@@ -30,11 +30,12 @@ message Asset {
 
 message AssetStats {
   int32 total          = 10;
-  int32 in_stock       = 20;
+  int32 available      = 20;
   int32 deployed       = 30;
-  int32 available      = 40;
-  int32 rma            = 50;
-  int32 decommissioned = 60;
+  int32 needs_repair   = 40;
+  int32 on_order       = 50;
+  int32 requested      = 60;
+  int32 decommissioned = 70;
 }
 
 enum AssetSortField {

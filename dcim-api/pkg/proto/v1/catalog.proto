@@ -82,11 +82,11 @@ message ListCatalogRequest {
 
 message ListCatalogResponse {
   message CatalogSummary {
-    DeviceCatalog entry    = 10;
-    int32         total    = 20;
-    int32         deployed = 30;
-    int32         in_stock = 40;
-    int32         issues   = 50;
+    DeviceCatalog entry        = 10;
+    int32         total        = 20;
+    int32         deployed     = 30;
+    int32         available    = 40;
+    int32         needs_repair = 50;
   }
 
   repeated CatalogSummary entries = 10;

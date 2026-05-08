@@ -3029,14 +3029,14 @@ func (b0 DeletePortCompatibilityResponse_builder) Build() *DeletePortCompatibili
 }
 
 type ListCatalogResponse_CatalogSummary struct {
-	state               protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Entry    *DeviceCatalog         `protobuf:"bytes,10,opt,name=entry"`
-	xxx_hidden_Total    int32                  `protobuf:"varint,20,opt,name=total"`
-	xxx_hidden_Deployed int32                  `protobuf:"varint,30,opt,name=deployed"`
-	xxx_hidden_InStock  int32                  `protobuf:"varint,40,opt,name=in_stock,json=inStock"`
-	xxx_hidden_Issues   int32                  `protobuf:"varint,50,opt,name=issues"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Entry       *DeviceCatalog         `protobuf:"bytes,10,opt,name=entry"`
+	xxx_hidden_Total       int32                  `protobuf:"varint,20,opt,name=total"`
+	xxx_hidden_Deployed    int32                  `protobuf:"varint,30,opt,name=deployed"`
+	xxx_hidden_Available   int32                  `protobuf:"varint,40,opt,name=available"`
+	xxx_hidden_NeedsRepair int32                  `protobuf:"varint,50,opt,name=needs_repair,json=needsRepair"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ListCatalogResponse_CatalogSummary) Reset() {
@@ -3085,16 +3085,16 @@ func (x *ListCatalogResponse_CatalogSummary) GetDeployed() int32 {
 	return 0
 }
 
-func (x *ListCatalogResponse_CatalogSummary) GetInStock() int32 {
+func (x *ListCatalogResponse_CatalogSummary) GetAvailable() int32 {
 	if x != nil {
-		return x.xxx_hidden_InStock
+		return x.xxx_hidden_Available
 	}
 	return 0
 }
 
-func (x *ListCatalogResponse_CatalogSummary) GetIssues() int32 {
+func (x *ListCatalogResponse_CatalogSummary) GetNeedsRepair() int32 {
 	if x != nil {
-		return x.xxx_hidden_Issues
+		return x.xxx_hidden_NeedsRepair
 	}
 	return 0
 }
@@ -3111,12 +3111,12 @@ func (x *ListCatalogResponse_CatalogSummary) SetDeployed(v int32) {
 	x.xxx_hidden_Deployed = v
 }
 
-func (x *ListCatalogResponse_CatalogSummary) SetInStock(v int32) {
-	x.xxx_hidden_InStock = v
+func (x *ListCatalogResponse_CatalogSummary) SetAvailable(v int32) {
+	x.xxx_hidden_Available = v
 }
 
-func (x *ListCatalogResponse_CatalogSummary) SetIssues(v int32) {
-	x.xxx_hidden_Issues = v
+func (x *ListCatalogResponse_CatalogSummary) SetNeedsRepair(v int32) {
+	x.xxx_hidden_NeedsRepair = v
 }
 
 func (x *ListCatalogResponse_CatalogSummary) HasEntry() bool {
@@ -3133,11 +3133,11 @@ func (x *ListCatalogResponse_CatalogSummary) ClearEntry() {
 type ListCatalogResponse_CatalogSummary_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Entry    *DeviceCatalog
-	Total    int32
-	Deployed int32
-	InStock  int32
-	Issues   int32
+	Entry       *DeviceCatalog
+	Total       int32
+	Deployed    int32
+	Available   int32
+	NeedsRepair int32
 }
 
 func (b0 ListCatalogResponse_CatalogSummary_builder) Build() *ListCatalogResponse_CatalogSummary {
@@ -3147,8 +3147,8 @@ func (b0 ListCatalogResponse_CatalogSummary_builder) Build() *ListCatalogRespons
 	x.xxx_hidden_Entry = b.Entry
 	x.xxx_hidden_Total = b.Total
 	x.xxx_hidden_Deployed = b.Deployed
-	x.xxx_hidden_InStock = b.InStock
-	x.xxx_hidden_Issues = b.Issues
+	x.xxx_hidden_Available = b.Available
+	x.xxx_hidden_NeedsRepair = b.NeedsRepair
 	return m0
 }
 
@@ -3199,17 +3199,17 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\x12ListCatalogRequest\x12F\n" +
 	"\x0fcategory_filter\x18\n" +
 	" \x01(\x0e2\x16.dcim.v1.AssetCategoryB\x05\xaa\x01\x02\b\x01R\x0ecategoryFilter\x12\x16\n" +
-	"\x06search\x18\x14 \x01(\tR\x06search\"\x82\x02\n" +
+	"\x06search\x18\x14 \x01(\tR\x06search\"\x90\x02\n" +
 	"\x13ListCatalogResponse\x12E\n" +
 	"\aentries\x18\n" +
-	" \x03(\v2+.dcim.v1.ListCatalogResponse.CatalogSummaryR\aentries\x1a\xa3\x01\n" +
+	" \x03(\v2+.dcim.v1.ListCatalogResponse.CatalogSummaryR\aentries\x1a\xb1\x01\n" +
 	"\x0eCatalogSummary\x12,\n" +
 	"\x05entry\x18\n" +
 	" \x01(\v2\x16.dcim.v1.DeviceCatalogR\x05entry\x12\x14\n" +
 	"\x05total\x18\x14 \x01(\x05R\x05total\x12\x1a\n" +
-	"\bdeployed\x18\x1e \x01(\x05R\bdeployed\x12\x19\n" +
-	"\bin_stock\x18( \x01(\x05R\ainStock\x12\x16\n" +
-	"\x06issues\x182 \x01(\x05R\x06issues\"2\n" +
+	"\bdeployed\x18\x1e \x01(\x05R\bdeployed\x12\x1c\n" +
+	"\tavailable\x18( \x01(\x05R\tavailable\x12!\n" +
+	"\fneeds_repair\x182 \x01(\x05R\vneedsRepair\"2\n" +
 	"\x16GetCatalogEntryRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"G\n" +

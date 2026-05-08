@@ -382,11 +382,12 @@ func (b0 Asset_builder) Build() *Asset {
 type AssetStats struct {
 	state                     protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Total          int32                  `protobuf:"varint,10,opt,name=total"`
-	xxx_hidden_InStock        int32                  `protobuf:"varint,20,opt,name=in_stock,json=inStock"`
+	xxx_hidden_Available      int32                  `protobuf:"varint,20,opt,name=available"`
 	xxx_hidden_Deployed       int32                  `protobuf:"varint,30,opt,name=deployed"`
-	xxx_hidden_Available      int32                  `protobuf:"varint,40,opt,name=available"`
-	xxx_hidden_Rma            int32                  `protobuf:"varint,50,opt,name=rma"`
-	xxx_hidden_Decommissioned int32                  `protobuf:"varint,60,opt,name=decommissioned"`
+	xxx_hidden_NeedsRepair    int32                  `protobuf:"varint,40,opt,name=needs_repair,json=needsRepair"`
+	xxx_hidden_OnOrder        int32                  `protobuf:"varint,50,opt,name=on_order,json=onOrder"`
+	xxx_hidden_Requested      int32                  `protobuf:"varint,60,opt,name=requested"`
+	xxx_hidden_Decommissioned int32                  `protobuf:"varint,70,opt,name=decommissioned"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -423,9 +424,9 @@ func (x *AssetStats) GetTotal() int32 {
 	return 0
 }
 
-func (x *AssetStats) GetInStock() int32 {
+func (x *AssetStats) GetAvailable() int32 {
 	if x != nil {
-		return x.xxx_hidden_InStock
+		return x.xxx_hidden_Available
 	}
 	return 0
 }
@@ -437,16 +438,23 @@ func (x *AssetStats) GetDeployed() int32 {
 	return 0
 }
 
-func (x *AssetStats) GetAvailable() int32 {
+func (x *AssetStats) GetNeedsRepair() int32 {
 	if x != nil {
-		return x.xxx_hidden_Available
+		return x.xxx_hidden_NeedsRepair
 	}
 	return 0
 }
 
-func (x *AssetStats) GetRma() int32 {
+func (x *AssetStats) GetOnOrder() int32 {
 	if x != nil {
-		return x.xxx_hidden_Rma
+		return x.xxx_hidden_OnOrder
+	}
+	return 0
+}
+
+func (x *AssetStats) GetRequested() int32 {
+	if x != nil {
+		return x.xxx_hidden_Requested
 	}
 	return 0
 }
@@ -462,20 +470,24 @@ func (x *AssetStats) SetTotal(v int32) {
 	x.xxx_hidden_Total = v
 }
 
-func (x *AssetStats) SetInStock(v int32) {
-	x.xxx_hidden_InStock = v
+func (x *AssetStats) SetAvailable(v int32) {
+	x.xxx_hidden_Available = v
 }
 
 func (x *AssetStats) SetDeployed(v int32) {
 	x.xxx_hidden_Deployed = v
 }
 
-func (x *AssetStats) SetAvailable(v int32) {
-	x.xxx_hidden_Available = v
+func (x *AssetStats) SetNeedsRepair(v int32) {
+	x.xxx_hidden_NeedsRepair = v
 }
 
-func (x *AssetStats) SetRma(v int32) {
-	x.xxx_hidden_Rma = v
+func (x *AssetStats) SetOnOrder(v int32) {
+	x.xxx_hidden_OnOrder = v
+}
+
+func (x *AssetStats) SetRequested(v int32) {
+	x.xxx_hidden_Requested = v
 }
 
 func (x *AssetStats) SetDecommissioned(v int32) {
@@ -486,10 +498,11 @@ type AssetStats_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Total          int32
-	InStock        int32
-	Deployed       int32
 	Available      int32
-	Rma            int32
+	Deployed       int32
+	NeedsRepair    int32
+	OnOrder        int32
+	Requested      int32
 	Decommissioned int32
 }
 
@@ -498,10 +511,11 @@ func (b0 AssetStats_builder) Build() *AssetStats {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Total = b.Total
-	x.xxx_hidden_InStock = b.InStock
-	x.xxx_hidden_Deployed = b.Deployed
 	x.xxx_hidden_Available = b.Available
-	x.xxx_hidden_Rma = b.Rma
+	x.xxx_hidden_Deployed = b.Deployed
+	x.xxx_hidden_NeedsRepair = b.NeedsRepair
+	x.xxx_hidden_OnOrder = b.OnOrder
+	x.xxx_hidden_Requested = b.Requested
 	x.xxx_hidden_Decommissioned = b.Decommissioned
 	return m0
 }
@@ -1855,16 +1869,17 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\x0fwarranty_expiry\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x0ewarrantyExpiry\x12\x14\n" +
 	"\x05notes\x18Z \x01(\tR\x05notes\x124\n" +
 	"\acreated\x18d \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x18n \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\xb1\x01\n" +
+	"\adeleted\x18n \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\xe0\x01\n" +
 	"\n" +
 	"AssetStats\x12\x14\n" +
 	"\x05total\x18\n" +
-	" \x01(\x05R\x05total\x12\x19\n" +
-	"\bin_stock\x18\x14 \x01(\x05R\ainStock\x12\x1a\n" +
-	"\bdeployed\x18\x1e \x01(\x05R\bdeployed\x12\x1c\n" +
-	"\tavailable\x18( \x01(\x05R\tavailable\x12\x10\n" +
-	"\x03rma\x182 \x01(\x05R\x03rma\x12&\n" +
-	"\x0edecommissioned\x18< \x01(\x05R\x0edecommissioned\"\x82\x03\n" +
+	" \x01(\x05R\x05total\x12\x1c\n" +
+	"\tavailable\x18\x14 \x01(\x05R\tavailable\x12\x1a\n" +
+	"\bdeployed\x18\x1e \x01(\x05R\bdeployed\x12!\n" +
+	"\fneeds_repair\x18( \x01(\x05R\vneedsRepair\x12\x19\n" +
+	"\bon_order\x182 \x01(\x05R\aonOrder\x12\x1c\n" +
+	"\trequested\x18< \x01(\x05R\trequested\x12&\n" +
+	"\x0edecommissioned\x18F \x01(\x05R\x0edecommissioned\"\x82\x03\n" +
 	"\x11ListAssetsRequest\x12@\n" +
 	"\rstatus_filter\x18\n" +
 	" \x01(\x0e2\x14.dcim.v1.AssetStatusB\x05\xaa\x01\x02\b\x01R\fstatusFilter\x12F\n" +

@@ -25,14 +25,23 @@ const (
 
 // Site is a physical data center location (core.sites).
 type Site struct {
-	state              protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id      string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_Name    string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_Address string                 `protobuf:"bytes,30,opt,name=address"`
-	xxx_hidden_Created *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=created"`
-	xxx_hidden_Deleted *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=deleted"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_FullName    string                 `protobuf:"bytes,30,opt,name=full_name,json=fullName"`
+	xxx_hidden_Address     string                 `protobuf:"bytes,40,opt,name=address"`
+	xxx_hidden_City        string                 `protobuf:"bytes,50,opt,name=city"`
+	xxx_hidden_Country     string                 `protobuf:"bytes,60,opt,name=country"`
+	xxx_hidden_Tier        *string                `protobuf:"bytes,70,opt,name=tier"`
+	xxx_hidden_FloorSqm    float64                `protobuf:"fixed64,80,opt,name=floor_sqm,json=floorSqm"`
+	xxx_hidden_Established *timestamppb.Timestamp `protobuf:"bytes,90,opt,name=established"`
+	xxx_hidden_Status      string                 `protobuf:"bytes,100,opt,name=status"`
+	xxx_hidden_Created     *timestamppb.Timestamp `protobuf:"bytes,110,opt,name=created"`
+	xxx_hidden_Deleted     *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=deleted"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *Site) Reset() {
@@ -74,9 +83,61 @@ func (x *Site) GetName() string {
 	return ""
 }
 
+func (x *Site) GetFullName() string {
+	if x != nil {
+		return x.xxx_hidden_FullName
+	}
+	return ""
+}
+
 func (x *Site) GetAddress() string {
 	if x != nil {
 		return x.xxx_hidden_Address
+	}
+	return ""
+}
+
+func (x *Site) GetCity() string {
+	if x != nil {
+		return x.xxx_hidden_City
+	}
+	return ""
+}
+
+func (x *Site) GetCountry() string {
+	if x != nil {
+		return x.xxx_hidden_Country
+	}
+	return ""
+}
+
+func (x *Site) GetTier() string {
+	if x != nil {
+		if x.xxx_hidden_Tier != nil {
+			return *x.xxx_hidden_Tier
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *Site) GetFloorSqm() float64 {
+	if x != nil {
+		return x.xxx_hidden_FloorSqm
+	}
+	return 0
+}
+
+func (x *Site) GetEstablished() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Established
+	}
+	return nil
+}
+
+func (x *Site) GetStatus() string {
+	if x != nil {
+		return x.xxx_hidden_Status
 	}
 	return ""
 }
@@ -103,8 +164,38 @@ func (x *Site) SetName(v string) {
 	x.xxx_hidden_Name = v
 }
 
+func (x *Site) SetFullName(v string) {
+	x.xxx_hidden_FullName = v
+}
+
 func (x *Site) SetAddress(v string) {
 	x.xxx_hidden_Address = v
+}
+
+func (x *Site) SetCity(v string) {
+	x.xxx_hidden_City = v
+}
+
+func (x *Site) SetCountry(v string) {
+	x.xxx_hidden_Country = v
+}
+
+func (x *Site) SetTier(v string) {
+	x.xxx_hidden_Tier = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 12)
+}
+
+func (x *Site) SetFloorSqm(v float64) {
+	x.xxx_hidden_FloorSqm = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 12)
+}
+
+func (x *Site) SetEstablished(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Established = v
+}
+
+func (x *Site) SetStatus(v string) {
+	x.xxx_hidden_Status = v
 }
 
 func (x *Site) SetCreated(v *timestamppb.Timestamp) {
@@ -113,6 +204,27 @@ func (x *Site) SetCreated(v *timestamppb.Timestamp) {
 
 func (x *Site) SetDeleted(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Deleted = v
+}
+
+func (x *Site) HasTier() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
+}
+
+func (x *Site) HasFloorSqm() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
+func (x *Site) HasEstablished() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Established != nil
 }
 
 func (x *Site) HasCreated() bool {
@@ -129,6 +241,20 @@ func (x *Site) HasDeleted() bool {
 	return x.xxx_hidden_Deleted != nil
 }
 
+func (x *Site) ClearTier() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
+	x.xxx_hidden_Tier = nil
+}
+
+func (x *Site) ClearFloorSqm() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_FloorSqm = 0
+}
+
+func (x *Site) ClearEstablished() {
+	x.xxx_hidden_Established = nil
+}
+
 func (x *Site) ClearCreated() {
 	x.xxx_hidden_Created = nil
 }
@@ -140,11 +266,18 @@ func (x *Site) ClearDeleted() {
 type Site_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id      string
-	Name    string
-	Address string
-	Created *timestamppb.Timestamp
-	Deleted *timestamppb.Timestamp
+	Id          string
+	Name        string
+	FullName    string
+	Address     string
+	City        string
+	Country     string
+	Tier        *string
+	FloorSqm    *float64
+	Established *timestamppb.Timestamp
+	Status      string
+	Created     *timestamppb.Timestamp
+	Deleted     *timestamppb.Timestamp
 }
 
 func (b0 Site_builder) Build() *Site {
@@ -153,7 +286,20 @@ func (b0 Site_builder) Build() *Site {
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_FullName = b.FullName
 	x.xxx_hidden_Address = b.Address
+	x.xxx_hidden_City = b.City
+	x.xxx_hidden_Country = b.Country
+	if b.Tier != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 12)
+		x.xxx_hidden_Tier = b.Tier
+	}
+	if b.FloorSqm != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 12)
+		x.xxx_hidden_FloorSqm = *b.FloorSqm
+	}
+	x.xxx_hidden_Established = b.Established
+	x.xxx_hidden_Status = b.Status
 	x.xxx_hidden_Created = b.Created
 	x.xxx_hidden_Deleted = b.Deleted
 	return m0
@@ -387,11 +533,18 @@ func (b0 GetSiteResponse_builder) Build() *GetSiteResponse {
 }
 
 type CreateSiteRequest struct {
-	state              protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Name    string                 `protobuf:"bytes,10,opt,name=name"`
-	xxx_hidden_Address string                 `protobuf:"bytes,20,opt,name=address"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_FullName    string                 `protobuf:"bytes,20,opt,name=full_name,json=fullName"`
+	xxx_hidden_Address     string                 `protobuf:"bytes,30,opt,name=address"`
+	xxx_hidden_City        string                 `protobuf:"bytes,40,opt,name=city"`
+	xxx_hidden_Country     string                 `protobuf:"bytes,50,opt,name=country"`
+	xxx_hidden_Tier        string                 `protobuf:"bytes,60,opt,name=tier"`
+	xxx_hidden_FloorSqm    float64                `protobuf:"fixed64,70,opt,name=floor_sqm,json=floorSqm"`
+	xxx_hidden_Established *timestamppb.Timestamp `protobuf:"bytes,80,opt,name=established"`
+	xxx_hidden_Status      string                 `protobuf:"bytes,90,opt,name=status"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CreateSiteRequest) Reset() {
@@ -426,9 +579,58 @@ func (x *CreateSiteRequest) GetName() string {
 	return ""
 }
 
+func (x *CreateSiteRequest) GetFullName() string {
+	if x != nil {
+		return x.xxx_hidden_FullName
+	}
+	return ""
+}
+
 func (x *CreateSiteRequest) GetAddress() string {
 	if x != nil {
 		return x.xxx_hidden_Address
+	}
+	return ""
+}
+
+func (x *CreateSiteRequest) GetCity() string {
+	if x != nil {
+		return x.xxx_hidden_City
+	}
+	return ""
+}
+
+func (x *CreateSiteRequest) GetCountry() string {
+	if x != nil {
+		return x.xxx_hidden_Country
+	}
+	return ""
+}
+
+func (x *CreateSiteRequest) GetTier() string {
+	if x != nil {
+		return x.xxx_hidden_Tier
+	}
+	return ""
+}
+
+func (x *CreateSiteRequest) GetFloorSqm() float64 {
+	if x != nil {
+		return x.xxx_hidden_FloorSqm
+	}
+	return 0
+}
+
+func (x *CreateSiteRequest) GetEstablished() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Established
+	}
+	return nil
+}
+
+func (x *CreateSiteRequest) GetStatus() string {
+	if x != nil {
+		return x.xxx_hidden_Status
 	}
 	return ""
 }
@@ -437,15 +639,61 @@ func (x *CreateSiteRequest) SetName(v string) {
 	x.xxx_hidden_Name = v
 }
 
+func (x *CreateSiteRequest) SetFullName(v string) {
+	x.xxx_hidden_FullName = v
+}
+
 func (x *CreateSiteRequest) SetAddress(v string) {
 	x.xxx_hidden_Address = v
+}
+
+func (x *CreateSiteRequest) SetCity(v string) {
+	x.xxx_hidden_City = v
+}
+
+func (x *CreateSiteRequest) SetCountry(v string) {
+	x.xxx_hidden_Country = v
+}
+
+func (x *CreateSiteRequest) SetTier(v string) {
+	x.xxx_hidden_Tier = v
+}
+
+func (x *CreateSiteRequest) SetFloorSqm(v float64) {
+	x.xxx_hidden_FloorSqm = v
+}
+
+func (x *CreateSiteRequest) SetEstablished(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Established = v
+}
+
+func (x *CreateSiteRequest) SetStatus(v string) {
+	x.xxx_hidden_Status = v
+}
+
+func (x *CreateSiteRequest) HasEstablished() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Established != nil
+}
+
+func (x *CreateSiteRequest) ClearEstablished() {
+	x.xxx_hidden_Established = nil
 }
 
 type CreateSiteRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Name    string
-	Address string
+	Name        string
+	FullName    string
+	Address     string
+	City        string
+	Country     string
+	Tier        string
+	FloorSqm    float64
+	Established *timestamppb.Timestamp
+	Status      string
 }
 
 func (b0 CreateSiteRequest_builder) Build() *CreateSiteRequest {
@@ -453,7 +701,14 @@ func (b0 CreateSiteRequest_builder) Build() *CreateSiteRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_FullName = b.FullName
 	x.xxx_hidden_Address = b.Address
+	x.xxx_hidden_City = b.City
+	x.xxx_hidden_Country = b.Country
+	x.xxx_hidden_Tier = b.Tier
+	x.xxx_hidden_FloorSqm = b.FloorSqm
+	x.xxx_hidden_Established = b.Established
+	x.xxx_hidden_Status = b.Status
 	return m0
 }
 
@@ -518,7 +773,14 @@ type UpdateSiteRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
 	xxx_hidden_Name        *string                `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_Address     *string                `protobuf:"bytes,30,opt,name=address"`
+	xxx_hidden_FullName    *string                `protobuf:"bytes,30,opt,name=full_name,json=fullName"`
+	xxx_hidden_Address     *string                `protobuf:"bytes,40,opt,name=address"`
+	xxx_hidden_City        *string                `protobuf:"bytes,50,opt,name=city"`
+	xxx_hidden_Country     *string                `protobuf:"bytes,60,opt,name=country"`
+	xxx_hidden_Tier        *string                `protobuf:"bytes,70,opt,name=tier"`
+	xxx_hidden_FloorSqm    float64                `protobuf:"fixed64,80,opt,name=floor_sqm,json=floorSqm"`
+	xxx_hidden_Established *timestamppb.Timestamp `protobuf:"bytes,90,opt,name=established"`
+	xxx_hidden_Status      *string                `protobuf:"bytes,100,opt,name=status"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -567,10 +829,74 @@ func (x *UpdateSiteRequest) GetName() string {
 	return ""
 }
 
+func (x *UpdateSiteRequest) GetFullName() string {
+	if x != nil {
+		if x.xxx_hidden_FullName != nil {
+			return *x.xxx_hidden_FullName
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *UpdateSiteRequest) GetAddress() string {
 	if x != nil {
 		if x.xxx_hidden_Address != nil {
 			return *x.xxx_hidden_Address
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *UpdateSiteRequest) GetCity() string {
+	if x != nil {
+		if x.xxx_hidden_City != nil {
+			return *x.xxx_hidden_City
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *UpdateSiteRequest) GetCountry() string {
+	if x != nil {
+		if x.xxx_hidden_Country != nil {
+			return *x.xxx_hidden_Country
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *UpdateSiteRequest) GetTier() string {
+	if x != nil {
+		if x.xxx_hidden_Tier != nil {
+			return *x.xxx_hidden_Tier
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *UpdateSiteRequest) GetFloorSqm() float64 {
+	if x != nil {
+		return x.xxx_hidden_FloorSqm
+	}
+	return 0
+}
+
+func (x *UpdateSiteRequest) GetEstablished() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Established
+	}
+	return nil
+}
+
+func (x *UpdateSiteRequest) GetStatus() string {
+	if x != nil {
+		if x.xxx_hidden_Status != nil {
+			return *x.xxx_hidden_Status
 		}
 		return ""
 	}
@@ -583,12 +909,46 @@ func (x *UpdateSiteRequest) SetId(v string) {
 
 func (x *UpdateSiteRequest) SetName(v string) {
 	x.xxx_hidden_Name = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 10)
+}
+
+func (x *UpdateSiteRequest) SetFullName(v string) {
+	x.xxx_hidden_FullName = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 10)
 }
 
 func (x *UpdateSiteRequest) SetAddress(v string) {
 	x.xxx_hidden_Address = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 10)
+}
+
+func (x *UpdateSiteRequest) SetCity(v string) {
+	x.xxx_hidden_City = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 10)
+}
+
+func (x *UpdateSiteRequest) SetCountry(v string) {
+	x.xxx_hidden_Country = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 10)
+}
+
+func (x *UpdateSiteRequest) SetTier(v string) {
+	x.xxx_hidden_Tier = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 10)
+}
+
+func (x *UpdateSiteRequest) SetFloorSqm(v float64) {
+	x.xxx_hidden_FloorSqm = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 10)
+}
+
+func (x *UpdateSiteRequest) SetEstablished(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Established = v
+}
+
+func (x *UpdateSiteRequest) SetStatus(v string) {
+	x.xxx_hidden_Status = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 9, 10)
 }
 
 func (x *UpdateSiteRequest) HasName() bool {
@@ -598,11 +958,60 @@ func (x *UpdateSiteRequest) HasName() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
-func (x *UpdateSiteRequest) HasAddress() bool {
+func (x *UpdateSiteRequest) HasFullName() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *UpdateSiteRequest) HasAddress() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
+func (x *UpdateSiteRequest) HasCity() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
+}
+
+func (x *UpdateSiteRequest) HasCountry() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
+}
+
+func (x *UpdateSiteRequest) HasTier() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
+}
+
+func (x *UpdateSiteRequest) HasFloorSqm() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
+func (x *UpdateSiteRequest) HasEstablished() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Established != nil
+}
+
+func (x *UpdateSiteRequest) HasStatus() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 9)
 }
 
 func (x *UpdateSiteRequest) ClearName() {
@@ -610,17 +1019,58 @@ func (x *UpdateSiteRequest) ClearName() {
 	x.xxx_hidden_Name = nil
 }
 
-func (x *UpdateSiteRequest) ClearAddress() {
+func (x *UpdateSiteRequest) ClearFullName() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_FullName = nil
+}
+
+func (x *UpdateSiteRequest) ClearAddress() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
 	x.xxx_hidden_Address = nil
+}
+
+func (x *UpdateSiteRequest) ClearCity() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
+	x.xxx_hidden_City = nil
+}
+
+func (x *UpdateSiteRequest) ClearCountry() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
+	x.xxx_hidden_Country = nil
+}
+
+func (x *UpdateSiteRequest) ClearTier() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
+	x.xxx_hidden_Tier = nil
+}
+
+func (x *UpdateSiteRequest) ClearFloorSqm() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_FloorSqm = 0
+}
+
+func (x *UpdateSiteRequest) ClearEstablished() {
+	x.xxx_hidden_Established = nil
+}
+
+func (x *UpdateSiteRequest) ClearStatus() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 9)
+	x.xxx_hidden_Status = nil
 }
 
 type UpdateSiteRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id      string
-	Name    *string
-	Address *string
+	Id          string
+	Name        *string
+	FullName    *string
+	Address     *string
+	City        *string
+	Country     *string
+	Tier        *string
+	FloorSqm    *float64
+	Established *timestamppb.Timestamp
+	Status      *string
 }
 
 func (b0 UpdateSiteRequest_builder) Build() *UpdateSiteRequest {
@@ -629,12 +1079,37 @@ func (b0 UpdateSiteRequest_builder) Build() *UpdateSiteRequest {
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	if b.Name != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 10)
 		x.xxx_hidden_Name = b.Name
 	}
+	if b.FullName != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 10)
+		x.xxx_hidden_FullName = b.FullName
+	}
 	if b.Address != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 10)
 		x.xxx_hidden_Address = b.Address
+	}
+	if b.City != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 10)
+		x.xxx_hidden_City = b.City
+	}
+	if b.Country != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 10)
+		x.xxx_hidden_Country = b.Country
+	}
+	if b.Tier != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 10)
+		x.xxx_hidden_Tier = b.Tier
+	}
+	if b.FloorSqm != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 10)
+		x.xxx_hidden_FloorSqm = *b.FloorSqm
+	}
+	x.xxx_hidden_Established = b.Established
+	if b.Status != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 9, 10)
+		x.xxx_hidden_Status = b.Status
 	}
 	return m0
 }
@@ -786,14 +1261,21 @@ var File_v1_site_proto protoreflect.FileDescriptor
 
 const file_v1_site_proto_rawDesc = "" +
 	"\n" +
-	"\rv1/site.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb7\x01\n" +
+	"\rv1/site.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x03\n" +
 	"\x04Site\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12\x18\n" +
-	"\aaddress\x18\x1e \x01(\tR\aaddress\x124\n" +
-	"\acreated\x18( \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x182 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\x12\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12\x1b\n" +
+	"\tfull_name\x18\x1e \x01(\tR\bfullName\x12\x18\n" +
+	"\aaddress\x18( \x01(\tR\aaddress\x12\x12\n" +
+	"\x04city\x182 \x01(\tR\x04city\x12\x18\n" +
+	"\acountry\x18< \x01(\tR\acountry\x12\x19\n" +
+	"\x04tier\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x04tier\x12\"\n" +
+	"\tfloor_sqm\x18P \x01(\x01B\x05\xaa\x01\x02\b\x01R\bfloorSqm\x12C\n" +
+	"\vestablished\x18Z \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\vestablished\x12\x16\n" +
+	"\x06status\x18d \x01(\tR\x06status\x124\n" +
+	"\acreated\x18n \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
+	"\adeleted\x18x \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\x12\n" +
 	"\x10ListSitesRequest\"8\n" +
 	"\x11ListSitesResponse\x12#\n" +
 	"\x05sites\x18\n" +
@@ -803,19 +1285,33 @@ const file_v1_site_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"4\n" +
 	"\x0fGetSiteResponse\x12!\n" +
 	"\x04site\x18\n" +
-	" \x01(\v2\r.dcim.v1.SiteR\x04site\"J\n" +
+	" \x01(\v2\r.dcim.v1.SiteR\x04site\"\x9c\x02\n" +
 	"\x11CreateSiteRequest\x12\x1b\n" +
 	"\x04name\x18\n" +
-	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x18\n" +
-	"\aaddress\x18\x14 \x01(\tR\aaddress\"-\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x1b\n" +
+	"\tfull_name\x18\x14 \x01(\tR\bfullName\x12\x18\n" +
+	"\aaddress\x18\x1e \x01(\tR\aaddress\x12\x12\n" +
+	"\x04city\x18( \x01(\tR\x04city\x12\x18\n" +
+	"\acountry\x182 \x01(\tR\acountry\x12\x12\n" +
+	"\x04tier\x18< \x01(\tR\x04tier\x12\x1b\n" +
+	"\tfloor_sqm\x18F \x01(\x01R\bfloorSqm\x12<\n" +
+	"\vestablished\x18P \x01(\v2\x1a.google.protobuf.TimestampR\vestablished\x12\x16\n" +
+	"\x06status\x18Z \x01(\tR\x06status\"-\n" +
 	"\x12CreateSiteResponse\x12\x17\n" +
 	"\asite_id\x18\n" +
-	" \x01(\tR\x06siteId\"i\n" +
+	" \x01(\tR\x06siteId\"\xec\x02\n" +
 	"\x11UpdateSiteRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
-	"\x04name\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04name\x12\x1f\n" +
-	"\aaddress\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\aaddress\"\x14\n" +
+	"\x04name\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04name\x12\"\n" +
+	"\tfull_name\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\bfullName\x12\x1f\n" +
+	"\aaddress\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\aaddress\x12\x19\n" +
+	"\x04city\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04city\x12\x1f\n" +
+	"\acountry\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\acountry\x12\x19\n" +
+	"\x04tier\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x04tier\x12\"\n" +
+	"\tfloor_sqm\x18P \x01(\x01B\x05\xaa\x01\x02\b\x01R\bfloorSqm\x12C\n" +
+	"\vestablished\x18Z \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\vestablished\x12\x1d\n" +
+	"\x06status\x18d \x01(\tB\x05\xaa\x01\x02\b\x01R\x06status\"\x14\n" +
 	"\x12UpdateSiteResponse\"-\n" +
 	"\x11DeleteSiteRequest\x12\x18\n" +
 	"\x02id\x18\n" +
@@ -847,25 +1343,28 @@ var file_v1_site_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
 }
 var file_v1_site_proto_depIdxs = []int32{
-	11, // 0: dcim.v1.Site.created:type_name -> google.protobuf.Timestamp
-	11, // 1: dcim.v1.Site.deleted:type_name -> google.protobuf.Timestamp
-	0,  // 2: dcim.v1.ListSitesResponse.sites:type_name -> dcim.v1.Site
-	0,  // 3: dcim.v1.GetSiteResponse.site:type_name -> dcim.v1.Site
-	1,  // 4: dcim.v1.SiteService.ListSites:input_type -> dcim.v1.ListSitesRequest
-	3,  // 5: dcim.v1.SiteService.GetSite:input_type -> dcim.v1.GetSiteRequest
-	5,  // 6: dcim.v1.SiteService.CreateSite:input_type -> dcim.v1.CreateSiteRequest
-	7,  // 7: dcim.v1.SiteService.UpdateSite:input_type -> dcim.v1.UpdateSiteRequest
-	9,  // 8: dcim.v1.SiteService.DeleteSite:input_type -> dcim.v1.DeleteSiteRequest
-	2,  // 9: dcim.v1.SiteService.ListSites:output_type -> dcim.v1.ListSitesResponse
-	4,  // 10: dcim.v1.SiteService.GetSite:output_type -> dcim.v1.GetSiteResponse
-	6,  // 11: dcim.v1.SiteService.CreateSite:output_type -> dcim.v1.CreateSiteResponse
-	8,  // 12: dcim.v1.SiteService.UpdateSite:output_type -> dcim.v1.UpdateSiteResponse
-	10, // 13: dcim.v1.SiteService.DeleteSite:output_type -> dcim.v1.DeleteSiteResponse
-	9,  // [9:14] is the sub-list for method output_type
-	4,  // [4:9] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	11, // 0: dcim.v1.Site.established:type_name -> google.protobuf.Timestamp
+	11, // 1: dcim.v1.Site.created:type_name -> google.protobuf.Timestamp
+	11, // 2: dcim.v1.Site.deleted:type_name -> google.protobuf.Timestamp
+	0,  // 3: dcim.v1.ListSitesResponse.sites:type_name -> dcim.v1.Site
+	0,  // 4: dcim.v1.GetSiteResponse.site:type_name -> dcim.v1.Site
+	11, // 5: dcim.v1.CreateSiteRequest.established:type_name -> google.protobuf.Timestamp
+	11, // 6: dcim.v1.UpdateSiteRequest.established:type_name -> google.protobuf.Timestamp
+	1,  // 7: dcim.v1.SiteService.ListSites:input_type -> dcim.v1.ListSitesRequest
+	3,  // 8: dcim.v1.SiteService.GetSite:input_type -> dcim.v1.GetSiteRequest
+	5,  // 9: dcim.v1.SiteService.CreateSite:input_type -> dcim.v1.CreateSiteRequest
+	7,  // 10: dcim.v1.SiteService.UpdateSite:input_type -> dcim.v1.UpdateSiteRequest
+	9,  // 11: dcim.v1.SiteService.DeleteSite:input_type -> dcim.v1.DeleteSiteRequest
+	2,  // 12: dcim.v1.SiteService.ListSites:output_type -> dcim.v1.ListSitesResponse
+	4,  // 13: dcim.v1.SiteService.GetSite:output_type -> dcim.v1.GetSiteResponse
+	6,  // 14: dcim.v1.SiteService.CreateSite:output_type -> dcim.v1.CreateSiteResponse
+	8,  // 15: dcim.v1.SiteService.UpdateSite:output_type -> dcim.v1.UpdateSiteResponse
+	10, // 16: dcim.v1.SiteService.DeleteSite:output_type -> dcim.v1.DeleteSiteResponse
+	12, // [12:17] is the sub-list for method output_type
+	7,  // [7:12] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_v1_site_proto_init() }
