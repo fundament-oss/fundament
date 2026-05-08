@@ -298,6 +298,22 @@ const routes: Routes = [
         ],
       },
       {
+        path: 'logs',
+        loadComponent: () =>
+          import('./logs/log-explorer/log-explorer.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Log explorer' }],
+        },
+      },
+      {
+        path: 'logs/analytics',
+        loadComponent: () =>
+          import('./logs/log-analytics/log-analytics.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Log explorer', route: '/logs' }, { label: 'Analytics' }],
+        },
+      },
+      {
         path: '',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
         data: {

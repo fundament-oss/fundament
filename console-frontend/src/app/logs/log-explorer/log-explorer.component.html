@@ -1,0 +1,433 @@
+<!-- Log detail backdrop -->
+@if (selectedLog()) {
+  <div
+    class="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
+    (click)="closeDetail()"
+    aria-hidden="true"
+  ></div>
+}
+
+<!-- Log detail panel -->
+<div
+  class="fixed inset-y-0 right-0 z-50 flex w-[520px] flex-col overflow-hidden bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-gray-950"
+  [class]="selectedLog() ? 'translate-x-0' : 'translate-x-full'"
+  role="dialog"
+  aria-label="Log detail"
+>
+  @if (selectedLog(); as log) {
+    <!-- Panel header -->
+    <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-900">
+      <h2 class="font-semibold text-gray-900 dark:text-white">Log detail</h2>
+      <button
+        (click)="closeDetail()"
+        type="button"
+        class="rounded-md p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+        aria-label="Close detail panel"
+      >
+        <nldd-icon name="x-mark" class="h-5 w-5"></nldd-icon>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+      <!-- Meta -->
+      <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-900">
+        <p class="font-mono text-sm text-gray-500 dark:text-gray-400">{{ formatTimestampFull(log.timestamp) }}</p>
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+          <span [class]="levelBadgeClass(log.level)">{{ log.level }}</span>
+          <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ log.pod }}</span>
+          <span class="text-gray-400 dark:text-gray-600">/</span>
+          <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ log.namespace }}</span>
+          <span class="text-gray-400 dark:text-gray-600">/</span>
+          <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ log.container }}</span>
+        </div>
+      </div>
+
+      <!-- Message -->
+      <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-900">
+        <div class="mb-2 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Message</p>
+          <button
+            (click)="copyToClipboard(log.message)"
+            type="button"
+            class="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          >Copy</button>
+        </div>
+        <pre class="overflow-x-auto rounded-md bg-gray-50 p-3 font-mono text-sm whitespace-pre-wrap text-gray-800 dark:bg-gray-900 dark:text-gray-200">{{ log.message }}</pre>
+      </div>
+
+      <!-- Fields -->
+      <div class="px-5 py-4">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Fields</p>
+          <div class="flex gap-2">
+            <button
+              (click)="showRawJson.set(false)"
+              type="button"
+              class="rounded px-2 py-0.5 text-xs font-medium transition-colors"
+              [class]="!showRawJson() ? 'bg-accent-100 text-accent-700 dark:bg-accent-950 dark:text-accent-300' : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'"
+            >Table</button>
+            <button
+              (click)="showRawJson.set(true)"
+              type="button"
+              class="rounded px-2 py-0.5 text-xs font-medium transition-colors"
+              [class]="showRawJson() ? 'bg-accent-100 text-accent-700 dark:bg-accent-950 dark:text-accent-300' : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'"
+            >JSON</button>
+          </div>
+        </div>
+
+        @if (showRawJson()) {
+          <pre class="overflow-x-auto rounded-md bg-gray-50 p-3 font-mono text-xs text-gray-700 dark:bg-gray-900 dark:text-gray-300">{{ formattedJson(log) }}</pre>
+        } @else {
+          <div class="divide-y divide-gray-100 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+            @for (entry of fieldEntries(log); track entry.key) {
+              <div class="flex items-start gap-3 px-3 py-2">
+                <span class="w-36 shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400">{{ entry.key }}</span>
+                <span class="min-w-0 break-all font-mono text-xs text-gray-800 dark:text-gray-200">{{ entry.value }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Panel footer -->
+    <div class="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-gray-900">
+      <button
+        (click)="navigateDetail(-1)"
+        [disabled]="selectedLogIndex() <= 0"
+        type="button"
+        class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-800"
+      >
+        <nldd-icon name="chevron-left-small" class="h-4 w-4"></nldd-icon>
+        Prev
+      </button>
+      <button
+        (click)="copyToClipboard(formattedJson(log))"
+        type="button"
+        class="text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+      >Copy all</button>
+      <button
+        (click)="navigateDetail(1)"
+        [disabled]="selectedLogIndex() >= pagedLogs().length - 1"
+        type="button"
+        class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-800"
+      >
+        Next
+        <nldd-icon name="chevron-right-small" class="h-4 w-4"></nldd-icon>
+      </button>
+    </div>
+  }
+</div>
+
+<!-- ── Main page ── -->
+<div class="space-y-4">
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-3xl font-semibold">Log explorer</h1>
+    <div class="flex items-center gap-3">
+      <a
+        routerLink="/logs/analytics"
+        class="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+      >
+        Analytics
+        <nldd-icon name="chevron-right-small" class="h-4 w-4"></nldd-icon>
+      </a>
+
+      <!-- Live tail toggle -->
+      <button
+        (click)="toggleLiveTail()"
+        type="button"
+        class="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
+        [class]="
+          liveTailEnabled()
+            ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100 dark:border-green-700 dark:bg-green-950 dark:text-green-300'
+            : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'
+        "
+      >
+        @if (liveTailEnabled()) {
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+          </span>
+          Live tail on
+        } @else {
+          <span class="h-2 w-2 rounded-full border-2 border-gray-400"></span>
+          Live tail
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Live tail status bar -->
+  @if (liveTailEnabled()) {
+    <div
+      class="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300"
+    >
+      @if (!liveTailPaused()) {
+        <span class="relative flex h-2 w-2 shrink-0">
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+          <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+        </span>
+        <span>Streaming — {{ liveTailRate() }} new line{{ liveTailRate() === 1 ? '' : 's' }}/sec</span>
+        <button
+          (click)="pauseLiveTail()"
+          type="button"
+          class="ml-auto rounded border border-green-300 bg-white px-2.5 py-1 text-xs font-medium text-green-700 hover:bg-green-50 dark:border-green-700 dark:bg-green-900 dark:text-green-300"
+        >
+          Pause
+        </button>
+      } @else {
+        <span class="h-2 w-2 shrink-0 rounded-full bg-amber-400"></span>
+        <span>Paused</span>
+        <button
+          (click)="resumeLiveTail()"
+          type="button"
+          class="ml-auto rounded border border-green-300 bg-white px-2.5 py-1 text-xs font-medium text-green-700 hover:bg-green-50 dark:border-green-700 dark:bg-green-900 dark:text-green-300"
+        >
+          Resume
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Filters card -->
+  <div class="card">
+    <div class="card-body space-y-3">
+      <!-- Scope selectors row -->
+      <div class="flex flex-wrap gap-2">
+        <select
+          [ngModel]="selectedCluster()"
+          (ngModelChange)="onClusterChange($event)"
+          class="text-sm"
+          aria-label="Cluster"
+        >
+          <option value="">All clusters</option>
+          @for (c of clusters(); track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+
+        <select
+          [ngModel]="selectedNamespace()"
+          (ngModelChange)="onNamespaceChange($event)"
+          class="text-sm"
+          aria-label="Namespace"
+        >
+          <option value="">All namespaces</option>
+          @for (ns of namespaces(); track ns) {
+            <option [value]="ns">{{ ns }}</option>
+          }
+        </select>
+
+        <select
+          [ngModel]="selectedPod()"
+          (ngModelChange)="onPodChange($event)"
+          class="text-sm"
+          aria-label="Pod"
+        >
+          <option value="">All pods</option>
+          @for (pod of pods(); track pod) {
+            <option [value]="pod">{{ pod }}</option>
+          }
+        </select>
+
+        <select
+          [ngModel]="selectedContainer()"
+          (ngModelChange)="onContainerChange($event)"
+          class="text-sm"
+          aria-label="Container"
+        >
+          <option value="">All containers</option>
+          @for (c of containers(); track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+
+        <select
+          [ngModel]="timePreset()"
+          (ngModelChange)="onTimePresetChange($event)"
+          class="ml-auto text-sm"
+          aria-label="Time range"
+        >
+          @for (preset of TIME_PRESETS; track preset.value) {
+            <option [value]="preset.value">{{ preset.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Search bar -->
+      <div class="flex gap-2">
+        <div class="relative flex-1">
+          <nldd-icon name="magnifier" class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"></nldd-icon>
+          <input
+            type="text"
+            placeholder="Search log messages..."
+            class="w-full border border-gray-300 bg-white py-2 pr-3 pl-9 text-sm placeholder-gray-400 focus:border-accent-400 focus:outline-none focus:ring-2 focus:ring-accent-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:focus:ring-accent-800 rounded-[9px]"
+            [ngModel]="searchText()"
+            (ngModelChange)="onSearchChange($event)"
+            (keydown.enter)="onSearchChange(searchText())"
+            aria-label="Search log messages"
+          />
+        </div>
+        @if (searchText() || activeFilterChips().length > 0) {
+          <button
+            (click)="clearAllFilters()"
+            type="button"
+            class="rounded-[9px] border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            Clear all
+          </button>
+        }
+      </div>
+
+      <!-- Generated query display -->
+      <div class="flex items-center gap-2 overflow-hidden rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
+        <code class="min-w-0 flex-1 truncate font-mono text-xs text-gray-600 dark:text-gray-400">{{ generatedQuery() }}</code>
+        <button
+          (click)="copyToClipboard(generatedQuery())"
+          type="button"
+          class="shrink-0 text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+        >Copy</button>
+      </div>
+
+      <!-- Active filter chips -->
+      @if (activeFilterChips().length > 0) {
+        <div class="flex flex-wrap gap-1.5">
+          @for (chip of activeFilterChips(); track chip.key) {
+            <span class="flex items-center gap-1 rounded-full border border-accent-200 bg-accent-50 px-2.5 py-0.5 text-xs font-medium text-accent-700 dark:border-accent-800 dark:bg-accent-950 dark:text-accent-300">
+              {{ chip.label }}
+              <button
+                (click)="removeChip(chip.key)"
+                type="button"
+                aria-label="Remove filter"
+                class="ml-0.5 text-accent-400 hover:text-accent-600 dark:text-accent-600 dark:hover:text-accent-400"
+              >✕</button>
+            </span>
+          }
+        </div>
+      }
+
+      <!-- Severity chips -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          (click)="toggleAllLevels()"
+          type="button"
+          [class]="allChipClass()"
+        >
+          All
+        </button>
+        @for (level of ALL_LEVELS; track level) {
+          <button
+            (click)="toggleLevel(level)"
+            type="button"
+            [class]="levelChipClass(level)"
+          >
+            <span [class]="levelDotClass(level)"></span>
+            {{ level }}
+            <span class="font-mono text-xs opacity-70">{{ levelCounts()[level] | number }}</span>
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Histogram -->
+  <div class="card">
+    <div class="px-4 pt-3 pb-1">
+      <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+        <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-red-600/75"></span>Error</span>
+        <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-amber-600/75"></span>Warn</span>
+        <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-blue-600/65"></span>Info</span>
+        <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-gray-500/50"></span>Debug</span>
+      </div>
+    </div>
+    <div class="px-4 pb-3" style="height: 100px;">
+      <canvas #histogramChart></canvas>
+    </div>
+  </div>
+
+  <!-- Log list -->
+  <div class="card">
+    <div class="card-header flex items-center justify-between gap-4">
+      <span class="text-sm text-gray-600 dark:text-gray-400">
+        <span class="font-semibold text-gray-900 dark:text-white">{{ filteredLogs().length | number }}</span>
+        entr{{ filteredLogs().length === 1 ? 'y' : 'ies' }}
+      </span>
+      <select
+        [ngModel]="sortNewestFirst()"
+        (ngModelChange)="sortNewestFirst.set($event === 'true' || $event === true); currentPage.set(0)"
+        class="text-sm"
+        aria-label="Sort order"
+      >
+        <option [value]="true">Newest first</option>
+        <option [value]="false">Oldest first</option>
+      </select>
+    </div>
+
+    <div class="mx-4 table-container rounded-none border-0 shadow-none ring-0">
+      <table class="table" aria-label="Log entries">
+        <thead>
+          <tr>
+            <th class="w-44">Timestamp</th>
+            <th class="w-20">Level</th>
+            <th class="w-44">Pod</th>
+            <th class="w-28">Container</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (filteredLogs().length === 0) {
+            <tr>
+              <td colspan="5" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                No log entries match the current filters
+              </td>
+            </tr>
+          }
+          @for (log of pagedLogs(); track log.id) {
+            <tr
+              class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+              [class]="levelRowBorderClass(log.level)"
+              (click)="selectLog(log)"
+              tabindex="0"
+              (keydown.enter)="selectLog(log)"
+              (keydown.space)="selectLog(log)"
+            >
+              <td class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ formatTimestamp(log.timestamp) }}</td>
+              <td>
+                <span [class]="levelBadgeClass(log.level)">{{ log.level }}</span>
+              </td>
+              <td class="max-w-[180px] truncate font-mono text-xs text-gray-700 dark:text-gray-300">{{ log.pod }}</td>
+              <td class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ log.container }}</td>
+              <td class="max-w-xs truncate font-mono text-xs text-gray-700 dark:text-gray-300 lg:max-w-md xl:max-w-xl">{{ log.message }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="card-body flex items-center justify-between gap-4 text-sm">
+      <button
+        (click)="prevPage()"
+        [disabled]="currentPage() === 0"
+        type="button"
+        class="flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+      >
+        <nldd-icon name="chevron-left-small" class="h-4 w-4"></nldd-icon>
+        Prev
+      </button>
+      <span class="text-gray-500 dark:text-gray-400">
+        Page {{ currentPage() + 1 }} of {{ totalPages() }}
+      </span>
+      <button
+        (click)="nextPage()"
+        [disabled]="currentPage() >= totalPages() - 1"
+        type="button"
+        class="flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+      >
+        Next
+        <nldd-icon name="chevron-right-small" class="h-4 w-4"></nldd-icon>
+      </button>
+    </div>
+  </div>
+</div>
