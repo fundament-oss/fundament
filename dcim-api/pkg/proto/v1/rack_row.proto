@@ -1,0 +1,75 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// RackRow is a row of racks within a room (core.rack_rows).
+// position_x and position_y enable cable length estimation between racks.
+message RackRow {
+  string                    id         = 10;
+  string                    room_id    = 20;
+  string                    name       = 30;
+  double                    position_x = 40 [features.field_presence = EXPLICIT];
+  double                    position_y = 50 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp created    = 60;
+  google.protobuf.Timestamp deleted    = 70 [features.field_presence = EXPLICIT];
+}
+
+// ── RackRowService ────────────────────────────────────────────────────────────
+
+service RackRowService {
+  rpc ListRackRows (ListRackRowsRequest)  returns (ListRackRowsResponse);
+  rpc GetRackRow   (GetRackRowRequest)    returns (GetRackRowResponse);
+  rpc CreateRackRow(CreateRackRowRequest) returns (CreateRackRowResponse);
+  rpc UpdateRackRow(UpdateRackRowRequest) returns (UpdateRackRowResponse);
+  rpc DeleteRackRow(DeleteRackRowRequest) returns (DeleteRackRowResponse);
+}
+
+message ListRackRowsRequest {
+  string room_id = 10 [features.field_presence = EXPLICIT];
+}
+
+message ListRackRowsResponse {
+  repeated RackRow rack_rows = 10;
+}
+
+message GetRackRowRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetRackRowResponse {
+  RackRow rack_row = 10;
+}
+
+message CreateRackRowRequest {
+  string room_id    = 10 [(buf.validate.field).string = {uuid: true}];
+  string name       = 20 [(buf.validate.field).string.min_len = 1];
+  double position_x = 30 [features.field_presence = EXPLICIT];
+  double position_y = 40 [features.field_presence = EXPLICIT];
+}
+
+message CreateRackRowResponse {
+  string rack_row_id = 10;
+}
+
+message UpdateRackRowRequest {
+  string id         = 10 [(buf.validate.field).string = {uuid: true}];
+  string name       = 20 [features.field_presence = EXPLICIT];
+  double position_x = 30 [features.field_presence = EXPLICIT];
+  double position_y = 40 [features.field_presence = EXPLICIT];
+}
+
+message UpdateRackRowResponse {}
+
+message DeleteRackRowRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteRackRowResponse {}

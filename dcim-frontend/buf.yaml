@@ -1,0 +1,11 @@
+version: v2
+modules:
+  - path: ../dcim-api/pkg/proto
+deps:
+  - buf.build/bufbuild/protovalidate
+lint:
+  use:
+    - DEFAULT
+breaking:
+  use:
+    - FILE

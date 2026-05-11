@@ -1,0 +1,136 @@
+<div class="flex items-start">
+  <!-- U-position numbers (outside rack, left) -->
+  <div class="shrink-0 w-5 flex flex-col gap-px mr-2" style="padding-top: 37px" aria-hidden="true">
+    @for (slot of rackSlots(); track slot.u) {
+      @if (slot.isFirst) {
+        <div
+          class="text-right text-[10px] text-neutral-500 font-mono select-none flex items-start justify-end pt-1"
+          [style.height.px]="slot.device ? deviceHeight(slot.device) : 28"
+        >
+          {{ slot.u }}
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Power bars + rack frame -->
+  <div class="flex-1 flex items-stretch">
+    <!-- Left power bar -->
+    <div
+      class="w-6 shrink-0 bg-neutral-100 border border-r-0 border-neutral-200 rounded-l-xl flex items-center justify-center"
+      aria-hidden="true"
+    >
+      <span
+        class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest select-none"
+        style="writing-mode: vertical-rl; transform: rotate(180deg)"
+        >Power</span
+      >
+    </div>
+
+    <!-- Rack frame -->
+    <div
+      class="flex-1 min-w-0 overflow-hidden border border-neutral-200 bg-neutral-100"
+      role="list"
+      [attr.aria-label]="rack().name + ' rack diagram, ' + viewMode() + ' view'"
+    >
+      <!-- Top cap -->
+      <div
+        class="px-3 py-1.5 border-b border-neutral-200 flex items-center justify-between"
+        aria-hidden="true"
+      >
+        <span class="text-xs font-mono text-neutral-600">{{ rack().totalU }}U</span>
+        <span class="text-xs font-mono text-neutral-600 uppercase tracking-wider">{{
+          viewMode()
+        }}</span>
+      </div>
+
+      <!-- Slot rows -->
+      <div class="flex flex-col gap-px p-2" role="presentation">
+        @for (slot of rackSlots(); track slot.u) {
+          @if (slot.isFirst) {
+            <div role="listitem">
+              @if (slot.device) {
+                <!-- Device bar -->
+                <button
+                  class="w-full min-w-0 rounded border flex items-center gap-2 px-2 overflow-hidden cursor-pointer transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 focus:ring-offset-neutral-300"
+                  [class]="deviceButtonClasses(slot.device)"
+                  [style.height.px]="deviceHeight(slot.device)"
+                  (click)="deviceSelect.emit(slot.device.id)"
+                  [attr.aria-label]="
+                    slot.device.name +
+                    ', ' +
+                    slot.device.uSize +
+                    'U, state: ' +
+                    slot.device.state +
+                    (slot.device.ipmi ? ', power: ' + slot.device.ipmi.powerstate : '') +
+                    (isActive(slot.device) ? ' (current device)' : '')
+                  "
+                >
+                  <!-- Active indicator stripe -->
+                  @if (isActive(slot.device)) {
+                    <span
+                      class="shrink-0 w-1 self-stretch bg-yellow-300 rounded-full -ml-1 -mr-2"
+                      aria-hidden="true"
+                    ></span>
+                  }
+
+                  <!-- Primary label -->
+                  <span class="text-xs font-medium font-mono truncate flex-1 min-w-0">
+                    @if (viewMode() === 'front') {
+                      {{ slot.device.name }}
+                    } @else {
+                      {{ slot.device.ipmi?.address ?? slot.device.name }}
+                    }
+                  </span>
+
+                  <!-- U-size -->
+                  <span class="text-xs opacity-40 shrink-0 font-mono"
+                    >{{ slot.device.uSize }}U</span
+                  >
+
+                  <!-- Power badge -->
+                  @if (slot.device.ipmi) {
+                    <span
+                      class="shrink-0 w-8 text-center rounded py-0.5 text-xs font-medium font-mono"
+                      [class]="powerBadgeClass(slot.device.ipmi.powerstate)"
+                      aria-hidden="true"
+                    >
+                      {{ slot.device.ipmi.powerstate }}
+                    </span>
+                  }
+                </button>
+              } @else {
+                <!-- Empty slot -->
+                <div
+                  class="w-full h-7 rounded border border-dashed border-neutral-200 bg-neutral-200/60 flex items-center px-2"
+                  [attr.aria-label]="'Empty U' + slot.u"
+                >
+                  <span class="text-xs text-neutral-400 font-mono select-none" aria-hidden="true"
+                    >—</span
+                  >
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Bottom cap -->
+      <div class="px-3 py-1.5 border-t border-neutral-200" aria-hidden="true">
+        <span class="text-xs font-mono text-neutral-600">{{ rack().name }}</span>
+      </div>
+    </div>
+
+    <!-- Right power bar -->
+    <div
+      class="w-6 shrink-0 bg-neutral-100 border border-l-0 border-neutral-200 rounded-r-xl flex items-center justify-center"
+      aria-hidden="true"
+    >
+      <span
+        class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest select-none"
+        style="writing-mode: vertical-rl"
+        >Power</span
+      >
+    </div>
+  </div>
+</div>

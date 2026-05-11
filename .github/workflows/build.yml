@@ -96,6 +96,12 @@ jobs:
           - image-name: docs-frontend
             dockerfile: docs-frontend/Dockerfile
             context: "."
+          - image-name: dcim-api
+            dockerfile: dcim-api/Dockerfile
+            context: "."
+          - image-name: dcim-frontend
+            dockerfile: dcim-frontend/Dockerfile
+            context: "."
     permissions:
       contents: read
       packages: write
@@ -198,6 +204,8 @@ jobs:
             | Organization API | https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Kube API Proxy | https://k8s-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Docs | https://docs.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | DCIM | https://dcim.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | DCIM API | https://dcim-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Commit:** `${{ env.IMAGE_TAG }}`
             **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`

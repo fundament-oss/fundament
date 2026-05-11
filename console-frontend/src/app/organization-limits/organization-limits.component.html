@@ -17,16 +17,17 @@
         <div class="space-y-5">
           <!-- Max nodes per cluster -->
           <nldd-form-field label="Max nodes per cluster">
-            <nldd-text-field
+            <nldd-number-field
               id="maxNodesPerCluster"
-              type="number"
+              full-width="true"
               min="1"
               step="1"
-              placeholder="50"
               [value]="maxNodesPerCluster()"
-              (input)="maxNodesPerCluster.set(toInt($any($event.target).value))"
+              (input)="
+                $any($event).detail && maxNodesPerCluster.set(toInt($any($event).detail.value))
+              "
               [disabled]="clusterSaving()"
-            ></nldd-text-field>
+            ></nldd-number-field>
             <nldd-form-field-help-text>
               Maximum total number of nodes across all node pools in a shoot cluster.
             </nldd-form-field-help-text>
@@ -34,16 +35,15 @@
 
           <!-- Max node pools -->
           <nldd-form-field label="Max node pools per cluster">
-            <nldd-text-field
+            <nldd-number-field
               id="maxNodePools"
-              type="number"
+              full-width="true"
               min="1"
               step="1"
-              placeholder="10"
               [value]="maxNodePools()"
-              (input)="maxNodePools.set(toInt($any($event.target).value))"
+              (input)="$any($event).detail && maxNodePools.set(toInt($any($event).detail.value))"
               [disabled]="clusterSaving()"
-            ></nldd-text-field>
+            ></nldd-number-field>
             <nldd-form-field-help-text>
               Maximum number of node pools that can be configured per shoot cluster.
             </nldd-form-field-help-text>
@@ -51,16 +51,17 @@
 
           <!-- Max nodes per node pool -->
           <nldd-form-field label="Max nodes per node pool">
-            <nldd-text-field
+            <nldd-number-field
               id="maxNodesPerNodePool"
-              type="number"
+              full-width="true"
               min="1"
               step="1"
-              placeholder="20"
               [value]="maxNodesPerNodePool()"
-              (input)="maxNodesPerNodePool.set(toInt($any($event.target).value))"
+              (input)="
+                $any($event).detail && maxNodesPerNodePool.set(toInt($any($event).detail.value))
+              "
               [disabled]="clusterSaving()"
-            ></nldd-text-field>
+            ></nldd-number-field>
             <nldd-form-field-help-text>
               Maximum number of nodes allowed in a single node pool (applies to autoscaler max).
             </nldd-form-field-help-text>
@@ -95,16 +96,19 @@
           <!-- Default memory request -->
           <nldd-form-field label="Default memory request">
             <div class="flex items-center gap-2">
-              <nldd-text-field
+              <nldd-number-field
                 id="defaultMemoryRequest"
-                type="number"
+                full-width="true"
                 min="1"
                 step="1"
-                placeholder="128"
+                [attr.max]="defaultMemoryLimitMi() ?? null"
                 [value]="defaultMemoryRequestMi()"
-                (input)="defaultMemoryRequestMi.set(toInt($any($event.target).value))"
+                (input)="
+                  $any($event).detail &&
+                    defaultMemoryRequestMi.set(toInt($any($event).detail.value))
+                "
                 [disabled]="namespaceSaving()"
-              ></nldd-text-field>
+              ></nldd-number-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">MiB</span>
             </div>
           </nldd-form-field>
@@ -112,16 +116,17 @@
           <!-- Default memory limit -->
           <nldd-form-field label="Default memory limit">
             <div class="flex items-center gap-2">
-              <nldd-text-field
+              <nldd-number-field
                 id="defaultMemoryLimit"
-                type="number"
-                min="1"
+                full-width="true"
+                [min]="defaultMemoryRequestMi() ?? 1"
                 step="1"
-                placeholder="256"
                 [value]="defaultMemoryLimitMi()"
-                (input)="defaultMemoryLimitMi.set(toInt($any($event.target).value))"
+                (input)="
+                  $any($event).detail && defaultMemoryLimitMi.set(toInt($any($event).detail.value))
+                "
                 [disabled]="namespaceSaving()"
-              ></nldd-text-field>
+              ></nldd-number-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">MiB</span>
             </div>
           </nldd-form-field>
@@ -129,16 +134,18 @@
           <!-- Default CPU request -->
           <nldd-form-field label="Default CPU request">
             <div class="flex items-center gap-2">
-              <nldd-text-field
+              <nldd-number-field
                 id="defaultCpuRequest"
-                type="number"
+                full-width="true"
                 min="1"
                 step="1"
-                placeholder="100"
+                [attr.max]="defaultCpuLimitM() ?? null"
                 [value]="defaultCpuRequestM()"
-                (input)="defaultCpuRequestM.set(toInt($any($event.target).value))"
+                (input)="
+                  $any($event).detail && defaultCpuRequestM.set(toInt($any($event).detail.value))
+                "
                 [disabled]="namespaceSaving()"
-              ></nldd-text-field>
+              ></nldd-number-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
             </div>
           </nldd-form-field>
@@ -146,16 +153,17 @@
           <!-- Default CPU limit -->
           <nldd-form-field label="Default CPU limit">
             <div class="flex items-center gap-2">
-              <nldd-text-field
+              <nldd-number-field
                 id="defaultCpuLimit"
-                type="number"
-                min="1"
+                full-width="true"
+                [min]="defaultCpuRequestM() ?? 1"
                 step="1"
-                placeholder="500"
                 [value]="defaultCpuLimitM()"
-                (input)="defaultCpuLimitM.set(toInt($any($event.target).value))"
+                (input)="
+                  $any($event).detail && defaultCpuLimitM.set(toInt($any($event).detail.value))
+                "
                 [disabled]="namespaceSaving()"
-              ></nldd-text-field>
+              ></nldd-number-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
             </div>
           </nldd-form-field>

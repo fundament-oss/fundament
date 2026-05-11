@@ -37,7 +37,7 @@ setup-certs:
     set -e
     which mkcert > /dev/null 2>&1 || { echo "mkcert not installed. Run: mise install"; exit 1; }
     which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/development-setup.md for installation instructions."; exit 1; }
-    mkcert -install
+    TRUST_STORES=system,nss mkcert -install
     echo "Waiting for cert-manager to become available..."
     deadline=$(( $(date +%s) + 120 ))
     until kubectl get ns cert-manager > /dev/null 2>&1; do
@@ -113,6 +113,7 @@ generate:
     cd console-frontend && buf generate
     cd console-frontend && openapi-ts
     cd e2e && buf generate
+    cd dcim-frontend && buf generate
     just fmt
 
 # Lint all Go code

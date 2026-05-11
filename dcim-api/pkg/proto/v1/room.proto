@@ -1,0 +1,71 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// Room is a hall or room within a site (core.rooms).
+message Room {
+  string                    id      = 10;
+  string                    site_id = 20;
+  string                    name    = 30;
+  string                    floor   = 40;
+  google.protobuf.Timestamp created = 50;
+  google.protobuf.Timestamp deleted = 60 [features.field_presence = EXPLICIT];
+}
+
+// ── RoomService ───────────────────────────────────────────────────────────────
+
+service RoomService {
+  rpc ListRooms (ListRoomsRequest)  returns (ListRoomsResponse);
+  rpc GetRoom   (GetRoomRequest)    returns (GetRoomResponse);
+  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
+  rpc UpdateRoom(UpdateRoomRequest) returns (UpdateRoomResponse);
+  rpc DeleteRoom(DeleteRoomRequest) returns (DeleteRoomResponse);
+}
+
+message ListRoomsRequest {
+  string site_id = 10 [features.field_presence = EXPLICIT];
+}
+
+message ListRoomsResponse {
+  repeated Room rooms = 10;
+}
+
+message GetRoomRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetRoomResponse {
+  Room room = 10;
+}
+
+message CreateRoomRequest {
+  string site_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string name    = 20 [(buf.validate.field).string.min_len = 1];
+  string floor   = 30;
+}
+
+message CreateRoomResponse {
+  string room_id = 10;
+}
+
+message UpdateRoomRequest {
+  string id    = 10 [(buf.validate.field).string = {uuid: true}];
+  string name  = 20 [features.field_presence = EXPLICIT];
+  string floor = 30 [features.field_presence = EXPLICIT];
+}
+
+message UpdateRoomResponse {}
+
+message DeleteRoomRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteRoomResponse {}

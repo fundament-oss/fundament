@@ -1,0 +1,14 @@
+# Compiled output
+/dist
+
+# Node
+/node_modules
+
+# IDEs and editors
+.vscode/*
+
+# Miscellaneous
+/.angular/cache
+
+# System files
+.DS_Store

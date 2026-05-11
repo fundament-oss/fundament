@@ -52,6 +52,10 @@ spec:
         bypassrls: true
         passwordSecret:
           name: db-fun-authz-worker
+      - name: fun_dcim_api
+        login: true
+        passwordSecret:
+          name: db-fun-dcim-api
 {{- if $.Values.openfga.enabled }}
       - name: fun_openfga
         login: true

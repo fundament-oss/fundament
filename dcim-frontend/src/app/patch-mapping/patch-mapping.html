@@ -1,0 +1,107 @@
+<!-- ══════════════════════════════════════════════════════════════
+     PAGE HEADER
+     ══════════════════════════════════════════════════════════════ -->
+<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
+  <div class="flex-1 min-w-0">
+    <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0">Patch mapping</h1>
+  </div>
+
+  <!-- View toggle -->
+  <nldd-segmented-control
+    [value]="activeView()"
+    size="sm"
+    type="radio"
+    variant="text"
+    (change)="activeView.set($any($event).detail.value)"
+  >
+    <nldd-segmented-control-item value="list" text="Cables"></nldd-segmented-control-item>
+    <nldd-segmented-control-item value="topology" text="Topology"></nldd-segmented-control-item>
+  </nldd-segmented-control>
+
+  <nldd-button
+    variant="secondary"
+    text="Download CSV"
+    start-icon="arrow-down-in-bucket"
+    size="sm"
+    (click)="exportCsv()"
+    aria-label="Export cables as CSV"
+  ></nldd-button>
+  <nldd-button
+    variant="accent-filled"
+    text="Add cable"
+    start-icon="plus-small"
+    size="sm"
+    (click)="openAddCable()"
+    aria-label="Add a new cable"
+  ></nldd-button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MAIN CONTENT (list or topology)
+     ══════════════════════════════════════════════════════════════ -->
+<div [class]="activeView() === 'topology' ? 'flex-1 min-h-0 flex flex-col' : 'flex flex-col'">
+  @if (activeView() === 'list') {
+    <app-cable-list
+      class="flex flex-col"
+      [cables]="dcCables()"
+      [dcId]="selectedDcId()"
+      (editCable)="openEditCable($event)"
+      (deleteCable)="openDeleteCable($event)"
+      (dcSelected)="selectedDcId.set($event)"
+    />
+  } @else {
+    <app-patch-mapping-flow
+      class="block w-full h-full"
+      [cables]="dcCables()"
+      [devicePorts]="DEVICE_PORTS"
+      [selectedCableId]="editCable()?.id ?? null"
+      (cableSelected)="openEditCableById($event)"
+      (deviceNavigate)="navigateToDevice($event)"
+    />
+  }
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ADD / EDIT CABLE SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #cableSheet accessible-label="Cable details" placement="right" width="480px">
+  <app-cable-form
+    [cable]="editCable()"
+    [dcId]="selectedDcId()"
+    (save)="saveFromForm($event)"
+    (cancelForm)="closeForm()"
+    (cableDelete)="openDeleteCable($event)"
+  />
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DELETE CABLE MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #deleteModal
+  (close)="cancelDelete()"
+  [attr.text]="
+    'Delete cable ' +
+    (deleteCable()?.label
+      ? '&quot;' + deleteCable()!.label + '&quot;'
+      : (deleteCable()?.aSide?.deviceName ?? '') +
+        ' → ' +
+        (deleteCable()?.bSide?.deviceName ?? '')) +
+    '?'
+  "
+  supporting-text="This action cannot be undone."
+  accessible-label="Confirm cable deletion"
+>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelDelete()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    (click)="confirmDelete()"
+  ></nldd-button>
+</nldd-modal-dialog>

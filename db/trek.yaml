@@ -8,6 +8,7 @@ roles:
   - name: fun_owner
   - name: fun_authz
   - name: fun_authz_worker
+  - name: fun_dcim_api
 outputs:
   - sql
 templates:

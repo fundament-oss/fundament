@@ -22,6 +22,14 @@ docsFrontend:
   enabled: true
   replicas: 2
 
+dcimApi:
+  enabled: true
+  replicas: 2
+
+dcimFrontend:
+  enabled: true
+  replicas: 2
+
 dex:
   enabled: true
   issuer: https://dex.sandbox.example.com

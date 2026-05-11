@@ -1,0 +1,302 @@
+<!-- ══════════════════════════════════════════════════════════════
+     BODY (sidebar + main)
+     ══════════════════════════════════════════════════════════════ -->
+<div class="flex">
+  <!-- ── LEFT SIDEBAR ─────────────────────────────────────────── -->
+  <aside
+    class="w-60 shrink-0 border-r border-slate-200 bg-white flex-col hidden sm:flex"
+    aria-label="Filters"
+  >
+    <!-- Search -->
+    <div class="px-4 py-3 border-b border-slate-100">
+      <nldd-search-field
+        accessible-label="Search cables"
+        placeholder="Search cables…"
+        start-icon="magnifier"
+        [value]="searchText()"
+        (input)="searchText.set($any($event.target).value)"
+        class="block w-full"
+        size="sm"
+      ></nldd-search-field>
+    </div>
+
+    <!-- Datacenter -->
+    <div class="px-4 py-3 border-b border-slate-100">
+      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        Datacenter
+      </p>
+      <nav aria-label="Datacenter selection">
+        @for (dc of DATACENTER_INFO; track dc.id) {
+          <button
+            (click)="dcSelected.emit(dc.id)"
+            class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+            [class]="
+              dcId() === dc.id
+                ? 'bg-accent-50 text-accent-700 font-medium'
+                : 'text-slate-600 hover:bg-slate-50'
+            "
+            [attr.aria-pressed]="dcId() === dc.id"
+          >
+            <span
+              class="h-2 w-2 rounded-full shrink-0"
+              [class]="dcStatusDotClass(dc.status)"
+              aria-hidden="true"
+            ></span>
+            <span class="flex-1 text-left">{{ dc.name }}</span>
+          </button>
+        }
+      </nav>
+    </div>
+
+    <!-- Status -->
+    <div class="px-4 py-3 border-b border-slate-100">
+      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</p>
+
+      <button
+        (click)="filterStatus.set('')"
+        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+        [class]="
+          filterStatus() === ''
+            ? 'bg-accent-50 text-accent-700 font-medium'
+            : 'text-slate-600 hover:bg-slate-50'
+        "
+      >
+        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
+        <span class="flex-1 text-left">All statuses</span>
+        <span class="text-xs text-slate-400">{{ statusCounts()['all'] }}</span>
+      </button>
+
+      @for (s of CABLE_STATUSES; track s.value) {
+        <button
+          (click)="filterStatus.set(s.value)"
+          class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+          [class]="
+            filterStatus() === s.value
+              ? 'bg-accent-50 text-accent-700 font-medium'
+              : 'text-slate-600 hover:bg-slate-50'
+          "
+        >
+          <span
+            class="h-2 w-2 rounded-full shrink-0"
+            [class]="statusDotClass(s.value)"
+            aria-hidden="true"
+          ></span>
+          <span class="flex-1 text-left">{{ s.label }}</span>
+          @if (statusCounts()[s.value]) {
+            <span class="text-xs text-slate-400">{{ statusCounts()[s.value] }}</span>
+          }
+        </button>
+      }
+    </div>
+
+    <!-- Type -->
+    <div class="px-4 py-3 border-b border-slate-100">
+      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Type</p>
+
+      <button
+        (click)="filterType.set('')"
+        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+        [class]="
+          filterType() === ''
+            ? 'bg-accent-50 text-accent-700 font-medium'
+            : 'text-slate-600 hover:bg-slate-50'
+        "
+      >
+        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
+        <span class="flex-1 text-left">All types</span>
+        <span class="text-xs text-slate-400">{{ statusCounts()['all'] }}</span>
+      </button>
+
+      @for (t of CABLE_TYPES; track t) {
+        @if (typeCounts()[t]) {
+          <button
+            (click)="filterType.set(t)"
+            class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+            [class]="
+              filterType() === t
+                ? 'bg-accent-50 text-accent-700 font-medium'
+                : 'text-slate-600 hover:bg-slate-50'
+            "
+          >
+            <span class="flex-1 text-left">{{ t }}</span>
+            <span class="text-xs text-slate-400">{{ typeCounts()[t] }}</span>
+          </button>
+        }
+      }
+    </div>
+
+    <!-- Device -->
+    <div class="px-4 py-3">
+      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Device</p>
+
+      <button
+        (click)="filterDeviceId.set('')"
+        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+        [class]="
+          filterDeviceId() === ''
+            ? 'bg-accent-50 text-accent-700 font-medium'
+            : 'text-slate-600 hover:bg-slate-50'
+        "
+      >
+        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
+        <span class="flex-1 text-left">All devices</span>
+        <span class="text-xs text-slate-400">{{ statusCounts()['all'] }}</span>
+      </button>
+
+      @for (dev of dcDevices(); track dev.id) {
+        <button
+          (click)="filterDeviceId.set(dev.id)"
+          class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+          [class]="
+            filterDeviceId() === dev.id
+              ? 'bg-accent-50 text-accent-700 font-medium'
+              : 'text-slate-600 hover:bg-slate-50'
+          "
+        >
+          <nldd-icon name="cylinder-split" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
+          <span class="flex-1 text-left text-sm truncate">{{ dev.name }}</span>
+        </button>
+      }
+    </div>
+  </aside>
+
+  <!-- ── MAIN ───────────────────────────────────────────────────── -->
+  <main class="flex-1 min-w-0" aria-label="Cable list">
+    <div class="px-6 pb-6">
+      <div role="table" aria-label="Cable list">
+        <!-- Column headers -->
+        <div role="row" class="flex items-center gap-3 border-b border-slate-100 py-2.5">
+          <div
+            class="flex-1 min-w-0 grid grid-cols-[120px_1fr_1fr_110px_80px_56px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 uppercase tracking-wide"
+          >
+            <span role="columnheader">Label</span>
+            <span role="columnheader">A side</span>
+            <span role="columnheader">B side</span>
+            <span role="columnheader">Status</span>
+            <span role="columnheader">Type</span>
+            <span role="columnheader"></span>
+          </div>
+        </div>
+
+        <!-- Cable rows -->
+        @for (cable of filteredCables(); track cable.id) {
+          <div
+            role="row"
+            class="flex items-center gap-3 border-b border-slate-100 py-2.5 hover:bg-slate-50 transition-colors group cursor-pointer"
+            (click)="editCable.emit(cable)"
+            (keydown.enter)="editCable.emit(cable)"
+            tabindex="0"
+          >
+            <div
+              class="flex-1 min-w-0 grid grid-cols-[120px_1fr_1fr_110px_80px_56px] gap-3 lg:gap-4 items-center"
+              role="presentation"
+            >
+              <!-- Label -->
+              <div role="cell" class="min-w-0">
+                <p class="truncate text-sm font-medium text-slate-800">
+                  {{ cable.label ?? '—' }}
+                </p>
+                @if (cable.color) {
+                  <span
+                    class="inline-block w-3 h-3 rounded-full align-middle mt-0.5"
+                    [style.background]="CABLE_COLOR_HEX[cable.color]"
+                    [attr.aria-label]="'Color: ' + cable.color"
+                  ></span>
+                }
+              </div>
+
+              <!-- A side -->
+              <div role="cell" class="min-w-0">
+                <p class="truncate text-sm font-medium text-slate-900">
+                  {{ cable.aSide.deviceName }}
+                </p>
+                <p class="text-xs text-slate-400 font-mono">
+                  {{ cable.aSide.portName }}
+                  <span class="text-slate-300 mx-0.5" aria-hidden="true">·</span>
+                  {{ PORT_TYPE_LABEL[cable.aSide.portType] }}
+                </p>
+              </div>
+
+              <!-- B side -->
+              <div role="cell" class="min-w-0">
+                <p class="truncate text-sm font-medium text-slate-900">
+                  {{ cable.bSide.deviceName }}
+                </p>
+                <p class="text-xs text-slate-400">
+                  {{ cable.bSide.portName }}
+                  <span class="text-slate-300 mx-0.5" aria-hidden="true">·</span>
+                  {{ PORT_TYPE_LABEL[cable.bSide.portType] }}
+                </p>
+              </div>
+
+              <!-- Status -->
+              <div role="cell">
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  [class]="CABLE_STATUS_COLORS[cable.status]"
+                >
+                  <span
+                    class="h-1.5 w-1.5 rounded-full"
+                    [class]="statusDotClass(cable.status)"
+                    aria-hidden="true"
+                  ></span>
+                  {{ CABLE_STATUS_LABEL[cable.status] }}
+                </span>
+              </div>
+
+              <!-- Type -->
+              <div role="cell">
+                <span class="text-sm text-slate-600">{{ cable.type }}</span>
+              </div>
+
+              <!-- Row actions -->
+              <div
+                role="cell"
+                class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                (click)="$event.stopPropagation()"
+                (keydown)="$event.stopPropagation()"
+              >
+                <nldd-icon-button
+                  icon="pencil-on-square"
+                  variant="neutral-transparent"
+                  size="xs"
+                  text="Edit cable"
+                  (click)="editCable.emit(cable)"
+                ></nldd-icon-button>
+                <nldd-icon-button
+                  icon="trash"
+                  variant="neutral-transparent"
+                  size="xs"
+                  text="Delete cable"
+                  (click)="deleteCable.emit(cable)"
+                ></nldd-icon-button>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Empty state -->
+        @if (filteredCables().length === 0) {
+          <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400 mb-3"
+            >
+              <nldd-icon name="rectangle-stack" class="w-6 h-6" aria-hidden="true"></nldd-icon>
+            </div>
+            <p class="text-sm font-medium text-slate-600">No cables found</p>
+            <p class="mt-1 text-xs text-slate-400">Try adjusting your search or filters.</p>
+          </div>
+        }
+
+        <!-- Result count -->
+        @if (filteredCables().length > 0) {
+          <div class="pt-4 pb-2">
+            <p class="text-xs text-slate-400">
+              {{ filteredCables().length }} of {{ cables().length }} cables
+            </p>
+          </div>
+        }
+      </div>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,822 @@
+<!-- ══════════════════════════════════════════════════════════════
+     PAGE HEADER (subbar)
+     ══════════════════════════════════════════════════════════════ -->
+<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
+  <div class="flex-1 min-w-0">
+    <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0">Tasks</h1>
+  </div>
+  <div class="flex items-center gap-4 shrink-0">
+    <!-- View toggle -->
+    <nldd-segmented-control
+      value="list"
+      size="sm"
+      type="radio"
+      variant="icon"
+      (change)="setView($any($event).detail.value)"
+    >
+      <nldd-segmented-control-item
+        value="list"
+        icon="list"
+        text="List view"
+      ></nldd-segmented-control-item>
+      <nldd-segmented-control-item
+        value="kanban"
+        icon="rectangle-stack"
+        text="Kanban view"
+      ></nldd-segmented-control-item>
+    </nldd-segmented-control>
+    <nldd-button
+      variant="accent-filled"
+      text="New task"
+      start-icon="plus-small"
+      size="sm"
+      (click)="openEditModal(null)"
+    ></nldd-button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TOOLBAR
+     ══════════════════════════════════════════════════════════════ -->
+<div
+  class="shrink-0 border-b border-slate-200 bg-white px-6 py-2.5"
+  [class.hidden]="selectedTasks().size === 0"
+>
+  <div class="flex items-center gap-2.5">
+    <!-- Bulk actions -->
+    <span class="text-xs font-medium text-slate-600">{{ selectedTasks().size }} selected</span>
+    <nldd-button
+      variant="neutral-transparent"
+      text="Status"
+      start-icon="pencil"
+      size="sm"
+    ></nldd-button>
+    <nldd-button
+      variant="neutral-transparent"
+      text="Assign"
+      start-icon="person"
+      size="sm"
+    ></nldd-button>
+    <nldd-button
+      variant="neutral-transparent"
+      start-icon="trash"
+      size="sm"
+      accessible-label="Delete selected"
+      class="text-danger-700"
+    ></nldd-button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     BODY (sidebar + main)
+     ══════════════════════════════════════════════════════════════ -->
+<div class="flex flex-1 min-h-0">
+  <!-- ── LEFT SIDEBAR: Filters ──────────────────────────────────── -->
+  <aside
+    class="w-60 shrink-0 border-r border-slate-200 bg-white flex flex-col overflow-y-auto"
+    aria-label="Task filters"
+  >
+    <div class="px-4 py-3 flex flex-col gap-5">
+      <!-- Search -->
+      <nldd-search-field
+        placeholder="Search tasks…"
+        accessible-label="Search tasks"
+        size="sm"
+        class="w-full"
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value)"
+      ></nldd-search-field>
+
+      <!-- Status -->
+      <div>
+        <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+          Status
+        </p>
+        <button
+          (click)="statusFilter.set('all')"
+          class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+          [class]="
+            statusFilter() === 'all'
+              ? 'bg-accent-50 text-accent-700 font-medium'
+              : 'text-slate-600 hover:bg-slate-50'
+          "
+        >
+          <span class="flex-1 text-left">All</span>
+          <span class="text-xs text-slate-400">{{ tasks().length }}</span>
+        </button>
+        @for (status of kanbanColumns; track status) {
+          <button
+            (click)="statusFilter.set(status)"
+            class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+            [class]="
+              statusFilter() === status
+                ? 'bg-accent-50 text-accent-700 font-medium'
+                : 'text-slate-600 hover:bg-slate-50'
+            "
+          >
+            <span
+              class="h-2 w-2 rounded-full shrink-0"
+              [class]="statusStyles[status].dot"
+              aria-hidden="true"
+            ></span>
+            <span class="flex-1 text-left">{{ status }}</span>
+            @if (statusCounts()[status]) {
+              <span class="text-xs text-slate-400">{{ statusCounts()[status] }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      <!-- Priority -->
+      <div>
+        <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+          Priority
+        </p>
+        <button
+          (click)="priorityFilter.set('all')"
+          class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+          [class]="
+            priorityFilter() === 'all'
+              ? 'bg-accent-50 text-accent-700 font-medium'
+              : 'text-slate-600 hover:bg-slate-50'
+          "
+        >
+          <span class="flex-1 text-left">All</span>
+        </button>
+        @for (priority of priorities; track priority) {
+          <button
+            (click)="priorityFilter.set(priority)"
+            class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+            [class]="
+              priorityFilter() === priority
+                ? 'bg-accent-50 text-accent-700 font-medium'
+                : 'text-slate-600 hover:bg-slate-50'
+            "
+          >
+            <span
+              class="h-2 w-2 rounded-full shrink-0"
+              [class]="priorityStyles[priority].dot"
+              aria-hidden="true"
+            ></span>
+            <span class="flex-1 text-left">{{ priority }}</span>
+            @if (priorityCounts()[priority]) {
+              <span class="text-xs text-slate-400">{{ priorityCounts()[priority] }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      <!-- Category -->
+      <div>
+        <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+          Category
+        </p>
+        <button
+          (click)="categoryFilter.set('all')"
+          class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+          [class]="
+            categoryFilter() === 'all'
+              ? 'bg-accent-50 text-accent-700 font-medium'
+              : 'text-slate-600 hover:bg-slate-50'
+          "
+        >
+          <span class="flex-1 text-left">All</span>
+        </button>
+        @for (cat of taskCategories; track cat) {
+          <button
+            (click)="categoryFilter.set(cat)"
+            class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+            [class]="
+              categoryFilter() === cat
+                ? 'bg-accent-50 text-accent-700 font-medium'
+                : 'text-slate-600 hover:bg-slate-50'
+            "
+          >
+            <nldd-icon
+              [name]="categoryIcon(cat)"
+              class="w-4 h-4 shrink-0 text-slate-400"
+              aria-hidden="true"
+            ></nldd-icon>
+            <span class="flex-1 text-left">{{ cat }}</span>
+            @if (categoryCounts()[cat]) {
+              <span class="text-xs text-slate-400">{{ categoryCounts()[cat] }}</span>
+            }
+          </button>
+        }
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ───────────────────────────────────────────────────── -->
+  <main class="flex-1 min-w-0 overflow-y-auto px-6 pb-6">
+    <!-- ── LIST VIEW ── -->
+    <div [class.hidden]="currentView() === 'kanban'">
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="border-b border-slate-100">
+            <th class="w-10 px-3 py-2.5 text-left">
+              <nldd-checkbox
+                accessible-label="Select all tasks"
+                (change)="toggleSelectAll($any($event).detail.checked)"
+              ></nldd-checkbox>
+            </th>
+            <th
+              class="w-20 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+            >
+              ID
+            </th>
+            <th
+              class="py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+            >
+              Task
+            </th>
+            <th
+              class="w-32 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+            >
+              Status
+            </th>
+            <th
+              class="w-24 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+            >
+              Priority
+            </th>
+            <th
+              class="w-28 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+            >
+              Category
+            </th>
+            <th
+              class="w-12 py-2.5 px-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wide"
+            >
+              Who
+            </th>
+            <th
+              class="w-28 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+            >
+              Due
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (task of filteredTasks(); track task.id) {
+            <tr
+              class="border-b border-slate-100 transition-colors hover:bg-slate-50 cursor-pointer"
+              [class.bg-indigo-50]="isSelected(task.id)"
+              (click)="openDetail(task.id)"
+            >
+              <td class="w-10 px-3 py-3">
+                <nldd-checkbox
+                  [attr.accessible-label]="'Select task ' + taskDisplayId(task)"
+                  [attr.checked]="isSelected(task.id) ? '' : null"
+                  (click)="$event.stopPropagation()"
+                  (change)="toggleSelection(task.id, $any($event).detail.checked)"
+                ></nldd-checkbox>
+              </td>
+              <td class="w-20 px-2 py-3">
+                <span class="font-mono text-xs text-slate-400">{{ taskDisplayId(task) }}</span>
+              </td>
+              <td class="min-w-0 px-2 py-3">
+                <p class="text-sm font-medium text-slate-900 leading-snug truncate max-w-xs">
+                  {{ task.title }}
+                </p>
+                <p class="mt-0.5 text-xs text-slate-400 truncate flex items-center gap-1">
+                  <nldd-icon
+                    name="apartment-building"
+                    style="width: 11px; height: 11px; display: inline-block; vertical-align: middle"
+                    aria-hidden="true"
+                  ></nldd-icon
+                  >{{ task.location }}
+                </p>
+              </td>
+              <td class="w-32 px-2 py-3">
+                <span [class]="statusBadgeClass(task.status)">
+                  <span [class]="statusDotClass(task.status)" aria-hidden="true"></span
+                  >{{ task.status }}
+                </span>
+              </td>
+              <td class="w-24 px-2 py-3">
+                <span [class]="priorityTextClass(task.priority)">
+                  <span [class]="priorityDotClass(task.priority)" aria-hidden="true"></span
+                  >{{ task.priority }}
+                </span>
+              </td>
+              <td class="w-28 px-2 py-3">
+                <span class="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                  <nldd-icon
+                    [attr.name]="categoryIcon(task.category)"
+                    style="
+                      width: 14px;
+                      height: 14px;
+                      color: #94a3b8;
+                      display: inline-block;
+                      vertical-align: middle;
+                    "
+                    aria-hidden="true"
+                  ></nldd-icon
+                  >{{ task.category }}
+                </span>
+              </td>
+              <td class="w-12 px-2 py-3 text-center">
+                @if (getTech(task.assignee); as tech) {
+                  <span [class]="techInitialsClass(tech)" [title]="tech.name" aria-hidden="true">{{
+                    tech.initials
+                  }}</span>
+                } @else {
+                  <span [class]="unassignedAvatarClass()" aria-hidden="true">
+                    <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
+                  </span>
+                }
+              </td>
+              <td class="w-28 px-2 py-3 text-xs text-slate-500">
+                @if (task.due) {
+                  {{ formatDate(task.due) }}
+                } @else {
+                  <span class="text-slate-300">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="py-3 text-xs text-slate-400">
+        {{ filteredTasks().length }} task{{ filteredTasks().length !== 1 ? 's' : '' }}
+      </div>
+    </div>
+
+    <!-- ── KANBAN VIEW ── -->
+    <div class="pt-5" [class.hidden]="currentView() === 'list'">
+      <div class="flex gap-3 overflow-x-auto pb-6 snap-x snap-mandatory sm:snap-none">
+        @for (col of kanbanColumns; track col) {
+          <div class="shrink-0 w-72 snap-center">
+            <div class="mb-3 flex items-center gap-2">
+              <span
+                class="h-2 w-2 rounded-full"
+                [class]="statusStyles[col].dot"
+                aria-hidden="true"
+              ></span>
+              <h3 class="text-sm font-semibold text-slate-700">{{ col }}</h3>
+              <span
+                class="ml-auto inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+                >{{ tasksForColumn(col).length }}</span
+              >
+            </div>
+            <div class="space-y-2">
+              @for (task of tasksForColumn(col); track task.id) {
+                <div
+                  [class]="kanbanCardClass(task.status)"
+                  tabindex="0"
+                  (click)="openDetail(task.id)"
+                  (keydown.enter)="openDetail(task.id)"
+                  (keydown.space)="openDetail(task.id)"
+                >
+                  <h4 class="text-sm font-medium text-slate-900 leading-snug">{{ task.title }}</h4>
+                  <div class="mt-2 flex items-center gap-1.5">
+                    <span [class]="priorityBadgeClass(task.priority)">
+                      <span [class]="priorityDotClass(task.priority)" aria-hidden="true"></span
+                      >{{ task.priority }}
+                    </span>
+                    <span class="inline-flex items-center gap-1 text-xs text-slate-400">
+                      <nldd-icon
+                        [attr.name]="categoryIcon(task.category)"
+                        style="width: 13px; height: 13px"
+                        aria-hidden="true"
+                      ></nldd-icon
+                      >{{ task.category }}
+                    </span>
+                  </div>
+                  <div class="mt-3 flex items-center justify-between">
+                    <span
+                      class="inline-flex items-center gap-1 text-xs text-slate-400 truncate max-w-[60%]"
+                    >
+                      <nldd-icon
+                        name="apartment-building"
+                        style="width: 11px; height: 11px"
+                        aria-hidden="true"
+                      ></nldd-icon
+                      >{{ task.location.split('·')[1]?.trim() ?? task.location }}
+                    </span>
+                    <div class="flex items-center gap-2">
+                      @if (task.due) {
+                        <span class="text-xs text-slate-400">{{ shortDate(task.due) }}</span>
+                      }
+                      @if (getTech(task.assignee); as tech) {
+                        <span
+                          [class]="techInitialsClass(tech, 'h-6 w-6 text-[10px]')"
+                          [title]="tech.name"
+                          aria-hidden="true"
+                          >{{ tech.initials }}</span
+                        >
+                      } @else {
+                        <span
+                          [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')"
+                          aria-hidden="true"
+                        >
+                          <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
+                        </span>
+                      }
+                    </div>
+                  </div>
+                  @if (task.notes.length) {
+                    <div
+                      class="mt-2.5 flex items-center gap-1 text-xs text-slate-400 border-t border-slate-100 pt-2.5"
+                    >
+                      <nldd-icon
+                        name="envelope"
+                        style="width: 13px; height: 13px"
+                        aria-hidden="true"
+                      ></nldd-icon
+                      >{{ task.notes.length }} note{{ task.notes.length !== 1 ? 's' : '' }}
+                    </div>
+                  }
+                </div>
+              }
+              @if (tasksForColumn(col).length === 0) {
+                <div
+                  class="rounded-xl border-2 border-dashed border-slate-200 p-6 text-center text-xs text-slate-400"
+                >
+                  No tasks
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TASK DETAIL SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #detailSheetEl accessible-label="Task details" placement="right" width="520px">
+  <div class="flex flex-col h-full">
+    <!-- Sheet header -->
+    <div class="flex items-start justify-between border-b border-slate-100 px-6 pt-6 pb-5 shrink-0">
+      <div class="flex-1 min-w-0 pr-4">
+        <h2 class="text-base font-semibold text-slate-900 leading-snug" aria-label="Task title">
+          {{ detailTask()?.title }}
+        </h2>
+        <div class="mt-2.5 flex flex-wrap items-center gap-2">
+          @if (detailTask(); as task) {
+            <span [class]="detailStatusClass(task.status)">
+              <span [class]="statusDotClass(task.status)" aria-hidden="true"></span
+              >{{ task.status }}
+            </span>
+            <span [class]="detailPriorityClass(task.priority)">
+              <span [class]="priorityDotClass(task.priority)" aria-hidden="true"></span
+              >{{ task.priority }}
+            </span>
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500"
+            >
+              <nldd-icon
+                [attr.name]="categoryIcon(task.category)"
+                class="w-3.5 h-3.5"
+                aria-hidden="true"
+              ></nldd-icon
+              >{{ task.category }}
+            </span>
+          }
+        </div>
+      </div>
+      <button
+        class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors shrink-0"
+        aria-label="Close"
+        (click)="closeDetail()"
+      >
+        <nldd-icon name="dismiss" class="w-4.5 h-4.5 block"></nldd-icon>
+      </button>
+    </div>
+
+    <!-- Sheet body -->
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+      @if (detailTask(); as task) {
+        <!-- Properties -->
+        <div class="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+          <div>
+            <p class="text-xs font-medium text-slate-400 mb-1.5">Assignee</p>
+            <div class="flex items-center gap-2 text-slate-700 font-medium">
+              @if (getTech(task.assignee); as tech) {
+                <span [class]="techInitialsClass(tech)" aria-hidden="true">{{
+                  tech.initials
+                }}</span>
+                <span>{{ tech.name }}</span>
+              } @else {
+                <span [class]="unassignedAvatarClass()" aria-hidden="true">
+                  <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
+                </span>
+                <span class="text-slate-400 font-normal">Unassigned</span>
+              }
+            </div>
+          </div>
+          <div>
+            <p class="text-xs font-medium text-slate-400 mb-1.5">Due date</p>
+            <p class="text-slate-700">{{ formatDate(task.due) }}</p>
+          </div>
+          <div>
+            <p class="text-xs font-medium text-slate-400 mb-1.5">Location</p>
+            <p class="text-slate-700">{{ task.location }}</p>
+          </div>
+          <div>
+            <p class="text-xs font-medium text-slate-400 mb-1.5">Created</p>
+            <p class="text-slate-700">{{ formatDate(task.created) }}</p>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="rounded-xl bg-slate-50 px-4 py-3.5">
+          <p class="text-xs font-medium text-slate-400 mb-2">Description</p>
+          <p class="text-sm leading-relaxed text-slate-600">{{ task.description }}</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2">
+          <nldd-button
+            variant="secondary"
+            text="Edit"
+            start-icon="pencil"
+            size="sm"
+            (click)="openEditFromDetail()"
+          ></nldd-button>
+          <nldd-button
+            variant="neutral-tinted"
+            text="Technician view"
+            start-icon="eye"
+            size="sm"
+            href="/task-management-technician"
+          ></nldd-button>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <p class="text-xs font-medium text-slate-400 mb-3">
+            Notes <span class="text-slate-300 ml-0.5">({{ task.notes.length }})</span>
+          </p>
+          <div class="space-y-3">
+            @if (task.notes.length === 0) {
+              <p class="text-sm text-slate-400 text-center py-4">No notes yet</p>
+            }
+            @for (note of task.notes; track $index) {
+              @let author = noteAuthor(note);
+              <div class="flex gap-3">
+                <div class="shrink-0 pt-0.5">
+                  @if (author.tech; as tech) {
+                    <span [class]="techInitialsClass(tech)" aria-hidden="true">{{
+                      tech.initials
+                    }}</span>
+                  } @else {
+                    <span
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white text-xs font-semibold shrink-0 select-none"
+                      aria-hidden="true"
+                      >A</span
+                    >
+                  }
+                </div>
+                <div class="flex-1 rounded-xl bg-slate-50 px-3.5 py-3">
+                  <div class="flex items-center justify-between gap-2 mb-1">
+                    <span class="text-xs font-semibold text-slate-700">{{ author.name }}</span>
+                    <span class="text-xs text-slate-400 shrink-0">{{ note.time }}</span>
+                  </div>
+                  <p class="text-sm text-slate-600 leading-relaxed">{{ note.text }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Add note -->
+      <div class="mt-4 flex gap-2.5">
+        <div
+          class="h-8 w-8 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold select-none"
+          aria-hidden="true"
+        >
+          A
+        </div>
+        <div class="flex-1 relative">
+          <nldd-text-field
+            placeholder="Add a note…"
+            accessible-label="Add a note"
+            size="sm"
+            class="w-full"
+            [value]="newNoteText()"
+            (change)="newNoteText.set($any($event).detail?.value ?? '')"
+            (keydown.enter)="addNote()"
+          ></nldd-text-field>
+          <button
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
+            aria-label="Send note"
+            (click)="addNote()"
+          >
+            <nldd-icon name="arrow-right" class="w-4 h-4 block"></nldd-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ADD / EDIT TASK SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #editModalEl accessible-label="Add / edit task" placement="right" width="520px">
+  <div class="flex flex-col h-full">
+    <!-- Sheet header -->
+    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 shrink-0">
+      <h2 class="text-base font-semibold text-slate-900">{{ editModalTitle() }}</h2>
+    </div>
+
+    <!-- Sheet body -->
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editTitle">Title</label>
+        <nldd-text-field
+          id="editTitle"
+          placeholder="E.g. Replace broken harddisk"
+          accessible-label="Title"
+          class="w-full"
+          [value]="editFormTitle()"
+          (change)="editFormTitle.set($any($event).detail?.value ?? '')"
+        ></nldd-text-field>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editDescription"
+          >Description</label
+        >
+        <nldd-multi-line-text-field
+          id="editDescription"
+          rows="3"
+          placeholder="Describe the task…"
+          [value]="editFormDescription()"
+          (input)="editFormDescription.set($any($event).target.value)"
+        ></nldd-multi-line-text-field>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editStatus"
+            >Status</label
+          >
+          <select
+            id="editStatus"
+            class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+            (change)="editFormStatus.set($any($event).target.value)"
+          >
+            <option [selected]="editFormStatus() === 'Ready'">Ready</option>
+            <option [selected]="editFormStatus() === 'In Progress'">In Progress</option>
+            <option [selected]="editFormStatus() === 'Review'">Review</option>
+            <option [selected]="editFormStatus() === 'Blocked'">Blocked</option>
+            <option [selected]="editFormStatus() === 'Done'">Done</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editPriority"
+            >Priority</label
+          >
+          <select
+            id="editPriority"
+            class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+            (change)="editFormPriority.set($any($event).target.value)"
+          >
+            <option [selected]="editFormPriority() === 'Critical'">Critical</option>
+            <option [selected]="editFormPriority() === 'High'">High</option>
+            <option [selected]="editFormPriority() === 'Medium'">Medium</option>
+            <option [selected]="editFormPriority() === 'Low'">Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editCategory"
+            >Category</label
+          >
+          <select
+            id="editCategory"
+            class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+            (change)="editFormCategory.set($any($event).target.value)"
+          >
+            <option [selected]="editFormCategory() === 'Hardware'">Hardware</option>
+            <option [selected]="editFormCategory() === 'Network'">Network</option>
+            <option [selected]="editFormCategory() === 'Cooling'">Cooling</option>
+            <option [selected]="editFormCategory() === 'Power'">Power</option>
+            <option [selected]="editFormCategory() === 'Security'">Security</option>
+            <option [selected]="editFormCategory() === 'Other'">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editDue"
+            >Due date</label
+          >
+          <input
+            id="editDue"
+            type="date"
+            class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+            [value]="editFormDue()"
+            (change)="editFormDue.set($any($event).target.value)"
+          />
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editLocation"
+          >Location</label
+        >
+        <nldd-text-field
+          id="editLocation"
+          placeholder="E.g. DC Amsterdam-West · Rack 123"
+          accessible-label="Location"
+          class="w-full"
+          [value]="editFormLocation()"
+          (change)="editFormLocation.set($any($event).detail?.value ?? '')"
+        ></nldd-text-field>
+      </div>
+      <div>
+        <p class="block text-xs font-medium text-slate-500 mb-1.5" id="assigneeSelectorLabel">
+          Assignee
+        </p>
+        <div role="group" aria-labelledby="assigneeSelectorLabel" class="max-h-48 overflow-y-auto">
+          <nldd-radio-button-group
+            name="assignee"
+            class="space-y-1.5"
+            (change)="
+              editFormAssignee.set($any($event).detail.value ? +$any($event).detail.value : null)
+            "
+          >
+            <div
+              class="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5 hover:bg-slate-50 transition-colors"
+            >
+              <span [class]="unassignedAvatarClass('h-8 w-8 text-sm')" aria-hidden="true">
+                <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
+              </span>
+              <nldd-radio-button-field
+                value=""
+                label="Unassigned"
+                [attr.checked]="editFormAssignee() === null ? '' : null"
+              ></nldd-radio-button-field>
+            </div>
+            @for (tech of technicians; track tech.id) {
+              <div
+                class="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5 hover:bg-slate-50 transition-colors"
+              >
+                <span [class]="techInitialsClass(tech, 'h-8 w-8 text-sm')" aria-hidden="true">{{
+                  tech.initials
+                }}</span>
+                <nldd-radio-button-field
+                  [attr.value]="tech.id"
+                  [attr.label]="tech.name"
+                  [attr.checked]="editFormAssignee() === tech.id ? '' : null"
+                ></nldd-radio-button-field>
+                <span
+                  class="ml-auto inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                  [class]="
+                    tech.available
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-slate-100 text-slate-500'
+                  "
+                  >{{ tech.available ? 'Available' : 'Busy' }}</span
+                >
+              </div>
+            }
+          </nldd-radio-button-group>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sheet footer -->
+    <div class="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 shrink-0">
+      <nldd-button
+        variant="neutral-transparent"
+        text="Cancel"
+        size="sm"
+        (click)="closeEditModal()"
+      ></nldd-button>
+      <nldd-button
+        variant="accent-filled"
+        text="Save task"
+        size="sm"
+        (click)="saveTask()"
+      ></nldd-button>
+    </div>
+  </div>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TOAST
+     ══════════════════════════════════════════════════════════════ -->
+<div
+  class="pointer-events-none fixed bottom-24 left-1/2 z-50 -translate-x-1/2 transition-opacity duration-300"
+  [class.opacity-0]="!toastMessage()"
+  [class.opacity-100]="!!toastMessage()"
+  aria-live="polite"
+  aria-atomic="true"
+>
+  <div
+    class="flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-xl ring-1 ring-slate-700"
+  >
+    <nldd-icon
+      name="check-mark"
+      style="width: 14px; height: 14px; color: #34d399"
+      aria-hidden="true"
+    ></nldd-icon>
+    <span>{{ toastMessage() }}</span>
+  </div>
+</div>

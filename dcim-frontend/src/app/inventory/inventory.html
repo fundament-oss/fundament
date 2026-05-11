@@ -1,0 +1,692 @@
+<!-- ══════════════════════════════════════════════════════════════
+     SUBBAR
+     ══════════════════════════════════════════════════════════════ -->
+<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
+  <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0 flex-1">Inventory</h1>
+  <div class="flex items-center gap-2 shrink-0">
+    <nldd-button
+      variant="accent-filled"
+      text="Add asset"
+      start-icon="plus-small"
+      size="sm"
+      (click)="openCreateAsset()"
+    ></nldd-button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     BODY (sidebar + main)
+     ══════════════════════════════════════════════════════════════ -->
+<div class="flex flex-1 min-h-0">
+  <!-- ── LEFT SIDEBAR ─────────────────────────────────────────── -->
+  <aside
+    class="w-60 shrink-0 border-r border-slate-200 bg-white flex-col overflow-y-auto hidden sm:flex"
+    aria-label="Filters"
+  >
+    <!-- Search -->
+    <div class="px-4 py-3 border-b border-slate-100">
+      <nldd-search-field
+        accessible-label="Search assets"
+        placeholder="Search assets…"
+        start-icon="magnifier"
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value); onFilterChange()"
+        class="block w-full"
+        size="sm"
+      >
+      </nldd-search-field>
+    </div>
+
+    <!-- Status -->
+    <div class="px-4 py-3 border-b border-slate-100">
+      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</p>
+
+      <button
+        (click)="statusFilter.set('all'); onFilterChange()"
+        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+        [class]="
+          statusFilter() === 'all'
+            ? 'bg-accent-50 text-accent-700 font-medium'
+            : 'text-slate-600 hover:bg-slate-50'
+        "
+      >
+        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
+        <span class="flex-1 text-left">All assets</span>
+        <span class="text-xs text-slate-400">{{ statusCounts()['all'] }}</span>
+      </button>
+
+      @for (s of statuses; track s.value) {
+        <button
+          (click)="statusFilter.set(s.value); onFilterChange()"
+          class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+          [class]="
+            statusFilter() === s.value
+              ? 'bg-accent-50 text-accent-700 font-medium'
+              : 'text-slate-600 hover:bg-slate-50'
+          "
+        >
+          <span
+            class="h-2 w-2 rounded-full shrink-0"
+            [class]="statusDotClass(s.value)"
+            aria-hidden="true"
+          ></span>
+          <span class="flex-1 text-left">{{ s.label }}</span>
+          @if (statusCounts()[s.value]) {
+            <span class="text-xs text-slate-400">{{ statusCounts()[s.value] }}</span>
+          }
+        </button>
+      }
+    </div>
+
+    <!-- Categories -->
+    <div class="px-4 py-3 border-b border-slate-100">
+      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        Category
+      </p>
+
+      <button
+        (click)="categoryFilter.set('all'); onFilterChange()"
+        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+        [class]="
+          categoryFilter() === 'all'
+            ? 'bg-accent-50 text-accent-700 font-medium'
+            : 'text-slate-600 hover:bg-slate-50'
+        "
+      >
+        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
+        <span class="flex-1 text-left">All categories</span>
+        <span class="text-xs text-slate-400">{{ statusCounts()['all'] }}</span>
+      </button>
+
+      @for (cat of categories; track cat) {
+        @if (categoryCounts()[cat]) {
+          <button
+            (click)="categoryFilter.set(cat); onFilterChange()"
+            class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+            [class]="
+              categoryFilter() === cat
+                ? 'bg-accent-50 text-accent-700 font-medium'
+                : 'text-slate-600 hover:bg-slate-50'
+            "
+          >
+            <nldd-icon
+              [name]="categoryIcon(cat)"
+              class="w-4 h-4 shrink-0"
+              aria-hidden="true"
+            ></nldd-icon>
+            <span class="flex-1 text-left">{{ cat }}</span>
+            <span class="text-xs text-slate-400">{{ categoryCounts()[cat] }}</span>
+          </button>
+        }
+      }
+    </div>
+
+    <!-- Locations -->
+    <div class="px-4 py-3">
+      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        Location
+      </p>
+
+      <button
+        (click)="locationFilter.set('all'); onFilterChange()"
+        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+        [class]="
+          locationFilter() === 'all'
+            ? 'bg-accent-50 text-accent-700 font-medium'
+            : 'text-slate-600 hover:bg-slate-50'
+        "
+      >
+        <nldd-icon
+          name="apartment-building"
+          class="w-4 h-4 shrink-0"
+          aria-hidden="true"
+        ></nldd-icon>
+        <span class="flex-1 text-left">All locations</span>
+        <span class="text-xs text-slate-400">{{ statusCounts()['all'] }}</span>
+      </button>
+
+      @for (dc of datacenters; track dc) {
+        <button
+          (click)="locationFilter.set(dc); onFilterChange()"
+          class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+          [class]="
+            locationFilter() === dc
+              ? 'bg-accent-50 text-accent-700 font-medium'
+              : 'text-slate-600 hover:bg-slate-50'
+          "
+        >
+          <nldd-icon
+            name="apartment-building"
+            class="w-4 h-4 shrink-0"
+            aria-hidden="true"
+          ></nldd-icon>
+          <span class="flex-1 text-left font-mono text-xs">{{ dc }}</span>
+          <span class="text-xs text-slate-400">{{ locationCounts()[dc] }}</span>
+        </button>
+      }
+    </div>
+  </aside>
+
+  <!-- ── MAIN ───────────────────────────────────────────────────── -->
+  <main class="flex-1 min-w-0 overflow-y-auto" aria-label="Asset inventory">
+    <div class="px-6 pb-6">
+      <!-- Stats row -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 pb-5">
+        <div
+          class="bg-white border border-slate-200 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
+        >
+          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Total Assets</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ totalCount }}</p>
+          <p class="text-xs text-slate-400">across all locations</p>
+        </div>
+        <div
+          class="bg-white border border-slate-200 border-l-[3px] border-l-teal-600 px-4 py-3.5 grid gap-1"
+        >
+          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Deployed</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ deployedCount }}</p>
+          <p class="text-xs text-slate-400">in production</p>
+        </div>
+        <div
+          class="bg-white border border-slate-200 border-l-[3px] border-l-emerald-600 px-4 py-3.5 grid gap-1"
+        >
+          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Available</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ availableCount }}</p>
+          <p class="text-xs text-slate-400">ready to deploy</p>
+        </div>
+        <div
+          class="bg-white border border-slate-200 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
+        >
+          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Issues</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ issuesCount }}</p>
+          <p class="text-xs text-slate-400">need attention</p>
+        </div>
+      </div>
+
+      <!-- ── TABLE ── -->
+      <div role="table" aria-label="Asset inventory">
+        <!-- Column headers -->
+        <div role="row" class="flex items-center gap-3 border-b border-slate-100 py-2.5">
+          <div class="w-14 shrink-0"></div>
+          <div
+            class="flex-1 min-w-0 grid grid-cols-[1fr_110px_130px_148px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 uppercase tracking-wide mr-18"
+          >
+            <button
+              role="columnheader"
+              (click)="toggleSort('model')"
+              class="uppercase cursor-pointer flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
+              [attr.aria-sort]="
+                sortColumn() === 'model'
+                  ? sortDirection() === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              Model
+              <nldd-icon
+                name="caret-down-small"
+                class="w-3.5 h-3.5"
+                [style.transform]="
+                  sortColumn() === 'model' && sortDirection() === 'asc' ? 'rotate(180deg)' : 'none'
+                "
+                [style.opacity]="sortColumn() !== 'model' ? '0.35' : '1'"
+                aria-hidden="true"
+              >
+              </nldd-icon>
+            </button>
+            <button
+              role="columnheader"
+              (click)="toggleSort('category')"
+              class="uppercase cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
+              [attr.aria-sort]="
+                sortColumn() === 'category'
+                  ? sortDirection() === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              Category
+              <nldd-icon
+                name="caret-down-small"
+                class="w-3.5 h-3.5"
+                [style.transform]="
+                  sortColumn() === 'category' && sortDirection() === 'asc'
+                    ? 'rotate(180deg)'
+                    : 'none'
+                "
+                [style.opacity]="sortColumn() !== 'category' ? '0.35' : '1'"
+                aria-hidden="true"
+              >
+              </nldd-icon>
+            </button>
+            <button
+              role="columnheader"
+              (click)="toggleSort('datacenter')"
+              class="uppercase cursor-pointer hidden md:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
+              [attr.aria-sort]="
+                sortColumn() === 'datacenter'
+                  ? sortDirection() === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              Location
+              <nldd-icon
+                name="caret-down-small"
+                class="w-3.5 h-3.5"
+                [style.transform]="
+                  sortColumn() === 'datacenter' && sortDirection() === 'asc'
+                    ? 'rotate(180deg)'
+                    : 'none'
+                "
+                [style.opacity]="sortColumn() !== 'datacenter' ? '0.35' : '1'"
+                aria-hidden="true"
+              >
+              </nldd-icon>
+            </button>
+            <button
+              role="columnheader"
+              (click)="toggleSort('status')"
+              class="uppercase cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
+              [attr.aria-sort]="
+                sortColumn() === 'status'
+                  ? sortDirection() === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              Status
+              <nldd-icon
+                name="caret-down-small"
+                class="w-3.5 h-3.5"
+                [style.transform]="
+                  sortColumn() === 'status' && sortDirection() === 'asc' ? 'rotate(180deg)' : 'none'
+                "
+                [style.opacity]="sortColumn() !== 'status' ? '0.35' : '1'"
+                aria-hidden="true"
+              >
+              </nldd-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Asset rows -->
+        @for (row of flatRows(); track row.asset.id) {
+          <a
+            role="row"
+            [routerLink]="['/inventory', row.asset.id]"
+            class="flex items-center gap-3 border-b border-slate-100 py-2.5 hover:bg-slate-50 transition-colors group cursor-pointer"
+            [class.bg-slate-50/60]="row.depth > 0"
+          >
+            <!-- Toggle + icon (indented together based on depth) -->
+            <div
+              role="cell"
+              class="flex items-center gap-1.5 shrink-0"
+              [style.paddingLeft.rem]="row.depth * 1.25"
+              [attr.aria-label]="row.asset.category"
+            >
+              @if (row.hasChildren) {
+                <button
+                  (click)="toggleExpand(row.asset.id, $event)"
+                  class="cursor-pointer w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+                  [attr.aria-label]="row.isExpanded ? 'Collapse components' : 'Expand components'"
+                  [attr.aria-expanded]="row.isExpanded"
+                >
+                  <nldd-icon
+                    name="chevron-right-small"
+                    style="width: 14px; height: 14px; transition: transform 0.15s"
+                    [style.transform]="row.isExpanded ? 'rotate(90deg)' : 'none'"
+                    aria-hidden="true"
+                  >
+                  </nldd-icon>
+                </button>
+              } @else {
+                <span class="w-5 shrink-0" aria-hidden="true"></span>
+              }
+              <div
+                class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors"
+                [class.bg-slate-100/60]="row.depth > 0"
+              >
+                <nldd-icon
+                  [name]="categoryIcon(row.asset.category)"
+                  class="w-4.5 h-4.5"
+                  aria-hidden="true"
+                ></nldd-icon>
+              </div>
+            </div>
+
+            <div
+              class="flex-1 min-w-0 grid grid-cols-[1fr_110px_130px_148px] gap-3 lg:gap-4 items-center"
+              role="presentation"
+            >
+              <!-- Model + asset tag -->
+              <div role="cell" class="min-w-0">
+                <p
+                  class="truncate text-sm font-medium"
+                  [class]="row.depth > 0 ? 'text-slate-700' : 'text-slate-900'"
+                >
+                  {{ row.asset.model }}
+                </p>
+                <p class="text-xs text-slate-400 font-mono">{{ row.asset.assetTag }}</p>
+              </div>
+
+              <!-- Category badge -->
+              <div role="cell" class="hidden sm:block">
+                <span
+                  class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"
+                >
+                  {{ row.asset.category }}
+                </span>
+              </div>
+
+              <!-- Location -->
+              <div role="cell" class="hidden md:block">
+                <span class="inline-flex items-center gap-1.5 text-sm text-slate-600">
+                  <span
+                    class="font-mono text-xs font-medium text-slate-500 bg-slate-100 rounded px-1.5 py-0.5"
+                    >{{ row.asset.datacenter }}</span
+                  >
+                  <span class="text-slate-300" aria-hidden="true">·</span>
+                  <span class="text-xs text-slate-500">{{ row.asset.rack }}</span>
+                </span>
+              </div>
+
+              <!-- Status badge -->
+              <div role="cell" class="hidden sm:block">
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  [class]="statusBadgeClass(row.asset.status)"
+                  [attr.aria-label]="'Status: ' + statusLabel(row.asset.status)"
+                >
+                  <span
+                    class="h-1.5 w-1.5 rounded-full"
+                    [class]="statusDotClass(row.asset.status)"
+                    aria-hidden="true"
+                  ></span>
+                  {{ statusLabel(row.asset.status) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Edit / Delete actions -->
+            <div
+              role="cell"
+              class="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity pr-3"
+              (click)="$event.stopPropagation()"
+              (keydown)="$event.stopPropagation()"
+            >
+              <nldd-icon-button
+                icon="pencil-on-square"
+                variant="neutral-transparent"
+                size="xs"
+                text="Edit asset"
+                (click)="openEditAsset(row.asset, $event)"
+              ></nldd-icon-button>
+              <nldd-icon-button
+                icon="trash"
+                variant="neutral-transparent"
+                size="xs"
+                text="Delete asset"
+                (click)="openDeleteAsset(row.asset, $event)"
+              ></nldd-icon-button>
+            </div>
+          </a>
+        }
+
+        <!-- Empty state -->
+        @if (flatRows().length === 0) {
+          <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400 mb-3"
+            >
+              <nldd-icon name="rectangle-stack" class="w-6 h-6" aria-hidden="true"></nldd-icon>
+            </div>
+            <p class="text-sm font-medium text-slate-600">No assets found</p>
+            <p class="mt-1 text-xs text-slate-400">Try adjusting your search or filter criteria.</p>
+          </div>
+        }
+
+        <!-- Count + pagination -->
+        @if (totalFiltered() > 0) {
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-4 pb-2">
+            <p class="text-xs text-slate-400 shrink-0">
+              Showing {{ pageStart() }}–{{ pageEnd() }} of {{ totalFiltered() }} assets
+            </p>
+            <nldd-pagination
+              [attr.current]="currentPage()"
+              [attr.total]="totalPages()"
+              (page-change)="goToPage($any($event).detail.page)"
+            >
+            </nldd-pagination>
+          </div>
+        }
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     NOTES MODAL
+     ══════════════════════════════════════════════════════════════ -->
+@if (activeNotesAsset(); as asset) {
+  <div
+    class="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/50 p-4 pt-10 backdrop-blur-sm overflow-y-auto"
+    role="dialog"
+    aria-modal="true"
+    tabindex="0"
+    [attr.aria-label]="'Notes for ' + asset.model"
+    (click)="closeNotes()"
+    (keydown.escape)="closeNotes()"
+  >
+    <div
+      class="w-full max-w-lg rounded-2xl bg-white shadow-2xl shadow-slate-900/20 my-4 ring-1 ring-slate-200/80"
+      tabindex="-1"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <!-- Modal header -->
+      <div class="flex items-start justify-between border-b border-slate-100 px-6 pt-6 pb-5">
+        <div class="flex-1 min-w-0 pr-4">
+          <h2 class="text-base font-semibold text-slate-900 leading-snug">{{ asset.model }}</h2>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+              [class]="statusBadgeClass(asset.status)"
+            >
+              <span
+                class="h-1.5 w-1.5 rounded-full"
+                [class]="statusDotClass(asset.status)"
+                aria-hidden="true"
+              ></span>
+              {{ statusLabel(asset.status) }}
+            </span>
+            <span
+              class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"
+            >
+              {{ asset.category }}
+            </span>
+            <span class="font-mono text-xs text-slate-400">{{ asset.assetTag }}</span>
+          </div>
+        </div>
+        <button
+          (click)="closeNotes()"
+          class="cursor-pointer rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors shrink-0"
+          aria-label="Close notes"
+        >
+          <nldd-icon name="dismiss" class="w-5 h-5" aria-hidden="true"></nldd-icon>
+        </button>
+      </div>
+
+      <!-- Modal body -->
+      @if (getAssetNotes(asset.id); as notes) {
+        <div class="px-6 py-5 space-y-5">
+          <!-- Description -->
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">
+              Description
+            </p>
+            <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg px-4 py-3">
+              {{ notes.description }}
+            </p>
+          </div>
+
+          <!-- Comments -->
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
+              Notes
+              <span
+                class="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-500 normal-case tracking-normal"
+              >
+                {{ notes.comments.length }}
+              </span>
+            </p>
+            <ul class="space-y-4">
+              @for (comment of notes.comments; track $index) {
+                <li class="flex gap-3">
+                  <!-- Avatar -->
+                  <div
+                    class="h-7 w-7 shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-semibold select-none"
+                    aria-hidden="true"
+                  >
+                    {{ comment.initials }}
+                  </div>
+                  <!-- Content -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2 flex-wrap">
+                      <span class="text-sm font-medium text-slate-800">{{ comment.author }}</span>
+                      <span class="text-xs text-slate-400">{{
+                        formatDaysAgo(comment.daysAgo)
+                      }}</span>
+                    </div>
+                    <p class="mt-0.5 text-sm text-slate-600 leading-relaxed">
+                      {{ comment.content }}
+                    </p>
+                  </div>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- ══════════════════════════════════════════════════════════════
+     ASSET EDIT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #assetSheet accessible-label="Asset details" placement="right" width="480px">
+  <div class="flex flex-col h-full">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+      <h2 class="text-base font-semibold text-slate-900">
+        {{ editAsset()?.id ? 'Edit asset' : 'Add asset' }}
+      </h2>
+      <nldd-icon-button
+        icon="dismiss"
+        variant="neutral-transparent"
+        size="sm"
+        text="Close"
+        (click)="closeAssetForm()"
+      ></nldd-icon-button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+      <nldd-form-field label="Model">
+        <nldd-text-field
+          #fAssetModel
+          [attr.value]="editAsset()?.model ?? ''"
+          placeholder="Dell PowerEdge R750"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <nldd-form-field label="Asset tag">
+        <nldd-text-field
+          #fAssetTag
+          [attr.value]="editAsset()?.assetTag ?? ''"
+          placeholder="AST-001"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Category">
+          <nldd-dropdown #fAssetCat>
+            <select>
+              @for (cat of categories; track cat) {
+                <option [value]="cat" [attr.selected]="editAsset()?.category === cat ? true : null">
+                  {{ cat }}
+                </option>
+              }
+            </select>
+          </nldd-dropdown>
+        </nldd-form-field>
+        <nldd-form-field label="Status">
+          <nldd-dropdown #fAssetStatus>
+            <select>
+              @for (s of statuses; track s.value) {
+                <option
+                  [value]="s.value"
+                  [attr.selected]="editAsset()?.status === s.value ? true : null"
+                >
+                  {{ s.label }}
+                </option>
+              }
+            </select>
+          </nldd-dropdown>
+        </nldd-form-field>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Datacenter">
+          <nldd-text-field
+            #fAssetDc
+            [attr.value]="editAsset()?.datacenter ?? ''"
+            placeholder="AMS-01"
+          ></nldd-text-field>
+        </nldd-form-field>
+        <nldd-form-field label="Rack">
+          <nldd-text-field
+            #fAssetRack
+            [attr.value]="editAsset()?.rack ?? ''"
+            placeholder="R01"
+          ></nldd-text-field>
+        </nldd-form-field>
+      </div>
+      <nldd-form-field label="Notes" [optional]="true">
+        <nldd-text-field
+          #fAssetNotes
+          [attr.value]="editAsset()?.notes ?? ''"
+          placeholder="Additional notes…"
+        ></nldd-text-field>
+      </nldd-form-field>
+    </div>
+    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
+      <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeAssetForm()"></nldd-button>
+      <nldd-button variant="accent-filled" text="Save" (click)="saveAsset()"></nldd-button>
+    </div>
+  </div>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ASSET DELETE MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #assetModal
+  (close)="cancelDeleteAsset()"
+  [attr.text]="'Delete ' + (deleteAsset()?.assetTag ?? '') + '?'"
+  [attr.supporting-text]="
+    'Remove ' + (deleteAsset()?.model ?? '') + ' from inventory. This action cannot be undone.'
+  "
+  accessible-label="Confirm asset deletion"
+>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelDeleteAsset()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    (click)="confirmDeleteAsset()"
+  ></nldd-button>
+</nldd-modal-dialog>

@@ -28,7 +28,7 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
 
   steps: ProgressStep[] = [
     { name: 'Basics', route: '/clusters/add' },
-    { name: 'Worker nodes', route: '/clusters/add/nodes' },
+    { name: 'Node pools', route: '/clusters/add/nodes' },
     { name: 'Summary', route: '/clusters/add/summary' },
   ];
 

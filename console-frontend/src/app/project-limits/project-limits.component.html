@@ -19,16 +19,19 @@
           <!-- Default memory request -->
           <nldd-form-field label="Default memory request">
             <div class="flex items-center gap-2">
-              <nldd-text-field
+              <nldd-number-field
                 id="defaultMemoryRequest"
-                type="number"
+                full-width="true"
                 min="1"
                 step="1"
-                placeholder="128"
+                [attr.max]="defaultMemoryLimitMi() ?? null"
                 [value]="defaultMemoryRequestMi()"
-                (input)="defaultMemoryRequestMi.set(toInt($any($event.target).value))"
+                (input)="
+                  $any($event).detail &&
+                    defaultMemoryRequestMi.set(toInt($any($event).detail.value))
+                "
                 [disabled]="saving()"
-              ></nldd-text-field>
+              ></nldd-number-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">MiB</span>
             </div>
           </nldd-form-field>
@@ -36,16 +39,17 @@
           <!-- Default memory limit -->
           <nldd-form-field label="Default memory limit">
             <div class="flex items-center gap-2">
-              <nldd-text-field
+              <nldd-number-field
                 id="defaultMemoryLimit"
-                type="number"
-                min="1"
+                full-width="true"
+                [min]="defaultMemoryRequestMi() ?? 1"
                 step="1"
-                placeholder="256"
                 [value]="defaultMemoryLimitMi()"
-                (input)="defaultMemoryLimitMi.set(toInt($any($event.target).value))"
+                (input)="
+                  $any($event).detail && defaultMemoryLimitMi.set(toInt($any($event).detail.value))
+                "
                 [disabled]="saving()"
-              ></nldd-text-field>
+              ></nldd-number-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">MiB</span>
             </div>
           </nldd-form-field>
@@ -53,16 +57,18 @@
           <!-- Default CPU request -->
           <nldd-form-field label="Default CPU request">
             <div class="flex items-center gap-2">
-              <nldd-text-field
+              <nldd-number-field
                 id="defaultCpuRequest"
-                type="number"
+                full-width="true"
                 min="1"
                 step="1"
-                placeholder="100"
+                [attr.max]="defaultCpuLimitM() ?? null"
                 [value]="defaultCpuRequestM()"
-                (input)="defaultCpuRequestM.set(toInt($any($event.target).value))"
+                (input)="
+                  $any($event).detail && defaultCpuRequestM.set(toInt($any($event).detail.value))
+                "
                 [disabled]="saving()"
-              ></nldd-text-field>
+              ></nldd-number-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
             </div>
           </nldd-form-field>
@@ -70,16 +76,17 @@
           <!-- Default CPU limit -->
           <nldd-form-field label="Default CPU limit">
             <div class="flex items-center gap-2">
-              <nldd-text-field
+              <nldd-number-field
                 id="defaultCpuLimit"
-                type="number"
-                min="1"
+                full-width="true"
+                [min]="defaultCpuRequestM() ?? 1"
                 step="1"
-                placeholder="500"
                 [value]="defaultCpuLimitM()"
-                (input)="defaultCpuLimitM.set(toInt($any($event.target).value))"
+                (input)="
+                  $any($event).detail && defaultCpuLimitM.set(toInt($any($event).detail.value))
+                "
                 [disabled]="saving()"
-              ></nldd-text-field>
+              ></nldd-number-field>
               <span class="text-sm text-gray-500 dark:text-gray-400">m</span>
             </div>
           </nldd-form-field>

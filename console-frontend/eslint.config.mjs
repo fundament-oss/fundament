@@ -1,5 +1,4 @@
 // @ts-check
-import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import angular from 'angular-eslint';
 import { configs as airbnbConfigs, plugins as airbnbPlugins } from 'eslint-config-airbnb-extended';
@@ -9,7 +8,7 @@ export default tseslint.config(
   {
     ignores: ['src/generated/**'],
   },
-  eslint.configs.recommended,
+  tseslint.configs.recommended,
   airbnbPlugins.stylistic,
   airbnbPlugins.importX,
   {

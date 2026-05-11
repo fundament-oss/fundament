@@ -1,0 +1,494 @@
+<main class="pb-6">
+  @if (entry(); as e) {
+    <!-- Page header -->
+    <div class="bg-white border-b border-slate-200">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Breadcrumb -->
+        <nav aria-label="Breadcrumb" class="mb-3">
+          <ol class="flex items-center gap-1.5 text-sm text-slate-400">
+            <li>
+              <a routerLink="/catalog" class="hover:text-slate-600 transition-colors">Catalog</a>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li class="text-slate-500" aria-current="page">{{ e.model }}</li>
+          </ol>
+        </nav>
+
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-3 min-w-0">
+            <div
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500"
+              [attr.aria-label]="e.category"
+            >
+              <nldd-icon
+                [name]="categoryIcon(e.category)"
+                class="w-5 h-5"
+                aria-hidden="true"
+              ></nldd-icon>
+            </div>
+            <div class="min-w-0">
+              <h1 class="text-xl font-semibold text-slate-900 leading-tight">{{ e.model }}</h1>
+              <p class="text-sm text-slate-400 mt-0.5">{{ e.manufacturer }}</p>
+            </div>
+          </div>
+          <nldd-button
+            variant="neutral-tinted"
+            size="sm"
+            text="Back to catalog"
+            start-icon="arrow-left"
+            href="/catalog"
+          ></nldd-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6">
+        <!-- Left: specs + port defs + asset list -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
+          <!-- Specs card -->
+          <section
+            aria-labelledby="specs-heading"
+            class="rounded-xl border border-slate-200 bg-white"
+          >
+            <div class="px-5 py-4 border-b border-slate-100">
+              <h2 id="specs-heading" class="text-sm font-semibold text-slate-900">
+                Specifications
+              </h2>
+            </div>
+            <dl class="divide-y divide-slate-100">
+              @for (spec of specEntries(e.specs); track spec.key) {
+                <div class="flex items-center justify-between px-5 py-3">
+                  <dt class="text-sm text-slate-500">{{ spec.key }}</dt>
+                  <dd class="text-sm font-mono text-slate-800">{{ spec.value }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
+
+          <!-- Port Definitions card -->
+          <section
+            aria-labelledby="ports-heading"
+            class="rounded-xl border border-slate-200 bg-white"
+          >
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h2 id="ports-heading" class="text-sm font-semibold text-slate-900">
+                Port Definitions
+              </h2>
+              <nldd-button
+                variant="accent-filled"
+                text="Add Port"
+                start-icon="plus-small"
+                size="xs"
+                (click)="openCreatePortDef()"
+              ></nldd-button>
+            </div>
+
+            @if (portDefs().length === 0) {
+              <p class="px-5 py-4 text-xs text-slate-400 italic">
+                No port definitions. Click "Add Port" to define one.
+              </p>
+            } @else {
+              <table class="w-full text-sm" role="grid">
+                <thead>
+                  <tr class="border-b border-slate-100">
+                    <th
+                      class="px-5 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    >
+                      Name
+                    </th>
+                    <th
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    >
+                      Type
+                    </th>
+                    <th
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    >
+                      Speed
+                    </th>
+                    <th
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    >
+                      Power
+                    </th>
+                    <th
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                    >
+                      Compatible with
+                    </th>
+                    <th class="px-3 py-2 w-24"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (pd of portDefs(); track pd.id) {
+                    <tr class="hover:bg-slate-50 transition-colors">
+                      <td class="px-5 py-2.5 font-medium text-slate-800 font-mono text-xs">
+                        {{ pd.name }}
+                      </td>
+                      <td class="px-3 py-2.5 text-slate-600">{{ pd.portType }}</td>
+                      <td class="px-3 py-2.5 text-slate-600 tabular-nums">
+                        @if (pd.speedGbps !== null && pd.speedGbps !== undefined) {
+                          {{ pd.speedGbps }} Gbps
+                        }
+                      </td>
+                      <td class="px-3 py-2.5 text-slate-600 tabular-nums">
+                        @if (pd.powerWatts !== null && pd.powerWatts !== undefined) {
+                          {{ pd.powerWatts }} W
+                        }
+                      </td>
+                      <td class="px-3 py-2.5">
+                        <div class="flex flex-wrap gap-1 items-center">
+                          @for (compat of compatibilitiesForPortDef(pd.id); track compat.id) {
+                            <span
+                              class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 text-xs rounded-full px-2 py-0.5"
+                            >
+                              {{ compatibleEntryName(compat.compatibleCatalogEntryId) }}
+                              <button
+                                (click)="openDeleteCompat(compat)"
+                                class="text-slate-400 hover:text-red-500 transition-colors"
+                                [attr.aria-label]="
+                                  'Remove compatibility with ' +
+                                  compatibleEntryName(compat.compatibleCatalogEntryId)
+                                "
+                              >
+                                ×
+                              </button>
+                            </span>
+                          }
+                          <nldd-icon-button
+                            icon="plus-small"
+                            variant="neutral-transparent"
+                            size="xs"
+                            text="Add compatibility"
+                            (click)="openAddCompatibility(pd.id)"
+                          ></nldd-icon-button>
+                        </div>
+                      </td>
+                      <td class="px-3 py-2.5">
+                        <div class="flex items-center gap-1 justify-end">
+                          <nldd-icon-button
+                            icon="pencil-on-square"
+                            variant="neutral-transparent"
+                            size="xs"
+                            text="Edit port"
+                            (click)="openEditPortDef(pd)"
+                          ></nldd-icon-button>
+                          <nldd-icon-button
+                            icon="trash"
+                            variant="neutral-transparent"
+                            size="xs"
+                            text="Delete port"
+                            (click)="openDeletePortDef(pd)"
+                          ></nldd-icon-button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+
+          <!-- Assets list -->
+          @if (assets().length > 0) {
+            <section
+              aria-labelledby="assets-heading"
+              class="rounded-xl border border-slate-200 bg-white"
+            >
+              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 id="assets-heading" class="text-sm font-semibold text-slate-900">Assets</h2>
+                <span
+                  class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+                >
+                  {{ assets().length }}
+                </span>
+              </div>
+              <ul class="divide-y divide-slate-100" aria-label="Assets of this product model">
+                @for (asset of assets(); track asset.id) {
+                  <li>
+                    <a
+                      [routerLink]="['/inventory', asset.id]"
+                      class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors group"
+                    >
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-indigo-600 font-mono">
+                          {{ asset.assetTag }}
+                        </p>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                          {{ asset.datacenter }} · {{ asset.rack }}
+                        </p>
+                      </div>
+                      <span
+                        class="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                        [class]="statusBadgeClass(asset.status)"
+                      >
+                        <span
+                          class="h-1.5 w-1.5 rounded-full"
+                          [class]="statusDotClass(asset.status)"
+                          aria-hidden="true"
+                        ></span>
+                        {{ statusLabel(asset.status) }}
+                      </span>
+                    </a>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+
+        <!-- Right: summary stats + product info -->
+        <div class="flex flex-col gap-6">
+          <section
+            aria-labelledby="summary-heading"
+            class="rounded-xl border border-slate-200 bg-white"
+          >
+            <div class="px-5 py-4 border-b border-slate-100">
+              <h2 id="summary-heading" class="text-sm font-semibold text-slate-900">
+                Inventory Summary
+              </h2>
+            </div>
+            <div class="divide-y divide-slate-100">
+              <div class="flex items-center justify-between px-5 py-3">
+                <span class="text-sm text-slate-500">Total assets</span>
+                <span class="text-sm font-semibold text-slate-900">{{ assets().length }}</span>
+              </div>
+              <div class="flex items-center justify-between px-5 py-3">
+                <span class="text-sm text-slate-500">Deployed</span>
+                <span class="text-sm font-semibold text-teal-600">{{ deployedCount() }}</span>
+              </div>
+              <div class="flex items-center justify-between px-5 py-3">
+                <span class="text-sm text-slate-500">Available</span>
+                <span class="text-sm font-semibold text-green-600">{{ availableCount() }}</span>
+              </div>
+              <div class="flex items-center justify-between px-5 py-3">
+                <span class="text-sm text-slate-500">Issues</span>
+                <span
+                  class="text-sm font-semibold"
+                  [class]="issuesCount() > 0 ? 'text-amber-600' : 'text-slate-400'"
+                  >{{ issuesCount() }}</span
+                >
+              </div>
+            </div>
+          </section>
+
+          <section
+            aria-labelledby="catalog-meta-heading"
+            class="rounded-xl border border-slate-200 bg-white"
+          >
+            <div class="px-5 py-4 border-b border-slate-100">
+              <h2 id="catalog-meta-heading" class="text-sm font-semibold text-slate-900">
+                Product Info
+              </h2>
+            </div>
+            <div class="divide-y divide-slate-100">
+              <div class="flex items-center justify-between px-5 py-3">
+                <span class="text-sm text-slate-500">Catalog ID</span>
+                <span class="text-sm font-mono text-slate-700">{{ e.id }}</span>
+              </div>
+              <div class="flex items-center justify-between px-5 py-3">
+                <span class="text-sm text-slate-500">Category</span>
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"
+                >
+                  <nldd-icon
+                    [name]="categoryIcon(e.category)"
+                    class="w-3 h-3"
+                    aria-hidden="true"
+                  ></nldd-icon>
+                  {{ e.category }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between px-5 py-3">
+                <span class="text-sm text-slate-500">Manufacturer</span>
+                <span class="text-sm text-slate-700">{{ e.manufacturer }}</span>
+              </div>
+              <div class="flex items-center justify-between px-5 py-3">
+                <span class="text-sm text-slate-500">Port definitions</span>
+                <span class="text-sm font-semibold text-slate-900">{{ portDefs().length }}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <!-- Not found -->
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col items-center justify-center py-24 text-center">
+        <div
+          class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-4"
+        >
+          <nldd-icon name="rectangle-stack" class="w-8 h-8" aria-hidden="true"></nldd-icon>
+        </div>
+        <h1 class="text-lg font-semibold text-slate-800">Product not found</h1>
+        <p class="mt-1 text-sm text-slate-400 max-w-xs">
+          No catalog entry with ID <span class="font-mono">{{ catalogId() }}</span> exists.
+        </p>
+        <nldd-button
+          class="mt-5"
+          variant="accent-filled"
+          text="Back to catalog"
+          start-icon="arrow-left"
+          href="/catalog"
+        ></nldd-button>
+      </div>
+    </div>
+  }
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PORT DEFINITION EDIT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #portSheet accessible-label="Port definition details" placement="right" width="400px">
+  <div class="flex flex-col h-full">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+      <h2 class="text-base font-semibold text-slate-900">
+        {{ editPortDef()?.id ? 'Edit Port' : 'New Port' }}
+      </h2>
+      <nldd-icon-button
+        icon="dismiss"
+        variant="neutral-transparent"
+        size="sm"
+        text="Close"
+        (click)="closePortDefForm()"
+      ></nldd-icon-button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+      <nldd-form-field label="Port name">
+        <nldd-text-field
+          #fPortName
+          [attr.value]="editPortDef()?.name ?? ''"
+          placeholder="E.g. nic0"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <nldd-form-field label="Port type">
+        <nldd-text-field
+          #fPortType
+          [attr.value]="editPortDef()?.portType ?? ''"
+          placeholder="E.g. SFP+, QSFP28, IEC C13"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Speed (Gbps)">
+          <nldd-number-field
+            #fPortSpeed
+            [attr.value]="editPortDef()?.speedGbps ?? ''"
+            min="0"
+            placeholder="optional"
+            full-width
+          ></nldd-number-field>
+        </nldd-form-field>
+        <nldd-form-field label="Power (W)">
+          <nldd-number-field
+            #fPortPower
+            [attr.value]="editPortDef()?.powerWatts ?? ''"
+            min="0"
+            placeholder="optional"
+            full-width
+          ></nldd-number-field>
+        </nldd-form-field>
+      </div>
+    </div>
+    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
+      <nldd-button
+        variant="neutral-tinted"
+        text="Cancel"
+        (click)="closePortDefForm()"
+      ></nldd-button>
+      <nldd-button variant="accent-filled" text="Save" (click)="savePortDef()"></nldd-button>
+    </div>
+  </div>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PORT DEFINITION DELETE MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #portModal
+  (close)="cancelDeletePortDef()"
+  [attr.text]="'Delete port \'' + (deletePortDef()?.name ?? '') + '\'?'"
+  supporting-text="All port compatibilities for this port will also be removed."
+  accessible-label="Confirm port definition deletion"
+>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelDeletePortDef()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    (click)="confirmDeletePortDef()"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ADD COMPATIBILITY MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #compatModal
+  (close)="cancelAddCompatibility()"
+  text="Add Port Compatibility"
+  [attr.supporting-text]="
+    'Select a catalog entry compatible with port ' + portDefName(addCompatPortDefId() ?? '')
+  "
+  accessible-label="Add port compatibility"
+>
+  <div slot="content" class="px-1 pt-2 pb-1">
+    <nldd-form-field label="Compatible product">
+      <nldd-dropdown #fCompatEntry placeholder="Select product…">
+        @for (entry of allCatalogEntries; track entry.id) {
+          <nldd-dropdown-item
+            [attr.value]="entry.id"
+            [attr.label]="entry.model"
+          ></nldd-dropdown-item>
+        }
+      </nldd-dropdown>
+    </nldd-form-field>
+  </div>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelAddCompatibility()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="accent-filled"
+    text="Add"
+    (click)="confirmAddCompatibility()"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DELETE COMPATIBILITY MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #compatDeleteModal
+  (close)="cancelDeleteCompat()"
+  [attr.text]="
+    'Remove compatibility with ' +
+    compatibleEntryName(deleteCompat()?.compatibleCatalogEntryId ?? '') +
+    '?'
+  "
+  supporting-text="This action cannot be undone."
+  accessible-label="Confirm compatibility removal"
+>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelDeleteCompat()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Remove"
+    (click)="confirmDeleteCompat()"
+  ></nldd-button>
+</nldd-modal-dialog>

@@ -1,0 +1,82 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// Rack is a physical equipment rack within a rack row (core.racks).
+message Rack {
+  string                    id              = 10;
+  string                    row_id          = 20;
+  string                    name            = 30;
+  int32                     total_units     = 40;
+  int32                     position_in_row = 50;
+  google.protobuf.Timestamp created         = 60;
+  google.protobuf.Timestamp deleted         = 70 [features.field_presence = EXPLICIT];
+}
+
+service RackService {
+  rpc ListRacks (ListRacksRequest)  returns (ListRacksResponse);
+  rpc GetRack   (GetRackRequest)    returns (GetRackResponse);
+  rpc CreateRack(CreateRackRequest) returns (CreateRackResponse);
+  rpc UpdateRack(UpdateRackRequest) returns (UpdateRackResponse);
+  rpc DeleteRack(DeleteRackRequest) returns (DeleteRackResponse);
+}
+
+message ListRacksRequest {
+  // Filter by row; omit to list all racks.
+  string row_id = 10 [features.field_presence = EXPLICIT];
+}
+
+message ListRacksResponse {
+  message RackSummary {
+    Rack   rack            = 10;
+    int32  used_units      = 20;
+    int32  free_units      = 30;
+    double power_draw_w    = 40;
+    int32  device_count    = 50;
+    double utilization_pct = 60;
+  }
+
+  repeated RackSummary racks = 10;
+}
+
+message GetRackRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetRackResponse {
+  Rack rack = 10;
+}
+
+message CreateRackRequest {
+  string row_id          = 10 [(buf.validate.field).string = {uuid: true}];
+  string name            = 20 [(buf.validate.field).string.min_len = 1];
+  int32  total_units     = 30 [(buf.validate.field).int32.gt = 0];
+  int32  position_in_row = 40;
+}
+
+message CreateRackResponse {
+  string rack_id = 10;
+}
+
+message UpdateRackRequest {
+  string id              = 10 [(buf.validate.field).string = {uuid: true}];
+  string name            = 20 [features.field_presence = EXPLICIT];
+  int32  total_units     = 30 [features.field_presence = EXPLICIT];
+  int32  position_in_row = 40 [features.field_presence = EXPLICIT];
+}
+
+message UpdateRackResponse {}
+
+message DeleteRackRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message DeleteRackResponse {}
