@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -749,10 +750,10 @@ func (*createPlacementRequest_Rack) isCreatePlacementRequest_Location() {}
 func (*createPlacementRequest_SubComponent) isCreatePlacementRequest_Location() {}
 
 type CreatePlacementResponse struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Placement *Placement             `protobuf:"bytes,10,opt,name=placement"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PlacementId string                 `protobuf:"bytes,10,opt,name=placement_id,json=placementId"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CreatePlacementResponse) Reset() {
@@ -780,39 +781,28 @@ func (x *CreatePlacementResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *CreatePlacementResponse) GetPlacement() *Placement {
+func (x *CreatePlacementResponse) GetPlacementId() string {
 	if x != nil {
-		return x.xxx_hidden_Placement
+		return x.xxx_hidden_PlacementId
 	}
-	return nil
+	return ""
 }
 
-func (x *CreatePlacementResponse) SetPlacement(v *Placement) {
-	x.xxx_hidden_Placement = v
-}
-
-func (x *CreatePlacementResponse) HasPlacement() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Placement != nil
-}
-
-func (x *CreatePlacementResponse) ClearPlacement() {
-	x.xxx_hidden_Placement = nil
+func (x *CreatePlacementResponse) SetPlacementId(v string) {
+	x.xxx_hidden_PlacementId = v
 }
 
 type CreatePlacementResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Placement *Placement
+	PlacementId string
 }
 
 func (b0 CreatePlacementResponse_builder) Build() *CreatePlacementResponse {
 	m0 := &CreatePlacementResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Placement = b.Placement
+	x.xxx_hidden_PlacementId = b.PlacementId
 	return m0
 }
 
@@ -1194,74 +1184,6 @@ func (*updatePlacementRequest_Rack) isUpdatePlacementRequest_Location() {}
 
 func (*updatePlacementRequest_SubComponent) isUpdatePlacementRequest_Location() {}
 
-type UpdatePlacementResponse struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Placement *Placement             `protobuf:"bytes,10,opt,name=placement"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
-}
-
-func (x *UpdatePlacementResponse) Reset() {
-	*x = UpdatePlacementResponse{}
-	mi := &file_v1_placement_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdatePlacementResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdatePlacementResponse) ProtoMessage() {}
-
-func (x *UpdatePlacementResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdatePlacementResponse) GetPlacement() *Placement {
-	if x != nil {
-		return x.xxx_hidden_Placement
-	}
-	return nil
-}
-
-func (x *UpdatePlacementResponse) SetPlacement(v *Placement) {
-	x.xxx_hidden_Placement = v
-}
-
-func (x *UpdatePlacementResponse) HasPlacement() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Placement != nil
-}
-
-func (x *UpdatePlacementResponse) ClearPlacement() {
-	x.xxx_hidden_Placement = nil
-}
-
-type UpdatePlacementResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Placement *Placement
-}
-
-func (b0 UpdatePlacementResponse_builder) Build() *UpdatePlacementResponse {
-	m0 := &UpdatePlacementResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Placement = b.Placement
-	return m0
-}
-
 type DeletePlacementRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -1271,7 +1193,7 @@ type DeletePlacementRequest struct {
 
 func (x *DeletePlacementRequest) Reset() {
 	*x = DeletePlacementRequest{}
-	mi := &file_v1_placement_proto_msgTypes[9]
+	mi := &file_v1_placement_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1283,7 +1205,7 @@ func (x *DeletePlacementRequest) String() string {
 func (*DeletePlacementRequest) ProtoMessage() {}
 
 func (x *DeletePlacementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[9]
+	mi := &file_v1_placement_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1319,49 +1241,6 @@ func (b0 DeletePlacementRequest_builder) Build() *DeletePlacementRequest {
 	return m0
 }
 
-type DeletePlacementResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeletePlacementResponse) Reset() {
-	*x = DeletePlacementResponse{}
-	mi := &file_v1_placement_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeletePlacementResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeletePlacementResponse) ProtoMessage() {}
-
-func (x *DeletePlacementResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeletePlacementResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeletePlacementResponse_builder) Build() *DeletePlacementResponse {
-	m0 := &DeletePlacementResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type ListPlacementsByRackRequest struct {
 	state             protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_RackId string                 `protobuf:"bytes,10,opt,name=rack_id,json=rackId"`
@@ -1371,7 +1250,7 @@ type ListPlacementsByRackRequest struct {
 
 func (x *ListPlacementsByRackRequest) Reset() {
 	*x = ListPlacementsByRackRequest{}
-	mi := &file_v1_placement_proto_msgTypes[11]
+	mi := &file_v1_placement_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1383,7 +1262,7 @@ func (x *ListPlacementsByRackRequest) String() string {
 func (*ListPlacementsByRackRequest) ProtoMessage() {}
 
 func (x *ListPlacementsByRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[11]
+	mi := &file_v1_placement_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1428,7 +1307,7 @@ type ListPlacementsByRackResponse struct {
 
 func (x *ListPlacementsByRackResponse) Reset() {
 	*x = ListPlacementsByRackResponse{}
-	mi := &file_v1_placement_proto_msgTypes[12]
+	mi := &file_v1_placement_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1440,7 +1319,7 @@ func (x *ListPlacementsByRackResponse) String() string {
 func (*ListPlacementsByRackResponse) ProtoMessage() {}
 
 func (x *ListPlacementsByRackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[12]
+	mi := &file_v1_placement_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1487,7 +1366,7 @@ type ListChildPlacementsRequest struct {
 
 func (x *ListChildPlacementsRequest) Reset() {
 	*x = ListChildPlacementsRequest{}
-	mi := &file_v1_placement_proto_msgTypes[13]
+	mi := &file_v1_placement_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1499,7 +1378,7 @@ func (x *ListChildPlacementsRequest) String() string {
 func (*ListChildPlacementsRequest) ProtoMessage() {}
 
 func (x *ListChildPlacementsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[13]
+	mi := &file_v1_placement_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1544,7 +1423,7 @@ type ListChildPlacementsResponse struct {
 
 func (x *ListChildPlacementsResponse) Reset() {
 	*x = ListChildPlacementsResponse{}
-	mi := &file_v1_placement_proto_msgTypes[14]
+	mi := &file_v1_placement_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1556,7 +1435,7 @@ func (x *ListChildPlacementsResponse) String() string {
 func (*ListChildPlacementsResponse) ProtoMessage() {}
 
 func (x *ListChildPlacementsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[14]
+	mi := &file_v1_placement_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1598,7 +1477,7 @@ var File_v1_placement_proto protoreflect.FileDescriptor
 
 const file_v1_placement_proto_rawDesc = "" +
 	"\n" +
-	"\x12v1/placement.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x8c\x01\n" +
+	"\x12v1/placement.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x8c\x01\n" +
 	"\fRackLocation\x12\x17\n" +
 	"\arack_id\x18\n" +
 	" \x01(\tR\x06rackId\x12&\n" +
@@ -1628,10 +1507,10 @@ const file_v1_placement_proto_rawDesc = "" +
 	"\rsub_component\x18\x1e \x01(\v2\x1d.dcim.v1.SubComponentLocationH\x00R\fsubComponent\x121\n" +
 	"\x11logical_device_id\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x0flogicalDeviceId\x12\x14\n" +
 	"\x05notes\x18P \x01(\tR\x05notesB\x11\n" +
-	"\blocation\x12\x05\xbaH\x02\b\x01\"K\n" +
-	"\x17CreatePlacementResponse\x120\n" +
-	"\tplacement\x18\n" +
-	" \x01(\v2\x12.dcim.v1.PlacementR\tplacement\"/\n" +
+	"\blocation\x12\x05\xbaH\x02\b\x01\"<\n" +
+	"\x17CreatePlacementResponse\x12!\n" +
+	"\fplacement_id\x18\n" +
+	" \x01(\tR\vplacementId\"/\n" +
 	"\x13GetPlacementRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"H\n" +
@@ -1646,14 +1525,10 @@ const file_v1_placement_proto_rawDesc = "" +
 	"\x11logical_device_id\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x0flogicalDeviceId\x12\x1b\n" +
 	"\x05notes\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notesB\n" +
 	"\n" +
-	"\blocation\"K\n" +
-	"\x17UpdatePlacementResponse\x120\n" +
-	"\tplacement\x18\n" +
-	" \x01(\v2\x12.dcim.v1.PlacementR\tplacement\"2\n" +
+	"\blocation\"2\n" +
 	"\x16DeletePlacementRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x19\n" +
-	"\x17DeletePlacementResponse\"@\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"@\n" +
 	"\x1bListPlacementsByRackRequest\x12!\n" +
 	"\arack_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06rackId\"R\n" +
@@ -1669,16 +1544,16 @@ const file_v1_placement_proto_rawDesc = "" +
 	"\n" +
 	"placements\x18\n" +
 	" \x03(\v2\x12.dcim.v1.PlacementR\n" +
-	"placements2\xa8\x04\n" +
+	"placements2\x94\x04\n" +
 	"\x10PlacementService\x12T\n" +
 	"\x0fCreatePlacement\x12\x1f.dcim.v1.CreatePlacementRequest\x1a .dcim.v1.CreatePlacementResponse\x12K\n" +
-	"\fGetPlacement\x12\x1c.dcim.v1.GetPlacementRequest\x1a\x1d.dcim.v1.GetPlacementResponse\x12T\n" +
-	"\x0fUpdatePlacement\x12\x1f.dcim.v1.UpdatePlacementRequest\x1a .dcim.v1.UpdatePlacementResponse\x12T\n" +
-	"\x0fDeletePlacement\x12\x1f.dcim.v1.DeletePlacementRequest\x1a .dcim.v1.DeletePlacementResponse\x12c\n" +
+	"\fGetPlacement\x12\x1c.dcim.v1.GetPlacementRequest\x1a\x1d.dcim.v1.GetPlacementResponse\x12J\n" +
+	"\x0fUpdatePlacement\x12\x1f.dcim.v1.UpdatePlacementRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\x0fDeletePlacement\x12\x1f.dcim.v1.DeletePlacementRequest\x1a\x16.google.protobuf.Empty\x12c\n" +
 	"\x14ListPlacementsByRack\x12$.dcim.v1.ListPlacementsByRackRequest\x1a%.dcim.v1.ListPlacementsByRackResponse\x12`\n" +
 	"\x13ListChildPlacements\x12#.dcim.v1.ListChildPlacementsRequest\x1a$.dcim.v1.ListChildPlacementsResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_placement_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_v1_placement_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_v1_placement_proto_goTypes = []any{
 	(*RackLocation)(nil),                 // 0: dcim.v1.RackLocation
 	(*SubComponentLocation)(nil),         // 1: dcim.v1.SubComponentLocation
@@ -1688,48 +1563,45 @@ var file_v1_placement_proto_goTypes = []any{
 	(*GetPlacementRequest)(nil),          // 5: dcim.v1.GetPlacementRequest
 	(*GetPlacementResponse)(nil),         // 6: dcim.v1.GetPlacementResponse
 	(*UpdatePlacementRequest)(nil),       // 7: dcim.v1.UpdatePlacementRequest
-	(*UpdatePlacementResponse)(nil),      // 8: dcim.v1.UpdatePlacementResponse
-	(*DeletePlacementRequest)(nil),       // 9: dcim.v1.DeletePlacementRequest
-	(*DeletePlacementResponse)(nil),      // 10: dcim.v1.DeletePlacementResponse
-	(*ListPlacementsByRackRequest)(nil),  // 11: dcim.v1.ListPlacementsByRackRequest
-	(*ListPlacementsByRackResponse)(nil), // 12: dcim.v1.ListPlacementsByRackResponse
-	(*ListChildPlacementsRequest)(nil),   // 13: dcim.v1.ListChildPlacementsRequest
-	(*ListChildPlacementsResponse)(nil),  // 14: dcim.v1.ListChildPlacementsResponse
-	(RackSlotType)(0),                    // 15: dcim.v1.RackSlotType
-	(*timestamppb.Timestamp)(nil),        // 16: google.protobuf.Timestamp
+	(*DeletePlacementRequest)(nil),       // 8: dcim.v1.DeletePlacementRequest
+	(*ListPlacementsByRackRequest)(nil),  // 9: dcim.v1.ListPlacementsByRackRequest
+	(*ListPlacementsByRackResponse)(nil), // 10: dcim.v1.ListPlacementsByRackResponse
+	(*ListChildPlacementsRequest)(nil),   // 11: dcim.v1.ListChildPlacementsRequest
+	(*ListChildPlacementsResponse)(nil),  // 12: dcim.v1.ListChildPlacementsResponse
+	(RackSlotType)(0),                    // 13: dcim.v1.RackSlotType
+	(*timestamppb.Timestamp)(nil),        // 14: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                // 15: google.protobuf.Empty
 }
 var file_v1_placement_proto_depIdxs = []int32{
-	15, // 0: dcim.v1.RackLocation.rack_slot_type:type_name -> dcim.v1.RackSlotType
+	13, // 0: dcim.v1.RackLocation.rack_slot_type:type_name -> dcim.v1.RackSlotType
 	0,  // 1: dcim.v1.Placement.rack:type_name -> dcim.v1.RackLocation
 	1,  // 2: dcim.v1.Placement.sub_component:type_name -> dcim.v1.SubComponentLocation
-	16, // 3: dcim.v1.Placement.created:type_name -> google.protobuf.Timestamp
-	16, // 4: dcim.v1.Placement.deleted:type_name -> google.protobuf.Timestamp
+	14, // 3: dcim.v1.Placement.created:type_name -> google.protobuf.Timestamp
+	14, // 4: dcim.v1.Placement.deleted:type_name -> google.protobuf.Timestamp
 	0,  // 5: dcim.v1.CreatePlacementRequest.rack:type_name -> dcim.v1.RackLocation
 	1,  // 6: dcim.v1.CreatePlacementRequest.sub_component:type_name -> dcim.v1.SubComponentLocation
-	2,  // 7: dcim.v1.CreatePlacementResponse.placement:type_name -> dcim.v1.Placement
-	2,  // 8: dcim.v1.GetPlacementResponse.placement:type_name -> dcim.v1.Placement
-	0,  // 9: dcim.v1.UpdatePlacementRequest.rack:type_name -> dcim.v1.RackLocation
-	1,  // 10: dcim.v1.UpdatePlacementRequest.sub_component:type_name -> dcim.v1.SubComponentLocation
-	2,  // 11: dcim.v1.UpdatePlacementResponse.placement:type_name -> dcim.v1.Placement
-	2,  // 12: dcim.v1.ListPlacementsByRackResponse.placements:type_name -> dcim.v1.Placement
-	2,  // 13: dcim.v1.ListChildPlacementsResponse.placements:type_name -> dcim.v1.Placement
-	3,  // 14: dcim.v1.PlacementService.CreatePlacement:input_type -> dcim.v1.CreatePlacementRequest
-	5,  // 15: dcim.v1.PlacementService.GetPlacement:input_type -> dcim.v1.GetPlacementRequest
-	7,  // 16: dcim.v1.PlacementService.UpdatePlacement:input_type -> dcim.v1.UpdatePlacementRequest
-	9,  // 17: dcim.v1.PlacementService.DeletePlacement:input_type -> dcim.v1.DeletePlacementRequest
-	11, // 18: dcim.v1.PlacementService.ListPlacementsByRack:input_type -> dcim.v1.ListPlacementsByRackRequest
-	13, // 19: dcim.v1.PlacementService.ListChildPlacements:input_type -> dcim.v1.ListChildPlacementsRequest
-	4,  // 20: dcim.v1.PlacementService.CreatePlacement:output_type -> dcim.v1.CreatePlacementResponse
-	6,  // 21: dcim.v1.PlacementService.GetPlacement:output_type -> dcim.v1.GetPlacementResponse
-	8,  // 22: dcim.v1.PlacementService.UpdatePlacement:output_type -> dcim.v1.UpdatePlacementResponse
-	10, // 23: dcim.v1.PlacementService.DeletePlacement:output_type -> dcim.v1.DeletePlacementResponse
-	12, // 24: dcim.v1.PlacementService.ListPlacementsByRack:output_type -> dcim.v1.ListPlacementsByRackResponse
-	14, // 25: dcim.v1.PlacementService.ListChildPlacements:output_type -> dcim.v1.ListChildPlacementsResponse
-	20, // [20:26] is the sub-list for method output_type
-	14, // [14:20] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	2,  // 7: dcim.v1.GetPlacementResponse.placement:type_name -> dcim.v1.Placement
+	0,  // 8: dcim.v1.UpdatePlacementRequest.rack:type_name -> dcim.v1.RackLocation
+	1,  // 9: dcim.v1.UpdatePlacementRequest.sub_component:type_name -> dcim.v1.SubComponentLocation
+	2,  // 10: dcim.v1.ListPlacementsByRackResponse.placements:type_name -> dcim.v1.Placement
+	2,  // 11: dcim.v1.ListChildPlacementsResponse.placements:type_name -> dcim.v1.Placement
+	3,  // 12: dcim.v1.PlacementService.CreatePlacement:input_type -> dcim.v1.CreatePlacementRequest
+	5,  // 13: dcim.v1.PlacementService.GetPlacement:input_type -> dcim.v1.GetPlacementRequest
+	7,  // 14: dcim.v1.PlacementService.UpdatePlacement:input_type -> dcim.v1.UpdatePlacementRequest
+	8,  // 15: dcim.v1.PlacementService.DeletePlacement:input_type -> dcim.v1.DeletePlacementRequest
+	9,  // 16: dcim.v1.PlacementService.ListPlacementsByRack:input_type -> dcim.v1.ListPlacementsByRackRequest
+	11, // 17: dcim.v1.PlacementService.ListChildPlacements:input_type -> dcim.v1.ListChildPlacementsRequest
+	4,  // 18: dcim.v1.PlacementService.CreatePlacement:output_type -> dcim.v1.CreatePlacementResponse
+	6,  // 19: dcim.v1.PlacementService.GetPlacement:output_type -> dcim.v1.GetPlacementResponse
+	15, // 20: dcim.v1.PlacementService.UpdatePlacement:output_type -> google.protobuf.Empty
+	15, // 21: dcim.v1.PlacementService.DeletePlacement:output_type -> google.protobuf.Empty
+	10, // 22: dcim.v1.PlacementService.ListPlacementsByRack:output_type -> dcim.v1.ListPlacementsByRackResponse
+	12, // 23: dcim.v1.PlacementService.ListChildPlacements:output_type -> dcim.v1.ListChildPlacementsResponse
+	18, // [18:24] is the sub-list for method output_type
+	12, // [12:18] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_v1_placement_proto_init() }
@@ -1756,7 +1628,7 @@ func file_v1_placement_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_placement_proto_rawDesc), len(file_v1_placement_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

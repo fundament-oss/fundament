@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -29,8 +30,8 @@ message PhysicalConnection {
 service PhysicalConnectionService {
   rpc CreatePhysicalConnection  (CreatePhysicalConnectionRequest)  returns (CreatePhysicalConnectionResponse);
   rpc GetPhysicalConnection     (GetPhysicalConnectionRequest)     returns (GetPhysicalConnectionResponse);
-  rpc UpdatePhysicalConnection  (UpdatePhysicalConnectionRequest)  returns (UpdatePhysicalConnectionResponse);
-  rpc DeletePhysicalConnection  (DeletePhysicalConnectionRequest)  returns (DeletePhysicalConnectionResponse);
+  rpc UpdatePhysicalConnection  (UpdatePhysicalConnectionRequest)  returns (google.protobuf.Empty);
+  rpc DeletePhysicalConnection  (DeletePhysicalConnectionRequest)  returns (google.protobuf.Empty);
   rpc ListConnectionsByPlacement(ListConnectionsByPlacementRequest) returns (ListConnectionsByPlacementResponse);
 }
 
@@ -45,7 +46,7 @@ message CreatePhysicalConnectionRequest {
 }
 
 message CreatePhysicalConnectionResponse {
-  PhysicalConnection connection = 10;
+  string connection_id = 10;
 }
 
 message GetPhysicalConnectionRequest {
@@ -63,15 +64,9 @@ message UpdatePhysicalConnectionRequest {
   string notes                 = 40 [features.field_presence = EXPLICIT];
 }
 
-message UpdatePhysicalConnectionResponse {
-  PhysicalConnection connection = 10;
-}
-
 message DeletePhysicalConnectionRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeletePhysicalConnectionResponse {}
 
 message ListConnectionsByPlacementRequest {
   string placement_id = 10 [(buf.validate.field).string = {uuid: true}];

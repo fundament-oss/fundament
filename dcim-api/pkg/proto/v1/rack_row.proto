@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -28,8 +29,8 @@ service RackRowService {
   rpc ListRackRows (ListRackRowsRequest)  returns (ListRackRowsResponse);
   rpc GetRackRow   (GetRackRowRequest)    returns (GetRackRowResponse);
   rpc CreateRackRow(CreateRackRowRequest) returns (CreateRackRowResponse);
-  rpc UpdateRackRow(UpdateRackRowRequest) returns (UpdateRackRowResponse);
-  rpc DeleteRackRow(DeleteRackRowRequest) returns (DeleteRackRowResponse);
+  rpc UpdateRackRow(UpdateRackRowRequest) returns (google.protobuf.Empty);
+  rpc DeleteRackRow(DeleteRackRowRequest) returns (google.protobuf.Empty);
 }
 
 message ListRackRowsRequest {
@@ -66,10 +67,6 @@ message UpdateRackRowRequest {
   double position_y = 40 [features.field_presence = EXPLICIT];
 }
 
-message UpdateRackRowResponse {}
-
 message DeleteRackRowRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteRackRowResponse {}

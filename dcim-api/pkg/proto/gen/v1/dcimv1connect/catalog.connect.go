@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -83,19 +84,19 @@ type CatalogServiceClient interface {
 	ListCatalog(context.Context, *connect.Request[v1.ListCatalogRequest]) (*connect.Response[v1.ListCatalogResponse], error)
 	GetCatalogEntry(context.Context, *connect.Request[v1.GetCatalogEntryRequest]) (*connect.Response[v1.GetCatalogEntryResponse], error)
 	CreateCatalogEntry(context.Context, *connect.Request[v1.CreateCatalogEntryRequest]) (*connect.Response[v1.CreateCatalogEntryResponse], error)
-	UpdateCatalogEntry(context.Context, *connect.Request[v1.UpdateCatalogEntryRequest]) (*connect.Response[v1.UpdateCatalogEntryResponse], error)
-	DeleteCatalogEntry(context.Context, *connect.Request[v1.DeleteCatalogEntryRequest]) (*connect.Response[v1.DeleteCatalogEntryResponse], error)
+	UpdateCatalogEntry(context.Context, *connect.Request[v1.UpdateCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteCatalogEntry(context.Context, *connect.Request[v1.DeleteCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error)
 	ListAssetsByCatalogEntry(context.Context, *connect.Request[v1.ListAssetsByCatalogEntryRequest]) (*connect.Response[v1.ListAssetsByCatalogEntryResponse], error)
 	// Port definitions
 	ListPortDefinitions(context.Context, *connect.Request[v1.ListPortDefinitionsRequest]) (*connect.Response[v1.ListPortDefinitionsResponse], error)
 	GetPortDefinition(context.Context, *connect.Request[v1.GetPortDefinitionRequest]) (*connect.Response[v1.GetPortDefinitionResponse], error)
 	CreatePortDefinition(context.Context, *connect.Request[v1.CreatePortDefinitionRequest]) (*connect.Response[v1.CreatePortDefinitionResponse], error)
-	UpdatePortDefinition(context.Context, *connect.Request[v1.UpdatePortDefinitionRequest]) (*connect.Response[v1.UpdatePortDefinitionResponse], error)
-	DeletePortDefinition(context.Context, *connect.Request[v1.DeletePortDefinitionRequest]) (*connect.Response[v1.DeletePortDefinitionResponse], error)
+	UpdatePortDefinition(context.Context, *connect.Request[v1.UpdatePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error)
+	DeletePortDefinition(context.Context, *connect.Request[v1.DeletePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error)
 	// Port compatibilities
 	ListPortCompatibilities(context.Context, *connect.Request[v1.ListPortCompatibilitiesRequest]) (*connect.Response[v1.ListPortCompatibilitiesResponse], error)
-	CreatePortCompatibility(context.Context, *connect.Request[v1.CreatePortCompatibilityRequest]) (*connect.Response[v1.CreatePortCompatibilityResponse], error)
-	DeletePortCompatibility(context.Context, *connect.Request[v1.DeletePortCompatibilityRequest]) (*connect.Response[v1.DeletePortCompatibilityResponse], error)
+	CreatePortCompatibility(context.Context, *connect.Request[v1.CreatePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error)
+	DeletePortCompatibility(context.Context, *connect.Request[v1.DeletePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewCatalogServiceClient constructs a client for the dcim.v1.CatalogService service. By default,
@@ -127,13 +128,13 @@ func NewCatalogServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(catalogServiceMethods.ByName("CreateCatalogEntry")),
 			connect.WithClientOptions(opts...),
 		),
-		updateCatalogEntry: connect.NewClient[v1.UpdateCatalogEntryRequest, v1.UpdateCatalogEntryResponse](
+		updateCatalogEntry: connect.NewClient[v1.UpdateCatalogEntryRequest, emptypb.Empty](
 			httpClient,
 			baseURL+CatalogServiceUpdateCatalogEntryProcedure,
 			connect.WithSchema(catalogServiceMethods.ByName("UpdateCatalogEntry")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteCatalogEntry: connect.NewClient[v1.DeleteCatalogEntryRequest, v1.DeleteCatalogEntryResponse](
+		deleteCatalogEntry: connect.NewClient[v1.DeleteCatalogEntryRequest, emptypb.Empty](
 			httpClient,
 			baseURL+CatalogServiceDeleteCatalogEntryProcedure,
 			connect.WithSchema(catalogServiceMethods.ByName("DeleteCatalogEntry")),
@@ -163,13 +164,13 @@ func NewCatalogServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(catalogServiceMethods.ByName("CreatePortDefinition")),
 			connect.WithClientOptions(opts...),
 		),
-		updatePortDefinition: connect.NewClient[v1.UpdatePortDefinitionRequest, v1.UpdatePortDefinitionResponse](
+		updatePortDefinition: connect.NewClient[v1.UpdatePortDefinitionRequest, emptypb.Empty](
 			httpClient,
 			baseURL+CatalogServiceUpdatePortDefinitionProcedure,
 			connect.WithSchema(catalogServiceMethods.ByName("UpdatePortDefinition")),
 			connect.WithClientOptions(opts...),
 		),
-		deletePortDefinition: connect.NewClient[v1.DeletePortDefinitionRequest, v1.DeletePortDefinitionResponse](
+		deletePortDefinition: connect.NewClient[v1.DeletePortDefinitionRequest, emptypb.Empty](
 			httpClient,
 			baseURL+CatalogServiceDeletePortDefinitionProcedure,
 			connect.WithSchema(catalogServiceMethods.ByName("DeletePortDefinition")),
@@ -181,13 +182,13 @@ func NewCatalogServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(catalogServiceMethods.ByName("ListPortCompatibilities")),
 			connect.WithClientOptions(opts...),
 		),
-		createPortCompatibility: connect.NewClient[v1.CreatePortCompatibilityRequest, v1.CreatePortCompatibilityResponse](
+		createPortCompatibility: connect.NewClient[v1.CreatePortCompatibilityRequest, emptypb.Empty](
 			httpClient,
 			baseURL+CatalogServiceCreatePortCompatibilityProcedure,
 			connect.WithSchema(catalogServiceMethods.ByName("CreatePortCompatibility")),
 			connect.WithClientOptions(opts...),
 		),
-		deletePortCompatibility: connect.NewClient[v1.DeletePortCompatibilityRequest, v1.DeletePortCompatibilityResponse](
+		deletePortCompatibility: connect.NewClient[v1.DeletePortCompatibilityRequest, emptypb.Empty](
 			httpClient,
 			baseURL+CatalogServiceDeletePortCompatibilityProcedure,
 			connect.WithSchema(catalogServiceMethods.ByName("DeletePortCompatibility")),
@@ -201,17 +202,17 @@ type catalogServiceClient struct {
 	listCatalog              *connect.Client[v1.ListCatalogRequest, v1.ListCatalogResponse]
 	getCatalogEntry          *connect.Client[v1.GetCatalogEntryRequest, v1.GetCatalogEntryResponse]
 	createCatalogEntry       *connect.Client[v1.CreateCatalogEntryRequest, v1.CreateCatalogEntryResponse]
-	updateCatalogEntry       *connect.Client[v1.UpdateCatalogEntryRequest, v1.UpdateCatalogEntryResponse]
-	deleteCatalogEntry       *connect.Client[v1.DeleteCatalogEntryRequest, v1.DeleteCatalogEntryResponse]
+	updateCatalogEntry       *connect.Client[v1.UpdateCatalogEntryRequest, emptypb.Empty]
+	deleteCatalogEntry       *connect.Client[v1.DeleteCatalogEntryRequest, emptypb.Empty]
 	listAssetsByCatalogEntry *connect.Client[v1.ListAssetsByCatalogEntryRequest, v1.ListAssetsByCatalogEntryResponse]
 	listPortDefinitions      *connect.Client[v1.ListPortDefinitionsRequest, v1.ListPortDefinitionsResponse]
 	getPortDefinition        *connect.Client[v1.GetPortDefinitionRequest, v1.GetPortDefinitionResponse]
 	createPortDefinition     *connect.Client[v1.CreatePortDefinitionRequest, v1.CreatePortDefinitionResponse]
-	updatePortDefinition     *connect.Client[v1.UpdatePortDefinitionRequest, v1.UpdatePortDefinitionResponse]
-	deletePortDefinition     *connect.Client[v1.DeletePortDefinitionRequest, v1.DeletePortDefinitionResponse]
+	updatePortDefinition     *connect.Client[v1.UpdatePortDefinitionRequest, emptypb.Empty]
+	deletePortDefinition     *connect.Client[v1.DeletePortDefinitionRequest, emptypb.Empty]
 	listPortCompatibilities  *connect.Client[v1.ListPortCompatibilitiesRequest, v1.ListPortCompatibilitiesResponse]
-	createPortCompatibility  *connect.Client[v1.CreatePortCompatibilityRequest, v1.CreatePortCompatibilityResponse]
-	deletePortCompatibility  *connect.Client[v1.DeletePortCompatibilityRequest, v1.DeletePortCompatibilityResponse]
+	createPortCompatibility  *connect.Client[v1.CreatePortCompatibilityRequest, emptypb.Empty]
+	deletePortCompatibility  *connect.Client[v1.DeletePortCompatibilityRequest, emptypb.Empty]
 }
 
 // ListCatalog calls dcim.v1.CatalogService.ListCatalog.
@@ -230,12 +231,12 @@ func (c *catalogServiceClient) CreateCatalogEntry(ctx context.Context, req *conn
 }
 
 // UpdateCatalogEntry calls dcim.v1.CatalogService.UpdateCatalogEntry.
-func (c *catalogServiceClient) UpdateCatalogEntry(ctx context.Context, req *connect.Request[v1.UpdateCatalogEntryRequest]) (*connect.Response[v1.UpdateCatalogEntryResponse], error) {
+func (c *catalogServiceClient) UpdateCatalogEntry(ctx context.Context, req *connect.Request[v1.UpdateCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateCatalogEntry.CallUnary(ctx, req)
 }
 
 // DeleteCatalogEntry calls dcim.v1.CatalogService.DeleteCatalogEntry.
-func (c *catalogServiceClient) DeleteCatalogEntry(ctx context.Context, req *connect.Request[v1.DeleteCatalogEntryRequest]) (*connect.Response[v1.DeleteCatalogEntryResponse], error) {
+func (c *catalogServiceClient) DeleteCatalogEntry(ctx context.Context, req *connect.Request[v1.DeleteCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteCatalogEntry.CallUnary(ctx, req)
 }
 
@@ -260,12 +261,12 @@ func (c *catalogServiceClient) CreatePortDefinition(ctx context.Context, req *co
 }
 
 // UpdatePortDefinition calls dcim.v1.CatalogService.UpdatePortDefinition.
-func (c *catalogServiceClient) UpdatePortDefinition(ctx context.Context, req *connect.Request[v1.UpdatePortDefinitionRequest]) (*connect.Response[v1.UpdatePortDefinitionResponse], error) {
+func (c *catalogServiceClient) UpdatePortDefinition(ctx context.Context, req *connect.Request[v1.UpdatePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updatePortDefinition.CallUnary(ctx, req)
 }
 
 // DeletePortDefinition calls dcim.v1.CatalogService.DeletePortDefinition.
-func (c *catalogServiceClient) DeletePortDefinition(ctx context.Context, req *connect.Request[v1.DeletePortDefinitionRequest]) (*connect.Response[v1.DeletePortDefinitionResponse], error) {
+func (c *catalogServiceClient) DeletePortDefinition(ctx context.Context, req *connect.Request[v1.DeletePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deletePortDefinition.CallUnary(ctx, req)
 }
 
@@ -275,12 +276,12 @@ func (c *catalogServiceClient) ListPortCompatibilities(ctx context.Context, req 
 }
 
 // CreatePortCompatibility calls dcim.v1.CatalogService.CreatePortCompatibility.
-func (c *catalogServiceClient) CreatePortCompatibility(ctx context.Context, req *connect.Request[v1.CreatePortCompatibilityRequest]) (*connect.Response[v1.CreatePortCompatibilityResponse], error) {
+func (c *catalogServiceClient) CreatePortCompatibility(ctx context.Context, req *connect.Request[v1.CreatePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.createPortCompatibility.CallUnary(ctx, req)
 }
 
 // DeletePortCompatibility calls dcim.v1.CatalogService.DeletePortCompatibility.
-func (c *catalogServiceClient) DeletePortCompatibility(ctx context.Context, req *connect.Request[v1.DeletePortCompatibilityRequest]) (*connect.Response[v1.DeletePortCompatibilityResponse], error) {
+func (c *catalogServiceClient) DeletePortCompatibility(ctx context.Context, req *connect.Request[v1.DeletePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deletePortCompatibility.CallUnary(ctx, req)
 }
 
@@ -290,19 +291,19 @@ type CatalogServiceHandler interface {
 	ListCatalog(context.Context, *connect.Request[v1.ListCatalogRequest]) (*connect.Response[v1.ListCatalogResponse], error)
 	GetCatalogEntry(context.Context, *connect.Request[v1.GetCatalogEntryRequest]) (*connect.Response[v1.GetCatalogEntryResponse], error)
 	CreateCatalogEntry(context.Context, *connect.Request[v1.CreateCatalogEntryRequest]) (*connect.Response[v1.CreateCatalogEntryResponse], error)
-	UpdateCatalogEntry(context.Context, *connect.Request[v1.UpdateCatalogEntryRequest]) (*connect.Response[v1.UpdateCatalogEntryResponse], error)
-	DeleteCatalogEntry(context.Context, *connect.Request[v1.DeleteCatalogEntryRequest]) (*connect.Response[v1.DeleteCatalogEntryResponse], error)
+	UpdateCatalogEntry(context.Context, *connect.Request[v1.UpdateCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteCatalogEntry(context.Context, *connect.Request[v1.DeleteCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error)
 	ListAssetsByCatalogEntry(context.Context, *connect.Request[v1.ListAssetsByCatalogEntryRequest]) (*connect.Response[v1.ListAssetsByCatalogEntryResponse], error)
 	// Port definitions
 	ListPortDefinitions(context.Context, *connect.Request[v1.ListPortDefinitionsRequest]) (*connect.Response[v1.ListPortDefinitionsResponse], error)
 	GetPortDefinition(context.Context, *connect.Request[v1.GetPortDefinitionRequest]) (*connect.Response[v1.GetPortDefinitionResponse], error)
 	CreatePortDefinition(context.Context, *connect.Request[v1.CreatePortDefinitionRequest]) (*connect.Response[v1.CreatePortDefinitionResponse], error)
-	UpdatePortDefinition(context.Context, *connect.Request[v1.UpdatePortDefinitionRequest]) (*connect.Response[v1.UpdatePortDefinitionResponse], error)
-	DeletePortDefinition(context.Context, *connect.Request[v1.DeletePortDefinitionRequest]) (*connect.Response[v1.DeletePortDefinitionResponse], error)
+	UpdatePortDefinition(context.Context, *connect.Request[v1.UpdatePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error)
+	DeletePortDefinition(context.Context, *connect.Request[v1.DeletePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error)
 	// Port compatibilities
 	ListPortCompatibilities(context.Context, *connect.Request[v1.ListPortCompatibilitiesRequest]) (*connect.Response[v1.ListPortCompatibilitiesResponse], error)
-	CreatePortCompatibility(context.Context, *connect.Request[v1.CreatePortCompatibilityRequest]) (*connect.Response[v1.CreatePortCompatibilityResponse], error)
-	DeletePortCompatibility(context.Context, *connect.Request[v1.DeletePortCompatibilityRequest]) (*connect.Response[v1.DeletePortCompatibilityResponse], error)
+	CreatePortCompatibility(context.Context, *connect.Request[v1.CreatePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error)
+	DeletePortCompatibility(context.Context, *connect.Request[v1.DeletePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewCatalogServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -447,11 +448,11 @@ func (UnimplementedCatalogServiceHandler) CreateCatalogEntry(context.Context, *c
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.CatalogService.CreateCatalogEntry is not implemented"))
 }
 
-func (UnimplementedCatalogServiceHandler) UpdateCatalogEntry(context.Context, *connect.Request[v1.UpdateCatalogEntryRequest]) (*connect.Response[v1.UpdateCatalogEntryResponse], error) {
+func (UnimplementedCatalogServiceHandler) UpdateCatalogEntry(context.Context, *connect.Request[v1.UpdateCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.CatalogService.UpdateCatalogEntry is not implemented"))
 }
 
-func (UnimplementedCatalogServiceHandler) DeleteCatalogEntry(context.Context, *connect.Request[v1.DeleteCatalogEntryRequest]) (*connect.Response[v1.DeleteCatalogEntryResponse], error) {
+func (UnimplementedCatalogServiceHandler) DeleteCatalogEntry(context.Context, *connect.Request[v1.DeleteCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.CatalogService.DeleteCatalogEntry is not implemented"))
 }
 
@@ -471,11 +472,11 @@ func (UnimplementedCatalogServiceHandler) CreatePortDefinition(context.Context, 
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.CatalogService.CreatePortDefinition is not implemented"))
 }
 
-func (UnimplementedCatalogServiceHandler) UpdatePortDefinition(context.Context, *connect.Request[v1.UpdatePortDefinitionRequest]) (*connect.Response[v1.UpdatePortDefinitionResponse], error) {
+func (UnimplementedCatalogServiceHandler) UpdatePortDefinition(context.Context, *connect.Request[v1.UpdatePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.CatalogService.UpdatePortDefinition is not implemented"))
 }
 
-func (UnimplementedCatalogServiceHandler) DeletePortDefinition(context.Context, *connect.Request[v1.DeletePortDefinitionRequest]) (*connect.Response[v1.DeletePortDefinitionResponse], error) {
+func (UnimplementedCatalogServiceHandler) DeletePortDefinition(context.Context, *connect.Request[v1.DeletePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.CatalogService.DeletePortDefinition is not implemented"))
 }
 
@@ -483,10 +484,10 @@ func (UnimplementedCatalogServiceHandler) ListPortCompatibilities(context.Contex
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.CatalogService.ListPortCompatibilities is not implemented"))
 }
 
-func (UnimplementedCatalogServiceHandler) CreatePortCompatibility(context.Context, *connect.Request[v1.CreatePortCompatibilityRequest]) (*connect.Response[v1.CreatePortCompatibilityResponse], error) {
+func (UnimplementedCatalogServiceHandler) CreatePortCompatibility(context.Context, *connect.Request[v1.CreatePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.CatalogService.CreatePortCompatibility is not implemented"))
 }
 
-func (UnimplementedCatalogServiceHandler) DeletePortCompatibility(context.Context, *connect.Request[v1.DeletePortCompatibilityRequest]) (*connect.Response[v1.DeletePortCompatibilityResponse], error) {
+func (UnimplementedCatalogServiceHandler) DeletePortCompatibility(context.Context, *connect.Request[v1.DeletePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.CatalogService.DeletePortCompatibility is not implemented"))
 }

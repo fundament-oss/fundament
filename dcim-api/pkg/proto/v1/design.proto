@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -105,8 +106,8 @@ service LogicalDesignService {
   rpc ListDesigns (ListDesignsRequest)  returns (ListDesignsResponse);
   rpc GetDesign   (GetDesignRequest)    returns (GetDesignResponse);
   rpc CreateDesign(CreateDesignRequest) returns (CreateDesignResponse);
-  rpc UpdateDesign(UpdateDesignRequest) returns (UpdateDesignResponse);
-  rpc DeleteDesign(DeleteDesignRequest) returns (DeleteDesignResponse);
+  rpc UpdateDesign(UpdateDesignRequest) returns (google.protobuf.Empty);
+  rpc DeleteDesign(DeleteDesignRequest) returns (google.protobuf.Empty);
 }
 
 message ListDesignsRequest {}
@@ -129,7 +130,7 @@ message CreateDesignRequest {
 }
 
 message CreateDesignResponse {
-  LogicalDesign design = 10;
+  string design_id = 10;
 }
 
 message UpdateDesignRequest {
@@ -139,15 +140,9 @@ message UpdateDesignRequest {
   LogicalDesignStatus status      = 40 [features.field_presence = EXPLICIT];
 }
 
-message UpdateDesignResponse {
-  LogicalDesign design = 10;
-}
-
 message DeleteDesignRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteDesignResponse {}
 
 // ── LogicalDeviceService ──────────────────────────────────────────────────────
 
@@ -155,8 +150,8 @@ service LogicalDeviceService {
   rpc ListDevices (ListDevicesRequest)  returns (ListDevicesResponse);
   rpc GetDevice   (GetDeviceRequest)    returns (GetDeviceResponse);
   rpc CreateDevice(CreateDeviceRequest) returns (CreateDeviceResponse);
-  rpc UpdateDevice(UpdateDeviceRequest) returns (UpdateDeviceResponse);
-  rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
+  rpc UpdateDevice(UpdateDeviceRequest) returns (google.protobuf.Empty);
+  rpc DeleteDevice(DeleteDeviceRequest) returns (google.protobuf.Empty);
 }
 
 message ListDevicesRequest {
@@ -185,7 +180,7 @@ message CreateDeviceRequest {
 }
 
 message CreateDeviceResponse {
-  LogicalDevice device = 10;
+  string device_id = 10;
 }
 
 message UpdateDeviceRequest {
@@ -197,15 +192,9 @@ message UpdateDeviceRequest {
   string            notes             = 60 [features.field_presence = EXPLICIT];
 }
 
-message UpdateDeviceResponse {
-  LogicalDevice device = 10;
-}
-
 message DeleteDeviceRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteDeviceResponse {}
 
 // ── LogicalConnectionService ──────────────────────────────────────────────────
 
@@ -213,8 +202,8 @@ service LogicalConnectionService {
   rpc ListConnections (ListConnectionsRequest)  returns (ListConnectionsResponse);
   rpc GetConnection   (GetConnectionRequest)    returns (GetConnectionResponse);
   rpc CreateConnection(CreateConnectionRequest) returns (CreateConnectionResponse);
-  rpc UpdateConnection(UpdateConnectionRequest) returns (UpdateConnectionResponse);
-  rpc DeleteConnection(DeleteConnectionRequest) returns (DeleteConnectionResponse);
+  rpc UpdateConnection(UpdateConnectionRequest) returns (google.protobuf.Empty);
+  rpc DeleteConnection(DeleteConnectionRequest) returns (google.protobuf.Empty);
 }
 
 message ListConnectionsRequest {
@@ -245,7 +234,7 @@ message CreateConnectionRequest {
 }
 
 message CreateConnectionResponse {
-  LogicalConnection connection = 10;
+  string connection_id = 10;
 }
 
 message UpdateConnectionRequest {
@@ -257,22 +246,16 @@ message UpdateConnectionRequest {
   string                label            = 60 [features.field_presence = EXPLICIT];
 }
 
-message UpdateConnectionResponse {
-  LogicalConnection connection = 10;
-}
-
 message DeleteConnectionRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteConnectionResponse {}
 
 // ── LogicalDeviceLayoutService ────────────────────────────────────────────────
 
 service LogicalDeviceLayoutService {
   rpc GetLayout   (GetLayoutRequest)    returns (GetLayoutResponse);
   rpc SaveLayout  (SaveLayoutRequest)   returns (SaveLayoutResponse);
-  rpc DeleteLayout(DeleteLayoutRequest) returns (DeleteLayoutResponse);
+  rpc DeleteLayout(DeleteLayoutRequest) returns (google.protobuf.Empty);
 }
 
 message GetLayoutRequest {
@@ -303,5 +286,3 @@ message SaveLayoutResponse {
 message DeleteLayoutRequest {
   string design_id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteLayoutResponse {}

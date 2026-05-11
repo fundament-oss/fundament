@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
@@ -14,7 +15,7 @@ import (
 func (s *Server) DeleteRoom(
 	ctx context.Context,
 	req *connect.Request[dcimv1.DeleteRoomRequest],
-) (*connect.Response[dcimv1.DeleteRoomResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	roomID := uuid.MustParse(req.Msg.GetId())
 
 	rowsAffected, err := s.queries.RoomDelete(ctx, db.RoomDeleteParams{ID: roomID})
@@ -28,5 +29,5 @@ func (s *Server) DeleteRoom(
 
 	s.logger.InfoContext(ctx, "room deleted", "room_id", roomID)
 
-	return connect.NewResponse(dcimv1.DeleteRoomResponse_builder{}.Build()), nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }

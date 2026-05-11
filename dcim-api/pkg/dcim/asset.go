@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (s *Server) ListAssets(ctx context.Context, req *connect.Request[dcimv1.ListAssetsRequest]) (*connect.Response[dcimv1.ListAssetsResponse], error) {
@@ -19,11 +20,11 @@ func (s *Server) CreateAsset(ctx context.Context, req *connect.Request[dcimv1.Cr
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) UpdateAsset(ctx context.Context, req *connect.Request[dcimv1.UpdateAssetRequest]) (*connect.Response[dcimv1.UpdateAssetResponse], error) {
+func (s *Server) UpdateAsset(ctx context.Context, req *connect.Request[dcimv1.UpdateAssetRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeleteAsset(ctx context.Context, req *connect.Request[dcimv1.DeleteAssetRequest]) (*connect.Response[dcimv1.DeleteAssetResponse], error) {
+func (s *Server) DeleteAsset(ctx context.Context, req *connect.Request[dcimv1.DeleteAssetRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 

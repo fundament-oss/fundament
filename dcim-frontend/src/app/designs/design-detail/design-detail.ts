@@ -206,8 +206,8 @@ export default class DesignDetailComponent implements OnInit {
     const role = (this.fDeviceRole()?.nativeElement.value ?? 'Compute') as LogicalDeviceRole;
     if (form.id) {
       firstValueFrom(this.designApi.updateDevice(form.id, name, role))
-        .then((res) => {
-          const updated = DesignApiService.mapDevice(res.device!);
+        .then(() => {
+          const updated: LogicalDevice = { id: form.id!, designId: form.designId ?? this.designId, name, role };
           this.mutableDevices.update((list) => list.map((d) => (d.id === form.id ? updated : d)));
           this.editDevice.set(null);
         })
@@ -216,11 +216,11 @@ export default class DesignDetailComponent implements OnInit {
     } else {
       firstValueFrom(this.designApi.createDevice(this.designId, name, role))
         .then((res) => {
-          const created = DesignApiService.mapDevice(res.device!);
+          const created: LogicalDevice = { id: res.deviceId, designId: this.designId, name, role };
           this.mutableDevices.update((list) => [...list, created]);
           this.mutableLayouts.update((list) => [
             ...list,
-            { deviceId: created.id, x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 },
+            { deviceId: res.deviceId, x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 },
           ]);
           this.editDevice.set(null);
         })
@@ -296,10 +296,9 @@ export default class DesignDetailComponent implements OnInit {
     };
     if (form.id) {
       firstValueFrom(this.designApi.updateConnection(conn))
-        .then((res) => {
-          const updated = DesignApiService.mapConnection(res.connection!);
+        .then(() => {
           this.mutableConnections.update((list) =>
-            list.map((c) => (c.id === form.id ? updated : c)),
+            list.map((c) => (c.id === form.id ? conn : c)),
           );
           this.editConnection.set(null);
         })
@@ -308,8 +307,7 @@ export default class DesignDetailComponent implements OnInit {
     } else {
       firstValueFrom(this.designApi.createConnection(conn))
         .then((res) => {
-          const created = DesignApiService.mapConnection(res.connection!);
-          this.mutableConnections.update((list) => [...list, created]);
+          this.mutableConnections.update((list) => [...list, { ...conn, id: res.connectionId }]);
           this.editConnection.set(null);
         })
         // eslint-disable-next-line no-console

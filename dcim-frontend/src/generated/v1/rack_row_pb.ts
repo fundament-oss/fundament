@@ -6,15 +6,15 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/rack_row.proto.
  */
 export const file_v1_rack_row: GenFile = /*@__PURE__*/
-  fileDesc("ChF2MS9yYWNrX3Jvdy5wcm90bxIHZGNpbS52MSLLAQoHUmFja1JvdxIKCgJpZBgKIAEoCRIPCgdyb29tX2lkGBQgASgJEgwKBG5hbWUYHiABKAkSGQoKcG9zaXRpb25feBgoIAEoAUIFqgECCAESGQoKcG9zaXRpb25feRgyIAEoAUIFqgECCAESKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoHZGVsZXRlZBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBIi0KE0xpc3RSYWNrUm93c1JlcXVlc3QSFgoHcm9vbV9pZBgKIAEoCUIFqgECCAEiOwoUTGlzdFJhY2tSb3dzUmVzcG9uc2USIwoJcmFja19yb3dzGAogAygLMhAuZGNpbS52MS5SYWNrUm93IikKEUdldFJhY2tSb3dSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASI4ChJHZXRSYWNrUm93UmVzcG9uc2USIgoIcmFja19yb3cYCiABKAsyEC5kY2ltLnYxLlJhY2tSb3cifgoUQ3JlYXRlUmFja1Jvd1JlcXVlc3QSGQoHcm9vbV9pZBgKIAEoCUIIukgFcgOwAQESFQoEbmFtZRgUIAEoCUIHukgEcgIQARIZCgpwb3NpdGlvbl94GB4gASgBQgWqAQIIARIZCgpwb3NpdGlvbl95GCggASgBQgWqAQIIASIsChVDcmVhdGVSYWNrUm93UmVzcG9uc2USEwoLcmFja19yb3dfaWQYCiABKAkidwoUVXBkYXRlUmFja1Jvd1JlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhMKBG5hbWUYFCABKAlCBaoBAggBEhkKCnBvc2l0aW9uX3gYHiABKAFCBaoBAggBEhkKCnBvc2l0aW9uX3kYKCABKAFCBaoBAggBIhcKFVVwZGF0ZVJhY2tSb3dSZXNwb25zZSIsChREZWxldGVSYWNrUm93UmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiFwoVRGVsZXRlUmFja1Jvd1Jlc3BvbnNlMpQDCg5SYWNrUm93U2VydmljZRJLCgxMaXN0UmFja1Jvd3MSHC5kY2ltLnYxLkxpc3RSYWNrUm93c1JlcXVlc3QaHS5kY2ltLnYxLkxpc3RSYWNrUm93c1Jlc3BvbnNlEkUKCkdldFJhY2tSb3cSGi5kY2ltLnYxLkdldFJhY2tSb3dSZXF1ZXN0GhsuZGNpbS52MS5HZXRSYWNrUm93UmVzcG9uc2USTgoNQ3JlYXRlUmFja1JvdxIdLmRjaW0udjEuQ3JlYXRlUmFja1Jvd1JlcXVlc3QaHi5kY2ltLnYxLkNyZWF0ZVJhY2tSb3dSZXNwb25zZRJOCg1VcGRhdGVSYWNrUm93Eh0uZGNpbS52MS5VcGRhdGVSYWNrUm93UmVxdWVzdBoeLmRjaW0udjEuVXBkYXRlUmFja1Jvd1Jlc3BvbnNlEk4KDURlbGV0ZVJhY2tSb3cSHS5kY2ltLnYxLkRlbGV0ZVJhY2tSb3dSZXF1ZXN0Gh4uZGNpbS52MS5EZWxldGVSYWNrUm93UmVzcG9uc2VCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("ChF2MS9yYWNrX3Jvdy5wcm90bxIHZGNpbS52MSLLAQoHUmFja1JvdxIKCgJpZBgKIAEoCRIPCgdyb29tX2lkGBQgASgJEgwKBG5hbWUYHiABKAkSGQoKcG9zaXRpb25feBgoIAEoAUIFqgECCAESGQoKcG9zaXRpb25feRgyIAEoAUIFqgECCAESKwoHY3JlYXRlZBg8IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoHZGVsZXRlZBhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBIi0KE0xpc3RSYWNrUm93c1JlcXVlc3QSFgoHcm9vbV9pZBgKIAEoCUIFqgECCAEiOwoUTGlzdFJhY2tSb3dzUmVzcG9uc2USIwoJcmFja19yb3dzGAogAygLMhAuZGNpbS52MS5SYWNrUm93IikKEUdldFJhY2tSb3dSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASI4ChJHZXRSYWNrUm93UmVzcG9uc2USIgoIcmFja19yb3cYCiABKAsyEC5kY2ltLnYxLlJhY2tSb3cifgoUQ3JlYXRlUmFja1Jvd1JlcXVlc3QSGQoHcm9vbV9pZBgKIAEoCUIIukgFcgOwAQESFQoEbmFtZRgUIAEoCUIHukgEcgIQARIZCgpwb3NpdGlvbl94GB4gASgBQgWqAQIIARIZCgpwb3NpdGlvbl95GCggASgBQgWqAQIIASIsChVDcmVhdGVSYWNrUm93UmVzcG9uc2USEwoLcmFja19yb3dfaWQYCiABKAkidwoUVXBkYXRlUmFja1Jvd1JlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhMKBG5hbWUYFCABKAlCBaoBAggBEhkKCnBvc2l0aW9uX3gYHiABKAFCBaoBAggBEhkKCnBvc2l0aW9uX3kYKCABKAFCBaoBAggBIiwKFERlbGV0ZVJhY2tSb3dSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABATKEAwoOUmFja1Jvd1NlcnZpY2USSwoMTGlzdFJhY2tSb3dzEhwuZGNpbS52MS5MaXN0UmFja1Jvd3NSZXF1ZXN0Gh0uZGNpbS52MS5MaXN0UmFja1Jvd3NSZXNwb25zZRJFCgpHZXRSYWNrUm93EhouZGNpbS52MS5HZXRSYWNrUm93UmVxdWVzdBobLmRjaW0udjEuR2V0UmFja1Jvd1Jlc3BvbnNlEk4KDUNyZWF0ZVJhY2tSb3cSHS5kY2ltLnYxLkNyZWF0ZVJhY2tSb3dSZXF1ZXN0Gh4uZGNpbS52MS5DcmVhdGVSYWNrUm93UmVzcG9uc2USRgoNVXBkYXRlUmFja1JvdxIdLmRjaW0udjEuVXBkYXRlUmFja1Jvd1JlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSRgoNRGVsZXRlUmFja1JvdxIdLmRjaW0udjEuRGVsZXRlUmFja1Jvd1JlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * RackRow is a row of racks within a room (core.rack_rows).
@@ -216,19 +216,6 @@ export const UpdateRackRowRequestSchema: GenMessage<UpdateRackRowRequest> = /*@_
   messageDesc(file_v1_rack_row, 7);
 
 /**
- * @generated from message dcim.v1.UpdateRackRowResponse
- */
-export type UpdateRackRowResponse = Message<"dcim.v1.UpdateRackRowResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.UpdateRackRowResponse.
- * Use `create(UpdateRackRowResponseSchema)` to create a new message.
- */
-export const UpdateRackRowResponseSchema: GenMessage<UpdateRackRowResponse> = /*@__PURE__*/
-  messageDesc(file_v1_rack_row, 8);
-
-/**
  * @generated from message dcim.v1.DeleteRackRowRequest
  */
 export type DeleteRackRowRequest = Message<"dcim.v1.DeleteRackRowRequest"> & {
@@ -243,20 +230,7 @@ export type DeleteRackRowRequest = Message<"dcim.v1.DeleteRackRowRequest"> & {
  * Use `create(DeleteRackRowRequestSchema)` to create a new message.
  */
 export const DeleteRackRowRequestSchema: GenMessage<DeleteRackRowRequest> = /*@__PURE__*/
-  messageDesc(file_v1_rack_row, 9);
-
-/**
- * @generated from message dcim.v1.DeleteRackRowResponse
- */
-export type DeleteRackRowResponse = Message<"dcim.v1.DeleteRackRowResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.DeleteRackRowResponse.
- * Use `create(DeleteRackRowResponseSchema)` to create a new message.
- */
-export const DeleteRackRowResponseSchema: GenMessage<DeleteRackRowResponse> = /*@__PURE__*/
-  messageDesc(file_v1_rack_row, 10);
+  messageDesc(file_v1_rack_row, 8);
 
 /**
  * @generated from service dcim.v1.RackRowService
@@ -292,7 +266,7 @@ export const RackRowService: GenService<{
   updateRackRow: {
     methodKind: "unary";
     input: typeof UpdateRackRowRequestSchema;
-    output: typeof UpdateRackRowResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * @generated from rpc dcim.v1.RackRowService.DeleteRackRow
@@ -300,7 +274,7 @@ export const RackRowService: GenService<{
   deleteRackRow: {
     methodKind: "unary";
     input: typeof DeleteRackRowRequestSchema;
-    output: typeof DeleteRackRowResponseSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_rack_row, 0);

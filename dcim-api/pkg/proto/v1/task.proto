@@ -1,0 +1,170 @@
+edition = "2023";
+
+package dcim.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+// ── Enums ─────────────────────────────────────────────────────────────────────
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_READY       = 10;
+  TASK_STATUS_IN_PROGRESS = 20;
+  TASK_STATUS_REVIEW      = 30;
+  TASK_STATUS_BLOCKED     = 40;
+  TASK_STATUS_DONE        = 50;
+}
+
+enum TaskPriority {
+  TASK_PRIORITY_UNSPECIFIED = 0;
+  TASK_PRIORITY_LOW         = 10;
+  TASK_PRIORITY_MEDIUM      = 20;
+  TASK_PRIORITY_HIGH        = 30;
+  TASK_PRIORITY_CRITICAL    = 40;
+}
+
+enum TaskCategory {
+  TASK_CATEGORY_UNSPECIFIED = 0;
+  TASK_CATEGORY_HARDWARE    = 10;
+  TASK_CATEGORY_NETWORK     = 20;
+  TASK_CATEGORY_COOLING     = 30;
+  TASK_CATEGORY_POWER       = 40;
+  TASK_CATEGORY_SECURITY    = 50;
+  TASK_CATEGORY_OTHER       = 60;
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+// Task is a standalone datacenter work order.
+message Task {
+  string                    id          = 10;
+  string                    title       = 20;
+  string                    description = 30;
+  TaskStatus                status      = 40;
+  TaskPriority              priority    = 50;
+  TaskCategory              category    = 60;
+  string                    assignee_id = 70  [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp due_date    = 80  [features.field_presence = EXPLICIT];
+  string                    location    = 90;
+  google.protobuf.Timestamp created     = 100;
+  google.protobuf.Timestamp deleted     = 110 [features.field_presence = EXPLICIT];
+}
+
+// TaskStep is an ordered checklist item belonging to a task.
+message TaskStep {
+  string                    id          = 10;
+  string                    task_id     = 20;
+  string                    title       = 30;
+  string                    description = 40;
+  int32                     ordinal     = 50;
+  bool                      completed   = 60;
+  google.protobuf.Timestamp created     = 70;
+  google.protobuf.Timestamp deleted     = 80 [features.field_presence = EXPLICIT];
+}
+
+// ── TaskService ───────────────────────────────────────────────────────────────
+
+service TaskService {
+  rpc ListTasks (ListTasksRequest)  returns (ListTasksResponse);
+  rpc GetTask   (GetTaskRequest)    returns (GetTaskResponse);
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+  rpc UpdateTask(UpdateTaskRequest) returns (google.protobuf.Empty);
+  rpc DeleteTask(DeleteTaskRequest) returns (google.protobuf.Empty);
+}
+
+message ListTasksRequest {
+  TaskStatus   status      = 10 [features.field_presence = EXPLICIT];
+  TaskPriority priority    = 20 [features.field_presence = EXPLICIT];
+  TaskCategory category    = 30 [features.field_presence = EXPLICIT];
+  string       assignee_id = 40 [features.field_presence = EXPLICIT];
+}
+
+message ListTasksResponse {
+  repeated Task tasks = 10;
+}
+
+message GetTaskRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetTaskResponse {
+  Task task = 10;
+}
+
+message CreateTaskRequest {
+  string                    title       = 10 [(buf.validate.field).string.min_len = 1];
+  string                    description = 20;
+  TaskStatus                status      = 30;
+  TaskPriority              priority    = 40;
+  TaskCategory              category    = 50;
+  string                    assignee_id = 60 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp due_date    = 70 [features.field_presence = EXPLICIT];
+  string                    location    = 80;
+}
+
+message CreateTaskResponse {
+  string task_id = 10;
+}
+
+message UpdateTaskRequest {
+  string                    id          = 10 [(buf.validate.field).string = {uuid: true}];
+  string                    title       = 20 [features.field_presence = EXPLICIT];
+  string                    description = 30 [features.field_presence = EXPLICIT];
+  TaskStatus                status      = 40 [features.field_presence = EXPLICIT];
+  TaskPriority              priority    = 50 [features.field_presence = EXPLICIT];
+  TaskCategory              category    = 60 [features.field_presence = EXPLICIT];
+  string                    assignee_id = 70 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp due_date    = 80 [features.field_presence = EXPLICIT];
+  string                    location    = 90 [features.field_presence = EXPLICIT];
+}
+
+message DeleteTaskRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// ── TaskStepService ───────────────────────────────────────────────────────────
+
+service TaskStepService {
+  rpc ListTaskSteps (ListTaskStepsRequest)  returns (ListTaskStepsResponse);
+  rpc CreateTaskStep(CreateTaskStepRequest) returns (CreateTaskStepResponse);
+  rpc UpdateTaskStep(UpdateTaskStepRequest) returns (google.protobuf.Empty);
+  rpc DeleteTaskStep(DeleteTaskStepRequest) returns (google.protobuf.Empty);
+}
+
+message ListTaskStepsRequest {
+  string task_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListTaskStepsResponse {
+  repeated TaskStep steps = 10;
+}
+
+message CreateTaskStepRequest {
+  string task_id     = 10 [(buf.validate.field).string = {uuid: true}];
+  string title       = 20 [(buf.validate.field).string.min_len = 1];
+  string description = 30;
+  int32  ordinal     = 40;
+}
+
+message CreateTaskStepResponse {
+  string task_step_id = 10;
+}
+
+message UpdateTaskStepRequest {
+  string id          = 10 [(buf.validate.field).string = {uuid: true}];
+  string title       = 20 [features.field_presence = EXPLICIT];
+  string description = 30 [features.field_presence = EXPLICIT];
+  int32  ordinal     = 40 [features.field_presence = EXPLICIT];
+  bool   completed   = 50 [features.field_presence = EXPLICIT];
+}
+
+message DeleteTaskStepRequest {
+  string id = 10 [(buf.validate.field).string = {uuid: true}];
+}

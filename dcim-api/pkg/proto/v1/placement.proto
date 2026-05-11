@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
@@ -43,8 +44,8 @@ message Placement {
 service PlacementService {
   rpc CreatePlacement     (CreatePlacementRequest)      returns (CreatePlacementResponse);
   rpc GetPlacement        (GetPlacementRequest)         returns (GetPlacementResponse);
-  rpc UpdatePlacement     (UpdatePlacementRequest)      returns (UpdatePlacementResponse);
-  rpc DeletePlacement     (DeletePlacementRequest)      returns (DeletePlacementResponse);
+  rpc UpdatePlacement     (UpdatePlacementRequest)      returns (google.protobuf.Empty);
+  rpc DeletePlacement     (DeletePlacementRequest)      returns (google.protobuf.Empty);
   rpc ListPlacementsByRack(ListPlacementsByRackRequest) returns (ListPlacementsByRackResponse);
   rpc ListChildPlacements (ListChildPlacementsRequest)  returns (ListChildPlacementsResponse);
 }
@@ -61,7 +62,7 @@ message CreatePlacementRequest {
 }
 
 message CreatePlacementResponse {
-  Placement placement = 10;
+  string placement_id = 10;
 }
 
 message GetPlacementRequest {
@@ -82,15 +83,9 @@ message UpdatePlacementRequest {
   string notes             = 80 [features.field_presence = EXPLICIT];
 }
 
-message UpdatePlacementResponse {
-  Placement placement = 10;
-}
-
 message DeletePlacementRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeletePlacementResponse {}
 
 message ListPlacementsByRackRequest {
   string rack_id = 10 [(buf.validate.field).string = {uuid: true}];

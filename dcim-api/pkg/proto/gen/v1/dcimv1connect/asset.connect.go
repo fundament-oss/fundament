@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -59,8 +60,8 @@ type AssetServiceClient interface {
 	ListAssets(context.Context, *connect.Request[v1.ListAssetsRequest]) (*connect.Response[v1.ListAssetsResponse], error)
 	GetAsset(context.Context, *connect.Request[v1.GetAssetRequest]) (*connect.Response[v1.GetAssetResponse], error)
 	CreateAsset(context.Context, *connect.Request[v1.CreateAssetRequest]) (*connect.Response[v1.CreateAssetResponse], error)
-	UpdateAsset(context.Context, *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[v1.UpdateAssetResponse], error)
-	DeleteAsset(context.Context, *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[v1.DeleteAssetResponse], error)
+	UpdateAsset(context.Context, *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteAsset(context.Context, *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[emptypb.Empty], error)
 	GetAssetEvents(context.Context, *connect.Request[v1.GetAssetEventsRequest]) (*connect.Response[v1.GetAssetEventsResponse], error)
 	GetAssetStats(context.Context, *connect.Request[v1.GetAssetStatsRequest]) (*connect.Response[v1.GetAssetStatsResponse], error)
 }
@@ -94,13 +95,13 @@ func NewAssetServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(assetServiceMethods.ByName("CreateAsset")),
 			connect.WithClientOptions(opts...),
 		),
-		updateAsset: connect.NewClient[v1.UpdateAssetRequest, v1.UpdateAssetResponse](
+		updateAsset: connect.NewClient[v1.UpdateAssetRequest, emptypb.Empty](
 			httpClient,
 			baseURL+AssetServiceUpdateAssetProcedure,
 			connect.WithSchema(assetServiceMethods.ByName("UpdateAsset")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteAsset: connect.NewClient[v1.DeleteAssetRequest, v1.DeleteAssetResponse](
+		deleteAsset: connect.NewClient[v1.DeleteAssetRequest, emptypb.Empty](
 			httpClient,
 			baseURL+AssetServiceDeleteAssetProcedure,
 			connect.WithSchema(assetServiceMethods.ByName("DeleteAsset")),
@@ -126,8 +127,8 @@ type assetServiceClient struct {
 	listAssets     *connect.Client[v1.ListAssetsRequest, v1.ListAssetsResponse]
 	getAsset       *connect.Client[v1.GetAssetRequest, v1.GetAssetResponse]
 	createAsset    *connect.Client[v1.CreateAssetRequest, v1.CreateAssetResponse]
-	updateAsset    *connect.Client[v1.UpdateAssetRequest, v1.UpdateAssetResponse]
-	deleteAsset    *connect.Client[v1.DeleteAssetRequest, v1.DeleteAssetResponse]
+	updateAsset    *connect.Client[v1.UpdateAssetRequest, emptypb.Empty]
+	deleteAsset    *connect.Client[v1.DeleteAssetRequest, emptypb.Empty]
 	getAssetEvents *connect.Client[v1.GetAssetEventsRequest, v1.GetAssetEventsResponse]
 	getAssetStats  *connect.Client[v1.GetAssetStatsRequest, v1.GetAssetStatsResponse]
 }
@@ -148,12 +149,12 @@ func (c *assetServiceClient) CreateAsset(ctx context.Context, req *connect.Reque
 }
 
 // UpdateAsset calls dcim.v1.AssetService.UpdateAsset.
-func (c *assetServiceClient) UpdateAsset(ctx context.Context, req *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[v1.UpdateAssetResponse], error) {
+func (c *assetServiceClient) UpdateAsset(ctx context.Context, req *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateAsset.CallUnary(ctx, req)
 }
 
 // DeleteAsset calls dcim.v1.AssetService.DeleteAsset.
-func (c *assetServiceClient) DeleteAsset(ctx context.Context, req *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[v1.DeleteAssetResponse], error) {
+func (c *assetServiceClient) DeleteAsset(ctx context.Context, req *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteAsset.CallUnary(ctx, req)
 }
 
@@ -172,8 +173,8 @@ type AssetServiceHandler interface {
 	ListAssets(context.Context, *connect.Request[v1.ListAssetsRequest]) (*connect.Response[v1.ListAssetsResponse], error)
 	GetAsset(context.Context, *connect.Request[v1.GetAssetRequest]) (*connect.Response[v1.GetAssetResponse], error)
 	CreateAsset(context.Context, *connect.Request[v1.CreateAssetRequest]) (*connect.Response[v1.CreateAssetResponse], error)
-	UpdateAsset(context.Context, *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[v1.UpdateAssetResponse], error)
-	DeleteAsset(context.Context, *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[v1.DeleteAssetResponse], error)
+	UpdateAsset(context.Context, *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteAsset(context.Context, *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[emptypb.Empty], error)
 	GetAssetEvents(context.Context, *connect.Request[v1.GetAssetEventsRequest]) (*connect.Response[v1.GetAssetEventsResponse], error)
 	GetAssetStats(context.Context, *connect.Request[v1.GetAssetStatsRequest]) (*connect.Response[v1.GetAssetStatsResponse], error)
 }
@@ -264,11 +265,11 @@ func (UnimplementedAssetServiceHandler) CreateAsset(context.Context, *connect.Re
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.CreateAsset is not implemented"))
 }
 
-func (UnimplementedAssetServiceHandler) UpdateAsset(context.Context, *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[v1.UpdateAssetResponse], error) {
+func (UnimplementedAssetServiceHandler) UpdateAsset(context.Context, *connect.Request[v1.UpdateAssetRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.UpdateAsset is not implemented"))
 }
 
-func (UnimplementedAssetServiceHandler) DeleteAsset(context.Context, *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[v1.DeleteAssetResponse], error) {
+func (UnimplementedAssetServiceHandler) DeleteAsset(context.Context, *connect.Request[v1.DeleteAssetRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.AssetService.DeleteAsset is not implemented"))
 }
 

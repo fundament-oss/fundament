@@ -6,15 +6,15 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/connection.proto.
  */
 export const file_v1_connection: GenFile = /*@__PURE__*/
-  fileDesc("ChN2MS9jb25uZWN0aW9uLnByb3RvEgdkY2ltLnYxIsMCChJQaHlzaWNhbENvbm5lY3Rpb24SCgoCaWQYCiABKAkSGwoTc291cmNlX3BsYWNlbWVudF9pZBgUIAEoCRIYChBzb3VyY2VfcG9ydF9uYW1lGB4gASgJEhsKE3RhcmdldF9wbGFjZW1lbnRfaWQYKCABKAkSGAoQdGFyZ2V0X3BvcnRfbmFtZRgyIAEoCRIdCg5jYWJsZV9hc3NldF9pZBg8IAEoCUIFqgECCAESJAoVbG9naWNhbF9jb25uZWN0aW9uX2lkGEYgASgJQgWqAQIIARINCgVub3RlcxhQIAEoCRIrCgdjcmVhdGVkGFogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiiQIKH0NyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlcXVlc3QSJQoTc291cmNlX3BsYWNlbWVudF9pZBgKIAEoCUIIukgFcgOwAQESIQoQc291cmNlX3BvcnRfbmFtZRgUIAEoCUIHukgEcgIQARIlChN0YXJnZXRfcGxhY2VtZW50X2lkGB4gASgJQgi6SAVyA7ABARIhChB0YXJnZXRfcG9ydF9uYW1lGCggASgJQge6SARyAhABEh0KDmNhYmxlX2Fzc2V0X2lkGDIgASgJQgWqAQIIARIkChVsb2dpY2FsX2Nvbm5lY3Rpb25faWQYPCABKAlCBaoBAggBEg0KBW5vdGVzGEYgASgJIlMKIENyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlc3BvbnNlEi8KCmNvbm5lY3Rpb24YCiABKAsyGy5kY2ltLnYxLlBoeXNpY2FsQ29ubmVjdGlvbiI0ChxHZXRQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASJQCh1HZXRQaHlzaWNhbENvbm5lY3Rpb25SZXNwb25zZRIvCgpjb25uZWN0aW9uGAogASgLMhsuZGNpbS52MS5QaHlzaWNhbENvbm5lY3Rpb24ikgEKH1VwZGF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEh0KDmNhYmxlX2Fzc2V0X2lkGBQgASgJQgWqAQIIARIkChVsb2dpY2FsX2Nvbm5lY3Rpb25faWQYHiABKAlCBaoBAggBEhQKBW5vdGVzGCggASgJQgWqAQIIASJTCiBVcGRhdGVQaHlzaWNhbENvbm5lY3Rpb25SZXNwb25zZRIvCgpjb25uZWN0aW9uGAogASgLMhsuZGNpbS52MS5QaHlzaWNhbENvbm5lY3Rpb24iNwofRGVsZXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiIgogRGVsZXRlUGh5c2ljYWxDb25uZWN0aW9uUmVzcG9uc2UiQwohTGlzdENvbm5lY3Rpb25zQnlQbGFjZW1lbnRSZXF1ZXN0Eh4KDHBsYWNlbWVudF9pZBgKIAEoCUIIukgFcgOwAQEiVgoiTGlzdENvbm5lY3Rpb25zQnlQbGFjZW1lbnRSZXNwb25zZRIwCgtjb25uZWN0aW9ucxgKIAMoCzIbLmRjaW0udjEuUGh5c2ljYWxDb25uZWN0aW9uMs0EChlQaHlzaWNhbENvbm5lY3Rpb25TZXJ2aWNlEm8KGENyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvbhIoLmRjaW0udjEuQ3JlYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBopLmRjaW0udjEuQ3JlYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVzcG9uc2USZgoVR2V0UGh5c2ljYWxDb25uZWN0aW9uEiUuZGNpbS52MS5HZXRQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0GiYuZGNpbS52MS5HZXRQaHlzaWNhbENvbm5lY3Rpb25SZXNwb25zZRJvChhVcGRhdGVQaHlzaWNhbENvbm5lY3Rpb24SKC5kY2ltLnYxLlVwZGF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlcXVlc3QaKS5kY2ltLnYxLlVwZGF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlc3BvbnNlEm8KGERlbGV0ZVBoeXNpY2FsQ29ubmVjdGlvbhIoLmRjaW0udjEuRGVsZXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBopLmRjaW0udjEuRGVsZXRlUGh5c2ljYWxDb25uZWN0aW9uUmVzcG9uc2USdQoaTGlzdENvbm5lY3Rpb25zQnlQbGFjZW1lbnQSKi5kY2ltLnYxLkxpc3RDb25uZWN0aW9uc0J5UGxhY2VtZW50UmVxdWVzdBorLmRjaW0udjEuTGlzdENvbm5lY3Rpb25zQnlQbGFjZW1lbnRSZXNwb25zZUJPWkNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2RjaW0tYXBpL3BrZy9wcm90by9nZW4vdjE7ZGNpbXYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("ChN2MS9jb25uZWN0aW9uLnByb3RvEgdkY2ltLnYxIsMCChJQaHlzaWNhbENvbm5lY3Rpb24SCgoCaWQYCiABKAkSGwoTc291cmNlX3BsYWNlbWVudF9pZBgUIAEoCRIYChBzb3VyY2VfcG9ydF9uYW1lGB4gASgJEhsKE3RhcmdldF9wbGFjZW1lbnRfaWQYKCABKAkSGAoQdGFyZ2V0X3BvcnRfbmFtZRgyIAEoCRIdCg5jYWJsZV9hc3NldF9pZBg8IAEoCUIFqgECCAESJAoVbG9naWNhbF9jb25uZWN0aW9uX2lkGEYgASgJQgWqAQIIARINCgVub3RlcxhQIAEoCRIrCgdjcmVhdGVkGFogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiiQIKH0NyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlcXVlc3QSJQoTc291cmNlX3BsYWNlbWVudF9pZBgKIAEoCUIIukgFcgOwAQESIQoQc291cmNlX3BvcnRfbmFtZRgUIAEoCUIHukgEcgIQARIlChN0YXJnZXRfcGxhY2VtZW50X2lkGB4gASgJQgi6SAVyA7ABARIhChB0YXJnZXRfcG9ydF9uYW1lGCggASgJQge6SARyAhABEh0KDmNhYmxlX2Fzc2V0X2lkGDIgASgJQgWqAQIIARIkChVsb2dpY2FsX2Nvbm5lY3Rpb25faWQYPCABKAlCBaoBAggBEg0KBW5vdGVzGEYgASgJIjkKIENyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlc3BvbnNlEhUKDWNvbm5lY3Rpb25faWQYCiABKAkiNAocR2V0UGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiUAodR2V0UGh5c2ljYWxDb25uZWN0aW9uUmVzcG9uc2USLwoKY29ubmVjdGlvbhgKIAEoCzIbLmRjaW0udjEuUGh5c2ljYWxDb25uZWN0aW9uIpIBCh9VcGRhdGVQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARIdCg5jYWJsZV9hc3NldF9pZBgUIAEoCUIFqgECCAESJAoVbG9naWNhbF9jb25uZWN0aW9uX2lkGB4gASgJQgWqAQIIARIUCgVub3RlcxgoIAEoCUIFqgECCAEiNwofRGVsZXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiQwohTGlzdENvbm5lY3Rpb25zQnlQbGFjZW1lbnRSZXF1ZXN0Eh4KDHBsYWNlbWVudF9pZBgKIAEoCUIIukgFcgOwAQEiVgoiTGlzdENvbm5lY3Rpb25zQnlQbGFjZW1lbnRSZXNwb25zZRIwCgtjb25uZWN0aW9ucxgKIAMoCzIbLmRjaW0udjEuUGh5c2ljYWxDb25uZWN0aW9uMqcEChlQaHlzaWNhbENvbm5lY3Rpb25TZXJ2aWNlEm8KGENyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvbhIoLmRjaW0udjEuQ3JlYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBopLmRjaW0udjEuQ3JlYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVzcG9uc2USZgoVR2V0UGh5c2ljYWxDb25uZWN0aW9uEiUuZGNpbS52MS5HZXRQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0GiYuZGNpbS52MS5HZXRQaHlzaWNhbENvbm5lY3Rpb25SZXNwb25zZRJcChhVcGRhdGVQaHlzaWNhbENvbm5lY3Rpb24SKC5kY2ltLnYxLlVwZGF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSXAoYRGVsZXRlUGh5c2ljYWxDb25uZWN0aW9uEiguZGNpbS52MS5EZWxldGVQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EnUKGkxpc3RDb25uZWN0aW9uc0J5UGxhY2VtZW50EiouZGNpbS52MS5MaXN0Q29ubmVjdGlvbnNCeVBsYWNlbWVudFJlcXVlc3QaKy5kY2ltLnYxLkxpc3RDb25uZWN0aW9uc0J5UGxhY2VtZW50UmVzcG9uc2VCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * PhysicalConnection records a cable between two placement ports (core.physical_connections).
@@ -136,9 +136,9 @@ export const CreatePhysicalConnectionRequestSchema: GenMessage<CreatePhysicalCon
  */
 export type CreatePhysicalConnectionResponse = Message<"dcim.v1.CreatePhysicalConnectionResponse"> & {
   /**
-   * @generated from field: dcim.v1.PhysicalConnection connection = 10;
+   * @generated from field: string connection_id = 10;
    */
-  connection?: PhysicalConnection;
+  connectionId: string;
 };
 
 /**
@@ -215,23 +215,6 @@ export const UpdatePhysicalConnectionRequestSchema: GenMessage<UpdatePhysicalCon
   messageDesc(file_v1_connection, 5);
 
 /**
- * @generated from message dcim.v1.UpdatePhysicalConnectionResponse
- */
-export type UpdatePhysicalConnectionResponse = Message<"dcim.v1.UpdatePhysicalConnectionResponse"> & {
-  /**
-   * @generated from field: dcim.v1.PhysicalConnection connection = 10;
-   */
-  connection?: PhysicalConnection;
-};
-
-/**
- * Describes the message dcim.v1.UpdatePhysicalConnectionResponse.
- * Use `create(UpdatePhysicalConnectionResponseSchema)` to create a new message.
- */
-export const UpdatePhysicalConnectionResponseSchema: GenMessage<UpdatePhysicalConnectionResponse> = /*@__PURE__*/
-  messageDesc(file_v1_connection, 6);
-
-/**
  * @generated from message dcim.v1.DeletePhysicalConnectionRequest
  */
 export type DeletePhysicalConnectionRequest = Message<"dcim.v1.DeletePhysicalConnectionRequest"> & {
@@ -246,20 +229,7 @@ export type DeletePhysicalConnectionRequest = Message<"dcim.v1.DeletePhysicalCon
  * Use `create(DeletePhysicalConnectionRequestSchema)` to create a new message.
  */
 export const DeletePhysicalConnectionRequestSchema: GenMessage<DeletePhysicalConnectionRequest> = /*@__PURE__*/
-  messageDesc(file_v1_connection, 7);
-
-/**
- * @generated from message dcim.v1.DeletePhysicalConnectionResponse
- */
-export type DeletePhysicalConnectionResponse = Message<"dcim.v1.DeletePhysicalConnectionResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.DeletePhysicalConnectionResponse.
- * Use `create(DeletePhysicalConnectionResponseSchema)` to create a new message.
- */
-export const DeletePhysicalConnectionResponseSchema: GenMessage<DeletePhysicalConnectionResponse> = /*@__PURE__*/
-  messageDesc(file_v1_connection, 8);
+  messageDesc(file_v1_connection, 6);
 
 /**
  * @generated from message dcim.v1.ListConnectionsByPlacementRequest
@@ -276,7 +246,7 @@ export type ListConnectionsByPlacementRequest = Message<"dcim.v1.ListConnections
  * Use `create(ListConnectionsByPlacementRequestSchema)` to create a new message.
  */
 export const ListConnectionsByPlacementRequestSchema: GenMessage<ListConnectionsByPlacementRequest> = /*@__PURE__*/
-  messageDesc(file_v1_connection, 9);
+  messageDesc(file_v1_connection, 7);
 
 /**
  * @generated from message dcim.v1.ListConnectionsByPlacementResponse
@@ -293,7 +263,7 @@ export type ListConnectionsByPlacementResponse = Message<"dcim.v1.ListConnection
  * Use `create(ListConnectionsByPlacementResponseSchema)` to create a new message.
  */
 export const ListConnectionsByPlacementResponseSchema: GenMessage<ListConnectionsByPlacementResponse> = /*@__PURE__*/
-  messageDesc(file_v1_connection, 10);
+  messageDesc(file_v1_connection, 8);
 
 /**
  * @generated from service dcim.v1.PhysicalConnectionService
@@ -321,7 +291,7 @@ export const PhysicalConnectionService: GenService<{
   updatePhysicalConnection: {
     methodKind: "unary";
     input: typeof UpdatePhysicalConnectionRequestSchema;
-    output: typeof UpdatePhysicalConnectionResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * @generated from rpc dcim.v1.PhysicalConnectionService.DeletePhysicalConnection
@@ -329,7 +299,7 @@ export const PhysicalConnectionService: GenService<{
   deletePhysicalConnection: {
     methodKind: "unary";
     input: typeof DeletePhysicalConnectionRequestSchema;
-    output: typeof DeletePhysicalConnectionResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * @generated from rpc dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement

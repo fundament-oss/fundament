@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
@@ -18,7 +19,7 @@ import (
 func (s *Server) UpdateRoom(
 	ctx context.Context,
 	req *connect.Request[dcimv1.UpdateRoomRequest],
-) (*connect.Response[dcimv1.UpdateRoomResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	roomID := uuid.MustParse(req.Msg.GetId())
 
 	params := db.RoomUpdateParams{
@@ -48,5 +49,5 @@ func (s *Server) UpdateRoom(
 
 	s.logger.InfoContext(ctx, "room updated", "room_id", roomID)
 
-	return connect.NewResponse(dcimv1.UpdateRoomResponse_builder{}.Build()), nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }

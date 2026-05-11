@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -50,8 +51,8 @@ type SiteServiceClient interface {
 	ListSites(context.Context, *connect.Request[v1.ListSitesRequest]) (*connect.Response[v1.ListSitesResponse], error)
 	GetSite(context.Context, *connect.Request[v1.GetSiteRequest]) (*connect.Response[v1.GetSiteResponse], error)
 	CreateSite(context.Context, *connect.Request[v1.CreateSiteRequest]) (*connect.Response[v1.CreateSiteResponse], error)
-	UpdateSite(context.Context, *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[v1.UpdateSiteResponse], error)
-	DeleteSite(context.Context, *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[v1.DeleteSiteResponse], error)
+	UpdateSite(context.Context, *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteSite(context.Context, *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewSiteServiceClient constructs a client for the dcim.v1.SiteService service. By default, it uses
@@ -83,13 +84,13 @@ func NewSiteServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(siteServiceMethods.ByName("CreateSite")),
 			connect.WithClientOptions(opts...),
 		),
-		updateSite: connect.NewClient[v1.UpdateSiteRequest, v1.UpdateSiteResponse](
+		updateSite: connect.NewClient[v1.UpdateSiteRequest, emptypb.Empty](
 			httpClient,
 			baseURL+SiteServiceUpdateSiteProcedure,
 			connect.WithSchema(siteServiceMethods.ByName("UpdateSite")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteSite: connect.NewClient[v1.DeleteSiteRequest, v1.DeleteSiteResponse](
+		deleteSite: connect.NewClient[v1.DeleteSiteRequest, emptypb.Empty](
 			httpClient,
 			baseURL+SiteServiceDeleteSiteProcedure,
 			connect.WithSchema(siteServiceMethods.ByName("DeleteSite")),
@@ -103,8 +104,8 @@ type siteServiceClient struct {
 	listSites  *connect.Client[v1.ListSitesRequest, v1.ListSitesResponse]
 	getSite    *connect.Client[v1.GetSiteRequest, v1.GetSiteResponse]
 	createSite *connect.Client[v1.CreateSiteRequest, v1.CreateSiteResponse]
-	updateSite *connect.Client[v1.UpdateSiteRequest, v1.UpdateSiteResponse]
-	deleteSite *connect.Client[v1.DeleteSiteRequest, v1.DeleteSiteResponse]
+	updateSite *connect.Client[v1.UpdateSiteRequest, emptypb.Empty]
+	deleteSite *connect.Client[v1.DeleteSiteRequest, emptypb.Empty]
 }
 
 // ListSites calls dcim.v1.SiteService.ListSites.
@@ -123,12 +124,12 @@ func (c *siteServiceClient) CreateSite(ctx context.Context, req *connect.Request
 }
 
 // UpdateSite calls dcim.v1.SiteService.UpdateSite.
-func (c *siteServiceClient) UpdateSite(ctx context.Context, req *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[v1.UpdateSiteResponse], error) {
+func (c *siteServiceClient) UpdateSite(ctx context.Context, req *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateSite.CallUnary(ctx, req)
 }
 
 // DeleteSite calls dcim.v1.SiteService.DeleteSite.
-func (c *siteServiceClient) DeleteSite(ctx context.Context, req *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[v1.DeleteSiteResponse], error) {
+func (c *siteServiceClient) DeleteSite(ctx context.Context, req *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteSite.CallUnary(ctx, req)
 }
 
@@ -137,8 +138,8 @@ type SiteServiceHandler interface {
 	ListSites(context.Context, *connect.Request[v1.ListSitesRequest]) (*connect.Response[v1.ListSitesResponse], error)
 	GetSite(context.Context, *connect.Request[v1.GetSiteRequest]) (*connect.Response[v1.GetSiteResponse], error)
 	CreateSite(context.Context, *connect.Request[v1.CreateSiteRequest]) (*connect.Response[v1.CreateSiteResponse], error)
-	UpdateSite(context.Context, *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[v1.UpdateSiteResponse], error)
-	DeleteSite(context.Context, *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[v1.DeleteSiteResponse], error)
+	UpdateSite(context.Context, *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteSite(context.Context, *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewSiteServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -211,10 +212,10 @@ func (UnimplementedSiteServiceHandler) CreateSite(context.Context, *connect.Requ
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.SiteService.CreateSite is not implemented"))
 }
 
-func (UnimplementedSiteServiceHandler) UpdateSite(context.Context, *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[v1.UpdateSiteResponse], error) {
+func (UnimplementedSiteServiceHandler) UpdateSite(context.Context, *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.SiteService.UpdateSite is not implemented"))
 }
 
-func (UnimplementedSiteServiceHandler) DeleteSite(context.Context, *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[v1.DeleteSiteResponse], error) {
+func (UnimplementedSiteServiceHandler) DeleteSite(context.Context, *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.SiteService.DeleteSite is not implemented"))
 }

@@ -6,15 +6,15 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/rack.proto.
  */
 export const file_v1_rack: GenFile = /*@__PURE__*/
-  fileDesc("Cg12MS9yYWNrLnByb3RvEgdkY2ltLnYxIr8BCgRSYWNrEgoKAmlkGAogASgJEg4KBnJvd19pZBgUIAEoCRIMCgRuYW1lGB4gASgJEhMKC3RvdGFsX3VuaXRzGCggASgFEhcKD3Bvc2l0aW9uX2luX3JvdxgyIAEoBRIrCgdjcmVhdGVkGDwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGEYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiKQoQTGlzdFJhY2tzUmVxdWVzdBIVCgZyb3dfaWQYCiABKAlCBaoBAggBIuQBChFMaXN0UmFja3NSZXNwb25zZRI1CgVyYWNrcxgKIAMoCzImLmRjaW0udjEuTGlzdFJhY2tzUmVzcG9uc2UuUmFja1N1bW1hcnkalwEKC1JhY2tTdW1tYXJ5EhsKBHJhY2sYCiABKAsyDS5kY2ltLnYxLlJhY2sSEgoKdXNlZF91bml0cxgUIAEoBRISCgpmcmVlX3VuaXRzGB4gASgFEhQKDHBvd2VyX2RyYXdfdxgoIAEoARIUCgxkZXZpY2VfY291bnQYMiABKAUSFwoPdXRpbGl6YXRpb25fcGN0GDwgASgBIiYKDkdldFJhY2tSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIuCg9HZXRSYWNrUmVzcG9uc2USGwoEcmFjaxgKIAEoCzINLmRjaW0udjEuUmFjayJ7ChFDcmVhdGVSYWNrUmVxdWVzdBIYCgZyb3dfaWQYCiABKAlCCLpIBXIDsAEBEhUKBG5hbWUYFCABKAlCB7pIBHICEAESHAoLdG90YWxfdW5pdHMYHiABKAVCB7pIBBoCIAASFwoPcG9zaXRpb25faW5fcm93GCggASgFIiUKEkNyZWF0ZVJhY2tSZXNwb25zZRIPCgdyYWNrX2lkGAogASgJInoKEVVwZGF0ZVJhY2tSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARITCgRuYW1lGBQgASgJQgWqAQIIARIaCgt0b3RhbF91bml0cxgeIAEoBUIFqgECCAESHgoPcG9zaXRpb25faW5fcm93GCggASgFQgWqAQIIASIUChJVcGRhdGVSYWNrUmVzcG9uc2UiKQoRRGVsZXRlUmFja1JlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIhQKEkRlbGV0ZVJhY2tSZXNwb25zZTLkAgoLUmFja1NlcnZpY2USQgoJTGlzdFJhY2tzEhkuZGNpbS52MS5MaXN0UmFja3NSZXF1ZXN0GhouZGNpbS52MS5MaXN0UmFja3NSZXNwb25zZRI8CgdHZXRSYWNrEhcuZGNpbS52MS5HZXRSYWNrUmVxdWVzdBoYLmRjaW0udjEuR2V0UmFja1Jlc3BvbnNlEkUKCkNyZWF0ZVJhY2sSGi5kY2ltLnYxLkNyZWF0ZVJhY2tSZXF1ZXN0GhsuZGNpbS52MS5DcmVhdGVSYWNrUmVzcG9uc2USRQoKVXBkYXRlUmFjaxIaLmRjaW0udjEuVXBkYXRlUmFja1JlcXVlc3QaGy5kY2ltLnYxLlVwZGF0ZVJhY2tSZXNwb25zZRJFCgpEZWxldGVSYWNrEhouZGNpbS52MS5EZWxldGVSYWNrUmVxdWVzdBobLmRjaW0udjEuRGVsZXRlUmFja1Jlc3BvbnNlQk9aQ2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvZGNpbS1hcGkvcGtnL3Byb3RvL2dlbi92MTtkY2ltdjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("Cg12MS9yYWNrLnByb3RvEgdkY2ltLnYxIr8BCgRSYWNrEgoKAmlkGAogASgJEg4KBnJvd19pZBgUIAEoCRIMCgRuYW1lGB4gASgJEhMKC3RvdGFsX3VuaXRzGCggASgFEhcKD3Bvc2l0aW9uX2luX3JvdxgyIAEoBRIrCgdjcmVhdGVkGDwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGEYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiKQoQTGlzdFJhY2tzUmVxdWVzdBIVCgZyb3dfaWQYCiABKAlCBaoBAggBIuQBChFMaXN0UmFja3NSZXNwb25zZRI1CgVyYWNrcxgKIAMoCzImLmRjaW0udjEuTGlzdFJhY2tzUmVzcG9uc2UuUmFja1N1bW1hcnkalwEKC1JhY2tTdW1tYXJ5EhsKBHJhY2sYCiABKAsyDS5kY2ltLnYxLlJhY2sSEgoKdXNlZF91bml0cxgUIAEoBRISCgpmcmVlX3VuaXRzGB4gASgFEhQKDHBvd2VyX2RyYXdfdxgoIAEoARIUCgxkZXZpY2VfY291bnQYMiABKAUSFwoPdXRpbGl6YXRpb25fcGN0GDwgASgBIiYKDkdldFJhY2tSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIuCg9HZXRSYWNrUmVzcG9uc2USGwoEcmFjaxgKIAEoCzINLmRjaW0udjEuUmFjayJ7ChFDcmVhdGVSYWNrUmVxdWVzdBIYCgZyb3dfaWQYCiABKAlCCLpIBXIDsAEBEhUKBG5hbWUYFCABKAlCB7pIBHICEAESHAoLdG90YWxfdW5pdHMYHiABKAVCB7pIBBoCIAASFwoPcG9zaXRpb25faW5fcm93GCggASgFIiUKEkNyZWF0ZVJhY2tSZXNwb25zZRIPCgdyYWNrX2lkGAogASgJInoKEVVwZGF0ZVJhY2tSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARITCgRuYW1lGBQgASgJQgWqAQIIARIaCgt0b3RhbF91bml0cxgeIAEoBUIFqgECCAESHgoPcG9zaXRpb25faW5fcm93GCggASgFQgWqAQIIASIpChFEZWxldGVSYWNrUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEy2gIKC1JhY2tTZXJ2aWNlEkIKCUxpc3RSYWNrcxIZLmRjaW0udjEuTGlzdFJhY2tzUmVxdWVzdBoaLmRjaW0udjEuTGlzdFJhY2tzUmVzcG9uc2USPAoHR2V0UmFjaxIXLmRjaW0udjEuR2V0UmFja1JlcXVlc3QaGC5kY2ltLnYxLkdldFJhY2tSZXNwb25zZRJFCgpDcmVhdGVSYWNrEhouZGNpbS52MS5DcmVhdGVSYWNrUmVxdWVzdBobLmRjaW0udjEuQ3JlYXRlUmFja1Jlc3BvbnNlEkAKClVwZGF0ZVJhY2sSGi5kY2ltLnYxLlVwZGF0ZVJhY2tSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EkAKCkRlbGV0ZVJhY2sSGi5kY2ltLnYxLkRlbGV0ZVJhY2tSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Qk9aQ2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvZGNpbS1hcGkvcGtnL3Byb3RvL2dlbi92MTtkY2ltdjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * Rack is a physical equipment rack within a rack row (core.racks).
@@ -259,19 +259,6 @@ export const UpdateRackRequestSchema: GenMessage<UpdateRackRequest> = /*@__PURE_
   messageDesc(file_v1_rack, 7);
 
 /**
- * @generated from message dcim.v1.UpdateRackResponse
- */
-export type UpdateRackResponse = Message<"dcim.v1.UpdateRackResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.UpdateRackResponse.
- * Use `create(UpdateRackResponseSchema)` to create a new message.
- */
-export const UpdateRackResponseSchema: GenMessage<UpdateRackResponse> = /*@__PURE__*/
-  messageDesc(file_v1_rack, 8);
-
-/**
  * @generated from message dcim.v1.DeleteRackRequest
  */
 export type DeleteRackRequest = Message<"dcim.v1.DeleteRackRequest"> & {
@@ -286,20 +273,7 @@ export type DeleteRackRequest = Message<"dcim.v1.DeleteRackRequest"> & {
  * Use `create(DeleteRackRequestSchema)` to create a new message.
  */
 export const DeleteRackRequestSchema: GenMessage<DeleteRackRequest> = /*@__PURE__*/
-  messageDesc(file_v1_rack, 9);
-
-/**
- * @generated from message dcim.v1.DeleteRackResponse
- */
-export type DeleteRackResponse = Message<"dcim.v1.DeleteRackResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.DeleteRackResponse.
- * Use `create(DeleteRackResponseSchema)` to create a new message.
- */
-export const DeleteRackResponseSchema: GenMessage<DeleteRackResponse> = /*@__PURE__*/
-  messageDesc(file_v1_rack, 10);
+  messageDesc(file_v1_rack, 8);
 
 /**
  * @generated from service dcim.v1.RackService
@@ -335,7 +309,7 @@ export const RackService: GenService<{
   updateRack: {
     methodKind: "unary";
     input: typeof UpdateRackRequestSchema;
-    output: typeof UpdateRackResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * @generated from rpc dcim.v1.RackService.DeleteRack
@@ -343,7 +317,7 @@ export const RackService: GenService<{
   deleteRack: {
     methodKind: "unary";
     input: typeof DeleteRackRequestSchema;
-    output: typeof DeleteRackResponseSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_rack, 0);

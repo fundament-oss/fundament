@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -25,8 +26,8 @@ service RackService {
   rpc ListRacks (ListRacksRequest)  returns (ListRacksResponse);
   rpc GetRack   (GetRackRequest)    returns (GetRackResponse);
   rpc CreateRack(CreateRackRequest) returns (CreateRackResponse);
-  rpc UpdateRack(UpdateRackRequest) returns (UpdateRackResponse);
-  rpc DeleteRack(DeleteRackRequest) returns (DeleteRackResponse);
+  rpc UpdateRack(UpdateRackRequest) returns (google.protobuf.Empty);
+  rpc DeleteRack(DeleteRackRequest) returns (google.protobuf.Empty);
 }
 
 message ListRacksRequest {
@@ -73,10 +74,6 @@ message UpdateRackRequest {
   int32  position_in_row = 40 [features.field_presence = EXPLICIT];
 }
 
-message UpdateRackResponse {}
-
 message DeleteRackRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteRackResponse {}
