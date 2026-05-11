@@ -224,6 +224,80 @@ jobs:
             - grace@initech.com (Initech)
             </details>
 
+            <details>
+            <summary>Debugging this environment</summary>
+
+            Kubeconfig and pinniped setup: see the [deployment and infra docs](https://gitlab.com/digilab.overheid.nl/miscellaneous/team-documentation/-/blob/main/deployment-and-infra.md).
+
+            **1. Connect**
+
+            ```bash
+            export KUBECONFIG=~/.kube/pinniped_digikluster.yaml
+            export NS=tn-fundament-pr-${{ env.PR_NUMBER }}
+            kubectl -n $NS get pods
+            ```
+
+            **2. Flux reconciliation**
+
+            ```bash
+            kubectl -n $NS get helmrelease,gitrepository
+            kubectl -n $NS describe helmrelease fundament
+            kubectl -n $NS describe gitrepository fundament   # auth / branch / commit issues surface here
+
+            # Force a retry
+            kubectl -n $NS annotate --overwrite helmrelease/fundament \
+              reconcile.fluxcd.io/requestedAt="$(date +%s)"
+            ```
+
+            **3. Pod / app state**
+
+            ```bash
+            kubectl -n $NS get pods
+            kubectl -n $NS get events --sort-by=.lastTimestamp
+            kubectl -n $NS describe pod <pod>   # readiness probes, env refs, and pod events
+            kubectl -n $NS logs <pod>
+            kubectl -n $NS logs <pod> --previous   # if the pod crashed
+
+            # Narrow to a single service (app.kubernetes.io/name = authn-api, organization-api,
+            # console-frontend, docs-frontend, cluster-worker, authz-worker, kube-api-proxy, dex, openfga)
+            kubectl -n $NS get pods -l app.kubernetes.io/name=organization-api
+            ```
+
+            **4. OpenFGA / authorization config**
+
+            ```bash
+            # organization-api and kube-api-proxy readiness depend on OpenFGA.
+            kubectl -n $NS get configmap openfga-config -o yaml
+            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c setup
+            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c openfga --tail=100
+
+            # If consumers are still using an old store/model ID after setup patched openfga-config:
+            kubectl -n $NS rollout restart deployment/organization-api deployment/kube-api-proxy
+            ```
+
+            **5. DB & migrations**
+
+            ```bash
+            kubectl -n $NS get cluster.postgresql.cnpg.io/db
+            kubectl -n $NS describe cluster.postgresql.cnpg.io/db
+
+            # Migrations run as a Job named db-migrations with a 5m TTL after success.
+            # If the Job is gone, migrations almost certainly succeeded.
+            kubectl -n $NS logs job/db-migrations -c migrations
+            ```
+
+            **6. Routes & TLS**
+
+            ```bash
+            kubectl -n $NS get httproutes
+            kubectl -n istio-gateway get certificate tn-fundament-pr-${{ env.PR_NUMBER }}-wildcard-tls
+            ```
+
+            **7. Nothing deployed at all?**
+
+            If the namespace is missing, the PR overlay never reached the cluster. Check the [PR overlay in the Flux repo](https://${{ vars.GITLAB_REPO_HOST }}/${{ vars.GITLAB_REPO_PATH }}/-/tree/master/apps/fundament/overlays/pr/pr-${{ env.PR_NUMBER }}) — if it's not there, the CI push to the Flux repo failed; if it is, the cluster-level Flux reconciliation is stuck.
+            </details>
+
   terraform-acc-tests:
     needs: deploy
     runs-on: ubuntu-24.04
