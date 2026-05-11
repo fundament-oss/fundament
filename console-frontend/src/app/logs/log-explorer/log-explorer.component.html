@@ -166,69 +166,71 @@
 </nldd-sheet>
 
 <!-- ── Main page ── -->
-<div class="space-y-4">
-  <!-- Header -->
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-3xl font-semibold">Log explorer</h1>
-    <div class="flex items-center gap-3">
-      <nldd-button
-        [routerLink]="['/logs/analytics']"
-        text="Analytics"
-        end-icon="chevron-right-small"
-        variant="secondary"
-        size="sm"
-      ></nldd-button>
+<div class="card">
+  <div class="card-body-lg space-y-4">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-3xl font-semibold">Log explorer</h1>
+      <div class="flex items-center gap-3">
+        <nldd-button
+          [routerLink]="['/logs/analytics']"
+          text="Analytics"
+          end-icon="chevron-right-small"
+          variant="secondary"
+          size="sm"
+        ></nldd-button>
 
-      <nldd-toggle-button
-        [text]="liveTailEnabled() ? 'Stop streaming' : 'Stream logs'"
-        [active]="liveTailEnabled()"
-        (click)="toggleLiveTail()"
-        size="sm"
-      ></nldd-toggle-button>
+        <nldd-toggle-button
+          [text]="liveTailEnabled() ? 'Stop streaming' : 'Stream logs'"
+          [active]="liveTailEnabled()"
+          (click)="toggleLiveTail()"
+          size="sm"
+        ></nldd-toggle-button>
+      </div>
     </div>
-  </div>
 
-  <!-- Live tail status bar -->
-  @if (liveTailEnabled()) {
-    <div
-      class="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300"
-    >
-      @if (!liveTailPaused()) {
-        <span class="relative flex h-2 w-2 shrink-0">
+    <!-- Live tail status bar -->
+    @if (liveTailEnabled()) {
+      <div
+        class="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300"
+      >
+        @if (!liveTailPaused()) {
+          <span class="relative flex h-2 w-2 shrink-0">
+            <span
+              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+            ></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+          </span>
           <span
-            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-          ></span>
-          <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
-        </span>
-        <span
-          >Streaming — {{ liveTailRate() }} new line{{ liveTailRate() === 1 ? '' : 's' }}/sec</span
-        >
-        <nldd-button
-          type="button"
-          (click)="pauseLiveTail()"
-          text="Pause"
-          variant="secondary"
-          size="xs"
-          class="ml-auto"
-        ></nldd-button>
-      } @else {
-        <span class="h-2 w-2 shrink-0 rounded-full bg-amber-400"></span>
-        <span>Paused</span>
-        <nldd-button
-          type="button"
-          (click)="resumeLiveTail()"
-          text="Resume"
-          variant="secondary"
-          size="xs"
-          class="ml-auto"
-        ></nldd-button>
-      }
-    </div>
-  }
+            >Streaming — {{ liveTailRate() }} new line{{
+              liveTailRate() === 1 ? '' : 's'
+            }}/sec</span
+          >
+          <nldd-button
+            type="button"
+            (click)="pauseLiveTail()"
+            text="Pause"
+            variant="secondary"
+            size="xs"
+            class="ml-auto"
+          ></nldd-button>
+        } @else {
+          <span class="h-2 w-2 shrink-0 rounded-full bg-amber-400"></span>
+          <span>Paused</span>
+          <nldd-button
+            type="button"
+            (click)="resumeLiveTail()"
+            text="Resume"
+            variant="secondary"
+            size="xs"
+            class="ml-auto"
+          ></nldd-button>
+        }
+      </div>
+    }
 
-  <!-- Filters card -->
-  <div class="card">
-    <div class="card-body space-y-3">
+    <!-- Filters -->
+    <div class="space-y-3">
       <!-- Scope selectors row -->
       <div class="flex flex-wrap gap-2">
         <label class="flex flex-col gap-1">
@@ -368,111 +370,113 @@
         }
       </div>
     </div>
-  </div>
 
-  <!-- Histogram -->
-  <div class="card">
-    <div class="px-4 pt-3 pb-1">
-      <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-        <span class="flex items-center gap-1.5"
-          ><span class="inline-block h-2.5 w-2.5 rounded-full bg-red-600/75"></span>Error</span
-        >
-        <span class="flex items-center gap-1.5"
-          ><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-600/75"></span>Warn</span
-        >
-        <span class="flex items-center gap-1.5"
-          ><span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-600/65"></span>Info</span
-        >
-        <span class="flex items-center gap-1.5"
-          ><span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-500/50"></span>Debug</span
-        >
+    <!-- Histogram -->
+    <div>
+      <div class="pt-3 pb-1">
+        <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-red-600/75"></span>Error</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-600/75"></span>Warn</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-600/65"></span>Info</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-500/50"></span>Debug</span
+          >
+        </div>
+      </div>
+      <div class="pb-3" style="height: 100px">
+        <canvas #histogramChart></canvas>
       </div>
     </div>
-    <div class="px-4 pb-3" style="height: 100px">
-      <canvas #histogramChart></canvas>
-    </div>
-  </div>
 
-  <!-- Log list -->
-  <div class="card">
-    <div class="card-header flex items-center justify-between gap-4">
-      <span class="text-sm text-gray-600 dark:text-gray-400">
-        <span class="font-semibold text-gray-900 dark:text-white">{{
-          filteredLogs().length | number
-        }}</span>
-        entr{{ filteredLogs().length === 1 ? 'y' : 'ies' }}
-      </span>
-      <select
-        [ngModel]="sortNewestFirst()"
-        (ngModelChange)="
-          sortNewestFirst.set($event === 'true' || $event === true); currentPage.set(0)
-        "
-        class="text-sm"
-        aria-label="Sort order"
-      >
-        <option [value]="true">Newest first</option>
-        <option [value]="false">Oldest first</option>
-      </select>
-    </div>
+    <!-- Log list -->
+    <div class="mb-4">
+      <div class="mb-2 flex items-center justify-between gap-4">
+        <span class="text-sm text-gray-600 dark:text-gray-400">
+          <span class="font-semibold text-gray-900 dark:text-white">{{
+            filteredLogs().length | number
+          }}</span>
+          entr{{ filteredLogs().length === 1 ? 'y' : 'ies' }}
+        </span>
+        <select
+          [ngModel]="sortNewestFirst()"
+          (ngModelChange)="
+            sortNewestFirst.set($event === 'true' || $event === true); currentPage.set(0)
+          "
+          class="text-sm"
+          aria-label="Sort order"
+        >
+          <option [value]="true">Newest first</option>
+          <option [value]="false">Oldest first</option>
+        </select>
+      </div>
 
-    <div class="table-container mx-4 rounded-none border-0 shadow-none ring-0">
-      <table class="table" aria-label="Log entries">
-        <thead>
-          <tr>
-            <th class="w-44">Timestamp</th>
-            <th class="w-20">Level</th>
-            <th class="w-44">Pod</th>
-            <th class="w-28">Container</th>
-            <th>Message</th>
-          </tr>
-        </thead>
-        <tbody>
-          @if (filteredLogs().length === 0) {
+      <div class="table-container mb-6 rounded-none border-0 shadow-none ring-0">
+        <table class="table" aria-label="Log entries">
+          <thead>
             <tr>
-              <td colspan="5" class="py-12 text-center text-gray-400 dark:text-gray-500">
-                No log entries match the current filters
-              </td>
+              <th class="w-44">Timestamp</th>
+              <th class="w-20">Level</th>
+              <th class="w-44">Pod</th>
+              <th class="w-28">Container</th>
+              <th>Message</th>
             </tr>
-          }
-          @for (log of pagedLogs(); track log.id) {
-            <tr
-              class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
-              [class]="levelRowBorderClass(log.level)"
-              (click)="selectLog(log)"
-              tabindex="0"
-              (keydown.enter)="selectLog(log)"
-              (keydown.space)="selectLog(log)"
-            >
-              <td class="font-mono text-xs text-gray-500 dark:text-gray-400">
-                {{ formatTimestamp(log.timestamp) }}
-              </td>
-              <td>
-                <span [class]="levelBadgeClass(log.level)">{{ log.level }}</span>
-              </td>
-              <td class="max-w-[180px] truncate font-mono text-xs text-gray-700 dark:text-gray-300">
-                {{ log.pod }}
-              </td>
-              <td class="font-mono text-xs text-gray-500 dark:text-gray-400">
-                {{ log.container }}
-              </td>
-              <td
-                class="max-w-xs truncate font-mono text-xs text-gray-700 lg:max-w-md xl:max-w-xl dark:text-gray-300"
+          </thead>
+          <tbody>
+            @if (filteredLogs().length === 0) {
+              <tr>
+                <td colspan="5" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                  No log entries match the current filters
+                </td>
+              </tr>
+            }
+            @for (log of pagedLogs(); track log.id) {
+              <tr
+                class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+                [class]="levelRowBorderClass(log.level)"
+                (click)="selectLog(log)"
+                tabindex="0"
+                (keydown.enter)="selectLog(log)"
+                (keydown.space)="selectLog(log)"
               >
-                {{ log.message }}
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+                <td class="font-mono text-xs text-gray-500 dark:text-gray-400">
+                  {{ formatTimestamp(log.timestamp) }}
+                </td>
+                <td>
+                  <span [class]="levelBadgeClass(log.level)">{{ log.level }}</span>
+                </td>
+                <td
+                  class="max-w-[180px] truncate font-mono text-xs text-gray-700 dark:text-gray-300"
+                >
+                  {{ log.pod }}
+                </td>
+                <td class="font-mono text-xs text-gray-500 dark:text-gray-400">
+                  {{ log.container }}
+                </td>
+                <td
+                  class="max-w-xs truncate font-mono text-xs text-gray-700 lg:max-w-md xl:max-w-xl dark:text-gray-300"
+                >
+                  {{ log.message }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
 
-    <!-- Pagination -->
-    <div class="card-body flex justify-center">
-      <nldd-pagination
-        [current]="currentPage() + 1"
-        [total]="totalPages()"
-        (page-change)="onPageChange($event)"
-      ></nldd-pagination>
+      <!-- Pagination -->
+      <div class="flex justify-center">
+        <nldd-pagination
+          [current]="currentPage() + 1"
+          [total]="totalPages()"
+          (page-change)="onPageChange($event)"
+        ></nldd-pagination>
+      </div>
     </div>
   </div>
 </div>
