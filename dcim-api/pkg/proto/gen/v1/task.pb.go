@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -1526,49 +1527,6 @@ func (b0 UpdateTaskRequest_builder) Build() *UpdateTaskRequest {
 	return m0
 }
 
-type UpdateTaskResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateTaskResponse) Reset() {
-	*x = UpdateTaskResponse{}
-	mi := &file_v1_task_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateTaskResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateTaskResponse) ProtoMessage() {}
-
-func (x *UpdateTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type UpdateTaskResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 UpdateTaskResponse_builder) Build() *UpdateTaskResponse {
-	m0 := &UpdateTaskResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type DeleteTaskRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -1578,7 +1536,7 @@ type DeleteTaskRequest struct {
 
 func (x *DeleteTaskRequest) Reset() {
 	*x = DeleteTaskRequest{}
-	mi := &file_v1_task_proto_msgTypes[10]
+	mi := &file_v1_task_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1590,7 +1548,7 @@ func (x *DeleteTaskRequest) String() string {
 func (*DeleteTaskRequest) ProtoMessage() {}
 
 func (x *DeleteTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[10]
+	mi := &file_v1_task_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1626,49 +1584,6 @@ func (b0 DeleteTaskRequest_builder) Build() *DeleteTaskRequest {
 	return m0
 }
 
-type DeleteTaskResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteTaskResponse) Reset() {
-	*x = DeleteTaskResponse{}
-	mi := &file_v1_task_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteTaskResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteTaskResponse) ProtoMessage() {}
-
-func (x *DeleteTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteTaskResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteTaskResponse_builder) Build() *DeleteTaskResponse {
-	m0 := &DeleteTaskResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type ListTaskStepsRequest struct {
 	state             protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_TaskId string                 `protobuf:"bytes,10,opt,name=task_id,json=taskId"`
@@ -1678,7 +1593,7 @@ type ListTaskStepsRequest struct {
 
 func (x *ListTaskStepsRequest) Reset() {
 	*x = ListTaskStepsRequest{}
-	mi := &file_v1_task_proto_msgTypes[12]
+	mi := &file_v1_task_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1690,7 +1605,7 @@ func (x *ListTaskStepsRequest) String() string {
 func (*ListTaskStepsRequest) ProtoMessage() {}
 
 func (x *ListTaskStepsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[12]
+	mi := &file_v1_task_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1735,7 +1650,7 @@ type ListTaskStepsResponse struct {
 
 func (x *ListTaskStepsResponse) Reset() {
 	*x = ListTaskStepsResponse{}
-	mi := &file_v1_task_proto_msgTypes[13]
+	mi := &file_v1_task_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1747,7 +1662,7 @@ func (x *ListTaskStepsResponse) String() string {
 func (*ListTaskStepsResponse) ProtoMessage() {}
 
 func (x *ListTaskStepsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[13]
+	mi := &file_v1_task_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1797,7 +1712,7 @@ type CreateTaskStepRequest struct {
 
 func (x *CreateTaskStepRequest) Reset() {
 	*x = CreateTaskStepRequest{}
-	mi := &file_v1_task_proto_msgTypes[14]
+	mi := &file_v1_task_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1809,7 +1724,7 @@ func (x *CreateTaskStepRequest) String() string {
 func (*CreateTaskStepRequest) ProtoMessage() {}
 
 func (x *CreateTaskStepRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[14]
+	mi := &file_v1_task_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1893,7 +1808,7 @@ type CreateTaskStepResponse struct {
 
 func (x *CreateTaskStepResponse) Reset() {
 	*x = CreateTaskStepResponse{}
-	mi := &file_v1_task_proto_msgTypes[15]
+	mi := &file_v1_task_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1905,7 +1820,7 @@ func (x *CreateTaskStepResponse) String() string {
 func (*CreateTaskStepResponse) ProtoMessage() {}
 
 func (x *CreateTaskStepResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[15]
+	mi := &file_v1_task_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1956,7 +1871,7 @@ type UpdateTaskStepRequest struct {
 
 func (x *UpdateTaskStepRequest) Reset() {
 	*x = UpdateTaskStepRequest{}
-	mi := &file_v1_task_proto_msgTypes[16]
+	mi := &file_v1_task_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1968,7 +1883,7 @@ func (x *UpdateTaskStepRequest) String() string {
 func (*UpdateTaskStepRequest) ProtoMessage() {}
 
 func (x *UpdateTaskStepRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[16]
+	mi := &file_v1_task_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2126,49 +2041,6 @@ func (b0 UpdateTaskStepRequest_builder) Build() *UpdateTaskStepRequest {
 	return m0
 }
 
-type UpdateTaskStepResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateTaskStepResponse) Reset() {
-	*x = UpdateTaskStepResponse{}
-	mi := &file_v1_task_proto_msgTypes[17]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateTaskStepResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateTaskStepResponse) ProtoMessage() {}
-
-func (x *UpdateTaskStepResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[17]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type UpdateTaskStepResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 UpdateTaskStepResponse_builder) Build() *UpdateTaskStepResponse {
-	m0 := &UpdateTaskStepResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type DeleteTaskStepRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -2178,7 +2050,7 @@ type DeleteTaskStepRequest struct {
 
 func (x *DeleteTaskStepRequest) Reset() {
 	*x = DeleteTaskStepRequest{}
-	mi := &file_v1_task_proto_msgTypes[18]
+	mi := &file_v1_task_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2190,7 +2062,7 @@ func (x *DeleteTaskStepRequest) String() string {
 func (*DeleteTaskStepRequest) ProtoMessage() {}
 
 func (x *DeleteTaskStepRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[18]
+	mi := &file_v1_task_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2226,54 +2098,11 @@ func (b0 DeleteTaskStepRequest_builder) Build() *DeleteTaskStepRequest {
 	return m0
 }
 
-type DeleteTaskStepResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteTaskStepResponse) Reset() {
-	*x = DeleteTaskStepResponse{}
-	mi := &file_v1_task_proto_msgTypes[19]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteTaskStepResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteTaskStepResponse) ProtoMessage() {}
-
-func (x *DeleteTaskStepResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_task_proto_msgTypes[19]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteTaskStepResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteTaskStepResponse_builder) Build() *DeleteTaskStepResponse {
-	m0 := &DeleteTaskStepResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 var File_v1_task_proto protoreflect.FileDescriptor
 
 const file_v1_task_proto_rawDesc = "" +
 	"\n" +
-	"\rv1/task.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd6\x03\n" +
+	"\rv1/task.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd6\x03\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x14\n" +
@@ -2339,12 +2168,10 @@ const file_v1_task_proto_rawDesc = "" +
 	"\vassignee_id\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\n" +
 	"assigneeId\x12<\n" +
 	"\bdue_date\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adueDate\x12!\n" +
-	"\blocation\x18Z \x01(\tB\x05\xaa\x01\x02\b\x01R\blocation\"\x14\n" +
-	"\x12UpdateTaskResponse\"-\n" +
+	"\blocation\x18Z \x01(\tB\x05\xaa\x01\x02\b\x01R\blocation\"-\n" +
 	"\x11DeleteTaskRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x14\n" +
-	"\x12DeleteTaskResponse\"9\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"9\n" +
 	"\x14ListTaskStepsRequest\x12!\n" +
 	"\atask_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06taskId\"@\n" +
@@ -2367,12 +2194,10 @@ const file_v1_task_proto_rawDesc = "" +
 	"\x05title\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x05title\x12'\n" +
 	"\vdescription\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x12\x1f\n" +
 	"\aordinal\x18( \x01(\x05B\x05\xaa\x01\x02\b\x01R\aordinal\x12#\n" +
-	"\tcompleted\x182 \x01(\bB\x05\xaa\x01\x02\b\x01R\tcompleted\"\x18\n" +
-	"\x16UpdateTaskStepResponse\"1\n" +
+	"\tcompleted\x182 \x01(\bB\x05\xaa\x01\x02\b\x01R\tcompleted\"1\n" +
 	"\x15DeleteTaskStepRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x18\n" +
-	"\x16DeleteTaskStepResponse*\xa4\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id*\xa4\x01\n" +
 	"\n" +
 	"TaskStatus\x12\x1b\n" +
 	"\x17TASK_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
@@ -2397,24 +2222,24 @@ const file_v1_task_proto_rawDesc = "" +
 	"\x15TASK_CATEGORY_COOLING\x10\x1e\x12\x17\n" +
 	"\x13TASK_CATEGORY_POWER\x10(\x12\x1a\n" +
 	"\x16TASK_CATEGORY_SECURITY\x102\x12\x17\n" +
-	"\x13TASK_CATEGORY_OTHER\x10<2\xe4\x02\n" +
+	"\x13TASK_CATEGORY_OTHER\x10<2\xda\x02\n" +
 	"\vTaskService\x12B\n" +
 	"\tListTasks\x12\x19.dcim.v1.ListTasksRequest\x1a\x1a.dcim.v1.ListTasksResponse\x12<\n" +
 	"\aGetTask\x12\x17.dcim.v1.GetTaskRequest\x1a\x18.dcim.v1.GetTaskResponse\x12E\n" +
 	"\n" +
-	"CreateTask\x12\x1a.dcim.v1.CreateTaskRequest\x1a\x1b.dcim.v1.CreateTaskResponse\x12E\n" +
+	"CreateTask\x12\x1a.dcim.v1.CreateTaskRequest\x1a\x1b.dcim.v1.CreateTaskResponse\x12@\n" +
 	"\n" +
-	"UpdateTask\x12\x1a.dcim.v1.UpdateTaskRequest\x1a\x1b.dcim.v1.UpdateTaskResponse\x12E\n" +
+	"UpdateTask\x12\x1a.dcim.v1.UpdateTaskRequest\x1a\x16.google.protobuf.Empty\x12@\n" +
 	"\n" +
-	"DeleteTask\x12\x1a.dcim.v1.DeleteTaskRequest\x1a\x1b.dcim.v1.DeleteTaskResponse2\xda\x02\n" +
+	"DeleteTask\x12\x1a.dcim.v1.DeleteTaskRequest\x1a\x16.google.protobuf.Empty2\xc8\x02\n" +
 	"\x0fTaskStepService\x12N\n" +
 	"\rListTaskSteps\x12\x1d.dcim.v1.ListTaskStepsRequest\x1a\x1e.dcim.v1.ListTaskStepsResponse\x12Q\n" +
-	"\x0eCreateTaskStep\x12\x1e.dcim.v1.CreateTaskStepRequest\x1a\x1f.dcim.v1.CreateTaskStepResponse\x12Q\n" +
-	"\x0eUpdateTaskStep\x12\x1e.dcim.v1.UpdateTaskStepRequest\x1a\x1f.dcim.v1.UpdateTaskStepResponse\x12Q\n" +
-	"\x0eDeleteTaskStep\x12\x1e.dcim.v1.DeleteTaskStepRequest\x1a\x1f.dcim.v1.DeleteTaskStepResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x0eCreateTaskStep\x12\x1e.dcim.v1.CreateTaskStepRequest\x1a\x1f.dcim.v1.CreateTaskStepResponse\x12H\n" +
+	"\x0eUpdateTaskStep\x12\x1e.dcim.v1.UpdateTaskStepRequest\x1a\x16.google.protobuf.Empty\x12H\n" +
+	"\x0eDeleteTaskStep\x12\x1e.dcim.v1.DeleteTaskStepRequest\x1a\x16.google.protobuf.EmptyBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_task_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_v1_task_proto_goTypes = []any{
 	(TaskStatus)(0),                // 0: dcim.v1.TaskStatus
 	(TaskPriority)(0),              // 1: dcim.v1.TaskPriority
@@ -2428,28 +2253,25 @@ var file_v1_task_proto_goTypes = []any{
 	(*CreateTaskRequest)(nil),      // 9: dcim.v1.CreateTaskRequest
 	(*CreateTaskResponse)(nil),     // 10: dcim.v1.CreateTaskResponse
 	(*UpdateTaskRequest)(nil),      // 11: dcim.v1.UpdateTaskRequest
-	(*UpdateTaskResponse)(nil),     // 12: dcim.v1.UpdateTaskResponse
-	(*DeleteTaskRequest)(nil),      // 13: dcim.v1.DeleteTaskRequest
-	(*DeleteTaskResponse)(nil),     // 14: dcim.v1.DeleteTaskResponse
-	(*ListTaskStepsRequest)(nil),   // 15: dcim.v1.ListTaskStepsRequest
-	(*ListTaskStepsResponse)(nil),  // 16: dcim.v1.ListTaskStepsResponse
-	(*CreateTaskStepRequest)(nil),  // 17: dcim.v1.CreateTaskStepRequest
-	(*CreateTaskStepResponse)(nil), // 18: dcim.v1.CreateTaskStepResponse
-	(*UpdateTaskStepRequest)(nil),  // 19: dcim.v1.UpdateTaskStepRequest
-	(*UpdateTaskStepResponse)(nil), // 20: dcim.v1.UpdateTaskStepResponse
-	(*DeleteTaskStepRequest)(nil),  // 21: dcim.v1.DeleteTaskStepRequest
-	(*DeleteTaskStepResponse)(nil), // 22: dcim.v1.DeleteTaskStepResponse
-	(*timestamppb.Timestamp)(nil),  // 23: google.protobuf.Timestamp
+	(*DeleteTaskRequest)(nil),      // 12: dcim.v1.DeleteTaskRequest
+	(*ListTaskStepsRequest)(nil),   // 13: dcim.v1.ListTaskStepsRequest
+	(*ListTaskStepsResponse)(nil),  // 14: dcim.v1.ListTaskStepsResponse
+	(*CreateTaskStepRequest)(nil),  // 15: dcim.v1.CreateTaskStepRequest
+	(*CreateTaskStepResponse)(nil), // 16: dcim.v1.CreateTaskStepResponse
+	(*UpdateTaskStepRequest)(nil),  // 17: dcim.v1.UpdateTaskStepRequest
+	(*DeleteTaskStepRequest)(nil),  // 18: dcim.v1.DeleteTaskStepRequest
+	(*timestamppb.Timestamp)(nil),  // 19: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),          // 20: google.protobuf.Empty
 }
 var file_v1_task_proto_depIdxs = []int32{
 	0,  // 0: dcim.v1.Task.status:type_name -> dcim.v1.TaskStatus
 	1,  // 1: dcim.v1.Task.priority:type_name -> dcim.v1.TaskPriority
 	2,  // 2: dcim.v1.Task.category:type_name -> dcim.v1.TaskCategory
-	23, // 3: dcim.v1.Task.due_date:type_name -> google.protobuf.Timestamp
-	23, // 4: dcim.v1.Task.created:type_name -> google.protobuf.Timestamp
-	23, // 5: dcim.v1.Task.deleted:type_name -> google.protobuf.Timestamp
-	23, // 6: dcim.v1.TaskStep.created:type_name -> google.protobuf.Timestamp
-	23, // 7: dcim.v1.TaskStep.deleted:type_name -> google.protobuf.Timestamp
+	19, // 3: dcim.v1.Task.due_date:type_name -> google.protobuf.Timestamp
+	19, // 4: dcim.v1.Task.created:type_name -> google.protobuf.Timestamp
+	19, // 5: dcim.v1.Task.deleted:type_name -> google.protobuf.Timestamp
+	19, // 6: dcim.v1.TaskStep.created:type_name -> google.protobuf.Timestamp
+	19, // 7: dcim.v1.TaskStep.deleted:type_name -> google.protobuf.Timestamp
 	0,  // 8: dcim.v1.ListTasksRequest.status:type_name -> dcim.v1.TaskStatus
 	1,  // 9: dcim.v1.ListTasksRequest.priority:type_name -> dcim.v1.TaskPriority
 	2,  // 10: dcim.v1.ListTasksRequest.category:type_name -> dcim.v1.TaskCategory
@@ -2458,30 +2280,30 @@ var file_v1_task_proto_depIdxs = []int32{
 	0,  // 13: dcim.v1.CreateTaskRequest.status:type_name -> dcim.v1.TaskStatus
 	1,  // 14: dcim.v1.CreateTaskRequest.priority:type_name -> dcim.v1.TaskPriority
 	2,  // 15: dcim.v1.CreateTaskRequest.category:type_name -> dcim.v1.TaskCategory
-	23, // 16: dcim.v1.CreateTaskRequest.due_date:type_name -> google.protobuf.Timestamp
+	19, // 16: dcim.v1.CreateTaskRequest.due_date:type_name -> google.protobuf.Timestamp
 	0,  // 17: dcim.v1.UpdateTaskRequest.status:type_name -> dcim.v1.TaskStatus
 	1,  // 18: dcim.v1.UpdateTaskRequest.priority:type_name -> dcim.v1.TaskPriority
 	2,  // 19: dcim.v1.UpdateTaskRequest.category:type_name -> dcim.v1.TaskCategory
-	23, // 20: dcim.v1.UpdateTaskRequest.due_date:type_name -> google.protobuf.Timestamp
+	19, // 20: dcim.v1.UpdateTaskRequest.due_date:type_name -> google.protobuf.Timestamp
 	4,  // 21: dcim.v1.ListTaskStepsResponse.steps:type_name -> dcim.v1.TaskStep
 	5,  // 22: dcim.v1.TaskService.ListTasks:input_type -> dcim.v1.ListTasksRequest
 	7,  // 23: dcim.v1.TaskService.GetTask:input_type -> dcim.v1.GetTaskRequest
 	9,  // 24: dcim.v1.TaskService.CreateTask:input_type -> dcim.v1.CreateTaskRequest
 	11, // 25: dcim.v1.TaskService.UpdateTask:input_type -> dcim.v1.UpdateTaskRequest
-	13, // 26: dcim.v1.TaskService.DeleteTask:input_type -> dcim.v1.DeleteTaskRequest
-	15, // 27: dcim.v1.TaskStepService.ListTaskSteps:input_type -> dcim.v1.ListTaskStepsRequest
-	17, // 28: dcim.v1.TaskStepService.CreateTaskStep:input_type -> dcim.v1.CreateTaskStepRequest
-	19, // 29: dcim.v1.TaskStepService.UpdateTaskStep:input_type -> dcim.v1.UpdateTaskStepRequest
-	21, // 30: dcim.v1.TaskStepService.DeleteTaskStep:input_type -> dcim.v1.DeleteTaskStepRequest
+	12, // 26: dcim.v1.TaskService.DeleteTask:input_type -> dcim.v1.DeleteTaskRequest
+	13, // 27: dcim.v1.TaskStepService.ListTaskSteps:input_type -> dcim.v1.ListTaskStepsRequest
+	15, // 28: dcim.v1.TaskStepService.CreateTaskStep:input_type -> dcim.v1.CreateTaskStepRequest
+	17, // 29: dcim.v1.TaskStepService.UpdateTaskStep:input_type -> dcim.v1.UpdateTaskStepRequest
+	18, // 30: dcim.v1.TaskStepService.DeleteTaskStep:input_type -> dcim.v1.DeleteTaskStepRequest
 	6,  // 31: dcim.v1.TaskService.ListTasks:output_type -> dcim.v1.ListTasksResponse
 	8,  // 32: dcim.v1.TaskService.GetTask:output_type -> dcim.v1.GetTaskResponse
 	10, // 33: dcim.v1.TaskService.CreateTask:output_type -> dcim.v1.CreateTaskResponse
-	12, // 34: dcim.v1.TaskService.UpdateTask:output_type -> dcim.v1.UpdateTaskResponse
-	14, // 35: dcim.v1.TaskService.DeleteTask:output_type -> dcim.v1.DeleteTaskResponse
-	16, // 36: dcim.v1.TaskStepService.ListTaskSteps:output_type -> dcim.v1.ListTaskStepsResponse
-	18, // 37: dcim.v1.TaskStepService.CreateTaskStep:output_type -> dcim.v1.CreateTaskStepResponse
-	20, // 38: dcim.v1.TaskStepService.UpdateTaskStep:output_type -> dcim.v1.UpdateTaskStepResponse
-	22, // 39: dcim.v1.TaskStepService.DeleteTaskStep:output_type -> dcim.v1.DeleteTaskStepResponse
+	20, // 34: dcim.v1.TaskService.UpdateTask:output_type -> google.protobuf.Empty
+	20, // 35: dcim.v1.TaskService.DeleteTask:output_type -> google.protobuf.Empty
+	14, // 36: dcim.v1.TaskStepService.ListTaskSteps:output_type -> dcim.v1.ListTaskStepsResponse
+	16, // 37: dcim.v1.TaskStepService.CreateTaskStep:output_type -> dcim.v1.CreateTaskStepResponse
+	20, // 38: dcim.v1.TaskStepService.UpdateTaskStep:output_type -> google.protobuf.Empty
+	20, // 39: dcim.v1.TaskStepService.DeleteTaskStep:output_type -> google.protobuf.Empty
 	31, // [31:40] is the sub-list for method output_type
 	22, // [22:31] is the sub-list for method input_type
 	22, // [22:22] is the sub-list for extension type_name
@@ -2500,7 +2322,7 @@ func file_v1_task_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_task_proto_rawDesc), len(file_v1_task_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   20,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -64,8 +65,8 @@ type TaskServiceClient interface {
 	ListTasks(context.Context, *connect.Request[v1.ListTasksRequest]) (*connect.Response[v1.ListTasksResponse], error)
 	GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.GetTaskResponse], error)
 	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.CreateTaskResponse], error)
-	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
-	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
+	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewTaskServiceClient constructs a client for the dcim.v1.TaskService service. By default, it uses
@@ -97,13 +98,13 @@ func NewTaskServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(taskServiceMethods.ByName("CreateTask")),
 			connect.WithClientOptions(opts...),
 		),
-		updateTask: connect.NewClient[v1.UpdateTaskRequest, v1.UpdateTaskResponse](
+		updateTask: connect.NewClient[v1.UpdateTaskRequest, emptypb.Empty](
 			httpClient,
 			baseURL+TaskServiceUpdateTaskProcedure,
 			connect.WithSchema(taskServiceMethods.ByName("UpdateTask")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteTask: connect.NewClient[v1.DeleteTaskRequest, v1.DeleteTaskResponse](
+		deleteTask: connect.NewClient[v1.DeleteTaskRequest, emptypb.Empty](
 			httpClient,
 			baseURL+TaskServiceDeleteTaskProcedure,
 			connect.WithSchema(taskServiceMethods.ByName("DeleteTask")),
@@ -117,8 +118,8 @@ type taskServiceClient struct {
 	listTasks  *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
 	getTask    *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
 	createTask *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
-	updateTask *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
-	deleteTask *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
+	updateTask *connect.Client[v1.UpdateTaskRequest, emptypb.Empty]
+	deleteTask *connect.Client[v1.DeleteTaskRequest, emptypb.Empty]
 }
 
 // ListTasks calls dcim.v1.TaskService.ListTasks.
@@ -137,12 +138,12 @@ func (c *taskServiceClient) CreateTask(ctx context.Context, req *connect.Request
 }
 
 // UpdateTask calls dcim.v1.TaskService.UpdateTask.
-func (c *taskServiceClient) UpdateTask(ctx context.Context, req *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error) {
+func (c *taskServiceClient) UpdateTask(ctx context.Context, req *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateTask.CallUnary(ctx, req)
 }
 
 // DeleteTask calls dcim.v1.TaskService.DeleteTask.
-func (c *taskServiceClient) DeleteTask(ctx context.Context, req *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error) {
+func (c *taskServiceClient) DeleteTask(ctx context.Context, req *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteTask.CallUnary(ctx, req)
 }
 
@@ -151,8 +152,8 @@ type TaskServiceHandler interface {
 	ListTasks(context.Context, *connect.Request[v1.ListTasksRequest]) (*connect.Response[v1.ListTasksResponse], error)
 	GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.GetTaskResponse], error)
 	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.CreateTaskResponse], error)
-	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
-	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
+	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewTaskServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -225,11 +226,11 @@ func (UnimplementedTaskServiceHandler) CreateTask(context.Context, *connect.Requ
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.TaskService.CreateTask is not implemented"))
 }
 
-func (UnimplementedTaskServiceHandler) UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error) {
+func (UnimplementedTaskServiceHandler) UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.TaskService.UpdateTask is not implemented"))
 }
 
-func (UnimplementedTaskServiceHandler) DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error) {
+func (UnimplementedTaskServiceHandler) DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.TaskService.DeleteTask is not implemented"))
 }
 
@@ -237,8 +238,8 @@ func (UnimplementedTaskServiceHandler) DeleteTask(context.Context, *connect.Requ
 type TaskStepServiceClient interface {
 	ListTaskSteps(context.Context, *connect.Request[v1.ListTaskStepsRequest]) (*connect.Response[v1.ListTaskStepsResponse], error)
 	CreateTaskStep(context.Context, *connect.Request[v1.CreateTaskStepRequest]) (*connect.Response[v1.CreateTaskStepResponse], error)
-	UpdateTaskStep(context.Context, *connect.Request[v1.UpdateTaskStepRequest]) (*connect.Response[v1.UpdateTaskStepResponse], error)
-	DeleteTaskStep(context.Context, *connect.Request[v1.DeleteTaskStepRequest]) (*connect.Response[v1.DeleteTaskStepResponse], error)
+	UpdateTaskStep(context.Context, *connect.Request[v1.UpdateTaskStepRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteTaskStep(context.Context, *connect.Request[v1.DeleteTaskStepRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewTaskStepServiceClient constructs a client for the dcim.v1.TaskStepService service. By default,
@@ -264,13 +265,13 @@ func NewTaskStepServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(taskStepServiceMethods.ByName("CreateTaskStep")),
 			connect.WithClientOptions(opts...),
 		),
-		updateTaskStep: connect.NewClient[v1.UpdateTaskStepRequest, v1.UpdateTaskStepResponse](
+		updateTaskStep: connect.NewClient[v1.UpdateTaskStepRequest, emptypb.Empty](
 			httpClient,
 			baseURL+TaskStepServiceUpdateTaskStepProcedure,
 			connect.WithSchema(taskStepServiceMethods.ByName("UpdateTaskStep")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteTaskStep: connect.NewClient[v1.DeleteTaskStepRequest, v1.DeleteTaskStepResponse](
+		deleteTaskStep: connect.NewClient[v1.DeleteTaskStepRequest, emptypb.Empty](
 			httpClient,
 			baseURL+TaskStepServiceDeleteTaskStepProcedure,
 			connect.WithSchema(taskStepServiceMethods.ByName("DeleteTaskStep")),
@@ -283,8 +284,8 @@ func NewTaskStepServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 type taskStepServiceClient struct {
 	listTaskSteps  *connect.Client[v1.ListTaskStepsRequest, v1.ListTaskStepsResponse]
 	createTaskStep *connect.Client[v1.CreateTaskStepRequest, v1.CreateTaskStepResponse]
-	updateTaskStep *connect.Client[v1.UpdateTaskStepRequest, v1.UpdateTaskStepResponse]
-	deleteTaskStep *connect.Client[v1.DeleteTaskStepRequest, v1.DeleteTaskStepResponse]
+	updateTaskStep *connect.Client[v1.UpdateTaskStepRequest, emptypb.Empty]
+	deleteTaskStep *connect.Client[v1.DeleteTaskStepRequest, emptypb.Empty]
 }
 
 // ListTaskSteps calls dcim.v1.TaskStepService.ListTaskSteps.
@@ -298,12 +299,12 @@ func (c *taskStepServiceClient) CreateTaskStep(ctx context.Context, req *connect
 }
 
 // UpdateTaskStep calls dcim.v1.TaskStepService.UpdateTaskStep.
-func (c *taskStepServiceClient) UpdateTaskStep(ctx context.Context, req *connect.Request[v1.UpdateTaskStepRequest]) (*connect.Response[v1.UpdateTaskStepResponse], error) {
+func (c *taskStepServiceClient) UpdateTaskStep(ctx context.Context, req *connect.Request[v1.UpdateTaskStepRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateTaskStep.CallUnary(ctx, req)
 }
 
 // DeleteTaskStep calls dcim.v1.TaskStepService.DeleteTaskStep.
-func (c *taskStepServiceClient) DeleteTaskStep(ctx context.Context, req *connect.Request[v1.DeleteTaskStepRequest]) (*connect.Response[v1.DeleteTaskStepResponse], error) {
+func (c *taskStepServiceClient) DeleteTaskStep(ctx context.Context, req *connect.Request[v1.DeleteTaskStepRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteTaskStep.CallUnary(ctx, req)
 }
 
@@ -311,8 +312,8 @@ func (c *taskStepServiceClient) DeleteTaskStep(ctx context.Context, req *connect
 type TaskStepServiceHandler interface {
 	ListTaskSteps(context.Context, *connect.Request[v1.ListTaskStepsRequest]) (*connect.Response[v1.ListTaskStepsResponse], error)
 	CreateTaskStep(context.Context, *connect.Request[v1.CreateTaskStepRequest]) (*connect.Response[v1.CreateTaskStepResponse], error)
-	UpdateTaskStep(context.Context, *connect.Request[v1.UpdateTaskStepRequest]) (*connect.Response[v1.UpdateTaskStepResponse], error)
-	DeleteTaskStep(context.Context, *connect.Request[v1.DeleteTaskStepRequest]) (*connect.Response[v1.DeleteTaskStepResponse], error)
+	UpdateTaskStep(context.Context, *connect.Request[v1.UpdateTaskStepRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteTaskStep(context.Context, *connect.Request[v1.DeleteTaskStepRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewTaskStepServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -373,10 +374,10 @@ func (UnimplementedTaskStepServiceHandler) CreateTaskStep(context.Context, *conn
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.TaskStepService.CreateTaskStep is not implemented"))
 }
 
-func (UnimplementedTaskStepServiceHandler) UpdateTaskStep(context.Context, *connect.Request[v1.UpdateTaskStepRequest]) (*connect.Response[v1.UpdateTaskStepResponse], error) {
+func (UnimplementedTaskStepServiceHandler) UpdateTaskStep(context.Context, *connect.Request[v1.UpdateTaskStepRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.TaskStepService.UpdateTaskStep is not implemented"))
 }
 
-func (UnimplementedTaskStepServiceHandler) DeleteTaskStep(context.Context, *connect.Request[v1.DeleteTaskStepRequest]) (*connect.Response[v1.DeleteTaskStepResponse], error) {
+func (UnimplementedTaskStepServiceHandler) DeleteTaskStep(context.Context, *connect.Request[v1.DeleteTaskStepRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.TaskStepService.DeleteTaskStep is not implemented"))
 }

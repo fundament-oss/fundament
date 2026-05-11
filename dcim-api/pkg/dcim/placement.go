@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (s *Server) CreatePlacement(ctx context.Context, req *connect.Request[dcimv1.CreatePlacementRequest]) (*connect.Response[dcimv1.CreatePlacementResponse], error) {
@@ -15,11 +16,11 @@ func (s *Server) GetPlacement(ctx context.Context, req *connect.Request[dcimv1.G
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) UpdatePlacement(ctx context.Context, req *connect.Request[dcimv1.UpdatePlacementRequest]) (*connect.Response[dcimv1.UpdatePlacementResponse], error) {
+func (s *Server) UpdatePlacement(ctx context.Context, req *connect.Request[dcimv1.UpdatePlacementRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeletePlacement(ctx context.Context, req *connect.Request[dcimv1.DeletePlacementRequest]) (*connect.Response[dcimv1.DeletePlacementResponse], error) {
+func (s *Server) DeletePlacement(ctx context.Context, req *connect.Request[dcimv1.DeletePlacementRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 

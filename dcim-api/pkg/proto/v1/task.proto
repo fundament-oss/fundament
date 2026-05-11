@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -74,8 +75,8 @@ service TaskService {
   rpc ListTasks (ListTasksRequest)  returns (ListTasksResponse);
   rpc GetTask   (GetTaskRequest)    returns (GetTaskResponse);
   rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
-  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
-  rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
+  rpc UpdateTask(UpdateTaskRequest) returns (google.protobuf.Empty);
+  rpc DeleteTask(DeleteTaskRequest) returns (google.protobuf.Empty);
 }
 
 message ListTasksRequest {
@@ -124,21 +125,17 @@ message UpdateTaskRequest {
   string                    location    = 90 [features.field_presence = EXPLICIT];
 }
 
-message UpdateTaskResponse {}
-
 message DeleteTaskRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteTaskResponse {}
 
 // ── TaskStepService ───────────────────────────────────────────────────────────
 
 service TaskStepService {
   rpc ListTaskSteps (ListTaskStepsRequest)  returns (ListTaskStepsResponse);
   rpc CreateTaskStep(CreateTaskStepRequest) returns (CreateTaskStepResponse);
-  rpc UpdateTaskStep(UpdateTaskStepRequest) returns (UpdateTaskStepResponse);
-  rpc DeleteTaskStep(DeleteTaskStepRequest) returns (DeleteTaskStepResponse);
+  rpc UpdateTaskStep(UpdateTaskStepRequest) returns (google.protobuf.Empty);
+  rpc DeleteTaskStep(DeleteTaskStepRequest) returns (google.protobuf.Empty);
 }
 
 message ListTaskStepsRequest {
@@ -168,10 +165,6 @@ message UpdateTaskStepRequest {
   bool   completed   = 50 [features.field_presence = EXPLICIT];
 }
 
-message UpdateTaskStepResponse {}
-
 message DeleteTaskStepRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteTaskStepResponse {}

@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // LogicalDesignService
@@ -21,11 +22,11 @@ func (s *Server) CreateDesign(ctx context.Context, req *connect.Request[dcimv1.C
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) UpdateDesign(ctx context.Context, req *connect.Request[dcimv1.UpdateDesignRequest]) (*connect.Response[dcimv1.UpdateDesignResponse], error) {
+func (s *Server) UpdateDesign(ctx context.Context, req *connect.Request[dcimv1.UpdateDesignRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeleteDesign(ctx context.Context, req *connect.Request[dcimv1.DeleteDesignRequest]) (*connect.Response[dcimv1.DeleteDesignResponse], error) {
+func (s *Server) DeleteDesign(ctx context.Context, req *connect.Request[dcimv1.DeleteDesignRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
@@ -43,11 +44,11 @@ func (s *Server) CreateDevice(ctx context.Context, req *connect.Request[dcimv1.C
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) UpdateDevice(ctx context.Context, req *connect.Request[dcimv1.UpdateDeviceRequest]) (*connect.Response[dcimv1.UpdateDeviceResponse], error) {
+func (s *Server) UpdateDevice(ctx context.Context, req *connect.Request[dcimv1.UpdateDeviceRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeleteDevice(ctx context.Context, req *connect.Request[dcimv1.DeleteDeviceRequest]) (*connect.Response[dcimv1.DeleteDeviceResponse], error) {
+func (s *Server) DeleteDevice(ctx context.Context, req *connect.Request[dcimv1.DeleteDeviceRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
@@ -65,11 +66,11 @@ func (s *Server) CreateConnection(ctx context.Context, req *connect.Request[dcim
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) UpdateConnection(ctx context.Context, req *connect.Request[dcimv1.UpdateConnectionRequest]) (*connect.Response[dcimv1.UpdateConnectionResponse], error) {
+func (s *Server) UpdateConnection(ctx context.Context, req *connect.Request[dcimv1.UpdateConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeleteConnection(ctx context.Context, req *connect.Request[dcimv1.DeleteConnectionRequest]) (*connect.Response[dcimv1.DeleteConnectionResponse], error) {
+func (s *Server) DeleteConnection(ctx context.Context, req *connect.Request[dcimv1.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
@@ -83,6 +84,6 @@ func (s *Server) SaveLayout(ctx context.Context, req *connect.Request[dcimv1.Sav
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeleteLayout(ctx context.Context, req *connect.Request[dcimv1.DeleteLayoutRequest]) (*connect.Response[dcimv1.DeleteLayoutResponse], error) {
+func (s *Server) DeleteLayout(ctx context.Context, req *connect.Request[dcimv1.DeleteLayoutRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }

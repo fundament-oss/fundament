@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -26,8 +27,8 @@ service RoomService {
   rpc ListRooms (ListRoomsRequest)  returns (ListRoomsResponse);
   rpc GetRoom   (GetRoomRequest)    returns (GetRoomResponse);
   rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
-  rpc UpdateRoom(UpdateRoomRequest) returns (UpdateRoomResponse);
-  rpc DeleteRoom(DeleteRoomRequest) returns (DeleteRoomResponse);
+  rpc UpdateRoom(UpdateRoomRequest) returns (google.protobuf.Empty);
+  rpc DeleteRoom(DeleteRoomRequest) returns (google.protobuf.Empty);
 }
 
 message ListRoomsRequest {
@@ -62,10 +63,6 @@ message UpdateRoomRequest {
   string floor = 30 [features.field_presence = EXPLICIT];
 }
 
-message UpdateRoomResponse {}
-
 message DeleteRoomRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteRoomResponse {}

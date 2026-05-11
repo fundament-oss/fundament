@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -50,8 +51,8 @@ type RoomServiceClient interface {
 	ListRooms(context.Context, *connect.Request[v1.ListRoomsRequest]) (*connect.Response[v1.ListRoomsResponse], error)
 	GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error)
 	CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error)
-	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.UpdateRoomResponse], error)
-	DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[v1.DeleteRoomResponse], error)
+	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewRoomServiceClient constructs a client for the dcim.v1.RoomService service. By default, it uses
@@ -83,13 +84,13 @@ func NewRoomServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(roomServiceMethods.ByName("CreateRoom")),
 			connect.WithClientOptions(opts...),
 		),
-		updateRoom: connect.NewClient[v1.UpdateRoomRequest, v1.UpdateRoomResponse](
+		updateRoom: connect.NewClient[v1.UpdateRoomRequest, emptypb.Empty](
 			httpClient,
 			baseURL+RoomServiceUpdateRoomProcedure,
 			connect.WithSchema(roomServiceMethods.ByName("UpdateRoom")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteRoom: connect.NewClient[v1.DeleteRoomRequest, v1.DeleteRoomResponse](
+		deleteRoom: connect.NewClient[v1.DeleteRoomRequest, emptypb.Empty](
 			httpClient,
 			baseURL+RoomServiceDeleteRoomProcedure,
 			connect.WithSchema(roomServiceMethods.ByName("DeleteRoom")),
@@ -103,8 +104,8 @@ type roomServiceClient struct {
 	listRooms  *connect.Client[v1.ListRoomsRequest, v1.ListRoomsResponse]
 	getRoom    *connect.Client[v1.GetRoomRequest, v1.GetRoomResponse]
 	createRoom *connect.Client[v1.CreateRoomRequest, v1.CreateRoomResponse]
-	updateRoom *connect.Client[v1.UpdateRoomRequest, v1.UpdateRoomResponse]
-	deleteRoom *connect.Client[v1.DeleteRoomRequest, v1.DeleteRoomResponse]
+	updateRoom *connect.Client[v1.UpdateRoomRequest, emptypb.Empty]
+	deleteRoom *connect.Client[v1.DeleteRoomRequest, emptypb.Empty]
 }
 
 // ListRooms calls dcim.v1.RoomService.ListRooms.
@@ -123,12 +124,12 @@ func (c *roomServiceClient) CreateRoom(ctx context.Context, req *connect.Request
 }
 
 // UpdateRoom calls dcim.v1.RoomService.UpdateRoom.
-func (c *roomServiceClient) UpdateRoom(ctx context.Context, req *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.UpdateRoomResponse], error) {
+func (c *roomServiceClient) UpdateRoom(ctx context.Context, req *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateRoom.CallUnary(ctx, req)
 }
 
 // DeleteRoom calls dcim.v1.RoomService.DeleteRoom.
-func (c *roomServiceClient) DeleteRoom(ctx context.Context, req *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[v1.DeleteRoomResponse], error) {
+func (c *roomServiceClient) DeleteRoom(ctx context.Context, req *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteRoom.CallUnary(ctx, req)
 }
 
@@ -137,8 +138,8 @@ type RoomServiceHandler interface {
 	ListRooms(context.Context, *connect.Request[v1.ListRoomsRequest]) (*connect.Response[v1.ListRoomsResponse], error)
 	GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error)
 	CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error)
-	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.UpdateRoomResponse], error)
-	DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[v1.DeleteRoomResponse], error)
+	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewRoomServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -211,10 +212,10 @@ func (UnimplementedRoomServiceHandler) CreateRoom(context.Context, *connect.Requ
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RoomService.CreateRoom is not implemented"))
 }
 
-func (UnimplementedRoomServiceHandler) UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[v1.UpdateRoomResponse], error) {
+func (UnimplementedRoomServiceHandler) UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RoomService.UpdateRoom is not implemented"))
 }
 
-func (UnimplementedRoomServiceHandler) DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[v1.DeleteRoomResponse], error) {
+func (UnimplementedRoomServiceHandler) DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RoomService.DeleteRoom is not implemented"))
 }

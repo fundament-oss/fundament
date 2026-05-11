@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -1259,10 +1260,10 @@ func (b0 CreateDesignRequest_builder) Build() *CreateDesignRequest {
 }
 
 type CreateDesignResponse struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Design *LogicalDesign         `protobuf:"bytes,10,opt,name=design"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_DesignId string                 `protobuf:"bytes,10,opt,name=design_id,json=designId"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *CreateDesignResponse) Reset() {
@@ -1290,39 +1291,28 @@ func (x *CreateDesignResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *CreateDesignResponse) GetDesign() *LogicalDesign {
+func (x *CreateDesignResponse) GetDesignId() string {
 	if x != nil {
-		return x.xxx_hidden_Design
+		return x.xxx_hidden_DesignId
 	}
-	return nil
+	return ""
 }
 
-func (x *CreateDesignResponse) SetDesign(v *LogicalDesign) {
-	x.xxx_hidden_Design = v
-}
-
-func (x *CreateDesignResponse) HasDesign() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Design != nil
-}
-
-func (x *CreateDesignResponse) ClearDesign() {
-	x.xxx_hidden_Design = nil
+func (x *CreateDesignResponse) SetDesignId(v string) {
+	x.xxx_hidden_DesignId = v
 }
 
 type CreateDesignResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Design *LogicalDesign
+	DesignId string
 }
 
 func (b0 CreateDesignResponse_builder) Build() *CreateDesignResponse {
 	m0 := &CreateDesignResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Design = b.Design
+	x.xxx_hidden_DesignId = b.DesignId
 	return m0
 }
 
@@ -1483,74 +1473,6 @@ func (b0 UpdateDesignRequest_builder) Build() *UpdateDesignRequest {
 	return m0
 }
 
-type UpdateDesignResponse struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Design *LogicalDesign         `protobuf:"bytes,10,opt,name=design"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
-}
-
-func (x *UpdateDesignResponse) Reset() {
-	*x = UpdateDesignResponse{}
-	mi := &file_v1_design_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateDesignResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateDesignResponse) ProtoMessage() {}
-
-func (x *UpdateDesignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateDesignResponse) GetDesign() *LogicalDesign {
-	if x != nil {
-		return x.xxx_hidden_Design
-	}
-	return nil
-}
-
-func (x *UpdateDesignResponse) SetDesign(v *LogicalDesign) {
-	x.xxx_hidden_Design = v
-}
-
-func (x *UpdateDesignResponse) HasDesign() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Design != nil
-}
-
-func (x *UpdateDesignResponse) ClearDesign() {
-	x.xxx_hidden_Design = nil
-}
-
-type UpdateDesignResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Design *LogicalDesign
-}
-
-func (b0 UpdateDesignResponse_builder) Build() *UpdateDesignResponse {
-	m0 := &UpdateDesignResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Design = b.Design
-	return m0
-}
-
 type DeleteDesignRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -1560,7 +1482,7 @@ type DeleteDesignRequest struct {
 
 func (x *DeleteDesignRequest) Reset() {
 	*x = DeleteDesignRequest{}
-	mi := &file_v1_design_proto_msgTypes[12]
+	mi := &file_v1_design_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1572,7 +1494,7 @@ func (x *DeleteDesignRequest) String() string {
 func (*DeleteDesignRequest) ProtoMessage() {}
 
 func (x *DeleteDesignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[12]
+	mi := &file_v1_design_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1608,49 +1530,6 @@ func (b0 DeleteDesignRequest_builder) Build() *DeleteDesignRequest {
 	return m0
 }
 
-type DeleteDesignResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteDesignResponse) Reset() {
-	*x = DeleteDesignResponse{}
-	mi := &file_v1_design_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteDesignResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteDesignResponse) ProtoMessage() {}
-
-func (x *DeleteDesignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteDesignResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteDesignResponse_builder) Build() *DeleteDesignResponse {
-	m0 := &DeleteDesignResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type ListDevicesRequest struct {
 	state               protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_DesignId string                 `protobuf:"bytes,10,opt,name=design_id,json=designId"`
@@ -1660,7 +1539,7 @@ type ListDevicesRequest struct {
 
 func (x *ListDevicesRequest) Reset() {
 	*x = ListDevicesRequest{}
-	mi := &file_v1_design_proto_msgTypes[14]
+	mi := &file_v1_design_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1672,7 +1551,7 @@ func (x *ListDevicesRequest) String() string {
 func (*ListDevicesRequest) ProtoMessage() {}
 
 func (x *ListDevicesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[14]
+	mi := &file_v1_design_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1717,7 +1596,7 @@ type ListDevicesResponse struct {
 
 func (x *ListDevicesResponse) Reset() {
 	*x = ListDevicesResponse{}
-	mi := &file_v1_design_proto_msgTypes[15]
+	mi := &file_v1_design_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1729,7 +1608,7 @@ func (x *ListDevicesResponse) String() string {
 func (*ListDevicesResponse) ProtoMessage() {}
 
 func (x *ListDevicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[15]
+	mi := &file_v1_design_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1776,7 +1655,7 @@ type GetDeviceRequest struct {
 
 func (x *GetDeviceRequest) Reset() {
 	*x = GetDeviceRequest{}
-	mi := &file_v1_design_proto_msgTypes[16]
+	mi := &file_v1_design_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1788,7 +1667,7 @@ func (x *GetDeviceRequest) String() string {
 func (*GetDeviceRequest) ProtoMessage() {}
 
 func (x *GetDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[16]
+	mi := &file_v1_design_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1833,7 +1712,7 @@ type GetDeviceResponse struct {
 
 func (x *GetDeviceResponse) Reset() {
 	*x = GetDeviceResponse{}
-	mi := &file_v1_design_proto_msgTypes[17]
+	mi := &file_v1_design_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1845,7 +1724,7 @@ func (x *GetDeviceResponse) String() string {
 func (*GetDeviceResponse) ProtoMessage() {}
 
 func (x *GetDeviceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[17]
+	mi := &file_v1_design_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1908,7 +1787,7 @@ type CreateDeviceRequest struct {
 
 func (x *CreateDeviceRequest) Reset() {
 	*x = CreateDeviceRequest{}
-	mi := &file_v1_design_proto_msgTypes[18]
+	mi := &file_v1_design_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1920,7 +1799,7 @@ func (x *CreateDeviceRequest) String() string {
 func (*CreateDeviceRequest) ProtoMessage() {}
 
 func (x *CreateDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[18]
+	mi := &file_v1_design_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2060,15 +1939,15 @@ func (b0 CreateDeviceRequest_builder) Build() *CreateDeviceRequest {
 }
 
 type CreateDeviceResponse struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Device *LogicalDevice         `protobuf:"bytes,10,opt,name=device"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_DeviceId string                 `protobuf:"bytes,10,opt,name=device_id,json=deviceId"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *CreateDeviceResponse) Reset() {
 	*x = CreateDeviceResponse{}
-	mi := &file_v1_design_proto_msgTypes[19]
+	mi := &file_v1_design_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2080,7 +1959,7 @@ func (x *CreateDeviceResponse) String() string {
 func (*CreateDeviceResponse) ProtoMessage() {}
 
 func (x *CreateDeviceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[19]
+	mi := &file_v1_design_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2091,39 +1970,28 @@ func (x *CreateDeviceResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *CreateDeviceResponse) GetDevice() *LogicalDevice {
+func (x *CreateDeviceResponse) GetDeviceId() string {
 	if x != nil {
-		return x.xxx_hidden_Device
+		return x.xxx_hidden_DeviceId
 	}
-	return nil
+	return ""
 }
 
-func (x *CreateDeviceResponse) SetDevice(v *LogicalDevice) {
-	x.xxx_hidden_Device = v
-}
-
-func (x *CreateDeviceResponse) HasDevice() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Device != nil
-}
-
-func (x *CreateDeviceResponse) ClearDevice() {
-	x.xxx_hidden_Device = nil
+func (x *CreateDeviceResponse) SetDeviceId(v string) {
+	x.xxx_hidden_DeviceId = v
 }
 
 type CreateDeviceResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Device *LogicalDevice
+	DeviceId string
 }
 
 func (b0 CreateDeviceResponse_builder) Build() *CreateDeviceResponse {
 	m0 := &CreateDeviceResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Device = b.Device
+	x.xxx_hidden_DeviceId = b.DeviceId
 	return m0
 }
 
@@ -2143,7 +2011,7 @@ type UpdateDeviceRequest struct {
 
 func (x *UpdateDeviceRequest) Reset() {
 	*x = UpdateDeviceRequest{}
-	mi := &file_v1_design_proto_msgTypes[20]
+	mi := &file_v1_design_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2155,7 +2023,7 @@ func (x *UpdateDeviceRequest) String() string {
 func (*UpdateDeviceRequest) ProtoMessage() {}
 
 func (x *UpdateDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[20]
+	mi := &file_v1_design_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2350,74 +2218,6 @@ func (b0 UpdateDeviceRequest_builder) Build() *UpdateDeviceRequest {
 	return m0
 }
 
-type UpdateDeviceResponse struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Device *LogicalDevice         `protobuf:"bytes,10,opt,name=device"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
-}
-
-func (x *UpdateDeviceResponse) Reset() {
-	*x = UpdateDeviceResponse{}
-	mi := &file_v1_design_proto_msgTypes[21]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateDeviceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateDeviceResponse) ProtoMessage() {}
-
-func (x *UpdateDeviceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[21]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateDeviceResponse) GetDevice() *LogicalDevice {
-	if x != nil {
-		return x.xxx_hidden_Device
-	}
-	return nil
-}
-
-func (x *UpdateDeviceResponse) SetDevice(v *LogicalDevice) {
-	x.xxx_hidden_Device = v
-}
-
-func (x *UpdateDeviceResponse) HasDevice() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Device != nil
-}
-
-func (x *UpdateDeviceResponse) ClearDevice() {
-	x.xxx_hidden_Device = nil
-}
-
-type UpdateDeviceResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Device *LogicalDevice
-}
-
-func (b0 UpdateDeviceResponse_builder) Build() *UpdateDeviceResponse {
-	m0 := &UpdateDeviceResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Device = b.Device
-	return m0
-}
-
 type DeleteDeviceRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -2427,7 +2227,7 @@ type DeleteDeviceRequest struct {
 
 func (x *DeleteDeviceRequest) Reset() {
 	*x = DeleteDeviceRequest{}
-	mi := &file_v1_design_proto_msgTypes[22]
+	mi := &file_v1_design_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2439,7 +2239,7 @@ func (x *DeleteDeviceRequest) String() string {
 func (*DeleteDeviceRequest) ProtoMessage() {}
 
 func (x *DeleteDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[22]
+	mi := &file_v1_design_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2475,49 +2275,6 @@ func (b0 DeleteDeviceRequest_builder) Build() *DeleteDeviceRequest {
 	return m0
 }
 
-type DeleteDeviceResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteDeviceResponse) Reset() {
-	*x = DeleteDeviceResponse{}
-	mi := &file_v1_design_proto_msgTypes[23]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteDeviceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteDeviceResponse) ProtoMessage() {}
-
-func (x *DeleteDeviceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[23]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteDeviceResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteDeviceResponse_builder) Build() *DeleteDeviceResponse {
-	m0 := &DeleteDeviceResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type ListConnectionsRequest struct {
 	state               protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_DesignId string                 `protobuf:"bytes,10,opt,name=design_id,json=designId"`
@@ -2527,7 +2284,7 @@ type ListConnectionsRequest struct {
 
 func (x *ListConnectionsRequest) Reset() {
 	*x = ListConnectionsRequest{}
-	mi := &file_v1_design_proto_msgTypes[24]
+	mi := &file_v1_design_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2539,7 +2296,7 @@ func (x *ListConnectionsRequest) String() string {
 func (*ListConnectionsRequest) ProtoMessage() {}
 
 func (x *ListConnectionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[24]
+	mi := &file_v1_design_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2584,7 +2341,7 @@ type GetConnectionRequest struct {
 
 func (x *GetConnectionRequest) Reset() {
 	*x = GetConnectionRequest{}
-	mi := &file_v1_design_proto_msgTypes[25]
+	mi := &file_v1_design_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2596,7 +2353,7 @@ func (x *GetConnectionRequest) String() string {
 func (*GetConnectionRequest) ProtoMessage() {}
 
 func (x *GetConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[25]
+	mi := &file_v1_design_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2641,7 +2398,7 @@ type GetConnectionResponse struct {
 
 func (x *GetConnectionResponse) Reset() {
 	*x = GetConnectionResponse{}
-	mi := &file_v1_design_proto_msgTypes[26]
+	mi := &file_v1_design_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2653,7 +2410,7 @@ func (x *GetConnectionResponse) String() string {
 func (*GetConnectionResponse) ProtoMessage() {}
 
 func (x *GetConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[26]
+	mi := &file_v1_design_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2709,7 +2466,7 @@ type ListConnectionsResponse struct {
 
 func (x *ListConnectionsResponse) Reset() {
 	*x = ListConnectionsResponse{}
-	mi := &file_v1_design_proto_msgTypes[27]
+	mi := &file_v1_design_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2721,7 +2478,7 @@ func (x *ListConnectionsResponse) String() string {
 func (*ListConnectionsResponse) ProtoMessage() {}
 
 func (x *ListConnectionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[27]
+	mi := &file_v1_design_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2777,7 +2534,7 @@ type CreateConnectionRequest struct {
 
 func (x *CreateConnectionRequest) Reset() {
 	*x = CreateConnectionRequest{}
-	mi := &file_v1_design_proto_msgTypes[28]
+	mi := &file_v1_design_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2789,7 +2546,7 @@ func (x *CreateConnectionRequest) String() string {
 func (*CreateConnectionRequest) ProtoMessage() {}
 
 func (x *CreateConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[28]
+	mi := &file_v1_design_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2936,15 +2693,15 @@ func (b0 CreateConnectionRequest_builder) Build() *CreateConnectionRequest {
 }
 
 type CreateConnectionResponse struct {
-	state                 protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Connection *LogicalConnection     `protobuf:"bytes,10,opt,name=connection"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ConnectionId string                 `protobuf:"bytes,10,opt,name=connection_id,json=connectionId"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *CreateConnectionResponse) Reset() {
 	*x = CreateConnectionResponse{}
-	mi := &file_v1_design_proto_msgTypes[29]
+	mi := &file_v1_design_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2956,7 +2713,7 @@ func (x *CreateConnectionResponse) String() string {
 func (*CreateConnectionResponse) ProtoMessage() {}
 
 func (x *CreateConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[29]
+	mi := &file_v1_design_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2967,39 +2724,28 @@ func (x *CreateConnectionResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *CreateConnectionResponse) GetConnection() *LogicalConnection {
+func (x *CreateConnectionResponse) GetConnectionId() string {
 	if x != nil {
-		return x.xxx_hidden_Connection
+		return x.xxx_hidden_ConnectionId
 	}
-	return nil
+	return ""
 }
 
-func (x *CreateConnectionResponse) SetConnection(v *LogicalConnection) {
-	x.xxx_hidden_Connection = v
-}
-
-func (x *CreateConnectionResponse) HasConnection() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Connection != nil
-}
-
-func (x *CreateConnectionResponse) ClearConnection() {
-	x.xxx_hidden_Connection = nil
+func (x *CreateConnectionResponse) SetConnectionId(v string) {
+	x.xxx_hidden_ConnectionId = v
 }
 
 type CreateConnectionResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Connection *LogicalConnection
+	ConnectionId string
 }
 
 func (b0 CreateConnectionResponse_builder) Build() *CreateConnectionResponse {
 	m0 := &CreateConnectionResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Connection = b.Connection
+	x.xxx_hidden_ConnectionId = b.ConnectionId
 	return m0
 }
 
@@ -3019,7 +2765,7 @@ type UpdateConnectionRequest struct {
 
 func (x *UpdateConnectionRequest) Reset() {
 	*x = UpdateConnectionRequest{}
-	mi := &file_v1_design_proto_msgTypes[30]
+	mi := &file_v1_design_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3031,7 +2777,7 @@ func (x *UpdateConnectionRequest) String() string {
 func (*UpdateConnectionRequest) ProtoMessage() {}
 
 func (x *UpdateConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[30]
+	mi := &file_v1_design_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3226,74 +2972,6 @@ func (b0 UpdateConnectionRequest_builder) Build() *UpdateConnectionRequest {
 	return m0
 }
 
-type UpdateConnectionResponse struct {
-	state                 protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Connection *LogicalConnection     `protobuf:"bytes,10,opt,name=connection"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
-}
-
-func (x *UpdateConnectionResponse) Reset() {
-	*x = UpdateConnectionResponse{}
-	mi := &file_v1_design_proto_msgTypes[31]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateConnectionResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateConnectionResponse) ProtoMessage() {}
-
-func (x *UpdateConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[31]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateConnectionResponse) GetConnection() *LogicalConnection {
-	if x != nil {
-		return x.xxx_hidden_Connection
-	}
-	return nil
-}
-
-func (x *UpdateConnectionResponse) SetConnection(v *LogicalConnection) {
-	x.xxx_hidden_Connection = v
-}
-
-func (x *UpdateConnectionResponse) HasConnection() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Connection != nil
-}
-
-func (x *UpdateConnectionResponse) ClearConnection() {
-	x.xxx_hidden_Connection = nil
-}
-
-type UpdateConnectionResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Connection *LogicalConnection
-}
-
-func (b0 UpdateConnectionResponse_builder) Build() *UpdateConnectionResponse {
-	m0 := &UpdateConnectionResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Connection = b.Connection
-	return m0
-}
-
 type DeleteConnectionRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -3303,7 +2981,7 @@ type DeleteConnectionRequest struct {
 
 func (x *DeleteConnectionRequest) Reset() {
 	*x = DeleteConnectionRequest{}
-	mi := &file_v1_design_proto_msgTypes[32]
+	mi := &file_v1_design_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3315,7 +2993,7 @@ func (x *DeleteConnectionRequest) String() string {
 func (*DeleteConnectionRequest) ProtoMessage() {}
 
 func (x *DeleteConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[32]
+	mi := &file_v1_design_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3351,49 +3029,6 @@ func (b0 DeleteConnectionRequest_builder) Build() *DeleteConnectionRequest {
 	return m0
 }
 
-type DeleteConnectionResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteConnectionResponse) Reset() {
-	*x = DeleteConnectionResponse{}
-	mi := &file_v1_design_proto_msgTypes[33]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteConnectionResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteConnectionResponse) ProtoMessage() {}
-
-func (x *DeleteConnectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[33]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteConnectionResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteConnectionResponse_builder) Build() *DeleteConnectionResponse {
-	m0 := &DeleteConnectionResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type GetLayoutRequest struct {
 	state               protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_DesignId string                 `protobuf:"bytes,10,opt,name=design_id,json=designId"`
@@ -3403,7 +3038,7 @@ type GetLayoutRequest struct {
 
 func (x *GetLayoutRequest) Reset() {
 	*x = GetLayoutRequest{}
-	mi := &file_v1_design_proto_msgTypes[34]
+	mi := &file_v1_design_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3415,7 +3050,7 @@ func (x *GetLayoutRequest) String() string {
 func (*GetLayoutRequest) ProtoMessage() {}
 
 func (x *GetLayoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[34]
+	mi := &file_v1_design_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3460,7 +3095,7 @@ type GetLayoutResponse struct {
 
 func (x *GetLayoutResponse) Reset() {
 	*x = GetLayoutResponse{}
-	mi := &file_v1_design_proto_msgTypes[35]
+	mi := &file_v1_design_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3472,7 +3107,7 @@ func (x *GetLayoutResponse) String() string {
 func (*GetLayoutResponse) ProtoMessage() {}
 
 func (x *GetLayoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[35]
+	mi := &file_v1_design_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3520,7 +3155,7 @@ type SaveLayoutRequest struct {
 
 func (x *SaveLayoutRequest) Reset() {
 	*x = SaveLayoutRequest{}
-	mi := &file_v1_design_proto_msgTypes[36]
+	mi := &file_v1_design_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3532,7 +3167,7 @@ func (x *SaveLayoutRequest) String() string {
 func (*SaveLayoutRequest) ProtoMessage() {}
 
 func (x *SaveLayoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[36]
+	mi := &file_v1_design_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3592,7 +3227,7 @@ type SaveLayoutResponse struct {
 
 func (x *SaveLayoutResponse) Reset() {
 	*x = SaveLayoutResponse{}
-	mi := &file_v1_design_proto_msgTypes[37]
+	mi := &file_v1_design_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3604,7 +3239,7 @@ func (x *SaveLayoutResponse) String() string {
 func (*SaveLayoutResponse) ProtoMessage() {}
 
 func (x *SaveLayoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[37]
+	mi := &file_v1_design_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3652,7 +3287,7 @@ type DeleteLayoutRequest struct {
 
 func (x *DeleteLayoutRequest) Reset() {
 	*x = DeleteLayoutRequest{}
-	mi := &file_v1_design_proto_msgTypes[38]
+	mi := &file_v1_design_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3664,7 +3299,7 @@ func (x *DeleteLayoutRequest) String() string {
 func (*DeleteLayoutRequest) ProtoMessage() {}
 
 func (x *DeleteLayoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[38]
+	mi := &file_v1_design_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3700,49 +3335,6 @@ func (b0 DeleteLayoutRequest_builder) Build() *DeleteLayoutRequest {
 	return m0
 }
 
-type DeleteLayoutResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteLayoutResponse) Reset() {
-	*x = DeleteLayoutResponse{}
-	mi := &file_v1_design_proto_msgTypes[39]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteLayoutResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteLayoutResponse) ProtoMessage() {}
-
-func (x *DeleteLayoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[39]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteLayoutResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteLayoutResponse_builder) Build() *DeleteLayoutResponse {
-	m0 := &DeleteLayoutResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type SaveLayoutRequest_DevicePosition struct {
 	state                protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_DeviceId  string                 `protobuf:"bytes,10,opt,name=device_id,json=deviceId"`
@@ -3754,7 +3346,7 @@ type SaveLayoutRequest_DevicePosition struct {
 
 func (x *SaveLayoutRequest_DevicePosition) Reset() {
 	*x = SaveLayoutRequest_DevicePosition{}
-	mi := &file_v1_design_proto_msgTypes[40]
+	mi := &file_v1_design_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3766,7 +3358,7 @@ func (x *SaveLayoutRequest_DevicePosition) String() string {
 func (*SaveLayoutRequest_DevicePosition) ProtoMessage() {}
 
 func (x *SaveLayoutRequest_DevicePosition) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_design_proto_msgTypes[40]
+	mi := &file_v1_design_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3832,7 +3424,7 @@ var File_v1_design_proto protoreflect.FileDescriptor
 
 const file_v1_design_proto_rawDesc = "" +
 	"\n" +
-	"\x0fv1/design.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x98\x02\n" +
+	"\x0fv1/design.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x98\x02\n" +
 	"\rLogicalDesign\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -3888,23 +3480,19 @@ const file_v1_design_proto_rawDesc = "" +
 	"\x13CreateDesignRequest\x12\x1b\n" +
 	"\x04name\x18\n" +
 	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12 \n" +
-	"\vdescription\x18\x14 \x01(\tR\vdescription\"F\n" +
-	"\x14CreateDesignResponse\x12.\n" +
-	"\x06design\x18\n" +
-	" \x01(\v2\x16.dcim.v1.LogicalDesignR\x06design\"\xb0\x01\n" +
+	"\vdescription\x18\x14 \x01(\tR\vdescription\"3\n" +
+	"\x14CreateDesignResponse\x12\x1b\n" +
+	"\tdesign_id\x18\n" +
+	" \x01(\tR\bdesignId\"\xb0\x01\n" +
 	"\x13UpdateDesignRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
 	"\x04name\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04name\x12'\n" +
 	"\vdescription\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x12;\n" +
-	"\x06status\x18( \x01(\x0e2\x1c.dcim.v1.LogicalDesignStatusB\x05\xaa\x01\x02\b\x01R\x06status\"F\n" +
-	"\x14UpdateDesignResponse\x12.\n" +
-	"\x06design\x18\n" +
-	" \x01(\v2\x16.dcim.v1.LogicalDesignR\x06design\"/\n" +
+	"\x06status\x18( \x01(\x0e2\x1c.dcim.v1.LogicalDesignStatusB\x05\xaa\x01\x02\b\x01R\x06status\"/\n" +
 	"\x13DeleteDesignRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x16\n" +
-	"\x14DeleteDesignResponse\";\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\";\n" +
 	"\x12ListDevicesRequest\x12%\n" +
 	"\tdesign_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bdesignId\"G\n" +
@@ -3925,10 +3513,10 @@ const file_v1_design_proto_rawDesc = "" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04role\x121\n" +
 	"\x11device_catalog_id\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\x0fdeviceCatalogId\x12)\n" +
 	"\frequirements\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x14\n" +
-	"\x05notes\x18< \x01(\tR\x05notes\"F\n" +
-	"\x14CreateDeviceResponse\x12.\n" +
-	"\x06device\x18\n" +
-	" \x01(\v2\x16.dcim.v1.LogicalDeviceR\x06device\"\xfe\x01\n" +
+	"\x05notes\x18< \x01(\tR\x05notes\"3\n" +
+	"\x14CreateDeviceResponse\x12\x1b\n" +
+	"\tdevice_id\x18\n" +
+	" \x01(\tR\bdeviceId\"\xfe\x01\n" +
 	"\x13UpdateDeviceRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1b\n" +
@@ -3936,14 +3524,10 @@ const file_v1_design_proto_rawDesc = "" +
 	"\x04role\x18\x1e \x01(\x0e2\x1a.dcim.v1.LogicalDeviceRoleB\x05\xaa\x01\x02\b\x01R\x04role\x121\n" +
 	"\x11device_catalog_id\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\x0fdeviceCatalogId\x12)\n" +
 	"\frequirements\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x1b\n" +
-	"\x05notes\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\"F\n" +
-	"\x14UpdateDeviceResponse\x12.\n" +
-	"\x06device\x18\n" +
-	" \x01(\v2\x16.dcim.v1.LogicalDeviceR\x06device\"/\n" +
+	"\x05notes\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\"/\n" +
 	"\x13DeleteDeviceRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x16\n" +
-	"\x14DeleteDeviceResponse\"?\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"?\n" +
 	"\x16ListConnectionsRequest\x12%\n" +
 	"\tdesign_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bdesignId\"0\n" +
@@ -3968,12 +3552,10 @@ const file_v1_design_proto_rawDesc = "" +
 	"\x0fconnection_type\x18< \x01(\x0e2\x1e.dcim.v1.LogicalConnectionTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x0econnectionType\x12)\n" +
 	"\frequirements\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x14\n" +
-	"\x05label\x18P \x01(\tR\x05label\"V\n" +
-	"\x18CreateConnectionResponse\x12:\n" +
-	"\n" +
-	"connection\x18\n" +
-	" \x01(\v2\x1a.dcim.v1.LogicalConnectionR\n" +
-	"connection\"\xad\x02\n" +
+	"\x05label\x18P \x01(\tR\x05label\"?\n" +
+	"\x18CreateConnectionResponse\x12#\n" +
+	"\rconnection_id\x18\n" +
+	" \x01(\tR\fconnectionId\"\xad\x02\n" +
 	"\x17UpdateConnectionRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12/\n" +
@@ -3981,16 +3563,10 @@ const file_v1_design_proto_rawDesc = "" +
 	"\x10target_port_role\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x0etargetPortRole\x12N\n" +
 	"\x0fconnection_type\x18( \x01(\x0e2\x1e.dcim.v1.LogicalConnectionTypeB\x05\xaa\x01\x02\b\x01R\x0econnectionType\x12)\n" +
 	"\frequirements\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x1b\n" +
-	"\x05label\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05label\"V\n" +
-	"\x18UpdateConnectionResponse\x12:\n" +
-	"\n" +
-	"connection\x18\n" +
-	" \x01(\v2\x1a.dcim.v1.LogicalConnectionR\n" +
-	"connection\"3\n" +
+	"\x05label\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05label\"3\n" +
 	"\x17DeleteConnectionRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x1a\n" +
-	"\x18DeleteConnectionResponse\"9\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"9\n" +
 	"\x10GetLayoutRequest\x12%\n" +
 	"\tdesign_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bdesignId\"O\n" +
@@ -4013,8 +3589,7 @@ const file_v1_design_proto_rawDesc = "" +
 	" \x03(\v2\x1c.dcim.v1.LogicalDeviceLayoutR\tpositions\"<\n" +
 	"\x13DeleteLayoutRequest\x12%\n" +
 	"\tdesign_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bdesignId\"\x16\n" +
-	"\x14DeleteLayoutResponse*\xa3\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bdesignId*\xa3\x01\n" +
 	"\x13LogicalDesignStatus\x12%\n" +
 	"!LOGICAL_DESIGN_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bLOGICAL_DESIGN_STATUS_DRAFT\x10\n" +
@@ -4041,33 +3616,33 @@ const file_v1_design_proto_rawDesc = "" +
 	"\x1fLOGICAL_CONNECTION_TYPE_NETWORK\x10\n" +
 	"\x12!\n" +
 	"\x1dLOGICAL_CONNECTION_TYPE_POWER\x10\x14\x12#\n" +
-	"\x1fLOGICAL_CONNECTION_TYPE_CONSOLE\x10\x1e2\x8b\x03\n" +
+	"\x1fLOGICAL_CONNECTION_TYPE_CONSOLE\x10\x1e2\xfd\x02\n" +
 	"\x14LogicalDesignService\x12H\n" +
 	"\vListDesigns\x12\x1b.dcim.v1.ListDesignsRequest\x1a\x1c.dcim.v1.ListDesignsResponse\x12B\n" +
 	"\tGetDesign\x12\x19.dcim.v1.GetDesignRequest\x1a\x1a.dcim.v1.GetDesignResponse\x12K\n" +
-	"\fCreateDesign\x12\x1c.dcim.v1.CreateDesignRequest\x1a\x1d.dcim.v1.CreateDesignResponse\x12K\n" +
-	"\fUpdateDesign\x12\x1c.dcim.v1.UpdateDesignRequest\x1a\x1d.dcim.v1.UpdateDesignResponse\x12K\n" +
-	"\fDeleteDesign\x12\x1c.dcim.v1.DeleteDesignRequest\x1a\x1d.dcim.v1.DeleteDesignResponse2\x8b\x03\n" +
+	"\fCreateDesign\x12\x1c.dcim.v1.CreateDesignRequest\x1a\x1d.dcim.v1.CreateDesignResponse\x12D\n" +
+	"\fUpdateDesign\x12\x1c.dcim.v1.UpdateDesignRequest\x1a\x16.google.protobuf.Empty\x12D\n" +
+	"\fDeleteDesign\x12\x1c.dcim.v1.DeleteDesignRequest\x1a\x16.google.protobuf.Empty2\xfd\x02\n" +
 	"\x14LogicalDeviceService\x12H\n" +
 	"\vListDevices\x12\x1b.dcim.v1.ListDevicesRequest\x1a\x1c.dcim.v1.ListDevicesResponse\x12B\n" +
 	"\tGetDevice\x12\x19.dcim.v1.GetDeviceRequest\x1a\x1a.dcim.v1.GetDeviceResponse\x12K\n" +
-	"\fCreateDevice\x12\x1c.dcim.v1.CreateDeviceRequest\x1a\x1d.dcim.v1.CreateDeviceResponse\x12K\n" +
-	"\fUpdateDevice\x12\x1c.dcim.v1.UpdateDeviceRequest\x1a\x1d.dcim.v1.UpdateDeviceResponse\x12K\n" +
-	"\fDeleteDevice\x12\x1c.dcim.v1.DeleteDeviceRequest\x1a\x1d.dcim.v1.DeleteDeviceResponse2\xcb\x03\n" +
+	"\fCreateDevice\x12\x1c.dcim.v1.CreateDeviceRequest\x1a\x1d.dcim.v1.CreateDeviceResponse\x12D\n" +
+	"\fUpdateDevice\x12\x1c.dcim.v1.UpdateDeviceRequest\x1a\x16.google.protobuf.Empty\x12D\n" +
+	"\fDeleteDevice\x12\x1c.dcim.v1.DeleteDeviceRequest\x1a\x16.google.protobuf.Empty2\xb5\x03\n" +
 	"\x18LogicalConnectionService\x12T\n" +
 	"\x0fListConnections\x12\x1f.dcim.v1.ListConnectionsRequest\x1a .dcim.v1.ListConnectionsResponse\x12N\n" +
 	"\rGetConnection\x12\x1d.dcim.v1.GetConnectionRequest\x1a\x1e.dcim.v1.GetConnectionResponse\x12W\n" +
-	"\x10CreateConnection\x12 .dcim.v1.CreateConnectionRequest\x1a!.dcim.v1.CreateConnectionResponse\x12W\n" +
-	"\x10UpdateConnection\x12 .dcim.v1.UpdateConnectionRequest\x1a!.dcim.v1.UpdateConnectionResponse\x12W\n" +
-	"\x10DeleteConnection\x12 .dcim.v1.DeleteConnectionRequest\x1a!.dcim.v1.DeleteConnectionResponse2\xf4\x01\n" +
+	"\x10CreateConnection\x12 .dcim.v1.CreateConnectionRequest\x1a!.dcim.v1.CreateConnectionResponse\x12L\n" +
+	"\x10UpdateConnection\x12 .dcim.v1.UpdateConnectionRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
+	"\x10DeleteConnection\x12 .dcim.v1.DeleteConnectionRequest\x1a\x16.google.protobuf.Empty2\xed\x01\n" +
 	"\x1aLogicalDeviceLayoutService\x12B\n" +
 	"\tGetLayout\x12\x19.dcim.v1.GetLayoutRequest\x1a\x1a.dcim.v1.GetLayoutResponse\x12E\n" +
 	"\n" +
-	"SaveLayout\x12\x1a.dcim.v1.SaveLayoutRequest\x1a\x1b.dcim.v1.SaveLayoutResponse\x12K\n" +
-	"\fDeleteLayout\x12\x1c.dcim.v1.DeleteLayoutRequest\x1a\x1d.dcim.v1.DeleteLayoutResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"SaveLayout\x12\x1a.dcim.v1.SaveLayoutRequest\x1a\x1b.dcim.v1.SaveLayoutResponse\x12D\n" +
+	"\fDeleteLayout\x12\x1c.dcim.v1.DeleteLayoutRequest\x1a\x16.google.protobuf.EmptyBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_design_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_v1_design_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_v1_design_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_v1_design_proto_goTypes = []any{
 	(LogicalDesignStatus)(0),                 // 0: dcim.v1.LogicalDesignStatus
 	(LogicalDeviceRole)(0),                   // 1: dcim.v1.LogicalDeviceRole
@@ -4083,110 +3658,98 @@ var file_v1_design_proto_goTypes = []any{
 	(*CreateDesignRequest)(nil),              // 11: dcim.v1.CreateDesignRequest
 	(*CreateDesignResponse)(nil),             // 12: dcim.v1.CreateDesignResponse
 	(*UpdateDesignRequest)(nil),              // 13: dcim.v1.UpdateDesignRequest
-	(*UpdateDesignResponse)(nil),             // 14: dcim.v1.UpdateDesignResponse
-	(*DeleteDesignRequest)(nil),              // 15: dcim.v1.DeleteDesignRequest
-	(*DeleteDesignResponse)(nil),             // 16: dcim.v1.DeleteDesignResponse
-	(*ListDevicesRequest)(nil),               // 17: dcim.v1.ListDevicesRequest
-	(*ListDevicesResponse)(nil),              // 18: dcim.v1.ListDevicesResponse
-	(*GetDeviceRequest)(nil),                 // 19: dcim.v1.GetDeviceRequest
-	(*GetDeviceResponse)(nil),                // 20: dcim.v1.GetDeviceResponse
-	(*CreateDeviceRequest)(nil),              // 21: dcim.v1.CreateDeviceRequest
-	(*CreateDeviceResponse)(nil),             // 22: dcim.v1.CreateDeviceResponse
-	(*UpdateDeviceRequest)(nil),              // 23: dcim.v1.UpdateDeviceRequest
-	(*UpdateDeviceResponse)(nil),             // 24: dcim.v1.UpdateDeviceResponse
-	(*DeleteDeviceRequest)(nil),              // 25: dcim.v1.DeleteDeviceRequest
-	(*DeleteDeviceResponse)(nil),             // 26: dcim.v1.DeleteDeviceResponse
-	(*ListConnectionsRequest)(nil),           // 27: dcim.v1.ListConnectionsRequest
-	(*GetConnectionRequest)(nil),             // 28: dcim.v1.GetConnectionRequest
-	(*GetConnectionResponse)(nil),            // 29: dcim.v1.GetConnectionResponse
-	(*ListConnectionsResponse)(nil),          // 30: dcim.v1.ListConnectionsResponse
-	(*CreateConnectionRequest)(nil),          // 31: dcim.v1.CreateConnectionRequest
-	(*CreateConnectionResponse)(nil),         // 32: dcim.v1.CreateConnectionResponse
-	(*UpdateConnectionRequest)(nil),          // 33: dcim.v1.UpdateConnectionRequest
-	(*UpdateConnectionResponse)(nil),         // 34: dcim.v1.UpdateConnectionResponse
-	(*DeleteConnectionRequest)(nil),          // 35: dcim.v1.DeleteConnectionRequest
-	(*DeleteConnectionResponse)(nil),         // 36: dcim.v1.DeleteConnectionResponse
-	(*GetLayoutRequest)(nil),                 // 37: dcim.v1.GetLayoutRequest
-	(*GetLayoutResponse)(nil),                // 38: dcim.v1.GetLayoutResponse
-	(*SaveLayoutRequest)(nil),                // 39: dcim.v1.SaveLayoutRequest
-	(*SaveLayoutResponse)(nil),               // 40: dcim.v1.SaveLayoutResponse
-	(*DeleteLayoutRequest)(nil),              // 41: dcim.v1.DeleteLayoutRequest
-	(*DeleteLayoutResponse)(nil),             // 42: dcim.v1.DeleteLayoutResponse
-	(*SaveLayoutRequest_DevicePosition)(nil), // 43: dcim.v1.SaveLayoutRequest.DevicePosition
-	(*timestamppb.Timestamp)(nil),            // 44: google.protobuf.Timestamp
+	(*DeleteDesignRequest)(nil),              // 14: dcim.v1.DeleteDesignRequest
+	(*ListDevicesRequest)(nil),               // 15: dcim.v1.ListDevicesRequest
+	(*ListDevicesResponse)(nil),              // 16: dcim.v1.ListDevicesResponse
+	(*GetDeviceRequest)(nil),                 // 17: dcim.v1.GetDeviceRequest
+	(*GetDeviceResponse)(nil),                // 18: dcim.v1.GetDeviceResponse
+	(*CreateDeviceRequest)(nil),              // 19: dcim.v1.CreateDeviceRequest
+	(*CreateDeviceResponse)(nil),             // 20: dcim.v1.CreateDeviceResponse
+	(*UpdateDeviceRequest)(nil),              // 21: dcim.v1.UpdateDeviceRequest
+	(*DeleteDeviceRequest)(nil),              // 22: dcim.v1.DeleteDeviceRequest
+	(*ListConnectionsRequest)(nil),           // 23: dcim.v1.ListConnectionsRequest
+	(*GetConnectionRequest)(nil),             // 24: dcim.v1.GetConnectionRequest
+	(*GetConnectionResponse)(nil),            // 25: dcim.v1.GetConnectionResponse
+	(*ListConnectionsResponse)(nil),          // 26: dcim.v1.ListConnectionsResponse
+	(*CreateConnectionRequest)(nil),          // 27: dcim.v1.CreateConnectionRequest
+	(*CreateConnectionResponse)(nil),         // 28: dcim.v1.CreateConnectionResponse
+	(*UpdateConnectionRequest)(nil),          // 29: dcim.v1.UpdateConnectionRequest
+	(*DeleteConnectionRequest)(nil),          // 30: dcim.v1.DeleteConnectionRequest
+	(*GetLayoutRequest)(nil),                 // 31: dcim.v1.GetLayoutRequest
+	(*GetLayoutResponse)(nil),                // 32: dcim.v1.GetLayoutResponse
+	(*SaveLayoutRequest)(nil),                // 33: dcim.v1.SaveLayoutRequest
+	(*SaveLayoutResponse)(nil),               // 34: dcim.v1.SaveLayoutResponse
+	(*DeleteLayoutRequest)(nil),              // 35: dcim.v1.DeleteLayoutRequest
+	(*SaveLayoutRequest_DevicePosition)(nil), // 36: dcim.v1.SaveLayoutRequest.DevicePosition
+	(*timestamppb.Timestamp)(nil),            // 37: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                    // 38: google.protobuf.Empty
 }
 var file_v1_design_proto_depIdxs = []int32{
 	0,  // 0: dcim.v1.LogicalDesign.status:type_name -> dcim.v1.LogicalDesignStatus
-	44, // 1: dcim.v1.LogicalDesign.created:type_name -> google.protobuf.Timestamp
-	44, // 2: dcim.v1.LogicalDesign.deleted:type_name -> google.protobuf.Timestamp
+	37, // 1: dcim.v1.LogicalDesign.created:type_name -> google.protobuf.Timestamp
+	37, // 2: dcim.v1.LogicalDesign.deleted:type_name -> google.protobuf.Timestamp
 	1,  // 3: dcim.v1.LogicalDevice.role:type_name -> dcim.v1.LogicalDeviceRole
-	44, // 4: dcim.v1.LogicalDevice.created:type_name -> google.protobuf.Timestamp
-	44, // 5: dcim.v1.LogicalDevice.deleted:type_name -> google.protobuf.Timestamp
+	37, // 4: dcim.v1.LogicalDevice.created:type_name -> google.protobuf.Timestamp
+	37, // 5: dcim.v1.LogicalDevice.deleted:type_name -> google.protobuf.Timestamp
 	2,  // 6: dcim.v1.LogicalConnection.connection_type:type_name -> dcim.v1.LogicalConnectionType
-	44, // 7: dcim.v1.LogicalConnection.created:type_name -> google.protobuf.Timestamp
-	44, // 8: dcim.v1.LogicalConnection.deleted:type_name -> google.protobuf.Timestamp
-	44, // 9: dcim.v1.LogicalDeviceLayout.updated:type_name -> google.protobuf.Timestamp
+	37, // 7: dcim.v1.LogicalConnection.created:type_name -> google.protobuf.Timestamp
+	37, // 8: dcim.v1.LogicalConnection.deleted:type_name -> google.protobuf.Timestamp
+	37, // 9: dcim.v1.LogicalDeviceLayout.updated:type_name -> google.protobuf.Timestamp
 	3,  // 10: dcim.v1.ListDesignsResponse.designs:type_name -> dcim.v1.LogicalDesign
 	3,  // 11: dcim.v1.GetDesignResponse.design:type_name -> dcim.v1.LogicalDesign
-	3,  // 12: dcim.v1.CreateDesignResponse.design:type_name -> dcim.v1.LogicalDesign
-	0,  // 13: dcim.v1.UpdateDesignRequest.status:type_name -> dcim.v1.LogicalDesignStatus
-	3,  // 14: dcim.v1.UpdateDesignResponse.design:type_name -> dcim.v1.LogicalDesign
-	4,  // 15: dcim.v1.ListDevicesResponse.devices:type_name -> dcim.v1.LogicalDevice
-	4,  // 16: dcim.v1.GetDeviceResponse.device:type_name -> dcim.v1.LogicalDevice
-	1,  // 17: dcim.v1.CreateDeviceRequest.role:type_name -> dcim.v1.LogicalDeviceRole
-	4,  // 18: dcim.v1.CreateDeviceResponse.device:type_name -> dcim.v1.LogicalDevice
-	1,  // 19: dcim.v1.UpdateDeviceRequest.role:type_name -> dcim.v1.LogicalDeviceRole
-	4,  // 20: dcim.v1.UpdateDeviceResponse.device:type_name -> dcim.v1.LogicalDevice
-	5,  // 21: dcim.v1.GetConnectionResponse.connection:type_name -> dcim.v1.LogicalConnection
-	5,  // 22: dcim.v1.ListConnectionsResponse.connections:type_name -> dcim.v1.LogicalConnection
-	2,  // 23: dcim.v1.CreateConnectionRequest.connection_type:type_name -> dcim.v1.LogicalConnectionType
-	5,  // 24: dcim.v1.CreateConnectionResponse.connection:type_name -> dcim.v1.LogicalConnection
-	2,  // 25: dcim.v1.UpdateConnectionRequest.connection_type:type_name -> dcim.v1.LogicalConnectionType
-	5,  // 26: dcim.v1.UpdateConnectionResponse.connection:type_name -> dcim.v1.LogicalConnection
-	6,  // 27: dcim.v1.GetLayoutResponse.positions:type_name -> dcim.v1.LogicalDeviceLayout
-	43, // 28: dcim.v1.SaveLayoutRequest.positions:type_name -> dcim.v1.SaveLayoutRequest.DevicePosition
-	6,  // 29: dcim.v1.SaveLayoutResponse.positions:type_name -> dcim.v1.LogicalDeviceLayout
-	7,  // 30: dcim.v1.LogicalDesignService.ListDesigns:input_type -> dcim.v1.ListDesignsRequest
-	9,  // 31: dcim.v1.LogicalDesignService.GetDesign:input_type -> dcim.v1.GetDesignRequest
-	11, // 32: dcim.v1.LogicalDesignService.CreateDesign:input_type -> dcim.v1.CreateDesignRequest
-	13, // 33: dcim.v1.LogicalDesignService.UpdateDesign:input_type -> dcim.v1.UpdateDesignRequest
-	15, // 34: dcim.v1.LogicalDesignService.DeleteDesign:input_type -> dcim.v1.DeleteDesignRequest
-	17, // 35: dcim.v1.LogicalDeviceService.ListDevices:input_type -> dcim.v1.ListDevicesRequest
-	19, // 36: dcim.v1.LogicalDeviceService.GetDevice:input_type -> dcim.v1.GetDeviceRequest
-	21, // 37: dcim.v1.LogicalDeviceService.CreateDevice:input_type -> dcim.v1.CreateDeviceRequest
-	23, // 38: dcim.v1.LogicalDeviceService.UpdateDevice:input_type -> dcim.v1.UpdateDeviceRequest
-	25, // 39: dcim.v1.LogicalDeviceService.DeleteDevice:input_type -> dcim.v1.DeleteDeviceRequest
-	27, // 40: dcim.v1.LogicalConnectionService.ListConnections:input_type -> dcim.v1.ListConnectionsRequest
-	28, // 41: dcim.v1.LogicalConnectionService.GetConnection:input_type -> dcim.v1.GetConnectionRequest
-	31, // 42: dcim.v1.LogicalConnectionService.CreateConnection:input_type -> dcim.v1.CreateConnectionRequest
-	33, // 43: dcim.v1.LogicalConnectionService.UpdateConnection:input_type -> dcim.v1.UpdateConnectionRequest
-	35, // 44: dcim.v1.LogicalConnectionService.DeleteConnection:input_type -> dcim.v1.DeleteConnectionRequest
-	37, // 45: dcim.v1.LogicalDeviceLayoutService.GetLayout:input_type -> dcim.v1.GetLayoutRequest
-	39, // 46: dcim.v1.LogicalDeviceLayoutService.SaveLayout:input_type -> dcim.v1.SaveLayoutRequest
-	41, // 47: dcim.v1.LogicalDeviceLayoutService.DeleteLayout:input_type -> dcim.v1.DeleteLayoutRequest
-	8,  // 48: dcim.v1.LogicalDesignService.ListDesigns:output_type -> dcim.v1.ListDesignsResponse
-	10, // 49: dcim.v1.LogicalDesignService.GetDesign:output_type -> dcim.v1.GetDesignResponse
-	12, // 50: dcim.v1.LogicalDesignService.CreateDesign:output_type -> dcim.v1.CreateDesignResponse
-	14, // 51: dcim.v1.LogicalDesignService.UpdateDesign:output_type -> dcim.v1.UpdateDesignResponse
-	16, // 52: dcim.v1.LogicalDesignService.DeleteDesign:output_type -> dcim.v1.DeleteDesignResponse
-	18, // 53: dcim.v1.LogicalDeviceService.ListDevices:output_type -> dcim.v1.ListDevicesResponse
-	20, // 54: dcim.v1.LogicalDeviceService.GetDevice:output_type -> dcim.v1.GetDeviceResponse
-	22, // 55: dcim.v1.LogicalDeviceService.CreateDevice:output_type -> dcim.v1.CreateDeviceResponse
-	24, // 56: dcim.v1.LogicalDeviceService.UpdateDevice:output_type -> dcim.v1.UpdateDeviceResponse
-	26, // 57: dcim.v1.LogicalDeviceService.DeleteDevice:output_type -> dcim.v1.DeleteDeviceResponse
-	30, // 58: dcim.v1.LogicalConnectionService.ListConnections:output_type -> dcim.v1.ListConnectionsResponse
-	29, // 59: dcim.v1.LogicalConnectionService.GetConnection:output_type -> dcim.v1.GetConnectionResponse
-	32, // 60: dcim.v1.LogicalConnectionService.CreateConnection:output_type -> dcim.v1.CreateConnectionResponse
-	34, // 61: dcim.v1.LogicalConnectionService.UpdateConnection:output_type -> dcim.v1.UpdateConnectionResponse
-	36, // 62: dcim.v1.LogicalConnectionService.DeleteConnection:output_type -> dcim.v1.DeleteConnectionResponse
-	38, // 63: dcim.v1.LogicalDeviceLayoutService.GetLayout:output_type -> dcim.v1.GetLayoutResponse
-	40, // 64: dcim.v1.LogicalDeviceLayoutService.SaveLayout:output_type -> dcim.v1.SaveLayoutResponse
-	42, // 65: dcim.v1.LogicalDeviceLayoutService.DeleteLayout:output_type -> dcim.v1.DeleteLayoutResponse
-	48, // [48:66] is the sub-list for method output_type
-	30, // [30:48] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	0,  // 12: dcim.v1.UpdateDesignRequest.status:type_name -> dcim.v1.LogicalDesignStatus
+	4,  // 13: dcim.v1.ListDevicesResponse.devices:type_name -> dcim.v1.LogicalDevice
+	4,  // 14: dcim.v1.GetDeviceResponse.device:type_name -> dcim.v1.LogicalDevice
+	1,  // 15: dcim.v1.CreateDeviceRequest.role:type_name -> dcim.v1.LogicalDeviceRole
+	1,  // 16: dcim.v1.UpdateDeviceRequest.role:type_name -> dcim.v1.LogicalDeviceRole
+	5,  // 17: dcim.v1.GetConnectionResponse.connection:type_name -> dcim.v1.LogicalConnection
+	5,  // 18: dcim.v1.ListConnectionsResponse.connections:type_name -> dcim.v1.LogicalConnection
+	2,  // 19: dcim.v1.CreateConnectionRequest.connection_type:type_name -> dcim.v1.LogicalConnectionType
+	2,  // 20: dcim.v1.UpdateConnectionRequest.connection_type:type_name -> dcim.v1.LogicalConnectionType
+	6,  // 21: dcim.v1.GetLayoutResponse.positions:type_name -> dcim.v1.LogicalDeviceLayout
+	36, // 22: dcim.v1.SaveLayoutRequest.positions:type_name -> dcim.v1.SaveLayoutRequest.DevicePosition
+	6,  // 23: dcim.v1.SaveLayoutResponse.positions:type_name -> dcim.v1.LogicalDeviceLayout
+	7,  // 24: dcim.v1.LogicalDesignService.ListDesigns:input_type -> dcim.v1.ListDesignsRequest
+	9,  // 25: dcim.v1.LogicalDesignService.GetDesign:input_type -> dcim.v1.GetDesignRequest
+	11, // 26: dcim.v1.LogicalDesignService.CreateDesign:input_type -> dcim.v1.CreateDesignRequest
+	13, // 27: dcim.v1.LogicalDesignService.UpdateDesign:input_type -> dcim.v1.UpdateDesignRequest
+	14, // 28: dcim.v1.LogicalDesignService.DeleteDesign:input_type -> dcim.v1.DeleteDesignRequest
+	15, // 29: dcim.v1.LogicalDeviceService.ListDevices:input_type -> dcim.v1.ListDevicesRequest
+	17, // 30: dcim.v1.LogicalDeviceService.GetDevice:input_type -> dcim.v1.GetDeviceRequest
+	19, // 31: dcim.v1.LogicalDeviceService.CreateDevice:input_type -> dcim.v1.CreateDeviceRequest
+	21, // 32: dcim.v1.LogicalDeviceService.UpdateDevice:input_type -> dcim.v1.UpdateDeviceRequest
+	22, // 33: dcim.v1.LogicalDeviceService.DeleteDevice:input_type -> dcim.v1.DeleteDeviceRequest
+	23, // 34: dcim.v1.LogicalConnectionService.ListConnections:input_type -> dcim.v1.ListConnectionsRequest
+	24, // 35: dcim.v1.LogicalConnectionService.GetConnection:input_type -> dcim.v1.GetConnectionRequest
+	27, // 36: dcim.v1.LogicalConnectionService.CreateConnection:input_type -> dcim.v1.CreateConnectionRequest
+	29, // 37: dcim.v1.LogicalConnectionService.UpdateConnection:input_type -> dcim.v1.UpdateConnectionRequest
+	30, // 38: dcim.v1.LogicalConnectionService.DeleteConnection:input_type -> dcim.v1.DeleteConnectionRequest
+	31, // 39: dcim.v1.LogicalDeviceLayoutService.GetLayout:input_type -> dcim.v1.GetLayoutRequest
+	33, // 40: dcim.v1.LogicalDeviceLayoutService.SaveLayout:input_type -> dcim.v1.SaveLayoutRequest
+	35, // 41: dcim.v1.LogicalDeviceLayoutService.DeleteLayout:input_type -> dcim.v1.DeleteLayoutRequest
+	8,  // 42: dcim.v1.LogicalDesignService.ListDesigns:output_type -> dcim.v1.ListDesignsResponse
+	10, // 43: dcim.v1.LogicalDesignService.GetDesign:output_type -> dcim.v1.GetDesignResponse
+	12, // 44: dcim.v1.LogicalDesignService.CreateDesign:output_type -> dcim.v1.CreateDesignResponse
+	38, // 45: dcim.v1.LogicalDesignService.UpdateDesign:output_type -> google.protobuf.Empty
+	38, // 46: dcim.v1.LogicalDesignService.DeleteDesign:output_type -> google.protobuf.Empty
+	16, // 47: dcim.v1.LogicalDeviceService.ListDevices:output_type -> dcim.v1.ListDevicesResponse
+	18, // 48: dcim.v1.LogicalDeviceService.GetDevice:output_type -> dcim.v1.GetDeviceResponse
+	20, // 49: dcim.v1.LogicalDeviceService.CreateDevice:output_type -> dcim.v1.CreateDeviceResponse
+	38, // 50: dcim.v1.LogicalDeviceService.UpdateDevice:output_type -> google.protobuf.Empty
+	38, // 51: dcim.v1.LogicalDeviceService.DeleteDevice:output_type -> google.protobuf.Empty
+	26, // 52: dcim.v1.LogicalConnectionService.ListConnections:output_type -> dcim.v1.ListConnectionsResponse
+	25, // 53: dcim.v1.LogicalConnectionService.GetConnection:output_type -> dcim.v1.GetConnectionResponse
+	28, // 54: dcim.v1.LogicalConnectionService.CreateConnection:output_type -> dcim.v1.CreateConnectionResponse
+	38, // 55: dcim.v1.LogicalConnectionService.UpdateConnection:output_type -> google.protobuf.Empty
+	38, // 56: dcim.v1.LogicalConnectionService.DeleteConnection:output_type -> google.protobuf.Empty
+	32, // 57: dcim.v1.LogicalDeviceLayoutService.GetLayout:output_type -> dcim.v1.GetLayoutResponse
+	34, // 58: dcim.v1.LogicalDeviceLayoutService.SaveLayout:output_type -> dcim.v1.SaveLayoutResponse
+	38, // 59: dcim.v1.LogicalDeviceLayoutService.DeleteLayout:output_type -> google.protobuf.Empty
+	42, // [42:60] is the sub-list for method output_type
+	24, // [24:42] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_v1_design_proto_init() }
@@ -4200,7 +3763,7 @@ func file_v1_design_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_design_proto_rawDesc), len(file_v1_design_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   41,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   4,
 		},

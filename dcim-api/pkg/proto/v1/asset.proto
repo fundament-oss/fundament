@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
@@ -51,8 +52,8 @@ service AssetService {
   rpc ListAssets    (ListAssetsRequest)     returns (ListAssetsResponse);
   rpc GetAsset      (GetAssetRequest)       returns (GetAssetResponse);
   rpc CreateAsset   (CreateAssetRequest)    returns (CreateAssetResponse);
-  rpc UpdateAsset   (UpdateAssetRequest)    returns (UpdateAssetResponse);
-  rpc DeleteAsset   (DeleteAssetRequest)    returns (DeleteAssetResponse);
+  rpc UpdateAsset   (UpdateAssetRequest)    returns (google.protobuf.Empty);
+  rpc DeleteAsset   (DeleteAssetRequest)    returns (google.protobuf.Empty);
   rpc GetAssetEvents(GetAssetEventsRequest) returns (GetAssetEventsResponse);
   rpc GetAssetStats (GetAssetStatsRequest)  returns (GetAssetStatsResponse);
 }
@@ -91,7 +92,7 @@ message CreateAssetRequest {
 }
 
 message CreateAssetResponse {
-  Asset asset = 10;
+  string asset_id = 10;
 }
 
 message UpdateAssetRequest {
@@ -103,15 +104,9 @@ message UpdateAssetRequest {
   string                    notes           = 60 [features.field_presence = EXPLICIT];
 }
 
-message UpdateAssetResponse {
-  Asset asset = 10;
-}
-
 message DeleteAssetRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteAssetResponse {}
 
 message GetAssetEventsRequest {
   string asset_id = 10 [(buf.validate.field).string = {uuid: true}];

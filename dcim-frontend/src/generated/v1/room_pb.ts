@@ -6,15 +6,15 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/room.proto.
  */
 export const file_v1_room: GenFile = /*@__PURE__*/
-  fileDesc("Cg12MS9yb29tLnByb3RvEgdkY2ltLnYxIqEBCgRSb29tEgoKAmlkGAogASgJEg8KB3NpdGVfaWQYFCABKAkSDAoEbmFtZRgeIAEoCRINCgVmbG9vchgoIAEoCRIrCgdjcmVhdGVkGDIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGDwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiKgoQTGlzdFJvb21zUmVxdWVzdBIWCgdzaXRlX2lkGAogASgJQgWqAQIIASIxChFMaXN0Um9vbXNSZXNwb25zZRIcCgVyb29tcxgKIAMoCzINLmRjaW0udjEuUm9vbSImCg5HZXRSb29tUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiLgoPR2V0Um9vbVJlc3BvbnNlEhsKBHJvb20YCiABKAsyDS5kY2ltLnYxLlJvb20iVAoRQ3JlYXRlUm9vbVJlcXVlc3QSGQoHc2l0ZV9pZBgKIAEoCUIIukgFcgOwAQESFQoEbmFtZRgUIAEoCUIHukgEcgIQARINCgVmbG9vchgeIAEoCSIlChJDcmVhdGVSb29tUmVzcG9uc2USDwoHcm9vbV9pZBgKIAEoCSJUChFVcGRhdGVSb29tUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESEwoEbmFtZRgUIAEoCUIFqgECCAESFAoFZmxvb3IYHiABKAlCBaoBAggBIhQKElVwZGF0ZVJvb21SZXNwb25zZSIpChFEZWxldGVSb29tUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiFAoSRGVsZXRlUm9vbVJlc3BvbnNlMuQCCgtSb29tU2VydmljZRJCCglMaXN0Um9vbXMSGS5kY2ltLnYxLkxpc3RSb29tc1JlcXVlc3QaGi5kY2ltLnYxLkxpc3RSb29tc1Jlc3BvbnNlEjwKB0dldFJvb20SFy5kY2ltLnYxLkdldFJvb21SZXF1ZXN0GhguZGNpbS52MS5HZXRSb29tUmVzcG9uc2USRQoKQ3JlYXRlUm9vbRIaLmRjaW0udjEuQ3JlYXRlUm9vbVJlcXVlc3QaGy5kY2ltLnYxLkNyZWF0ZVJvb21SZXNwb25zZRJFCgpVcGRhdGVSb29tEhouZGNpbS52MS5VcGRhdGVSb29tUmVxdWVzdBobLmRjaW0udjEuVXBkYXRlUm9vbVJlc3BvbnNlEkUKCkRlbGV0ZVJvb20SGi5kY2ltLnYxLkRlbGV0ZVJvb21SZXF1ZXN0GhsuZGNpbS52MS5EZWxldGVSb29tUmVzcG9uc2VCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("Cg12MS9yb29tLnByb3RvEgdkY2ltLnYxIqEBCgRSb29tEgoKAmlkGAogASgJEg8KB3NpdGVfaWQYFCABKAkSDAoEbmFtZRgeIAEoCRINCgVmbG9vchgoIAEoCRIrCgdjcmVhdGVkGDIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGDwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiKgoQTGlzdFJvb21zUmVxdWVzdBIWCgdzaXRlX2lkGAogASgJQgWqAQIIASIxChFMaXN0Um9vbXNSZXNwb25zZRIcCgVyb29tcxgKIAMoCzINLmRjaW0udjEuUm9vbSImCg5HZXRSb29tUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiLgoPR2V0Um9vbVJlc3BvbnNlEhsKBHJvb20YCiABKAsyDS5kY2ltLnYxLlJvb20iVAoRQ3JlYXRlUm9vbVJlcXVlc3QSGQoHc2l0ZV9pZBgKIAEoCUIIukgFcgOwAQESFQoEbmFtZRgUIAEoCUIHukgEcgIQARINCgVmbG9vchgeIAEoCSIlChJDcmVhdGVSb29tUmVzcG9uc2USDwoHcm9vbV9pZBgKIAEoCSJUChFVcGRhdGVSb29tUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESEwoEbmFtZRgUIAEoCUIFqgECCAESFAoFZmxvb3IYHiABKAlCBaoBAggBIikKEURlbGV0ZVJvb21SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABATLaAgoLUm9vbVNlcnZpY2USQgoJTGlzdFJvb21zEhkuZGNpbS52MS5MaXN0Um9vbXNSZXF1ZXN0GhouZGNpbS52MS5MaXN0Um9vbXNSZXNwb25zZRI8CgdHZXRSb29tEhcuZGNpbS52MS5HZXRSb29tUmVxdWVzdBoYLmRjaW0udjEuR2V0Um9vbVJlc3BvbnNlEkUKCkNyZWF0ZVJvb20SGi5kY2ltLnYxLkNyZWF0ZVJvb21SZXF1ZXN0GhsuZGNpbS52MS5DcmVhdGVSb29tUmVzcG9uc2USQAoKVXBkYXRlUm9vbRIaLmRjaW0udjEuVXBkYXRlUm9vbVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSQAoKRGVsZXRlUm9vbRIaLmRjaW0udjEuRGVsZXRlUm9vbVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * Room is a hall or room within a site (core.rooms).
@@ -200,19 +200,6 @@ export const UpdateRoomRequestSchema: GenMessage<UpdateRoomRequest> = /*@__PURE_
   messageDesc(file_v1_room, 7);
 
 /**
- * @generated from message dcim.v1.UpdateRoomResponse
- */
-export type UpdateRoomResponse = Message<"dcim.v1.UpdateRoomResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.UpdateRoomResponse.
- * Use `create(UpdateRoomResponseSchema)` to create a new message.
- */
-export const UpdateRoomResponseSchema: GenMessage<UpdateRoomResponse> = /*@__PURE__*/
-  messageDesc(file_v1_room, 8);
-
-/**
  * @generated from message dcim.v1.DeleteRoomRequest
  */
 export type DeleteRoomRequest = Message<"dcim.v1.DeleteRoomRequest"> & {
@@ -227,20 +214,7 @@ export type DeleteRoomRequest = Message<"dcim.v1.DeleteRoomRequest"> & {
  * Use `create(DeleteRoomRequestSchema)` to create a new message.
  */
 export const DeleteRoomRequestSchema: GenMessage<DeleteRoomRequest> = /*@__PURE__*/
-  messageDesc(file_v1_room, 9);
-
-/**
- * @generated from message dcim.v1.DeleteRoomResponse
- */
-export type DeleteRoomResponse = Message<"dcim.v1.DeleteRoomResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.DeleteRoomResponse.
- * Use `create(DeleteRoomResponseSchema)` to create a new message.
- */
-export const DeleteRoomResponseSchema: GenMessage<DeleteRoomResponse> = /*@__PURE__*/
-  messageDesc(file_v1_room, 10);
+  messageDesc(file_v1_room, 8);
 
 /**
  * @generated from service dcim.v1.RoomService
@@ -276,7 +250,7 @@ export const RoomService: GenService<{
   updateRoom: {
     methodKind: "unary";
     input: typeof UpdateRoomRequestSchema;
-    output: typeof UpdateRoomResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * @generated from rpc dcim.v1.RoomService.DeleteRoom
@@ -284,7 +258,7 @@ export const RoomService: GenService<{
   deleteRoom: {
     methodKind: "unary";
     input: typeof DeleteRoomRequestSchema;
-    output: typeof DeleteRoomResponseSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_room, 0);

@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -826,49 +827,6 @@ func (b0 UpdateRackRowRequest_builder) Build() *UpdateRackRowRequest {
 	return m0
 }
 
-type UpdateRackRowResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateRackRowResponse) Reset() {
-	*x = UpdateRackRowResponse{}
-	mi := &file_v1_rack_row_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateRackRowResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateRackRowResponse) ProtoMessage() {}
-
-func (x *UpdateRackRowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_rack_row_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type UpdateRackRowResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 UpdateRackRowResponse_builder) Build() *UpdateRackRowResponse {
-	m0 := &UpdateRackRowResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type DeleteRackRowRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -878,7 +836,7 @@ type DeleteRackRowRequest struct {
 
 func (x *DeleteRackRowRequest) Reset() {
 	*x = DeleteRackRowRequest{}
-	mi := &file_v1_rack_row_proto_msgTypes[9]
+	mi := &file_v1_rack_row_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -890,7 +848,7 @@ func (x *DeleteRackRowRequest) String() string {
 func (*DeleteRackRowRequest) ProtoMessage() {}
 
 func (x *DeleteRackRowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_rack_row_proto_msgTypes[9]
+	mi := &file_v1_rack_row_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -926,54 +884,11 @@ func (b0 DeleteRackRowRequest_builder) Build() *DeleteRackRowRequest {
 	return m0
 }
 
-type DeleteRackRowResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteRackRowResponse) Reset() {
-	*x = DeleteRackRowResponse{}
-	mi := &file_v1_rack_row_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteRackRowResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRackRowResponse) ProtoMessage() {}
-
-func (x *DeleteRackRowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_rack_row_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteRackRowResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteRackRowResponse_builder) Build() *DeleteRackRowResponse {
-	m0 := &DeleteRackRowResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 var File_v1_rack_row_proto protoreflect.FileDescriptor
 
 const file_v1_rack_row_proto_rawDesc = "" +
 	"\n" +
-	"\x11v1/rack_row.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x85\x02\n" +
+	"\x11v1/rack_row.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x85\x02\n" +
 	"\aRackRow\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x17\n" +
@@ -1015,21 +930,19 @@ const file_v1_rack_row_proto_rawDesc = "" +
 	"\n" +
 	"position_x\x18\x1e \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionX\x12$\n" +
 	"\n" +
-	"position_y\x18( \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionY\"\x17\n" +
-	"\x15UpdateRackRowResponse\"0\n" +
+	"position_y\x18( \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionY\"0\n" +
 	"\x14DeleteRackRowRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x17\n" +
-	"\x15DeleteRackRowResponse2\x94\x03\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id2\x84\x03\n" +
 	"\x0eRackRowService\x12K\n" +
 	"\fListRackRows\x12\x1c.dcim.v1.ListRackRowsRequest\x1a\x1d.dcim.v1.ListRackRowsResponse\x12E\n" +
 	"\n" +
 	"GetRackRow\x12\x1a.dcim.v1.GetRackRowRequest\x1a\x1b.dcim.v1.GetRackRowResponse\x12N\n" +
-	"\rCreateRackRow\x12\x1d.dcim.v1.CreateRackRowRequest\x1a\x1e.dcim.v1.CreateRackRowResponse\x12N\n" +
-	"\rUpdateRackRow\x12\x1d.dcim.v1.UpdateRackRowRequest\x1a\x1e.dcim.v1.UpdateRackRowResponse\x12N\n" +
-	"\rDeleteRackRow\x12\x1d.dcim.v1.DeleteRackRowRequest\x1a\x1e.dcim.v1.DeleteRackRowResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\rCreateRackRow\x12\x1d.dcim.v1.CreateRackRowRequest\x1a\x1e.dcim.v1.CreateRackRowResponse\x12F\n" +
+	"\rUpdateRackRow\x12\x1d.dcim.v1.UpdateRackRowRequest\x1a\x16.google.protobuf.Empty\x12F\n" +
+	"\rDeleteRackRow\x12\x1d.dcim.v1.DeleteRackRowRequest\x1a\x16.google.protobuf.EmptyBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_rack_row_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_v1_rack_row_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_v1_rack_row_proto_goTypes = []any{
 	(*RackRow)(nil),               // 0: dcim.v1.RackRow
 	(*ListRackRowsRequest)(nil),   // 1: dcim.v1.ListRackRowsRequest
@@ -1039,26 +952,25 @@ var file_v1_rack_row_proto_goTypes = []any{
 	(*CreateRackRowRequest)(nil),  // 5: dcim.v1.CreateRackRowRequest
 	(*CreateRackRowResponse)(nil), // 6: dcim.v1.CreateRackRowResponse
 	(*UpdateRackRowRequest)(nil),  // 7: dcim.v1.UpdateRackRowRequest
-	(*UpdateRackRowResponse)(nil), // 8: dcim.v1.UpdateRackRowResponse
-	(*DeleteRackRowRequest)(nil),  // 9: dcim.v1.DeleteRackRowRequest
-	(*DeleteRackRowResponse)(nil), // 10: dcim.v1.DeleteRackRowResponse
-	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
+	(*DeleteRackRowRequest)(nil),  // 8: dcim.v1.DeleteRackRowRequest
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 10: google.protobuf.Empty
 }
 var file_v1_rack_row_proto_depIdxs = []int32{
-	11, // 0: dcim.v1.RackRow.created:type_name -> google.protobuf.Timestamp
-	11, // 1: dcim.v1.RackRow.deleted:type_name -> google.protobuf.Timestamp
+	9,  // 0: dcim.v1.RackRow.created:type_name -> google.protobuf.Timestamp
+	9,  // 1: dcim.v1.RackRow.deleted:type_name -> google.protobuf.Timestamp
 	0,  // 2: dcim.v1.ListRackRowsResponse.rack_rows:type_name -> dcim.v1.RackRow
 	0,  // 3: dcim.v1.GetRackRowResponse.rack_row:type_name -> dcim.v1.RackRow
 	1,  // 4: dcim.v1.RackRowService.ListRackRows:input_type -> dcim.v1.ListRackRowsRequest
 	3,  // 5: dcim.v1.RackRowService.GetRackRow:input_type -> dcim.v1.GetRackRowRequest
 	5,  // 6: dcim.v1.RackRowService.CreateRackRow:input_type -> dcim.v1.CreateRackRowRequest
 	7,  // 7: dcim.v1.RackRowService.UpdateRackRow:input_type -> dcim.v1.UpdateRackRowRequest
-	9,  // 8: dcim.v1.RackRowService.DeleteRackRow:input_type -> dcim.v1.DeleteRackRowRequest
+	8,  // 8: dcim.v1.RackRowService.DeleteRackRow:input_type -> dcim.v1.DeleteRackRowRequest
 	2,  // 9: dcim.v1.RackRowService.ListRackRows:output_type -> dcim.v1.ListRackRowsResponse
 	4,  // 10: dcim.v1.RackRowService.GetRackRow:output_type -> dcim.v1.GetRackRowResponse
 	6,  // 11: dcim.v1.RackRowService.CreateRackRow:output_type -> dcim.v1.CreateRackRowResponse
-	8,  // 12: dcim.v1.RackRowService.UpdateRackRow:output_type -> dcim.v1.UpdateRackRowResponse
-	10, // 13: dcim.v1.RackRowService.DeleteRackRow:output_type -> dcim.v1.DeleteRackRowResponse
+	10, // 12: dcim.v1.RackRowService.UpdateRackRow:output_type -> google.protobuf.Empty
+	10, // 13: dcim.v1.RackRowService.DeleteRackRow:output_type -> google.protobuf.Empty
 	9,  // [9:14] is the sub-list for method output_type
 	4,  // [4:9] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
@@ -1077,7 +989,7 @@ func file_v1_rack_row_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_rack_row_proto_rawDesc), len(file_v1_rack_row_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

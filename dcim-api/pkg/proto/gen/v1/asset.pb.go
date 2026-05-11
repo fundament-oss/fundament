@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -1139,10 +1140,10 @@ func (b0 CreateAssetRequest_builder) Build() *CreateAssetRequest {
 }
 
 type CreateAssetResponse struct {
-	state            protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Asset *Asset                 `protobuf:"bytes,10,opt,name=asset"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_AssetId string                 `protobuf:"bytes,10,opt,name=asset_id,json=assetId"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CreateAssetResponse) Reset() {
@@ -1170,39 +1171,28 @@ func (x *CreateAssetResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *CreateAssetResponse) GetAsset() *Asset {
+func (x *CreateAssetResponse) GetAssetId() string {
 	if x != nil {
-		return x.xxx_hidden_Asset
+		return x.xxx_hidden_AssetId
 	}
-	return nil
+	return ""
 }
 
-func (x *CreateAssetResponse) SetAsset(v *Asset) {
-	x.xxx_hidden_Asset = v
-}
-
-func (x *CreateAssetResponse) HasAsset() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Asset != nil
-}
-
-func (x *CreateAssetResponse) ClearAsset() {
-	x.xxx_hidden_Asset = nil
+func (x *CreateAssetResponse) SetAssetId(v string) {
+	x.xxx_hidden_AssetId = v
 }
 
 type CreateAssetResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Asset *Asset
+	AssetId string
 }
 
 func (b0 CreateAssetResponse_builder) Build() *CreateAssetResponse {
 	m0 := &CreateAssetResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Asset = b.Asset
+	x.xxx_hidden_AssetId = b.AssetId
 	return m0
 }
 
@@ -1421,74 +1411,6 @@ func (b0 UpdateAssetRequest_builder) Build() *UpdateAssetRequest {
 	return m0
 }
 
-type UpdateAssetResponse struct {
-	state            protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Asset *Asset                 `protobuf:"bytes,10,opt,name=asset"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *UpdateAssetResponse) Reset() {
-	*x = UpdateAssetResponse{}
-	mi := &file_v1_asset_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateAssetResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateAssetResponse) ProtoMessage() {}
-
-func (x *UpdateAssetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_asset_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateAssetResponse) GetAsset() *Asset {
-	if x != nil {
-		return x.xxx_hidden_Asset
-	}
-	return nil
-}
-
-func (x *UpdateAssetResponse) SetAsset(v *Asset) {
-	x.xxx_hidden_Asset = v
-}
-
-func (x *UpdateAssetResponse) HasAsset() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Asset != nil
-}
-
-func (x *UpdateAssetResponse) ClearAsset() {
-	x.xxx_hidden_Asset = nil
-}
-
-type UpdateAssetResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Asset *Asset
-}
-
-func (b0 UpdateAssetResponse_builder) Build() *UpdateAssetResponse {
-	m0 := &UpdateAssetResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Asset = b.Asset
-	return m0
-}
-
 type DeleteAssetRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -1498,7 +1420,7 @@ type DeleteAssetRequest struct {
 
 func (x *DeleteAssetRequest) Reset() {
 	*x = DeleteAssetRequest{}
-	mi := &file_v1_asset_proto_msgTypes[10]
+	mi := &file_v1_asset_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1510,7 +1432,7 @@ func (x *DeleteAssetRequest) String() string {
 func (*DeleteAssetRequest) ProtoMessage() {}
 
 func (x *DeleteAssetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_asset_proto_msgTypes[10]
+	mi := &file_v1_asset_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1546,49 +1468,6 @@ func (b0 DeleteAssetRequest_builder) Build() *DeleteAssetRequest {
 	return m0
 }
 
-type DeleteAssetResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteAssetResponse) Reset() {
-	*x = DeleteAssetResponse{}
-	mi := &file_v1_asset_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteAssetResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteAssetResponse) ProtoMessage() {}
-
-func (x *DeleteAssetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_asset_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteAssetResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteAssetResponse_builder) Build() *DeleteAssetResponse {
-	m0 := &DeleteAssetResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type GetAssetEventsRequest struct {
 	state              protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_AssetId string                 `protobuf:"bytes,10,opt,name=asset_id,json=assetId"`
@@ -1598,7 +1477,7 @@ type GetAssetEventsRequest struct {
 
 func (x *GetAssetEventsRequest) Reset() {
 	*x = GetAssetEventsRequest{}
-	mi := &file_v1_asset_proto_msgTypes[12]
+	mi := &file_v1_asset_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1610,7 +1489,7 @@ func (x *GetAssetEventsRequest) String() string {
 func (*GetAssetEventsRequest) ProtoMessage() {}
 
 func (x *GetAssetEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_asset_proto_msgTypes[12]
+	mi := &file_v1_asset_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1655,7 +1534,7 @@ type GetAssetEventsResponse struct {
 
 func (x *GetAssetEventsResponse) Reset() {
 	*x = GetAssetEventsResponse{}
-	mi := &file_v1_asset_proto_msgTypes[13]
+	mi := &file_v1_asset_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1667,7 +1546,7 @@ func (x *GetAssetEventsResponse) String() string {
 func (*GetAssetEventsResponse) ProtoMessage() {}
 
 func (x *GetAssetEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_asset_proto_msgTypes[13]
+	mi := &file_v1_asset_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1716,7 +1595,7 @@ type GetAssetStatsRequest struct {
 
 func (x *GetAssetStatsRequest) Reset() {
 	*x = GetAssetStatsRequest{}
-	mi := &file_v1_asset_proto_msgTypes[14]
+	mi := &file_v1_asset_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1728,7 +1607,7 @@ func (x *GetAssetStatsRequest) String() string {
 func (*GetAssetStatsRequest) ProtoMessage() {}
 
 func (x *GetAssetStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_asset_proto_msgTypes[14]
+	mi := &file_v1_asset_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1793,7 +1672,7 @@ type GetAssetStatsResponse struct {
 
 func (x *GetAssetStatsResponse) Reset() {
 	*x = GetAssetStatsResponse{}
-	mi := &file_v1_asset_proto_msgTypes[15]
+	mi := &file_v1_asset_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1805,7 +1684,7 @@ func (x *GetAssetStatsResponse) String() string {
 func (*GetAssetStatsResponse) ProtoMessage() {}
 
 func (x *GetAssetStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_asset_proto_msgTypes[15]
+	mi := &file_v1_asset_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1856,7 +1735,7 @@ var File_v1_asset_proto protoreflect.FileDescriptor
 
 const file_v1_asset_proto_rawDesc = "" +
 	"\n" +
-	"\x0ev1/asset.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x8c\x04\n" +
+	"\x0ev1/asset.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x8c\x04\n" +
 	"\x05Asset\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12*\n" +
@@ -1908,10 +1787,10 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\rpurchase_date\x182 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\fpurchaseDate\x12,\n" +
 	"\x0epurchase_order\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\rpurchaseOrder\x12J\n" +
 	"\x0fwarranty_expiry\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x0ewarrantyExpiry\x12\x14\n" +
-	"\x05notes\x18P \x01(\tR\x05notes\";\n" +
-	"\x13CreateAssetResponse\x12$\n" +
-	"\x05asset\x18\n" +
-	" \x01(\v2\x0e.dcim.v1.AssetR\x05asset\"\x9c\x02\n" +
+	"\x05notes\x18P \x01(\tR\x05notes\"0\n" +
+	"\x13CreateAssetResponse\x12\x19\n" +
+	"\basset_id\x18\n" +
+	" \x01(\tR\aassetId\"\x9c\x02\n" +
 	"\x12UpdateAssetRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x123\n" +
@@ -1919,14 +1798,10 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\rserial_number\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\fserialNumber\x12\"\n" +
 	"\tasset_tag\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\bassetTag\x12J\n" +
 	"\x0fwarranty_expiry\x182 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x0ewarrantyExpiry\x12\x1b\n" +
-	"\x05notes\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\";\n" +
-	"\x13UpdateAssetResponse\x12$\n" +
-	"\x05asset\x18\n" +
-	" \x01(\v2\x0e.dcim.v1.AssetR\x05asset\".\n" +
+	"\x05notes\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\".\n" +
 	"\x12DeleteAssetRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x15\n" +
-	"\x13DeleteAssetResponse\"<\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"<\n" +
 	"\x15GetAssetEventsRequest\x12#\n" +
 	"\basset_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aassetId\"E\n" +
@@ -1946,19 +1821,19 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\x1eASSET_SORT_FIELD_SERIAL_NUMBER\x10\x14\x12\x1e\n" +
 	"\x1aASSET_SORT_FIELD_ASSET_TAG\x10\x1e\x12\"\n" +
 	"\x1eASSET_SORT_FIELD_PURCHASE_DATE\x10(\x12$\n" +
-	" ASSET_SORT_FIELD_WARRANTY_EXPIRY\x1022\x97\x04\n" +
+	" ASSET_SORT_FIELD_WARRANTY_EXPIRY\x1022\x8b\x04\n" +
 	"\fAssetService\x12E\n" +
 	"\n" +
 	"ListAssets\x12\x1a.dcim.v1.ListAssetsRequest\x1a\x1b.dcim.v1.ListAssetsResponse\x12?\n" +
 	"\bGetAsset\x12\x18.dcim.v1.GetAssetRequest\x1a\x19.dcim.v1.GetAssetResponse\x12H\n" +
-	"\vCreateAsset\x12\x1b.dcim.v1.CreateAssetRequest\x1a\x1c.dcim.v1.CreateAssetResponse\x12H\n" +
-	"\vUpdateAsset\x12\x1b.dcim.v1.UpdateAssetRequest\x1a\x1c.dcim.v1.UpdateAssetResponse\x12H\n" +
-	"\vDeleteAsset\x12\x1b.dcim.v1.DeleteAssetRequest\x1a\x1c.dcim.v1.DeleteAssetResponse\x12Q\n" +
+	"\vCreateAsset\x12\x1b.dcim.v1.CreateAssetRequest\x1a\x1c.dcim.v1.CreateAssetResponse\x12B\n" +
+	"\vUpdateAsset\x12\x1b.dcim.v1.UpdateAssetRequest\x1a\x16.google.protobuf.Empty\x12B\n" +
+	"\vDeleteAsset\x12\x1b.dcim.v1.DeleteAssetRequest\x1a\x16.google.protobuf.Empty\x12Q\n" +
 	"\x0eGetAssetEvents\x12\x1e.dcim.v1.GetAssetEventsRequest\x1a\x1f.dcim.v1.GetAssetEventsResponse\x12N\n" +
 	"\rGetAssetStats\x12\x1d.dcim.v1.GetAssetStatsRequest\x1a\x1e.dcim.v1.GetAssetStatsResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_asset_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_v1_asset_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_v1_asset_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_v1_asset_proto_goTypes = []any{
 	(AssetSortField)(0),            // 0: dcim.v1.AssetSortField
 	(*Asset)(nil),                  // 1: dcim.v1.Asset
@@ -1970,59 +1845,56 @@ var file_v1_asset_proto_goTypes = []any{
 	(*CreateAssetRequest)(nil),     // 7: dcim.v1.CreateAssetRequest
 	(*CreateAssetResponse)(nil),    // 8: dcim.v1.CreateAssetResponse
 	(*UpdateAssetRequest)(nil),     // 9: dcim.v1.UpdateAssetRequest
-	(*UpdateAssetResponse)(nil),    // 10: dcim.v1.UpdateAssetResponse
-	(*DeleteAssetRequest)(nil),     // 11: dcim.v1.DeleteAssetRequest
-	(*DeleteAssetResponse)(nil),    // 12: dcim.v1.DeleteAssetResponse
-	(*GetAssetEventsRequest)(nil),  // 13: dcim.v1.GetAssetEventsRequest
-	(*GetAssetEventsResponse)(nil), // 14: dcim.v1.GetAssetEventsResponse
-	(*GetAssetStatsRequest)(nil),   // 15: dcim.v1.GetAssetStatsRequest
-	(*GetAssetStatsResponse)(nil),  // 16: dcim.v1.GetAssetStatsResponse
-	(AssetStatus)(0),               // 17: dcim.v1.AssetStatus
-	(*timestamppb.Timestamp)(nil),  // 18: google.protobuf.Timestamp
-	(AssetCategory)(0),             // 19: dcim.v1.AssetCategory
-	(SortDirection)(0),             // 20: dcim.v1.SortDirection
-	(*AssetEvent)(nil),             // 21: dcim.v1.AssetEvent
+	(*DeleteAssetRequest)(nil),     // 10: dcim.v1.DeleteAssetRequest
+	(*GetAssetEventsRequest)(nil),  // 11: dcim.v1.GetAssetEventsRequest
+	(*GetAssetEventsResponse)(nil), // 12: dcim.v1.GetAssetEventsResponse
+	(*GetAssetStatsRequest)(nil),   // 13: dcim.v1.GetAssetStatsRequest
+	(*GetAssetStatsResponse)(nil),  // 14: dcim.v1.GetAssetStatsResponse
+	(AssetStatus)(0),               // 15: dcim.v1.AssetStatus
+	(*timestamppb.Timestamp)(nil),  // 16: google.protobuf.Timestamp
+	(AssetCategory)(0),             // 17: dcim.v1.AssetCategory
+	(SortDirection)(0),             // 18: dcim.v1.SortDirection
+	(*AssetEvent)(nil),             // 19: dcim.v1.AssetEvent
+	(*emptypb.Empty)(nil),          // 20: google.protobuf.Empty
 }
 var file_v1_asset_proto_depIdxs = []int32{
-	17, // 0: dcim.v1.Asset.status:type_name -> dcim.v1.AssetStatus
-	18, // 1: dcim.v1.Asset.purchase_date:type_name -> google.protobuf.Timestamp
-	18, // 2: dcim.v1.Asset.warranty_expiry:type_name -> google.protobuf.Timestamp
-	18, // 3: dcim.v1.Asset.created:type_name -> google.protobuf.Timestamp
-	18, // 4: dcim.v1.Asset.deleted:type_name -> google.protobuf.Timestamp
-	17, // 5: dcim.v1.ListAssetsRequest.status_filter:type_name -> dcim.v1.AssetStatus
-	19, // 6: dcim.v1.ListAssetsRequest.category_filter:type_name -> dcim.v1.AssetCategory
+	15, // 0: dcim.v1.Asset.status:type_name -> dcim.v1.AssetStatus
+	16, // 1: dcim.v1.Asset.purchase_date:type_name -> google.protobuf.Timestamp
+	16, // 2: dcim.v1.Asset.warranty_expiry:type_name -> google.protobuf.Timestamp
+	16, // 3: dcim.v1.Asset.created:type_name -> google.protobuf.Timestamp
+	16, // 4: dcim.v1.Asset.deleted:type_name -> google.protobuf.Timestamp
+	15, // 5: dcim.v1.ListAssetsRequest.status_filter:type_name -> dcim.v1.AssetStatus
+	17, // 6: dcim.v1.ListAssetsRequest.category_filter:type_name -> dcim.v1.AssetCategory
 	0,  // 7: dcim.v1.ListAssetsRequest.sort_by:type_name -> dcim.v1.AssetSortField
-	20, // 8: dcim.v1.ListAssetsRequest.sort_direction:type_name -> dcim.v1.SortDirection
+	18, // 8: dcim.v1.ListAssetsRequest.sort_direction:type_name -> dcim.v1.SortDirection
 	1,  // 9: dcim.v1.ListAssetsResponse.assets:type_name -> dcim.v1.Asset
 	1,  // 10: dcim.v1.GetAssetResponse.asset:type_name -> dcim.v1.Asset
-	17, // 11: dcim.v1.CreateAssetRequest.status:type_name -> dcim.v1.AssetStatus
-	18, // 12: dcim.v1.CreateAssetRequest.purchase_date:type_name -> google.protobuf.Timestamp
-	18, // 13: dcim.v1.CreateAssetRequest.warranty_expiry:type_name -> google.protobuf.Timestamp
-	1,  // 14: dcim.v1.CreateAssetResponse.asset:type_name -> dcim.v1.Asset
-	17, // 15: dcim.v1.UpdateAssetRequest.status:type_name -> dcim.v1.AssetStatus
-	18, // 16: dcim.v1.UpdateAssetRequest.warranty_expiry:type_name -> google.protobuf.Timestamp
-	1,  // 17: dcim.v1.UpdateAssetResponse.asset:type_name -> dcim.v1.Asset
-	21, // 18: dcim.v1.GetAssetEventsResponse.events:type_name -> dcim.v1.AssetEvent
-	2,  // 19: dcim.v1.GetAssetStatsResponse.stats:type_name -> dcim.v1.AssetStats
-	3,  // 20: dcim.v1.AssetService.ListAssets:input_type -> dcim.v1.ListAssetsRequest
-	5,  // 21: dcim.v1.AssetService.GetAsset:input_type -> dcim.v1.GetAssetRequest
-	7,  // 22: dcim.v1.AssetService.CreateAsset:input_type -> dcim.v1.CreateAssetRequest
-	9,  // 23: dcim.v1.AssetService.UpdateAsset:input_type -> dcim.v1.UpdateAssetRequest
-	11, // 24: dcim.v1.AssetService.DeleteAsset:input_type -> dcim.v1.DeleteAssetRequest
-	13, // 25: dcim.v1.AssetService.GetAssetEvents:input_type -> dcim.v1.GetAssetEventsRequest
-	15, // 26: dcim.v1.AssetService.GetAssetStats:input_type -> dcim.v1.GetAssetStatsRequest
-	4,  // 27: dcim.v1.AssetService.ListAssets:output_type -> dcim.v1.ListAssetsResponse
-	6,  // 28: dcim.v1.AssetService.GetAsset:output_type -> dcim.v1.GetAssetResponse
-	8,  // 29: dcim.v1.AssetService.CreateAsset:output_type -> dcim.v1.CreateAssetResponse
-	10, // 30: dcim.v1.AssetService.UpdateAsset:output_type -> dcim.v1.UpdateAssetResponse
-	12, // 31: dcim.v1.AssetService.DeleteAsset:output_type -> dcim.v1.DeleteAssetResponse
-	14, // 32: dcim.v1.AssetService.GetAssetEvents:output_type -> dcim.v1.GetAssetEventsResponse
-	16, // 33: dcim.v1.AssetService.GetAssetStats:output_type -> dcim.v1.GetAssetStatsResponse
-	27, // [27:34] is the sub-list for method output_type
-	20, // [20:27] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	15, // 11: dcim.v1.CreateAssetRequest.status:type_name -> dcim.v1.AssetStatus
+	16, // 12: dcim.v1.CreateAssetRequest.purchase_date:type_name -> google.protobuf.Timestamp
+	16, // 13: dcim.v1.CreateAssetRequest.warranty_expiry:type_name -> google.protobuf.Timestamp
+	15, // 14: dcim.v1.UpdateAssetRequest.status:type_name -> dcim.v1.AssetStatus
+	16, // 15: dcim.v1.UpdateAssetRequest.warranty_expiry:type_name -> google.protobuf.Timestamp
+	19, // 16: dcim.v1.GetAssetEventsResponse.events:type_name -> dcim.v1.AssetEvent
+	2,  // 17: dcim.v1.GetAssetStatsResponse.stats:type_name -> dcim.v1.AssetStats
+	3,  // 18: dcim.v1.AssetService.ListAssets:input_type -> dcim.v1.ListAssetsRequest
+	5,  // 19: dcim.v1.AssetService.GetAsset:input_type -> dcim.v1.GetAssetRequest
+	7,  // 20: dcim.v1.AssetService.CreateAsset:input_type -> dcim.v1.CreateAssetRequest
+	9,  // 21: dcim.v1.AssetService.UpdateAsset:input_type -> dcim.v1.UpdateAssetRequest
+	10, // 22: dcim.v1.AssetService.DeleteAsset:input_type -> dcim.v1.DeleteAssetRequest
+	11, // 23: dcim.v1.AssetService.GetAssetEvents:input_type -> dcim.v1.GetAssetEventsRequest
+	13, // 24: dcim.v1.AssetService.GetAssetStats:input_type -> dcim.v1.GetAssetStatsRequest
+	4,  // 25: dcim.v1.AssetService.ListAssets:output_type -> dcim.v1.ListAssetsResponse
+	6,  // 26: dcim.v1.AssetService.GetAsset:output_type -> dcim.v1.GetAssetResponse
+	8,  // 27: dcim.v1.AssetService.CreateAsset:output_type -> dcim.v1.CreateAssetResponse
+	20, // 28: dcim.v1.AssetService.UpdateAsset:output_type -> google.protobuf.Empty
+	20, // 29: dcim.v1.AssetService.DeleteAsset:output_type -> google.protobuf.Empty
+	12, // 30: dcim.v1.AssetService.GetAssetEvents:output_type -> dcim.v1.GetAssetEventsResponse
+	14, // 31: dcim.v1.AssetService.GetAssetStats:output_type -> dcim.v1.GetAssetStatsResponse
+	25, // [25:32] is the sub-list for method output_type
+	18, // [18:25] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_v1_asset_proto_init() }
@@ -2037,7 +1909,7 @@ func file_v1_asset_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_asset_proto_rawDesc), len(file_v1_asset_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

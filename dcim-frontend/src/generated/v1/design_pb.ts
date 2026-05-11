@@ -6,15 +6,15 @@
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/design.proto.
  */
 export const file_v1_design: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9kZXNpZ24ucHJvdG8SB2RjaW0udjEi3gEKDUxvZ2ljYWxEZXNpZ24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIPCgd2ZXJzaW9uGB4gASgFEhMKC2Rlc2NyaXB0aW9uGCggASgJEiwKBnN0YXR1cxgyIAEoDjIcLmRjaW0udjEuTG9naWNhbERlc2lnblN0YXR1cxIrCgdjcmVhdGVkGDwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGEYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEilgIKDUxvZ2ljYWxEZXZpY2USCgoCaWQYCiABKAkSEQoJZGVzaWduX2lkGBQgASgJEg0KBWxhYmVsGB4gASgJEigKBHJvbGUYKCABKA4yGi5kY2ltLnYxLkxvZ2ljYWxEZXZpY2VSb2xlEiAKEWRldmljZV9jYXRhbG9nX2lkGDIgASgJQgWqAQIIARIbCgxyZXF1aXJlbWVudHMYPCABKAlCBaoBAggBEg0KBW5vdGVzGEYgASgJEisKB2NyZWF0ZWQYUCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKB2RlbGV0ZWQYWiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIASLgAgoRTG9naWNhbENvbm5lY3Rpb24SCgoCaWQYCiABKAkSEQoJZGVzaWduX2lkGBQgASgJEhgKEHNvdXJjZV9kZXZpY2VfaWQYHiABKAkSGAoQc291cmNlX3BvcnRfcm9sZRgoIAEoCRIYChB0YXJnZXRfZGV2aWNlX2lkGDIgASgJEhgKEHRhcmdldF9wb3J0X3JvbGUYPCABKAkSNwoPY29ubmVjdGlvbl90eXBlGEYgASgOMh4uZGNpbS52MS5Mb2dpY2FsQ29ubmVjdGlvblR5cGUSGwoMcmVxdWlyZW1lbnRzGFAgASgJQgWqAQIIARINCgVsYWJlbBhaIAEoCRIrCgdjcmVhdGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGG4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEikAEKE0xvZ2ljYWxEZXZpY2VMYXlvdXQSEQoJZGVzaWduX2lkGAogASgJEhEKCWRldmljZV9pZBgUIAEoCRISCgpwb3NpdGlvbl94GB4gASgBEhIKCnBvc2l0aW9uX3kYKCABKAESKwoHdXBkYXRlZBgyIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiFAoSTGlzdERlc2lnbnNSZXF1ZXN0Ij4KE0xpc3REZXNpZ25zUmVzcG9uc2USJwoHZGVzaWducxgKIAMoCzIWLmRjaW0udjEuTG9naWNhbERlc2lnbiIoChBHZXREZXNpZ25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASI7ChFHZXREZXNpZ25SZXNwb25zZRImCgZkZXNpZ24YCiABKAsyFi5kY2ltLnYxLkxvZ2ljYWxEZXNpZ24iQQoTQ3JlYXRlRGVzaWduUmVxdWVzdBIVCgRuYW1lGAogASgJQge6SARyAhABEhMKC2Rlc2NyaXB0aW9uGBQgASgJIj4KFENyZWF0ZURlc2lnblJlc3BvbnNlEiYKBmRlc2lnbhgKIAEoCzIWLmRjaW0udjEuTG9naWNhbERlc2lnbiKRAQoTVXBkYXRlRGVzaWduUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESEwoEbmFtZRgUIAEoCUIFqgECCAESGgoLZGVzY3JpcHRpb24YHiABKAlCBaoBAggBEjMKBnN0YXR1cxgoIAEoDjIcLmRjaW0udjEuTG9naWNhbERlc2lnblN0YXR1c0IFqgECCAEiPgoUVXBkYXRlRGVzaWduUmVzcG9uc2USJgoGZGVzaWduGAogASgLMhYuZGNpbS52MS5Mb2dpY2FsRGVzaWduIisKE0RlbGV0ZURlc2lnblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIhYKFERlbGV0ZURlc2lnblJlc3BvbnNlIjEKEkxpc3REZXZpY2VzUmVxdWVzdBIbCglkZXNpZ25faWQYCiABKAlCCLpIBXIDsAEBIj4KE0xpc3REZXZpY2VzUmVzcG9uc2USJwoHZGV2aWNlcxgKIAMoCzIWLmRjaW0udjEuTG9naWNhbERldmljZSIoChBHZXREZXZpY2VSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASI7ChFHZXREZXZpY2VSZXNwb25zZRImCgZkZXZpY2UYCiABKAsyFi5kY2ltLnYxLkxvZ2ljYWxEZXZpY2UizgEKE0NyZWF0ZURldmljZVJlcXVlc3QSGwoJZGVzaWduX2lkGAogASgJQgi6SAVyA7ABARIWCgVsYWJlbBgUIAEoCUIHukgEcgIQARI0CgRyb2xlGB4gASgOMhouZGNpbS52MS5Mb2dpY2FsRGV2aWNlUm9sZUIKukgHggEEEAEgABIgChFkZXZpY2VfY2F0YWxvZ19pZBgoIAEoCUIFqgECCAESGwoMcmVxdWlyZW1lbnRzGDIgASgJQgWqAQIIARINCgVub3Rlcxg8IAEoCSI+ChRDcmVhdGVEZXZpY2VSZXNwb25zZRImCgZkZXZpY2UYCiABKAsyFi5kY2ltLnYxLkxvZ2ljYWxEZXZpY2UixwEKE1VwZGF0ZURldmljZVJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEhQKBWxhYmVsGBQgASgJQgWqAQIIARIvCgRyb2xlGB4gASgOMhouZGNpbS52MS5Mb2dpY2FsRGV2aWNlUm9sZUIFqgECCAESIAoRZGV2aWNlX2NhdGFsb2dfaWQYKCABKAlCBaoBAggBEhsKDHJlcXVpcmVtZW50cxgyIAEoCUIFqgECCAESFAoFbm90ZXMYPCABKAlCBaoBAggBIj4KFFVwZGF0ZURldmljZVJlc3BvbnNlEiYKBmRldmljZRgKIAEoCzIWLmRjaW0udjEuTG9naWNhbERldmljZSIrChNEZWxldGVEZXZpY2VSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVEZXZpY2VSZXNwb25zZSI1ChZMaXN0Q29ubmVjdGlvbnNSZXF1ZXN0EhsKCWRlc2lnbl9pZBgKIAEoCUIIukgFcgOwAQEiLAoUR2V0Q29ubmVjdGlvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIkcKFUdldENvbm5lY3Rpb25SZXNwb25zZRIuCgpjb25uZWN0aW9uGAogASgLMhouZGNpbS52MS5Mb2dpY2FsQ29ubmVjdGlvbiJKChdMaXN0Q29ubmVjdGlvbnNSZXNwb25zZRIvCgtjb25uZWN0aW9ucxgKIAMoCzIaLmRjaW0udjEuTG9naWNhbENvbm5lY3Rpb24itQIKF0NyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0EhsKCWRlc2lnbl9pZBgKIAEoCUIIukgFcgOwAQESIgoQc291cmNlX2RldmljZV9pZBgUIAEoCUIIukgFcgOwAQESIQoQc291cmNlX3BvcnRfcm9sZRgeIAEoCUIHukgEcgIQARIiChB0YXJnZXRfZGV2aWNlX2lkGCggASgJQgi6SAVyA7ABARIhChB0YXJnZXRfcG9ydF9yb2xlGDIgASgJQge6SARyAhABEkMKD2Nvbm5lY3Rpb25fdHlwZRg8IAEoDjIeLmRjaW0udjEuTG9naWNhbENvbm5lY3Rpb25UeXBlQgq6SAeCAQQQASAAEhsKDHJlcXVpcmVtZW50cxhGIAEoCUIFqgECCAESDQoFbGFiZWwYUCABKAkiSgoYQ3JlYXRlQ29ubmVjdGlvblJlc3BvbnNlEi4KCmNvbm5lY3Rpb24YCiABKAsyGi5kY2ltLnYxLkxvZ2ljYWxDb25uZWN0aW9uIuQBChdVcGRhdGVDb25uZWN0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESHwoQc291cmNlX3BvcnRfcm9sZRgUIAEoCUIFqgECCAESHwoQdGFyZ2V0X3BvcnRfcm9sZRgeIAEoCUIFqgECCAESPgoPY29ubmVjdGlvbl90eXBlGCggASgOMh4uZGNpbS52MS5Mb2dpY2FsQ29ubmVjdGlvblR5cGVCBaoBAggBEhsKDHJlcXVpcmVtZW50cxgyIAEoCUIFqgECCAESFAoFbGFiZWwYPCABKAlCBaoBAggBIkoKGFVwZGF0ZUNvbm5lY3Rpb25SZXNwb25zZRIuCgpjb25uZWN0aW9uGAogASgLMhouZGNpbS52MS5Mb2dpY2FsQ29ubmVjdGlvbiIvChdEZWxldGVDb25uZWN0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiGgoYRGVsZXRlQ29ubmVjdGlvblJlc3BvbnNlIi8KEEdldExheW91dFJlcXVlc3QSGwoJZGVzaWduX2lkGAogASgJQgi6SAVyA7ABASJEChFHZXRMYXlvdXRSZXNwb25zZRIvCglwb3NpdGlvbnMYCiADKAsyHC5kY2ltLnYxLkxvZ2ljYWxEZXZpY2VMYXlvdXQixQEKEVNhdmVMYXlvdXRSZXF1ZXN0EhsKCWRlc2lnbl9pZBgKIAEoCUIIukgFcgOwAQESPAoJcG9zaXRpb25zGBQgAygLMikuZGNpbS52MS5TYXZlTGF5b3V0UmVxdWVzdC5EZXZpY2VQb3NpdGlvbhpVCg5EZXZpY2VQb3NpdGlvbhIbCglkZXZpY2VfaWQYCiABKAlCCLpIBXIDsAEBEhIKCnBvc2l0aW9uX3gYFCABKAESEgoKcG9zaXRpb25feRgeIAEoASJFChJTYXZlTGF5b3V0UmVzcG9uc2USLwoJcG9zaXRpb25zGAogAygLMhwuZGNpbS52MS5Mb2dpY2FsRGV2aWNlTGF5b3V0IjIKE0RlbGV0ZUxheW91dFJlcXVlc3QSGwoJZGVzaWduX2lkGAogASgJQgi6SAVyA7ABASIWChREZWxldGVMYXlvdXRSZXNwb25zZSqjAQoTTG9naWNhbERlc2lnblN0YXR1cxIlCiFMT0dJQ0FMX0RFU0lHTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIfChtMT0dJQ0FMX0RFU0lHTl9TVEFUVVNfRFJBRlQQChIgChxMT0dJQ0FMX0RFU0lHTl9TVEFUVVNfQUNUSVZFEBQSIgoeTE9HSUNBTF9ERVNJR05fU1RBVFVTX0FSQ0hJVkVEEB4qzwMKEUxvZ2ljYWxEZXZpY2VSb2xlEiMKH0xPR0lDQUxfREVWSUNFX1JPTEVfVU5TUEVDSUZJRUQQABIfChtMT0dJQ0FMX0RFVklDRV9ST0xFX0NPTVBVVEUQChIbChdMT0dJQ0FMX0RFVklDRV9ST0xFX1RPUhAUEh0KGUxPR0lDQUxfREVWSUNFX1JPTEVfU1BJTkUQHhIcChhMT0dJQ0FMX0RFVklDRV9ST0xFX0NPUkUQKBIbChdMT0dJQ0FMX0RFVklDRV9ST0xFX1BEVRAyEiMKH0xPR0lDQUxfREVWSUNFX1JPTEVfUEFUQ0hfUEFORUwQPBIfChtMT0dJQ0FMX0RFVklDRV9ST0xFX1NUT1JBR0UQRhIgChxMT0dJQ0FMX0RFVklDRV9ST0xFX0ZJUkVXQUxMEFASJQohTE9HSUNBTF9ERVZJQ0VfUk9MRV9MT0FEX0JBTEFOQ0VSEFoSJgoiTE9HSUNBTF9ERVZJQ0VfUk9MRV9DT05TT0xFX1NFUlZFUhBkEiUKIUxPR0lDQUxfREVWSUNFX1JPTEVfQ0FCTEVfTUFOQUdFUhBuEh8KG0xPR0lDQUxfREVWSUNFX1JPTEVfQURBUFRFUhB4Kq0BChVMb2dpY2FsQ29ubmVjdGlvblR5cGUSJwojTE9HSUNBTF9DT05ORUNUSU9OX1RZUEVfVU5TUEVDSUZJRUQQABIjCh9MT0dJQ0FMX0NPTk5FQ1RJT05fVFlQRV9ORVRXT1JLEAoSIQodTE9HSUNBTF9DT05ORUNUSU9OX1RZUEVfUE9XRVIQFBIjCh9MT0dJQ0FMX0NPTk5FQ1RJT05fVFlQRV9DT05TT0xFEB4yiwMKFExvZ2ljYWxEZXNpZ25TZXJ2aWNlEkgKC0xpc3REZXNpZ25zEhsuZGNpbS52MS5MaXN0RGVzaWduc1JlcXVlc3QaHC5kY2ltLnYxLkxpc3REZXNpZ25zUmVzcG9uc2USQgoJR2V0RGVzaWduEhkuZGNpbS52MS5HZXREZXNpZ25SZXF1ZXN0GhouZGNpbS52MS5HZXREZXNpZ25SZXNwb25zZRJLCgxDcmVhdGVEZXNpZ24SHC5kY2ltLnYxLkNyZWF0ZURlc2lnblJlcXVlc3QaHS5kY2ltLnYxLkNyZWF0ZURlc2lnblJlc3BvbnNlEksKDFVwZGF0ZURlc2lnbhIcLmRjaW0udjEuVXBkYXRlRGVzaWduUmVxdWVzdBodLmRjaW0udjEuVXBkYXRlRGVzaWduUmVzcG9uc2USSwoMRGVsZXRlRGVzaWduEhwuZGNpbS52MS5EZWxldGVEZXNpZ25SZXF1ZXN0Gh0uZGNpbS52MS5EZWxldGVEZXNpZ25SZXNwb25zZTKLAwoUTG9naWNhbERldmljZVNlcnZpY2USSAoLTGlzdERldmljZXMSGy5kY2ltLnYxLkxpc3REZXZpY2VzUmVxdWVzdBocLmRjaW0udjEuTGlzdERldmljZXNSZXNwb25zZRJCCglHZXREZXZpY2USGS5kY2ltLnYxLkdldERldmljZVJlcXVlc3QaGi5kY2ltLnYxLkdldERldmljZVJlc3BvbnNlEksKDENyZWF0ZURldmljZRIcLmRjaW0udjEuQ3JlYXRlRGV2aWNlUmVxdWVzdBodLmRjaW0udjEuQ3JlYXRlRGV2aWNlUmVzcG9uc2USSwoMVXBkYXRlRGV2aWNlEhwuZGNpbS52MS5VcGRhdGVEZXZpY2VSZXF1ZXN0Gh0uZGNpbS52MS5VcGRhdGVEZXZpY2VSZXNwb25zZRJLCgxEZWxldGVEZXZpY2USHC5kY2ltLnYxLkRlbGV0ZURldmljZVJlcXVlc3QaHS5kY2ltLnYxLkRlbGV0ZURldmljZVJlc3BvbnNlMssDChhMb2dpY2FsQ29ubmVjdGlvblNlcnZpY2USVAoPTGlzdENvbm5lY3Rpb25zEh8uZGNpbS52MS5MaXN0Q29ubmVjdGlvbnNSZXF1ZXN0GiAuZGNpbS52MS5MaXN0Q29ubmVjdGlvbnNSZXNwb25zZRJOCg1HZXRDb25uZWN0aW9uEh0uZGNpbS52MS5HZXRDb25uZWN0aW9uUmVxdWVzdBoeLmRjaW0udjEuR2V0Q29ubmVjdGlvblJlc3BvbnNlElcKEENyZWF0ZUNvbm5lY3Rpb24SIC5kY2ltLnYxLkNyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0GiEuZGNpbS52MS5DcmVhdGVDb25uZWN0aW9uUmVzcG9uc2USVwoQVXBkYXRlQ29ubmVjdGlvbhIgLmRjaW0udjEuVXBkYXRlQ29ubmVjdGlvblJlcXVlc3QaIS5kY2ltLnYxLlVwZGF0ZUNvbm5lY3Rpb25SZXNwb25zZRJXChBEZWxldGVDb25uZWN0aW9uEiAuZGNpbS52MS5EZWxldGVDb25uZWN0aW9uUmVxdWVzdBohLmRjaW0udjEuRGVsZXRlQ29ubmVjdGlvblJlc3BvbnNlMvQBChpMb2dpY2FsRGV2aWNlTGF5b3V0U2VydmljZRJCCglHZXRMYXlvdXQSGS5kY2ltLnYxLkdldExheW91dFJlcXVlc3QaGi5kY2ltLnYxLkdldExheW91dFJlc3BvbnNlEkUKClNhdmVMYXlvdXQSGi5kY2ltLnYxLlNhdmVMYXlvdXRSZXF1ZXN0GhsuZGNpbS52MS5TYXZlTGF5b3V0UmVzcG9uc2USSwoMRGVsZXRlTGF5b3V0EhwuZGNpbS52MS5EZWxldGVMYXlvdXRSZXF1ZXN0Gh0uZGNpbS52MS5EZWxldGVMYXlvdXRSZXNwb25zZUJPWkNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2RjaW0tYXBpL3BrZy9wcm90by9nZW4vdjE7ZGNpbXYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("Cg92MS9kZXNpZ24ucHJvdG8SB2RjaW0udjEi3gEKDUxvZ2ljYWxEZXNpZ24SCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIPCgd2ZXJzaW9uGB4gASgFEhMKC2Rlc2NyaXB0aW9uGCggASgJEiwKBnN0YXR1cxgyIAEoDjIcLmRjaW0udjEuTG9naWNhbERlc2lnblN0YXR1cxIrCgdjcmVhdGVkGDwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGEYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEilgIKDUxvZ2ljYWxEZXZpY2USCgoCaWQYCiABKAkSEQoJZGVzaWduX2lkGBQgASgJEg0KBWxhYmVsGB4gASgJEigKBHJvbGUYKCABKA4yGi5kY2ltLnYxLkxvZ2ljYWxEZXZpY2VSb2xlEiAKEWRldmljZV9jYXRhbG9nX2lkGDIgASgJQgWqAQIIARIbCgxyZXF1aXJlbWVudHMYPCABKAlCBaoBAggBEg0KBW5vdGVzGEYgASgJEisKB2NyZWF0ZWQYUCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKB2RlbGV0ZWQYWiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIASLgAgoRTG9naWNhbENvbm5lY3Rpb24SCgoCaWQYCiABKAkSEQoJZGVzaWduX2lkGBQgASgJEhgKEHNvdXJjZV9kZXZpY2VfaWQYHiABKAkSGAoQc291cmNlX3BvcnRfcm9sZRgoIAEoCRIYChB0YXJnZXRfZGV2aWNlX2lkGDIgASgJEhgKEHRhcmdldF9wb3J0X3JvbGUYPCABKAkSNwoPY29ubmVjdGlvbl90eXBlGEYgASgOMh4uZGNpbS52MS5Mb2dpY2FsQ29ubmVjdGlvblR5cGUSGwoMcmVxdWlyZW1lbnRzGFAgASgJQgWqAQIIARINCgVsYWJlbBhaIAEoCRIrCgdjcmVhdGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGG4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEikAEKE0xvZ2ljYWxEZXZpY2VMYXlvdXQSEQoJZGVzaWduX2lkGAogASgJEhEKCWRldmljZV9pZBgUIAEoCRISCgpwb3NpdGlvbl94GB4gASgBEhIKCnBvc2l0aW9uX3kYKCABKAESKwoHdXBkYXRlZBgyIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiFAoSTGlzdERlc2lnbnNSZXF1ZXN0Ij4KE0xpc3REZXNpZ25zUmVzcG9uc2USJwoHZGVzaWducxgKIAMoCzIWLmRjaW0udjEuTG9naWNhbERlc2lnbiIoChBHZXREZXNpZ25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASI7ChFHZXREZXNpZ25SZXNwb25zZRImCgZkZXNpZ24YCiABKAsyFi5kY2ltLnYxLkxvZ2ljYWxEZXNpZ24iQQoTQ3JlYXRlRGVzaWduUmVxdWVzdBIVCgRuYW1lGAogASgJQge6SARyAhABEhMKC2Rlc2NyaXB0aW9uGBQgASgJIikKFENyZWF0ZURlc2lnblJlc3BvbnNlEhEKCWRlc2lnbl9pZBgKIAEoCSKRAQoTVXBkYXRlRGVzaWduUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESEwoEbmFtZRgUIAEoCUIFqgECCAESGgoLZGVzY3JpcHRpb24YHiABKAlCBaoBAggBEjMKBnN0YXR1cxgoIAEoDjIcLmRjaW0udjEuTG9naWNhbERlc2lnblN0YXR1c0IFqgECCAEiKwoTRGVsZXRlRGVzaWduUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiMQoSTGlzdERldmljZXNSZXF1ZXN0EhsKCWRlc2lnbl9pZBgKIAEoCUIIukgFcgOwAQEiPgoTTGlzdERldmljZXNSZXNwb25zZRInCgdkZXZpY2VzGAogAygLMhYuZGNpbS52MS5Mb2dpY2FsRGV2aWNlIigKEEdldERldmljZVJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIjsKEUdldERldmljZVJlc3BvbnNlEiYKBmRldmljZRgKIAEoCzIWLmRjaW0udjEuTG9naWNhbERldmljZSLOAQoTQ3JlYXRlRGV2aWNlUmVxdWVzdBIbCglkZXNpZ25faWQYCiABKAlCCLpIBXIDsAEBEhYKBWxhYmVsGBQgASgJQge6SARyAhABEjQKBHJvbGUYHiABKA4yGi5kY2ltLnYxLkxvZ2ljYWxEZXZpY2VSb2xlQgq6SAeCAQQQASAAEiAKEWRldmljZV9jYXRhbG9nX2lkGCggASgJQgWqAQIIARIbCgxyZXF1aXJlbWVudHMYMiABKAlCBaoBAggBEg0KBW5vdGVzGDwgASgJIikKFENyZWF0ZURldmljZVJlc3BvbnNlEhEKCWRldmljZV9pZBgKIAEoCSLHAQoTVXBkYXRlRGV2aWNlUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESFAoFbGFiZWwYFCABKAlCBaoBAggBEi8KBHJvbGUYHiABKA4yGi5kY2ltLnYxLkxvZ2ljYWxEZXZpY2VSb2xlQgWqAQIIARIgChFkZXZpY2VfY2F0YWxvZ19pZBgoIAEoCUIFqgECCAESGwoMcmVxdWlyZW1lbnRzGDIgASgJQgWqAQIIARIUCgVub3Rlcxg8IAEoCUIFqgECCAEiKwoTRGVsZXRlRGV2aWNlUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiNQoWTGlzdENvbm5lY3Rpb25zUmVxdWVzdBIbCglkZXNpZ25faWQYCiABKAlCCLpIBXIDsAEBIiwKFEdldENvbm5lY3Rpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASJHChVHZXRDb25uZWN0aW9uUmVzcG9uc2USLgoKY29ubmVjdGlvbhgKIAEoCzIaLmRjaW0udjEuTG9naWNhbENvbm5lY3Rpb24iSgoXTGlzdENvbm5lY3Rpb25zUmVzcG9uc2USLwoLY29ubmVjdGlvbnMYCiADKAsyGi5kY2ltLnYxLkxvZ2ljYWxDb25uZWN0aW9uIrUCChdDcmVhdGVDb25uZWN0aW9uUmVxdWVzdBIbCglkZXNpZ25faWQYCiABKAlCCLpIBXIDsAEBEiIKEHNvdXJjZV9kZXZpY2VfaWQYFCABKAlCCLpIBXIDsAEBEiEKEHNvdXJjZV9wb3J0X3JvbGUYHiABKAlCB7pIBHICEAESIgoQdGFyZ2V0X2RldmljZV9pZBgoIAEoCUIIukgFcgOwAQESIQoQdGFyZ2V0X3BvcnRfcm9sZRgyIAEoCUIHukgEcgIQARJDCg9jb25uZWN0aW9uX3R5cGUYPCABKA4yHi5kY2ltLnYxLkxvZ2ljYWxDb25uZWN0aW9uVHlwZUIKukgHggEEEAEgABIbCgxyZXF1aXJlbWVudHMYRiABKAlCBaoBAggBEg0KBWxhYmVsGFAgASgJIjEKGENyZWF0ZUNvbm5lY3Rpb25SZXNwb25zZRIVCg1jb25uZWN0aW9uX2lkGAogASgJIuQBChdVcGRhdGVDb25uZWN0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESHwoQc291cmNlX3BvcnRfcm9sZRgUIAEoCUIFqgECCAESHwoQdGFyZ2V0X3BvcnRfcm9sZRgeIAEoCUIFqgECCAESPgoPY29ubmVjdGlvbl90eXBlGCggASgOMh4uZGNpbS52MS5Mb2dpY2FsQ29ubmVjdGlvblR5cGVCBaoBAggBEhsKDHJlcXVpcmVtZW50cxgyIAEoCUIFqgECCAESFAoFbGFiZWwYPCABKAlCBaoBAggBIi8KF0RlbGV0ZUNvbm5lY3Rpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIvChBHZXRMYXlvdXRSZXF1ZXN0EhsKCWRlc2lnbl9pZBgKIAEoCUIIukgFcgOwAQEiRAoRR2V0TGF5b3V0UmVzcG9uc2USLwoJcG9zaXRpb25zGAogAygLMhwuZGNpbS52MS5Mb2dpY2FsRGV2aWNlTGF5b3V0IsUBChFTYXZlTGF5b3V0UmVxdWVzdBIbCglkZXNpZ25faWQYCiABKAlCCLpIBXIDsAEBEjwKCXBvc2l0aW9ucxgUIAMoCzIpLmRjaW0udjEuU2F2ZUxheW91dFJlcXVlc3QuRGV2aWNlUG9zaXRpb24aVQoORGV2aWNlUG9zaXRpb24SGwoJZGV2aWNlX2lkGAogASgJQgi6SAVyA7ABARISCgpwb3NpdGlvbl94GBQgASgBEhIKCnBvc2l0aW9uX3kYHiABKAEiRQoSU2F2ZUxheW91dFJlc3BvbnNlEi8KCXBvc2l0aW9ucxgKIAMoCzIcLmRjaW0udjEuTG9naWNhbERldmljZUxheW91dCIyChNEZWxldGVMYXlvdXRSZXF1ZXN0EhsKCWRlc2lnbl9pZBgKIAEoCUIIukgFcgOwAQEqowEKE0xvZ2ljYWxEZXNpZ25TdGF0dXMSJQohTE9HSUNBTF9ERVNJR05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASHwobTE9HSUNBTF9ERVNJR05fU1RBVFVTX0RSQUZUEAoSIAocTE9HSUNBTF9ERVNJR05fU1RBVFVTX0FDVElWRRAUEiIKHkxPR0lDQUxfREVTSUdOX1NUQVRVU19BUkNISVZFRBAeKs8DChFMb2dpY2FsRGV2aWNlUm9sZRIjCh9MT0dJQ0FMX0RFVklDRV9ST0xFX1VOU1BFQ0lGSUVEEAASHwobTE9HSUNBTF9ERVZJQ0VfUk9MRV9DT01QVVRFEAoSGwoXTE9HSUNBTF9ERVZJQ0VfUk9MRV9UT1IQFBIdChlMT0dJQ0FMX0RFVklDRV9ST0xFX1NQSU5FEB4SHAoYTE9HSUNBTF9ERVZJQ0VfUk9MRV9DT1JFECgSGwoXTE9HSUNBTF9ERVZJQ0VfUk9MRV9QRFUQMhIjCh9MT0dJQ0FMX0RFVklDRV9ST0xFX1BBVENIX1BBTkVMEDwSHwobTE9HSUNBTF9ERVZJQ0VfUk9MRV9TVE9SQUdFEEYSIAocTE9HSUNBTF9ERVZJQ0VfUk9MRV9GSVJFV0FMTBBQEiUKIUxPR0lDQUxfREVWSUNFX1JPTEVfTE9BRF9CQUxBTkNFUhBaEiYKIkxPR0lDQUxfREVWSUNFX1JPTEVfQ09OU09MRV9TRVJWRVIQZBIlCiFMT0dJQ0FMX0RFVklDRV9ST0xFX0NBQkxFX01BTkFHRVIQbhIfChtMT0dJQ0FMX0RFVklDRV9ST0xFX0FEQVBURVIQeCqtAQoVTG9naWNhbENvbm5lY3Rpb25UeXBlEicKI0xPR0lDQUxfQ09OTkVDVElPTl9UWVBFX1VOU1BFQ0lGSUVEEAASIwofTE9HSUNBTF9DT05ORUNUSU9OX1RZUEVfTkVUV09SSxAKEiEKHUxPR0lDQUxfQ09OTkVDVElPTl9UWVBFX1BPV0VSEBQSIwofTE9HSUNBTF9DT05ORUNUSU9OX1RZUEVfQ09OU09MRRAeMv0CChRMb2dpY2FsRGVzaWduU2VydmljZRJICgtMaXN0RGVzaWducxIbLmRjaW0udjEuTGlzdERlc2lnbnNSZXF1ZXN0GhwuZGNpbS52MS5MaXN0RGVzaWduc1Jlc3BvbnNlEkIKCUdldERlc2lnbhIZLmRjaW0udjEuR2V0RGVzaWduUmVxdWVzdBoaLmRjaW0udjEuR2V0RGVzaWduUmVzcG9uc2USSwoMQ3JlYXRlRGVzaWduEhwuZGNpbS52MS5DcmVhdGVEZXNpZ25SZXF1ZXN0Gh0uZGNpbS52MS5DcmVhdGVEZXNpZ25SZXNwb25zZRJECgxVcGRhdGVEZXNpZ24SHC5kY2ltLnYxLlVwZGF0ZURlc2lnblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSRAoMRGVsZXRlRGVzaWduEhwuZGNpbS52MS5EZWxldGVEZXNpZ25SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Mv0CChRMb2dpY2FsRGV2aWNlU2VydmljZRJICgtMaXN0RGV2aWNlcxIbLmRjaW0udjEuTGlzdERldmljZXNSZXF1ZXN0GhwuZGNpbS52MS5MaXN0RGV2aWNlc1Jlc3BvbnNlEkIKCUdldERldmljZRIZLmRjaW0udjEuR2V0RGV2aWNlUmVxdWVzdBoaLmRjaW0udjEuR2V0RGV2aWNlUmVzcG9uc2USSwoMQ3JlYXRlRGV2aWNlEhwuZGNpbS52MS5DcmVhdGVEZXZpY2VSZXF1ZXN0Gh0uZGNpbS52MS5DcmVhdGVEZXZpY2VSZXNwb25zZRJECgxVcGRhdGVEZXZpY2USHC5kY2ltLnYxLlVwZGF0ZURldmljZVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSRAoMRGVsZXRlRGV2aWNlEhwuZGNpbS52MS5EZWxldGVEZXZpY2VSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5MrUDChhMb2dpY2FsQ29ubmVjdGlvblNlcnZpY2USVAoPTGlzdENvbm5lY3Rpb25zEh8uZGNpbS52MS5MaXN0Q29ubmVjdGlvbnNSZXF1ZXN0GiAuZGNpbS52MS5MaXN0Q29ubmVjdGlvbnNSZXNwb25zZRJOCg1HZXRDb25uZWN0aW9uEh0uZGNpbS52MS5HZXRDb25uZWN0aW9uUmVxdWVzdBoeLmRjaW0udjEuR2V0Q29ubmVjdGlvblJlc3BvbnNlElcKEENyZWF0ZUNvbm5lY3Rpb24SIC5kY2ltLnYxLkNyZWF0ZUNvbm5lY3Rpb25SZXF1ZXN0GiEuZGNpbS52MS5DcmVhdGVDb25uZWN0aW9uUmVzcG9uc2USTAoQVXBkYXRlQ29ubmVjdGlvbhIgLmRjaW0udjEuVXBkYXRlQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSTAoQRGVsZXRlQ29ubmVjdGlvbhIgLmRjaW0udjEuRGVsZXRlQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHky7QEKGkxvZ2ljYWxEZXZpY2VMYXlvdXRTZXJ2aWNlEkIKCUdldExheW91dBIZLmRjaW0udjEuR2V0TGF5b3V0UmVxdWVzdBoaLmRjaW0udjEuR2V0TGF5b3V0UmVzcG9uc2USRQoKU2F2ZUxheW91dBIaLmRjaW0udjEuU2F2ZUxheW91dFJlcXVlc3QaGy5kY2ltLnYxLlNhdmVMYXlvdXRSZXNwb25zZRJECgxEZWxldGVMYXlvdXQSHC5kY2ltLnYxLkRlbGV0ZUxheW91dFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * LogicalDesign is a versioned topology schema (core.logical_designs).
@@ -327,9 +327,9 @@ export const CreateDesignRequestSchema: GenMessage<CreateDesignRequest> = /*@__P
  */
 export type CreateDesignResponse = Message<"dcim.v1.CreateDesignResponse"> & {
   /**
-   * @generated from field: dcim.v1.LogicalDesign design = 10;
+   * @generated from field: string design_id = 10;
    */
-  design?: LogicalDesign;
+  designId: string;
 };
 
 /**
@@ -372,23 +372,6 @@ export const UpdateDesignRequestSchema: GenMessage<UpdateDesignRequest> = /*@__P
   messageDesc(file_v1_design, 10);
 
 /**
- * @generated from message dcim.v1.UpdateDesignResponse
- */
-export type UpdateDesignResponse = Message<"dcim.v1.UpdateDesignResponse"> & {
-  /**
-   * @generated from field: dcim.v1.LogicalDesign design = 10;
-   */
-  design?: LogicalDesign;
-};
-
-/**
- * Describes the message dcim.v1.UpdateDesignResponse.
- * Use `create(UpdateDesignResponseSchema)` to create a new message.
- */
-export const UpdateDesignResponseSchema: GenMessage<UpdateDesignResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 11);
-
-/**
  * @generated from message dcim.v1.DeleteDesignRequest
  */
 export type DeleteDesignRequest = Message<"dcim.v1.DeleteDesignRequest"> & {
@@ -403,20 +386,7 @@ export type DeleteDesignRequest = Message<"dcim.v1.DeleteDesignRequest"> & {
  * Use `create(DeleteDesignRequestSchema)` to create a new message.
  */
 export const DeleteDesignRequestSchema: GenMessage<DeleteDesignRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 12);
-
-/**
- * @generated from message dcim.v1.DeleteDesignResponse
- */
-export type DeleteDesignResponse = Message<"dcim.v1.DeleteDesignResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.DeleteDesignResponse.
- * Use `create(DeleteDesignResponseSchema)` to create a new message.
- */
-export const DeleteDesignResponseSchema: GenMessage<DeleteDesignResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 13);
+  messageDesc(file_v1_design, 11);
 
 /**
  * @generated from message dcim.v1.ListDevicesRequest
@@ -433,7 +403,7 @@ export type ListDevicesRequest = Message<"dcim.v1.ListDevicesRequest"> & {
  * Use `create(ListDevicesRequestSchema)` to create a new message.
  */
 export const ListDevicesRequestSchema: GenMessage<ListDevicesRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 14);
+  messageDesc(file_v1_design, 12);
 
 /**
  * @generated from message dcim.v1.ListDevicesResponse
@@ -450,7 +420,7 @@ export type ListDevicesResponse = Message<"dcim.v1.ListDevicesResponse"> & {
  * Use `create(ListDevicesResponseSchema)` to create a new message.
  */
 export const ListDevicesResponseSchema: GenMessage<ListDevicesResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 15);
+  messageDesc(file_v1_design, 13);
 
 /**
  * @generated from message dcim.v1.GetDeviceRequest
@@ -467,7 +437,7 @@ export type GetDeviceRequest = Message<"dcim.v1.GetDeviceRequest"> & {
  * Use `create(GetDeviceRequestSchema)` to create a new message.
  */
 export const GetDeviceRequestSchema: GenMessage<GetDeviceRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 16);
+  messageDesc(file_v1_design, 14);
 
 /**
  * @generated from message dcim.v1.GetDeviceResponse
@@ -484,7 +454,7 @@ export type GetDeviceResponse = Message<"dcim.v1.GetDeviceResponse"> & {
  * Use `create(GetDeviceResponseSchema)` to create a new message.
  */
 export const GetDeviceResponseSchema: GenMessage<GetDeviceResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 17);
+  messageDesc(file_v1_design, 15);
 
 /**
  * @generated from message dcim.v1.CreateDeviceRequest
@@ -526,16 +496,16 @@ export type CreateDeviceRequest = Message<"dcim.v1.CreateDeviceRequest"> & {
  * Use `create(CreateDeviceRequestSchema)` to create a new message.
  */
 export const CreateDeviceRequestSchema: GenMessage<CreateDeviceRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 18);
+  messageDesc(file_v1_design, 16);
 
 /**
  * @generated from message dcim.v1.CreateDeviceResponse
  */
 export type CreateDeviceResponse = Message<"dcim.v1.CreateDeviceResponse"> & {
   /**
-   * @generated from field: dcim.v1.LogicalDevice device = 10;
+   * @generated from field: string device_id = 10;
    */
-  device?: LogicalDevice;
+  deviceId: string;
 };
 
 /**
@@ -543,7 +513,7 @@ export type CreateDeviceResponse = Message<"dcim.v1.CreateDeviceResponse"> & {
  * Use `create(CreateDeviceResponseSchema)` to create a new message.
  */
 export const CreateDeviceResponseSchema: GenMessage<CreateDeviceResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 19);
+  messageDesc(file_v1_design, 17);
 
 /**
  * @generated from message dcim.v1.UpdateDeviceRequest
@@ -585,24 +555,7 @@ export type UpdateDeviceRequest = Message<"dcim.v1.UpdateDeviceRequest"> & {
  * Use `create(UpdateDeviceRequestSchema)` to create a new message.
  */
 export const UpdateDeviceRequestSchema: GenMessage<UpdateDeviceRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 20);
-
-/**
- * @generated from message dcim.v1.UpdateDeviceResponse
- */
-export type UpdateDeviceResponse = Message<"dcim.v1.UpdateDeviceResponse"> & {
-  /**
-   * @generated from field: dcim.v1.LogicalDevice device = 10;
-   */
-  device?: LogicalDevice;
-};
-
-/**
- * Describes the message dcim.v1.UpdateDeviceResponse.
- * Use `create(UpdateDeviceResponseSchema)` to create a new message.
- */
-export const UpdateDeviceResponseSchema: GenMessage<UpdateDeviceResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 21);
+  messageDesc(file_v1_design, 18);
 
 /**
  * @generated from message dcim.v1.DeleteDeviceRequest
@@ -619,20 +572,7 @@ export type DeleteDeviceRequest = Message<"dcim.v1.DeleteDeviceRequest"> & {
  * Use `create(DeleteDeviceRequestSchema)` to create a new message.
  */
 export const DeleteDeviceRequestSchema: GenMessage<DeleteDeviceRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 22);
-
-/**
- * @generated from message dcim.v1.DeleteDeviceResponse
- */
-export type DeleteDeviceResponse = Message<"dcim.v1.DeleteDeviceResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.DeleteDeviceResponse.
- * Use `create(DeleteDeviceResponseSchema)` to create a new message.
- */
-export const DeleteDeviceResponseSchema: GenMessage<DeleteDeviceResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 23);
+  messageDesc(file_v1_design, 19);
 
 /**
  * @generated from message dcim.v1.ListConnectionsRequest
@@ -649,7 +589,7 @@ export type ListConnectionsRequest = Message<"dcim.v1.ListConnectionsRequest"> &
  * Use `create(ListConnectionsRequestSchema)` to create a new message.
  */
 export const ListConnectionsRequestSchema: GenMessage<ListConnectionsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 24);
+  messageDesc(file_v1_design, 20);
 
 /**
  * @generated from message dcim.v1.GetConnectionRequest
@@ -666,7 +606,7 @@ export type GetConnectionRequest = Message<"dcim.v1.GetConnectionRequest"> & {
  * Use `create(GetConnectionRequestSchema)` to create a new message.
  */
 export const GetConnectionRequestSchema: GenMessage<GetConnectionRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 25);
+  messageDesc(file_v1_design, 21);
 
 /**
  * @generated from message dcim.v1.GetConnectionResponse
@@ -683,7 +623,7 @@ export type GetConnectionResponse = Message<"dcim.v1.GetConnectionResponse"> & {
  * Use `create(GetConnectionResponseSchema)` to create a new message.
  */
 export const GetConnectionResponseSchema: GenMessage<GetConnectionResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 26);
+  messageDesc(file_v1_design, 22);
 
 /**
  * @generated from message dcim.v1.ListConnectionsResponse
@@ -700,7 +640,7 @@ export type ListConnectionsResponse = Message<"dcim.v1.ListConnectionsResponse">
  * Use `create(ListConnectionsResponseSchema)` to create a new message.
  */
 export const ListConnectionsResponseSchema: GenMessage<ListConnectionsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 27);
+  messageDesc(file_v1_design, 23);
 
 /**
  * @generated from message dcim.v1.CreateConnectionRequest
@@ -752,16 +692,16 @@ export type CreateConnectionRequest = Message<"dcim.v1.CreateConnectionRequest">
  * Use `create(CreateConnectionRequestSchema)` to create a new message.
  */
 export const CreateConnectionRequestSchema: GenMessage<CreateConnectionRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 28);
+  messageDesc(file_v1_design, 24);
 
 /**
  * @generated from message dcim.v1.CreateConnectionResponse
  */
 export type CreateConnectionResponse = Message<"dcim.v1.CreateConnectionResponse"> & {
   /**
-   * @generated from field: dcim.v1.LogicalConnection connection = 10;
+   * @generated from field: string connection_id = 10;
    */
-  connection?: LogicalConnection;
+  connectionId: string;
 };
 
 /**
@@ -769,7 +709,7 @@ export type CreateConnectionResponse = Message<"dcim.v1.CreateConnectionResponse
  * Use `create(CreateConnectionResponseSchema)` to create a new message.
  */
 export const CreateConnectionResponseSchema: GenMessage<CreateConnectionResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 29);
+  messageDesc(file_v1_design, 25);
 
 /**
  * @generated from message dcim.v1.UpdateConnectionRequest
@@ -811,24 +751,7 @@ export type UpdateConnectionRequest = Message<"dcim.v1.UpdateConnectionRequest">
  * Use `create(UpdateConnectionRequestSchema)` to create a new message.
  */
 export const UpdateConnectionRequestSchema: GenMessage<UpdateConnectionRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 30);
-
-/**
- * @generated from message dcim.v1.UpdateConnectionResponse
- */
-export type UpdateConnectionResponse = Message<"dcim.v1.UpdateConnectionResponse"> & {
-  /**
-   * @generated from field: dcim.v1.LogicalConnection connection = 10;
-   */
-  connection?: LogicalConnection;
-};
-
-/**
- * Describes the message dcim.v1.UpdateConnectionResponse.
- * Use `create(UpdateConnectionResponseSchema)` to create a new message.
- */
-export const UpdateConnectionResponseSchema: GenMessage<UpdateConnectionResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 31);
+  messageDesc(file_v1_design, 26);
 
 /**
  * @generated from message dcim.v1.DeleteConnectionRequest
@@ -845,20 +768,7 @@ export type DeleteConnectionRequest = Message<"dcim.v1.DeleteConnectionRequest">
  * Use `create(DeleteConnectionRequestSchema)` to create a new message.
  */
 export const DeleteConnectionRequestSchema: GenMessage<DeleteConnectionRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 32);
-
-/**
- * @generated from message dcim.v1.DeleteConnectionResponse
- */
-export type DeleteConnectionResponse = Message<"dcim.v1.DeleteConnectionResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.DeleteConnectionResponse.
- * Use `create(DeleteConnectionResponseSchema)` to create a new message.
- */
-export const DeleteConnectionResponseSchema: GenMessage<DeleteConnectionResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 33);
+  messageDesc(file_v1_design, 27);
 
 /**
  * @generated from message dcim.v1.GetLayoutRequest
@@ -875,7 +785,7 @@ export type GetLayoutRequest = Message<"dcim.v1.GetLayoutRequest"> & {
  * Use `create(GetLayoutRequestSchema)` to create a new message.
  */
 export const GetLayoutRequestSchema: GenMessage<GetLayoutRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 34);
+  messageDesc(file_v1_design, 28);
 
 /**
  * @generated from message dcim.v1.GetLayoutResponse
@@ -892,7 +802,7 @@ export type GetLayoutResponse = Message<"dcim.v1.GetLayoutResponse"> & {
  * Use `create(GetLayoutResponseSchema)` to create a new message.
  */
 export const GetLayoutResponseSchema: GenMessage<GetLayoutResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 35);
+  messageDesc(file_v1_design, 29);
 
 /**
  * @generated from message dcim.v1.SaveLayoutRequest
@@ -914,7 +824,7 @@ export type SaveLayoutRequest = Message<"dcim.v1.SaveLayoutRequest"> & {
  * Use `create(SaveLayoutRequestSchema)` to create a new message.
  */
 export const SaveLayoutRequestSchema: GenMessage<SaveLayoutRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 36);
+  messageDesc(file_v1_design, 30);
 
 /**
  * @generated from message dcim.v1.SaveLayoutRequest.DevicePosition
@@ -941,7 +851,7 @@ export type SaveLayoutRequest_DevicePosition = Message<"dcim.v1.SaveLayoutReques
  * Use `create(SaveLayoutRequest_DevicePositionSchema)` to create a new message.
  */
 export const SaveLayoutRequest_DevicePositionSchema: GenMessage<SaveLayoutRequest_DevicePosition> = /*@__PURE__*/
-  messageDesc(file_v1_design, 36, 0);
+  messageDesc(file_v1_design, 30, 0);
 
 /**
  * @generated from message dcim.v1.SaveLayoutResponse
@@ -958,7 +868,7 @@ export type SaveLayoutResponse = Message<"dcim.v1.SaveLayoutResponse"> & {
  * Use `create(SaveLayoutResponseSchema)` to create a new message.
  */
 export const SaveLayoutResponseSchema: GenMessage<SaveLayoutResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 37);
+  messageDesc(file_v1_design, 31);
 
 /**
  * DeleteLayout removes all stored positions for a design (hard delete — resets to auto-layout).
@@ -977,20 +887,7 @@ export type DeleteLayoutRequest = Message<"dcim.v1.DeleteLayoutRequest"> & {
  * Use `create(DeleteLayoutRequestSchema)` to create a new message.
  */
 export const DeleteLayoutRequestSchema: GenMessage<DeleteLayoutRequest> = /*@__PURE__*/
-  messageDesc(file_v1_design, 38);
-
-/**
- * @generated from message dcim.v1.DeleteLayoutResponse
- */
-export type DeleteLayoutResponse = Message<"dcim.v1.DeleteLayoutResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.DeleteLayoutResponse.
- * Use `create(DeleteLayoutResponseSchema)` to create a new message.
- */
-export const DeleteLayoutResponseSchema: GenMessage<DeleteLayoutResponse> = /*@__PURE__*/
-  messageDesc(file_v1_design, 39);
+  messageDesc(file_v1_design, 32);
 
 /**
  * LogicalDesignStatus aligns with core.logical_designs status check constraint.
@@ -1170,7 +1067,7 @@ export const LogicalDesignService: GenService<{
   updateDesign: {
     methodKind: "unary";
     input: typeof UpdateDesignRequestSchema;
-    output: typeof UpdateDesignResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * @generated from rpc dcim.v1.LogicalDesignService.DeleteDesign
@@ -1178,7 +1075,7 @@ export const LogicalDesignService: GenService<{
   deleteDesign: {
     methodKind: "unary";
     input: typeof DeleteDesignRequestSchema;
-    output: typeof DeleteDesignResponseSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_design, 0);
@@ -1217,7 +1114,7 @@ export const LogicalDeviceService: GenService<{
   updateDevice: {
     methodKind: "unary";
     input: typeof UpdateDeviceRequestSchema;
-    output: typeof UpdateDeviceResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * @generated from rpc dcim.v1.LogicalDeviceService.DeleteDevice
@@ -1225,7 +1122,7 @@ export const LogicalDeviceService: GenService<{
   deleteDevice: {
     methodKind: "unary";
     input: typeof DeleteDeviceRequestSchema;
-    output: typeof DeleteDeviceResponseSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_design, 1);
@@ -1264,7 +1161,7 @@ export const LogicalConnectionService: GenService<{
   updateConnection: {
     methodKind: "unary";
     input: typeof UpdateConnectionRequestSchema;
-    output: typeof UpdateConnectionResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * @generated from rpc dcim.v1.LogicalConnectionService.DeleteConnection
@@ -1272,7 +1169,7 @@ export const LogicalConnectionService: GenService<{
   deleteConnection: {
     methodKind: "unary";
     input: typeof DeleteConnectionRequestSchema;
-    output: typeof DeleteConnectionResponseSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_design, 2);
@@ -1303,7 +1200,7 @@ export const LogicalDeviceLayoutService: GenService<{
   deleteLayout: {
     methodKind: "unary";
     input: typeof DeleteLayoutRequestSchema;
-    output: typeof DeleteLayoutResponseSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_design, 3);

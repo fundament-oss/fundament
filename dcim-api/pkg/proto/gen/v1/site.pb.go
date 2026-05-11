@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -1114,49 +1115,6 @@ func (b0 UpdateSiteRequest_builder) Build() *UpdateSiteRequest {
 	return m0
 }
 
-type UpdateSiteResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateSiteResponse) Reset() {
-	*x = UpdateSiteResponse{}
-	mi := &file_v1_site_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateSiteResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateSiteResponse) ProtoMessage() {}
-
-func (x *UpdateSiteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type UpdateSiteResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 UpdateSiteResponse_builder) Build() *UpdateSiteResponse {
-	m0 := &UpdateSiteResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type DeleteSiteRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -1166,7 +1124,7 @@ type DeleteSiteRequest struct {
 
 func (x *DeleteSiteRequest) Reset() {
 	*x = DeleteSiteRequest{}
-	mi := &file_v1_site_proto_msgTypes[9]
+	mi := &file_v1_site_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1178,7 +1136,7 @@ func (x *DeleteSiteRequest) String() string {
 func (*DeleteSiteRequest) ProtoMessage() {}
 
 func (x *DeleteSiteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[9]
+	mi := &file_v1_site_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1214,54 +1172,11 @@ func (b0 DeleteSiteRequest_builder) Build() *DeleteSiteRequest {
 	return m0
 }
 
-type DeleteSiteResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteSiteResponse) Reset() {
-	*x = DeleteSiteResponse{}
-	mi := &file_v1_site_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteSiteResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteSiteResponse) ProtoMessage() {}
-
-func (x *DeleteSiteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_site_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteSiteResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteSiteResponse_builder) Build() *DeleteSiteResponse {
-	m0 := &DeleteSiteResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 var File_v1_site_proto protoreflect.FileDescriptor
 
 const file_v1_site_proto_rawDesc = "" +
 	"\n" +
-	"\rv1/site.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x03\n" +
+	"\rv1/site.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x03\n" +
 	"\x04Site\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -1311,23 +1226,21 @@ const file_v1_site_proto_rawDesc = "" +
 	"\x04tier\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x04tier\x12\"\n" +
 	"\tfloor_sqm\x18P \x01(\x01B\x05\xaa\x01\x02\b\x01R\bfloorSqm\x12C\n" +
 	"\vestablished\x18Z \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\vestablished\x12\x1d\n" +
-	"\x06status\x18d \x01(\tB\x05\xaa\x01\x02\b\x01R\x06status\"\x14\n" +
-	"\x12UpdateSiteResponse\"-\n" +
+	"\x06status\x18d \x01(\tB\x05\xaa\x01\x02\b\x01R\x06status\"-\n" +
 	"\x11DeleteSiteRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x14\n" +
-	"\x12DeleteSiteResponse2\xe4\x02\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id2\xda\x02\n" +
 	"\vSiteService\x12B\n" +
 	"\tListSites\x12\x19.dcim.v1.ListSitesRequest\x1a\x1a.dcim.v1.ListSitesResponse\x12<\n" +
 	"\aGetSite\x12\x17.dcim.v1.GetSiteRequest\x1a\x18.dcim.v1.GetSiteResponse\x12E\n" +
 	"\n" +
-	"CreateSite\x12\x1a.dcim.v1.CreateSiteRequest\x1a\x1b.dcim.v1.CreateSiteResponse\x12E\n" +
+	"CreateSite\x12\x1a.dcim.v1.CreateSiteRequest\x1a\x1b.dcim.v1.CreateSiteResponse\x12@\n" +
 	"\n" +
-	"UpdateSite\x12\x1a.dcim.v1.UpdateSiteRequest\x1a\x1b.dcim.v1.UpdateSiteResponse\x12E\n" +
+	"UpdateSite\x12\x1a.dcim.v1.UpdateSiteRequest\x1a\x16.google.protobuf.Empty\x12@\n" +
 	"\n" +
-	"DeleteSite\x12\x1a.dcim.v1.DeleteSiteRequest\x1a\x1b.dcim.v1.DeleteSiteResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"DeleteSite\x12\x1a.dcim.v1.DeleteSiteRequest\x1a\x16.google.protobuf.EmptyBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_site_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_v1_site_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_v1_site_proto_goTypes = []any{
 	(*Site)(nil),                  // 0: dcim.v1.Site
 	(*ListSitesRequest)(nil),      // 1: dcim.v1.ListSitesRequest
@@ -1337,29 +1250,28 @@ var file_v1_site_proto_goTypes = []any{
 	(*CreateSiteRequest)(nil),     // 5: dcim.v1.CreateSiteRequest
 	(*CreateSiteResponse)(nil),    // 6: dcim.v1.CreateSiteResponse
 	(*UpdateSiteRequest)(nil),     // 7: dcim.v1.UpdateSiteRequest
-	(*UpdateSiteResponse)(nil),    // 8: dcim.v1.UpdateSiteResponse
-	(*DeleteSiteRequest)(nil),     // 9: dcim.v1.DeleteSiteRequest
-	(*DeleteSiteResponse)(nil),    // 10: dcim.v1.DeleteSiteResponse
-	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
+	(*DeleteSiteRequest)(nil),     // 8: dcim.v1.DeleteSiteRequest
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 10: google.protobuf.Empty
 }
 var file_v1_site_proto_depIdxs = []int32{
-	11, // 0: dcim.v1.Site.established:type_name -> google.protobuf.Timestamp
-	11, // 1: dcim.v1.Site.created:type_name -> google.protobuf.Timestamp
-	11, // 2: dcim.v1.Site.deleted:type_name -> google.protobuf.Timestamp
+	9,  // 0: dcim.v1.Site.established:type_name -> google.protobuf.Timestamp
+	9,  // 1: dcim.v1.Site.created:type_name -> google.protobuf.Timestamp
+	9,  // 2: dcim.v1.Site.deleted:type_name -> google.protobuf.Timestamp
 	0,  // 3: dcim.v1.ListSitesResponse.sites:type_name -> dcim.v1.Site
 	0,  // 4: dcim.v1.GetSiteResponse.site:type_name -> dcim.v1.Site
-	11, // 5: dcim.v1.CreateSiteRequest.established:type_name -> google.protobuf.Timestamp
-	11, // 6: dcim.v1.UpdateSiteRequest.established:type_name -> google.protobuf.Timestamp
+	9,  // 5: dcim.v1.CreateSiteRequest.established:type_name -> google.protobuf.Timestamp
+	9,  // 6: dcim.v1.UpdateSiteRequest.established:type_name -> google.protobuf.Timestamp
 	1,  // 7: dcim.v1.SiteService.ListSites:input_type -> dcim.v1.ListSitesRequest
 	3,  // 8: dcim.v1.SiteService.GetSite:input_type -> dcim.v1.GetSiteRequest
 	5,  // 9: dcim.v1.SiteService.CreateSite:input_type -> dcim.v1.CreateSiteRequest
 	7,  // 10: dcim.v1.SiteService.UpdateSite:input_type -> dcim.v1.UpdateSiteRequest
-	9,  // 11: dcim.v1.SiteService.DeleteSite:input_type -> dcim.v1.DeleteSiteRequest
+	8,  // 11: dcim.v1.SiteService.DeleteSite:input_type -> dcim.v1.DeleteSiteRequest
 	2,  // 12: dcim.v1.SiteService.ListSites:output_type -> dcim.v1.ListSitesResponse
 	4,  // 13: dcim.v1.SiteService.GetSite:output_type -> dcim.v1.GetSiteResponse
 	6,  // 14: dcim.v1.SiteService.CreateSite:output_type -> dcim.v1.CreateSiteResponse
-	8,  // 15: dcim.v1.SiteService.UpdateSite:output_type -> dcim.v1.UpdateSiteResponse
-	10, // 16: dcim.v1.SiteService.DeleteSite:output_type -> dcim.v1.DeleteSiteResponse
+	10, // 15: dcim.v1.SiteService.UpdateSite:output_type -> google.protobuf.Empty
+	10, // 16: dcim.v1.SiteService.DeleteSite:output_type -> google.protobuf.Empty
 	12, // [12:17] is the sub-list for method output_type
 	7,  // [7:12] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
@@ -1378,7 +1290,7 @@ func file_v1_site_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_site_proto_rawDesc), len(file_v1_site_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

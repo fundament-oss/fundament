@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (s *Server) ListTasks(_ context.Context, _ *connect.Request[dcimv1.ListTasksRequest]) (*connect.Response[dcimv1.ListTasksResponse], error) {
@@ -19,10 +20,10 @@ func (s *Server) CreateTask(_ context.Context, _ *connect.Request[dcimv1.CreateT
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) UpdateTask(_ context.Context, _ *connect.Request[dcimv1.UpdateTaskRequest]) (*connect.Response[dcimv1.UpdateTaskResponse], error) {
+func (s *Server) UpdateTask(_ context.Context, _ *connect.Request[dcimv1.UpdateTaskRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeleteTask(_ context.Context, _ *connect.Request[dcimv1.DeleteTaskRequest]) (*connect.Response[dcimv1.DeleteTaskResponse], error) {
+func (s *Server) DeleteTask(_ context.Context, _ *connect.Request[dcimv1.DeleteTaskRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }

@@ -21,11 +21,10 @@ export default class InventoryApiService {
     const map: Record<number, AssetStatus> = {
       [ProtoStatus.DEPLOYED]: 'deployed',
       [ProtoStatus.AVAILABLE]: 'available',
-      [ProtoStatus.IN_STOCK]: 'available',
       [ProtoStatus.DECOMMISSIONED]: 'decommissioned',
-      [ProtoStatus.RMA]: 'needs-repair',
-      [ProtoStatus.IN_TRANSIT]: 'on-order',
-      [ProtoStatus.RESERVED]: 'requested',
+      [ProtoStatus.NEEDS_REPAIR]: 'needs-repair',
+      [ProtoStatus.ON_ORDER]: 'on-order',
+      [ProtoStatus.REQUESTED]: 'requested',
     };
     return map[s] ?? 'available';
   }
@@ -35,9 +34,9 @@ export default class InventoryApiService {
       deployed: ProtoStatus.DEPLOYED,
       available: ProtoStatus.AVAILABLE,
       decommissioned: ProtoStatus.DECOMMISSIONED,
-      'needs-repair': ProtoStatus.RMA,
-      'on-order': ProtoStatus.IN_TRANSIT,
-      requested: ProtoStatus.RESERVED,
+      'needs-repair': ProtoStatus.NEEDS_REPAIR,
+      'on-order': ProtoStatus.ON_ORDER,
+      requested: ProtoStatus.REQUESTED,
     };
     return map[s] ?? ProtoStatus.AVAILABLE;
   }

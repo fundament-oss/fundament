@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -101,8 +102,8 @@ type LogicalDesignServiceClient interface {
 	ListDesigns(context.Context, *connect.Request[v1.ListDesignsRequest]) (*connect.Response[v1.ListDesignsResponse], error)
 	GetDesign(context.Context, *connect.Request[v1.GetDesignRequest]) (*connect.Response[v1.GetDesignResponse], error)
 	CreateDesign(context.Context, *connect.Request[v1.CreateDesignRequest]) (*connect.Response[v1.CreateDesignResponse], error)
-	UpdateDesign(context.Context, *connect.Request[v1.UpdateDesignRequest]) (*connect.Response[v1.UpdateDesignResponse], error)
-	DeleteDesign(context.Context, *connect.Request[v1.DeleteDesignRequest]) (*connect.Response[v1.DeleteDesignResponse], error)
+	UpdateDesign(context.Context, *connect.Request[v1.UpdateDesignRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteDesign(context.Context, *connect.Request[v1.DeleteDesignRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewLogicalDesignServiceClient constructs a client for the dcim.v1.LogicalDesignService service.
@@ -134,13 +135,13 @@ func NewLogicalDesignServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(logicalDesignServiceMethods.ByName("CreateDesign")),
 			connect.WithClientOptions(opts...),
 		),
-		updateDesign: connect.NewClient[v1.UpdateDesignRequest, v1.UpdateDesignResponse](
+		updateDesign: connect.NewClient[v1.UpdateDesignRequest, emptypb.Empty](
 			httpClient,
 			baseURL+LogicalDesignServiceUpdateDesignProcedure,
 			connect.WithSchema(logicalDesignServiceMethods.ByName("UpdateDesign")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteDesign: connect.NewClient[v1.DeleteDesignRequest, v1.DeleteDesignResponse](
+		deleteDesign: connect.NewClient[v1.DeleteDesignRequest, emptypb.Empty](
 			httpClient,
 			baseURL+LogicalDesignServiceDeleteDesignProcedure,
 			connect.WithSchema(logicalDesignServiceMethods.ByName("DeleteDesign")),
@@ -154,8 +155,8 @@ type logicalDesignServiceClient struct {
 	listDesigns  *connect.Client[v1.ListDesignsRequest, v1.ListDesignsResponse]
 	getDesign    *connect.Client[v1.GetDesignRequest, v1.GetDesignResponse]
 	createDesign *connect.Client[v1.CreateDesignRequest, v1.CreateDesignResponse]
-	updateDesign *connect.Client[v1.UpdateDesignRequest, v1.UpdateDesignResponse]
-	deleteDesign *connect.Client[v1.DeleteDesignRequest, v1.DeleteDesignResponse]
+	updateDesign *connect.Client[v1.UpdateDesignRequest, emptypb.Empty]
+	deleteDesign *connect.Client[v1.DeleteDesignRequest, emptypb.Empty]
 }
 
 // ListDesigns calls dcim.v1.LogicalDesignService.ListDesigns.
@@ -174,12 +175,12 @@ func (c *logicalDesignServiceClient) CreateDesign(ctx context.Context, req *conn
 }
 
 // UpdateDesign calls dcim.v1.LogicalDesignService.UpdateDesign.
-func (c *logicalDesignServiceClient) UpdateDesign(ctx context.Context, req *connect.Request[v1.UpdateDesignRequest]) (*connect.Response[v1.UpdateDesignResponse], error) {
+func (c *logicalDesignServiceClient) UpdateDesign(ctx context.Context, req *connect.Request[v1.UpdateDesignRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateDesign.CallUnary(ctx, req)
 }
 
 // DeleteDesign calls dcim.v1.LogicalDesignService.DeleteDesign.
-func (c *logicalDesignServiceClient) DeleteDesign(ctx context.Context, req *connect.Request[v1.DeleteDesignRequest]) (*connect.Response[v1.DeleteDesignResponse], error) {
+func (c *logicalDesignServiceClient) DeleteDesign(ctx context.Context, req *connect.Request[v1.DeleteDesignRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteDesign.CallUnary(ctx, req)
 }
 
@@ -188,8 +189,8 @@ type LogicalDesignServiceHandler interface {
 	ListDesigns(context.Context, *connect.Request[v1.ListDesignsRequest]) (*connect.Response[v1.ListDesignsResponse], error)
 	GetDesign(context.Context, *connect.Request[v1.GetDesignRequest]) (*connect.Response[v1.GetDesignResponse], error)
 	CreateDesign(context.Context, *connect.Request[v1.CreateDesignRequest]) (*connect.Response[v1.CreateDesignResponse], error)
-	UpdateDesign(context.Context, *connect.Request[v1.UpdateDesignRequest]) (*connect.Response[v1.UpdateDesignResponse], error)
-	DeleteDesign(context.Context, *connect.Request[v1.DeleteDesignRequest]) (*connect.Response[v1.DeleteDesignResponse], error)
+	UpdateDesign(context.Context, *connect.Request[v1.UpdateDesignRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteDesign(context.Context, *connect.Request[v1.DeleteDesignRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewLogicalDesignServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -262,11 +263,11 @@ func (UnimplementedLogicalDesignServiceHandler) CreateDesign(context.Context, *c
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalDesignService.CreateDesign is not implemented"))
 }
 
-func (UnimplementedLogicalDesignServiceHandler) UpdateDesign(context.Context, *connect.Request[v1.UpdateDesignRequest]) (*connect.Response[v1.UpdateDesignResponse], error) {
+func (UnimplementedLogicalDesignServiceHandler) UpdateDesign(context.Context, *connect.Request[v1.UpdateDesignRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalDesignService.UpdateDesign is not implemented"))
 }
 
-func (UnimplementedLogicalDesignServiceHandler) DeleteDesign(context.Context, *connect.Request[v1.DeleteDesignRequest]) (*connect.Response[v1.DeleteDesignResponse], error) {
+func (UnimplementedLogicalDesignServiceHandler) DeleteDesign(context.Context, *connect.Request[v1.DeleteDesignRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalDesignService.DeleteDesign is not implemented"))
 }
 
@@ -275,8 +276,8 @@ type LogicalDeviceServiceClient interface {
 	ListDevices(context.Context, *connect.Request[v1.ListDevicesRequest]) (*connect.Response[v1.ListDevicesResponse], error)
 	GetDevice(context.Context, *connect.Request[v1.GetDeviceRequest]) (*connect.Response[v1.GetDeviceResponse], error)
 	CreateDevice(context.Context, *connect.Request[v1.CreateDeviceRequest]) (*connect.Response[v1.CreateDeviceResponse], error)
-	UpdateDevice(context.Context, *connect.Request[v1.UpdateDeviceRequest]) (*connect.Response[v1.UpdateDeviceResponse], error)
-	DeleteDevice(context.Context, *connect.Request[v1.DeleteDeviceRequest]) (*connect.Response[v1.DeleteDeviceResponse], error)
+	UpdateDevice(context.Context, *connect.Request[v1.UpdateDeviceRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteDevice(context.Context, *connect.Request[v1.DeleteDeviceRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewLogicalDeviceServiceClient constructs a client for the dcim.v1.LogicalDeviceService service.
@@ -308,13 +309,13 @@ func NewLogicalDeviceServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(logicalDeviceServiceMethods.ByName("CreateDevice")),
 			connect.WithClientOptions(opts...),
 		),
-		updateDevice: connect.NewClient[v1.UpdateDeviceRequest, v1.UpdateDeviceResponse](
+		updateDevice: connect.NewClient[v1.UpdateDeviceRequest, emptypb.Empty](
 			httpClient,
 			baseURL+LogicalDeviceServiceUpdateDeviceProcedure,
 			connect.WithSchema(logicalDeviceServiceMethods.ByName("UpdateDevice")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteDevice: connect.NewClient[v1.DeleteDeviceRequest, v1.DeleteDeviceResponse](
+		deleteDevice: connect.NewClient[v1.DeleteDeviceRequest, emptypb.Empty](
 			httpClient,
 			baseURL+LogicalDeviceServiceDeleteDeviceProcedure,
 			connect.WithSchema(logicalDeviceServiceMethods.ByName("DeleteDevice")),
@@ -328,8 +329,8 @@ type logicalDeviceServiceClient struct {
 	listDevices  *connect.Client[v1.ListDevicesRequest, v1.ListDevicesResponse]
 	getDevice    *connect.Client[v1.GetDeviceRequest, v1.GetDeviceResponse]
 	createDevice *connect.Client[v1.CreateDeviceRequest, v1.CreateDeviceResponse]
-	updateDevice *connect.Client[v1.UpdateDeviceRequest, v1.UpdateDeviceResponse]
-	deleteDevice *connect.Client[v1.DeleteDeviceRequest, v1.DeleteDeviceResponse]
+	updateDevice *connect.Client[v1.UpdateDeviceRequest, emptypb.Empty]
+	deleteDevice *connect.Client[v1.DeleteDeviceRequest, emptypb.Empty]
 }
 
 // ListDevices calls dcim.v1.LogicalDeviceService.ListDevices.
@@ -348,12 +349,12 @@ func (c *logicalDeviceServiceClient) CreateDevice(ctx context.Context, req *conn
 }
 
 // UpdateDevice calls dcim.v1.LogicalDeviceService.UpdateDevice.
-func (c *logicalDeviceServiceClient) UpdateDevice(ctx context.Context, req *connect.Request[v1.UpdateDeviceRequest]) (*connect.Response[v1.UpdateDeviceResponse], error) {
+func (c *logicalDeviceServiceClient) UpdateDevice(ctx context.Context, req *connect.Request[v1.UpdateDeviceRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateDevice.CallUnary(ctx, req)
 }
 
 // DeleteDevice calls dcim.v1.LogicalDeviceService.DeleteDevice.
-func (c *logicalDeviceServiceClient) DeleteDevice(ctx context.Context, req *connect.Request[v1.DeleteDeviceRequest]) (*connect.Response[v1.DeleteDeviceResponse], error) {
+func (c *logicalDeviceServiceClient) DeleteDevice(ctx context.Context, req *connect.Request[v1.DeleteDeviceRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteDevice.CallUnary(ctx, req)
 }
 
@@ -362,8 +363,8 @@ type LogicalDeviceServiceHandler interface {
 	ListDevices(context.Context, *connect.Request[v1.ListDevicesRequest]) (*connect.Response[v1.ListDevicesResponse], error)
 	GetDevice(context.Context, *connect.Request[v1.GetDeviceRequest]) (*connect.Response[v1.GetDeviceResponse], error)
 	CreateDevice(context.Context, *connect.Request[v1.CreateDeviceRequest]) (*connect.Response[v1.CreateDeviceResponse], error)
-	UpdateDevice(context.Context, *connect.Request[v1.UpdateDeviceRequest]) (*connect.Response[v1.UpdateDeviceResponse], error)
-	DeleteDevice(context.Context, *connect.Request[v1.DeleteDeviceRequest]) (*connect.Response[v1.DeleteDeviceResponse], error)
+	UpdateDevice(context.Context, *connect.Request[v1.UpdateDeviceRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteDevice(context.Context, *connect.Request[v1.DeleteDeviceRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewLogicalDeviceServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -436,11 +437,11 @@ func (UnimplementedLogicalDeviceServiceHandler) CreateDevice(context.Context, *c
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalDeviceService.CreateDevice is not implemented"))
 }
 
-func (UnimplementedLogicalDeviceServiceHandler) UpdateDevice(context.Context, *connect.Request[v1.UpdateDeviceRequest]) (*connect.Response[v1.UpdateDeviceResponse], error) {
+func (UnimplementedLogicalDeviceServiceHandler) UpdateDevice(context.Context, *connect.Request[v1.UpdateDeviceRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalDeviceService.UpdateDevice is not implemented"))
 }
 
-func (UnimplementedLogicalDeviceServiceHandler) DeleteDevice(context.Context, *connect.Request[v1.DeleteDeviceRequest]) (*connect.Response[v1.DeleteDeviceResponse], error) {
+func (UnimplementedLogicalDeviceServiceHandler) DeleteDevice(context.Context, *connect.Request[v1.DeleteDeviceRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalDeviceService.DeleteDevice is not implemented"))
 }
 
@@ -449,8 +450,8 @@ type LogicalConnectionServiceClient interface {
 	ListConnections(context.Context, *connect.Request[v1.ListConnectionsRequest]) (*connect.Response[v1.ListConnectionsResponse], error)
 	GetConnection(context.Context, *connect.Request[v1.GetConnectionRequest]) (*connect.Response[v1.GetConnectionResponse], error)
 	CreateConnection(context.Context, *connect.Request[v1.CreateConnectionRequest]) (*connect.Response[v1.CreateConnectionResponse], error)
-	UpdateConnection(context.Context, *connect.Request[v1.UpdateConnectionRequest]) (*connect.Response[v1.UpdateConnectionResponse], error)
-	DeleteConnection(context.Context, *connect.Request[v1.DeleteConnectionRequest]) (*connect.Response[v1.DeleteConnectionResponse], error)
+	UpdateConnection(context.Context, *connect.Request[v1.UpdateConnectionRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteConnection(context.Context, *connect.Request[v1.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewLogicalConnectionServiceClient constructs a client for the dcim.v1.LogicalConnectionService
@@ -482,13 +483,13 @@ func NewLogicalConnectionServiceClient(httpClient connect.HTTPClient, baseURL st
 			connect.WithSchema(logicalConnectionServiceMethods.ByName("CreateConnection")),
 			connect.WithClientOptions(opts...),
 		),
-		updateConnection: connect.NewClient[v1.UpdateConnectionRequest, v1.UpdateConnectionResponse](
+		updateConnection: connect.NewClient[v1.UpdateConnectionRequest, emptypb.Empty](
 			httpClient,
 			baseURL+LogicalConnectionServiceUpdateConnectionProcedure,
 			connect.WithSchema(logicalConnectionServiceMethods.ByName("UpdateConnection")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteConnection: connect.NewClient[v1.DeleteConnectionRequest, v1.DeleteConnectionResponse](
+		deleteConnection: connect.NewClient[v1.DeleteConnectionRequest, emptypb.Empty](
 			httpClient,
 			baseURL+LogicalConnectionServiceDeleteConnectionProcedure,
 			connect.WithSchema(logicalConnectionServiceMethods.ByName("DeleteConnection")),
@@ -502,8 +503,8 @@ type logicalConnectionServiceClient struct {
 	listConnections  *connect.Client[v1.ListConnectionsRequest, v1.ListConnectionsResponse]
 	getConnection    *connect.Client[v1.GetConnectionRequest, v1.GetConnectionResponse]
 	createConnection *connect.Client[v1.CreateConnectionRequest, v1.CreateConnectionResponse]
-	updateConnection *connect.Client[v1.UpdateConnectionRequest, v1.UpdateConnectionResponse]
-	deleteConnection *connect.Client[v1.DeleteConnectionRequest, v1.DeleteConnectionResponse]
+	updateConnection *connect.Client[v1.UpdateConnectionRequest, emptypb.Empty]
+	deleteConnection *connect.Client[v1.DeleteConnectionRequest, emptypb.Empty]
 }
 
 // ListConnections calls dcim.v1.LogicalConnectionService.ListConnections.
@@ -522,12 +523,12 @@ func (c *logicalConnectionServiceClient) CreateConnection(ctx context.Context, r
 }
 
 // UpdateConnection calls dcim.v1.LogicalConnectionService.UpdateConnection.
-func (c *logicalConnectionServiceClient) UpdateConnection(ctx context.Context, req *connect.Request[v1.UpdateConnectionRequest]) (*connect.Response[v1.UpdateConnectionResponse], error) {
+func (c *logicalConnectionServiceClient) UpdateConnection(ctx context.Context, req *connect.Request[v1.UpdateConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateConnection.CallUnary(ctx, req)
 }
 
 // DeleteConnection calls dcim.v1.LogicalConnectionService.DeleteConnection.
-func (c *logicalConnectionServiceClient) DeleteConnection(ctx context.Context, req *connect.Request[v1.DeleteConnectionRequest]) (*connect.Response[v1.DeleteConnectionResponse], error) {
+func (c *logicalConnectionServiceClient) DeleteConnection(ctx context.Context, req *connect.Request[v1.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteConnection.CallUnary(ctx, req)
 }
 
@@ -537,8 +538,8 @@ type LogicalConnectionServiceHandler interface {
 	ListConnections(context.Context, *connect.Request[v1.ListConnectionsRequest]) (*connect.Response[v1.ListConnectionsResponse], error)
 	GetConnection(context.Context, *connect.Request[v1.GetConnectionRequest]) (*connect.Response[v1.GetConnectionResponse], error)
 	CreateConnection(context.Context, *connect.Request[v1.CreateConnectionRequest]) (*connect.Response[v1.CreateConnectionResponse], error)
-	UpdateConnection(context.Context, *connect.Request[v1.UpdateConnectionRequest]) (*connect.Response[v1.UpdateConnectionResponse], error)
-	DeleteConnection(context.Context, *connect.Request[v1.DeleteConnectionRequest]) (*connect.Response[v1.DeleteConnectionResponse], error)
+	UpdateConnection(context.Context, *connect.Request[v1.UpdateConnectionRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteConnection(context.Context, *connect.Request[v1.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewLogicalConnectionServiceHandler builds an HTTP handler from the service implementation. It
@@ -611,11 +612,11 @@ func (UnimplementedLogicalConnectionServiceHandler) CreateConnection(context.Con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalConnectionService.CreateConnection is not implemented"))
 }
 
-func (UnimplementedLogicalConnectionServiceHandler) UpdateConnection(context.Context, *connect.Request[v1.UpdateConnectionRequest]) (*connect.Response[v1.UpdateConnectionResponse], error) {
+func (UnimplementedLogicalConnectionServiceHandler) UpdateConnection(context.Context, *connect.Request[v1.UpdateConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalConnectionService.UpdateConnection is not implemented"))
 }
 
-func (UnimplementedLogicalConnectionServiceHandler) DeleteConnection(context.Context, *connect.Request[v1.DeleteConnectionRequest]) (*connect.Response[v1.DeleteConnectionResponse], error) {
+func (UnimplementedLogicalConnectionServiceHandler) DeleteConnection(context.Context, *connect.Request[v1.DeleteConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalConnectionService.DeleteConnection is not implemented"))
 }
 
@@ -623,7 +624,7 @@ func (UnimplementedLogicalConnectionServiceHandler) DeleteConnection(context.Con
 type LogicalDeviceLayoutServiceClient interface {
 	GetLayout(context.Context, *connect.Request[v1.GetLayoutRequest]) (*connect.Response[v1.GetLayoutResponse], error)
 	SaveLayout(context.Context, *connect.Request[v1.SaveLayoutRequest]) (*connect.Response[v1.SaveLayoutResponse], error)
-	DeleteLayout(context.Context, *connect.Request[v1.DeleteLayoutRequest]) (*connect.Response[v1.DeleteLayoutResponse], error)
+	DeleteLayout(context.Context, *connect.Request[v1.DeleteLayoutRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewLogicalDeviceLayoutServiceClient constructs a client for the
@@ -649,7 +650,7 @@ func NewLogicalDeviceLayoutServiceClient(httpClient connect.HTTPClient, baseURL 
 			connect.WithSchema(logicalDeviceLayoutServiceMethods.ByName("SaveLayout")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteLayout: connect.NewClient[v1.DeleteLayoutRequest, v1.DeleteLayoutResponse](
+		deleteLayout: connect.NewClient[v1.DeleteLayoutRequest, emptypb.Empty](
 			httpClient,
 			baseURL+LogicalDeviceLayoutServiceDeleteLayoutProcedure,
 			connect.WithSchema(logicalDeviceLayoutServiceMethods.ByName("DeleteLayout")),
@@ -662,7 +663,7 @@ func NewLogicalDeviceLayoutServiceClient(httpClient connect.HTTPClient, baseURL 
 type logicalDeviceLayoutServiceClient struct {
 	getLayout    *connect.Client[v1.GetLayoutRequest, v1.GetLayoutResponse]
 	saveLayout   *connect.Client[v1.SaveLayoutRequest, v1.SaveLayoutResponse]
-	deleteLayout *connect.Client[v1.DeleteLayoutRequest, v1.DeleteLayoutResponse]
+	deleteLayout *connect.Client[v1.DeleteLayoutRequest, emptypb.Empty]
 }
 
 // GetLayout calls dcim.v1.LogicalDeviceLayoutService.GetLayout.
@@ -676,7 +677,7 @@ func (c *logicalDeviceLayoutServiceClient) SaveLayout(ctx context.Context, req *
 }
 
 // DeleteLayout calls dcim.v1.LogicalDeviceLayoutService.DeleteLayout.
-func (c *logicalDeviceLayoutServiceClient) DeleteLayout(ctx context.Context, req *connect.Request[v1.DeleteLayoutRequest]) (*connect.Response[v1.DeleteLayoutResponse], error) {
+func (c *logicalDeviceLayoutServiceClient) DeleteLayout(ctx context.Context, req *connect.Request[v1.DeleteLayoutRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteLayout.CallUnary(ctx, req)
 }
 
@@ -685,7 +686,7 @@ func (c *logicalDeviceLayoutServiceClient) DeleteLayout(ctx context.Context, req
 type LogicalDeviceLayoutServiceHandler interface {
 	GetLayout(context.Context, *connect.Request[v1.GetLayoutRequest]) (*connect.Response[v1.GetLayoutResponse], error)
 	SaveLayout(context.Context, *connect.Request[v1.SaveLayoutRequest]) (*connect.Response[v1.SaveLayoutResponse], error)
-	DeleteLayout(context.Context, *connect.Request[v1.DeleteLayoutRequest]) (*connect.Response[v1.DeleteLayoutResponse], error)
+	DeleteLayout(context.Context, *connect.Request[v1.DeleteLayoutRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewLogicalDeviceLayoutServiceHandler builds an HTTP handler from the service implementation. It
@@ -738,6 +739,6 @@ func (UnimplementedLogicalDeviceLayoutServiceHandler) SaveLayout(context.Context
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalDeviceLayoutService.SaveLayout is not implemented"))
 }
 
-func (UnimplementedLogicalDeviceLayoutServiceHandler) DeleteLayout(context.Context, *connect.Request[v1.DeleteLayoutRequest]) (*connect.Response[v1.DeleteLayoutResponse], error) {
+func (UnimplementedLogicalDeviceLayoutServiceHandler) DeleteLayout(context.Context, *connect.Request[v1.DeleteLayoutRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.LogicalDeviceLayoutService.DeleteLayout is not implemented"))
 }

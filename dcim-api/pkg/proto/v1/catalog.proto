@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/asset.proto";
@@ -58,19 +59,19 @@ service CatalogService {
   rpc ListCatalog              (ListCatalogRequest)              returns (ListCatalogResponse);
   rpc GetCatalogEntry          (GetCatalogEntryRequest)          returns (GetCatalogEntryResponse);
   rpc CreateCatalogEntry       (CreateCatalogEntryRequest)       returns (CreateCatalogEntryResponse);
-  rpc UpdateCatalogEntry       (UpdateCatalogEntryRequest)       returns (UpdateCatalogEntryResponse);
-  rpc DeleteCatalogEntry       (DeleteCatalogEntryRequest)       returns (DeleteCatalogEntryResponse);
+  rpc UpdateCatalogEntry       (UpdateCatalogEntryRequest)       returns (google.protobuf.Empty);
+  rpc DeleteCatalogEntry       (DeleteCatalogEntryRequest)       returns (google.protobuf.Empty);
   rpc ListAssetsByCatalogEntry (ListAssetsByCatalogEntryRequest) returns (ListAssetsByCatalogEntryResponse);
   // Port definitions
   rpc ListPortDefinitions      (ListPortDefinitionsRequest)      returns (ListPortDefinitionsResponse);
   rpc GetPortDefinition        (GetPortDefinitionRequest)        returns (GetPortDefinitionResponse);
   rpc CreatePortDefinition     (CreatePortDefinitionRequest)     returns (CreatePortDefinitionResponse);
-  rpc UpdatePortDefinition     (UpdatePortDefinitionRequest)     returns (UpdatePortDefinitionResponse);
-  rpc DeletePortDefinition     (DeletePortDefinitionRequest)     returns (DeletePortDefinitionResponse);
+  rpc UpdatePortDefinition     (UpdatePortDefinitionRequest)     returns (google.protobuf.Empty);
+  rpc DeletePortDefinition     (DeletePortDefinitionRequest)     returns (google.protobuf.Empty);
   // Port compatibilities
   rpc ListPortCompatibilities  (ListPortCompatibilitiesRequest)  returns (ListPortCompatibilitiesResponse);
-  rpc CreatePortCompatibility  (CreatePortCompatibilityRequest)  returns (CreatePortCompatibilityResponse);
-  rpc DeletePortCompatibility  (DeletePortCompatibilityRequest)  returns (DeletePortCompatibilityResponse);
+  rpc CreatePortCompatibility  (CreatePortCompatibilityRequest)  returns (google.protobuf.Empty);
+  rpc DeletePortCompatibility  (DeletePortCompatibilityRequest)  returns (google.protobuf.Empty);
 }
 
 // ── Device catalog requests/responses ─────────────────────────────────────────
@@ -113,7 +114,7 @@ message CreateCatalogEntryRequest {
 }
 
 message CreateCatalogEntryResponse {
-  DeviceCatalog entry = 10;
+  string catalog_entry_id = 10;
 }
 
 message UpdateCatalogEntryRequest {
@@ -129,15 +130,9 @@ message UpdateCatalogEntryRequest {
   map<string, string> specs        = 100;
 }
 
-message UpdateCatalogEntryResponse {
-  DeviceCatalog entry = 10;
-}
-
 message DeleteCatalogEntryRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteCatalogEntryResponse {}
 
 message ListAssetsByCatalogEntryRequest {
   string device_catalog_id = 10 [(buf.validate.field).string = {uuid: true}];
@@ -177,7 +172,7 @@ message CreatePortDefinitionRequest {
 }
 
 message CreatePortDefinitionResponse {
-  PortDefinition port_definition = 10;
+  string port_definition_id = 10;
 }
 
 message UpdatePortDefinitionRequest {
@@ -191,15 +186,9 @@ message UpdatePortDefinitionRequest {
   int32         ordinal     = 80 [features.field_presence = EXPLICIT];
 }
 
-message UpdatePortDefinitionResponse {
-  PortDefinition port_definition = 10;
-}
-
 message DeletePortDefinitionRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeletePortDefinitionResponse {}
 
 // ── Port compatibility requests/responses ─────────────────────────────────────
 
@@ -217,13 +206,7 @@ message CreatePortCompatibilityRequest {
   string notes                 = 30;
 }
 
-message CreatePortCompatibilityResponse {
-  PortCompatibility compatibility = 10;
-}
-
 message DeletePortCompatibilityRequest {
   string port_definition_id    = 10 [(buf.validate.field).string = {uuid: true}];
   string compatible_catalog_id = 20 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeletePortCompatibilityResponse {}

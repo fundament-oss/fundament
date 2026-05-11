@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -418,10 +419,10 @@ func (b0 CreateNoteRequest_builder) Build() *CreateNoteRequest {
 }
 
 type CreateNoteResponse struct {
-	state           protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Note *Note                  `protobuf:"bytes,10,opt,name=note"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_NoteId string                 `protobuf:"bytes,10,opt,name=note_id,json=noteId"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateNoteResponse) Reset() {
@@ -449,39 +450,28 @@ func (x *CreateNoteResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *CreateNoteResponse) GetNote() *Note {
+func (x *CreateNoteResponse) GetNoteId() string {
 	if x != nil {
-		return x.xxx_hidden_Note
+		return x.xxx_hidden_NoteId
 	}
-	return nil
+	return ""
 }
 
-func (x *CreateNoteResponse) SetNote(v *Note) {
-	x.xxx_hidden_Note = v
-}
-
-func (x *CreateNoteResponse) HasNote() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Note != nil
-}
-
-func (x *CreateNoteResponse) ClearNote() {
-	x.xxx_hidden_Note = nil
+func (x *CreateNoteResponse) SetNoteId(v string) {
+	x.xxx_hidden_NoteId = v
 }
 
 type CreateNoteResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Note *Note
+	NoteId string
 }
 
 func (b0 CreateNoteResponse_builder) Build() *CreateNoteResponse {
 	m0 := &CreateNoteResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Note = b.Note
+	x.xxx_hidden_NoteId = b.NoteId
 	return m0
 }
 
@@ -543,54 +533,11 @@ func (b0 DeleteNoteRequest_builder) Build() *DeleteNoteRequest {
 	return m0
 }
 
-type DeleteNoteResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteNoteResponse) Reset() {
-	*x = DeleteNoteResponse{}
-	mi := &file_v1_note_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteNoteResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteNoteResponse) ProtoMessage() {}
-
-func (x *DeleteNoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_note_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteNoteResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteNoteResponse_builder) Build() *DeleteNoteResponse {
-	m0 := &DeleteNoteResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 var File_v1_note_proto protoreflect.FileDescriptor
 
 const file_v1_note_proto_rawDesc = "" +
 	"\n" +
-	"\rv1/note.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x93\x02\n" +
+	"\rv1/note.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x93\x02\n" +
 	"\x04Note\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x128\n" +
@@ -619,22 +566,21 @@ const file_v1_note_proto_rawDesc = "" +
 	"\tentity_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bentityId\x12\x1b\n" +
 	"\x04body\x18\x1e \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04body\x12&\n" +
 	"\n" +
-	"created_by\x18( \x01(\tB\a\xbaH\x04r\x02\x10\x01R\tcreatedBy\"7\n" +
-	"\x12CreateNoteResponse\x12!\n" +
-	"\x04note\x18\n" +
-	" \x01(\v2\r.dcim.v1.NoteR\x04note\"-\n" +
+	"created_by\x18( \x01(\tB\a\xbaH\x04r\x02\x10\x01R\tcreatedBy\"-\n" +
+	"\x12CreateNoteResponse\x12\x17\n" +
+	"\anote_id\x18\n" +
+	" \x01(\tR\x06noteId\"-\n" +
 	"\x11DeleteNoteRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x14\n" +
-	"\x12DeleteNoteResponse2\xdf\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id2\xda\x01\n" +
 	"\vNoteService\x12B\n" +
 	"\tListNotes\x12\x19.dcim.v1.ListNotesRequest\x1a\x1a.dcim.v1.ListNotesResponse\x12E\n" +
 	"\n" +
-	"CreateNote\x12\x1a.dcim.v1.CreateNoteRequest\x1a\x1b.dcim.v1.CreateNoteResponse\x12E\n" +
+	"CreateNote\x12\x1a.dcim.v1.CreateNoteRequest\x1a\x1b.dcim.v1.CreateNoteResponse\x12@\n" +
 	"\n" +
-	"DeleteNote\x12\x1a.dcim.v1.DeleteNoteRequest\x1a\x1b.dcim.v1.DeleteNoteResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"DeleteNote\x12\x1a.dcim.v1.DeleteNoteRequest\x1a\x16.google.protobuf.EmptyBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_note_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_v1_note_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_v1_note_proto_goTypes = []any{
 	(*Note)(nil),                  // 0: dcim.v1.Note
 	(*ListNotesRequest)(nil),      // 1: dcim.v1.ListNotesRequest
@@ -642,29 +588,28 @@ var file_v1_note_proto_goTypes = []any{
 	(*CreateNoteRequest)(nil),     // 3: dcim.v1.CreateNoteRequest
 	(*CreateNoteResponse)(nil),    // 4: dcim.v1.CreateNoteResponse
 	(*DeleteNoteRequest)(nil),     // 5: dcim.v1.DeleteNoteRequest
-	(*DeleteNoteResponse)(nil),    // 6: dcim.v1.DeleteNoteResponse
-	(NoteEntityType)(0),           // 7: dcim.v1.NoteEntityType
-	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(NoteEntityType)(0),           // 6: dcim.v1.NoteEntityType
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 8: google.protobuf.Empty
 }
 var file_v1_note_proto_depIdxs = []int32{
-	7,  // 0: dcim.v1.Note.entity_type:type_name -> dcim.v1.NoteEntityType
-	8,  // 1: dcim.v1.Note.created:type_name -> google.protobuf.Timestamp
-	8,  // 2: dcim.v1.Note.deleted:type_name -> google.protobuf.Timestamp
-	7,  // 3: dcim.v1.ListNotesRequest.entity_type:type_name -> dcim.v1.NoteEntityType
-	0,  // 4: dcim.v1.ListNotesResponse.notes:type_name -> dcim.v1.Note
-	7,  // 5: dcim.v1.CreateNoteRequest.entity_type:type_name -> dcim.v1.NoteEntityType
-	0,  // 6: dcim.v1.CreateNoteResponse.note:type_name -> dcim.v1.Note
-	1,  // 7: dcim.v1.NoteService.ListNotes:input_type -> dcim.v1.ListNotesRequest
-	3,  // 8: dcim.v1.NoteService.CreateNote:input_type -> dcim.v1.CreateNoteRequest
-	5,  // 9: dcim.v1.NoteService.DeleteNote:input_type -> dcim.v1.DeleteNoteRequest
-	2,  // 10: dcim.v1.NoteService.ListNotes:output_type -> dcim.v1.ListNotesResponse
-	4,  // 11: dcim.v1.NoteService.CreateNote:output_type -> dcim.v1.CreateNoteResponse
-	6,  // 12: dcim.v1.NoteService.DeleteNote:output_type -> dcim.v1.DeleteNoteResponse
-	10, // [10:13] is the sub-list for method output_type
-	7,  // [7:10] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	6, // 0: dcim.v1.Note.entity_type:type_name -> dcim.v1.NoteEntityType
+	7, // 1: dcim.v1.Note.created:type_name -> google.protobuf.Timestamp
+	7, // 2: dcim.v1.Note.deleted:type_name -> google.protobuf.Timestamp
+	6, // 3: dcim.v1.ListNotesRequest.entity_type:type_name -> dcim.v1.NoteEntityType
+	0, // 4: dcim.v1.ListNotesResponse.notes:type_name -> dcim.v1.Note
+	6, // 5: dcim.v1.CreateNoteRequest.entity_type:type_name -> dcim.v1.NoteEntityType
+	1, // 6: dcim.v1.NoteService.ListNotes:input_type -> dcim.v1.ListNotesRequest
+	3, // 7: dcim.v1.NoteService.CreateNote:input_type -> dcim.v1.CreateNoteRequest
+	5, // 8: dcim.v1.NoteService.DeleteNote:input_type -> dcim.v1.DeleteNoteRequest
+	2, // 9: dcim.v1.NoteService.ListNotes:output_type -> dcim.v1.ListNotesResponse
+	4, // 10: dcim.v1.NoteService.CreateNote:output_type -> dcim.v1.CreateNoteResponse
+	8, // 11: dcim.v1.NoteService.DeleteNote:output_type -> google.protobuf.Empty
+	9, // [9:12] is the sub-list for method output_type
+	6, // [6:9] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_v1_note_proto_init() }
@@ -679,7 +624,7 @@ func file_v1_note_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_note_proto_rawDesc), len(file_v1_note_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
