@@ -18,6 +18,7 @@ import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import type { LogEntry, LogLevel, HistogramBucket } from '../log.types';
 import { generateMockLogs, generateLiveTailEntry } from '../log-mock-data';
 import { TitleService } from '../../title.service';
+import { ToastService } from '../../toast.service';
 
 Chart.register(...registerables);
 
@@ -120,6 +121,8 @@ function fieldEntries(log: LogEntry): { key: string; value: string }[] {
 })
 export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
   private readonly titleService = inject(TitleService);
+
+  private readonly toastService = inject(ToastService);
 
   @ViewChild('histogramChart') private histogramCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -318,7 +321,7 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
       };
     });
 
-    this.filteredLogsNoLevel().forEach((log) => {
+    this.filteredLogs().forEach((log) => {
       const idx = Math.min(
         Math.floor((log.timestamp.getTime() - from.getTime()) / bucketMs),
         BUCKET_COUNT - 1,
@@ -464,7 +467,7 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
   }
 
   pauseLiveTail(): void {
-    this.liveTailPaused.set(true);
+    this.toggleLiveTail();
   }
 
   resumeLiveTail(): void {
@@ -604,7 +607,10 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  readonly copyToClipboard = copyToClipboard;
+  copyToClipboard(text: string): void {
+    copyToClipboard(text);
+    this.toastService.success('Copied to clipboard');
+  }
 
   readonly formattedJson = formattedJson;
 

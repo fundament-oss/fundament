@@ -179,14 +179,12 @@
         size="sm"
       ></nldd-button>
 
-      <!-- Live tail toggle -->
-      <nldd-button
-        type="button"
+      <nldd-toggle-button
+        [text]="liveTailEnabled() ? 'Stop streaming' : 'Stream logs'"
+        [active]="liveTailEnabled()"
         (click)="toggleLiveTail()"
-        [text]="liveTailEnabled() ? 'Live tail enabled' : 'Live tail'"
-        [variant]="liveTailEnabled() ? 'accent-filled' : 'secondary'"
         size="sm"
-      ></nldd-button>
+      ></nldd-toggle-button>
     </div>
   </div>
 
@@ -233,64 +231,70 @@
     <div class="card-body space-y-3">
       <!-- Scope selectors row -->
       <div class="flex flex-wrap gap-2">
-        <select
-          [ngModel]="selectedCluster()"
-          (ngModelChange)="onClusterChange($event)"
-          class="text-sm"
-          aria-label="Cluster"
-        >
-          <option value="">All clusters</option>
-          @for (c of clusters(); track c) {
-            <option [value]="c">{{ c }}</option>
-          }
-        </select>
+        <label class="flex flex-col gap-1">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Cluster</span>
+          <select
+            [ngModel]="selectedCluster()"
+            (ngModelChange)="onClusterChange($event)"
+            class="text-sm"
+          >
+            <option value="">All clusters</option>
+            @for (c of clusters(); track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </label>
 
-        <select
-          [ngModel]="selectedNamespace()"
-          (ngModelChange)="onNamespaceChange($event)"
-          class="text-sm"
-          aria-label="Namespace"
-        >
-          <option value="">All namespaces</option>
-          @for (ns of namespaces(); track ns) {
-            <option [value]="ns">{{ ns }}</option>
-          }
-        </select>
+        <label class="flex flex-col gap-1">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Namespace</span>
+          <select
+            [ngModel]="selectedNamespace()"
+            (ngModelChange)="onNamespaceChange($event)"
+            class="text-sm"
+          >
+            <option value="">All namespaces</option>
+            @for (ns of namespaces(); track ns) {
+              <option [value]="ns">{{ ns }}</option>
+            }
+          </select>
+        </label>
 
-        <select
-          [ngModel]="selectedPod()"
-          (ngModelChange)="onPodChange($event)"
-          class="text-sm"
-          aria-label="Pod"
-        >
-          <option value="">All pods</option>
-          @for (pod of pods(); track pod) {
-            <option [value]="pod">{{ pod }}</option>
-          }
-        </select>
+        <label class="flex flex-col gap-1">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Pod</span>
+          <select [ngModel]="selectedPod()" (ngModelChange)="onPodChange($event)" class="text-sm">
+            <option value="">All pods</option>
+            @for (pod of pods(); track pod) {
+              <option [value]="pod">{{ pod }}</option>
+            }
+          </select>
+        </label>
 
-        <select
-          [ngModel]="selectedContainer()"
-          (ngModelChange)="onContainerChange($event)"
-          class="text-sm"
-          aria-label="Container"
-        >
-          <option value="">All containers</option>
-          @for (c of containers(); track c) {
-            <option [value]="c">{{ c }}</option>
-          }
-        </select>
+        <label class="flex flex-col gap-1">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Container</span>
+          <select
+            [ngModel]="selectedContainer()"
+            (ngModelChange)="onContainerChange($event)"
+            class="text-sm"
+          >
+            <option value="">All containers</option>
+            @for (c of containers(); track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </label>
 
-        <select
-          [ngModel]="timePreset()"
-          (ngModelChange)="onTimePresetChange($event)"
-          class="ml-auto text-sm"
-          aria-label="Time range"
-        >
-          @for (preset of TIME_PRESETS; track preset.value) {
-            <option [value]="preset.value">{{ preset.label }}</option>
-          }
-        </select>
+        <label class="ml-auto flex flex-col gap-1">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Time range</span>
+          <select
+            [ngModel]="timePreset()"
+            (ngModelChange)="onTimePresetChange($event)"
+            class="text-sm"
+          >
+            @for (preset of TIME_PRESETS; track preset.value) {
+              <option [value]="preset.value">{{ preset.label }}</option>
+            }
+          </select>
+        </label>
       </div>
 
       <!-- Search bar -->
@@ -326,7 +330,7 @@
           type="button"
           (click)="copyToClipboard(generatedQuery())"
           text="Copy"
-          variant="neutral-transparent"
+          variant="neutral-tinted"
           size="xs"
         ></nldd-button>
       </div>
@@ -371,16 +375,16 @@
     <div class="px-4 pt-3 pb-1">
       <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
         <span class="flex items-center gap-1.5"
-          ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-red-600/75"></span>Error</span
+          ><span class="inline-block h-2.5 w-2.5 rounded-full bg-red-600/75"></span>Error</span
         >
         <span class="flex items-center gap-1.5"
-          ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-amber-600/75"></span>Warn</span
+          ><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-600/75"></span>Warn</span
         >
         <span class="flex items-center gap-1.5"
-          ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-blue-600/65"></span>Info</span
+          ><span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-600/65"></span>Info</span
         >
         <span class="flex items-center gap-1.5"
-          ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-gray-500/50"></span>Debug</span
+          ><span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-500/50"></span>Debug</span
         >
       </div>
     </div>

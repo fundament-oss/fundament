@@ -1,54 +1,50 @@
 <div class="space-y-6">
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <div class="flex items-center gap-3">
-      <a
-        routerLink="/logs"
-        class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-      >
-        <nldd-icon name="chevron-left-small" class="h-4 w-4"></nldd-icon>
-        Explorer
-      </a>
-      <span class="text-gray-300 dark:text-gray-600">/</span>
-      <h1 class="text-3xl font-semibold">Log analytics</h1>
-    </div>
+    <h1 class="text-3xl font-semibold">Log analytics</h1>
 
     <!-- Filters -->
     <div class="flex flex-wrap gap-2">
-      <select
-        [ngModel]="selectedCluster()"
-        (ngModelChange)="onClusterChange($event)"
-        class="text-sm"
-        aria-label="Cluster"
-      >
-        <option value="">All clusters</option>
-        @for (c of clusters(); track c) {
-          <option [value]="c">{{ c }}</option>
-        }
-      </select>
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-gray-500 dark:text-gray-400">Cluster</span>
+        <select
+          [ngModel]="selectedCluster()"
+          (ngModelChange)="onClusterChange($event)"
+          class="text-sm"
+        >
+          <option value="">All clusters</option>
+          @for (c of clusters(); track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+      </label>
 
-      <select
-        [ngModel]="selectedNamespace()"
-        (ngModelChange)="onNamespaceChange($event)"
-        class="text-sm"
-        aria-label="Namespace"
-      >
-        <option value="">All namespaces</option>
-        @for (ns of namespaces(); track ns) {
-          <option [value]="ns">{{ ns }}</option>
-        }
-      </select>
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-gray-500 dark:text-gray-400">Namespace</span>
+        <select
+          [ngModel]="selectedNamespace()"
+          (ngModelChange)="onNamespaceChange($event)"
+          class="text-sm"
+        >
+          <option value="">All namespaces</option>
+          @for (ns of namespaces(); track ns) {
+            <option [value]="ns">{{ ns }}</option>
+          }
+        </select>
+      </label>
 
-      <select
-        [ngModel]="timePreset()"
-        (ngModelChange)="onTimePresetChange($event)"
-        class="text-sm"
-        aria-label="Time range"
-      >
-        @for (preset of TIME_PRESETS; track preset.value) {
-          <option [value]="preset.value">{{ preset.label }}</option>
-        }
-      </select>
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-gray-500 dark:text-gray-400">Time range</span>
+        <select
+          [ngModel]="timePreset()"
+          (ngModelChange)="onTimePresetChange($event)"
+          class="text-sm"
+        >
+          @for (preset of TIME_PRESETS; track preset.value) {
+            <option [value]="preset.value">{{ preset.label }}</option>
+          }
+        </select>
+      </label>
     </div>
   </div>
 
@@ -85,16 +81,16 @@
       <div class="px-4 py-3">
         <div class="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
           <span class="flex items-center gap-1.5"
-            ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-red-600/75"></span>Error</span
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-red-600/75"></span>Error</span
           >
           <span class="flex items-center gap-1.5"
-            ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-amber-600/75"></span>Warn</span
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-600/75"></span>Warn</span
           >
           <span class="flex items-center gap-1.5"
-            ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-blue-600/65"></span>Info</span
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-600/65"></span>Info</span
           >
           <span class="flex items-center gap-1.5"
-            ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-gray-500/50"></span>Debug</span
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-500/50"></span>Debug</span
           >
         </div>
       </div>
