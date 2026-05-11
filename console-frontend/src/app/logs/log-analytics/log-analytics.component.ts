@@ -46,16 +46,22 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
   private readonly titleService = inject(TitleService);
 
   @ViewChild('volumeChart') private volumeCanvas!: ElementRef<HTMLCanvasElement>;
+
   @ViewChild('severityChart') private severityCanvas!: ElementRef<HTMLCanvasElement>;
+
   @ViewChild('namespaceChart') private namespaceCanvas!: ElementRef<HTMLCanvasElement>;
 
   private volumeChart: Chart | null = null;
+
   private severityChart: Chart | null = null;
+
   private namespaceChart: Chart | null = null;
 
   // ── filter state
   readonly selectedCluster = signal('');
+
   readonly selectedNamespace = signal('');
+
   readonly timePreset = signal('24h');
 
   readonly TIME_PRESETS = TIME_PRESETS;
@@ -64,13 +70,16 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
   private readonly allLogs = signal(generateMockLogs(300));
 
   // ── derived filter options
-  readonly clusters = computed(() =>
-    [...new Set(this.allLogs().map((l) => l.cluster))].sort(),
-  );
+  readonly clusters = computed(() => [...new Set(this.allLogs().map((l) => l.cluster))].sort());
+
   readonly namespaces = computed(() => {
     const cl = this.selectedCluster();
     return [
-      ...new Set(this.allLogs().filter((l) => !cl || l.cluster === cl).map((l) => l.namespace)),
+      ...new Set(
+        this.allLogs()
+          .filter((l) => !cl || l.cluster === cl)
+          .map((l) => l.namespace),
+      ),
     ].sort();
   });
 
@@ -101,11 +110,16 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
 
   // ── KPI cards
   readonly totalLogs = computed(() => this.filteredLogs().length);
-  readonly errorCount = computed(() => this.filteredLogs().filter((l) => l.level === 'ERROR').length);
+
+  readonly errorCount = computed(
+    () => this.filteredLogs().filter((l) => l.level === 'ERROR').length,
+  );
+
   readonly errorRate = computed(() => {
     const total = this.totalLogs();
     return total > 0 ? ((this.errorCount() / total) * 100).toFixed(2) : '0.00';
   });
+
   readonly activePods = computed(() => new Set(this.filteredLogs().map((l) => l.pod)).size);
 
   // ── volume buckets (for volume chart)
@@ -116,21 +130,25 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
     const buckets = Array.from({ length: count }, (_, i) => {
       const t = new Date(from.getTime() + i * bucketMs);
       const label = t.toLocaleString('en-US', {
-        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
       });
       return { label, error: 0, warn: 0, info: 0, debug: 0 };
     });
 
-    for (const log of this.filteredLogs()) {
+    this.filteredLogs().forEach((log) => {
       const idx = Math.min(
         Math.floor((log.timestamp.getTime() - from.getTime()) / bucketMs),
         count - 1,
       );
       if (idx >= 0) {
         const key = log.level.toLowerCase() as 'error' | 'warn' | 'info' | 'debug';
-        buckets[idx][key]++;
+        buckets[idx][key] += 1;
       }
-    }
+    });
 
     return buckets;
   });
@@ -147,9 +165,9 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
   // ── namespace breakdown (top 8)
   readonly namespaceCounts = computed(() => {
     const counts = new Map<string, number>();
-    for (const log of this.filteredLogs()) {
+    this.filteredLogs().forEach((log) => {
       counts.set(log.namespace, (counts.get(log.namespace) ?? 0) + 1);
-    }
+    });
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
@@ -163,10 +181,14 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
 
   readonly errorPatterns = computed((): ErrorPattern[] => {
     const counts = new Map<string, number>();
-    for (const log of this.filteredLogs().filter((l) => l.level === 'ERROR')) {
-      const pattern = log.message.replace(/\b\d{1,3}(?:\.\d{1,3}){3}:\d+\b/g, '*').replace(/[a-z0-9]{5,}\b/g, (m) => (m.length > 6 ? '*' : m));
-      counts.set(pattern, (counts.get(pattern) ?? 0) + 1);
-    }
+    this.filteredLogs()
+      .filter((l) => l.level === 'ERROR')
+      .forEach((log) => {
+        const pattern = log.message
+          .replace(/\b\d{1,3}(?:\.\d{1,3}){3}:\d+\b/g, '*')
+          .replace(/[a-z0-9]{5,}\b/g, (m) => (m.length > 6 ? '*' : m));
+        counts.set(pattern, (counts.get(pattern) ?? 0) + 1);
+      });
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6)
@@ -238,10 +260,30 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
       data: {
         labels: buckets.map((b) => b.label),
         datasets: [
-          { label: 'Error', data: buckets.map((b) => b.error), backgroundColor: 'rgba(220,38,38,0.75)', stack: 'logs' },
-          { label: 'Warn', data: buckets.map((b) => b.warn), backgroundColor: 'rgba(217,119,6,0.75)', stack: 'logs' },
-          { label: 'Info', data: buckets.map((b) => b.info), backgroundColor: 'rgba(37,99,235,0.65)', stack: 'logs' },
-          { label: 'Debug', data: buckets.map((b) => b.debug), backgroundColor: 'rgba(107,114,128,0.5)', stack: 'logs' },
+          {
+            label: 'Error',
+            data: buckets.map((b) => b.error),
+            backgroundColor: 'rgba(220,38,38,0.75)',
+            stack: 'logs',
+          },
+          {
+            label: 'Warn',
+            data: buckets.map((b) => b.warn),
+            backgroundColor: 'rgba(217,119,6,0.75)',
+            stack: 'logs',
+          },
+          {
+            label: 'Info',
+            data: buckets.map((b) => b.info),
+            backgroundColor: 'rgba(37,99,235,0.65)',
+            stack: 'logs',
+          },
+          {
+            label: 'Debug',
+            data: buckets.map((b) => b.debug),
+            backgroundColor: 'rgba(107,114,128,0.5)',
+            stack: 'logs',
+          },
         ],
       },
       options: {
@@ -250,8 +292,17 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
         animation: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { stacked: true, ticks: { maxTicksLimit: 8, maxRotation: 0, color: '#6b7280', font: { size: 11 } }, grid: { display: false } },
-          y: { stacked: true, beginAtZero: true, ticks: { color: '#6b7280', font: { size: 11 } }, grid: { color: 'rgba(107,114,128,0.15)' } },
+          x: {
+            stacked: true,
+            ticks: { maxTicksLimit: 8, maxRotation: 0, color: '#6b7280', font: { size: 11 } },
+            grid: { display: false },
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: { color: '#6b7280', font: { size: 11 } },
+            grid: { color: 'rgba(107,114,128,0.15)' },
+          },
         },
       },
     };
@@ -264,11 +315,18 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
       type: 'doughnut',
       data: {
         labels: counts.map((c) => c.level),
-        datasets: [{
-          data: counts.map((c) => c.count),
-          backgroundColor: ['rgba(220,38,38,0.8)', 'rgba(217,119,6,0.8)', 'rgba(37,99,235,0.75)', 'rgba(107,114,128,0.6)'],
-          borderWidth: 2,
-        }],
+        datasets: [
+          {
+            data: counts.map((c) => c.count),
+            backgroundColor: [
+              'rgba(220,38,38,0.8)',
+              'rgba(217,119,6,0.8)',
+              'rgba(37,99,235,0.75)',
+              'rgba(107,114,128,0.6)',
+            ],
+            borderWidth: 2,
+          },
+        ],
       },
       options: {
         responsive: true,
@@ -277,7 +335,13 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
         plugins: {
           legend: {
             position: 'bottom',
-            labels: { color: '#6b7280', font: { size: 11 }, padding: 12, boxWidth: 10, boxHeight: 10 },
+            labels: {
+              color: '#6b7280',
+              font: { size: 11 },
+              padding: 12,
+              boxWidth: 10,
+              boxHeight: 10,
+            },
           },
         },
         cutout: '65%',
@@ -292,11 +356,13 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
       type: 'bar',
       data: {
         labels: ns.map((n) => n.namespace),
-        datasets: [{
-          data: ns.map((n) => n.count),
-          backgroundColor: 'rgba(37,99,235,0.65)',
-          borderRadius: 3,
-        }],
+        datasets: [
+          {
+            data: ns.map((n) => n.count),
+            backgroundColor: 'rgba(37,99,235,0.65)',
+            borderRadius: 3,
+          },
+        ],
       },
       options: {
         indexAxis: 'y',
@@ -305,7 +371,11 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
         animation: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { beginAtZero: true, ticks: { color: '#6b7280', font: { size: 11 } }, grid: { color: 'rgba(107,114,128,0.15)' } },
+          x: {
+            beginAtZero: true,
+            ticks: { color: '#6b7280', font: { size: 11 } },
+            grid: { color: 'rgba(107,114,128,0.15)' },
+          },
           y: { ticks: { color: '#6b7280', font: { size: 11 } }, grid: { display: false } },
         },
       },

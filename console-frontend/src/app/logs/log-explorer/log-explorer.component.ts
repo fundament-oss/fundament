@@ -47,10 +47,12 @@ const LEVEL_ROW_BORDER: Record<LogLevel, string> = {
 };
 
 const LEVEL_CHIP_ACTIVE: Record<LogLevel, string> = {
-  ERROR: 'border-danger-300 bg-danger-50 text-danger-700 dark:border-danger-700 dark:bg-danger-950 dark:text-danger-300',
+  ERROR:
+    'border-danger-300 bg-danger-50 text-danger-700 dark:border-danger-700 dark:bg-danger-950 dark:text-danger-300',
   WARN: 'border-yellow-300 bg-yellow-50 text-yellow-700 dark:border-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
   INFO: 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-300',
-  DEBUG: 'border-neutral-300 bg-neutral-50 text-neutral-600 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-400',
+  DEBUG:
+    'border-neutral-300 bg-neutral-50 text-neutral-600 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-400',
 };
 
 const LEVEL_DOT: Record<LogLevel, string> = {
@@ -67,6 +69,48 @@ const HISTOGRAM_COLORS: Record<string, string> = {
   debug: 'rgba(107, 114, 128, 0.5)',
 };
 
+function copyToClipboard(text: string): void {
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+function formattedJson(log: LogEntry): string {
+  return JSON.stringify({ message: log.message, ...log.fields }, null, 2);
+}
+
+function levelBadgeClass(level: LogLevel): string {
+  return LEVEL_BADGE[level];
+}
+
+function levelRowBorderClass(level: LogLevel): string {
+  return LEVEL_ROW_BORDER[level];
+}
+
+function levelDotClass(level: LogLevel): string {
+  return `inline-block h-2 w-2 rounded-full ${LEVEL_DOT[level]}`;
+}
+
+function formatTimestamp(date: Date): string {
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+}
+
+function formatTimestampFull(date: Date): string {
+  return date.toISOString().replace('T', ' ').replace('Z', ' UTC');
+}
+
+function fieldEntries(log: LogEntry): { key: string; value: string }[] {
+  return Object.entries(log.fields).map(([key, value]) => ({
+    key,
+    value: typeof value === 'object' ? JSON.stringify(value) : String(value),
+  }));
+}
+
 @Component({
   selector: 'app-log-explorer',
   imports: [FormsModule, DecimalPipe, RouterLink],
@@ -79,46 +123,62 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('histogramChart') private histogramCanvas!: ElementRef<HTMLCanvasElement>;
 
+  @ViewChild('detailSheet') private detailSheetRef?: ElementRef<HTMLElement>;
+
   private histogram: Chart | null = null;
 
   private liveTailInterval: ReturnType<typeof setInterval> | null = null;
 
   // ── static UI data
   readonly ALL_LEVELS = ALL_LEVELS;
+
   readonly TIME_PRESETS = TIME_PRESETS;
 
   // ── filter state
   readonly selectedCluster = signal('');
+
   readonly selectedNamespace = signal('');
+
   readonly selectedPod = signal('');
+
   readonly selectedContainer = signal('');
+
   readonly selectedLevels = signal<Set<LogLevel>>(new Set(ALL_LEVELS));
+
   readonly searchText = signal('');
+
   readonly timePreset = signal('1h');
+
   readonly sortNewestFirst = signal(true);
+
   readonly currentPage = signal(0);
 
   // ── live tail
   readonly liveTailEnabled = signal(false);
+
   readonly liveTailPaused = signal(false);
+
   readonly liveTailRate = signal(0);
 
   // ── detail panel
   readonly selectedLog = signal<LogEntry | null>(null);
+
   readonly showRawJson = signal(false);
 
   // ── all log data
   private readonly allLogs = signal<LogEntry[]>(generateMockLogs(300));
 
   // ── derived: available filter options
-  readonly clusters = computed(() =>
-    [...new Set(this.allLogs().map((l) => l.cluster))].sort(),
-  );
+  readonly clusters = computed(() => [...new Set(this.allLogs().map((l) => l.cluster))].sort());
 
   readonly namespaces = computed(() => {
     const cl = this.selectedCluster();
     return [
-      ...new Set(this.allLogs().filter((l) => !cl || l.cluster === cl).map((l) => l.namespace)),
+      ...new Set(
+        this.allLogs()
+          .filter((l) => !cl || l.cluster === cl)
+          .map((l) => l.namespace),
+      ),
     ].sort();
   });
 
@@ -174,7 +234,9 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
         (!ns || l.namespace === ns) &&
         (!pod || l.pod === pod) &&
         (!container || l.container === container) &&
-        (!search || l.message.toLowerCase().includes(search) || l.pod.toLowerCase().includes(search)),
+        (!search ||
+          l.message.toLowerCase().includes(search) ||
+          l.pod.toLowerCase().includes(search)),
     );
   });
 
@@ -192,7 +254,10 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
   // ── fully filtered logs (with level filter)
   readonly filteredLogs = computed(() => {
     const levels = this.selectedLevels();
-    const logs = this.filteredLogsNoLevel().filter((l) => levels.has(l.level));
+    const logs =
+      levels.size === 0
+        ? this.filteredLogsNoLevel()
+        : this.filteredLogsNoLevel().filter((l) => levels.has(l.level));
     return this.sortNewestFirst()
       ? [...logs].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       : [...logs].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
@@ -203,7 +268,9 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
     return this.filteredLogs().slice(start, start + PAGE_SIZE);
   });
 
-  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredLogs().length / PAGE_SIZE)));
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredLogs().length / PAGE_SIZE)),
+  );
 
   // ── generated query string for the query bar
   readonly generatedQuery = computed(() => {
@@ -218,16 +285,16 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
     const search = this.searchText();
     if (search) parts.push(`|= "${search}"`);
     if (parts.length === 0) return '{}';
-    const scope = parts.slice(0, -1).filter((p) => !p.startsWith('|=')).join(', ');
+    const scope = parts
+      .slice(0, -1)
+      .filter((p) => !p.startsWith('|='))
+      .join(', ');
     const textParts = parts.filter((p) => p.startsWith('|='));
     const levelPart = parts.find((p) => p.startsWith('level'));
-    const braceParts = [
-      scope,
-      levelPart && !scope.includes('level') ? levelPart : '',
-    ]
+    const braceParts = [scope, levelPart && !scope.includes('level') ? levelPart : '']
       .filter(Boolean)
       .join(', ');
-    return `{${braceParts}}${textParts.length ? ' ' + textParts.join(' ') : ''}`;
+    return `{${braceParts}}${textParts.length ? ` ${textParts.join(' ')}` : ''}`;
   });
 
   // ── histogram buckets
@@ -251,16 +318,16 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
       };
     });
 
-    for (const log of this.filteredLogsNoLevel()) {
+    this.filteredLogsNoLevel().forEach((log) => {
       const idx = Math.min(
         Math.floor((log.timestamp.getTime() - from.getTime()) / bucketMs),
         BUCKET_COUNT - 1,
       );
       if (idx >= 0) {
         const key = log.level.toLowerCase() as 'error' | 'warn' | 'info' | 'debug';
-        buckets[idx][key]++;
+        buckets[idx][key] += 1;
       }
-    }
+    });
 
     return buckets;
   });
@@ -275,10 +342,13 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
   // ── all active filter chips (for display)
   readonly activeFilterChips = computed(() => {
     const chips: { label: string; key: string }[] = [];
-    if (this.selectedCluster()) chips.push({ label: `cluster: ${this.selectedCluster()}`, key: 'cluster' });
-    if (this.selectedNamespace()) chips.push({ label: `namespace: ${this.selectedNamespace()}`, key: 'namespace' });
+    if (this.selectedCluster())
+      chips.push({ label: `cluster: ${this.selectedCluster()}`, key: 'cluster' });
+    if (this.selectedNamespace())
+      chips.push({ label: `namespace: ${this.selectedNamespace()}`, key: 'namespace' });
     if (this.selectedPod()) chips.push({ label: `pod: ${this.selectedPod()}`, key: 'pod' });
-    if (this.selectedContainer()) chips.push({ label: `container: ${this.selectedContainer()}`, key: 'container' });
+    if (this.selectedContainer())
+      chips.push({ label: `container: ${this.selectedContainer()}`, key: 'container' });
     return chips;
   });
 
@@ -317,10 +387,30 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
       data: {
         labels: buckets.map((b) => b.label),
         datasets: [
-          { label: 'Error', data: buckets.map((b) => b.error), backgroundColor: HISTOGRAM_COLORS['error'], stack: 'logs' },
-          { label: 'Warn', data: buckets.map((b) => b.warn), backgroundColor: HISTOGRAM_COLORS['warn'], stack: 'logs' },
-          { label: 'Info', data: buckets.map((b) => b.info), backgroundColor: HISTOGRAM_COLORS['info'], stack: 'logs' },
-          { label: 'Debug', data: buckets.map((b) => b.debug), backgroundColor: HISTOGRAM_COLORS['debug'], stack: 'logs' },
+          {
+            label: 'Error',
+            data: buckets.map((b) => b.error),
+            backgroundColor: HISTOGRAM_COLORS['error'],
+            stack: 'logs',
+          },
+          {
+            label: 'Warn',
+            data: buckets.map((b) => b.warn),
+            backgroundColor: HISTOGRAM_COLORS['warn'],
+            stack: 'logs',
+          },
+          {
+            label: 'Info',
+            data: buckets.map((b) => b.info),
+            backgroundColor: HISTOGRAM_COLORS['info'],
+            stack: 'logs',
+          },
+          {
+            label: 'Debug',
+            data: buckets.map((b) => b.debug),
+            backgroundColor: HISTOGRAM_COLORS['debug'],
+            stack: 'logs',
+          },
         ],
       },
       options: {
@@ -448,10 +538,19 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
   }
 
   removeChip(key: string): void {
-    if (key === 'cluster') { this.selectedCluster.set(''); this.selectedNamespace.set(''); this.selectedPod.set(''); this.selectedContainer.set(''); }
-    else if (key === 'namespace') { this.selectedNamespace.set(''); this.selectedPod.set(''); this.selectedContainer.set(''); }
-    else if (key === 'pod') { this.selectedPod.set(''); this.selectedContainer.set(''); }
-    else if (key === 'container') this.selectedContainer.set('');
+    if (key === 'cluster') {
+      this.selectedCluster.set('');
+      this.selectedNamespace.set('');
+      this.selectedPod.set('');
+      this.selectedContainer.set('');
+    } else if (key === 'namespace') {
+      this.selectedNamespace.set('');
+      this.selectedPod.set('');
+      this.selectedContainer.set('');
+    } else if (key === 'pod') {
+      this.selectedPod.set('');
+      this.selectedContainer.set('');
+    } else if (key === 'container') this.selectedContainer.set('');
     this.currentPage.set(0);
   }
 
@@ -462,8 +561,15 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
 
   toggleLevel(level: LogLevel): void {
     this.selectedLevels.update((levels) => {
+      if (levels.size === ALL_LEVELS.length) {
+        return new Set([level]);
+      }
       const next = new Set(levels);
-      next.has(level) ? next.delete(level) : next.add(level);
+      if (next.has(level)) {
+        next.delete(level);
+      } else {
+        next.add(level);
+      }
       return next;
     });
     this.currentPage.set(0);
@@ -477,9 +583,14 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
   selectLog(log: LogEntry): void {
     this.selectedLog.set(log);
     this.showRawJson.set(false);
+    (this.detailSheetRef?.nativeElement as (HTMLElement & { show(): void }) | undefined)?.show();
   }
 
   closeDetail(): void {
+    (this.detailSheetRef?.nativeElement as (HTMLElement & { hide(): void }) | undefined)?.hide();
+  }
+
+  onDetailSheetClose(): void {
     this.selectedLog.set(null);
   }
 
@@ -493,68 +604,44 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  copyToClipboard(text: string): void {
-    navigator.clipboard.writeText(text).catch(() => {});
-  }
+  readonly copyToClipboard = copyToClipboard;
 
-  formattedJson(log: LogEntry): string {
-    return JSON.stringify({ message: log.message, ...log.fields }, null, 2);
-  }
+  readonly formattedJson = formattedJson;
 
   // ── pagination
-  prevPage(): void {
-    this.currentPage.update((p) => Math.max(0, p - 1));
+  onPageChange(event: Event): void {
+    this.currentPage.set((event as CustomEvent<{ page: number }>).detail.page - 1);
   }
 
-  nextPage(): void {
-    this.currentPage.update((p) => Math.min(this.totalPages() - 1, p + 1));
+  onSearchInput(event: Event): void {
+    this.onSearchChange((event.target as HTMLInputElement).value);
   }
 
   // ── style helpers
-  levelBadgeClass(level: LogLevel): string {
-    return LEVEL_BADGE[level];
-  }
+  readonly levelBadgeClass = levelBadgeClass;
 
-  levelRowBorderClass(level: LogLevel): string {
-    return LEVEL_ROW_BORDER[level];
-  }
+  readonly levelRowBorderClass = levelRowBorderClass;
 
   levelChipClass(level: LogLevel): string {
-    const base = 'flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors cursor-pointer';
+    const base =
+      'flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors cursor-pointer';
     if (this.isLevelSelected(level)) return `${base} ${LEVEL_CHIP_ACTIVE[level]}`;
     return `${base} border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-500`;
   }
 
-  levelDotClass(level: LogLevel): string {
-    return `inline-block h-2 w-2 rounded-full ${LEVEL_DOT[level]}`;
-  }
+  readonly levelDotClass = levelDotClass;
 
   allChipClass(): string {
-    const base = 'flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors cursor-pointer';
+    const base =
+      'flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors cursor-pointer';
     if (this.isAllLevelsSelected())
       return `${base} border-accent-300 bg-accent-50 text-accent-700 dark:border-accent-700 dark:bg-accent-950 dark:text-accent-300`;
     return `${base} border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900`;
   }
 
-  formatTimestamp(date: Date): string {
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-  }
+  readonly formatTimestamp = formatTimestamp;
 
-  formatTimestampFull(date: Date): string {
-    return date.toISOString().replace('T', ' ').replace('Z', ' UTC');
-  }
+  readonly formatTimestampFull = formatTimestampFull;
 
-  fieldEntries(log: LogEntry): { key: string; value: string }[] {
-    return Object.entries(log.fields).map(([key, value]) => ({
-      key,
-      value: typeof value === 'object' ? JSON.stringify(value) : String(value),
-    }));
-  }
+  readonly fieldEntries = fieldEntries;
 }

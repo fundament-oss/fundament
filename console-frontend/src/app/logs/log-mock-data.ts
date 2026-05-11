@@ -36,7 +36,7 @@ const CLUSTER_NAMESPACES: Record<string, string[]> = {
   staging: ['staging', 'kube-system'],
 };
 
-const LEVEL_MESSAGES: Record<LogLevel, Array<{ msg: string; fields: Record<string, unknown> }>> = {
+const LEVEL_MESSAGES: Record<LogLevel, { msg: string; fields: Record<string, unknown> }[]> = {
   ERROR: [
     {
       msg: 'connection refused: dial tcp 10.0.1.4:5432: connect: connection refused',
@@ -48,15 +48,15 @@ const LEVEL_MESSAGES: Record<LogLevel, Array<{ msg: string; fields: Record<strin
     },
     {
       msg: 'panic: runtime error: index out of range [3] with length 2',
-      fields: { 'goroutine': 1, 'file': 'handlers/auth.go', 'line': 147 },
+      fields: { goroutine: 1, file: 'handlers/auth.go', line: 147 },
     },
     {
       msg: 'TLS handshake timeout connecting to upstream api.internal:443',
-      fields: { 'upstream': 'api.internal:443', 'timeout_ms': 30000 },
+      fields: { upstream: 'api.internal:443', timeout_ms: 30000 },
     },
     {
       msg: 'ImagePullBackOff: failed to pull image registry.internal/app:v2.3.1',
-      fields: { 'image': 'registry.internal/app:v2.3.1', 'reason': 'unauthorized' },
+      fields: { image: 'registry.internal/app:v2.3.1', reason: 'unauthorized' },
     },
     {
       msg: 'FATAL: database connection pool exhausted (max=50)',
@@ -66,45 +66,55 @@ const LEVEL_MESSAGES: Record<LogLevel, Array<{ msg: string; fields: Record<strin
   WARN: [
     {
       msg: 'slow query detected: SELECT * FROM events took 4.2s (threshold: 1s)',
-      fields: { 'query.duration_ms': 4200, 'threshold_ms': 1000, 'table': 'events' },
+      fields: { 'query.duration_ms': 4200, threshold_ms: 1000, table: 'events' },
     },
     {
       msg: 'memory usage at 87% of limit (448Mi/512Mi)',
-      fields: { 'memory.used': '448Mi', 'memory.limit': '512Mi', 'pct': 87 },
+      fields: { 'memory.used': '448Mi', 'memory.limit': '512Mi', pct: 87 },
     },
     {
       msg: 'retrying failed request to cache.internal:6379 (attempt 2/3)',
-      fields: { 'host': 'cache.internal:6379', 'attempt': 2, 'max_attempts': 3 },
+      fields: { host: 'cache.internal:6379', attempt: 2, max_attempts: 3 },
     },
     {
       msg: 'queue depth 847 exceeds warning threshold of 500',
-      fields: { 'queue': 'task-queue', 'depth': 847, 'threshold': 500 },
+      fields: { queue: 'task-queue', depth: 847, threshold: 500 },
     },
     {
       msg: 'certificate will expire in 14 days: *.internal.example.com',
-      fields: { 'cert.domain': '*.internal.example.com', 'days_remaining': 14 },
+      fields: { 'cert.domain': '*.internal.example.com', days_remaining: 14 },
     },
     {
       msg: 'rate limit approaching: 4823/5000 requests in current window',
-      fields: { 'current': 4823, 'limit': 5000, 'window_s': 60 },
+      fields: { current: 4823, limit: 5000, window_s: 60 },
     },
   ],
   INFO: [
     {
       msg: 'GET /api/v1/clusters 200 OK (34ms)',
-      fields: { 'http.method': 'GET', 'http.path': '/api/v1/clusters', 'http.status': 200, 'duration_ms': 34 },
+      fields: {
+        'http.method': 'GET',
+        'http.path': '/api/v1/clusters',
+        'http.status': 200,
+        duration_ms: 34,
+      },
     },
     {
       msg: 'POST /api/v1/namespaces 201 Created (89ms)',
-      fields: { 'http.method': 'POST', 'http.path': '/api/v1/namespaces', 'http.status': 201, 'duration_ms': 89 },
+      fields: {
+        'http.method': 'POST',
+        'http.path': '/api/v1/namespaces',
+        'http.status': 201,
+        duration_ms: 89,
+      },
     },
     {
       msg: 'GET /health 200 OK (2ms)',
-      fields: { 'http.method': 'GET', 'http.path': '/health', 'http.status': 200, 'duration_ms': 2 },
+      fields: { 'http.method': 'GET', 'http.path': '/health', 'http.status': 200, duration_ms: 2 },
     },
     {
       msg: 'worker started: processing task-queue (concurrency=4)',
-      fields: { 'queue': 'task-queue', 'concurrency': 4, 'worker_id': 'w-7f3a2' },
+      fields: { queue: 'task-queue', concurrency: 4, worker_id: 'w-7f3a2' },
     },
     {
       msg: 'cache miss for key user:profile:f8c3de3d (fetching from database)',
@@ -112,11 +122,16 @@ const LEVEL_MESSAGES: Record<LogLevel, Array<{ msg: string; fields: Record<strin
     },
     {
       msg: 'scheduled job reconcile-clusters completed in 1.23s (42 clusters processed)',
-      fields: { 'job': 'reconcile-clusters', 'duration_s': 1.23, 'processed': 42 },
+      fields: { job: 'reconcile-clusters', duration_s: 1.23, processed: 42 },
     },
     {
       msg: 'DELETE /api/v1/plugins/cert-manager 204 No Content (156ms)',
-      fields: { 'http.method': 'DELETE', 'http.path': '/api/v1/plugins/cert-manager', 'http.status': 204, 'duration_ms': 156 },
+      fields: {
+        'http.method': 'DELETE',
+        'http.path': '/api/v1/plugins/cert-manager',
+        'http.status': 204,
+        duration_ms: 156,
+      },
     },
     {
       msg: 'user authenticated: admin@example.com via OIDC (token TTL: 3600s)',
@@ -130,7 +145,7 @@ const LEVEL_MESSAGES: Record<LogLevel, Array<{ msg: string; fields: Record<strin
     },
     {
       msg: 'cache hit for key cluster:summary:a1b2c3 (TTL remaining: 47s)',
-      fields: { 'cache.key': 'cluster:summary:a1b2c3', 'cache.result': 'hit', 'ttl_s': 47 },
+      fields: { 'cache.key': 'cluster:summary:a1b2c3', 'cache.result': 'hit', ttl_s: 47 },
     },
     {
       msg: 'goroutine pool: 12 active / 48 idle / 60 max',
@@ -138,7 +153,7 @@ const LEVEL_MESSAGES: Record<LogLevel, Array<{ msg: string; fields: Record<strin
     },
     {
       msg: 'reconcile loop tick: checking 15 deployments for drift',
-      fields: { 'deployments': 15, 'tick': 'reconcile-loop' },
+      fields: { deployments: 15, tick: 'reconcile-loop' },
     },
   ],
 };
@@ -153,15 +168,15 @@ const LEVEL_WEIGHTS: [LogLevel, number][] = [
 function pickLevel(seed: number): LogLevel {
   const r = ((seed * 9301 + 49297) % 233280) / 233280;
   let acc = 0;
-  for (const [level, weight] of LEVEL_WEIGHTS) {
+  const found = LEVEL_WEIGHTS.find(([, weight]) => {
     acc += weight;
-    if (r < acc) return level;
-  }
-  return 'INFO';
+    return r < acc;
+  });
+  return (found?.[0] ?? 'INFO') as LogLevel;
 }
 
 function seededInt(seed: number, max: number): number {
-  return Math.abs((seed * 1103515245 + 12345) & 0x7fffffff) % max;
+  return Math.abs((seed * 1103515245 + 12345) % 0x80000000) % max;
 }
 
 function generatePodId(seed: number): string {
@@ -179,7 +194,7 @@ export function generateMockLogs(count: number): LogEntry[] {
   const logs: LogEntry[] = [];
   const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count; i += 1) {
     const seed = i * 31337 + 42;
     const cluster = CLUSTERS[seededInt(seed, CLUSTERS.length)];
     const namespaces = CLUSTER_NAMESPACES[cluster];
@@ -206,8 +221,8 @@ export function generateMockLogs(count: number): LogEntry[] {
       message: messageEntry.msg,
       fields: {
         ...messageEntry.fields,
-        'trace_id': `${generatePodId(seed * 37)}${generatePodId(seed * 41)}`,
-        'span_id': generatePodId(seed * 43),
+        trace_id: `${generatePodId(seed * 37)}${generatePodId(seed * 41)}`,
+        span_id: generatePodId(seed * 43),
       },
     });
   }
@@ -238,8 +253,8 @@ export function generateLiveTailEntry(cluster: string, namespace: string): LogEn
     message: messageEntry.msg,
     fields: {
       ...messageEntry.fields,
-      'trace_id': `${generatePodId(seed * 37)}${generatePodId(seed * 41)}`,
-      'span_id': generatePodId(seed * 43),
+      trace_id: `${generatePodId(seed * 37)}${generatePodId(seed * 41)}`,
+      span_id: generatePodId(seed * 43),
     },
   };
 }

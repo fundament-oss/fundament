@@ -59,7 +59,9 @@
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Total logs</p>
     </div>
     <div class="card card-body text-center">
-      <p class="text-3xl font-bold text-danger-600 dark:text-danger-400">{{ errorCount() | number }}</p>
+      <p class="text-danger-600 dark:text-danger-400 text-3xl font-bold">
+        {{ errorCount() | number }}
+      </p>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Errors</p>
     </div>
     <div class="card card-body text-center">
@@ -82,13 +84,21 @@
       </div>
       <div class="px-4 py-3">
         <div class="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
-          <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-red-600/75"></span>Error</span>
-          <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-amber-600/75"></span>Warn</span>
-          <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-blue-600/65"></span>Info</span>
-          <span class="flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-gray-500/50"></span>Debug</span>
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-red-600/75"></span>Error</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-amber-600/75"></span>Warn</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-blue-600/65"></span>Info</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-sm bg-gray-500/50"></span>Debug</span
+          >
         </div>
       </div>
-      <div class="px-4 pb-4" style="height: 200px;">
+      <div class="px-4 pb-4" style="height: 200px">
         <canvas #volumeChart></canvas>
       </div>
     </div>
@@ -99,7 +109,7 @@
         <h2 class="font-semibold text-gray-900 dark:text-white">By severity</h2>
         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Log distribution</p>
       </div>
-      <div class="flex items-center justify-center px-4 pb-4" style="height: 240px;">
+      <div class="flex items-center justify-center px-4 pb-4" style="height: 240px">
         <canvas #severityChart></canvas>
       </div>
     </div>
@@ -132,17 +142,24 @@
         }
         @for (pattern of errorPatterns(); track pattern.message) {
           <div class="flex items-start gap-3 px-5 py-3.5">
-            <span class="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-danger-500"></span>
+            <span class="bg-danger-500 mt-0.5 h-2 w-2 shrink-0 rounded-full"></span>
             <div class="min-w-0 flex-1">
-              <p class="truncate font-mono text-xs text-gray-700 dark:text-gray-300">{{ pattern.message }}</p>
+              <p class="truncate font-mono text-xs text-gray-700 dark:text-gray-300">
+                {{ pattern.message }}
+              </p>
             </div>
             <div class="flex shrink-0 items-center gap-2">
-              <span class="font-mono text-sm font-semibold text-danger-600 dark:text-danger-400">{{ pattern.count | number }}</span>
-              <a
-                routerLink="/logs"
-                class="text-xs text-accent-600 hover:underline dark:text-accent-400"
-                aria-label="Open in explorer"
-              >Open →</a>
+              <span class="text-danger-600 dark:text-danger-400 font-mono text-sm font-semibold">{{
+                pattern.count | number
+              }}</span>
+              <nldd-button
+                [routerLink]="['/logs']"
+                text="Open"
+                end-icon="chevron-right-small"
+                variant="accent-transparent"
+                size="xs"
+                accessible-label="Open in explorer"
+              ></nldd-button>
             </div>
           </div>
         }
