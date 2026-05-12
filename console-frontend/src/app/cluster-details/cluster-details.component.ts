@@ -21,6 +21,7 @@ import {
   ListNodePoolsRequestSchema,
   DeleteClusterRequestSchema,
   GetClusterActivityRequestSchema,
+  GetKubeconfigRequestSchema,
   NodePool,
   type ClusterEvent,
   type SyncState,
@@ -345,10 +346,37 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     console.log('Opening terminal for cluster:', this.clusterData.basics.name);
   }
 
-  downloadKubeconfig(): void {
-    // Mock implementation - would download kubeconfig in real app
-    // eslint-disable-next-line no-console
-    console.log('Downloading kubeconfig for cluster:', this.clusterData.basics.name);
+  isDownloadingKubeconfig = signal<boolean>(false);
+
+  async downloadKubeconfig(): Promise<void> {
+    if (this.isDownloadingKubeconfig()) {
+      return;
+    }
+    this.isDownloadingKubeconfig.set(true);
+    try {
+      const request = create(GetKubeconfigRequestSchema, {
+        clusterId: this.clusterData.basics.id,
+      });
+      const response = await firstValueFrom(this.client.getKubeconfig(request));
+
+      const blob = new Blob([response.kubeconfigContent], { type: 'application/yaml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `kubeconfig-${this.clusterData.basics.name}.yaml`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to download kubeconfig: ${error.message}`
+          : 'Failed to download kubeconfig',
+      );
+    } finally {
+      this.isDownloadingKubeconfig.set(false);
+    }
   }
 
   getNodePoolStatusLabel = getNodePoolStatusLabel;
