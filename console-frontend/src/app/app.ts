@@ -13,9 +13,6 @@ import {
 } from '@angular/core';
 import '@nldd/design-system/icon';
 import '@nldd/design-system/icon-button';
-import '@nldd/design-system/sheet';
-import '@nldd/design-system/page';
-import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/form';
@@ -30,9 +27,11 @@ import '@nldd/design-system/search-field';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/switch-field';
 import '@nldd/design-system/text-field';
+import '@nldd/design-system/navigation-split-view';
 import {
   RouterOutlet,
   RouterLink,
+  RouterLinkActive,
   Router,
   NavigationEnd,
   ActivatedRouteSnapshot,
@@ -56,7 +55,6 @@ import KubeClusterContextService from './plugin-resources/kube-cluster-context.s
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
-import SidebarNavComponent from './sidebar-nav/sidebar-nav';
 
 const reloadApp = () => {
   window.location.reload();
@@ -67,11 +65,11 @@ const reloadApp = () => {
   imports: [
     RouterOutlet,
     RouterLink,
+    RouterLinkActive,
     SelectorModalComponent,
     OrgPickerComponent,
     FundamentLogoIconComponent,
     BreadcrumbComponent,
-    SidebarNavComponent,
   ],
   host: {
     '(document:click)': 'onDocumentClick($event)',
@@ -107,7 +105,13 @@ export default class App implements OnInit {
 
   private inviteClient = inject(INVITE);
 
-  @ViewChild('mobileSheet') private mobileSheetRef?: ElementRef<HTMLElement>;
+  @ViewChild('splitView') private splitViewRef?: ElementRef<
+    HTMLElement & { showSidebarSheet(): Promise<void>; hideSidebarSheet(): void }
+  >;
+
+  private readonly mobileMq = window.matchMedia('(max-width: 1023px)');
+
+  isMobile = signal(this.mobileMq.matches);
 
   private clusterNameCache = new Map<string, string>();
 
@@ -177,6 +181,7 @@ export default class App implements OnInit {
   }
 
   async ngOnInit() {
+    this.mobileMq.addEventListener('change', (e) => this.isMobile.set(e.matches));
     this.initializeTheme();
 
     // Initialize authentication state
@@ -543,11 +548,11 @@ export default class App implements OnInit {
   }
 
   toggleSidebar() {
-    (this.mobileSheetRef?.nativeElement as (HTMLElement & { show(): void }) | undefined)?.show();
+    this.splitViewRef?.nativeElement.showSidebarSheet();
   }
 
   closeSidebar() {
-    (this.mobileSheetRef?.nativeElement as (HTMLElement & { hide(): void }) | undefined)?.hide();
+    this.splitViewRef?.nativeElement.hideSidebarSheet();
   }
 
   // Nested selector methods
