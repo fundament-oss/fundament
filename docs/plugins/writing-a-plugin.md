@@ -38,6 +38,17 @@ spec:
         create: true
         icon: pencil-on-square
 
+  customComponents:
+    MyResource:
+      list: myresources-list.html
+      detail: myresources-detail.html
+
+  allowedResources:
+    - group: my-api.io
+      version: v1
+      resource: myresources
+      verbs: [get, list]
+
   uiHints:
     myresources.my-api.io:
       statusMapping:
@@ -50,6 +61,14 @@ spec:
             badge: danger
             label: Failed
 ```
+
+`customComponents` maps every CRD kind that appears in the menu to the
+HTML files your plugin ships under `console/`. The console does not
+generate fallback views from the CRD schema, so every menu entry needs
+its own `list` and `detail` page. `allowedResources` is the allowlist the
+console host enforces on every `fundament.k8s.list` / `.get` call the
+plugin makes — see [Custom UI](custom-ui) and
+[Console integration](console-integration) for the full story.
 
 ### 2. Implement the plugin
 
@@ -103,7 +122,35 @@ func main() {
 }
 ```
 
-### 3. Build a container image
+### 3. Ship the console UI
+
+Plugins serve their own list and detail HTML from an embedded filesystem
+mounted at `/console/` by the runtime. Implement `ConsoleProvider`:
+
+```go
+package main
+
+import (
+    "embed"
+    "net/http"
+
+    "github.com/fundament-oss/fundament/plugin-sdk/helpers/console"
+)
+
+//go:embed console
+var consoleFS embed.FS
+
+func (p *MyPlugin) ConsoleAssets() http.FileSystem {
+    return console.MustNewFileSystem(consoleFS)
+}
+```
+
+Put one HTML file per `customComponents` entry under `console/` (e.g.
+`console/myresources-list.html`, `console/myresources-detail.html`).
+See [Custom UI](custom-ui) for what those pages need to do and
+[Example: cert-manager](example-cert-manager) for a worked layout.
+
+### 4. Build a container image
 
 ```dockerfile
 FROM golang:1.26-alpine AS builder
@@ -121,7 +168,7 @@ WORKDIR /app
 ENTRYPOINT ["/my-plugin"]
 ```
 
-### 4. Create a PluginInstallation
+### 5. Create a PluginInstallation
 
 ```yaml
 apiVersion: plugins.fundament.io/v1

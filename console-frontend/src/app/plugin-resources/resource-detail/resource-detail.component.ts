@@ -17,8 +17,10 @@ import PluginRegistryService from '../plugin-registry.service';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
+import { ConfigService } from '../../config.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
+import buildPluginConsoleUrl from '../plugin-console-url.utils';
 
 function checkIsWideField(schema: CrdPropertySchema): boolean {
   return (
@@ -56,27 +58,46 @@ export default class ResourceDetailComponent implements OnInit {
 
   private registry = inject(PluginRegistryService);
 
-  private clusterContext = inject(KubeClusterContextService);
+  protected clusterContext = inject(KubeClusterContextService);
 
   private loader = inject(KubePluginLoaderService);
 
+  private config = inject(ConfigService);
+
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
+  });
+
+  private routeQuery = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
   });
 
   protected pluginName = computed(() => this.routeParams().get('pluginName') ?? '');
 
   private resourceKind = computed(() => this.routeParams().get('resourceKind') ?? '');
 
-  private resourceId = computed(() => this.routeParams().get('resourceId') ?? '');
+  protected resourceId = computed(() => this.routeParams().get('resourceId') ?? '');
+
+  protected resourceNamespace = computed(() => this.routeQuery().get('ns') ?? undefined);
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
   customUIUrl = computed(() => {
     const kind = this.crdDef()?.kind;
     if (!kind) return null;
-    return this.plugin()?.customUI?.[kind]?.detail ?? null;
+    const plugin = this.plugin();
+    const path = plugin?.customComponents?.[kind]?.detail;
+    const clusterId = this.clusterContext.selectedClusterId();
+    if (!plugin || !path || !clusterId) return null;
+    return buildPluginConsoleUrl({
+      kubeApiProxyUrl: this.config.getConfig().kubeApiProxyUrl,
+      clusterId,
+      pluginName: plugin.name,
+      path,
+    });
   });
+
+  protected allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
 
   isLoading = signal(false);
 

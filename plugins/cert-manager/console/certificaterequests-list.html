@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Certificate requests</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Certificate requests</h1>
+      <table class="plugin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Namespace</th>
+            <th>Approved</th>
+            <th>Issuer</th>
+            <th>Age</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr>
+            <td colspan="5" class="plugin-text">Loading…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <script type="module">
+      import {
+        loadSdk,
+        escapeHtml,
+        formatAge,
+        approvedText,
+        emptyRow,
+        errorRow,
+        navigateToDetail,
+      } from './_shared.js';
+
+      await loadSdk();
+      await fundament.init;
+      const tbody = document.getElementById('rows');
+
+      try {
+        const { items } = await fundament.k8s.list({
+          group: 'cert-manager.io',
+          version: 'v1',
+          resource: 'certificaterequests',
+        });
+        if (!items || items.length === 0) {
+          tbody.innerHTML = emptyRow(5, 'No certificate requests found.');
+        } else {
+          tbody.innerHTML = items
+            .map((item) => {
+              const name = item.metadata?.name ?? '';
+              const namespace = item.metadata?.namespace ?? '';
+              return `
+                <tr data-name="${escapeHtml(name)}" data-namespace="${escapeHtml(namespace)}">
+                  <td><a href="#" class="row-link">${escapeHtml(name)}</a></td>
+                  <td>${escapeHtml(namespace)}</td>
+                  <td>${escapeHtml(approvedText(item))}</td>
+                  <td>${escapeHtml(item.spec?.issuerRef?.name ?? '')}</td>
+                  <td>${escapeHtml(formatAge(item.metadata?.creationTimestamp))}</td>
+                </tr>`;
+            })
+            .join('');
+          tbody.querySelectorAll('a.row-link').forEach((link) => {
+            link.addEventListener('click', (e) => {
+              e.preventDefault();
+              const row = link.closest('tr');
+              navigateToDetail(row.dataset.name, row.dataset.namespace || undefined);
+            });
+          });
+        }
+      } catch (err) {
+        tbody.innerHTML = errorRow(5, err);
+      }
+    </script>
+  </body>
+</html>

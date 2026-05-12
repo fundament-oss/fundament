@@ -5,4 +5,5 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY kube-api-proxy/ ./kube-api-proxy/
 COPY common/ ./common/
+COPY plugins/ ./plugins/
 CMD ["air", "-c", "kube-api-proxy/hotreload/.air.toml"]

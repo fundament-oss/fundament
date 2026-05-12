@@ -23,7 +23,10 @@ func TestLoadDefinition(t *testing.T) {
 	assert.NotEmpty(t, def.Spec.Permissions.Capabilities)
 	assert.NotEmpty(t, def.Spec.Permissions.RBAC)
 	assert.Len(t, def.Spec.Menu.Organization, 1)
-	assert.Len(t, def.Spec.Menu.Project, 2)
+	assert.Len(t, def.Spec.Menu.Project, 3)
+	assert.Len(t, def.Spec.AllowedResources, 4)
+	assert.Len(t, def.Spec.CustomComponents, 4)
+	assert.Len(t, def.Spec.CRDs, 4)
 }
 
 func TestNewCertManagerPlugin(t *testing.T) {

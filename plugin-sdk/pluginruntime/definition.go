@@ -24,6 +24,18 @@ type PluginSpec struct {
 	CustomComponents map[string]ComponentMapping `yaml:"customComponents"`
 	UIHints          map[string]UIHint           `yaml:"uiHints"`
 	CRDs             []string                    `yaml:"crds"`
+	AllowedResources []AllowedResource           `yaml:"allowedResources"`
+}
+
+// AllowedResource declares a Kubernetes resource the plugin's UI iframe is
+// permitted to read via the host-mediated SDK broker. The console enforces
+// this allowlist before forwarding any iframe-initiated request to the
+// kube-api-proxy.
+type AllowedResource struct {
+	Group    string   `yaml:"group"`
+	Version  string   `yaml:"version"`
+	Resource string   `yaml:"resource"`
+	Verbs    []string `yaml:"verbs"`
 }
 
 // PluginMetadata holds the identifying information for a plugin.
