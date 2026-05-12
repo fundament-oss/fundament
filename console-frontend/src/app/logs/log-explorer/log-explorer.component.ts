@@ -40,13 +40,6 @@ const LEVEL_BADGE: Record<LogLevel, string> = {
   DEBUG: 'badge badge-sm badge-gray',
 };
 
-const LEVEL_ROW_BORDER: Record<LogLevel, string> = {
-  ERROR: 'border-l-[3px] border-l-danger-500',
-  WARN: 'border-l-[3px] border-l-yellow-500',
-  INFO: 'border-l-[3px] border-l-blue-500',
-  DEBUG: 'border-l-[3px] border-l-neutral-300',
-};
-
 const LEVEL_CHIP_ACTIVE: Record<LogLevel, string> = {
   ERROR:
     'border-danger-300 bg-danger-50 text-danger-700 dark:border-danger-700 dark:bg-danger-950 dark:text-danger-300',
@@ -80,10 +73,6 @@ function formattedJson(log: LogEntry): string {
 
 function levelBadgeClass(level: LogLevel): string {
   return LEVEL_BADGE[level];
-}
-
-function levelRowBorderClass(level: LogLevel): string {
-  return LEVEL_ROW_BORDER[level];
 }
 
 function levelDotClass(level: LogLevel): string {
@@ -625,8 +614,6 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
 
   // ── style helpers
   readonly levelBadgeClass = levelBadgeClass;
-
-  readonly levelRowBorderClass = levelRowBorderClass;
 
   levelChipClass(level: LogLevel): string {
     const base =

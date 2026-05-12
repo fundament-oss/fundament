@@ -13,14 +13,14 @@
         class="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-900"
       >
         <h2 class="font-semibold text-gray-900 dark:text-white">Log detail</h2>
-        <nldd-button
+        <nldd-icon-button
           type="button"
           (click)="closeDetail()"
-          start-icon="x-mark"
+          icon="dismiss"
           accessible-label="Close detail panel"
-          variant="neutral-transparent"
+          variant="neutral-tinted"
           size="sm"
-        ></nldd-button>
+        ></nldd-icon-button>
       </div>
 
       <div class="min-h-0 flex-1 overflow-y-auto">
@@ -60,7 +60,7 @@
               type="button"
               (click)="copyToClipboard(log.message)"
               text="Copy"
-              variant="neutral-transparent"
+              variant="neutral-tinted"
               size="xs"
             ></nldd-button>
           </div>
@@ -141,14 +141,14 @@
           [disabled]="selectedLogIndex() <= 0"
           text="Prev"
           start-icon="chevron-left-small"
-          variant="neutral-transparent"
+          variant="neutral-tinted"
           size="sm"
         ></nldd-button>
         <nldd-button
           type="button"
           (click)="copyToClipboard(formattedJson(log))"
           text="Copy all"
-          variant="neutral-transparent"
+          variant="neutral-tinted"
           size="sm"
         ></nldd-button>
         <nldd-button
@@ -157,7 +157,7 @@
           [disabled]="selectedLogIndex() >= pagedLogs().length - 1"
           text="Next"
           end-icon="chevron-right-small"
-          variant="neutral-transparent"
+          variant="neutral-tinted"
           size="sm"
         ></nldd-button>
       </div>
@@ -416,7 +416,7 @@
         </select>
       </div>
 
-      <div class="table-container mb-6 rounded-none border-0 shadow-none ring-0">
+      <div class="table-container mb-6 rounded-none border-0 shadow-none! ring-0">
         <table class="table" aria-label="Log entries">
           <thead>
             <tr>
@@ -438,7 +438,6 @@
             @for (log of pagedLogs(); track log.id) {
               <tr
                 class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
-                [class]="levelRowBorderClass(log.level)"
                 (click)="selectLog(log)"
                 tabindex="0"
                 (keydown.enter)="selectLog(log)"

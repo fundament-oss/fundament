@@ -137,7 +137,7 @@
           </div>
         }
         @for (pattern of errorPatterns(); track pattern.message) {
-          <div class="flex items-start gap-3 px-5 py-3.5">
+          <div class="flex items-center gap-3 px-5 py-3.5">
             <span class="bg-danger-500 mt-0.5 h-2 w-2 shrink-0 rounded-full"></span>
             <div class="min-w-0 flex-1">
               <p class="truncate font-mono text-xs text-gray-700 dark:text-gray-300">
@@ -152,7 +152,7 @@
                 [routerLink]="['/logs']"
                 text="Open"
                 end-icon="chevron-right-small"
-                variant="accent-transparent"
+                variant="neutral-tinted"
                 size="xs"
                 accessible-label="Open in explorer"
               ></nldd-button>
