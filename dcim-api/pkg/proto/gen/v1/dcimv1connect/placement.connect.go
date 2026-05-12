@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -57,8 +58,8 @@ const (
 type PlacementServiceClient interface {
 	CreatePlacement(context.Context, *connect.Request[v1.CreatePlacementRequest]) (*connect.Response[v1.CreatePlacementResponse], error)
 	GetPlacement(context.Context, *connect.Request[v1.GetPlacementRequest]) (*connect.Response[v1.GetPlacementResponse], error)
-	UpdatePlacement(context.Context, *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[v1.UpdatePlacementResponse], error)
-	DeletePlacement(context.Context, *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[v1.DeletePlacementResponse], error)
+	UpdatePlacement(context.Context, *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[emptypb.Empty], error)
+	DeletePlacement(context.Context, *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[emptypb.Empty], error)
 	ListPlacementsByRack(context.Context, *connect.Request[v1.ListPlacementsByRackRequest]) (*connect.Response[v1.ListPlacementsByRackResponse], error)
 	ListChildPlacements(context.Context, *connect.Request[v1.ListChildPlacementsRequest]) (*connect.Response[v1.ListChildPlacementsResponse], error)
 }
@@ -86,13 +87,13 @@ func NewPlacementServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(placementServiceMethods.ByName("GetPlacement")),
 			connect.WithClientOptions(opts...),
 		),
-		updatePlacement: connect.NewClient[v1.UpdatePlacementRequest, v1.UpdatePlacementResponse](
+		updatePlacement: connect.NewClient[v1.UpdatePlacementRequest, emptypb.Empty](
 			httpClient,
 			baseURL+PlacementServiceUpdatePlacementProcedure,
 			connect.WithSchema(placementServiceMethods.ByName("UpdatePlacement")),
 			connect.WithClientOptions(opts...),
 		),
-		deletePlacement: connect.NewClient[v1.DeletePlacementRequest, v1.DeletePlacementResponse](
+		deletePlacement: connect.NewClient[v1.DeletePlacementRequest, emptypb.Empty](
 			httpClient,
 			baseURL+PlacementServiceDeletePlacementProcedure,
 			connect.WithSchema(placementServiceMethods.ByName("DeletePlacement")),
@@ -117,8 +118,8 @@ func NewPlacementServiceClient(httpClient connect.HTTPClient, baseURL string, op
 type placementServiceClient struct {
 	createPlacement      *connect.Client[v1.CreatePlacementRequest, v1.CreatePlacementResponse]
 	getPlacement         *connect.Client[v1.GetPlacementRequest, v1.GetPlacementResponse]
-	updatePlacement      *connect.Client[v1.UpdatePlacementRequest, v1.UpdatePlacementResponse]
-	deletePlacement      *connect.Client[v1.DeletePlacementRequest, v1.DeletePlacementResponse]
+	updatePlacement      *connect.Client[v1.UpdatePlacementRequest, emptypb.Empty]
+	deletePlacement      *connect.Client[v1.DeletePlacementRequest, emptypb.Empty]
 	listPlacementsByRack *connect.Client[v1.ListPlacementsByRackRequest, v1.ListPlacementsByRackResponse]
 	listChildPlacements  *connect.Client[v1.ListChildPlacementsRequest, v1.ListChildPlacementsResponse]
 }
@@ -134,12 +135,12 @@ func (c *placementServiceClient) GetPlacement(ctx context.Context, req *connect.
 }
 
 // UpdatePlacement calls dcim.v1.PlacementService.UpdatePlacement.
-func (c *placementServiceClient) UpdatePlacement(ctx context.Context, req *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[v1.UpdatePlacementResponse], error) {
+func (c *placementServiceClient) UpdatePlacement(ctx context.Context, req *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updatePlacement.CallUnary(ctx, req)
 }
 
 // DeletePlacement calls dcim.v1.PlacementService.DeletePlacement.
-func (c *placementServiceClient) DeletePlacement(ctx context.Context, req *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[v1.DeletePlacementResponse], error) {
+func (c *placementServiceClient) DeletePlacement(ctx context.Context, req *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deletePlacement.CallUnary(ctx, req)
 }
 
@@ -157,8 +158,8 @@ func (c *placementServiceClient) ListChildPlacements(ctx context.Context, req *c
 type PlacementServiceHandler interface {
 	CreatePlacement(context.Context, *connect.Request[v1.CreatePlacementRequest]) (*connect.Response[v1.CreatePlacementResponse], error)
 	GetPlacement(context.Context, *connect.Request[v1.GetPlacementRequest]) (*connect.Response[v1.GetPlacementResponse], error)
-	UpdatePlacement(context.Context, *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[v1.UpdatePlacementResponse], error)
-	DeletePlacement(context.Context, *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[v1.DeletePlacementResponse], error)
+	UpdatePlacement(context.Context, *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[emptypb.Empty], error)
+	DeletePlacement(context.Context, *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[emptypb.Empty], error)
 	ListPlacementsByRack(context.Context, *connect.Request[v1.ListPlacementsByRackRequest]) (*connect.Response[v1.ListPlacementsByRackResponse], error)
 	ListChildPlacements(context.Context, *connect.Request[v1.ListChildPlacementsRequest]) (*connect.Response[v1.ListChildPlacementsResponse], error)
 }
@@ -237,11 +238,11 @@ func (UnimplementedPlacementServiceHandler) GetPlacement(context.Context, *conne
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PlacementService.GetPlacement is not implemented"))
 }
 
-func (UnimplementedPlacementServiceHandler) UpdatePlacement(context.Context, *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[v1.UpdatePlacementResponse], error) {
+func (UnimplementedPlacementServiceHandler) UpdatePlacement(context.Context, *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PlacementService.UpdatePlacement is not implemented"))
 }
 
-func (UnimplementedPlacementServiceHandler) DeletePlacement(context.Context, *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[v1.DeletePlacementResponse], error) {
+func (UnimplementedPlacementServiceHandler) DeletePlacement(context.Context, *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PlacementService.DeletePlacement is not implemented"))
 }
 

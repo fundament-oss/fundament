@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -45,7 +46,7 @@ const (
 type NoteServiceClient interface {
 	ListNotes(context.Context, *connect.Request[v1.ListNotesRequest]) (*connect.Response[v1.ListNotesResponse], error)
 	CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error)
-	DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[v1.DeleteNoteResponse], error)
+	DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewNoteServiceClient constructs a client for the dcim.v1.NoteService service. By default, it uses
@@ -71,7 +72,7 @@ func NewNoteServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(noteServiceMethods.ByName("CreateNote")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteNote: connect.NewClient[v1.DeleteNoteRequest, v1.DeleteNoteResponse](
+		deleteNote: connect.NewClient[v1.DeleteNoteRequest, emptypb.Empty](
 			httpClient,
 			baseURL+NoteServiceDeleteNoteProcedure,
 			connect.WithSchema(noteServiceMethods.ByName("DeleteNote")),
@@ -84,7 +85,7 @@ func NewNoteServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 type noteServiceClient struct {
 	listNotes  *connect.Client[v1.ListNotesRequest, v1.ListNotesResponse]
 	createNote *connect.Client[v1.CreateNoteRequest, v1.CreateNoteResponse]
-	deleteNote *connect.Client[v1.DeleteNoteRequest, v1.DeleteNoteResponse]
+	deleteNote *connect.Client[v1.DeleteNoteRequest, emptypb.Empty]
 }
 
 // ListNotes calls dcim.v1.NoteService.ListNotes.
@@ -98,7 +99,7 @@ func (c *noteServiceClient) CreateNote(ctx context.Context, req *connect.Request
 }
 
 // DeleteNote calls dcim.v1.NoteService.DeleteNote.
-func (c *noteServiceClient) DeleteNote(ctx context.Context, req *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[v1.DeleteNoteResponse], error) {
+func (c *noteServiceClient) DeleteNote(ctx context.Context, req *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteNote.CallUnary(ctx, req)
 }
 
@@ -106,7 +107,7 @@ func (c *noteServiceClient) DeleteNote(ctx context.Context, req *connect.Request
 type NoteServiceHandler interface {
 	ListNotes(context.Context, *connect.Request[v1.ListNotesRequest]) (*connect.Response[v1.ListNotesResponse], error)
 	CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error)
-	DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[v1.DeleteNoteResponse], error)
+	DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewNoteServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -159,6 +160,6 @@ func (UnimplementedNoteServiceHandler) CreateNote(context.Context, *connect.Requ
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.NoteService.CreateNote is not implemented"))
 }
 
-func (UnimplementedNoteServiceHandler) DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[v1.DeleteNoteResponse], error) {
+func (UnimplementedNoteServiceHandler) DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.NoteService.DeleteNote is not implemented"))
 }

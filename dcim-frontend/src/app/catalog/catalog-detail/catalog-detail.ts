@@ -178,9 +178,8 @@ export default class CatalogDetailComponent implements OnInit {
     };
     if (form.id) {
       firstValueFrom(this.catalogApi.updatePortDefinition(pd))
-        .then((res) => {
-          const updated = CatalogApiService.mapPortDefinition(res.portDefinition!);
-          this.mutablePortDefs.update((list) => list.map((p) => (p.id === form.id ? updated : p)));
+        .then(() => {
+          this.mutablePortDefs.update((list) => list.map((p) => (p.id === form.id ? pd : p)));
           this.editPortDef.set(null);
         })
         // eslint-disable-next-line no-console
@@ -188,8 +187,7 @@ export default class CatalogDetailComponent implements OnInit {
     } else {
       firstValueFrom(this.catalogApi.createPortDefinition(pd))
         .then((res) => {
-          const created = CatalogApiService.mapPortDefinition(res.portDefinition!);
-          this.mutablePortDefs.update((list) => [...list, created]);
+          this.mutablePortDefs.update((list) => [...list, { ...pd, id: res.portDefinitionId }]);
           this.editPortDef.set(null);
         })
         // eslint-disable-next-line no-console
@@ -251,8 +249,12 @@ export default class CatalogDetailComponent implements OnInit {
     const entryId = this.fCompatEntry()?.nativeElement.value ?? '';
     if (!pdId || !entryId) return;
     firstValueFrom(this.catalogApi.createPortCompatibility(pdId, entryId))
-      .then((res) => {
-        const created = CatalogApiService.mapPortCompatibility(res.compatibility!);
+      .then(() => {
+        const created: PortCompatibility = {
+          id: `${pdId}:${entryId}`,
+          portDefinitionId: pdId,
+          compatibleCatalogEntryId: entryId,
+        };
         this.mutableCompatibilities.update((list) => [...list, created]);
         this.addCompatPortDefId.set(null);
       })

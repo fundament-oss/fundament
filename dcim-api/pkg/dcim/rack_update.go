@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
@@ -18,7 +19,7 @@ import (
 func (s *Server) UpdateRack(
 	ctx context.Context,
 	req *connect.Request[dcimv1.UpdateRackRequest],
-) (*connect.Response[dcimv1.UpdateRackResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	rackID := uuid.MustParse(req.Msg.GetId())
 
 	params := db.RackUpdateParams{
@@ -52,5 +53,5 @@ func (s *Server) UpdateRack(
 
 	s.logger.InfoContext(ctx, "rack updated", "rack_id", rackID)
 
-	return connect.NewResponse(dcimv1.UpdateRackResponse_builder{}.Build()), nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }

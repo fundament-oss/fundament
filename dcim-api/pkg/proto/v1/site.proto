@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -12,11 +13,18 @@ option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v
 
 // Site is a physical data center location (core.sites).
 message Site {
-  string                    id      = 10;
-  string                    name    = 20;
-  string                    address = 30;
-  google.protobuf.Timestamp created = 40;
-  google.protobuf.Timestamp deleted = 50 [features.field_presence = EXPLICIT];
+  string                    id          = 10;
+  string                    name        = 20;
+  string                    full_name   = 30;
+  string                    address     = 40;
+  string                    city        = 50;
+  string                    country     = 60;
+  string                    tier        = 70  [features.field_presence = EXPLICIT];
+  double                    floor_sqm   = 80  [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp established = 90  [features.field_presence = EXPLICIT];
+  string                    status      = 100;
+  google.protobuf.Timestamp created     = 110;
+  google.protobuf.Timestamp deleted     = 120 [features.field_presence = EXPLICIT];
 }
 
 // ── SiteService ───────────────────────────────────────────────────────────────
@@ -25,8 +33,8 @@ service SiteService {
   rpc ListSites (ListSitesRequest)  returns (ListSitesResponse);
   rpc GetSite   (GetSiteRequest)    returns (GetSiteResponse);
   rpc CreateSite(CreateSiteRequest) returns (CreateSiteResponse);
-  rpc UpdateSite(UpdateSiteRequest) returns (UpdateSiteResponse);
-  rpc DeleteSite(DeleteSiteRequest) returns (DeleteSiteResponse);
+  rpc UpdateSite(UpdateSiteRequest) returns (google.protobuf.Empty);
+  rpc DeleteSite(DeleteSiteRequest) returns (google.protobuf.Empty);
 }
 
 message ListSitesRequest {}
@@ -44,8 +52,15 @@ message GetSiteResponse {
 }
 
 message CreateSiteRequest {
-  string name    = 10 [(buf.validate.field).string.min_len = 1];
-  string address = 20;
+  string                    name        = 10 [(buf.validate.field).string.min_len = 1];
+  string                    full_name   = 20;
+  string                    address     = 30;
+  string                    city        = 40;
+  string                    country     = 50;
+  string                    tier        = 60;
+  double                    floor_sqm   = 70;
+  google.protobuf.Timestamp established = 80;
+  string                    status      = 90;
 }
 
 message CreateSiteResponse {
@@ -53,15 +68,18 @@ message CreateSiteResponse {
 }
 
 message UpdateSiteRequest {
-  string id      = 10 [(buf.validate.field).string = {uuid: true}];
-  string name    = 20 [features.field_presence = EXPLICIT];
-  string address = 30 [features.field_presence = EXPLICIT];
+  string                    id          = 10 [(buf.validate.field).string = {uuid: true}];
+  string                    name        = 20 [features.field_presence = EXPLICIT];
+  string                    full_name   = 30 [features.field_presence = EXPLICIT];
+  string                    address     = 40 [features.field_presence = EXPLICIT];
+  string                    city        = 50 [features.field_presence = EXPLICIT];
+  string                    country     = 60 [features.field_presence = EXPLICIT];
+  string                    tier        = 70 [features.field_presence = EXPLICIT];
+  double                    floor_sqm   = 80 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp established = 90 [features.field_presence = EXPLICIT];
+  string                    status      = 100 [features.field_presence = EXPLICIT];
 }
-
-message UpdateSiteResponse {}
 
 message DeleteSiteRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteSiteResponse {}

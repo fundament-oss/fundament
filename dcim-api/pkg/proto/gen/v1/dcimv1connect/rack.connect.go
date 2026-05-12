@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -50,8 +51,8 @@ type RackServiceClient interface {
 	ListRacks(context.Context, *connect.Request[v1.ListRacksRequest]) (*connect.Response[v1.ListRacksResponse], error)
 	GetRack(context.Context, *connect.Request[v1.GetRackRequest]) (*connect.Response[v1.GetRackResponse], error)
 	CreateRack(context.Context, *connect.Request[v1.CreateRackRequest]) (*connect.Response[v1.CreateRackResponse], error)
-	UpdateRack(context.Context, *connect.Request[v1.UpdateRackRequest]) (*connect.Response[v1.UpdateRackResponse], error)
-	DeleteRack(context.Context, *connect.Request[v1.DeleteRackRequest]) (*connect.Response[v1.DeleteRackResponse], error)
+	UpdateRack(context.Context, *connect.Request[v1.UpdateRackRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteRack(context.Context, *connect.Request[v1.DeleteRackRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewRackServiceClient constructs a client for the dcim.v1.RackService service. By default, it uses
@@ -83,13 +84,13 @@ func NewRackServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(rackServiceMethods.ByName("CreateRack")),
 			connect.WithClientOptions(opts...),
 		),
-		updateRack: connect.NewClient[v1.UpdateRackRequest, v1.UpdateRackResponse](
+		updateRack: connect.NewClient[v1.UpdateRackRequest, emptypb.Empty](
 			httpClient,
 			baseURL+RackServiceUpdateRackProcedure,
 			connect.WithSchema(rackServiceMethods.ByName("UpdateRack")),
 			connect.WithClientOptions(opts...),
 		),
-		deleteRack: connect.NewClient[v1.DeleteRackRequest, v1.DeleteRackResponse](
+		deleteRack: connect.NewClient[v1.DeleteRackRequest, emptypb.Empty](
 			httpClient,
 			baseURL+RackServiceDeleteRackProcedure,
 			connect.WithSchema(rackServiceMethods.ByName("DeleteRack")),
@@ -103,8 +104,8 @@ type rackServiceClient struct {
 	listRacks  *connect.Client[v1.ListRacksRequest, v1.ListRacksResponse]
 	getRack    *connect.Client[v1.GetRackRequest, v1.GetRackResponse]
 	createRack *connect.Client[v1.CreateRackRequest, v1.CreateRackResponse]
-	updateRack *connect.Client[v1.UpdateRackRequest, v1.UpdateRackResponse]
-	deleteRack *connect.Client[v1.DeleteRackRequest, v1.DeleteRackResponse]
+	updateRack *connect.Client[v1.UpdateRackRequest, emptypb.Empty]
+	deleteRack *connect.Client[v1.DeleteRackRequest, emptypb.Empty]
 }
 
 // ListRacks calls dcim.v1.RackService.ListRacks.
@@ -123,12 +124,12 @@ func (c *rackServiceClient) CreateRack(ctx context.Context, req *connect.Request
 }
 
 // UpdateRack calls dcim.v1.RackService.UpdateRack.
-func (c *rackServiceClient) UpdateRack(ctx context.Context, req *connect.Request[v1.UpdateRackRequest]) (*connect.Response[v1.UpdateRackResponse], error) {
+func (c *rackServiceClient) UpdateRack(ctx context.Context, req *connect.Request[v1.UpdateRackRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updateRack.CallUnary(ctx, req)
 }
 
 // DeleteRack calls dcim.v1.RackService.DeleteRack.
-func (c *rackServiceClient) DeleteRack(ctx context.Context, req *connect.Request[v1.DeleteRackRequest]) (*connect.Response[v1.DeleteRackResponse], error) {
+func (c *rackServiceClient) DeleteRack(ctx context.Context, req *connect.Request[v1.DeleteRackRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deleteRack.CallUnary(ctx, req)
 }
 
@@ -137,8 +138,8 @@ type RackServiceHandler interface {
 	ListRacks(context.Context, *connect.Request[v1.ListRacksRequest]) (*connect.Response[v1.ListRacksResponse], error)
 	GetRack(context.Context, *connect.Request[v1.GetRackRequest]) (*connect.Response[v1.GetRackResponse], error)
 	CreateRack(context.Context, *connect.Request[v1.CreateRackRequest]) (*connect.Response[v1.CreateRackResponse], error)
-	UpdateRack(context.Context, *connect.Request[v1.UpdateRackRequest]) (*connect.Response[v1.UpdateRackResponse], error)
-	DeleteRack(context.Context, *connect.Request[v1.DeleteRackRequest]) (*connect.Response[v1.DeleteRackResponse], error)
+	UpdateRack(context.Context, *connect.Request[v1.UpdateRackRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteRack(context.Context, *connect.Request[v1.DeleteRackRequest]) (*connect.Response[emptypb.Empty], error)
 }
 
 // NewRackServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -211,10 +212,10 @@ func (UnimplementedRackServiceHandler) CreateRack(context.Context, *connect.Requ
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackService.CreateRack is not implemented"))
 }
 
-func (UnimplementedRackServiceHandler) UpdateRack(context.Context, *connect.Request[v1.UpdateRackRequest]) (*connect.Response[v1.UpdateRackResponse], error) {
+func (UnimplementedRackServiceHandler) UpdateRack(context.Context, *connect.Request[v1.UpdateRackRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackService.UpdateRack is not implemented"))
 }
 
-func (UnimplementedRackServiceHandler) DeleteRack(context.Context, *connect.Request[v1.DeleteRackRequest]) (*connect.Response[v1.DeleteRackResponse], error) {
+func (UnimplementedRackServiceHandler) DeleteRack(context.Context, *connect.Request[v1.DeleteRackRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackService.DeleteRack is not implemented"))
 }

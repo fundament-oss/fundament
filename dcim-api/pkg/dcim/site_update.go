@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
@@ -19,7 +20,7 @@ import (
 func (s *Server) UpdateSite(
 	ctx context.Context,
 	req *connect.Request[dcimv1.UpdateSiteRequest],
-) (*connect.Response[dcimv1.UpdateSiteResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	siteID := uuid.MustParse(req.Msg.GetId())
 
 	params := db.SiteUpdateParams{
@@ -49,5 +50,5 @@ func (s *Server) UpdateSite(
 
 	s.logger.InfoContext(ctx, "site updated", "site_id", siteID)
 
-	return connect.NewResponse(dcimv1.UpdateSiteResponse_builder{}.Build()), nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }

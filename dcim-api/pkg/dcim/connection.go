@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (s *Server) CreatePhysicalConnection(ctx context.Context, req *connect.Request[dcimv1.CreatePhysicalConnectionRequest]) (*connect.Response[dcimv1.CreatePhysicalConnectionResponse], error) {
@@ -15,11 +16,11 @@ func (s *Server) GetPhysicalConnection(ctx context.Context, req *connect.Request
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) UpdatePhysicalConnection(ctx context.Context, req *connect.Request[dcimv1.UpdatePhysicalConnectionRequest]) (*connect.Response[dcimv1.UpdatePhysicalConnectionResponse], error) {
+func (s *Server) UpdatePhysicalConnection(ctx context.Context, req *connect.Request[dcimv1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeletePhysicalConnection(ctx context.Context, req *connect.Request[dcimv1.DeletePhysicalConnectionRequest]) (*connect.Response[dcimv1.DeletePhysicalConnectionResponse], error) {
+func (s *Server) DeletePhysicalConnection(ctx context.Context, req *connect.Request[dcimv1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 

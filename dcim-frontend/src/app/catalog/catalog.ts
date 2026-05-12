@@ -202,9 +202,8 @@ export default class CatalogComponent implements OnInit {
     const entry: CatalogEntry = { id: form.id || '', model, manufacturer, category, specs };
     if (form.id) {
       firstValueFrom(this.catalogApi.updateCatalogEntry(entry))
-        .then((res) => {
-          const updated = CatalogApiService.mapCatalogEntry(res.entry!);
-          this.mutableCatalog.update((list) => list.map((e) => (e.id === form.id ? updated : e)));
+        .then(() => {
+          this.mutableCatalog.update((list) => list.map((e) => (e.id === form.id ? entry : e)));
           this.editEntry.set(null);
         })
         // eslint-disable-next-line no-console
@@ -212,8 +211,7 @@ export default class CatalogComponent implements OnInit {
     } else {
       firstValueFrom(this.catalogApi.createCatalogEntry(entry))
         .then((res) => {
-          const created = CatalogApiService.mapCatalogEntry(res.entry!);
-          this.mutableCatalog.update((list) => [...list, created]);
+          this.mutableCatalog.update((list) => [...list, { ...entry, id: res.catalogEntryId }]);
           this.editEntry.set(null);
         })
         // eslint-disable-next-line no-console

@@ -41,6 +41,13 @@ const (
 	AssetCategory_ASSET_CATEGORY_POWER_SUPPLY   AssetCategory = 120
 	AssetCategory_ASSET_CATEGORY_CABLE_MANAGER  AssetCategory = 130
 	AssetCategory_ASSET_CATEGORY_CONSOLE_SERVER AssetCategory = 140
+	AssetCategory_ASSET_CATEGORY_STORAGE        AssetCategory = 150
+	AssetCategory_ASSET_CATEGORY_COOLING        AssetCategory = 160
+	AssetCategory_ASSET_CATEGORY_FIREWALL       AssetCategory = 170
+	AssetCategory_ASSET_CATEGORY_KVM            AssetCategory = 180
+	AssetCategory_ASSET_CATEGORY_GPU            AssetCategory = 190
+	AssetCategory_ASSET_CATEGORY_TRANSCEIVER    AssetCategory = 200
+	AssetCategory_ASSET_CATEGORY_OTHER          AssetCategory = 210
 )
 
 // Enum value maps for AssetCategory.
@@ -61,6 +68,13 @@ var (
 		120: "ASSET_CATEGORY_POWER_SUPPLY",
 		130: "ASSET_CATEGORY_CABLE_MANAGER",
 		140: "ASSET_CATEGORY_CONSOLE_SERVER",
+		150: "ASSET_CATEGORY_STORAGE",
+		160: "ASSET_CATEGORY_COOLING",
+		170: "ASSET_CATEGORY_FIREWALL",
+		180: "ASSET_CATEGORY_KVM",
+		190: "ASSET_CATEGORY_GPU",
+		200: "ASSET_CATEGORY_TRANSCEIVER",
+		210: "ASSET_CATEGORY_OTHER",
 	}
 	AssetCategory_value = map[string]int32{
 		"ASSET_CATEGORY_UNSPECIFIED":    0,
@@ -78,6 +92,13 @@ var (
 		"ASSET_CATEGORY_POWER_SUPPLY":   120,
 		"ASSET_CATEGORY_CABLE_MANAGER":  130,
 		"ASSET_CATEGORY_CONSOLE_SERVER": 140,
+		"ASSET_CATEGORY_STORAGE":        150,
+		"ASSET_CATEGORY_COOLING":        160,
+		"ASSET_CATEGORY_FIREWALL":       170,
+		"ASSET_CATEGORY_KVM":            180,
+		"ASSET_CATEGORY_GPU":            190,
+		"ASSET_CATEGORY_TRANSCEIVER":    200,
+		"ASSET_CATEGORY_OTHER":          210,
 	}
 )
 
@@ -108,36 +129,33 @@ type AssetStatus int32
 
 const (
 	AssetStatus_ASSET_STATUS_UNSPECIFIED    AssetStatus = 0
-	AssetStatus_ASSET_STATUS_IN_STOCK       AssetStatus = 10
+	AssetStatus_ASSET_STATUS_AVAILABLE      AssetStatus = 10
 	AssetStatus_ASSET_STATUS_DEPLOYED       AssetStatus = 20
-	AssetStatus_ASSET_STATUS_AVAILABLE      AssetStatus = 30
-	AssetStatus_ASSET_STATUS_RMA            AssetStatus = 40
-	AssetStatus_ASSET_STATUS_DECOMMISSIONED AssetStatus = 50
-	AssetStatus_ASSET_STATUS_IN_TRANSIT     AssetStatus = 60
-	AssetStatus_ASSET_STATUS_RESERVED       AssetStatus = 70
+	AssetStatus_ASSET_STATUS_NEEDS_REPAIR   AssetStatus = 30
+	AssetStatus_ASSET_STATUS_ON_ORDER       AssetStatus = 40
+	AssetStatus_ASSET_STATUS_REQUESTED      AssetStatus = 50
+	AssetStatus_ASSET_STATUS_DECOMMISSIONED AssetStatus = 60
 )
 
 // Enum value maps for AssetStatus.
 var (
 	AssetStatus_name = map[int32]string{
 		0:  "ASSET_STATUS_UNSPECIFIED",
-		10: "ASSET_STATUS_IN_STOCK",
+		10: "ASSET_STATUS_AVAILABLE",
 		20: "ASSET_STATUS_DEPLOYED",
-		30: "ASSET_STATUS_AVAILABLE",
-		40: "ASSET_STATUS_RMA",
-		50: "ASSET_STATUS_DECOMMISSIONED",
-		60: "ASSET_STATUS_IN_TRANSIT",
-		70: "ASSET_STATUS_RESERVED",
+		30: "ASSET_STATUS_NEEDS_REPAIR",
+		40: "ASSET_STATUS_ON_ORDER",
+		50: "ASSET_STATUS_REQUESTED",
+		60: "ASSET_STATUS_DECOMMISSIONED",
 	}
 	AssetStatus_value = map[string]int32{
 		"ASSET_STATUS_UNSPECIFIED":    0,
-		"ASSET_STATUS_IN_STOCK":       10,
+		"ASSET_STATUS_AVAILABLE":      10,
 		"ASSET_STATUS_DEPLOYED":       20,
-		"ASSET_STATUS_AVAILABLE":      30,
-		"ASSET_STATUS_RMA":            40,
-		"ASSET_STATUS_DECOMMISSIONED": 50,
-		"ASSET_STATUS_IN_TRANSIT":     60,
-		"ASSET_STATUS_RESERVED":       70,
+		"ASSET_STATUS_NEEDS_REPAIR":   30,
+		"ASSET_STATUS_ON_ORDER":       40,
+		"ASSET_STATUS_REQUESTED":      50,
+		"ASSET_STATUS_DECOMMISSIONED": 60,
 	}
 )
 
@@ -167,15 +185,15 @@ func (x AssetStatus) Number() protoreflect.EnumNumber {
 type AssetEventType int32
 
 const (
-	AssetEventType_ASSET_EVENT_TYPE_UNSPECIFIED    AssetEventType = 0
-	AssetEventType_ASSET_EVENT_TYPE_RECEIVED       AssetEventType = 10
-	AssetEventType_ASSET_EVENT_TYPE_DEPLOYED       AssetEventType = 20
-	AssetEventType_ASSET_EVENT_TYPE_MOVED          AssetEventType = 30
-	AssetEventType_ASSET_EVENT_TYPE_RMA_SENT       AssetEventType = 40
-	AssetEventType_ASSET_EVENT_TYPE_RMA_RECEIVED   AssetEventType = 50
-	AssetEventType_ASSET_EVENT_TYPE_DECOMMISSIONED AssetEventType = 60
-	AssetEventType_ASSET_EVENT_TYPE_RESERVED       AssetEventType = 70
-	AssetEventType_ASSET_EVENT_TYPE_NOTE           AssetEventType = 80
+	AssetEventType_ASSET_EVENT_TYPE_UNSPECIFIED     AssetEventType = 0
+	AssetEventType_ASSET_EVENT_TYPE_RECEIVED        AssetEventType = 10
+	AssetEventType_ASSET_EVENT_TYPE_DEPLOYED        AssetEventType = 20
+	AssetEventType_ASSET_EVENT_TYPE_MOVED           AssetEventType = 30
+	AssetEventType_ASSET_EVENT_TYPE_REPAIR_SENT     AssetEventType = 40
+	AssetEventType_ASSET_EVENT_TYPE_REPAIR_RECEIVED AssetEventType = 50
+	AssetEventType_ASSET_EVENT_TYPE_DECOMMISSIONED  AssetEventType = 60
+	AssetEventType_ASSET_EVENT_TYPE_REQUESTED       AssetEventType = 70
+	AssetEventType_ASSET_EVENT_TYPE_NOTE            AssetEventType = 80
 )
 
 // Enum value maps for AssetEventType.
@@ -185,22 +203,22 @@ var (
 		10: "ASSET_EVENT_TYPE_RECEIVED",
 		20: "ASSET_EVENT_TYPE_DEPLOYED",
 		30: "ASSET_EVENT_TYPE_MOVED",
-		40: "ASSET_EVENT_TYPE_RMA_SENT",
-		50: "ASSET_EVENT_TYPE_RMA_RECEIVED",
+		40: "ASSET_EVENT_TYPE_REPAIR_SENT",
+		50: "ASSET_EVENT_TYPE_REPAIR_RECEIVED",
 		60: "ASSET_EVENT_TYPE_DECOMMISSIONED",
-		70: "ASSET_EVENT_TYPE_RESERVED",
+		70: "ASSET_EVENT_TYPE_REQUESTED",
 		80: "ASSET_EVENT_TYPE_NOTE",
 	}
 	AssetEventType_value = map[string]int32{
-		"ASSET_EVENT_TYPE_UNSPECIFIED":    0,
-		"ASSET_EVENT_TYPE_RECEIVED":       10,
-		"ASSET_EVENT_TYPE_DEPLOYED":       20,
-		"ASSET_EVENT_TYPE_MOVED":          30,
-		"ASSET_EVENT_TYPE_RMA_SENT":       40,
-		"ASSET_EVENT_TYPE_RMA_RECEIVED":   50,
-		"ASSET_EVENT_TYPE_DECOMMISSIONED": 60,
-		"ASSET_EVENT_TYPE_RESERVED":       70,
-		"ASSET_EVENT_TYPE_NOTE":           80,
+		"ASSET_EVENT_TYPE_UNSPECIFIED":     0,
+		"ASSET_EVENT_TYPE_RECEIVED":        10,
+		"ASSET_EVENT_TYPE_DEPLOYED":        20,
+		"ASSET_EVENT_TYPE_MOVED":           30,
+		"ASSET_EVENT_TYPE_REPAIR_SENT":     40,
+		"ASSET_EVENT_TYPE_REPAIR_RECEIVED": 50,
+		"ASSET_EVENT_TYPE_DECOMMISSIONED":  60,
+		"ASSET_EVENT_TYPE_REQUESTED":       70,
+		"ASSET_EVENT_TYPE_NOTE":            80,
 	}
 )
 
@@ -396,6 +414,7 @@ const (
 	NoteEntityType_NOTE_ENTITY_TYPE_LOGICAL_DESIGN      NoteEntityType = 100
 	NoteEntityType_NOTE_ENTITY_TYPE_LOGICAL_DEVICE      NoteEntityType = 110
 	NoteEntityType_NOTE_ENTITY_TYPE_LOGICAL_CONNECTION  NoteEntityType = 120
+	NoteEntityType_NOTE_ENTITY_TYPE_TASK                NoteEntityType = 130
 )
 
 // Enum value maps for NoteEntityType.
@@ -414,6 +433,7 @@ var (
 		100: "NOTE_ENTITY_TYPE_LOGICAL_DESIGN",
 		110: "NOTE_ENTITY_TYPE_LOGICAL_DEVICE",
 		120: "NOTE_ENTITY_TYPE_LOGICAL_CONNECTION",
+		130: "NOTE_ENTITY_TYPE_TASK",
 	}
 	NoteEntityType_value = map[string]int32{
 		"NOTE_ENTITY_TYPE_UNSPECIFIED":         0,
@@ -429,6 +449,7 @@ var (
 		"NOTE_ENTITY_TYPE_LOGICAL_DESIGN":      100,
 		"NOTE_ENTITY_TYPE_LOGICAL_DEVICE":      110,
 		"NOTE_ENTITY_TYPE_LOGICAL_CONNECTION":  120,
+		"NOTE_ENTITY_TYPE_TASK":                130,
 	}
 )
 
@@ -652,7 +673,7 @@ const file_v1_common_proto_rawDesc = "" +
 	"event_type\x18\x1e \x01(\x0e2\x17.dcim.v1.AssetEventTypeR\teventType\x12\x18\n" +
 	"\adetails\x18( \x01(\tR\adetails\x12!\n" +
 	"\fperformed_by\x182 \x01(\tR\vperformedBy\x124\n" +
-	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated*\xb5\x03\n" +
+	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated*\xfb\x04\n" +
 	"\rAssetCategory\x12\x1e\n" +
 	"\x1aASSET_CATEGORY_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15ASSET_CATEGORY_SERVER\x10\n" +
@@ -669,27 +690,33 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x16ASSET_CATEGORY_ADAPTER\x10n\x12\x1f\n" +
 	"\x1bASSET_CATEGORY_POWER_SUPPLY\x10x\x12!\n" +
 	"\x1cASSET_CATEGORY_CABLE_MANAGER\x10\x82\x01\x12\"\n" +
-	"\x1dASSET_CATEGORY_CONSOLE_SERVER\x10\x8c\x01*\xec\x01\n" +
+	"\x1dASSET_CATEGORY_CONSOLE_SERVER\x10\x8c\x01\x12\x1b\n" +
+	"\x16ASSET_CATEGORY_STORAGE\x10\x96\x01\x12\x1b\n" +
+	"\x16ASSET_CATEGORY_COOLING\x10\xa0\x01\x12\x1c\n" +
+	"\x17ASSET_CATEGORY_FIREWALL\x10\xaa\x01\x12\x17\n" +
+	"\x12ASSET_CATEGORY_KVM\x10\xb4\x01\x12\x17\n" +
+	"\x12ASSET_CATEGORY_GPU\x10\xbe\x01\x12\x1f\n" +
+	"\x1aASSET_CATEGORY_TRANSCEIVER\x10\xc8\x01\x12\x19\n" +
+	"\x14ASSET_CATEGORY_OTHER\x10\xd2\x01*\xd9\x01\n" +
 	"\vAssetStatus\x12\x1c\n" +
-	"\x18ASSET_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
-	"\x15ASSET_STATUS_IN_STOCK\x10\n" +
+	"\x18ASSET_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16ASSET_STATUS_AVAILABLE\x10\n" +
 	"\x12\x19\n" +
-	"\x15ASSET_STATUS_DEPLOYED\x10\x14\x12\x1a\n" +
-	"\x16ASSET_STATUS_AVAILABLE\x10\x1e\x12\x14\n" +
-	"\x10ASSET_STATUS_RMA\x10(\x12\x1f\n" +
-	"\x1bASSET_STATUS_DECOMMISSIONED\x102\x12\x1b\n" +
-	"\x17ASSET_STATUS_IN_TRANSIT\x10<\x12\x19\n" +
-	"\x15ASSET_STATUS_RESERVED\x10F*\xad\x02\n" +
+	"\x15ASSET_STATUS_DEPLOYED\x10\x14\x12\x1d\n" +
+	"\x19ASSET_STATUS_NEEDS_REPAIR\x10\x1e\x12\x19\n" +
+	"\x15ASSET_STATUS_ON_ORDER\x10(\x12\x1a\n" +
+	"\x16ASSET_STATUS_REQUESTED\x102\x12\x1f\n" +
+	"\x1bASSET_STATUS_DECOMMISSIONED\x10<*\xb4\x02\n" +
 	"\x0eAssetEventType\x12 \n" +
 	"\x1cASSET_EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19ASSET_EVENT_TYPE_RECEIVED\x10\n" +
 	"\x12\x1d\n" +
 	"\x19ASSET_EVENT_TYPE_DEPLOYED\x10\x14\x12\x1a\n" +
-	"\x16ASSET_EVENT_TYPE_MOVED\x10\x1e\x12\x1d\n" +
-	"\x19ASSET_EVENT_TYPE_RMA_SENT\x10(\x12!\n" +
-	"\x1dASSET_EVENT_TYPE_RMA_RECEIVED\x102\x12#\n" +
-	"\x1fASSET_EVENT_TYPE_DECOMMISSIONED\x10<\x12\x1d\n" +
-	"\x19ASSET_EVENT_TYPE_RESERVED\x10F\x12\x19\n" +
+	"\x16ASSET_EVENT_TYPE_MOVED\x10\x1e\x12 \n" +
+	"\x1cASSET_EVENT_TYPE_REPAIR_SENT\x10(\x12$\n" +
+	" ASSET_EVENT_TYPE_REPAIR_RECEIVED\x102\x12#\n" +
+	"\x1fASSET_EVENT_TYPE_DECOMMISSIONED\x10<\x12\x1e\n" +
+	"\x1aASSET_EVENT_TYPE_REQUESTED\x10F\x12\x19\n" +
 	"\x15ASSET_EVENT_TYPE_NOTE\x10P*|\n" +
 	"\fRackSlotType\x12\x1e\n" +
 	"\x1aRACK_SLOT_TYPE_UNSPECIFIED\x10\x00\x12\x17\n" +
@@ -711,7 +738,7 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x11PORT_DIRECTION_IN\x10\n" +
 	"\x12\x16\n" +
 	"\x12PORT_DIRECTION_OUT\x10\x14\x12\x18\n" +
-	"\x14PORT_DIRECTION_BIDIR\x10\x1e*\xc6\x03\n" +
+	"\x14PORT_DIRECTION_BIDIR\x10\x1e*\xe2\x03\n" +
 	"\x0eNoteEntityType\x12 \n" +
 	"\x1cNOTE_ENTITY_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fNOTE_ENTITY_TYPE_DEVICE_CATALOG\x10\n" +
@@ -726,7 +753,8 @@ const file_v1_common_proto_rawDesc = "" +
 	"$NOTE_ENTITY_TYPE_PHYSICAL_CONNECTION\x10Z\x12#\n" +
 	"\x1fNOTE_ENTITY_TYPE_LOGICAL_DESIGN\x10d\x12#\n" +
 	"\x1fNOTE_ENTITY_TYPE_LOGICAL_DEVICE\x10n\x12'\n" +
-	"#NOTE_ENTITY_TYPE_LOGICAL_CONNECTION\x10x*`\n" +
+	"#NOTE_ENTITY_TYPE_LOGICAL_CONNECTION\x10x\x12\x1a\n" +
+	"\x15NOTE_ENTITY_TYPE_TASK\x10\x82\x01*`\n" +
 	"\rSortDirection\x12\x1e\n" +
 	"\x1aSORT_DIRECTION_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12SORT_DIRECTION_ASC\x10\n" +

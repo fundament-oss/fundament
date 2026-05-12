@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Device catalog entries
@@ -21,11 +22,11 @@ func (s *Server) CreateCatalogEntry(ctx context.Context, req *connect.Request[dc
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) UpdateCatalogEntry(ctx context.Context, req *connect.Request[dcimv1.UpdateCatalogEntryRequest]) (*connect.Response[dcimv1.UpdateCatalogEntryResponse], error) {
+func (s *Server) UpdateCatalogEntry(ctx context.Context, req *connect.Request[dcimv1.UpdateCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeleteCatalogEntry(ctx context.Context, req *connect.Request[dcimv1.DeleteCatalogEntryRequest]) (*connect.Response[dcimv1.DeleteCatalogEntryResponse], error) {
+func (s *Server) DeleteCatalogEntry(ctx context.Context, req *connect.Request[dcimv1.DeleteCatalogEntryRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
@@ -47,11 +48,11 @@ func (s *Server) CreatePortDefinition(ctx context.Context, req *connect.Request[
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) UpdatePortDefinition(ctx context.Context, req *connect.Request[dcimv1.UpdatePortDefinitionRequest]) (*connect.Response[dcimv1.UpdatePortDefinitionResponse], error) {
+func (s *Server) UpdatePortDefinition(ctx context.Context, req *connect.Request[dcimv1.UpdatePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeletePortDefinition(ctx context.Context, req *connect.Request[dcimv1.DeletePortDefinitionRequest]) (*connect.Response[dcimv1.DeletePortDefinitionResponse], error) {
+func (s *Server) DeletePortDefinition(ctx context.Context, req *connect.Request[dcimv1.DeletePortDefinitionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
@@ -61,10 +62,10 @@ func (s *Server) ListPortCompatibilities(ctx context.Context, req *connect.Reque
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) CreatePortCompatibility(ctx context.Context, req *connect.Request[dcimv1.CreatePortCompatibilityRequest]) (*connect.Response[dcimv1.CreatePortCompatibilityResponse], error) {
+func (s *Server) CreatePortCompatibility(ctx context.Context, req *connect.Request[dcimv1.CreatePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
 
-func (s *Server) DeletePortCompatibility(ctx context.Context, req *connect.Request[dcimv1.DeletePortCompatibilityRequest]) (*connect.Response[dcimv1.DeletePortCompatibilityResponse], error) {
+func (s *Server) DeletePortCompatibility(ctx context.Context, req *connect.Request[dcimv1.DeletePortCompatibilityRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }

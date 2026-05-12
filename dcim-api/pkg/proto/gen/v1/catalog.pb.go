@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -1034,10 +1035,10 @@ func (b0 CreateCatalogEntryRequest_builder) Build() *CreateCatalogEntryRequest {
 }
 
 type CreateCatalogEntryResponse struct {
-	state            protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Entry *DeviceCatalog         `protobuf:"bytes,10,opt,name=entry"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_CatalogEntryId string                 `protobuf:"bytes,10,opt,name=catalog_entry_id,json=catalogEntryId"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *CreateCatalogEntryResponse) Reset() {
@@ -1065,39 +1066,28 @@ func (x *CreateCatalogEntryResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *CreateCatalogEntryResponse) GetEntry() *DeviceCatalog {
+func (x *CreateCatalogEntryResponse) GetCatalogEntryId() string {
 	if x != nil {
-		return x.xxx_hidden_Entry
+		return x.xxx_hidden_CatalogEntryId
 	}
-	return nil
+	return ""
 }
 
-func (x *CreateCatalogEntryResponse) SetEntry(v *DeviceCatalog) {
-	x.xxx_hidden_Entry = v
-}
-
-func (x *CreateCatalogEntryResponse) HasEntry() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Entry != nil
-}
-
-func (x *CreateCatalogEntryResponse) ClearEntry() {
-	x.xxx_hidden_Entry = nil
+func (x *CreateCatalogEntryResponse) SetCatalogEntryId(v string) {
+	x.xxx_hidden_CatalogEntryId = v
 }
 
 type CreateCatalogEntryResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Entry *DeviceCatalog
+	CatalogEntryId string
 }
 
 func (b0 CreateCatalogEntryResponse_builder) Build() *CreateCatalogEntryResponse {
 	m0 := &CreateCatalogEntryResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_Entry = b.Entry
+	x.xxx_hidden_CatalogEntryId = b.CatalogEntryId
 	return m0
 }
 
@@ -1410,74 +1400,6 @@ func (b0 UpdateCatalogEntryRequest_builder) Build() *UpdateCatalogEntryRequest {
 	return m0
 }
 
-type UpdateCatalogEntryResponse struct {
-	state            protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Entry *DeviceCatalog         `protobuf:"bytes,10,opt,name=entry"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *UpdateCatalogEntryResponse) Reset() {
-	*x = UpdateCatalogEntryResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateCatalogEntryResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateCatalogEntryResponse) ProtoMessage() {}
-
-func (x *UpdateCatalogEntryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdateCatalogEntryResponse) GetEntry() *DeviceCatalog {
-	if x != nil {
-		return x.xxx_hidden_Entry
-	}
-	return nil
-}
-
-func (x *UpdateCatalogEntryResponse) SetEntry(v *DeviceCatalog) {
-	x.xxx_hidden_Entry = v
-}
-
-func (x *UpdateCatalogEntryResponse) HasEntry() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Entry != nil
-}
-
-func (x *UpdateCatalogEntryResponse) ClearEntry() {
-	x.xxx_hidden_Entry = nil
-}
-
-type UpdateCatalogEntryResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Entry *DeviceCatalog
-}
-
-func (b0 UpdateCatalogEntryResponse_builder) Build() *UpdateCatalogEntryResponse {
-	m0 := &UpdateCatalogEntryResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Entry = b.Entry
-	return m0
-}
-
 type DeleteCatalogEntryRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -1487,7 +1409,7 @@ type DeleteCatalogEntryRequest struct {
 
 func (x *DeleteCatalogEntryRequest) Reset() {
 	*x = DeleteCatalogEntryRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[11]
+	mi := &file_v1_catalog_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1499,7 +1421,7 @@ func (x *DeleteCatalogEntryRequest) String() string {
 func (*DeleteCatalogEntryRequest) ProtoMessage() {}
 
 func (x *DeleteCatalogEntryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[11]
+	mi := &file_v1_catalog_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1535,49 +1457,6 @@ func (b0 DeleteCatalogEntryRequest_builder) Build() *DeleteCatalogEntryRequest {
 	return m0
 }
 
-type DeleteCatalogEntryResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteCatalogEntryResponse) Reset() {
-	*x = DeleteCatalogEntryResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteCatalogEntryResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteCatalogEntryResponse) ProtoMessage() {}
-
-func (x *DeleteCatalogEntryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteCatalogEntryResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteCatalogEntryResponse_builder) Build() *DeleteCatalogEntryResponse {
-	m0 := &DeleteCatalogEntryResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type ListAssetsByCatalogEntryRequest struct {
 	state                      protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_DeviceCatalogId string                 `protobuf:"bytes,10,opt,name=device_catalog_id,json=deviceCatalogId"`
@@ -1587,7 +1466,7 @@ type ListAssetsByCatalogEntryRequest struct {
 
 func (x *ListAssetsByCatalogEntryRequest) Reset() {
 	*x = ListAssetsByCatalogEntryRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[13]
+	mi := &file_v1_catalog_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1599,7 +1478,7 @@ func (x *ListAssetsByCatalogEntryRequest) String() string {
 func (*ListAssetsByCatalogEntryRequest) ProtoMessage() {}
 
 func (x *ListAssetsByCatalogEntryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[13]
+	mi := &file_v1_catalog_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1644,7 +1523,7 @@ type ListAssetsByCatalogEntryResponse struct {
 
 func (x *ListAssetsByCatalogEntryResponse) Reset() {
 	*x = ListAssetsByCatalogEntryResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[14]
+	mi := &file_v1_catalog_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1656,7 +1535,7 @@ func (x *ListAssetsByCatalogEntryResponse) String() string {
 func (*ListAssetsByCatalogEntryResponse) ProtoMessage() {}
 
 func (x *ListAssetsByCatalogEntryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[14]
+	mi := &file_v1_catalog_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1703,7 +1582,7 @@ type ListPortDefinitionsRequest struct {
 
 func (x *ListPortDefinitionsRequest) Reset() {
 	*x = ListPortDefinitionsRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[15]
+	mi := &file_v1_catalog_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1715,7 +1594,7 @@ func (x *ListPortDefinitionsRequest) String() string {
 func (*ListPortDefinitionsRequest) ProtoMessage() {}
 
 func (x *ListPortDefinitionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[15]
+	mi := &file_v1_catalog_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1760,7 +1639,7 @@ type ListPortDefinitionsResponse struct {
 
 func (x *ListPortDefinitionsResponse) Reset() {
 	*x = ListPortDefinitionsResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[16]
+	mi := &file_v1_catalog_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1772,7 +1651,7 @@ func (x *ListPortDefinitionsResponse) String() string {
 func (*ListPortDefinitionsResponse) ProtoMessage() {}
 
 func (x *ListPortDefinitionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[16]
+	mi := &file_v1_catalog_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1819,7 +1698,7 @@ type GetPortDefinitionRequest struct {
 
 func (x *GetPortDefinitionRequest) Reset() {
 	*x = GetPortDefinitionRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[17]
+	mi := &file_v1_catalog_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1831,7 +1710,7 @@ func (x *GetPortDefinitionRequest) String() string {
 func (*GetPortDefinitionRequest) ProtoMessage() {}
 
 func (x *GetPortDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[17]
+	mi := &file_v1_catalog_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1876,7 +1755,7 @@ type GetPortDefinitionResponse struct {
 
 func (x *GetPortDefinitionResponse) Reset() {
 	*x = GetPortDefinitionResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[18]
+	mi := &file_v1_catalog_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1888,7 +1767,7 @@ func (x *GetPortDefinitionResponse) String() string {
 func (*GetPortDefinitionResponse) ProtoMessage() {}
 
 func (x *GetPortDefinitionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[18]
+	mi := &file_v1_catalog_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1953,7 +1832,7 @@ type CreatePortDefinitionRequest struct {
 
 func (x *CreatePortDefinitionRequest) Reset() {
 	*x = CreatePortDefinitionRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[19]
+	mi := &file_v1_catalog_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1965,7 +1844,7 @@ func (x *CreatePortDefinitionRequest) String() string {
 func (*CreatePortDefinitionRequest) ProtoMessage() {}
 
 func (x *CreatePortDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[19]
+	mi := &file_v1_catalog_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2128,15 +2007,15 @@ func (b0 CreatePortDefinitionRequest_builder) Build() *CreatePortDefinitionReque
 }
 
 type CreatePortDefinitionResponse struct {
-	state                     protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_PortDefinition *PortDefinition        `protobuf:"bytes,10,opt,name=port_definition,json=portDefinition"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PortDefinitionId string                 `protobuf:"bytes,10,opt,name=port_definition_id,json=portDefinitionId"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *CreatePortDefinitionResponse) Reset() {
 	*x = CreatePortDefinitionResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[20]
+	mi := &file_v1_catalog_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2148,7 +2027,7 @@ func (x *CreatePortDefinitionResponse) String() string {
 func (*CreatePortDefinitionResponse) ProtoMessage() {}
 
 func (x *CreatePortDefinitionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[20]
+	mi := &file_v1_catalog_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2159,39 +2038,28 @@ func (x *CreatePortDefinitionResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *CreatePortDefinitionResponse) GetPortDefinition() *PortDefinition {
+func (x *CreatePortDefinitionResponse) GetPortDefinitionId() string {
 	if x != nil {
-		return x.xxx_hidden_PortDefinition
+		return x.xxx_hidden_PortDefinitionId
 	}
-	return nil
+	return ""
 }
 
-func (x *CreatePortDefinitionResponse) SetPortDefinition(v *PortDefinition) {
-	x.xxx_hidden_PortDefinition = v
-}
-
-func (x *CreatePortDefinitionResponse) HasPortDefinition() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_PortDefinition != nil
-}
-
-func (x *CreatePortDefinitionResponse) ClearPortDefinition() {
-	x.xxx_hidden_PortDefinition = nil
+func (x *CreatePortDefinitionResponse) SetPortDefinitionId(v string) {
+	x.xxx_hidden_PortDefinitionId = v
 }
 
 type CreatePortDefinitionResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	PortDefinition *PortDefinition
+	PortDefinitionId string
 }
 
 func (b0 CreatePortDefinitionResponse_builder) Build() *CreatePortDefinitionResponse {
 	m0 := &CreatePortDefinitionResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_PortDefinition = b.PortDefinition
+	x.xxx_hidden_PortDefinitionId = b.PortDefinitionId
 	return m0
 }
 
@@ -2213,7 +2081,7 @@ type UpdatePortDefinitionRequest struct {
 
 func (x *UpdatePortDefinitionRequest) Reset() {
 	*x = UpdatePortDefinitionRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[21]
+	mi := &file_v1_catalog_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2225,7 +2093,7 @@ func (x *UpdatePortDefinitionRequest) String() string {
 func (*UpdatePortDefinitionRequest) ProtoMessage() {}
 
 func (x *UpdatePortDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[21]
+	mi := &file_v1_catalog_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2477,74 +2345,6 @@ func (b0 UpdatePortDefinitionRequest_builder) Build() *UpdatePortDefinitionReque
 	return m0
 }
 
-type UpdatePortDefinitionResponse struct {
-	state                     protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_PortDefinition *PortDefinition        `protobuf:"bytes,10,opt,name=port_definition,json=portDefinition"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
-}
-
-func (x *UpdatePortDefinitionResponse) Reset() {
-	*x = UpdatePortDefinitionResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[22]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdatePortDefinitionResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdatePortDefinitionResponse) ProtoMessage() {}
-
-func (x *UpdatePortDefinitionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[22]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *UpdatePortDefinitionResponse) GetPortDefinition() *PortDefinition {
-	if x != nil {
-		return x.xxx_hidden_PortDefinition
-	}
-	return nil
-}
-
-func (x *UpdatePortDefinitionResponse) SetPortDefinition(v *PortDefinition) {
-	x.xxx_hidden_PortDefinition = v
-}
-
-func (x *UpdatePortDefinitionResponse) HasPortDefinition() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_PortDefinition != nil
-}
-
-func (x *UpdatePortDefinitionResponse) ClearPortDefinition() {
-	x.xxx_hidden_PortDefinition = nil
-}
-
-type UpdatePortDefinitionResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	PortDefinition *PortDefinition
-}
-
-func (b0 UpdatePortDefinitionResponse_builder) Build() *UpdatePortDefinitionResponse {
-	m0 := &UpdatePortDefinitionResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_PortDefinition = b.PortDefinition
-	return m0
-}
-
 type DeletePortDefinitionRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -2554,7 +2354,7 @@ type DeletePortDefinitionRequest struct {
 
 func (x *DeletePortDefinitionRequest) Reset() {
 	*x = DeletePortDefinitionRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[23]
+	mi := &file_v1_catalog_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2566,7 +2366,7 @@ func (x *DeletePortDefinitionRequest) String() string {
 func (*DeletePortDefinitionRequest) ProtoMessage() {}
 
 func (x *DeletePortDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[23]
+	mi := &file_v1_catalog_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2602,49 +2402,6 @@ func (b0 DeletePortDefinitionRequest_builder) Build() *DeletePortDefinitionReque
 	return m0
 }
 
-type DeletePortDefinitionResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeletePortDefinitionResponse) Reset() {
-	*x = DeletePortDefinitionResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[24]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeletePortDefinitionResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeletePortDefinitionResponse) ProtoMessage() {}
-
-func (x *DeletePortDefinitionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[24]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeletePortDefinitionResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeletePortDefinitionResponse_builder) Build() *DeletePortDefinitionResponse {
-	m0 := &DeletePortDefinitionResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type ListPortCompatibilitiesRequest struct {
 	state                       protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_PortDefinitionId string                 `protobuf:"bytes,10,opt,name=port_definition_id,json=portDefinitionId"`
@@ -2654,7 +2411,7 @@ type ListPortCompatibilitiesRequest struct {
 
 func (x *ListPortCompatibilitiesRequest) Reset() {
 	*x = ListPortCompatibilitiesRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[25]
+	mi := &file_v1_catalog_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2666,7 +2423,7 @@ func (x *ListPortCompatibilitiesRequest) String() string {
 func (*ListPortCompatibilitiesRequest) ProtoMessage() {}
 
 func (x *ListPortCompatibilitiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[25]
+	mi := &file_v1_catalog_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2711,7 +2468,7 @@ type ListPortCompatibilitiesResponse struct {
 
 func (x *ListPortCompatibilitiesResponse) Reset() {
 	*x = ListPortCompatibilitiesResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[26]
+	mi := &file_v1_catalog_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2723,7 +2480,7 @@ func (x *ListPortCompatibilitiesResponse) String() string {
 func (*ListPortCompatibilitiesResponse) ProtoMessage() {}
 
 func (x *ListPortCompatibilitiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[26]
+	mi := &file_v1_catalog_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2772,7 +2529,7 @@ type CreatePortCompatibilityRequest struct {
 
 func (x *CreatePortCompatibilityRequest) Reset() {
 	*x = CreatePortCompatibilityRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[27]
+	mi := &file_v1_catalog_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2784,7 +2541,7 @@ func (x *CreatePortCompatibilityRequest) String() string {
 func (*CreatePortCompatibilityRequest) ProtoMessage() {}
 
 func (x *CreatePortCompatibilityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[27]
+	mi := &file_v1_catalog_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2846,74 +2603,6 @@ func (b0 CreatePortCompatibilityRequest_builder) Build() *CreatePortCompatibilit
 	return m0
 }
 
-type CreatePortCompatibilityResponse struct {
-	state                    protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Compatibility *PortCompatibility     `protobuf:"bytes,10,opt,name=compatibility"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
-}
-
-func (x *CreatePortCompatibilityResponse) Reset() {
-	*x = CreatePortCompatibilityResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[28]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreatePortCompatibilityResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreatePortCompatibilityResponse) ProtoMessage() {}
-
-func (x *CreatePortCompatibilityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[28]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *CreatePortCompatibilityResponse) GetCompatibility() *PortCompatibility {
-	if x != nil {
-		return x.xxx_hidden_Compatibility
-	}
-	return nil
-}
-
-func (x *CreatePortCompatibilityResponse) SetCompatibility(v *PortCompatibility) {
-	x.xxx_hidden_Compatibility = v
-}
-
-func (x *CreatePortCompatibilityResponse) HasCompatibility() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Compatibility != nil
-}
-
-func (x *CreatePortCompatibilityResponse) ClearCompatibility() {
-	x.xxx_hidden_Compatibility = nil
-}
-
-type CreatePortCompatibilityResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Compatibility *PortCompatibility
-}
-
-func (b0 CreatePortCompatibilityResponse_builder) Build() *CreatePortCompatibilityResponse {
-	m0 := &CreatePortCompatibilityResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Compatibility = b.Compatibility
-	return m0
-}
-
 type DeletePortCompatibilityRequest struct {
 	state                          protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_PortDefinitionId    string                 `protobuf:"bytes,10,opt,name=port_definition_id,json=portDefinitionId"`
@@ -2924,7 +2613,7 @@ type DeletePortCompatibilityRequest struct {
 
 func (x *DeletePortCompatibilityRequest) Reset() {
 	*x = DeletePortCompatibilityRequest{}
-	mi := &file_v1_catalog_proto_msgTypes[29]
+	mi := &file_v1_catalog_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2936,7 +2625,7 @@ func (x *DeletePortCompatibilityRequest) String() string {
 func (*DeletePortCompatibilityRequest) ProtoMessage() {}
 
 func (x *DeletePortCompatibilityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[29]
+	mi := &file_v1_catalog_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2985,63 +2674,20 @@ func (b0 DeletePortCompatibilityRequest_builder) Build() *DeletePortCompatibilit
 	return m0
 }
 
-type DeletePortCompatibilityResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeletePortCompatibilityResponse) Reset() {
-	*x = DeletePortCompatibilityResponse{}
-	mi := &file_v1_catalog_proto_msgTypes[30]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeletePortCompatibilityResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeletePortCompatibilityResponse) ProtoMessage() {}
-
-func (x *DeletePortCompatibilityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[30]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeletePortCompatibilityResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeletePortCompatibilityResponse_builder) Build() *DeletePortCompatibilityResponse {
-	m0 := &DeletePortCompatibilityResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type ListCatalogResponse_CatalogSummary struct {
-	state               protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Entry    *DeviceCatalog         `protobuf:"bytes,10,opt,name=entry"`
-	xxx_hidden_Total    int32                  `protobuf:"varint,20,opt,name=total"`
-	xxx_hidden_Deployed int32                  `protobuf:"varint,30,opt,name=deployed"`
-	xxx_hidden_InStock  int32                  `protobuf:"varint,40,opt,name=in_stock,json=inStock"`
-	xxx_hidden_Issues   int32                  `protobuf:"varint,50,opt,name=issues"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Entry       *DeviceCatalog         `protobuf:"bytes,10,opt,name=entry"`
+	xxx_hidden_Total       int32                  `protobuf:"varint,20,opt,name=total"`
+	xxx_hidden_Deployed    int32                  `protobuf:"varint,30,opt,name=deployed"`
+	xxx_hidden_Available   int32                  `protobuf:"varint,40,opt,name=available"`
+	xxx_hidden_NeedsRepair int32                  `protobuf:"varint,50,opt,name=needs_repair,json=needsRepair"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ListCatalogResponse_CatalogSummary) Reset() {
 	*x = ListCatalogResponse_CatalogSummary{}
-	mi := &file_v1_catalog_proto_msgTypes[32]
+	mi := &file_v1_catalog_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3053,7 +2699,7 @@ func (x *ListCatalogResponse_CatalogSummary) String() string {
 func (*ListCatalogResponse_CatalogSummary) ProtoMessage() {}
 
 func (x *ListCatalogResponse_CatalogSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_catalog_proto_msgTypes[32]
+	mi := &file_v1_catalog_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3085,16 +2731,16 @@ func (x *ListCatalogResponse_CatalogSummary) GetDeployed() int32 {
 	return 0
 }
 
-func (x *ListCatalogResponse_CatalogSummary) GetInStock() int32 {
+func (x *ListCatalogResponse_CatalogSummary) GetAvailable() int32 {
 	if x != nil {
-		return x.xxx_hidden_InStock
+		return x.xxx_hidden_Available
 	}
 	return 0
 }
 
-func (x *ListCatalogResponse_CatalogSummary) GetIssues() int32 {
+func (x *ListCatalogResponse_CatalogSummary) GetNeedsRepair() int32 {
 	if x != nil {
-		return x.xxx_hidden_Issues
+		return x.xxx_hidden_NeedsRepair
 	}
 	return 0
 }
@@ -3111,12 +2757,12 @@ func (x *ListCatalogResponse_CatalogSummary) SetDeployed(v int32) {
 	x.xxx_hidden_Deployed = v
 }
 
-func (x *ListCatalogResponse_CatalogSummary) SetInStock(v int32) {
-	x.xxx_hidden_InStock = v
+func (x *ListCatalogResponse_CatalogSummary) SetAvailable(v int32) {
+	x.xxx_hidden_Available = v
 }
 
-func (x *ListCatalogResponse_CatalogSummary) SetIssues(v int32) {
-	x.xxx_hidden_Issues = v
+func (x *ListCatalogResponse_CatalogSummary) SetNeedsRepair(v int32) {
+	x.xxx_hidden_NeedsRepair = v
 }
 
 func (x *ListCatalogResponse_CatalogSummary) HasEntry() bool {
@@ -3133,11 +2779,11 @@ func (x *ListCatalogResponse_CatalogSummary) ClearEntry() {
 type ListCatalogResponse_CatalogSummary_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Entry    *DeviceCatalog
-	Total    int32
-	Deployed int32
-	InStock  int32
-	Issues   int32
+	Entry       *DeviceCatalog
+	Total       int32
+	Deployed    int32
+	Available   int32
+	NeedsRepair int32
 }
 
 func (b0 ListCatalogResponse_CatalogSummary_builder) Build() *ListCatalogResponse_CatalogSummary {
@@ -3147,8 +2793,8 @@ func (b0 ListCatalogResponse_CatalogSummary_builder) Build() *ListCatalogRespons
 	x.xxx_hidden_Entry = b.Entry
 	x.xxx_hidden_Total = b.Total
 	x.xxx_hidden_Deployed = b.Deployed
-	x.xxx_hidden_InStock = b.InStock
-	x.xxx_hidden_Issues = b.Issues
+	x.xxx_hidden_Available = b.Available
+	x.xxx_hidden_NeedsRepair = b.NeedsRepair
 	return m0
 }
 
@@ -3156,7 +2802,7 @@ var File_v1_catalog_proto protoreflect.FileDescriptor
 
 const file_v1_catalog_proto_rawDesc = "" +
 	"\n" +
-	"\x10v1/catalog.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0ev1/asset.proto\x1a\x0fv1/common.proto\"\x9a\x04\n" +
+	"\x10v1/catalog.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0ev1/asset.proto\x1a\x0fv1/common.proto\"\x9a\x04\n" +
 	"\rDeviceCatalog\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\"\n" +
@@ -3199,17 +2845,17 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\x12ListCatalogRequest\x12F\n" +
 	"\x0fcategory_filter\x18\n" +
 	" \x01(\x0e2\x16.dcim.v1.AssetCategoryB\x05\xaa\x01\x02\b\x01R\x0ecategoryFilter\x12\x16\n" +
-	"\x06search\x18\x14 \x01(\tR\x06search\"\x82\x02\n" +
+	"\x06search\x18\x14 \x01(\tR\x06search\"\x90\x02\n" +
 	"\x13ListCatalogResponse\x12E\n" +
 	"\aentries\x18\n" +
-	" \x03(\v2+.dcim.v1.ListCatalogResponse.CatalogSummaryR\aentries\x1a\xa3\x01\n" +
+	" \x03(\v2+.dcim.v1.ListCatalogResponse.CatalogSummaryR\aentries\x1a\xb1\x01\n" +
 	"\x0eCatalogSummary\x12,\n" +
 	"\x05entry\x18\n" +
 	" \x01(\v2\x16.dcim.v1.DeviceCatalogR\x05entry\x12\x14\n" +
 	"\x05total\x18\x14 \x01(\x05R\x05total\x12\x1a\n" +
-	"\bdeployed\x18\x1e \x01(\x05R\bdeployed\x12\x19\n" +
-	"\bin_stock\x18( \x01(\x05R\ainStock\x12\x16\n" +
-	"\x06issues\x182 \x01(\x05R\x06issues\"2\n" +
+	"\bdeployed\x18\x1e \x01(\x05R\bdeployed\x12\x1c\n" +
+	"\tavailable\x18( \x01(\x05R\tavailable\x12!\n" +
+	"\fneeds_repair\x182 \x01(\x05R\vneedsRepair\"2\n" +
 	"\x16GetCatalogEntryRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"G\n" +
@@ -3235,10 +2881,10 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"SpecsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"J\n" +
-	"\x1aCreateCatalogEntryResponse\x12,\n" +
-	"\x05entry\x18\n" +
-	" \x01(\v2\x16.dcim.v1.DeviceCatalogR\x05entry\"\xff\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"F\n" +
+	"\x1aCreateCatalogEntryResponse\x12(\n" +
+	"\x10catalog_entry_id\x18\n" +
+	" \x01(\tR\x0ecatalogEntryId\"\xff\x03\n" +
 	"\x19UpdateCatalogEntryRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12)\n" +
@@ -3259,14 +2905,10 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\n" +
 	"SpecsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"J\n" +
-	"\x1aUpdateCatalogEntryResponse\x12,\n" +
-	"\x05entry\x18\n" +
-	" \x01(\v2\x16.dcim.v1.DeviceCatalogR\x05entry\"5\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"5\n" +
 	"\x19DeleteCatalogEntryRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x1c\n" +
-	"\x1aDeleteCatalogEntryResponse\"W\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"W\n" +
 	"\x1fListAssetsByCatalogEntryRequest\x124\n" +
 	"\x11device_catalog_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fdeviceCatalogId\"J\n" +
@@ -3297,10 +2939,10 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\vmax_power_w\x18< \x01(\x01B\x05\xaa\x01\x02\b\x01R\tmaxPowerW\x12@\n" +
 	"\tdirection\x18F \x01(\x0e2\x16.dcim.v1.PortDirectionB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\tdirection\x12\x18\n" +
-	"\aordinal\x18P \x01(\x05R\aordinal\"`\n" +
-	"\x1cCreatePortDefinitionResponse\x12@\n" +
-	"\x0fport_definition\x18\n" +
-	" \x01(\v2\x17.dcim.v1.PortDefinitionR\x0eportDefinition\"\xd1\x02\n" +
+	"\aordinal\x18P \x01(\x05R\aordinal\"L\n" +
+	"\x1cCreatePortDefinitionResponse\x12,\n" +
+	"\x12port_definition_id\x18\n" +
+	" \x01(\tR\x10portDefinitionId\"\xd1\x02\n" +
 	"\x1bUpdatePortDefinitionRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
@@ -3311,14 +2953,10 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\x05speed\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\x05speed\x12%\n" +
 	"\vmax_power_w\x18< \x01(\x01B\x05\xaa\x01\x02\b\x01R\tmaxPowerW\x12;\n" +
 	"\tdirection\x18F \x01(\x0e2\x16.dcim.v1.PortDirectionB\x05\xaa\x01\x02\b\x01R\tdirection\x12\x1f\n" +
-	"\aordinal\x18P \x01(\x05B\x05\xaa\x01\x02\b\x01R\aordinal\"`\n" +
-	"\x1cUpdatePortDefinitionResponse\x12@\n" +
-	"\x0fport_definition\x18\n" +
-	" \x01(\v2\x17.dcim.v1.PortDefinitionR\x0eportDefinition\"7\n" +
+	"\aordinal\x18P \x01(\x05B\x05\xaa\x01\x02\b\x01R\aordinal\"7\n" +
 	"\x1bDeletePortDefinitionRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x1e\n" +
-	"\x1cDeletePortDefinitionResponse\"X\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"X\n" +
 	"\x1eListPortCompatibilitiesRequest\x126\n" +
 	"\x12port_definition_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x10portDefinitionId\"g\n" +
@@ -3329,33 +2967,29 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\x12port_definition_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x10portDefinitionId\x12<\n" +
 	"\x15compatible_catalog_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x13compatibleCatalogId\x12\x14\n" +
-	"\x05notes\x18\x1e \x01(\tR\x05notes\"c\n" +
-	"\x1fCreatePortCompatibilityResponse\x12@\n" +
-	"\rcompatibility\x18\n" +
-	" \x01(\v2\x1a.dcim.v1.PortCompatibilityR\rcompatibility\"\x96\x01\n" +
+	"\x05notes\x18\x1e \x01(\tR\x05notes\"\x96\x01\n" +
 	"\x1eDeletePortCompatibilityRequest\x126\n" +
 	"\x12port_definition_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x10portDefinitionId\x12<\n" +
-	"\x15compatible_catalog_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x13compatibleCatalogId\"!\n" +
-	"\x1fDeletePortCompatibilityResponse2\xf5\n" +
+	"\x15compatible_catalog_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x13compatibleCatalogId2\x99\n" +
 	"\n" +
 	"\x0eCatalogService\x12H\n" +
 	"\vListCatalog\x12\x1b.dcim.v1.ListCatalogRequest\x1a\x1c.dcim.v1.ListCatalogResponse\x12T\n" +
 	"\x0fGetCatalogEntry\x12\x1f.dcim.v1.GetCatalogEntryRequest\x1a .dcim.v1.GetCatalogEntryResponse\x12]\n" +
-	"\x12CreateCatalogEntry\x12\".dcim.v1.CreateCatalogEntryRequest\x1a#.dcim.v1.CreateCatalogEntryResponse\x12]\n" +
-	"\x12UpdateCatalogEntry\x12\".dcim.v1.UpdateCatalogEntryRequest\x1a#.dcim.v1.UpdateCatalogEntryResponse\x12]\n" +
-	"\x12DeleteCatalogEntry\x12\".dcim.v1.DeleteCatalogEntryRequest\x1a#.dcim.v1.DeleteCatalogEntryResponse\x12o\n" +
+	"\x12CreateCatalogEntry\x12\".dcim.v1.CreateCatalogEntryRequest\x1a#.dcim.v1.CreateCatalogEntryResponse\x12P\n" +
+	"\x12UpdateCatalogEntry\x12\".dcim.v1.UpdateCatalogEntryRequest\x1a\x16.google.protobuf.Empty\x12P\n" +
+	"\x12DeleteCatalogEntry\x12\".dcim.v1.DeleteCatalogEntryRequest\x1a\x16.google.protobuf.Empty\x12o\n" +
 	"\x18ListAssetsByCatalogEntry\x12(.dcim.v1.ListAssetsByCatalogEntryRequest\x1a).dcim.v1.ListAssetsByCatalogEntryResponse\x12`\n" +
 	"\x13ListPortDefinitions\x12#.dcim.v1.ListPortDefinitionsRequest\x1a$.dcim.v1.ListPortDefinitionsResponse\x12Z\n" +
 	"\x11GetPortDefinition\x12!.dcim.v1.GetPortDefinitionRequest\x1a\".dcim.v1.GetPortDefinitionResponse\x12c\n" +
-	"\x14CreatePortDefinition\x12$.dcim.v1.CreatePortDefinitionRequest\x1a%.dcim.v1.CreatePortDefinitionResponse\x12c\n" +
-	"\x14UpdatePortDefinition\x12$.dcim.v1.UpdatePortDefinitionRequest\x1a%.dcim.v1.UpdatePortDefinitionResponse\x12c\n" +
-	"\x14DeletePortDefinition\x12$.dcim.v1.DeletePortDefinitionRequest\x1a%.dcim.v1.DeletePortDefinitionResponse\x12l\n" +
-	"\x17ListPortCompatibilities\x12'.dcim.v1.ListPortCompatibilitiesRequest\x1a(.dcim.v1.ListPortCompatibilitiesResponse\x12l\n" +
-	"\x17CreatePortCompatibility\x12'.dcim.v1.CreatePortCompatibilityRequest\x1a(.dcim.v1.CreatePortCompatibilityResponse\x12l\n" +
-	"\x17DeletePortCompatibility\x12'.dcim.v1.DeletePortCompatibilityRequest\x1a(.dcim.v1.DeletePortCompatibilityResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x14CreatePortDefinition\x12$.dcim.v1.CreatePortDefinitionRequest\x1a%.dcim.v1.CreatePortDefinitionResponse\x12T\n" +
+	"\x14UpdatePortDefinition\x12$.dcim.v1.UpdatePortDefinitionRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
+	"\x14DeletePortDefinition\x12$.dcim.v1.DeletePortDefinitionRequest\x1a\x16.google.protobuf.Empty\x12l\n" +
+	"\x17ListPortCompatibilities\x12'.dcim.v1.ListPortCompatibilitiesRequest\x1a(.dcim.v1.ListPortCompatibilitiesResponse\x12Z\n" +
+	"\x17CreatePortCompatibility\x12'.dcim.v1.CreatePortCompatibilityRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
+	"\x17DeletePortCompatibility\x12'.dcim.v1.DeletePortCompatibilityRequest\x1a\x16.google.protobuf.EmptyBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
+var file_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_v1_catalog_proto_goTypes = []any{
 	(*DeviceCatalog)(nil),                      // 0: dcim.v1.DeviceCatalog
 	(*PortDefinition)(nil),                     // 1: dcim.v1.PortDefinition
@@ -3367,98 +3001,88 @@ var file_v1_catalog_proto_goTypes = []any{
 	(*CreateCatalogEntryRequest)(nil),          // 7: dcim.v1.CreateCatalogEntryRequest
 	(*CreateCatalogEntryResponse)(nil),         // 8: dcim.v1.CreateCatalogEntryResponse
 	(*UpdateCatalogEntryRequest)(nil),          // 9: dcim.v1.UpdateCatalogEntryRequest
-	(*UpdateCatalogEntryResponse)(nil),         // 10: dcim.v1.UpdateCatalogEntryResponse
-	(*DeleteCatalogEntryRequest)(nil),          // 11: dcim.v1.DeleteCatalogEntryRequest
-	(*DeleteCatalogEntryResponse)(nil),         // 12: dcim.v1.DeleteCatalogEntryResponse
-	(*ListAssetsByCatalogEntryRequest)(nil),    // 13: dcim.v1.ListAssetsByCatalogEntryRequest
-	(*ListAssetsByCatalogEntryResponse)(nil),   // 14: dcim.v1.ListAssetsByCatalogEntryResponse
-	(*ListPortDefinitionsRequest)(nil),         // 15: dcim.v1.ListPortDefinitionsRequest
-	(*ListPortDefinitionsResponse)(nil),        // 16: dcim.v1.ListPortDefinitionsResponse
-	(*GetPortDefinitionRequest)(nil),           // 17: dcim.v1.GetPortDefinitionRequest
-	(*GetPortDefinitionResponse)(nil),          // 18: dcim.v1.GetPortDefinitionResponse
-	(*CreatePortDefinitionRequest)(nil),        // 19: dcim.v1.CreatePortDefinitionRequest
-	(*CreatePortDefinitionResponse)(nil),       // 20: dcim.v1.CreatePortDefinitionResponse
-	(*UpdatePortDefinitionRequest)(nil),        // 21: dcim.v1.UpdatePortDefinitionRequest
-	(*UpdatePortDefinitionResponse)(nil),       // 22: dcim.v1.UpdatePortDefinitionResponse
-	(*DeletePortDefinitionRequest)(nil),        // 23: dcim.v1.DeletePortDefinitionRequest
-	(*DeletePortDefinitionResponse)(nil),       // 24: dcim.v1.DeletePortDefinitionResponse
-	(*ListPortCompatibilitiesRequest)(nil),     // 25: dcim.v1.ListPortCompatibilitiesRequest
-	(*ListPortCompatibilitiesResponse)(nil),    // 26: dcim.v1.ListPortCompatibilitiesResponse
-	(*CreatePortCompatibilityRequest)(nil),     // 27: dcim.v1.CreatePortCompatibilityRequest
-	(*CreatePortCompatibilityResponse)(nil),    // 28: dcim.v1.CreatePortCompatibilityResponse
-	(*DeletePortCompatibilityRequest)(nil),     // 29: dcim.v1.DeletePortCompatibilityRequest
-	(*DeletePortCompatibilityResponse)(nil),    // 30: dcim.v1.DeletePortCompatibilityResponse
-	nil,                                        // 31: dcim.v1.DeviceCatalog.SpecsEntry
-	(*ListCatalogResponse_CatalogSummary)(nil), // 32: dcim.v1.ListCatalogResponse.CatalogSummary
-	nil,                           // 33: dcim.v1.CreateCatalogEntryRequest.SpecsEntry
-	nil,                           // 34: dcim.v1.UpdateCatalogEntryRequest.SpecsEntry
-	(AssetCategory)(0),            // 35: dcim.v1.AssetCategory
-	(*timestamppb.Timestamp)(nil), // 36: google.protobuf.Timestamp
-	(PortType)(0),                 // 37: dcim.v1.PortType
-	(PortDirection)(0),            // 38: dcim.v1.PortDirection
-	(*Asset)(nil),                 // 39: dcim.v1.Asset
+	(*DeleteCatalogEntryRequest)(nil),          // 10: dcim.v1.DeleteCatalogEntryRequest
+	(*ListAssetsByCatalogEntryRequest)(nil),    // 11: dcim.v1.ListAssetsByCatalogEntryRequest
+	(*ListAssetsByCatalogEntryResponse)(nil),   // 12: dcim.v1.ListAssetsByCatalogEntryResponse
+	(*ListPortDefinitionsRequest)(nil),         // 13: dcim.v1.ListPortDefinitionsRequest
+	(*ListPortDefinitionsResponse)(nil),        // 14: dcim.v1.ListPortDefinitionsResponse
+	(*GetPortDefinitionRequest)(nil),           // 15: dcim.v1.GetPortDefinitionRequest
+	(*GetPortDefinitionResponse)(nil),          // 16: dcim.v1.GetPortDefinitionResponse
+	(*CreatePortDefinitionRequest)(nil),        // 17: dcim.v1.CreatePortDefinitionRequest
+	(*CreatePortDefinitionResponse)(nil),       // 18: dcim.v1.CreatePortDefinitionResponse
+	(*UpdatePortDefinitionRequest)(nil),        // 19: dcim.v1.UpdatePortDefinitionRequest
+	(*DeletePortDefinitionRequest)(nil),        // 20: dcim.v1.DeletePortDefinitionRequest
+	(*ListPortCompatibilitiesRequest)(nil),     // 21: dcim.v1.ListPortCompatibilitiesRequest
+	(*ListPortCompatibilitiesResponse)(nil),    // 22: dcim.v1.ListPortCompatibilitiesResponse
+	(*CreatePortCompatibilityRequest)(nil),     // 23: dcim.v1.CreatePortCompatibilityRequest
+	(*DeletePortCompatibilityRequest)(nil),     // 24: dcim.v1.DeletePortCompatibilityRequest
+	nil,                                        // 25: dcim.v1.DeviceCatalog.SpecsEntry
+	(*ListCatalogResponse_CatalogSummary)(nil), // 26: dcim.v1.ListCatalogResponse.CatalogSummary
+	nil,                           // 27: dcim.v1.CreateCatalogEntryRequest.SpecsEntry
+	nil,                           // 28: dcim.v1.UpdateCatalogEntryRequest.SpecsEntry
+	(AssetCategory)(0),            // 29: dcim.v1.AssetCategory
+	(*timestamppb.Timestamp)(nil), // 30: google.protobuf.Timestamp
+	(PortType)(0),                 // 31: dcim.v1.PortType
+	(PortDirection)(0),            // 32: dcim.v1.PortDirection
+	(*Asset)(nil),                 // 33: dcim.v1.Asset
+	(*emptypb.Empty)(nil),         // 34: google.protobuf.Empty
 }
 var file_v1_catalog_proto_depIdxs = []int32{
-	35, // 0: dcim.v1.DeviceCatalog.category:type_name -> dcim.v1.AssetCategory
-	31, // 1: dcim.v1.DeviceCatalog.specs:type_name -> dcim.v1.DeviceCatalog.SpecsEntry
-	36, // 2: dcim.v1.DeviceCatalog.created:type_name -> google.protobuf.Timestamp
-	36, // 3: dcim.v1.DeviceCatalog.deleted:type_name -> google.protobuf.Timestamp
-	37, // 4: dcim.v1.PortDefinition.port_type:type_name -> dcim.v1.PortType
-	38, // 5: dcim.v1.PortDefinition.direction:type_name -> dcim.v1.PortDirection
-	35, // 6: dcim.v1.ListCatalogRequest.category_filter:type_name -> dcim.v1.AssetCategory
-	32, // 7: dcim.v1.ListCatalogResponse.entries:type_name -> dcim.v1.ListCatalogResponse.CatalogSummary
+	29, // 0: dcim.v1.DeviceCatalog.category:type_name -> dcim.v1.AssetCategory
+	25, // 1: dcim.v1.DeviceCatalog.specs:type_name -> dcim.v1.DeviceCatalog.SpecsEntry
+	30, // 2: dcim.v1.DeviceCatalog.created:type_name -> google.protobuf.Timestamp
+	30, // 3: dcim.v1.DeviceCatalog.deleted:type_name -> google.protobuf.Timestamp
+	31, // 4: dcim.v1.PortDefinition.port_type:type_name -> dcim.v1.PortType
+	32, // 5: dcim.v1.PortDefinition.direction:type_name -> dcim.v1.PortDirection
+	29, // 6: dcim.v1.ListCatalogRequest.category_filter:type_name -> dcim.v1.AssetCategory
+	26, // 7: dcim.v1.ListCatalogResponse.entries:type_name -> dcim.v1.ListCatalogResponse.CatalogSummary
 	0,  // 8: dcim.v1.GetCatalogEntryResponse.entry:type_name -> dcim.v1.DeviceCatalog
-	35, // 9: dcim.v1.CreateCatalogEntryRequest.category:type_name -> dcim.v1.AssetCategory
-	33, // 10: dcim.v1.CreateCatalogEntryRequest.specs:type_name -> dcim.v1.CreateCatalogEntryRequest.SpecsEntry
-	0,  // 11: dcim.v1.CreateCatalogEntryResponse.entry:type_name -> dcim.v1.DeviceCatalog
-	35, // 12: dcim.v1.UpdateCatalogEntryRequest.category:type_name -> dcim.v1.AssetCategory
-	34, // 13: dcim.v1.UpdateCatalogEntryRequest.specs:type_name -> dcim.v1.UpdateCatalogEntryRequest.SpecsEntry
-	0,  // 14: dcim.v1.UpdateCatalogEntryResponse.entry:type_name -> dcim.v1.DeviceCatalog
-	39, // 15: dcim.v1.ListAssetsByCatalogEntryResponse.assets:type_name -> dcim.v1.Asset
-	1,  // 16: dcim.v1.ListPortDefinitionsResponse.port_definitions:type_name -> dcim.v1.PortDefinition
-	1,  // 17: dcim.v1.GetPortDefinitionResponse.port_definition:type_name -> dcim.v1.PortDefinition
-	37, // 18: dcim.v1.CreatePortDefinitionRequest.port_type:type_name -> dcim.v1.PortType
-	38, // 19: dcim.v1.CreatePortDefinitionRequest.direction:type_name -> dcim.v1.PortDirection
-	1,  // 20: dcim.v1.CreatePortDefinitionResponse.port_definition:type_name -> dcim.v1.PortDefinition
-	37, // 21: dcim.v1.UpdatePortDefinitionRequest.port_type:type_name -> dcim.v1.PortType
-	38, // 22: dcim.v1.UpdatePortDefinitionRequest.direction:type_name -> dcim.v1.PortDirection
-	1,  // 23: dcim.v1.UpdatePortDefinitionResponse.port_definition:type_name -> dcim.v1.PortDefinition
-	2,  // 24: dcim.v1.ListPortCompatibilitiesResponse.compatibilities:type_name -> dcim.v1.PortCompatibility
-	2,  // 25: dcim.v1.CreatePortCompatibilityResponse.compatibility:type_name -> dcim.v1.PortCompatibility
-	0,  // 26: dcim.v1.ListCatalogResponse.CatalogSummary.entry:type_name -> dcim.v1.DeviceCatalog
-	3,  // 27: dcim.v1.CatalogService.ListCatalog:input_type -> dcim.v1.ListCatalogRequest
-	5,  // 28: dcim.v1.CatalogService.GetCatalogEntry:input_type -> dcim.v1.GetCatalogEntryRequest
-	7,  // 29: dcim.v1.CatalogService.CreateCatalogEntry:input_type -> dcim.v1.CreateCatalogEntryRequest
-	9,  // 30: dcim.v1.CatalogService.UpdateCatalogEntry:input_type -> dcim.v1.UpdateCatalogEntryRequest
-	11, // 31: dcim.v1.CatalogService.DeleteCatalogEntry:input_type -> dcim.v1.DeleteCatalogEntryRequest
-	13, // 32: dcim.v1.CatalogService.ListAssetsByCatalogEntry:input_type -> dcim.v1.ListAssetsByCatalogEntryRequest
-	15, // 33: dcim.v1.CatalogService.ListPortDefinitions:input_type -> dcim.v1.ListPortDefinitionsRequest
-	17, // 34: dcim.v1.CatalogService.GetPortDefinition:input_type -> dcim.v1.GetPortDefinitionRequest
-	19, // 35: dcim.v1.CatalogService.CreatePortDefinition:input_type -> dcim.v1.CreatePortDefinitionRequest
-	21, // 36: dcim.v1.CatalogService.UpdatePortDefinition:input_type -> dcim.v1.UpdatePortDefinitionRequest
-	23, // 37: dcim.v1.CatalogService.DeletePortDefinition:input_type -> dcim.v1.DeletePortDefinitionRequest
-	25, // 38: dcim.v1.CatalogService.ListPortCompatibilities:input_type -> dcim.v1.ListPortCompatibilitiesRequest
-	27, // 39: dcim.v1.CatalogService.CreatePortCompatibility:input_type -> dcim.v1.CreatePortCompatibilityRequest
-	29, // 40: dcim.v1.CatalogService.DeletePortCompatibility:input_type -> dcim.v1.DeletePortCompatibilityRequest
-	4,  // 41: dcim.v1.CatalogService.ListCatalog:output_type -> dcim.v1.ListCatalogResponse
-	6,  // 42: dcim.v1.CatalogService.GetCatalogEntry:output_type -> dcim.v1.GetCatalogEntryResponse
-	8,  // 43: dcim.v1.CatalogService.CreateCatalogEntry:output_type -> dcim.v1.CreateCatalogEntryResponse
-	10, // 44: dcim.v1.CatalogService.UpdateCatalogEntry:output_type -> dcim.v1.UpdateCatalogEntryResponse
-	12, // 45: dcim.v1.CatalogService.DeleteCatalogEntry:output_type -> dcim.v1.DeleteCatalogEntryResponse
-	14, // 46: dcim.v1.CatalogService.ListAssetsByCatalogEntry:output_type -> dcim.v1.ListAssetsByCatalogEntryResponse
-	16, // 47: dcim.v1.CatalogService.ListPortDefinitions:output_type -> dcim.v1.ListPortDefinitionsResponse
-	18, // 48: dcim.v1.CatalogService.GetPortDefinition:output_type -> dcim.v1.GetPortDefinitionResponse
-	20, // 49: dcim.v1.CatalogService.CreatePortDefinition:output_type -> dcim.v1.CreatePortDefinitionResponse
-	22, // 50: dcim.v1.CatalogService.UpdatePortDefinition:output_type -> dcim.v1.UpdatePortDefinitionResponse
-	24, // 51: dcim.v1.CatalogService.DeletePortDefinition:output_type -> dcim.v1.DeletePortDefinitionResponse
-	26, // 52: dcim.v1.CatalogService.ListPortCompatibilities:output_type -> dcim.v1.ListPortCompatibilitiesResponse
-	28, // 53: dcim.v1.CatalogService.CreatePortCompatibility:output_type -> dcim.v1.CreatePortCompatibilityResponse
-	30, // 54: dcim.v1.CatalogService.DeletePortCompatibility:output_type -> dcim.v1.DeletePortCompatibilityResponse
-	41, // [41:55] is the sub-list for method output_type
-	27, // [27:41] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	29, // 9: dcim.v1.CreateCatalogEntryRequest.category:type_name -> dcim.v1.AssetCategory
+	27, // 10: dcim.v1.CreateCatalogEntryRequest.specs:type_name -> dcim.v1.CreateCatalogEntryRequest.SpecsEntry
+	29, // 11: dcim.v1.UpdateCatalogEntryRequest.category:type_name -> dcim.v1.AssetCategory
+	28, // 12: dcim.v1.UpdateCatalogEntryRequest.specs:type_name -> dcim.v1.UpdateCatalogEntryRequest.SpecsEntry
+	33, // 13: dcim.v1.ListAssetsByCatalogEntryResponse.assets:type_name -> dcim.v1.Asset
+	1,  // 14: dcim.v1.ListPortDefinitionsResponse.port_definitions:type_name -> dcim.v1.PortDefinition
+	1,  // 15: dcim.v1.GetPortDefinitionResponse.port_definition:type_name -> dcim.v1.PortDefinition
+	31, // 16: dcim.v1.CreatePortDefinitionRequest.port_type:type_name -> dcim.v1.PortType
+	32, // 17: dcim.v1.CreatePortDefinitionRequest.direction:type_name -> dcim.v1.PortDirection
+	31, // 18: dcim.v1.UpdatePortDefinitionRequest.port_type:type_name -> dcim.v1.PortType
+	32, // 19: dcim.v1.UpdatePortDefinitionRequest.direction:type_name -> dcim.v1.PortDirection
+	2,  // 20: dcim.v1.ListPortCompatibilitiesResponse.compatibilities:type_name -> dcim.v1.PortCompatibility
+	0,  // 21: dcim.v1.ListCatalogResponse.CatalogSummary.entry:type_name -> dcim.v1.DeviceCatalog
+	3,  // 22: dcim.v1.CatalogService.ListCatalog:input_type -> dcim.v1.ListCatalogRequest
+	5,  // 23: dcim.v1.CatalogService.GetCatalogEntry:input_type -> dcim.v1.GetCatalogEntryRequest
+	7,  // 24: dcim.v1.CatalogService.CreateCatalogEntry:input_type -> dcim.v1.CreateCatalogEntryRequest
+	9,  // 25: dcim.v1.CatalogService.UpdateCatalogEntry:input_type -> dcim.v1.UpdateCatalogEntryRequest
+	10, // 26: dcim.v1.CatalogService.DeleteCatalogEntry:input_type -> dcim.v1.DeleteCatalogEntryRequest
+	11, // 27: dcim.v1.CatalogService.ListAssetsByCatalogEntry:input_type -> dcim.v1.ListAssetsByCatalogEntryRequest
+	13, // 28: dcim.v1.CatalogService.ListPortDefinitions:input_type -> dcim.v1.ListPortDefinitionsRequest
+	15, // 29: dcim.v1.CatalogService.GetPortDefinition:input_type -> dcim.v1.GetPortDefinitionRequest
+	17, // 30: dcim.v1.CatalogService.CreatePortDefinition:input_type -> dcim.v1.CreatePortDefinitionRequest
+	19, // 31: dcim.v1.CatalogService.UpdatePortDefinition:input_type -> dcim.v1.UpdatePortDefinitionRequest
+	20, // 32: dcim.v1.CatalogService.DeletePortDefinition:input_type -> dcim.v1.DeletePortDefinitionRequest
+	21, // 33: dcim.v1.CatalogService.ListPortCompatibilities:input_type -> dcim.v1.ListPortCompatibilitiesRequest
+	23, // 34: dcim.v1.CatalogService.CreatePortCompatibility:input_type -> dcim.v1.CreatePortCompatibilityRequest
+	24, // 35: dcim.v1.CatalogService.DeletePortCompatibility:input_type -> dcim.v1.DeletePortCompatibilityRequest
+	4,  // 36: dcim.v1.CatalogService.ListCatalog:output_type -> dcim.v1.ListCatalogResponse
+	6,  // 37: dcim.v1.CatalogService.GetCatalogEntry:output_type -> dcim.v1.GetCatalogEntryResponse
+	8,  // 38: dcim.v1.CatalogService.CreateCatalogEntry:output_type -> dcim.v1.CreateCatalogEntryResponse
+	34, // 39: dcim.v1.CatalogService.UpdateCatalogEntry:output_type -> google.protobuf.Empty
+	34, // 40: dcim.v1.CatalogService.DeleteCatalogEntry:output_type -> google.protobuf.Empty
+	12, // 41: dcim.v1.CatalogService.ListAssetsByCatalogEntry:output_type -> dcim.v1.ListAssetsByCatalogEntryResponse
+	14, // 42: dcim.v1.CatalogService.ListPortDefinitions:output_type -> dcim.v1.ListPortDefinitionsResponse
+	16, // 43: dcim.v1.CatalogService.GetPortDefinition:output_type -> dcim.v1.GetPortDefinitionResponse
+	18, // 44: dcim.v1.CatalogService.CreatePortDefinition:output_type -> dcim.v1.CreatePortDefinitionResponse
+	34, // 45: dcim.v1.CatalogService.UpdatePortDefinition:output_type -> google.protobuf.Empty
+	34, // 46: dcim.v1.CatalogService.DeletePortDefinition:output_type -> google.protobuf.Empty
+	22, // 47: dcim.v1.CatalogService.ListPortCompatibilities:output_type -> dcim.v1.ListPortCompatibilitiesResponse
+	34, // 48: dcim.v1.CatalogService.CreatePortCompatibility:output_type -> google.protobuf.Empty
+	34, // 49: dcim.v1.CatalogService.DeletePortCompatibility:output_type -> google.protobuf.Empty
+	36, // [36:50] is the sub-list for method output_type
+	22, // [22:36] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_v1_catalog_proto_init() }
@@ -3474,7 +3098,7 @@ func file_v1_catalog_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_catalog_proto_rawDesc), len(file_v1_catalog_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   35,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

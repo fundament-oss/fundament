@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -758,49 +759,6 @@ func (b0 UpdateRackRequest_builder) Build() *UpdateRackRequest {
 	return m0
 }
 
-type UpdateRackResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateRackResponse) Reset() {
-	*x = UpdateRackResponse{}
-	mi := &file_v1_rack_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateRackResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateRackResponse) ProtoMessage() {}
-
-func (x *UpdateRackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_rack_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type UpdateRackResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 UpdateRackResponse_builder) Build() *UpdateRackResponse {
-	m0 := &UpdateRackResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type DeleteRackRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -810,7 +768,7 @@ type DeleteRackRequest struct {
 
 func (x *DeleteRackRequest) Reset() {
 	*x = DeleteRackRequest{}
-	mi := &file_v1_rack_proto_msgTypes[9]
+	mi := &file_v1_rack_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -822,7 +780,7 @@ func (x *DeleteRackRequest) String() string {
 func (*DeleteRackRequest) ProtoMessage() {}
 
 func (x *DeleteRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_rack_proto_msgTypes[9]
+	mi := &file_v1_rack_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -858,49 +816,6 @@ func (b0 DeleteRackRequest_builder) Build() *DeleteRackRequest {
 	return m0
 }
 
-type DeleteRackResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteRackResponse) Reset() {
-	*x = DeleteRackResponse{}
-	mi := &file_v1_rack_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteRackResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRackResponse) ProtoMessage() {}
-
-func (x *DeleteRackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_rack_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteRackResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteRackResponse_builder) Build() *DeleteRackResponse {
-	m0 := &DeleteRackResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type ListRacksResponse_RackSummary struct {
 	state                     protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Rack           *Rack                  `protobuf:"bytes,10,opt,name=rack"`
@@ -915,7 +830,7 @@ type ListRacksResponse_RackSummary struct {
 
 func (x *ListRacksResponse_RackSummary) Reset() {
 	*x = ListRacksResponse_RackSummary{}
-	mi := &file_v1_rack_proto_msgTypes[11]
+	mi := &file_v1_rack_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -927,7 +842,7 @@ func (x *ListRacksResponse_RackSummary) String() string {
 func (*ListRacksResponse_RackSummary) ProtoMessage() {}
 
 func (x *ListRacksResponse_RackSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_rack_proto_msgTypes[11]
+	mi := &file_v1_rack_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1043,7 +958,7 @@ var File_v1_rack_proto protoreflect.FileDescriptor
 
 const file_v1_rack_proto_rawDesc = "" +
 	"\n" +
-	"\rv1/rack.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfd\x01\n" +
+	"\rv1/rack.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfd\x01\n" +
 	"\x04Rack\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x15\n" +
@@ -1093,23 +1008,21 @@ const file_v1_rack_proto_rawDesc = "" +
 	"\x04name\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04name\x12&\n" +
 	"\vtotal_units\x18\x1e \x01(\x05B\x05\xaa\x01\x02\b\x01R\n" +
 	"totalUnits\x12-\n" +
-	"\x0fposition_in_row\x18( \x01(\x05B\x05\xaa\x01\x02\b\x01R\rpositionInRow\"\x14\n" +
-	"\x12UpdateRackResponse\"-\n" +
+	"\x0fposition_in_row\x18( \x01(\x05B\x05\xaa\x01\x02\b\x01R\rpositionInRow\"-\n" +
 	"\x11DeleteRackRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x14\n" +
-	"\x12DeleteRackResponse2\xe4\x02\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id2\xda\x02\n" +
 	"\vRackService\x12B\n" +
 	"\tListRacks\x12\x19.dcim.v1.ListRacksRequest\x1a\x1a.dcim.v1.ListRacksResponse\x12<\n" +
 	"\aGetRack\x12\x17.dcim.v1.GetRackRequest\x1a\x18.dcim.v1.GetRackResponse\x12E\n" +
 	"\n" +
-	"CreateRack\x12\x1a.dcim.v1.CreateRackRequest\x1a\x1b.dcim.v1.CreateRackResponse\x12E\n" +
+	"CreateRack\x12\x1a.dcim.v1.CreateRackRequest\x1a\x1b.dcim.v1.CreateRackResponse\x12@\n" +
 	"\n" +
-	"UpdateRack\x12\x1a.dcim.v1.UpdateRackRequest\x1a\x1b.dcim.v1.UpdateRackResponse\x12E\n" +
+	"UpdateRack\x12\x1a.dcim.v1.UpdateRackRequest\x1a\x16.google.protobuf.Empty\x12@\n" +
 	"\n" +
-	"DeleteRack\x12\x1a.dcim.v1.DeleteRackRequest\x1a\x1b.dcim.v1.DeleteRackResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"DeleteRack\x12\x1a.dcim.v1.DeleteRackRequest\x1a\x16.google.protobuf.EmptyBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_rack_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_v1_rack_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_v1_rack_proto_goTypes = []any{
 	(*Rack)(nil),                          // 0: dcim.v1.Rack
 	(*ListRacksRequest)(nil),              // 1: dcim.v1.ListRacksRequest
@@ -1119,28 +1032,27 @@ var file_v1_rack_proto_goTypes = []any{
 	(*CreateRackRequest)(nil),             // 5: dcim.v1.CreateRackRequest
 	(*CreateRackResponse)(nil),            // 6: dcim.v1.CreateRackResponse
 	(*UpdateRackRequest)(nil),             // 7: dcim.v1.UpdateRackRequest
-	(*UpdateRackResponse)(nil),            // 8: dcim.v1.UpdateRackResponse
-	(*DeleteRackRequest)(nil),             // 9: dcim.v1.DeleteRackRequest
-	(*DeleteRackResponse)(nil),            // 10: dcim.v1.DeleteRackResponse
-	(*ListRacksResponse_RackSummary)(nil), // 11: dcim.v1.ListRacksResponse.RackSummary
-	(*timestamppb.Timestamp)(nil),         // 12: google.protobuf.Timestamp
+	(*DeleteRackRequest)(nil),             // 8: dcim.v1.DeleteRackRequest
+	(*ListRacksResponse_RackSummary)(nil), // 9: dcim.v1.ListRacksResponse.RackSummary
+	(*timestamppb.Timestamp)(nil),         // 10: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                 // 11: google.protobuf.Empty
 }
 var file_v1_rack_proto_depIdxs = []int32{
-	12, // 0: dcim.v1.Rack.created:type_name -> google.protobuf.Timestamp
-	12, // 1: dcim.v1.Rack.deleted:type_name -> google.protobuf.Timestamp
-	11, // 2: dcim.v1.ListRacksResponse.racks:type_name -> dcim.v1.ListRacksResponse.RackSummary
+	10, // 0: dcim.v1.Rack.created:type_name -> google.protobuf.Timestamp
+	10, // 1: dcim.v1.Rack.deleted:type_name -> google.protobuf.Timestamp
+	9,  // 2: dcim.v1.ListRacksResponse.racks:type_name -> dcim.v1.ListRacksResponse.RackSummary
 	0,  // 3: dcim.v1.GetRackResponse.rack:type_name -> dcim.v1.Rack
 	0,  // 4: dcim.v1.ListRacksResponse.RackSummary.rack:type_name -> dcim.v1.Rack
 	1,  // 5: dcim.v1.RackService.ListRacks:input_type -> dcim.v1.ListRacksRequest
 	3,  // 6: dcim.v1.RackService.GetRack:input_type -> dcim.v1.GetRackRequest
 	5,  // 7: dcim.v1.RackService.CreateRack:input_type -> dcim.v1.CreateRackRequest
 	7,  // 8: dcim.v1.RackService.UpdateRack:input_type -> dcim.v1.UpdateRackRequest
-	9,  // 9: dcim.v1.RackService.DeleteRack:input_type -> dcim.v1.DeleteRackRequest
+	8,  // 9: dcim.v1.RackService.DeleteRack:input_type -> dcim.v1.DeleteRackRequest
 	2,  // 10: dcim.v1.RackService.ListRacks:output_type -> dcim.v1.ListRacksResponse
 	4,  // 11: dcim.v1.RackService.GetRack:output_type -> dcim.v1.GetRackResponse
 	6,  // 12: dcim.v1.RackService.CreateRack:output_type -> dcim.v1.CreateRackResponse
-	8,  // 13: dcim.v1.RackService.UpdateRack:output_type -> dcim.v1.UpdateRackResponse
-	10, // 14: dcim.v1.RackService.DeleteRack:output_type -> dcim.v1.DeleteRackResponse
+	11, // 13: dcim.v1.RackService.UpdateRack:output_type -> google.protobuf.Empty
+	11, // 14: dcim.v1.RackService.DeleteRack:output_type -> google.protobuf.Empty
 	10, // [10:15] is the sub-list for method output_type
 	5,  // [5:10] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
@@ -1159,7 +1071,7 @@ func file_v1_rack_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_rack_proto_rawDesc), len(file_v1_rack_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

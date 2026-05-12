@@ -3,6 +3,7 @@ edition = "2023";
 package dcim.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
@@ -26,7 +27,7 @@ message Note {
 service NoteService {
   rpc ListNotes (ListNotesRequest)  returns (ListNotesResponse);
   rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
-  rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse);
+  rpc DeleteNote(DeleteNoteRequest) returns (google.protobuf.Empty);
 }
 
 message ListNotesRequest {
@@ -46,12 +47,10 @@ message CreateNoteRequest {
 }
 
 message CreateNoteResponse {
-  Note note = 10;
+  string note_id = 10;
 }
 
 // DeleteNote soft-deletes the note by setting its deleted timestamp.
 message DeleteNoteRequest {
   string id = 10 [(buf.validate.field).string = {uuid: true}];
 }
-
-message DeleteNoteResponse {}

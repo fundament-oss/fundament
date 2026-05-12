@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
@@ -702,49 +703,6 @@ func (b0 UpdateRoomRequest_builder) Build() *UpdateRoomRequest {
 	return m0
 }
 
-type UpdateRoomResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateRoomResponse) Reset() {
-	*x = UpdateRoomResponse{}
-	mi := &file_v1_room_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateRoomResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateRoomResponse) ProtoMessage() {}
-
-func (x *UpdateRoomResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_room_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type UpdateRoomResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 UpdateRoomResponse_builder) Build() *UpdateRoomResponse {
-	m0 := &UpdateRoomResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 type DeleteRoomRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id string                 `protobuf:"bytes,10,opt,name=id"`
@@ -754,7 +712,7 @@ type DeleteRoomRequest struct {
 
 func (x *DeleteRoomRequest) Reset() {
 	*x = DeleteRoomRequest{}
-	mi := &file_v1_room_proto_msgTypes[9]
+	mi := &file_v1_room_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -766,7 +724,7 @@ func (x *DeleteRoomRequest) String() string {
 func (*DeleteRoomRequest) ProtoMessage() {}
 
 func (x *DeleteRoomRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_room_proto_msgTypes[9]
+	mi := &file_v1_room_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -802,54 +760,11 @@ func (b0 DeleteRoomRequest_builder) Build() *DeleteRoomRequest {
 	return m0
 }
 
-type DeleteRoomResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteRoomResponse) Reset() {
-	*x = DeleteRoomResponse{}
-	mi := &file_v1_room_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteRoomResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRoomResponse) ProtoMessage() {}
-
-func (x *DeleteRoomResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_room_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type DeleteRoomResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 DeleteRoomResponse_builder) Build() *DeleteRoomResponse {
-	m0 := &DeleteRoomResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
 var File_v1_room_proto protoreflect.FileDescriptor
 
 const file_v1_room_proto_rawDesc = "" +
 	"\n" +
-	"\rv1/room.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x01\n" +
+	"\rv1/room.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x01\n" +
 	"\x04Room\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x17\n" +
@@ -882,23 +797,21 @@ const file_v1_room_proto_rawDesc = "" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
 	"\x04name\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04name\x12\x1b\n" +
-	"\x05floor\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x05floor\"\x14\n" +
-	"\x12UpdateRoomResponse\"-\n" +
+	"\x05floor\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x05floor\"-\n" +
 	"\x11DeleteRoomRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x14\n" +
-	"\x12DeleteRoomResponse2\xe4\x02\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id2\xda\x02\n" +
 	"\vRoomService\x12B\n" +
 	"\tListRooms\x12\x19.dcim.v1.ListRoomsRequest\x1a\x1a.dcim.v1.ListRoomsResponse\x12<\n" +
 	"\aGetRoom\x12\x17.dcim.v1.GetRoomRequest\x1a\x18.dcim.v1.GetRoomResponse\x12E\n" +
 	"\n" +
-	"CreateRoom\x12\x1a.dcim.v1.CreateRoomRequest\x1a\x1b.dcim.v1.CreateRoomResponse\x12E\n" +
+	"CreateRoom\x12\x1a.dcim.v1.CreateRoomRequest\x1a\x1b.dcim.v1.CreateRoomResponse\x12@\n" +
 	"\n" +
-	"UpdateRoom\x12\x1a.dcim.v1.UpdateRoomRequest\x1a\x1b.dcim.v1.UpdateRoomResponse\x12E\n" +
+	"UpdateRoom\x12\x1a.dcim.v1.UpdateRoomRequest\x1a\x16.google.protobuf.Empty\x12@\n" +
 	"\n" +
-	"DeleteRoom\x12\x1a.dcim.v1.DeleteRoomRequest\x1a\x1b.dcim.v1.DeleteRoomResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"DeleteRoom\x12\x1a.dcim.v1.DeleteRoomRequest\x1a\x16.google.protobuf.EmptyBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_room_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_v1_room_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_v1_room_proto_goTypes = []any{
 	(*Room)(nil),                  // 0: dcim.v1.Room
 	(*ListRoomsRequest)(nil),      // 1: dcim.v1.ListRoomsRequest
@@ -908,26 +821,25 @@ var file_v1_room_proto_goTypes = []any{
 	(*CreateRoomRequest)(nil),     // 5: dcim.v1.CreateRoomRequest
 	(*CreateRoomResponse)(nil),    // 6: dcim.v1.CreateRoomResponse
 	(*UpdateRoomRequest)(nil),     // 7: dcim.v1.UpdateRoomRequest
-	(*UpdateRoomResponse)(nil),    // 8: dcim.v1.UpdateRoomResponse
-	(*DeleteRoomRequest)(nil),     // 9: dcim.v1.DeleteRoomRequest
-	(*DeleteRoomResponse)(nil),    // 10: dcim.v1.DeleteRoomResponse
-	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
+	(*DeleteRoomRequest)(nil),     // 8: dcim.v1.DeleteRoomRequest
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 10: google.protobuf.Empty
 }
 var file_v1_room_proto_depIdxs = []int32{
-	11, // 0: dcim.v1.Room.created:type_name -> google.protobuf.Timestamp
-	11, // 1: dcim.v1.Room.deleted:type_name -> google.protobuf.Timestamp
+	9,  // 0: dcim.v1.Room.created:type_name -> google.protobuf.Timestamp
+	9,  // 1: dcim.v1.Room.deleted:type_name -> google.protobuf.Timestamp
 	0,  // 2: dcim.v1.ListRoomsResponse.rooms:type_name -> dcim.v1.Room
 	0,  // 3: dcim.v1.GetRoomResponse.room:type_name -> dcim.v1.Room
 	1,  // 4: dcim.v1.RoomService.ListRooms:input_type -> dcim.v1.ListRoomsRequest
 	3,  // 5: dcim.v1.RoomService.GetRoom:input_type -> dcim.v1.GetRoomRequest
 	5,  // 6: dcim.v1.RoomService.CreateRoom:input_type -> dcim.v1.CreateRoomRequest
 	7,  // 7: dcim.v1.RoomService.UpdateRoom:input_type -> dcim.v1.UpdateRoomRequest
-	9,  // 8: dcim.v1.RoomService.DeleteRoom:input_type -> dcim.v1.DeleteRoomRequest
+	8,  // 8: dcim.v1.RoomService.DeleteRoom:input_type -> dcim.v1.DeleteRoomRequest
 	2,  // 9: dcim.v1.RoomService.ListRooms:output_type -> dcim.v1.ListRoomsResponse
 	4,  // 10: dcim.v1.RoomService.GetRoom:output_type -> dcim.v1.GetRoomResponse
 	6,  // 11: dcim.v1.RoomService.CreateRoom:output_type -> dcim.v1.CreateRoomResponse
-	8,  // 12: dcim.v1.RoomService.UpdateRoom:output_type -> dcim.v1.UpdateRoomResponse
-	10, // 13: dcim.v1.RoomService.DeleteRoom:output_type -> dcim.v1.DeleteRoomResponse
+	10, // 12: dcim.v1.RoomService.UpdateRoom:output_type -> google.protobuf.Empty
+	10, // 13: dcim.v1.RoomService.DeleteRoom:output_type -> google.protobuf.Empty
 	9,  // [9:14] is the sub-list for method output_type
 	4,  // [4:9] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
@@ -946,7 +858,7 @@ func file_v1_room_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_room_proto_rawDesc), len(file_v1_room_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -2324,8 +2324,7 @@ export default class InventoryComponent {
     } else {
       firstValueFrom(this.inventoryApi.createAsset(updated))
         .then((res) => {
-          const created = { ...updated, id: res.asset?.id ?? updated.id };
-          this.mutableAssets.update((list) => [...list, created]);
+          this.mutableAssets.update((list) => [...list, { ...updated, id: res.assetId }]);
           this.editAsset.set(null);
         })
         // eslint-disable-next-line no-console

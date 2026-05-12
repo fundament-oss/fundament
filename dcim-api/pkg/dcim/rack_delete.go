@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
@@ -14,7 +15,7 @@ import (
 func (s *Server) DeleteRack(
 	ctx context.Context,
 	req *connect.Request[dcimv1.DeleteRackRequest],
-) (*connect.Response[dcimv1.DeleteRackResponse], error) {
+) (*connect.Response[emptypb.Empty], error) {
 	rackID := uuid.MustParse(req.Msg.GetId())
 
 	rowsAffected, err := s.queries.RackDelete(ctx, db.RackDeleteParams{ID: rackID})
@@ -28,5 +29,5 @@ func (s *Server) DeleteRack(
 
 	s.logger.InfoContext(ctx, "rack deleted", "rack_id", rackID)
 
-	return connect.NewResponse(dcimv1.DeleteRackResponse_builder{}.Build()), nil
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }

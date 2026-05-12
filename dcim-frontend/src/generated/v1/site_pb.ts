@@ -6,15 +6,15 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/site.proto.
  */
 export const file_v1_site: GenFile = /*@__PURE__*/
-  fileDesc("Cg12MS9zaXRlLnByb3RvEgdkY2ltLnYxIpIBCgRTaXRlEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSDwoHYWRkcmVzcxgeIAEoCRIrCgdjcmVhdGVkGCggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGDIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiEgoQTGlzdFNpdGVzUmVxdWVzdCIxChFMaXN0U2l0ZXNSZXNwb25zZRIcCgVzaXRlcxgKIAMoCzINLmRjaW0udjEuU2l0ZSImCg5HZXRTaXRlUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiLgoPR2V0U2l0ZVJlc3BvbnNlEhsKBHNpdGUYCiABKAsyDS5kY2ltLnYxLlNpdGUiOwoRQ3JlYXRlU2l0ZVJlcXVlc3QSFQoEbmFtZRgKIAEoCUIHukgEcgIQARIPCgdhZGRyZXNzGBQgASgJIiUKEkNyZWF0ZVNpdGVSZXNwb25zZRIPCgdzaXRlX2lkGAogASgJIlYKEVVwZGF0ZVNpdGVSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARITCgRuYW1lGBQgASgJQgWqAQIIARIWCgdhZGRyZXNzGB4gASgJQgWqAQIIASIUChJVcGRhdGVTaXRlUmVzcG9uc2UiKQoRRGVsZXRlU2l0ZVJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIhQKEkRlbGV0ZVNpdGVSZXNwb25zZTLkAgoLU2l0ZVNlcnZpY2USQgoJTGlzdFNpdGVzEhkuZGNpbS52MS5MaXN0U2l0ZXNSZXF1ZXN0GhouZGNpbS52MS5MaXN0U2l0ZXNSZXNwb25zZRI8CgdHZXRTaXRlEhcuZGNpbS52MS5HZXRTaXRlUmVxdWVzdBoYLmRjaW0udjEuR2V0U2l0ZVJlc3BvbnNlEkUKCkNyZWF0ZVNpdGUSGi5kY2ltLnYxLkNyZWF0ZVNpdGVSZXF1ZXN0GhsuZGNpbS52MS5DcmVhdGVTaXRlUmVzcG9uc2USRQoKVXBkYXRlU2l0ZRIaLmRjaW0udjEuVXBkYXRlU2l0ZVJlcXVlc3QaGy5kY2ltLnYxLlVwZGF0ZVNpdGVSZXNwb25zZRJFCgpEZWxldGVTaXRlEhouZGNpbS52MS5EZWxldGVTaXRlUmVxdWVzdBobLmRjaW0udjEuRGVsZXRlU2l0ZVJlc3BvbnNlQk9aQ2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvZGNpbS1hcGkvcGtnL3Byb3RvL2dlbi92MTtkY2ltdjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("Cg12MS9zaXRlLnByb3RvEgdkY2ltLnYxIrsCCgRTaXRlEgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSEQoJZnVsbF9uYW1lGB4gASgJEg8KB2FkZHJlc3MYKCABKAkSDAoEY2l0eRgyIAEoCRIPCgdjb3VudHJ5GDwgASgJEhMKBHRpZXIYRiABKAlCBaoBAggBEhgKCWZsb29yX3NxbRhQIAEoAUIFqgECCAESNgoLZXN0YWJsaXNoZWQYWiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIOCgZzdGF0dXMYZCABKAkSKwoHY3JlYXRlZBhuIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoHZGVsZXRlZBh4IAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBIhIKEExpc3RTaXRlc1JlcXVlc3QiMQoRTGlzdFNpdGVzUmVzcG9uc2USHAoFc2l0ZXMYCiADKAsyDS5kY2ltLnYxLlNpdGUiJgoOR2V0U2l0ZVJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIi4KD0dldFNpdGVSZXNwb25zZRIbCgRzaXRlGAogASgLMg0uZGNpbS52MS5TaXRlIs8BChFDcmVhdGVTaXRlUmVxdWVzdBIVCgRuYW1lGAogASgJQge6SARyAhABEhEKCWZ1bGxfbmFtZRgUIAEoCRIPCgdhZGRyZXNzGB4gASgJEgwKBGNpdHkYKCABKAkSDwoHY291bnRyeRgyIAEoCRIMCgR0aWVyGDwgASgJEhEKCWZsb29yX3NxbRhGIAEoARIvCgtlc3RhYmxpc2hlZBhQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDgoGc3RhdHVzGFogASgJIiUKEkNyZWF0ZVNpdGVSZXNwb25zZRIPCgdzaXRlX2lkGAogASgJIpsCChFVcGRhdGVTaXRlUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESEwoEbmFtZRgUIAEoCUIFqgECCAESGAoJZnVsbF9uYW1lGB4gASgJQgWqAQIIARIWCgdhZGRyZXNzGCggASgJQgWqAQIIARITCgRjaXR5GDIgASgJQgWqAQIIARIWCgdjb3VudHJ5GDwgASgJQgWqAQIIARITCgR0aWVyGEYgASgJQgWqAQIIARIYCglmbG9vcl9zcW0YUCABKAFCBaoBAggBEjYKC2VzdGFibGlzaGVkGFogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESFQoGc3RhdHVzGGQgASgJQgWqAQIIASIpChFEZWxldGVTaXRlUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEy2gIKC1NpdGVTZXJ2aWNlEkIKCUxpc3RTaXRlcxIZLmRjaW0udjEuTGlzdFNpdGVzUmVxdWVzdBoaLmRjaW0udjEuTGlzdFNpdGVzUmVzcG9uc2USPAoHR2V0U2l0ZRIXLmRjaW0udjEuR2V0U2l0ZVJlcXVlc3QaGC5kY2ltLnYxLkdldFNpdGVSZXNwb25zZRJFCgpDcmVhdGVTaXRlEhouZGNpbS52MS5DcmVhdGVTaXRlUmVxdWVzdBobLmRjaW0udjEuQ3JlYXRlU2l0ZVJlc3BvbnNlEkAKClVwZGF0ZVNpdGUSGi5kY2ltLnYxLlVwZGF0ZVNpdGVSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EkAKCkRlbGV0ZVNpdGUSGi5kY2ltLnYxLkRlbGV0ZVNpdGVSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Qk9aQ2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvZGNpbS1hcGkvcGtnL3Byb3RvL2dlbi92MTtkY2ltdjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
 
 /**
  * Site is a physical data center location (core.sites).
@@ -33,17 +33,52 @@ export type Site = Message<"dcim.v1.Site"> & {
   name: string;
 
   /**
-   * @generated from field: string address = 30;
+   * @generated from field: string full_name = 30;
+   */
+  fullName: string;
+
+  /**
+   * @generated from field: string address = 40;
    */
   address: string;
 
   /**
-   * @generated from field: google.protobuf.Timestamp created = 40;
+   * @generated from field: string city = 50;
+   */
+  city: string;
+
+  /**
+   * @generated from field: string country = 60;
+   */
+  country: string;
+
+  /**
+   * @generated from field: string tier = 70 [features.field_presence = EXPLICIT];
+   */
+  tier: string;
+
+  /**
+   * @generated from field: double floor_sqm = 80 [features.field_presence = EXPLICIT];
+   */
+  floorSqm: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp established = 90 [features.field_presence = EXPLICIT];
+   */
+  established?: Timestamp;
+
+  /**
+   * @generated from field: string status = 100;
+   */
+  status: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created = 110;
    */
   created?: Timestamp;
 
   /**
-   * @generated from field: google.protobuf.Timestamp deleted = 50 [features.field_presence = EXPLICIT];
+   * @generated from field: google.protobuf.Timestamp deleted = 120 [features.field_presence = EXPLICIT];
    */
   deleted?: Timestamp;
 };
@@ -129,9 +164,44 @@ export type CreateSiteRequest = Message<"dcim.v1.CreateSiteRequest"> & {
   name: string;
 
   /**
-   * @generated from field: string address = 20;
+   * @generated from field: string full_name = 20;
+   */
+  fullName: string;
+
+  /**
+   * @generated from field: string address = 30;
    */
   address: string;
+
+  /**
+   * @generated from field: string city = 40;
+   */
+  city: string;
+
+  /**
+   * @generated from field: string country = 50;
+   */
+  country: string;
+
+  /**
+   * @generated from field: string tier = 60;
+   */
+  tier: string;
+
+  /**
+   * @generated from field: double floor_sqm = 70;
+   */
+  floorSqm: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp established = 80;
+   */
+  established?: Timestamp;
+
+  /**
+   * @generated from field: string status = 90;
+   */
+  status: string;
 };
 
 /**
@@ -173,9 +243,44 @@ export type UpdateSiteRequest = Message<"dcim.v1.UpdateSiteRequest"> & {
   name: string;
 
   /**
-   * @generated from field: string address = 30 [features.field_presence = EXPLICIT];
+   * @generated from field: string full_name = 30 [features.field_presence = EXPLICIT];
+   */
+  fullName: string;
+
+  /**
+   * @generated from field: string address = 40 [features.field_presence = EXPLICIT];
    */
   address: string;
+
+  /**
+   * @generated from field: string city = 50 [features.field_presence = EXPLICIT];
+   */
+  city: string;
+
+  /**
+   * @generated from field: string country = 60 [features.field_presence = EXPLICIT];
+   */
+  country: string;
+
+  /**
+   * @generated from field: string tier = 70 [features.field_presence = EXPLICIT];
+   */
+  tier: string;
+
+  /**
+   * @generated from field: double floor_sqm = 80 [features.field_presence = EXPLICIT];
+   */
+  floorSqm: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp established = 90 [features.field_presence = EXPLICIT];
+   */
+  established?: Timestamp;
+
+  /**
+   * @generated from field: string status = 100 [features.field_presence = EXPLICIT];
+   */
+  status: string;
 };
 
 /**
@@ -184,19 +289,6 @@ export type UpdateSiteRequest = Message<"dcim.v1.UpdateSiteRequest"> & {
  */
 export const UpdateSiteRequestSchema: GenMessage<UpdateSiteRequest> = /*@__PURE__*/
   messageDesc(file_v1_site, 7);
-
-/**
- * @generated from message dcim.v1.UpdateSiteResponse
- */
-export type UpdateSiteResponse = Message<"dcim.v1.UpdateSiteResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.UpdateSiteResponse.
- * Use `create(UpdateSiteResponseSchema)` to create a new message.
- */
-export const UpdateSiteResponseSchema: GenMessage<UpdateSiteResponse> = /*@__PURE__*/
-  messageDesc(file_v1_site, 8);
 
 /**
  * @generated from message dcim.v1.DeleteSiteRequest
@@ -213,20 +305,7 @@ export type DeleteSiteRequest = Message<"dcim.v1.DeleteSiteRequest"> & {
  * Use `create(DeleteSiteRequestSchema)` to create a new message.
  */
 export const DeleteSiteRequestSchema: GenMessage<DeleteSiteRequest> = /*@__PURE__*/
-  messageDesc(file_v1_site, 9);
-
-/**
- * @generated from message dcim.v1.DeleteSiteResponse
- */
-export type DeleteSiteResponse = Message<"dcim.v1.DeleteSiteResponse"> & {
-};
-
-/**
- * Describes the message dcim.v1.DeleteSiteResponse.
- * Use `create(DeleteSiteResponseSchema)` to create a new message.
- */
-export const DeleteSiteResponseSchema: GenMessage<DeleteSiteResponse> = /*@__PURE__*/
-  messageDesc(file_v1_site, 10);
+  messageDesc(file_v1_site, 8);
 
 /**
  * @generated from service dcim.v1.SiteService
@@ -262,7 +341,7 @@ export const SiteService: GenService<{
   updateSite: {
     methodKind: "unary";
     input: typeof UpdateSiteRequestSchema;
-    output: typeof UpdateSiteResponseSchema;
+    output: typeof EmptySchema;
   },
   /**
    * @generated from rpc dcim.v1.SiteService.DeleteSite
@@ -270,7 +349,7 @@ export const SiteService: GenService<{
   deleteSite: {
     methodKind: "unary";
     input: typeof DeleteSiteRequestSchema;
-    output: typeof DeleteSiteResponseSchema;
+    output: typeof EmptySchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_site, 0);

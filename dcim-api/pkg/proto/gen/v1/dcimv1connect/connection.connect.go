@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -55,8 +56,8 @@ const (
 type PhysicalConnectionServiceClient interface {
 	CreatePhysicalConnection(context.Context, *connect.Request[v1.CreatePhysicalConnectionRequest]) (*connect.Response[v1.CreatePhysicalConnectionResponse], error)
 	GetPhysicalConnection(context.Context, *connect.Request[v1.GetPhysicalConnectionRequest]) (*connect.Response[v1.GetPhysicalConnectionResponse], error)
-	UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[v1.UpdatePhysicalConnectionResponse], error)
-	DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[v1.DeletePhysicalConnectionResponse], error)
+	UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
+	DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 	ListConnectionsByPlacement(context.Context, *connect.Request[v1.ListConnectionsByPlacementRequest]) (*connect.Response[v1.ListConnectionsByPlacementResponse], error)
 }
 
@@ -83,13 +84,13 @@ func NewPhysicalConnectionServiceClient(httpClient connect.HTTPClient, baseURL s
 			connect.WithSchema(physicalConnectionServiceMethods.ByName("GetPhysicalConnection")),
 			connect.WithClientOptions(opts...),
 		),
-		updatePhysicalConnection: connect.NewClient[v1.UpdatePhysicalConnectionRequest, v1.UpdatePhysicalConnectionResponse](
+		updatePhysicalConnection: connect.NewClient[v1.UpdatePhysicalConnectionRequest, emptypb.Empty](
 			httpClient,
 			baseURL+PhysicalConnectionServiceUpdatePhysicalConnectionProcedure,
 			connect.WithSchema(physicalConnectionServiceMethods.ByName("UpdatePhysicalConnection")),
 			connect.WithClientOptions(opts...),
 		),
-		deletePhysicalConnection: connect.NewClient[v1.DeletePhysicalConnectionRequest, v1.DeletePhysicalConnectionResponse](
+		deletePhysicalConnection: connect.NewClient[v1.DeletePhysicalConnectionRequest, emptypb.Empty](
 			httpClient,
 			baseURL+PhysicalConnectionServiceDeletePhysicalConnectionProcedure,
 			connect.WithSchema(physicalConnectionServiceMethods.ByName("DeletePhysicalConnection")),
@@ -108,8 +109,8 @@ func NewPhysicalConnectionServiceClient(httpClient connect.HTTPClient, baseURL s
 type physicalConnectionServiceClient struct {
 	createPhysicalConnection   *connect.Client[v1.CreatePhysicalConnectionRequest, v1.CreatePhysicalConnectionResponse]
 	getPhysicalConnection      *connect.Client[v1.GetPhysicalConnectionRequest, v1.GetPhysicalConnectionResponse]
-	updatePhysicalConnection   *connect.Client[v1.UpdatePhysicalConnectionRequest, v1.UpdatePhysicalConnectionResponse]
-	deletePhysicalConnection   *connect.Client[v1.DeletePhysicalConnectionRequest, v1.DeletePhysicalConnectionResponse]
+	updatePhysicalConnection   *connect.Client[v1.UpdatePhysicalConnectionRequest, emptypb.Empty]
+	deletePhysicalConnection   *connect.Client[v1.DeletePhysicalConnectionRequest, emptypb.Empty]
 	listConnectionsByPlacement *connect.Client[v1.ListConnectionsByPlacementRequest, v1.ListConnectionsByPlacementResponse]
 }
 
@@ -124,12 +125,12 @@ func (c *physicalConnectionServiceClient) GetPhysicalConnection(ctx context.Cont
 }
 
 // UpdatePhysicalConnection calls dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection.
-func (c *physicalConnectionServiceClient) UpdatePhysicalConnection(ctx context.Context, req *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[v1.UpdatePhysicalConnectionResponse], error) {
+func (c *physicalConnectionServiceClient) UpdatePhysicalConnection(ctx context.Context, req *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.updatePhysicalConnection.CallUnary(ctx, req)
 }
 
 // DeletePhysicalConnection calls dcim.v1.PhysicalConnectionService.DeletePhysicalConnection.
-func (c *physicalConnectionServiceClient) DeletePhysicalConnection(ctx context.Context, req *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[v1.DeletePhysicalConnectionResponse], error) {
+func (c *physicalConnectionServiceClient) DeletePhysicalConnection(ctx context.Context, req *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return c.deletePhysicalConnection.CallUnary(ctx, req)
 }
 
@@ -143,8 +144,8 @@ func (c *physicalConnectionServiceClient) ListConnectionsByPlacement(ctx context
 type PhysicalConnectionServiceHandler interface {
 	CreatePhysicalConnection(context.Context, *connect.Request[v1.CreatePhysicalConnectionRequest]) (*connect.Response[v1.CreatePhysicalConnectionResponse], error)
 	GetPhysicalConnection(context.Context, *connect.Request[v1.GetPhysicalConnectionRequest]) (*connect.Response[v1.GetPhysicalConnectionResponse], error)
-	UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[v1.UpdatePhysicalConnectionResponse], error)
-	DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[v1.DeletePhysicalConnectionResponse], error)
+	UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
+	DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 	ListConnectionsByPlacement(context.Context, *connect.Request[v1.ListConnectionsByPlacementRequest]) (*connect.Response[v1.ListConnectionsByPlacementResponse], error)
 }
 
@@ -214,11 +215,11 @@ func (UnimplementedPhysicalConnectionServiceHandler) GetPhysicalConnection(conte
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.GetPhysicalConnection is not implemented"))
 }
 
-func (UnimplementedPhysicalConnectionServiceHandler) UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[v1.UpdatePhysicalConnectionResponse], error) {
+func (UnimplementedPhysicalConnectionServiceHandler) UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection is not implemented"))
 }
 
-func (UnimplementedPhysicalConnectionServiceHandler) DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[v1.DeletePhysicalConnectionResponse], error) {
+func (UnimplementedPhysicalConnectionServiceHandler) DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.DeletePhysicalConnection is not implemented"))
 }
 
