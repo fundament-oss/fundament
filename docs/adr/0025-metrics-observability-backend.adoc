@@ -1,0 +1,70 @@
+:showtitle:
+:sidebar-order: 25
+:state: proposed
+
+= ADR-0025: Metrics observability backend
+
+Status:: proposed
+Date:: 2026-05-04
+Group:: cross-cutting
+Depends-on:: ADR-0006, ADR-0013, ADR-0017, ADR-0021
+
+== Context
+
+The platform needs metrics observability for two distinct audiences with different requirements.
+
+The platform team must monitor node health, control-plane health, and resource utilization across shoot clusters. The cost-control workflow specifically requires spotting shoots that are over-provisioned on nodes or resources so we can engage tenants to right-size them.
+
+Tenants need insight into their own shoot clusters -- at minimum resource usage and node health. Access must be limited to their own organization's clusters.
+
+Gardener (ADR-0006) already ships a metrics stack: Prometheus and Alertmanager via prometheus-operator, plus Plutono (an Apache-2.0 fork of Grafana 7.5) dashboards for visualization. The relevant Prometheus instances run in the seed and in each shoot control-plane namespace on the seed; node-exporter and kube-state-metrics provide shoot-side metrics. Gardener also exposes per-shoot Prometheus and Plutono access to shoot owners via the `<shoot-name>.monitoring` secret in the garden project namespace. Extensions integrate through standard Prometheus Operator CRDs (`ServiceMonitor`, `ScrapeConfig`, `PrometheusRule`) and dashboard `ConfigMap`s.
+
+Three forces complicate the choice:
+
+* **Upstream alignment.** Replacing Gardener's metrics stack means every Gardener release that touches monitoring becomes an integration and maintenance problem for fundament.
+* **Scale.** Gardener's default metrics views are seed-scoped and shoot-scoped. Fleet-wide aggregation for right-sizing across many shoots or many seeds is possible, but it is a separate design problem and not provided as the default operator view.
+* **Tenant UX is orthogonal.** Fundament wants a single-pane-of-glass UX, but that is a frontend concern, not a reason by itself to replace the Gardener metrics backend. In the short term, tenants can use Gardener's default per-shoot views.
+
+This ADR decides only which metrics backend fundament adopts now. Tenant-facing frontend work in fundament, cross-shoot aggregation, log observability, and long-term retention are out of scope and tracked separately.
+
+== Options
+
+=== Option 1: Adopt Gardener default metrics backend
+
+Use Gardener-managed Prometheus and Alertmanager as the metrics backend. Operators use Gardener's existing metrics views; shoot owners use per-shoot Plutono or federate from the shoot Prometheus using credentials Gardener provides. Fundament does not replace Gardener's metrics components.
+
+* Pros: zero divergence; no backend maintenance; tenants and operators get metrics today; extension integration follows Gardener's standard contract; future Gardener improvements land without a fundament fork
+* Cons: tenant UX stays split between fundament and Gardener until follow-up frontend work lands; fleet-wide aggregation for right-sizing is not solved by this option alone; operator workflows initially follow Gardener's seed/shoot boundaries
+
+=== Option 2: Replace Gardener's metrics backend
+
+Disable or override Gardener's Prometheus deployments and run a fundament-managed alternative in their place, for example a custom Prometheus topology or a different metrics backend such as Mimir, Thanos, or VictoriaMetrics.
+
+* Pros: full control over scraping, storage, retention, and aggregation; could optimize for fleet-wide queries from day one; one metrics architecture fully shaped around fundament requirements
+* Cons: large maintenance surface; every Gardener release that touches monitoring is a potential merge conflict; existing Gardener dashboards and rules need migration or compatibility work; less help from upstream Gardener patterns and community practice
+
+== Decision
+
+Option 1. Adopt Gardener's default metrics backend now.
+
+For the immediate phase, operators use Gardener-managed metrics views and shoot owners use the per-shoot Plutono/Prometheus access Gardener already exposes. This satisfies the near-term requirement without diverging from Gardener's supported path.
+
+This ADR intentionally does *not* decide the long-term tenant frontend. If the split UX becomes a problem, a follow-up ADR may choose native metrics panels in fundament's `console-frontend`, queried through fundament's backend, as the preferred user experience. That future work builds on the backend chosen here rather than replacing it.
+
+Cross-shoot and cross-seed aggregation for fleet-level right-sizing is also deferred to a follow-up ADR. If operators need landscape-wide queries beyond Gardener's default seed/shoot views, that ADR will choose an aggregation backend and define how metrics are collected, labeled, and queried.
+
+Option 2 was rejected because the maintenance cost of replacing Gardener's metrics backend outweighs the benefit at this stage. The stronger near-term need is to stay aligned with Gardener, then add frontend and aggregation layers only if and when they are justified.
+
+== Consequences
+
+* Gardener Prometheus and Alertmanager remain the source of truth for platform metrics
+* Operators start with Gardener's existing seed and shoot metrics views for health and debugging
+* Shoot owners can use Gardener's per-shoot Plutono and Prometheus credentials today through the monitoring secret
+* A small fundament UX bridge, such as a deep link from cluster details to Gardener's per-shoot metrics view, can be added without changing the backend choice
+* **Future frontend follow-up**: native fundament metrics panels in `console-frontend` are an explicit follow-up option, not part of this ADR
+* **Future aggregation follow-up**: cross-shoot or cross-seed metrics aggregation for fleet right-sizing is deferred to a separate ADR
+* Long-term metrics retention beyond Prometheus's per-shoot defaults is implicitly tied to the aggregation backend choice (Mimir/Thanos/VictoriaMetrics typically handle long-term storage as part of the same deployment) and is addressed in the same follow-up ADR
+* Hubble integration (ADR-0013 chose Cilium partly for Hubble) is deferred to a follow-up ADR. Hubble exposes Prometheus metrics natively, so the data path is straightforward when we choose to enable it
+* GEP-34 (Gardener's OpenTelemetry transition) modifies metrics ingest but keeps Prometheus as the storage and query backend; this decision is robust to that transition because the Prometheus HTTP query API does not change
+* Log observability, log retention, and any Vali/Loki/VictoriaLogs decision are explicitly out of scope and require a separate ADR
+* Audit/compliance requirements from ADR-0021 that depend on logging or audit event retention are explicitly outside this ADR's scope and must be handled by the separate logging/auditing decisions
