@@ -1,0 +1,121 @@
+<div class="flex items-start">
+  <!-- U-position numbers (outside rack, left) -->
+  <div class="shrink-0 w-5 flex flex-col gap-px mr-2" style="padding-top: 37px" aria-hidden="true">
+    @for (u of uNumbers(); track u) {
+      <div
+        class="h-7 text-right text-[10px] text-neutral-500 font-mono select-none flex items-start justify-end pt-1"
+      >
+        {{ u }}
+      </div>
+    }
+  </div>
+
+  <!-- Power bars + rack frame -->
+  <div class="flex-1 flex items-stretch">
+    <!-- Left power bar -->
+    <div
+      class="w-6 shrink-0 bg-neutral-100 border border-r-0 border-neutral-200 rounded-l-xl flex items-center justify-center"
+      aria-hidden="true"
+    >
+      <span
+        class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest select-none"
+        style="writing-mode: vertical-rl; transform: rotate(180deg)"
+        >Power</span
+      >
+    </div>
+
+    <!-- Rack frame -->
+    <div class="flex-1 min-w-0 overflow-hidden border border-neutral-200 bg-neutral-100">
+      <!-- Top cap -->
+      <div
+        class="px-3 py-1.5 border-b border-neutral-200 flex items-center justify-between"
+        aria-hidden="true"
+      >
+        <span class="text-xs font-mono text-neutral-600">{{ rack().totalU }}U</span>
+        <span class="text-xs font-mono text-amber-600 font-semibold uppercase tracking-wider"
+          >editing</span
+        >
+      </div>
+
+      <!-- Unified drop list: devices + empty slots -->
+      <div
+        cdkDropList
+        [cdkDropListData]="editorRows()"
+        (cdkDropListDropped)="onDrop($event)"
+        class="flex flex-col gap-px p-2"
+        aria-label="Rack slots — drag devices to reorder"
+      >
+        @for (row of editorRows(); track (row.type === 'device' ? row.device.id : 'u' + row.u)) {
+          @if (row.type === 'device') {
+            <div
+              cdkDrag
+              [cdkDragData]="row"
+              class="w-full rounded border flex items-center gap-1.5 px-1.5 overflow-hidden cursor-grab active:cursor-grabbing"
+              [class]="deviceSlotClasses(row.device)"
+              [style.height.px]="deviceHeight(row.device)"
+            >
+              <!-- Device label -->
+              <span class="text-xs font-medium font-mono truncate flex-1 min-w-0 text-left">{{
+                row.device.name
+              }}</span>
+
+              <!-- U-size -->
+              <span class="text-xs opacity-40 shrink-0 font-mono">{{ row.device.uSize }}U</span>
+
+              <!-- Delete button -->
+              <button
+                type="button"
+                class="shrink-0 inline-flex items-center justify-center p-0.5 rounded opacity-60 hover:opacity-100 hover:bg-black/20 focus:outline-none focus:ring-1 focus:ring-white/50"
+                (click)="requestDelete(row.device)"
+                [attr.aria-label]="'Delete ' + row.device.name"
+              >
+                <nldd-icon name="trash" style="width:14px;height:14px;display:block"></nldd-icon>
+              </button>
+
+              <!-- Custom drag preview. CDK 21 forces padding:0/border:none/background:none
+                   on the preview root (.cdk-drag-preview reset), so we wrap the styled row
+                   in an inner div that is untouched by that reset. -->
+              <ng-template cdkDragPreview matchSize>
+                <div class="w-full h-full">
+                  <div
+                    class="w-full h-full rounded border flex items-center gap-1.5 px-1.5 overflow-hidden"
+                    [class]="deviceSlotClasses(row.device)"
+                  >
+                    <span
+                      class="text-xs font-medium font-mono truncate flex-1 min-w-0 text-left"
+                      >{{ row.device.name }}</span
+                    >
+                    <span class="text-xs opacity-40 shrink-0 font-mono"
+                      >{{ row.device.uSize }}U</span
+                    >
+                  </div>
+                </div>
+              </ng-template>
+            </div>
+          } @else {
+            <div
+              cdkDrag
+              [cdkDragDisabled]="true"
+              class="w-full h-7 rounded border border-dashed border-neutral-200 bg-neutral-200/60 flex items-center px-2"
+            >
+              <span class="text-xs text-neutral-400 font-mono select-none">—</span>
+            </div>
+          }
+        }
+      </div>
+
+    </div>
+
+    <!-- Right power bar -->
+    <div
+      class="w-6 shrink-0 bg-neutral-100 border border-l-0 border-neutral-200 rounded-r-xl flex items-center justify-center"
+      aria-hidden="true"
+    >
+      <span
+        class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest select-none"
+        style="writing-mode: vertical-rl"
+        >Power</span
+      >
+    </div>
+  </div>
+</div>
