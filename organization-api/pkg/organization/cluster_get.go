@@ -17,6 +17,10 @@ import (
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
+// shootStatusReady mirrors cluster-worker's gardener.StatusReady value
+// written to cluster.shoot_status in the DB.
+const shootStatusReady = "ready"
+
 func (s *Server) GetClusterByName(
 	ctx context.Context,
 	req *connect.Request[organizationv1.GetClusterByNameRequest],
@@ -154,7 +158,7 @@ func (s *Server) GetClusterMetricsCredentials(
 	if cluster.Deleted.Valid {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 	}
-	if !cluster.ShootStatus.Valid || cluster.ShootStatus.String != "ready" {
+	if !cluster.ShootStatus.Valid || cluster.ShootStatus.String != shootStatusReady {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet"))
 	}
 
@@ -195,7 +199,7 @@ func (s *Server) GetKubeconfig(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	if !cluster.ShootStatus.Valid || cluster.ShootStatus.String != "ready" {
+	if !cluster.ShootStatus.Valid || cluster.ShootStatus.String != shootStatusReady {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet"))
 	}
 
@@ -215,7 +219,7 @@ func (s *Server) GetKubeconfig(
 // are ready. Any error short of "found nothing" is logged and swallowed: a
 // transient Gardener glitch shouldn't fail cluster-details.
 func (s *Server) lookupObservabilityURL(ctx context.Context, clusterID uuid.UUID, shootStatus pgtype.Text) string {
-	if !shootStatus.Valid || shootStatus.String != "ready" {
+	if !shootStatus.Valid || shootStatus.String != shootStatusReady {
 		return ""
 	}
 	info, err := s.gardener.Monitoring(ctx, clusterID)

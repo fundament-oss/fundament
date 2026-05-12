@@ -32,9 +32,7 @@ const (
 	monitoringSecretSuffix = ".monitoring"
 
 	// plutonoURLAnnotation is the annotation Gardener sets on the monitoring
-	// secret carrying the Plutono dashboard URL. The exact field is one of
-	// the open questions in ADR-0025's design.md and may need adjustment
-	// after kubectl-verifying against a real landscape.
+	// secret carrying the Plutono dashboard URL.
 	plutonoURLAnnotation = "plutono-url"
 )
 

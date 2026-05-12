@@ -1,10 +1,10 @@
 :showtitle:
 :sidebar-order: 25
-:state: proposed
+:state: accepted
 
 = ADR-0025: Metrics observability backend
 
-Status:: proposed
+Status:: accepted
 Date:: 2026-05-04
 Group:: cross-cutting
 Depends-on:: ADR-0006, ADR-0013, ADR-0017, ADR-0021
