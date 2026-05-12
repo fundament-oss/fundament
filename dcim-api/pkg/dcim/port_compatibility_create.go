@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -24,26 +23,14 @@ func (s *Server) CreatePortCompatibility(
 	portDefID := uuid.MustParse(req.Msg.GetPortDefinitionId())
 	compatCatalogID := uuid.MustParse(req.Msg.GetCompatibleCatalogId())
 
-	// Look up the compatible catalog entry to get its category
-	catalogEntry, err := s.queries.DeviceCatalogGetByID(ctx, db.DeviceCatalogGetByIDParams{ID: compatCatalogID})
+	_, err := s.queries.PortCompatibilityCreate(ctx, db.PortCompatibilityCreateParams{
+		PortDefinitionID:    portDefID,
+		CompatibleCatalogID: compatCatalogID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("compatible catalog entry not found"))
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to look up compatible catalog entry: %w", err))
-	}
-
-	params := db.PortCompatibilityCreateParams{
-		PortDefinitionID:   portDefID,
-		CompatibleCategory: catalogEntry.Category,
-		CompatibleCatalogID: pgtype.UUID{
-			Bytes: compatCatalogID,
-			Valid: true,
-		},
-	}
-
-	_, err = s.queries.PortCompatibilityCreate(ctx, params)
-	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			switch pgErr.ConstraintName {

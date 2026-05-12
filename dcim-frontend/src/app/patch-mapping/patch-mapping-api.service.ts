@@ -13,10 +13,10 @@ export default class PatchMappingApiService {
       dcId: '',
       sourcePlacementId: c.sourcePlacementId,
       sourceDeviceLabel: c.sourcePlacementId,
-      sourcePortName: c.sourcePortName,
+      sourcePortDefinitionId: c.sourcePortDefinitionId,
       targetPlacementId: c.targetPlacementId,
       targetDeviceLabel: c.targetPlacementId,
-      targetPortName: c.targetPortName,
+      targetPortDefinitionId: c.targetPortDefinitionId,
       cableAssetId: c.cableAssetId || undefined,
     };
   }
@@ -27,15 +27,15 @@ export default class PatchMappingApiService {
 
   createPhysicalConnection(
     sourcePlacementId: string,
-    sourcePortName: string,
+    sourcePortDefinitionId: string,
     targetPlacementId: string,
-    targetPortName: string,
+    targetPortDefinitionId: string,
   ) {
     return this.client.createPhysicalConnection({
       sourcePlacementId,
-      sourcePortName,
+      sourcePortDefinitionId,
       targetPlacementId,
-      targetPortName,
+      targetPortDefinitionId,
     });
   }
 

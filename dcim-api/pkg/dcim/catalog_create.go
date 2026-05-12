@@ -21,15 +21,12 @@ func (s *Server) CreateCatalogEntry(
 	params := db.DeviceCatalogCreateParams{
 		Manufacturer: req.Msg.GetManufacturer(),
 		Model:        req.Msg.GetModel(),
+		PartNumber:   pgtype.Text{String: req.Msg.GetPartNumber(), Valid: true},
 		Category:     assetCategoryToDB(req.Msg.GetCategory()),
 		Specs:        specsToDB(req.Msg.GetSpecs()),
 	}
 
-	if req.Msg.GetPartNumber() != "" {
-		params.PartNumber = pgtype.Text{String: req.Msg.GetPartNumber(), Valid: true}
-	}
-
-	if req.Msg.GetFormFactor() != "" {
+	if req.Msg.HasFormFactor() {
 		params.FormFactor = pgtype.Text{String: req.Msg.GetFormFactor(), Valid: true}
 	}
 

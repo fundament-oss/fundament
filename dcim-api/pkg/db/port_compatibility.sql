@@ -7,7 +7,9 @@ ORDER BY created;
 
 -- name: PortCompatibilityCreate :one
 INSERT INTO dcim.port_compatibilities (port_definition_id, compatible_category, compatible_catalog_id)
-VALUES ($1, $2, $3)
+SELECT sqlc.arg('port_definition_id')::uuid, category, sqlc.arg('compatible_catalog_id')::uuid
+FROM dcim.device_catalogs
+WHERE id = sqlc.arg('compatible_catalog_id')::uuid AND deleted IS NULL
 RETURNING id;
 
 -- name: PortCompatibilityDelete :execrows

@@ -28,11 +28,19 @@ func (s *Server) UpdatePhysicalConnection(
 	}
 
 	if req.Msg.HasCableAssetId() {
-		params.CableAssetID = pgtype.UUID{Bytes: uuid.MustParse(req.Msg.GetCableAssetId()), Valid: true}
+		if v := req.Msg.GetCableAssetId(); v == "" {
+			params.ClearCableAssetID = true
+		} else {
+			params.CableAssetID = pgtype.UUID{Bytes: uuid.MustParse(v), Valid: true}
+		}
 	}
 
 	if req.Msg.HasLogicalConnectionId() {
-		params.LogicalConnectionID = pgtype.UUID{Bytes: uuid.MustParse(req.Msg.GetLogicalConnectionId()), Valid: true}
+		if v := req.Msg.GetLogicalConnectionId(); v == "" {
+			params.ClearLogicalConnectionID = true
+		} else {
+			params.LogicalConnectionID = pgtype.UUID{Bytes: uuid.MustParse(v), Valid: true}
+		}
 	}
 
 	rowsAffected, err := s.queries.PhysicalConnectionUpdate(ctx, params)

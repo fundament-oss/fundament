@@ -10,8 +10,14 @@ RETURNING id;
 
 -- name: PhysicalConnectionUpdate :execrows
 UPDATE dcim.physical_connections
-SET cable_asset_id        = COALESCE(sqlc.narg('cable_asset_id'), cable_asset_id),
-    logical_connection_id = COALESCE(sqlc.narg('logical_connection_id'), logical_connection_id)
+SET cable_asset_id        = CASE
+        WHEN sqlc.arg('clear_cable_asset_id')::bool THEN NULL
+        ELSE COALESCE(sqlc.narg('cable_asset_id'), cable_asset_id)
+    END,
+    logical_connection_id = CASE
+        WHEN sqlc.arg('clear_logical_connection_id')::bool THEN NULL
+        ELSE COALESCE(sqlc.narg('logical_connection_id'), logical_connection_id)
+    END
 WHERE id = $1 AND deleted IS NULL;
 
 -- name: PhysicalConnectionDelete :execrows

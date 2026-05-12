@@ -149,19 +149,33 @@ func (q *Queries) PhysicalConnectionListByPlacement(ctx context.Context, arg Phy
 
 const physicalConnectionUpdate = `-- name: PhysicalConnectionUpdate :execrows
 UPDATE dcim.physical_connections
-SET cable_asset_id        = COALESCE($2, cable_asset_id),
-    logical_connection_id = COALESCE($3, logical_connection_id)
+SET cable_asset_id        = CASE
+        WHEN $2::bool THEN NULL
+        ELSE COALESCE($3, cable_asset_id)
+    END,
+    logical_connection_id = CASE
+        WHEN $4::bool THEN NULL
+        ELSE COALESCE($5, logical_connection_id)
+    END
 WHERE id = $1 AND deleted IS NULL
 `
 
 type PhysicalConnectionUpdateParams struct {
-	ID                  uuid.UUID
-	CableAssetID        pgtype.UUID
-	LogicalConnectionID pgtype.UUID
+	ID                       uuid.UUID
+	ClearCableAssetID        bool
+	CableAssetID             pgtype.UUID
+	ClearLogicalConnectionID bool
+	LogicalConnectionID      pgtype.UUID
 }
 
 func (q *Queries) PhysicalConnectionUpdate(ctx context.Context, arg PhysicalConnectionUpdateParams) (int64, error) {
-	result, err := q.db.Exec(ctx, physicalConnectionUpdate, arg.ID, arg.CableAssetID, arg.LogicalConnectionID)
+	result, err := q.db.Exec(ctx, physicalConnectionUpdate,
+		arg.ID,
+		arg.ClearCableAssetID,
+		arg.CableAssetID,
+		arg.ClearLogicalConnectionID,
+		arg.LogicalConnectionID,
+	)
 	if err != nil {
 		return 0, err
 	}

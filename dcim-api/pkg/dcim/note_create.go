@@ -16,7 +16,10 @@ func (s *Server) CreateNote(
 	req *connect.Request[dcimv1.CreateNoteRequest],
 ) (*connect.Response[dcimv1.CreateNoteResponse], error) {
 	entityID := uuid.MustParse(req.Msg.GetEntityId())
-	params := noteEntityToCreateParams(req.Msg.GetEntityType(), entityID)
+	params, err := noteEntityToCreateParams(req.Msg.GetEntityType(), entityID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
 
 	params.Body = req.Msg.GetBody()
 	params.CreatedBy = pgtype.Text{String: req.Msg.GetCreatedBy(), Valid: true}

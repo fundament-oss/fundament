@@ -79,78 +79,71 @@ func noteEntityFromRow(
 	}
 }
 
-func noteEntityToCreateParams(entityType dcimv1.NoteEntityType, entityID uuid.UUID) db.NoteCreateParams {
+func assignNoteEntityFK(
+	entityType dcimv1.NoteEntityType,
+	entityID uuid.UUID,
+	deviceCatalogID, portDefinitionID, assetID, siteID, roomID,
+	rackRowID, rackID, placementID, physicalConnectionID,
+	logicalDesignID, logicalDeviceID, logicalConnectionID, taskID *pgtype.UUID,
+) error {
 	fk := pgtype.UUID{Bytes: entityID, Valid: true}
-	var params db.NoteCreateParams
 
 	switch entityType {
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_DEVICE_CATALOG:
-		params.DeviceCatalogID = fk
+		*deviceCatalogID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_PORT_DEFINITION:
-		params.PortDefinitionID = fk
+		*portDefinitionID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_ASSET:
-		params.AssetID = fk
+		*assetID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_SITE:
-		params.SiteID = fk
+		*siteID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_ROOM:
-		params.RoomID = fk
+		*roomID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_RACK_ROW:
-		params.RackRowID = fk
+		*rackRowID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_RACK:
-		params.RackID = fk
+		*rackID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_PLACEMENT:
-		params.PlacementID = fk
+		*placementID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_PHYSICAL_CONNECTION:
-		params.PhysicalConnectionID = fk
+		*physicalConnectionID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_LOGICAL_DESIGN:
-		params.LogicalDesignID = fk
+		*logicalDesignID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_LOGICAL_DEVICE:
-		params.LogicalDeviceID = fk
+		*logicalDeviceID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_LOGICAL_CONNECTION:
-		params.LogicalConnectionID = fk
+		*logicalConnectionID = fk
 	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_TASK:
-		params.TaskID = fk
+		*taskID = fk
+	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_UNSPECIFIED:
+		return fmt.Errorf("entity_type is required")
 	default:
 		panic(fmt.Sprintf("unknown note entity type: %d", entityType))
 	}
 
-	return params
+	return nil
 }
 
-func noteEntityToListParams(entityType dcimv1.NoteEntityType, entityID uuid.UUID) db.NoteListParams {
-	fk := pgtype.UUID{Bytes: entityID, Valid: true}
+func noteEntityToCreateParams(entityType dcimv1.NoteEntityType, entityID uuid.UUID) (db.NoteCreateParams, error) {
+	var params db.NoteCreateParams
+	err := assignNoteEntityFK(entityType, entityID,
+		&params.DeviceCatalogID, &params.PortDefinitionID, &params.AssetID,
+		&params.SiteID, &params.RoomID, &params.RackRowID, &params.RackID,
+		&params.PlacementID, &params.PhysicalConnectionID,
+		&params.LogicalDesignID, &params.LogicalDeviceID,
+		&params.LogicalConnectionID, &params.TaskID,
+	)
+	return params, err
+}
+
+func noteEntityToListParams(entityType dcimv1.NoteEntityType, entityID uuid.UUID) (db.NoteListParams, error) {
 	var params db.NoteListParams
-
-	switch entityType {
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_DEVICE_CATALOG:
-		params.DeviceCatalogID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_PORT_DEFINITION:
-		params.PortDefinitionID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_ASSET:
-		params.AssetID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_LOGICAL_DESIGN:
-		params.LogicalDesignID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_SITE:
-		params.SiteID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_ROOM:
-		params.RoomID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_RACK_ROW:
-		params.RackRowID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_RACK:
-		params.RackID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_PLACEMENT:
-		params.PlacementID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_PHYSICAL_CONNECTION:
-		params.PhysicalConnectionID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_LOGICAL_DEVICE:
-		params.LogicalDeviceID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_LOGICAL_CONNECTION:
-		params.LogicalConnectionID = fk
-	case dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_TASK:
-		params.TaskID = fk
-	default:
-		panic(fmt.Sprintf("unknown note entity type: %d", entityType))
-	}
-
-	return params
+	err := assignNoteEntityFK(entityType, entityID,
+		&params.DeviceCatalogID, &params.PortDefinitionID, &params.AssetID,
+		&params.SiteID, &params.RoomID, &params.RackRowID, &params.RackID,
+		&params.PlacementID, &params.PhysicalConnectionID,
+		&params.LogicalDesignID, &params.LogicalDeviceID,
+		&params.LogicalConnectionID, &params.TaskID,
+	)
+	return params, err
 }

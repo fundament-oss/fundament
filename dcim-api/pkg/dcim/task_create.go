@@ -22,7 +22,7 @@ func (s *Server) CreateTask(
 		Category: taskCategoryFromProto(req.Msg.GetCategory()),
 	}
 
-	if req.Msg.GetDescription() != "" {
+	if req.Msg.HasDescription() {
 		params.Description = pgtype.Text{String: req.Msg.GetDescription(), Valid: true}
 	}
 
@@ -34,7 +34,7 @@ func (s *Server) CreateTask(
 		params.DueDate = pgtype.Timestamptz{Time: req.Msg.GetDueDate().AsTime(), Valid: true}
 	}
 
-	if req.Msg.GetLocation() != "" {
+	if req.Msg.HasLocation() {
 		params.Location = pgtype.Text{String: req.Msg.GetLocation(), Valid: true}
 	}
 

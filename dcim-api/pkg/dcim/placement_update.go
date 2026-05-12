@@ -36,7 +36,7 @@ func (s *Server) UpdatePlacement(
 	case dcimv1.UpdatePlacementRequest_SubComponent_case:
 		sub := req.Msg.GetSubComponent()
 		params.ParentPlacementID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPlacementId()), Valid: true}
-		params.PortDefinitionID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPortName()), Valid: true}
+		params.PortDefinitionID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPortDefinitionId()), Valid: true}
 	case dcimv1.UpdatePlacementRequest_Location_not_set_case:
 		// location not being updated
 	default:
@@ -44,7 +44,11 @@ func (s *Server) UpdatePlacement(
 	}
 
 	if req.Msg.HasLogicalDeviceId() {
-		params.LogicalDeviceID = pgtype.UUID{Bytes: uuid.MustParse(req.Msg.GetLogicalDeviceId()), Valid: true}
+		if v := req.Msg.GetLogicalDeviceId(); v == "" {
+			params.ClearLogicalDeviceID = true
+		} else {
+			params.LogicalDeviceID = pgtype.UUID{Bytes: uuid.MustParse(v), Valid: true}
+		}
 	}
 
 	if req.Msg.HasNotes() {

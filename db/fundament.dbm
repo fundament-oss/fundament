@@ -2716,6 +2716,18 @@ END;]]> </definition>
 	</constraint>
 </table>
 
+<index name="task_steps_uq_task_ordinal" table="dcim.task_steps"
+	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="task_id"/>
+		</idxelement>
+		<idxelement use-sorting="false">
+			<column name="ordinal"/>
+		</idxelement>
+	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
+</index>
+
 <constraint name="projects_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.projects">
 	<columns names="cluster_id" ref-type="src-columns"/>

@@ -1,6 +1,9 @@
 package dcim
 
 import (
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
+
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -67,100 +70,71 @@ func assetEventTypeToProto(eventType string) dcimv1.AssetEventType {
 	}
 }
 
-func assetFromGetRow(row *db.AssetGetByIDRow) *dcimv1.Asset {
+func assetFromFields(
+	id uuid.UUID,
+	deviceCatalogID uuid.UUID,
+	serialNumber pgtype.Text,
+	assetTag pgtype.Text,
+	purchaseDate pgtype.Date,
+	purchaseOrder pgtype.Text,
+	warrantyExpiry pgtype.Date,
+	status string,
+	notes pgtype.Text,
+	created pgtype.Timestamptz,
+) *dcimv1.Asset {
 	asset := dcimv1.Asset_builder{
-		Id:              row.ID.String(),
-		DeviceCatalogId: row.DeviceCatalogID.String(),
-		Status:          assetStatusToProto(row.Status),
-		Notes:           row.Notes.String,
-		Created:         timestamppb.New(row.Created.Time),
+		Id:              id.String(),
+		DeviceCatalogId: deviceCatalogID.String(),
+		Status:          assetStatusToProto(status),
+		Notes:           notes.String,
+		Created:         timestamppb.New(created.Time),
 	}.Build()
 
-	if row.SerialNumber.Valid {
-		asset.SetSerialNumber(row.SerialNumber.String)
+	if serialNumber.Valid {
+		asset.SetSerialNumber(serialNumber.String)
 	}
 
-	if row.AssetTag.Valid {
-		asset.SetAssetTag(row.AssetTag.String)
+	if assetTag.Valid {
+		asset.SetAssetTag(assetTag.String)
 	}
 
-	if row.PurchaseDate.Valid {
-		asset.SetPurchaseDate(timestamppb.New(row.PurchaseDate.Time))
+	if purchaseDate.Valid {
+		asset.SetPurchaseDate(timestamppb.New(purchaseDate.Time))
 	}
 
-	if row.PurchaseOrder.Valid {
-		asset.SetPurchaseOrder(row.PurchaseOrder.String)
+	if purchaseOrder.Valid {
+		asset.SetPurchaseOrder(purchaseOrder.String)
 	}
 
-	if row.WarrantyExpiry.Valid {
-		asset.SetWarrantyExpiry(timestamppb.New(row.WarrantyExpiry.Time))
+	if warrantyExpiry.Valid {
+		asset.SetWarrantyExpiry(timestamppb.New(warrantyExpiry.Time))
 	}
 
 	return asset
+}
+
+func assetFromGetRow(row *db.AssetGetByIDRow) *dcimv1.Asset {
+	return assetFromFields(
+		row.ID, row.DeviceCatalogID, row.SerialNumber, row.AssetTag,
+		row.PurchaseDate, row.PurchaseOrder, row.WarrantyExpiry,
+		row.Status, row.Notes, row.Created,
+	)
 }
 
 func assetFromListRow(row *db.AssetListRow) *dcimv1.Asset {
-	asset := dcimv1.Asset_builder{
-		Id:              row.ID.String(),
-		DeviceCatalogId: row.DeviceCatalogID.String(),
-		Status:          assetStatusToProto(row.Status),
-		Notes:           row.Notes.String,
-		Created:         timestamppb.New(row.Created.Time),
-	}.Build()
-
-	if row.SerialNumber.Valid {
-		asset.SetSerialNumber(row.SerialNumber.String)
-	}
-
-	if row.AssetTag.Valid {
-		asset.SetAssetTag(row.AssetTag.String)
-	}
-
-	if row.PurchaseDate.Valid {
-		asset.SetPurchaseDate(timestamppb.New(row.PurchaseDate.Time))
-	}
-
-	if row.PurchaseOrder.Valid {
-		asset.SetPurchaseOrder(row.PurchaseOrder.String)
-	}
-
-	if row.WarrantyExpiry.Valid {
-		asset.SetWarrantyExpiry(timestamppb.New(row.WarrantyExpiry.Time))
-	}
-
-	return asset
+	return assetFromFields(
+		row.ID, row.DeviceCatalogID, row.SerialNumber, row.AssetTag,
+		row.PurchaseDate, row.PurchaseOrder, row.WarrantyExpiry,
+		row.Status, row.Notes, row.Created,
+	)
 }
 
 func assetFromListByCatalogRow(row *db.AssetListByCatalogIDRow) *dcimv1.Asset {
-	asset := dcimv1.Asset_builder{
-		Id:              row.ID.String(),
-		DeviceCatalogId: row.DeviceCatalogID.String(),
-		Status:          assetStatusToProto(row.Status),
-		Notes:           row.Notes.String,
-		Created:         timestamppb.New(row.Created.Time),
-	}.Build()
-
-	if row.SerialNumber.Valid {
-		asset.SetSerialNumber(row.SerialNumber.String)
-	}
-
-	if row.AssetTag.Valid {
-		asset.SetAssetTag(row.AssetTag.String)
-	}
-
-	if row.PurchaseDate.Valid {
-		asset.SetPurchaseDate(timestamppb.New(row.PurchaseDate.Time))
-	}
-
-	if row.PurchaseOrder.Valid {
-		asset.SetPurchaseOrder(row.PurchaseOrder.String)
-	}
-
-	if row.WarrantyExpiry.Valid {
-		asset.SetWarrantyExpiry(timestamppb.New(row.WarrantyExpiry.Time))
-	}
-
-	return asset
+	return assetFromFields(
+		row.ID, row.DeviceCatalogID, row.SerialNumber, row.AssetTag,
+		row.PurchaseDate, row.PurchaseOrder, row.WarrantyExpiry,
+		row.Status, row.Notes, row.Created,
+	)
 }
 
 func assetEventFromRow(row *db.DcimAssetEvent) *dcimv1.AssetEvent {

@@ -50,8 +50,8 @@ func placementFromGetRow(row *db.PlacementGetByIDRow) *dcimv1.Placement {
 		}.Build())
 	} else if row.ParentPlacementID.Valid {
 		p.SetSubComponent(dcimv1.SubComponentLocation_builder{
-			ParentPlacementId: uuid.UUID(row.ParentPlacementID.Bytes).String(),
-			ParentPortName:    uuid.UUID(row.PortDefinitionID.Bytes).String(),
+			ParentPlacementId:      uuid.UUID(row.ParentPlacementID.Bytes).String(),
+			ParentPortDefinitionId: uuid.UUID(row.PortDefinitionID.Bytes).String(),
 		}.Build())
 	}
 
@@ -103,8 +103,8 @@ func placementFromParentListRow(row *db.PlacementListByParentRow) *dcimv1.Placem
 
 	if row.ParentPlacementID.Valid {
 		p.SetSubComponent(dcimv1.SubComponentLocation_builder{
-			ParentPlacementId: uuid.UUID(row.ParentPlacementID.Bytes).String(),
-			ParentPortName:    uuid.UUID(row.PortDefinitionID.Bytes).String(),
+			ParentPlacementId:      uuid.UUID(row.ParentPlacementID.Bytes).String(),
+			ParentPortDefinitionId: uuid.UUID(row.PortDefinitionID.Bytes).String(),
 		}.Build())
 	}
 

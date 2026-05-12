@@ -23,7 +23,7 @@ func (s *Server) CreateDesign(
 		Name: req.Msg.GetName(),
 	}
 
-	if req.Msg.GetDescription() != "" {
+	if req.Msg.HasDescription() {
 		params.Description = pgtype.Text{String: req.Msg.GetDescription(), Valid: true}
 	}
 

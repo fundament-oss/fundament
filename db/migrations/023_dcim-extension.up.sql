@@ -267,6 +267,8 @@ CREATE UNIQUE INDEX task_steps_pk ON dcim.task_steps USING btree (id);
 
 ALTER TABLE "dcim"."task_steps" ADD CONSTRAINT "task_steps_pk" PRIMARY KEY USING INDEX "task_steps_pk";
 
+CREATE UNIQUE INDEX task_steps_uq_task_ordinal ON dcim.task_steps USING btree (task_id, ordinal) WHERE (deleted IS NULL);
+
 CREATE TABLE "dcim"."tasks" (
 	"id" uuid DEFAULT uuidv7() NOT NULL,
 	"title" text COLLATE "pg_catalog"."default" NOT NULL,

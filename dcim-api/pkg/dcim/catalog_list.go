@@ -22,7 +22,7 @@ func (s *Server) ListCatalog(
 		params.Category = pgtype.Text{String: assetCategoryToDB(req.Msg.GetCategoryFilter()), Valid: true}
 	}
 
-	if req.Msg.GetSearch() != "" {
+	if req.Msg.HasSearch() {
 		params.Search = pgtype.Text{String: req.Msg.GetSearch(), Valid: true}
 	}
 
@@ -31,7 +31,12 @@ func (s *Server) ListCatalog(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list catalog entries: %w", err))
 	}
 
-	counts, err := s.queries.DeviceCatalogAssetCounts(ctx)
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ID)
+	}
+
+	counts, err := s.queries.DeviceCatalogAssetCounts(ctx, db.DeviceCatalogAssetCountsParams{Ids: ids})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get asset counts: %w", err))
 	}

@@ -33,7 +33,9 @@ func (s *Server) CreatePlacement(
 	case dcimv1.CreatePlacementRequest_SubComponent_case:
 		sub := req.Msg.GetSubComponent()
 		params.ParentPlacementID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPlacementId()), Valid: true}
-		params.PortDefinitionID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPortName()), Valid: true}
+		params.PortDefinitionID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPortDefinitionId()), Valid: true}
+	case dcimv1.CreatePlacementRequest_Location_not_set_case:
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("placement location is required"))
 	default:
 		panic("unhandled placement location case")
 	}
@@ -42,7 +44,7 @@ func (s *Server) CreatePlacement(
 		params.LogicalDeviceID = pgtype.UUID{Bytes: uuid.MustParse(req.Msg.GetLogicalDeviceId()), Valid: true}
 	}
 
-	if req.Msg.GetNotes() != "" {
+	if req.Msg.HasNotes() {
 		params.Notes = pgtype.Text{String: req.Msg.GetNotes(), Valid: true}
 	}
 

@@ -50,7 +50,7 @@ func (s *Server) CreateAsset(
 		}
 	}
 
-	if req.Msg.GetNotes() != "" {
+	if req.Msg.HasNotes() {
 		params.Notes = pgtype.Text{String: req.Msg.GetNotes(), Valid: true}
 	}
 

@@ -575,7 +575,7 @@ func (b0 PortCompatibility_builder) Build() *PortCompatibility {
 type ListCatalogRequest struct {
 	state                     protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_CategoryFilter AssetCategory          `protobuf:"varint,10,opt,name=category_filter,json=categoryFilter,enum=dcim.v1.AssetCategory"`
-	xxx_hidden_Search         string                 `protobuf:"bytes,20,opt,name=search"`
+	xxx_hidden_Search         *string                `protobuf:"bytes,20,opt,name=search"`
 	XXX_raceDetectHookData    protoimpl.RaceDetectHookData
 	XXX_presence              [1]uint32
 	unknownFields             protoimpl.UnknownFields
@@ -618,7 +618,10 @@ func (x *ListCatalogRequest) GetCategoryFilter() AssetCategory {
 
 func (x *ListCatalogRequest) GetSearch() string {
 	if x != nil {
-		return x.xxx_hidden_Search
+		if x.xxx_hidden_Search != nil {
+			return *x.xxx_hidden_Search
+		}
+		return ""
 	}
 	return ""
 }
@@ -629,7 +632,8 @@ func (x *ListCatalogRequest) SetCategoryFilter(v AssetCategory) {
 }
 
 func (x *ListCatalogRequest) SetSearch(v string) {
-	x.xxx_hidden_Search = v
+	x.xxx_hidden_Search = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
 }
 
 func (x *ListCatalogRequest) HasCategoryFilter() bool {
@@ -639,16 +643,28 @@ func (x *ListCatalogRequest) HasCategoryFilter() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
+func (x *ListCatalogRequest) HasSearch() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
 func (x *ListCatalogRequest) ClearCategoryFilter() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_CategoryFilter = AssetCategory_ASSET_CATEGORY_UNSPECIFIED
+}
+
+func (x *ListCatalogRequest) ClearSearch() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Search = nil
 }
 
 type ListCatalogRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	CategoryFilter *AssetCategory
-	Search         string
+	Search         *string
 }
 
 func (b0 ListCatalogRequest_builder) Build() *ListCatalogRequest {
@@ -659,7 +675,10 @@ func (b0 ListCatalogRequest_builder) Build() *ListCatalogRequest {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
 		x.xxx_hidden_CategoryFilter = *b.CategoryFilter
 	}
-	x.xxx_hidden_Search = b.Search
+	if b.Search != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_Search = b.Search
+	}
 	return m0
 }
 
@@ -853,7 +872,7 @@ type CreateCatalogEntryRequest struct {
 	xxx_hidden_Model        string                 `protobuf:"bytes,20,opt,name=model"`
 	xxx_hidden_PartNumber   string                 `protobuf:"bytes,30,opt,name=part_number,json=partNumber"`
 	xxx_hidden_Category     AssetCategory          `protobuf:"varint,40,opt,name=category,enum=dcim.v1.AssetCategory"`
-	xxx_hidden_FormFactor   string                 `protobuf:"bytes,50,opt,name=form_factor,json=formFactor"`
+	xxx_hidden_FormFactor   *string                `protobuf:"bytes,50,opt,name=form_factor,json=formFactor"`
 	xxx_hidden_RackUnits    int32                  `protobuf:"varint,60,opt,name=rack_units,json=rackUnits"`
 	xxx_hidden_WeightKg     float64                `protobuf:"fixed64,70,opt,name=weight_kg,json=weightKg"`
 	xxx_hidden_PowerDrawW   float64                `protobuf:"fixed64,80,opt,name=power_draw_w,json=powerDrawW"`
@@ -919,7 +938,10 @@ func (x *CreateCatalogEntryRequest) GetCategory() AssetCategory {
 
 func (x *CreateCatalogEntryRequest) GetFormFactor() string {
 	if x != nil {
-		return x.xxx_hidden_FormFactor
+		if x.xxx_hidden_FormFactor != nil {
+			return *x.xxx_hidden_FormFactor
+		}
+		return ""
 	}
 	return ""
 }
@@ -969,7 +991,8 @@ func (x *CreateCatalogEntryRequest) SetCategory(v AssetCategory) {
 }
 
 func (x *CreateCatalogEntryRequest) SetFormFactor(v string) {
-	x.xxx_hidden_FormFactor = v
+	x.xxx_hidden_FormFactor = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 9)
 }
 
 func (x *CreateCatalogEntryRequest) SetRackUnits(v int32) {
@@ -989,11 +1012,23 @@ func (x *CreateCatalogEntryRequest) SetSpecs(v map[string]string) {
 	x.xxx_hidden_Specs = v
 }
 
+func (x *CreateCatalogEntryRequest) HasFormFactor() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
+}
+
 func (x *CreateCatalogEntryRequest) HasRackUnits() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
+}
+
+func (x *CreateCatalogEntryRequest) ClearFormFactor() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
+	x.xxx_hidden_FormFactor = nil
 }
 
 func (x *CreateCatalogEntryRequest) ClearRackUnits() {
@@ -1008,7 +1043,7 @@ type CreateCatalogEntryRequest_builder struct {
 	Model        string
 	PartNumber   string
 	Category     AssetCategory
-	FormFactor   string
+	FormFactor   *string
 	RackUnits    *int32
 	WeightKg     float64
 	PowerDrawW   float64
@@ -1023,7 +1058,10 @@ func (b0 CreateCatalogEntryRequest_builder) Build() *CreateCatalogEntryRequest {
 	x.xxx_hidden_Model = b.Model
 	x.xxx_hidden_PartNumber = b.PartNumber
 	x.xxx_hidden_Category = b.Category
-	x.xxx_hidden_FormFactor = b.FormFactor
+	if b.FormFactor != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 9)
+		x.xxx_hidden_FormFactor = b.FormFactor
+	}
 	if b.RackUnits != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 9)
 		x.xxx_hidden_RackUnits = *b.RackUnits
@@ -1819,7 +1857,7 @@ type CreatePortDefinitionRequest struct {
 	xxx_hidden_DeviceCatalogId string                 `protobuf:"bytes,10,opt,name=device_catalog_id,json=deviceCatalogId"`
 	xxx_hidden_Name            string                 `protobuf:"bytes,20,opt,name=name"`
 	xxx_hidden_PortType        PortType               `protobuf:"varint,30,opt,name=port_type,json=portType,enum=dcim.v1.PortType"`
-	xxx_hidden_MediaType       string                 `protobuf:"bytes,40,opt,name=media_type,json=mediaType"`
+	xxx_hidden_MediaType       *string                `protobuf:"bytes,40,opt,name=media_type,json=mediaType"`
 	xxx_hidden_Speed           *string                `protobuf:"bytes,50,opt,name=speed"`
 	xxx_hidden_MaxPowerW       float64                `protobuf:"fixed64,60,opt,name=max_power_w,json=maxPowerW"`
 	xxx_hidden_Direction       PortDirection          `protobuf:"varint,70,opt,name=direction,enum=dcim.v1.PortDirection"`
@@ -1878,7 +1916,10 @@ func (x *CreatePortDefinitionRequest) GetPortType() PortType {
 
 func (x *CreatePortDefinitionRequest) GetMediaType() string {
 	if x != nil {
-		return x.xxx_hidden_MediaType
+		if x.xxx_hidden_MediaType != nil {
+			return *x.xxx_hidden_MediaType
+		}
+		return ""
 	}
 	return ""
 }
@@ -1927,7 +1968,8 @@ func (x *CreatePortDefinitionRequest) SetPortType(v PortType) {
 }
 
 func (x *CreatePortDefinitionRequest) SetMediaType(v string) {
-	x.xxx_hidden_MediaType = v
+	x.xxx_hidden_MediaType = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 8)
 }
 
 func (x *CreatePortDefinitionRequest) SetSpeed(v string) {
@@ -1948,6 +1990,13 @@ func (x *CreatePortDefinitionRequest) SetOrdinal(v int32) {
 	x.xxx_hidden_Ordinal = v
 }
 
+func (x *CreatePortDefinitionRequest) HasMediaType() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
 func (x *CreatePortDefinitionRequest) HasSpeed() bool {
 	if x == nil {
 		return false
@@ -1960,6 +2009,11 @@ func (x *CreatePortDefinitionRequest) HasMaxPowerW() bool {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
+}
+
+func (x *CreatePortDefinitionRequest) ClearMediaType() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_MediaType = nil
 }
 
 func (x *CreatePortDefinitionRequest) ClearSpeed() {
@@ -1978,7 +2032,7 @@ type CreatePortDefinitionRequest_builder struct {
 	DeviceCatalogId string
 	Name            string
 	PortType        PortType
-	MediaType       string
+	MediaType       *string
 	Speed           *string
 	MaxPowerW       *float64
 	Direction       PortDirection
@@ -1992,7 +2046,10 @@ func (b0 CreatePortDefinitionRequest_builder) Build() *CreatePortDefinitionReque
 	x.xxx_hidden_DeviceCatalogId = b.DeviceCatalogId
 	x.xxx_hidden_Name = b.Name
 	x.xxx_hidden_PortType = b.PortType
-	x.xxx_hidden_MediaType = b.MediaType
+	if b.MediaType != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 8)
+		x.xxx_hidden_MediaType = b.MediaType
+	}
 	if b.Speed != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 8)
 		x.xxx_hidden_Speed = b.Speed
@@ -2841,11 +2898,11 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\x12port_definition_id\x18\n" +
 	" \x01(\tR\x10portDefinitionId\x122\n" +
 	"\x15compatible_catalog_id\x18\x14 \x01(\tR\x13compatibleCatalogId\x12\x14\n" +
-	"\x05notes\x18\x1e \x01(\tR\x05notes\"t\n" +
-	"\x12ListCatalogRequest\x12F\n" +
+	"\x05notes\x18\x1e \x01(\tR\x05notes\"\x85\x01\n" +
+	"\x12ListCatalogRequest\x12P\n" +
 	"\x0fcategory_filter\x18\n" +
-	" \x01(\x0e2\x16.dcim.v1.AssetCategoryB\x05\xaa\x01\x02\b\x01R\x0ecategoryFilter\x12\x16\n" +
-	"\x06search\x18\x14 \x01(\tR\x06search\"\x90\x02\n" +
+	" \x01(\x0e2\x16.dcim.v1.AssetCategoryB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x0ecategoryFilter\x12\x1d\n" +
+	"\x06search\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x06search\"\x90\x02\n" +
 	"\x13ListCatalogResponse\x12E\n" +
 	"\aentries\x18\n" +
 	" \x03(\v2+.dcim.v1.ListCatalogResponse.CatalogSummaryR\aentries\x1a\xb1\x01\n" +
@@ -2861,7 +2918,7 @@ const file_v1_catalog_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"G\n" +
 	"\x17GetCatalogEntryResponse\x12,\n" +
 	"\x05entry\x18\n" +
-	" \x01(\v2\x16.dcim.v1.DeviceCatalogR\x05entry\"\xd6\x03\n" +
+	" \x01(\v2\x16.dcim.v1.DeviceCatalogR\x05entry\"\xdd\x03\n" +
 	"\x19CreateCatalogEntryRequest\x12+\n" +
 	"\fmanufacturer\x18\n" +
 	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\fmanufacturer\x12\x1d\n" +
@@ -2869,8 +2926,8 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\vpart_number\x18\x1e \x01(\tB\a\xbaH\x04r\x02\x10\x01R\n" +
 	"partNumber\x12>\n" +
 	"\bcategory\x18( \x01(\x0e2\x16.dcim.v1.AssetCategoryB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bcategory\x12\x1f\n" +
-	"\vform_factor\x182 \x01(\tR\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bcategory\x12&\n" +
+	"\vform_factor\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\n" +
 	"formFactor\x12$\n" +
 	"\n" +
 	"rack_units\x18< \x01(\x05B\x05\xaa\x01\x02\b\x01R\trackUnits\x12\x1b\n" +
@@ -2926,15 +2983,15 @@ const file_v1_catalog_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"]\n" +
 	"\x19GetPortDefinitionResponse\x12@\n" +
 	"\x0fport_definition\x18\n" +
-	" \x01(\v2\x17.dcim.v1.PortDefinitionR\x0eportDefinition\"\xeb\x02\n" +
+	" \x01(\v2\x17.dcim.v1.PortDefinitionR\x0eportDefinition\"\xf2\x02\n" +
 	"\x1bCreatePortDefinitionRequest\x124\n" +
 	"\x11device_catalog_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fdeviceCatalogId\x12\x1b\n" +
 	"\x04name\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12:\n" +
 	"\tport_type\x18\x1e \x01(\x0e2\x11.dcim.v1.PortTypeB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bportType\x12\x1d\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bportType\x12$\n" +
 	"\n" +
-	"media_type\x18( \x01(\tR\tmediaType\x12\x1b\n" +
+	"media_type\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\tmediaType\x12\x1b\n" +
 	"\x05speed\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\x05speed\x12%\n" +
 	"\vmax_power_w\x18< \x01(\x01B\x05\xaa\x01\x02\b\x01R\tmaxPowerW\x12@\n" +
 	"\tdirection\x18F \x01(\x0e2\x16.dcim.v1.PortDirectionB\n" +

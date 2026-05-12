@@ -20,8 +20,13 @@ SELECT device_catalog_id,
        count(*) FILTER (WHERE status = 'rma')::int AS needs_repair
 FROM dcim.assets
 WHERE deleted IS NULL
+  AND device_catalog_id = ANY($1::uuid[])
 GROUP BY device_catalog_id
 `
+
+type DeviceCatalogAssetCountsParams struct {
+	Ids []uuid.UUID
+}
 
 type DeviceCatalogAssetCountsRow struct {
 	DeviceCatalogID uuid.UUID
@@ -31,8 +36,8 @@ type DeviceCatalogAssetCountsRow struct {
 	NeedsRepair     int32
 }
 
-func (q *Queries) DeviceCatalogAssetCounts(ctx context.Context) ([]DeviceCatalogAssetCountsRow, error) {
-	rows, err := q.db.Query(ctx, deviceCatalogAssetCounts)
+func (q *Queries) DeviceCatalogAssetCounts(ctx context.Context, arg DeviceCatalogAssetCountsParams) ([]DeviceCatalogAssetCountsRow, error) {
+	rows, err := q.db.Query(ctx, deviceCatalogAssetCounts, arg.Ids)
 	if err != nil {
 		return nil, err
 	}

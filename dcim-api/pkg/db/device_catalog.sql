@@ -42,4 +42,5 @@ SELECT device_catalog_id,
        count(*) FILTER (WHERE status = 'rma')::int AS needs_repair
 FROM dcim.assets
 WHERE deleted IS NULL
+  AND device_catalog_id = ANY(sqlc.arg('ids')::uuid[])
 GROUP BY device_catalog_id;

@@ -28,6 +28,24 @@ func (q *Queries) LogicalDeviceLayoutDeleteByDesign(ctx context.Context, arg Log
 	return err
 }
 
+const logicalDeviceLayoutDeleteNotIn = `-- name: LogicalDeviceLayoutDeleteNotIn :exec
+DELETE FROM dcim.logical_device_layouts
+WHERE logical_device_id IN (
+    SELECT id FROM dcim.logical_devices WHERE logical_design_id = $1::uuid
+)
+  AND logical_device_id <> ALL($2::uuid[])
+`
+
+type LogicalDeviceLayoutDeleteNotInParams struct {
+	LogicalDesignID uuid.UUID
+	Keep            []uuid.UUID
+}
+
+func (q *Queries) LogicalDeviceLayoutDeleteNotIn(ctx context.Context, arg LogicalDeviceLayoutDeleteNotInParams) error {
+	_, err := q.db.Exec(ctx, logicalDeviceLayoutDeleteNotIn, arg.LogicalDesignID, arg.Keep)
+	return err
+}
+
 const logicalDeviceLayoutGetByDesign = `-- name: LogicalDeviceLayoutGetByDesign :many
 SELECT logical_device_layouts.id, logical_device_layouts.logical_device_id, logical_device_layouts.position_x, logical_device_layouts.position_y, logical_device_layouts.updated
 FROM dcim.logical_device_layouts

@@ -15,7 +15,10 @@ func (s *Server) ListNotes(
 	req *connect.Request[dcimv1.ListNotesRequest],
 ) (*connect.Response[dcimv1.ListNotesResponse], error) {
 	entityID := uuid.MustParse(req.Msg.GetEntityId())
-	params := noteEntityToListParams(req.Msg.GetEntityType(), entityID)
+	params, err := noteEntityToListParams(req.Msg.GetEntityType(), entityID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
 
 	rows, err := s.queries.NoteList(ctx, params)
 	if err != nil {

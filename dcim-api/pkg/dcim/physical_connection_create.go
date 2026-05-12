@@ -22,9 +22,9 @@ func (s *Server) CreatePhysicalConnection(
 ) (*connect.Response[dcimv1.CreatePhysicalConnectionResponse], error) {
 	params := db.PhysicalConnectionCreateParams{
 		APlacementID:      uuid.MustParse(req.Msg.GetSourcePlacementId()),
-		APortDefinitionID: uuid.MustParse(req.Msg.GetSourcePortName()),
+		APortDefinitionID: uuid.MustParse(req.Msg.GetSourcePortDefinitionId()),
 		BPlacementID:      uuid.MustParse(req.Msg.GetTargetPlacementId()),
-		BPortDefinitionID: uuid.MustParse(req.Msg.GetTargetPortName()),
+		BPortDefinitionID: uuid.MustParse(req.Msg.GetTargetPortDefinitionId()),
 	}
 
 	if req.Msg.HasCableAssetId() {

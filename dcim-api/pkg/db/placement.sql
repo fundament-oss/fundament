@@ -15,7 +15,10 @@ SET rack_id              = COALESCE(sqlc.narg('rack_id'), rack_id),
     slot_type            = COALESCE(sqlc.narg('slot_type'), slot_type),
     parent_placement_id  = COALESCE(sqlc.narg('parent_placement_id'), parent_placement_id),
     port_definition_id   = COALESCE(sqlc.narg('port_definition_id'), port_definition_id),
-    logical_device_id    = COALESCE(sqlc.narg('logical_device_id'), logical_device_id),
+    logical_device_id    = CASE
+        WHEN sqlc.arg('clear_logical_device_id')::bool THEN NULL
+        ELSE COALESCE(sqlc.narg('logical_device_id'), logical_device_id)
+    END,
     notes                = COALESCE(sqlc.narg('notes'), notes)
 WHERE id = $1 AND deleted IS NULL;
 

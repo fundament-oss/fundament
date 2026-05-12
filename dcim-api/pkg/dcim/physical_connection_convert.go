@@ -10,12 +10,12 @@ import (
 
 func physicalConnectionFromRow(row *db.PhysicalConnectionGetByIDRow) *dcimv1.PhysicalConnection {
 	conn := dcimv1.PhysicalConnection_builder{
-		Id:                row.ID.String(),
-		SourcePlacementId: row.APlacementID.String(),
-		SourcePortName:    row.APortDefinitionID.String(),
-		TargetPlacementId: row.BPlacementID.String(),
-		TargetPortName:    row.BPortDefinitionID.String(),
-		Created:           timestamppb.New(row.Created.Time),
+		Id:                     row.ID.String(),
+		SourcePlacementId:      row.APlacementID.String(),
+		SourcePortDefinitionId: row.APortDefinitionID.String(),
+		TargetPlacementId:      row.BPlacementID.String(),
+		TargetPortDefinitionId: row.BPortDefinitionID.String(),
+		Created:                timestamppb.New(row.Created.Time),
 	}.Build()
 
 	if row.CableAssetID.Valid {
@@ -31,12 +31,12 @@ func physicalConnectionFromRow(row *db.PhysicalConnectionGetByIDRow) *dcimv1.Phy
 
 func physicalConnectionFromListRow(row *db.PhysicalConnectionListByPlacementRow) *dcimv1.PhysicalConnection {
 	conn := dcimv1.PhysicalConnection_builder{
-		Id:                row.ID.String(),
-		SourcePlacementId: row.APlacementID.String(),
-		SourcePortName:    row.APortDefinitionID.String(),
-		TargetPlacementId: row.BPlacementID.String(),
-		TargetPortName:    row.BPortDefinitionID.String(),
-		Created:           timestamppb.New(row.Created.Time),
+		Id:                     row.ID.String(),
+		SourcePlacementId:      row.APlacementID.String(),
+		SourcePortDefinitionId: row.APortDefinitionID.String(),
+		TargetPlacementId:      row.BPlacementID.String(),
+		TargetPortDefinitionId: row.BPortDefinitionID.String(),
+		Created:                timestamppb.New(row.Created.Time),
 	}.Build()
 
 	if row.CableAssetID.Valid {

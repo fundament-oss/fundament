@@ -229,20 +229,24 @@ SET rack_id              = COALESCE($2, rack_id),
     slot_type            = COALESCE($4, slot_type),
     parent_placement_id  = COALESCE($5, parent_placement_id),
     port_definition_id   = COALESCE($6, port_definition_id),
-    logical_device_id    = COALESCE($7, logical_device_id),
-    notes                = COALESCE($8, notes)
+    logical_device_id    = CASE
+        WHEN $7::bool THEN NULL
+        ELSE COALESCE($8, logical_device_id)
+    END,
+    notes                = COALESCE($9, notes)
 WHERE id = $1 AND deleted IS NULL
 `
 
 type PlacementUpdateParams struct {
-	ID                uuid.UUID
-	RackID            pgtype.UUID
-	StartUnit         pgtype.Int4
-	SlotType          pgtype.Text
-	ParentPlacementID pgtype.UUID
-	PortDefinitionID  pgtype.UUID
-	LogicalDeviceID   pgtype.UUID
-	Notes             pgtype.Text
+	ID                   uuid.UUID
+	RackID               pgtype.UUID
+	StartUnit            pgtype.Int4
+	SlotType             pgtype.Text
+	ParentPlacementID    pgtype.UUID
+	PortDefinitionID     pgtype.UUID
+	ClearLogicalDeviceID bool
+	LogicalDeviceID      pgtype.UUID
+	Notes                pgtype.Text
 }
 
 func (q *Queries) PlacementUpdate(ctx context.Context, arg PlacementUpdateParams) (int64, error) {
@@ -253,6 +257,7 @@ func (q *Queries) PlacementUpdate(ctx context.Context, arg PlacementUpdateParams
 		arg.SlotType,
 		arg.ParentPlacementID,
 		arg.PortDefinitionID,
+		arg.ClearLogicalDeviceID,
 		arg.LogicalDeviceID,
 		arg.Notes,
 	)

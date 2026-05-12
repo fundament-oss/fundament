@@ -33,7 +33,7 @@ func (s *Server) CreateConnection(
 		params.Requirements = pgtype.Text{String: req.Msg.GetRequirements(), Valid: true}
 	}
 
-	if req.Msg.GetLabel() != "" {
+	if req.Msg.HasLabel() {
 		params.Label = pgtype.Text{String: req.Msg.GetLabel(), Valid: true}
 	}
 

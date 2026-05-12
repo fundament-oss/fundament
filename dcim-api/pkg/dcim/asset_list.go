@@ -31,7 +31,7 @@ func (s *Server) ListAssets(
 		params.DeviceCatalogID = pgtype.UUID{Bytes: catalogID, Valid: true}
 	}
 
-	if req.Msg.GetSearch() != "" {
+	if req.Msg.HasSearch() {
 		params.Search = pgtype.Text{String: req.Msg.GetSearch(), Valid: true}
 	}
 

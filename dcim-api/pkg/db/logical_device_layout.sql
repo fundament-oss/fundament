@@ -19,3 +19,10 @@ DELETE FROM dcim.logical_device_layouts
 WHERE logical_device_id IN (
     SELECT id FROM dcim.logical_devices WHERE logical_design_id = $1
 );
+
+-- name: LogicalDeviceLayoutDeleteNotIn :exec
+DELETE FROM dcim.logical_device_layouts
+WHERE logical_device_id IN (
+    SELECT id FROM dcim.logical_devices WHERE logical_design_id = sqlc.arg('logical_design_id')::uuid
+)
+  AND logical_device_id <> ALL(sqlc.arg('keep')::uuid[]);

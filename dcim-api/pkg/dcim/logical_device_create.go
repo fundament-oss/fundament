@@ -34,7 +34,7 @@ func (s *Server) CreateDevice(
 		params.Requirements = pgtype.Text{String: req.Msg.GetRequirements(), Valid: true}
 	}
 
-	if req.Msg.GetNotes() != "" {
+	if req.Msg.HasNotes() {
 		params.Notes = pgtype.Text{String: req.Msg.GetNotes(), Valid: true}
 	}
 

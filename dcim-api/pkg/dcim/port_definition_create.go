@@ -27,7 +27,7 @@ func (s *Server) CreatePortDefinition(
 		Ordinal:         req.Msg.GetOrdinal(),
 	}
 
-	if req.Msg.GetMediaType() != "" {
+	if req.Msg.HasMediaType() {
 		params.MediaType = pgtype.Text{String: req.Msg.GetMediaType(), Valid: true}
 	}
 

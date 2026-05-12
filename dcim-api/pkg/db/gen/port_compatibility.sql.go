@@ -14,18 +14,19 @@ import (
 
 const portCompatibilityCreate = `-- name: PortCompatibilityCreate :one
 INSERT INTO dcim.port_compatibilities (port_definition_id, compatible_category, compatible_catalog_id)
-VALUES ($1, $2, $3)
+SELECT $1::uuid, category, $2::uuid
+FROM dcim.device_catalogs
+WHERE id = $2::uuid AND deleted IS NULL
 RETURNING id
 `
 
 type PortCompatibilityCreateParams struct {
 	PortDefinitionID    uuid.UUID
-	CompatibleCategory  string
-	CompatibleCatalogID pgtype.UUID
+	CompatibleCatalogID uuid.UUID
 }
 
 func (q *Queries) PortCompatibilityCreate(ctx context.Context, arg PortCompatibilityCreateParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, portCompatibilityCreate, arg.PortDefinitionID, arg.CompatibleCategory, arg.CompatibleCatalogID)
+	row := q.db.QueryRow(ctx, portCompatibilityCreate, arg.PortDefinitionID, arg.CompatibleCatalogID)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
