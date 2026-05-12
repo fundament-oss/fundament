@@ -437,12 +437,14 @@ func (b0 GetRoomResponse_builder) Build() *GetRoomResponse {
 }
 
 type CreateRoomRequest struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_SiteId string                 `protobuf:"bytes,10,opt,name=site_id,json=siteId"`
-	xxx_hidden_Name   string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_Floor  string                 `protobuf:"bytes,30,opt,name=floor"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_SiteId      string                 `protobuf:"bytes,10,opt,name=site_id,json=siteId"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Floor       *string                `protobuf:"bytes,30,opt,name=floor"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CreateRoomRequest) Reset() {
@@ -486,7 +488,10 @@ func (x *CreateRoomRequest) GetName() string {
 
 func (x *CreateRoomRequest) GetFloor() string {
 	if x != nil {
-		return x.xxx_hidden_Floor
+		if x.xxx_hidden_Floor != nil {
+			return *x.xxx_hidden_Floor
+		}
+		return ""
 	}
 	return ""
 }
@@ -500,7 +505,20 @@ func (x *CreateRoomRequest) SetName(v string) {
 }
 
 func (x *CreateRoomRequest) SetFloor(v string) {
-	x.xxx_hidden_Floor = v
+	x.xxx_hidden_Floor = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
+}
+
+func (x *CreateRoomRequest) HasFloor() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *CreateRoomRequest) ClearFloor() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Floor = nil
 }
 
 type CreateRoomRequest_builder struct {
@@ -508,7 +526,7 @@ type CreateRoomRequest_builder struct {
 
 	SiteId string
 	Name   string
-	Floor  string
+	Floor  *string
 }
 
 func (b0 CreateRoomRequest_builder) Build() *CreateRoomRequest {
@@ -517,7 +535,10 @@ func (b0 CreateRoomRequest_builder) Build() *CreateRoomRequest {
 	_, _ = b, x
 	x.xxx_hidden_SiteId = b.SiteId
 	x.xxx_hidden_Name = b.Name
-	x.xxx_hidden_Floor = b.Floor
+	if b.Floor != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
+		x.xxx_hidden_Floor = b.Floor
+	}
 	return m0
 }
 
@@ -784,12 +805,12 @@ const file_v1_room_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"4\n" +
 	"\x0fGetRoomResponse\x12!\n" +
 	"\x04room\x18\n" +
-	" \x01(\v2\r.dcim.v1.RoomR\x04room\"i\n" +
+	" \x01(\v2\r.dcim.v1.RoomR\x04room\"p\n" +
 	"\x11CreateRoomRequest\x12!\n" +
 	"\asite_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06siteId\x12\x1b\n" +
-	"\x04name\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x14\n" +
-	"\x05floor\x18\x1e \x01(\tR\x05floor\"-\n" +
+	"\x04name\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x1b\n" +
+	"\x05floor\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x05floor\"-\n" +
 	"\x12CreateRoomResponse\x12\x17\n" +
 	"\aroom_id\x18\n" +
 	" \x01(\tR\x06roomId\"e\n" +

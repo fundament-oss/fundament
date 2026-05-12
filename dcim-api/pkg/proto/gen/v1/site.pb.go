@@ -537,13 +537,15 @@ type CreateSiteRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Name        string                 `protobuf:"bytes,10,opt,name=name"`
 	xxx_hidden_FullName    string                 `protobuf:"bytes,20,opt,name=full_name,json=fullName"`
-	xxx_hidden_Address     string                 `protobuf:"bytes,30,opt,name=address"`
+	xxx_hidden_Address     *string                `protobuf:"bytes,30,opt,name=address"`
 	xxx_hidden_City        string                 `protobuf:"bytes,40,opt,name=city"`
 	xxx_hidden_Country     string                 `protobuf:"bytes,50,opt,name=country"`
 	xxx_hidden_Tier        string                 `protobuf:"bytes,60,opt,name=tier"`
 	xxx_hidden_FloorSqm    float64                `protobuf:"fixed64,70,opt,name=floor_sqm,json=floorSqm"`
 	xxx_hidden_Established *timestamppb.Timestamp `protobuf:"bytes,80,opt,name=established"`
 	xxx_hidden_Status      string                 `protobuf:"bytes,90,opt,name=status"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -589,7 +591,10 @@ func (x *CreateSiteRequest) GetFullName() string {
 
 func (x *CreateSiteRequest) GetAddress() string {
 	if x != nil {
-		return x.xxx_hidden_Address
+		if x.xxx_hidden_Address != nil {
+			return *x.xxx_hidden_Address
+		}
+		return ""
 	}
 	return ""
 }
@@ -645,7 +650,8 @@ func (x *CreateSiteRequest) SetFullName(v string) {
 }
 
 func (x *CreateSiteRequest) SetAddress(v string) {
-	x.xxx_hidden_Address = v
+	x.xxx_hidden_Address = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 9)
 }
 
 func (x *CreateSiteRequest) SetCity(v string) {
@@ -672,11 +678,23 @@ func (x *CreateSiteRequest) SetStatus(v string) {
 	x.xxx_hidden_Status = v
 }
 
+func (x *CreateSiteRequest) HasAddress() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
 func (x *CreateSiteRequest) HasEstablished() bool {
 	if x == nil {
 		return false
 	}
 	return x.xxx_hidden_Established != nil
+}
+
+func (x *CreateSiteRequest) ClearAddress() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Address = nil
 }
 
 func (x *CreateSiteRequest) ClearEstablished() {
@@ -688,7 +706,7 @@ type CreateSiteRequest_builder struct {
 
 	Name        string
 	FullName    string
-	Address     string
+	Address     *string
 	City        string
 	Country     string
 	Tier        string
@@ -703,7 +721,10 @@ func (b0 CreateSiteRequest_builder) Build() *CreateSiteRequest {
 	_, _ = b, x
 	x.xxx_hidden_Name = b.Name
 	x.xxx_hidden_FullName = b.FullName
-	x.xxx_hidden_Address = b.Address
+	if b.Address != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 9)
+		x.xxx_hidden_Address = b.Address
+	}
 	x.xxx_hidden_City = b.City
 	x.xxx_hidden_Country = b.Country
 	x.xxx_hidden_Tier = b.Tier
@@ -1200,12 +1221,12 @@ const file_v1_site_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"4\n" +
 	"\x0fGetSiteResponse\x12!\n" +
 	"\x04site\x18\n" +
-	" \x01(\v2\r.dcim.v1.SiteR\x04site\"\x9c\x02\n" +
+	" \x01(\v2\r.dcim.v1.SiteR\x04site\"\xa3\x02\n" +
 	"\x11CreateSiteRequest\x12\x1b\n" +
 	"\x04name\x18\n" +
 	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x1b\n" +
-	"\tfull_name\x18\x14 \x01(\tR\bfullName\x12\x18\n" +
-	"\aaddress\x18\x1e \x01(\tR\aaddress\x12\x12\n" +
+	"\tfull_name\x18\x14 \x01(\tR\bfullName\x12\x1f\n" +
+	"\aaddress\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\aaddress\x12\x12\n" +
 	"\x04city\x18( \x01(\tR\x04city\x12\x18\n" +
 	"\acountry\x182 \x01(\tR\acountry\x12\x12\n" +
 	"\x04tier\x18< \x01(\tR\x04tier\x12\x1b\n" +

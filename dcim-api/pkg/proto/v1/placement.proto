@@ -14,15 +14,15 @@ option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v
 
 // RackLocation places an asset directly in a rack.
 message RackLocation {
-  string       rack_id         = 10;
+  string       rack_id         = 10 [(buf.validate.field).string = {uuid: true}];
   int32        rack_unit_start = 20;
-  RackSlotType rack_slot_type  = 30;
+  RackSlotType rack_slot_type  = 30 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
 }
 
 // SubComponentLocation places an asset inside another placement's port/slot.
 message SubComponentLocation {
-  string parent_placement_id = 10;
-  string parent_port_name    = 20;
+  string parent_placement_id       = 10 [(buf.validate.field).string = {uuid: true}];
+  string parent_port_definition_id = 20 [(buf.validate.field).string = {uuid: true}];
 }
 
 // Placement maps an asset to a physical location (core.placements).
@@ -58,7 +58,7 @@ message CreatePlacementRequest {
     SubComponentLocation sub_component = 30;
   }
   string logical_device_id = 70 [features.field_presence = EXPLICIT];
-  string notes             = 80;
+  string notes             = 80 [features.field_presence = EXPLICIT];
 }
 
 message CreatePlacementResponse {

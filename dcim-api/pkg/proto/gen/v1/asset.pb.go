@@ -526,7 +526,7 @@ type ListAssetsRequest struct {
 	xxx_hidden_StatusFilter    AssetStatus            `protobuf:"varint,10,opt,name=status_filter,json=statusFilter,enum=dcim.v1.AssetStatus"`
 	xxx_hidden_CategoryFilter  AssetCategory          `protobuf:"varint,20,opt,name=category_filter,json=categoryFilter,enum=dcim.v1.AssetCategory"`
 	xxx_hidden_DeviceCatalogId *string                `protobuf:"bytes,30,opt,name=device_catalog_id,json=deviceCatalogId"`
-	xxx_hidden_Search          string                 `protobuf:"bytes,40,opt,name=search"`
+	xxx_hidden_Search          *string                `protobuf:"bytes,40,opt,name=search"`
 	xxx_hidden_SortBy          AssetSortField         `protobuf:"varint,50,opt,name=sort_by,json=sortBy,enum=dcim.v1.AssetSortField"`
 	xxx_hidden_SortDirection   SortDirection          `protobuf:"varint,60,opt,name=sort_direction,json=sortDirection,enum=dcim.v1.SortDirection"`
 	xxx_hidden_IncludeDeleted  bool                   `protobuf:"varint,70,opt,name=include_deleted,json=includeDeleted"`
@@ -591,7 +591,10 @@ func (x *ListAssetsRequest) GetDeviceCatalogId() string {
 
 func (x *ListAssetsRequest) GetSearch() string {
 	if x != nil {
-		return x.xxx_hidden_Search
+		if x.xxx_hidden_Search != nil {
+			return *x.xxx_hidden_Search
+		}
+		return ""
 	}
 	return ""
 }
@@ -633,7 +636,8 @@ func (x *ListAssetsRequest) SetDeviceCatalogId(v string) {
 }
 
 func (x *ListAssetsRequest) SetSearch(v string) {
-	x.xxx_hidden_Search = v
+	x.xxx_hidden_Search = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 7)
 }
 
 func (x *ListAssetsRequest) SetSortBy(v AssetSortField) {
@@ -669,6 +673,13 @@ func (x *ListAssetsRequest) HasDeviceCatalogId() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
+func (x *ListAssetsRequest) HasSearch() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
 func (x *ListAssetsRequest) ClearStatusFilter() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_StatusFilter = AssetStatus_ASSET_STATUS_UNSPECIFIED
@@ -684,13 +695,18 @@ func (x *ListAssetsRequest) ClearDeviceCatalogId() {
 	x.xxx_hidden_DeviceCatalogId = nil
 }
 
+func (x *ListAssetsRequest) ClearSearch() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_Search = nil
+}
+
 type ListAssetsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	StatusFilter    *AssetStatus
 	CategoryFilter  *AssetCategory
 	DeviceCatalogId *string
-	Search          string
+	Search          *string
 	SortBy          AssetSortField
 	SortDirection   SortDirection
 	IncludeDeleted  bool
@@ -712,7 +728,10 @@ func (b0 ListAssetsRequest_builder) Build() *ListAssetsRequest {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 7)
 		x.xxx_hidden_DeviceCatalogId = b.DeviceCatalogId
 	}
-	x.xxx_hidden_Search = b.Search
+	if b.Search != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 7)
+		x.xxx_hidden_Search = b.Search
+	}
 	x.xxx_hidden_SortBy = b.SortBy
 	x.xxx_hidden_SortDirection = b.SortDirection
 	x.xxx_hidden_IncludeDeleted = b.IncludeDeleted
@@ -912,7 +931,7 @@ type CreateAssetRequest struct {
 	xxx_hidden_PurchaseDate    *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=purchase_date,json=purchaseDate"`
 	xxx_hidden_PurchaseOrder   *string                `protobuf:"bytes,60,opt,name=purchase_order,json=purchaseOrder"`
 	xxx_hidden_WarrantyExpiry  *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=warranty_expiry,json=warrantyExpiry"`
-	xxx_hidden_Notes           string                 `protobuf:"bytes,80,opt,name=notes"`
+	xxx_hidden_Notes           *string                `protobuf:"bytes,80,opt,name=notes"`
 	XXX_raceDetectHookData     protoimpl.RaceDetectHookData
 	XXX_presence               [1]uint32
 	unknownFields              protoimpl.UnknownFields
@@ -1004,7 +1023,10 @@ func (x *CreateAssetRequest) GetWarrantyExpiry() *timestamppb.Timestamp {
 
 func (x *CreateAssetRequest) GetNotes() string {
 	if x != nil {
-		return x.xxx_hidden_Notes
+		if x.xxx_hidden_Notes != nil {
+			return *x.xxx_hidden_Notes
+		}
+		return ""
 	}
 	return ""
 }
@@ -1041,7 +1063,8 @@ func (x *CreateAssetRequest) SetWarrantyExpiry(v *timestamppb.Timestamp) {
 }
 
 func (x *CreateAssetRequest) SetNotes(v string) {
-	x.xxx_hidden_Notes = v
+	x.xxx_hidden_Notes = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 8)
 }
 
 func (x *CreateAssetRequest) HasSerialNumber() bool {
@@ -1079,6 +1102,13 @@ func (x *CreateAssetRequest) HasWarrantyExpiry() bool {
 	return x.xxx_hidden_WarrantyExpiry != nil
 }
 
+func (x *CreateAssetRequest) HasNotes() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
 func (x *CreateAssetRequest) ClearSerialNumber() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
 	x.xxx_hidden_SerialNumber = nil
@@ -1102,6 +1132,11 @@ func (x *CreateAssetRequest) ClearWarrantyExpiry() {
 	x.xxx_hidden_WarrantyExpiry = nil
 }
 
+func (x *CreateAssetRequest) ClearNotes() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_Notes = nil
+}
+
 type CreateAssetRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1112,7 +1147,7 @@ type CreateAssetRequest_builder struct {
 	PurchaseDate    *timestamppb.Timestamp
 	PurchaseOrder   *string
 	WarrantyExpiry  *timestamppb.Timestamp
-	Notes           string
+	Notes           *string
 }
 
 func (b0 CreateAssetRequest_builder) Build() *CreateAssetRequest {
@@ -1135,7 +1170,10 @@ func (b0 CreateAssetRequest_builder) Build() *CreateAssetRequest {
 		x.xxx_hidden_PurchaseOrder = b.PurchaseOrder
 	}
 	x.xxx_hidden_WarrantyExpiry = b.WarrantyExpiry
-	x.xxx_hidden_Notes = b.Notes
+	if b.Notes != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 8)
+		x.xxx_hidden_Notes = b.Notes
+	}
 	return m0
 }
 
@@ -1758,13 +1796,13 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\fneeds_repair\x18( \x01(\x05R\vneedsRepair\x12\x19\n" +
 	"\bon_order\x182 \x01(\x05R\aonOrder\x12\x1c\n" +
 	"\trequested\x18< \x01(\x05R\trequested\x12&\n" +
-	"\x0edecommissioned\x18F \x01(\x05R\x0edecommissioned\"\x82\x03\n" +
-	"\x11ListAssetsRequest\x12@\n" +
+	"\x0edecommissioned\x18F \x01(\x05R\x0edecommissioned\"\x9d\x03\n" +
+	"\x11ListAssetsRequest\x12J\n" +
 	"\rstatus_filter\x18\n" +
-	" \x01(\x0e2\x14.dcim.v1.AssetStatusB\x05\xaa\x01\x02\b\x01R\fstatusFilter\x12F\n" +
-	"\x0fcategory_filter\x18\x14 \x01(\x0e2\x16.dcim.v1.AssetCategoryB\x05\xaa\x01\x02\b\x01R\x0ecategoryFilter\x121\n" +
-	"\x11device_catalog_id\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x0fdeviceCatalogId\x12\x16\n" +
-	"\x06search\x18( \x01(\tR\x06search\x120\n" +
+	" \x01(\x0e2\x14.dcim.v1.AssetStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\fstatusFilter\x12P\n" +
+	"\x0fcategory_filter\x18\x14 \x01(\x0e2\x16.dcim.v1.AssetCategoryB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x0ecategoryFilter\x121\n" +
+	"\x11device_catalog_id\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x0fdeviceCatalogId\x12\x1d\n" +
+	"\x06search\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\x06search\x120\n" +
 	"\asort_by\x182 \x01(\x0e2\x17.dcim.v1.AssetSortFieldR\x06sortBy\x12=\n" +
 	"\x0esort_direction\x18< \x01(\x0e2\x16.dcim.v1.SortDirectionR\rsortDirection\x12'\n" +
 	"\x0finclude_deleted\x18F \x01(\bR\x0eincludeDeleted\"<\n" +
@@ -1776,7 +1814,7 @@ const file_v1_asset_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"8\n" +
 	"\x10GetAssetResponse\x12$\n" +
 	"\x05asset\x18\n" +
-	" \x01(\v2\x0e.dcim.v1.AssetR\x05asset\"\xac\x03\n" +
+	" \x01(\v2\x0e.dcim.v1.AssetR\x05asset\"\xb3\x03\n" +
 	"\x12CreateAssetRequest\x124\n" +
 	"\x11device_catalog_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fdeviceCatalogId\x128\n" +
@@ -1786,15 +1824,15 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\tasset_tag\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\bassetTag\x12F\n" +
 	"\rpurchase_date\x182 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\fpurchaseDate\x12,\n" +
 	"\x0epurchase_order\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\rpurchaseOrder\x12J\n" +
-	"\x0fwarranty_expiry\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x0ewarrantyExpiry\x12\x14\n" +
-	"\x05notes\x18P \x01(\tR\x05notes\"0\n" +
+	"\x0fwarranty_expiry\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x0ewarrantyExpiry\x12\x1b\n" +
+	"\x05notes\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\"0\n" +
 	"\x13CreateAssetResponse\x12\x19\n" +
 	"\basset_id\x18\n" +
-	" \x01(\tR\aassetId\"\x9c\x02\n" +
+	" \x01(\tR\aassetId\"\xa6\x02\n" +
 	"\x12UpdateAssetRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x123\n" +
-	"\x06status\x18\x14 \x01(\x0e2\x14.dcim.v1.AssetStatusB\x05\xaa\x01\x02\b\x01R\x06status\x12*\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12=\n" +
+	"\x06status\x18\x14 \x01(\x0e2\x14.dcim.v1.AssetStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x06status\x12*\n" +
 	"\rserial_number\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\fserialNumber\x12\"\n" +
 	"\tasset_tag\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\bassetTag\x12J\n" +
 	"\x0fwarranty_expiry\x182 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x0ewarrantyExpiry\x12\x1b\n" +

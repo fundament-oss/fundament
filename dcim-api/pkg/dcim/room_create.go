@@ -24,7 +24,7 @@ func (s *Server) CreateRoom(
 		Name:   req.Msg.GetName(),
 	}
 
-	if req.Msg.GetFloor() != "" {
+	if req.Msg.HasFloor() {
 		params.Floor = pgtype.Text{String: req.Msg.GetFloor(), Valid: true}
 	}
 

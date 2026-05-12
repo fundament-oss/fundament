@@ -112,11 +112,11 @@ func (b0 RackLocation_builder) Build() *RackLocation {
 
 // SubComponentLocation places an asset inside another placement's port/slot.
 type SubComponentLocation struct {
-	state                        protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_ParentPlacementId string                 `protobuf:"bytes,10,opt,name=parent_placement_id,json=parentPlacementId"`
-	xxx_hidden_ParentPortName    string                 `protobuf:"bytes,20,opt,name=parent_port_name,json=parentPortName"`
-	unknownFields                protoimpl.UnknownFields
-	sizeCache                    protoimpl.SizeCache
+	state                             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ParentPlacementId      string                 `protobuf:"bytes,10,opt,name=parent_placement_id,json=parentPlacementId"`
+	xxx_hidden_ParentPortDefinitionId string                 `protobuf:"bytes,20,opt,name=parent_port_definition_id,json=parentPortDefinitionId"`
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *SubComponentLocation) Reset() {
@@ -151,9 +151,9 @@ func (x *SubComponentLocation) GetParentPlacementId() string {
 	return ""
 }
 
-func (x *SubComponentLocation) GetParentPortName() string {
+func (x *SubComponentLocation) GetParentPortDefinitionId() string {
 	if x != nil {
-		return x.xxx_hidden_ParentPortName
+		return x.xxx_hidden_ParentPortDefinitionId
 	}
 	return ""
 }
@@ -162,15 +162,15 @@ func (x *SubComponentLocation) SetParentPlacementId(v string) {
 	x.xxx_hidden_ParentPlacementId = v
 }
 
-func (x *SubComponentLocation) SetParentPortName(v string) {
-	x.xxx_hidden_ParentPortName = v
+func (x *SubComponentLocation) SetParentPortDefinitionId(v string) {
+	x.xxx_hidden_ParentPortDefinitionId = v
 }
 
 type SubComponentLocation_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	ParentPlacementId string
-	ParentPortName    string
+	ParentPlacementId      string
+	ParentPortDefinitionId string
 }
 
 func (b0 SubComponentLocation_builder) Build() *SubComponentLocation {
@@ -178,7 +178,7 @@ func (b0 SubComponentLocation_builder) Build() *SubComponentLocation {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_ParentPlacementId = b.ParentPlacementId
-	x.xxx_hidden_ParentPortName = b.ParentPortName
+	x.xxx_hidden_ParentPortDefinitionId = b.ParentPortDefinitionId
 	return m0
 }
 
@@ -520,7 +520,7 @@ type CreatePlacementRequest struct {
 	xxx_hidden_AssetId         string                            `protobuf:"bytes,10,opt,name=asset_id,json=assetId"`
 	xxx_hidden_Location        isCreatePlacementRequest_Location `protobuf_oneof:"location"`
 	xxx_hidden_LogicalDeviceId *string                           `protobuf:"bytes,70,opt,name=logical_device_id,json=logicalDeviceId"`
-	xxx_hidden_Notes           string                            `protobuf:"bytes,80,opt,name=notes"`
+	xxx_hidden_Notes           *string                           `protobuf:"bytes,80,opt,name=notes"`
 	XXX_raceDetectHookData     protoimpl.RaceDetectHookData
 	XXX_presence               [1]uint32
 	unknownFields              protoimpl.UnknownFields
@@ -589,7 +589,10 @@ func (x *CreatePlacementRequest) GetLogicalDeviceId() string {
 
 func (x *CreatePlacementRequest) GetNotes() string {
 	if x != nil {
-		return x.xxx_hidden_Notes
+		if x.xxx_hidden_Notes != nil {
+			return *x.xxx_hidden_Notes
+		}
+		return ""
 	}
 	return ""
 }
@@ -620,7 +623,8 @@ func (x *CreatePlacementRequest) SetLogicalDeviceId(v string) {
 }
 
 func (x *CreatePlacementRequest) SetNotes(v string) {
-	x.xxx_hidden_Notes = v
+	x.xxx_hidden_Notes = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 4)
 }
 
 func (x *CreatePlacementRequest) HasLocation() bool {
@@ -653,6 +657,13 @@ func (x *CreatePlacementRequest) HasLogicalDeviceId() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
+func (x *CreatePlacementRequest) HasNotes() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
 func (x *CreatePlacementRequest) ClearLocation() {
 	x.xxx_hidden_Location = nil
 }
@@ -672,6 +683,11 @@ func (x *CreatePlacementRequest) ClearSubComponent() {
 func (x *CreatePlacementRequest) ClearLogicalDeviceId() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
 	x.xxx_hidden_LogicalDeviceId = nil
+}
+
+func (x *CreatePlacementRequest) ClearNotes() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_Notes = nil
 }
 
 const CreatePlacementRequest_Location_not_set_case case_CreatePlacementRequest_Location = 0
@@ -701,7 +717,7 @@ type CreatePlacementRequest_builder struct {
 	SubComponent *SubComponentLocation
 	// -- end of xxx_hidden_Location
 	LogicalDeviceId *string
-	Notes           string
+	Notes           *string
 }
 
 func (b0 CreatePlacementRequest_builder) Build() *CreatePlacementRequest {
@@ -719,7 +735,10 @@ func (b0 CreatePlacementRequest_builder) Build() *CreatePlacementRequest {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
 		x.xxx_hidden_LogicalDeviceId = b.LogicalDeviceId
 	}
-	x.xxx_hidden_Notes = b.Notes
+	if b.Notes != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 4)
+		x.xxx_hidden_Notes = b.Notes
+	}
 	return m0
 }
 
@@ -1477,16 +1496,17 @@ var File_v1_placement_proto protoreflect.FileDescriptor
 
 const file_v1_placement_proto_rawDesc = "" +
 	"\n" +
-	"\x12v1/placement.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x8c\x01\n" +
-	"\fRackLocation\x12\x17\n" +
+	"\x12v1/placement.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xa2\x01\n" +
+	"\fRackLocation\x12!\n" +
 	"\arack_id\x18\n" +
-	" \x01(\tR\x06rackId\x12&\n" +
-	"\x0frack_unit_start\x18\x14 \x01(\x05R\rrackUnitStart\x12;\n" +
-	"\x0erack_slot_type\x18\x1e \x01(\x0e2\x15.dcim.v1.RackSlotTypeR\frackSlotType\"p\n" +
-	"\x14SubComponentLocation\x12.\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06rackId\x12&\n" +
+	"\x0frack_unit_start\x18\x14 \x01(\x05R\rrackUnitStart\x12G\n" +
+	"\x0erack_slot_type\x18\x1e \x01(\x0e2\x15.dcim.v1.RackSlotTypeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\frackSlotType\"\x95\x01\n" +
+	"\x14SubComponentLocation\x128\n" +
 	"\x13parent_placement_id\x18\n" +
-	" \x01(\tR\x11parentPlacementId\x12(\n" +
-	"\x10parent_port_name\x18\x14 \x01(\tR\x0eparentPortName\"\x9b\x03\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x11parentPlacementId\x12C\n" +
+	"\x19parent_port_definition_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x16parentPortDefinitionId\"\x9b\x03\n" +
 	"\tPlacement\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x19\n" +
@@ -1499,14 +1519,14 @@ const file_v1_placement_proto_rawDesc = "" +
 	"\acreated\x18P \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
 	"\adeleted\x18Z \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeletedB\n" +
 	"\n" +
-	"\blocation\"\x8c\x02\n" +
+	"\blocation\"\x93\x02\n" +
 	"\x16CreatePlacementRequest\x12#\n" +
 	"\basset_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aassetId\x12+\n" +
 	"\x04rack\x18\x14 \x01(\v2\x15.dcim.v1.RackLocationH\x00R\x04rack\x12D\n" +
 	"\rsub_component\x18\x1e \x01(\v2\x1d.dcim.v1.SubComponentLocationH\x00R\fsubComponent\x121\n" +
-	"\x11logical_device_id\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x0flogicalDeviceId\x12\x14\n" +
-	"\x05notes\x18P \x01(\tR\x05notesB\x11\n" +
+	"\x11logical_device_id\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x0flogicalDeviceId\x12\x1b\n" +
+	"\x05notes\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notesB\x11\n" +
 	"\blocation\x12\x05\xbaH\x02\b\x01\"<\n" +
 	"\x17CreatePlacementResponse\x12!\n" +
 	"\fplacement_id\x18\n" +

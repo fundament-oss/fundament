@@ -59,10 +59,10 @@ service AssetService {
 }
 
 message ListAssetsRequest {
-  AssetStatus    status_filter     = 10 [features.field_presence = EXPLICIT];
-  AssetCategory  category_filter   = 20 [features.field_presence = EXPLICIT];
+  AssetStatus    status_filter     = 10 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  AssetCategory  category_filter   = 20 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string         device_catalog_id = 30 [features.field_presence = EXPLICIT];
-  string         search            = 40;
+  string         search            = 40 [features.field_presence = EXPLICIT];
   AssetSortField sort_by           = 50;
   SortDirection  sort_direction    = 60;
   bool           include_deleted   = 70;
@@ -88,7 +88,7 @@ message CreateAssetRequest {
   google.protobuf.Timestamp purchase_date     = 50 [features.field_presence = EXPLICIT];
   string                    purchase_order    = 60 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp warranty_expiry   = 70 [features.field_presence = EXPLICIT];
-  string                    notes             = 80;
+  string                    notes             = 80 [features.field_presence = EXPLICIT];
 }
 
 message CreateAssetResponse {
@@ -97,7 +97,7 @@ message CreateAssetResponse {
 
 message UpdateAssetRequest {
   string                    id              = 10 [(buf.validate.field).string = {uuid: true}];
-  AssetStatus               status          = 20 [features.field_presence = EXPLICIT];
+  AssetStatus               status          = 20 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string                    serial_number   = 30 [features.field_presence = EXPLICIT];
   string                    asset_tag       = 40 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp warranty_expiry = 50 [features.field_presence = EXPLICIT];

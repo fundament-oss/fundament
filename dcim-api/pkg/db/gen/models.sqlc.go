@@ -3,3 +3,17 @@
 //   sqlc v1.30.0
 
 package db
+
+import (
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type DcimAssetEvent struct {
+	ID          uuid.UUID
+	AssetID     uuid.UUID
+	EventType   string
+	Details     pgtype.Text
+	PerformedBy pgtype.Text
+	Created     pgtype.Timestamptz
+}

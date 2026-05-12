@@ -13,11 +13,11 @@ option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v
 
 // PhysicalConnection records a cable between two placement ports (core.physical_connections).
 message PhysicalConnection {
-  string                    id                    = 10;
-  string                    source_placement_id   = 20;
-  string                    source_port_name      = 30;
-  string                    target_placement_id   = 40;
-  string                    target_port_name      = 50;
+  string                    id                         = 10;
+  string                    source_placement_id        = 20;
+  string                    source_port_definition_id  = 30;
+  string                    target_placement_id        = 40;
+  string                    target_port_definition_id  = 50;
   // cable_asset_id is absent when the cable itself is not individually tracked.
   string                    cable_asset_id        = 60 [features.field_presence = EXPLICIT];
   // logical_connection_id links this physical cable to the intended logical design.
@@ -36,13 +36,13 @@ service PhysicalConnectionService {
 }
 
 message CreatePhysicalConnectionRequest {
-  string source_placement_id   = 10 [(buf.validate.field).string = {uuid: true}];
-  string source_port_name      = 20 [(buf.validate.field).string.min_len = 1];
-  string target_placement_id   = 30 [(buf.validate.field).string = {uuid: true}];
-  string target_port_name      = 40 [(buf.validate.field).string.min_len = 1];
-  string cable_asset_id        = 50 [features.field_presence = EXPLICIT];
-  string logical_connection_id = 60 [features.field_presence = EXPLICIT];
-  string notes                 = 70;
+  string source_placement_id       = 10 [(buf.validate.field).string = {uuid: true}];
+  string source_port_definition_id = 20 [(buf.validate.field).string = {uuid: true}];
+  string target_placement_id       = 30 [(buf.validate.field).string = {uuid: true}];
+  string target_port_definition_id = 40 [(buf.validate.field).string = {uuid: true}];
+  string cable_asset_id            = 50 [features.field_presence = EXPLICIT];
+  string logical_connection_id     = 60 [features.field_presence = EXPLICIT];
+  string notes                     = 70;
 }
 
 message CreatePhysicalConnectionResponse {
