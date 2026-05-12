@@ -6,6 +6,10 @@ metadata:
   name: {{ $.Release.Name }}-dcim-api
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "dcim-api" "component" "gateway") | nindent 4 }}
+  {{- with $.Values.dcimApi.httproute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   parentRefs:
     {{- toYaml $.Values.dcimApi.httproute.parentRefs | nindent 4 }}

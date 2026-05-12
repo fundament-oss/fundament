@@ -6,6 +6,10 @@ metadata:
   name: {{ $.Release.Name }}-dex
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "dex" "component" "gateway") | nindent 4 }}
+  {{- with $.Values.dex.httproute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   parentRefs:
     {{- toYaml $.Values.dex.httproute.parentRefs | nindent 4 }}

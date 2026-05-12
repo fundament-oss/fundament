@@ -6,6 +6,10 @@ metadata:
   name: {{ $.Release.Name }}-authn-api
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "authn-api" "component" "gateway") | nindent 4 }}
+  {{- with $.Values.authnApi.httproute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   parentRefs:
     {{- toYaml $.Values.authnApi.httproute.parentRefs | nindent 4 }}

@@ -6,6 +6,10 @@ metadata:
   name: {{ $.Release.Name }}-docs-frontend
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "docs-frontend" "component" "gateway") | nindent 4 }}
+  {{- with $.Values.docsFrontend.httproute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   parentRefs:
     {{- toYaml $.Values.docsFrontend.httproute.parentRefs | nindent 4 }}

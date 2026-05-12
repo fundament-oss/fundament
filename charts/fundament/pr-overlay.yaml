@@ -118,6 +118,9 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - authn.pr${PR_NUM}.${DOMAIN}
+        annotations:
+          external-dns.alpha.kubernetes.io/target: "86.105.162.209,2a0f:dc40:14:e0::"
+          external-dns.alpha.kubernetes.io/ttl: "300"
 
     organizationApi:
       replicas: 1
@@ -131,6 +134,9 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - organization.pr${PR_NUM}.${DOMAIN}
+        annotations:
+          external-dns.alpha.kubernetes.io/target: "86.105.162.209,2a0f:dc40:14:e0::"
+          external-dns.alpha.kubernetes.io/ttl: "300"
 
     consoleFrontend:
       replicas: 1
@@ -144,6 +150,9 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - console.pr${PR_NUM}.${DOMAIN}
+        annotations:
+          external-dns.alpha.kubernetes.io/target: "86.105.162.209,2a0f:dc40:14:e0::"
+          external-dns.alpha.kubernetes.io/ttl: "300"
 
     docsFrontend:
       replicas: 1
@@ -157,6 +166,9 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - docs.pr${PR_NUM}.${DOMAIN}
+        annotations:
+          external-dns.alpha.kubernetes.io/target: "86.105.162.209,2a0f:dc40:14:e0::"
+          external-dns.alpha.kubernetes.io/ttl: "300"
 
     db:
       instances: 1
@@ -195,6 +207,9 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - dex.pr${PR_NUM}.${DOMAIN}
+        annotations:
+          external-dns.alpha.kubernetes.io/target: "86.105.162.209,2a0f:dc40:14:e0::"
+          external-dns.alpha.kubernetes.io/ttl: "300"
       staticClients:
         - id: fundament
           name: Fundament
@@ -216,6 +231,9 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - dcim-api.pr${PR_NUM}.${DOMAIN}
+        annotations:
+          external-dns.alpha.kubernetes.io/target: "86.105.162.209,2a0f:dc40:14:e0::"
+          external-dns.alpha.kubernetes.io/ttl: "300"
 
     dcimFrontend:
       enabled: true
@@ -230,6 +248,9 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - dcim.pr${PR_NUM}.${DOMAIN}
+        annotations:
+          external-dns.alpha.kubernetes.io/target: "86.105.162.209,2a0f:dc40:14:e0::"
+          external-dns.alpha.kubernetes.io/ttl: "300"
 
     ingress:
       enabled: false

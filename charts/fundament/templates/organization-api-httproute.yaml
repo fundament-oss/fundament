@@ -6,6 +6,10 @@ metadata:
   name: {{ $.Release.Name }}-organization-api
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "organization-api" "component" "gateway") | nindent 4 }}
+  {{- with $.Values.organizationApi.httproute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   parentRefs:
     {{- toYaml $.Values.organizationApi.httproute.parentRefs | nindent 4 }}

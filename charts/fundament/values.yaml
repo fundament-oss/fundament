@@ -54,6 +54,8 @@ authnApi:
     #    namespace: gateway-ns
     hostnames: []
     #  - authn.example.com
+    annotations: {}
+    #  external-dns.alpha.kubernetes.io/target: "1.2.3.4"
 
 # Organization API
 organizationApi:
@@ -68,6 +70,7 @@ organizationApi:
     #    namespace: gateway-ns
     hostnames: []
     #  - organization.example.com
+    annotations: {}
 
 # Kube Proxy (Kubernetes API proxy for frontend)
 kubeApiProxy:
@@ -96,6 +99,7 @@ consoleFrontend:
     #    namespace: gateway-ns
     hostnames: []
     #  - console.example.com
+    annotations: {}
 
 # Docs frontend
 docsFrontend:
@@ -108,6 +112,7 @@ docsFrontend:
     #    namespace: gateway-ns
     hostnames: []
     #  - docs.example.com
+    annotations: {}
 
 # Authz Worker (outbox pattern for OpenFGA tuple sync)
 authzWorker:
@@ -140,6 +145,7 @@ dcimApi:
     enabled: false
     parentRefs: []
     hostnames: []
+    annotations: {}
 
 # DCIM Frontend
 dcimFrontend:
@@ -149,6 +155,7 @@ dcimFrontend:
     enabled: false
     parentRefs: []
     hostnames: []
+    annotations: {}
 
 # Dex (OIDC Identity Provider)
 dex:
@@ -164,6 +171,7 @@ dex:
     #    namespace: gateway-ns
     hostnames: []
     #  - dex.example.com
+    annotations: {}
 
 # Host aliases for pods (useful for local development to resolve external URLs to internal services)
 hostAliases: []
