@@ -14,6 +14,16 @@ import (
 // AuthCookieName is the name of the authentication cookie.
 const AuthCookieName = "fundament_auth"
 
+// TokenType is the value carried in the JWT `aud` claim. It distinguishes
+// user-session tokens from plugin-delegation tokens so that services can
+// refuse the wrong kind at validation time.
+type TokenType string
+
+const (
+	TokenTypeUser   TokenType = "fundament-user"
+	TokenTypePlugin TokenType = "fundament-plugin"
+)
+
 // Claims represents the JWT claims used across fundament services.
 type Claims struct {
 	jwt.RegisteredClaims
@@ -26,14 +36,24 @@ func (c *Claims) UserID() uuid.UUID {
 	return uuid.MustParse(c.Subject)
 }
 
-// Validator handles JWT validation from HTTP headers.
-type Validator struct {
-	jwtSecret []byte
-	logger    *slog.Logger
+// Type returns the token type from the first audience claim, or empty if none.
+func (c *Claims) Type() TokenType {
+	if len(c.Audience) == 0 {
+		return ""
+	}
+	return TokenType(c.Audience[0])
 }
 
-// NewValidator creates a new Validator with the given JWT secret.
-// Logger is optional and can be nil.
+// Validator handles JWT validation from HTTP headers.
+type Validator struct {
+	jwtSecret        []byte
+	expectedAudience TokenType // empty = accept any audience (legacy)
+	logger           *slog.Logger
+}
+
+// NewValidator creates a Validator that accepts any audience. Prefer
+// NewValidatorForAudience in new code so that services explicitly declare
+// the token type they accept.
 func NewValidator(jwtSecret []byte, logger *slog.Logger) *Validator {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -42,6 +62,14 @@ func NewValidator(jwtSecret []byte, logger *slog.Logger) *Validator {
 		jwtSecret: jwtSecret,
 		logger:    logger,
 	}
+}
+
+// NewValidatorForAudience creates a Validator that requires the JWT `aud`
+// claim to contain the given TokenType.
+func NewValidatorForAudience(jwtSecret []byte, audience TokenType, logger *slog.Logger) *Validator {
+	v := NewValidator(jwtSecret, logger)
+	v.expectedAudience = audience
+	return v
 }
 
 // Validate validates a JWT from the Authorization header,
@@ -103,6 +131,13 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 	if _, err := uuid.Parse(claims.Subject); err != nil {
 		v.logger.Debug("invalid user ID in token subject", "subject", claims.Subject)
 		return nil, fmt.Errorf("invalid user ID in token subject: %w", err)
+	}
+
+	if v.expectedAudience != "" {
+		if got := claims.Type(); got != v.expectedAudience {
+			v.logger.Debug("token audience mismatch", "got", got, "want", v.expectedAudience)
+			return nil, fmt.Errorf("token audience %q does not match expected %q", got, v.expectedAudience)
+		}
 	}
 
 	v.logger.Debug("token validated", "user_id", claims.Subject, "organization_ids", claims.OrganizationIDs)

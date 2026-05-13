@@ -34,7 +34,27 @@ type PluginInstallationSpec struct {
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	PluginName      string            `json:"pluginName"`
 	ClusterRoles    []string          `json:"clusterRoles,omitempty"`
+	Permissions     PluginPermissions `json:"permissions,omitzero"`
 	Config          map[string]string `json:"config,omitempty"`
+}
+
+// PluginPermissions carries the consented permissions for a plugin install.
+// It mirrors the `permissions` block of the PluginDefinition manifest at
+// install time and is the source of truth used when minting PluginTokens.
+//
+// +k8s:deepcopy-gen=true
+type PluginPermissions struct {
+	RBAC []RBACRule `json:"rbac,omitempty"`
+}
+
+// RBACRule matches the Kubernetes rbac/v1 PolicyRule shape (subset).
+// Subresources may be expressed as "resource/subresource" entries in Resources.
+//
+// +k8s:deepcopy-gen=true
+type RBACRule struct {
+	APIGroups []string `json:"apiGroups,omitempty"`
+	Resources []string `json:"resources,omitempty"`
+	Verbs     []string `json:"verbs"`
 }
 
 type PluginInstallationStatus struct {

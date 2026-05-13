@@ -55,7 +55,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 
 	s := &Server{
 		logger:        logger,
-		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
+		authValidator: auth.NewValidatorForAudience(cfg.JWTSecret, auth.TokenTypeUser, logger),
 		authz:         authzClient,
 		tokenCache:    tokenCache,
 		kubeHandler:   kubeHandler,
