@@ -63,6 +63,28 @@ spec:
                   type: array
                   items:
                     type: string
+                permissions:
+                  type: object
+                  properties:
+                    rbac:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - verbs
+                        properties:
+                          apiGroups:
+                            type: array
+                            items:
+                              type: string
+                          resources:
+                            type: array
+                            items:
+                              type: string
+                          verbs:
+                            type: array
+                            items:
+                              type: string
                 config:
                   type: object
                   additionalProperties:

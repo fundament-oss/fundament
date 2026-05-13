@@ -253,6 +253,7 @@ func (e *testEnv) createAuthnToken(t *testing.T, userID uuid.UUID) string {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
 			Subject:   userID.String(),
+			Audience:  jwt.ClaimStrings{string(auth.TokenTypeUser)},
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
 		},
