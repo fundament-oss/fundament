@@ -88,8 +88,8 @@ Sandboxing isolates the iframe from the parent. It does not, on its own, stop th
 ----
 Content-Security-Policy:
   default-src 'self';
-  script-src 'self' 'unsafe-inline';
-  style-src  'self' 'unsafe-inline';
+  script-src 'self';
+  style-src  'self';
   connect-src https://kube-api-proxy.fundament.io
               https://plugin-proxy.fundament.io;
   form-action https://kube-api-proxy.fundament.io
@@ -101,7 +101,7 @@ Content-Security-Policy:
 
 The `connect-src` allowlist is the line that does the work. The plugin's JS can `fetch()` only the two proxies — every other destination is refused by the browser before the request leaves the iframe. `form-action` closes the parallel exfil path via `<form>` submission, which `connect-src` does not cover, while still allowing legitimate POSTs (file uploads, cert submissions) to the proxies. `frame-ancestors` ensures nobody but the Console can host the iframe in the first place. The plugin author cannot override this policy because it is a response header set by `plugin-proxy`, outside the plugin's HTML.
 
-`'unsafe-inline'` in both `script-src` and `style-src` is a transitional concession to the SDK's current inline init shape; the longer-term goal is to ship the SDK as a separate file at `/plugins/sdk/{version}/sdk.js` so `script-src 'self'` (and analogously `style-src 'self'`) suffices, and drop both `'unsafe-inline'` directives.
+`script-src 'self'` and `style-src 'self'` allow scripts and styles only from the plugin's own origin — no inline content, no remote sources. Since the iframe now holds a usable PluginToken, the SDK is no longer the exfil chokepoint it was when the parent mediated every API call; the CSP is. `'unsafe-inline'` would defeat that, so this design rules it out from v1. The SDK is shipped as a separate file at `/plugins/sdk/{version}/sdk.js`, loaded via a normal `<script src="…">` reference from the plugin's HTML, and plugin authors follow the same pattern for their own code — scripts in separate files, no inline `<script>` blocks or `on*` attribute handlers. Modern SPA build tools default to this layout. If a future use case genuinely requires inline content (e.g., server-injected bootstrap config), nonces can be added per-response, but no such case exists in v1.
 
 `plugin-proxy` reserves `/csp-reports` for future CSP `report-to` / `Reporting-Endpoints` integration so violations become observable; not wired in v1.
 
