@@ -29,6 +29,7 @@ import '@nldd/design-system/switch-field';
 import '@nldd/design-system/text-field';
 import '@nldd/design-system/segmented-control';
 import '@nldd/design-system/navigation-split-view';
+import '@nldd/design-system/inline-dialog';
 import {
   RouterOutlet,
   RouterLink,

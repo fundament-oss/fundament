@@ -21,15 +21,15 @@
     </div>
 
     <div class="mb-6 flex flex-wrap items-center gap-3">
-      <nldd-button
-        type="button"
-        (click)="openCreateModal()"
-        text="Create role binding"
-        start-icon="plus-small"
-        variant="primary"
-      ></nldd-button>
-
-      <!-- Filters -->
+      @if (filteredBindings().length > 0) {
+        <nldd-button
+          type="button"
+          (click)="openCreateModal()"
+          text="Create role binding"
+          start-icon="plus-small"
+          variant="primary"
+        ></nldd-button>
+      }
       <select
         class="w-auto"
         [ngModel]="namespaceFilter()"
@@ -43,7 +43,22 @@
     </div>
 
     @if (filteredBindings().length === 0) {
-      <p class="text-gray-500 dark:text-gray-400">No role bindings found.</p>
+      <nldd-box>
+        <nldd-inline-dialog
+          icon="person-badge-gear"
+          icon-color="secondary"
+          text="No role bindings found."
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="openCreateModal()"
+            text="Create role binding"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      </nldd-box>
     } @else {
       <div class="table-container">
         <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
@@ -230,19 +245,19 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showCreateModal.set(false)"
-    [disabled]="isSubmitting()"
-    text="Cancel"
-    variant="secondary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
     (click)="saveBinding()"
     text="Save changes"
     [text]="isSubmitting() ? 'Saving...' : editingBinding() ? 'Save changes' : 'Create binding'"
     [disabled]="isSubmitting()"
     variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showCreateModal.set(false)"
+    [disabled]="isSubmitting()"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -267,15 +282,15 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showRemoveModal.set(false)"
-    text="Cancel"
-    variant="secondary"
+    (click)="confirmRemoveBinding()"
+    text="Yes, remove this binding"
+    variant="destructive"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
-    (click)="confirmRemoveBinding()"
-    text="Yes, remove this binding"
-    variant="destructive"
+    (click)="showRemoveModal.set(false)"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>

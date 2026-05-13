@@ -108,7 +108,7 @@
           </div>
         </form>
       </div>
-    } @else {
+    } @else if (loading() || apiKeys().length > 0 || error()) {
       <!-- Create Button -->
       <nldd-button
         type="button"
@@ -210,10 +210,24 @@
 
     <!-- Empty State -->
     @if (!loading() && apiKeys().length === 0 && !error() && !isCreating()) {
-      <div class="py-8 text-center">
-        <p class="text-lg text-gray-600 dark:text-gray-300">No API keys found</p>
-        <p class="mt-2 text-gray-500 dark:text-gray-400">Create your first API key</p>
-      </div>
+      <nldd-box>
+        <nldd-inline-dialog
+          icon="lock-closed"
+          icon-color="secondary"
+          text="No API keys found"
+          supporting-text="Create your first API key to authenticate with the API."
+        >
+          <nldd-button
+            slot="actions"
+            (click)="startCreating()"
+            type="button"
+            text="Create an API key"
+            start-icon="plus-small"
+            variant="primary"
+            class="mb-4"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      </nldd-box>
     }
   </div>
 </div>
@@ -239,16 +253,16 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showRevokeModal.set(false)"
-    text="Cancel"
-    variant="secondary"
+    (click)="confirmRevoke()"
+    text="Yes, revoke this key"
+    variant="destructive"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
-    (click)="confirmRevoke()"
-    text="Yes, revoke this key"
-    variant="destructive"
+    (click)="showRevokeModal.set(false)"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -273,15 +287,15 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showDeleteModal.set(false)"
-    text="Cancel"
-    variant="secondary"
+    (click)="confirmDelete()"
+    text="Yes, delete this key"
+    variant="destructive"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
-    (click)="confirmDelete()"
-    text="Yes, delete this key"
-    variant="destructive"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>

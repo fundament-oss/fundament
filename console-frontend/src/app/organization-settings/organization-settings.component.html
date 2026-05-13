@@ -105,9 +105,14 @@
 
     <!-- Empty State -->
     @if (!loading() && !organization() && !error()) {
-      <div class="py-8 text-center">
-        <p class="text-gray-600 dark:text-gray-300">No organization information available</p>
-      </div>
+      <nldd-box>
+        <nldd-inline-dialog
+          icon="gear"
+          icon-color="secondary"
+          text="No organization information available"
+        >
+        </nldd-inline-dialog>
+      </nldd-box>
     }
   </div>
 </div>

@@ -127,13 +127,14 @@
 
         <!-- Empty State -->
         @if (resources().length === 0) {
-          <div class="py-8 text-center">
-            <nldd-icon
-              name="cylinder-split-slash"
-              class="mx-auto mb-3 h-12 w-12 text-gray-400!"
-            ></nldd-icon>
-            <p class="text-gray-600 dark:text-gray-300">No {{ kindLabel().toLowerCase() }} found</p>
-          </div>
+          <nldd-box>
+            <nldd-inline-dialog
+              icon="cylinder-split-slash"
+              icon-color="secondary"
+              [text]="'No ' + kindLabel().toLowerCase() + ' found'"
+            >
+            </nldd-inline-dialog>
+          </nldd-box>
         }
       }
     </div>
