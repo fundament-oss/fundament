@@ -27,6 +27,7 @@ import '@nldd/design-system/search-field';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/switch-field';
 import '@nldd/design-system/text-field';
+import '@nldd/design-system/segmented-control';
 import '@nldd/design-system/navigation-split-view';
 import {
   RouterOutlet,
@@ -476,6 +477,17 @@ export default class App implements OnInit {
     }
 
     this.applyTheme();
+  }
+
+  // Set theme explicitly
+  setTheme(value: string) {
+    this.isDarkMode.set(value === 'dark');
+
+    if (document.startViewTransition) {
+      document.startViewTransition(this.applyTheme.bind(this));
+    } else {
+      this.applyTheme();
+    }
   }
 
   // Toggle theme
