@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Certificate request</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading" id="heading">Certificate request</h1>
+      <div id="content" class="plugin-text">Loading…</div>
+    </div>
+    <script type="module">
+      import {
+        loadSdk,
+        renderDefList,
+        renderConditionsTable,
+        approvedText,
+      } from './_shared.js';
+
+      await loadSdk();
+      const ctx = await fundament.init;
+      const content = document.getElementById('content');
+      const heading = document.getElementById('heading');
+
+      if (!ctx.resource?.name) {
+        content.textContent = 'No certificate request selected.';
+      } else {
+        try {
+          const item = await fundament.k8s.get({
+            group: 'cert-manager.io',
+            version: 'v1',
+            resource: 'certificaterequests',
+            name: ctx.resource.name,
+            namespace: ctx.resource.namespace,
+          });
+          heading.textContent = `Certificate request · ${item.metadata?.name ?? ctx.resource.name}`;
+          const meta = {
+            Name: item.metadata?.name,
+            Namespace: item.metadata?.namespace,
+            Created: item.metadata?.creationTimestamp,
+            'Issuer kind': item.spec?.issuerRef?.kind,
+            'Issuer name': item.spec?.issuerRef?.name,
+            Approval: approvedText(item),
+            Duration: item.spec?.duration,
+          };
+          content.innerHTML = `
+            <h2 class="plugin-heading">Spec</h2>
+            ${renderDefList(meta)}
+            <h2 class="plugin-heading">Conditions</h2>
+            ${renderConditionsTable(item)}`;
+        } catch (err) {
+          content.textContent = `Failed to load: ${err?.message ?? err}`;
+        }
+      }
+    </script>
+  </body>
+</html>

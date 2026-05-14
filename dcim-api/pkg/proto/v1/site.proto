@@ -54,7 +54,7 @@ message GetSiteResponse {
 message CreateSiteRequest {
   string                    name        = 10 [(buf.validate.field).string.min_len = 1];
   string                    full_name   = 20;
-  string                    address     = 30;
+  string                    address     = 30 [features.field_presence = EXPLICIT];
   string                    city        = 40;
   string                    country     = 50;
   string                    tier        = 60;

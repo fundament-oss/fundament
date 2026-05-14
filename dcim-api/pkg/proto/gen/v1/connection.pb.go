@@ -26,21 +26,21 @@ const (
 
 // PhysicalConnection records a cable between two placement ports (core.physical_connections).
 type PhysicalConnection struct {
-	state                          protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id                  string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_SourcePlacementId   string                 `protobuf:"bytes,20,opt,name=source_placement_id,json=sourcePlacementId"`
-	xxx_hidden_SourcePortName      string                 `protobuf:"bytes,30,opt,name=source_port_name,json=sourcePortName"`
-	xxx_hidden_TargetPlacementId   string                 `protobuf:"bytes,40,opt,name=target_placement_id,json=targetPlacementId"`
-	xxx_hidden_TargetPortName      string                 `protobuf:"bytes,50,opt,name=target_port_name,json=targetPortName"`
-	xxx_hidden_CableAssetId        *string                `protobuf:"bytes,60,opt,name=cable_asset_id,json=cableAssetId"`
-	xxx_hidden_LogicalConnectionId *string                `protobuf:"bytes,70,opt,name=logical_connection_id,json=logicalConnectionId"`
-	xxx_hidden_Notes               string                 `protobuf:"bytes,80,opt,name=notes"`
-	xxx_hidden_Created             *timestamppb.Timestamp `protobuf:"bytes,90,opt,name=created"`
-	xxx_hidden_Deleted             *timestamppb.Timestamp `protobuf:"bytes,100,opt,name=deleted"`
-	XXX_raceDetectHookData         protoimpl.RaceDetectHookData
-	XXX_presence                   [1]uint32
-	unknownFields                  protoimpl.UnknownFields
-	sizeCache                      protoimpl.SizeCache
+	state                             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id                     string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_SourcePlacementId      string                 `protobuf:"bytes,20,opt,name=source_placement_id,json=sourcePlacementId"`
+	xxx_hidden_SourcePortDefinitionId string                 `protobuf:"bytes,30,opt,name=source_port_definition_id,json=sourcePortDefinitionId"`
+	xxx_hidden_TargetPlacementId      string                 `protobuf:"bytes,40,opt,name=target_placement_id,json=targetPlacementId"`
+	xxx_hidden_TargetPortDefinitionId string                 `protobuf:"bytes,50,opt,name=target_port_definition_id,json=targetPortDefinitionId"`
+	xxx_hidden_CableAssetId           *string                `protobuf:"bytes,60,opt,name=cable_asset_id,json=cableAssetId"`
+	xxx_hidden_LogicalConnectionId    *string                `protobuf:"bytes,70,opt,name=logical_connection_id,json=logicalConnectionId"`
+	xxx_hidden_Notes                  string                 `protobuf:"bytes,80,opt,name=notes"`
+	xxx_hidden_Created                *timestamppb.Timestamp `protobuf:"bytes,90,opt,name=created"`
+	xxx_hidden_Deleted                *timestamppb.Timestamp `protobuf:"bytes,100,opt,name=deleted"`
+	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
+	XXX_presence                      [1]uint32
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *PhysicalConnection) Reset() {
@@ -82,9 +82,9 @@ func (x *PhysicalConnection) GetSourcePlacementId() string {
 	return ""
 }
 
-func (x *PhysicalConnection) GetSourcePortName() string {
+func (x *PhysicalConnection) GetSourcePortDefinitionId() string {
 	if x != nil {
-		return x.xxx_hidden_SourcePortName
+		return x.xxx_hidden_SourcePortDefinitionId
 	}
 	return ""
 }
@@ -96,9 +96,9 @@ func (x *PhysicalConnection) GetTargetPlacementId() string {
 	return ""
 }
 
-func (x *PhysicalConnection) GetTargetPortName() string {
+func (x *PhysicalConnection) GetTargetPortDefinitionId() string {
 	if x != nil {
-		return x.xxx_hidden_TargetPortName
+		return x.xxx_hidden_TargetPortDefinitionId
 	}
 	return ""
 }
@@ -152,16 +152,16 @@ func (x *PhysicalConnection) SetSourcePlacementId(v string) {
 	x.xxx_hidden_SourcePlacementId = v
 }
 
-func (x *PhysicalConnection) SetSourcePortName(v string) {
-	x.xxx_hidden_SourcePortName = v
+func (x *PhysicalConnection) SetSourcePortDefinitionId(v string) {
+	x.xxx_hidden_SourcePortDefinitionId = v
 }
 
 func (x *PhysicalConnection) SetTargetPlacementId(v string) {
 	x.xxx_hidden_TargetPlacementId = v
 }
 
-func (x *PhysicalConnection) SetTargetPortName(v string) {
-	x.xxx_hidden_TargetPortName = v
+func (x *PhysicalConnection) SetTargetPortDefinitionId(v string) {
+	x.xxx_hidden_TargetPortDefinitionId = v
 }
 
 func (x *PhysicalConnection) SetCableAssetId(v string) {
@@ -235,11 +235,11 @@ func (x *PhysicalConnection) ClearDeleted() {
 type PhysicalConnection_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id                string
-	SourcePlacementId string
-	SourcePortName    string
-	TargetPlacementId string
-	TargetPortName    string
+	Id                     string
+	SourcePlacementId      string
+	SourcePortDefinitionId string
+	TargetPlacementId      string
+	TargetPortDefinitionId string
 	// cable_asset_id is absent when the cable itself is not individually tracked.
 	CableAssetId *string
 	// logical_connection_id links this physical cable to the intended logical design.
@@ -255,9 +255,9 @@ func (b0 PhysicalConnection_builder) Build() *PhysicalConnection {
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	x.xxx_hidden_SourcePlacementId = b.SourcePlacementId
-	x.xxx_hidden_SourcePortName = b.SourcePortName
+	x.xxx_hidden_SourcePortDefinitionId = b.SourcePortDefinitionId
 	x.xxx_hidden_TargetPlacementId = b.TargetPlacementId
-	x.xxx_hidden_TargetPortName = b.TargetPortName
+	x.xxx_hidden_TargetPortDefinitionId = b.TargetPortDefinitionId
 	if b.CableAssetId != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 10)
 		x.xxx_hidden_CableAssetId = b.CableAssetId
@@ -273,18 +273,18 @@ func (b0 PhysicalConnection_builder) Build() *PhysicalConnection {
 }
 
 type CreatePhysicalConnectionRequest struct {
-	state                          protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_SourcePlacementId   string                 `protobuf:"bytes,10,opt,name=source_placement_id,json=sourcePlacementId"`
-	xxx_hidden_SourcePortName      string                 `protobuf:"bytes,20,opt,name=source_port_name,json=sourcePortName"`
-	xxx_hidden_TargetPlacementId   string                 `protobuf:"bytes,30,opt,name=target_placement_id,json=targetPlacementId"`
-	xxx_hidden_TargetPortName      string                 `protobuf:"bytes,40,opt,name=target_port_name,json=targetPortName"`
-	xxx_hidden_CableAssetId        *string                `protobuf:"bytes,50,opt,name=cable_asset_id,json=cableAssetId"`
-	xxx_hidden_LogicalConnectionId *string                `protobuf:"bytes,60,opt,name=logical_connection_id,json=logicalConnectionId"`
-	xxx_hidden_Notes               string                 `protobuf:"bytes,70,opt,name=notes"`
-	XXX_raceDetectHookData         protoimpl.RaceDetectHookData
-	XXX_presence                   [1]uint32
-	unknownFields                  protoimpl.UnknownFields
-	sizeCache                      protoimpl.SizeCache
+	state                             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_SourcePlacementId      string                 `protobuf:"bytes,10,opt,name=source_placement_id,json=sourcePlacementId"`
+	xxx_hidden_SourcePortDefinitionId string                 `protobuf:"bytes,20,opt,name=source_port_definition_id,json=sourcePortDefinitionId"`
+	xxx_hidden_TargetPlacementId      string                 `protobuf:"bytes,30,opt,name=target_placement_id,json=targetPlacementId"`
+	xxx_hidden_TargetPortDefinitionId string                 `protobuf:"bytes,40,opt,name=target_port_definition_id,json=targetPortDefinitionId"`
+	xxx_hidden_CableAssetId           *string                `protobuf:"bytes,50,opt,name=cable_asset_id,json=cableAssetId"`
+	xxx_hidden_LogicalConnectionId    *string                `protobuf:"bytes,60,opt,name=logical_connection_id,json=logicalConnectionId"`
+	xxx_hidden_Notes                  string                 `protobuf:"bytes,70,opt,name=notes"`
+	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
+	XXX_presence                      [1]uint32
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *CreatePhysicalConnectionRequest) Reset() {
@@ -319,9 +319,9 @@ func (x *CreatePhysicalConnectionRequest) GetSourcePlacementId() string {
 	return ""
 }
 
-func (x *CreatePhysicalConnectionRequest) GetSourcePortName() string {
+func (x *CreatePhysicalConnectionRequest) GetSourcePortDefinitionId() string {
 	if x != nil {
-		return x.xxx_hidden_SourcePortName
+		return x.xxx_hidden_SourcePortDefinitionId
 	}
 	return ""
 }
@@ -333,9 +333,9 @@ func (x *CreatePhysicalConnectionRequest) GetTargetPlacementId() string {
 	return ""
 }
 
-func (x *CreatePhysicalConnectionRequest) GetTargetPortName() string {
+func (x *CreatePhysicalConnectionRequest) GetTargetPortDefinitionId() string {
 	if x != nil {
-		return x.xxx_hidden_TargetPortName
+		return x.xxx_hidden_TargetPortDefinitionId
 	}
 	return ""
 }
@@ -371,16 +371,16 @@ func (x *CreatePhysicalConnectionRequest) SetSourcePlacementId(v string) {
 	x.xxx_hidden_SourcePlacementId = v
 }
 
-func (x *CreatePhysicalConnectionRequest) SetSourcePortName(v string) {
-	x.xxx_hidden_SourcePortName = v
+func (x *CreatePhysicalConnectionRequest) SetSourcePortDefinitionId(v string) {
+	x.xxx_hidden_SourcePortDefinitionId = v
 }
 
 func (x *CreatePhysicalConnectionRequest) SetTargetPlacementId(v string) {
 	x.xxx_hidden_TargetPlacementId = v
 }
 
-func (x *CreatePhysicalConnectionRequest) SetTargetPortName(v string) {
-	x.xxx_hidden_TargetPortName = v
+func (x *CreatePhysicalConnectionRequest) SetTargetPortDefinitionId(v string) {
+	x.xxx_hidden_TargetPortDefinitionId = v
 }
 
 func (x *CreatePhysicalConnectionRequest) SetCableAssetId(v string) {
@@ -424,13 +424,13 @@ func (x *CreatePhysicalConnectionRequest) ClearLogicalConnectionId() {
 type CreatePhysicalConnectionRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	SourcePlacementId   string
-	SourcePortName      string
-	TargetPlacementId   string
-	TargetPortName      string
-	CableAssetId        *string
-	LogicalConnectionId *string
-	Notes               string
+	SourcePlacementId      string
+	SourcePortDefinitionId string
+	TargetPlacementId      string
+	TargetPortDefinitionId string
+	CableAssetId           *string
+	LogicalConnectionId    *string
+	Notes                  string
 }
 
 func (b0 CreatePhysicalConnectionRequest_builder) Build() *CreatePhysicalConnectionRequest {
@@ -438,9 +438,9 @@ func (b0 CreatePhysicalConnectionRequest_builder) Build() *CreatePhysicalConnect
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_SourcePlacementId = b.SourcePlacementId
-	x.xxx_hidden_SourcePortName = b.SourcePortName
+	x.xxx_hidden_SourcePortDefinitionId = b.SourcePortDefinitionId
 	x.xxx_hidden_TargetPlacementId = b.TargetPlacementId
-	x.xxx_hidden_TargetPortName = b.TargetPortName
+	x.xxx_hidden_TargetPortDefinitionId = b.TargetPortDefinitionId
 	if b.CableAssetId != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 7)
 		x.xxx_hidden_CableAssetId = b.CableAssetId
@@ -970,25 +970,25 @@ var File_v1_connection_proto protoreflect.FileDescriptor
 
 const file_v1_connection_proto_rawDesc = "" +
 	"\n" +
-	"\x13v1/connection.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc9\x03\n" +
+	"\x13v1/connection.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xeb\x03\n" +
 	"\x12PhysicalConnection\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12.\n" +
-	"\x13source_placement_id\x18\x14 \x01(\tR\x11sourcePlacementId\x12(\n" +
-	"\x10source_port_name\x18\x1e \x01(\tR\x0esourcePortName\x12.\n" +
-	"\x13target_placement_id\x18( \x01(\tR\x11targetPlacementId\x12(\n" +
-	"\x10target_port_name\x182 \x01(\tR\x0etargetPortName\x12+\n" +
+	"\x13source_placement_id\x18\x14 \x01(\tR\x11sourcePlacementId\x129\n" +
+	"\x19source_port_definition_id\x18\x1e \x01(\tR\x16sourcePortDefinitionId\x12.\n" +
+	"\x13target_placement_id\x18( \x01(\tR\x11targetPlacementId\x129\n" +
+	"\x19target_port_definition_id\x182 \x01(\tR\x16targetPortDefinitionId\x12+\n" +
 	"\x0ecable_asset_id\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\fcableAssetId\x129\n" +
 	"\x15logical_connection_id\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x13logicalConnectionId\x12\x14\n" +
 	"\x05notes\x18P \x01(\tR\x05notes\x124\n" +
 	"\acreated\x18Z \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x18d \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\xf9\x02\n" +
+	"\adeleted\x18d \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\x9d\x03\n" +
 	"\x1fCreatePhysicalConnectionRequest\x128\n" +
 	"\x13source_placement_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x11sourcePlacementId\x121\n" +
-	"\x10source_port_name\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x0esourcePortName\x128\n" +
-	"\x13target_placement_id\x18\x1e \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x11targetPlacementId\x121\n" +
-	"\x10target_port_name\x18( \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x0etargetPortName\x12+\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x11sourcePlacementId\x12C\n" +
+	"\x19source_port_definition_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x16sourcePortDefinitionId\x128\n" +
+	"\x13target_placement_id\x18\x1e \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x11targetPlacementId\x12C\n" +
+	"\x19target_port_definition_id\x18( \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x16targetPortDefinitionId\x12+\n" +
 	"\x0ecable_asset_id\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\fcableAssetId\x129\n" +
 	"\x15logical_connection_id\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x13logicalConnectionId\x12\x14\n" +
 	"\x05notes\x18F \x01(\tR\x05notes\"G\n" +

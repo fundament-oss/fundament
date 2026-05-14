@@ -1992,7 +1992,8 @@ CREATE TABLE dcim.logical_device_layouts (
 	position_y numeric NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	updated timestamptz NOT NULL DEFAULT now(),
-	CONSTRAINT logical_device_layouts_pk PRIMARY KEY (id)
+	CONSTRAINT logical_device_layouts_pk PRIMARY KEY (id),
+	CONSTRAINT logical_device_layouts_uq_device UNIQUE (logical_device_id)
 );
 -- ddl-end --
 ALTER TABLE dcim.logical_device_layouts OWNER TO fun_owner;
@@ -2058,13 +2059,54 @@ CREATE TABLE dcim.notes (
 	logical_design_id uuid,
 	logical_device_id uuid,
 	logical_connection_id uuid,
+	task_id uuid,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT notes_pk PRIMARY KEY (id),
-	CONSTRAINT notes_ck_single_ref CHECK (num_nonnulls(device_catalog_id, port_definition_id, asset_id, site_id, room_id, rack_row_id, rack_id, placement_id, physical_connection_id, logical_design_id, logical_device_id, logical_connection_id) = 1)
+	CONSTRAINT notes_ck_single_ref CHECK (num_nonnulls(device_catalog_id, port_definition_id, asset_id, site_id, room_id, rack_row_id, rack_id, placement_id, physical_connection_id, logical_design_id, logical_device_id, logical_connection_id, task_id) = 1)
 );
 -- ddl-end --
 ALTER TABLE dcim.notes OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.tasks | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.tasks CASCADE;
+CREATE TABLE dcim.tasks (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	title text NOT NULL,
+	description text,
+	status text NOT NULL DEFAULT 'ready',
+	priority text NOT NULL DEFAULT 'medium',
+	category text NOT NULL DEFAULT 'other',
+	assignee_id text,
+	due_date timestamptz,
+	location text,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT tasks_pk PRIMARY KEY (id),
+	CONSTRAINT tasks_ck_status CHECK (status IN ('ready','in_progress','review','blocked','done')),
+	CONSTRAINT tasks_ck_priority CHECK (priority IN ('low','medium','high','critical')),
+	CONSTRAINT tasks_ck_category CHECK (category IN ('hardware','network','cooling','power','security','other'))
+);
+-- ddl-end --
+ALTER TABLE dcim.tasks OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.task_steps | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.task_steps CASCADE;
+CREATE TABLE dcim.task_steps (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	task_id uuid NOT NULL,
+	title text NOT NULL,
+	description text,
+	ordinal integer NOT NULL,
+	completed boolean NOT NULL DEFAULT false,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT task_steps_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE dcim.task_steps OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: organization_limits_fk_organization | type: CONSTRAINT --
@@ -2596,6 +2638,20 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_logical_connection CASCADE;
 ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_logical_connection FOREIGN KEY (logical_connection_id)
 REFERENCES dcim.logical_connections (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_task | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_task CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_task FOREIGN KEY (task_id)
+REFERENCES dcim.tasks (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_task_steps_fk_task | type: CONSTRAINT --
+-- ALTER TABLE dcim.task_steps DROP CONSTRAINT IF EXISTS dcim_task_steps_fk_task CASCADE;
+ALTER TABLE dcim.task_steps ADD CONSTRAINT dcim_task_steps_fk_task FOREIGN KEY (task_id)
+REFERENCES dcim.tasks (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -3186,6 +3242,142 @@ GRANT USAGE
 -- object: grant_raw_b7ac85ec57 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE dcim.sites
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_44078bc70a | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.rooms
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_3fd949e43e | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.rack_rows
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_1d905c5a7b | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.racks
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_dc63cb6324 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.device_catalogs
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_76dcdf1f9c | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.port_definitions
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_a62d17bec0 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.port_compatibilities
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_82a4020c6c | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.assets
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_b356f9b7ea | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.asset_events
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_7816c51ac7 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.placements
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_fe1af0df2a | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.physical_connections
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_b4fe0f7438 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.logical_designs
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_4c53d811ba | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.logical_devices
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_634a599204 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.logical_connections
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_rawd_d9c6dd6ecd | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE,DELETE
+   ON TABLE dcim.logical_device_layouts
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_46ceb194ad | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.notes
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_103e145361 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.tasks
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_55ce0b15d8 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE dcim.task_steps
    TO fun_dcim_api;
 
 -- ddl-end --

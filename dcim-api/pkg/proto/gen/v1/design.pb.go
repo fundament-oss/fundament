@@ -1191,7 +1191,9 @@ func (b0 GetDesignResponse_builder) Build() *GetDesignResponse {
 type CreateDesignRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Name        string                 `protobuf:"bytes,10,opt,name=name"`
-	xxx_hidden_Description string                 `protobuf:"bytes,20,opt,name=description"`
+	xxx_hidden_Description *string                `protobuf:"bytes,20,opt,name=description"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -1230,7 +1232,10 @@ func (x *CreateDesignRequest) GetName() string {
 
 func (x *CreateDesignRequest) GetDescription() string {
 	if x != nil {
-		return x.xxx_hidden_Description
+		if x.xxx_hidden_Description != nil {
+			return *x.xxx_hidden_Description
+		}
+		return ""
 	}
 	return ""
 }
@@ -1240,14 +1245,27 @@ func (x *CreateDesignRequest) SetName(v string) {
 }
 
 func (x *CreateDesignRequest) SetDescription(v string) {
-	x.xxx_hidden_Description = v
+	x.xxx_hidden_Description = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *CreateDesignRequest) HasDescription() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *CreateDesignRequest) ClearDescription() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Description = nil
 }
 
 type CreateDesignRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Name        string
-	Description string
+	Description *string
 }
 
 func (b0 CreateDesignRequest_builder) Build() *CreateDesignRequest {
@@ -1255,7 +1273,10 @@ func (b0 CreateDesignRequest_builder) Build() *CreateDesignRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Name = b.Name
-	x.xxx_hidden_Description = b.Description
+	if b.Description != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_Description = b.Description
+	}
 	return m0
 }
 
@@ -1778,7 +1799,7 @@ type CreateDeviceRequest struct {
 	xxx_hidden_Role            LogicalDeviceRole      `protobuf:"varint,30,opt,name=role,enum=dcim.v1.LogicalDeviceRole"`
 	xxx_hidden_DeviceCatalogId *string                `protobuf:"bytes,40,opt,name=device_catalog_id,json=deviceCatalogId"`
 	xxx_hidden_Requirements    *string                `protobuf:"bytes,50,opt,name=requirements"`
-	xxx_hidden_Notes           string                 `protobuf:"bytes,60,opt,name=notes"`
+	xxx_hidden_Notes           *string                `protobuf:"bytes,60,opt,name=notes"`
 	XXX_raceDetectHookData     protoimpl.RaceDetectHookData
 	XXX_presence               [1]uint32
 	unknownFields              protoimpl.UnknownFields
@@ -1853,7 +1874,10 @@ func (x *CreateDeviceRequest) GetRequirements() string {
 
 func (x *CreateDeviceRequest) GetNotes() string {
 	if x != nil {
-		return x.xxx_hidden_Notes
+		if x.xxx_hidden_Notes != nil {
+			return *x.xxx_hidden_Notes
+		}
+		return ""
 	}
 	return ""
 }
@@ -1881,7 +1905,8 @@ func (x *CreateDeviceRequest) SetRequirements(v string) {
 }
 
 func (x *CreateDeviceRequest) SetNotes(v string) {
-	x.xxx_hidden_Notes = v
+	x.xxx_hidden_Notes = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 6)
 }
 
 func (x *CreateDeviceRequest) HasDeviceCatalogId() bool {
@@ -1898,6 +1923,13 @@ func (x *CreateDeviceRequest) HasRequirements() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
 }
 
+func (x *CreateDeviceRequest) HasNotes() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
+}
+
 func (x *CreateDeviceRequest) ClearDeviceCatalogId() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
 	x.xxx_hidden_DeviceCatalogId = nil
@@ -1908,6 +1940,11 @@ func (x *CreateDeviceRequest) ClearRequirements() {
 	x.xxx_hidden_Requirements = nil
 }
 
+func (x *CreateDeviceRequest) ClearNotes() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
+	x.xxx_hidden_Notes = nil
+}
+
 type CreateDeviceRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1916,7 +1953,7 @@ type CreateDeviceRequest_builder struct {
 	Role            LogicalDeviceRole
 	DeviceCatalogId *string
 	Requirements    *string
-	Notes           string
+	Notes           *string
 }
 
 func (b0 CreateDeviceRequest_builder) Build() *CreateDeviceRequest {
@@ -1934,7 +1971,10 @@ func (b0 CreateDeviceRequest_builder) Build() *CreateDeviceRequest {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 6)
 		x.xxx_hidden_Requirements = b.Requirements
 	}
-	x.xxx_hidden_Notes = b.Notes
+	if b.Notes != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 6)
+		x.xxx_hidden_Notes = b.Notes
+	}
 	return m0
 }
 
@@ -2525,7 +2565,7 @@ type CreateConnectionRequest struct {
 	xxx_hidden_TargetPortRole string                 `protobuf:"bytes,50,opt,name=target_port_role,json=targetPortRole"`
 	xxx_hidden_ConnectionType LogicalConnectionType  `protobuf:"varint,60,opt,name=connection_type,json=connectionType,enum=dcim.v1.LogicalConnectionType"`
 	xxx_hidden_Requirements   *string                `protobuf:"bytes,70,opt,name=requirements"`
-	xxx_hidden_Label          string                 `protobuf:"bytes,80,opt,name=label"`
+	xxx_hidden_Label          *string                `protobuf:"bytes,80,opt,name=label"`
 	XXX_raceDetectHookData    protoimpl.RaceDetectHookData
 	XXX_presence              [1]uint32
 	unknownFields             protoimpl.UnknownFields
@@ -2611,7 +2651,10 @@ func (x *CreateConnectionRequest) GetRequirements() string {
 
 func (x *CreateConnectionRequest) GetLabel() string {
 	if x != nil {
-		return x.xxx_hidden_Label
+		if x.xxx_hidden_Label != nil {
+			return *x.xxx_hidden_Label
+		}
+		return ""
 	}
 	return ""
 }
@@ -2646,7 +2689,8 @@ func (x *CreateConnectionRequest) SetRequirements(v string) {
 }
 
 func (x *CreateConnectionRequest) SetLabel(v string) {
-	x.xxx_hidden_Label = v
+	x.xxx_hidden_Label = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 8)
 }
 
 func (x *CreateConnectionRequest) HasRequirements() bool {
@@ -2656,9 +2700,21 @@ func (x *CreateConnectionRequest) HasRequirements() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
 }
 
+func (x *CreateConnectionRequest) HasLabel() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
 func (x *CreateConnectionRequest) ClearRequirements() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
 	x.xxx_hidden_Requirements = nil
+}
+
+func (x *CreateConnectionRequest) ClearLabel() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_Label = nil
 }
 
 type CreateConnectionRequest_builder struct {
@@ -2671,7 +2727,7 @@ type CreateConnectionRequest_builder struct {
 	TargetPortRole string
 	ConnectionType LogicalConnectionType
 	Requirements   *string
-	Label          string
+	Label          *string
 }
 
 func (b0 CreateConnectionRequest_builder) Build() *CreateConnectionRequest {
@@ -2688,7 +2744,10 @@ func (b0 CreateConnectionRequest_builder) Build() *CreateConnectionRequest {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 8)
 		x.xxx_hidden_Requirements = b.Requirements
 	}
-	x.xxx_hidden_Label = b.Label
+	if b.Label != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 8)
+		x.xxx_hidden_Label = b.Label
+	}
 	return m0
 }
 
@@ -3476,20 +3535,20 @@ const file_v1_design_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"C\n" +
 	"\x11GetDesignResponse\x12.\n" +
 	"\x06design\x18\n" +
-	" \x01(\v2\x16.dcim.v1.LogicalDesignR\x06design\"T\n" +
+	" \x01(\v2\x16.dcim.v1.LogicalDesignR\x06design\"[\n" +
 	"\x13CreateDesignRequest\x12\x1b\n" +
 	"\x04name\x18\n" +
-	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12 \n" +
-	"\vdescription\x18\x14 \x01(\tR\vdescription\"3\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12'\n" +
+	"\vdescription\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\"3\n" +
 	"\x14CreateDesignResponse\x12\x1b\n" +
 	"\tdesign_id\x18\n" +
-	" \x01(\tR\bdesignId\"\xb0\x01\n" +
+	" \x01(\tR\bdesignId\"\xba\x01\n" +
 	"\x13UpdateDesignRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x19\n" +
 	"\x04name\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x04name\x12'\n" +
-	"\vdescription\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x12;\n" +
-	"\x06status\x18( \x01(\x0e2\x1c.dcim.v1.LogicalDesignStatusB\x05\xaa\x01\x02\b\x01R\x06status\"/\n" +
+	"\vdescription\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x12E\n" +
+	"\x06status\x18( \x01(\x0e2\x1c.dcim.v1.LogicalDesignStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x06status\"/\n" +
 	"\x13DeleteDesignRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\";\n" +
@@ -3504,7 +3563,7 @@ const file_v1_design_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"C\n" +
 	"\x11GetDeviceResponse\x12.\n" +
 	"\x06device\x18\n" +
-	" \x01(\v2\x16.dcim.v1.LogicalDeviceR\x06device\"\x8b\x02\n" +
+	" \x01(\v2\x16.dcim.v1.LogicalDeviceR\x06device\"\x92\x02\n" +
 	"\x13CreateDeviceRequest\x12%\n" +
 	"\tdesign_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bdesignId\x12\x1d\n" +
@@ -3512,16 +3571,16 @@ const file_v1_design_proto_rawDesc = "" +
 	"\x04role\x18\x1e \x01(\x0e2\x1a.dcim.v1.LogicalDeviceRoleB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04role\x121\n" +
 	"\x11device_catalog_id\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\x0fdeviceCatalogId\x12)\n" +
-	"\frequirements\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x14\n" +
-	"\x05notes\x18< \x01(\tR\x05notes\"3\n" +
+	"\frequirements\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x1b\n" +
+	"\x05notes\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\"3\n" +
 	"\x14CreateDeviceResponse\x12\x1b\n" +
 	"\tdevice_id\x18\n" +
-	" \x01(\tR\bdeviceId\"\xfe\x01\n" +
+	" \x01(\tR\bdeviceId\"\x88\x02\n" +
 	"\x13UpdateDeviceRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1b\n" +
-	"\x05label\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x05label\x125\n" +
-	"\x04role\x18\x1e \x01(\x0e2\x1a.dcim.v1.LogicalDeviceRoleB\x05\xaa\x01\x02\b\x01R\x04role\x121\n" +
+	"\x05label\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x05label\x12?\n" +
+	"\x04role\x18\x1e \x01(\x0e2\x1a.dcim.v1.LogicalDeviceRoleB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x04role\x121\n" +
 	"\x11device_catalog_id\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\x0fdeviceCatalogId\x12)\n" +
 	"\frequirements\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x1b\n" +
 	"\x05notes\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\"/\n" +
@@ -3541,7 +3600,7 @@ const file_v1_design_proto_rawDesc = "" +
 	"connection\"W\n" +
 	"\x17ListConnectionsResponse\x12<\n" +
 	"\vconnections\x18\n" +
-	" \x03(\v2\x1a.dcim.v1.LogicalConnectionR\vconnections\"\xa4\x03\n" +
+	" \x03(\v2\x1a.dcim.v1.LogicalConnectionR\vconnections\"\xab\x03\n" +
 	"\x17CreateConnectionRequest\x12%\n" +
 	"\tdesign_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bdesignId\x122\n" +
@@ -3551,17 +3610,17 @@ const file_v1_design_proto_rawDesc = "" +
 	"\x10target_port_role\x182 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x0etargetPortRole\x12S\n" +
 	"\x0fconnection_type\x18< \x01(\x0e2\x1e.dcim.v1.LogicalConnectionTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x0econnectionType\x12)\n" +
-	"\frequirements\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x14\n" +
-	"\x05label\x18P \x01(\tR\x05label\"?\n" +
+	"\frequirements\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x1b\n" +
+	"\x05label\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\x05label\"?\n" +
 	"\x18CreateConnectionResponse\x12#\n" +
 	"\rconnection_id\x18\n" +
-	" \x01(\tR\fconnectionId\"\xad\x02\n" +
+	" \x01(\tR\fconnectionId\"\xb7\x02\n" +
 	"\x17UpdateConnectionRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12/\n" +
 	"\x10source_port_role\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x0esourcePortRole\x12/\n" +
-	"\x10target_port_role\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x0etargetPortRole\x12N\n" +
-	"\x0fconnection_type\x18( \x01(\x0e2\x1e.dcim.v1.LogicalConnectionTypeB\x05\xaa\x01\x02\b\x01R\x0econnectionType\x12)\n" +
+	"\x10target_port_role\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x0etargetPortRole\x12X\n" +
+	"\x0fconnection_type\x18( \x01(\x0e2\x1e.dcim.v1.LogicalConnectionTypeB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x0econnectionType\x12)\n" +
 	"\frequirements\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\frequirements\x12\x1b\n" +
 	"\x05label\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05label\"3\n" +
 	"\x17DeleteConnectionRequest\x12\x18\n" +

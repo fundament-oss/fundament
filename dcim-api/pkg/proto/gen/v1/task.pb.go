@@ -974,13 +974,13 @@ func (b0 GetTaskResponse_builder) Build() *GetTaskResponse {
 type CreateTaskRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Title       string                 `protobuf:"bytes,10,opt,name=title"`
-	xxx_hidden_Description string                 `protobuf:"bytes,20,opt,name=description"`
+	xxx_hidden_Description *string                `protobuf:"bytes,20,opt,name=description"`
 	xxx_hidden_Status      TaskStatus             `protobuf:"varint,30,opt,name=status,enum=dcim.v1.TaskStatus"`
 	xxx_hidden_Priority    TaskPriority           `protobuf:"varint,40,opt,name=priority,enum=dcim.v1.TaskPriority"`
 	xxx_hidden_Category    TaskCategory           `protobuf:"varint,50,opt,name=category,enum=dcim.v1.TaskCategory"`
 	xxx_hidden_AssigneeId  *string                `protobuf:"bytes,60,opt,name=assignee_id,json=assigneeId"`
 	xxx_hidden_DueDate     *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=due_date,json=dueDate"`
-	xxx_hidden_Location    string                 `protobuf:"bytes,80,opt,name=location"`
+	xxx_hidden_Location    *string                `protobuf:"bytes,80,opt,name=location"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -1021,7 +1021,10 @@ func (x *CreateTaskRequest) GetTitle() string {
 
 func (x *CreateTaskRequest) GetDescription() string {
 	if x != nil {
-		return x.xxx_hidden_Description
+		if x.xxx_hidden_Description != nil {
+			return *x.xxx_hidden_Description
+		}
+		return ""
 	}
 	return ""
 }
@@ -1066,7 +1069,10 @@ func (x *CreateTaskRequest) GetDueDate() *timestamppb.Timestamp {
 
 func (x *CreateTaskRequest) GetLocation() string {
 	if x != nil {
-		return x.xxx_hidden_Location
+		if x.xxx_hidden_Location != nil {
+			return *x.xxx_hidden_Location
+		}
+		return ""
 	}
 	return ""
 }
@@ -1076,7 +1082,8 @@ func (x *CreateTaskRequest) SetTitle(v string) {
 }
 
 func (x *CreateTaskRequest) SetDescription(v string) {
-	x.xxx_hidden_Description = v
+	x.xxx_hidden_Description = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 8)
 }
 
 func (x *CreateTaskRequest) SetStatus(v TaskStatus) {
@@ -1101,7 +1108,15 @@ func (x *CreateTaskRequest) SetDueDate(v *timestamppb.Timestamp) {
 }
 
 func (x *CreateTaskRequest) SetLocation(v string) {
-	x.xxx_hidden_Location = v
+	x.xxx_hidden_Location = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 8)
+}
+
+func (x *CreateTaskRequest) HasDescription() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
 func (x *CreateTaskRequest) HasAssigneeId() bool {
@@ -1118,6 +1133,18 @@ func (x *CreateTaskRequest) HasDueDate() bool {
 	return x.xxx_hidden_DueDate != nil
 }
 
+func (x *CreateTaskRequest) HasLocation() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
+func (x *CreateTaskRequest) ClearDescription() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Description = nil
+}
+
 func (x *CreateTaskRequest) ClearAssigneeId() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
 	x.xxx_hidden_AssigneeId = nil
@@ -1127,17 +1154,22 @@ func (x *CreateTaskRequest) ClearDueDate() {
 	x.xxx_hidden_DueDate = nil
 }
 
+func (x *CreateTaskRequest) ClearLocation() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_Location = nil
+}
+
 type CreateTaskRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Title       string
-	Description string
+	Description *string
 	Status      TaskStatus
 	Priority    TaskPriority
 	Category    TaskCategory
 	AssigneeId  *string
 	DueDate     *timestamppb.Timestamp
-	Location    string
+	Location    *string
 }
 
 func (b0 CreateTaskRequest_builder) Build() *CreateTaskRequest {
@@ -1145,7 +1177,10 @@ func (b0 CreateTaskRequest_builder) Build() *CreateTaskRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Title = b.Title
-	x.xxx_hidden_Description = b.Description
+	if b.Description != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 8)
+		x.xxx_hidden_Description = b.Description
+	}
 	x.xxx_hidden_Status = b.Status
 	x.xxx_hidden_Priority = b.Priority
 	x.xxx_hidden_Category = b.Category
@@ -1154,7 +1189,10 @@ func (b0 CreateTaskRequest_builder) Build() *CreateTaskRequest {
 		x.xxx_hidden_AssigneeId = b.AssigneeId
 	}
 	x.xxx_hidden_DueDate = b.DueDate
-	x.xxx_hidden_Location = b.Location
+	if b.Location != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 8)
+		x.xxx_hidden_Location = b.Location
+	}
 	return m0
 }
 
@@ -1704,8 +1742,10 @@ type CreateTaskStepRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_TaskId      string                 `protobuf:"bytes,10,opt,name=task_id,json=taskId"`
 	xxx_hidden_Title       string                 `protobuf:"bytes,20,opt,name=title"`
-	xxx_hidden_Description string                 `protobuf:"bytes,30,opt,name=description"`
+	xxx_hidden_Description *string                `protobuf:"bytes,30,opt,name=description"`
 	xxx_hidden_Ordinal     int32                  `protobuf:"varint,40,opt,name=ordinal"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -1751,7 +1791,10 @@ func (x *CreateTaskStepRequest) GetTitle() string {
 
 func (x *CreateTaskStepRequest) GetDescription() string {
 	if x != nil {
-		return x.xxx_hidden_Description
+		if x.xxx_hidden_Description != nil {
+			return *x.xxx_hidden_Description
+		}
+		return ""
 	}
 	return ""
 }
@@ -1772,11 +1815,24 @@ func (x *CreateTaskStepRequest) SetTitle(v string) {
 }
 
 func (x *CreateTaskStepRequest) SetDescription(v string) {
-	x.xxx_hidden_Description = v
+	x.xxx_hidden_Description = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
 }
 
 func (x *CreateTaskStepRequest) SetOrdinal(v int32) {
 	x.xxx_hidden_Ordinal = v
+}
+
+func (x *CreateTaskStepRequest) HasDescription() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *CreateTaskStepRequest) ClearDescription() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Description = nil
 }
 
 type CreateTaskStepRequest_builder struct {
@@ -1784,7 +1840,7 @@ type CreateTaskStepRequest_builder struct {
 
 	TaskId      string
 	Title       string
-	Description string
+	Description *string
 	Ordinal     int32
 }
 
@@ -1794,7 +1850,10 @@ func (b0 CreateTaskStepRequest_builder) Build() *CreateTaskStepRequest {
 	_, _ = b, x
 	x.xxx_hidden_TaskId = b.TaskId
 	x.xxx_hidden_Title = b.Title
-	x.xxx_hidden_Description = b.Description
+	if b.Description != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
+		x.xxx_hidden_Description = b.Description
+	}
 	x.xxx_hidden_Ordinal = b.Ordinal
 	return m0
 }
@@ -2126,12 +2185,12 @@ const file_v1_task_proto_rawDesc = "" +
 	"\aordinal\x182 \x01(\x05R\aordinal\x12\x1c\n" +
 	"\tcompleted\x18< \x01(\bR\tcompleted\x124\n" +
 	"\acreated\x18F \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\xe2\x01\n" +
-	"\x10ListTasksRequest\x122\n" +
+	"\adeleted\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\x80\x02\n" +
+	"\x10ListTasksRequest\x12<\n" +
 	"\x06status\x18\n" +
-	" \x01(\x0e2\x13.dcim.v1.TaskStatusB\x05\xaa\x01\x02\b\x01R\x06status\x128\n" +
-	"\bpriority\x18\x14 \x01(\x0e2\x15.dcim.v1.TaskPriorityB\x05\xaa\x01\x02\b\x01R\bpriority\x128\n" +
-	"\bcategory\x18\x1e \x01(\x0e2\x15.dcim.v1.TaskCategoryB\x05\xaa\x01\x02\b\x01R\bcategory\x12&\n" +
+	" \x01(\x0e2\x13.dcim.v1.TaskStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x06status\x12B\n" +
+	"\bpriority\x18\x14 \x01(\x0e2\x15.dcim.v1.TaskPriorityB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\bpriority\x12B\n" +
+	"\bcategory\x18\x1e \x01(\x0e2\x15.dcim.v1.TaskCategoryB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\bcategory\x12&\n" +
 	"\vassignee_id\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\n" +
 	"assigneeId\"8\n" +
 	"\x11ListTasksResponse\x12#\n" +
@@ -2142,29 +2201,32 @@ const file_v1_task_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"4\n" +
 	"\x0fGetTaskResponse\x12!\n" +
 	"\x04task\x18\n" +
-	" \x01(\v2\r.dcim.v1.TaskR\x04task\"\xe9\x02\n" +
+	" \x01(\v2\r.dcim.v1.TaskR\x04task\"\x9b\x03\n" +
 	"\x11CreateTaskRequest\x12\x1d\n" +
 	"\x05title\x18\n" +
-	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05title\x12 \n" +
-	"\vdescription\x18\x14 \x01(\tR\vdescription\x12+\n" +
-	"\x06status\x18\x1e \x01(\x0e2\x13.dcim.v1.TaskStatusR\x06status\x121\n" +
-	"\bpriority\x18( \x01(\x0e2\x15.dcim.v1.TaskPriorityR\bpriority\x121\n" +
-	"\bcategory\x182 \x01(\x0e2\x15.dcim.v1.TaskCategoryR\bcategory\x12&\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05title\x12'\n" +
+	"\vdescription\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x127\n" +
+	"\x06status\x18\x1e \x01(\x0e2\x13.dcim.v1.TaskStatusB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06status\x12=\n" +
+	"\bpriority\x18( \x01(\x0e2\x15.dcim.v1.TaskPriorityB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bpriority\x12=\n" +
+	"\bcategory\x182 \x01(\x0e2\x15.dcim.v1.TaskCategoryB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bcategory\x12&\n" +
 	"\vassignee_id\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\n" +
 	"assigneeId\x12<\n" +
-	"\bdue_date\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adueDate\x12\x1a\n" +
-	"\blocation\x18P \x01(\tR\blocation\"-\n" +
+	"\bdue_date\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adueDate\x12!\n" +
+	"\blocation\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\blocation\"-\n" +
 	"\x12CreateTaskResponse\x12\x17\n" +
 	"\atask_id\x18\n" +
-	" \x01(\tR\x06taskId\"\xa4\x03\n" +
+	" \x01(\tR\x06taskId\"\xc2\x03\n" +
 	"\x11UpdateTaskRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1b\n" +
 	"\x05title\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x05title\x12'\n" +
-	"\vdescription\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x122\n" +
-	"\x06status\x18( \x01(\x0e2\x13.dcim.v1.TaskStatusB\x05\xaa\x01\x02\b\x01R\x06status\x128\n" +
-	"\bpriority\x182 \x01(\x0e2\x15.dcim.v1.TaskPriorityB\x05\xaa\x01\x02\b\x01R\bpriority\x128\n" +
-	"\bcategory\x18< \x01(\x0e2\x15.dcim.v1.TaskCategoryB\x05\xaa\x01\x02\b\x01R\bcategory\x12&\n" +
+	"\vdescription\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x12<\n" +
+	"\x06status\x18( \x01(\x0e2\x13.dcim.v1.TaskStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x06status\x12B\n" +
+	"\bpriority\x182 \x01(\x0e2\x15.dcim.v1.TaskPriorityB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\bpriority\x12B\n" +
+	"\bcategory\x18< \x01(\x0e2\x15.dcim.v1.TaskCategoryB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\bcategory\x12&\n" +
 	"\vassignee_id\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\n" +
 	"assigneeId\x12<\n" +
 	"\bdue_date\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adueDate\x12!\n" +
@@ -2177,12 +2239,12 @@ const file_v1_task_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06taskId\"@\n" +
 	"\x15ListTaskStepsResponse\x12'\n" +
 	"\x05steps\x18\n" +
-	" \x03(\v2\x11.dcim.v1.TaskStepR\x05steps\"\x95\x01\n" +
+	" \x03(\v2\x11.dcim.v1.TaskStepR\x05steps\"\x9c\x01\n" +
 	"\x15CreateTaskStepRequest\x12!\n" +
 	"\atask_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06taskId\x12\x1d\n" +
-	"\x05title\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05title\x12 \n" +
-	"\vdescription\x18\x1e \x01(\tR\vdescription\x12\x18\n" +
+	"\x05title\x18\x14 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05title\x12'\n" +
+	"\vdescription\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\vdescription\x12\x18\n" +
 	"\aordinal\x18( \x01(\x05R\aordinal\":\n" +
 	"\x16CreateTaskStepResponse\x12 \n" +
 	"\ftask_step_id\x18\n" +

@@ -64,7 +64,8 @@ function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
       })),
     },
     crds: def.crds ?? [],
-    customUI: def.customUI,
+    customComponents: def.customComponents,
+    allowedResources: def.allowedResources ?? [],
   };
 }
 

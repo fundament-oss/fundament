@@ -10,7 +10,15 @@ export interface PluginDefinition {
   author?: string;
   menu: PluginMenu;
   crds: string[];
-  customUI?: Record<string, CustomUIConfig>;
+  customComponents?: Record<string, CustomComponentMapping>;
+  allowedResources: AllowedResource[];
+}
+
+export interface AllowedResource {
+  group: string;
+  version: string;
+  resource: string;
+  verbs: string[];
 }
 
 export interface PluginMenu {
@@ -80,7 +88,7 @@ export interface KubeResource {
 
 // Custom UI configuration
 
-export interface CustomUIConfig {
+export interface CustomComponentMapping {
   list?: string;
   detail?: string;
 }
@@ -126,7 +134,8 @@ export interface GetDefinitionResponse {
     project?: GetDefinitionMenuEntry[];
   };
   crds: string[];
-  customUI?: Record<string, CustomUIConfig>;
+  customComponents?: Record<string, CustomComponentMapping>;
+  allowedResources?: AllowedResource[];
 }
 
 export interface RawCrdYaml {

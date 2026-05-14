@@ -4,6 +4,10 @@
     [pluginName]="pluginName()"
     [crdKind]="crdDef()!.kind"
     view="detail"
+    [allowedResources]="allowedResources()"
+    [clusterId]="clusterContext.selectedClusterId()!"
+    [resourceName]="resourceId()"
+    [resourceNamespace]="resourceNamespace()"
   />
 } @else if (resource()) {
   <div class="space-y-6">
