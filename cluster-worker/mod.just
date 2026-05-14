@@ -29,30 +29,8 @@ default:
 versions:
     @echo "Gardener: {{GARDENER_VERSION}} (operator path)"
 
-# Check if prerequisites for local Gardener are installed
-check-prerequisites:
-    #!/usr/bin/env bash
-    set -e
-    missing=()
-    command -v docker >/dev/null || missing+=("docker")
-    command -v kind >/dev/null || missing+=("kind (mise use -g kind)")
-    command -v kubectl >/dev/null || missing+=("kubectl")
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed --version 2>/dev/null | grep -q GNU || missing+=("GNU sed (brew install gnu-sed)")
-        tar --version 2>/dev/null | grep -q GNU || missing+=("GNU tar (brew install gnu-tar)")
-        command -v ip >/dev/null || missing+=("iproute2mac (brew install iproute2mac)")
-    fi
-    if [ ${#missing[@]} -gt 0 ]; then
-        echo "Missing prerequisites:"
-        printf '  - %s\n' "${missing[@]}"
-        echo ""
-        echo "Install missing tools and try again"
-        exit 1
-    fi
-    echo "All prerequisites installed"
-
 # Start local Gardener via gardener-operator (~15 min first time)
-gardener-up: check-prerequisites
+gardener-up:
     #!/usr/bin/env bash
     set -e
     GARDENER_DIR="{{GARDENER_DIR}}"
