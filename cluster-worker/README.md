@@ -207,6 +207,9 @@ The `cluster_outbox` table tracks changes from multiple sources:
 
 ## Quick Start: Full Local Development
 
+Start with preparing your setup by installing all Gardener dependencies and tools.
+See https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#preparing-the-setup
+
 Run the complete stack with local Gardener (gardener-operator path):
 
 ```bash
