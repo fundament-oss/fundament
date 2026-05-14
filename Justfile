@@ -15,6 +15,7 @@ fmt:
 
 # Create a local k3d cluster for development with local registry
 cluster-create:
+    docker network inspect k3d-fundament >/dev/null 2>&1 || docker network create --subnet 172.30.0.0/16 k3d-fundament
     k3d cluster create --config=deploy/k3d/config.yaml
     just setup-certs
 
@@ -37,6 +38,7 @@ setup-certs:
     set -e
     which mkcert > /dev/null 2>&1 || { echo "mkcert not installed. Run: mise install"; exit 1; }
     which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/development-setup.md for installation instructions."; exit 1; }
+    which cmctl > /dev/null 2>&1 || { echo "cmctl not installed. Run: mise install"; exit 1; }
     TRUST_STORES=system,nss mkcert -install
     echo "Waiting for cert-manager to become available..."
     deadline=$(( $(date +%s) + 120 ))
@@ -44,17 +46,12 @@ setup-certs:
         [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for cert-manager namespace"; exit 1; }
         sleep 5
     done
-    kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
     echo "Waiting for cert-manager webhook to be ready..."
-    for i in $(seq 1 12); do
-        helm upgrade --install mkcert-setup charts/mkcert-setup \
-            --namespace cert-manager \
-            --set-file ca.cert="$(mkcert -CAROOT)/rootCA.pem" \
-            --set-file ca.key="$(mkcert -CAROOT)/rootCA-key.pem" && break
-        [ "$i" -eq 12 ] && { echo "cert-manager webhook did not become ready in time"; exit 1; }
-        echo "Webhook not ready yet, retrying in 5s... ($i/12)"
-        sleep 5
-    done
+    cmctl check api --wait=5m -n cert-manager
+    helm upgrade --install mkcert-setup charts/mkcert-setup \
+        --namespace cert-manager \
+        --set-file ca.cert="$(mkcert -CAROOT)/rootCA.pem" \
+        --set-file ca.key="$(mkcert -CAROOT)/rootCA-key.pem"
 
 # --- Deployment commands ---
 
