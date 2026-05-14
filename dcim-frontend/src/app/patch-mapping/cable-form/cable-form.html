@@ -1,315 +1,311 @@
-<div class="flex flex-col h-full">
-  <!-- Header -->
-  <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-    <h2 class="text-base font-semibold text-slate-900">
-      {{ isEditMode() ? 'Edit cable' : 'New cable' }}
-    </h2>
-    <nldd-icon-button
-      icon="dismiss"
-      variant="neutral-transparent"
-      size="sm"
-      text="Close"
-      (click)="onCancel()"
-    ></nldd-icon-button>
-  </div>
+<nldd-page sticky-header="" sticky-footer="">
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="isEditMode() ? 'Edit cable' : 'New cable'"
+    dismiss-text="Close"
+    (dismiss)="onCancel()"
+  ></nldd-top-title-bar>
 
-  <!-- Scrollable body -->
-  <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6">
-    <!-- ── A Side ──────────────────────────────────────────────────────────── -->
-    <section aria-labelledby="aside-heading">
-      <h3
-        id="aside-heading"
-        class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"
-      >
-        <span
-          class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-100 text-accent-700 text-[10px] font-bold"
-          aria-hidden="true"
-          >A</span
+  <nldd-simple-section>
+    <div class="flex flex-col gap-6">
+      <!-- ── A Side ──────────────────────────────────────────────────────────── -->
+      <section aria-labelledby="aside-heading">
+        <h3
+          id="aside-heading"
+          class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"
         >
-        A side
-      </h3>
-
-      <div class="flex flex-col gap-3">
-        <!-- Port type -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="a-port-type">Port type</label>
-          <select
-            id="a-port-type"
-            [value]="aPortType()"
-            (change)="onAPortTypeChange($any($event.target).value)"
-            class="w-full"
+          <span
+            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-100 text-accent-700 text-[10px] font-bold"
+            aria-hidden="true"
+            >A</span
           >
-            <option value="">Any type</option>
-            @for (pt of PORT_TYPES; track pt.value) {
-              <option [value]="pt.value">{{ pt.label }}</option>
-            }
-          </select>
-        </div>
+          A side
+        </h3>
 
-        <!-- Device -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="a-device">Device</label>
-          <select
-            id="a-device"
-            [value]="aDeviceId()"
-            (change)="onADeviceChange($any($event.target).value)"
-            class="w-full"
-          >
-            <option value="">Select device…</option>
-            @for (dev of dcDevices(); track dev.id) {
-              <option [value]="dev.id">{{ dev.name }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Port -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="a-port">Port</label>
-          <select
-            id="a-port"
-            [value]="aPortId()"
-            (change)="aPortId.set($any($event.target).value)"
-            [disabled]="!aDeviceId()"
-            class="w-full disabled:bg-neutral-50 disabled:text-slate-400"
-          >
-            <option value="">Select port…</option>
-            @for (port of aFilteredPorts(); track port.id) {
-              <option [value]="port.id">
-                {{ port.name }}{{ port.label ? ' — ' + port.label : '' }} ({{
-                  PORT_TYPE_LABEL[port.type]
-                }})
-              </option>
-            }
-          </select>
-          @if (aDeviceId() && aFilteredPorts().length === 0) {
-            <p class="text-[10px] text-amber-600 mt-0.5">No ports of this type on this device.</p>
-          }
-        </div>
-      </div>
-    </section>
-
-    <div class="border-t border-slate-100"></div>
-
-    <!-- ── B Side ──────────────────────────────────────────────────────────── -->
-    <section aria-labelledby="bside-heading">
-      <h3
-        id="bside-heading"
-        class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"
-      >
-        <span
-          class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-200 text-slate-700 text-[10px] font-bold"
-          aria-hidden="true"
-          >B</span
-        >
-        B side
-      </h3>
-
-      <div class="flex flex-col gap-3">
-        <!-- Port type -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="b-port-type">Port type</label>
-          <select
-            id="b-port-type"
-            [value]="bPortType()"
-            (change)="onBPortTypeChange($any($event.target).value)"
-            class="w-full"
-          >
-            <option value="">Any type</option>
-            @for (pt of PORT_TYPES; track pt.value) {
-              <option [value]="pt.value">{{ pt.label }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Device -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="b-device">Device</label>
-          <select
-            id="b-device"
-            [value]="bDeviceId()"
-            (change)="onBDeviceChange($any($event.target).value)"
-            class="w-full"
-          >
-            <option value="">Select device…</option>
-            @for (dev of dcDevices(); track dev.id) {
-              <option [value]="dev.id">{{ dev.name }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Port -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="b-port">Port</label>
-          <select
-            id="b-port"
-            [value]="bPortId()"
-            (change)="bPortId.set($any($event.target).value)"
-            [disabled]="!bDeviceId()"
-            class="w-full disabled:bg-neutral-50 disabled:text-slate-400"
-          >
-            <option value="">Select port…</option>
-            @for (port of bFilteredPorts(); track port.id) {
-              <option [value]="port.id">
-                {{ port.name }}{{ port.label ? ' — ' + port.label : '' }} ({{
-                  PORT_TYPE_LABEL[port.type]
-                }})
-              </option>
-            }
-          </select>
-          @if (bDeviceId() && bFilteredPorts().length === 0) {
-            <p class="text-[10px] text-amber-600 mt-0.5">No ports of this type on this device.</p>
-          }
-          @if (isSamePort()) {
-            <p class="text-[10px] text-red-600 mt-0.5" role="alert">
-              A and B sides cannot use the same port.
-            </p>
-          }
-        </div>
-      </div>
-    </section>
-
-    <div class="border-t border-slate-100"></div>
-
-    <!-- ── Cable properties ────────────────────────────────────────────────── -->
-    <section aria-labelledby="cable-props-heading">
-      <h3
-        id="cable-props-heading"
-        class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3"
-      >
-        Cable
-      </h3>
-
-      <div class="flex flex-col gap-3">
-        <!-- Status -->
-        <div class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium text-slate-700" id="cable-status-label">Status</span>
-          <nldd-segmented-control
-            [value]="cableStatus()"
-            size="sm"
-            type="radio"
-            variant="text"
-            aria-labelledby="cable-status-label"
-            (change)="cableStatus.set($any($event).detail.value)"
-          >
-            @for (s of CABLE_STATUSES; track s.value) {
-              <nldd-segmented-control-item
-                [attr.value]="s.value"
-                [attr.text]="s.label"
-              ></nldd-segmented-control-item>
-            }
-          </nldd-segmented-control>
-        </div>
-
-        <!-- Type -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="cable-type">
-            Type <span class="text-red-500" aria-hidden="true">*</span>
-          </label>
-          <select
-            id="cable-type"
-            [value]="cableType()"
-            (change)="cableType.set($any($event.target).value)"
-            class="w-full"
-          >
-            <option value="">Select type…</option>
-            @for (t of CABLE_TYPES; track t) {
-              <option [value]="t">{{ t }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- Label -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="cable-label">Label</label>
-          <nldd-text-field
-            id="cable-label"
-            [attr.value]="cableLabel()"
-            placeholder="e.g. srv01-eth0"
-            class="w-full font-mono"
-            (change)="cableLabel.set($any($event).detail?.value ?? '')"
-            (input)="cableLabel.set($any($event.target).value)"
-          ></nldd-text-field>
-        </div>
-
-        <!-- Color -->
-        <div class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium text-slate-700" id="color-label">Color</span>
-          <div class="flex flex-wrap gap-1.5" role="group" aria-labelledby="color-label">
-            <!-- No color option -->
-            <button
-              class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1"
-              [class]="
-                cableColor() === undefined
-                  ? 'border-accent-500 bg-white'
-                  : 'border-slate-200 bg-white hover:border-slate-400'
-              "
-              (click)="cableColor.set(undefined)"
-              aria-label="No color"
-              [attr.aria-pressed]="cableColor() === undefined"
-              title="No color"
+        <div class="flex flex-col gap-3">
+          <!-- Port type -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="a-port-type">Port type</label>
+            <select
+              id="a-port-type"
+              [value]="aPortType()"
+              (change)="onAPortTypeChange($any($event.target).value)"
+              class="w-full"
             >
-              <svg
-                class="w-3 h-3 text-slate-300"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+              <option value="">Any type</option>
+              @for (pt of PORT_TYPES; track pt.value) {
+                <option [value]="pt.value">{{ pt.label }}</option>
+              }
+            </select>
+          </div>
 
-            @for (color of CABLE_COLORS; track color) {
-              <button
-                class="w-6 h-6 rounded-full border-2 transition-all focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1"
-                [class]="
-                  cableColor() === color
-                    ? 'border-accent-500 scale-110'
-                    : 'border-transparent hover:border-slate-300 hover:scale-105'
-                "
-                [style.background]="CABLE_COLOR_HEX[color]"
-                (click)="cableColor.set(color)"
-                [attr.aria-label]="'Color: ' + color"
-                [attr.aria-pressed]="cableColor() === color"
-                [title]="color"
-              ></button>
+          <!-- Device -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="a-device">Device</label>
+            <select
+              id="a-device"
+              [value]="aDeviceId()"
+              (change)="onADeviceChange($any($event.target).value)"
+              class="w-full"
+            >
+              <option value="">Select device…</option>
+              @for (dev of dcDevices(); track dev.id) {
+                <option [value]="dev.id">{{ dev.name }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Port -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="a-port">Port</label>
+            <select
+              id="a-port"
+              [value]="aPortId()"
+              (change)="aPortId.set($any($event.target).value)"
+              [disabled]="!aDeviceId()"
+              class="w-full disabled:bg-neutral-50 disabled:text-slate-400"
+            >
+              <option value="">Select port…</option>
+              @for (port of aFilteredPorts(); track port.id) {
+                <option [value]="port.id">
+                  {{ port.name }}{{ port.label ? ' — ' + port.label : '' }} ({{
+                    PORT_TYPE_LABEL[port.type]
+                  }})
+                </option>
+              }
+            </select>
+            @if (aDeviceId() && aFilteredPorts().length === 0) {
+              <p class="text-[10px] text-amber-600 mt-0.5">No ports of this type on this device.</p>
             }
           </div>
         </div>
+      </section>
 
-        <!-- Description -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="cable-description"
-            >Description</label
+      <div class="border-t border-slate-100"></div>
+
+      <!-- ── B Side ──────────────────────────────────────────────────────────── -->
+      <section aria-labelledby="bside-heading">
+        <h3
+          id="bside-heading"
+          class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"
+        >
+          <span
+            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-200 text-slate-700 text-[10px] font-bold"
+            aria-hidden="true"
+            >B</span
           >
-          <nldd-multi-line-text-field
-            id="cable-description"
-            [value]="cableDescription()"
-            (input)="cableDescription.set($any($event.target).value)"
-            rows="2"
-            placeholder="Optional description…"
-            resize="vertical"
-          ></nldd-multi-line-text-field>
-        </div>
+          B side
+        </h3>
 
-        <!-- Comments -->
-        <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium text-slate-700" for="cable-comments">Comments</label>
-          <nldd-multi-line-text-field
-            id="cable-comments"
-            [value]="cableComments()"
-            (input)="cableComments.set($any($event.target).value)"
-            rows="3"
-            placeholder="Optional comments…"
-          ></nldd-multi-line-text-field>
-        </div>
-      </div>
-    </section>
-  </div>
+        <div class="flex flex-col gap-3">
+          <!-- Port type -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="b-port-type">Port type</label>
+            <select
+              id="b-port-type"
+              [value]="bPortType()"
+              (change)="onBPortTypeChange($any($event.target).value)"
+              class="w-full"
+            >
+              <option value="">Any type</option>
+              @for (pt of PORT_TYPES; track pt.value) {
+                <option [value]="pt.value">{{ pt.label }}</option>
+              }
+            </select>
+          </div>
 
-  <!-- Footer -->
-  <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex items-center justify-between gap-2">
+          <!-- Device -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="b-device">Device</label>
+            <select
+              id="b-device"
+              [value]="bDeviceId()"
+              (change)="onBDeviceChange($any($event.target).value)"
+              class="w-full"
+            >
+              <option value="">Select device…</option>
+              @for (dev of dcDevices(); track dev.id) {
+                <option [value]="dev.id">{{ dev.name }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Port -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="b-port">Port</label>
+            <select
+              id="b-port"
+              [value]="bPortId()"
+              (change)="bPortId.set($any($event.target).value)"
+              [disabled]="!bDeviceId()"
+              class="w-full disabled:bg-neutral-50 disabled:text-slate-400"
+            >
+              <option value="">Select port…</option>
+              @for (port of bFilteredPorts(); track port.id) {
+                <option [value]="port.id">
+                  {{ port.name }}{{ port.label ? ' — ' + port.label : '' }} ({{
+                    PORT_TYPE_LABEL[port.type]
+                  }})
+                </option>
+              }
+            </select>
+            @if (bDeviceId() && bFilteredPorts().length === 0) {
+              <p class="text-[10px] text-amber-600 mt-0.5">No ports of this type on this device.</p>
+            }
+            @if (isSamePort()) {
+              <p class="text-[10px] text-red-600 mt-0.5" role="alert">
+                A and B sides cannot use the same port.
+              </p>
+            }
+          </div>
+        </div>
+      </section>
+
+      <div class="border-t border-slate-100"></div>
+
+      <!-- ── Cable properties ────────────────────────────────────────────────── -->
+      <section aria-labelledby="cable-props-heading">
+        <h3
+          id="cable-props-heading"
+          class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3"
+        >
+          Cable
+        </h3>
+
+        <div class="flex flex-col gap-3">
+          <!-- Status -->
+          <div class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium text-slate-700" id="cable-status-label">Status</span>
+            <nldd-segmented-control
+              [value]="cableStatus()"
+              size="sm"
+              type="radio"
+              variant="text"
+              aria-labelledby="cable-status-label"
+              (change)="cableStatus.set($any($event).detail.value)"
+            >
+              @for (s of CABLE_STATUSES; track s.value) {
+                <nldd-segmented-control-item
+                  [attr.value]="s.value"
+                  [attr.text]="s.label"
+                ></nldd-segmented-control-item>
+              }
+            </nldd-segmented-control>
+          </div>
+
+          <!-- Type -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="cable-type">
+              Type <span class="text-red-500" aria-hidden="true">*</span>
+            </label>
+            <select
+              id="cable-type"
+              [value]="cableType()"
+              (change)="cableType.set($any($event.target).value)"
+              class="w-full"
+            >
+              <option value="">Select type…</option>
+              @for (t of CABLE_TYPES; track t) {
+                <option [value]="t">{{ t }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Label -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="cable-label">Label</label>
+            <nldd-text-field
+              id="cable-label"
+              [attr.value]="cableLabel()"
+              placeholder="e.g. srv01-eth0"
+              class="w-full font-mono"
+              (change)="cableLabel.set($any($event).detail?.value ?? '')"
+              (input)="cableLabel.set($any($event.target).value)"
+            ></nldd-text-field>
+          </div>
+
+          <!-- Color -->
+          <div class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium text-slate-700" id="color-label">Color</span>
+            <div class="flex flex-wrap gap-1.5" role="group" aria-labelledby="color-label">
+              <!-- No color option -->
+              <button
+                class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1"
+                [class]="
+                  cableColor() === undefined
+                    ? 'border-accent-500 bg-white'
+                    : 'border-slate-200 bg-white hover:border-slate-400'
+                "
+                (click)="cableColor.set(undefined)"
+                aria-label="No color"
+                [attr.aria-pressed]="cableColor() === undefined"
+                title="No color"
+              >
+                <svg
+                  class="w-3 h-3 text-slate-300"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              @for (color of CABLE_COLORS; track color) {
+                <button
+                  class="w-6 h-6 rounded-full border-2 transition-all focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1"
+                  [class]="
+                    cableColor() === color
+                      ? 'border-accent-500 scale-110'
+                      : 'border-transparent hover:border-slate-300 hover:scale-105'
+                  "
+                  [style.background]="CABLE_COLOR_HEX[color]"
+                  (click)="cableColor.set(color)"
+                  [attr.aria-label]="'Color: ' + color"
+                  [attr.aria-pressed]="cableColor() === color"
+                  [title]="color"
+                ></button>
+              }
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="cable-description"
+              >Description</label
+            >
+            <nldd-multi-line-text-field
+              id="cable-description"
+              [value]="cableDescription()"
+              (input)="cableDescription.set($any($event.target).value)"
+              rows="2"
+              placeholder="Optional description…"
+              resize="vertical"
+            ></nldd-multi-line-text-field>
+          </div>
+
+          <!-- Comments -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="cable-comments">Comments</label>
+            <nldd-multi-line-text-field
+              id="cable-comments"
+              [value]="cableComments()"
+              (input)="cableComments.set($any($event.target).value)"
+              rows="3"
+              placeholder="Optional comments…"
+            ></nldd-multi-line-text-field>
+          </div>
+        </div>
+      </section>
+    </div>
+  </nldd-simple-section>
+
+  <div
+    slot="footer"
+    class="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4"
+  >
     @if (isEditMode()) {
       <nldd-button
         variant="destructive"
@@ -331,4 +327,4 @@
       ></nldd-button>
     </div>
   </div>
-</div>
+</nldd-page>
