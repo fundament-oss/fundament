@@ -15,6 +15,7 @@ fmt:
 
 # Create a local k3d cluster for development with local registry
 cluster-create:
+    docker network inspect k3d-fundament >/dev/null 2>&1 || docker network create --subnet 172.30.0.0/16 k3d-fundament
     k3d cluster create --config=deploy/k3d/config.yaml
     just setup-certs
 
