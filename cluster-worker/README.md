@@ -210,6 +210,8 @@ The `cluster_outbox` table tracks changes from multiple sources:
 Start with preparing your setup by installing all Gardener dependencies and tools.
 See https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#preparing-the-setup
 
+This setup is tested with Docker Desktop on macOS. With a memory limit of 32GB.
+
 Run the complete stack with local Gardener (gardener-operator path):
 
 ```bash
@@ -223,9 +225,10 @@ just cluster-worker gardener-up
 just dev -p local-gardener
 
 # 4. Access the console frontend
-open http://console.fundament.localhost:8080
+Open http://console.fundament.localhost:8443
 
-# 5. Create a test cluster via console or CLI:
+# 5. Create a test cluster via the Console UI or CLI:
+TODO in review: the create-test-cluster job directly access the db to create a cluster. This is brittle, I suggest we remove this job and ask the user to create a cluster via the Console or fundament CLI
 just cluster-worker create-test-cluster t1
 
 # Watch progress:
@@ -244,7 +247,9 @@ just cluster-worker gardener-secret
 ```
 
 **Prerequisites:**
-- Docker with 8+ CPUs and 8+ GB memory
+- Docker with 8+ CPUs and 16+ GB memory (Gardener alone needs ~8 GB; the
+  documented workflow runs the k3d cluster and Gardener side by side, so the
+  Docker VM needs headroom for both)
 - `mise trust && mise install` (installs all tools)
 - macOS only: GNU tools (`brew install gnu-sed gnu-tar iproute2mac`)
 
