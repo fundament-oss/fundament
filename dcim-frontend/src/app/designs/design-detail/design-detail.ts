@@ -207,7 +207,12 @@ export default class DesignDetailComponent implements OnInit {
     if (form.id) {
       firstValueFrom(this.designApi.updateDevice(form.id, name, role))
         .then(() => {
-          const updated: LogicalDevice = { id: form.id!, designId: form.designId ?? this.designId, name, role };
+          const updated: LogicalDevice = {
+            id: form.id!,
+            designId: form.designId ?? this.designId,
+            name,
+            role,
+          };
           this.mutableDevices.update((list) => list.map((d) => (d.id === form.id ? updated : d)));
           this.editDevice.set(null);
         })
@@ -297,9 +302,7 @@ export default class DesignDetailComponent implements OnInit {
     if (form.id) {
       firstValueFrom(this.designApi.updateConnection(conn))
         .then(() => {
-          this.mutableConnections.update((list) =>
-            list.map((c) => (c.id === form.id ? conn : c)),
-          );
+          this.mutableConnections.update((list) => list.map((c) => (c.id === form.id ? conn : c)));
           this.editConnection.set(null);
         })
         // eslint-disable-next-line no-console

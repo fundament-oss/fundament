@@ -322,9 +322,9 @@
     }
 
     <div class="flex gap-2">
-      <nldd-button variant="neutral-tinted" text="Cancel" (click)="onCancel()"></nldd-button>
+      <nldd-button variant="secondary" text="Cancel" (click)="onCancel()"></nldd-button>
       <nldd-button
-        variant="accent-filled"
+        variant="primary"
         text="Save"
         (click)="onSave()"
         [attr.disabled]="canSave() ? null : true"
