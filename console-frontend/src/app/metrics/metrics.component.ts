@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   OnInit,
+  OnDestroy,
   ElementRef,
   ViewChild,
   signal,
@@ -13,7 +14,7 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
@@ -25,16 +26,10 @@ import {
   type ListClustersResponse_ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import {
-  GetClusterWorkloadMetricsRequestSchema,
-  GetClusterWorkloadTimeSeriesRequestSchema,
-  GetOrgWorkloadMetricsRequestSchema,
-  GetOrgWorkloadTimeSeriesRequestSchema,
-  GetProjectWorkloadMetricsRequestSchema,
-  GetProjectWorkloadTimeSeriesRequestSchema,
-  type GetClusterWorkloadMetricsResponse,
-  type GetOrgWorkloadMetricsResponse,
-  type GetProjectWorkloadMetricsResponse,
-  type GetWorkloadTimeSeriesResponse,
+  StreamOrgWorkloadMetricsRequestSchema,
+  StreamClusterWorkloadMetricsRequestSchema,
+  StreamProjectWorkloadMetricsRequestSchema,
+  type StreamWorkloadMetricsResponse,
   type NamespaceWorkloadMetrics,
 } from '../../generated/v1/metrics_pb';
 
@@ -90,6 +85,14 @@ export const TIME_RANGE_PRESETS: { value: TimeRangePreset; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ];
 
+const PRESET_WINDOW_SECONDS: Record<string, number> = {
+  '1h': 3600,
+  '6h': 21600,
+  '24h': 86400,
+  '7d': 604800,
+  '30d': 2592000,
+};
+
 function getUsagePercentage(used: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((used / total) * 100);
@@ -137,7 +140,7 @@ function presetToDateRange(preset: TimeRangePreset): { from: string; to: string 
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './metrics.component.html',
 })
-export default class MetricsComponent implements OnInit {
+export default class MetricsComponent implements OnInit, OnDestroy {
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
@@ -162,6 +165,10 @@ export default class MetricsComponent implements OnInit {
 
   private networkChart?: Chart;
 
+  private streamSub: Subscription | null = null;
+
+  private chartsReady = false;
+
   viewMode = signal<'org' | 'project'>('org');
 
   projectId = signal<string | null>(null);
@@ -183,6 +190,12 @@ export default class MetricsComponent implements OnInit {
   clusters = signal<ClusterOption[]>([]);
 
   isLoading = signal(false);
+
+  isLive = signal(false);
+
+  connectionError = signal(false);
+
+  lastRefreshedAt = signal<Date | null>(null);
 
   errorMessage = signal<string | null>(null);
 
@@ -222,12 +235,15 @@ export default class MetricsComponent implements OnInit {
     if (projectId) {
       this.viewMode.set('project');
       this.projectId.set(projectId);
-      this.loadProjectMetrics();
     } else {
       this.viewMode.set('org');
       this.loadClusters();
-      this.loadOrgMetrics();
     }
+    this.startStream();
+  }
+
+  ngOnDestroy() {
+    this.cancelStream();
   }
 
   currentTotals = computed<ClusterUsageData | null>(() => {
@@ -289,22 +305,20 @@ export default class MetricsComponent implements OnInit {
     this.selectedPreset.set(preset);
     if (preset !== 'custom') {
       this.applyPreset(preset);
-      this.reload();
+      this.startStream();
     }
   }
 
   onClusterChange(): void {
-    if (this.selectedClusterId()) {
-      this.loadClusterMetrics(this.selectedClusterId());
-    } else {
+    if (!this.selectedClusterId()) {
       this.clusterTotals.set(null);
       this.nodeUsage.set([]);
-      this.loadOrgMetrics();
     }
+    this.startStream();
   }
 
   onDateChange(): void {
-    this.reload();
+    this.startStream();
   }
 
   private applyPreset(preset: TimeRangePreset): void {
@@ -313,13 +327,137 @@ export default class MetricsComponent implements OnInit {
     this.dateTo = to;
   }
 
-  private reload(): void {
+  private cancelStream(): void {
+    this.streamSub?.unsubscribe();
+    this.streamSub = null;
+  }
+
+  private startStream(): void {
+    this.cancelStream();
+    this.isLoading.set(true);
+    this.isLive.set(false);
+    this.connectionError.set(false);
+    this.errorMessage.set(null);
+
+    // Destroy charts so they are recreated fresh for the new stream/filter.
+    this.destroyCharts();
+    this.chartsReady = false;
+
+    const obs = this.buildStreamObservable();
+    this.streamSub = obs.subscribe({
+      next: (response) => {
+        this.applyStreamResponse(response);
+        this.isLoading.set(false);
+        this.isLive.set(true);
+        if (response.refreshedAt) {
+          this.lastRefreshedAt.set(timestampDate(response.refreshedAt));
+        }
+        if (!this.chartsReady) {
+          // Defer chart creation until Angular has rendered the canvases.
+          setTimeout(() => {
+            this.refreshCharts();
+            this.chartsReady = true;
+          });
+        } else {
+          this.updateChartsInPlace();
+        }
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.isLive.set(false);
+        this.connectionError.set(true);
+      },
+    });
+  }
+
+  private buildStreamObservable() {
+    const preset = this.selectedPreset();
+    const windowSeconds = PRESET_WINDOW_SECONDS[preset] ?? 0;
+
     if (this.viewMode() === 'project') {
-      this.loadProjectMetrics();
+      const pid = this.projectId();
+      if (!pid) throw new Error('No project ID');
+      const req =
+        windowSeconds > 0
+          ? create(StreamProjectWorkloadMetricsRequestSchema, { projectId: pid, windowSeconds })
+          : create(StreamProjectWorkloadMetricsRequestSchema, {
+              projectId: pid,
+              start: timestampFromDate(new Date(this.dateFrom)),
+              end: timestampFromDate(new Date(`${this.dateTo}T23:59:59`)),
+            });
+      return this.metricsClient.streamProjectWorkloadMetrics(req);
+    }
+
+    const clusterId = this.selectedClusterId();
+    if (clusterId) {
+      const req =
+        windowSeconds > 0
+          ? create(StreamClusterWorkloadMetricsRequestSchema, { clusterId, windowSeconds })
+          : create(StreamClusterWorkloadMetricsRequestSchema, {
+              clusterId,
+              start: timestampFromDate(new Date(this.dateFrom)),
+              end: timestampFromDate(new Date(`${this.dateTo}T23:59:59`)),
+            });
+      return this.metricsClient.streamClusterWorkloadMetrics(req);
+    }
+
+    const req =
+      windowSeconds > 0
+        ? create(StreamOrgWorkloadMetricsRequestSchema, { windowSeconds })
+        : create(StreamOrgWorkloadMetricsRequestSchema, {
+            start: timestampFromDate(new Date(this.dateFrom)),
+            end: timestampFromDate(new Date(`${this.dateTo}T23:59:59`)),
+          });
+    return this.metricsClient.streamOrgWorkloadMetrics(req);
+  }
+
+  private applyStreamResponse(r: StreamWorkloadMetricsResponse): void {
+    const t = r.totals;
+    const totals: ClusterUsageData | null = t
+      ? {
+          cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
+          memory: {
+            used: t.memory?.used ?? 0,
+            total: t.memory?.total ?? 0,
+            unit: t.memory?.unit ?? 'GiB',
+          },
+          pods: {
+            used: t.pods?.used ?? 0,
+            total: t.pods?.total ?? 0,
+            unit: t.pods?.unit ?? 'pods',
+          },
+        }
+      : null;
+
+    if (this.viewMode() === 'project') {
+      this.projectTotals.set(totals);
     } else if (this.selectedClusterId()) {
-      this.loadClusterMetrics(this.selectedClusterId());
+      this.clusterTotals.set(totals);
+      this.nodeUsage.set(
+        r.nodes.map((n) => ({
+          name: n.node,
+          cpu: { used: n.cpu?.used ?? 0, total: n.cpu?.total ?? 0 },
+          memory: { used: n.memory?.used ?? 0, total: n.memory?.total ?? 0 },
+          pods: { used: n.pods?.used ?? 0, total: n.pods?.total ?? 0 },
+        })),
+      );
     } else {
-      this.loadOrgMetrics();
+      this.orgTotals.set(totals);
+      this.clusterSummaries.set(
+        r.clusters.map((c) => ({
+          id: c.clusterId,
+          name: c.clusterName,
+          cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
+          memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
+          pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
+        })),
+      );
+    }
+
+    this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
+
+    if (r.timeSeries) {
+      this.applyTimeSeries(r.timeSeries);
     }
   }
 
@@ -341,111 +479,6 @@ export default class MetricsComponent implements OnInit {
     }
   }
 
-  private async loadOrgMetrics(): Promise<void> {
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
-
-    const { start, end } = this.dateRange();
-
-    try {
-      const [workload, timeSeries] = await Promise.all([
-        firstValueFrom(
-          this.metricsClient.getOrgWorkloadMetrics(create(GetOrgWorkloadMetricsRequestSchema, {})),
-        ),
-        firstValueFrom(
-          this.metricsClient.getOrgWorkloadTimeSeries(
-            create(GetOrgWorkloadTimeSeriesRequestSchema, { start, end }),
-          ),
-        ),
-      ]);
-
-      this.applyOrgWorkload(workload);
-      this.applyTimeSeries(timeSeries);
-    } catch (err) {
-      this.errorMessage.set(String(err));
-    } finally {
-      this.isLoading.set(false);
-      // setTimeout defers chart creation until the next macrotask, giving Angular
-      // a chance to render the canvas elements before Chart.js tries to access them.
-      setTimeout(() => this.refreshCharts());
-    }
-  }
-
-  private async loadClusterMetrics(clusterId: string): Promise<void> {
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
-
-    const { start, end } = this.dateRange();
-
-    try {
-      const [workload, timeSeries] = await Promise.all([
-        firstValueFrom(
-          this.metricsClient.getClusterWorkloadMetrics(
-            create(GetClusterWorkloadMetricsRequestSchema, { clusterId }),
-          ),
-        ),
-        firstValueFrom(
-          this.metricsClient.getClusterWorkloadTimeSeries(
-            create(GetClusterWorkloadTimeSeriesRequestSchema, {
-              clusterId,
-              start,
-              end,
-            }),
-          ),
-        ),
-      ]);
-
-      this.applyClusterWorkload(workload);
-      this.applyTimeSeries(timeSeries);
-    } catch (err) {
-      this.errorMessage.set(String(err));
-    } finally {
-      this.isLoading.set(false);
-      // setTimeout defers chart creation until the next macrotask, giving Angular
-      // a chance to render the canvas elements before Chart.js tries to access them.
-      setTimeout(() => this.refreshCharts());
-    }
-  }
-
-  private async loadProjectMetrics(): Promise<void> {
-    const pid = this.projectId();
-    if (!pid) return;
-
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
-
-    const { start, end } = this.dateRange();
-
-    try {
-      const [workload, timeSeries] = await Promise.all([
-        firstValueFrom(
-          this.metricsClient.getProjectWorkloadMetrics(
-            create(GetProjectWorkloadMetricsRequestSchema, { projectId: pid }),
-          ),
-        ),
-        firstValueFrom(
-          this.metricsClient.getProjectWorkloadTimeSeries(
-            create(GetProjectWorkloadTimeSeriesRequestSchema, {
-              projectId: pid,
-              start,
-              end,
-            }),
-          ),
-        ),
-      ]);
-
-      this.applyProjectWorkload(workload);
-      this.applyTimeSeries(timeSeries);
-    } catch (err) {
-      this.errorMessage.set(String(err));
-    } finally {
-      this.isLoading.set(false);
-      // setTimeout defers chart creation until the next macrotask, giving Angular
-      // a chance to render the canvas elements before Chart.js tries to access them.
-      setTimeout(() => this.refreshCharts());
-    }
-  }
-
   private static mapNamespaceUsage(namespaces: NamespaceWorkloadMetrics[]): NamespaceUsageData[] {
     return namespaces.map((n) => ({
       name: n.namespace,
@@ -461,90 +494,13 @@ export default class MetricsComponent implements OnInit {
     }));
   }
 
-  private applyOrgWorkload(r: GetOrgWorkloadMetricsResponse): void {
-    const t = r.totals;
-    this.orgTotals.set(
-      t
-        ? {
-            cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
-            memory: {
-              used: t.memory?.used ?? 0,
-              total: t.memory?.total ?? 0,
-              unit: t.memory?.unit ?? 'GiB',
-            },
-            pods: {
-              used: t.pods?.used ?? 0,
-              total: t.pods?.total ?? 0,
-              unit: t.pods?.unit ?? 'pods',
-            },
-          }
-        : null,
-    );
-    this.clusterSummaries.set(
-      r.clusters.map((c) => ({
-        id: c.clusterId,
-        name: c.clusterName,
-        cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
-        memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
-        pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
-      })),
-    );
-    this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
-  }
-
-  private applyClusterWorkload(r: GetClusterWorkloadMetricsResponse): void {
-    const t = r.totals;
-    this.clusterTotals.set(
-      t
-        ? {
-            cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
-            memory: {
-              used: t.memory?.used ?? 0,
-              total: t.memory?.total ?? 0,
-              unit: t.memory?.unit ?? 'GiB',
-            },
-            pods: {
-              used: t.pods?.used ?? 0,
-              total: t.pods?.total ?? 0,
-              unit: t.pods?.unit ?? 'pods',
-            },
-          }
-        : null,
-    );
-    this.nodeUsage.set(
-      r.nodes.map((n) => ({
-        name: n.node,
-        cpu: { used: n.cpu?.used ?? 0, total: n.cpu?.total ?? 0 },
-        memory: { used: n.memory?.used ?? 0, total: n.memory?.total ?? 0 },
-        pods: { used: n.pods?.used ?? 0, total: n.pods?.total ?? 0 },
-      })),
-    );
-    this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
-  }
-
-  private applyProjectWorkload(r: GetProjectWorkloadMetricsResponse): void {
-    const t = r.totals;
-    this.projectTotals.set(
-      t
-        ? {
-            cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
-            memory: {
-              used: t.memory?.used ?? 0,
-              total: t.memory?.total ?? 0,
-              unit: t.memory?.unit ?? 'GiB',
-            },
-            pods: {
-              used: t.pods?.used ?? 0,
-              total: t.pods?.total ?? 0,
-              unit: t.pods?.unit ?? 'pods',
-            },
-          }
-        : null,
-    );
-    this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
-  }
-
-  private applyTimeSeries(r: GetWorkloadTimeSeriesResponse): void {
+  private applyTimeSeries(r: {
+    cpuCores: { timestamp?: Timestamp; value: number }[];
+    memoryGib: { timestamp?: Timestamp; value: number }[];
+    podCount: { timestamp?: Timestamp; value: number }[];
+    networkReceiveMbS: { timestamp?: Timestamp; value: number }[];
+    networkTransmitMbS: { timestamp?: Timestamp; value: number }[];
+  }): void {
     this.chartLabels = r.cpuCores.map((s) => formatTimestamp(s.timestamp));
     this.chartDates = r.cpuCores.map((s) =>
       s.timestamp ? timestampDate(s.timestamp).toISOString().split('T')[0] : '',
@@ -556,17 +512,19 @@ export default class MetricsComponent implements OnInit {
     this.networkTxSeriesData = r.networkTransmitMbS.map((s) => s.value);
   }
 
-  private dateRange(): { start: Timestamp; end: Timestamp } {
-    const start = timestampFromDate(new Date(this.dateFrom));
-    const end = timestampFromDate(new Date(`${this.dateTo}T23:59:59`));
-    return { start, end };
-  }
-
-  private refreshCharts(): void {
+  private destroyCharts(): void {
     this.cpuChart?.destroy();
     this.memoryChart?.destroy();
     this.podChart?.destroy();
     this.networkChart?.destroy();
+    this.cpuChart = undefined;
+    this.memoryChart = undefined;
+    this.podChart = undefined;
+    this.networkChart = undefined;
+  }
+
+  private refreshCharts(): void {
+    this.destroyCharts();
     this.initializeCharts(
       this.chartLabels,
       this.cpuSeriesData,
@@ -575,6 +533,30 @@ export default class MetricsComponent implements OnInit {
       this.networkRxSeriesData,
       this.networkTxSeriesData,
     );
+  }
+
+  private updateChartsInPlace(): void {
+    if (this.cpuChart) {
+      this.cpuChart.data.labels = this.chartLabels;
+      this.cpuChart.data.datasets[0].data = this.cpuSeriesData;
+      this.cpuChart.update('none');
+    }
+    if (this.memoryChart) {
+      this.memoryChart.data.labels = this.chartLabels;
+      this.memoryChart.data.datasets[0].data = this.memorySeriesData;
+      this.memoryChart.update('none');
+    }
+    if (this.podChart) {
+      this.podChart.data.labels = this.chartLabels;
+      this.podChart.data.datasets[0].data = this.podSeriesData;
+      this.podChart.update('none');
+    }
+    if (this.networkChart) {
+      this.networkChart.data.labels = this.chartLabels;
+      this.networkChart.data.datasets[0].data = this.networkRxSeriesData;
+      this.networkChart.data.datasets[1].data = this.networkTxSeriesData;
+      this.networkChart.update('none');
+    }
   }
 
   private initializeCharts(

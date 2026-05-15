@@ -225,6 +225,23 @@ input.validate-on-touch.ng-invalid.ng-touched {
   @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200;
 }
 
+.live-dot {
+  @apply inline-block h-2 w-2 shrink-0 rounded-full bg-current;
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.75);
+  }
+}
+
 /* Custom select styles until nldd-dropdown has been fixed */
 
 select {

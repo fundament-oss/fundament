@@ -3,12 +3,37 @@
   <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
-        <h1 class="text-3xl font-semibold">Metrics</h1>
-        <p class="mt-1 text-gray-600 dark:text-gray-300">
+        <div class="flex items-center gap-3">
+          <h1 class="text-3xl font-semibold">Metrics</h1>
+          @if (isLive()) {
+            <span class="badge badge-sm badge-green gap-1.5" aria-label="Data is updating live">
+              <span class="live-dot" aria-hidden="true"></span>
+              Live
+            </span>
+          }
+          @if (connectionError()) {
+            <span class="badge badge-sm badge-yellow" aria-label="Connection lost, reconnecting">
+              Reconnecting…
+            </span>
+          }
+        </div>
+        <p class="mt-1 whitespace-nowrap text-gray-600 dark:text-gray-300">
           @if (viewMode() === 'project') {
             Resource metrics for this project
           } @else {
             Resource metrics across your clusters
+          }
+          @if (lastRefreshedAt()) {
+            <span class="ml-2 text-sm text-gray-400 dark:text-gray-500">
+              Last update:
+              {{
+                lastRefreshedAt()!.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })
+              }}
+            </span>
           }
         </p>
       </div>
