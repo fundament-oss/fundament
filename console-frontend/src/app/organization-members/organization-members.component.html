@@ -33,14 +33,16 @@
       </div>
     </div>
 
-    <nldd-button
-      type="button"
-      (click)="openModal()"
-      text="Invite member"
-      start-icon="plus-small"
-      variant="primary"
-      class="mb-4"
-    ></nldd-button>
+    @if (isLoading() || pendingInvitations().length > 0) {
+      <nldd-button
+        type="button"
+        (click)="openModal()"
+        text="Invite member"
+        start-icon="plus-small"
+        variant="primary"
+        class="mb-4"
+      ></nldd-button>
+    }
 
     <!-- Pending Invitations Section -->
     <div class="mb-8">
@@ -106,13 +108,18 @@
           </table>
         </div>
       } @else {
-        <div class="rounded-md border border-gray-200 p-4 text-center dark:border-gray-800">
-          <nldd-icon
-            name="envelope"
-            class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!"
-          ></nldd-icon>
-          <p class="mt-2 text-gray-600 dark:text-gray-400">No pending invitations</p>
-        </div>
+        <nldd-box>
+          <nldd-inline-dialog icon="envelope" icon-color="secondary" text="No pending invitations">
+            <nldd-button
+              (click)="openModal()"
+              type="button"
+              slot="actions"
+              text="Invite member"
+              start-icon="plus-small"
+              variant="primary"
+            ></nldd-button>
+          </nldd-inline-dialog>
+        </nldd-box>
       }
     </div>
 
@@ -150,15 +157,15 @@
           ></nldd-button>
         </div>
       } @else if (activeMembers().length === 0) {
-        <div
-          class="rounded-md border border-dashed border-gray-300 p-8 text-center dark:border-gray-700"
-        >
-          <nldd-icon
-            name="person-2"
-            class="mx-auto h-12 w-12 text-gray-400! dark:text-gray-600!"
-          ></nldd-icon>
-          <p class="mt-2 text-gray-600 dark:text-gray-400">No members found</p>
-        </div>
+        <nldd-box>
+          <nldd-inline-dialog
+            icon="person-2"
+            icon-color="secondary"
+            text="No members found"
+            supporting-text="Members who sign in via SSO will appear here."
+          >
+          </nldd-inline-dialog>
+        </nldd-box>
       } @else {
         <div class="table-container">
           <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
@@ -260,16 +267,16 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showDeleteModal.set(false)"
-    text="Cancel"
-    variant="secondary"
+    (click)="confirmDeleteMember()"
+    text="Yes, remove member"
+    variant="destructive"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
-    (click)="confirmDeleteMember()"
-    text="Yes, remove member"
-    variant="destructive"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -323,19 +330,19 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showEditModal.set(false)"
-    [disabled]="isSubmitting()"
-    text="Cancel"
-    variant="secondary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
     (click)="confirmEditMember()"
     text="Save changes"
     [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
     [disabled]="isSubmitting()"
     variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showEditModal.set(false)"
+    [disabled]="isSubmitting()"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -411,18 +418,18 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="closeModal()"
-    [disabled]="isSubmitting()"
-    text="Cancel"
-    variant="secondary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
     (click)="submitInvitation()"
     text="Send invitation"
     [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
     [disabled]="isSubmitting()"
     variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="closeModal()"
+    [disabled]="isSubmitting()"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>

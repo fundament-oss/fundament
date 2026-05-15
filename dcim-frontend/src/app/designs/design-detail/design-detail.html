@@ -26,7 +26,7 @@
     <div class="flex items-center gap-2 shrink-0">
       @if (d.status === 'draft') {
         <nldd-button
-          variant="accent-filled"
+          variant="primary"
           text="Activate"
           start-icon="check-mark"
           size="sm"
@@ -35,7 +35,7 @@
       }
       @if (d.status === 'active') {
         <nldd-button
-          variant="neutral-tinted"
+          variant="secondary"
           text="Archive"
           start-icon="inbox"
           size="sm"
@@ -43,14 +43,14 @@
         ></nldd-button>
       }
       <nldd-button
-        variant="neutral-tinted"
+        variant="secondary"
         text="Add Device"
         start-icon="plus-small"
         size="sm"
         (click)="openAddDevice()"
       ></nldd-button>
       <nldd-button
-        variant="neutral-tinted"
+        variant="secondary"
         text="Add Connection"
         start-icon="plus-small"
         size="sm"
@@ -256,20 +256,14 @@
      DEVICE EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #deviceSheet accessible-label="Device details" placement="right" width="400px">
-  <div class="flex flex-col h-full">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-      <h2 class="text-base font-semibold text-slate-900">
-        {{ editDevice()?.id ? 'Edit Device' : 'Add Device' }}
-      </h2>
-      <nldd-icon-button
-        icon="dismiss"
-        variant="neutral-transparent"
-        size="sm"
-        text="Close"
-        (click)="closeDeviceForm()"
-      ></nldd-icon-button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="editDevice()?.id ? 'Edit Device' : 'Add Device'"
+      dismiss-text="Close"
+      (dismiss)="closeDeviceForm()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
       <nldd-form-field label="Device name">
         <nldd-text-field
           #fDeviceName
@@ -284,8 +278,11 @@
           }
         </nldd-dropdown>
       </nldd-form-field>
-    </div>
-    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+    </nldd-simple-section>
+    <div
+      slot="footer"
+      class="flex items-center justify-between px-6 py-4 border-t border-slate-200"
+    >
       @if (editDevice()?.id) {
         <nldd-button
           variant="destructive"
@@ -297,15 +294,11 @@
         <span></span>
       }
       <div class="flex gap-2">
-        <nldd-button
-          variant="neutral-tinted"
-          text="Cancel"
-          (click)="closeDeviceForm()"
-        ></nldd-button>
-        <nldd-button variant="accent-filled" text="Save" (click)="saveDevice()"></nldd-button>
+        <nldd-button variant="secondary" text="Cancel" (click)="closeDeviceForm()"></nldd-button>
+        <nldd-button variant="primary" text="Save" (click)="saveDevice()"></nldd-button>
       </div>
     </div>
-  </div>
+  </nldd-page>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -319,15 +312,15 @@
 >
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
-    (click)="cancelDeleteDevice()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
     variant="destructive"
     text="Delete"
     (click)="confirmDeleteDevice()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelDeleteDevice()"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -335,20 +328,14 @@
      CONNECTION EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #connSheet accessible-label="Connection details" placement="right" width="420px">
-  <div class="flex flex-col h-full">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-      <h2 class="text-base font-semibold text-slate-900">
-        {{ editConnection()?.id ? 'Edit Connection' : 'Add Connection' }}
-      </h2>
-      <nldd-icon-button
-        icon="dismiss"
-        variant="neutral-transparent"
-        size="sm"
-        text="Close"
-        (click)="closeConnForm()"
-      ></nldd-icon-button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="editConnection()?.id ? 'Edit Connection' : 'Add Connection'"
+      dismiss-text="Close"
+      (dismiss)="closeConnForm()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Source device">
           <nldd-dropdown #fConnSrcDevice [attr.value]="editConnection()?.sourceDeviceId ?? ''">
@@ -394,8 +381,11 @@
           <nldd-dropdown-item value="console" label="Console"></nldd-dropdown-item>
         </nldd-dropdown>
       </nldd-form-field>
-    </div>
-    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+    </nldd-simple-section>
+    <div
+      slot="footer"
+      class="flex items-center justify-between px-6 py-4 border-t border-slate-200"
+    >
       @if (editConnection()?.id) {
         <nldd-button
           variant="destructive"
@@ -417,11 +407,11 @@
         <span></span>
       }
       <div class="flex gap-2">
-        <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeConnForm()"></nldd-button>
-        <nldd-button variant="accent-filled" text="Save" (click)="saveConnection()"></nldd-button>
+        <nldd-button variant="secondary" text="Cancel" (click)="closeConnForm()"></nldd-button>
+        <nldd-button variant="primary" text="Save" (click)="saveConnection()"></nldd-button>
       </div>
     </div>
-  </div>
+  </nldd-page>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -441,14 +431,14 @@
 >
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
-    (click)="cancelDeleteConnection()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
     variant="destructive"
     text="Delete"
     (click)="confirmDeleteConnection()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelDeleteConnection()"
   ></nldd-button>
 </nldd-modal-dialog>

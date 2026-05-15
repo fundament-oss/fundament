@@ -84,21 +84,22 @@
       </div>
     } @else {
       <!-- Empty state -->
-      <div
-        class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-16 text-center dark:border-gray-800 dark:bg-gray-900/30"
-      >
-        <p class="font-medium text-gray-600 dark:text-gray-300">No clusters yet</p>
-        <p class="mt-1 text-gray-500 dark:text-gray-400">
-          Add your first Kubernetes cluster to get started.
-        </p>
-        <nldd-button
-          routerLink="/clusters/add"
-          text="Add cluster"
-          start-icon="plus-small"
-          variant="primary"
-          class="mt-5"
-        ></nldd-button>
-      </div>
+      <nldd-box>
+        <nldd-inline-dialog
+          icon="ship-wheel"
+          icon-color="secondary"
+          text="No clusters yet"
+          supporting-text="Add your first Kubernetes cluster to get started."
+        >
+          <nldd-button
+            routerLink="/clusters/add"
+            slot="actions"
+            text="Add cluster"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      </nldd-box>
     }
   </div>
 </div>

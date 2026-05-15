@@ -3,12 +3,37 @@
   <div class="card-header">
     <div class="grid items-center gap-3 sm:grid-cols-2">
       <div>
-        <h1 class="text-3xl font-semibold">Usage</h1>
-        <p class="mt-1 text-gray-600 dark:text-gray-300">
+        <div class="flex items-center gap-3">
+          <h1 class="text-3xl font-semibold">Metrics</h1>
+          @if (isLive()) {
+            <span class="badge badge-sm badge-green gap-1.5" aria-label="Data is updating live">
+              <span class="live-dot" aria-hidden="true"></span>
+              Live
+            </span>
+          }
+          @if (connectionError()) {
+            <span class="badge badge-sm badge-yellow" aria-label="Connection lost, reconnecting">
+              Reconnecting…
+            </span>
+          }
+        </div>
+        <p class="mt-1 whitespace-nowrap text-gray-600 dark:text-gray-300">
           @if (viewMode() === 'project') {
-            Monitor resource usage for this project
+            Resource metrics for this project
           } @else {
-            Monitor resource usage across your clusters
+            Resource metrics across your clusters
+          }
+          @if (lastRefreshedAt()) {
+            <span class="ml-2 text-sm text-gray-400 dark:text-gray-500">
+              Last update:
+              {{
+                lastRefreshedAt()!.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })
+              }}
+            </span>
           }
         </p>
       </div>
@@ -27,17 +52,32 @@
   <!-- Filters -->
   <div class="card-header">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <!-- Date Range -->
+      <!-- Time range presets -->
       <div class="lg:col-span-2">
-        <label for="date" class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200"
-          >Date range</label
+        <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
+          Time range
+        </span>
+        <nldd-segmented-control
+          [value]="selectedPreset()"
+          (change)="onPresetChange($any($event).detail.value)"
         >
-        <app-date-range-picker
-          [id]="'date'"
-          [(dateFrom)]="dateFrom"
-          [(dateTo)]="dateTo"
-          (dateRangeChange)="onDateChange()"
-        ></app-date-range-picker>
+          @for (preset of presets; track preset.value) {
+            <nldd-segmented-control-item
+              [value]="preset.value"
+              [text]="preset.label"
+            ></nldd-segmented-control-item>
+          }
+        </nldd-segmented-control>
+        @if (showCustomRange()) {
+          <div class="mt-2">
+            <app-date-range-picker
+              [id]="'date'"
+              [(dateFrom)]="dateFrom"
+              [(dateTo)]="dateTo"
+              (dateRangeChange)="onDateChange()"
+            ></app-date-range-picker>
+          </div>
+        }
       </div>
 
       <!-- Cluster filter — only shown in org-level view -->
@@ -100,16 +140,16 @@
     }
 
     @if (!isLoading()) {
-      <!-- Totals summary cards (all views)                        -->
+      <!-- Totals summary cards (all views) -->
       @if (currentTotals(); as totals) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium">
             @if (selectedClusterId()) {
-              Cluster usage
+              Cluster totals
             } @else if (viewMode() === 'project') {
-              Project usage
+              Project totals
             } @else {
-              Organisation usage
+              Organisation totals
             }
           </h3>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -183,7 +223,7 @@
         </div>
       }
 
-      <!-- Time-series charts (all views)                          -->
+      <!-- Time-series charts (all views) -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium">CPU usage over time</h3>
@@ -235,7 +275,7 @@
         </div>
       </div>
 
-      <!-- Per-cluster breakdown — org-level, no cluster selected  -->
+      <!-- Per-cluster breakdown — org-level, no cluster selected -->
       @if (viewMode() === 'org' && !selectedClusterId() && clusterSummaries().length > 0) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium">Per cluster</h3>
@@ -292,7 +332,7 @@
         </div>
       }
 
-      <!-- Per-node breakdown — cluster-level only                 -->
+      <!-- Per-node breakdown — cluster-level only -->
       @if (selectedClusterId()) {
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
           <h3 class="mb-4 text-lg font-medium">Per node</h3>
@@ -366,7 +406,7 @@
         </div>
       }
 
-      <!-- Per-namespace breakdown (all views)                     -->
+      <!-- Per-namespace breakdown (all views) -->
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
         <h3 class="mb-4 text-lg font-medium">Per namespace</h3>
         @if (namespaceUsage().length > 0) {

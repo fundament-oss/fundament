@@ -33,6 +33,15 @@ service MetricsService {
 
   // Project-level time-series workload metrics filtered to the project's namespaces
   rpc GetProjectWorkloadTimeSeries(GetProjectWorkloadTimeSeriesRequest) returns (GetWorkloadTimeSeriesResponse);
+
+  // Live streaming of org-wide workload metrics, pushed every 15 seconds.
+  rpc StreamOrgWorkloadMetrics(StreamOrgWorkloadMetricsRequest) returns (stream StreamWorkloadMetricsResponse);
+
+  // Live streaming of cluster workload metrics, pushed every 15 seconds.
+  rpc StreamClusterWorkloadMetrics(StreamClusterWorkloadMetricsRequest) returns (stream StreamWorkloadMetricsResponse);
+
+  // Live streaming of project workload metrics, pushed every 15 seconds.
+  rpc StreamProjectWorkloadMetrics(StreamProjectWorkloadMetricsRequest) returns (stream StreamWorkloadMetricsResponse);
 }
 
 // -- Shared response types --
@@ -162,4 +171,59 @@ message GetProjectWorkloadTimeSeriesRequest {
   google.protobuf.Timestamp end = 30 [features.field_presence = EXPLICIT];
   // Resolution in seconds. Defaults to 300 (5 minutes) when zero.
   int32 step_seconds = 40;
+}
+
+// -- Streaming requests --
+
+// StreamOrgWorkloadMetricsRequest starts a live org-wide metrics stream.
+message StreamOrgWorkloadMetricsRequest {
+  // Sliding window in seconds (e.g. 3600 for last hour). On each push the backend
+  // computes start = now − window_seconds. When zero, start/end are used instead.
+  int32 window_seconds = 10;
+  // Fixed time range. Only used when window_seconds is zero.
+  google.protobuf.Timestamp start = 20 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp end = 30 [features.field_presence = EXPLICIT];
+  // Resolution in seconds. Defaults to 300 (5 minutes) when zero.
+  int32 step_seconds = 40;
+}
+
+// StreamClusterWorkloadMetricsRequest starts a live cluster metrics stream.
+message StreamClusterWorkloadMetricsRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Sliding window in seconds. When zero, start/end are used instead.
+  int32 window_seconds = 20;
+  // Fixed time range. Only used when window_seconds is zero.
+  google.protobuf.Timestamp start = 30 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp end = 40 [features.field_presence = EXPLICIT];
+  // Resolution in seconds. Defaults to 300 (5 minutes) when zero.
+  int32 step_seconds = 50;
+}
+
+// StreamProjectWorkloadMetricsRequest starts a live project metrics stream.
+message StreamProjectWorkloadMetricsRequest {
+  string project_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Sliding window in seconds. When zero, start/end are used instead.
+  int32 window_seconds = 20;
+  // Fixed time range. Only used when window_seconds is zero.
+  google.protobuf.Timestamp start = 30 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp end = 40 [features.field_presence = EXPLICIT];
+  // Resolution in seconds. Defaults to 300 (5 minutes) when zero.
+  int32 step_seconds = 50;
+}
+
+// StreamWorkloadMetricsResponse is the unified response pushed on each live tick.
+// Fields are populated based on the view level (org / cluster / project).
+message StreamWorkloadMetricsResponse {
+  // Resource totals (CPU, memory, pods).
+  ResourceUsageInfo totals = 10;
+  // Per-cluster breakdown — populated in org view.
+  repeated ClusterWorkloadSummary clusters = 20;
+  // Per-node breakdown — populated in cluster view.
+  repeated NodeWorkloadMetrics nodes = 30;
+  // Per-namespace breakdown — populated in all views.
+  repeated NamespaceWorkloadMetrics namespaces = 40;
+  // Time-series chart data for the requested window.
+  GetWorkloadTimeSeriesResponse time_series = 50;
+  // Wall-clock time when this snapshot was computed.
+  google.protobuf.Timestamp refreshed_at = 60;
 }

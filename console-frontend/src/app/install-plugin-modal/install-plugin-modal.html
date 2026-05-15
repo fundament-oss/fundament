@@ -15,7 +15,15 @@
 
   <div class="space-y-2">
     @if (clusters().length === 0) {
-      <p class="text-gray-600 dark:text-gray-400">No clusters found</p>
+      <nldd-box>
+        <nldd-inline-dialog
+          icon="ship-wheel"
+          icon-color="secondary"
+          text="No clusters found"
+          supporting-text="Create a cluster first to install plugins on it."
+        >
+        </nldd-inline-dialog>
+      </nldd-box>
     } @else {
       @for (cluster of clusters(); track cluster.id) {
         <div

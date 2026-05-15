@@ -97,16 +97,15 @@
 
       <!-- Empty State -->
       @if (!isLoading() && filteredPlugins.length === 0) {
-        <div class="py-12 text-center">
-          <nldd-icon
-            name="question-mark-circle"
-            class="mx-auto h-8 w-8 text-gray-400! dark:text-gray-600!"
-          ></nldd-icon>
-          <h3 class="mt-2 text-sm font-medium">No plugins found</h3>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Please try selecting a different category.
-          </p>
-        </div>
+        <nldd-box>
+          <nldd-inline-dialog
+            icon="puzzle-piece"
+            icon-color="secondary"
+            text="No plugins found"
+            supporting-text="Try selecting a different category."
+          >
+          </nldd-inline-dialog>
+        </nldd-box>
       }
     </div>
 

@@ -182,17 +182,17 @@ const routes: Routes = [
         },
       },
       {
-        path: 'usage',
-        loadComponent: () => import('./usage/usage.component').then((m) => m.default),
+        path: 'metrics',
+        loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
         data: {
-          breadcrumbs: [{ label: 'Usage' }],
+          breadcrumbs: [{ label: 'Metrics' }],
         },
       },
       {
-        path: 'projects/:id/usage',
-        loadComponent: () => import('./usage/usage.component').then((m) => m.default),
+        path: 'projects/:id/metrics',
+        loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
         data: {
-          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Usage' }],
+          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Metrics' }],
         },
       },
       {

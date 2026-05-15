@@ -141,7 +141,7 @@ button {
 
 select {
   @apply ring-accent-200 dark:ring-accent-800 appearance-none rounded-[9px] bg-size-[1.5em_1.5em] bg-position-[right_0.625rem_center] bg-no-repeat py-2.5 pr-10 pl-3 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50;
-  background-color: var(--semantics-buttons-neutral-tinted-background-color);
+  background-color: var(--semantics-buttons-secondary-background-color);
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3e%3cpath fill='currentColor' d='M12 5.828 7.4 10.4 6 9l6-6 6 6-1.4 1.4zm0 12.344L7.4 13.6 6 15l6 6 6-6-1.4-1.4z'%3e%3c/path%3e%3c/svg%3e");
 }
 

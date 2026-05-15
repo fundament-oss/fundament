@@ -36,6 +36,9 @@ export default class LoginComponent implements OnInit {
 
   constructor() {
     this.titleService.setTitle('Log in');
+    this.titleService.setDescription(
+      'Log in - Fundament: Open-source platform for deploying and managing Kubernetes clusters with bare-metal provisioning',
+    );
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required]],
