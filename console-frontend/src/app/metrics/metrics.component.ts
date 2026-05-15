@@ -112,7 +112,8 @@ function presetToDateRange(preset: TimeRangePreset): { from: string; to: string 
   const to = now.toISOString().split('T')[0];
 
   if (preset === '1h' || preset === '6h' || preset === '24h') {
-    const hours = preset === '1h' ? 1 : preset === '6h' ? 6 : 24;
+    const hoursMap: Record<string, number> = { '1h': 1, '6h': 6, '24h': 24 };
+    const hours = hoursMap[preset];
     const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
     return { from: from.toISOString().split('T')[0], to };
   }
@@ -209,6 +210,8 @@ export default class MetricsComponent implements OnInit {
 
   private chartLabels: string[] = [];
 
+  private chartDates: string[] = [];
+
   constructor() {
     this.titleService.setTitle('Metrics');
     this.applyPreset('7d');
@@ -256,6 +259,31 @@ export default class MetricsComponent implements OnInit {
   getUsagePercentage = getUsagePercentage;
 
   getUsageColor = getUsageColor;
+
+  private onChartZoom(source: Chart): void {
+    const { min, max } = source.scales['x'];
+    [this.cpuChart, this.memoryChart, this.podChart, this.networkChart]
+      .filter((chart): chart is Chart => !!chart && chart !== source)
+      .forEach((chart) => chart.zoomScale('x', { min, max }, 'none'));
+
+    const minIdx = Math.max(0, Math.round(min));
+    const maxIdx = Math.min(this.chartDates.length - 1, Math.round(max));
+    if (this.chartDates[minIdx]) this.dateFrom = this.chartDates[minIdx];
+    if (this.chartDates[maxIdx]) this.dateTo = this.chartDates[maxIdx];
+
+    this.selectedPreset.set('custom');
+  }
+
+  private zoomOptions() {
+    return {
+      zoom: {
+        drag: { enabled: true },
+        mode: 'x' as const,
+        onZoomComplete: ({ chart }: { chart: Chart }) => this.onChartZoom(chart),
+      },
+      pan: { enabled: false },
+    };
+  }
 
   onPresetChange(preset: TimeRangePreset): void {
     this.selectedPreset.set(preset);
@@ -518,6 +546,9 @@ export default class MetricsComponent implements OnInit {
 
   private applyTimeSeries(r: GetWorkloadTimeSeriesResponse): void {
     this.chartLabels = r.cpuCores.map((s) => formatTimestamp(s.timestamp));
+    this.chartDates = r.cpuCores.map((s) =>
+      s.timestamp ? timestampDate(s.timestamp).toISOString().split('T')[0] : '',
+    );
     this.cpuSeriesData = r.cpuCores.map((s) => s.value);
     this.memorySeriesData = r.memoryGib.map((s) => s.value);
     this.podSeriesData = r.podCount.map((s) => s.value);
@@ -587,10 +618,7 @@ export default class MetricsComponent implements OnInit {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          zoom: {
-            zoom: { wheel: { enabled: true }, pinch: { enabled: false }, mode: 'x' },
-            pan: { enabled: true, mode: 'x' },
-          },
+          zoom: this.zoomOptions(),
         },
         scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
@@ -626,10 +654,7 @@ export default class MetricsComponent implements OnInit {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          zoom: {
-            zoom: { wheel: { enabled: true }, pinch: { enabled: false }, mode: 'x' },
-            pan: { enabled: true, mode: 'x' },
-          },
+          zoom: this.zoomOptions(),
         },
         scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
@@ -644,17 +669,19 @@ export default class MetricsComponent implements OnInit {
     if (!ctx) return;
 
     const config: ChartConfiguration = {
-      type: 'bar',
+      type: 'line',
       data: {
         labels: labels.length ? labels : [''],
         datasets: [
           {
             label: 'Pod count',
             data: data.length ? data : [0],
-            backgroundColor: 'rgba(245, 158, 11, 0.8)',
-            borderWidth: 0,
-            barPercentage: 1.0,
-            categoryPercentage: 1.0,
+            borderColor: 'rgb(245, 158, 11)',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            borderWidth: 1,
+            tension: 0.4,
+            fill: true,
+            pointRadius: 0,
           },
         ],
       },
@@ -663,10 +690,7 @@ export default class MetricsComponent implements OnInit {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          zoom: {
-            zoom: { wheel: { enabled: true }, pinch: { enabled: false }, mode: 'x' },
-            pan: { enabled: true, mode: 'x' },
-          },
+          zoom: this.zoomOptions(),
         },
         scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
@@ -712,10 +736,7 @@ export default class MetricsComponent implements OnInit {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: true, position: 'top' },
-          zoom: {
-            zoom: { wheel: { enabled: true }, pinch: { enabled: false }, mode: 'x' },
-            pan: { enabled: true, mode: 'x' },
-          },
+          zoom: this.zoomOptions(),
         },
         scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
