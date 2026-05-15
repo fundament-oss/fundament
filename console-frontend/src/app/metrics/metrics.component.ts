@@ -15,6 +15,7 @@ import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
 import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
@@ -37,7 +38,7 @@ import {
   type NamespaceWorkloadMetrics,
 } from '../../generated/v1/metrics_pb';
 
-Chart.register(...registerables);
+Chart.register(...registerables, ZoomPlugin);
 
 interface ClusterOption {
   id: string;
@@ -78,6 +79,17 @@ interface ClusterSummaryData {
   pods: { used: number; total: number };
 }
 
+export type TimeRangePreset = '1h' | '6h' | '24h' | '7d' | '30d' | 'custom';
+
+export const TIME_RANGE_PRESETS: { value: TimeRangePreset; label: string }[] = [
+  { value: '1h', label: '1h' },
+  { value: '6h', label: '6h' },
+  { value: '24h', label: '24h' },
+  { value: '7d', label: '7d' },
+  { value: '30d', label: '30d' },
+  { value: 'custom', label: 'Custom' },
+];
+
 function getUsagePercentage(used: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((used / total) * 100);
@@ -95,14 +107,36 @@ function formatTimestamp(ts: Timestamp | undefined): string {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
+function presetToDateRange(preset: TimeRangePreset): { from: string; to: string } {
+  const now = new Date();
+  const to = now.toISOString().split('T')[0];
+
+  if (preset === '1h' || preset === '6h' || preset === '24h') {
+    const hours = preset === '1h' ? 1 : preset === '6h' ? 6 : 24;
+    const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
+    return { from: from.toISOString().split('T')[0], to };
+  }
+  if (preset === '7d') {
+    const from = new Date(now);
+    from.setDate(from.getDate() - 7);
+    return { from: from.toISOString().split('T')[0], to };
+  }
+  if (preset === '30d') {
+    const from = new Date(now);
+    from.setDate(from.getDate() - 30);
+    return { from: from.toISOString().split('T')[0], to };
+  }
+  return { from: to, to };
+}
+
 @Component({
-  selector: 'app-usage',
+  selector: 'app-metrics',
   imports: [FormsModule, DateRangePickerComponent, DecimalPipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './usage.component.html',
+  templateUrl: './metrics.component.html',
 })
-export default class UsageComponent implements OnInit {
+export default class MetricsComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
@@ -127,44 +161,42 @@ export default class UsageComponent implements OnInit {
 
   private networkChart?: Chart;
 
-  // View mode derived from route
   viewMode = signal<'org' | 'project'>('org');
 
   projectId = signal<string | null>(null);
 
-  // Filter state
   selectedClusterId = signal('');
 
   selectedNamespace = signal('');
+
+  selectedPreset = signal<TimeRangePreset>('7d');
 
   dateFrom = '';
 
   dateTo = '';
 
-  // Data signals
+  showCustomRange = computed(() => this.selectedPreset() === 'custom');
+
+  readonly presets = TIME_RANGE_PRESETS;
+
   clusters = signal<ClusterOption[]>([]);
 
   isLoading = signal(false);
 
   errorMessage = signal<string | null>(null);
 
-  // Org-level: totals + per-cluster breakdown
   orgTotals = signal<ClusterUsageData | null>(null);
 
-  // Project-level totals (separate from orgTotals to avoid stale data on view switch)
   projectTotals = signal<ClusterUsageData | null>(null);
 
   clusterSummaries = signal<ClusterSummaryData[]>([]);
 
-  // Cluster-level: totals + per-node breakdown
   clusterTotals = signal<ClusterUsageData | null>(null);
 
   nodeUsage = signal<NodeUsageData[]>([]);
 
-  // Shared: namespace breakdown
   namespaceUsage = signal<NamespaceUsageData[]>([]);
 
-  // Chart data (plain arrays — updated before chart re-creation)
   private cpuSeriesData: number[] = [];
 
   private memorySeriesData: number[] = [];
@@ -178,13 +210,8 @@ export default class UsageComponent implements OnInit {
   private chartLabels: string[] = [];
 
   constructor() {
-    this.titleService.setTitle('Usage');
-
-    const today = new Date();
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    this.dateTo = today.toISOString().split('T')[0];
-    this.dateFrom = weekAgo.toISOString().split('T')[0];
+    this.titleService.setTitle('Metrics');
+    this.applyPreset('7d');
   }
 
   ngOnInit() {
@@ -230,6 +257,14 @@ export default class UsageComponent implements OnInit {
 
   getUsageColor = getUsageColor;
 
+  onPresetChange(preset: TimeRangePreset): void {
+    this.selectedPreset.set(preset);
+    if (preset !== 'custom') {
+      this.applyPreset(preset);
+      this.reload();
+    }
+  }
+
   onClusterChange(): void {
     if (this.selectedClusterId()) {
       this.loadClusterMetrics(this.selectedClusterId());
@@ -241,6 +276,16 @@ export default class UsageComponent implements OnInit {
   }
 
   onDateChange(): void {
+    this.reload();
+  }
+
+  private applyPreset(preset: TimeRangePreset): void {
+    const { from, to } = presetToDateRange(preset);
+    this.dateFrom = from;
+    this.dateTo = to;
+  }
+
+  private reload(): void {
     if (this.viewMode() === 'project') {
       this.loadProjectMetrics();
     } else if (this.selectedClusterId()) {
@@ -373,8 +418,6 @@ export default class UsageComponent implements OnInit {
     }
   }
 
-  // -- Response mappers --
-
   private static mapNamespaceUsage(namespaces: NamespaceWorkloadMetrics[]): NamespaceUsageData[] {
     return namespaces.map((n) => ({
       name: n.namespace,
@@ -418,7 +461,7 @@ export default class UsageComponent implements OnInit {
         pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
       })),
     );
-    this.namespaceUsage.set(UsageComponent.mapNamespaceUsage(r.namespaces));
+    this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
   }
 
   private applyClusterWorkload(r: GetClusterWorkloadMetricsResponse): void {
@@ -448,7 +491,7 @@ export default class UsageComponent implements OnInit {
         pods: { used: n.pods?.used ?? 0, total: n.pods?.total ?? 0 },
       })),
     );
-    this.namespaceUsage.set(UsageComponent.mapNamespaceUsage(r.namespaces));
+    this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
   }
 
   private applyProjectWorkload(r: GetProjectWorkloadMetricsResponse): void {
@@ -470,7 +513,7 @@ export default class UsageComponent implements OnInit {
           }
         : null,
     );
-    this.namespaceUsage.set(UsageComponent.mapNamespaceUsage(r.namespaces));
+    this.namespaceUsage.set(MetricsComponent.mapNamespaceUsage(r.namespaces));
   }
 
   private applyTimeSeries(r: GetWorkloadTimeSeriesResponse): void {
@@ -528,20 +571,28 @@ export default class UsageComponent implements OnInit {
         labels: labels.length ? labels : [''],
         datasets: [
           {
-            label: 'CPU Usage (cores)',
+            label: 'CPU usage (cores)',
             data: data.length ? data : [0],
             borderColor: 'rgb(99, 102, 241)',
             backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            borderWidth: 1,
             tension: 0.4,
             fill: true,
+            pointRadius: 0,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } },
+        plugins: {
+          legend: { display: false },
+          zoom: {
+            zoom: { wheel: { enabled: true }, pinch: { enabled: false }, mode: 'x' },
+            pan: { enabled: true, mode: 'x' },
+          },
+        },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
     };
 
@@ -559,20 +610,28 @@ export default class UsageComponent implements OnInit {
         labels: labels.length ? labels : [''],
         datasets: [
           {
-            label: 'Memory Usage (GiB)',
+            label: 'Memory usage (GiB)',
             data: data.length ? data : [0],
             borderColor: 'rgb(16, 185, 129)',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderWidth: 1,
             tension: 0.4,
             fill: true,
+            pointRadius: 0,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } },
+        plugins: {
+          legend: { display: false },
+          zoom: {
+            zoom: { wheel: { enabled: true }, pinch: { enabled: false }, mode: 'x' },
+            pan: { enabled: true, mode: 'x' },
+          },
+        },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
     };
 
@@ -590,19 +649,26 @@ export default class UsageComponent implements OnInit {
         labels: labels.length ? labels : [''],
         datasets: [
           {
-            label: 'Pod Count',
+            label: 'Pod count',
             data: data.length ? data : [0],
             backgroundColor: 'rgba(245, 158, 11, 0.8)',
-            borderColor: 'rgb(245, 158, 11)',
-            borderWidth: 1,
+            borderWidth: 0,
+            barPercentage: 1.0,
+            categoryPercentage: 1.0,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } },
+        plugins: {
+          legend: { display: false },
+          zoom: {
+            zoom: { wheel: { enabled: true }, pinch: { enabled: false }, mode: 'x' },
+            pan: { enabled: true, mode: 'x' },
+          },
+        },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
     };
 
@@ -624,24 +690,34 @@ export default class UsageComponent implements OnInit {
             data: rx.length ? rx : [0],
             borderColor: 'rgb(59, 130, 246)',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 1,
             tension: 0.4,
             fill: true,
+            pointRadius: 0,
           },
           {
             label: 'Transmit (MB/s)',
             data: tx.length ? tx : [0],
             borderColor: 'rgb(168, 85, 247)',
             backgroundColor: 'rgba(168, 85, 247, 0.1)',
+            borderWidth: 1,
             tension: 0.4,
             fill: true,
+            pointRadius: 0,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: true, position: 'top' } },
-        scales: { y: { beginAtZero: true } },
+        plugins: {
+          legend: { display: true, position: 'top' },
+          zoom: {
+            zoom: { wheel: { enabled: true }, pinch: { enabled: false }, mode: 'x' },
+            pan: { enabled: true, mode: 'x' },
+          },
+        },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
     };
 

@@ -267,13 +267,13 @@
               </li>
               <li>
                 <a
-                  routerLink="/usage"
+                  routerLink="/metrics"
                   routerLinkActive="active"
                   class="nav-link"
                   (click)="closeSidebar()"
                 >
                   <nldd-icon name="chart-x-y-axis-line" class="mr-3 h-5 w-5"></nldd-icon>
-                  Usage
+                  Metrics
                 </a>
               </li>
               <li>
@@ -347,13 +347,13 @@
               </li>
               <li>
                 <a
-                  [routerLink]="['/projects', selectedProjectId(), 'usage']"
+                  [routerLink]="['/projects', selectedProjectId(), 'metrics']"
                   routerLinkActive="active"
                   class="nav-link"
                   (click)="closeSidebar()"
                 >
                   <nldd-icon name="chart-x-y-axis-line" class="mr-3 h-5 w-5"></nldd-icon>
-                  Usage
+                  Metrics
                 </a>
               </li>
               <li>
