@@ -171,16 +171,44 @@
               }}</span
             >
           </div>
+
+          <!-- Spacer -->
+          <div class="flex-1"></div>
+
+          <!-- Edit-layout controls -->
+          @if (editMode()) {
+            <nldd-button
+              variant="accent-tinted"
+              text="Add device"
+              start-icon="plus-small"
+              size="sm"
+              (click)="openAddDevice()"
+            ></nldd-button>
+          }
+          <nldd-button
+            [variant]="editMode() ? 'accent-filled' : 'neutral-tinted'"
+            [text]="editMode() ? 'Done' : 'Edit layout'"
+            size="sm"
+            (click)="toggleEditMode()"
+          ></nldd-button>
         </div>
 
         <!-- Rack frame -->
         <div class="mx-6 my-6 flex items-start justify-center">
           <div class="w-full max-w-xs min-w-0 shrink-0">
-            <app-rack-diagram
-              [rack]="rack"
-              [viewMode]="viewMode()"
-              (deviceSelect)="selectDevice($event)"
-            />
+            @if (editMode()) {
+              <app-rack-diagram-editor
+                [rack]="rack"
+                (devicesChange)="applyDeviceChanges(rack.id, $event)"
+                (deleteDeviceRequest)="openDeleteDevice($event)"
+              />
+            } @else {
+              <app-rack-diagram
+                [rack]="rack"
+                [viewMode]="viewMode()"
+                (deviceSelect)="selectDevice($event)"
+              />
+            }
           </div>
         </div>
       } @else {
@@ -383,6 +411,108 @@
     </div>
   </div>
 </nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DEVICE ADD SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #deviceSheet accessible-label="Add device" placement="right" width="400px">
+  <div class="flex flex-col h-full">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+      <h2 class="text-base font-semibold text-slate-900">Add device</h2>
+      <nldd-icon-button
+        icon="dismiss"
+        variant="neutral-transparent"
+        size="sm"
+        text="Close"
+        (click)="closeAddDevice()"
+      ></nldd-icon-button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+      <nldd-form-field label="Name">
+        <nldd-text-field
+          #fDeviceName
+          placeholder="server-99"
+          (input)="addDeviceNameInput.set($any($event.target).value)"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <nldd-form-field label="Type">
+        <nldd-dropdown #fDeviceType>
+          <select>
+            <option value="machine">Machine</option>
+            <option value="switch">Switch</option>
+            <option value="patch">Patch panel</option>
+            <option value="pdu">PDU</option>
+          </select>
+        </nldd-dropdown>
+      </nldd-form-field>
+      <nldd-form-field label="Size (U)">
+        <nldd-number-field
+          #fDeviceUSize
+          [attr.value]="addDeviceForm()?.uSize ?? 1"
+          min="1"
+          [attr.max]="currentRack()?.totalU ?? 1"
+          full-width
+          (input)="onAddDeviceSizeInput($any($event.target).value)"
+        ></nldd-number-field>
+      </nldd-form-field>
+      <nldd-form-field label="State">
+        <nldd-dropdown #fDeviceState>
+          <select>
+            <option value="allocated">Allocated</option>
+            <option value="free">Free</option>
+            <option value="reserved">Reserved</option>
+            <option value="offline">Offline</option>
+            <option value="locked">Locked</option>
+          </select>
+        </nldd-dropdown>
+      </nldd-form-field>
+      @if (addDeviceNameInput().trim().length === 0) {
+        <p class="text-sm text-red-600">Name is required.</p>
+      } @else if (!addDeviceCanFit()) {
+        <p class="text-sm text-red-600">
+          @if (currentRackFreeU() < 1) {
+            Rack is full — no free U positions available.
+          } @else {
+            No contiguous {{ addDeviceSizeInput() }}U slot available — only
+            {{ currentRackFreeU() }}U free.
+          }
+        </p>
+      }
+    </div>
+    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
+      <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeAddDevice()"></nldd-button>
+      <nldd-button
+        variant="accent-filled"
+        text="Add"
+        [attr.disabled]="canAddDevice() ? null : true"
+        (click)="saveDevice()"
+      ></nldd-button>
+    </div>
+  </div>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DEVICE DELETE MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #deviceModal
+  [attr.text]="'Delete ' + (deleteDeviceTarget()?.name ?? '') + '?'"
+  supporting-text="This removes the device from the rack. This action cannot be undone."
+  accessible-label="Confirm device deletion"
+>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelDeleteDevice()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    (click)="confirmDeleteDevice()"
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- ══════════════════════════════════════════════════════════════
      RACK DELETE MODAL
