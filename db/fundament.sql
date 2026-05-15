@@ -2109,6 +2109,17 @@ CREATE TABLE dcim.task_steps (
 ALTER TABLE dcim.task_steps OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: task_steps_uq_task_ordinal | type: INDEX --
+-- DROP INDEX IF EXISTS dcim.task_steps_uq_task_ordinal CASCADE;
+CREATE UNIQUE INDEX task_steps_uq_task_ordinal ON dcim.task_steps
+USING btree
+(
+	task_id,
+	ordinal
+)
+WHERE (deleted IS NULL);
+-- ddl-end --
+
 -- object: organization_limits_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.organization_limits DROP CONSTRAINT IF EXISTS organization_limits_fk_organization CASCADE;
 ALTER TABLE tenant.organization_limits ADD CONSTRAINT organization_limits_fk_organization FOREIGN KEY (organization_id)
