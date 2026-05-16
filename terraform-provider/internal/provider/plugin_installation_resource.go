@@ -50,12 +50,14 @@ type pluginInstallationStatus struct {
 	Phase string `json:"phase"`
 }
 
+const pluginInstallationAPIVersion = "plugins.fundament.io/v1"
+
 type pluginInstallationCRD struct {
 	APIVersion string                     `json:"apiVersion"`
 	Kind       string                     `json:"kind"`
 	Metadata   pluginInstallationMetadata `json:"metadata"`
 	Spec       pluginInstallationSpec     `json:"spec"`
-	Status     pluginInstallationStatus   `json:"status,omitempty"`
+	Status     pluginInstallationStatus   `json:"status"`
 }
 
 func NewPluginInstallationResource() resource.Resource {
@@ -162,7 +164,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	crd := pluginInstallationCRD{
-		APIVersion: "plugins.fundament.io/v1",
+		APIVersion: pluginInstallationAPIVersion,
 		Kind:       "PluginInstallation",
 		Metadata:   pluginInstallationMetadata{Name: pluginName},
 		Spec: pluginInstallationSpec{
@@ -193,9 +195,9 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode == http.StatusConflict {
-		existingCRD, errMsg := r.fetchCRD(ctx, clusterID, pluginName)
-		if errMsg != "" {
-			resp.Diagnostics.AddError("Unable to Read Existing Plugin Installation on 409", errMsg)
+		existingCRD, err := r.fetchCRD(ctx, clusterID, pluginName)
+		if err != nil {
+			resp.Diagnostics.AddError("Unable to Read Existing Plugin Installation on 409", err.Error())
 			return
 		}
 		if existingCRD.Spec.Image != image {
@@ -220,9 +222,9 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	tflog.Debug(ctx, "Polling plugin installation until phase is set", map[string]any{"plugin_name": pluginName})
 
 	for {
-		crdState, errMsg := r.fetchCRD(ctx, clusterID, pluginName)
-		if errMsg != "" {
-			resp.Diagnostics.AddError("Unable to Poll Plugin Installation Phase", errMsg)
+		crdState, err := r.fetchCRD(ctx, clusterID, pluginName)
+		if err != nil {
+			resp.Diagnostics.AddError("Unable to Poll Plugin Installation Phase", err.Error())
 			return
 		}
 
@@ -298,6 +300,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
+	state.Image = types.StringValue(crd.Spec.Image)
 	state.Phase = types.StringValue(crd.Status.Phase)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -349,10 +352,10 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 
 	clusterStatus := clusterResp.Msg.GetCluster().GetStatus()
 	switch clusterStatus {
-	case organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR,
-		organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING,
-		organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING,
-		organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING,
+		organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING:
+		// API server is reachable; proceed with deletion.
+	default:
 		tflog.Info(ctx, "Cluster Kubernetes API unreachable, skipping CRD deletion", map[string]any{
 			"cluster_id": clusterID,
 			"status":     clusterStatusToString(clusterStatus),
@@ -407,28 +410,28 @@ func (r *PluginInstallationResource) resourceURL(clusterID, pluginName string) s
 	return r.listURL(clusterID) + "/" + pluginName
 }
 
-// fetchCRD performs a GET and returns the parsed CRD, or a non-empty error string on failure.
-func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, pluginName string) (*pluginInstallationCRD, string) {
+// fetchCRD performs a GET and returns the parsed CRD, or an error on failure.
+func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, pluginName string) (*pluginInstallationCRD, error) {
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, r.resourceURL(clusterID, pluginName), nil)
 	if err != nil {
-		return nil, err.Error()
+		return nil, err
 	}
 
 	httpResp, err := r.client.KubeProxyHTTPClient.Do(httpReq)
 	if err != nil {
-		return nil, err.Error()
+		return nil, err
 	}
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(httpResp.Body)
-		return nil, fmt.Sprintf("kube-api-proxy returned HTTP %d: %s", httpResp.StatusCode, string(body))
+		return nil, fmt.Errorf("kube-api-proxy returned HTTP %d: %s", httpResp.StatusCode, string(body))
 	}
 
 	var crd pluginInstallationCRD
 	if err := json.NewDecoder(httpResp.Body).Decode(&crd); err != nil {
-		return nil, err.Error()
+		return nil, err
 	}
 
-	return &crd, ""
+	return &crd, nil
 }
