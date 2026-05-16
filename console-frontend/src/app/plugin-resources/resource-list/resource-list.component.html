@@ -91,10 +91,14 @@
                 @for (resource of resources(); track resource.metadata.uid) {
                   <tr>
                     <td class="whitespace-normal">
-                      <a [routerLink]="detailLink(resource)"
-                          [queryParams]="resource.metadata.namespace ? { ns: resource.metadata.namespace } : null" class="font-medium hover:underline">{{
-                        resource.metadata.name
-                      }}</a>
+                      <a
+                        [routerLink]="detailLink(resource)"
+                        [queryParams]="
+                          resource.metadata.namespace ? { ns: resource.metadata.namespace } : null
+                        "
+                        class="font-medium hover:underline"
+                        >{{ resource.metadata.name }}</a
+                      >
                       @if (resource.metadata.namespace) {
                         <div class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
                           {{ resource.metadata.namespace }}
@@ -114,7 +118,9 @@
                       <div class="flex gap-1">
                         <nldd-button
                           [routerLink]="detailLink(resource)"
-                          [queryParams]="resource.metadata.namespace ? { ns: resource.metadata.namespace } : null"
+                          [queryParams]="
+                            resource.metadata.namespace ? { ns: resource.metadata.namespace } : null
+                          "
                           text="View"
                           start-icon="eye"
                           variant="secondary"

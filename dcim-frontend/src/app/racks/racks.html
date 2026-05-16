@@ -351,15 +351,13 @@
         ></nldd-text-field>
       </nldd-form-field>
       <nldd-form-field label="Datacenter">
-        <nldd-dropdown #fRackDcId>
-          <select>
-            @for (dc of datacenters; track dc.id) {
-              <option [value]="dc.id" [attr.selected]="editRack()?.dcId === dc.id ? true : null">
-                {{ dc.name }}
-              </option>
-            }
-          </select>
-        </nldd-dropdown>
+        <select #fRackDcId>
+          @for (dc of datacenters; track dc.id) {
+            <option [value]="dc.id" [attr.selected]="editRack()?.dcId === dc.id ? true : null">
+              {{ dc.name }}
+            </option>
+          }
+        </select>
       </nldd-form-field>
       <nldd-form-field label="Unit count (U)">
         <nldd-number-field

@@ -272,11 +272,11 @@
         ></nldd-text-field>
       </nldd-form-field>
       <nldd-form-field label="Role">
-        <nldd-dropdown #fDeviceRole [attr.value]="editDevice()?.role ?? 'Compute'">
+        <select #fDeviceRole>
           @for (role of allRoles; track role) {
-            <nldd-dropdown-item [attr.value]="role" [attr.label]="role"></nldd-dropdown-item>
+            <option [value]="role" [attr.selected]="(editDevice()?.role ?? 'Compute') === role ? true : null">{{ role }}</option>
           }
-        </nldd-dropdown>
+        </select>
       </nldd-form-field>
     </nldd-simple-section>
     <div
@@ -338,14 +338,11 @@
     <nldd-simple-section>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Source device">
-          <nldd-dropdown #fConnSrcDevice [attr.value]="editConnection()?.sourceDeviceId ?? ''">
+          <select #fConnSrcDevice>
             @for (dev of devices(); track dev.id) {
-              <nldd-dropdown-item
-                [attr.value]="dev.id"
-                [attr.label]="dev.name"
-              ></nldd-dropdown-item>
+              <option [value]="dev.id" [attr.selected]="(editConnection()?.sourceDeviceId ?? '') === dev.id ? true : null">{{ dev.name }}</option>
             }
-          </nldd-dropdown>
+          </select>
         </nldd-form-field>
         <nldd-form-field label="Source port">
           <nldd-text-field
@@ -357,14 +354,11 @@
       </div>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Target device">
-          <nldd-dropdown #fConnTgtDevice [attr.value]="editConnection()?.targetDeviceId ?? ''">
+          <select #fConnTgtDevice>
             @for (dev of devices(); track dev.id) {
-              <nldd-dropdown-item
-                [attr.value]="dev.id"
-                [attr.label]="dev.name"
-              ></nldd-dropdown-item>
+              <option [value]="dev.id" [attr.selected]="(editConnection()?.targetDeviceId ?? '') === dev.id ? true : null">{{ dev.name }}</option>
             }
-          </nldd-dropdown>
+          </select>
         </nldd-form-field>
         <nldd-form-field label="Target port">
           <nldd-text-field
@@ -375,11 +369,11 @@
         </nldd-form-field>
       </div>
       <nldd-form-field label="Connection type">
-        <nldd-dropdown #fConnType [attr.value]="editConnection()?.connectionType ?? 'network'">
-          <nldd-dropdown-item value="network" label="Network"></nldd-dropdown-item>
-          <nldd-dropdown-item value="power" label="Power"></nldd-dropdown-item>
-          <nldd-dropdown-item value="console" label="Console"></nldd-dropdown-item>
-        </nldd-dropdown>
+        <select #fConnType>
+          <option value="network" [attr.selected]="(editConnection()?.connectionType ?? 'network') === 'network' ? true : null">Network</option>
+          <option value="power" [attr.selected]="(editConnection()?.connectionType ?? 'network') === 'power' ? true : null">Power</option>
+          <option value="console" [attr.selected]="(editConnection()?.connectionType ?? 'network') === 'console' ? true : null">Console</option>
+        </select>
       </nldd-form-field>
     </nldd-simple-section>
     <div

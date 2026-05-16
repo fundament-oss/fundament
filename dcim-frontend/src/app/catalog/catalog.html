@@ -236,7 +236,7 @@
       dismiss-text="Close"
       (dismiss)="closeEntryForm()"
     ></nldd-top-title-bar>
-    <nldd-simple-section>
+    <nldd-simple-section class="space-y-4">
       <nldd-form-field label="Model name">
         <nldd-text-field
           #fEntryModel
@@ -252,11 +252,11 @@
         ></nldd-text-field>
       </nldd-form-field>
       <nldd-form-field label="Category">
-        <nldd-dropdown #fEntryCat [attr.value]="editEntry()?.category ?? 'Server'">
+        <select #fEntryCat>
           @for (cat of categories; track cat) {
-            <nldd-dropdown-item [attr.value]="cat" [attr.label]="cat"></nldd-dropdown-item>
+            <option [value]="cat" [attr.selected]="(editEntry()?.category ?? 'Server') === cat ? true : null">{{ cat }}</option>
           }
-        </nldd-dropdown>
+        </select>
       </nldd-form-field>
 
       <!-- Specs section -->

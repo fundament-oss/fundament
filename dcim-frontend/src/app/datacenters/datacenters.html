@@ -542,7 +542,7 @@
       dismiss-text="Close"
       (dismiss)="closeEditForm()"
     ></nldd-top-title-bar>
-    <nldd-simple-section>
+    <nldd-simple-section class="space-y-4">
       <nldd-form-field label="Short name (e.g. AMS-01)">
         <nldd-text-field
           #fName
@@ -582,46 +582,19 @@
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Tier">
-          <nldd-dropdown #fTier>
-            <select>
-              <option value="1" [attr.selected]="editForm()?.tier === 1 ? true : null">
-                Tier 1
-              </option>
-              <option value="2" [attr.selected]="editForm()?.tier === 2 ? true : null">
-                Tier 2
-              </option>
-              <option value="3" [attr.selected]="editForm()?.tier === 3 ? true : null">
-                Tier 3
-              </option>
-              <option value="4" [attr.selected]="editForm()?.tier === 4 ? true : null">
-                Tier 4
-              </option>
-            </select>
-          </nldd-dropdown>
+          <select #fTier>
+            <option value="1" [attr.selected]="editForm()?.tier === 1 ? true : null">Tier 1</option>
+            <option value="2" [attr.selected]="editForm()?.tier === 2 ? true : null">Tier 2</option>
+            <option value="3" [attr.selected]="editForm()?.tier === 3 ? true : null">Tier 3</option>
+            <option value="4" [attr.selected]="editForm()?.tier === 4 ? true : null">Tier 4</option>
+          </select>
         </nldd-form-field>
         <nldd-form-field label="Status">
-          <nldd-dropdown #fStatus>
-            <select>
-              <option
-                value="operational"
-                [attr.selected]="editForm()?.status === 'operational' ? true : null"
-              >
-                Operational
-              </option>
-              <option
-                value="degraded"
-                [attr.selected]="editForm()?.status === 'degraded' ? true : null"
-              >
-                Degraded
-              </option>
-              <option
-                value="maintenance"
-                [attr.selected]="editForm()?.status === 'maintenance' ? true : null"
-              >
-                Maintenance
-              </option>
-            </select>
-          </nldd-dropdown>
+          <select #fStatus>
+            <option value="operational" [attr.selected]="editForm()?.status === 'operational' ? true : null">Operational</option>
+            <option value="degraded" [attr.selected]="editForm()?.status === 'degraded' ? true : null">Degraded</option>
+            <option value="maintenance" [attr.selected]="editForm()?.status === 'maintenance' ? true : null">Maintenance</option>
+          </select>
         </nldd-form-field>
       </div>
       <nldd-form-field label="Established (year)">
