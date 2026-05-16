@@ -15,6 +15,10 @@ type FundamentClient struct {
 	MemberService    organizationv1connect.MemberServiceClient
 	InviteService    organizationv1connect.InviteServiceClient
 	NamespaceService organizationv1connect.NamespaceServiceClient
+
+	// KubeProxyURL is the base URL for the kube-api-proxy service.
+	KubeProxyURL        string
+	KubeProxyHTTPClient *http.Client
 }
 
 // TokenSource provides authentication tokens.
@@ -54,15 +58,16 @@ func (t *AuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 // NewFundamentClientWithTokenManager creates a new FundamentClient with API key authentication.
-func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organizationID string) *FundamentClient {
-	return newFundamentClientWithTransport(endpoint, &AuthTransport{
+func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organizationID string, kubeProxyURL string) *FundamentClient {
+	transport := &AuthTransport{
 		TokenSource:    tm,
 		OrganizationID: organizationID,
 		Transport:      http.DefaultTransport,
-	})
+	}
+	return newFundamentClientWithTransport(endpoint, kubeProxyURL, transport)
 }
 
-func newFundamentClientWithTransport(endpoint string, transport http.RoundTripper) *FundamentClient {
+func newFundamentClientWithTransport(endpoint string, kubeProxyURL string, transport http.RoundTripper) *FundamentClient {
 	httpClient := &http.Client{
 		Timeout:   30 * time.Second,
 		Transport: transport,
@@ -74,5 +79,7 @@ func newFundamentClientWithTransport(endpoint string, transport http.RoundTrippe
 		MemberService:    organizationv1connect.NewMemberServiceClient(httpClient, endpoint),
 		InviteService:    organizationv1connect.NewInviteServiceClient(httpClient, endpoint),
 		NamespaceService: organizationv1connect.NewNamespaceServiceClient(httpClient, endpoint),
+		KubeProxyURL:        kubeProxyURL,
+		KubeProxyHTTPClient: httpClient,
 	}
 }

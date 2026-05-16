@@ -25,18 +25,20 @@ type FundamentProvider struct {
 
 // FundamentProviderModel describes the provider data model.
 type FundamentProviderModel struct {
-	Endpoint       types.String `tfsdk:"endpoint"`
-	ApiKey         types.String `tfsdk:"api_key"`
-	AuthnEndpoint  types.String `tfsdk:"authn_endpoint"`
-	OrganizationID types.String `tfsdk:"organization_id"`
+	Endpoint        types.String `tfsdk:"endpoint"`
+	ApiKey          types.String `tfsdk:"api_key"`
+	AuthnEndpoint   types.String `tfsdk:"authn_endpoint"`
+	OrganizationID  types.String `tfsdk:"organization_id"`
+	KubeAPIProxyURL types.String `tfsdk:"kube_api_proxy_url"`
 }
 
 // FundamentEnvConfig describes the environment variable configuration.
 type FundamentEnvConfig struct {
-	Endpoint       string `env:"FUNDAMENT_ENDPOINT"`
-	ApiKey         string `env:"FUNDAMENT_API_KEY"`
-	AuthnEndpoint  string `env:"FUNDAMENT_AUTHN_ENDPOINT"`
-	OrganizationID string `env:"FUNDAMENT_ORGANIZATION_ID"`
+	Endpoint        string `env:"FUNDAMENT_ENDPOINT"`
+	ApiKey          string `env:"FUNDAMENT_API_KEY"`
+	AuthnEndpoint   string `env:"FUNDAMENT_AUTHN_ENDPOINT"`
+	OrganizationID  string `env:"FUNDAMENT_ORGANIZATION_ID"`
+	KubeAPIProxyURL string `env:"FUNDAMENT_KUBE_API_PROXY_URL"`
 }
 
 // New returns a function that creates a new FundamentProvider.
@@ -86,6 +88,13 @@ func (p *FundamentProvider) Schema(ctx context.Context, req provider.SchemaReque
 				Optional:    true,
 				Validators: []validator.String{
 					uuidValidator{},
+				},
+			},
+			"kube_api_proxy_url": schema.StringAttribute{
+				Description: "The base URL of the kube-api-proxy service. Required for managing plugin installations. Can also be set via the FUNDAMENT_KUBE_API_PROXY_URL environment variable.",
+				Optional:    true,
+				Validators: []validator.String{
+					httpURLValidator{},
 				},
 			},
 		},
@@ -183,7 +192,12 @@ func (p *FundamentProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID)
+	kubeAPIProxyURL := config.KubeAPIProxyURL.ValueString()
+	if kubeAPIProxyURL == "" {
+		kubeAPIProxyURL = envConfig.KubeAPIProxyURL
+	}
+
+	client = NewFundamentClientWithTokenManager(endpoint, tm, organizationID, kubeAPIProxyURL)
 
 	tflog.Info(ctx, "Fundament provider configured successfully")
 
@@ -200,6 +214,7 @@ func (p *FundamentProvider) Resources(ctx context.Context) []func() resource.Res
 		NewProjectMemberResource,
 		NewNamespaceResource,
 		NewOrganizationMemberResource,
+		NewPluginInstallationResource,
 	}
 }
 
