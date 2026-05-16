@@ -58,7 +58,7 @@
       ></nldd-icon-button>
     }
     <nldd-button
-      variant="accent-filled"
+      variant="primary"
       text="Add datacenter"
       start-icon="plus-small"
       size="sm"
@@ -535,20 +535,14 @@
      DATACENTER EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #editSheet accessible-label="Datacenter details" placement="right" width="480px">
-  <div class="flex flex-col h-full">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-      <h2 class="text-base font-semibold text-slate-900">
-        {{ editForm()?.id ? 'Edit datacenter' : 'Add datacenter' }}
-      </h2>
-      <nldd-icon-button
-        icon="dismiss"
-        variant="neutral-transparent"
-        size="sm"
-        text="Close"
-        (click)="closeEditForm()"
-      ></nldd-icon-button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="editForm()?.id ? 'Edit datacenter' : 'Add datacenter'"
+      dismiss-text="Close"
+      (dismiss)="closeEditForm()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section class="space-y-4">
       <nldd-form-field label="Short name (e.g. AMS-01)">
         <nldd-text-field
           #fName
@@ -588,46 +582,19 @@
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Tier">
-          <nldd-dropdown #fTier>
-            <select>
-              <option value="1" [attr.selected]="editForm()?.tier === 1 ? true : null">
-                Tier 1
-              </option>
-              <option value="2" [attr.selected]="editForm()?.tier === 2 ? true : null">
-                Tier 2
-              </option>
-              <option value="3" [attr.selected]="editForm()?.tier === 3 ? true : null">
-                Tier 3
-              </option>
-              <option value="4" [attr.selected]="editForm()?.tier === 4 ? true : null">
-                Tier 4
-              </option>
-            </select>
-          </nldd-dropdown>
+          <select #fTier>
+            <option value="1" [attr.selected]="editForm()?.tier === 1 ? true : null">Tier 1</option>
+            <option value="2" [attr.selected]="editForm()?.tier === 2 ? true : null">Tier 2</option>
+            <option value="3" [attr.selected]="editForm()?.tier === 3 ? true : null">Tier 3</option>
+            <option value="4" [attr.selected]="editForm()?.tier === 4 ? true : null">Tier 4</option>
+          </select>
         </nldd-form-field>
         <nldd-form-field label="Status">
-          <nldd-dropdown #fStatus>
-            <select>
-              <option
-                value="operational"
-                [attr.selected]="editForm()?.status === 'operational' ? true : null"
-              >
-                Operational
-              </option>
-              <option
-                value="degraded"
-                [attr.selected]="editForm()?.status === 'degraded' ? true : null"
-              >
-                Degraded
-              </option>
-              <option
-                value="maintenance"
-                [attr.selected]="editForm()?.status === 'maintenance' ? true : null"
-              >
-                Maintenance
-              </option>
-            </select>
-          </nldd-dropdown>
+          <select #fStatus>
+            <option value="operational" [attr.selected]="editForm()?.status === 'operational' ? true : null">Operational</option>
+            <option value="degraded" [attr.selected]="editForm()?.status === 'degraded' ? true : null">Degraded</option>
+            <option value="maintenance" [attr.selected]="editForm()?.status === 'maintenance' ? true : null">Maintenance</option>
+          </select>
         </nldd-form-field>
       </div>
       <nldd-form-field label="Established (year)">
@@ -677,12 +644,12 @@
           ></nldd-number-field>
         </nldd-form-field>
       </div>
+    </nldd-simple-section>
+    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+      <nldd-button variant="secondary" text="Cancel" (click)="closeEditForm()"></nldd-button>
+      <nldd-button variant="primary" text="Save" (click)="saveDc()"></nldd-button>
     </div>
-    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
-      <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeEditForm()"></nldd-button>
-      <nldd-button variant="accent-filled" text="Save" (click)="saveDc()"></nldd-button>
-    </div>
-  </div>
+  </nldd-page>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -697,15 +664,15 @@
 >
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
-    (click)="cancelDelete()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
     variant="destructive"
     text="Delete"
     (click)="confirmDeleteDc()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelDelete()"
   ></nldd-button>
 </nldd-modal-dialog>
 

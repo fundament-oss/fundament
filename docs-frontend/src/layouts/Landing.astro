@@ -4,9 +4,13 @@ import '../styles/global.css';
 
 export interface Props {
   title?: string;
+  description?: string;
 }
 
-const { title = 'Fundament' } = Astro.props;
+const {
+  title = 'Fundament',
+  description = 'Fundament - Open-source platform for deploying and managing Kubernetes clusters with bare-metal provisioning',
+} = Astro.props;
 
 const { pathname } = Astro.url;
 const isActive = (path: string) => pathname === path || pathname === `${path}/`;
@@ -17,10 +21,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Fundament - Open-source platform for deploying and managing Kubernetes clusters with bare-metal provisioning"
-    />
+    <meta name="description" content={description} />
     <title>{title}</title>
     <link rel="icon" type="image/png" href="/img/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/img/favicon.svg" />

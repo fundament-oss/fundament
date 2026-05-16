@@ -34,7 +34,10 @@
       <h3 class="text-lg font-medium">Plugins</h3>
       <div class="space-y-4">
         @if (plugins.length === 0) {
-          <p class="text-gray-600 dark:text-gray-400">No plugins found</p>
+          <nldd-box>
+            <nldd-inline-dialog icon="puzzle-piece" icon-color="secondary" text="No plugins found">
+            </nldd-inline-dialog>
+          </nldd-box>
         } @else {
           @for (plugin of plugins; track plugin.id) {
             <div>

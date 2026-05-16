@@ -32,7 +32,7 @@
             </div>
           </div>
           <nldd-button
-            variant="neutral-tinted"
+            variant="secondary"
             size="sm"
             text="Back to catalog"
             start-icon="arrow-left"
@@ -77,7 +77,7 @@
                 Port Definitions
               </h2>
               <nldd-button
-                variant="accent-filled"
+                variant="primary"
                 text="Add Port"
                 start-icon="plus-small"
                 size="xs"
@@ -329,7 +329,7 @@
         </p>
         <nldd-button
           class="mt-5"
-          variant="accent-filled"
+          variant="primary"
           text="Back to catalog"
           start-icon="arrow-left"
           href="/catalog"
@@ -343,20 +343,14 @@
      PORT DEFINITION EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #portSheet accessible-label="Port definition details" placement="right" width="400px">
-  <div class="flex flex-col h-full">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-      <h2 class="text-base font-semibold text-slate-900">
-        {{ editPortDef()?.id ? 'Edit Port' : 'New Port' }}
-      </h2>
-      <nldd-icon-button
-        icon="dismiss"
-        variant="neutral-transparent"
-        size="sm"
-        text="Close"
-        (click)="closePortDefForm()"
-      ></nldd-icon-button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="editPortDef()?.id ? 'Edit Port' : 'New Port'"
+      dismiss-text="Close"
+      (dismiss)="closePortDefForm()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
       <nldd-form-field label="Port name">
         <nldd-text-field
           #fPortName
@@ -391,16 +385,12 @@
           ></nldd-number-field>
         </nldd-form-field>
       </div>
+    </nldd-simple-section>
+    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+      <nldd-button variant="secondary" text="Cancel" (click)="closePortDefForm()"></nldd-button>
+      <nldd-button variant="primary" text="Save" (click)="savePortDef()"></nldd-button>
     </div>
-    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
-      <nldd-button
-        variant="neutral-tinted"
-        text="Cancel"
-        (click)="closePortDefForm()"
-      ></nldd-button>
-      <nldd-button variant="accent-filled" text="Save" (click)="savePortDef()"></nldd-button>
-    </div>
-  </div>
+  </nldd-page>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -415,15 +405,15 @@
 >
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
-    (click)="cancelDeletePortDef()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
     variant="destructive"
     text="Delete"
     (click)="confirmDeletePortDef()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelDeletePortDef()"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -441,27 +431,24 @@
 >
   <div slot="content" class="px-1 pt-2 pb-1">
     <nldd-form-field label="Compatible product">
-      <nldd-dropdown #fCompatEntry placeholder="Select product…">
+      <select #fCompatEntry>
         @for (entry of allCatalogEntries; track entry.id) {
-          <nldd-dropdown-item
-            [attr.value]="entry.id"
-            [attr.label]="entry.model"
-          ></nldd-dropdown-item>
+          <option [value]="entry.id">{{ entry.model }}</option>
         }
-      </nldd-dropdown>
+      </select>
     </nldd-form-field>
   </div>
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
-    (click)="cancelAddCompatibility()"
+    variant="primary"
+    text="Add"
+    (click)="confirmAddCompatibility()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="accent-filled"
-    text="Add"
-    (click)="confirmAddCompatibility()"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelAddCompatibility()"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -481,14 +468,14 @@
 >
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
-    (click)="cancelDeleteCompat()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
     variant="destructive"
     text="Remove"
     (click)="confirmDeleteCompat()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelDeleteCompat()"
   ></nldd-button>
 </nldd-modal-dialog>

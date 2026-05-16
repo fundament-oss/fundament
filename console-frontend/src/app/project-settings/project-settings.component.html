@@ -128,15 +128,15 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showDeleteModal.set(false)"
-    text="Cancel"
-    variant="secondary"
+    (click)="deleteProject()"
+    text="Yes, delete this project"
+    variant="destructive"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
-    (click)="deleteProject()"
-    text="Yes, delete this project"
-    variant="destructive"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
