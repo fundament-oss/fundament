@@ -1,0 +1,165 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-3xl font-semibold">Log analytics</h1>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-2">
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-gray-500 dark:text-gray-400">Cluster</span>
+        <select
+          [ngModel]="selectedCluster()"
+          (ngModelChange)="onClusterChange($event)"
+          class="text-sm"
+        >
+          <option value="">All clusters</option>
+          @for (c of clusters(); track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-gray-500 dark:text-gray-400">Namespace</span>
+        <select
+          [ngModel]="selectedNamespace()"
+          (ngModelChange)="onNamespaceChange($event)"
+          class="text-sm"
+        >
+          <option value="">All namespaces</option>
+          @for (ns of namespaces(); track ns) {
+            <option [value]="ns">{{ ns }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-gray-500 dark:text-gray-400">Time range</span>
+        <select
+          [ngModel]="timePreset()"
+          (ngModelChange)="onTimePresetChange($event)"
+          class="text-sm"
+        >
+          @for (preset of TIME_PRESETS; track preset.value) {
+            <option [value]="preset.value">{{ preset.label }}</option>
+          }
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div class="card card-body text-center">
+      <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ totalLogs() | number }}</p>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Total logs</p>
+    </div>
+    <div class="card card-body text-center">
+      <p class="text-danger-600 dark:text-danger-400 text-3xl font-bold">
+        {{ errorCount() | number }}
+      </p>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Errors</p>
+    </div>
+    <div class="card card-body text-center">
+      <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{{ errorRate() }}%</p>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Error rate</p>
+    </div>
+    <div class="card card-body text-center">
+      <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ activePods() | number }}</p>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Active pods</p>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <!-- Volume over time (2/3 width) -->
+    <div class="card lg:col-span-2">
+      <div class="card-header">
+        <h2 class="font-semibold text-gray-900 dark:text-white">Volume over time</h2>
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Log count by severity</p>
+      </div>
+      <div class="px-4 py-3">
+        <div class="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-red-600/75"></span>Error</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-600/75"></span>Warn</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-blue-600/65"></span>Info</span
+          >
+          <span class="flex items-center gap-1.5"
+            ><span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-500/50"></span>Debug</span
+          >
+        </div>
+      </div>
+      <div class="px-4 pb-4" style="height: 200px">
+        <canvas #volumeChart></canvas>
+      </div>
+    </div>
+
+    <!-- Severity donut (1/3 width) -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="font-semibold text-gray-900 dark:text-white">By severity</h2>
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Log distribution</p>
+      </div>
+      <div class="flex items-center justify-center px-4 pb-4" style="height: 240px">
+        <canvas #severityChart></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row: namespace chart + error patterns -->
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <!-- By namespace -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="font-semibold text-gray-900 dark:text-white">By namespace</h2>
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Top 8 by log volume</p>
+      </div>
+      <div class="px-4 pb-4" [style.height.px]="namespaceChartHeight()">
+        <canvas #namespaceChart></canvas>
+      </div>
+    </div>
+
+    <!-- Top error patterns -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="font-semibold text-gray-900 dark:text-white">Top error patterns</h2>
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Most frequent error messages</p>
+      </div>
+      <div class="divide-y divide-gray-100 dark:divide-gray-900">
+        @if (errorPatterns().length === 0) {
+          <div class="px-6 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+            No errors in this time range
+          </div>
+        }
+        @for (pattern of errorPatterns(); track pattern.message) {
+          <div class="flex items-center gap-3 px-5 py-3.5">
+            <span class="bg-danger-500 mt-0.5 h-2 w-2 shrink-0 rounded-full"></span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-mono text-xs text-gray-700 dark:text-gray-300">
+                {{ pattern.message }}
+              </p>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+              <span class="text-danger-600 dark:text-danger-400 font-mono text-sm font-semibold">{{
+                pattern.count | number
+              }}</span>
+              <nldd-button
+                [routerLink]="['/logs']"
+                text="Open"
+                end-icon="chevron-right-small"
+                variant="neutral-tinted"
+                size="xs"
+                accessible-label="Open in explorer"
+              ></nldd-button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

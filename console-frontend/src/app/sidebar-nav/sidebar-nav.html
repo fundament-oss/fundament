@@ -59,6 +59,17 @@
       </li>
       <li>
         <a
+          routerLink="/logs"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="closeSidebar.emit()"
+        >
+          <nldd-icon name="bullet-list" class="mr-3 h-5 w-5"></nldd-icon>
+          Logs
+        </a>
+      </li>
+      <li>
+        <a
           routerLink="/plugins"
           routerLinkActive="active"
           class="nav-link"
