@@ -1,11 +1,11 @@
 @if (device(); as dev) {
-  <div class="flex h-[calc(100vh-6rem)] overflow-hidden">
+  <div class="flex items-start">
     <!-- ══════════════════════════════════════════════════════════════
          LEFT SIDEBAR: Rack mini view
          ══════════════════════════════════════════════════════════════ -->
     @if (rack(); as r) {
       <aside
-        class="w-80 shrink-0 border-r border-gray-200 bg-white flex flex-col overflow-hidden"
+        class="w-80 shrink-0 border-r border-gray-200 bg-white flex flex-col overflow-hidden sticky top-17 h-[calc(100vh-4.25rem)]"
         aria-label="Rack position"
       >
         <!-- Rack header -->
@@ -34,7 +34,7 @@
     <!-- ══════════════════════════════════════════════════════════════
          MAIN: Device detail
          ══════════════════════════════════════════════════════════════ -->
-    <div #scrollContainer class="flex-1 min-w-0 overflow-y-auto flex flex-col">
+    <div class="flex-1 min-w-0 pb-6">
       <!-- Header -->
       <div class="border-b border-gray-200 bg-white shrink-0">
         <div class="max-w-4xl py-4 flex items-center gap-4 px-4 sm:px-6">

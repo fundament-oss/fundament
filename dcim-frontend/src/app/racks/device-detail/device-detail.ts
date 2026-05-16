@@ -4,13 +4,11 @@ import {
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
-  ElementRef,
   inject,
   signal,
-  viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { LowerCasePipe } from '@angular/common';
+import { DOCUMENT, LowerCasePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import RackDiagramComponent from '../rack-diagram/rack-diagram';
@@ -53,12 +51,12 @@ export default class DeviceDetailComponent {
 
   private readonly router = inject(Router);
 
-  private readonly scrollContainer = viewChild<ElementRef<HTMLElement>>('scrollContainer');
+  private readonly document = inject(DOCUMENT);
 
   constructor() {
     effect(() => {
       this.deviceId(); // track device changes
-      this.scrollContainer()?.nativeElement.scrollTo({ top: 0 });
+      this.document.defaultView?.scrollTo(0, 0);
     });
   }
 
