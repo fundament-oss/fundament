@@ -39,20 +39,30 @@
             </select>
           </div>
 
-          <!-- Device -->
+          <!-- Device + manage ports -->
           <div class="flex flex-col gap-1">
             <label class="text-xs font-medium text-slate-700" for="a-device">Device</label>
-            <select
-              id="a-device"
-              [value]="aDeviceId()"
-              (change)="onADeviceChange($any($event.target).value)"
-              class="w-full"
-            >
-              <option value="">Select device…</option>
-              @for (dev of dcDevices(); track dev.id) {
-                <option [value]="dev.id">{{ dev.name }}</option>
-              }
-            </select>
+            <div class="flex items-center gap-1.5">
+              <select
+                id="a-device"
+                [value]="aDeviceId()"
+                (change)="onADeviceChange($any($event.target).value)"
+                class="flex-1"
+              >
+                <option value="">Select device…</option>
+                @for (dev of dcDevices(); track dev.id) {
+                  <option [value]="dev.id">{{ dev.name }}</option>
+                }
+              </select>
+              <nldd-icon-button
+                icon="wrench"
+                variant="neutral-transparent"
+                size="sm"
+                text="Manage ports for this device"
+                [attr.disabled]="aDeviceId() ? null : true"
+                (click)="openPortManagement(aDeviceId())"
+              ></nldd-icon-button>
+            </div>
           </div>
 
           <!-- Port -->
@@ -67,10 +77,10 @@
             >
               <option value="">Select port…</option>
               @for (port of aFilteredPorts(); track port.id) {
-                <option [value]="port.id">
+                <option [value]="port.id" [disabled]="usedPortIds().has(port.id)">
                   {{ port.name }}{{ port.label ? ' — ' + port.label : '' }} ({{
                     PORT_TYPE_LABEL[port.type]
-                  }})
+                  }}){{ usedPortIds().has(port.id) ? ' [in use]' : '' }}
                 </option>
               }
             </select>
@@ -81,7 +91,19 @@
         </div>
       </section>
 
-      <div class="border-t border-slate-100"></div>
+      <!-- ── Swap button ──────────────────────────────────────────────────────── -->
+      <div class="flex items-center gap-3">
+        <div class="flex-1 border-t border-slate-100"></div>
+        <nldd-icon-button
+          icon="arrow-up-down"
+          variant="neutral-transparent"
+          size="sm"
+          text="Swap A and B sides"
+          (click)="swapSides()"
+          [disabled]="!aDeviceId() && !bDeviceId()"
+        ></nldd-icon-button>
+        <div class="flex-1 border-t border-slate-100"></div>
+      </div>
 
       <!-- ── B Side ──────────────────────────────────────────────────────────── -->
       <section aria-labelledby="bside-heading">
@@ -114,20 +136,30 @@
             </select>
           </div>
 
-          <!-- Device -->
+          <!-- Device + manage ports -->
           <div class="flex flex-col gap-1">
             <label class="text-xs font-medium text-slate-700" for="b-device">Device</label>
-            <select
-              id="b-device"
-              [value]="bDeviceId()"
-              (change)="onBDeviceChange($any($event.target).value)"
-              class="w-full"
-            >
-              <option value="">Select device…</option>
-              @for (dev of dcDevices(); track dev.id) {
-                <option [value]="dev.id">{{ dev.name }}</option>
-              }
-            </select>
+            <div class="flex items-center gap-1.5">
+              <select
+                id="b-device"
+                [value]="bDeviceId()"
+                (change)="onBDeviceChange($any($event.target).value)"
+                class="flex-1"
+              >
+                <option value="">Select device…</option>
+                @for (dev of dcDevices(); track dev.id) {
+                  <option [value]="dev.id">{{ dev.name }}</option>
+                }
+              </select>
+              <nldd-icon-button
+                icon="wrench"
+                variant="neutral-transparent"
+                size="sm"
+                text="Manage ports for this device"
+                [attr.disabled]="bDeviceId() ? null : true"
+                (click)="openPortManagement(bDeviceId())"
+              ></nldd-icon-button>
+            </div>
           </div>
 
           <!-- Port -->
@@ -142,10 +174,10 @@
             >
               <option value="">Select port…</option>
               @for (port of bFilteredPorts(); track port.id) {
-                <option [value]="port.id">
+                <option [value]="port.id" [disabled]="usedPortIds().has(port.id)">
                   {{ port.name }}{{ port.label ? ' — ' + port.label : '' }} ({{
                     PORT_TYPE_LABEL[port.type]
-                  }})
+                  }}){{ usedPortIds().has(port.id) ? ' [in use]' : '' }}
                 </option>
               }
             </select>
@@ -155,6 +187,11 @@
             @if (isSamePort()) {
               <p class="text-[10px] text-red-600 mt-0.5" role="alert">
                 A and B sides cannot use the same port.
+              </p>
+            }
+            @if (incompatibleSides()) {
+              <p class="text-[10px] text-amber-600 mt-0.5" role="alert">
+                Power and data ports cannot be combined.
               </p>
             }
           </div>
@@ -206,9 +243,34 @@
             >
               <option value="">Select type…</option>
               @for (t of CABLE_TYPES; track t) {
-                <option [value]="t">{{ t }}</option>
+                <option [value]="t">{{ CABLE_TYPE_LABEL[t] }}</option>
               }
             </select>
+          </div>
+
+          <!-- Length -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-slate-700" for="cable-length">Length (m)</label>
+            <nldd-number-field
+              id="cable-length"
+              [attr.value]="cableLength() ?? ''"
+              placeholder="e.g. 2"
+              class="w-full"
+              min="0"
+              step="0.5"
+              (change)="
+                cableLength.set(
+                  $any($event).detail?.value !== null && $any($event).detail?.value !== ''
+                    ? +$any($event).detail.value
+                    : undefined
+                )
+              "
+              (input)="
+                cableLength.set(
+                  $any($event.target).value !== '' ? +$any($event.target).value : undefined
+                )
+              "
+            ></nldd-number-field>
           </div>
 
           <!-- Label -->
@@ -280,21 +342,9 @@
               id="cable-description"
               [value]="cableDescription()"
               (input)="cableDescription.set($any($event.target).value)"
-              rows="2"
-              placeholder="Optional description…"
-              resize="vertical"
-            ></nldd-multi-line-text-field>
-          </div>
-
-          <!-- Comments -->
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-slate-700" for="cable-comments">Comments</label>
-            <nldd-multi-line-text-field
-              id="cable-comments"
-              [value]="cableComments()"
-              (input)="cableComments.set($any($event.target).value)"
               rows="3"
-              placeholder="Optional comments…"
+              placeholder="Optional description or notes…"
+              resize="vertical"
             ></nldd-multi-line-text-field>
           </div>
         </div>
@@ -328,3 +378,30 @@
     </div>
   </div>
 </nldd-page>
+
+<!-- ── Port management modal ───────────────────────────────────────────────── -->
+@if (portManagementDevice() !== null) {
+  <div
+    class="fixed inset-0 z-200 flex items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'Manage ports for ' + portManagementDevice()!.name"
+    (click)="closePortManagement()"
+    (keydown.escape)="closePortManagement()"
+  >
+    <div
+      class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl shadow-neutral-900/20 ring-1 ring-neutral-200/80"
+      tabindex="-1"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    >
+      <app-device-ports
+        [deviceId]="portManagementDevice()!.id"
+        [deviceName]="portManagementDevice()!.name"
+        [ports]="portManagementPorts()"
+        (portsChange)="onPortsSaved($event)"
+        (cancelEdit)="closePortManagement()"
+      />
+    </div>
+  </div>
+}

@@ -1,0 +1,105 @@
+<div class="flex flex-col gap-4">
+  <!-- Header -->
+  <div>
+    <h3 class="text-sm font-semibold text-slate-900">Manage ports — {{ deviceName() }}</h3>
+    <p class="text-xs text-slate-400 mt-0.5">
+      {{ localPorts().length }} port{{ localPorts().length === 1 ? '' : 's' }}
+    </p>
+  </div>
+
+  <!-- Existing ports -->
+  @if (localPorts().length > 0) {
+    <ul
+      class="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden"
+      aria-label="Ports"
+    >
+      @for (port of localPorts(); track port.id) {
+        <li class="flex items-center gap-2 px-3 py-2 bg-white group">
+          <span class="flex-1 min-w-0">
+            <span class="text-sm font-mono text-slate-800">{{ port.name }}</span>
+            @if (port.label) {
+              <span class="text-xs text-slate-400 ml-1.5">{{ port.label }}</span>
+            }
+          </span>
+          <span class="text-xs text-slate-400 shrink-0">{{ PORT_TYPE_LABEL[port.type] }}</span>
+          <nldd-icon-button
+            icon="trash"
+            variant="neutral-transparent"
+            size="xs"
+            [attr.text]="'Remove port ' + port.name"
+            (click)="removePort(port.id)"
+            class="opacity-0 group-hover:opacity-100 transition-opacity"
+          ></nldd-icon-button>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="text-xs text-slate-400 italic">No ports defined yet.</p>
+  }
+
+  <!-- Add port form -->
+  <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+    <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Add port</p>
+
+    <div class="flex flex-col gap-2">
+      <!-- Name -->
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-slate-700" for="new-port-name">Name</label>
+        <nldd-text-field
+          id="new-port-name"
+          [attr.value]="newPortName()"
+          placeholder="e.g. Gi0/5"
+          class="w-full font-mono"
+          (input)="newPortName.set($any($event.target).value)"
+          (change)="newPortName.set($any($event).detail?.value ?? newPortName())"
+        ></nldd-text-field>
+      </div>
+
+      <!-- Type -->
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-slate-700" for="new-port-type">Type</label>
+        <select
+          id="new-port-type"
+          [value]="newPortType()"
+          (change)="newPortType.set($any($event.target).value)"
+          class="w-full"
+        >
+          @for (pt of PORT_TYPES; track pt.value) {
+            <option [value]="pt.value">{{ pt.label }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Label (optional) -->
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-slate-700" for="new-port-label">
+          Label <span class="text-slate-400 font-normal">(optional)</span>
+        </label>
+        <nldd-text-field
+          id="new-port-label"
+          [attr.value]="newPortLabel()"
+          placeholder="e.g. Uplink 3"
+          class="w-full"
+          (input)="newPortLabel.set($any($event.target).value)"
+          (change)="newPortLabel.set($any($event).detail?.value ?? newPortLabel())"
+        ></nldd-text-field>
+      </div>
+
+      <nldd-button
+        variant="secondary"
+        text="Add port"
+        start-icon="plus-small"
+        size="sm"
+        (click)="addPort()"
+        [attr.disabled]="canAddPort() ? null : true"
+        class="self-start"
+      ></nldd-button>
+    </div>
+  </div>
+
+  <!-- Footer actions -->
+  <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+    <nldd-button variant="secondary" text="Cancel" size="sm" (click)="onCancel()"></nldd-button>
+    <nldd-button variant="primary" text="Save ports" size="sm" (click)="onSave()"></nldd-button>
+  </div>
+</div>

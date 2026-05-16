@@ -66,6 +66,7 @@ export interface Cable {
   description?: string;
   color?: CableColor;
   comments?: string;
+  length?: number;
 }
 
 // ── Color palette ─────────────────────────────────────────────────────────────
@@ -81,6 +82,22 @@ export const CABLE_COLOR_HEX: Record<CableColor, string> = {
   orange: '#f97316',
   teal: '#14b8a6',
   white: '#f8fafc',
+};
+
+export const CABLE_TYPE_LABEL: Record<CableType, string> = {
+  cat5e: 'Cat5e',
+  cat6: 'Cat6',
+  cat6a: 'Cat6a',
+  cat7: 'Cat7',
+  cat8: 'Cat8',
+  dac: 'DAC',
+  aoc: 'AOC',
+  mmf: 'MMF',
+  smf: 'SMF',
+  power: 'Power',
+  console: 'Console',
+  usb: 'USB',
+  other: 'Other',
 };
 
 export const CABLE_STATUS_LABEL: Record<CableStatus, string> = {

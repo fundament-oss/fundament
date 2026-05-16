@@ -1,0 +1,99 @@
+<nldd-page sticky-header="">
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="'Shopping list — ' + dcLabel()"
+    dismiss-text="Close"
+    (dismiss)="($event)"
+  ></nldd-top-title-bar>
+
+  <nldd-simple-section>
+    <!-- Summary -->
+    <div class="mb-4">
+      <p class="text-sm text-slate-600">Cables planned in this patch mapping that still need to be procured and installed.</p>
+      <p class="text-xs text-slate-400 mt-1">{{ totalCount() }} {{ totalCount() === 1 ? 'cable' : 'cables' }} to order</p>
+    </div>
+
+    <!-- Groups -->
+    <div class="flex flex-col gap-2" role="list" aria-label="Cables to order">
+      @for (group of groups(); track groupKey(group)) {
+        <div class="rounded-lg border border-slate-200 bg-white overflow-hidden" role="listitem">
+          <!-- Group header -->
+          <button
+            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+            (click)="toggleExpanded(group)"
+            [attr.aria-expanded]="isExpanded(group)"
+          >
+            <!-- Color swatch -->
+            @if (group.color) {
+              <span
+                class="h-4 w-4 rounded-full shrink-0 border border-slate-200"
+                [style.background]="CABLE_COLOR_HEX[group.color]"
+                [attr.aria-label]="group.color"
+              ></span>
+            } @else {
+              <span
+                class="h-4 w-4 rounded-full shrink-0 border-2 border-dashed border-slate-300"
+                aria-label="No color"
+              ></span>
+            }
+
+            <!-- Type + length -->
+            <span class="flex-1 min-w-0">
+              <span class="text-sm font-semibold text-slate-900">{{
+                CABLE_TYPE_LABEL[group.type]
+              }}</span>
+              @if (group.color) {
+                <span class="text-xs text-slate-500 ml-1.5 capitalize">{{
+                  group.color.replace('-', ' ')
+                }}</span>
+              }
+              @if (group.length !== undefined) {
+                <span class="text-xs text-slate-400 ml-1.5">{{ group.length }} m</span>
+              } @else {
+                <span class="text-xs text-slate-300 ml-1.5">length unknown</span>
+              }
+            </span>
+
+            <!-- Count badge -->
+            <span
+              class="inline-flex items-center justify-center min-w-[2rem] h-6 rounded-full bg-amber-100 text-amber-800 text-xs font-bold px-2 shrink-0"
+              aria-label="{{ group.count }} cables"
+            >
+              × {{ group.count }}
+            </span>
+
+            <!-- Chevron -->
+            <nldd-icon
+              [attr.name]="isExpanded(group) ? 'chevron-up' : 'chevron-down'"
+              class="w-4 h-4 text-slate-400 shrink-0"
+              aria-hidden="true"
+            ></nldd-icon>
+          </button>
+
+          <!-- Expanded cable list -->
+          @if (isExpanded(group)) {
+            <ul class="border-t border-slate-100 divide-y divide-slate-100">
+              @for (cable of group.cables; track cable.id) {
+                <li class="px-4 py-2 flex items-center gap-2">
+                  <nldd-icon
+                    name="minus-small"
+                    class="w-3 h-3 text-slate-300 shrink-0"
+                    aria-hidden="true"
+                  ></nldd-icon>
+                  <span class="text-xs text-slate-700 font-mono truncate">{{
+                    cableLabel(cable)
+                  }}</span>
+                  @if (cable.label) {
+                    <span class="text-xs text-slate-400 truncate">
+                      {{ cable.aSide.deviceName }} → {{ cable.bSide.deviceName }}
+                    </span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </div>
+  </nldd-simple-section>
+</nldd-page>

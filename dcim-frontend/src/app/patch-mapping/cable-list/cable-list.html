@@ -118,8 +118,48 @@
                 : 'text-slate-600 hover:bg-slate-50'
             "
           >
-            <span class="flex-1 text-left">{{ t }}</span>
+            <span class="flex-1 text-left">{{ CABLE_TYPE_LABEL[t] }}</span>
             <span class="text-xs text-slate-400">{{ typeCounts()[t] }}</span>
+          </button>
+        }
+      }
+    </div>
+
+    <!-- Color -->
+    <div class="px-4 py-3 border-b border-slate-100">
+      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Color</p>
+
+      <button
+        (click)="filterColor.set('')"
+        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+        [class]="
+          filterColor() === ''
+            ? 'bg-accent-50 text-accent-700 font-medium'
+            : 'text-slate-600 hover:bg-slate-50'
+        "
+      >
+        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
+        <span class="flex-1 text-left">All colors</span>
+      </button>
+
+      @for (color of CABLE_COLORS; track color) {
+        @if (colorCounts()[color]) {
+          <button
+            (click)="filterColor.set(color)"
+            class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+            [class]="
+              filterColor() === color
+                ? 'bg-accent-50 text-accent-700 font-medium'
+                : 'text-slate-600 hover:bg-slate-50'
+            "
+          >
+            <span
+              class="h-3 w-3 rounded-full shrink-0 border border-slate-200"
+              [style.background]="CABLE_COLOR_HEX[color]"
+              aria-hidden="true"
+            ></span>
+            <span class="flex-1 text-left capitalize">{{ color.replace('-', ' ') }}</span>
+            <span class="text-xs text-slate-400">{{ colorCounts()[color] }}</span>
           </button>
         }
       }
@@ -167,19 +207,95 @@
         <!-- Column headers -->
         <div role="row" class="flex items-center gap-3 border-b border-slate-100 py-2.5">
           <div
-            class="flex-1 min-w-0 grid grid-cols-[120px_1fr_1fr_110px_80px_56px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 uppercase tracking-wide"
+            class="flex-1 min-w-0 grid grid-cols-[120px_1fr_1fr_110px_80px_56px] gap-3 lg:gap-4 items-center"
           >
-            <span role="columnheader">Label</span>
-            <span role="columnheader">A side</span>
-            <span role="columnheader">B side</span>
-            <span role="columnheader">Status</span>
-            <span role="columnheader">Type</span>
+            <button
+              role="columnheader"
+              class="flex items-center gap-1 text-xs font-medium text-slate-400 uppercase tracking-wide hover:text-slate-600 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
+              (click)="toggleSort('label')"
+              [attr.aria-sort]="
+                sortField() === 'label'
+                  ? sortDir() === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              Label
+              @if (sortField() === 'label') {
+                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
+              }
+            </button>
+            <button
+              role="columnheader"
+              class="flex items-center gap-1 text-xs font-medium text-slate-400 uppercase tracking-wide hover:text-slate-600 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
+              (click)="toggleSort('aSide')"
+              [attr.aria-sort]="
+                sortField() === 'aSide'
+                  ? sortDir() === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              A side
+              @if (sortField() === 'aSide') {
+                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
+              }
+            </button>
+            <button
+              role="columnheader"
+              class="flex items-center gap-1 text-xs font-medium text-slate-400 uppercase tracking-wide hover:text-slate-600 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
+              (click)="toggleSort('bSide')"
+              [attr.aria-sort]="
+                sortField() === 'bSide'
+                  ? sortDir() === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              B side
+              @if (sortField() === 'bSide') {
+                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
+              }
+            </button>
+            <button
+              role="columnheader"
+              class="flex items-center gap-1 text-xs font-medium text-slate-400 uppercase tracking-wide hover:text-slate-600 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
+              (click)="toggleSort('status')"
+              [attr.aria-sort]="
+                sortField() === 'status'
+                  ? sortDir() === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              Status
+              @if (sortField() === 'status') {
+                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
+              }
+            </button>
+            <button
+              role="columnheader"
+              class="flex items-center gap-1 text-xs font-medium text-slate-400 uppercase tracking-wide hover:text-slate-600 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
+              (click)="toggleSort('type')"
+              [attr.aria-sort]="
+                sortField() === 'type' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'
+              "
+            >
+              Type
+              @if (sortField() === 'type') {
+                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
+              }
+            </button>
             <span role="columnheader"></span>
           </div>
         </div>
 
         <!-- Cable rows -->
-        @for (cable of filteredCables(); track cable.id) {
+        @for (cable of sortedFilteredCables(); track cable.id) {
           <div
             role="row"
             class="flex items-center gap-3 border-b border-slate-100 py-2.5 hover:bg-slate-50 transition-colors group cursor-pointer"
@@ -246,7 +362,7 @@
 
               <!-- Type -->
               <div role="cell">
-                <span class="text-sm text-slate-600">{{ cable.type }}</span>
+                <span class="text-sm text-slate-600">{{ CABLE_TYPE_LABEL[cable.type] }}</span>
               </div>
 
               <!-- Row actions -->
@@ -276,7 +392,7 @@
         }
 
         <!-- Empty state -->
-        @if (filteredCables().length === 0) {
+        @if (sortedFilteredCables().length === 0) {
           <div class="flex flex-col items-center justify-center py-16 text-center">
             <div
               class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400 mb-3"
@@ -288,12 +404,20 @@
           </div>
         }
 
-        <!-- Result count -->
-        @if (filteredCables().length > 0) {
-          <div class="pt-4 pb-2">
+        <!-- Result count + export -->
+        @if (sortedFilteredCables().length > 0) {
+          <div class="pt-4 pb-2 flex items-center justify-between">
             <p class="text-xs text-slate-400">
-              {{ filteredCables().length }} of {{ cables().length }} cables
+              {{ sortedFilteredCables().length }} of {{ cables().length }} cables
             </p>
+            <nldd-button
+              variant="secondary"
+              text="Download CSV"
+              start-icon="arrow-down-in-bucket"
+              size="sm"
+              (click)="exportCsv()"
+              aria-label="Export visible cables as CSV"
+            ></nldd-button>
           </div>
         }
       </div>

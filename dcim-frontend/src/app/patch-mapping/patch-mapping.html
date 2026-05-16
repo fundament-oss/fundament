@@ -18,14 +18,25 @@
     <nldd-segmented-control-item value="topology" text="Topology"></nldd-segmented-control-item>
   </nldd-segmented-control>
 
-  <nldd-button
-    variant="secondary"
-    text="Download CSV"
-    start-icon="arrow-down-in-bucket"
-    size="sm"
-    (click)="exportCsv()"
-    aria-label="Export cables as CSV"
-  ></nldd-button>
+  <!-- Shopping list button (only when there are planned cables) -->
+  @if (plannedCount() > 0) {
+    <div class="relative">
+      <nldd-button
+        variant="secondary"
+        text="Shopping list"
+        start-icon="check-list"
+        size="sm"
+        (click)="shoppingListOpen.set(true)"
+        aria-label="View shopping list of planned cables"
+      ></nldd-button>
+      <span
+        class="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold px-1 pointer-events-none"
+        aria-hidden="true"
+        >{{ plannedCount() }}</span
+      >
+    </div>
+  }
+
   <nldd-button
     variant="primary"
     text="Add cable"
@@ -50,13 +61,66 @@
       (dcSelected)="selectedDcId.set($event)"
     />
   } @else {
+    <!-- Topology filter bar -->
+    <div
+      class="shrink-0 border-b border-slate-200 bg-white px-4 py-2 flex items-center gap-3"
+      aria-label="Topology filters"
+    >
+      <span class="text-xs font-medium text-slate-500">Filter:</span>
+
+      <nldd-segmented-control
+        [value]="topologyStatusFilter()"
+        size="sm"
+        type="radio"
+        variant="text"
+        (change)="topologyStatusFilter.set($any($event).detail.value)"
+        aria-label="Filter by status"
+      >
+        <nldd-segmented-control-item value="" text="All"></nldd-segmented-control-item>
+        @for (s of CABLE_STATUSES; track s.value) {
+          <nldd-segmented-control-item
+            [attr.value]="s.value"
+            [attr.text]="s.label"
+          ></nldd-segmented-control-item>
+        }
+      </nldd-segmented-control>
+
+      <div class="flex items-center gap-1.5">
+        <label class="text-xs text-slate-500" for="topo-type-filter">Type</label>
+        <select
+          id="topo-type-filter"
+          [value]="topologyTypeFilter()"
+          (change)="topologyTypeFilter.set($any($event.target).value)"
+          class="text-xs border border-slate-200 rounded px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-accent-400"
+        >
+          <option value="">All types</option>
+          @for (t of CABLE_TYPES; track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+      </div>
+
+      @if (topologyStatusFilter() || topologyTypeFilter()) {
+        <button
+          class="text-xs text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-accent-400 rounded px-1"
+          (click)="topologyStatusFilter.set(''); topologyTypeFilter.set('')"
+        >
+          Clear
+        </button>
+      }
+    </div>
+
     <app-patch-mapping-flow
-      class="block w-full h-full"
+      class="block w-full flex-1 min-h-0"
       [cables]="dcCables()"
       [devicePorts]="DEVICE_PORTS"
       [selectedCableId]="editCable()?.id ?? null"
+      [dcId]="selectedDcId()"
+      [filterStatus]="topologyStatusFilter()"
+      [filterType]="topologyTypeFilter()"
       (cableSelected)="openEditCableById($event)"
       (deviceNavigate)="navigateToDevice($event)"
+      (connectionMade)="openAddCableFromConnection($event)"
     />
   }
 </div>
@@ -68,10 +132,24 @@
   <app-cable-form
     [cable]="editCable()"
     [dcId]="selectedDcId()"
+    [allCables]="dcCables()"
     (save)="saveFromForm($event)"
     (cancelForm)="closeForm()"
     (cableDelete)="openDeleteCable($event)"
   />
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SHOPPING LIST SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet
+  #shoppingSheet
+  accessible-label="Shopping list"
+  placement="right"
+  width="480px"
+  (close)="shoppingListOpen.set(false)"
+>
+  <app-shopping-list [cables]="plannedCables()" [dcLabel]="selectedDcLabel()" />
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
