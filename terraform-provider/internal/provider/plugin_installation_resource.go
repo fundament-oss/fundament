@@ -300,8 +300,16 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	state.Image = types.StringValue(crd.Spec.Image)
-	state.Phase = types.StringValue(crd.Status.Phase)
+	if crd.Spec.Image != "" {
+		state.Image = types.StringValue(crd.Spec.Image)
+	} else {
+		state.Image = types.StringNull()
+	}
+	if crd.Status.Phase != "" {
+		state.Phase = types.StringValue(crd.Status.Phase)
+	} else {
+		state.Phase = types.StringNull()
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }

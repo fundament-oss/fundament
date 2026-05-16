@@ -27,8 +27,11 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 			return nil
 		case organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR:
 			return fmt.Errorf("cluster %s entered ERROR state", clusterID)
+		case organizationv1.ClusterStatus_CLUSTER_STATUS_DELETING,
+			organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPING,
+			organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:
+			return fmt.Errorf("cluster %s is in a terminal state and will not reach RUNNING", clusterID)
 		default:
-			// still provisioning/starting/etc — keep polling
 		}
 
 		t := time.NewTimer(10 * time.Second)

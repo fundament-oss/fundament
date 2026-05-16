@@ -57,6 +57,29 @@ func (t *AuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return transport.RoundTrip(reqClone)
 }
 
+// tokenTransport is an http.RoundTripper that adds only a Bearer token — no org header.
+// Used for the kube-api-proxy client so that Fundament-specific headers are not leaked.
+type tokenTransport struct {
+	tokenSource TokenSource
+	transport   http.RoundTripper
+}
+
+func (t *tokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	clone := req.Clone(req.Context())
+	token, err := t.tokenSource.GetToken(req.Context())
+	if err != nil {
+		return nil, err
+	}
+	if token != "" {
+		clone.Header.Set("Authorization", "Bearer "+token)
+	}
+	tr := t.transport
+	if tr == nil {
+		tr = http.DefaultTransport
+	}
+	return tr.RoundTrip(clone)
+}
+
 // NewFundamentClientWithTokenManager creates a new FundamentClient with API key authentication.
 func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organizationID string, kubeProxyURL string) *FundamentClient {
 	transport := &AuthTransport{
@@ -64,22 +87,30 @@ func NewFundamentClientWithTokenManager(endpoint string, tm *TokenManager, organ
 		OrganizationID: organizationID,
 		Transport:      http.DefaultTransport,
 	}
-	return newFundamentClientWithTransport(endpoint, kubeProxyURL, transport)
+	kubeProxyTransport := &tokenTransport{
+		tokenSource: tm,
+		transport:   http.DefaultTransport,
+	}
+	return newFundamentClientWithTransport(endpoint, kubeProxyURL, transport, kubeProxyTransport)
 }
 
-func newFundamentClientWithTransport(endpoint string, kubeProxyURL string, transport http.RoundTripper) *FundamentClient {
+func newFundamentClientWithTransport(endpoint string, kubeProxyURL string, transport http.RoundTripper, kubeProxyTransport http.RoundTripper) *FundamentClient {
 	httpClient := &http.Client{
 		Timeout:   30 * time.Second,
 		Transport: transport,
 	}
+	// No hard timeout on the kube-proxy client — callers set a context deadline instead.
+	kubeProxyClient := &http.Client{
+		Transport: kubeProxyTransport,
+	}
 
 	return &FundamentClient{
-		ClusterService:   organizationv1connect.NewClusterServiceClient(httpClient, endpoint),
-		ProjectService:   organizationv1connect.NewProjectServiceClient(httpClient, endpoint),
-		MemberService:    organizationv1connect.NewMemberServiceClient(httpClient, endpoint),
-		InviteService:    organizationv1connect.NewInviteServiceClient(httpClient, endpoint),
-		NamespaceService: organizationv1connect.NewNamespaceServiceClient(httpClient, endpoint),
+		ClusterService:      organizationv1connect.NewClusterServiceClient(httpClient, endpoint),
+		ProjectService:      organizationv1connect.NewProjectServiceClient(httpClient, endpoint),
+		MemberService:       organizationv1connect.NewMemberServiceClient(httpClient, endpoint),
+		InviteService:       organizationv1connect.NewInviteServiceClient(httpClient, endpoint),
+		NamespaceService:    organizationv1connect.NewNamespaceServiceClient(httpClient, endpoint),
 		KubeProxyURL:        kubeProxyURL,
-		KubeProxyHTTPClient: httpClient,
+		KubeProxyHTTPClient: kubeProxyClient,
 	}
 }
