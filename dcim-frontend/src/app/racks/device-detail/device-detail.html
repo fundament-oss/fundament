@@ -443,38 +443,33 @@
                   {{ devicePorts().length }}
                 </span>
               </h2>
-              <button
-                class="text-xs text-accent-600 hover:text-accent-800 font-medium focus:outline-none focus:ring-2 focus:ring-accent-500 rounded px-2 py-1"
+              <nldd-button
+                variant="secondary"
+                size="sm"
+                text="Add port"
+                start-icon="plus-small"
                 (click)="showAddPortForm.set(!showAddPortForm())"
                 [attr.aria-expanded]="showAddPortForm()"
-              >
-                + Add Port
-              </button>
+              ></nldd-button>
             </div>
 
             <!-- Tab bar -->
-            <div
-              class="flex border-b border-gray-100 px-4 pt-1.5 gap-0.5 overflow-x-auto"
-              role="tablist"
-              aria-label="Port type tabs"
-            >
-              @for (tab of PORT_TABS; track tab) {
-                <button
-                  class="px-3 py-1.5 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-inset"
-                  [class]="
-                    activePortTab() === tab
-                      ? 'border-accent-500 text-accent-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  "
-                  (click)="activePortTab.set(tab)"
-                  role="tab"
-                  [attr.aria-selected]="activePortTab() === tab"
-                  [attr.id]="'port-tab-' + tab"
-                  [attr.aria-controls]="'port-panel-' + tab"
-                >
-                  {{ PORT_TYPE_LABEL[tab] }}
-                </button>
-              }
+            <div class="px-4 py-2 border-b border-gray-100">
+              <nldd-segmented-control
+                [value]="activePortTab()"
+                size="sm"
+                type="radio"
+                variant="text"
+                (change)="activePortTab.set($any($event).detail.value)"
+                aria-label="Port type tabs"
+              >
+                @for (tab of PORT_TABS; track tab) {
+                  <nldd-segmented-control-item
+                    [attr.value]="tab"
+                    [attr.text]="PORT_TYPE_LABEL[tab]"
+                  ></nldd-segmented-control-item>
+                }
+              </nldd-segmented-control>
             </div>
 
             <!-- Add port inline form -->
@@ -482,34 +477,32 @@
               <div
                 class="px-4 py-3 bg-slate-50 border-b border-gray-100 flex flex-wrap items-center gap-2"
               >
-                <input
-                  type="text"
+                <nldd-text-field
                   [value]="newPortName()"
                   (input)="newPortName.set($any($event.target).value)"
                   placeholder="Port name (e.g. eth4)"
-                  aria-label="New port name"
-                  class="rounded border border-gray-200 px-2 py-1 text-xs font-mono w-40 focus:border-accent-400 focus:outline-none focus:ring-2 focus:ring-accent-400/20"
-                />
-                <input
-                  type="text"
+                  accessible-label="New port name"
+                  size="sm"
+                ></nldd-text-field>
+                <nldd-text-field
                   [value]="newPortLabel()"
                   (input)="newPortLabel.set($any($event.target).value)"
                   placeholder="Label (optional)"
-                  aria-label="New port label"
-                  class="rounded border border-gray-200 px-2 py-1 text-xs w-40 focus:border-accent-400 focus:outline-none focus:ring-2 focus:ring-accent-400/20"
-                />
-                <button
+                  accessible-label="New port label"
+                  size="sm"
+                ></nldd-text-field>
+                <nldd-button
+                  variant="primary"
+                  size="sm"
+                  text="Add"
                   (click)="addPort()"
-                  class="text-xs text-white bg-accent-600 hover:bg-accent-700 font-medium px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
-                >
-                  Add
-                </button>
-                <button
+                ></nldd-button>
+                <nldd-button
+                  variant="secondary"
+                  size="sm"
+                  text="Cancel"
                   (click)="showAddPortForm.set(false)"
-                  class="text-xs text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
-                >
-                  Cancel
-                </button>
+                ></nldd-button>
               </div>
             }
 
@@ -574,21 +567,21 @@
                             class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1"
                           >
                             @if (cable) {
-                              <button
+                              <nldd-button
+                                variant="secondary"
+                                size="xs"
+                                text="Disconnect"
                                 (click)="disconnectCable(port.id)"
-                                class="text-[10px] text-red-500 hover:text-red-700 font-medium px-1.5 py-0.5 rounded hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400"
                                 [attr.aria-label]="'Disconnect ' + port.name"
-                              >
-                                Disconnect
-                              </button>
+                              ></nldd-button>
                             } @else {
-                              <button
+                              <nldd-button
+                                variant="secondary"
+                                size="xs"
+                                text="Connect"
                                 (click)="openConnectForm(port)"
-                                class="text-[10px] text-accent-600 hover:text-accent-800 font-medium px-1.5 py-0.5 rounded hover:bg-accent-50 focus:outline-none focus:ring-2 focus:ring-accent-400"
                                 [attr.aria-label]="'Connect ' + port.name"
-                              >
-                                Connect
-                              </button>
+                              ></nldd-button>
                             }
                           </div>
                         </td>
@@ -597,14 +590,14 @@
                   </tbody>
                 </table>
               } @else {
-                <div class="py-8 text-center text-gray-400 text-xs">
+                <div class="py-8 flex flex-col items-center gap-2 text-gray-400 text-xs">
                   No {{ PORT_TYPE_LABEL[activePortTab()] | lowercase }} on this device.
-                  <button
-                    class="block mx-auto mt-2 text-accent-500 hover:text-accent-700 underline focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
+                  <nldd-button
+                    variant="secondary"
+                    size="sm"
+                    text="Add one"
                     (click)="showAddPortForm.set(true)"
-                  >
-                    Add one
-                  </button>
+                  ></nldd-button>
                 </div>
               }
             </div>
@@ -664,25 +657,21 @@
                   Y
                 </div>
                 <div class="flex-1 relative">
-                  <input
-                    type="text"
+                  <nldd-text-field
                     [value]="newNoteText()"
-                    (input)="newNoteText.set($any($event.target).value)"
+                    (change)="newNoteText.set($any($event).detail?.value ?? '')"
                     (keydown.enter)="addNote()"
                     placeholder="Add a note…"
-                    aria-label="Add a note"
-                    class="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-3 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
-                  />
+                    accessible-label="Add a note"
+                    size="sm"
+                    class="w-full"
+                  ></nldd-text-field>
                   <button
-                    (click)="addNote()"
-                    class="cursor-pointer absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
                     aria-label="Send note"
+                    (click)="addNote()"
                   >
-                    <nldd-icon
-                      name="square-arrow-up"
-                      style="width: 16px; height: 16px; display: block"
-                      aria-hidden="true"
-                    ></nldd-icon>
+                    <nldd-icon name="arrow-right" class="w-4 h-4 block"></nldd-icon>
                   </button>
                 </div>
               </div>
