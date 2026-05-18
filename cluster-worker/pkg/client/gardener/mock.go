@@ -300,29 +300,7 @@ func (m *MockClient) GetShootStatus(ctx context.Context, cluster *ClusterToSync)
 	// Look up shoot by cluster ID (not shoot name)
 	shoot, shootName := m.findShootByClusterID(cluster.ID)
 	if shoot == nil {
-		if cluster.ShootName == "" {
-			return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}, nil
-		}
-		// Auto-recover: shoot is missing (e.g. after a restart cleared in-memory state).
-		// Re-create it so status progression can continue without requiring a full re-sync.
-		now := m.clock()
-		m.shoots[cluster.ShootName] = &mockShoot{
-			Info: ShootInfo{
-				Name:      cluster.ShootName,
-				Namespace: cluster.Namespace,
-				ClusterID: cluster.ID,
-				Labels: map[string]string{
-					LabelClusterID:      cluster.ID.String(),
-					LabelOrganizationID: cluster.OrganizationID.String(),
-				},
-			},
-			CreatedAt: now,
-			Cluster:   *cluster,
-		}
-		shoot = m.shoots[cluster.ShootName]
-		shootName = cluster.ShootName
-		m.logger.Info("MOCK: auto-recovered missing shoot on status poll",
-			"shoot", shootName, "cluster_id", cluster.ID)
+		return &ShootStatus{Status: StatusPending, Message: MsgShootNotFound}, nil
 	}
 
 	now := m.clock()

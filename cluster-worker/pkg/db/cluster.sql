@@ -112,11 +112,9 @@ FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
 WHERE
-    ( -- Cluster has been submitted to Gardener at least once: has shoot_status,
-      -- a completed outbox row, or an exhausted-failed outbox row (sync attempted
-      -- but failed, e.g. transient errors — status poller can still recover via mock)
+    ( -- Cluster has been synced: has shoot_status or a completed outbox row
         tenant.clusters.shoot_status IS NOT NULL
-        OR tenant.clusters.outbox_status IN ('completed', 'failed')
+        OR tenant.clusters.outbox_status = 'completed'
     )
     AND tenant.clusters.deleted IS NULL -- Active (not deleted)
     AND (
