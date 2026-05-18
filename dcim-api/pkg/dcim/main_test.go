@@ -1,4 +1,4 @@
-package cluster_test
+package dcim_test
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"github.com/fundament-oss/fundament/common/testdb"
 )
 
-const testDBPort = 45326
+const testDBPort = 45328
 
 func TestMain(m *testing.M) {
 	cacheDir := os.Getenv("FUNDAMENT_TEST_CACHE_DIR")
@@ -30,12 +30,10 @@ func TestMain(m *testing.M) {
 			log.Fatalf("failed to determine user cache directory: %v", err)
 		}
 
-		cacheDir = filepath.Join(userCache, "fundament-test-pg-cw")
-	} else {
-		cacheDir += "-cw"
+		cacheDir = filepath.Join(userCache, "fundament-test-pg-dcim")
 	}
 
-	err := os.MkdirAll(cacheDir, 0o750)
+	err := os.MkdirAll(cacheDir, 0o755)
 	if err != nil {
 		log.Fatalf("failed to create cache directory: %v", err)
 	}
@@ -59,7 +57,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 	} else {
-		log.Printf("setting up new embedded-postgres installation %q", cacheDir)
+		log.Printf("setting up new embedded-postgres installation at %q", cacheDir)
 		epDB := createAndStartNewEmbeddedPostgres(cacheDir, dataDir)
 
 		stopPostgres = func() {
@@ -79,15 +77,15 @@ func TestMain(m *testing.M) {
 	}()
 
 	adminPool := newAdminPool()
+	defer adminPool.Close()
 
+	useGlobalTrustAuth(dataDir, adminPool)
 	testdb.CreateRoles(context.Background(), adminPool)
 
-	if err = setupTemplateDatabaseWithMigrations(adminPool); err != nil {
-		adminPool.Close()
+	err = setupTemplateDatabaseWithMigrations(adminPool)
+	if err != nil {
 		log.Fatalf("failed to setup template database: %v", err)
 	}
-
-	adminPool.Close()
 
 	code := m.Run()
 
@@ -96,6 +94,9 @@ func TestMain(m *testing.M) {
 }
 
 func startExistingEmbeddedPostgres(pgBin, dataDir string) {
+	// We run `pg_ctl` directly, since the `Start` method of embedded-postgres deletes
+	// the postgres binaries every time. There is no workaround currently.
+	// See https://github.com/fergusstrange/embedded-postgres/issues/154
 	removeStalePostmasterPID(pgBin, dataDir)
 
 	pgCtl := filepath.Join(pgBin, "pg_ctl")
@@ -133,13 +134,13 @@ func removeStalePostmasterPID(pgBin, dataDir string) {
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d)", pid)
-		_ = os.Remove(pidFile)
+		os.Remove(pidFile)
 		return
 	}
 
 	if err := process.Signal(syscall.Signal(0)); err != nil {
 		log.Printf("removing stale postmaster.pid (pid %d no longer running)", pid)
-		_ = os.Remove(pidFile)
+		os.Remove(pidFile)
 		return
 	}
 
@@ -184,14 +185,14 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 
 	_, err := pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = false WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to unmark fundament as template: %w", err)
+		return fmt.Errorf("failed to unmark fundament as template: %v", err)
 	}
 
 	trekApply(projectRoot)
 
 	_, err = pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = true WHERE datname = 'fundament'")
 	if err != nil {
-		return fmt.Errorf("failed to mark fundament as template: %w", err)
+		return fmt.Errorf("failed to mark fundament as template: %v", err)
 	}
 
 	return nil
@@ -229,8 +230,43 @@ func newAdminPool() *pgxpool.Pool {
 	return pool
 }
 
+// The embedded-postgres library hardcodes `initdb -A password`, so `pg_hba.conf` requires
+// password auth for every connection. In this function we reconfigure PostgreSQL
+// to use 'trust', which means it will accept connections without any credential check.
+func useGlobalTrustAuth(dataDir string, pool *pgxpool.Pool) {
+	pgHBAPath := filepath.Join(dataDir, "pg_hba.conf")
+	content, err := os.ReadFile(pgHBAPath)
+	if err != nil {
+		log.Fatalf("failed to read pg_hba.conf: %v", err)
+	}
+	updated := strings.ReplaceAll(string(content), " password\n", " trust\n")
+	if err := os.WriteFile(pgHBAPath, []byte(updated), 0o600); err != nil {
+		log.Fatalf("failed to write pg_hba.conf: %v", err)
+	}
+	if _, err := pool.Exec(context.Background(), "SELECT pg_reload_conf()"); err != nil {
+		log.Fatalf("failed to reload pg_hba.conf: %v", err)
+	}
+}
+
 func trekApply(projectRoot string) {
-	cmd := exec.Command("trek", "apply",
+	trekBin, err := exec.LookPath("trek")
+	if err != nil {
+		candidates := []string{
+			filepath.Join(os.Getenv("HOME"), ".local/share/mise/shims/trek"),
+			filepath.Join(os.Getenv("HOME"), ".asdf/shims/trek"),
+		}
+		for _, c := range candidates {
+			if _, statErr := os.Stat(c); statErr == nil {
+				trekBin = c
+				break
+			}
+		}
+		if trekBin == "" {
+			log.Fatalf("trek binary not found in PATH or common tool-manager locations: %v", err)
+		}
+	}
+
+	cmd := exec.Command(trekBin, "apply",
 		"--reset-database",
 		"--insert-test-data",
 		"--postgres-host", "localhost",
