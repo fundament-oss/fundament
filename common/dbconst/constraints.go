@@ -301,6 +301,8 @@ const (
 	ConstraintSitesUqName = "sites_uq_name"
 	// ConstraintTagsUqName is defined on appstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
+	// ConstraintTaskStepsUqTaskOrdinal is defined on dcim.task_steps.
+	ConstraintTaskStepsUqTaskOrdinal = "task_steps_uq_task_ordinal"
 	// ConstraintTasksCkCategory is defined on dcim.tasks.
 	ConstraintTasksCkCategory = "tasks_ck_category"
 	// ConstraintTasksCkPriority is defined on dcim.tasks.

@@ -16,6 +16,7 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/rs/cors"
@@ -29,6 +30,7 @@ type Config struct {
 	MockPrometheusClient *prom.MockClient
 	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
 	KubeAPIProxyURL      string // Base URL for the kube-api-proxy (e.g. "https://kube-proxy.fundament.example")
+	GardenerClient       gardener.Client
 }
 
 type Server struct {
@@ -43,6 +45,7 @@ type Server struct {
 	handler        http.Handler
 	mockPromClient *prom.MockClient
 	prometheusURL  string
+	gardener       gardener.Client
 }
 
 // Option configures optional Server dependencies.
@@ -61,6 +64,11 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		clk = clock.New()
 	}
 
+	gardenerClient := cfg.GardenerClient
+	if gardenerClient == nil {
+		gardenerClient = gardener.NoopClient{}
+	}
+
 	s := &Server{
 		logger:         logger,
 		config:         cfg,
@@ -71,6 +79,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		clock:          clk,
 		mockPromClient: cfg.MockPrometheusClient,
 		prometheusURL:  cfg.PrometheusURL,
+		gardener:       gardenerClient,
 	}
 
 	for _, opt := range opts {

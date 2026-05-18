@@ -83,7 +83,8 @@ clusterWorker:
   replicas: 1
   logLevel: info
   gardenerMode: mock # mock or real
-  gardenerKubeconfigSecret: "" # Secret name containing kubeconfig for real mode
+  # Gardener kubeconfig secret for real mode. Also consumed by authn-api and organization-api.
+  gardenerKubeconfigSecret: ""
 
 # Console Frontend
 consoleFrontend:
