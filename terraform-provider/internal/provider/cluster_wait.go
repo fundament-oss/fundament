@@ -11,7 +11,13 @@ import (
 
 // waitForClusterRunning polls GetCluster until status == RUNNING.
 // Returns error if cluster enters ERROR state or ctx deadline elapses.
+// Transient errors (including not_found, which can occur briefly after creation)
+// are retried; only consecutive failures beyond the threshold are fatal.
 func waitForClusterRunning(ctx context.Context, client *FundamentClient, clusterID string) error {
+	const maxConsecutiveErrors = 5
+
+	consecutiveErrors := 0
+
 	for {
 		req := connect.NewRequest(organizationv1.GetClusterRequest_builder{
 			ClusterId: clusterID,
@@ -19,8 +25,21 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 
 		resp, err := client.ClusterService.GetCluster(ctx, req)
 		if err != nil {
-			return fmt.Errorf("polling cluster status: %w", err)
+			consecutiveErrors++
+			if consecutiveErrors >= maxConsecutiveErrors {
+				return fmt.Errorf("polling cluster status: %w", err)
+			}
+			t := time.NewTimer(10 * time.Second)
+			select {
+			case <-ctx.Done():
+				t.Stop()
+				return ctx.Err()
+			case <-t.C:
+			}
+			continue
 		}
+
+		consecutiveErrors = 0
 
 		switch resp.Msg.GetCluster().GetStatus() {
 		case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING:

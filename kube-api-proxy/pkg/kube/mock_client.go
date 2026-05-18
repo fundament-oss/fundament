@@ -95,6 +95,19 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 		}
 		m.mu.Unlock()
 		return 200, r(`{}`), nil
+	case strings.HasPrefix(path, pluginInstallationsPath+"/") && method == http.MethodGet:
+		name := path[len(pluginInstallationsPath)+1:]
+		m.mu.Lock()
+		items := m.installItemsForCluster(clusterID)
+		m.mu.Unlock()
+		for _, item := range items {
+			meta, _ := item["metadata"].(map[string]any)
+			if meta["name"] == name {
+				b, _ := json.Marshal(item)
+				return 200, r(string(b)), nil
+			}
+		}
+		return 404, r(`{"message":"not found"}`), nil
 	case path == pluginInstallationsPath:
 		return 200, r(m.installationsListJSON(clusterID)), nil
 	case strings.HasPrefix(path, crdBasePath+"/"):
