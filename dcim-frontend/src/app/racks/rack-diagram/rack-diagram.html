@@ -2,14 +2,11 @@
   <!-- U-position numbers (outside rack, left) -->
   <div class="shrink-0 w-5 flex flex-col gap-px mr-2" style="padding-top: 37px" aria-hidden="true">
     @for (slot of rackSlots(); track slot.u) {
-      @if (slot.isFirst) {
-        <div
-          class="text-right text-[10px] text-neutral-500 font-mono select-none flex items-start justify-end pt-1"
-          [style.height.px]="slot.device ? deviceHeight(slot.device) : 28"
-        >
-          {{ slot.u }}
-        </div>
-      }
+      <div
+        class="h-7 text-right text-[10px] text-neutral-500 font-mono select-none flex items-start justify-end pt-1"
+      >
+        {{ slot.u }}
+      </div>
     }
   </div>
 
@@ -75,7 +72,7 @@
                   }
 
                   <!-- Primary label -->
-                  <span class="text-xs font-medium font-mono truncate flex-1 min-w-0">
+                  <span class="text-xs font-medium font-mono truncate flex-1 min-w-0 text-left">
                     @if (viewMode() === 'front') {
                       {{ slot.device.name }}
                     } @else {
@@ -115,10 +112,6 @@
         }
       </div>
 
-      <!-- Bottom cap -->
-      <div class="px-3 py-1.5 border-t border-neutral-200" aria-hidden="true">
-        <span class="text-xs font-mono text-neutral-600">{{ rack().name }}</span>
-      </div>
     </div>
 
     <!-- Right power bar -->
