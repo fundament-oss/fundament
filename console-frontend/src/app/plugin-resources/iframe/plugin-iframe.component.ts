@@ -61,7 +61,8 @@ function buildResourceUrl(
   clusterId: string,
   args: { group: string; version: string; resource: string; namespace?: string; name?: string },
 ): string {
-  const groupPart = args.group === '' ? `api/${args.version}` : `apis/${args.group}/${args.version}`;
+  const groupPart =
+    args.group === '' ? `api/${args.version}` : `apis/${args.group}/${args.version}`;
   const nsPart = args.namespace ? `/namespaces/${encodeURIComponent(args.namespace)}` : '';
   const namePart = args.name ? `/${encodeURIComponent(args.name)}` : '';
   return `${base}/clusters/${encodeURIComponent(clusterId)}/${groupPart}${nsPart}/${encodeURIComponent(args.resource)}${namePart}`;

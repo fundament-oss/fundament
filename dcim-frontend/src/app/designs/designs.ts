@@ -103,7 +103,13 @@ export default class DesignsComponent implements OnInit {
     if (!name?.trim()) return;
     firstValueFrom(this.designApi.createDesign(name.trim()))
       .then((res) => {
-        const design: LogicalDesign = { id: res.designId, name: name.trim(), version: 1, status: 'draft', created: new Date().toISOString() };
+        const design: LogicalDesign = {
+          id: res.designId,
+          name: name.trim(),
+          version: 1,
+          status: 'draft',
+          created: new Date().toISOString(),
+        };
         this.mutableDesigns.update((list) => [design, ...list]);
         this.editDesign.set(null);
       })

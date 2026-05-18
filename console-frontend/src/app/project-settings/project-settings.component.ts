@@ -153,7 +153,7 @@ export default class ProjectSettingsComponent implements OnInit {
       await firstValueFrom(this.projectClient.deleteProject(request));
 
       this.showDeleteModal.set(false);
-      this.toastService.info(`Project '${currentProject.name}' deleted`);
+      this.toastService.success(`Project '${currentProject.name}' deleted`);
 
       // Reload project data to update the selector modal
       await this.organizationDataService.reloadProjectsAndNamespaces();

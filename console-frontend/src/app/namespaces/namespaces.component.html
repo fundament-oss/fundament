@@ -19,18 +19,32 @@
   </div>
 
   <div class="p-6">
-    <nldd-button
-      type="button"
-      (click)="openCreateNamespaceModal()"
-      text="Create namespace"
-      start-icon="plus-small"
-      variant="primary"
-      class="mb-6"
-    ></nldd-button>
-
     @if (namespaces().length === 0) {
-      <p class="text-gray-500 dark:text-gray-400">No namespaces belong to this project yet.</p>
+      <nldd-box>
+        <nldd-inline-dialog
+          icon="brackets-ellipsis"
+          icon-color="secondary"
+          text="No namespaces belong to this project yet."
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="openCreateNamespaceModal()"
+            text="Create namespace"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      </nldd-box>
     } @else {
+      <nldd-button
+        type="button"
+        (click)="openCreateNamespaceModal()"
+        text="Create namespace"
+        start-icon="plus-small"
+        variant="primary"
+        class="mb-6"
+      ></nldd-button>
       <div class="space-y-3">
         @for (namespace of namespaces(); track namespace.id) {
           <div
@@ -91,19 +105,19 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showCreateNamespaceModal.set(false)"
-    [disabled]="isCreatingNamespace()"
-    text="Cancel"
-    variant="secondary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
     (click)="createNamespace()"
     text="Create namespace"
     [text]="isCreatingNamespace() ? 'Creating...' : 'Create namespace'"
     [disabled]="isCreatingNamespace() || !namespaceForm.valid"
     variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showCreateNamespaceModal.set(false)"
+    [disabled]="isCreatingNamespace()"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -131,15 +145,15 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showDeleteNamespaceModal.set(false)"
-    text="Cancel"
-    variant="secondary"
+    (click)="confirmDeleteNamespace()"
+    text="Yes, delete this namespace"
+    variant="destructive"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
-    (click)="confirmDeleteNamespace()"
-    text="Yes, delete this namespace"
-    variant="destructive"
+    (click)="showDeleteNamespaceModal.set(false)"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
