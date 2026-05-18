@@ -16,6 +16,12 @@ func TestPluginInstallationSpec_PermissionsRoundTrip(t *testing.T) {
 					Resources: []string{"certificates", "certificaterequests"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
+				{
+					APIGroups:     []string{""},
+					Resources:     []string{"secrets"},
+					Verbs:         []string{"get"},
+					ResourceNames: []string{"cert-manager-webhook-ca"},
+				},
 			},
 		},
 	}
@@ -30,8 +36,8 @@ func TestPluginInstallationSpec_PermissionsRoundTrip(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	if len(got.Permissions.RBAC) != 1 {
-		t.Fatalf("RBAC = %v, want 1 rule", got.Permissions.RBAC)
+	if len(got.Permissions.RBAC) != 2 {
+		t.Fatalf("RBAC = %v, want 2 rules", got.Permissions.RBAC)
 	}
 	rule := got.Permissions.RBAC[0]
 	if rule.APIGroups[0] != "cert-manager.io" {
@@ -42,6 +48,29 @@ func TestPluginInstallationSpec_PermissionsRoundTrip(t *testing.T) {
 	}
 	if rule.Verbs[0] != "get" {
 		t.Errorf("Verbs = %v", rule.Verbs)
+	}
+	if rule.ResourceNames != nil {
+		t.Errorf("ResourceNames on rule 0 = %v, want nil", rule.ResourceNames)
+	}
+
+	named := got.Permissions.RBAC[1]
+	if len(named.ResourceNames) != 1 || named.ResourceNames[0] != "cert-manager-webhook-ca" {
+		t.Errorf("ResourceNames = %v", named.ResourceNames)
+	}
+}
+
+func TestRBACRule_ResourceNamesOmittedWhenEmpty(t *testing.T) {
+	rule := RBACRule{
+		APIGroups: []string{"cert-manager.io"},
+		Resources: []string{"certificates"},
+		Verbs:     []string{"list"},
+	}
+	data, err := json.Marshal(rule)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if got := string(data); contains(got, "resourceNames") {
+		t.Errorf("expected 'resourceNames' to be omitted when empty, got JSON: %s", got)
 	}
 }
 

@@ -40,7 +40,8 @@ type PluginInstallationSpec struct {
 
 // PluginPermissions carries the consented permissions for a plugin install.
 // It mirrors the `permissions` block of the PluginDefinition manifest at
-// install time and is the source of truth used when minting PluginTokens.
+// install time. The CR is the source of truth read live by kube-api-proxy
+// at request-validation time; PluginTokens carry only identity and binding.
 //
 // +k8s:deepcopy-gen=true
 type PluginPermissions struct {
@@ -52,9 +53,10 @@ type PluginPermissions struct {
 //
 // +k8s:deepcopy-gen=true
 type RBACRule struct {
-	APIGroups []string `json:"apiGroups,omitempty"`
-	Resources []string `json:"resources,omitempty"`
-	Verbs     []string `json:"verbs"`
+	APIGroups     []string `json:"apiGroups,omitempty"`
+	Resources     []string `json:"resources,omitempty"`
+	Verbs         []string `json:"verbs"`
+	ResourceNames []string `json:"resourceNames,omitempty"`
 }
 
 type PluginInstallationStatus struct {

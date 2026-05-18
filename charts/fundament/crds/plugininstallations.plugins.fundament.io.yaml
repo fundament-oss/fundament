@@ -85,6 +85,10 @@ spec:
                             type: array
                             items:
                               type: string
+                          resourceNames:
+                            type: array
+                            items:
+                              type: string
                 config:
                   type: object
                   additionalProperties:
