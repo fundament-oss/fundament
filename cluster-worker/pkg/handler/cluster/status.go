@@ -56,6 +56,7 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 		}
 
 		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
+		clusterToSync.ShootName = gardener.GenerateShootName(cluster.Name, cluster.ID)
 
 		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
@@ -172,6 +173,7 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 		}
 
 		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
+		clusterToSync.ShootName = gardener.GenerateShootName(cluster.Name, cluster.ID)
 		clusterToSync.Deleted = deleted
 
 		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
