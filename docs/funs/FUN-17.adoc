@@ -29,13 +29,13 @@ The escalation wall depends on every existing JWT validator enforcing `aud=funda
 
 == Scoping: user intersect plugin
 
-A PluginToken's effective permissions are the intersection of what the user is allowed to do and what the plugin manifest declared. Two enforcement points realize the intersection.
+A PluginToken's effective permissions are the intersection of what the user is allowed to do and what the plugin manifest declared. The two proxies that accept PluginTokens enforce that intersection in different shapes, because they speak to different backends.
 
-The plugin-scope half is enforced at the proxy. `kube-api-proxy` parses the K8s URL into `(apiGroup, resource, verb, resourceName?)` and matches it against the current scope on the `PluginInstallation` CR (served from a local informer cache, see below). A cert-manager plugin token that lists pods is rejected with 403 before the request reaches the cluster, regardless of who the user is.
+`plugin-proxy` forwards `/installations/{id}/runtime/*` and `/installations/{id}/controller/*` requests to the plugin pod and the plugin-controller, not to the Kubernetes API. There is no kube scope to apply, so authorization reduces to: `aud=fundament-plugin`, the URL's `installation_id` matches the claim, and OpenFGA `can_view` on `(user, cluster)` still holds. The OpenFGA result is cached per `(user, cluster)` for a few seconds to keep the hot path fast; revocation lag is bounded by that cache plus the 15-minute token TTL.
 
-The user-permission half is enforced via the existing per-user ServiceAccount token that `kube-api-proxy` injects downstream. That SA token's permissions inside the cluster are exactly the user's project memberships, as today. A request that satisfies the plugin's scope but exceeds the user's project permissions is rejected by the cluster's own RBAC. Namespace-level enforcement lives here: a plugin scope says "read Certificates"; the user's SA decides *in which namespaces*.
+`kube-api-proxy` enforces the same OpenFGA gate plus two more. The plugin-scope half: the proxy parses the K8s URL into `(apiGroup, resource, verb, resourceName?)` and matches it against the current scope on the `PluginInstallation` CR (served from a local informer cache, see below). A cert-manager plugin token that lists pods is rejected with 403 before the request reaches the cluster, regardless of who the user is. The user-permission half is enforced via the existing per-user ServiceAccount token that `kube-api-proxy` injects downstream. That SA token's permissions inside the cluster are exactly the user's project memberships, as today. A request that satisfies the plugin's scope but exceeds the user's project permissions is rejected by the cluster's own RBAC. Namespace-level enforcement lives here: a plugin scope says "read Certificates"; the user's SA decides *in which namespaces*.
 
-The mechanism is deliberately defense-in-depth. Either half failing produces a denial; both halves succeeding produces an allow.
+The mechanism is deliberately defense-in-depth. Any gate failing produces a denial; all succeeding produces an allow.
 
 == Where the scope comes from
 
@@ -140,7 +140,7 @@ Within those bounds, a compromised plugin can read and write exactly the resourc
 We rely on short TTL plus mint-time gating rather than a deny-list. Each refresh re-runs the gate:
 
 - The user logs out → cookie cleared → next mint has no `UserToken` → 401 → host emits `fundament:auth-failed`. Live tokens expire on their own within 15 minutes.
-- The user loses cluster access (removed from org or project) → OpenFGA `can_view` returns false on the next mint → 403. In-flight streams die when the user's SA loses its cluster RoleBindings.
+- The user loses cluster access (removed from org or project) → OpenFGA `can_view` returns false at mint time and at every subsequent proxy request → 403 once the per-proxy OpenFGA cache (a few seconds) drains. In-flight streams die when the user's SA loses its cluster RoleBindings.
 - The plugin is uninstalled → `GetInstallationManifest` returns `NotFound`, or `FailedPrecondition` if the CR carries a non-zero `metadata.deletionTimestamp` → next mint fails. The runtime pod is being torn down regardless.
 - The plugin scope changes (admin re-consents during an upgrade) → CR `spec.permissions.rbac` is patched → `kube-api-proxy`'s informer picks up the update within seconds → next request is matched against the new scope. Narrowing and widening propagate symmetrically through the informer; the only asymmetry is that new permissions require re-consent before they can apply.
 - `JWT_SECRET` rotates → every token (both types) is invalidated, same as today.
@@ -156,9 +156,9 @@ Two pieces of net-new infrastructure, plus modest changes to existing services.
 `plugin-proxy` is a new service alongside `kube-api-proxy`. It carries two distinct surfaces:
 
 - *Internal:* a single `PluginInstallationService.GetInstallationManifest` RPC returning `{plugin_name, plugin_version, organization_id, status}`. Bound to a cluster-internal Service and restricted by NetworkPolicy to `authn-api`'s ServiceAccount.
-- *Public:* static asset serving at `/plugins/{name}/{version}/console/*` (CSP-decorated, no auth, long cache), and authenticated proxying at `/installations/{id}/runtime/*` (plugin pod) and `/installations/{id}/controller/*` (plugin-controller status). The authenticated routes require a PluginToken whose `installation_id` matches the URL.
+- *Public:* static asset serving at `/plugins/{name}/{version}/console/*` (CSP-decorated, no auth, long cache), and authenticated proxying at `/installations/{id}/runtime/*` (plugin pod) and `/installations/{id}/controller/*` (plugin-controller status). The authenticated routes require a PluginToken whose `installation_id` matches the URL, and an OpenFGA `can_view` check that the token's user still has access to `claims.cluster_id`. The OpenFGA result is cached per `(user, cluster)` for a few seconds.
 
-`kube-api-proxy` learns to accept both token types. For PluginToken requests it adds three gates: `aud=fundament-plugin`, `cluster_id` in the URL must equal `claims.cluster_id`, and the parsed `(apiGroup, resource, verb, resourceName?)` of the K8s request must match a rule in the current `PluginInstallation` CR scope. The scope is served from a local `PluginInstallation` informer keyed by `(cluster, installation_id)`; informer updates propagate scope changes within seconds. The per-user ServiceAccount injection is unchanged — the plugin still acts as the user inside the cluster, and in-cluster audit continues to show the user as the actor.
+`kube-api-proxy` learns to accept both token types. For PluginToken requests it adds four gates: `aud=fundament-plugin`, `cluster_id` in the URL must equal `claims.cluster_id`, OpenFGA `can_view` on `(user, cluster)` (same short cache as `plugin-proxy`), and the parsed `(apiGroup, resource, verb, resourceName?)` of the K8s request must match a rule in the current `PluginInstallation` CR scope. The scope is served from a local `PluginInstallation` informer keyed by `(cluster, installation_id)`; informer updates propagate scope changes within seconds. The per-user ServiceAccount injection is unchanged — the plugin still acts as the user inside the cluster, and in-cluster audit continues to show the user as the actor.
 
 For PluginToken requests, the proxy additionally emits a structured stdout audit line tagged with the user, installation, plugin name, and version, so forensic queries can attribute cluster mutations to a specific plugin installation — the cluster's own audit log shows only the per-user SA.
 
