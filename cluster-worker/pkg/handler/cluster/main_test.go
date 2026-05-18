@@ -80,7 +80,7 @@ func TestMain(m *testing.M) {
 
 	adminPool := newAdminPool()
 
-	createRoles(adminPool)
+	testdb.CreateRoles(context.Background(), adminPool)
 
 	if err = setupTemplateDatabaseWithMigrations(adminPool); err != nil {
 		adminPool.Close()
@@ -227,16 +227,6 @@ func newAdminPool() *pgxpool.Pool {
 		log.Fatalf("failed to connect to postgres: %v", err)
 	}
 	return pool
-}
-
-func createRoles(pool *pgxpool.Pool) {
-	ctx := context.Background()
-	for _, role := range testdb.Roles {
-		_, err := pool.Exec(ctx, fmt.Sprintf(`DO $$ BEGIN CREATE ROLE %s WITH LOGIN PASSWORD '%s'; EXCEPTION WHEN duplicate_object THEN ALTER ROLE %s WITH PASSWORD '%s'; END $$`, role.Name, role.Name, role.Name, role.Name))
-		if err != nil {
-			log.Fatalf("failed to create role %s: %v", role.Name, err)
-		}
-	}
 }
 
 func trekApply(projectRoot string) {

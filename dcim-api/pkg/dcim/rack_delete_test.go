@@ -7,9 +7,30 @@ import (
 	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
+	"github.com/stretchr/testify/require"
 )
 
-func TestRackService_DeleteRack(t *testing.T) {
+func TestRackService_DeleteRack_HappyFlow(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+	client := dcimv1connect.NewRackServiceClient(env.server.Client(), env.server.URL)
+
+	rowID := createRackRowFixture(t, env, "Rack Delete")
+	rackID := createRack(t, env, rowID, "Rack To Delete", 24)
+
+	_, err := client.DeleteRack(context.Background(), connect.NewRequest(
+		(&dcimv1.DeleteRackRequest_builder{Id: rackID}).Build(),
+	))
+	require.NoError(t, err)
+
+	_, err = client.GetRack(context.Background(), connect.NewRequest(
+		(&dcimv1.GetRackRequest_builder{Id: rackID}).Build(),
+	))
+	requireCode(t, err, connect.CodeNotFound)
+}
+
+func TestRackService_DeleteRack_Errors(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)

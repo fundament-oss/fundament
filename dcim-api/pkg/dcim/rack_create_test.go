@@ -7,9 +7,31 @@ import (
 	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestRackService_CreateRack(t *testing.T) {
+func TestRackService_CreateRack_HappyFlow(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+	client := dcimv1connect.NewRackServiceClient(env.server.Client(), env.server.URL)
+
+	rowID := createRackRowFixture(t, env, "Rack Create")
+
+	resp, err := client.CreateRack(context.Background(), connect.NewRequest(
+		(&dcimv1.CreateRackRequest_builder{
+			RowId:      rowID,
+			Name:       "Rack A",
+			TotalUnits: 42,
+		}).Build(),
+	))
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, resp.Msg.GetRackId())
+}
+
+func TestRackService_CreateRack_Errors(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)

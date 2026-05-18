@@ -7,7 +7,28 @@ import (
 	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestSiteService_GetSite_HappyFlow(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+
+	siteID := createSite(t, env, "Site Get Success")
+
+	resp, err := client.GetSite(context.Background(), connect.NewRequest(
+		(&dcimv1.GetSiteRequest_builder{Id: siteID}).Build(),
+	))
+	require.NoError(t, err)
+
+	site := resp.Msg.GetSite()
+	require.NotNil(t, site)
+	assert.Equal(t, siteID, site.GetId())
+	assert.Equal(t, "Site Get Success", site.GetName())
+}
 
 func TestSiteService_GetSite(t *testing.T) {
 	t.Parallel()
