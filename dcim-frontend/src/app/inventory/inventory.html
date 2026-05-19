@@ -586,7 +586,7 @@
       dismiss-text="Close"
       (dismiss)="closeAssetForm()"
     ></nldd-top-title-bar>
-    <nldd-simple-section>
+    <nldd-simple-section class="space-y-4">
       <nldd-form-field label="Model">
         <nldd-text-field
           #fAssetModel
@@ -603,29 +603,25 @@
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Category">
-          <nldd-dropdown #fAssetCat>
-            <select>
-              @for (cat of categories; track cat) {
-                <option [value]="cat" [attr.selected]="editAsset()?.category === cat ? true : null">
-                  {{ cat }}
-                </option>
-              }
-            </select>
-          </nldd-dropdown>
+          <select #fAssetCat>
+            @for (cat of categories; track cat) {
+              <option [value]="cat" [attr.selected]="editAsset()?.category === cat ? true : null">
+                {{ cat }}
+              </option>
+            }
+          </select>
         </nldd-form-field>
         <nldd-form-field label="Status">
-          <nldd-dropdown #fAssetStatus>
-            <select>
-              @for (s of statuses; track s.value) {
-                <option
-                  [value]="s.value"
-                  [attr.selected]="editAsset()?.status === s.value ? true : null"
-                >
-                  {{ s.label }}
-                </option>
-              }
-            </select>
-          </nldd-dropdown>
+          <select #fAssetStatus>
+            @for (s of statuses; track s.value) {
+              <option
+                [value]="s.value"
+                [attr.selected]="editAsset()?.status === s.value ? true : null"
+              >
+                {{ s.label }}
+              </option>
+            }
+          </select>
         </nldd-form-field>
       </div>
       <div class="grid grid-cols-2 gap-3">
@@ -645,11 +641,11 @@
         </nldd-form-field>
       </div>
       <nldd-form-field label="Notes" [optional]="true">
-        <nldd-text-field
+        <nldd-multi-line-text-field
           #fAssetNotes
           [attr.value]="editAsset()?.notes ?? ''"
           placeholder="Additional notes…"
-        ></nldd-text-field>
+        ></nldd-multi-line-text-field>
       </nldd-form-field>
     </nldd-simple-section>
     <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">

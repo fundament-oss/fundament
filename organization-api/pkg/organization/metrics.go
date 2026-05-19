@@ -810,10 +810,15 @@ func sumTimeSeries(allSeries [][]prom.TimeSeries) []prom.TimeSeries {
 	return []prom.TimeSeries{{Labels: map[string]string{}, Samples: points}}
 }
 
-// promEscapeLabelValue escapes backslashes and double-quotes in a PromQL label value.
+// promEscapeLabelValue escapes characters that are special in PromQL regex label values:
+// backslashes, double-quotes, and regex metacharacters.
 func promEscapeLabelValue(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
+	// Escape regex metacharacters so the alternation is treated as a literal match.
+	for _, ch := range []string{".", "+", "*", "?", "(", ")", "[", "]", "{", "}", "^", "$"} {
+		s = strings.ReplaceAll(s, ch, `\`+ch)
+	}
 	return s
 }
 
@@ -826,7 +831,11 @@ func buildNamespaceFilter(names []string) string {
 		// Kubernetes namespace names must be valid DNS labels, so "_" is impossible.
 		return `namespace="_"`
 	}
-	return fmt.Sprintf(`namespace=~"%s"`, strings.Join(names, "|"))
+	escaped := make([]string, len(names))
+	for i, n := range names {
+		escaped[i] = promEscapeLabelValue(n)
+	}
+	return fmt.Sprintf(`namespace=~"%s"`, strings.Join(escaped, "|"))
 }
 
 // resolveTimeRange returns start, end, and step for a Prometheus range query,
@@ -936,16 +945,26 @@ func (s *Server) sendOrgSnapshot(
 ) error {
 	start, end, step := resolveStreamTimeRange(req.GetWindowSeconds(), req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
 
-	workload, err := s.GetOrgWorkloadMetrics(ctx, connect.NewRequest(organizationv1.GetOrgWorkloadMetricsRequest_builder{}.Build()))
-	if err != nil {
+	var (
+		workload *connect.Response[organizationv1.GetOrgWorkloadMetricsResponse]
+		ts       *connect.Response[organizationv1.GetWorkloadTimeSeriesResponse]
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		var err error
+		workload, err = s.GetOrgWorkloadMetrics(gctx, connect.NewRequest(organizationv1.GetOrgWorkloadMetricsRequest_builder{}.Build()))
 		return err
-	}
-	ts, err := s.GetOrgWorkloadTimeSeries(ctx, connect.NewRequest(organizationv1.GetOrgWorkloadTimeSeriesRequest_builder{
-		Start:       timestamppb.New(start),
-		End:         timestamppb.New(end),
-		StepSeconds: int32(step.Seconds()),
-	}.Build()))
-	if err != nil {
+	})
+	g.Go(func() error {
+		var err error
+		ts, err = s.GetOrgWorkloadTimeSeries(gctx, connect.NewRequest(organizationv1.GetOrgWorkloadTimeSeriesRequest_builder{
+			Start:       timestamppb.New(start),
+			End:         timestamppb.New(end),
+			StepSeconds: int32(step.Seconds()),
+		}.Build()))
+		return err
+	})
+	if err := g.Wait(); err != nil {
 		return err
 	}
 
@@ -965,19 +984,29 @@ func (s *Server) sendClusterSnapshot(
 ) error {
 	start, end, step := resolveStreamTimeRange(req.GetWindowSeconds(), req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
 
-	workload, err := s.GetClusterWorkloadMetrics(ctx, connect.NewRequest(organizationv1.GetClusterWorkloadMetricsRequest_builder{
-		ClusterId: req.GetClusterId(),
-	}.Build()))
-	if err != nil {
+	var (
+		workload *connect.Response[organizationv1.GetClusterWorkloadMetricsResponse]
+		ts       *connect.Response[organizationv1.GetWorkloadTimeSeriesResponse]
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		var err error
+		workload, err = s.GetClusterWorkloadMetrics(gctx, connect.NewRequest(organizationv1.GetClusterWorkloadMetricsRequest_builder{
+			ClusterId: req.GetClusterId(),
+		}.Build()))
 		return err
-	}
-	ts, err := s.GetClusterWorkloadTimeSeries(ctx, connect.NewRequest(organizationv1.GetClusterWorkloadTimeSeriesRequest_builder{
-		ClusterId:   req.GetClusterId(),
-		Start:       timestamppb.New(start),
-		End:         timestamppb.New(end),
-		StepSeconds: int32(step.Seconds()),
-	}.Build()))
-	if err != nil {
+	})
+	g.Go(func() error {
+		var err error
+		ts, err = s.GetClusterWorkloadTimeSeries(gctx, connect.NewRequest(organizationv1.GetClusterWorkloadTimeSeriesRequest_builder{
+			ClusterId:   req.GetClusterId(),
+			Start:       timestamppb.New(start),
+			End:         timestamppb.New(end),
+			StepSeconds: int32(step.Seconds()),
+		}.Build()))
+		return err
+	})
+	if err := g.Wait(); err != nil {
 		return err
 	}
 
@@ -997,19 +1026,29 @@ func (s *Server) sendProjectSnapshot(
 ) error {
 	start, end, step := resolveStreamTimeRange(req.GetWindowSeconds(), req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
 
-	workload, err := s.GetProjectWorkloadMetrics(ctx, connect.NewRequest(organizationv1.GetProjectWorkloadMetricsRequest_builder{
-		ProjectId: req.GetProjectId(),
-	}.Build()))
-	if err != nil {
+	var (
+		workload *connect.Response[organizationv1.GetProjectWorkloadMetricsResponse]
+		ts       *connect.Response[organizationv1.GetWorkloadTimeSeriesResponse]
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		var err error
+		workload, err = s.GetProjectWorkloadMetrics(gctx, connect.NewRequest(organizationv1.GetProjectWorkloadMetricsRequest_builder{
+			ProjectId: req.GetProjectId(),
+		}.Build()))
 		return err
-	}
-	ts, err := s.GetProjectWorkloadTimeSeries(ctx, connect.NewRequest(organizationv1.GetProjectWorkloadTimeSeriesRequest_builder{
-		ProjectId:   req.GetProjectId(),
-		Start:       timestamppb.New(start),
-		End:         timestamppb.New(end),
-		StepSeconds: int32(step.Seconds()),
-	}.Build()))
-	if err != nil {
+	})
+	g.Go(func() error {
+		var err error
+		ts, err = s.GetProjectWorkloadTimeSeries(gctx, connect.NewRequest(organizationv1.GetProjectWorkloadTimeSeriesRequest_builder{
+			ProjectId:   req.GetProjectId(),
+			Start:       timestamppb.New(start),
+			End:         timestamppb.New(end),
+			StepSeconds: int32(step.Seconds()),
+		}.Build()))
+		return err
+	})
+	if err := g.Wait(); err != nil {
 		return err
 	}
 
