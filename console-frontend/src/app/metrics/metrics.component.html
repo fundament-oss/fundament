@@ -61,7 +61,7 @@
         </span>
         <nldd-segmented-control
           [value]="selectedPreset()"
-          (change)="onPresetChange($any($event).detail.value)"
+          (change)="onPresetChangeEvent($event)"
         >
           @for (preset of presets; track preset.value) {
             <nldd-segmented-control-item

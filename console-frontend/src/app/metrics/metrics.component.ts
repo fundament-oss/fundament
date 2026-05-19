@@ -85,7 +85,7 @@ export const TIME_RANGE_PRESETS: { value: TimeRangePreset; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ];
 
-const PRESET_WINDOW_SECONDS: Record<string, number> = {
+const PRESET_WINDOW_SECONDS: Record<Exclude<TimeRangePreset, 'custom'>, number> = {
   '1h': 3600,
   '6h': 21600,
   '24h': 86400,
@@ -106,9 +106,12 @@ function getUsageColor(percentage: number): string {
   return 'bg-green-500';
 }
 
-function formatTimestamp(ts: Timestamp | undefined): string {
+function formatTimestamp(ts: Timestamp | undefined, includeTime: boolean): string {
   if (!ts) return '';
   const d = timestampDate(ts);
+  if (includeTime) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
@@ -311,8 +314,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
     const minIdx = Math.max(0, Math.round(min));
     const maxIdx = Math.min(this.chartDates.length - 1, Math.round(max));
-    if (this.chartDates[minIdx]) this.dateFrom = this.chartDates[minIdx];
-    if (this.chartDates[maxIdx]) this.dateTo = this.chartDates[maxIdx];
+    if (this.chartDates[minIdx]) this.dateFrom = this.chartDates[minIdx].split('T')[0];
+    if (this.chartDates[maxIdx]) this.dateTo = this.chartDates[maxIdx].split('T')[0];
 
     if (this.selectedPreset() !== 'custom') {
       this.selectedPreset.set('custom');
@@ -330,6 +333,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
       },
       pan: { enabled: false },
     };
+  }
+
+  onPresetChangeEvent(event: Event): void {
+    this.onPresetChange((event as CustomEvent<{ value: TimeRangePreset }>).detail.value);
   }
 
   onPresetChange(preset: TimeRangePreset): void {
@@ -551,10 +558,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
           name: c.name,
         })),
       );
-    } catch (err) {
+    } catch {
       // Non-fatal — cluster dropdown will be empty but the rest of the page still works.
-      // eslint-disable-next-line no-console
-      console.error('Failed to load cluster list:', err);
     }
   }
 
@@ -580,9 +585,11 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     networkReceiveMbS: { timestamp?: Timestamp; value: number }[];
     networkTransmitMbS: { timestamp?: Timestamp; value: number }[];
   }): void {
-    this.chartLabels = r.cpuCores.map((s) => formatTimestamp(s.timestamp));
+    const windowSeconds = PRESET_WINDOW_SECONDS[this.selectedPreset() as Exclude<TimeRangePreset, 'custom'>] ?? 0;
+    const includeTime = windowSeconds > 0 && windowSeconds <= 86400;
+    this.chartLabels = r.cpuCores.map((s) => formatTimestamp(s.timestamp, includeTime));
     this.chartDates = r.cpuCores.map((s) =>
-      s.timestamp ? timestampDate(s.timestamp).toISOString().split('T')[0] : '',
+      s.timestamp ? timestampDate(s.timestamp).toISOString() : '',
     );
     this.cpuSeriesData = r.cpuCores.map((s) => s.value);
     this.memorySeriesData = r.memoryGib.map((s) => s.value);
