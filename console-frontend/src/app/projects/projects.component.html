@@ -34,14 +34,17 @@
     <div class="card-body-lg">
       <!-- No clusters -->
       @if (clusters().length === 0) {
-        <div
-          class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-6 py-16 text-center dark:border-gray-800 dark:bg-gray-900/30"
-        >
-          <p class="font-medium text-gray-600 dark:text-gray-300">No clusters found</p>
-          <p class="mt-1 text-gray-500 dark:text-gray-400">
-            <a routerLink="/clusters/add" class="link">Create a cluster first</a> to add projects.
-          </p>
-        </div>
+        <nldd-box>
+          <nldd-inline-dialog icon="ship-wheel" icon-color="secondary" text="No clusters found">
+            <nldd-button
+              routerLink="/clusters/add"
+              slot="actions"
+              text="Add cluster"
+              start-icon="plus-small"
+              variant="primary"
+            ></nldd-button>
+          </nldd-inline-dialog>
+        </nldd-box>
       } @else {
         <div class="space-y-8">
           @for (cluster of clusters(); track cluster.id) {
@@ -63,15 +66,21 @@
 
               <!-- Projects list -->
               @if (cluster.projects.length === 0) {
-                <div
-                  class="flex items-center gap-3 rounded-lg border border-dashed border-gray-200 px-5 py-4 dark:border-gray-800"
-                >
-                  <nldd-icon
-                    name="folder-stack"
-                    class="h-4.5 w-4.5 shrink-0 text-gray-300 dark:text-gray-600"
-                  ></nldd-icon>
-                  <p class="text-gray-500 dark:text-gray-400">No projects in this cluster yet.</p>
-                </div>
+                <nldd-box>
+                  <nldd-inline-dialog
+                    icon="folder-stack"
+                    icon-color="secondary"
+                    text="No projects in this cluster yet."
+                  >
+                    <nldd-button
+                      slot="actions"
+                      routerLink="/projects/add"
+                      text="Add project"
+                      start-icon="plus-small"
+                      variant="primary"
+                    ></nldd-button>
+                  </nldd-inline-dialog>
+                </nldd-box>
               } @else {
                 <div
                   class="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 dark:divide-gray-800 dark:border-gray-800"

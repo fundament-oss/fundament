@@ -87,34 +87,36 @@
 
     <!-- Right: dark/light toggle + user account -->
     <div class="flex items-center gap-2">
-      <button
-        (click)="toggleTheme()"
-        type="button"
-        role="switch"
-        aria-label="Toggle dark mode"
-        [attr.aria-checked]="isDarkMode()"
-        class="group text-accent-600 ring-accent-500 h-6 w-10 cursor-pointer rounded-full border border-gray-300 bg-gray-200 outline-none focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:ring-offset-gray-900"
+      <nldd-segmented-control
+        [value]="isDarkMode() ? 'dark' : 'light'"
+        variant="icon"
+        size="sm"
+        (change)="setTheme($any($event).detail.value)"
       >
-        <span
-          class="flex h-5 w-5 translate-x-0.5 items-center justify-center rounded-full bg-white text-gray-600 shadow-xs transition-transform group-aria-checked:translate-x-4.5 dark:bg-gray-950 dark:text-gray-300"
-        >
-          @if (isDarkMode()) {
-            <nldd-icon name="moon" class="h-3 w-3"></nldd-icon>
-          } @else {
-            <nldd-icon name="sun" class="h-3 w-3"></nldd-icon>
-          }
-        </span>
-      </button>
+        <nldd-segmented-control-item
+          value="light"
+          text="Light mode"
+          icon="sun"
+        ></nldd-segmented-control-item>
+        <nldd-segmented-control-item
+          value="dark"
+          text="Dark mode"
+          icon="moon"
+        ></nldd-segmented-control-item>
+      </nldd-segmented-control>
 
       @if (!isLoginPage()) {
         <div class="user-dropdown relative">
-          <button
+          <nldd-icon-button
             (click)="toggleUserDropdown()"
-            class="text-accent-600 ring-accent-500 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 flex cursor-pointer items-center rounded-full focus:ring-2 focus:outline-none dark:ring-offset-gray-900"
-            aria-label="User menu"
-          >
-            <nldd-icon name="person-circle" class="h-7 w-7"></nldd-icon>
-          </button>
+            variant="secondary"
+            size="sm"
+            icon="user"
+            accessible-label="User menu"
+            expandable
+            type="button"
+            hide-tooltip="true"
+          ></nldd-icon-button>
 
           @if (userDropdownOpen()) {
             <div
@@ -167,52 +169,264 @@
     (declineInvitation)="handleDeclineInvitation($event)"
   />
 } @else {
-  <div class="flex">
-    <!-- Sidebar -->
+  <nldd-navigation-split-view
+    #splitView
+    [attr.sidebar-as-sheet]="!isLoginPage() && isMobile() ? '' : null"
+    sidebar-accessible-label="Navigation"
+    style="--_sidebar-min-width: 15rem; min-height: calc(100vh - 3.5rem - 1px)"
+  >
     @if (!isLoginPage()) {
-      <!-- Desktop sidebar -->
-      <aside
-        class="hidden w-60 shrink-0 overflow-y-auto border-r border-gray-200 bg-white lg:block lg:min-h-[calc(100vh-3.5rem-1px)] dark:border-gray-800 dark:bg-gray-950"
-      >
-        <app-sidebar-nav
-          [selectedType]="selectedType()"
-          [selectedItemDisplay]="selectedItemDisplay()"
-          [selectedProjectId]="selectedProjectId()"
-          [settingsHeader]="settingsHeader()"
-          [isClustersActive]="isClustersActive()"
-          [projectNav]="pluginNavService.projectNav()"
-          (openSelectorModal)="openSelectorModal()"
-        />
-      </aside>
+      <nldd-split-view-pane slot="sidebar" class="bg-white dark:bg-gray-950">
+        <!-- Context selector -->
+        <div class="px-3 pt-4">
+          <div
+            class="mb-1.5 px-2 text-sm font-medium tracking-wide text-gray-600 dark:text-gray-400"
+          >
+            Context
+          </div>
+          <button
+            (click)="openSelectorModal()"
+            type="button"
+            class="ring-accent-500 flex w-full cursor-pointer items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <div class="flex min-w-0 flex-1 items-center">
+              @if (selectedItemDisplay(); as selected) {
+                @if (selected.type === 'organization') {
+                  <nldd-icon
+                    name="apartment-building"
+                    class="mr-2 h-3.5 w-3.5 shrink-0"
+                  ></nldd-icon>
+                } @else if (selected.type === 'project') {
+                  <nldd-icon name="folder" class="mr-2 h-3.5 w-3.5 shrink-0"></nldd-icon>
+                }
+                <span class="truncate font-medium">{{ selected.name }}</span>
+              } @else {
+                <span class="text-gray-400 dark:text-gray-500">Select...</span>
+              }
+            </div>
+            <nldd-icon name="chevron-right-small" class="ml-2 h-3.5 w-3.5 shrink-0"></nldd-icon>
+          </button>
+        </div>
 
-      <!-- Mobile sheet -->
-      <nldd-sheet #mobileSheet placement="left" accessible-label="Navigation">
-        <nldd-page sticky-header="">
-          <nldd-top-title-bar slot="header" dismiss-text="Close"></nldd-top-title-bar>
-          <app-sidebar-nav
-            [selectedType]="selectedType()"
-            [selectedItemDisplay]="selectedItemDisplay()"
-            [selectedProjectId]="selectedProjectId()"
-            [settingsHeader]="settingsHeader()"
-            [isClustersActive]="isClustersActive()"
-            [projectNav]="pluginNavService.projectNav()"
-            (openSelectorModal)="openSelectorModal()"
-            (closeSidebar)="closeSidebar()"
-          />
-        </nldd-page>
-      </nldd-sheet>
+        <nav class="overflow-y-auto px-3 pb-6">
+          @if (selectedType()) {
+            <div class="mb-1.5 pt-5">
+              <p
+                class="px-3 text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+              >
+                {{ settingsHeader() }}
+              </p>
+            </div>
+          }
+
+          <ul class="space-y-2">
+            @if (selectedType() === 'organization') {
+              <li>
+                <a
+                  routerLink="/"
+                  [class.active]="isClustersActive()"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="ship-wheel" class="mr-3 h-5 w-5"></nldd-icon>
+                  Clusters
+                </a>
+              </li>
+              <li>
+                <a
+                  routerLink="/projects"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="folder-stack" class="mr-3 h-5 w-5"></nldd-icon>
+                  Projects
+                </a>
+              </li>
+              <li>
+                <a
+                  routerLink="/plugins"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="puzzle-piece" class="mr-3 h-5 w-5"></nldd-icon>
+                  Plugins
+                </a>
+              </li>
+              <li>
+                <a
+                  routerLink="/organization/members"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="person-2" class="mr-3 h-5 w-5"></nldd-icon>
+                  Members
+                </a>
+              </li>
+              <li>
+                <a
+                  routerLink="/usage"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="chart-x-y-axis-line" class="mr-3 h-5 w-5"></nldd-icon>
+                  Usage
+                </a>
+              </li>
+              <li>
+                <a
+                  routerLink="/organization/limits"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="circle-dashed" class="mr-3 h-5 w-5"></nldd-icon>
+                  Limits
+                </a>
+              </li>
+              <li>
+                <a
+                  routerLink="/organization"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="gear" class="mr-3 h-5 w-5"></nldd-icon>
+                  Settings
+                </a>
+              </li>
+            } @else if (selectedType() === 'project') {
+              <li>
+                <a
+                  [routerLink]="['/projects', selectedProjectId()]"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="folder" class="mr-3 h-5 w-5"></nldd-icon>
+                  General
+                </a>
+              </li>
+              <li>
+                <a
+                  [routerLink]="['/projects', selectedProjectId(), 'namespaces']"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="brackets-ellipsis" class="mr-3 h-5 w-5"></nldd-icon>
+                  Namespaces
+                </a>
+              </li>
+              <li>
+                <a
+                  [routerLink]="['/projects', selectedProjectId(), 'members']"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="person-2" class="mr-3 h-5 w-5"></nldd-icon>
+                  Members
+                </a>
+              </li>
+              <li>
+                <a
+                  [routerLink]="['/projects', selectedProjectId(), 'roles']"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="person-badge-gear" class="mr-3 h-5 w-5"></nldd-icon>
+                  Roles
+                </a>
+              </li>
+              <li>
+                <a
+                  [routerLink]="['/projects', selectedProjectId(), 'usage']"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="chart-x-y-axis-line" class="mr-3 h-5 w-5"></nldd-icon>
+                  Usage
+                </a>
+              </li>
+              <li>
+                <a
+                  [routerLink]="['/projects', selectedProjectId(), 'limits']"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="circle-dashed" class="mr-3 h-5 w-5"></nldd-icon>
+                  Limits
+                </a>
+              </li>
+              <li>
+                <a
+                  [routerLink]="['/projects', selectedProjectId(), 'settings']"
+                  routerLinkActive="active"
+                  class="nav-link"
+                  (click)="closeSidebar()"
+                >
+                  <nldd-icon name="gear" class="mr-3 h-5 w-5"></nldd-icon>
+                  Settings
+                </a>
+              </li>
+
+              @for (group of pluginNavService.projectNav(); track group.pluginName) {
+                <li class="mt-2">
+                  <p
+                    class="px-3 pt-3 text-sm font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                  >
+                    {{ group.label }}
+                  </p>
+                  <ul class="mt-1 space-y-1">
+                    @for (item of group.items; track item.crdPlural) {
+                      <li>
+                        <a
+                          [routerLink]="[
+                            '/projects',
+                            selectedProjectId(),
+                            'plugin-resources',
+                            group.pluginName,
+                            item.crdPlural,
+                          ]"
+                          routerLinkActive="active"
+                          class="nav-link"
+                          (click)="closeSidebar()"
+                        >
+                          @if (item.icon) {
+                            <nldd-icon [name]="item.icon" class="mr-3 h-5 w-5"></nldd-icon>
+                          }
+                          {{ item.label }}
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                </li>
+              }
+            }
+          </ul>
+        </nav>
+      </nldd-split-view-pane>
     }
-
-    <!-- Main content -->
-    <main class="mx-auto max-w-7xl min-w-0 flex-1 px-4 py-6 sm:px-6">
-      @if (isLoginPage() || selectedOrgId() || selectedProjectId()) {
-        @if (!isLoginPage()) {
-          <app-breadcrumb [segments]="breadcrumbSegments()" />
+    <nldd-split-view-pane slot="main" has-content class="bg-neutral-25 dark:bg-gray-900">
+      <main class="mx-auto max-w-7xl min-w-0 flex-1 px-4 py-6 sm:px-6">
+        @if (isLoginPage() || selectedOrgId() || selectedProjectId()) {
+          @if (!isLoginPage()) {
+            <app-breadcrumb [segments]="breadcrumbSegments()" />
+          }
+          <router-outlet />
         }
-        <router-outlet />
-      }
-    </main>
-  </div>
+      </main>
+    </nldd-split-view-pane>
+  </nldd-navigation-split-view>
 
   <!-- Selector Modal -->
   <app-selector-modal

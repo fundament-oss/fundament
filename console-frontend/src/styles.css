@@ -79,40 +79,6 @@
   --color-links: var(--semantics-links-color);
   --color-links-hover: var(--semantics-links-is-hovered-color);
 
-  /* Spacing */
-  --spacing-primitives-space-6: 6px;
-  --spacing-primitives-space-8: 8px;
-  --spacing-primitives-space-10: 10px;
-  --spacing-primitives-space-12: 12px;
-  --spacing-primitives-space-16: 16px;
-  --spacing-primitives-space-24: 24px;
-  --spacing-primitives-space-28: 28px;
-  --spacing-primitives-space-32: 32px;
-  --spacing-primitives-space-48: 48px;
-  --spacing-primitives-space-56: 56px;
-  --spacing-primitives-space-64: 64px;
-  --spacing-primitives-space-80: 80px;
-
-  /* Text sizes with line-heights (snug = 1.5, flat = 1.125) */
-  --text-body-xs: var(--primitives-font-size-80);
-  --text-body-xs--line-height: 1.5;
-  --text-body-sm: var(--primitives-font-size-90);
-  --text-body-sm--line-height: 1.5;
-  --text-body-md: var(--primitives-font-size-100);
-  --text-body-md--line-height: 1.5;
-  --text-body-lg: var(--primitives-font-size-200);
-  --text-body-lg--line-height: 1.5;
-  --text-display-1: var(--primitives-font-size-1000);
-  --text-display-1--line-height: 1.125;
-  --text-display-2: var(--primitives-font-size-800);
-  --text-display-2--line-height: 1.125;
-  --text-display-3: var(--primitives-font-size-600);
-  --text-display-3--line-height: 1.125;
-  --text-display-4: var(--primitives-font-size-400);
-  --text-display-4--line-height: 1.125;
-  --text-display-5: var(--primitives-font-size-200);
-  --text-display-5--line-height: 1.125;
-
   /* Font families */
   --font-body: var(--primitives-font-family-body);
   --font-display: var(--primitives-font-family-display);
@@ -122,11 +88,7 @@
 :root {
   --primitives-font-size-100: theme('fontSize.base');
 
-  /* Button colors. Note: for dark mode, set similar styles using `html.dark { ... }` */
-  /* --semantics-buttons-accent-filled-background-color: theme('colors.indigo.600');
-  --semantics-buttons-accent-filled-is-hovered-background-color: theme('colors.indigo.700');
-  --semantics-buttons-accent-filled-is-active-background-color: theme('colors.indigo.800'); */
-
+  /* Custom focus ring, since the NLDD default is very dark */
   --semantics-focus-ring-outline: none;
   --semantics-focus-ring-box-shadow:
     var(--semantics-surfaces-background-color) 0 0 0 2px,
@@ -316,6 +278,14 @@ select {
 }
 
 /* Navigation link styles */
+
+nldd-navigation-split-view {
+  --semantics-dividers-color: var(--color-gray-200);
+}
+
+.dark nldd-navigation-split-view {
+  --semantics-dividers-color: var(--color-gray-800);
+}
 
 .nav-link {
   @apply ring-accent-500 flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;

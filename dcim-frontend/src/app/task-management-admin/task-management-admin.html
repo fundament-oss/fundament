@@ -26,7 +26,7 @@
       ></nldd-segmented-control-item>
     </nldd-segmented-control>
     <nldd-button
-      variant="accent-filled"
+      variant="primary"
       text="New task"
       start-icon="plus-small"
       size="sm"
@@ -450,353 +450,331 @@
      TASK DETAIL SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #detailSheetEl accessible-label="Task details" placement="right" width="520px">
-  <div class="flex flex-col h-full">
-    <!-- Sheet header -->
-    <div class="flex items-start justify-between border-b border-slate-100 px-6 pt-6 pb-5 shrink-0">
-      <div class="flex-1 min-w-0 pr-4">
-        <h2 class="text-base font-semibold text-slate-900 leading-snug" aria-label="Task title">
-          {{ detailTask()?.title }}
-        </h2>
-        <div class="mt-2.5 flex flex-wrap items-center gap-2">
-          @if (detailTask(); as task) {
-            <span [class]="detailStatusClass(task.status)">
-              <span [class]="statusDotClass(task.status)" aria-hidden="true"></span
-              >{{ task.status }}
-            </span>
-            <span [class]="detailPriorityClass(task.priority)">
-              <span [class]="priorityDotClass(task.priority)" aria-hidden="true"></span
-              >{{ task.priority }}
-            </span>
-            <span
-              class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500"
-            >
-              <nldd-icon
-                [attr.name]="categoryIcon(task.category)"
-                class="w-3.5 h-3.5"
-                aria-hidden="true"
-              ></nldd-icon
-              >{{ task.category }}
-            </span>
-          }
-        </div>
-      </div>
-      <button
-        class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors shrink-0"
-        aria-label="Close"
-        (click)="closeDetail()"
-      >
-        <nldd-icon name="dismiss" class="w-4.5 h-4.5 block"></nldd-icon>
-      </button>
-    </div>
+  <nldd-page sticky-header="">
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="detailTask()?.title ?? ''"
+      dismiss-text="Close"
+      (dismiss)="closeDetail()"
+    ></nldd-top-title-bar>
 
     <!-- Sheet body -->
-    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-      @if (detailTask(); as task) {
-        <!-- Properties -->
-        <div class="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+    <nldd-simple-section>
+      <div class="space-y-5">
+        @if (detailTask(); as task) {
+          <!-- Properties -->
+          <div class="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+            <div>
+              <p class="text-xs font-medium text-slate-400 mb-1.5">Assignee</p>
+              <div class="flex items-center gap-2 text-slate-700 font-medium">
+                @if (getTech(task.assignee); as tech) {
+                  <span [class]="techInitialsClass(tech)" aria-hidden="true">{{
+                    tech.initials
+                  }}</span>
+                  <span>{{ tech.name }}</span>
+                } @else {
+                  <span [class]="unassignedAvatarClass()" aria-hidden="true">
+                    <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
+                  </span>
+                  <span class="text-slate-400 font-normal">Unassigned</span>
+                }
+              </div>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-slate-400 mb-1.5">Due date</p>
+              <p class="text-slate-700">{{ formatDate(task.due) }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-slate-400 mb-1.5">Location</p>
+              <p class="text-slate-700">{{ task.location }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-slate-400 mb-1.5">Created</p>
+              <p class="text-slate-700">{{ formatDate(task.created) }}</p>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="rounded-xl bg-slate-50 px-4 py-3.5">
+            <p class="text-xs font-medium text-slate-400 mb-2">Description</p>
+            <p class="text-sm leading-relaxed text-slate-600">{{ task.description }}</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-2">
+            <nldd-button
+              variant="secondary"
+              text="Edit"
+              start-icon="pencil"
+              size="sm"
+              (click)="openEditFromDetail()"
+            ></nldd-button>
+            <nldd-button
+              variant="secondary"
+              text="Technician view"
+              start-icon="eye"
+              size="sm"
+              href="/task-management-technician"
+            ></nldd-button>
+          </div>
+
+          <!-- Notes -->
           <div>
-            <p class="text-xs font-medium text-slate-400 mb-1.5">Assignee</p>
-            <div class="flex items-center gap-2 text-slate-700 font-medium">
-              @if (getTech(task.assignee); as tech) {
-                <span [class]="techInitialsClass(tech)" aria-hidden="true">{{
-                  tech.initials
-                }}</span>
-                <span>{{ tech.name }}</span>
-              } @else {
-                <span [class]="unassignedAvatarClass()" aria-hidden="true">
-                  <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
-                </span>
-                <span class="text-slate-400 font-normal">Unassigned</span>
+            <p class="text-xs font-medium text-slate-400 mb-3">
+              Notes <span class="text-slate-300 ml-0.5">({{ task.notes.length }})</span>
+            </p>
+            <div class="space-y-3">
+              @if (task.notes.length === 0) {
+                <p class="text-sm text-slate-400 text-center py-4">No notes yet</p>
+              }
+              @for (note of task.notes; track $index) {
+                @let author = noteAuthor(note);
+                <div class="flex gap-3">
+                  <div class="shrink-0 pt-0.5">
+                    @if (author.tech; as tech) {
+                      <span [class]="techInitialsClass(tech)" aria-hidden="true">{{
+                        tech.initials
+                      }}</span>
+                    } @else {
+                      <span
+                        class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white text-xs font-semibold shrink-0 select-none"
+                        aria-hidden="true"
+                        >A</span
+                      >
+                    }
+                  </div>
+                  <div class="flex-1 rounded-xl bg-slate-50 px-3.5 py-3">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                      <span class="text-xs font-semibold text-slate-700">{{ author.name }}</span>
+                      <span class="text-xs text-slate-400 shrink-0">{{ note.time }}</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">{{ note.text }}</p>
+                  </div>
+                </div>
               }
             </div>
           </div>
-          <div>
-            <p class="text-xs font-medium text-slate-400 mb-1.5">Due date</p>
-            <p class="text-slate-700">{{ formatDate(task.due) }}</p>
-          </div>
-          <div>
-            <p class="text-xs font-medium text-slate-400 mb-1.5">Location</p>
-            <p class="text-slate-700">{{ task.location }}</p>
-          </div>
-          <div>
-            <p class="text-xs font-medium text-slate-400 mb-1.5">Created</p>
-            <p class="text-slate-700">{{ formatDate(task.created) }}</p>
-          </div>
-        </div>
+        }
 
-        <!-- Description -->
-        <div class="rounded-xl bg-slate-50 px-4 py-3.5">
-          <p class="text-xs font-medium text-slate-400 mb-2">Description</p>
-          <p class="text-sm leading-relaxed text-slate-600">{{ task.description }}</p>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex items-center gap-2">
-          <nldd-button
-            variant="secondary"
-            text="Edit"
-            start-icon="pencil"
-            size="sm"
-            (click)="openEditFromDetail()"
-          ></nldd-button>
-          <nldd-button
-            variant="neutral-tinted"
-            text="Technician view"
-            start-icon="eye"
-            size="sm"
-            href="/task-management-technician"
-          ></nldd-button>
-        </div>
-
-        <!-- Notes -->
-        <div>
-          <p class="text-xs font-medium text-slate-400 mb-3">
-            Notes <span class="text-slate-300 ml-0.5">({{ task.notes.length }})</span>
-          </p>
-          <div class="space-y-3">
-            @if (task.notes.length === 0) {
-              <p class="text-sm text-slate-400 text-center py-4">No notes yet</p>
-            }
-            @for (note of task.notes; track $index) {
-              @let author = noteAuthor(note);
-              <div class="flex gap-3">
-                <div class="shrink-0 pt-0.5">
-                  @if (author.tech; as tech) {
-                    <span [class]="techInitialsClass(tech)" aria-hidden="true">{{
-                      tech.initials
-                    }}</span>
-                  } @else {
-                    <span
-                      class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white text-xs font-semibold shrink-0 select-none"
-                      aria-hidden="true"
-                      >A</span
-                    >
-                  }
-                </div>
-                <div class="flex-1 rounded-xl bg-slate-50 px-3.5 py-3">
-                  <div class="flex items-center justify-between gap-2 mb-1">
-                    <span class="text-xs font-semibold text-slate-700">{{ author.name }}</span>
-                    <span class="text-xs text-slate-400 shrink-0">{{ note.time }}</span>
-                  </div>
-                  <p class="text-sm text-slate-600 leading-relaxed">{{ note.text }}</p>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- Add note -->
-      <div class="mt-4 flex gap-2.5">
-        <div
-          class="h-8 w-8 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold select-none"
-          aria-hidden="true"
-        >
-          A
-        </div>
-        <div class="flex-1 relative">
-          <nldd-text-field
-            placeholder="Add a note…"
-            accessible-label="Add a note"
-            size="sm"
-            class="w-full"
-            [value]="newNoteText()"
-            (change)="newNoteText.set($any($event).detail?.value ?? '')"
-            (keydown.enter)="addNote()"
-          ></nldd-text-field>
-          <button
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
-            aria-label="Send note"
-            (click)="addNote()"
+        <!-- Add note -->
+        <div class="mt-4 flex gap-2.5">
+          <div
+            class="h-8 w-8 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold select-none"
+            aria-hidden="true"
           >
-            <nldd-icon name="arrow-right" class="w-4 h-4 block"></nldd-icon>
-          </button>
+            A
+          </div>
+          <div class="flex-1 relative">
+            <nldd-text-field
+              placeholder="Add a note…"
+              accessible-label="Add a note"
+              size="sm"
+              class="w-full"
+              [value]="newNoteText()"
+              (change)="newNoteText.set($any($event).detail?.value ?? '')"
+              (keydown.enter)="addNote()"
+            ></nldd-text-field>
+            <button
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
+              aria-label="Send note"
+              (click)="addNote()"
+            >
+              <nldd-icon name="arrow-right" class="w-4 h-4 block"></nldd-icon>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+    </nldd-simple-section>
+  </nldd-page>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
      ADD / EDIT TASK SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #editModalEl accessible-label="Add / edit task" placement="right" width="520px">
-  <div class="flex flex-col h-full">
-    <!-- Sheet header -->
-    <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 shrink-0">
-      <h2 class="text-base font-semibold text-slate-900">{{ editModalTitle() }}</h2>
-    </div>
-
-    <!-- Sheet body -->
-    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-      <div>
-        <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editTitle">Title</label>
-        <nldd-text-field
-          id="editTitle"
-          placeholder="E.g. Replace broken harddisk"
-          accessible-label="Title"
-          class="w-full"
-          [value]="editFormTitle()"
-          (change)="editFormTitle.set($any($event).detail?.value ?? '')"
-        ></nldd-text-field>
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editDescription"
-          >Description</label
-        >
-        <nldd-multi-line-text-field
-          id="editDescription"
-          rows="3"
-          placeholder="Describe the task…"
-          [value]="editFormDescription()"
-          (input)="editFormDescription.set($any($event).target.value)"
-        ></nldd-multi-line-text-field>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="editModalTitle()"
+      dismiss-text="Close"
+      (dismiss)="closeEditModal()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <div class="space-y-4">
+        <nldd-form-field label="Title">
+          <nldd-text-field
+            id="editTitle"
+            placeholder="E.g. Replace broken harddisk"
+            accessible-label="Title"
+            class="w-full"
+            error-message="editTitle-error"
+            [attr.invalid]="editTitleInvalid() ? '' : null"
+            [value]="editFormTitle()"
+            (change)="editFormTitle.set($any($event).detail?.value ?? '')"
+            (focusout)="editTitleTouched.set(true)"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="editTitle-error"
+            >Title is required.</nldd-form-field-error-text
+          >
+        </nldd-form-field>
         <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editStatus"
-            >Status</label
+          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editDescription"
+            >Description</label
           >
-          <select
-            id="editStatus"
-            class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
-            (change)="editFormStatus.set($any($event).target.value)"
-          >
-            <option [selected]="editFormStatus() === 'Ready'">Ready</option>
-            <option [selected]="editFormStatus() === 'In Progress'">In Progress</option>
-            <option [selected]="editFormStatus() === 'Review'">Review</option>
-            <option [selected]="editFormStatus() === 'Blocked'">Blocked</option>
-            <option [selected]="editFormStatus() === 'Done'">Done</option>
-          </select>
+          <nldd-multi-line-text-field
+            id="editDescription"
+            rows="3"
+            placeholder="Describe the task…"
+            [value]="editFormDescription()"
+            (input)="editFormDescription.set($any($event).target.value)"
+          ></nldd-multi-line-text-field>
         </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editPriority"
-            >Priority</label
-          >
-          <select
-            id="editPriority"
-            class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
-            (change)="editFormPriority.set($any($event).target.value)"
-          >
-            <option [selected]="editFormPriority() === 'Critical'">Critical</option>
-            <option [selected]="editFormPriority() === 'High'">High</option>
-            <option [selected]="editFormPriority() === 'Medium'">Medium</option>
-            <option [selected]="editFormPriority() === 'Low'">Low</option>
-          </select>
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editCategory"
-            >Category</label
-          >
-          <select
-            id="editCategory"
-            class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
-            (change)="editFormCategory.set($any($event).target.value)"
-          >
-            <option [selected]="editFormCategory() === 'Hardware'">Hardware</option>
-            <option [selected]="editFormCategory() === 'Network'">Network</option>
-            <option [selected]="editFormCategory() === 'Cooling'">Cooling</option>
-            <option [selected]="editFormCategory() === 'Power'">Power</option>
-            <option [selected]="editFormCategory() === 'Security'">Security</option>
-            <option [selected]="editFormCategory() === 'Other'">Other</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editDue"
-            >Due date</label
-          >
-          <input
-            id="editDue"
-            type="date"
-            class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
-            [value]="editFormDue()"
-            (change)="editFormDue.set($any($event).target.value)"
-          />
-        </div>
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editLocation"
-          >Location</label
-        >
-        <nldd-text-field
-          id="editLocation"
-          placeholder="E.g. DC Amsterdam-West · Rack 123"
-          accessible-label="Location"
-          class="w-full"
-          [value]="editFormLocation()"
-          (change)="editFormLocation.set($any($event).detail?.value ?? '')"
-        ></nldd-text-field>
-      </div>
-      <div>
-        <p class="block text-xs font-medium text-slate-500 mb-1.5" id="assigneeSelectorLabel">
-          Assignee
-        </p>
-        <div role="group" aria-labelledby="assigneeSelectorLabel" class="max-h-48 overflow-y-auto">
-          <nldd-radio-button-group
-            name="assignee"
-            class="space-y-1.5"
-            (change)="
-              editFormAssignee.set($any($event).detail.value ? +$any($event).detail.value : null)
-            "
-          >
-            <div
-              class="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5 hover:bg-slate-50 transition-colors"
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editStatus"
+              >Status</label
             >
-              <span [class]="unassignedAvatarClass('h-8 w-8 text-sm')" aria-hidden="true">
-                <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
-              </span>
-              <nldd-radio-button-field
-                value=""
-                label="Unassigned"
-                [attr.checked]="editFormAssignee() === null ? '' : null"
-              ></nldd-radio-button-field>
-            </div>
-            @for (tech of technicians; track tech.id) {
+            <select
+              id="editStatus"
+              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+              (change)="editFormStatus.set($any($event).target.value)"
+            >
+              <option [selected]="editFormStatus() === 'Ready'">Ready</option>
+              <option [selected]="editFormStatus() === 'In Progress'">In Progress</option>
+              <option [selected]="editFormStatus() === 'Review'">Review</option>
+              <option [selected]="editFormStatus() === 'Blocked'">Blocked</option>
+              <option [selected]="editFormStatus() === 'Done'">Done</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editPriority"
+              >Priority</label
+            >
+            <select
+              id="editPriority"
+              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+              (change)="editFormPriority.set($any($event).target.value)"
+            >
+              <option [selected]="editFormPriority() === 'Critical'">Critical</option>
+              <option [selected]="editFormPriority() === 'High'">High</option>
+              <option [selected]="editFormPriority() === 'Medium'">Medium</option>
+              <option [selected]="editFormPriority() === 'Low'">Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editCategory"
+              >Category</label
+            >
+            <select
+              id="editCategory"
+              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+              (change)="editFormCategory.set($any($event).target.value)"
+            >
+              <option [selected]="editFormCategory() === 'Hardware'">Hardware</option>
+              <option [selected]="editFormCategory() === 'Network'">Network</option>
+              <option [selected]="editFormCategory() === 'Cooling'">Cooling</option>
+              <option [selected]="editFormCategory() === 'Power'">Power</option>
+              <option [selected]="editFormCategory() === 'Security'">Security</option>
+              <option [selected]="editFormCategory() === 'Other'">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editDue"
+              >Due date</label
+            >
+            <input
+              id="editDue"
+              type="date"
+              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+              [value]="editFormDue()"
+              (change)="editFormDue.set($any($event).target.value)"
+            />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editLocation"
+            >Location</label
+          >
+          <nldd-text-field
+            id="editLocation"
+            placeholder="E.g. DC Amsterdam-West · Rack 123"
+            accessible-label="Location"
+            class="w-full"
+            [value]="editFormLocation()"
+            (change)="editFormLocation.set($any($event).detail?.value ?? '')"
+          ></nldd-text-field>
+        </div>
+        <div>
+          <p class="block text-xs font-medium text-slate-500 mb-1.5" id="assigneeSelectorLabel">
+            Assignee
+          </p>
+          <div
+            role="group"
+            aria-labelledby="assigneeSelectorLabel"
+            class="max-h-48 overflow-y-auto"
+          >
+            <nldd-radio-button-group
+              name="assignee"
+              class="space-y-1.5"
+              (change)="
+                editFormAssignee.set($any($event).detail.value ? +$any($event).detail.value : null)
+              "
+            >
               <div
                 class="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5 hover:bg-slate-50 transition-colors"
               >
-                <span [class]="techInitialsClass(tech, 'h-8 w-8 text-sm')" aria-hidden="true">{{
-                  tech.initials
-                }}</span>
+                <span [class]="unassignedAvatarClass('h-8 w-8 text-sm')" aria-hidden="true">
+                  <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
+                </span>
                 <nldd-radio-button-field
-                  [attr.value]="tech.id"
-                  [attr.label]="tech.name"
-                  [attr.checked]="editFormAssignee() === tech.id ? '' : null"
+                  value=""
+                  label="Unassigned"
+                  [attr.checked]="editFormAssignee() === null ? '' : null"
                 ></nldd-radio-button-field>
-                <span
-                  class="ml-auto inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                  [class]="
-                    tech.available
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-slate-100 text-slate-500'
-                  "
-                  >{{ tech.available ? 'Available' : 'Busy' }}</span
-                >
               </div>
-            }
-          </nldd-radio-button-group>
+              @for (tech of technicians; track tech.id) {
+                <div
+                  class="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5 hover:bg-slate-50 transition-colors"
+                >
+                  <span [class]="techInitialsClass(tech, 'h-8 w-8 text-sm')" aria-hidden="true">{{
+                    tech.initials
+                  }}</span>
+                  <nldd-radio-button-field
+                    [attr.value]="tech.id"
+                    [attr.label]="tech.name"
+                    [attr.checked]="editFormAssignee() === tech.id ? '' : null"
+                  ></nldd-radio-button-field>
+                  <span
+                    class="ml-auto inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                    [class]="
+                      tech.available
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-slate-100 text-slate-500'
+                    "
+                    >{{ tech.available ? 'Available' : 'Busy' }}</span
+                  >
+                </div>
+              }
+            </nldd-radio-button-group>
+          </div>
         </div>
       </div>
-    </div>
-
-    <!-- Sheet footer -->
-    <div class="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 shrink-0">
+    </nldd-simple-section>
+    <div
+      slot="footer"
+      class="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4"
+    >
       <nldd-button
-        variant="neutral-transparent"
+        variant="secondary"
         text="Cancel"
         size="sm"
         (click)="closeEditModal()"
       ></nldd-button>
-      <nldd-button
-        variant="accent-filled"
-        text="Save task"
-        size="sm"
-        (click)="saveTask()"
-      ></nldd-button>
+      <nldd-button variant="primary" text="Save task" size="sm" (click)="saveTask()"></nldd-button>
     </div>
-  </div>
+  </nldd-page>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════

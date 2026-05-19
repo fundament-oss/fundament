@@ -731,15 +731,15 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showDeleteModal.set(false)"
-    text="Cancel"
-    variant="secondary"
+    (click)="deleteCluster()"
+    text="Yes, delete this cluster"
+    variant="destructive"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
-    (click)="deleteCluster()"
-    text="Yes, delete this cluster"
-    variant="destructive"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>

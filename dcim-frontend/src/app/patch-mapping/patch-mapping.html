@@ -27,7 +27,7 @@
     aria-label="Export cables as CSV"
   ></nldd-button>
   <nldd-button
-    variant="accent-filled"
+    variant="primary"
     text="Add cable"
     start-icon="plus-small"
     size="sm"
@@ -94,14 +94,14 @@
 >
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
-    (click)="cancelDelete()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
     variant="destructive"
     text="Delete"
     (click)="confirmDelete()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelDelete()"
   ></nldd-button>
 </nldd-modal-dialog>

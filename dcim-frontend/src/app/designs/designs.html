@@ -4,7 +4,7 @@
 <div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
   <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0 flex-1">Logical designs</h1>
   <nldd-button
-    variant="accent-filled"
+    variant="primary"
     text="New design"
     start-icon="plus-small"
     size="sm"
@@ -181,18 +181,14 @@
      NEW DESIGN SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #designSheet accessible-label="New design" placement="right" width="400px">
-  <div class="flex flex-col h-full">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-      <h2 class="text-base font-semibold text-slate-900">New design</h2>
-      <nldd-icon-button
-        icon="dismiss"
-        variant="neutral-transparent"
-        size="sm"
-        text="Close"
-        (click)="closeDesignForm()"
-      ></nldd-icon-button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      text="New design"
+      dismiss-text="Close"
+      (dismiss)="closeDesignForm()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
       <nldd-form-field label="Design name">
         <nldd-text-field
           #fDesignName
@@ -201,12 +197,12 @@
         ></nldd-text-field>
       </nldd-form-field>
       <p class="text-xs text-slate-400">Version will be set to 1 and status to Draft.</p>
+    </nldd-simple-section>
+    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+      <nldd-button variant="secondary" text="Cancel" (click)="closeDesignForm()"></nldd-button>
+      <nldd-button variant="primary" text="Create" (click)="saveDesign()"></nldd-button>
     </div>
-    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
-      <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeDesignForm()"></nldd-button>
-      <nldd-button variant="accent-filled" text="Create" (click)="saveDesign()"></nldd-button>
-    </div>
-  </div>
+  </nldd-page>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -220,14 +216,14 @@
 >
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
-    (click)="cancelDeleteDesign()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
     variant="destructive"
     text="Delete"
     (click)="confirmDeleteDesign()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelDeleteDesign()"
   ></nldd-button>
 </nldd-modal-dialog>

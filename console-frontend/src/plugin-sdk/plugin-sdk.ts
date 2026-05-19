@@ -160,10 +160,7 @@ function generateRequestId(): string {
   return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function sendK8sRequest<T>(
-  kind: 'list' | 'get',
-  payload: Record<string, unknown>,
-): Promise<T> {
+function sendK8sRequest<T>(kind: 'list' | 'get', payload: Record<string, unknown>): Promise<T> {
   const requestId = generateRequestId();
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {

@@ -244,7 +244,13 @@ export default class DatacenterDetailComponent implements OnInit {
     } else {
       firstValueFrom(this.dcApi.createRackRow(form.roomId!, name, posX, posY))
         .then((res) => {
-          const created: RackRow = { id: res.rackRowId, roomId: form.roomId!, name, positionX: posX, positionY: posY };
+          const created: RackRow = {
+            id: res.rackRowId,
+            roomId: form.roomId!,
+            name,
+            positionX: posX,
+            positionY: posY,
+          };
           this.mutableRackRows.update((list) => [...list, created]);
           this.editRackRow.set(null);
         })

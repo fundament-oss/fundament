@@ -210,7 +210,7 @@ export default class ClusterNamespacesComponent implements OnInit {
       const request = create(DeleteNamespaceRequestSchema, { namespaceId });
       await firstValueFrom(this.namespaceClient.deleteNamespace(request));
 
-      this.toastService.info(`Namespace '${namespaceName}' deleted`);
+      this.toastService.success(`Namespace '${namespaceName}' deleted`);
 
       // Reload namespaces and organization data
       await Promise.all([

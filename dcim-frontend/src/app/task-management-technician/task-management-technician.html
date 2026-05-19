@@ -453,7 +453,7 @@
     <!-- Action Row -->
     <div class="flex items-center justify-between px-3 pb-3 pt-2">
       <nldd-button
-        variant="neutral-tinted"
+        variant="secondary"
         size="sm"
         text="Previous"
         start-icon="chevron-left"
@@ -463,7 +463,7 @@
       ></nldd-button>
       <div class="flex items-center gap-1">
         <nldd-button
-          variant="neutral-tinted"
+          variant="secondary"
           size="sm"
           text="Photo"
           start-icon="square-arrow-up"
@@ -471,7 +471,7 @@
           (click)="openPhotoModal()"
         ></nldd-button>
         <nldd-button
-          variant="neutral-tinted"
+          variant="secondary"
           size="sm"
           text="Note"
           start-icon="pencil-on-square"
@@ -480,7 +480,7 @@
         ></nldd-button>
       </div>
       <nldd-button
-        variant="accent-filled"
+        variant="primary"
         size="sm"
         [attr.text]="showCompleteBtn() ? 'Complete' : 'Done'"
         [attr.end-icon]="showCompleteBtn() ? 'check-mark-circle' : 'check-mark-small'"
@@ -544,17 +544,12 @@
     </div>
     <div class="mt-5 flex justify-end gap-2">
       <nldd-button
-        variant="neutral-tinted"
+        variant="secondary"
         text="Cancel"
         size="sm"
         (click)="closePhotoModal()"
       ></nldd-button>
-      <nldd-button
-        variant="accent-filled"
-        text="Save"
-        size="sm"
-        (click)="savePhoto()"
-      ></nldd-button>
+      <nldd-button variant="primary" text="Save" size="sm" (click)="savePhoto()"></nldd-button>
     </div>
   </div>
 </div>
@@ -588,12 +583,12 @@
     ></nldd-multi-line-text-field>
     <div class="mt-5 flex justify-end gap-2">
       <nldd-button
-        variant="neutral-tinted"
+        variant="secondary"
         text="Cancel"
         size="sm"
         (click)="closeNoteModal()"
       ></nldd-button>
-      <nldd-button variant="accent-filled" text="Save" size="sm" (click)="saveNote()"></nldd-button>
+      <nldd-button variant="primary" text="Save" size="sm" (click)="saveNote()"></nldd-button>
     </div>
   </div>
 </div>

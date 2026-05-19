@@ -40,14 +40,16 @@
       </div>
     </div>
 
-    <nldd-button
-      type="button"
-      (click)="openAddMemberModal()"
-      text="Add a member"
-      start-icon="plus-small"
-      variant="primary"
-      class="mb-6"
-    ></nldd-button>
+    @if (isLoading() || memberViews().length > 0) {
+      <nldd-button
+        type="button"
+        (click)="openAddMemberModal()"
+        text="Add a member"
+        start-icon="plus-small"
+        variant="primary"
+        class="mb-6"
+      ></nldd-button>
+    }
 
     @if (error()) {
       <div
@@ -80,9 +82,23 @@
         <p class="mt-4 text-gray-600 dark:text-gray-300">Loading members...</p>
       </div>
     } @else if (memberViews().length === 0) {
-      <p class="text-gray-500 dark:text-gray-400">
-        No members have been added to this project yet.
-      </p>
+      <nldd-box>
+        <nldd-inline-dialog
+          icon="person-2"
+          icon-color="secondary"
+          text="No members have been added to this project yet."
+          supporting-text="Add members to grant them access to this project's resources."
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="openAddMemberModal()"
+            text="Add a member"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      </nldd-box>
     } @else {
       <div class="table-container">
         <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
@@ -239,19 +255,19 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showAddMemberModal.set(false)"
-    [disabled]="isAddingMember()"
-    text="Cancel"
-    variant="secondary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
     (click)="saveMember()"
     text="Save changes"
     [text]="isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'"
     [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
     variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showAddMemberModal.set(false)"
+    [disabled]="isAddingMember()"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -276,15 +292,15 @@
   <nldd-button
     slot="actions"
     type="button"
-    (click)="showRemoveMemberModal.set(false)"
-    text="Cancel"
-    variant="secondary"
+    (click)="confirmRemoveMember()"
+    text="Yes, remove this member"
+    variant="destructive"
   ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
-    (click)="confirmRemoveMember()"
-    text="Yes, remove this member"
-    variant="destructive"
+    (click)="showRemoveMemberModal.set(false)"
+    text="Cancel"
+    variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
