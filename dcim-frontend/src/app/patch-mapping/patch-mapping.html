@@ -85,35 +85,33 @@
         }
       </nldd-segmented-control>
 
-      <div class="flex items-center gap-1.5">
-        <label class="text-xs text-slate-500" for="topo-type-filter">Type</label>
+      <nldd-form-field label="Type">
         <select
           id="topo-type-filter"
           [value]="topologyTypeFilter()"
           (change)="topologyTypeFilter.set($any($event.target).value)"
-          class="text-xs border border-slate-200 rounded px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-accent-400"
         >
           <option value="">All types</option>
           @for (t of CABLE_TYPES; track t) {
             <option [value]="t">{{ t }}</option>
           }
         </select>
-      </div>
+      </nldd-form-field>
 
       @if (topologyStatusFilter() || topologyTypeFilter()) {
-        <button
-          class="text-xs text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-accent-400 rounded px-1"
+        <nldd-button
+          variant="secondary"
+          text="Clear"
+          size="sm"
           (click)="topologyStatusFilter.set(''); topologyTypeFilter.set('')"
-        >
-          Clear
-        </button>
+        ></nldd-button>
       }
     </div>
 
     <app-patch-mapping-flow
       class="block w-full flex-1 min-h-0"
       [cables]="dcCables()"
-      [devicePorts]="DEVICE_PORTS"
+      [devicePorts]="localDevicePorts()"
       [selectedCableId]="editCable()?.id ?? null"
       [dcId]="selectedDcId()"
       [filterStatus]="topologyStatusFilter()"
@@ -121,6 +119,8 @@
       (cableSelected)="openEditCableById($event)"
       (deviceNavigate)="navigateToDevice($event)"
       (connectionMade)="openAddCableFromConnection($event)"
+      (portsEditRequested)="openEditPorts($event)"
+      (cableStatusChanged)="updateCableStatus($event)"
     />
   }
 </div>
@@ -133,10 +133,33 @@
     [cable]="editCable()"
     [dcId]="selectedDcId()"
     [allCables]="dcCables()"
+    [externalDevicePorts]="localDevicePorts()"
     (save)="saveFromForm($event)"
     (cancelForm)="closeForm()"
     (cableDelete)="openDeleteCable($event)"
+    (portsUpdated)="onPortsUpdated($event)"
   />
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PORT EDIT SHEET (topology view)
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet
+  #portEditSheet
+  accessible-label="Edit device ports"
+  placement="right"
+  width="420px"
+  (close)="closeEditPorts()"
+>
+  @if (editPortsDevice() !== null) {
+    <app-device-ports
+      [deviceId]="editPortsDevice()!.id"
+      [deviceName]="editPortsDevice()!.name"
+      [ports]="editPortsPorts()"
+      (portsChange)="saveTopologyPorts($event)"
+      (cancelEdit)="closeEditPorts()"
+    />
+  }
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════

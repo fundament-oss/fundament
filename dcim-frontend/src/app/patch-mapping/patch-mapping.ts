@@ -13,8 +13,17 @@ import { Router } from '@angular/router';
 import PatchMappingFlowWrapperComponent from './patch-mapping-flow-wrapper';
 import CableListComponent from './cable-list/cable-list';
 import CableFormComponent from './cable-form/cable-form';
+import DevicePortsComponent from './device-ports/device-ports';
 import ShoppingListComponent from './shopping-list/shopping-list';
-import { Cable, CableSide, CableStatus, CableType, DEVICE_PORTS, MOCK_CABLES } from './cable.model';
+import {
+  Cable,
+  CableSide,
+  CableStatus,
+  CableType,
+  DEVICE_PORTS,
+  MOCK_CABLES,
+  Port,
+} from './cable.model';
 import { DATACENTER_INFO } from '../datacenters/datacenter.model';
 import { RACKS } from '../racks/rack.model';
 
@@ -25,6 +34,7 @@ import { RACKS } from '../racks/rack.model';
     PatchMappingFlowWrapperComponent,
     CableListComponent,
     CableFormComponent,
+    DevicePortsComponent,
     ShoppingListComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -70,7 +80,15 @@ export default class PatchMappingComponent {
 
   readonly topologyTypeFilter = signal<CableType | ''>('');
 
-  readonly DEVICE_PORTS = DEVICE_PORTS;
+  readonly localDevicePorts = signal<Record<string, Port[]>>({ ...DEVICE_PORTS });
+
+  readonly editPortsDevice = signal<{ id: string; name: string } | null>(null);
+
+  readonly editPortsPorts = computed<Port[]>(() => {
+    const dev = this.editPortsDevice();
+    if (!dev) return [];
+    return this.localDevicePorts()[dev.id] ?? [];
+  });
 
   readonly CABLE_TYPES: CableType[] = [
     'cat5e',
@@ -100,6 +118,8 @@ export default class PatchMappingComponent {
 
   private readonly shoppingSheetEl = viewChild<ElementRef>('shoppingSheet');
 
+  private readonly portEditSheetEl = viewChild<ElementRef>('portEditSheet');
+
   constructor() {
     effect(() => {
       const el = this.cableSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
@@ -114,6 +134,11 @@ export default class PatchMappingComponent {
     effect(() => {
       const el = this.shoppingSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.shoppingListOpen()) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
+      const el = this.portEditSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.editPortsDevice() !== null) el?.show?.();
       else el?.hide?.();
     });
   }
@@ -133,6 +158,28 @@ export default class PatchMappingComponent {
     if (cable) this.openEditCable(cable);
   }
 
+  onPortsUpdated(event: { deviceId: string; ports: Port[] }): void {
+    this.localDevicePorts.update((map) => ({ ...map, [event.deviceId]: event.ports }));
+  }
+
+  openEditPorts(deviceId: string): void {
+    const allDevices = RACKS.flatMap((r) => r.devices);
+    const device = allDevices.find((d) => d.id === deviceId);
+    if (!device) return;
+    this.editPortsDevice.set({ id: device.id, name: device.name });
+  }
+
+  saveTopologyPorts(ports: Port[]): void {
+    const dev = this.editPortsDevice();
+    if (!dev) return;
+    this.localDevicePorts.update((map) => ({ ...map, [dev.id]: ports }));
+    this.editPortsDevice.set(null);
+  }
+
+  closeEditPorts(): void {
+    this.editPortsDevice.set(null);
+  }
+
   openAddCableFromConnection(conn: {
     sourceDeviceId: string;
     sourcePortId: string;
@@ -142,8 +189,9 @@ export default class PatchMappingComponent {
     const allDevices = RACKS.flatMap((r) => r.devices);
     const aDevice = allDevices.find((d) => d.id === conn.sourceDeviceId);
     const bDevice = allDevices.find((d) => d.id === conn.targetDeviceId);
-    const aPort = (DEVICE_PORTS[conn.sourceDeviceId] ?? []).find((p) => p.id === conn.sourcePortId);
-    const bPort = (DEVICE_PORTS[conn.targetDeviceId] ?? []).find((p) => p.id === conn.targetPortId);
+    const ports = this.localDevicePorts();
+    const aPort = (ports[conn.sourceDeviceId] ?? []).find((p) => p.id === conn.sourcePortId);
+    const bPort = (ports[conn.targetDeviceId] ?? []).find((p) => p.id === conn.targetPortId);
 
     if (!aDevice || !bDevice || !aPort || !bPort) {
       this.openAddCable();
@@ -201,6 +249,12 @@ export default class PatchMappingComponent {
     if (!target) return;
     this.mutableCables.update((list) => list.filter((c) => c.id !== target.id));
     this.deleteCable.set(null);
+  }
+
+  updateCableStatus(event: { cableId: string; status: CableStatus }): void {
+    this.mutableCables.update((list) =>
+      list.map((c) => (c.id === event.cableId ? { ...c, status: event.status } : c)),
+    );
   }
 
   navigateToDevice(id: string): void {

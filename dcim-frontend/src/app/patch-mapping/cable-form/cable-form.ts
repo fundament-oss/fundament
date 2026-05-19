@@ -42,6 +42,8 @@ export default class CableFormComponent {
 
   readonly allCables = input<Cable[]>([]);
 
+  readonly externalDevicePorts = input<Record<string, Port[]>>({});
+
   readonly save = output<Cable>();
 
   readonly cancelForm = output<void>();
@@ -81,6 +83,15 @@ export default class CableFormComponent {
   readonly portManagementDevice = signal<{ id: string; name: string } | null>(null);
 
   readonly localDevicePorts = signal<Record<string, Port[]>>({ ...DEVICE_PORTS });
+
+  // ── Quick-add port ─────────────────────────────────────────────────────────
+  readonly aAddingPort = signal(false);
+
+  readonly bAddingPort = signal(false);
+
+  readonly newPortName = signal('');
+
+  readonly newPortType = signal<PortType>('network-interface');
 
   // ── Derived: devices in this DC ───────────────────────────────────────────
   readonly dcDevices = computed<DeviceOption[]>(() => {
@@ -165,6 +176,10 @@ export default class CableFormComponent {
   });
 
   constructor() {
+    effect(() => {
+      const ext = this.externalDevicePorts();
+      this.localDevicePorts.update((current) => ({ ...current, ...ext }));
+    });
     effect(() => {
       const c = this.cable();
       if (!c) return;
@@ -266,6 +281,37 @@ export default class CableFormComponent {
     }
     this.portsUpdated.emit({ deviceId: dev.id, ports });
     this.portManagementDevice.set(null);
+  }
+
+  confirmAddPort(side: 'a' | 'b'): void {
+    const name = this.newPortName().trim();
+    if (!name) return;
+    const deviceId = side === 'a' ? this.aDeviceId() : this.bDeviceId();
+    if (!deviceId) return;
+    const portType = this.newPortType();
+    const id = `p-${deviceId}-${Date.now().toString(36)}`;
+    const port: Port = { id, deviceId, name, type: portType };
+    this.localDevicePorts.update((map) => ({
+      ...map,
+      [deviceId]: [...(map[deviceId] ?? []), port],
+    }));
+    this.portsUpdated.emit({ deviceId, ports: this.localDevicePorts()[deviceId] });
+    if (side === 'a') {
+      this.aPortType.set(portType);
+      this.aPortId.set(id);
+      this.aAddingPort.set(false);
+    } else {
+      this.bPortType.set(portType);
+      this.bPortId.set(id);
+      this.bAddingPort.set(false);
+    }
+    this.newPortName.set('');
+  }
+
+  cancelAddPort(side: 'a' | 'b'): void {
+    if (side === 'a') this.aAddingPort.set(false);
+    else this.bAddingPort.set(false);
+    this.newPortName.set('');
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────

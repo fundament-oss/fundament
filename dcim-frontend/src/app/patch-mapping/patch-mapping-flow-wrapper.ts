@@ -48,6 +48,10 @@ export default class PatchMappingFlowWrapperComponent
     targetPortId: string;
   }>();
 
+  readonly portsEditRequested = output<string>();
+
+  readonly cableStatusChanged = output<{ cableId: string; status: CableStatus }>();
+
   private root: ReturnType<typeof ReactDOM.createRoot> | undefined;
 
   ngAfterViewInit() {
@@ -75,6 +79,9 @@ export default class PatchMappingFlowWrapperComponent
         onCableClick: (id: string) => this.cableSelected.emit(id),
         onDeviceClick: (id: string) => this.deviceNavigate.emit(id),
         onConnectionMade: (conn) => this.connectionMade.emit(conn),
+        onEditPorts: (deviceId: string) => this.portsEditRequested.emit(deviceId),
+        onCableStatusChange: (cableId: string, status: CableStatus) =>
+          this.cableStatusChanged.emit({ cableId, status }),
       }),
     );
   }
