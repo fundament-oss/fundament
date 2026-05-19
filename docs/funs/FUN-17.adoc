@@ -9,11 +9,29 @@
 
 == Introduction
 
-link:/funs/fun-16[FUN-16] established that plugin UIs run inside sandboxed iframes so that third-party plugin code cannot reach the user's session cookie or the rest of the Console's JavaScript context. That sandbox is the right isolation primitive, but it leaves an open question: how does plugin code inside the sandbox make authenticated API calls? The user's session JWT lives in an `HttpOnly` cookie scoped to the Console origin; the iframe runs on a different origin with `sandbox="allow-scripts"` (no `allow-same-origin`), so even loosening cookie scoping would not help. The plugin literally has no way to read the user's session token.
+link:/funs/fun-16[FUN-16] established that plugin UIs run inside sandboxed iframes so that third-party plugin code cannot reach the user's session cookie or the rest of the Console's JavaScript context. That sandbox is the right isolation primitive, but it leaves an open question: how does plugin code inside the sandbox make authenticated API calls? The user's session JWT lives in an `HttpOnly` cookie scoped to the Console origin; the iframe runs on a different *site* (`plugin-proxy.fundament.io` — see "Origin model"), so the Same-Origin Policy plus the cookie's own scoping put the session token out of reach and loosening cookie scoping would not help. The plugin literally has no way to read the user's session token.
 
 A second concern surfaces alongside this: even if we *could* hand the user's JWT to the iframe, we shouldn't. The user's JWT carries every organization the user belongs to and every group they're a member of. A cert-manager plugin needs to read Certificate CRs; it does not need permission to delete the organization, manage cluster nodes, or talk to billing endpoints. Giving every plugin the full reach of the user's token violates least-privilege and turns every plugin into a potential confused deputy.
 
 This FUN describes the token model, mint flow, and proxy enforcement that together let plugin code call platform APIs as the user — but only inside the scope the plugin's installation manifest declared and the user consented to.
+
+== Origin model
+
+Plugin UI assets are served from a *dedicated origin*, `https://plugin-proxy.fundament.io`, which is a different *site* from the Console's `https://console.fundament.io`. The iframe is created with `sandbox="allow-scripts allow-same-origin"`, so plugin code runs in a real, stable origin of its own: `plugin-proxy.fundament.io`.
+
+Isolation from the user's session rests on cross-site origin separation plus the session cookie's own scoping: the `UserToken` cookie is `HttpOnly` and scoped to the Console host, so the Same-Origin Policy blocks the plugin origin from reading the Console's cookies, `localStorage`, or DOM, exactly as it blocks any unrelated third-party site. A real origin is what makes this FUN's later mechanisms work: `script-src 'self'` resolves to the plugin's own origin, and a host→iframe `postMessage` can pin a concrete `targetOrigin` (see "Delivering the token" and "The CSP confines outbound network calls").
+
+The well-known hazard of combining `allow-scripts` with `allow-same-origin` — that the framed document can reach its embedder and rewrite its own `sandbox` attribute — does not apply here: the plugin origin is cross-site with the Console, so plugin code cannot reach `parent.document` at all. `allow-top-navigation` and `allow-popups` remain ungranted, so the navigation and popup containment from link:/funs/fun-16[FUN-16] is unchanged.
+
+=== Relationship to FUN-16
+
+link:/funs/fun-16[FUN-16] is committed and remains the baseline for plugin isolation. A token-bearing iframe needs a real origin, so this FUN supersedes the following FUN-16 statements specifically; FUN-16 itself is left unedited and the supersessions are recorded here:
+
+* *Serving plugins on the same origin.* Assets move to the dedicated `plugin-proxy` origin instead of being mounted under a Console path.
+* *Sandboxed iframes as an isolation boundary.* The sandbox becomes `allow-scripts allow-same-origin`; the opaque-origin rationale is replaced by cross-site origin separation. FUN-16's "both `HttpOnly` and the opaque origin must fail" framing becomes "both `HttpOnly` and cross-site SOP must fail".
+* *Content Security Policy.* `'unsafe-inline'` is dropped from `script-src`/`style-src`; `connect-src` and `frame-ancestors` take the cross-origin form shown under "The CSP confines outbound network calls".
+* *Message validation.* Because the iframe now has a real origin, `event.origin` is usable for inbound validation and host→iframe sends pin `targetOrigin`; FUN-16's `event.source === iframe.contentWindow` check is retained as a second factor.
+* *Kubernetes API access.* FUN-16's "relative URLs, server-side auth, no CORS" no longer holds: plugin JS holds a `PluginToken` and calls the proxies cross-origin under CORS (see "The CSP confines outbound network calls").
 
 == Two token types
 
@@ -78,7 +96,7 @@ When the Console mounts an iframe, it kicks off a `MintPluginToken` request in p
 
 The Console holds tokens only in a JS variable on the parent window. They are never written to `localStorage`, `sessionStorage`, `IndexedDB`, or any other persistent storage. Closing the tab discards them.
 
-Every host-to-iframe `postMessage` call pins the *target origin* to `plugin-proxy`'s origin. The legacy `postMessage(msg, '*')` form is safe against other windows but unsafe if the iframe is ever navigated off its expected origin — at that point, an attacker page would silently receive every subsequent message including the next refreshed token. Pinning the target origin lets the browser refuse delivery on mismatch. The cost is zero because we always know the origin: we constructed the iframe `src` ourselves.
+Every host-to-iframe `postMessage` call pins the *target origin* to `plugin-proxy`'s origin. This works because the iframe has a real origin (`allow-same-origin` on the dedicated `plugin-proxy` site — see "Origin model"), which the browser requires before it will deliver a message to a concrete `targetOrigin`. The legacy `postMessage(msg, '*')` form is safe against other windows but unsafe if the iframe is ever navigated off its expected origin — at that point, an attacker page would silently receive every subsequent message including the next refreshed token. Pinning the target origin lets the browser refuse delivery on mismatch, and we explicitly reject the `'*'` form for token delivery. The cost is zero because we always know the origin: we constructed the iframe `src` ourselves.
 
 == The CSP confines outbound network calls
 
@@ -103,7 +121,9 @@ Content-Security-Policy:
 
 The `connect-src` allowlist is the line that does the work. The plugin's JS can `fetch()` only the two proxies — every other destination is refused by the browser before the request leaves the iframe. `form-action` closes the parallel exfil path via `<form>` submission, which `connect-src` does not cover, while still allowing legitimate POSTs (file uploads, cert submissions) to the proxies. `frame-ancestors` ensures nobody but the Console can host the iframe in the first place. The plugin author cannot override this policy because it is a response header set by `plugin-proxy`, outside the plugin's HTML.
 
-`script-src 'self'` and `style-src 'self'` allow scripts and styles only from the plugin's own origin — no inline content, no remote sources. Since the iframe now holds a usable PluginToken, the SDK is no longer the exfil chokepoint it was when the parent mediated every API call; the CSP is. `'unsafe-inline'` would defeat that, so this design rules it out from v1. The SDK is shipped as a separate file at `/plugins/sdk/{version}/sdk.js`, loaded via a normal `<script src="…">` reference from the plugin's HTML, and plugin authors follow the same pattern for their own code — scripts in separate files, no inline `<script>` blocks or `on*` attribute handlers. Modern SPA build tools default to this layout. If a future use case genuinely requires inline content (e.g., server-injected bootstrap config), nonces can be added per-response, but no such case exists in v1.
+`script-src 'self'` and `style-src 'self'` allow scripts and styles only from the plugin's own origin — no inline content, no remote sources. `'self'` here resolves to `https://plugin-proxy.fundament.io` because the iframe has a real origin (see "Origin model"), so the plugin's own bundle and the SDK load. Since the iframe now holds a usable PluginToken, the SDK is no longer the exfil chokepoint it was when the parent mediated every API call; the CSP is. `'unsafe-inline'` would defeat that, so this design rules it out from v1 — explicitly superseding link:/funs/fun-16[FUN-16]'s `script-src 'self' 'unsafe-inline'` for the plugin path. The cost lands on plugin authors: FUN-16 allowed inline UI logic with no build step, whereas here scripts must live in separate files. The SDK is shipped as a separate file at `/plugins/sdk/{version}/sdk.js`, loaded via a normal `<script src="…">` reference from the plugin's HTML, and plugin authors follow the same pattern for their own code — scripts in separate files, no inline `<script>` blocks or `on*` attribute handlers. Modern SPA build tools default to this layout. If a future use case genuinely requires inline content (e.g., server-injected bootstrap config), nonces can be added per-response, but no such case exists in v1.
+
+Because the iframe is cross-site with the proxies (see "Origin model"), the plugin's `fetch()` calls are cross-origin. Carrying the `PluginToken` in an `Authorization` header makes them non-simple requests, so the browser issues a CORS preflight. `plugin-proxy` and `kube-api-proxy` must answer it: `Access-Control-Allow-Origin: https://plugin-proxy.fundament.io`, `Access-Control-Allow-Headers: Authorization`, and the methods the data path uses; the token rides in the `Authorization` header, so credentials mode stays off. This is the CORS surface link:/funs/fun-16[FUN-16] avoided by serving same-origin; the dedicated origin makes it unavoidable, so it is handled here.
 
 `plugin-proxy` reserves `/csp-reports` for future CSP `report-to` / `Reporting-Endpoints` integration so violations become observable; not wired in v1.
 
@@ -140,7 +160,7 @@ One caveat: in-cluster audit attributes these calls to the plugin SA, not to the
 
 *Network interception.* Tokens travel only in TLS-protected channels and only in `Authorization` headers (never in URLs, where they would leak via Referer headers and browser history). Existing TLS posture covers this.
 
-*Postmessage delivery to a wrong-origin page.* Pinned target origin in every host→iframe `postMessage` call. The browser refuses delivery if the iframe was navigated off its expected origin.
+*Postmessage delivery to a wrong-origin page.* Pinned target origin in every host→iframe `postMessage` call — effective only because the iframe has a real origin (see "Origin model"), so the browser refuses delivery if the iframe was navigated off its expected origin.
 
 == Lifecycle
 
@@ -175,7 +195,7 @@ This FUN imposes one requirement on committed link:/funs/fun-11[FUN-11], stated 
 
 == Alternatives considered
 
-*Hand the UserToken to the iframe.* Rejected primarily because of the blast radius: the UserToken's reach across every organization and group the user belongs to makes it unacceptable to hand to plugin code regardless of delivery mechanism. The technical delivery problem (HttpOnly cookie, opaque iframe origin) is independently a blocker but secondary.
+*Hand the UserToken to the iframe.* Rejected primarily because of the blast radius: the UserToken's reach across every organization and group the user belongs to makes it unacceptable to hand to plugin code regardless of delivery mechanism. The technical delivery problem (HttpOnly cookie, cross-site iframe origin) is independently a blocker but secondary.
 
 *Embed the scope in the JWT claim.* Initial draft. Rejected because (a) JWT size grows with rule count, hitting common proxy header limits (~8KB) for plugins with extensive RBAC; (b) an embedded snapshot would survive a re-pin — after an upgrade narrows or replaces the pinned definition, already-minted tokens would carry the old scope until they expire, reintroducing the stale-permissions window the pinned-definition lookup otherwise eliminates; (c) materialising the plugin SA's `Role` from the pinned definition keeps the source of truth singular — the immutable definition is authoritative, the token is just a bound capability carrying no scope.
 
@@ -198,4 +218,4 @@ This FUN imposes one requirement on committed link:/funs/fun-11[FUN-11], stated 
 * link:/funs/fun-9[FUN-9] API keys — the existing key-to-JWT exchange flow that the new mint endpoint sits alongside.
 * link:/funs/fun-11[FUN-11] Plugins and the Marketplace — plugin definition format, the per-installation plugin ServiceAccount, and `PluginInstallation` CR. This FUN refines FUN-11's "data access uses standard Kubernetes RBAC" statement for the plugin-mediated path (it becomes `user ∩ plugin`), and requires of FUN-11: `PluginDefinition` immutable and content-addressed by hash; `PluginInstallation` pinning one by `(plugin_name, plugin_version, definition_hash)`; and `plugin-controller` materialising the reused plugin SA's `Role`/`ClusterRole` from the pinned definition's `permissions.rbac` instead of binding opaque `clusterRoles`. Those schema and controller changes land in FUN-11; FUN-17 only states the authorization model.
 * link:/funs/fun-12[FUN-12] Unauthorized vs Not Found — applied to mint-time denials, the gateway's user-SAR rejections, and the cluster's RBAC rejections on the plugin SA.
-* link:/funs/fun-16[FUN-16] Plugin isolation — the iframe sandboxing this FUN builds on.
+* link:/funs/fun-16[FUN-16] Plugin isolation — the iframe sandboxing this FUN builds on and partially supersedes; see "Origin model" / "Relationship to FUN-16" for the exact superseded statements (dedicated origin, `allow-same-origin`, dropped `'unsafe-inline'`, CORS).
