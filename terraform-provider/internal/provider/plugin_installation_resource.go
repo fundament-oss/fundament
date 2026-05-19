@@ -47,7 +47,8 @@ type pluginInstallationSpec struct {
 }
 
 type pluginInstallationStatus struct {
-	Phase string `json:"phase"`
+	Phase   string `json:"phase"`
+	Message string `json:"message,omitempty"`
 }
 
 const pluginInstallationAPIVersion = "plugins.fundament.io/v1"
@@ -70,7 +71,9 @@ func (r *PluginInstallationResource) Metadata(ctx context.Context, req resource.
 
 func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a plugin installation on a Fundament cluster via the kube-api-proxy.",
+		Description: "Manages a plugin installation on a Fundament cluster via the kube-api-proxy. " +
+			"Create waits up to 40 minutes for the cluster to reach RUNNING and for the plugin to reach the Running phase. " +
+			"Delete is skipped (no-op) when the cluster is not in a state where its Kubernetes API is reachable (e.g. stopped, deleting); the CRD will be removed when the cluster is destroyed.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Composite identifier in the form {cluster_id}/{plugin_name}.",
@@ -103,6 +106,9 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 			"phase": schema.StringAttribute{
 				Description: "The current phase of the plugin installation as reported by the plugin controller.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -219,7 +225,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 
 	plan.ID = types.StringValue(clusterID + "/" + pluginName)
 
-	tflog.Debug(ctx, "Polling plugin installation until phase is set", map[string]any{"plugin_name": pluginName})
+	tflog.Debug(ctx, "Polling plugin installation until phase is Running", map[string]any{"plugin_name": pluginName})
 
 	for {
 		crdState, err := r.fetchCRD(ctx, clusterID, pluginName)
@@ -228,8 +234,21 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 			return
 		}
 
-		if crdState.Status.Phase != "" {
+		switch crdState.Status.Phase {
+		case "Running":
 			plan.Phase = types.StringValue(crdState.Status.Phase)
+		case "Failed", "Terminating":
+			resp.Diagnostics.AddError(
+				"Plugin Installation Failed",
+				fmt.Sprintf("Plugin installation for %q entered phase %q: %s", pluginName, crdState.Status.Phase, crdState.Status.Message),
+			)
+			return
+		default:
+			// Pending, Deploying, Degraded, or empty — keep polling.
+			tflog.Debug(ctx, "Plugin installation not yet running", map[string]any{"plugin_name": pluginName, "phase": crdState.Status.Phase})
+		}
+
+		if plan.Phase.ValueString() == "Running" {
 			break
 		}
 
@@ -237,7 +256,10 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		select {
 		case <-ctx.Done():
 			t.Stop()
-			resp.Diagnostics.AddError("Timeout Waiting for Plugin Phase", "Context deadline exceeded while waiting for plugin installation phase to be set.")
+			resp.Diagnostics.AddError(
+				"Timeout Waiting for Plugin Phase",
+				fmt.Sprintf("Timed out waiting for plugin %q to reach Running (last phase: %q).", pluginName, crdState.Status.Phase),
+			)
 			return
 		case <-t.C:
 		}
@@ -410,8 +432,8 @@ func (r *PluginInstallationResource) ImportState(ctx context.Context, req resour
 }
 
 func (r *PluginInstallationResource) listURL(clusterID string) string {
-	return fmt.Sprintf("%s/clusters/%s/apis/plugins.fundament.io/v1/plugininstallations",
-		strings.TrimRight(r.client.KubeProxyURL, "/"), clusterID)
+	return fmt.Sprintf("%s/clusters/%s/apis/%s/plugininstallations",
+		strings.TrimRight(r.client.KubeProxyURL, "/"), clusterID, pluginInstallationAPIVersion)
 }
 
 func (r *PluginInstallationResource) resourceURL(clusterID, pluginName string) string {

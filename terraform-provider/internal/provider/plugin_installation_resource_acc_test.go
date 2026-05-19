@@ -50,7 +50,7 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "plugin_name", pluginName),
 					resource.TestCheckResourceAttr(resourceName, "image", image),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttrSet(resourceName, "phase"),
+					resource.TestCheckResourceAttr(resourceName, "phase", "Running"),
 				),
 			},
 			// ImportState

@@ -63,9 +63,10 @@ func TestMain(m *testing.M) {
 	// If FUNDAMENT_API_KEY is already set (e.g. when the authz-worker is not
 	// running locally), skip dynamic key creation and use the provided key directly.
 	apiKeyToken := os.Getenv("FUNDAMENT_API_KEY")
+	usingPresetKey := apiKeyToken != ""
 	var apiKeyID string // only set when we create the key dynamically; used for cleanup
 
-	if apiKeyToken != "" {
+	if usingPresetKey {
 		fmt.Println("TestMain: using pre-set FUNDAMENT_API_KEY, skipping dynamic key creation")
 	} else {
 		apiKeyClient := organizationv1connect.NewAPIKeyServiceClient(http.DefaultClient, endpoint)
@@ -122,7 +123,7 @@ func TestMain(m *testing.M) {
 			// permanently invalid — retrying won't help.
 			// For a dynamically created key, unauthenticated can be transient
 			// while the authn-worker propagates the new key.
-			if apiKeyID == "" && (code == connect.CodeInternal || code == connect.CodeUnauthenticated) {
+			if usingPresetKey && (code == connect.CodeInternal || code == connect.CodeUnauthenticated) {
 				fmt.Fprintf(os.Stderr, "TestMain: token exchange failed permanently — FUNDAMENT_API_KEY may be invalid or not found on the server: %v\n", err)
 				os.Exit(1)
 			}
