@@ -158,6 +158,22 @@ input[type='radio']:checked {
   background-repeat: no-repeat;
 }
 
+/* Angular CDK drag-drop */
+.cdk-drag-preview {
+  opacity: 0.9;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+}
+.cdk-drag-placeholder {
+  opacity: 0.5;
+}
+.cdk-drag-animating {
+  transition: transform 150ms ease;
+}
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 150ms ease;
+}
+
 /* Rack diagram: free slot diagonal stripe */
 .rack-slot-free {
   background-color: #f8fafc;

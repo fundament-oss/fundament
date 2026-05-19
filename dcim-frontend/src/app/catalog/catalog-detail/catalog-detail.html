@@ -431,14 +431,11 @@
 >
   <div slot="content" class="px-1 pt-2 pb-1">
     <nldd-form-field label="Compatible product">
-      <nldd-dropdown #fCompatEntry placeholder="Select product…">
+      <select #fCompatEntry>
         @for (entry of allCatalogEntries; track entry.id) {
-          <nldd-dropdown-item
-            [attr.value]="entry.id"
-            [attr.label]="entry.model"
-          ></nldd-dropdown-item>
+          <option [value]="entry.id">{{ entry.model }}</option>
         }
-      </nldd-dropdown>
+      </select>
     </nldd-form-field>
   </div>
   <nldd-button
