@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -59,6 +60,15 @@ type pluginInstallationCRD struct {
 	Metadata   pluginInstallationMetadata `json:"metadata"`
 	Spec       pluginInstallationSpec     `json:"spec"`
 	Status     pluginInstallationStatus   `json:"status"`
+}
+
+// pluginInstallationCreatePayload is used for POST requests; omits status so the
+// API server does not receive an empty status object.
+type pluginInstallationCreatePayload struct {
+	APIVersion string                     `json:"apiVersion"`
+	Kind       string                     `json:"kind"`
+	Metadata   pluginInstallationMetadata `json:"metadata"`
+	Spec       pluginInstallationSpec     `json:"spec"`
 }
 
 func NewPluginInstallationResource() resource.Resource {
@@ -169,7 +179,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	crd := pluginInstallationCRD{
+	crd := pluginInstallationCreatePayload{
 		APIVersion: pluginInstallationAPIVersion,
 		Kind:       "PluginInstallation",
 		Metadata:   pluginInstallationMetadata{Name: pluginName},
@@ -227,6 +237,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 
 	tflog.Debug(ctx, "Polling plugin installation until phase is Running", map[string]any{"plugin_name": pluginName})
 
+poll:
 	for {
 		crdState, err := r.fetchCRD(ctx, clusterID, pluginName)
 		if err != nil {
@@ -237,19 +248,16 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		switch crdState.Status.Phase {
 		case "Running":
 			plan.Phase = types.StringValue(crdState.Status.Phase)
-		case "Failed", "Terminating":
+			break poll
+		case "Failed", "Terminating", "Degraded":
 			resp.Diagnostics.AddError(
 				"Plugin Installation Failed",
 				fmt.Sprintf("Plugin installation for %q entered phase %q: %s", pluginName, crdState.Status.Phase, crdState.Status.Message),
 			)
 			return
 		default:
-			// Pending, Deploying, Degraded, or empty — keep polling.
+			// Pending, Deploying, or empty — keep polling.
 			tflog.Debug(ctx, "Plugin installation not yet running", map[string]any{"plugin_name": pluginName, "phase": crdState.Status.Phase})
-		}
-
-		if plan.Phase.ValueString() == "Running" {
-			break
 		}
 
 		t := time.NewTimer(10 * time.Second)
@@ -433,11 +441,11 @@ func (r *PluginInstallationResource) ImportState(ctx context.Context, req resour
 
 func (r *PluginInstallationResource) listURL(clusterID string) string {
 	return fmt.Sprintf("%s/clusters/%s/apis/%s/plugininstallations",
-		strings.TrimRight(r.client.KubeProxyURL, "/"), clusterID, pluginInstallationAPIVersion)
+		strings.TrimRight(r.client.KubeProxyURL, "/"), url.PathEscape(clusterID), pluginInstallationAPIVersion)
 }
 
 func (r *PluginInstallationResource) resourceURL(clusterID, pluginName string) string {
-	return r.listURL(clusterID) + "/" + pluginName
+	return r.listURL(clusterID) + "/" + url.PathEscape(pluginName)
 }
 
 // fetchCRD performs a GET and returns the parsed CRD, or an error on failure.
