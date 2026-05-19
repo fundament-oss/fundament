@@ -45,7 +45,7 @@
         class="flex flex-col gap-px p-2"
         aria-label="Rack slots — drag devices to reorder"
       >
-        @for (row of editorRows(); track (row.type === 'device' ? row.device.id : 'u' + row.u)) {
+        @for (row of editorRows(); track row.type === 'device' ? row.device.id : 'u' + row.u) {
           @if (row.type === 'device') {
             <div
               cdkDrag
@@ -69,7 +69,10 @@
                 (click)="requestDelete(row.device)"
                 [attr.aria-label]="'Delete ' + row.device.name"
               >
-                <nldd-icon name="trash" style="width:14px;height:14px;display:block"></nldd-icon>
+                <nldd-icon
+                  name="trash"
+                  style="width: 14px; height: 14px; display: block"
+                ></nldd-icon>
               </button>
 
               <!-- Custom drag preview. CDK 21 forces padding:0/border:none/background:none
@@ -81,10 +84,9 @@
                     class="w-full h-full rounded border flex items-center gap-1.5 px-1.5 overflow-hidden"
                     [class]="deviceSlotClasses(row.device)"
                   >
-                    <span
-                      class="text-xs font-medium font-mono truncate flex-1 min-w-0 text-left"
-                      >{{ row.device.name }}</span
-                    >
+                    <span class="text-xs font-medium font-mono truncate flex-1 min-w-0 text-left">{{
+                      row.device.name
+                    }}</span>
                     <span class="text-xs opacity-40 shrink-0 font-mono"
                       >{{ row.device.uSize }}U</span
                     >
@@ -103,7 +105,6 @@
           }
         }
       </div>
-
     </div>
 
     <!-- Right power bar -->

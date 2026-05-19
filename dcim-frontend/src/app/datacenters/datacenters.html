@@ -591,9 +591,24 @@
         </nldd-form-field>
         <nldd-form-field label="Status">
           <select #fStatus>
-            <option value="operational" [attr.selected]="editForm()?.status === 'operational' ? true : null">Operational</option>
-            <option value="degraded" [attr.selected]="editForm()?.status === 'degraded' ? true : null">Degraded</option>
-            <option value="maintenance" [attr.selected]="editForm()?.status === 'maintenance' ? true : null">Maintenance</option>
+            <option
+              value="operational"
+              [attr.selected]="editForm()?.status === 'operational' ? true : null"
+            >
+              Operational
+            </option>
+            <option
+              value="degraded"
+              [attr.selected]="editForm()?.status === 'degraded' ? true : null"
+            >
+              Degraded
+            </option>
+            <option
+              value="maintenance"
+              [attr.selected]="editForm()?.status === 'maintenance' ? true : null"
+            >
+              Maintenance
+            </option>
           </select>
         </nldd-form-field>
       </div>

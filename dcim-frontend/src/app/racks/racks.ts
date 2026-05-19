@@ -399,9 +399,7 @@ export default class RacksComponent {
   }
 
   applyDeviceChanges(rackId: string, devices: RackDevice[]): void {
-    this.mutableRacks.update((list) =>
-      list.map((r) => (r.id === rackId ? { ...r, devices } : r)),
-    );
+    this.mutableRacks.update((list) => list.map((r) => (r.id === rackId ? { ...r, devices } : r)));
   }
 
   openDeleteDevice(device: RackDevice): void {
@@ -453,8 +451,7 @@ export default class RacksComponent {
     if (!rack || !form) return;
     const name = (this.fDeviceName()?.nativeElement as HTMLInputElement)?.value?.trim() ?? '';
     const type =
-      ((this.fDeviceType()?.nativeElement as HTMLSelectElement)?.value as DeviceType) ??
-      'machine';
+      ((this.fDeviceType()?.nativeElement as HTMLSelectElement)?.value as DeviceType) ?? 'machine';
     const uSize =
       parseInt((this.fDeviceUSize()?.nativeElement as HTMLInputElement)?.value ?? '1', 10) || 1;
     const state =
