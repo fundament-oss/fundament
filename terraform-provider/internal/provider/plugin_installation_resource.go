@@ -208,7 +208,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode == http.StatusConflict {
-		conflictBody, _ := io.ReadAll(httpResp.Body)
+		conflictBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		tflog.Debug(ctx, "Plugin installation POST returned 409, checking existing resource", map[string]any{"body": string(conflictBody)})
 		existingCRD, err := r.fetchCRD(ctx, clusterID, pluginName)
 		if err != nil {
@@ -224,7 +224,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		}
 		tflog.Info(ctx, "Plugin installation already exists with matching image, treating as idempotent success", map[string]any{"plugin_name": pluginName})
 	} else if httpResp.StatusCode != http.StatusCreated && httpResp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(httpResp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		resp.Diagnostics.AddError(
 			"Unable to Create Plugin Installation",
 			fmt.Sprintf("kube-api-proxy returned HTTP %d: %s", httpResp.StatusCode, string(respBody)),
@@ -236,41 +236,12 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 
 	tflog.Debug(ctx, "Polling plugin installation until phase is Running", map[string]any{"plugin_name": pluginName})
 
-poll:
-	for {
-		crdState, err := r.fetchCRD(ctx, clusterID, pluginName)
-		if err != nil {
-			resp.Diagnostics.AddError("Unable to Poll Plugin Installation Phase", err.Error())
-			return
-		}
-
-		switch crdState.Status.Phase {
-		case "Running":
-			plan.Phase = types.StringValue(crdState.Status.Phase)
-			break poll
-		case "Failed", "Terminating", "Degraded":
-			resp.Diagnostics.AddError(
-				"Plugin Installation Failed",
-				fmt.Sprintf("Plugin installation for %q entered phase %q: %s", pluginName, crdState.Status.Phase, crdState.Status.Message),
-			)
-			return
-		default:
-			// Pending, Deploying, or empty — keep polling.
-			tflog.Debug(ctx, "Plugin installation not yet running", map[string]any{"plugin_name": pluginName, "phase": crdState.Status.Phase})
-		}
-
-		t := time.NewTimer(10 * time.Second)
-		select {
-		case <-ctx.Done():
-			t.Stop()
-			resp.Diagnostics.AddError(
-				"Timeout Waiting for Plugin Phase",
-				fmt.Sprintf("Timed out waiting for plugin %q to reach Running (last phase: %q).", pluginName, crdState.Status.Phase),
-			)
-			return
-		case <-t.C:
-		}
+	phase, err := r.waitForPluginRunning(ctx, clusterID, pluginName)
+	if err != nil {
+		resp.Diagnostics.AddError("Plugin Installation Did Not Reach Running", err.Error())
+		return
 	}
+	plan.Phase = types.StringValue(phase)
 
 	tflog.Info(ctx, "Created plugin installation", map[string]any{"id": plan.ID.ValueString(), "phase": plan.Phase.ValueString()})
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -350,7 +321,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	}
 
 	if httpResp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(httpResp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		resp.Diagnostics.AddError("Unable to Read Plugin Installation", fmt.Sprintf("kube-api-proxy returned HTTP %d: %s", httpResp.StatusCode, string(respBody)))
 		return
 	}
@@ -450,7 +421,7 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 	case http.StatusOK, http.StatusAccepted, http.StatusNoContent, http.StatusNotFound:
 		tflog.Info(ctx, "Deleted plugin installation", map[string]any{"plugin_name": pluginName})
 	default:
-		respBody, _ := io.ReadAll(httpResp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		resp.Diagnostics.AddError("Unable to Delete Plugin Installation", fmt.Sprintf("kube-api-proxy returned HTTP %d: %s", httpResp.StatusCode, string(respBody)))
 	}
 }
@@ -493,7 +464,7 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, pl
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(httpResp.Body)
+		body, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		return nil, fmt.Errorf("kube-api-proxy returned HTTP %d: %s", httpResp.StatusCode, string(body))
 	}
 
@@ -503,4 +474,33 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, pl
 	}
 
 	return &crd, nil
+}
+
+// waitForPluginRunning polls fetchCRD until phase is Running, or a terminal/timeout condition.
+// Returns the final phase string on success, or an error.
+func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, clusterID, pluginName string) (string, error) {
+	for {
+		crdState, err := r.fetchCRD(ctx, clusterID, pluginName)
+		if err != nil {
+			return "", err
+		}
+
+		switch crdState.Status.Phase {
+		case "Running":
+			return crdState.Status.Phase, nil
+		case "Failed", "Terminating", "Degraded":
+			return "", fmt.Errorf("plugin installation for %q entered phase %q: %s", pluginName, crdState.Status.Phase, crdState.Status.Message)
+		default:
+			// Pending, Deploying, or empty — keep polling.
+			tflog.Debug(ctx, "Plugin installation not yet running", map[string]any{"plugin_name": pluginName, "phase": crdState.Status.Phase})
+		}
+
+		t := time.NewTimer(10 * time.Second)
+		select {
+		case <-ctx.Done():
+			t.Stop()
+			return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q)", pluginName, crdState.Status.Phase)
+		case <-t.C:
+		}
+	}
 }

@@ -53,6 +53,7 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 			organizationv1.ClusterStatus_CLUSTER_STATUS_STOPPED:
 			return fmt.Errorf("cluster %s is in a terminal state and will not reach RUNNING", clusterID)
 		default:
+			// CREATING, UPGRADING, UNSPECIFIED, and any future transient states — keep polling.
 		}
 
 		t := time.NewTimer(10 * time.Second)
