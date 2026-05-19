@@ -17,6 +17,7 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 	const maxConsecutiveErrors = 5
 
 	consecutiveErrors := 0
+	lastStatus := organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
 
 	for {
 		req := connect.NewRequest(organizationv1.GetClusterRequest_builder{
@@ -33,15 +34,16 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 			select {
 			case <-ctx.Done():
 				t.Stop()
-				return ctx.Err()
+				return fmt.Errorf("timed out waiting for cluster %s to reach RUNNING (last status: %s): %w", clusterID, lastStatus, ctx.Err())
 			case <-t.C:
 			}
 			continue
 		}
 
 		consecutiveErrors = 0
+		lastStatus = resp.Msg.GetCluster().GetStatus()
 
-		switch resp.Msg.GetCluster().GetStatus() {
+		switch lastStatus {
 		case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING:
 			return nil
 		case organizationv1.ClusterStatus_CLUSTER_STATUS_ERROR:
@@ -57,7 +59,7 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 		select {
 		case <-ctx.Done():
 			t.Stop()
-			return ctx.Err()
+			return fmt.Errorf("timed out waiting for cluster %s to reach RUNNING (last status: %s): %w", clusterID, lastStatus, ctx.Err())
 		case <-t.C:
 		}
 	}
