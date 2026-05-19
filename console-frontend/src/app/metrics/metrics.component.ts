@@ -119,7 +119,7 @@ function toLocalDateString(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function presetToDateRange(preset: TimeRangePreset): { from: string; to: string } {
+function presetToDateRange(preset: Exclude<TimeRangePreset, 'custom'>): { from: string; to: string } {
   const now = new Date();
   const to = toLocalDateString(now);
 
@@ -139,7 +139,8 @@ function presetToDateRange(preset: TimeRangePreset): { from: string; to: string 
     from.setDate(from.getDate() - 30);
     return { from: toLocalDateString(from), to };
   }
-  return { from: to, to };
+  const _: never = preset;
+  throw new Error(`Unhandled preset: ${_}`);
 }
 
 function computeStepSeconds(rangeSeconds: number): number {
@@ -313,7 +314,11 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     if (this.chartDates[minIdx]) this.dateFrom = this.chartDates[minIdx];
     if (this.chartDates[maxIdx]) this.dateTo = this.chartDates[maxIdx];
 
-    this.selectedPreset.set('custom');
+    if (this.selectedPreset() !== 'custom') {
+      this.selectedPreset.set('custom');
+      this.cancelStream();
+      this.isLive.set(false);
+    }
   }
 
   private zoomOptions() {
@@ -350,7 +355,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.startStream();
   }
 
-  private applyPreset(preset: TimeRangePreset): void {
+  private applyPreset(preset: Exclude<TimeRangePreset, 'custom'>): void {
     const { from, to } = presetToDateRange(preset);
     this.dateFrom = from;
     this.dateTo = to;
@@ -359,7 +364,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   private cancelStream(): void {
     this.streamSub?.unsubscribe();
     this.streamSub = null;
-    this.reconnectAttempt = 0;
     if (this.refreshChartTimeoutId !== null) {
       clearTimeout(this.refreshChartTimeoutId);
       this.refreshChartTimeoutId = null;
@@ -370,7 +374,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private startStream(): void {
+  private startStream(fromReconnect = false): void {
+    if (!fromReconnect) this.reconnectAttempt = 0;
     this.cancelStream();
     this.isLoading.set(true);
     this.isLive.set(false);
@@ -418,7 +423,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         this.reconnectAttempt += 1;
         this.reconnectTimeoutId = setTimeout(() => {
           this.reconnectTimeoutId = null;
-          this.startStream();
+          this.startStream(true);
         }, delay);
       },
     });
