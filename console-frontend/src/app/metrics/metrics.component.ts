@@ -122,7 +122,10 @@ function toLocalDateString(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function presetToDateRange(preset: Exclude<TimeRangePreset, 'custom'>): { from: string; to: string } {
+function presetToDateRange(preset: Exclude<TimeRangePreset, 'custom'>): {
+  from: string;
+  to: string;
+} {
   const now = new Date();
   const to = toLocalDateString(now);
 
@@ -151,6 +154,24 @@ function computeStepSeconds(rangeSeconds: number): number {
   if (rangeSeconds <= 86_400) return 300;
   if (rangeSeconds <= 604_800) return 1_800;
   return 3_600;
+}
+
+function lineDataset(
+  label: string,
+  borderColor: string,
+  backgroundColor: string,
+  data: number[],
+): ChartDataset<'line'> {
+  return {
+    label,
+    data: data.length ? data : [0],
+    borderColor,
+    backgroundColor,
+    borderWidth: 1,
+    tension: 0.4,
+    fill: true,
+    pointRadius: 0,
+  };
 }
 
 @Component({
@@ -585,7 +606,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     networkReceiveMbS: { timestamp?: Timestamp; value: number }[];
     networkTransmitMbS: { timestamp?: Timestamp; value: number }[];
   }): void {
-    const windowSeconds = PRESET_WINDOW_SECONDS[this.selectedPreset() as Exclude<TimeRangePreset, 'custom'>] ?? 0;
+    const windowSeconds =
+      PRESET_WINDOW_SECONDS[this.selectedPreset() as Exclude<TimeRangePreset, 'custom'>] ?? 0;
     const includeTime = windowSeconds > 0 && windowSeconds <= 86400;
     this.chartLabels = r.cpuCores.map((s) => formatTimestamp(s.timestamp, includeTime));
     this.chartDates = r.cpuCores.map((s) =>
@@ -659,24 +681,6 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.createNetworkChart(labels, networkRx, networkTx);
   }
 
-  private lineDataset(
-    label: string,
-    borderColor: string,
-    backgroundColor: string,
-    data: number[],
-  ): ChartDataset<'line'> {
-    return {
-      label,
-      data: data.length ? data : [0],
-      borderColor,
-      backgroundColor,
-      borderWidth: 1,
-      tension: 0.4,
-      fill: true,
-      pointRadius: 0,
-    };
-  }
-
   private lineChartConfig(
     labels: string[],
     datasets: ChartDataset<'line'>[],
@@ -704,7 +708,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.cpuChart = new Chart(
       ctx,
       this.lineChartConfig(labels, [
-        this.lineDataset('CPU usage (cores)', 'rgb(99, 102, 241)', 'rgba(99, 102, 241, 0.1)', data),
+        lineDataset('CPU usage (cores)', 'rgb(99, 102, 241)', 'rgba(99, 102, 241, 0.1)', data),
       ]),
     );
   }
@@ -716,7 +720,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.memoryChart = new Chart(
       ctx,
       this.lineChartConfig(labels, [
-        this.lineDataset('Memory usage (GiB)', 'rgb(16, 185, 129)', 'rgba(16, 185, 129, 0.1)', data),
+        lineDataset('Memory usage (GiB)', 'rgb(16, 185, 129)', 'rgba(16, 185, 129, 0.1)', data),
       ]),
     );
   }
@@ -728,7 +732,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.podChart = new Chart(
       ctx,
       this.lineChartConfig(labels, [
-        this.lineDataset('Pod count', 'rgb(245, 158, 11)', 'rgba(245, 158, 11, 0.1)', data),
+        lineDataset('Pod count', 'rgb(245, 158, 11)', 'rgba(245, 158, 11, 0.1)', data),
       ]),
     );
   }
@@ -742,8 +746,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
       this.lineChartConfig(
         labels,
         [
-          this.lineDataset('Receive (MB/s)', 'rgb(59, 130, 246)', 'rgba(59, 130, 246, 0.1)', rx),
-          this.lineDataset('Transmit (MB/s)', 'rgb(168, 85, 247)', 'rgba(168, 85, 247, 0.1)', tx),
+          lineDataset('Receive (MB/s)', 'rgb(59, 130, 246)', 'rgba(59, 130, 246, 0.1)', rx),
+          lineDataset('Transmit (MB/s)', 'rgb(168, 85, 247)', 'rgba(168, 85, 247, 0.1)', tx),
         ],
         true,
       ),

@@ -59,10 +59,7 @@
         <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
           Time range
         </span>
-        <nldd-segmented-control
-          [value]="selectedPreset()"
-          (change)="onPresetChangeEvent($event)"
-        >
+        <nldd-segmented-control [value]="selectedPreset()" (change)="onPresetChangeEvent($event)">
           @for (preset of presets; track preset.value) {
             <nldd-segmented-control-item
               [value]="preset.value"
