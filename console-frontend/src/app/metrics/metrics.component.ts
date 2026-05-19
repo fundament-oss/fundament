@@ -459,7 +459,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   private buildStreamObservable() {
     const preset = this.selectedPreset();
-    const windowSeconds = PRESET_WINDOW_SECONDS[preset] ?? 0;
+    const windowSeconds = preset !== 'custom' ? PRESET_WINDOW_SECONDS[preset] : 0;
 
     if (this.viewMode() === 'project') {
       const pid = this.projectId();
