@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom, Subscription } from 'rxjs';
-import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { Chart, ChartConfiguration, ChartDataset, registerables } from 'chart.js';
 import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
@@ -93,6 +93,8 @@ const PRESET_WINDOW_SECONDS: Record<string, number> = {
   '30d': 2592000,
 };
 
+const MAX_RECONNECT_DELAY_MS = 60_000;
+
 function getUsagePercentage(used: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((used / total) * 100);
@@ -110,27 +112,41 @@ function formatTimestamp(ts: Timestamp | undefined): string {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
+function toLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function presetToDateRange(preset: TimeRangePreset): { from: string; to: string } {
   const now = new Date();
-  const to = now.toISOString().split('T')[0];
+  const to = toLocalDateString(now);
 
   if (preset === '1h' || preset === '6h' || preset === '24h') {
     const hoursMap: Record<string, number> = { '1h': 1, '6h': 6, '24h': 24 };
     const hours = hoursMap[preset];
     const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
-    return { from: from.toISOString().split('T')[0], to };
+    return { from: toLocalDateString(from), to };
   }
   if (preset === '7d') {
     const from = new Date(now);
     from.setDate(from.getDate() - 7);
-    return { from: from.toISOString().split('T')[0], to };
+    return { from: toLocalDateString(from), to };
   }
   if (preset === '30d') {
     const from = new Date(now);
     from.setDate(from.getDate() - 30);
-    return { from: from.toISOString().split('T')[0], to };
+    return { from: toLocalDateString(from), to };
   }
   return { from: to, to };
+}
+
+function computeStepSeconds(rangeSeconds: number): number {
+  if (rangeSeconds <= 3_600) return 60;
+  if (rangeSeconds <= 86_400) return 300;
+  if (rangeSeconds <= 604_800) return 1_800;
+  return 3_600;
 }
 
 @Component({
@@ -171,6 +187,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+  private reconnectAttempt = 0;
+
   private chartsReady = false;
 
   viewMode = signal<'org' | 'project'>('org');
@@ -183,6 +201,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   selectedPreset = signal<TimeRangePreset>('7d');
 
+  // dateFrom, dateTo, and the chart series arrays are plain fields rather than
+  // signals. Chart updates are imperative (Chart.js update()), so they don't
+  // need to trigger Angular's change detection. Keeping them as plain fields
+  // avoids unnecessary signal overhead and makes the intent clear.
   dateFrom = '';
 
   dateTo = '';
@@ -337,6 +359,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   private cancelStream(): void {
     this.streamSub?.unsubscribe();
     this.streamSub = null;
+    this.reconnectAttempt = 0;
     if (this.refreshChartTimeoutId !== null) {
       clearTimeout(this.refreshChartTimeoutId);
       this.refreshChartTimeoutId = null;
@@ -358,12 +381,21 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.destroyCharts();
     this.chartsReady = false;
 
-    const obs = this.buildStreamObservable();
+    let obs;
+    try {
+      obs = this.buildStreamObservable();
+    } catch (err) {
+      this.isLoading.set(false);
+      this.errorMessage.set(err instanceof Error ? err.message : 'Failed to start stream');
+      return;
+    }
+
     this.streamSub = obs.subscribe({
       next: (response) => {
         this.applyStreamResponse(response);
         this.isLoading.set(false);
         this.isLive.set(true);
+        this.reconnectAttempt = 0;
         if (response.refreshedAt) {
           this.lastRefreshedAt.set(timestampDate(response.refreshedAt));
         }
@@ -382,10 +414,12 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         this.isLoading.set(false);
         this.isLive.set(false);
         this.connectionError.set(true);
+        const delay = Math.min(5_000 * 2 ** this.reconnectAttempt, MAX_RECONNECT_DELAY_MS);
+        this.reconnectAttempt += 1;
         this.reconnectTimeoutId = setTimeout(() => {
           this.reconnectTimeoutId = null;
           this.startStream();
-        }, 5000);
+        }, delay);
       },
     });
   }
@@ -399,11 +433,16 @@ export default class MetricsComponent implements OnInit, OnDestroy {
       if (!pid) throw new Error('No project ID');
       const req =
         windowSeconds > 0
-          ? create(StreamProjectWorkloadMetricsRequestSchema, { projectId: pid, windowSeconds })
+          ? create(StreamProjectWorkloadMetricsRequestSchema, {
+              projectId: pid,
+              windowSeconds,
+              stepSeconds: computeStepSeconds(windowSeconds),
+            })
           : create(StreamProjectWorkloadMetricsRequestSchema, {
               projectId: pid,
               start: timestampFromDate(new Date(this.dateFrom)),
               end: timestampFromDate(new Date(`${this.dateTo}T23:59:59`)),
+              stepSeconds: computeStepSeconds(this.customRangeSeconds()),
             });
       return this.metricsClient.streamProjectWorkloadMetrics(req);
     }
@@ -412,23 +451,38 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     if (clusterId) {
       const req =
         windowSeconds > 0
-          ? create(StreamClusterWorkloadMetricsRequestSchema, { clusterId, windowSeconds })
+          ? create(StreamClusterWorkloadMetricsRequestSchema, {
+              clusterId,
+              windowSeconds,
+              stepSeconds: computeStepSeconds(windowSeconds),
+            })
           : create(StreamClusterWorkloadMetricsRequestSchema, {
               clusterId,
               start: timestampFromDate(new Date(this.dateFrom)),
               end: timestampFromDate(new Date(`${this.dateTo}T23:59:59`)),
+              stepSeconds: computeStepSeconds(this.customRangeSeconds()),
             });
       return this.metricsClient.streamClusterWorkloadMetrics(req);
     }
 
     const req =
       windowSeconds > 0
-        ? create(StreamOrgWorkloadMetricsRequestSchema, { windowSeconds })
+        ? create(StreamOrgWorkloadMetricsRequestSchema, {
+            windowSeconds,
+            stepSeconds: computeStepSeconds(windowSeconds),
+          })
         : create(StreamOrgWorkloadMetricsRequestSchema, {
             start: timestampFromDate(new Date(this.dateFrom)),
             end: timestampFromDate(new Date(`${this.dateTo}T23:59:59`)),
+            stepSeconds: computeStepSeconds(this.customRangeSeconds()),
           });
     return this.metricsClient.streamOrgWorkloadMetrics(req);
+  }
+
+  private customRangeSeconds(): number {
+    const from = new Date(this.dateFrom).getTime();
+    const to = new Date(`${this.dateTo}T23:59:59`).getTime();
+    return Math.max(0, Math.round((to - from) / 1000));
   }
 
   private applyStreamResponse(r: StreamWorkloadMetricsResponse): void {
@@ -593,157 +647,94 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.createNetworkChart(labels, networkRx, networkTx);
   }
 
-  private createCpuChart(labels: string[], data: number[]): void {
-    if (!this.cpuChartCanvas) return;
-    const ctx = this.cpuChartCanvas.nativeElement.getContext('2d');
-    if (!ctx) return;
+  private lineDataset(
+    label: string,
+    borderColor: string,
+    backgroundColor: string,
+    data: number[],
+  ): ChartDataset<'line'> {
+    return {
+      label,
+      data: data.length ? data : [0],
+      borderColor,
+      backgroundColor,
+      borderWidth: 1,
+      tension: 0.4,
+      fill: true,
+      pointRadius: 0,
+    };
+  }
 
-    const config: ChartConfiguration = {
+  private lineChartConfig(
+    labels: string[],
+    datasets: ChartDataset<'line'>[],
+    showLegend = false,
+  ): ChartConfiguration<'line'> {
+    return {
       type: 'line',
-      data: {
-        labels: labels.length ? labels : [''],
-        datasets: [
-          {
-            label: 'CPU usage (cores)',
-            data: data.length ? data : [0],
-            borderColor: 'rgb(99, 102, 241)',
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            borderWidth: 1,
-            tension: 0.4,
-            fill: true,
-            pointRadius: 0,
-          },
-        ],
-      },
+      data: { labels: labels.length ? labels : [''], datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
+          legend: { display: showLegend, position: 'top' },
           zoom: this.zoomOptions(),
         },
         scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
     };
+  }
 
-    this.cpuChart = new Chart(ctx, config);
+  private createCpuChart(labels: string[], data: number[]): void {
+    if (!this.cpuChartCanvas) return;
+    const ctx = this.cpuChartCanvas.nativeElement.getContext('2d');
+    if (!ctx) return;
+    this.cpuChart = new Chart(
+      ctx,
+      this.lineChartConfig(labels, [
+        this.lineDataset('CPU usage (cores)', 'rgb(99, 102, 241)', 'rgba(99, 102, 241, 0.1)', data),
+      ]),
+    );
   }
 
   private createMemoryChart(labels: string[], data: number[]): void {
     if (!this.memoryChartCanvas) return;
     const ctx = this.memoryChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
-
-    const config: ChartConfiguration = {
-      type: 'line',
-      data: {
-        labels: labels.length ? labels : [''],
-        datasets: [
-          {
-            label: 'Memory usage (GiB)',
-            data: data.length ? data : [0],
-            borderColor: 'rgb(16, 185, 129)',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            borderWidth: 1,
-            tension: 0.4,
-            fill: true,
-            pointRadius: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          zoom: this.zoomOptions(),
-        },
-        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
-      },
-    };
-
-    this.memoryChart = new Chart(ctx, config);
+    this.memoryChart = new Chart(
+      ctx,
+      this.lineChartConfig(labels, [
+        this.lineDataset('Memory usage (GiB)', 'rgb(16, 185, 129)', 'rgba(16, 185, 129, 0.1)', data),
+      ]),
+    );
   }
 
   private createPodChart(labels: string[], data: number[]): void {
     if (!this.podChartCanvas) return;
     const ctx = this.podChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
-
-    const config: ChartConfiguration = {
-      type: 'line',
-      data: {
-        labels: labels.length ? labels : [''],
-        datasets: [
-          {
-            label: 'Pod count',
-            data: data.length ? data : [0],
-            borderColor: 'rgb(245, 158, 11)',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            borderWidth: 1,
-            tension: 0.4,
-            fill: true,
-            pointRadius: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          zoom: this.zoomOptions(),
-        },
-        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
-      },
-    };
-
-    this.podChart = new Chart(ctx, config);
+    this.podChart = new Chart(
+      ctx,
+      this.lineChartConfig(labels, [
+        this.lineDataset('Pod count', 'rgb(245, 158, 11)', 'rgba(245, 158, 11, 0.1)', data),
+      ]),
+    );
   }
 
   private createNetworkChart(labels: string[], rx: number[], tx: number[]): void {
     if (!this.networkChartCanvas) return;
     const ctx = this.networkChartCanvas.nativeElement.getContext('2d');
     if (!ctx) return;
-
-    const config: ChartConfiguration = {
-      type: 'line',
-      data: {
-        labels: labels.length ? labels : [''],
-        datasets: [
-          {
-            label: 'Receive (MB/s)',
-            data: rx.length ? rx : [0],
-            borderColor: 'rgb(59, 130, 246)',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            borderWidth: 1,
-            tension: 0.4,
-            fill: true,
-            pointRadius: 0,
-          },
-          {
-            label: 'Transmit (MB/s)',
-            data: tx.length ? tx : [0],
-            borderColor: 'rgb(168, 85, 247)',
-            backgroundColor: 'rgba(168, 85, 247, 0.1)',
-            borderWidth: 1,
-            tension: 0.4,
-            fill: true,
-            pointRadius: 0,
-          },
+    this.networkChart = new Chart(
+      ctx,
+      this.lineChartConfig(
+        labels,
+        [
+          this.lineDataset('Receive (MB/s)', 'rgb(59, 130, 246)', 'rgba(59, 130, 246, 0.1)', rx),
+          this.lineDataset('Transmit (MB/s)', 'rgb(168, 85, 247)', 'rgba(168, 85, 247, 0.1)', tx),
         ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true, position: 'top' },
-          zoom: this.zoomOptions(),
-        },
-        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
-      },
-    };
-
-    this.networkChart = new Chart(ctx, config);
+        true,
+      ),
+    );
   }
 }
