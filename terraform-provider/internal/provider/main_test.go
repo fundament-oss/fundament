@@ -117,11 +117,12 @@ func TestMain(m *testing.M) {
 		exchangeReq.Header().Set("Authorization", "Bearer "+apiKeyToken)
 		exchangeResp, err := tokenClient.ExchangeToken(ctx, exchangeReq)
 		if err != nil {
-			// Internal/unauthenticated errors from ExchangeToken indicate a
-			// permanently invalid key (e.g. FUNDAMENT_API_KEY not found in the
-			// server) — retrying will never help, so fail immediately.
 			code := connect.CodeOf(err)
-			if code == connect.CodeInternal || code == connect.CodeUnauthenticated {
+			// For a pre-set key, unauthenticated/internal means the key is
+			// permanently invalid — retrying won't help.
+			// For a dynamically created key, unauthenticated can be transient
+			// while the authn-worker propagates the new key.
+			if apiKeyID == "" && (code == connect.CodeInternal || code == connect.CodeUnauthenticated) {
 				fmt.Fprintf(os.Stderr, "TestMain: token exchange failed permanently — FUNDAMENT_API_KEY may be invalid or not found on the server: %v\n", err)
 				os.Exit(1)
 			}
