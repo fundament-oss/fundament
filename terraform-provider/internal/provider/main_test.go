@@ -57,6 +57,8 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	// 60 retries × 2 s = 2 min; bumped from 30 to accommodate slower CI
+	// environments where the authz-worker takes longer to propagate tuples.
 	const maxRetries = 60
 	const retryInterval = 2 * time.Second
 

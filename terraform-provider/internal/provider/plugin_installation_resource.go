@@ -82,7 +82,7 @@ func (r *PluginInstallationResource) Metadata(ctx context.Context, req resource.
 func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a plugin installation on a Fundament cluster via the kube-api-proxy. " +
-			"Create waits up to 40 minutes for the cluster to reach RUNNING and for the plugin to reach the Running phase. " +
+			"Create waits up to 20 minutes for the cluster to reach RUNNING and for the plugin to reach the Running phase. " +
 			"Delete is skipped (no-op) when the cluster is not in a state where its Kubernetes API is reachable (e.g. stopped, deleting); the CRD will be removed when the cluster is destroyed.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -116,9 +116,6 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 			"phase": schema.StringAttribute{
 				Description: "The current phase of the plugin installation as reported by the plugin controller.",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -166,7 +163,7 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	pluginName := plan.PluginName.ValueString()
 	image := plan.Image.ValueString()
 
-	ctx, cancel := context.WithTimeout(ctx, 40*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 
 	tflog.Debug(ctx, "Waiting for cluster to be running before installing plugin", map[string]any{"cluster_id": clusterID})
@@ -211,6 +208,8 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode == http.StatusConflict {
+		conflictBody, _ := io.ReadAll(httpResp.Body)
+		tflog.Debug(ctx, "Plugin installation POST returned 409, checking existing resource", map[string]any{"body": string(conflictBody)})
 		existingCRD, err := r.fetchCRD(ctx, clusterID, pluginName)
 		if err != nil {
 			resp.Diagnostics.AddError("Unable to Read Existing Plugin Installation on 409", err.Error())
@@ -297,6 +296,38 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 
 	clusterID := state.ClusterID.ValueString()
 	pluginName := state.PluginName.ValueString()
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	// Check whether the cluster's Kubernetes API is reachable before hitting the proxy.
+	getClusterReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+		ClusterId: clusterID,
+	}.Build())
+
+	clusterResp, err := r.client.ClusterService.GetCluster(ctx, getClusterReq)
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			tflog.Info(ctx, "Cluster not found, removing plugin installation from state", map[string]any{"cluster_id": clusterID})
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		resp.Diagnostics.AddError("Unable to Check Cluster Status Before Reading Plugin Installation", err.Error())
+		return
+	}
+
+	clusterStatus := clusterResp.Msg.GetCluster().GetStatus()
+	switch clusterStatus {
+	case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING,
+		organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING:
+		// API server is reachable; proceed with read.
+	default:
+		tflog.Info(ctx, "Cluster Kubernetes API unreachable, skipping plugin installation read", map[string]any{
+			"cluster_id": clusterID,
+			"status":     clusterStatusToString(clusterStatus),
+		})
+		return
+	}
 
 	getURL := r.resourceURL(clusterID, pluginName)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, getURL, nil)
