@@ -478,28 +478,53 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, pl
 
 // waitForPluginRunning polls fetchCRD until phase is Running, or a terminal/timeout condition.
 // Returns the final phase string on success, or an error.
+// Transient fetch errors are retried; only maxConsecutiveErrors consecutive failures are fatal.
 func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, clusterID, pluginName string) (string, error) {
+	const maxConsecutiveErrors = 5
+
+	consecutiveErrors := 0
+	lastPhase := ""
+
 	for {
 		crdState, err := r.fetchCRD(ctx, clusterID, pluginName)
 		if err != nil {
-			return "", err
+			consecutiveErrors++
+			if consecutiveErrors >= maxConsecutiveErrors {
+				return "", fmt.Errorf("polling plugin installation status: %w", err)
+			}
+			tflog.Debug(ctx, "Transient error polling plugin installation, retrying", map[string]any{
+				"plugin_name":        pluginName,
+				"consecutive_errors": consecutiveErrors,
+				"error":              err.Error(),
+			})
+			t := time.NewTimer(10 * time.Second)
+			select {
+			case <-ctx.Done():
+				t.Stop()
+				return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q): %w", pluginName, lastPhase, ctx.Err())
+			case <-t.C:
+			}
+			continue
 		}
 
-		switch crdState.Status.Phase {
+		consecutiveErrors = 0
+		lastPhase = crdState.Status.Phase
+
+		switch lastPhase {
 		case "Running":
-			return crdState.Status.Phase, nil
+			return lastPhase, nil
 		case "Failed", "Terminating", "Degraded":
-			return "", fmt.Errorf("plugin installation for %q entered phase %q: %s", pluginName, crdState.Status.Phase, crdState.Status.Message)
+			return "", fmt.Errorf("plugin installation for %q entered phase %q: %s", pluginName, lastPhase, crdState.Status.Message)
 		default:
 			// Pending, Deploying, or empty — keep polling.
-			tflog.Debug(ctx, "Plugin installation not yet running", map[string]any{"plugin_name": pluginName, "phase": crdState.Status.Phase})
+			tflog.Debug(ctx, "Plugin installation not yet running", map[string]any{"plugin_name": pluginName, "phase": lastPhase})
 		}
 
 		t := time.NewTimer(10 * time.Second)
 		select {
 		case <-ctx.Done():
 			t.Stop()
-			return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q)", pluginName, crdState.Status.Phase)
+			return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q): %w", pluginName, lastPhase, ctx.Err())
 		case <-t.C:
 		}
 	}
