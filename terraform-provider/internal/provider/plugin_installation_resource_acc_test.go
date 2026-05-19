@@ -28,9 +28,10 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 		t.Fatal("FUNDAMENT_ORGANIZATION_ID must be set for acceptance tests")
 	}
 
+	// Skip (not Fatal) so CI without a kube proxy doesn't fail the test run.
 	kubeProxyURL := os.Getenv("FUNDAMENT_KUBE_API_PROXY_URL")
 	if kubeProxyURL == "" {
-		t.Fatal("FUNDAMENT_KUBE_API_PROXY_URL must be set for plugin installation acceptance tests")
+		t.Skip("FUNDAMENT_KUBE_API_PROXY_URL must be set for plugin installation acceptance tests")
 	}
 
 	suffix := acctest.RandString(6)
