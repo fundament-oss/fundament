@@ -408,7 +408,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       this.organizationDataService.removeCluster(this.clusterData.basics.id);
       this.showDeleteModal.set(false);
-      this.toastService.success(`The cluster '${this.clusterData.basics.name}' is being deleted`);
+      this.toastService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
       this.router.navigate(['/']);
     } catch (error) {
       this.showDeleteModal.set(false);

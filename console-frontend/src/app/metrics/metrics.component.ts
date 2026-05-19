@@ -167,6 +167,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   private streamSub: Subscription | null = null;
 
+  private refreshChartTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
   private chartsReady = false;
 
   viewMode = signal<'org' | 'project'>('org');
@@ -303,7 +307,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   onPresetChange(preset: TimeRangePreset): void {
     this.selectedPreset.set(preset);
-    if (preset !== 'custom') {
+    if (preset === 'custom') {
+      this.cancelStream();
+      this.isLive.set(false);
+    } else {
       this.applyPreset(preset);
       this.startStream();
     }
@@ -330,6 +337,14 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   private cancelStream(): void {
     this.streamSub?.unsubscribe();
     this.streamSub = null;
+    if (this.refreshChartTimeoutId !== null) {
+      clearTimeout(this.refreshChartTimeoutId);
+      this.refreshChartTimeoutId = null;
+    }
+    if (this.reconnectTimeoutId !== null) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
+    }
   }
 
   private startStream(): void {
@@ -354,7 +369,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         }
         if (!this.chartsReady) {
           // Defer chart creation until Angular has rendered the canvases.
-          setTimeout(() => {
+          this.refreshChartTimeoutId = setTimeout(() => {
+            this.refreshChartTimeoutId = null;
             this.refreshCharts();
             this.chartsReady = true;
           });
@@ -366,6 +382,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         this.isLoading.set(false);
         this.isLive.set(false);
         this.connectionError.set(true);
+        this.reconnectTimeoutId = setTimeout(() => {
+          this.reconnectTimeoutId = null;
+          this.startStream();
+        }, 5000);
       },
     });
   }
