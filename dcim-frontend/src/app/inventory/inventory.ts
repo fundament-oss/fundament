@@ -600,6 +600,7 @@ export interface CatalogEntry {
   id: string;
   model: string;
   manufacturer: string;
+  partNumber?: string;
   category: AssetCategory;
   specs: Record<string, string>;
 }

@@ -24,6 +24,7 @@ export default class CatalogApiService {
       id: d.id,
       model: d.model,
       manufacturer: d.manufacturer,
+      partNumber: d.partNumber,
       category: CatalogApiService.fromProtoCategory(d.category),
       specs: d.specs as Record<string, string>,
     };
@@ -94,7 +95,7 @@ export default class CatalogApiService {
     return this.client.createCatalogEntry({
       manufacturer: entry.manufacturer,
       model: entry.model,
-      partNumber: '',
+      partNumber: entry.partNumber ?? '',
       category: CatalogApiService.toProtoCategory(entry.category),
       formFactor: '',
       specs: entry.specs,
