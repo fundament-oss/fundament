@@ -89,15 +89,12 @@
         <label for="topo-type-filter" class="text-xs font-medium text-slate-500 whitespace-nowrap"
           >Type</label
         >
-        <select
-          id="topo-type-filter"
-          (change)="topologyTypeFilter.set($any($event.target).value)"
-        >
+        <select id="topo-type-filter" (change)="topologyTypeFilter.set($any($event.target).value)">
           <option value="" [selected]="topologyTypeFilter() === ''">All types</option>
           @for (t of CABLE_TYPES; track t) {
-            <option [value]="t" [selected]="topologyTypeFilter() === t">{{
-              CABLE_TYPE_LABEL[t]
-            }}</option>
+            <option [value]="t" [selected]="topologyTypeFilter() === t">
+              {{ CABLE_TYPE_LABEL[t] }}
+            </option>
           }
         </select>
       </div>
@@ -121,7 +118,6 @@
       [filterStatus]="topologyStatusFilter()"
       [filterType]="topologyTypeFilter()"
       (cableSelected)="openEditCableById($event)"
-
       (connectionMade)="openAddCableFromConnection($event)"
       (portsEditRequested)="openEditPorts($event)"
       (cableStatusChanged)="updateCableStatus($event)"

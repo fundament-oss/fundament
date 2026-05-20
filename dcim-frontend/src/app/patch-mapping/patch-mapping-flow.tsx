@@ -135,20 +135,6 @@ function PortRow({
     ...(side === 'left' ? { left: 0 } : { right: 0, flexDirection: 'row-reverse' }),
   };
 
-  const squareStyle: React.CSSProperties = {
-    position: 'absolute',
-    width: PORT_SQ,
-    height: PORT_SQ,
-    borderRadius: 2,
-    background: squareColor,
-    border: `1.5px solid ${borderColor}`,
-    zIndex: 1,
-    flexShrink: 0,
-    boxShadow: isPending ? `0 0 0 3px #c7d2fe` : undefined,
-    animation: isPending ? 'pulseDot 1s ease-in-out infinite' : undefined,
-    ...(side === 'left' ? { left: -PORT_INSET } : { right: -PORT_INSET }),
-  };
-
   const labelStyle: React.CSSProperties = {
     fontSize: 9,
     fontFamily: 'monospace',
@@ -164,14 +150,19 @@ function PortRow({
       : { marginRight: PORT_INSET + PORT_SQ + 4 }),
   };
 
-  const portLabel = port.name;
-
   return (
     <div
       style={rowStyle}
       onMouseEnter={() => onHoverPort(port.id)}
       onMouseLeave={() => onHoverPort(null)}
     >
+      {/*
+       * The Handle IS the visible port square. Positioning it at exactly the
+       * same spot as the old <span> means dragging from the visible square
+       * always hits the ReactFlow Handle — eliminating the gap that caused
+       * canvas-panning when dragging from the protruding part of the square.
+       * `transform: 'none'` suppresses ReactFlow's default translate(-50%).
+       */}
       <Handle
         type="source"
         position={side === 'left' ? Position.Left : Position.Right}
@@ -180,13 +171,18 @@ function PortRow({
         isConnectable={isFree}
         style={{
           position: 'absolute',
-          left: 0,
-          top: 0,
-          width: '100%',
-          height: '100%',
-          opacity: 0,
-          borderRadius: 0,
+          width: PORT_SQ,
+          height: PORT_SQ,
+          borderRadius: 2,
+          background: squareColor,
+          border: `1.5px solid ${borderColor}`,
+          boxShadow: isPending ? `0 0 0 3px #c7d2fe` : undefined,
+          animation: isPending ? 'pulseDot 1s ease-in-out infinite' : undefined,
+          ...(side === 'left' ? { left: -PORT_INSET } : { right: -PORT_INSET }),
+          top: `calc(50% - ${PORT_SQ / 2}px)`,
+          transform: 'none',
           cursor: isFree ? 'crosshair' : 'default',
+          pointerEvents: 'auto',
           zIndex: 2,
         }}
         onMouseDown={(e) => {
@@ -202,8 +198,7 @@ function PortRow({
           onPortClick(deviceId, port.id, isFree);
         }}
       />
-      <span style={squareStyle} />
-      <span style={labelStyle}>{portLabel}</span>
+      <span style={labelStyle}>{port.name}</span>
     </div>
   );
 }
@@ -1009,6 +1004,7 @@ export function PatchMappingFlow({
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      setPendingSource(null);
       if (
         connection.source &&
         connection.sourceHandle &&

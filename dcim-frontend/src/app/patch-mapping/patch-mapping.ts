@@ -255,5 +255,4 @@ export default class PatchMappingComponent {
       list.map((c) => (c.id === event.cableId ? { ...c, status: event.status } : c)),
     );
   }
-
 }
