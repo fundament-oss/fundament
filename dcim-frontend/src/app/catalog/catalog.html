@@ -279,7 +279,10 @@
         </nldd-form-field>
       }
       <nldd-form-field label="Category">
-        <select #fEntryCat>
+        <select
+          #fEntryCat
+          [attr.aria-invalid]="isFieldInvalid('category') ? 'true' : null"
+        >
           @for (cat of categories; track cat) {
             <option
               [value]="cat"
@@ -289,6 +292,9 @@
             </option>
           }
         </select>
+        @if (isFieldInvalid('category')) {
+          <nldd-form-field-error-text id="error-category">{{ fieldError('category') }}</nldd-form-field-error-text>
+        }
       </nldd-form-field>
 
       <!-- Specs section -->
