@@ -23,6 +23,10 @@ export default class DevicePortsComponent {
 
   readonly deviceId = input.required<string>();
 
+  // When true, the component's own header and cancel button are hidden;
+  // the parent sheet provides navigation back.
+  readonly embedded = input(false);
+
   readonly portsChange = output<Port[]>();
 
   readonly cancelEdit = output<void>();
@@ -32,8 +36,6 @@ export default class DevicePortsComponent {
   readonly newPortName = signal('');
 
   readonly newPortType = signal<PortType>('network-interface');
-
-  readonly newPortLabel = signal('');
 
   readonly canAddPort = computed(() => this.newPortName().trim().length > 0);
 
@@ -61,11 +63,9 @@ export default class DevicePortsComponent {
       deviceId: this.deviceId(),
       name: this.newPortName().trim(),
       type: this.newPortType(),
-      label: this.newPortLabel().trim() || undefined,
     };
     this.localPorts.update((list) => [...list, port]);
     this.newPortName.set('');
-    this.newPortLabel.set('');
   }
 
   removePort(portId: string): void {

@@ -1,11 +1,13 @@
 <div class="flex flex-col gap-4">
-  <!-- Header -->
-  <div>
-    <h3 class="text-sm font-semibold text-slate-900">Manage ports — {{ deviceName() }}</h3>
-    <p class="text-xs text-slate-400 mt-0.5">
-      {{ localPorts().length }} port{{ localPorts().length === 1 ? '' : 's' }}
-    </p>
-  </div>
+  <!-- Header — hidden when embedded in a sheet takeover -->
+  @if (!embedded()) {
+    <div>
+      <h3 class="text-sm font-semibold text-slate-900">Manage ports — {{ deviceName() }}</h3>
+      <p class="text-xs text-slate-400 mt-0.5">
+        {{ localPorts().length }} port{{ localPorts().length === 1 ? '' : 's' }}
+      </p>
+    </div>
+  }
 
   <!-- Existing ports -->
   @if (localPorts().length > 0) {
@@ -17,9 +19,6 @@
         <li class="flex items-center gap-2 px-3 py-2 bg-white group">
           <span class="flex-1 min-w-0">
             <span class="text-sm font-mono text-slate-800">{{ port.name }}</span>
-            @if (port.label) {
-              <span class="text-xs text-slate-400 ml-1.5">{{ port.label }}</span>
-            }
           </span>
           <span class="text-xs text-slate-400 shrink-0">{{ PORT_TYPE_LABEL[port.type] }}</span>
           <nldd-icon-button
@@ -48,7 +47,7 @@
         <nldd-text-field
           id="new-port-name"
           [attr.value]="newPortName()"
-          placeholder="e.g. Gi0/5"
+          placeholder="E.g. Gi0/5"
           class="w-full font-mono"
           (input)="newPortName.set($any($event.target).value)"
           (change)="newPortName.set($any($event).detail?.value ?? newPortName())"
@@ -70,21 +69,6 @@
         </select>
       </div>
 
-      <!-- Label (optional) -->
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-slate-700" for="new-port-label">
-          Label <span class="text-slate-400 font-normal">(optional)</span>
-        </label>
-        <nldd-text-field
-          id="new-port-label"
-          [attr.value]="newPortLabel()"
-          placeholder="e.g. Uplink 3"
-          class="w-full"
-          (input)="newPortLabel.set($any($event.target).value)"
-          (change)="newPortLabel.set($any($event).detail?.value ?? newPortLabel())"
-        ></nldd-text-field>
-      </div>
-
       <nldd-button
         variant="secondary"
         text="Add port"
@@ -97,9 +81,11 @@
     </div>
   </div>
 
-  <!-- Footer actions -->
+  <!-- Footer actions — cancel hidden when embedded (parent provides back navigation) -->
   <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-    <nldd-button variant="secondary" text="Cancel" size="sm" (click)="onCancel()"></nldd-button>
+    @if (!embedded()) {
+      <nldd-button variant="secondary" text="Cancel" size="sm" (click)="onCancel()"></nldd-button>
+    }
     <nldd-button variant="primary" text="Save ports" size="sm" (click)="onSave()"></nldd-button>
   </div>
 </div>

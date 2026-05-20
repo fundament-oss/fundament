@@ -114,6 +114,32 @@ export default class CableFormComponent {
     return set;
   });
 
+  // ── Derived: available port types per device ──────────────────────────────
+  readonly aAvailablePortTypes = computed<Set<PortType>>(() => {
+    const devId = this.aDeviceId();
+    if (!devId) return new Set();
+    const ports = this.localDevicePorts()[devId] ?? [];
+    return new Set(ports.map((p) => p.type));
+  });
+
+  readonly bAvailablePortTypes = computed<Set<PortType>>(() => {
+    const devId = this.bDeviceId();
+    if (!devId) return new Set();
+    const ports = this.localDevicePorts()[devId] ?? [];
+    return new Set(ports.map((p) => p.type));
+  });
+
+  // Port types on B side compatible with whatever is selected on A side
+  readonly bCompatiblePortTypes = computed<Set<PortType>>(() => {
+    const aType = this.aPortType();
+    if (!aType) return new Set(this.PORT_TYPES.map((pt) => pt.value));
+    const powerTypes = new Set<PortType>(['power-port', 'power-outlet']);
+    const aIsPower = powerTypes.has(aType as PortType);
+    return new Set(
+      this.PORT_TYPES.map((pt) => pt.value).filter((t) => powerTypes.has(t) === aIsPower),
+    );
+  });
+
   // ── Derived: filtered port lists ──────────────────────────────────────────
   readonly aFilteredPorts = computed<Port[]>(() => {
     const devId = this.aDeviceId();
@@ -183,6 +209,7 @@ export default class CableFormComponent {
     effect(() => {
       const c = this.cable();
       if (!c) return;
+      this.portManagementDevice.set(null);
       if (c.aSide) {
         this.aPortType.set(c.aSide.portType);
         this.aDeviceId.set(c.aSide.deviceId);
@@ -222,25 +249,29 @@ export default class CableFormComponent {
 
   // ── Cascade handlers ───────────────────────────────────────────────────────
 
-  onAPortTypeChange(value: string): void {
-    this.aPortType.set(value as PortType | '');
-    this.aDeviceId.set('');
-    this.aPortId.set('');
-  }
-
   onADeviceChange(value: string): void {
     this.aDeviceId.set(value);
+    if (this.aPortType() && !this.aAvailablePortTypes().has(this.aPortType() as PortType)) {
+      this.aPortType.set('');
+    }
     this.aPortId.set('');
   }
 
-  onBPortTypeChange(value: string): void {
-    this.bPortType.set(value as PortType | '');
-    this.bDeviceId.set('');
-    this.bPortId.set('');
+  onAPortTypeChange(value: string): void {
+    this.aPortType.set(value as PortType | '');
+    this.aPortId.set('');
   }
 
   onBDeviceChange(value: string): void {
     this.bDeviceId.set(value);
+    if (this.bPortType() && !this.bAvailablePortTypes().has(this.bPortType() as PortType)) {
+      this.bPortType.set('');
+    }
+    this.bPortId.set('');
+  }
+
+  onBPortTypeChange(value: string): void {
+    this.bPortType.set(value as PortType | '');
     this.bPortId.set('');
   }
 

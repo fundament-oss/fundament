@@ -478,17 +478,11 @@
                 class="px-4 py-3 bg-slate-50 border-b border-gray-100 flex flex-wrap items-center gap-2"
               >
                 <nldd-text-field
+                  #portNameInput
                   [value]="newPortName()"
                   (input)="newPortName.set($any($event.target).value)"
                   placeholder="Port name (e.g. eth4)"
                   accessible-label="New port name"
-                  size="sm"
-                ></nldd-text-field>
-                <nldd-text-field
-                  [value]="newPortLabel()"
-                  (input)="newPortLabel.set($any($event.target).value)"
-                  placeholder="Label (optional)"
-                  accessible-label="New port label"
                   size="sm"
                 ></nldd-text-field>
                 <nldd-button
@@ -520,7 +514,6 @@
                   <thead class="bg-slate-50 border-b border-gray-100">
                     <tr>
                       <th class="px-4 py-2 text-left font-medium text-gray-500">Name</th>
-                      <th class="px-4 py-2 text-left font-medium text-gray-500">Label</th>
                       <th class="px-4 py-2 text-left font-medium text-gray-500">Cable</th>
                       <th class="px-4 py-2 text-left font-medium text-gray-500">Peer</th>
                       <th class="px-4 py-2 text-right font-medium text-gray-500">
@@ -535,7 +528,6 @@
                         <td class="px-4 py-2.5 font-mono text-gray-800 font-medium">
                           {{ port.name }}
                         </td>
-                        <td class="px-4 py-2.5 text-gray-500">{{ port.label ?? '—' }}</td>
                         <td class="px-4 py-2.5">
                           @if (cable) {
                             <a

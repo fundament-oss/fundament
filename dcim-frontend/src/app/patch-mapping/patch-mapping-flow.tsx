@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
   Panel,
-  useNodesState,
   useEdgesState,
   Handle,
   Position,
@@ -14,7 +13,21 @@ import ReactFlow, {
   Edge,
   Connection,
 } from 'reactflow';
-import { Cable, CableStatus, CableType, CABLE_COLOR_HEX, Port } from './cable.model';
+import { Cable, CableStatus, CableType, CABLE_COLOR_HEX, Port, PortType } from './cable.model';
+
+// ── Port type visual styles ───────────────────────────────────────────────────
+
+const PORT_TYPE_STYLE: Record<PortType, { free: string; used: string; abbr: string }> = {
+  'network-interface': { free: '#bfdbfe', used: '#2563eb', abbr: 'NET' },
+  'console-port': { free: '#fde68a', used: '#d97706', abbr: 'CON' },
+  'console-server-port': { free: '#fde68a', used: '#d97706', abbr: 'CON' },
+  'power-port': { free: '#fecaca', used: '#dc2626', abbr: 'PWR' },
+  'power-outlet': { free: '#e9d5ff', used: '#9333ea', abbr: 'OUT' },
+};
+
+const PORT_ROW_H = 22;
+const PORT_SQ = 12;
+const PORT_INSET = 6; // distance outside card edge for port square center
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -84,21 +97,140 @@ function WrenchIcon() {
   );
 }
 
+function PortRow({
+  port,
+  index,
+  total,
+  side,
+  isFree,
+  isPending,
+  isHovered,
+  deviceId,
+  onPortClick,
+  onHoverPort,
+}: {
+  port: Port;
+  index: number;
+  total: number;
+  side: 'left' | 'right';
+  isFree: boolean;
+  isPending: boolean;
+  isHovered: boolean;
+  deviceId: string;
+  onPortClick: (deviceId: string, portId: string, isFree: boolean) => void;
+  onHoverPort: (portId: string | null) => void;
+}) {
+  const topPct = `${((index + 1) / (total + 1)) * 100}%`;
+  const style = PORT_TYPE_STYLE[port.type];
+  const squareColor = isPending ? '#6366f1' : isFree ? style.free : style.used;
+  const borderColor = isPending ? '#a5b4fc' : isFree ? '#94a3b8' : squareColor;
+
+  const rowStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: `calc(${topPct} - ${PORT_ROW_H / 2}px)`,
+    width: '52%',
+    height: PORT_ROW_H,
+    display: 'flex',
+    alignItems: 'center',
+    ...(side === 'left' ? { left: 0 } : { right: 0, flexDirection: 'row-reverse' }),
+  };
+
+  const squareStyle: React.CSSProperties = {
+    position: 'absolute',
+    width: PORT_SQ,
+    height: PORT_SQ,
+    borderRadius: 2,
+    background: squareColor,
+    border: `1.5px solid ${borderColor}`,
+    zIndex: 1,
+    flexShrink: 0,
+    boxShadow: isPending ? `0 0 0 3px #c7d2fe` : undefined,
+    animation: isPending ? 'pulseDot 1s ease-in-out infinite' : undefined,
+    ...(side === 'left' ? { left: -PORT_INSET } : { right: -PORT_INSET }),
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 9,
+    fontFamily: 'monospace',
+    color: isHovered ? '#1e293b' : '#64748b',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
+    maxWidth: 68,
+    userSelect: 'none',
+    transition: 'color 0.1s',
+    ...(side === 'left'
+      ? { marginLeft: PORT_INSET + PORT_SQ + 4 }
+      : { marginRight: PORT_INSET + PORT_SQ + 4 }),
+  };
+
+  const portLabel = port.name;
+
+  return (
+    <div
+      style={rowStyle}
+      onMouseEnter={() => onHoverPort(port.id)}
+      onMouseLeave={() => onHoverPort(null)}
+    >
+      <Handle
+        type="source"
+        position={side === 'left' ? Position.Left : Position.Right}
+        id={port.id}
+        title={`${port.name} (${PORT_TYPE_STYLE[port.type].abbr})`}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: '100%',
+          height: '100%',
+          opacity: 0,
+          borderRadius: 0,
+          cursor: isFree ? 'crosshair' : 'default',
+          zIndex: 2,
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onPortClick(deviceId, port.id, isFree);
+        }}
+      />
+      <span style={squareStyle} />
+      <span style={labelStyle}>{portLabel}</span>
+    </div>
+  );
+}
+
 function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
   const [hovered, setHovered] = useState(false);
   const [btnHovered, setBtnHovered] = useState(false);
+  const [hoveredPortId, setHoveredPortId] = useState<string | null>(null);
 
-  const leftPorts = data.ports.filter(
-    (p) =>
-      p.type === 'network-interface' ||
-      p.type === 'console-port' ||
-      p.type === 'console-server-port',
+  const leftPorts = useMemo(
+    () =>
+      data.ports.filter(
+        (p) =>
+          p.type === 'network-interface' ||
+          p.type === 'console-port' ||
+          p.type === 'console-server-port',
+      ),
+    [data.ports],
   );
-  const rightPorts = data.ports.filter((p) => p.type === 'power-port' || p.type === 'power-outlet');
+  const rightPorts = useMemo(
+    () => data.ports.filter((p) => p.type === 'power-port' || p.type === 'power-outlet'),
+    [data.ports],
+  );
 
-  const height = Math.max(64, Math.max(leftPorts.length, rightPorts.length) * 18 + 36);
+  const totalPorts = data.ports.length;
+  const usedCount = data.ports.filter((p) => data.usedPortIds.has(p.id)).length;
+  const utilizationPct = totalPorts > 0 ? (usedCount / totalPorts) * 100 : 0;
+  const utilColor =
+    utilizationPct === 0 ? '#86efac' : utilizationPct === 100 ? '#fca5a5' : '#fde68a';
 
-  const handleTopPct = (index: number, total: number) => `${((index + 1) / (total + 1)) * 100}%`;
+  const headerH = 28;
+  const footerH = leftPorts.length > 0 || rightPorts.length > 0 ? 16 : 0;
+  const utilBarH = totalPorts > 0 ? 5 : 0;
+  const portRows = Math.max(leftPorts.length, rightPorts.length);
+  const bodyH = Math.max(portRows * PORT_ROW_H, portRows > 0 ? PORT_ROW_H : 0);
+  const totalH = Math.max(64, headerH + bodyH + footerH + utilBarH + 4);
 
   return (
     <div
@@ -106,15 +238,15 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
         background: hovered ? '#f8fafc' : '#ffffff',
         border: `1px solid ${hovered ? '#64748b' : '#94a3b8'}`,
         borderRadius: 4,
-        padding: '6px 14px',
         fontSize: 11,
         fontFamily: 'monospace',
         width: 190,
-        minHeight: height,
+        height: totalH,
         position: 'relative',
         cursor: 'pointer',
         boxShadow: hovered ? '0 2px 8px rgba(0,0,0,0.14)' : '0 1px 3px rgba(0,0,0,0.08)',
         transition: 'box-shadow 0.15s, border-color 0.15s, background 0.15s',
+        overflow: 'visible',
       }}
       onClick={() => data.onDeviceClick(data.nodeId)}
       onMouseEnter={() => {
@@ -123,84 +255,52 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
       }}
       onMouseLeave={() => {
         setHovered(false);
+        setHoveredPortId(null);
         data.onHover(null);
       }}
     >
-      {/* Left port rows (network/console) */}
-      {leftPorts.map((p, i) => {
-        const isPending = data.pendingSourcePortId === p.id;
-        const isFree = !data.usedPortIds.has(p.id);
-        return (
-          <div
-            key={p.id}
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: `calc(${handleTopPct(i, leftPorts.length)} - 9px)`,
-              width: '50%',
-              height: 18,
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <Handle
-              type="source"
-              position={Position.Left}
-              id={p.id}
-              title={`${p.name}${p.label ? ` — ${p.label}` : ''}`}
-              style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                width: '100%',
-                height: '100%',
-                opacity: 0,
-                borderRadius: 0,
-                cursor: isFree ? 'crosshair' : 'default',
-                zIndex: 2,
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onPortClick(data.nodeId, p.id, isFree);
-              }}
-            />
-            {isPending && (
-              <span
-                style={{
-                  position: 'absolute',
-                  left: -6,
-                  top: 5,
-                  width: 8,
-                  height: 8,
-                  borderRadius: 2,
-                  background: '#6366f1',
-                  boxShadow: '0 0 0 2px #a5b4fc',
-                  animation: 'pulseDot 1s ease-in-out infinite',
-                  zIndex: 3,
-                }}
-              />
-            )}
-            {!isPending && (
-              <span
-                style={{
-                  position: 'absolute',
-                  left: -4,
-                  top: 5,
-                  width: 8,
-                  height: 8,
-                  background: isFree ? '#94a3b8' : '#60a5fa',
-                  border: '1px solid #64748b',
-                  borderRadius: 2,
-                  zIndex: 1,
-                }}
-              />
-            )}
-          </div>
-        );
-      })}
+      {/* Port rows — rendered as absolute overlays on left and right */}
+      {leftPorts.map((p, i) => (
+        <PortRow
+          key={p.id}
+          port={p}
+          index={i}
+          total={leftPorts.length}
+          side="left"
+          isFree={!data.usedPortIds.has(p.id)}
+          isPending={data.pendingSourcePortId === p.id}
+          isHovered={hoveredPortId === p.id}
+          deviceId={data.nodeId}
+          onPortClick={data.onPortClick}
+          onHoverPort={setHoveredPortId}
+        />
+      ))}
+      {rightPorts.map((p, i) => (
+        <PortRow
+          key={p.id}
+          port={p}
+          index={i}
+          total={rightPorts.length}
+          side="right"
+          isFree={!data.usedPortIds.has(p.id)}
+          isPending={data.pendingSourcePortId === p.id}
+          isHovered={hoveredPortId === p.id}
+          deviceId={data.nodeId}
+          onPortClick={data.onPortClick}
+          onHoverPort={setHoveredPortId}
+        />
+      ))}
 
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '5px 10px',
+          height: headerH,
+        }}
+      >
         <span
           style={{
             fontSize: 9,
@@ -226,7 +326,6 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
         >
           {data.label}
         </span>
-        {/* Wrench button — visible on card hover */}
         {hovered && (
           <button
             style={{
@@ -258,85 +357,78 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
         )}
       </div>
 
-      {leftPorts.length > 0 && (
-        <div style={{ marginTop: 4, fontSize: 9, color: '#94a3b8' }}>
-          {leftPorts.map((p) => p.name).join(' · ')}
+      {/* Port name footers */}
+      {(leftPorts.length > 0 || rightPorts.length > 0) && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: utilBarH + 2,
+            left: 10,
+            right: 10,
+            height: footerH,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            gap: 4,
+          }}
+        >
+          {leftPorts.length > 0 && (
+            <span
+              style={{
+                fontSize: 8,
+                color: '#94a3b8',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                flex: 1,
+              }}
+            >
+              {leftPorts.map((p) => p.name).join(' · ')}
+            </span>
+          )}
+          {rightPorts.length > 0 && (
+            <span
+              style={{
+                fontSize: 8,
+                color: '#94a3b8',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                textAlign: 'right',
+                flex: 1,
+              }}
+            >
+              {rightPorts.map((p) => p.name).join(' · ')}
+            </span>
+          )}
         </div>
       )}
 
-      {/* Right port rows (power) */}
-      {rightPorts.map((p, i) => {
-        const isPending = data.pendingSourcePortId === p.id;
-        const isFree = !data.usedPortIds.has(p.id);
-        return (
+      {/* Utilization bar */}
+      {totalPorts > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: utilBarH,
+            background: '#e2e8f0',
+            borderRadius: '0 0 4px 4px',
+            overflow: 'hidden',
+          }}
+          title={`${usedCount} / ${totalPorts} ports in use`}
+        >
           <div
-            key={p.id}
             style={{
-              position: 'absolute',
-              right: 0,
-              top: `calc(${handleTopPct(i, rightPorts.length)} - 9px)`,
-              width: '50%',
-              height: 18,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
+              height: '100%',
+              width: `${utilizationPct}%`,
+              background: utilColor,
+              transition: 'width 0.3s, background 0.3s',
             }}
-          >
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={p.id}
-              title={`${p.name}${p.label ? ` — ${p.label}` : ''}`}
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                width: '100%',
-                height: '100%',
-                opacity: 0,
-                borderRadius: 0,
-                cursor: isFree ? 'crosshair' : 'default',
-                zIndex: 2,
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onPortClick(data.nodeId, p.id, isFree);
-              }}
-            />
-            {isPending && (
-              <span
-                style={{
-                  position: 'absolute',
-                  right: -6,
-                  top: 5,
-                  width: 8,
-                  height: 8,
-                  borderRadius: 2,
-                  background: '#6366f1',
-                  boxShadow: '0 0 0 2px #a5b4fc',
-                  animation: 'pulseDot 1s ease-in-out infinite',
-                  zIndex: 3,
-                }}
-              />
-            )}
-            {!isPending && (
-              <span
-                style={{
-                  position: 'absolute',
-                  right: -4,
-                  top: 5,
-                  width: 8,
-                  height: 8,
-                  background: isFree ? '#94a3b8' : '#60a5fa',
-                  border: '1px solid #64748b',
-                  borderRadius: 2,
-                  zIndex: 1,
-                }}
-              />
-            )}
-          </div>
-        );
-      })}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -431,7 +523,7 @@ const DEVICE_LAYOUTS: DeviceLayout[] = [
     deviceType: 'patch',
     parentNode: 'rack-r01',
     dcId: 'ams-01',
-    position: { x: 20, y: 155 },
+    position: { x: 20, y: 185 },
   },
   {
     id: 'd-003',
@@ -439,7 +531,7 @@ const DEVICE_LAYOUTS: DeviceLayout[] = [
     deviceType: 'server',
     parentNode: 'rack-r01',
     dcId: 'ams-01',
-    position: { x: 20, y: 260 },
+    position: { x: 20, y: 290 },
   },
   {
     id: 'd-008',
@@ -447,7 +539,7 @@ const DEVICE_LAYOUTS: DeviceLayout[] = [
     deviceType: 'pdu',
     parentNode: 'rack-r01',
     dcId: 'ams-01',
-    position: { x: 20, y: 390 },
+    position: { x: 20, y: 400 },
   },
   // AMS-01 R02
   {
@@ -464,7 +556,7 @@ const DEVICE_LAYOUTS: DeviceLayout[] = [
     deviceType: 'server',
     parentNode: 'rack-r02',
     dcId: 'ams-01',
-    position: { x: 20, y: 180 },
+    position: { x: 20, y: 195 },
   },
   {
     id: 'd-103',
@@ -472,7 +564,7 @@ const DEVICE_LAYOUTS: DeviceLayout[] = [
     deviceType: 'server',
     parentNode: 'rack-r02',
     dcId: 'ams-01',
-    position: { x: 20, y: 290 },
+    position: { x: 20, y: 305 },
   },
   // AMS-01 R04
   {
@@ -498,7 +590,7 @@ const DEVICE_LAYOUTS: DeviceLayout[] = [
     deviceType: 'server',
     parentNode: 'rack-fra01-r01',
     dcId: 'fra-01',
-    position: { x: 20, y: 180 },
+    position: { x: 20, y: 195 },
   },
 ];
 
@@ -531,6 +623,7 @@ function buildNodes(
     parentNode: d.parentNode,
     extent: 'parent' as const,
     position: d.position,
+    draggable: false,
     data: {
       label: d.label,
       deviceType: d.deviceType,
@@ -581,6 +674,21 @@ function Legend() {
       <LegendRow dash={false} opacity={1} label="Connected" />
       <LegendRow dash={true} opacity={1} label="Planned" />
       <LegendRow dash={false} opacity={0.3} label="Decommissioned" />
+      <div
+        style={{
+          borderTop: '1px solid #e2e8f0',
+          marginTop: 3,
+          paddingTop: 5,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3,
+        }}
+      >
+        <PortTypeLegendRow color={PORT_TYPE_STYLE['network-interface'].used} label="Network" />
+        <PortTypeLegendRow color={PORT_TYPE_STYLE['console-port'].used} label="Console" />
+        <PortTypeLegendRow color={PORT_TYPE_STYLE['power-port'].used} label="Power port" />
+        <PortTypeLegendRow color={PORT_TYPE_STYLE['power-outlet'].used} label="Power outlet" />
+      </div>
     </div>
   );
 }
@@ -599,6 +707,24 @@ function LegendRow({ dash, opacity, label }: { dash: boolean; opacity: number; l
           strokeDasharray={dash ? '5 3' : undefined}
         />
       </svg>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function PortTypeLegendRow({ color, label }: { color: string; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span
+        style={{
+          width: 10,
+          height: 10,
+          borderRadius: 2,
+          background: color,
+          flexShrink: 0,
+          display: 'inline-block',
+        }}
+      />
       <span>{label}</span>
     </div>
   );
@@ -724,7 +850,7 @@ const PULSE_STYLE_ID = 'pm-pulse-keyframe';
 if (typeof document !== 'undefined' && !document.getElementById(PULSE_STYLE_ID)) {
   const style = document.createElement('style');
   style.id = PULSE_STYLE_ID;
-  style.textContent = `@keyframes pulseDot { 0%,100% { box-shadow: 0 0 0 2px #a5b4fc; } 50% { box-shadow: 0 0 0 4px #c7d2fe; } }`;
+  style.textContent = `@keyframes pulseDot { 0%,100% { box-shadow: 0 0 0 3px #c7d2fe; } 50% { box-shadow: 0 0 0 5px #e0e7ff; } }`;
   document.head.appendChild(style);
 }
 
@@ -765,7 +891,6 @@ export function PatchMappingFlow({
   const onPortClick = useCallback(
     (deviceId: string, portId: string, isFree: boolean) => {
       if (!isFree) {
-        // Highlight the cable that uses this port
         const cable = cables.find((c) => c.aSide.portId === portId || c.bSide.portId === portId);
         if (cable) onCableClick(cable.id);
         return;
@@ -775,7 +900,6 @@ export function PatchMappingFlow({
         return;
       }
       if (pendingSource.deviceId === deviceId) {
-        // Same device — cancel
         setPendingSource(null);
         return;
       }
@@ -804,8 +928,6 @@ export function PatchMappingFlow({
       ),
     [dcId, devicePorts, usedPortIds, pendingSource, onDeviceClick, onEditPorts, onPortClick],
   );
-
-  const [, , onNodesChange] = useNodesState(nodes);
 
   const edges = useMemo<Edge[]>(
     () =>
@@ -894,13 +1016,20 @@ export function PatchMappingFlow({
     [onConnectionMade],
   );
 
+  // Look up pending port/device info for the status panel
+  const pendingPortName = pendingSource
+    ? (devicePorts[pendingSource.deviceId]?.find((p) => p.id === pendingSource.portId)?.name ??
+      pendingSource.portId)
+    : null;
+  const pendingDeviceLabel = pendingSource
+    ? (DEVICE_LAYOUTS.find((d) => d.id === pendingSource.deviceId)?.label ?? pendingSource.deviceId)
+    : null;
+
   return (
     <>
-      {/* Pulse keyframe style is injected globally above */}
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onEdgeClick={onEdgeClick}
         onEdgeContextMenu={onEdgeContextMenu}
@@ -936,7 +1065,13 @@ export function PatchMappingFlow({
               role="status"
               aria-live="polite"
             >
-              <span>Click a free port on another device to complete the cable</span>
+              <span>
+                Completing cable from{' '}
+                <strong style={{ fontFamily: 'monospace' }}>{pendingPortName}</strong>
+                {' on '}
+                <strong style={{ fontFamily: 'monospace' }}>{pendingDeviceLabel}</strong>
+                {' — click a free port on another device'}
+              </span>
               <button
                 style={{
                   background: 'transparent',
