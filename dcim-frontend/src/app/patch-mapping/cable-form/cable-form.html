@@ -27,17 +27,15 @@
       portManagementDevice()?.name
     }}</span>
   </div>
-  <div class="flex-1 overflow-y-auto">
-    <nldd-simple-section>
-      <app-device-ports
-        [deviceId]="portManagementDevice()?.id ?? ''"
-        [deviceName]="portManagementDevice()?.name ?? ''"
-        [ports]="portManagementPorts()"
-        [embedded]="true"
-        (portsChange)="onPortsSaved($event)"
-        (cancelEdit)="closePortManagement()"
-      />
-    </nldd-simple-section>
+  <div class="flex-1 overflow-y-auto p-4">
+    <app-device-ports
+      [deviceId]="portManagementDevice()?.id ?? ''"
+      [deviceName]="portManagementDevice()?.name ?? ''"
+      [ports]="portManagementPorts()"
+      [embedded]="true"
+      (portsChange)="onPortsSaved($event)"
+      (cancelEdit)="closePortManagement()"
+    />
   </div>
 </div>
 <nldd-page sticky-header="" sticky-footer="" [hidden]="portManagementDevice() !== null">

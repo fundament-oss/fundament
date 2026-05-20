@@ -70,7 +70,7 @@
       </div>
 
       <nldd-button
-        variant="secondary"
+        variant="primary"
         text="Add port"
         start-icon="plus-small"
         size="sm"
@@ -86,6 +86,6 @@
     @if (!embedded()) {
       <nldd-button variant="secondary" text="Cancel" size="sm" (click)="onCancel()"></nldd-button>
     }
-    <nldd-button variant="primary" text="Save ports" size="sm" (click)="onSave()"></nldd-button>
+    <nldd-button variant="primary" text="Save ports" (click)="onSave()" width="full"></nldd-button>
   </div>
 </div>

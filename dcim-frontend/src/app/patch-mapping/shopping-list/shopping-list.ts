@@ -91,7 +91,9 @@ export default class ShoppingListComponent {
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
     a.download = `shopping-list-${slug}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 }

@@ -1,4 +1,5 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -6,6 +7,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   input,
   output,
   signal,
@@ -40,6 +42,8 @@ interface DeviceOption {
 })
 export default class CableFormComponent {
   private readonly elRef = inject(ElementRef);
+
+  private readonly injector = inject(Injector);
 
   readonly cable = input<Partial<Cable> | null>(null);
 
@@ -216,7 +220,7 @@ export default class CableFormComponent {
       const c = this.cable();
       if (!c) return;
       if (c.aSide && c.bSide && !c.id) {
-        setTimeout(() => this.focusAndScrollNameField(), 0);
+        afterNextRender(() => this.focusAndScrollNameField(), { injector: this.injector });
       }
       this.portManagementDevice.set(null);
       if (c.aSide) {
@@ -436,7 +440,7 @@ export default class CableFormComponent {
     typeSignal.set((portType as PortType) || 'network-interface');
     if (side === 'a') this.aAddingPort.set(true);
     else this.bAddingPort.set(true);
-    setTimeout(() => this.focusAddPortNameField(side), 0);
+    afterNextRender(() => this.focusAddPortNameField(side), { injector: this.injector });
   }
 
   // ── Constants for template ─────────────────────────────────────────────────

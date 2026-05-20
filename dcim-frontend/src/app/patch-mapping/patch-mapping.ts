@@ -9,7 +9,7 @@ import {
   computed,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import PatchMappingFlowWrapperComponent from './patch-mapping-flow-wrapper';
 import CableListComponent from './cable-list/cable-list';
 import CableFormComponent from './cable-form/cable-form';
@@ -49,6 +49,8 @@ import { RACKS } from '../racks/rack.model';
 })
 export default class PatchMappingComponent {
   private readonly route = inject(ActivatedRoute);
+
+  private readonly router = inject(Router);
 
   readonly selectedDcId = signal('ams-01');
 
@@ -144,6 +146,8 @@ export default class PatchMappingComponent {
           },
         });
       }
+      // Remove the deep-link params so a hard-refresh doesn't re-open the form.
+      this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
     }
 
     effect(() => {
