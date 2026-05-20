@@ -20,6 +20,7 @@ import {
   CABLE_TYPE_LABEL,
   DEVICE_PORTS,
   Port,
+  portsAreCompatible,
   PortType,
   PORT_TYPE_LABEL,
 } from '../cable.model';
@@ -81,6 +82,8 @@ export default class CableFormComponent {
 
   readonly cableDescription = signal('');
 
+  readonly cableComments = signal('');
+
   readonly cableLength = signal<number | undefined>(undefined);
 
   // ── Port management ────────────────────────────────────────────────────────
@@ -141,10 +144,8 @@ export default class CableFormComponent {
   readonly bCompatiblePortTypes = computed<Set<PortType>>(() => {
     const aType = this.aPortType();
     if (!aType) return new Set(this.PORT_TYPES.map((pt) => pt.value));
-    const powerTypes = new Set<PortType>(['power-port', 'power-outlet']);
-    const aIsPower = powerTypes.has(aType as PortType);
     return new Set(
-      this.PORT_TYPES.map((pt) => pt.value).filter((t) => powerTypes.has(t) === aIsPower),
+      this.PORT_TYPES.map((pt) => pt.value).filter((t) => portsAreCompatible(aType as PortType, t)),
     );
   });
 
@@ -183,10 +184,7 @@ export default class CableFormComponent {
     const a = this.aSelectedPort();
     const b = this.bSelectedPort();
     if (!a || !b) return false;
-    const powerTypes: PortType[] = ['power-port', 'power-outlet'];
-    const aIsPower = powerTypes.includes(a.type);
-    const bIsPower = powerTypes.includes(b.type);
-    return aIsPower !== bIsPower;
+    return !portsAreCompatible(a.type, b.type);
   });
 
   readonly canSave = computed(
@@ -244,17 +242,8 @@ export default class CableFormComponent {
       this.cableLabel.set(c.label ?? '');
       this.cableColor.set(c.color ?? undefined);
       this.cableLength.set(c.length ?? undefined);
-
-      // Merge comments into description when loading
-      const desc = c.description ?? '';
-      const comments = c.comments ?? '';
-      let combined: string;
-      if (comments) {
-        combined = desc ? `${desc}\n${comments}` : comments;
-      } else {
-        combined = desc;
-      }
-      this.cableDescription.set(combined);
+      this.cableDescription.set(c.description ?? '');
+      this.cableComments.set(c.comments ?? '');
     });
   }
 
@@ -402,6 +391,7 @@ export default class CableFormComponent {
       label: this.cableLabel() || undefined,
       color: this.cableColor(),
       description: this.cableDescription() || undefined,
+      comments: this.cableComments() || undefined,
       length: this.cableLength(),
     };
     this.save.emit(cable);

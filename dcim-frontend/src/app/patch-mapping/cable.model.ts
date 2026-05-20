@@ -15,10 +15,13 @@ export interface Port {
   description?: string;
 }
 
+const CONSOLE_PORT_TYPES = new Set<PortType>(['console-port', 'console-server-port']);
 const POWER_PORT_TYPES = new Set<PortType>(['power-port', 'power-outlet']);
 
 export function portsAreCompatible(a: PortType, b: PortType): boolean {
-  return POWER_PORT_TYPES.has(a) === POWER_PORT_TYPES.has(b);
+  if (POWER_PORT_TYPES.has(a)) return POWER_PORT_TYPES.has(b);
+  if (CONSOLE_PORT_TYPES.has(a)) return CONSOLE_PORT_TYPES.has(b);
+  return !POWER_PORT_TYPES.has(b) && !CONSOLE_PORT_TYPES.has(b);
 }
 
 // ── Cable types ───────────────────────────────────────────────────────────────

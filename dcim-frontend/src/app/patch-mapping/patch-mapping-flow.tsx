@@ -217,6 +217,23 @@ function PortRow({
   );
 }
 
+function computeDeviceHeight(ports: Port[]): number {
+  const leftPorts = ports.filter(
+    (p) =>
+      p.type === 'network-interface' ||
+      p.type === 'console-port' ||
+      p.type === 'console-server-port',
+  );
+  const rightPorts = ports.filter((p) => p.type === 'power-port' || p.type === 'power-outlet');
+  const totalPorts = ports.length;
+  const headerH = 28;
+  const footerH = leftPorts.length > 0 || rightPorts.length > 0 ? 16 : 0;
+  const utilBarH = totalPorts > 0 ? 5 : 0;
+  const portRows = Math.max(leftPorts.length, rightPorts.length);
+  const bodyH = Math.max(portRows * PORT_ROW_H, portRows > 0 ? PORT_ROW_H : 0);
+  return Math.max(64, headerH + bodyH + footerH + utilBarH + 4);
+}
+
 function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
   const [hovered, setHovered] = useState(false);
   const [btnHovered, setBtnHovered] = useState(false);
@@ -246,9 +263,7 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
   const headerH = 28;
   const footerH = leftPorts.length > 0 || rightPorts.length > 0 ? 16 : 0;
   const utilBarH = totalPorts > 0 ? 5 : 0;
-  const portRows = Math.max(leftPorts.length, rightPorts.length);
-  const bodyH = Math.max(portRows * PORT_ROW_H, portRows > 0 ? PORT_ROW_H : 0);
-  const totalH = Math.max(64, headerH + bodyH + footerH + utilBarH + 4);
+  const totalH = computeDeviceHeight(data.ports);
 
   return (
     <div
@@ -559,30 +574,30 @@ function CurlyEdge(props: EdgeProps) {
     <>
       <BaseEdge id={id} path={edgePath} style={style} interactionWidth={12} />
       {label && (
-        <foreignObject
-          x={labelX - 40}
-          y={labelY - 10}
-          width={80}
-          height={20}
-          style={{ overflow: 'visible', pointerEvents: 'none' }}
-        >
-          <div
-            style={{
-              background: (labelBgStyle?.fill as string) ?? '#f8fafc',
-              opacity: (labelBgStyle?.fillOpacity as number) ?? 0.9,
-              padding: '1px 4px',
-              borderRadius: 3,
-              fontSize: 10,
-              color: (labelStyle?.fill as string) ?? '#475569',
-              whiteSpace: 'nowrap',
-              textAlign: 'center',
-              fontFamily: 'monospace',
-              fontWeight: selected ? 600 : 400,
-            }}
+        <>
+          <rect
+            x={labelX - 30}
+            y={labelY - 8}
+            width={60}
+            height={16}
+            rx={3}
+            fill={(labelBgStyle?.fill as string) ?? '#f8fafc'}
+            fillOpacity={(labelBgStyle?.fillOpacity as number) ?? 0.9}
+            pointerEvents="none"
+          />
+          <text
+            x={labelX}
+            y={labelY + 4}
+            textAnchor="middle"
+            fontSize={10}
+            fontFamily="monospace"
+            fontWeight={selected ? 600 : 400}
+            fill={(labelStyle?.fill as string) ?? '#475569'}
+            pointerEvents="none"
           >
             {label as string}
-          </div>
-        </foreignObject>
+          </text>
+        </>
       )}
     </>
   );
@@ -714,23 +729,6 @@ const DEVICE_LAYOUTS: DeviceLayout[] = [
     position: { x: 20, y: 195 },
   },
 ];
-
-function computeDeviceHeight(ports: Port[]): number {
-  const leftPorts = ports.filter(
-    (p) =>
-      p.type === 'network-interface' ||
-      p.type === 'console-port' ||
-      p.type === 'console-server-port',
-  );
-  const rightPorts = ports.filter((p) => p.type === 'power-port' || p.type === 'power-outlet');
-  const totalPorts = ports.length;
-  const headerH = 28;
-  const footerH = leftPorts.length > 0 || rightPorts.length > 0 ? 16 : 0;
-  const utilBarH = totalPorts > 0 ? 5 : 0;
-  const portRows = Math.max(leftPorts.length, rightPorts.length);
-  const bodyH = Math.max(portRows * PORT_ROW_H, portRows > 0 ? PORT_ROW_H : 0);
-  return Math.max(64, headerH + bodyH + footerH + utilBarH + 4);
-}
 
 const RACK_PADDING_TOP = 50;
 const RACK_PADDING_BOTTOM = 20;

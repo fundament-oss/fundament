@@ -4,10 +4,12 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
   ElementRef,
+  inject,
   signal,
   computed,
   viewChild,
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import PatchMappingFlowWrapperComponent from './patch-mapping-flow-wrapper';
 import CableListComponent from './cable-list/cable-list';
 import CableFormComponent from './cable-form/cable-form';
@@ -46,6 +48,8 @@ import { RACKS } from '../racks/rack.model';
   templateUrl: './patch-mapping.html',
 })
 export default class PatchMappingComponent {
+  private readonly route = inject(ActivatedRoute);
+
   readonly selectedDcId = signal('ams-01');
 
   readonly activeView = signal<'list' | 'topology'>('list');
@@ -120,6 +124,28 @@ export default class PatchMappingComponent {
   private readonly portEditSheetEl = viewChild<ElementRef>('portEditSheet');
 
   constructor() {
+    const params = this.route.snapshot.queryParamMap;
+    const aDeviceId = params.get('aDeviceId');
+    const aPortId = params.get('aPortId');
+    if (aDeviceId && aPortId) {
+      const ports = this.localDevicePorts();
+      const port = (ports[aDeviceId] ?? []).find((p) => p.id === aPortId);
+      const device = RACKS.flatMap((r) => r.devices).find((d) => d.id === aDeviceId);
+      if (port && device) {
+        this.editCable.set({
+          dcId: this.selectedDcId(),
+          status: 'connected',
+          aSide: {
+            deviceId: aDeviceId,
+            deviceName: device.name,
+            portId: aPortId,
+            portName: port.name,
+            portType: port.type,
+          },
+        });
+      }
+    }
+
     effect(() => {
       const el = this.cableSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editCable() !== null) el?.show?.();
