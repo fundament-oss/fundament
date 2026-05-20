@@ -91,6 +91,10 @@ export default class CatalogApiService {
     return this.client.listCatalog({});
   }
 
+  getCatalogEntry(id: string) {
+    return this.client.getCatalogEntry({ id });
+  }
+
   createCatalogEntry(entry: CatalogEntry) {
     return this.client.createCatalogEntry({
       manufacturer: entry.manufacturer,
