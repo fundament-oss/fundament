@@ -4,6 +4,8 @@ import {
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
+  ElementRef,
+  inject,
   input,
   output,
   signal,
@@ -36,6 +38,8 @@ interface DeviceOption {
   templateUrl: './cable-form.html',
 })
 export default class CableFormComponent {
+  private readonly elRef = inject(ElementRef);
+
   readonly cable = input<Partial<Cable> | null>(null);
 
   readonly dcId = input.required<string>();
@@ -209,6 +213,9 @@ export default class CableFormComponent {
     effect(() => {
       const c = this.cable();
       if (!c) return;
+      if (c.aSide && c.bSide && !c.id) {
+        setTimeout(() => this.focusAndScrollNameField(), 0);
+      }
       this.portManagementDevice.set(null);
       if (c.aSide) {
         this.aPortType.set(c.aSide.portType);
@@ -397,6 +404,38 @@ export default class CableFormComponent {
   onDelete(): void {
     const c = this.cable();
     if (c?.id) this.cableDelete.emit(c as Cable);
+  }
+
+  // ── Focus helpers ──────────────────────────────────────────────────────────
+
+  private focusAndScrollNameField(): void {
+    const el: HTMLElement | null = this.elRef.nativeElement.querySelector('#cable-label');
+    if (!el) return;
+    const target: HTMLElement =
+      (el.shadowRoot?.querySelector('input') as HTMLElement | null) ??
+      (el.querySelector('input') as HTMLElement | null) ??
+      el;
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    target.focus();
+  }
+
+  private focusAddPortNameField(side: 'a' | 'b'): void {
+    const id = side === 'a' ? 'a-new-port-name' : 'b-new-port-name';
+    const el: HTMLElement | null = this.elRef.nativeElement.querySelector(`#${id}`);
+    if (!el) return;
+    const target: HTMLElement =
+      (el.shadowRoot?.querySelector('input') as HTMLElement | null) ??
+      (el.querySelector('input') as HTMLElement | null) ??
+      el;
+    target.focus();
+  }
+
+  startAddPort(side: 'a' | 'b'): void {
+    const portType = side === 'a' ? this.aPortType() : this.bPortType();
+    this.newPortType.set((portType as PortType) || 'network-interface');
+    if (side === 'a') this.aAddingPort.set(true);
+    else this.bAddingPort.set(true);
+    setTimeout(() => this.focusAddPortNameField(side), 0);
   }
 
   // ── Constants for template ─────────────────────────────────────────────────

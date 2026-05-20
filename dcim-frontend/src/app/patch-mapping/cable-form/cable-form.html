@@ -140,7 +140,7 @@
                 size="sm"
                 text="Add a new port to this device"
                 [attr.disabled]="aDeviceId() ? null : true"
-                (click)="newPortType.set(aPortType() || 'network-interface'); aAddingPort.set(true)"
+                (click)="startAddPort('a')"
               ></nldd-icon-button>
             </div>
             @if (aAddingPort()) {
@@ -148,6 +148,7 @@
                 class="flex items-center gap-1.5 mt-1 p-2 bg-slate-50 rounded border border-slate-200"
               >
                 <nldd-text-field
+                  id="a-new-port-name"
                   [attr.value]="newPortName()"
                   (input)="newPortName.set($any($event.target).value)"
                   placeholder="Port name…"
@@ -294,7 +295,7 @@
                 size="sm"
                 text="Add a new port to this device"
                 [attr.disabled]="bDeviceId() ? null : true"
-                (click)="newPortType.set(bPortType() || 'network-interface'); bAddingPort.set(true)"
+                (click)="startAddPort('b')"
               ></nldd-icon-button>
             </div>
             @if (bAddingPort()) {
@@ -302,6 +303,7 @@
                 class="flex items-center gap-1.5 mt-1 p-2 bg-slate-50 rounded border border-slate-200"
               >
                 <nldd-text-field
+                  id="b-new-port-name"
                   [attr.value]="newPortName()"
                   (input)="newPortName.set($any($event.target).value)"
                   placeholder="Port name…"

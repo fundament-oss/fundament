@@ -12,6 +12,9 @@ import ReactFlow, {
   Node,
   Edge,
   Connection,
+  EdgeProps,
+  BaseEdge,
+  getBezierPath,
 } from 'reactflow';
 import {
   Cable,
@@ -192,7 +195,7 @@ function PortRow({
           ...(side === 'left' ? { left: -PORT_INSET } : { right: -PORT_INSET }),
           top: `calc(50% - ${PORT_SQ / 2}px)`,
           transform: 'none',
-          cursor: isIncompatible ? 'not-allowed' : isFree ? 'crosshair' : 'default',
+          cursor: !isFree || isIncompatible ? 'not-allowed' : 'crosshair',
           pointerEvents: 'auto',
           zIndex: 2,
         }}
@@ -489,6 +492,103 @@ function RackNode({ data }: NodeProps<{ label: string }>) {
 }
 
 const nodeTypes = { device: DeviceNode, rack: RackNode };
+
+// ── Custom edge with adaptive curvature ───────────────────────────────────────
+// getBezierPath computes control-point offsets from |dx|. When both ports are on
+// the same side (dx ≈ 0) the resulting path is nearly a vertical line and hard to
+// distinguish from rack-column borders. For same-side connections we build the
+// cubic bezier manually, forcing the control points to bow out by a fixed amount.
+
+const SAME_SIDE_BOW = 90; // px the curve bulges outward for same-side cables
+
+function buildSameSidePath(
+  sx: number,
+  sy: number,
+  tx: number,
+  ty: number,
+  direction: 'left' | 'right',
+): [string, number, number] {
+  const sign = direction === 'left' ? -1 : 1;
+  const bow = sign * SAME_SIDE_BOW;
+  const cpX = (direction === 'left' ? Math.min(sx, tx) : Math.max(sx, tx)) + bow;
+  // cubic bezier: both control points bow to the same side
+  const path = `M${sx},${sy} C${cpX},${sy} ${cpX},${ty} ${tx},${ty}`;
+  // label sits halfway along the curve at the bow apex
+  const labelX = cpX;
+  const labelY = (sy + ty) / 2;
+  return [path, labelX, labelY];
+}
+
+function CurlyEdge(props: EdgeProps) {
+  const {
+    id,
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+    style,
+    label,
+    labelStyle,
+    labelBgStyle,
+    selected,
+  } = props;
+
+  let edgePath: string;
+  let labelX: number;
+  let labelY: number;
+
+  if (sourcePosition === Position.Left && targetPosition === Position.Left) {
+    [edgePath, labelX, labelY] = buildSameSidePath(sourceX, sourceY, targetX, targetY, 'left');
+  } else if (sourcePosition === Position.Right && targetPosition === Position.Right) {
+    [edgePath, labelX, labelY] = buildSameSidePath(sourceX, sourceY, targetX, targetY, 'right');
+  } else {
+    [edgePath, labelX, labelY] = getBezierPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+      curvature: 0.25,
+    });
+  }
+
+  return (
+    <>
+      <BaseEdge id={id} path={edgePath} style={style} interactionWidth={12} />
+      {label && (
+        <foreignObject
+          x={labelX - 40}
+          y={labelY - 10}
+          width={80}
+          height={20}
+          style={{ overflow: 'visible', pointerEvents: 'none' }}
+        >
+          <div
+            style={{
+              background: (labelBgStyle?.fill as string) ?? '#f8fafc',
+              opacity: (labelBgStyle?.fillOpacity as number) ?? 0.9,
+              padding: '1px 4px',
+              borderRadius: 3,
+              fontSize: 10,
+              color: (labelStyle?.fill as string) ?? '#475569',
+              whiteSpace: 'nowrap',
+              textAlign: 'center',
+              fontFamily: 'monospace',
+              fontWeight: selected ? 600 : 400,
+            }}
+          >
+            {label as string}
+          </div>
+        </foreignObject>
+      )}
+    </>
+  );
+}
+
+const edgeTypes = { default: CurlyEdge };
 
 // ── Layout data ───────────────────────────────────────────────────────────────
 
@@ -1009,16 +1109,15 @@ export function PatchMappingFlow({
   const isValidConnection = useCallback(
     (connection: Connection) => {
       if (!connection.sourceHandle || !connection.targetHandle) return true;
-      const sourcePort = Object.values(devicePorts)
-        .flat()
-        .find((p) => p.id === connection.sourceHandle);
-      const targetPort = Object.values(devicePorts)
-        .flat()
-        .find((p) => p.id === connection.targetHandle);
+      if (usedPortIds.has(connection.sourceHandle) || usedPortIds.has(connection.targetHandle))
+        return false;
+      const allPorts = Object.values(devicePorts).flat();
+      const sourcePort = allPorts.find((p) => p.id === connection.sourceHandle);
+      const targetPort = allPorts.find((p) => p.id === connection.targetHandle);
       if (!sourcePort || !targetPort) return true;
       return portsAreCompatible(sourcePort.type, targetPort.type);
     },
-    [devicePorts],
+    [devicePorts, usedPortIds],
   );
 
   const nodes = useMemo(
@@ -1156,6 +1255,7 @@ export function PatchMappingFlow({
         onConnectEnd={onConnectEnd}
         isValidConnection={isValidConnection}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         connectionMode={ConnectionMode.Loose}
         fitView
         fitViewOptions={{ padding: 0.15 }}
