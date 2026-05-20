@@ -4,7 +4,6 @@ import {
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
   input,
-  signal,
 } from '@angular/core';
 import { Cable, CableColor, CableType, CABLE_COLOR_HEX, CABLE_TYPE_LABEL } from '../cable.model';
 
@@ -23,7 +22,6 @@ interface ShoppingGroup {
   length: number | undefined;
   count: number;
   cables: Cable[];
-  expanded: boolean;
 }
 
 @Component({
@@ -36,8 +34,6 @@ export default class ShoppingListComponent {
   readonly cables = input.required<Cable[]>();
 
   readonly dcLabel = input.required<string>();
-
-  readonly expandedKeys = signal(new Set<string>());
 
   readonly groups = computed<ShoppingGroup[]>(() => {
     const map = this.cables().reduce((acc, cable) => {
@@ -53,7 +49,6 @@ export default class ShoppingListComponent {
           length: cable.length,
           count: 1,
           cables: [cable],
-          expanded: false,
         });
       }
       return acc;
@@ -69,26 +64,34 @@ export default class ShoppingListComponent {
 
   readonly groupKey = groupKey;
 
-  isExpanded(group: ShoppingGroup): boolean {
-    return this.expandedKeys().has(groupKey(group));
-  }
-
-  toggleExpanded(group: ShoppingGroup): void {
-    const key = groupKey(group);
-    this.expandedKeys.update((set) => {
-      const next = new Set(set);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  }
-
   readonly cableLabel = cableLabel;
 
   readonly CABLE_COLOR_HEX = CABLE_COLOR_HEX;
 
   readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
+
+  exportCsv(): void {
+    const headers = ['Type', 'Color', 'Length (m)', 'Count', 'Cables'];
+    const rows = this.groups().map((g) => [
+      CABLE_TYPE_LABEL[g.type],
+      g.color ?? '',
+      g.length != null ? String(g.length) : '',
+      String(g.count),
+      g.cables.map((c) => cableLabel(c)).join('; '),
+    ]);
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+      .join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const slug = this.dcLabel()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    a.download = `shopping-list-${slug}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }

@@ -93,9 +93,13 @@ export default class CableFormComponent {
 
   readonly bAddingPort = signal(false);
 
-  readonly newPortName = signal('');
+  readonly aNewPortName = signal('');
 
-  readonly newPortType = signal<PortType>('network-interface');
+  readonly aNewPortType = signal<PortType>('network-interface');
+
+  readonly bNewPortName = signal('');
+
+  readonly bNewPortType = signal<PortType>('network-interface');
 
   // ── Derived: devices in this DC ───────────────────────────────────────────
   readonly dcDevices = computed<DeviceOption[]>(() => {
@@ -322,11 +326,13 @@ export default class CableFormComponent {
   }
 
   confirmAddPort(side: 'a' | 'b'): void {
-    const name = this.newPortName().trim();
+    const nameSignal = side === 'a' ? this.aNewPortName : this.bNewPortName;
+    const typeSignal = side === 'a' ? this.aNewPortType : this.bNewPortType;
+    const name = nameSignal().trim();
     if (!name) return;
     const deviceId = side === 'a' ? this.aDeviceId() : this.bDeviceId();
     if (!deviceId) return;
-    const portType = this.newPortType();
+    const portType = typeSignal();
     const id = `p-${deviceId}-${Date.now().toString(36)}`;
     const port: Port = { id, deviceId, name, type: portType };
     this.localDevicePorts.update((map) => ({
@@ -343,13 +349,17 @@ export default class CableFormComponent {
       this.bPortId.set(id);
       this.bAddingPort.set(false);
     }
-    this.newPortName.set('');
+    nameSignal.set('');
   }
 
   cancelAddPort(side: 'a' | 'b'): void {
-    if (side === 'a') this.aAddingPort.set(false);
-    else this.bAddingPort.set(false);
-    this.newPortName.set('');
+    if (side === 'a') {
+      this.aAddingPort.set(false);
+      this.aNewPortName.set('');
+    } else {
+      this.bAddingPort.set(false);
+      this.bNewPortName.set('');
+    }
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -432,7 +442,8 @@ export default class CableFormComponent {
 
   startAddPort(side: 'a' | 'b'): void {
     const portType = side === 'a' ? this.aPortType() : this.bPortType();
-    this.newPortType.set((portType as PortType) || 'network-interface');
+    const typeSignal = side === 'a' ? this.aNewPortType : this.bNewPortType;
+    typeSignal.set((portType as PortType) || 'network-interface');
     if (side === 'a') this.aAddingPort.set(true);
     else this.bAddingPort.set(true);
     setTimeout(() => this.focusAddPortNameField(side), 0);

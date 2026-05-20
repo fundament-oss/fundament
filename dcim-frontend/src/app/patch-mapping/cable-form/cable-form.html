@@ -44,7 +44,7 @@
   <nldd-top-title-bar
     slot="header"
     [attr.text]="isEditMode() ? 'Edit cable' : 'New cable'"
-    dismiss-text="Close"
+    dismiss-text="Cancel"
     (dismiss)="onCancel()"
   ></nldd-top-title-bar>
 
@@ -149,20 +149,21 @@
               >
                 <nldd-text-field
                   id="a-new-port-name"
-                  [attr.value]="newPortName()"
-                  (input)="newPortName.set($any($event.target).value)"
+                  [attr.value]="aNewPortName()"
+                  (input)="aNewPortName.set($any($event.target).value)"
                   placeholder="Port name…"
                   class="flex-1 font-mono"
                   (keydown.enter)="confirmAddPort('a')"
                   (keydown.escape)="cancelAddPort('a')"
                 ></nldd-text-field>
                 <select
-                  [value]="newPortType()"
-                  (change)="newPortType.set($any($event.target).value)"
+                  (change)="aNewPortType.set($any($event.target).value)"
                   class="text-xs border border-slate-200 rounded px-1 py-1"
                 >
                   @for (pt of PORT_TYPES; track pt.value) {
-                    <option [value]="pt.value">{{ pt.label }}</option>
+                    <option [value]="pt.value" [selected]="pt.value === aNewPortType()">
+                      {{ pt.label }}
+                    </option>
                   }
                 </select>
                 <nldd-icon-button
@@ -170,7 +171,7 @@
                   variant="primary"
                   size="sm"
                   text="Confirm new port"
-                  [attr.disabled]="newPortName().trim() ? null : true"
+                  [attr.disabled]="aNewPortName().trim() ? null : true"
                   (click)="confirmAddPort('a')"
                 ></nldd-icon-button>
                 <nldd-icon-button
@@ -304,20 +305,21 @@
               >
                 <nldd-text-field
                   id="b-new-port-name"
-                  [attr.value]="newPortName()"
-                  (input)="newPortName.set($any($event.target).value)"
+                  [attr.value]="bNewPortName()"
+                  (input)="bNewPortName.set($any($event.target).value)"
                   placeholder="Port name…"
                   class="flex-1 font-mono"
                   (keydown.enter)="confirmAddPort('b')"
                   (keydown.escape)="cancelAddPort('b')"
                 ></nldd-text-field>
                 <select
-                  [value]="newPortType()"
-                  (change)="newPortType.set($any($event.target).value)"
+                  (change)="bNewPortType.set($any($event.target).value)"
                   class="text-xs border border-slate-200 rounded px-1 py-1"
                 >
                   @for (pt of PORT_TYPES; track pt.value) {
-                    <option [value]="pt.value">{{ pt.label }}</option>
+                    <option [value]="pt.value" [selected]="pt.value === bNewPortType()">
+                      {{ pt.label }}
+                    </option>
                   }
                 </select>
                 <nldd-icon-button
@@ -325,7 +327,7 @@
                   variant="primary"
                   size="sm"
                   text="Confirm new port"
-                  [attr.disabled]="newPortName().trim() ? null : true"
+                  [attr.disabled]="bNewPortName().trim() ? null : true"
                   (click)="confirmAddPort('b')"
                 ></nldd-icon-button>
                 <nldd-icon-button
@@ -501,29 +503,24 @@
     </div>
   </nldd-simple-section>
 
-  <div
-    slot="footer"
-    class="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4"
-  >
-    @if (isEditMode()) {
-      <nldd-button
-        variant="destructive"
-        text="Delete"
-        start-icon="trash"
-        (click)="onDelete()"
-      ></nldd-button>
-    } @else {
-      <span></span>
-    }
-
-    <div class="flex gap-2">
-      <nldd-button variant="secondary" text="Cancel" (click)="onCancel()"></nldd-button>
+  <div slot="footer" class="border-t border-slate-100 px-6 py-4">
+    <nldd-button-group orientation="vertical">
       <nldd-button
         variant="primary"
         text="Save"
+        width="full"
         (click)="onSave()"
         [attr.disabled]="canSave() ? null : true"
       ></nldd-button>
-    </div>
+      @if (isEditMode()) {
+        <nldd-button
+          variant="destructive"
+          text="Delete this cable"
+          start-icon="trash"
+          width="full"
+          (click)="onDelete()"
+        ></nldd-button>
+      }
+    </nldd-button-group>
   </div>
 </nldd-page>
