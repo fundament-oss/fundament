@@ -13,7 +13,15 @@ import ReactFlow, {
   Edge,
   Connection,
 } from 'reactflow';
-import { Cable, CableStatus, CableType, CABLE_COLOR_HEX, Port, PortType } from './cable.model';
+import {
+  Cable,
+  CableStatus,
+  CableType,
+  CABLE_COLOR_HEX,
+  Port,
+  PortType,
+  portsAreCompatible,
+} from './cable.model';
 
 // ── Port type visual styles ───────────────────────────────────────────────────
 
@@ -58,6 +66,7 @@ interface DeviceNodeData {
   nodeId: string;
   usedPortIds: Set<string>;
   pendingSourcePortId: string | null;
+  activeSourceType: PortType | null;
   onBodyClick: () => void;
   onHover: (id: string | null) => void;
   onEditPorts: (deviceId: string) => void;
@@ -104,6 +113,7 @@ function PortRow({
   isFree,
   isPending,
   isHovered,
+  isIncompatible,
   deviceId,
   onPortClick,
   onHoverPort,
@@ -115,6 +125,7 @@ function PortRow({
   isFree: boolean;
   isPending: boolean;
   isHovered: boolean;
+  isIncompatible: boolean;
   deviceId: string;
   onPortClick: (deviceId: string, portId: string, isFree: boolean) => void;
   onHoverPort: (portId: string | null) => void;
@@ -152,7 +163,7 @@ function PortRow({
 
   return (
     <div
-      style={rowStyle}
+      style={{ ...rowStyle, opacity: isIncompatible ? 0.25 : 1, transition: 'opacity 0.15s' }}
       onMouseEnter={() => onHoverPort(port.id)}
       onMouseLeave={() => onHoverPort(null)}
     >
@@ -168,7 +179,7 @@ function PortRow({
         position={side === 'left' ? Position.Left : Position.Right}
         id={port.id}
         title={`${port.name} (${PORT_TYPE_STYLE[port.type].abbr})`}
-        isConnectable={isFree}
+        isConnectable={isFree && !isIncompatible}
         style={{
           position: 'absolute',
           width: PORT_SQ,
@@ -181,7 +192,7 @@ function PortRow({
           ...(side === 'left' ? { left: -PORT_INSET } : { right: -PORT_INSET }),
           top: `calc(50% - ${PORT_SQ / 2}px)`,
           transform: 'none',
-          cursor: isFree ? 'crosshair' : 'default',
+          cursor: isIncompatible ? 'not-allowed' : isFree ? 'crosshair' : 'default',
           pointerEvents: 'auto',
           zIndex: 2,
         }}
@@ -274,6 +285,9 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
           isFree={!data.usedPortIds.has(p.id)}
           isPending={data.pendingSourcePortId === p.id}
           isHovered={hoveredPortId === p.id}
+          isIncompatible={
+            data.activeSourceType !== null && !portsAreCompatible(data.activeSourceType, p.type)
+          }
           deviceId={data.nodeId}
           onPortClick={data.onPortClick}
           onHoverPort={setHoveredPortId}
@@ -289,6 +303,9 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
           isFree={!data.usedPortIds.has(p.id)}
           isPending={data.pendingSourcePortId === p.id}
           isHovered={hoveredPortId === p.id}
+          isIncompatible={
+            data.activeSourceType !== null && !portsAreCompatible(data.activeSourceType, p.type)
+          }
           deviceId={data.nodeId}
           onPortClick={data.onPortClick}
           onHoverPort={setHoveredPortId}
@@ -598,11 +615,34 @@ const DEVICE_LAYOUTS: DeviceLayout[] = [
   },
 ];
 
+function computeDeviceHeight(ports: Port[]): number {
+  const leftPorts = ports.filter(
+    (p) =>
+      p.type === 'network-interface' ||
+      p.type === 'console-port' ||
+      p.type === 'console-server-port',
+  );
+  const rightPorts = ports.filter((p) => p.type === 'power-port' || p.type === 'power-outlet');
+  const totalPorts = ports.length;
+  const headerH = 28;
+  const footerH = leftPorts.length > 0 || rightPorts.length > 0 ? 16 : 0;
+  const utilBarH = totalPorts > 0 ? 5 : 0;
+  const portRows = Math.max(leftPorts.length, rightPorts.length);
+  const bodyH = Math.max(portRows * PORT_ROW_H, portRows > 0 ? PORT_ROW_H : 0);
+  return Math.max(64, headerH + bodyH + footerH + utilBarH + 4);
+}
+
+const RACK_PADDING_TOP = 50;
+const RACK_PADDING_BOTTOM = 20;
+const DEVICE_GAP = 12;
+const DEVICE_X = 20;
+
 function buildNodes(
   dcId: string,
   devicePorts: Record<string, Port[]>,
   usedPortIds: Set<string>,
   pendingSourcePortId: string | null,
+  activeSourceType: PortType | null,
   onBodyClick: () => void,
   onHover: (id: string | null) => void,
   onEditPorts: (deviceId: string) => void,
@@ -611,11 +651,27 @@ function buildNodes(
   const dcRacks = RACK_LAYOUTS.filter((r) => r.dcId === dcId);
   const dcDevices = DEVICE_LAYOUTS.filter((d) => d.dcId === dcId);
 
+  // Stack devices top-to-bottom per rack and derive rack height from actual content
+  const devicePositions: Record<string, { x: number; y: number }> = {};
+  const rackHeights: Record<string, number> = {};
+
+  for (const rack of dcRacks) {
+    const rackDevices = dcDevices.filter((d) => d.parentNode === rack.id);
+    let y = RACK_PADDING_TOP;
+    for (const device of rackDevices) {
+      devicePositions[device.id] = { x: DEVICE_X, y };
+      const h = computeDeviceHeight(devicePorts[device.id] ?? []);
+      y += h + DEVICE_GAP;
+    }
+    rackHeights[rack.id] =
+      rackDevices.length > 0 ? y - DEVICE_GAP + RACK_PADDING_BOTTOM : rack.height;
+  }
+
   const rackNodes: Node[] = dcRacks.map((r) => ({
     id: r.id,
     type: 'rack',
     position: { x: r.x, y: r.y },
-    style: { width: r.width, height: r.height },
+    style: { width: r.width, height: rackHeights[r.id] },
     data: { label: r.label },
     selectable: false,
     draggable: false,
@@ -626,7 +682,7 @@ function buildNodes(
     type: 'device',
     parentNode: d.parentNode,
     extent: 'parent' as const,
-    position: d.position,
+    position: devicePositions[d.id] ?? d.position,
     draggable: false,
     data: {
       label: d.label,
@@ -635,6 +691,7 @@ function buildNodes(
       nodeId: d.id,
       usedPortIds,
       pendingSourcePortId,
+      activeSourceType,
       onBodyClick,
       onHover,
       onEditPorts,
@@ -874,6 +931,7 @@ export function PatchMappingFlow({
   const [pendingSource, setPendingSource] = useState<{ deviceId: string; portId: string } | null>(
     null,
   );
+  const [draggingSourceType, setDraggingSourceType] = useState<PortType | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
 
   const filteredCables = useMemo(
@@ -906,6 +964,13 @@ export function PatchMappingFlow({
         setPendingSource(null);
         return;
       }
+      const sourcePort = devicePorts[pendingSource.deviceId]?.find(
+        (p) => p.id === pendingSource.portId,
+      );
+      const targetPort = devicePorts[deviceId]?.find((p) => p.id === portId);
+      if (sourcePort && targetPort && !portsAreCompatible(sourcePort.type, targetPort.type)) {
+        return;
+      }
       onConnectionMade({
         sourceDeviceId: pendingSource.deviceId,
         sourcePortId: pendingSource.portId,
@@ -914,10 +979,47 @@ export function PatchMappingFlow({
       });
       setPendingSource(null);
     },
-    [pendingSource, cables, onCableClick, onConnectionMade],
+    [pendingSource, cables, devicePorts, onCableClick, onConnectionMade],
   );
 
   const onBodyClick = useCallback(() => setPendingSource(null), []);
+
+  const onConnectStart = useCallback(
+    (_: unknown, { handleId }: { handleId: string | null }) => {
+      if (!handleId) return;
+      const port = Object.values(devicePorts)
+        .flat()
+        .find((p) => p.id === handleId);
+      setDraggingSourceType(port?.type ?? null);
+    },
+    [devicePorts],
+  );
+
+  const onConnectEnd = useCallback(() => setDraggingSourceType(null), []);
+
+  const pendingSourceType = useMemo(() => {
+    if (!pendingSource) return null;
+    return (
+      devicePorts[pendingSource.deviceId]?.find((p) => p.id === pendingSource.portId)?.type ?? null
+    );
+  }, [pendingSource, devicePorts]);
+
+  const activeSourceType = draggingSourceType ?? pendingSourceType;
+
+  const isValidConnection = useCallback(
+    (connection: Connection) => {
+      if (!connection.sourceHandle || !connection.targetHandle) return true;
+      const sourcePort = Object.values(devicePorts)
+        .flat()
+        .find((p) => p.id === connection.sourceHandle);
+      const targetPort = Object.values(devicePorts)
+        .flat()
+        .find((p) => p.id === connection.targetHandle);
+      if (!sourcePort || !targetPort) return true;
+      return portsAreCompatible(sourcePort.type, targetPort.type);
+    },
+    [devicePorts],
+  );
 
   const nodes = useMemo(
     () =>
@@ -926,12 +1028,22 @@ export function PatchMappingFlow({
         devicePorts,
         usedPortIds,
         pendingSource?.portId ?? null,
+        activeSourceType,
         onBodyClick,
         setHoveredDeviceId,
         onEditPorts,
         onPortClick,
       ),
-    [dcId, devicePorts, usedPortIds, pendingSource, onBodyClick, onEditPorts, onPortClick],
+    [
+      dcId,
+      devicePorts,
+      usedPortIds,
+      pendingSource,
+      activeSourceType,
+      onBodyClick,
+      onEditPorts,
+      onPortClick,
+    ],
   );
 
   const edges = useMemo<Edge[]>(
@@ -1040,6 +1152,9 @@ export function PatchMappingFlow({
         onEdgeClick={onEdgeClick}
         onEdgeContextMenu={onEdgeContextMenu}
         onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
+        isValidConnection={isValidConnection}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
         fitView

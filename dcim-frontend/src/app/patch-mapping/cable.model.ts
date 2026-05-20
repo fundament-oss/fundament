@@ -15,6 +15,12 @@ export interface Port {
   description?: string;
 }
 
+const POWER_PORT_TYPES = new Set<PortType>(['power-port', 'power-outlet']);
+
+export function portsAreCompatible(a: PortType, b: PortType): boolean {
+  return POWER_PORT_TYPES.has(a) === POWER_PORT_TYPES.has(b);
+}
+
 // ── Cable types ───────────────────────────────────────────────────────────────
 
 export type CableType =
