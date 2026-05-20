@@ -9,9 +9,10 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {RouterLink} from '@angular/router';
 import {Code, ConnectError} from '@connectrpc/connect';
-import {firstValueFrom} from 'rxjs';
+import {debounce, distinctUntilChanged, firstValueFrom, skip, timer} from 'rxjs';
 import {AssetCategory, CatalogEntry, MOCK_ASSETS} from '../inventory/inventory';
 import CatalogApiService from './catalog-api.service';
 import connectErrorMessage from '../../connect/error';
@@ -91,6 +92,15 @@ export default class CatalogComponent implements OnInit {
   private readonly fEntryCat = viewChild<NativeElementRef>('fEntryCat');
 
   constructor() {
+    toObservable(this.searchQuery)
+      .pipe(
+        skip(1),
+        debounce((q) => timer(q ? 250 : 0)),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe((search) => this.loadCatalog(search));
+
     effect(() => {
       const el = this.entrySheetEl()?.nativeElement;
       if (this.editEntry() !== null) el?.show?.();
@@ -104,7 +114,11 @@ export default class CatalogComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    firstValueFrom(this.catalogApi.listCatalog())
+    this.loadCatalog();
+  }
+
+  private loadCatalog(search?: string): void {
+    firstValueFrom(this.catalogApi.listCatalog(search))
       .then((res) =>
         this.mutableCatalog.set(
           res.entries.map((s) => CatalogApiService.mapCatalogEntry(s.entry!)),
@@ -129,18 +143,9 @@ export default class CatalogComponent implements OnInit {
   );
 
   readonly rows = computed<CatalogRow[]>(() => {
-    const q = this.searchQuery().toLowerCase();
     const cat = this.categoryFilter();
-    return this.allRows().filter((row) => {
-      if (cat !== 'all' && row.entry.category !== cat) return false;
-      if (
-        q &&
-        !row.entry.model.toLowerCase().includes(q) &&
-        !row.entry.manufacturer.toLowerCase().includes(q)
-      )
-        return false;
-      return true;
-    });
+    if (cat === 'all') return this.allRows();
+    return this.allRows().filter((row) => row.entry.category === cat);
   });
 
   readonly totalProducts = computed(() => this.allRows().length);

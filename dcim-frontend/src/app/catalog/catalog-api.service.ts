@@ -100,8 +100,8 @@ export default class CatalogApiService {
 
   // ── API methods ───────────────────────────────────────────────────────────
 
-  listCatalog() {
-    return this.client.listCatalog({});
+  listCatalog(search?: string) {
+    return this.client.listCatalog(search ? { search } : {});
   }
 
   getCatalogEntry(id: string) {
