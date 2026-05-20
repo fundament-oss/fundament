@@ -158,16 +158,16 @@
                   }
                 </select>
                 <nldd-icon-button
-                  icon="checkmark"
-                  variant="neutral-transparent"
+                  icon="check-mark-small"
+                  variant="primary"
                   size="sm"
                   text="Confirm new port"
                   [attr.disabled]="newPortName().trim() ? null : true"
                   (click)="confirmAddPort('a')"
                 ></nldd-icon-button>
                 <nldd-icon-button
-                  icon="close"
-                  variant="neutral-transparent"
+                  icon="dismiss-small"
+                  variant="secondary"
                   size="sm"
                   text="Cancel"
                   (click)="cancelAddPort('a')"
@@ -308,16 +308,16 @@
                   }
                 </select>
                 <nldd-icon-button
-                  icon="checkmark"
-                  variant="neutral-transparent"
+                  icon="check-mark-small"
+                  variant="primary"
                   size="sm"
                   text="Confirm new port"
                   [attr.disabled]="newPortName().trim() ? null : true"
                   (click)="confirmAddPort('b')"
                 ></nldd-icon-button>
                 <nldd-icon-button
-                  icon="close"
-                  variant="neutral-transparent"
+                  icon="dismiss-small"
+                  variant="secondary"
                   size="sm"
                   text="Cancel"
                   (click)="cancelAddPort('b')"
@@ -374,7 +374,7 @@
               class="w-full"
             >
               @for (t of CABLE_TYPES; track t) {
-                <option [value]="t">{{ CABLE_TYPE_LABEL[t] }}</option>
+                <option [value]="t" [selected]="t === cableType()">{{ CABLE_TYPE_LABEL[t] }}</option>
               }
             </select>
           </nldd-form-field>

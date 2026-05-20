@@ -39,8 +39,6 @@ export default class PatchMappingFlowWrapperComponent
 
   readonly cableSelected = output<string>();
 
-  readonly deviceNavigate = output<string>();
-
   readonly connectionMade = output<{
     sourceDeviceId: string;
     sourcePortId: string;
@@ -77,7 +75,6 @@ export default class PatchMappingFlowWrapperComponent
         filterStatus: this.filterStatus,
         filterType: this.filterType,
         onCableClick: (id: string) => this.cableSelected.emit(id),
-        onDeviceClick: (id: string) => this.deviceNavigate.emit(id),
         onConnectionMade: (conn) => this.connectionMade.emit(conn),
         onEditPorts: (deviceId: string) => this.portsEditRequested.emit(deviceId),
         onCableStatusChange: (cableId: string, status: CableStatus) =>

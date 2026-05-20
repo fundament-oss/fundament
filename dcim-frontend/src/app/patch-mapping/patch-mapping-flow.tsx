@@ -39,7 +39,6 @@ interface PatchMappingFlowProps {
   filterStatus: CableStatus | '';
   filterType: CableType | '';
   onCableClick: (id: string) => void;
-  onDeviceClick: (id: string) => void;
   onConnectionMade: (conn: {
     sourceDeviceId: string;
     sourcePortId: string;
@@ -59,7 +58,7 @@ interface DeviceNodeData {
   nodeId: string;
   usedPortIds: Set<string>;
   pendingSourcePortId: string | null;
-  onDeviceClick: (id: string) => void;
+  onBodyClick: () => void;
   onHover: (id: string | null) => void;
   onEditPorts: (deviceId: string) => void;
   onPortClick: (deviceId: string, portId: string, isFree: boolean) => void;
@@ -120,6 +119,7 @@ function PortRow({
   onPortClick: (deviceId: string, portId: string, isFree: boolean) => void;
   onHoverPort: (portId: string | null) => void;
 }) {
+  const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
   const topPct = `${((index + 1) / (total + 1)) * 100}%`;
   const style = PORT_TYPE_STYLE[port.type];
   const squareColor = isPending ? '#6366f1' : isFree ? style.free : style.used;
@@ -177,6 +177,7 @@ function PortRow({
         position={side === 'left' ? Position.Left : Position.Right}
         id={port.id}
         title={`${port.name} (${PORT_TYPE_STYLE[port.type].abbr})`}
+        isConnectable={isFree}
         style={{
           position: 'absolute',
           left: 0,
@@ -188,8 +189,16 @@ function PortRow({
           cursor: isFree ? 'crosshair' : 'default',
           zIndex: 2,
         }}
+        onMouseDown={(e) => {
+          mouseDownPos.current = { x: e.clientX, y: e.clientY };
+        }}
         onClick={(e) => {
           e.stopPropagation();
+          if (mouseDownPos.current) {
+            const dx = e.clientX - mouseDownPos.current.x;
+            const dy = e.clientY - mouseDownPos.current.y;
+            if (dx * dx + dy * dy > 25) return;
+          }
           onPortClick(deviceId, port.id, isFree);
         }}
       />
@@ -248,7 +257,7 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
         transition: 'box-shadow 0.15s, border-color 0.15s, background 0.15s',
         overflow: 'visible',
       }}
-      onClick={() => data.onDeviceClick(data.nodeId)}
+      onClick={() => data.onBodyClick()}
       onMouseEnter={() => {
         setHovered(true);
         data.onHover(data.nodeId);
@@ -599,7 +608,7 @@ function buildNodes(
   devicePorts: Record<string, Port[]>,
   usedPortIds: Set<string>,
   pendingSourcePortId: string | null,
-  onDeviceClick: (id: string) => void,
+  onBodyClick: () => void,
   onHover: (id: string | null) => void,
   onEditPorts: (deviceId: string) => void,
   onPortClick: (deviceId: string, portId: string, isFree: boolean) => void,
@@ -631,7 +640,7 @@ function buildNodes(
       nodeId: d.id,
       usedPortIds,
       pendingSourcePortId,
-      onDeviceClick,
+      onBodyClick,
       onHover,
       onEditPorts,
       onPortClick,
@@ -862,7 +871,6 @@ export function PatchMappingFlow({
   filterStatus,
   filterType,
   onCableClick,
-  onDeviceClick,
   onConnectionMade,
   onEditPorts,
   onCableStatusChange,
@@ -914,6 +922,8 @@ export function PatchMappingFlow({
     [pendingSource, cables, onCableClick, onConnectionMade],
   );
 
+  const onBodyClick = useCallback(() => setPendingSource(null), []);
+
   const nodes = useMemo(
     () =>
       buildNodes(
@@ -921,12 +931,12 @@ export function PatchMappingFlow({
         devicePorts,
         usedPortIds,
         pendingSource?.portId ?? null,
-        onDeviceClick,
+        onBodyClick,
         setHoveredDeviceId,
         onEditPorts,
         onPortClick,
       ),
-    [dcId, devicePorts, usedPortIds, pendingSource, onDeviceClick, onEditPorts, onPortClick],
+    [dcId, devicePorts, usedPortIds, pendingSource, onBodyClick, onEditPorts, onPortClick],
   );
 
   const edges = useMemo<Edge[]>(

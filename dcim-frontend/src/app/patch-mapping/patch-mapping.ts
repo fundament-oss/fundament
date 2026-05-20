@@ -4,12 +4,10 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
   ElementRef,
-  inject,
   signal,
   computed,
   viewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import PatchMappingFlowWrapperComponent from './patch-mapping-flow-wrapper';
 import CableListComponent from './cable-list/cable-list';
 import CableFormComponent from './cable-form/cable-form';
@@ -17,6 +15,7 @@ import DevicePortsComponent from './device-ports/device-ports';
 import ShoppingListComponent from './shopping-list/shopping-list';
 import {
   Cable,
+  CABLE_TYPE_LABEL,
   CableSide,
   CableStatus,
   CableType,
@@ -47,8 +46,6 @@ import { RACKS } from '../racks/rack.model';
   templateUrl: './patch-mapping.html',
 })
 export default class PatchMappingComponent {
-  private readonly router = inject(Router);
-
   readonly selectedDcId = signal('ams-01');
 
   readonly activeView = signal<'list' | 'topology'>('list');
@@ -89,6 +86,8 @@ export default class PatchMappingComponent {
     if (!dev) return [];
     return this.localDevicePorts()[dev.id] ?? [];
   });
+
+  readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
 
   readonly CABLE_TYPES: CableType[] = [
     'cat5e',
@@ -257,7 +256,4 @@ export default class PatchMappingComponent {
     );
   }
 
-  navigateToDevice(id: string): void {
-    this.router.navigate(['/racks/device', id]);
-  }
 }

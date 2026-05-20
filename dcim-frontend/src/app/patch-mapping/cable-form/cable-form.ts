@@ -67,7 +67,7 @@ export default class CableFormComponent {
   readonly bPortId = signal('');
 
   // ── Cable fields ───────────────────────────────────────────────────────────
-  readonly cableType = signal<CableType | ''>('');
+  readonly cableType = signal<CableType | ''>('cat5e');
 
   readonly cableStatus = signal<CableStatus>('connected');
 
@@ -228,7 +228,7 @@ export default class CableFormComponent {
         this.bDeviceId.set('');
         this.bPortId.set('');
       }
-      this.cableType.set(c.type ?? '');
+      this.cableType.set(c.type ?? this.CABLE_TYPES[0]);
       this.cableStatus.set(c.status ?? 'connected');
       this.cableLabel.set(c.label ?? '');
       this.cableColor.set(c.color ?? undefined);
