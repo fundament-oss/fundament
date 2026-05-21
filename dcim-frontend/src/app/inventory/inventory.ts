@@ -2047,8 +2047,6 @@ export default class InventoryComponent implements OnInit {
 
   private readonly catalogApi = inject(CatalogApiService);
 
-  readonly ITEMS_PER_PAGE = 50;
-
   readonly assets = signal<Asset[]>([]);
 
   readonly catalog = signal<CatalogEntry[]>([]);
@@ -2064,8 +2062,6 @@ export default class InventoryComponent implements OnInit {
   categoryFilter = signal<AssetCategory | 'all'>('all');
 
   sortDirection = signal<'asc' | 'desc'>('asc');
-
-  currentPage = signal(1);
 
   activeNotesAsset = signal<Asset | null>(null);
 
@@ -2178,30 +2174,10 @@ export default class InventoryComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  /** Re-query the list from the first page after a filter or sort change. */
+  /** Re-query the list after a filter or sort change. */
   private reload(): void {
-    this.currentPage.set(1);
     this.loadAssets();
   }
-
-  // ── Pagination (client-side over the server-filtered list) ─────────────────
-
-  readonly totalFiltered = computed(() => this.assets().length);
-
-  readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.totalFiltered() / this.ITEMS_PER_PAGE)),
-  );
-
-  readonly pagedAssets = computed(() => {
-    const start = (this.currentPage() - 1) * this.ITEMS_PER_PAGE;
-    return this.assets().slice(start, start + this.ITEMS_PER_PAGE);
-  });
-
-  readonly pageStart = computed(() => (this.currentPage() - 1) * this.ITEMS_PER_PAGE + 1);
-
-  readonly pageEnd = computed(() =>
-    Math.min(this.currentPage() * this.ITEMS_PER_PAGE, this.totalFiltered()),
-  );
 
   // ── Summary counts (from org-wide stats) ───────────────────────────────────
 
@@ -2245,12 +2221,6 @@ export default class InventoryComponent implements OnInit {
   toggleSort(): void {
     this.sortDirection.update((d) => (d === 'asc' ? 'desc' : 'asc'));
     this.reload();
-  }
-
-  goToPage(page: number) {
-    if (page >= 1 && page <= this.totalPages()) {
-      this.currentPage.set(page);
-    }
   }
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
