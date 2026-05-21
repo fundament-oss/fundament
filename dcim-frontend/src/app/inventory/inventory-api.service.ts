@@ -3,11 +3,20 @@ import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import {
   AssetCategory as ProtoCategory,
   AssetStatus as ProtoStatus,
+  AssetEventType as ProtoEventType,
   SortDirection,
 } from '../../generated/v1/common_pb';
 import { AssetSortField } from '../../generated/v1/asset_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
-import type { Asset, AssetCategory, AssetStatus, CatalogEntry } from './inventory';
+import type { AssetEvent as ProtoAssetEvent } from '../../generated/v1/common_pb';
+import type {
+  Asset,
+  AssetCategory,
+  AssetEventAction,
+  AssetStatus,
+  CatalogEntry,
+  HistoryEntry,
+} from './inventory';
 import { ASSET_CLIENT } from '../../connect/tokens';
 
 export interface ListAssetsOptions {
@@ -40,6 +49,32 @@ export default class InventoryApiService {
         : undefined,
       notes: a.notes,
     };
+  }
+
+  /** Maps an API asset event onto the UI history entry model. */
+  static mapAssetEvent(e: ProtoAssetEvent): HistoryEntry {
+    const created = e.created ? timestampDate(e.created) : new Date();
+    const daysAgo = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
+    return {
+      action: InventoryApiService.fromProtoEventType(e.eventType),
+      description: e.details,
+      user: e.performedBy,
+      daysAgo,
+    };
+  }
+
+  private static fromProtoEventType(t: ProtoEventType): AssetEventAction {
+    const map: Record<number, AssetEventAction> = {
+      [ProtoEventType.RECEIVED]: 'received',
+      [ProtoEventType.DEPLOYED]: 'deployed',
+      [ProtoEventType.MOVED]: 'moved',
+      [ProtoEventType.REPAIR_SENT]: 'repair-sent',
+      [ProtoEventType.REPAIR_RECEIVED]: 'repair-received',
+      [ProtoEventType.DECOMMISSIONED]: 'decommissioned',
+      [ProtoEventType.REQUESTED]: 'requested',
+      [ProtoEventType.NOTE]: 'note',
+    };
+    return map[t] ?? 'note';
   }
 
   private static fromProtoStatus(s: ProtoStatus): AssetStatus {
@@ -109,12 +144,24 @@ export default class InventoryApiService {
     return this.assetClient.getAssetStats({});
   }
 
+  getAssetEvents(id: string) {
+    return this.assetClient.getAssetEvents({ assetId: id });
+  }
+
+  getAssetLocation(id: string) {
+    return this.assetClient.getAssetLocation({ assetId: id });
+  }
+
   createAsset(asset: Asset) {
     return this.assetClient.createAsset({
       deviceCatalogId: asset.deviceCatalogId ?? '',
       status: InventoryApiService.toProtoStatus(asset.status),
       assetTag: asset.assetTag,
       notes: asset.notes,
+      ...(asset.serialNumber !== undefined ? { serialNumber: asset.serialNumber } : {}),
+      ...(asset.warrantyExpiry
+        ? { warrantyExpiry: timestampFromDate(new Date(asset.warrantyExpiry)) }
+        : {}),
     });
   }
 

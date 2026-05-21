@@ -432,6 +432,63 @@
           </select>
         </nldd-form-field>
       </div>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Serial number" [optional]="true">
+          <nldd-text-field
+            #fAssetSerial
+            [attr.value]="editAsset()?.serialNumber ?? ''"
+            placeholder="SN-…"
+          ></nldd-text-field>
+        </nldd-form-field>
+        <nldd-form-field label="Warranty expiry" [optional]="true">
+          <nldd-text-field
+            #fAssetWarranty
+            type="date"
+            [attr.value]="editAsset()?.warrantyExpiry ?? ''"
+          ></nldd-text-field>
+        </nldd-form-field>
+      </div>
+      <nldd-form-field label="Location" [optional]="true">
+        <select #fAssetRack>
+          <option value="">— Not placed —</option>
+          @for (group of racksByDatacenter(); track group.datacenter) {
+            <optgroup [attr.label]="group.datacenter">
+              @for (rack of group.racks; track rack.id) {
+                <option
+                  [value]="rack.id"
+                  [attr.selected]="editPlacement()?.rackId === rack.id ? true : null"
+                >
+                  {{ rack.name }}
+                </option>
+              }
+            </optgroup>
+          }
+        </select>
+      </nldd-form-field>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Rack unit" [optional]="true">
+          <nldd-text-field
+            #fAssetRackUnit
+            type="number"
+            [attr.value]="editPlacement()?.unit ?? ''"
+            placeholder="1"
+          ></nldd-text-field>
+        </nldd-form-field>
+        <nldd-form-field label="Slot type" [optional]="true">
+          <select #fAssetSlotType>
+            @for (st of slotTypes; track st.value) {
+              <option
+                [value]="st.value"
+                [attr.selected]="
+                  (editPlacement()?.slotType ?? defaultSlotType) === st.value ? true : null
+                "
+              >
+                {{ st.label }}
+              </option>
+            }
+          </select>
+        </nldd-form-field>
+      </div>
       <nldd-form-field label="Notes" [optional]="true">
         <nldd-multi-line-text-field
           #fAssetNotes

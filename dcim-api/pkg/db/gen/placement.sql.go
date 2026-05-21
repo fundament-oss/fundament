@@ -65,6 +65,49 @@ func (q *Queries) PlacementDelete(ctx context.Context, arg PlacementDeleteParams
 	return result.RowsAffected(), nil
 }
 
+const placementGetByAsset = `-- name: PlacementGetByAsset :one
+SELECT id, asset_id, rack_id, start_unit, slot_type, parent_placement_id, port_definition_id, logical_device_id, external_ref, notes, created
+FROM dcim.placements
+WHERE asset_id = $1 AND deleted IS NULL
+`
+
+type PlacementGetByAssetParams struct {
+	AssetID uuid.UUID
+}
+
+type PlacementGetByAssetRow struct {
+	ID                uuid.UUID
+	AssetID           uuid.UUID
+	RackID            pgtype.UUID
+	StartUnit         pgtype.Int4
+	SlotType          pgtype.Text
+	ParentPlacementID pgtype.UUID
+	PortDefinitionID  pgtype.UUID
+	LogicalDeviceID   pgtype.UUID
+	ExternalRef       pgtype.Text
+	Notes             pgtype.Text
+	Created           pgtype.Timestamptz
+}
+
+func (q *Queries) PlacementGetByAsset(ctx context.Context, arg PlacementGetByAssetParams) (PlacementGetByAssetRow, error) {
+	row := q.db.QueryRow(ctx, placementGetByAsset, arg.AssetID)
+	var i PlacementGetByAssetRow
+	err := row.Scan(
+		&i.ID,
+		&i.AssetID,
+		&i.RackID,
+		&i.StartUnit,
+		&i.SlotType,
+		&i.ParentPlacementID,
+		&i.PortDefinitionID,
+		&i.LogicalDeviceID,
+		&i.ExternalRef,
+		&i.Notes,
+		&i.Created,
+	)
+	return i, err
+}
+
 const placementGetByID = `-- name: PlacementGetByID :one
 SELECT id, asset_id, rack_id, start_unit, slot_type, parent_placement_id, port_definition_id, logical_device_id, external_ref, notes, created
 FROM dcim.placements
@@ -220,6 +263,41 @@ func (q *Queries) PlacementListByRack(ctx context.Context, arg PlacementListByRa
 		return nil, err
 	}
 	return items, nil
+}
+
+const placementResolveRackByAsset = `-- name: PlacementResolveRackByAsset :one
+WITH RECURSIVE location_chain AS (
+    SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id
+    FROM dcim.placements
+    WHERE dcim.placements.asset_id = $1 AND dcim.placements.deleted IS NULL
+    UNION ALL
+    SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id
+    FROM dcim.placements
+    JOIN location_chain ON dcim.placements.id = location_chain.parent_placement_id
+    WHERE dcim.placements.deleted IS NULL
+)
+SELECT location_chain.rack_id, location_chain.start_unit, location_chain.slot_type
+FROM location_chain
+WHERE location_chain.rack_id IS NOT NULL
+`
+
+type PlacementResolveRackByAssetParams struct {
+	AssetID uuid.UUID
+}
+
+type PlacementResolveRackByAssetRow struct {
+	RackID    pgtype.UUID
+	StartUnit pgtype.Int4
+	SlotType  pgtype.Text
+}
+
+// Walks parent_placement_id up from the asset's placement so nested
+// sub-components resolve the rack of their top-level host.
+func (q *Queries) PlacementResolveRackByAsset(ctx context.Context, arg PlacementResolveRackByAssetParams) (PlacementResolveRackByAssetRow, error) {
+	row := q.db.QueryRow(ctx, placementResolveRackByAsset, arg.AssetID)
+	var i PlacementResolveRackByAssetRow
+	err := row.Scan(&i.RackID, &i.StartUnit, &i.SlotType)
+	return i, err
 }
 
 const placementUpdate = `-- name: PlacementUpdate :execrows
