@@ -96,6 +96,10 @@ export default class InventoryApiService {
     });
   }
 
+  getAsset(id: string) {
+    return this.assetClient.getAsset({ id });
+  }
+
   getAssetStats() {
     return this.assetClient.getAssetStats({});
   }

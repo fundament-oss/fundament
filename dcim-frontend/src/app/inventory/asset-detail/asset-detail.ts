@@ -4,9 +4,11 @@ import {
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
   inject,
+  OnInit,
   signal,
 } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import {
   Asset,
   AssetCategory,
@@ -14,11 +16,13 @@ import {
   CatalogEntry,
   HistoryEntry,
   MOCK_ASSETS,
-  MOCK_CATALOG,
   MOCK_HISTORY,
   MOCK_NOTES,
   AssetNoteDetail,
 } from '../inventory';
+import InventoryApiService from '../inventory-api.service';
+import CatalogApiService from '../../catalog/catalog-api.service';
+import connectErrorMessage from '../../../connect/error';
 
 interface AssetExtraDetail {
   serial: string;
@@ -120,16 +124,23 @@ const MOCK_EXTRA_DETAILS: Record<string, AssetExtraDetail> = {
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'block bg-slate-50 min-h-screen' },
 })
-export default class AssetDetailComponent {
+export default class AssetDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
 
+  private readonly inventoryApi = inject(InventoryApiService);
+
+  private readonly catalogApi = inject(CatalogApiService);
+
   readonly assetId = computed(() => this.route.snapshot.paramMap.get('id') ?? '');
 
-  readonly asset = computed<Asset | undefined>(() =>
-    MOCK_ASSETS.find((a) => a.id === this.assetId()),
-  );
+  readonly asset = signal<Asset | undefined>(undefined);
+
+  /** False until the API call settles, so "not found" only shows after loading. */
+  readonly assetLoaded = signal(false);
+
+  readonly catalogEntry = signal<CatalogEntry | undefined>(undefined);
 
   readonly parentAsset = computed<Asset | undefined>(() => {
     const parentId = this.asset()?.parentId;
@@ -142,9 +153,34 @@ export default class AssetDetailComponent {
 
   readonly assetHistory = computed<HistoryEntry[]>(() => MOCK_HISTORY[this.assetId()] ?? []);
 
-  readonly catalogEntry = computed<CatalogEntry | undefined>(() =>
-    MOCK_CATALOG.find((e) => e.model === this.asset()?.model),
-  );
+  ngOnInit(): void {
+    firstValueFrom(this.inventoryApi.getAsset(this.assetId()))
+      .then((res) => {
+        const protoAsset = res.asset;
+        if (!protoAsset) return undefined;
+        if (!protoAsset.deviceCatalogId) {
+          this.asset.set(InventoryApiService.mapAsset(protoAsset, new Map()));
+          return undefined;
+        }
+        // Resolve the catalog entry so model, category and the specs panel populate.
+        return firstValueFrom(this.catalogApi.getCatalogEntry(protoAsset.deviceCatalogId))
+          .then((catRes) =>
+            catRes.entry ? CatalogApiService.mapCatalogEntry(catRes.entry) : undefined,
+          )
+          .catch(() => undefined)
+          .then((entry) => {
+            const catalog = new Map<string, CatalogEntry>();
+            if (entry) {
+              catalog.set(entry.id, entry);
+              this.catalogEntry.set(entry);
+            }
+            this.asset.set(InventoryApiService.mapAsset(protoAsset, catalog));
+          });
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)))
+      .finally(() => this.assetLoaded.set(true));
+  }
 
   readonly extraDetail = computed<AssetExtraDetail | undefined>(
     () => MOCK_EXTRA_DETAILS[this.assetId()],
