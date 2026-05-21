@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import {
   AssetCategory as ProtoCategory,
   AssetStatus as ProtoStatus,
@@ -33,6 +34,10 @@ export default class InventoryApiService {
       category: entry?.category ?? 'Other',
       assetTag: a.assetTag,
       status: InventoryApiService.fromProtoStatus(a.status),
+      serialNumber: a.serialNumber,
+      warrantyExpiry: a.warrantyExpiry
+        ? timestampDate(a.warrantyExpiry).toISOString().slice(0, 10)
+        : undefined,
       notes: a.notes,
     };
   }
@@ -119,6 +124,12 @@ export default class InventoryApiService {
       status: InventoryApiService.toProtoStatus(asset.status),
       assetTag: asset.assetTag,
       notes: asset.notes,
+      // Only send serial/warranty when the caller manages them, so a lighter
+      // editor (e.g. the inventory list) can't blank fields it never showed.
+      ...(asset.serialNumber !== undefined ? { serialNumber: asset.serialNumber } : {}),
+      ...(asset.warrantyExpiry
+        ? { warrantyExpiry: timestampFromDate(new Date(asset.warrantyExpiry)) }
+        : {}),
     });
   }
 

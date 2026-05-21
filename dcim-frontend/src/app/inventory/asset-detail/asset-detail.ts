@@ -176,6 +176,10 @@ export default class AssetDetailComponent implements OnInit {
 
   private readonly fAssetStatus = viewChild<ElementRef>('fAssetStatus');
 
+  private readonly fAssetSerial = viewChild<ElementRef>('fAssetSerial');
+
+  private readonly fAssetWarranty = viewChild<ElementRef>('fAssetWarranty');
+
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
   constructor() {
@@ -227,11 +231,17 @@ export default class AssetDetailComponent implements OnInit {
   saveAsset(): void {
     const current = this.asset();
     if (!current) return;
+    const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
     const updated: Asset = {
       ...current,
       assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? current.assetTag,
       status: ((this.fAssetStatus()?.nativeElement as HTMLSelectElement)?.value ??
         current.status) as AssetStatus,
+      serialNumber:
+        (this.fAssetSerial()?.nativeElement as HTMLInputElement)?.value ??
+        current.serialNumber ??
+        '',
+      warrantyExpiry: warranty || undefined,
       notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? current.notes,
     };
     firstValueFrom(this.inventoryApi.updateAsset(updated))

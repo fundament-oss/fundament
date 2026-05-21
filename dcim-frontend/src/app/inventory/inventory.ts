@@ -57,6 +57,10 @@ export interface Asset {
   category: AssetCategory;
   status: AssetStatus;
   notes: string;
+  /** Hardware serial number. Empty for asset types that carry none. */
+  serialNumber?: string;
+  /** Warranty expiry as an ISO date (YYYY-MM-DD). Absent when not tracked. */
+  warrantyExpiry?: string;
   /** Catalog entry the asset is an instance of. Absent for mock data. */
   deviceCatalogId?: string;
   /** Physical location. Tracked via Placement, so absent from the asset API. */

@@ -163,8 +163,8 @@
                   Serial Number
                 </dt>
                 <dd class="text-sm font-mono text-slate-700">
-                  @if (extraDetail()?.serial) {
-                    {{ extraDetail()!.serial }}
+                  @if (a.serialNumber) {
+                    {{ a.serialNumber }}
                   } @else {
                     <span class="text-slate-300">—</span>
                   }
@@ -287,8 +287,8 @@
                   Warranty Expires
                 </dt>
                 <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.warrantyExpires) {
-                    {{ extraDetail()!.warrantyExpires }}
+                  @if (a.warrantyExpiry) {
+                    {{ a.warrantyExpiry }}
                   } @else {
                     <span class="text-slate-300">—</span>
                   }
@@ -616,6 +616,11 @@
       (dismiss)="closeAssetForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
+      <nldd-form-field label="Device">
+        <select disabled>
+          <option selected>{{ editAsset()?.model }}</option>
+        </select>
+      </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Asset tag">
           <nldd-text-field
@@ -635,6 +640,22 @@
               </option>
             }
           </select>
+        </nldd-form-field>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Serial number" [optional]="true">
+          <nldd-text-field
+            #fAssetSerial
+            [attr.value]="editAsset()?.serialNumber ?? ''"
+            placeholder="SN-…"
+          ></nldd-text-field>
+        </nldd-form-field>
+        <nldd-form-field label="Warranty expiry" [optional]="true">
+          <nldd-text-field
+            #fAssetWarranty
+            type="date"
+            [attr.value]="editAsset()?.warrantyExpiry ?? ''"
+          ></nldd-text-field>
         </nldd-form-field>
       </div>
       <nldd-form-field label="Notes" [optional]="true">
