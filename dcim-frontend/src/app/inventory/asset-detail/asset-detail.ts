@@ -3,9 +3,12 @@ import {
   Component,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
+  effect,
+  ElementRef,
   inject,
   OnInit,
   signal,
+  viewChild,
 } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -153,6 +156,36 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly assetHistory = computed<HistoryEntry[]>(() => MOCK_HISTORY[this.assetId()] ?? []);
 
+  // ── Edit asset ─────────────────────────────────────────────────────────────
+
+  /** Holds the asset being edited; non-null while the edit sheet is open. */
+  readonly editAsset = signal<Partial<Asset> | null>(null);
+
+  readonly statuses: { value: AssetStatus; label: string }[] = [
+    { value: 'deployed', label: 'Deployed' },
+    { value: 'available', label: 'Available' },
+    { value: 'on-order', label: 'On Order' },
+    { value: 'requested', label: 'Requested' },
+    { value: 'needs-repair', label: 'Needs Repair' },
+    { value: 'decommissioned', label: 'Decommissioned' },
+  ];
+
+  private readonly assetSheetEl = viewChild<ElementRef>('assetSheet');
+
+  private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
+
+  private readonly fAssetStatus = viewChild<ElementRef>('fAssetStatus');
+
+  private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
+
+  constructor() {
+    effect(() => {
+      const el = this.assetSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.editAsset() !== null) el?.show?.();
+      else el?.hide?.();
+    });
+  }
+
   ngOnInit(): void {
     firstValueFrom(this.inventoryApi.getAsset(this.assetId()))
       .then((res) => {
@@ -180,6 +213,34 @@ export default class AssetDetailComponent implements OnInit {
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)))
       .finally(() => this.assetLoaded.set(true));
+  }
+
+  openEditAsset(): void {
+    const current = this.asset();
+    if (current) this.editAsset.set({ ...current });
+  }
+
+  closeAssetForm(): void {
+    this.editAsset.set(null);
+  }
+
+  saveAsset(): void {
+    const current = this.asset();
+    if (!current) return;
+    const updated: Asset = {
+      ...current,
+      assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? current.assetTag,
+      status: ((this.fAssetStatus()?.nativeElement as HTMLSelectElement)?.value ??
+        current.status) as AssetStatus,
+      notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? current.notes,
+    };
+    firstValueFrom(this.inventoryApi.updateAsset(updated))
+      .then(() => {
+        this.asset.set(updated);
+        this.editAsset.set(null);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   readonly extraDetail = computed<AssetExtraDetail | undefined>(

@@ -69,6 +69,7 @@
               size="sm"
               text="Edit Asset"
               start-icon="pencil-on-square"
+              (click)="openEditAsset()"
             ></nldd-button>
           </div>
         </div>
@@ -602,3 +603,51 @@
     </div>
   }
 </main>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ASSET EDIT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #assetSheet accessible-label="Edit asset" placement="right" width="480px">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit asset"
+      dismiss-text="Close"
+      (dismiss)="closeAssetForm()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section class="space-y-4">
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Asset tag">
+          <nldd-text-field
+            #fAssetTag
+            [attr.value]="editAsset()?.assetTag ?? ''"
+            placeholder="AST-001"
+          ></nldd-text-field>
+        </nldd-form-field>
+        <nldd-form-field label="Status">
+          <select #fAssetStatus>
+            @for (s of statuses; track s.value) {
+              <option
+                [value]="s.value"
+                [attr.selected]="editAsset()?.status === s.value ? true : null"
+              >
+                {{ s.label }}
+              </option>
+            }
+          </select>
+        </nldd-form-field>
+      </div>
+      <nldd-form-field label="Notes" [optional]="true">
+        <nldd-multi-line-text-field
+          #fAssetNotes
+          [attr.value]="editAsset()?.notes ?? ''"
+          placeholder="Additional notes…"
+        ></nldd-multi-line-text-field>
+      </nldd-form-field>
+    </nldd-simple-section>
+    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+      <nldd-button variant="secondary" text="Cancel" (click)="closeAssetForm()"></nldd-button>
+      <nldd-button variant="primary" text="Save" (click)="saveAsset()"></nldd-button>
+    </div>
+  </nldd-page>
+</nldd-sheet>
