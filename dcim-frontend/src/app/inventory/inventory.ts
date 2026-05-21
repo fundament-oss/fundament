@@ -6,12 +6,16 @@ import {
   effect,
   ElementRef,
   inject,
+  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
+import type { AssetStats } from '../../generated/v1/asset_pb';
 import InventoryApiService from './inventory-api.service';
+import CatalogApiService from '../catalog/catalog-api.service';
 import connectErrorMessage from '../../connect/error';
 
 export type AssetStatus =
@@ -51,21 +55,15 @@ export interface Asset {
   model: string;
   assetTag: string;
   category: AssetCategory;
-  datacenter: string;
-  rack: string;
   status: AssetStatus;
   notes: string;
+  /** Catalog entry the asset is an instance of. Absent for mock data. */
+  deviceCatalogId?: string;
+  /** Physical location. Tracked via Placement, so absent from the asset API. */
+  datacenter?: string;
+  rack?: string;
   parentId?: string;
 }
-
-const STATUS_SORT_ORDER: Record<AssetStatus, number> = {
-  'needs-repair': 0,
-  decommissioned: 1,
-  deployed: 2,
-  available: 3,
-  'on-order': 4,
-  requested: 5,
-};
 
 export interface NoteComment {
   author: string;
@@ -2033,15 +2031,6 @@ export const MOCK_ASSETS: Asset[] = [
   },
 ];
 
-type SortableColumn = 'model' | 'category' | 'datacenter' | 'status';
-
-interface FlatRow {
-  asset: Asset;
-  depth: number;
-  hasChildren: boolean;
-  isExpanded: boolean;
-}
-
 @Component({
   selector: 'app-inventory',
   templateUrl: './inventory.html',
@@ -2053,13 +2042,20 @@ interface FlatRow {
     '(document:keydown.escape)': 'closeNotes()',
   },
 })
-export default class InventoryComponent {
+export default class InventoryComponent implements OnInit {
   private readonly inventoryApi = inject(InventoryApiService);
+
+  private readonly catalogApi = inject(CatalogApiService);
 
   readonly ITEMS_PER_PAGE = 50;
 
-  // ── Mutable asset list ─────────────────────────────────────────────────────
-  readonly mutableAssets = signal([...MOCK_ASSETS]);
+  readonly assets = signal<Asset[]>([]);
+
+  readonly catalog = signal<CatalogEntry[]>([]);
+
+  private catalogById = new Map<string, CatalogEntry>();
+
+  readonly stats = signal<AssetStats | null>(null);
 
   searchQuery = signal('');
 
@@ -2067,21 +2063,11 @@ export default class InventoryComponent {
 
   categoryFilter = signal<AssetCategory | 'all'>('all');
 
-  locationFilter = signal<string>('all');
-
-  sortColumn = signal<SortableColumn>('status');
-
   sortDirection = signal<'asc' | 'desc'>('asc');
 
   currentPage = signal(1);
 
   activeNotesAsset = signal<Asset | null>(null);
-
-  expandedIds = signal<Set<string>>(
-    new Set(
-      MOCK_ASSETS.filter((a) => MOCK_ASSETS.some((b) => b.parentId === a.id)).map((a) => a.id),
-    ),
-  );
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editAsset = signal<Partial<Asset> | null>(null);
@@ -2092,21 +2078,24 @@ export default class InventoryComponent {
 
   private readonly assetModalEl = viewChild<ElementRef>('assetModal');
 
-  private readonly fAssetModel = viewChild<ElementRef>('fAssetModel');
+  private readonly fAssetDevice = viewChild<ElementRef>('fAssetDevice');
 
   private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
 
-  private readonly fAssetCat = viewChild<ElementRef>('fAssetCat');
-
   private readonly fAssetStatus = viewChild<ElementRef>('fAssetStatus');
-
-  private readonly fAssetDc = viewChild<ElementRef>('fAssetDc');
-
-  private readonly fAssetRack = viewChild<ElementRef>('fAssetRack');
 
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
   constructor() {
+    toObservable(this.searchQuery)
+      .pipe(
+        skip(1),
+        debounce((q) => timer(q ? 250 : 0)),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.reload());
+
     effect(() => {
       const el = this.assetSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editAsset() !== null) el?.show?.();
@@ -2117,6 +2106,26 @@ export default class InventoryComponent {
       if (this.deleteAsset() !== null) el?.show?.();
       else el?.hide?.();
     });
+  }
+
+  ngOnInit(): void {
+    this.loadStats();
+
+    firstValueFrom(this.catalogApi.listCatalog())
+      .then((res) => {
+        this.catalogById = new Map(
+          res.entries
+            .filter((s) => s.entry)
+            .map((s) => {
+              const entry = CatalogApiService.mapCatalogEntry(s.entry!);
+              return [entry.id, entry] as const;
+            }),
+        );
+        this.catalog.set([...this.catalogById.values()]);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)))
+      .finally(() => this.loadAssets());
   }
 
   readonly categories: AssetCategory[] = [
@@ -2137,10 +2146,6 @@ export default class InventoryComponent {
     'Transceiver',
   ];
 
-  readonly datacenters = [
-    ...new Set(MOCK_ASSETS.filter((a) => !a.parentId).map((a) => a.datacenter)),
-  ].sort();
-
   readonly statuses: { value: AssetStatus; label: string }[] = [
     { value: 'deployed', label: 'Deployed' },
     { value: 'available', label: 'Available' },
@@ -2150,77 +2155,46 @@ export default class InventoryComponent {
     { value: 'decommissioned', label: 'Decommissioned' },
   ];
 
-  private readonly filtered = computed(() => {
-    const q = this.searchQuery().toLowerCase();
-    const status = this.statusFilter();
-    const category = this.categoryFilter();
-    const location = this.locationFilter();
+  private loadAssets(): void {
+    firstValueFrom(
+      this.inventoryApi.listAssets({
+        search: this.searchQuery().trim(),
+        status: this.statusFilter(),
+        category: this.categoryFilter(),
+        sortDirection: this.sortDirection(),
+      }),
+    )
+      .then((res) =>
+        this.assets.set(res.assets.map((a) => InventoryApiService.mapAsset(a, this.catalogById))),
+      )
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
 
-    return this.mutableAssets().filter((a) => {
-      if (a.parentId) return false; // sub-assets are shown as children, not in top-level list
-      if (status !== 'all' && a.status !== status) return false;
-      if (category !== 'all' && a.category !== category) return false;
-      if (location !== 'all' && a.datacenter !== location) return false;
-      if (q && !a.model.toLowerCase().includes(q) && !a.assetTag.toLowerCase().includes(q)) {
-        return false;
-      }
-      return true;
-    });
-  });
+  private loadStats(): void {
+    firstValueFrom(this.inventoryApi.getAssetStats())
+      .then((res) => this.stats.set(res.stats ?? null))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
 
-  private readonly sorted = computed(() => {
-    const col = this.sortColumn();
-    const dir = this.sortDirection();
-    return [...this.filtered()].sort((a, b) => {
-      let cmp: number;
-      if (col === 'status') {
-        cmp = STATUS_SORT_ORDER[a.status] - STATUS_SORT_ORDER[b.status];
-      } else {
-        cmp = String(a[col]).localeCompare(String(b[col]));
-      }
-      return dir === 'asc' ? cmp : -cmp;
-    });
-  });
+  /** Re-query the list from the first page after a filter or sort change. */
+  private reload(): void {
+    this.currentPage.set(1);
+    this.loadAssets();
+  }
 
-  readonly totalFiltered = computed(() => this.filtered().length);
+  // ── Pagination (client-side over the server-filtered list) ─────────────────
+
+  readonly totalFiltered = computed(() => this.assets().length);
 
   readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.totalFiltered() / this.ITEMS_PER_PAGE)),
   );
 
-  private readonly pagedTopLevel = computed(() => {
-    const page = this.currentPage();
-    const start = (page - 1) * this.ITEMS_PER_PAGE;
-    return this.sorted().slice(start, start + this.ITEMS_PER_PAGE);
-  });
-
-  private buildChildRows(parentId: string, depth: number, expanded: Set<string>): FlatRow[] {
-    const children = this.mutableAssets().filter((a) => a.parentId === parentId);
-    const rows: FlatRow[] = [];
-    children.forEach((child) => {
-      const hasChildren = this.mutableAssets().some((a) => a.parentId === child.id);
-      const isExpanded = expanded.has(child.id);
-      rows.push({ asset: child, depth, hasChildren, isExpanded });
-      if (isExpanded) {
-        rows.push(...this.buildChildRows(child.id, depth + 1, expanded));
-      }
-    });
-    return rows;
-  }
-
-  readonly flatRows = computed<FlatRow[]>(() => {
-    const topLevel = this.pagedTopLevel();
-    const expanded = this.expandedIds();
-    const rows: FlatRow[] = [];
-    topLevel.forEach((asset) => {
-      const hasChildren = this.mutableAssets().some((a) => a.parentId === asset.id);
-      const isExpanded = expanded.has(asset.id);
-      rows.push({ asset, depth: 0, hasChildren, isExpanded });
-      if (isExpanded) {
-        rows.push(...this.buildChildRows(asset.id, 1, expanded));
-      }
-    });
-    return rows;
+  readonly pagedAssets = computed(() => {
+    const start = (this.currentPage() - 1) * this.ITEMS_PER_PAGE;
+    return this.assets().slice(start, start + this.ITEMS_PER_PAGE);
   });
 
   readonly pageStart = computed(() => (this.currentPage() - 1) * this.ITEMS_PER_PAGE + 1);
@@ -2229,61 +2203,64 @@ export default class InventoryComponent {
     Math.min(this.currentPage() * this.ITEMS_PER_PAGE, this.totalFiltered()),
   );
 
-  readonly pageNumbers = computed(() => {
-    const total = this.totalPages();
-    return Array.from({ length: total }, (_, i) => i + 1);
-  });
+  // ── Summary counts (from org-wide stats) ───────────────────────────────────
 
-  // Summary counts (top-level assets only, not filtered)
-  private readonly topLevelAssets = MOCK_ASSETS.filter((a) => !a.parentId);
-
-  readonly statusCounts = computed(() => {
-    const counts: Partial<Record<AssetStatus | 'all', number>> = {
-      all: this.topLevelAssets.length,
+  readonly statusCounts = computed<Partial<Record<AssetStatus | 'all', number>>>(() => {
+    const s = this.stats();
+    if (!s) return {};
+    return {
+      all: s.total,
+      deployed: s.deployed,
+      available: s.available,
+      'on-order': s.onOrder,
+      requested: s.requested,
+      'needs-repair': s.needsRepair,
+      decommissioned: s.decommissioned,
     };
-    this.topLevelAssets.forEach((a) => {
-      counts[a.status] = (counts[a.status] ?? 0) + 1;
-    });
-    return counts;
   });
 
-  readonly categoryCounts = computed(() => {
-    const counts: Partial<Record<AssetCategory, number>> = {};
-    this.topLevelAssets.forEach((a) => {
-      counts[a.category] = (counts[a.category] ?? 0) + 1;
-    });
-    return counts;
+  readonly totalCount = computed(() => this.stats()?.total ?? 0);
+
+  readonly deployedCount = computed(() => this.stats()?.deployed ?? 0);
+
+  readonly availableCount = computed(() => this.stats()?.available ?? 0);
+
+  readonly issuesCount = computed(() => {
+    const s = this.stats();
+    return s ? s.needsRepair + s.decommissioned : 0;
   });
 
-  readonly locationCounts = computed(() => {
-    const counts: Record<string, number> = {};
-    this.topLevelAssets.forEach((a) => {
-      counts[a.datacenter] = (counts[a.datacenter] ?? 0) + 1;
-    });
-    return counts;
-  });
+  // ── Filter / sort actions ──────────────────────────────────────────────────
 
-  readonly totalCount = this.topLevelAssets.length;
+  selectStatus(status: AssetStatus | 'all'): void {
+    this.statusFilter.set(status);
+    this.reload();
+  }
 
-  readonly deployedCount = this.topLevelAssets.filter((a) => a.status === 'deployed').length;
+  selectCategory(category: AssetCategory | 'all'): void {
+    this.categoryFilter.set(category);
+    this.reload();
+  }
 
-  readonly availableCount = this.topLevelAssets.filter((a) => a.status === 'available').length;
+  toggleSort(): void {
+    this.sortDirection.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    this.reload();
+  }
 
-  readonly issuesCount = this.topLevelAssets.filter(
-    (a) => a.status === 'needs-repair' || a.status === 'decommissioned',
-  ).length;
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages()) {
+      this.currentPage.set(page);
+    }
+  }
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
   openCreateAsset(): void {
     this.editAsset.set({
       id: '',
-      model: '',
+      deviceCatalogId: this.catalog()[0]?.id ?? '',
       assetTag: '',
-      category: 'Server',
       status: 'available',
-      datacenter: 'AMS-01',
-      rack: '',
       notes: '',
     });
   }
@@ -2301,23 +2278,26 @@ export default class InventoryComponent {
   saveAsset(): void {
     const form = this.editAsset();
     if (!form) return;
+    const deviceCatalogId =
+      (this.fAssetDevice()?.nativeElement as HTMLSelectElement)?.value ??
+      form.deviceCatalogId ??
+      '';
+    const entry = this.catalogById.get(deviceCatalogId);
     const updated: Asset = {
-      id: form.id || `AST-${String(Date.now()).slice(-5)}`,
-      model: (this.fAssetModel()?.nativeElement as HTMLInputElement)?.value ?? '',
+      id: form.id ?? '',
+      deviceCatalogId,
+      model: entry?.model ?? form.model ?? 'Unknown device',
+      category: entry?.category ?? form.category ?? 'Other',
       assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? '',
-      category: ((this.fAssetCat()?.nativeElement as HTMLInputElement)?.value ??
-        'Server') as AssetCategory,
-      status: ((this.fAssetStatus()?.nativeElement as HTMLInputElement)?.value ??
+      status: ((this.fAssetStatus()?.nativeElement as HTMLSelectElement)?.value ??
         'available') as AssetStatus,
-      datacenter: (this.fAssetDc()?.nativeElement as HTMLInputElement)?.value ?? '',
-      rack: (this.fAssetRack()?.nativeElement as HTMLInputElement)?.value ?? '',
       notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? '',
-      parentId: form.parentId,
     };
     if (form.id) {
       firstValueFrom(this.inventoryApi.updateAsset(updated))
         .then(() => {
-          this.mutableAssets.update((list) => list.map((a) => (a.id === form.id ? updated : a)));
+          this.assets.update((list) => list.map((a) => (a.id === form.id ? updated : a)));
+          this.loadStats();
           this.editAsset.set(null);
         })
         // eslint-disable-next-line no-console
@@ -2325,7 +2305,8 @@ export default class InventoryComponent {
     } else {
       firstValueFrom(this.inventoryApi.createAsset(updated))
         .then((res) => {
-          this.mutableAssets.update((list) => [...list, { ...updated, id: res.assetId }]);
+          this.assets.update((list) => [{ ...updated, id: res.assetId }, ...list]);
+          this.loadStats();
           this.editAsset.set(null);
         })
         // eslint-disable-next-line no-console
@@ -2348,46 +2329,12 @@ export default class InventoryComponent {
     if (!target) return;
     firstValueFrom(this.inventoryApi.deleteAsset(target.id))
       .then(() => {
-        this.mutableAssets.update((list) =>
-          list.filter((a) => a.id !== target.id && a.parentId !== target.id),
-        );
+        this.assets.update((list) => list.filter((a) => a.id !== target.id));
+        this.loadStats();
         this.deleteAsset.set(null);
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
-  }
-
-  toggleExpand(id: string, event: Event) {
-    event.stopPropagation();
-    this.expandedIds.update((set) => {
-      const next = new Set(set);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
-  toggleSort(col: SortableColumn) {
-    if (this.sortColumn() === col) {
-      this.sortDirection.update((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      this.sortColumn.set(col);
-      this.sortDirection.set('asc');
-    }
-    this.currentPage.set(1);
-  }
-
-  onFilterChange() {
-    this.currentPage.set(1);
-  }
-
-  goToPage(page: number) {
-    if (page >= 1 && page <= this.totalPages()) {
-      this.currentPage.set(page);
-    }
   }
 
   statusLabel(status: AssetStatus): string {

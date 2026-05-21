@@ -1,16 +1,36 @@
 import { Injectable, inject } from '@angular/core';
-import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
+import {
+  AssetCategory as ProtoCategory,
+  AssetStatus as ProtoStatus,
+  SortDirection,
+} from '../../generated/v1/common_pb';
+import { AssetSortField } from '../../generated/v1/asset_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
-import type { Asset, AssetStatus } from './inventory';
+import type { Asset, AssetCategory, AssetStatus, CatalogEntry } from './inventory';
 import { ASSET_CLIENT } from '../../connect/tokens';
+
+export interface ListAssetsOptions {
+  search?: string;
+  status: AssetStatus | 'all';
+  category: AssetCategory | 'all';
+  sortDirection: 'asc' | 'desc';
+}
 
 @Injectable({ providedIn: 'root' })
 export default class InventoryApiService {
   private readonly assetClient = inject(ASSET_CLIENT);
 
-  static mapAsset(a: ProtoAsset): Partial<Asset> {
+  /**
+   * Maps an API asset onto the UI Asset model. The API asset only carries a
+   * device_catalog_id, so model and category are resolved from the catalog.
+   */
+  static mapAsset(a: ProtoAsset, catalog: Map<string, CatalogEntry>): Asset {
+    const entry = catalog.get(a.deviceCatalogId);
     return {
       id: a.id,
+      deviceCatalogId: a.deviceCatalogId,
+      model: entry?.model ?? 'Unknown device',
+      category: entry?.category ?? 'Other',
       assetTag: a.assetTag,
       status: InventoryApiService.fromProtoStatus(a.status),
       notes: a.notes,
@@ -41,9 +61,48 @@ export default class InventoryApiService {
     return map[s] ?? ProtoStatus.AVAILABLE;
   }
 
+  private static toProtoCategory(cat: AssetCategory): ProtoCategory {
+    const map: Record<AssetCategory, ProtoCategory> = {
+      Server: ProtoCategory.SERVER,
+      Switch: ProtoCategory.SWITCH,
+      Storage: ProtoCategory.STORAGE,
+      Power: ProtoCategory.PDU,
+      Firewall: ProtoCategory.FIREWALL,
+      Cooling: ProtoCategory.COOLING,
+      KVM: ProtoCategory.KVM,
+      Memory: ProtoCategory.DIMM,
+      Disk: ProtoCategory.DISK,
+      NIC: ProtoCategory.NIC,
+      PSU: ProtoCategory.POWER_SUPPLY,
+      CPU: ProtoCategory.CPU,
+      GPU: ProtoCategory.GPU,
+      Transceiver: ProtoCategory.SFP,
+      Other: ProtoCategory.OTHER,
+    };
+    return map[cat] ?? ProtoCategory.UNSPECIFIED;
+  }
+
+  listAssets(opts: ListAssetsOptions) {
+    return this.assetClient.listAssets({
+      sortBy: AssetSortField.STATUS,
+      sortDirection: opts.sortDirection === 'desc' ? SortDirection.DESC : SortDirection.ASC,
+      ...(opts.search ? { search: opts.search } : {}),
+      ...(opts.status !== 'all'
+        ? { statusFilter: InventoryApiService.toProtoStatus(opts.status) }
+        : {}),
+      ...(opts.category !== 'all'
+        ? { categoryFilter: InventoryApiService.toProtoCategory(opts.category) }
+        : {}),
+    });
+  }
+
+  getAssetStats() {
+    return this.assetClient.getAssetStats({});
+  }
+
   createAsset(asset: Asset) {
     return this.assetClient.createAsset({
-      deviceCatalogId: '',
+      deviceCatalogId: asset.deviceCatalogId ?? '',
       status: InventoryApiService.toProtoStatus(asset.status),
       assetTag: asset.assetTag,
       notes: asset.notes,

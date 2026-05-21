@@ -30,7 +30,7 @@
         placeholder="Search assets…"
         start-icon="magnifier"
         [value]="searchQuery()"
-        (input)="searchQuery.set($any($event.target).value); onFilterChange()"
+        (input)="searchQuery.set($any($event.target).value)"
         class="block w-full"
         size="sm"
       >
@@ -42,7 +42,7 @@
       <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</p>
 
       <button
-        (click)="statusFilter.set('all'); onFilterChange()"
+        (click)="selectStatus('all')"
         class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
         [class]="
           statusFilter() === 'all'
@@ -57,7 +57,7 @@
 
       @for (s of statuses; track s.value) {
         <button
-          (click)="statusFilter.set(s.value); onFilterChange()"
+          (click)="selectStatus(s.value)"
           class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             statusFilter() === s.value
@@ -79,13 +79,13 @@
     </div>
 
     <!-- Categories -->
-    <div class="px-4 py-3 border-b border-slate-100">
+    <div class="px-4 py-3">
       <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
         Category
       </p>
 
       <button
-        (click)="categoryFilter.set('all'); onFilterChange()"
+        (click)="selectCategory('all')"
         class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
         [class]="
           categoryFilter() === 'all'
@@ -99,69 +99,21 @@
       </button>
 
       @for (cat of categories; track cat) {
-        @if (categoryCounts()[cat]) {
-          <button
-            (click)="categoryFilter.set(cat); onFilterChange()"
-            class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-            [class]="
-              categoryFilter() === cat
-                ? 'bg-accent-50 text-accent-700 font-medium'
-                : 'text-slate-600 hover:bg-slate-50'
-            "
-          >
-            <nldd-icon
-              [name]="categoryIcon(cat)"
-              class="w-4 h-4 shrink-0"
-              aria-hidden="true"
-            ></nldd-icon>
-            <span class="flex-1 text-left">{{ cat }}</span>
-            <span class="text-xs text-slate-400">{{ categoryCounts()[cat] }}</span>
-          </button>
-        }
-      }
-    </div>
-
-    <!-- Locations -->
-    <div class="px-4 py-3">
-      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
-        Location
-      </p>
-
-      <button
-        (click)="locationFilter.set('all'); onFilterChange()"
-        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-        [class]="
-          locationFilter() === 'all'
-            ? 'bg-accent-50 text-accent-700 font-medium'
-            : 'text-slate-600 hover:bg-slate-50'
-        "
-      >
-        <nldd-icon
-          name="apartment-building"
-          class="w-4 h-4 shrink-0"
-          aria-hidden="true"
-        ></nldd-icon>
-        <span class="flex-1 text-left">All locations</span>
-        <span class="text-xs text-slate-400">{{ statusCounts()['all'] }}</span>
-      </button>
-
-      @for (dc of datacenters; track dc) {
         <button
-          (click)="locationFilter.set(dc); onFilterChange()"
+          (click)="selectCategory(cat)"
           class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
-            locationFilter() === dc
+            categoryFilter() === cat
               ? 'bg-accent-50 text-accent-700 font-medium'
               : 'text-slate-600 hover:bg-slate-50'
           "
         >
           <nldd-icon
-            name="apartment-building"
+            [name]="categoryIcon(cat)"
             class="w-4 h-4 shrink-0"
             aria-hidden="true"
           ></nldd-icon>
-          <span class="flex-1 text-left font-mono text-xs">{{ dc }}</span>
-          <span class="text-xs text-slate-400">{{ locationCounts()[dc] }}</span>
+          <span class="flex-1 text-left">{{ cat }}</span>
         </button>
       }
     </div>
@@ -176,28 +128,28 @@
           class="bg-white border border-slate-200 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
         >
           <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Total Assets</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ totalCount }}</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ totalCount() }}</p>
           <p class="text-xs text-slate-400">across all locations</p>
         </div>
         <div
           class="bg-white border border-slate-200 border-l-[3px] border-l-teal-600 px-4 py-3.5 grid gap-1"
         >
           <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Deployed</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ deployedCount }}</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ deployedCount() }}</p>
           <p class="text-xs text-slate-400">in production</p>
         </div>
         <div
           class="bg-white border border-slate-200 border-l-[3px] border-l-emerald-600 px-4 py-3.5 grid gap-1"
         >
           <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Available</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ availableCount }}</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ availableCount() }}</p>
           <p class="text-xs text-slate-400">ready to deploy</p>
         </div>
         <div
           class="bg-white border border-slate-200 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
         >
           <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Issues</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ issuesCount }}</p>
+          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ issuesCount() }}</p>
           <p class="text-xs text-slate-400">need attention</p>
         </div>
       </div>
@@ -206,106 +158,23 @@
       <div role="table" aria-label="Asset inventory">
         <!-- Column headers -->
         <div role="row" class="flex items-center gap-3 border-b border-slate-100 py-2.5">
-          <div class="w-14 shrink-0"></div>
+          <div class="w-9 shrink-0"></div>
           <div
-            class="flex-1 min-w-0 grid grid-cols-[1fr_110px_130px_148px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 uppercase tracking-wide mr-18"
+            class="flex-1 min-w-0 grid grid-cols-[1fr_110px_148px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 uppercase tracking-wide mr-18"
           >
+            <span role="columnheader" class="uppercase">Model</span>
+            <span role="columnheader" class="uppercase hidden sm:block">Category</span>
             <button
               role="columnheader"
-              (click)="toggleSort('model')"
-              class="uppercase cursor-pointer flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
-              [attr.aria-sort]="
-                sortColumn() === 'model'
-                  ? sortDirection() === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              "
-            >
-              Model
-              <nldd-icon
-                name="caret-down-small"
-                class="w-3.5 h-3.5"
-                [style.transform]="
-                  sortColumn() === 'model' && sortDirection() === 'asc' ? 'rotate(180deg)' : 'none'
-                "
-                [style.opacity]="sortColumn() !== 'model' ? '0.35' : '1'"
-                aria-hidden="true"
-              >
-              </nldd-icon>
-            </button>
-            <button
-              role="columnheader"
-              (click)="toggleSort('category')"
+              (click)="toggleSort()"
               class="uppercase cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
-              [attr.aria-sort]="
-                sortColumn() === 'category'
-                  ? sortDirection() === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              "
-            >
-              Category
-              <nldd-icon
-                name="caret-down-small"
-                class="w-3.5 h-3.5"
-                [style.transform]="
-                  sortColumn() === 'category' && sortDirection() === 'asc'
-                    ? 'rotate(180deg)'
-                    : 'none'
-                "
-                [style.opacity]="sortColumn() !== 'category' ? '0.35' : '1'"
-                aria-hidden="true"
-              >
-              </nldd-icon>
-            </button>
-            <button
-              role="columnheader"
-              (click)="toggleSort('datacenter')"
-              class="uppercase cursor-pointer hidden md:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
-              [attr.aria-sort]="
-                sortColumn() === 'datacenter'
-                  ? sortDirection() === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              "
-            >
-              Location
-              <nldd-icon
-                name="caret-down-small"
-                class="w-3.5 h-3.5"
-                [style.transform]="
-                  sortColumn() === 'datacenter' && sortDirection() === 'asc'
-                    ? 'rotate(180deg)'
-                    : 'none'
-                "
-                [style.opacity]="sortColumn() !== 'datacenter' ? '0.35' : '1'"
-                aria-hidden="true"
-              >
-              </nldd-icon>
-            </button>
-            <button
-              role="columnheader"
-              (click)="toggleSort('status')"
-              class="uppercase cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
-              [attr.aria-sort]="
-                sortColumn() === 'status'
-                  ? sortDirection() === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              "
+              [attr.aria-sort]="sortDirection() === 'asc' ? 'ascending' : 'descending'"
             >
               Status
               <nldd-icon
                 name="caret-down-small"
                 class="w-3.5 h-3.5"
-                [style.transform]="
-                  sortColumn() === 'status' && sortDirection() === 'asc' ? 'rotate(180deg)' : 'none'
-                "
-                [style.opacity]="sortColumn() !== 'status' ? '0.35' : '1'"
+                [style.transform]="sortDirection() === 'asc' ? 'rotate(180deg)' : 'none'"
                 aria-hidden="true"
               >
               </nldd-icon>
@@ -314,63 +183,33 @@
         </div>
 
         <!-- Asset rows -->
-        @for (row of flatRows(); track row.asset.id) {
+        @for (asset of pagedAssets(); track asset.id) {
           <a
             role="row"
-            [routerLink]="['/inventory', row.asset.id]"
+            [routerLink]="['/inventory', asset.id]"
             class="flex items-center gap-3 border-b border-slate-100 py-2.5 hover:bg-slate-50 transition-colors group cursor-pointer"
-            [class.bg-slate-50/60]="row.depth > 0"
           >
-            <!-- Toggle + icon (indented together based on depth) -->
+            <!-- Category icon -->
             <div
               role="cell"
-              class="flex items-center gap-1.5 shrink-0"
-              [style.paddingLeft.rem]="row.depth * 1.25"
-              [attr.aria-label]="row.asset.category"
+              class="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors"
+              [attr.aria-label]="asset.category"
             >
-              @if (row.hasChildren) {
-                <button
-                  (click)="toggleExpand(row.asset.id, $event)"
-                  class="cursor-pointer w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
-                  [attr.aria-label]="row.isExpanded ? 'Collapse components' : 'Expand components'"
-                  [attr.aria-expanded]="row.isExpanded"
-                >
-                  <nldd-icon
-                    name="chevron-right-small"
-                    style="width: 14px; height: 14px; transition: transform 0.15s"
-                    [style.transform]="row.isExpanded ? 'rotate(90deg)' : 'none'"
-                    aria-hidden="true"
-                  >
-                  </nldd-icon>
-                </button>
-              } @else {
-                <span class="w-5 shrink-0" aria-hidden="true"></span>
-              }
-              <div
-                class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors"
-                [class.bg-slate-100/60]="row.depth > 0"
-              >
-                <nldd-icon
-                  [name]="categoryIcon(row.asset.category)"
-                  class="w-4.5 h-4.5"
-                  aria-hidden="true"
-                ></nldd-icon>
-              </div>
+              <nldd-icon
+                [name]="categoryIcon(asset.category)"
+                class="w-4.5 h-4.5"
+                aria-hidden="true"
+              ></nldd-icon>
             </div>
 
             <div
-              class="flex-1 min-w-0 grid grid-cols-[1fr_110px_130px_148px] gap-3 lg:gap-4 items-center"
+              class="flex-1 min-w-0 grid grid-cols-[1fr_110px_148px] gap-3 lg:gap-4 items-center"
               role="presentation"
             >
               <!-- Model + asset tag -->
               <div role="cell" class="min-w-0">
-                <p
-                  class="truncate text-sm font-medium"
-                  [class]="row.depth > 0 ? 'text-slate-700' : 'text-slate-900'"
-                >
-                  {{ row.asset.model }}
-                </p>
-                <p class="text-xs text-slate-400 font-mono">{{ row.asset.assetTag }}</p>
+                <p class="truncate text-sm font-medium text-slate-900">{{ asset.model }}</p>
+                <p class="text-xs text-slate-400 font-mono">{{ asset.assetTag }}</p>
               </div>
 
               <!-- Category badge -->
@@ -378,19 +217,7 @@
                 <span
                   class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"
                 >
-                  {{ row.asset.category }}
-                </span>
-              </div>
-
-              <!-- Location -->
-              <div role="cell" class="hidden md:block">
-                <span class="inline-flex items-center gap-1.5 text-sm text-slate-600">
-                  <span
-                    class="font-mono text-xs font-medium text-slate-500 bg-slate-100 rounded px-1.5 py-0.5"
-                    >{{ row.asset.datacenter }}</span
-                  >
-                  <span class="text-slate-300" aria-hidden="true">·</span>
-                  <span class="text-xs text-slate-500">{{ row.asset.rack }}</span>
+                  {{ asset.category }}
                 </span>
               </div>
 
@@ -398,15 +225,15 @@
               <div role="cell" class="hidden sm:block">
                 <span
                   class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  [class]="statusBadgeClass(row.asset.status)"
-                  [attr.aria-label]="'Status: ' + statusLabel(row.asset.status)"
+                  [class]="statusBadgeClass(asset.status)"
+                  [attr.aria-label]="'Status: ' + statusLabel(asset.status)"
                 >
                   <span
                     class="h-1.5 w-1.5 rounded-full"
-                    [class]="statusDotClass(row.asset.status)"
+                    [class]="statusDotClass(asset.status)"
                     aria-hidden="true"
                   ></span>
-                  {{ statusLabel(row.asset.status) }}
+                  {{ statusLabel(asset.status) }}
                 </span>
               </div>
             </div>
@@ -423,21 +250,21 @@
                 variant="neutral-transparent"
                 size="xs"
                 text="Edit asset"
-                (click)="openEditAsset(row.asset, $event)"
+                (click)="openEditAsset(asset, $event)"
               ></nldd-icon-button>
               <nldd-icon-button
                 icon="trash"
                 variant="neutral-transparent"
                 size="xs"
                 text="Delete asset"
-                (click)="openDeleteAsset(row.asset, $event)"
+                (click)="openDeleteAsset(asset, $event)"
               ></nldd-icon-button>
             </div>
           </a>
         }
 
         <!-- Empty state -->
-        @if (flatRows().length === 0) {
+        @if (totalFiltered() === 0) {
           <div class="flex flex-col items-center justify-center py-16 text-center">
             <div
               class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400 mb-3"
@@ -587,29 +414,25 @@
       (dismiss)="closeAssetForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
-      <nldd-form-field label="Model">
-        <nldd-text-field
-          #fAssetModel
-          [attr.value]="editAsset()?.model ?? ''"
-          placeholder="Dell PowerEdge R750"
-        ></nldd-text-field>
-      </nldd-form-field>
-      <nldd-form-field label="Asset tag">
-        <nldd-text-field
-          #fAssetTag
-          [attr.value]="editAsset()?.assetTag ?? ''"
-          placeholder="AST-001"
-        ></nldd-text-field>
+      <nldd-form-field label="Device">
+        <select #fAssetDevice [disabled]="!!editAsset()?.id">
+          @for (entry of catalog(); track entry.id) {
+            <option
+              [value]="entry.id"
+              [attr.selected]="editAsset()?.deviceCatalogId === entry.id ? true : null"
+            >
+              {{ entry.model }}
+            </option>
+          }
+        </select>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Category">
-          <select #fAssetCat>
-            @for (cat of categories; track cat) {
-              <option [value]="cat" [attr.selected]="editAsset()?.category === cat ? true : null">
-                {{ cat }}
-              </option>
-            }
-          </select>
+        <nldd-form-field label="Asset tag">
+          <nldd-text-field
+            #fAssetTag
+            [attr.value]="editAsset()?.assetTag ?? ''"
+            placeholder="AST-001"
+          ></nldd-text-field>
         </nldd-form-field>
         <nldd-form-field label="Status">
           <select #fAssetStatus>
@@ -622,22 +445,6 @@
               </option>
             }
           </select>
-        </nldd-form-field>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Datacenter">
-          <nldd-text-field
-            #fAssetDc
-            [attr.value]="editAsset()?.datacenter ?? ''"
-            placeholder="AMS-01"
-          ></nldd-text-field>
-        </nldd-form-field>
-        <nldd-form-field label="Rack">
-          <nldd-text-field
-            #fAssetRack
-            [attr.value]="editAsset()?.rack ?? ''"
-            placeholder="R01"
-          ></nldd-text-field>
         </nldd-form-field>
       </div>
       <nldd-form-field label="Notes" [optional]="true">
