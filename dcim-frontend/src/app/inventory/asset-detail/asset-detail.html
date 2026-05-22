@@ -717,7 +717,12 @@
           ></nldd-text-field>
         </nldd-form-field>
       </div>
-      <nldd-form-field label="Location" [optional]="true">
+      <nldd-form-field label="Rack" [optional]="true">
+        @if (racksByDatacenter().length === 0) {
+          <nldd-form-field-help-text>
+            No racks available yet. Add a room, rack row, and rack to a datacenter first.
+          </nldd-form-field-help-text>
+        }
         <select #fAssetRack>
           <option value="">— Not placed —</option>
           @for (group of racksByDatacenter(); track group.datacenter) {

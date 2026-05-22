@@ -11,8 +11,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { DATACENTER_INFO, DatacenterInfo, RackRow, Room } from '../datacenter.model';
-import { RACKS } from '../../racks/rack.model';
+import { DatacenterInfo, DatacenterRack, RackRow, Room } from '../datacenter.model';
 import DatacenterApiService from '../datacenter-api.service';
 import connectErrorMessage from '../../../connect/error';
 
@@ -35,10 +34,10 @@ export default class DatacenterDetailComponent implements OnInit {
 
   private readonly dcApi = inject(DatacenterApiService);
 
-  readonly dc = computed<DatacenterInfo | undefined>(() => {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
-    return DATACENTER_INFO.find((d) => d.id === id);
-  });
+  readonly dc = signal<DatacenterInfo | undefined>(undefined);
+
+  /** False until the site request settles, so "not found" only shows after loading. */
+  readonly dcLoaded = signal(false);
 
   // ── Rooms ──────────────────────────────────────────────────────────────────
 
@@ -59,10 +58,11 @@ export default class DatacenterDetailComponent implements OnInit {
 
   // ── Racks in this DC ───────────────────────────────────────────────────────
 
-  readonly dcRacks = computed(() => {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
-    return RACKS.filter((r) => r.dcId === id);
-  });
+  readonly dcRacks = signal<DatacenterRack[]>([]);
+
+  racksForRow(rowId: string): DatacenterRack[] {
+    return this.dcRacks().filter((rack) => rack.rowId === rowId);
+  }
 
   // ── Room CRUD ──────────────────────────────────────────────────────────────
 
@@ -96,6 +96,22 @@ export default class DatacenterDetailComponent implements OnInit {
 
   private readonly fRowY = viewChild<NativeElementRef>('fRowY');
 
+  // ── Rack CRUD ──────────────────────────────────────────────────────────────
+
+  editRack = signal<Partial<DatacenterRack> | null>(null);
+
+  deleteRack = signal<DatacenterRack | null>(null);
+
+  activeRowId = signal<string>('');
+
+  private readonly rackSheetEl = viewChild<NativeElementRef>('rackSheet');
+
+  private readonly rackModalEl = viewChild<NativeElementRef>('rackModal');
+
+  private readonly fRackName = viewChild<NativeElementRef>('fRackName');
+
+  private readonly fRackTotalU = viewChild<NativeElementRef>('fRackTotalU');
+
   constructor() {
     effect(() => {
       const el = this.roomSheetEl()?.nativeElement;
@@ -117,10 +133,35 @@ export default class DatacenterDetailComponent implements OnInit {
       if (this.deleteRackRow() !== null) el?.show?.();
       else el?.hide?.();
     });
+    effect(() => {
+      const el = this.rackSheetEl()?.nativeElement;
+      if (this.editRack() !== null) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
+      const el = this.rackModalEl()?.nativeElement;
+      if (this.deleteRack() !== null) el?.show?.();
+      else el?.hide?.();
+    });
   }
 
   ngOnInit(): void {
     const siteId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.loadSite(siteId);
+    this.loadRoomsAndRacks(siteId);
+  }
+
+  private loadSite(siteId: string): void {
+    firstValueFrom(this.dcApi.getSite(siteId))
+      .then((res) => {
+        if (res.site) this.dc.set(DatacenterApiService.mapSite(res.site));
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)))
+      .finally(() => this.dcLoaded.set(true));
+  }
+
+  private loadRoomsAndRacks(siteId: string): void {
     firstValueFrom(this.dcApi.listRooms(siteId))
       .then((res) => {
         const rooms = res.rooms.map((r) => DatacenterApiService.mapRoom(r));
@@ -134,7 +175,21 @@ export default class DatacenterDetailComponent implements OnInit {
         );
       })
       .then((allRows) => {
-        this.mutableRackRows.set(allRows.flat());
+        const rows = allRows.flat();
+        this.mutableRackRows.set(rows);
+        return Promise.all(
+          rows.map((row) =>
+            firstValueFrom(this.dcApi.listRacks(row.id)).then((rk) =>
+              rk.racks
+                .map((summary) => summary.rack)
+                .filter((rack): rack is NonNullable<typeof rack> => rack != null)
+                .map((rack) => DatacenterApiService.mapRack(rack)),
+            ),
+          ),
+        );
+      })
+      .then((allRacks) => {
+        this.dcRacks.set(allRacks.flat());
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
@@ -274,6 +329,68 @@ export default class DatacenterDetailComponent implements OnInit {
       .then(() => {
         this.mutableRackRows.update((list) => list.filter((rr) => rr.id !== target.id));
         this.deleteRackRow.set(null);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  // ── Rack actions ───────────────────────────────────────────────────────────
+
+  openCreateRack(rowId: string): void {
+    this.activeRowId.set(rowId);
+    this.editRack.set({ id: '', rowId, name: '', totalU: 42 });
+  }
+
+  openEditRack(rack: DatacenterRack): void {
+    this.activeRowId.set(rack.rowId);
+    this.editRack.set({ ...rack });
+  }
+
+  closeRackForm(): void {
+    this.editRack.set(null);
+  }
+
+  saveRack(): void {
+    const form = this.editRack();
+    if (!form) return;
+    const name = this.fRackName()?.nativeElement.value ?? '';
+    const totalU = parseInt(this.fRackTotalU()?.nativeElement.value ?? '42', 10) || 42;
+    if (form.id) {
+      firstValueFrom(this.dcApi.updateRack(form.id, name, totalU))
+        .then(() => {
+          const updated: DatacenterRack = { id: form.id!, rowId: form.rowId!, name, totalU };
+          this.dcRacks.update((list) => list.map((r) => (r.id === form.id ? updated : r)));
+          this.editRack.set(null);
+        })
+        // eslint-disable-next-line no-console
+        .catch((err) => console.error(connectErrorMessage(err)));
+    } else {
+      firstValueFrom(this.dcApi.createRack(form.rowId!, name, totalU))
+        .then((res) => {
+          const created: DatacenterRack = { id: res.rackId, rowId: form.rowId!, name, totalU };
+          this.dcRacks.update((list) => [...list, created]);
+          this.editRack.set(null);
+        })
+        // eslint-disable-next-line no-console
+        .catch((err) => console.error(connectErrorMessage(err)));
+    }
+  }
+
+  openDeleteRack(rack: DatacenterRack): void {
+    this.deleteRack.set(rack);
+  }
+
+  cancelDeleteRack(): void {
+    this.deleteRack.set(null);
+  }
+
+  confirmDeleteRack(): void {
+    const target = this.deleteRack();
+    if (!target) return;
+    firstValueFrom(this.dcApi.deleteRack(target.id))
+      .then(() => {
+        this.dcRacks.update((list) => list.filter((r) => r.id !== target.id));
+        this.deleteRack.set(null);
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));

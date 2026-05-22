@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { DATACENTER_INFO, DatacenterStatus } from '../datacenters/datacenter.model';
+import { DATACENTER_INFO, DatacenterInfo, DatacenterStatus } from '../datacenters/datacenter.model';
 
 @Component({
   selector: 'app-dc-selector',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nav class="flex h-10 items-center gap-0.5" aria-label="Datacenter selection">
-      @for (dc of datacenters; track dc.id) {
+      @for (dc of datacenters(); track dc.id) {
         <button
           (click)="dcSelected.emit(dc.id)"
           class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer"
@@ -33,7 +33,8 @@ export default class DcSelectorComponent {
 
   readonly dcSelected = output<string>();
 
-  readonly datacenters = DATACENTER_INFO;
+  /** Datacenters to list; defaults to mock data when no list is bound. */
+  readonly datacenters = input<DatacenterInfo[]>(DATACENTER_INFO);
 
   readonly statusDotClass = (status: DatacenterStatus): string => {
     switch (status) {
