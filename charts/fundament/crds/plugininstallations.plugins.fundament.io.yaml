@@ -63,32 +63,19 @@ spec:
                   type: array
                   items:
                     type: string
-                permissions:
+                definitionRef:
                   type: object
+                  required:
+                    - pluginName
+                    - pluginVersion
+                    - definitionHash
                   properties:
-                    rbac:
-                      type: array
-                      items:
-                        type: object
-                        required:
-                          - verbs
-                        properties:
-                          apiGroups:
-                            type: array
-                            items:
-                              type: string
-                          resources:
-                            type: array
-                            items:
-                              type: string
-                          verbs:
-                            type: array
-                            items:
-                              type: string
-                          resourceNames:
-                            type: array
-                            items:
-                              type: string
+                    pluginName:
+                      type: string
+                    pluginVersion:
+                      type: string
+                    definitionHash:
+                      type: string
                 config:
                   type: object
                   additionalProperties:

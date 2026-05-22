@@ -5,24 +5,14 @@ import (
 	"testing"
 )
 
-func TestPluginInstallationSpec_PermissionsRoundTrip(t *testing.T) {
+func TestPluginInstallationSpec_DefinitionRefRoundTrip(t *testing.T) {
 	spec := PluginInstallationSpec{
-		Image:      "ghcr.io/example/cert-manager:v1.0.0",
+		Image:      "ghcr.io/example/cert-manager:v1.17.2",
 		PluginName: "cert-manager",
-		Permissions: PluginPermissions{
-			RBAC: []RBACRule{
-				{
-					APIGroups: []string{"cert-manager.io"},
-					Resources: []string{"certificates", "certificaterequests"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups:     []string{""},
-					Resources:     []string{"secrets"},
-					Verbs:         []string{"get"},
-					ResourceNames: []string{"cert-manager-webhook-ca"},
-				},
-			},
+		DefinitionRef: DefinitionRef{
+			PluginName:     "cert-manager",
+			PluginVersion:  "v1.17.2",
+			DefinitionHash: "sha256:1f3c9a",
 		},
 	}
 
@@ -36,55 +26,36 @@ func TestPluginInstallationSpec_PermissionsRoundTrip(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	if len(got.Permissions.RBAC) != 2 {
-		t.Fatalf("RBAC = %v, want 2 rules", got.Permissions.RBAC)
+	if got.DefinitionRef.PluginName != "cert-manager" {
+		t.Errorf("DefinitionRef.PluginName = %q", got.DefinitionRef.PluginName)
 	}
-	rule := got.Permissions.RBAC[0]
-	if rule.APIGroups[0] != "cert-manager.io" {
-		t.Errorf("APIGroups = %v", rule.APIGroups)
+	if got.DefinitionRef.PluginVersion != "v1.17.2" {
+		t.Errorf("DefinitionRef.PluginVersion = %q", got.DefinitionRef.PluginVersion)
 	}
-	if rule.Resources[1] != "certificaterequests" {
-		t.Errorf("Resources = %v", rule.Resources)
-	}
-	if rule.Verbs[0] != "get" {
-		t.Errorf("Verbs = %v", rule.Verbs)
-	}
-	if rule.ResourceNames != nil {
-		t.Errorf("ResourceNames on rule 0 = %v, want nil", rule.ResourceNames)
-	}
-
-	named := got.Permissions.RBAC[1]
-	if len(named.ResourceNames) != 1 || named.ResourceNames[0] != "cert-manager-webhook-ca" {
-		t.Errorf("ResourceNames = %v", named.ResourceNames)
+	if got.DefinitionRef.DefinitionHash != "sha256:1f3c9a" {
+		t.Errorf("DefinitionRef.DefinitionHash = %q", got.DefinitionRef.DefinitionHash)
 	}
 }
 
-func TestRBACRule_ResourceNamesOmittedWhenEmpty(t *testing.T) {
-	rule := RBACRule{
-		APIGroups: []string{"cert-manager.io"},
-		Resources: []string{"certificates"},
-		Verbs:     []string{"list"},
-	}
-	data, err := json.Marshal(rule)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	if got := string(data); contains(got, "resourceNames") {
-		t.Errorf("expected 'resourceNames' to be omitted when empty, got JSON: %s", got)
-	}
-}
-
-func TestPluginInstallationSpec_PermissionsOmittedWhenEmpty(t *testing.T) {
+func TestPluginInstallationSpec_DefinitionRefMarshalsExpectedKeys(t *testing.T) {
 	spec := PluginInstallationSpec{
-		Image:      "ghcr.io/example/cert-manager:v1.0.0",
+		Image:      "ghcr.io/example/cert-manager:v1.17.2",
 		PluginName: "cert-manager",
+		DefinitionRef: DefinitionRef{
+			PluginName:     "cert-manager",
+			PluginVersion:  "v1.17.2",
+			DefinitionHash: "sha256:1f3c9a",
+		},
 	}
 	data, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
+	if got := string(data); !contains(got, "definitionRef") {
+		t.Errorf("expected JSON to contain 'definitionRef', got: %s", got)
+	}
 	if got := string(data); contains(got, "permissions") {
-		t.Errorf("expected 'permissions' to be omitted when empty, got JSON: %s", got)
+		t.Errorf("expected no 'permissions' key (removed by FUN-17), got: %s", got)
 	}
 }
 

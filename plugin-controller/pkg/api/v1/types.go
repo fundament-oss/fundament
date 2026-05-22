@@ -33,30 +33,27 @@ type PluginInstallationSpec struct {
 	Image           string            `json:"image"`
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	PluginName      string            `json:"pluginName"`
-	ClusterRoles    []string          `json:"clusterRoles,omitempty"`
-	Permissions     PluginPermissions `json:"permissions,omitzero"`
-	Config          map[string]string `json:"config,omitempty"`
+	// DefinitionRef is the immutable pin to the published PluginDefinition the
+	// installer consented to. plugin-controller resolves the definition by
+	// DefinitionHash and materialises the plugin SA's Role from it (FUN-17).
+	// It is the source of truth for the plugin's RBAC scope — no RBAC is
+	// copied onto this CR.
+	DefinitionRef DefinitionRef `json:"definitionRef"`
+	// ClusterRoles is legacy: once the controller materialises the SA Role
+	// from DefinitionRef it is no longer bound. Retained for backward
+	// compatibility; removal is a follow-up.
+	ClusterRoles []string          `json:"clusterRoles,omitempty"`
+	Config       map[string]string `json:"config,omitempty"`
 }
 
-// PluginPermissions carries the consented permissions for a plugin install.
-// It mirrors the `permissions` block of the PluginDefinition manifest at
-// install time. The CR is the source of truth read live by kube-api-proxy
-// at request-validation time; PluginTokens carry only identity and binding.
-//
-// +k8s:deepcopy-gen=true
-type PluginPermissions struct {
-	RBAC []RBACRule `json:"rbac,omitempty"`
-}
-
-// RBACRule matches the Kubernetes rbac/v1 PolicyRule shape (subset).
-// Subresources may be expressed as "resource/subresource" entries in Resources.
-//
-// +k8s:deepcopy-gen=true
-type RBACRule struct {
-	APIGroups     []string `json:"apiGroups,omitempty"`
-	Resources     []string `json:"resources,omitempty"`
-	Verbs         []string `json:"verbs"`
-	ResourceNames []string `json:"resourceNames,omitempty"`
+// DefinitionRef pins an immutable, content-addressed PluginDefinition.
+// A published PluginDefinition is content-addressed: (PluginName,
+// PluginVersion) resolves to exactly one DefinitionHash forever, so the pin is
+// itself the consent record (FUN-17 "Where the scope comes from").
+type DefinitionRef struct {
+	PluginName     string `json:"pluginName"`
+	PluginVersion  string `json:"pluginVersion"`
+	DefinitionHash string `json:"definitionHash"`
 }
 
 type PluginInstallationStatus struct {
