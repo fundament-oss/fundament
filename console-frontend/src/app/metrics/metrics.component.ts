@@ -295,6 +295,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.cancelStream();
+    this.destroyCharts();
   }
 
   currentTotals = computed<ClusterUsageData | null>(() => {
