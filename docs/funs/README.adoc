@@ -54,4 +54,10 @@ FUNs (Fundament Update Notes) document technical decisions, architecture, and pr
 
 | link:/funs/fun-15[FUN-15 Idempotency]
 | discussion
+
+| link:/funs/fun-16[FUN-16 Plugin isolation]
+| committed
+
+| link:/funs/fun-17[FUN-17 Plugin Authorization]
+| prediscussion
 |===
