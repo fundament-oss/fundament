@@ -274,7 +274,12 @@
       <nldd-form-field label="Role">
         <select #fDeviceRole>
           @for (role of allRoles; track role) {
-            <option [value]="role" [attr.selected]="(editDevice()?.role ?? 'Compute') === role ? true : null">{{ role }}</option>
+            <option
+              [value]="role"
+              [attr.selected]="(editDevice()?.role ?? 'Compute') === role ? true : null"
+            >
+              {{ role }}
+            </option>
           }
         </select>
       </nldd-form-field>
@@ -340,7 +345,12 @@
         <nldd-form-field label="Source device">
           <select #fConnSrcDevice>
             @for (dev of devices(); track dev.id) {
-              <option [value]="dev.id" [attr.selected]="(editConnection()?.sourceDeviceId ?? '') === dev.id ? true : null">{{ dev.name }}</option>
+              <option
+                [value]="dev.id"
+                [attr.selected]="(editConnection()?.sourceDeviceId ?? '') === dev.id ? true : null"
+              >
+                {{ dev.name }}
+              </option>
             }
           </select>
         </nldd-form-field>
@@ -356,7 +366,12 @@
         <nldd-form-field label="Target device">
           <select #fConnTgtDevice>
             @for (dev of devices(); track dev.id) {
-              <option [value]="dev.id" [attr.selected]="(editConnection()?.targetDeviceId ?? '') === dev.id ? true : null">{{ dev.name }}</option>
+              <option
+                [value]="dev.id"
+                [attr.selected]="(editConnection()?.targetDeviceId ?? '') === dev.id ? true : null"
+              >
+                {{ dev.name }}
+              </option>
             }
           </select>
         </nldd-form-field>
@@ -370,9 +385,30 @@
       </div>
       <nldd-form-field label="Connection type">
         <select #fConnType>
-          <option value="network" [attr.selected]="(editConnection()?.connectionType ?? 'network') === 'network' ? true : null">Network</option>
-          <option value="power" [attr.selected]="(editConnection()?.connectionType ?? 'network') === 'power' ? true : null">Power</option>
-          <option value="console" [attr.selected]="(editConnection()?.connectionType ?? 'network') === 'console' ? true : null">Console</option>
+          <option
+            value="network"
+            [attr.selected]="
+              (editConnection()?.connectionType ?? 'network') === 'network' ? true : null
+            "
+          >
+            Network
+          </option>
+          <option
+            value="power"
+            [attr.selected]="
+              (editConnection()?.connectionType ?? 'network') === 'power' ? true : null
+            "
+          >
+            Power
+          </option>
+          <option
+            value="console"
+            [attr.selected]="
+              (editConnection()?.connectionType ?? 'network') === 'console' ? true : null
+            "
+          >
+            Console
+          </option>
         </select>
       </nldd-form-field>
     </nldd-simple-section>

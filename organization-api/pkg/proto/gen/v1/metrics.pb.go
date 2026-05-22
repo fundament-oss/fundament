@@ -1512,6 +1512,584 @@ func (b0 GetProjectWorkloadTimeSeriesRequest_builder) Build() *GetProjectWorkloa
 	return m0
 }
 
+// StreamOrgWorkloadMetricsRequest starts a live org-wide metrics stream.
+type StreamOrgWorkloadMetricsRequest struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_WindowSeconds int32                  `protobuf:"varint,10,opt,name=window_seconds,json=windowSeconds"`
+	xxx_hidden_Start         *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=start"`
+	xxx_hidden_End           *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=end"`
+	xxx_hidden_StepSeconds   int32                  `protobuf:"varint,40,opt,name=step_seconds,json=stepSeconds"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) Reset() {
+	*x = StreamOrgWorkloadMetricsRequest{}
+	mi := &file_v1_metrics_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamOrgWorkloadMetricsRequest) ProtoMessage() {}
+
+func (x *StreamOrgWorkloadMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_metrics_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) GetWindowSeconds() int32 {
+	if x != nil {
+		return x.xxx_hidden_WindowSeconds
+	}
+	return 0
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Start
+	}
+	return nil
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) GetEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_End
+	}
+	return nil
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) GetStepSeconds() int32 {
+	if x != nil {
+		return x.xxx_hidden_StepSeconds
+	}
+	return 0
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) SetWindowSeconds(v int32) {
+	x.xxx_hidden_WindowSeconds = v
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) SetStart(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Start = v
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) SetEnd(v *timestamppb.Timestamp) {
+	x.xxx_hidden_End = v
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) SetStepSeconds(v int32) {
+	x.xxx_hidden_StepSeconds = v
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) HasStart() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Start != nil
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) HasEnd() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_End != nil
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) ClearStart() {
+	x.xxx_hidden_Start = nil
+}
+
+func (x *StreamOrgWorkloadMetricsRequest) ClearEnd() {
+	x.xxx_hidden_End = nil
+}
+
+type StreamOrgWorkloadMetricsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Sliding window in seconds (e.g. 3600 for last hour). On each push the backend
+	// computes start = now − window_seconds. When zero, start/end are used instead.
+	WindowSeconds int32
+	// Fixed time range. Only used when window_seconds is zero.
+	Start *timestamppb.Timestamp
+	End   *timestamppb.Timestamp
+	// Resolution in seconds. Defaults to 300 (5 minutes) when zero.
+	StepSeconds int32
+}
+
+func (b0 StreamOrgWorkloadMetricsRequest_builder) Build() *StreamOrgWorkloadMetricsRequest {
+	m0 := &StreamOrgWorkloadMetricsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_WindowSeconds = b.WindowSeconds
+	x.xxx_hidden_Start = b.Start
+	x.xxx_hidden_End = b.End
+	x.xxx_hidden_StepSeconds = b.StepSeconds
+	return m0
+}
+
+// StreamClusterWorkloadMetricsRequest starts a live cluster metrics stream.
+type StreamClusterWorkloadMetricsRequest struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId     string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_WindowSeconds int32                  `protobuf:"varint,20,opt,name=window_seconds,json=windowSeconds"`
+	xxx_hidden_Start         *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=start"`
+	xxx_hidden_End           *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=end"`
+	xxx_hidden_StepSeconds   int32                  `protobuf:"varint,50,opt,name=step_seconds,json=stepSeconds"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) Reset() {
+	*x = StreamClusterWorkloadMetricsRequest{}
+	mi := &file_v1_metrics_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamClusterWorkloadMetricsRequest) ProtoMessage() {}
+
+func (x *StreamClusterWorkloadMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_metrics_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) GetClusterId() string {
+	if x != nil {
+		return x.xxx_hidden_ClusterId
+	}
+	return ""
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) GetWindowSeconds() int32 {
+	if x != nil {
+		return x.xxx_hidden_WindowSeconds
+	}
+	return 0
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Start
+	}
+	return nil
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) GetEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_End
+	}
+	return nil
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) GetStepSeconds() int32 {
+	if x != nil {
+		return x.xxx_hidden_StepSeconds
+	}
+	return 0
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) SetWindowSeconds(v int32) {
+	x.xxx_hidden_WindowSeconds = v
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) SetStart(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Start = v
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) SetEnd(v *timestamppb.Timestamp) {
+	x.xxx_hidden_End = v
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) SetStepSeconds(v int32) {
+	x.xxx_hidden_StepSeconds = v
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) HasStart() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Start != nil
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) HasEnd() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_End != nil
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) ClearStart() {
+	x.xxx_hidden_Start = nil
+}
+
+func (x *StreamClusterWorkloadMetricsRequest) ClearEnd() {
+	x.xxx_hidden_End = nil
+}
+
+type StreamClusterWorkloadMetricsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ClusterId string
+	// Sliding window in seconds. When zero, start/end are used instead.
+	WindowSeconds int32
+	// Fixed time range. Only used when window_seconds is zero.
+	Start *timestamppb.Timestamp
+	End   *timestamppb.Timestamp
+	// Resolution in seconds. Defaults to 300 (5 minutes) when zero.
+	StepSeconds int32
+}
+
+func (b0 StreamClusterWorkloadMetricsRequest_builder) Build() *StreamClusterWorkloadMetricsRequest {
+	m0 := &StreamClusterWorkloadMetricsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ClusterId = b.ClusterId
+	x.xxx_hidden_WindowSeconds = b.WindowSeconds
+	x.xxx_hidden_Start = b.Start
+	x.xxx_hidden_End = b.End
+	x.xxx_hidden_StepSeconds = b.StepSeconds
+	return m0
+}
+
+// StreamProjectWorkloadMetricsRequest starts a live project metrics stream.
+type StreamProjectWorkloadMetricsRequest struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ProjectId     string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
+	xxx_hidden_WindowSeconds int32                  `protobuf:"varint,20,opt,name=window_seconds,json=windowSeconds"`
+	xxx_hidden_Start         *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=start"`
+	xxx_hidden_End           *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=end"`
+	xxx_hidden_StepSeconds   int32                  `protobuf:"varint,50,opt,name=step_seconds,json=stepSeconds"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) Reset() {
+	*x = StreamProjectWorkloadMetricsRequest{}
+	mi := &file_v1_metrics_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamProjectWorkloadMetricsRequest) ProtoMessage() {}
+
+func (x *StreamProjectWorkloadMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_metrics_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) GetProjectId() string {
+	if x != nil {
+		return x.xxx_hidden_ProjectId
+	}
+	return ""
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) GetWindowSeconds() int32 {
+	if x != nil {
+		return x.xxx_hidden_WindowSeconds
+	}
+	return 0
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Start
+	}
+	return nil
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) GetEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_End
+	}
+	return nil
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) GetStepSeconds() int32 {
+	if x != nil {
+		return x.xxx_hidden_StepSeconds
+	}
+	return 0
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) SetProjectId(v string) {
+	x.xxx_hidden_ProjectId = v
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) SetWindowSeconds(v int32) {
+	x.xxx_hidden_WindowSeconds = v
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) SetStart(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Start = v
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) SetEnd(v *timestamppb.Timestamp) {
+	x.xxx_hidden_End = v
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) SetStepSeconds(v int32) {
+	x.xxx_hidden_StepSeconds = v
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) HasStart() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Start != nil
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) HasEnd() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_End != nil
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) ClearStart() {
+	x.xxx_hidden_Start = nil
+}
+
+func (x *StreamProjectWorkloadMetricsRequest) ClearEnd() {
+	x.xxx_hidden_End = nil
+}
+
+type StreamProjectWorkloadMetricsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ProjectId string
+	// Sliding window in seconds. When zero, start/end are used instead.
+	WindowSeconds int32
+	// Fixed time range. Only used when window_seconds is zero.
+	Start *timestamppb.Timestamp
+	End   *timestamppb.Timestamp
+	// Resolution in seconds. Defaults to 300 (5 minutes) when zero.
+	StepSeconds int32
+}
+
+func (b0 StreamProjectWorkloadMetricsRequest_builder) Build() *StreamProjectWorkloadMetricsRequest {
+	m0 := &StreamProjectWorkloadMetricsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ProjectId = b.ProjectId
+	x.xxx_hidden_WindowSeconds = b.WindowSeconds
+	x.xxx_hidden_Start = b.Start
+	x.xxx_hidden_End = b.End
+	x.xxx_hidden_StepSeconds = b.StepSeconds
+	return m0
+}
+
+// StreamWorkloadMetricsResponse is the unified response pushed on each live tick.
+// Fields are populated based on the view level (org / cluster / project).
+type StreamWorkloadMetricsResponse struct {
+	state                  protoimpl.MessageState         `protogen:"opaque.v1"`
+	xxx_hidden_Totals      *ResourceUsageInfo             `protobuf:"bytes,10,opt,name=totals"`
+	xxx_hidden_Clusters    *[]*ClusterWorkloadSummary     `protobuf:"bytes,20,rep,name=clusters"`
+	xxx_hidden_Nodes       *[]*NodeWorkloadMetrics        `protobuf:"bytes,30,rep,name=nodes"`
+	xxx_hidden_Namespaces  *[]*NamespaceWorkloadMetrics   `protobuf:"bytes,40,rep,name=namespaces"`
+	xxx_hidden_TimeSeries  *GetWorkloadTimeSeriesResponse `protobuf:"bytes,50,opt,name=time_series,json=timeSeries"`
+	xxx_hidden_RefreshedAt *timestamppb.Timestamp         `protobuf:"bytes,60,opt,name=refreshed_at,json=refreshedAt"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *StreamWorkloadMetricsResponse) Reset() {
+	*x = StreamWorkloadMetricsResponse{}
+	mi := &file_v1_metrics_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamWorkloadMetricsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamWorkloadMetricsResponse) ProtoMessage() {}
+
+func (x *StreamWorkloadMetricsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_metrics_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *StreamWorkloadMetricsResponse) GetTotals() *ResourceUsageInfo {
+	if x != nil {
+		return x.xxx_hidden_Totals
+	}
+	return nil
+}
+
+func (x *StreamWorkloadMetricsResponse) GetClusters() []*ClusterWorkloadSummary {
+	if x != nil {
+		if x.xxx_hidden_Clusters != nil {
+			return *x.xxx_hidden_Clusters
+		}
+	}
+	return nil
+}
+
+func (x *StreamWorkloadMetricsResponse) GetNodes() []*NodeWorkloadMetrics {
+	if x != nil {
+		if x.xxx_hidden_Nodes != nil {
+			return *x.xxx_hidden_Nodes
+		}
+	}
+	return nil
+}
+
+func (x *StreamWorkloadMetricsResponse) GetNamespaces() []*NamespaceWorkloadMetrics {
+	if x != nil {
+		if x.xxx_hidden_Namespaces != nil {
+			return *x.xxx_hidden_Namespaces
+		}
+	}
+	return nil
+}
+
+func (x *StreamWorkloadMetricsResponse) GetTimeSeries() *GetWorkloadTimeSeriesResponse {
+	if x != nil {
+		return x.xxx_hidden_TimeSeries
+	}
+	return nil
+}
+
+func (x *StreamWorkloadMetricsResponse) GetRefreshedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_RefreshedAt
+	}
+	return nil
+}
+
+func (x *StreamWorkloadMetricsResponse) SetTotals(v *ResourceUsageInfo) {
+	x.xxx_hidden_Totals = v
+}
+
+func (x *StreamWorkloadMetricsResponse) SetClusters(v []*ClusterWorkloadSummary) {
+	x.xxx_hidden_Clusters = &v
+}
+
+func (x *StreamWorkloadMetricsResponse) SetNodes(v []*NodeWorkloadMetrics) {
+	x.xxx_hidden_Nodes = &v
+}
+
+func (x *StreamWorkloadMetricsResponse) SetNamespaces(v []*NamespaceWorkloadMetrics) {
+	x.xxx_hidden_Namespaces = &v
+}
+
+func (x *StreamWorkloadMetricsResponse) SetTimeSeries(v *GetWorkloadTimeSeriesResponse) {
+	x.xxx_hidden_TimeSeries = v
+}
+
+func (x *StreamWorkloadMetricsResponse) SetRefreshedAt(v *timestamppb.Timestamp) {
+	x.xxx_hidden_RefreshedAt = v
+}
+
+func (x *StreamWorkloadMetricsResponse) HasTotals() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Totals != nil
+}
+
+func (x *StreamWorkloadMetricsResponse) HasTimeSeries() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_TimeSeries != nil
+}
+
+func (x *StreamWorkloadMetricsResponse) HasRefreshedAt() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_RefreshedAt != nil
+}
+
+func (x *StreamWorkloadMetricsResponse) ClearTotals() {
+	x.xxx_hidden_Totals = nil
+}
+
+func (x *StreamWorkloadMetricsResponse) ClearTimeSeries() {
+	x.xxx_hidden_TimeSeries = nil
+}
+
+func (x *StreamWorkloadMetricsResponse) ClearRefreshedAt() {
+	x.xxx_hidden_RefreshedAt = nil
+}
+
+type StreamWorkloadMetricsResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Resource totals (CPU, memory, pods).
+	Totals *ResourceUsageInfo
+	// Per-cluster breakdown — populated in org view.
+	Clusters []*ClusterWorkloadSummary
+	// Per-node breakdown — populated in cluster view.
+	Nodes []*NodeWorkloadMetrics
+	// Per-namespace breakdown — populated in all views.
+	Namespaces []*NamespaceWorkloadMetrics
+	// Time-series chart data for the requested window.
+	TimeSeries *GetWorkloadTimeSeriesResponse
+	// Wall-clock time when this snapshot was computed.
+	RefreshedAt *timestamppb.Timestamp
+}
+
+func (b0 StreamWorkloadMetricsResponse_builder) Build() *StreamWorkloadMetricsResponse {
+	m0 := &StreamWorkloadMetricsResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Totals = b.Totals
+	x.xxx_hidden_Clusters = &b.Clusters
+	x.xxx_hidden_Nodes = &b.Nodes
+	x.xxx_hidden_Namespaces = &b.Namespaces
+	x.xxx_hidden_TimeSeries = b.TimeSeries
+	x.xxx_hidden_RefreshedAt = b.RefreshedAt
+	return m0
+}
+
 var File_v1_metrics_proto protoreflect.FileDescriptor
 
 const file_v1_metrics_proto_rawDesc = "" +
@@ -1604,16 +2182,52 @@ const file_v1_metrics_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x127\n" +
 	"\x05start\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
 	"\x03end\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12!\n" +
-	"\fstep_seconds\x18( \x01(\x05R\vstepSeconds2\x9e\x06\n" +
+	"\fstep_seconds\x18( \x01(\x05R\vstepSeconds\"\xd9\x01\n" +
+	"\x1fStreamOrgWorkloadMetricsRequest\x12%\n" +
+	"\x0ewindow_seconds\x18\n" +
+	" \x01(\x05R\rwindowSeconds\x127\n" +
+	"\x05start\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
+	"\x03end\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12!\n" +
+	"\fstep_seconds\x18( \x01(\x05R\vstepSeconds\"\x86\x02\n" +
+	"#StreamClusterWorkloadMetricsRequest\x12'\n" +
+	"\n" +
+	"cluster_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12%\n" +
+	"\x0ewindow_seconds\x18\x14 \x01(\x05R\rwindowSeconds\x127\n" +
+	"\x05start\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
+	"\x03end\x18( \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12!\n" +
+	"\fstep_seconds\x182 \x01(\x05R\vstepSeconds\"\x86\x02\n" +
+	"#StreamProjectWorkloadMetricsRequest\x12'\n" +
+	"\n" +
+	"project_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x12%\n" +
+	"\x0ewindow_seconds\x18\x14 \x01(\x05R\rwindowSeconds\x127\n" +
+	"\x05start\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
+	"\x03end\x18( \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12!\n" +
+	"\fstep_seconds\x182 \x01(\x05R\vstepSeconds\"\xb7\x03\n" +
+	"\x1dStreamWorkloadMetricsResponse\x12:\n" +
+	"\x06totals\x18\n" +
+	" \x01(\v2\".organization.v1.ResourceUsageInfoR\x06totals\x12C\n" +
+	"\bclusters\x18\x14 \x03(\v2'.organization.v1.ClusterWorkloadSummaryR\bclusters\x12:\n" +
+	"\x05nodes\x18\x1e \x03(\v2$.organization.v1.NodeWorkloadMetricsR\x05nodes\x12I\n" +
+	"\n" +
+	"namespaces\x18( \x03(\v2).organization.v1.NamespaceWorkloadMetricsR\n" +
+	"namespaces\x12O\n" +
+	"\vtime_series\x182 \x01(\v2..organization.v1.GetWorkloadTimeSeriesResponseR\n" +
+	"timeSeries\x12=\n" +
+	"\frefreshed_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\vrefreshedAt2\xb0\t\n" +
 	"\x0eMetricsService\x12\x82\x01\n" +
 	"\x19GetClusterWorkloadMetrics\x121.organization.v1.GetClusterWorkloadMetricsRequest\x1a2.organization.v1.GetClusterWorkloadMetricsResponse\x12\x84\x01\n" +
 	"\x1cGetClusterWorkloadTimeSeries\x124.organization.v1.GetClusterWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponse\x12v\n" +
 	"\x15GetOrgWorkloadMetrics\x12-.organization.v1.GetOrgWorkloadMetricsRequest\x1a..organization.v1.GetOrgWorkloadMetricsResponse\x12|\n" +
 	"\x18GetOrgWorkloadTimeSeries\x120.organization.v1.GetOrgWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponse\x12\x82\x01\n" +
 	"\x19GetProjectWorkloadMetrics\x121.organization.v1.GetProjectWorkloadMetricsRequest\x1a2.organization.v1.GetProjectWorkloadMetricsResponse\x12\x84\x01\n" +
-	"\x1cGetProjectWorkloadTimeSeries\x124.organization.v1.GetProjectWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x1cGetProjectWorkloadTimeSeries\x124.organization.v1.GetProjectWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponse\x12~\n" +
+	"\x18StreamOrgWorkloadMetrics\x120.organization.v1.StreamOrgWorkloadMetricsRequest\x1a..organization.v1.StreamWorkloadMetricsResponse0\x01\x12\x86\x01\n" +
+	"\x1cStreamClusterWorkloadMetrics\x124.organization.v1.StreamClusterWorkloadMetricsRequest\x1a..organization.v1.StreamWorkloadMetricsResponse0\x01\x12\x86\x01\n" +
+	"\x1cStreamProjectWorkloadMetrics\x124.organization.v1.StreamProjectWorkloadMetricsRequest\x1a..organization.v1.StreamWorkloadMetricsResponse0\x01B_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_metrics_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_v1_metrics_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_v1_metrics_proto_goTypes = []any{
 	(*GetWorkloadTimeSeriesResponse)(nil),       // 0: organization.v1.GetWorkloadTimeSeriesResponse
 	(*MetricSample)(nil),                        // 1: organization.v1.MetricSample
@@ -1629,9 +2243,13 @@ var file_v1_metrics_proto_goTypes = []any{
 	(*GetProjectWorkloadMetricsRequest)(nil),    // 11: organization.v1.GetProjectWorkloadMetricsRequest
 	(*GetProjectWorkloadMetricsResponse)(nil),   // 12: organization.v1.GetProjectWorkloadMetricsResponse
 	(*GetProjectWorkloadTimeSeriesRequest)(nil), // 13: organization.v1.GetProjectWorkloadTimeSeriesRequest
-	(*timestamppb.Timestamp)(nil),               // 14: google.protobuf.Timestamp
-	(*ResourceUsageInfo)(nil),                   // 15: organization.v1.ResourceUsageInfo
-	(*ResourceUsage)(nil),                       // 16: organization.v1.ResourceUsage
+	(*StreamOrgWorkloadMetricsRequest)(nil),     // 14: organization.v1.StreamOrgWorkloadMetricsRequest
+	(*StreamClusterWorkloadMetricsRequest)(nil), // 15: organization.v1.StreamClusterWorkloadMetricsRequest
+	(*StreamProjectWorkloadMetricsRequest)(nil), // 16: organization.v1.StreamProjectWorkloadMetricsRequest
+	(*StreamWorkloadMetricsResponse)(nil),       // 17: organization.v1.StreamWorkloadMetricsResponse
+	(*timestamppb.Timestamp)(nil),               // 18: google.protobuf.Timestamp
+	(*ResourceUsageInfo)(nil),                   // 19: organization.v1.ResourceUsageInfo
+	(*ResourceUsage)(nil),                       // 20: organization.v1.ResourceUsage
 }
 var file_v1_metrics_proto_depIdxs = []int32{
 	1,  // 0: organization.v1.GetWorkloadTimeSeriesResponse.cpu_cores:type_name -> organization.v1.MetricSample
@@ -1639,44 +2257,62 @@ var file_v1_metrics_proto_depIdxs = []int32{
 	1,  // 2: organization.v1.GetWorkloadTimeSeriesResponse.pod_count:type_name -> organization.v1.MetricSample
 	1,  // 3: organization.v1.GetWorkloadTimeSeriesResponse.network_receive_mb_s:type_name -> organization.v1.MetricSample
 	1,  // 4: organization.v1.GetWorkloadTimeSeriesResponse.network_transmit_mb_s:type_name -> organization.v1.MetricSample
-	14, // 5: organization.v1.MetricSample.timestamp:type_name -> google.protobuf.Timestamp
-	15, // 6: organization.v1.GetClusterWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	18, // 5: organization.v1.MetricSample.timestamp:type_name -> google.protobuf.Timestamp
+	19, // 6: organization.v1.GetClusterWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
 	5,  // 7: organization.v1.GetClusterWorkloadMetricsResponse.nodes:type_name -> organization.v1.NodeWorkloadMetrics
 	2,  // 8: organization.v1.GetClusterWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	16, // 9: organization.v1.NodeWorkloadMetrics.cpu:type_name -> organization.v1.ResourceUsage
-	16, // 10: organization.v1.NodeWorkloadMetrics.memory:type_name -> organization.v1.ResourceUsage
-	16, // 11: organization.v1.NodeWorkloadMetrics.pods:type_name -> organization.v1.ResourceUsage
-	14, // 12: organization.v1.GetClusterWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	14, // 13: organization.v1.GetClusterWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	15, // 14: organization.v1.GetOrgWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	20, // 9: organization.v1.NodeWorkloadMetrics.cpu:type_name -> organization.v1.ResourceUsage
+	20, // 10: organization.v1.NodeWorkloadMetrics.memory:type_name -> organization.v1.ResourceUsage
+	20, // 11: organization.v1.NodeWorkloadMetrics.pods:type_name -> organization.v1.ResourceUsage
+	18, // 12: organization.v1.GetClusterWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 13: organization.v1.GetClusterWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	19, // 14: organization.v1.GetOrgWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
 	9,  // 15: organization.v1.GetOrgWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
 	2,  // 16: organization.v1.GetOrgWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	16, // 17: organization.v1.ClusterWorkloadSummary.cpu:type_name -> organization.v1.ResourceUsage
-	16, // 18: organization.v1.ClusterWorkloadSummary.memory:type_name -> organization.v1.ResourceUsage
-	16, // 19: organization.v1.ClusterWorkloadSummary.pods:type_name -> organization.v1.ResourceUsage
-	14, // 20: organization.v1.GetOrgWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	14, // 21: organization.v1.GetOrgWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	15, // 22: organization.v1.GetProjectWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	20, // 17: organization.v1.ClusterWorkloadSummary.cpu:type_name -> organization.v1.ResourceUsage
+	20, // 18: organization.v1.ClusterWorkloadSummary.memory:type_name -> organization.v1.ResourceUsage
+	20, // 19: organization.v1.ClusterWorkloadSummary.pods:type_name -> organization.v1.ResourceUsage
+	18, // 20: organization.v1.GetOrgWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 21: organization.v1.GetOrgWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	19, // 22: organization.v1.GetProjectWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
 	2,  // 23: organization.v1.GetProjectWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
-	14, // 24: organization.v1.GetProjectWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
-	14, // 25: organization.v1.GetProjectWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
-	3,  // 26: organization.v1.MetricsService.GetClusterWorkloadMetrics:input_type -> organization.v1.GetClusterWorkloadMetricsRequest
-	6,  // 27: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:input_type -> organization.v1.GetClusterWorkloadTimeSeriesRequest
-	7,  // 28: organization.v1.MetricsService.GetOrgWorkloadMetrics:input_type -> organization.v1.GetOrgWorkloadMetricsRequest
-	10, // 29: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:input_type -> organization.v1.GetOrgWorkloadTimeSeriesRequest
-	11, // 30: organization.v1.MetricsService.GetProjectWorkloadMetrics:input_type -> organization.v1.GetProjectWorkloadMetricsRequest
-	13, // 31: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:input_type -> organization.v1.GetProjectWorkloadTimeSeriesRequest
-	4,  // 32: organization.v1.MetricsService.GetClusterWorkloadMetrics:output_type -> organization.v1.GetClusterWorkloadMetricsResponse
-	0,  // 33: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	8,  // 34: organization.v1.MetricsService.GetOrgWorkloadMetrics:output_type -> organization.v1.GetOrgWorkloadMetricsResponse
-	0,  // 35: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	12, // 36: organization.v1.MetricsService.GetProjectWorkloadMetrics:output_type -> organization.v1.GetProjectWorkloadMetricsResponse
-	0,  // 37: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
-	32, // [32:38] is the sub-list for method output_type
-	26, // [26:32] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	18, // 24: organization.v1.GetProjectWorkloadTimeSeriesRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 25: organization.v1.GetProjectWorkloadTimeSeriesRequest.end:type_name -> google.protobuf.Timestamp
+	18, // 26: organization.v1.StreamOrgWorkloadMetricsRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 27: organization.v1.StreamOrgWorkloadMetricsRequest.end:type_name -> google.protobuf.Timestamp
+	18, // 28: organization.v1.StreamClusterWorkloadMetricsRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 29: organization.v1.StreamClusterWorkloadMetricsRequest.end:type_name -> google.protobuf.Timestamp
+	18, // 30: organization.v1.StreamProjectWorkloadMetricsRequest.start:type_name -> google.protobuf.Timestamp
+	18, // 31: organization.v1.StreamProjectWorkloadMetricsRequest.end:type_name -> google.protobuf.Timestamp
+	19, // 32: organization.v1.StreamWorkloadMetricsResponse.totals:type_name -> organization.v1.ResourceUsageInfo
+	9,  // 33: organization.v1.StreamWorkloadMetricsResponse.clusters:type_name -> organization.v1.ClusterWorkloadSummary
+	5,  // 34: organization.v1.StreamWorkloadMetricsResponse.nodes:type_name -> organization.v1.NodeWorkloadMetrics
+	2,  // 35: organization.v1.StreamWorkloadMetricsResponse.namespaces:type_name -> organization.v1.NamespaceWorkloadMetrics
+	0,  // 36: organization.v1.StreamWorkloadMetricsResponse.time_series:type_name -> organization.v1.GetWorkloadTimeSeriesResponse
+	18, // 37: organization.v1.StreamWorkloadMetricsResponse.refreshed_at:type_name -> google.protobuf.Timestamp
+	3,  // 38: organization.v1.MetricsService.GetClusterWorkloadMetrics:input_type -> organization.v1.GetClusterWorkloadMetricsRequest
+	6,  // 39: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:input_type -> organization.v1.GetClusterWorkloadTimeSeriesRequest
+	7,  // 40: organization.v1.MetricsService.GetOrgWorkloadMetrics:input_type -> organization.v1.GetOrgWorkloadMetricsRequest
+	10, // 41: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:input_type -> organization.v1.GetOrgWorkloadTimeSeriesRequest
+	11, // 42: organization.v1.MetricsService.GetProjectWorkloadMetrics:input_type -> organization.v1.GetProjectWorkloadMetricsRequest
+	13, // 43: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:input_type -> organization.v1.GetProjectWorkloadTimeSeriesRequest
+	14, // 44: organization.v1.MetricsService.StreamOrgWorkloadMetrics:input_type -> organization.v1.StreamOrgWorkloadMetricsRequest
+	15, // 45: organization.v1.MetricsService.StreamClusterWorkloadMetrics:input_type -> organization.v1.StreamClusterWorkloadMetricsRequest
+	16, // 46: organization.v1.MetricsService.StreamProjectWorkloadMetrics:input_type -> organization.v1.StreamProjectWorkloadMetricsRequest
+	4,  // 47: organization.v1.MetricsService.GetClusterWorkloadMetrics:output_type -> organization.v1.GetClusterWorkloadMetricsResponse
+	0,  // 48: organization.v1.MetricsService.GetClusterWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	8,  // 49: organization.v1.MetricsService.GetOrgWorkloadMetrics:output_type -> organization.v1.GetOrgWorkloadMetricsResponse
+	0,  // 50: organization.v1.MetricsService.GetOrgWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	12, // 51: organization.v1.MetricsService.GetProjectWorkloadMetrics:output_type -> organization.v1.GetProjectWorkloadMetricsResponse
+	0,  // 52: organization.v1.MetricsService.GetProjectWorkloadTimeSeries:output_type -> organization.v1.GetWorkloadTimeSeriesResponse
+	17, // 53: organization.v1.MetricsService.StreamOrgWorkloadMetrics:output_type -> organization.v1.StreamWorkloadMetricsResponse
+	17, // 54: organization.v1.MetricsService.StreamClusterWorkloadMetrics:output_type -> organization.v1.StreamWorkloadMetricsResponse
+	17, // 55: organization.v1.MetricsService.StreamProjectWorkloadMetrics:output_type -> organization.v1.StreamWorkloadMetricsResponse
+	47, // [47:56] is the sub-list for method output_type
+	38, // [38:47] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_v1_metrics_proto_init() }
@@ -1692,7 +2328,7 @@ func file_v1_metrics_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_metrics_proto_rawDesc), len(file_v1_metrics_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

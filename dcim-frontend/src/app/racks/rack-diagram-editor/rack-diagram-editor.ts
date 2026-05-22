@@ -95,5 +95,4 @@ export default class RackDiagramEditorComponent {
   requestDelete(device: RackDevice): void {
     this.deleteDeviceRequest.emit(device);
   }
-
 }

@@ -254,7 +254,12 @@
       <nldd-form-field label="Category">
         <select #fEntryCat>
           @for (cat of categories; track cat) {
-            <option [value]="cat" [attr.selected]="(editEntry()?.category ?? 'Server') === cat ? true : null">{{ cat }}</option>
+            <option
+              [value]="cat"
+              [attr.selected]="(editEntry()?.category ?? 'Server') === cat ? true : null"
+            >
+              {{ cat }}
+            </option>
           }
         </select>
       </nldd-form-field>

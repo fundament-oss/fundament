@@ -51,6 +51,15 @@ const (
 	// MetricsServiceGetProjectWorkloadTimeSeriesProcedure is the fully-qualified name of the
 	// MetricsService's GetProjectWorkloadTimeSeries RPC.
 	MetricsServiceGetProjectWorkloadTimeSeriesProcedure = "/organization.v1.MetricsService/GetProjectWorkloadTimeSeries"
+	// MetricsServiceStreamOrgWorkloadMetricsProcedure is the fully-qualified name of the
+	// MetricsService's StreamOrgWorkloadMetrics RPC.
+	MetricsServiceStreamOrgWorkloadMetricsProcedure = "/organization.v1.MetricsService/StreamOrgWorkloadMetrics"
+	// MetricsServiceStreamClusterWorkloadMetricsProcedure is the fully-qualified name of the
+	// MetricsService's StreamClusterWorkloadMetrics RPC.
+	MetricsServiceStreamClusterWorkloadMetricsProcedure = "/organization.v1.MetricsService/StreamClusterWorkloadMetrics"
+	// MetricsServiceStreamProjectWorkloadMetricsProcedure is the fully-qualified name of the
+	// MetricsService's StreamProjectWorkloadMetrics RPC.
+	MetricsServiceStreamProjectWorkloadMetricsProcedure = "/organization.v1.MetricsService/StreamProjectWorkloadMetrics"
 )
 
 // MetricsServiceClient is a client for the organization.v1.MetricsService service.
@@ -67,6 +76,12 @@ type MetricsServiceClient interface {
 	GetProjectWorkloadMetrics(context.Context, *connect.Request[v1.GetProjectWorkloadMetricsRequest]) (*connect.Response[v1.GetProjectWorkloadMetricsResponse], error)
 	// Project-level time-series workload metrics filtered to the project's namespaces
 	GetProjectWorkloadTimeSeries(context.Context, *connect.Request[v1.GetProjectWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error)
+	// Live streaming of org-wide workload metrics, pushed every 15 seconds.
+	StreamOrgWorkloadMetrics(context.Context, *connect.Request[v1.StreamOrgWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error)
+	// Live streaming of cluster workload metrics, pushed every 15 seconds.
+	StreamClusterWorkloadMetrics(context.Context, *connect.Request[v1.StreamClusterWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error)
+	// Live streaming of project workload metrics, pushed every 15 seconds.
+	StreamProjectWorkloadMetrics(context.Context, *connect.Request[v1.StreamProjectWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error)
 }
 
 // NewMetricsServiceClient constructs a client for the organization.v1.MetricsService service. By
@@ -116,6 +131,24 @@ func NewMetricsServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(metricsServiceMethods.ByName("GetProjectWorkloadTimeSeries")),
 			connect.WithClientOptions(opts...),
 		),
+		streamOrgWorkloadMetrics: connect.NewClient[v1.StreamOrgWorkloadMetricsRequest, v1.StreamWorkloadMetricsResponse](
+			httpClient,
+			baseURL+MetricsServiceStreamOrgWorkloadMetricsProcedure,
+			connect.WithSchema(metricsServiceMethods.ByName("StreamOrgWorkloadMetrics")),
+			connect.WithClientOptions(opts...),
+		),
+		streamClusterWorkloadMetrics: connect.NewClient[v1.StreamClusterWorkloadMetricsRequest, v1.StreamWorkloadMetricsResponse](
+			httpClient,
+			baseURL+MetricsServiceStreamClusterWorkloadMetricsProcedure,
+			connect.WithSchema(metricsServiceMethods.ByName("StreamClusterWorkloadMetrics")),
+			connect.WithClientOptions(opts...),
+		),
+		streamProjectWorkloadMetrics: connect.NewClient[v1.StreamProjectWorkloadMetricsRequest, v1.StreamWorkloadMetricsResponse](
+			httpClient,
+			baseURL+MetricsServiceStreamProjectWorkloadMetricsProcedure,
+			connect.WithSchema(metricsServiceMethods.ByName("StreamProjectWorkloadMetrics")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -127,6 +160,9 @@ type metricsServiceClient struct {
 	getOrgWorkloadTimeSeries     *connect.Client[v1.GetOrgWorkloadTimeSeriesRequest, v1.GetWorkloadTimeSeriesResponse]
 	getProjectWorkloadMetrics    *connect.Client[v1.GetProjectWorkloadMetricsRequest, v1.GetProjectWorkloadMetricsResponse]
 	getProjectWorkloadTimeSeries *connect.Client[v1.GetProjectWorkloadTimeSeriesRequest, v1.GetWorkloadTimeSeriesResponse]
+	streamOrgWorkloadMetrics     *connect.Client[v1.StreamOrgWorkloadMetricsRequest, v1.StreamWorkloadMetricsResponse]
+	streamClusterWorkloadMetrics *connect.Client[v1.StreamClusterWorkloadMetricsRequest, v1.StreamWorkloadMetricsResponse]
+	streamProjectWorkloadMetrics *connect.Client[v1.StreamProjectWorkloadMetricsRequest, v1.StreamWorkloadMetricsResponse]
 }
 
 // GetClusterWorkloadMetrics calls organization.v1.MetricsService.GetClusterWorkloadMetrics.
@@ -159,6 +195,21 @@ func (c *metricsServiceClient) GetProjectWorkloadTimeSeries(ctx context.Context,
 	return c.getProjectWorkloadTimeSeries.CallUnary(ctx, req)
 }
 
+// StreamOrgWorkloadMetrics calls organization.v1.MetricsService.StreamOrgWorkloadMetrics.
+func (c *metricsServiceClient) StreamOrgWorkloadMetrics(ctx context.Context, req *connect.Request[v1.StreamOrgWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error) {
+	return c.streamOrgWorkloadMetrics.CallServerStream(ctx, req)
+}
+
+// StreamClusterWorkloadMetrics calls organization.v1.MetricsService.StreamClusterWorkloadMetrics.
+func (c *metricsServiceClient) StreamClusterWorkloadMetrics(ctx context.Context, req *connect.Request[v1.StreamClusterWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error) {
+	return c.streamClusterWorkloadMetrics.CallServerStream(ctx, req)
+}
+
+// StreamProjectWorkloadMetrics calls organization.v1.MetricsService.StreamProjectWorkloadMetrics.
+func (c *metricsServiceClient) StreamProjectWorkloadMetrics(ctx context.Context, req *connect.Request[v1.StreamProjectWorkloadMetricsRequest]) (*connect.ServerStreamForClient[v1.StreamWorkloadMetricsResponse], error) {
+	return c.streamProjectWorkloadMetrics.CallServerStream(ctx, req)
+}
+
 // MetricsServiceHandler is an implementation of the organization.v1.MetricsService service.
 type MetricsServiceHandler interface {
 	// Cluster-level workload metrics (CPU, memory, pods) for a specific cluster
@@ -173,6 +224,12 @@ type MetricsServiceHandler interface {
 	GetProjectWorkloadMetrics(context.Context, *connect.Request[v1.GetProjectWorkloadMetricsRequest]) (*connect.Response[v1.GetProjectWorkloadMetricsResponse], error)
 	// Project-level time-series workload metrics filtered to the project's namespaces
 	GetProjectWorkloadTimeSeries(context.Context, *connect.Request[v1.GetProjectWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error)
+	// Live streaming of org-wide workload metrics, pushed every 15 seconds.
+	StreamOrgWorkloadMetrics(context.Context, *connect.Request[v1.StreamOrgWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error
+	// Live streaming of cluster workload metrics, pushed every 15 seconds.
+	StreamClusterWorkloadMetrics(context.Context, *connect.Request[v1.StreamClusterWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error
+	// Live streaming of project workload metrics, pushed every 15 seconds.
+	StreamProjectWorkloadMetrics(context.Context, *connect.Request[v1.StreamProjectWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error
 }
 
 // NewMetricsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -218,6 +275,24 @@ func NewMetricsServiceHandler(svc MetricsServiceHandler, opts ...connect.Handler
 		connect.WithSchema(metricsServiceMethods.ByName("GetProjectWorkloadTimeSeries")),
 		connect.WithHandlerOptions(opts...),
 	)
+	metricsServiceStreamOrgWorkloadMetricsHandler := connect.NewServerStreamHandler(
+		MetricsServiceStreamOrgWorkloadMetricsProcedure,
+		svc.StreamOrgWorkloadMetrics,
+		connect.WithSchema(metricsServiceMethods.ByName("StreamOrgWorkloadMetrics")),
+		connect.WithHandlerOptions(opts...),
+	)
+	metricsServiceStreamClusterWorkloadMetricsHandler := connect.NewServerStreamHandler(
+		MetricsServiceStreamClusterWorkloadMetricsProcedure,
+		svc.StreamClusterWorkloadMetrics,
+		connect.WithSchema(metricsServiceMethods.ByName("StreamClusterWorkloadMetrics")),
+		connect.WithHandlerOptions(opts...),
+	)
+	metricsServiceStreamProjectWorkloadMetricsHandler := connect.NewServerStreamHandler(
+		MetricsServiceStreamProjectWorkloadMetricsProcedure,
+		svc.StreamProjectWorkloadMetrics,
+		connect.WithSchema(metricsServiceMethods.ByName("StreamProjectWorkloadMetrics")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/organization.v1.MetricsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case MetricsServiceGetClusterWorkloadMetricsProcedure:
@@ -232,6 +307,12 @@ func NewMetricsServiceHandler(svc MetricsServiceHandler, opts ...connect.Handler
 			metricsServiceGetProjectWorkloadMetricsHandler.ServeHTTP(w, r)
 		case MetricsServiceGetProjectWorkloadTimeSeriesProcedure:
 			metricsServiceGetProjectWorkloadTimeSeriesHandler.ServeHTTP(w, r)
+		case MetricsServiceStreamOrgWorkloadMetricsProcedure:
+			metricsServiceStreamOrgWorkloadMetricsHandler.ServeHTTP(w, r)
+		case MetricsServiceStreamClusterWorkloadMetricsProcedure:
+			metricsServiceStreamClusterWorkloadMetricsHandler.ServeHTTP(w, r)
+		case MetricsServiceStreamProjectWorkloadMetricsProcedure:
+			metricsServiceStreamProjectWorkloadMetricsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -263,4 +344,16 @@ func (UnimplementedMetricsServiceHandler) GetProjectWorkloadMetrics(context.Cont
 
 func (UnimplementedMetricsServiceHandler) GetProjectWorkloadTimeSeries(context.Context, *connect.Request[v1.GetProjectWorkloadTimeSeriesRequest]) (*connect.Response[v1.GetWorkloadTimeSeriesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.GetProjectWorkloadTimeSeries is not implemented"))
+}
+
+func (UnimplementedMetricsServiceHandler) StreamOrgWorkloadMetrics(context.Context, *connect.Request[v1.StreamOrgWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.StreamOrgWorkloadMetrics is not implemented"))
+}
+
+func (UnimplementedMetricsServiceHandler) StreamClusterWorkloadMetrics(context.Context, *connect.Request[v1.StreamClusterWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.StreamClusterWorkloadMetrics is not implemented"))
+}
+
+func (UnimplementedMetricsServiceHandler) StreamProjectWorkloadMetrics(context.Context, *connect.Request[v1.StreamProjectWorkloadMetricsRequest], *connect.ServerStream[v1.StreamWorkloadMetricsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.MetricsService.StreamProjectWorkloadMetrics is not implemented"))
 }
