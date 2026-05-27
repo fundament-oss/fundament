@@ -51,7 +51,7 @@
   <div class="shrink-0 border-b border-slate-200 bg-white">
     <div class="px-6">
       <app-dc-selector
-        [datacenters]="datacenters"
+        [datacenters]="mutableDcs()"
         [selectedId]="currentDC()"
         (dcSelected)="selectDC($event)"
       />
@@ -374,23 +374,58 @@
       dismiss-text="Close"
       (dismiss)="closeRackForm()"
     ></nldd-top-title-bar>
-    <nldd-simple-section>
+    <nldd-simple-section class="space-y-4">
+      @if (rackErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ rackErrorMessage() }}
+          </p>
+        </div>
+      }
       <nldd-form-field label="Rack name">
         <nldd-text-field
           #fRackName
           [attr.value]="editRack()?.name ?? ''"
           placeholder="AMS-01-R01"
+          [attr.invalid]="isFieldInvalid('name') ? '' : null"
+          error-message="error-rack-name"
+          (keydown.enter)="saveRack()"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-rack-name">{{
+          fieldError('name')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
-      <nldd-form-field label="Datacenter">
-        <select #fRackDcId>
-          @for (dc of datacenters; track dc.id) {
-            <option [value]="dc.id" [attr.selected]="editRack()?.dcId === dc.id ? true : null">
-              {{ dc.name }}
-            </option>
+      @if (!editRack()?.id) {
+        <nldd-form-field label="Row">
+          <nldd-dropdown>
+            <select
+              #fRackRowId
+              [attr.aria-invalid]="isFieldInvalid('row_id') ? 'true' : null"
+              (keydown.enter)="saveRack()"
+            >
+              @for (row of rowOptions(); track row.id) {
+                <option
+                  [value]="row.id"
+                  [attr.selected]="editRack()?.rowId === row.id ? true : null"
+                >
+                  {{ row.label }}
+                </option>
+              }
+            </select>
+          </nldd-dropdown>
+          @if (isFieldInvalid('row_id')) {
+            <nldd-form-field-error-text id="error-rack-row-id">{{
+              fieldError('row_id')
+            }}</nldd-form-field-error-text>
           }
-        </select>
-      </nldd-form-field>
+          @if (rowOptions().length === 0) {
+            <nldd-form-field-error-text id="error-no-rows"
+              >No rack rows in this datacenter. Create one on the Datacenters page
+              first.</nldd-form-field-error-text
+            >
+          }
+        </nldd-form-field>
+      }
       <nldd-form-field label="Unit count (U)">
         <nldd-number-field
           #fRackTotalU
@@ -398,7 +433,13 @@
           min="1"
           max="52"
           full-width
+          [attr.invalid]="isFieldInvalid('total_units') ? '' : null"
+          error-message="error-rack-total-u"
+          (keydown.enter)="saveRack()"
         ></nldd-number-field>
+        <nldd-form-field-error-text id="error-rack-total-u">{{
+          fieldError('total_units')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
     </nldd-simple-section>
     <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">

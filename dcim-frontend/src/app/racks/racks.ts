@@ -5,19 +5,39 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
   inject,
+  OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom, map } from 'rxjs';
 import RackApiService from './rack-api.service';
+import DatacenterApiService from '../datacenters/datacenter-api.service';
 import connectErrorMessage from '../../connect/error';
 import DcSelectorComponent from '../shared/dc-selector';
 import RackDiagramComponent from './rack-diagram/rack-diagram';
 import RackDiagramEditorComponent from './rack-diagram-editor/rack-diagram-editor';
-import { DeviceState, DeviceType, Rack, RackDevice, RACKS } from './rack.model';
-import { DATACENTER_INFO, MOCK_RACK_ROWS } from '../datacenters/datacenter.model';
+import { DeviceState, DeviceType, Rack, RackDevice } from './rack.model';
+import { DatacenterInfo, RackRow, Room } from '../datacenters/datacenter.model';
+import { ViolationsSchema } from '../../generated/buf/validate/validate_pb';
+
+interface RackListItem extends Rack {
+  usedU: number;
+  freeU: number;
+  totalPowerW: number;
+  deviceCount: number;
+  rowId: string;
+}
+
+interface RowOption {
+  id: string;
+  label: string;
+}
+
+type InvalidFields = Record<string, string>;
 
 // ── Notes & History types ──────────────────────────────────────────────────────
 
@@ -179,8 +199,10 @@ interface NativeElementRef {
   imports: [DcSelectorComponent, RackDiagramComponent, RackDiagramEditorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export default class RacksComponent {
+export default class RacksComponent implements OnInit {
   private readonly rackApi = inject(RackApiService);
+
+  private readonly dcApi = inject(DatacenterApiService);
 
   private readonly route = inject(ActivatedRoute);
 
@@ -196,11 +218,23 @@ export default class RacksComponent {
 
   activeModal = signal<'notes' | 'history' | null>(null);
 
-  // ── Mutable rack list ──────────────────────────────────────────────────────
-  readonly mutableRacks = signal([...RACKS]);
+  // ── Mutable rack list (per selected DC) ────────────────────────────────────
+  readonly mutableRacks = signal<RackListItem[]>([]);
+
+  // ── DC list (loaded from the API) ──────────────────────────────────────────
+  readonly mutableDcs = signal<DatacenterInfo[]>([]);
+
+  readonly selectedDcId = signal('');
+
+  // ── Row options for the create-rack form (rooms + rows in the selected DC) ─
+  readonly rowOptions = signal<RowOption[]>([]);
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
-  readonly editRack = signal<Partial<Rack> | null>(null);
+  readonly editRack = signal<(Partial<Rack> & { rowId?: string }) | null>(null);
+
+  readonly rackErrorMessage = signal<string | null>(null);
+
+  readonly invalidFields = signal<InvalidFields>({});
 
   readonly deleteRack = signal<Rack | null>(null);
 
@@ -215,17 +249,13 @@ export default class RacksComponent {
 
   readonly addDeviceNameInput = signal('');
 
-  readonly datacenters = DATACENTER_INFO;
-
-  readonly rackRows = MOCK_RACK_ROWS;
-
   private readonly rackSheetEl = viewChild<NativeElementRef>('rackSheet');
 
   private readonly rackModalEl = viewChild<NativeElementRef>('rackModal');
 
   private readonly fRackName = viewChild<NativeElementRef>('fRackName');
 
-  private readonly fRackDcId = viewChild<NativeElementRef>('fRackDcId');
+  private readonly fRackRowId = viewChild<NativeElementRef>('fRackRowId');
 
   private readonly fRackTotalU = viewChild<NativeElementRef>('fRackTotalU');
 
@@ -241,9 +271,17 @@ export default class RacksComponent {
 
   private readonly fDeviceState = viewChild<NativeElementRef>('fDeviceState');
 
-  readonly currentDC = computed(() => this.currentRack()?.dcId ?? 'ams-01');
+  readonly currentDC = computed(() => this.selectedDcId());
 
   constructor() {
+    // When the selected DC changes, fetch its racks and row options.
+    effect(() => {
+      const dcId = this.selectedDcId();
+      if (!dcId) return;
+      this.reloadRacks(dcId);
+      this.reloadRowOptions(dcId);
+    });
+
     effect(() => {
       if (!this.currentRackId()) {
         const first = this.mutableRacks()[0];
@@ -278,12 +316,69 @@ export default class RacksComponent {
     });
   }
 
+  ngOnInit(): void {
+    firstValueFrom(this.dcApi.listSites())
+      .then((res) => {
+        const dcs = res.sites.map((s) => DatacenterApiService.mapSite(s));
+        this.mutableDcs.set(dcs);
+        if (!this.selectedDcId() && dcs.length > 0) {
+          this.selectedDcId.set(dcs[0].id);
+        }
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private reloadRacks(dcId: string): void {
+    firstValueFrom(this.rackApi.listRacksBySite(dcId))
+      .then((res) => {
+        const racks: RackListItem[] = res.racks.flatMap((summary): RackListItem[] => {
+          const rack = summary.rack;
+          if (!rack) return [];
+          return [
+            {
+              id: rack.id,
+              name: rack.name,
+              dcId,
+              rowId: rack.rowId,
+              totalU: rack.totalUnits,
+              devices: [] as RackDevice[],
+              usedU: summary.usedUnits,
+              freeU: summary.freeUnits,
+              totalPowerW: summary.powerDrawW,
+              deviceCount: summary.deviceCount,
+            },
+          ];
+        });
+        untracked(() => this.mutableRacks.set(racks));
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private async reloadRowOptions(dcId: string): Promise<void> {
+    try {
+      const [roomsRes, rowsRes] = await Promise.all([
+        firstValueFrom(this.dcApi.listRooms(dcId)),
+        firstValueFrom(this.dcApi.listRackRowsBySite(dcId)),
+      ]);
+      const rooms = roomsRes.rooms.map((r) => DatacenterApiService.mapRoom(r));
+      const rows = rowsRes.rackRows.map((r) => DatacenterApiService.mapRackRow(r));
+      const roomName = new Map<string, string>(rooms.map((r: Room) => [r.id, r.name]));
+      const options = rows.map((r: RackRow) => ({
+        id: r.id,
+        label: `${roomName.get(r.roomId) ?? '—'} · ${r.name}`,
+      }));
+      this.rowOptions.set(options);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+    }
+  }
+
   readonly filteredRacks = computed(() => {
-    const dc = this.currentDC();
     const q = this.searchQuery().toLowerCase();
-    return this.mutableRacks().filter(
-      (r) => r.dcId === dc && (!q || r.name.toLowerCase().includes(q)),
-    );
+    return this.mutableRacks().filter((r) => !q || r.name.toLowerCase().includes(q));
   });
 
   readonly currentRack = computed(() => {
@@ -294,14 +389,12 @@ export default class RacksComponent {
   readonly rackStats = computed(() => {
     const rack = this.currentRack();
     if (!rack) return { usedU: 0, freeU: 0, totalU: 42, totalPowerW: 0, deviceCount: 0 };
-    const usedU = rack.devices.reduce((sum, d) => sum + d.uSize, 0);
-    const totalPowerW = rack.devices.reduce((sum, d) => sum + (d.ipmi?.averageW ?? 0), 0);
     return {
-      usedU,
-      freeU: rack.totalU - usedU,
+      usedU: rack.usedU,
+      freeU: rack.freeU,
       totalU: rack.totalU,
-      totalPowerW,
-      deviceCount: rack.devices.length,
+      totalPowerW: rack.totalPowerW,
+      deviceCount: rack.deviceCount,
     };
   });
 
@@ -320,50 +413,91 @@ export default class RacksComponent {
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
   openCreateRack(): void {
-    this.editRack.set({ id: '', name: '', dcId: this.currentDC(), totalU: 42, devices: [] });
+    this.clearRackErrors();
+    this.editRack.set({
+      id: '',
+      name: '',
+      dcId: this.currentDC(),
+      rowId: this.rowOptions()[0]?.id ?? '',
+      totalU: 42,
+      devices: [],
+    });
   }
 
-  openEditRack(rack: Rack): void {
+  openEditRack(rack: RackListItem): void {
+    this.clearRackErrors();
     this.editRack.set({ ...rack });
   }
 
   closeRackForm(): void {
+    this.clearRackErrors();
     this.editRack.set(null);
   }
 
   saveRack(): void {
     const form = this.editRack();
     if (!form) return;
+    this.clearRackErrors();
     const name = (this.fRackName()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const dcId = (this.fRackDcId()?.nativeElement as HTMLInputElement)?.value ?? '';
+    const rowId = (this.fRackRowId()?.nativeElement as HTMLSelectElement)?.value ?? '';
     const totalU =
       parseInt((this.fRackTotalU()?.nativeElement as HTMLInputElement)?.value ?? '42', 10) || 42;
-    const updated: Rack = {
-      id: form.id || `rack-${Date.now()}`,
-      name,
-      dcId,
-      totalU,
-      devices: form.devices ?? [],
-    };
     if (form.id) {
       firstValueFrom(this.rackApi.updateRack(form.id, name, totalU))
         .then(() => {
-          this.mutableRacks.update((list) => list.map((r) => (r.id === form.id ? updated : r)));
+          this.reloadRacks(this.selectedDcId());
           this.editRack.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRackError(err));
     } else {
-      firstValueFrom(this.rackApi.createRack(name, totalU, ''))
+      firstValueFrom(this.rackApi.createRack(name, totalU, rowId))
         .then((res) => {
-          const created = { ...updated, id: res.rackId ?? updated.id };
-          this.mutableRacks.update((list) => [...list, created]);
-          this.router.navigate(['/racks', created.id]);
+          this.reloadRacks(this.selectedDcId());
+          if (res.rackId) {
+            this.router.navigate(['/racks', res.rackId]);
+          }
           this.editRack.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRackError(err));
     }
+  }
+
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearRackErrors(): void {
+    this.invalidFields.set({});
+    this.rackErrorMessage.set(null);
+  }
+
+  private handleRackError(err: unknown): void {
+    const ce = ConnectError.from(err);
+
+    if (ce.code === Code.InvalidArgument) {
+      const fieldErrors: InvalidFields = {};
+      const unmappedMessages: string[] = [];
+      ce.findDetails(ViolationsSchema)
+        .flatMap((violations) => violations.violations)
+        .forEach((v) => {
+          const field = v.field?.elements.map((e) => e.fieldName).join('.') ?? '';
+          if (field) fieldErrors[field] = v.message;
+          else unmappedMessages.push(v.message);
+        });
+      if (Object.keys(fieldErrors).length > 0) {
+        this.invalidFields.set(fieldErrors);
+        if (unmappedMessages.length > 0) {
+          this.rackErrorMessage.set(unmappedMessages.join('\n'));
+        }
+        return;
+      }
+    }
+
+    this.rackErrorMessage.set(connectErrorMessage(err));
   }
 
   openDeleteRack(rack: Rack): void {
@@ -379,13 +513,8 @@ export default class RacksComponent {
     if (!target) return;
     firstValueFrom(this.rackApi.deleteRack(target.id))
       .then(() => {
-        this.mutableRacks.update((list) => list.filter((r) => r.id !== target.id));
-        const remaining = this.mutableRacks().filter((r) => r.dcId === this.currentDC());
-        if (remaining.length > 0) {
-          this.router.navigate(['/racks', remaining[0].id]);
-        } else {
-          this.router.navigate(['/racks']);
-        }
+        this.router.navigate(['/racks']);
+        this.reloadRacks(this.selectedDcId());
         this.deleteRack.set(null);
       })
       // eslint-disable-next-line no-console
@@ -477,12 +606,8 @@ export default class RacksComponent {
   selectDC(dc: string): void {
     this.searchQuery.set('');
     this.activeModal.set(null);
-    const first = RACKS.find((r) => r.dcId === dc);
-    if (first) {
-      this.router.navigate(['/racks', first.id]);
-    } else {
-      this.router.navigate(['/racks']);
-    }
+    this.selectedDcId.set(dc);
+    this.router.navigate(['/racks']);
   }
 
   selectRack(id: string): void {
@@ -502,7 +627,7 @@ export default class RacksComponent {
     this.activeModal.set(null);
   }
 
-  readonly rackUsedU = (rack: Rack): number => rack.devices.reduce((sum, d) => sum + d.uSize, 0);
+  readonly rackUsedU = (rack: RackListItem): number => rack.usedU;
 
   readonly formatPowerKw = (watts: number): string => (watts / 1000).toFixed(1);
 
