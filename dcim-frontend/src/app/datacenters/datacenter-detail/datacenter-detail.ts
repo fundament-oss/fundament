@@ -162,34 +162,22 @@ export default class DatacenterDetailComponent implements OnInit {
   }
 
   private loadRoomsAndRacks(siteId: string): void {
-    firstValueFrom(this.dcApi.listRooms(siteId))
-      .then((res) => {
-        const rooms = res.rooms.map((r) => DatacenterApiService.mapRoom(r));
-        this.mutableRooms.set(rooms);
-        return Promise.all(
-          rooms.map((room) =>
-            firstValueFrom(this.dcApi.listRackRows(room.id)).then((rr) =>
-              rr.rackRows.map((row) => DatacenterApiService.mapRackRow(row)),
-            ),
-          ),
+    Promise.all([
+      firstValueFrom(this.dcApi.listRooms(siteId)),
+      firstValueFrom(this.dcApi.listRackRowsBySite(siteId)),
+      firstValueFrom(this.dcApi.listRacksBySite(siteId)),
+    ])
+      .then(([roomsRes, rowsRes, racksRes]) => {
+        this.mutableRooms.set(roomsRes.rooms.map((r) => DatacenterApiService.mapRoom(r)));
+        this.mutableRackRows.set(
+          rowsRes.rackRows.map((row) => DatacenterApiService.mapRackRow(row)),
         );
-      })
-      .then((allRows) => {
-        const rows = allRows.flat();
-        this.mutableRackRows.set(rows);
-        return Promise.all(
-          rows.map((row) =>
-            firstValueFrom(this.dcApi.listRacks(row.id)).then((rk) =>
-              rk.racks
-                .map((summary) => summary.rack)
-                .filter((rack): rack is NonNullable<typeof rack> => rack != null)
-                .map((rack) => DatacenterApiService.mapRack(rack)),
-            ),
-          ),
+        this.dcRacks.set(
+          racksRes.racks
+            .map((summary) => summary.rack)
+            .filter((rack): rack is NonNullable<typeof rack> => rack != null)
+            .map((rack) => DatacenterApiService.mapRack(rack)),
         );
-      })
-      .then((allRacks) => {
-        this.dcRacks.set(allRacks.flat());
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));

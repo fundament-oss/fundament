@@ -135,6 +135,10 @@ export default class DatacenterApiService {
     return this.rackRowClient.listRackRows({ roomId });
   }
 
+  listRackRowsBySite(siteId: string) {
+    return this.rackRowClient.listRackRows({ siteId });
+  }
+
   createRackRow(roomId: string, name: string, positionX: number, positionY: number) {
     return this.rackRowClient.createRackRow({ roomId, name, positionX, positionY });
   }
@@ -149,6 +153,10 @@ export default class DatacenterApiService {
 
   listRacks(rowId: string) {
     return this.rackClient.listRacks({ rowId });
+  }
+
+  listRacksBySite(siteId: string) {
+    return this.rackClient.listRacks({ siteId });
   }
 
   createRack(rowId: string, name: string, totalUnits: number) {

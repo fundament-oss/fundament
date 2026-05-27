@@ -92,7 +92,7 @@ export default class CatalogApiService {
       PSU: ProtoCategory.POWER_SUPPLY,
       CPU: ProtoCategory.CPU,
       GPU: ProtoCategory.GPU,
-      Transceiver: ProtoCategory.SFP,
+      Transceiver: ProtoCategory.TRANSCEIVER,
       Other: ProtoCategory.OTHER,
     };
     return map[cat] ?? ProtoCategory.UNSPECIFIED;

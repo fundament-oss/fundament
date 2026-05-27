@@ -44,9 +44,11 @@ FROM dcim.placements
 WHERE parent_placement_id = $1 AND deleted IS NULL
 ORDER BY created;
 
--- name: PlacementResolveRackByAsset :one
+-- name: PlacementResolveLocationByAsset :one
 -- Walks parent_placement_id up from the asset's placement so nested
--- sub-components resolve the rack of their top-level host.
+-- sub-components resolve the rack of their top-level host, then joins
+-- the rack hierarchy (rack -> rack_row -> room -> site) to return
+-- human-readable names alongside the placement details.
 WITH RECURSIVE location_chain AS (
     SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id
     FROM dcim.placements
@@ -57,6 +59,18 @@ WITH RECURSIVE location_chain AS (
     JOIN location_chain ON dcim.placements.id = location_chain.parent_placement_id
     WHERE dcim.placements.deleted IS NULL
 )
-SELECT location_chain.rack_id, location_chain.start_unit, location_chain.slot_type
+SELECT
+    location_chain.rack_id,
+    location_chain.start_unit,
+    location_chain.slot_type,
+    dcim.racks.name     AS rack_name,
+    dcim.rack_rows.name AS rack_row_name,
+    dcim.rooms.name     AS room_name,
+    dcim.sites.name     AS site_name
 FROM location_chain
-WHERE location_chain.rack_id IS NOT NULL;
+JOIN dcim.racks     ON dcim.racks.id     = location_chain.rack_id    AND dcim.racks.deleted     IS NULL
+JOIN dcim.rack_rows ON dcim.rack_rows.id = dcim.racks.rack_row_id    AND dcim.rack_rows.deleted IS NULL
+JOIN dcim.rooms     ON dcim.rooms.id     = dcim.rack_rows.room_id    AND dcim.rooms.deleted     IS NULL
+JOIN dcim.sites     ON dcim.sites.id     = dcim.rooms.site_id        AND dcim.sites.deleted     IS NULL
+WHERE location_chain.rack_id IS NOT NULL
+LIMIT 1;

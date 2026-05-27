@@ -377,23 +377,20 @@ export default class AssetDetailComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  /** Creates, updates or removes the asset's rack placement to match the form. */
   private reconcilePlacement(assetId: string): Promise<unknown> {
     const rackId = (this.fAssetRack()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const existing = this.editPlacement();
-    if (!rackId) {
-      return existing
-        ? firstValueFrom(this.placementApi.deletePlacement(existing.id))
-        : Promise.resolve();
-    }
     const unit =
       parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
     const slotType =
       (Number((this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value) as RackSlotType) ||
       RackSlotType.UNIT;
-    return existing
-      ? firstValueFrom(this.placementApi.updatePlacement(existing.id, rackId, unit, slotType))
-      : firstValueFrom(this.placementApi.createPlacement(assetId, rackId, unit, slotType));
+    return this.placementApi.reconcilePlacement({
+      assetId,
+      rackId,
+      unit,
+      slotType,
+      existingPlacementId: this.editPlacement()?.id ?? null,
+    });
   }
 
   readonly extraDetail = computed<AssetExtraDetail | undefined>(

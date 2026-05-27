@@ -14,7 +14,7 @@ import (
 )
 
 // GetAssetLocation resolves an asset's physical location by walking its
-// placement up to the rack-bearing host, then joining the rack hierarchy
+// placement up to the rack-bearing host and joining the rack hierarchy
 // (rack -> rack_row -> room -> site) to human-readable names.
 func (s *Server) GetAssetLocation(
 	ctx context.Context,
@@ -22,7 +22,7 @@ func (s *Server) GetAssetLocation(
 ) (*connect.Response[dcimv1.GetAssetLocationResponse], error) {
 	assetID := uuid.MustParse(req.Msg.GetAssetId())
 
-	rackRef, err := s.queries.PlacementResolveRackByAsset(ctx, db.PlacementResolveRackByAssetParams{
+	loc, err := s.queries.PlacementResolveLocationByAsset(ctx, db.PlacementResolveLocationByAssetParams{
 		AssetID: assetID,
 	})
 	if err != nil {
@@ -30,38 +30,18 @@ func (s *Server) GetAssetLocation(
 			// Asset has no rack-based placement; return an unset location.
 			return connect.NewResponse(dcimv1.GetAssetLocationResponse_builder{}.Build()), nil
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve asset rack: %w", err))
-	}
-
-	rack, err := s.queries.RackGetByID(ctx, db.RackGetByIDParams{ID: uuid.UUID(rackRef.RackID.Bytes)})
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get rack: %w", err))
-	}
-
-	rackRow, err := s.queries.RackRowGetByID(ctx, db.RackRowGetByIDParams{ID: rack.RackRowID})
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get rack row: %w", err))
-	}
-
-	room, err := s.queries.RoomGetByID(ctx, db.RoomGetByIDParams{ID: rackRow.RoomID})
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get room: %w", err))
-	}
-
-	site, err := s.queries.SiteGetByID(ctx, db.SiteGetByIDParams{ID: room.SiteID})
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get site: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve asset location: %w", err))
 	}
 
 	return connect.NewResponse(dcimv1.GetAssetLocationResponse_builder{
 		Location: dcimv1.AssetLocation_builder{
-			SiteName:      site.Name,
-			RoomName:      room.Name,
-			RackRowName:   rackRow.Name,
-			RackName:      rack.Name,
-			RackUnitStart: rackRef.StartUnit.Int32,
-			RackId:        uuid.UUID(rackRef.RackID.Bytes).String(),
-			RackSlotType:  rackSlotTypeToProto(rackRef.SlotType.String),
+			SiteName:      loc.SiteName,
+			RoomName:      loc.RoomName,
+			RackRowName:   loc.RackRowName,
+			RackName:      loc.RackName,
+			RackUnitStart: loc.StartUnit.Int32,
+			RackId:        uuid.UUID(loc.RackID.Bytes).String(),
+			RackSlotType:  rackSlotTypeToProto(loc.SlotType.String),
 		}.Build(),
 	}.Build()), nil
 }

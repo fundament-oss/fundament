@@ -84,4 +84,27 @@ export default class PlacementApiService {
   deletePlacement(id: string) {
     return this.placementClient.deletePlacement({ id });
   }
+
+  /**
+   * Creates, updates, or removes the asset's placement so it matches the
+   * given rack/unit/slot. Pass `existingPlacementId` when the asset already
+   * has a placement; pass an empty `rackId` to clear the placement.
+   */
+  reconcilePlacement(input: {
+    assetId: string;
+    rackId: string;
+    unit: number;
+    slotType: RackSlotType;
+    existingPlacementId: string | null;
+  }): Promise<unknown> {
+    const { assetId, rackId, unit, slotType, existingPlacementId } = input;
+    if (!rackId) {
+      return existingPlacementId
+        ? firstValueFrom(this.deletePlacement(existingPlacementId))
+        : Promise.resolve();
+    }
+    return existingPlacementId
+      ? firstValueFrom(this.updatePlacement(existingPlacementId, rackId, unit, slotType))
+      : firstValueFrom(this.createPlacement(assetId, rackId, unit, slotType));
+  }
 }

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { DATACENTER_INFO, DatacenterInfo, DatacenterStatus } from '../datacenters/datacenter.model';
+import { DatacenterInfo, DatacenterStatus } from '../datacenters/datacenter.model';
 
 @Component({
   selector: 'app-dc-selector',
@@ -33,8 +33,7 @@ export default class DcSelectorComponent {
 
   readonly dcSelected = output<string>();
 
-  /** Datacenters to list; defaults to mock data when no list is bound. */
-  readonly datacenters = input<DatacenterInfo[]>(DATACENTER_INFO);
+  readonly datacenters = input.required<DatacenterInfo[]>();
 
   readonly statusDotClass = (status: DatacenterStatus): string => {
     switch (status) {

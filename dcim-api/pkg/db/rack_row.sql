@@ -3,6 +3,10 @@ SELECT id, room_id, name, position_x, position_y, created
 FROM dcim.rack_rows
 WHERE deleted IS NULL
   AND (sqlc.narg('room_id')::uuid IS NULL OR room_id = sqlc.narg('room_id')::uuid)
+  AND (sqlc.narg('site_id')::uuid IS NULL OR room_id IN (
+        SELECT id FROM dcim.rooms
+        WHERE site_id = sqlc.narg('site_id')::uuid AND deleted IS NULL
+      ))
 ORDER BY created;
 
 -- name: RackRowGetByID :one

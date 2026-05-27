@@ -265,7 +265,7 @@ func (q *Queries) PlacementListByRack(ctx context.Context, arg PlacementListByRa
 	return items, nil
 }
 
-const placementResolveRackByAsset = `-- name: PlacementResolveRackByAsset :one
+const placementResolveLocationByAsset = `-- name: PlacementResolveLocationByAsset :one
 WITH RECURSIVE location_chain AS (
     SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id
     FROM dcim.placements
@@ -276,27 +276,53 @@ WITH RECURSIVE location_chain AS (
     JOIN location_chain ON dcim.placements.id = location_chain.parent_placement_id
     WHERE dcim.placements.deleted IS NULL
 )
-SELECT location_chain.rack_id, location_chain.start_unit, location_chain.slot_type
+SELECT
+    location_chain.rack_id,
+    location_chain.start_unit,
+    location_chain.slot_type,
+    dcim.racks.name     AS rack_name,
+    dcim.rack_rows.name AS rack_row_name,
+    dcim.rooms.name     AS room_name,
+    dcim.sites.name     AS site_name
 FROM location_chain
+JOIN dcim.racks     ON dcim.racks.id     = location_chain.rack_id    AND dcim.racks.deleted     IS NULL
+JOIN dcim.rack_rows ON dcim.rack_rows.id = dcim.racks.rack_row_id    AND dcim.rack_rows.deleted IS NULL
+JOIN dcim.rooms     ON dcim.rooms.id     = dcim.rack_rows.room_id    AND dcim.rooms.deleted     IS NULL
+JOIN dcim.sites     ON dcim.sites.id     = dcim.rooms.site_id        AND dcim.sites.deleted     IS NULL
 WHERE location_chain.rack_id IS NOT NULL
+LIMIT 1
 `
 
-type PlacementResolveRackByAssetParams struct {
+type PlacementResolveLocationByAssetParams struct {
 	AssetID uuid.UUID
 }
 
-type PlacementResolveRackByAssetRow struct {
-	RackID    pgtype.UUID
-	StartUnit pgtype.Int4
-	SlotType  pgtype.Text
+type PlacementResolveLocationByAssetRow struct {
+	RackID      pgtype.UUID
+	StartUnit   pgtype.Int4
+	SlotType    pgtype.Text
+	RackName    string
+	RackRowName string
+	RoomName    string
+	SiteName    string
 }
 
 // Walks parent_placement_id up from the asset's placement so nested
-// sub-components resolve the rack of their top-level host.
-func (q *Queries) PlacementResolveRackByAsset(ctx context.Context, arg PlacementResolveRackByAssetParams) (PlacementResolveRackByAssetRow, error) {
-	row := q.db.QueryRow(ctx, placementResolveRackByAsset, arg.AssetID)
-	var i PlacementResolveRackByAssetRow
-	err := row.Scan(&i.RackID, &i.StartUnit, &i.SlotType)
+// sub-components resolve the rack of their top-level host, then joins
+// the rack hierarchy (rack -> rack_row -> room -> site) to return
+// human-readable names alongside the placement details.
+func (q *Queries) PlacementResolveLocationByAsset(ctx context.Context, arg PlacementResolveLocationByAssetParams) (PlacementResolveLocationByAssetRow, error) {
+	row := q.db.QueryRow(ctx, placementResolveLocationByAsset, arg.AssetID)
+	var i PlacementResolveLocationByAssetRow
+	err := row.Scan(
+		&i.RackID,
+		&i.StartUnit,
+		&i.SlotType,
+		&i.RackName,
+		&i.RackRowName,
+		&i.RoomName,
+		&i.SiteName,
+	)
 	return i, err
 }
 
