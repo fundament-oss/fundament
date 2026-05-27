@@ -226,6 +226,7 @@ func (b0 RackRow_builder) Build() *RackRow {
 type ListRackRowsRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_RoomId      *string                `protobuf:"bytes,10,opt,name=room_id,json=roomId"`
+	xxx_hidden_SiteId      *string                `protobuf:"bytes,20,opt,name=site_id,json=siteId"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -267,9 +268,24 @@ func (x *ListRackRowsRequest) GetRoomId() string {
 	return ""
 }
 
+func (x *ListRackRowsRequest) GetSiteId() string {
+	if x != nil {
+		if x.xxx_hidden_SiteId != nil {
+			return *x.xxx_hidden_SiteId
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *ListRackRowsRequest) SetRoomId(v string) {
 	x.xxx_hidden_RoomId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+}
+
+func (x *ListRackRowsRequest) SetSiteId(v string) {
+	x.xxx_hidden_SiteId = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
 }
 
 func (x *ListRackRowsRequest) HasRoomId() bool {
@@ -279,15 +295,28 @@ func (x *ListRackRowsRequest) HasRoomId() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
+func (x *ListRackRowsRequest) HasSiteId() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
 func (x *ListRackRowsRequest) ClearRoomId() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_RoomId = nil
+}
+
+func (x *ListRackRowsRequest) ClearSiteId() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_SiteId = nil
 }
 
 type ListRackRowsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	RoomId *string
+	SiteId *string
 }
 
 func (b0 ListRackRowsRequest_builder) Build() *ListRackRowsRequest {
@@ -295,8 +324,12 @@ func (b0 ListRackRowsRequest_builder) Build() *ListRackRowsRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.RoomId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
 		x.xxx_hidden_RoomId = b.RoomId
+	}
+	if b.SiteId != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_SiteId = b.SiteId
 	}
 	return m0
 }
@@ -899,10 +932,11 @@ const file_v1_rack_row_proto_rawDesc = "" +
 	"\n" +
 	"position_y\x182 \x01(\x01B\x05\xaa\x01\x02\b\x01R\tpositionY\x124\n" +
 	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"5\n" +
+	"\adeleted\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"U\n" +
 	"\x13ListRackRowsRequest\x12\x1e\n" +
 	"\aroom_id\x18\n" +
-	" \x01(\tB\x05\xaa\x01\x02\b\x01R\x06roomId\"E\n" +
+	" \x01(\tB\x05\xaa\x01\x02\b\x01R\x06roomId\x12\x1e\n" +
+	"\asite_id\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\x06siteId\"E\n" +
 	"\x14ListRackRowsResponse\x12-\n" +
 	"\track_rows\x18\n" +
 	" \x03(\v2\x10.dcim.v1.RackRowR\brackRows\"-\n" +

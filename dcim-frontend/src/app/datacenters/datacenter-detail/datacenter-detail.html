@@ -50,18 +50,6 @@
               <dd class="text-xs font-medium text-slate-800">Tier {{ dc.tier }}</dd>
             </div>
             <div class="flex items-center justify-between px-5 py-2.5">
-              <dt class="text-xs text-slate-500">PUE</dt>
-              <dd class="text-xs font-medium text-slate-800">{{ dc.pue }}</dd>
-            </div>
-            <div class="flex items-center justify-between px-5 py-2.5">
-              <dt class="text-xs text-slate-500">Power</dt>
-              <dd class="text-xs font-medium text-slate-800">{{ dc.powerCapacityKw }} kW</dd>
-            </div>
-            <div class="flex items-center justify-between px-5 py-2.5">
-              <dt class="text-xs text-slate-500">Cooling</dt>
-              <dd class="text-xs font-medium text-slate-800">{{ dc.coolingCapacityKw }} kW</dd>
-            </div>
-            <div class="flex items-center justify-between px-5 py-2.5">
               <dt class="text-xs text-slate-500">Floor</dt>
               <dd class="text-xs font-medium text-slate-800">{{ dc.floorSqm }} m²</dd>
             </div>
@@ -175,65 +163,85 @@
               </div>
             </div>
 
-            <!-- Rack rows table -->
+            <!-- Rack rows -->
             @if (rackRowsForRoom(room.id).length === 0) {
               <p class="px-5 py-4 text-xs text-slate-400 italic">No rack rows in this room.</p>
             } @else {
-              <table class="w-full text-sm" role="grid">
-                <thead>
-                  <tr class="border-b border-slate-100">
-                    <th
-                      class="px-5 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
-                    >
-                      Name
-                    </th>
-                    <th
-                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
-                    >
-                      Position X
-                    </th>
-                    <th
-                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
-                    >
-                      Position Y
-                    </th>
-                    <th class="px-3 py-2 w-20"></th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                  @for (rr of rackRowsForRoom(room.id); track rr.id) {
-                    <tr class="hover:bg-slate-50 transition-colors">
-                      <td class="px-5 py-2.5 font-medium text-slate-800">{{ rr.name }}</td>
-                      <td class="px-3 py-2.5 text-slate-600 tabular-nums">{{ rr.positionX }}</td>
-                      <td class="px-3 py-2.5 text-slate-600 tabular-nums">{{ rr.positionY }}</td>
-                      <td class="px-3 py-2.5">
-                        <div class="flex items-center gap-1 justify-end">
-                          <nldd-icon-button
-                            icon="pencil-on-square"
-                            variant="neutral-transparent"
-                            size="xs"
-                            text="Edit rack row"
-                            (click)="openEditRackRow(rr)"
-                          ></nldd-icon-button>
-                          <nldd-icon-button
-                            icon="trash"
-                            variant="neutral-transparent"
-                            size="xs"
-                            text="Delete rack row"
-                            (click)="openDeleteRackRow(rr)"
-                          ></nldd-icon-button>
-                        </div>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+              <ul class="divide-y divide-slate-100">
+                @for (rr of rackRowsForRoom(room.id); track rr.id) {
+                  <li class="px-5 py-3">
+                    <div class="flex items-center gap-2">
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-slate-800">{{ rr.name }}</p>
+                        <p class="text-xs text-slate-400">
+                          Position {{ rr.positionX }}, {{ rr.positionY }}
+                        </p>
+                      </div>
+                      <nldd-button
+                        variant="secondary"
+                        text="Add Rack"
+                        start-icon="plus-small"
+                        size="xs"
+                        (click)="openCreateRack(rr.id)"
+                      ></nldd-button>
+                      <nldd-icon-button
+                        icon="pencil-on-square"
+                        variant="neutral-transparent"
+                        size="xs"
+                        text="Edit rack row"
+                        (click)="openEditRackRow(rr)"
+                      ></nldd-icon-button>
+                      <nldd-icon-button
+                        icon="trash"
+                        variant="neutral-transparent"
+                        size="xs"
+                        text="Delete rack row"
+                        (click)="openDeleteRackRow(rr)"
+                      ></nldd-icon-button>
+                    </div>
+
+                    @if (racksForRow(rr.id).length === 0) {
+                      <p class="mt-1.5 text-xs text-slate-400 italic">No racks in this row.</p>
+                    } @else {
+                      <ul class="mt-2 flex flex-col gap-1">
+                        @for (rack of racksForRow(rr.id); track rack.id) {
+                          <li class="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5">
+                            <nldd-icon
+                              name="cylinder-split"
+                              style="width: 14px; height: 14px; color: #94a3b8"
+                              aria-hidden="true"
+                            ></nldd-icon>
+                            <span class="text-sm text-slate-700">{{ rack.name }}</span>
+                            <span class="text-xs text-slate-400">{{ rack.totalU }}U</span>
+                            <div class="ml-auto flex items-center gap-1">
+                              <nldd-icon-button
+                                icon="pencil-on-square"
+                                variant="neutral-transparent"
+                                size="xs"
+                                text="Edit rack"
+                                (click)="openEditRack(rack)"
+                              ></nldd-icon-button>
+                              <nldd-icon-button
+                                icon="trash"
+                                variant="neutral-transparent"
+                                size="xs"
+                                text="Delete rack"
+                                (click)="openDeleteRack(rack)"
+                              ></nldd-icon-button>
+                            </div>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </li>
+                }
+              </ul>
             }
           </section>
         }
       </div>
     </div>
-  } @else {
+  } @else if (dcLoaded()) {
     <div class="flex flex-col items-center justify-center py-20 text-slate-400">
       <p class="text-sm">Datacenter not found.</p>
       <a routerLink="/datacenters" class="mt-2 text-xs text-accent-700 hover:underline"
@@ -369,5 +377,65 @@
     variant="secondary"
     text="Cancel"
     (click)="cancelDeleteRackRow()"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════
+     RACK EDIT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #rackSheet accessible-label="Rack details" placement="right" width="400px">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="editRack()?.id ? 'Edit rack' : 'Add rack'"
+      dismiss-text="Close"
+      (dismiss)="closeRackForm()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-form-field label="Rack name">
+        <nldd-text-field
+          #fRackName
+          [attr.value]="editRack()?.name ?? ''"
+          placeholder="Rack 01"
+        ></nldd-text-field>
+      </nldd-form-field>
+      <nldd-form-field label="Height (U)">
+        <nldd-number-field
+          #fRackTotalU
+          [attr.value]="editRack()?.totalU ?? 42"
+          min="1"
+          max="60"
+          full-width
+        ></nldd-number-field>
+      </nldd-form-field>
+    </nldd-simple-section>
+    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+      <nldd-button variant="secondary" text="Cancel" (click)="closeRackForm()"></nldd-button>
+      <nldd-button variant="primary" text="Save" (click)="saveRack()"></nldd-button>
+    </div>
+  </nldd-page>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     RACK DELETE MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #rackModal
+  (close)="cancelDeleteRack()"
+  [attr.text]="'Delete rack \'' + (deleteRack()?.name ?? '') + '\'?'"
+  supporting-text="This action cannot be undone."
+  accessible-label="Confirm rack deletion"
+>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    (click)="confirmDeleteRack()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelDeleteRack()"
   ></nldd-button>
 </nldd-modal-dialog>

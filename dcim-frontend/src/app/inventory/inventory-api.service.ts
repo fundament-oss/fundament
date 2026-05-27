@@ -1,20 +1,80 @@
 import { Injectable, inject } from '@angular/core';
-import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
+import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
+import {
+  AssetCategory as ProtoCategory,
+  AssetStatus as ProtoStatus,
+  AssetEventType as ProtoEventType,
+  SortDirection,
+} from '../../generated/v1/common_pb';
+import { AssetSortField } from '../../generated/v1/asset_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
-import type { Asset, AssetStatus } from './inventory';
+import type { AssetEvent as ProtoAssetEvent } from '../../generated/v1/common_pb';
+import type {
+  Asset,
+  AssetCategory,
+  AssetEventAction,
+  AssetStatus,
+  CatalogEntry,
+  HistoryEntry,
+} from './inventory';
 import { ASSET_CLIENT } from '../../connect/tokens';
+
+export interface ListAssetsOptions {
+  search?: string;
+  status: AssetStatus | 'all';
+  category: AssetCategory | 'all';
+  sortDirection: 'asc' | 'desc';
+}
 
 @Injectable({ providedIn: 'root' })
 export default class InventoryApiService {
   private readonly assetClient = inject(ASSET_CLIENT);
 
-  static mapAsset(a: ProtoAsset): Partial<Asset> {
+  /**
+   * Maps an API asset onto the UI Asset model. The API asset only carries a
+   * device_catalog_id, so model and category are resolved from the catalog.
+   */
+  static mapAsset(a: ProtoAsset, catalog: Map<string, CatalogEntry>): Asset {
+    const entry = catalog.get(a.deviceCatalogId);
     return {
       id: a.id,
+      deviceCatalogId: a.deviceCatalogId,
+      model: entry?.model ?? 'Unknown device',
+      category: entry?.category ?? 'Other',
       assetTag: a.assetTag,
       status: InventoryApiService.fromProtoStatus(a.status),
+      serialNumber: a.serialNumber,
+      warrantyExpiry: a.warrantyExpiry
+        ? timestampDate(a.warrantyExpiry).toISOString().slice(0, 10)
+        : undefined,
       notes: a.notes,
     };
+  }
+
+  /** Maps an API asset event onto the UI history entry model. */
+  static mapAssetEvent(e: ProtoAssetEvent): HistoryEntry {
+    const created = e.created ? timestampDate(e.created) : new Date();
+    const daysAgo = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
+    return {
+      action: InventoryApiService.fromProtoEventType(e.eventType),
+      description: e.details,
+      user: e.performedBy,
+      daysAgo,
+    };
+  }
+
+  private static fromProtoEventType(t: ProtoEventType): AssetEventAction {
+    const map: Record<number, AssetEventAction> = {
+      [ProtoEventType.RECEIVED]: 'received',
+      [ProtoEventType.DEPLOYED]: 'deployed',
+      [ProtoEventType.MOVED]: 'moved',
+      [ProtoEventType.REPAIR_SENT]: 'repair-sent',
+      [ProtoEventType.REPAIR_RECEIVED]: 'repair-received',
+      [ProtoEventType.DECOMMISSIONED]: 'decommissioned',
+      [ProtoEventType.REQUESTED]: 'requested',
+      [ProtoEventType.NOTE]: 'note',
+    };
+    return map[t] ?? 'note';
   }
 
   private static fromProtoStatus(s: ProtoStatus): AssetStatus {
@@ -41,12 +101,67 @@ export default class InventoryApiService {
     return map[s] ?? ProtoStatus.AVAILABLE;
   }
 
+  private static toProtoCategory(cat: AssetCategory): ProtoCategory {
+    const map: Record<AssetCategory, ProtoCategory> = {
+      Server: ProtoCategory.SERVER,
+      Switch: ProtoCategory.SWITCH,
+      Storage: ProtoCategory.STORAGE,
+      Power: ProtoCategory.PDU,
+      Firewall: ProtoCategory.FIREWALL,
+      Cooling: ProtoCategory.COOLING,
+      KVM: ProtoCategory.KVM,
+      Memory: ProtoCategory.DIMM,
+      Disk: ProtoCategory.DISK,
+      NIC: ProtoCategory.NIC,
+      PSU: ProtoCategory.POWER_SUPPLY,
+      CPU: ProtoCategory.CPU,
+      GPU: ProtoCategory.GPU,
+      Transceiver: ProtoCategory.SFP,
+      Other: ProtoCategory.OTHER,
+    };
+    return map[cat] ?? ProtoCategory.UNSPECIFIED;
+  }
+
+  listAssets(opts: ListAssetsOptions) {
+    return this.assetClient.listAssets({
+      sortBy: AssetSortField.STATUS,
+      sortDirection: opts.sortDirection === 'desc' ? SortDirection.DESC : SortDirection.ASC,
+      ...(opts.search ? { search: opts.search } : {}),
+      ...(opts.status !== 'all'
+        ? { statusFilter: InventoryApiService.toProtoStatus(opts.status) }
+        : {}),
+      ...(opts.category !== 'all'
+        ? { categoryFilter: InventoryApiService.toProtoCategory(opts.category) }
+        : {}),
+    });
+  }
+
+  getAsset(id: string) {
+    return this.assetClient.getAsset({ id });
+  }
+
+  getAssetStats() {
+    return this.assetClient.getAssetStats({});
+  }
+
+  getAssetEvents(id: string) {
+    return this.assetClient.getAssetEvents({ assetId: id });
+  }
+
+  getAssetLocation(id: string) {
+    return this.assetClient.getAssetLocation({ assetId: id });
+  }
+
   createAsset(asset: Asset) {
     return this.assetClient.createAsset({
-      deviceCatalogId: '',
+      deviceCatalogId: asset.deviceCatalogId ?? '',
       status: InventoryApiService.toProtoStatus(asset.status),
       assetTag: asset.assetTag,
       notes: asset.notes,
+      ...(asset.serialNumber !== undefined ? { serialNumber: asset.serialNumber } : {}),
+      ...(asset.warrantyExpiry
+        ? { warrantyExpiry: timestampFromDate(new Date(asset.warrantyExpiry)) }
+        : {}),
     });
   }
 
@@ -56,6 +171,12 @@ export default class InventoryApiService {
       status: InventoryApiService.toProtoStatus(asset.status),
       assetTag: asset.assetTag,
       notes: asset.notes,
+      // Only send serial/warranty when the caller manages them, so a lighter
+      // editor (e.g. the inventory list) can't blank fields it never showed.
+      ...(asset.serialNumber !== undefined ? { serialNumber: asset.serialNumber } : {}),
+      ...(asset.warrantyExpiry
+        ? { warrantyExpiry: timestampFromDate(new Date(asset.warrantyExpiry)) }
+        : {}),
     });
   }
 

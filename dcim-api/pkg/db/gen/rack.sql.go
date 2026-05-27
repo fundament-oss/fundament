@@ -93,11 +93,19 @@ SELECT id, rack_row_id, name, total_units, position_in_row, created
 FROM dcim.racks
 WHERE deleted IS NULL
   AND ($1::uuid IS NULL OR rack_row_id = $1::uuid)
+  AND ($2::uuid IS NULL OR rack_row_id IN (
+        SELECT dcim.rack_rows.id
+        FROM dcim.rack_rows
+        JOIN dcim.rooms ON dcim.rooms.id = dcim.rack_rows.room_id AND dcim.rooms.deleted IS NULL
+        WHERE dcim.rack_rows.deleted IS NULL
+          AND dcim.rooms.site_id = $2::uuid
+      ))
 ORDER BY created
 `
 
 type RackListParams struct {
 	RackRowID pgtype.UUID
+	SiteID    pgtype.UUID
 }
 
 type RackListRow struct {
@@ -110,7 +118,7 @@ type RackListRow struct {
 }
 
 func (q *Queries) RackList(ctx context.Context, arg RackListParams) ([]RackListRow, error) {
-	rows, err := q.db.Query(ctx, rackList, arg.RackRowID)
+	rows, err := q.db.Query(ctx, rackList, arg.RackRowID, arg.SiteID)
 	if err != nil {
 		return nil, err
 	}

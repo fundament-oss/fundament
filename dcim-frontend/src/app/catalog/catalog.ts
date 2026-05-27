@@ -9,11 +9,14 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { AssetCategory, CatalogEntry, MOCK_ASSETS } from '../inventory/inventory';
+import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
+import {RouterLink} from '@angular/router';
+import {Code, ConnectError} from '@connectrpc/connect';
+import {debounce, distinctUntilChanged, firstValueFrom, skip, timer} from 'rxjs';
+import {AssetCategory, CatalogEntry, MOCK_ASSETS} from '../inventory/inventory';
 import CatalogApiService from './catalog-api.service';
 import connectErrorMessage from '../../connect/error';
+import {ViolationsSchema} from '../../generated/buf/validate/validate_pb';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -26,6 +29,8 @@ interface CatalogRow {
   available: number;
   issues: number;
 }
+
+type InvalidFields = Record<string, string>;
 
 @Component({
   selector: 'app-catalog',
@@ -66,6 +71,10 @@ export default class CatalogComponent implements OnInit {
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editEntry = signal<Partial<CatalogEntry> | null>(null);
 
+  entryErrorMessage = signal<string | null>(null);
+
+  invalidFields = signal<InvalidFields>({});
+
   deleteEntry = signal<CatalogEntry | null>(null);
 
   specRows = signal<{ key: string; value: string }[]>([]);
@@ -78,9 +87,20 @@ export default class CatalogComponent implements OnInit {
 
   private readonly fEntryMfr = viewChild<NativeElementRef>('fEntryMfr');
 
+  private readonly fEntryPart = viewChild<NativeElementRef>('fEntryPart');
+
   private readonly fEntryCat = viewChild<NativeElementRef>('fEntryCat');
 
   constructor() {
+    toObservable(this.searchQuery)
+      .pipe(
+        skip(1),
+        debounce((q) => timer(q ? 250 : 0)),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe((search) => this.loadCatalog(search));
+
     effect(() => {
       const el = this.entrySheetEl()?.nativeElement;
       if (this.editEntry() !== null) el?.show?.();
@@ -94,7 +114,11 @@ export default class CatalogComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    firstValueFrom(this.catalogApi.listCatalog())
+    this.loadCatalog();
+  }
+
+  private loadCatalog(search?: string): void {
+    firstValueFrom(this.catalogApi.listCatalog(search))
       .then((res) =>
         this.mutableCatalog.set(
           res.entries.map((s) => CatalogApiService.mapCatalogEntry(s.entry!)),
@@ -119,18 +143,9 @@ export default class CatalogComponent implements OnInit {
   );
 
   readonly rows = computed<CatalogRow[]>(() => {
-    const q = this.searchQuery().toLowerCase();
     const cat = this.categoryFilter();
-    return this.allRows().filter((row) => {
-      if (cat !== 'all' && row.entry.category !== cat) return false;
-      if (
-        q &&
-        !row.entry.model.toLowerCase().includes(q) &&
-        !row.entry.manufacturer.toLowerCase().includes(q)
-      )
-        return false;
-      return true;
-    });
+    if (cat === 'all') return this.allRows();
+    return this.allRows().filter((row) => row.entry.category === cat);
   });
 
   readonly totalProducts = computed(() => this.allRows().length);
@@ -156,13 +171,22 @@ export default class CatalogComponent implements OnInit {
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
   openCreateEntry(): void {
-    this.editEntry.set({ id: '', model: '', manufacturer: '', category: 'Server', specs: {} });
+    this.clearEntryErrors();
+    this.editEntry.set({
+      id: '',
+      model: '',
+      manufacturer: '',
+      partNumber: '',
+      category: 'Server',
+      specs: {},
+    });
     this.specRows.set([{ key: '', value: '' }]);
   }
 
   openEditEntry(entry: CatalogEntry, event: Event): void {
     event.preventDefault();
     event.stopPropagation();
+    this.clearEntryErrors();
     this.editEntry.set({ ...entry });
     this.specRows.set(Object.entries(entry.specs).map(([key, value]) => ({ key, value })));
   }
@@ -192,31 +216,85 @@ export default class CatalogComponent implements OnInit {
   saveEntry(): void {
     const form = this.editEntry();
     if (!form) return;
+
+    this.clearEntryErrors();
+
     const model = this.fEntryModel()?.nativeElement.value ?? '';
     const manufacturer = this.fEntryMfr()?.nativeElement.value ?? '';
+    const partNumber = this.fEntryPart()?.nativeElement.value ?? form.partNumber ?? '';
     const category = (this.fEntryCat()?.nativeElement.value ?? 'Server') as AssetCategory;
     const specs: Record<string, string> = {};
+
     this.specRows().forEach((row) => {
       if (row.key.trim()) specs[row.key.trim()] = row.value;
     });
-    const entry: CatalogEntry = { id: form.id || '', model, manufacturer, category, specs };
+
+    const entry: CatalogEntry = {
+      id: form.id || '',
+      model,
+      manufacturer,
+      partNumber,
+      category,
+      specs,
+    };
+
     if (form.id) {
       firstValueFrom(this.catalogApi.updateCatalogEntry(entry))
         .then(() => {
           this.mutableCatalog.update((list) => list.map((e) => (e.id === form.id ? entry : e)));
           this.editEntry.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleEntryError(err));
     } else {
       firstValueFrom(this.catalogApi.createCatalogEntry(entry))
         .then((res) => {
           this.mutableCatalog.update((list) => [...list, { ...entry, id: res.catalogEntryId }]);
           this.editEntry.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleEntryError(err));
     }
+  }
+
+  /** Returns true when the given proto field name has a validation error. */
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  /** Returns the validation message for a proto field, or '' when valid. */
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearEntryErrors(): void {
+    this.invalidFields.set({});
+    this.entryErrorMessage.set(null);
+  }
+
+  private handleEntryError(err: unknown): void {
+    const ce = ConnectError.from(err);
+
+    if (ce.code === Code.InvalidArgument) {
+      const fieldErrors: InvalidFields = {};
+      const unmappedMessages: string[] = [];
+      ce.findDetails(ViolationsSchema)
+        .flatMap((violations) => violations.violations)
+        .forEach((v) => {
+          const field = v.field?.elements.map((e) => e.fieldName).join('.') ?? '';
+          if (field) fieldErrors[field] = v.message;
+          else unmappedMessages.push(v.message);
+        });
+      if (Object.keys(fieldErrors).length > 0) {
+        this.invalidFields.set(fieldErrors);
+        // Violations without a field path can't attach to an input — show them in the banner.
+        if (unmappedMessages.length > 0) {
+          this.entryErrorMessage.set(unmappedMessages.join('\n'));
+        }
+        return;
+      }
+    }
+
+    // Non-validation errors (e.g. AlreadyExists) have no input to attach to.
+    this.entryErrorMessage.set(connectErrorMessage(err));
   }
 
   openDeleteEntry(entry: CatalogEntry, event: Event): void {

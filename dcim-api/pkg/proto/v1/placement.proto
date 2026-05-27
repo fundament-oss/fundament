@@ -44,6 +44,7 @@ message Placement {
 service PlacementService {
   rpc CreatePlacement     (CreatePlacementRequest)      returns (CreatePlacementResponse);
   rpc GetPlacement        (GetPlacementRequest)         returns (GetPlacementResponse);
+  rpc GetPlacementByAsset (GetPlacementByAssetRequest)  returns (GetPlacementByAssetResponse);
   rpc UpdatePlacement     (UpdatePlacementRequest)      returns (google.protobuf.Empty);
   rpc DeletePlacement     (DeletePlacementRequest)      returns (google.protobuf.Empty);
   rpc ListPlacementsByRack(ListPlacementsByRackRequest) returns (ListPlacementsByRackResponse);
@@ -70,6 +71,15 @@ message GetPlacementRequest {
 }
 
 message GetPlacementResponse {
+  Placement placement = 10;
+}
+
+message GetPlacementByAssetRequest {
+  string asset_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// GetPlacementByAssetResponse has an unset placement when the asset is unplaced.
+message GetPlacementByAssetResponse {
   Placement placement = 10;
 }
 

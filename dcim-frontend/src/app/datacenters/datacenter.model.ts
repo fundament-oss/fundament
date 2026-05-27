@@ -65,6 +65,14 @@ export interface RackRow {
   positionY: number;
 }
 
+/** A rack shown in the datacenter detail page's racks list. */
+export interface DatacenterRack {
+  id: string;
+  rowId: string;
+  name: string;
+  totalU: number;
+}
+
 export interface DatacenterFloorConfig {
   dcId: string;
   aisles: AisleDefinition[];

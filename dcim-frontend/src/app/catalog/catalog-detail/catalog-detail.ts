@@ -43,9 +43,9 @@ export default class CatalogDetailComponent implements OnInit {
 
   readonly catalogId = computed(() => this.route.snapshot.paramMap.get('id') ?? '');
 
-  readonly entry = computed<CatalogEntry | undefined>(() =>
-    MOCK_CATALOG.find((e) => e.id === this.catalogId()),
-  );
+  readonly entry = signal<CatalogEntry | undefined>(undefined);
+
+  readonly entryLoaded = signal(false);
 
   readonly assets = computed<Asset[]>(() => {
     const model = this.entry()?.model;
@@ -135,6 +135,14 @@ export default class CatalogDetailComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    firstValueFrom(this.catalogApi.getCatalogEntry(this.catalogId()))
+      .then((res) => {
+        if (res.entry) this.entry.set(CatalogApiService.mapCatalogEntry(res.entry));
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)))
+      .finally(() => this.entryLoaded.set(true));
+
     firstValueFrom(this.catalogApi.listPortDefinitions(this.catalogId()))
       .then((res) =>
         this.mutablePortDefs.set(
