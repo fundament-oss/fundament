@@ -267,14 +267,15 @@ func (q *Queries) PlacementListByRack(ctx context.Context, arg PlacementListByRa
 
 const placementResolveLocationByAsset = `-- name: PlacementResolveLocationByAsset :one
 WITH RECURSIVE location_chain AS (
-    SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id
+    SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id, 1 AS depth
     FROM dcim.placements
     WHERE dcim.placements.asset_id = $1 AND dcim.placements.deleted IS NULL
     UNION ALL
-    SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id
+    SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id, location_chain.depth + 1
     FROM dcim.placements
     JOIN location_chain ON dcim.placements.id = location_chain.parent_placement_id
     WHERE dcim.placements.deleted IS NULL
+      AND location_chain.depth < 16
 )
 SELECT
     location_chain.rack_id,
@@ -307,10 +308,12 @@ type PlacementResolveLocationByAssetRow struct {
 	SiteName    string
 }
 
-// Walks parent_placement_id up from the asset's placement so nested
-// sub-components resolve the rack of their top-level host, then joins
+// Same recursive walk as PlacementResolveRackByAsset, but additionally joins
 // the rack hierarchy (rack -> rack_row -> room -> site) to return
-// human-readable names alongside the placement details.
+// human-readable names alongside the placement details. Returns no rows
+// when the asset has no rack-based placement *or* when any ancestor in
+// the rack hierarchy is soft-deleted; callers that need to distinguish
+// those cases can fall back to PlacementResolveRackByAsset.
 func (q *Queries) PlacementResolveLocationByAsset(ctx context.Context, arg PlacementResolveLocationByAssetParams) (PlacementResolveLocationByAssetRow, error) {
 	row := q.db.QueryRow(ctx, placementResolveLocationByAsset, arg.AssetID)
 	var i PlacementResolveLocationByAssetRow
@@ -323,6 +326,46 @@ func (q *Queries) PlacementResolveLocationByAsset(ctx context.Context, arg Place
 		&i.RoomName,
 		&i.SiteName,
 	)
+	return i, err
+}
+
+const placementResolveRackByAsset = `-- name: PlacementResolveRackByAsset :one
+WITH RECURSIVE location_chain AS (
+    SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id, 1 AS depth
+    FROM dcim.placements
+    WHERE dcim.placements.asset_id = $1 AND dcim.placements.deleted IS NULL
+    UNION ALL
+    SELECT dcim.placements.id, dcim.placements.rack_id, dcim.placements.start_unit, dcim.placements.slot_type, dcim.placements.parent_placement_id, location_chain.depth + 1
+    FROM dcim.placements
+    JOIN location_chain ON dcim.placements.id = location_chain.parent_placement_id
+    WHERE dcim.placements.deleted IS NULL
+      AND location_chain.depth < 16
+)
+SELECT location_chain.rack_id, location_chain.start_unit, location_chain.slot_type
+FROM location_chain
+WHERE location_chain.rack_id IS NOT NULL
+LIMIT 1
+`
+
+type PlacementResolveRackByAssetParams struct {
+	AssetID uuid.UUID
+}
+
+type PlacementResolveRackByAssetRow struct {
+	RackID    pgtype.UUID
+	StartUnit pgtype.Int4
+	SlotType  pgtype.Text
+}
+
+// Walks parent_placement_id up from the asset's placement so nested
+// sub-components resolve the rack of their top-level host. The depth
+// guard bounds recursion at 16 levels (well beyond any realistic
+// host→component→port chain) so a parent_placement_id cycle cannot
+// spin indefinitely.
+func (q *Queries) PlacementResolveRackByAsset(ctx context.Context, arg PlacementResolveRackByAssetParams) (PlacementResolveRackByAssetRow, error) {
+	row := q.db.QueryRow(ctx, placementResolveRackByAsset, arg.AssetID)
+	var i PlacementResolveRackByAssetRow
+	err := row.Scan(&i.RackID, &i.StartUnit, &i.SlotType)
 	return i, err
 }
 

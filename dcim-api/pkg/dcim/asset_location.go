@@ -27,7 +27,19 @@ func (s *Server) GetAssetLocation(
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Asset has no rack-based placement; return an unset location.
+			// Either the asset has no rack-based placement (expected) or one of
+			// rack/rack_row/room/site in the chain is soft-deleted (data
+			// integrity issue). Probe with the lighter rack-only query to tell
+			// them apart and surface the latter via a warning log.
+			rackRef, rackErr := s.queries.PlacementResolveRackByAsset(ctx, db.PlacementResolveRackByAssetParams{
+				AssetID: assetID,
+			})
+			if rackErr == nil {
+				s.logger.WarnContext(ctx, "asset placement resolves to a rack but an ancestor is soft-deleted",
+					"asset_id", assetID,
+					"rack_id", uuid.UUID(rackRef.RackID.Bytes),
+				)
+			}
 			return connect.NewResponse(dcimv1.GetAssetLocationResponse_builder{}.Build()), nil
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve asset location: %w", err))
