@@ -192,3 +192,84 @@ func createRack(t *testing.T, env *testEnv, rowID, name string, totalUnits int32
 
 	return resp.Msg.GetRackId()
 }
+
+func createCatalogEntry(t *testing.T, env *testEnv, model string) string {
+	t.Helper()
+
+	client := dcimv1connect.NewCatalogServiceClient(env.server.Client(), env.server.URL)
+
+	resp, err := client.CreateCatalogEntry(context.Background(), connect.NewRequest(
+		(&dcimv1.CreateCatalogEntryRequest_builder{
+			Manufacturer: "Test Mfr",
+			Model:        model,
+			PartNumber:   model + "-PN",
+			Category:     dcimv1.AssetCategory_ASSET_CATEGORY_SERVER,
+		}).Build(),
+	))
+	require.NoError(t, err)
+
+	require.NotEmpty(t, resp.Msg.GetCatalogEntryId())
+
+	return resp.Msg.GetCatalogEntryId()
+}
+
+func createAsset(t *testing.T, env *testEnv, catalogID string) string {
+	t.Helper()
+
+	client := dcimv1connect.NewAssetServiceClient(env.server.Client(), env.server.URL)
+
+	resp, err := client.CreateAsset(context.Background(), connect.NewRequest(
+		(&dcimv1.CreateAssetRequest_builder{
+			DeviceCatalogId: catalogID,
+			Status:          dcimv1.AssetStatus_ASSET_STATUS_DEPLOYED,
+		}).Build(),
+	))
+	require.NoError(t, err)
+
+	require.NotEmpty(t, resp.Msg.GetAssetId())
+
+	return resp.Msg.GetAssetId()
+}
+
+func placeAssetInRack(t *testing.T, env *testEnv, assetID, rackID string, unit int32) string {
+	t.Helper()
+
+	client := dcimv1connect.NewPlacementServiceClient(env.server.Client(), env.server.URL)
+
+	resp, err := client.CreatePlacement(context.Background(), connect.NewRequest(
+		(&dcimv1.CreatePlacementRequest_builder{
+			AssetId: assetID,
+			Rack: (&dcimv1.RackLocation_builder{
+				RackId:        rackID,
+				RackUnitStart: unit,
+				RackSlotType:  dcimv1.RackSlotType_RACK_SLOT_TYPE_UNIT,
+			}).Build(),
+		}).Build(),
+	))
+	require.NoError(t, err)
+
+	require.NotEmpty(t, resp.Msg.GetPlacementId())
+
+	return resp.Msg.GetPlacementId()
+}
+
+func placeAssetInSubComponent(t *testing.T, env *testEnv, assetID, parentPlacementID, parentPortDefinitionID string) string {
+	t.Helper()
+
+	client := dcimv1connect.NewPlacementServiceClient(env.server.Client(), env.server.URL)
+
+	resp, err := client.CreatePlacement(context.Background(), connect.NewRequest(
+		(&dcimv1.CreatePlacementRequest_builder{
+			AssetId: assetID,
+			SubComponent: (&dcimv1.SubComponentLocation_builder{
+				ParentPlacementId:      parentPlacementID,
+				ParentPortDefinitionId: parentPortDefinitionID,
+			}).Build(),
+		}).Build(),
+	))
+	require.NoError(t, err)
+
+	require.NotEmpty(t, resp.Msg.GetPlacementId())
+
+	return resp.Msg.GetPlacementId()
+}

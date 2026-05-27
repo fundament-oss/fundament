@@ -6,12 +6,18 @@ import {
   effect,
   ElementRef,
   inject,
+  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
+import type { AssetStats } from '../../generated/v1/asset_pb';
+import { RackSlotType } from '../../generated/v1/common_pb';
 import InventoryApiService from './inventory-api.service';
+import CatalogApiService from '../catalog/catalog-api.service';
+import PlacementApiService, { RackOption } from './placement-api.service';
 import connectErrorMessage from '../../connect/error';
 
 export type AssetStatus =
@@ -39,8 +45,19 @@ export type AssetCategory =
   | 'GPU'
   | 'Transceiver';
 
+/** Mirrors the proto AssetEventType enum (common.proto). */
+export type AssetEventAction =
+  | 'received'
+  | 'deployed'
+  | 'moved'
+  | 'repair-sent'
+  | 'repair-received'
+  | 'decommissioned'
+  | 'requested'
+  | 'note';
+
 export interface HistoryEntry {
-  action: 'status-change' | 'location-change' | 'maintenance';
+  action: AssetEventAction;
   description: string;
   user: string;
   daysAgo: number;
@@ -51,23 +68,23 @@ export interface Asset {
   model: string;
   assetTag: string;
   category: AssetCategory;
-  datacenter: string;
-  rack: string;
   status: AssetStatus;
   notes: string;
+  /** Hardware serial number. Empty for asset types that carry none. */
+  serialNumber?: string;
+  /** Warranty expiry as an ISO date (YYYY-MM-DD). Absent when not tracked. */
+  warrantyExpiry?: string;
+  /** Catalog entry the asset is an instance of. Absent for mock data. */
+  deviceCatalogId?: string;
+  /** Physical location. Tracked via Placement, so absent from the asset API. */
+  datacenter?: string;
+  rack?: string;
   parentId?: string;
 }
 
-const STATUS_SORT_ORDER: Record<AssetStatus, number> = {
-  'needs-repair': 0,
-  decommissioned: 1,
-  deployed: 2,
-  available: 3,
-  'on-order': 4,
-  requested: 5,
-};
-
 export interface NoteComment {
+  /** Note id when sourced from the API; absent for mock data. */
+  id?: string;
   author: string;
   initials: string;
   daysAgo: number;
@@ -403,203 +420,11 @@ export const MOCK_NOTES: Record<string, AssetNoteDetail> = {
   },
 };
 
-export const MOCK_HISTORY: Record<string, HistoryEntry[]> = {
-  'AST-001': [
-    {
-      action: 'maintenance',
-      description: 'RAM upgraded from 256 GB to 512 GB (8× 64 GB DIMMs installed)',
-      user: 'Jan de Vries',
-      daysAgo: 7,
-    },
-    {
-      action: 'status-change',
-      description: 'ESXi 8.0 Update 3 patch applied, server back in service',
-      user: 'Sarah Müller',
-      daysAgo: 18,
-    },
-    {
-      action: 'location-change',
-      description: 'Migrated from AMS-02 / Rack A07 to AMS-01 / A12',
-      user: 'Pieter Hoek',
-      daysAgo: 90,
-    },
-    {
-      action: 'status-change',
-      description: 'Status set to deployed after initial configuration complete',
-      user: 'Roos van Dijk',
-      daysAgo: 180,
-    },
-  ],
-  'AST-004': [
-    {
-      action: 'maintenance',
-      description: 'PSU fault detected on secondary power supply, escalated to HPE support',
-      user: 'Jan de Vries',
-      daysAgo: 23,
-    },
-    {
-      action: 'status-change',
-      description: 'Status changed to needs-repair, workloads migrated to AST-010',
-      user: 'Sarah Müller',
-      daysAgo: 23,
-    },
-    {
-      action: 'status-change',
-      description: 'Deployed as ESXi host in BRU-01 cluster',
-      user: 'Pieter Hoek',
-      daysAgo: 400,
-    },
-  ],
-  'AST-007': [
-    {
-      action: 'maintenance',
-      description: 'Kernel patched to 5.15.0-100, node cordoned and uncordoned at 02:00',
-      user: 'Roos van Dijk',
-      daysAgo: 5,
-    },
-    {
-      action: 'status-change',
-      description: 'Added to production Kubernetes node pool (taint removed after smoke tests)',
-      user: 'Sarah Müller',
-      daysAgo: 19,
-    },
-    {
-      action: 'location-change',
-      description: 'Racked in AMS-01 / A13, cabled to top-of-rack switch SW-001',
-      user: 'Jan de Vries',
-      daysAgo: 25,
-    },
-  ],
-  'AST-013': [
-    {
-      action: 'maintenance',
-      description: 'RAID rebuild aborted at 34% — CRC errors on SAS expander, escalated to P1',
-      user: 'Jan de Vries',
-      daysAgo: 3,
-    },
-    {
-      action: 'status-change',
-      description: 'Status changed to needs-repair, ticket #4521 opened with Lenovo',
-      user: 'Pieter Hoek',
-      daysAgo: 4,
-    },
-    {
-      action: 'maintenance',
-      description: 'Data backed up to AST-017 before array taken offline',
-      user: 'Roos van Dijk',
-      daysAgo: 4,
-    },
-    {
-      action: 'status-change',
-      description: 'Deployed as compute node in BRU-01',
-      user: 'Sarah Müller',
-      daysAgo: 420,
-    },
-  ],
-  'AST-031': [
-    {
-      action: 'maintenance',
-      description: 'DIMM errors confirmed in XClarity on slot A3, replacement ordered',
-      user: 'Jan de Vries',
-      daysAgo: 5,
-    },
-    {
-      action: 'status-change',
-      description: 'Status changed to needs-repair, server running with 384 GB (slot A3 disabled)',
-      user: 'Roos van Dijk',
-      daysAgo: 5,
-    },
-  ],
-  'MEM-001': [
-    {
-      action: 'status-change',
-      description: 'Installed in AST-001 slot A1, upgrade from 32 GB DIMM',
-      user: 'Jan de Vries',
-      daysAgo: 7,
-    },
-    {
-      action: 'maintenance',
-      description: 'POST memory test passed, no ECC errors detected post-install',
-      user: 'Pieter Hoek',
-      daysAgo: 7,
-    },
-  ],
-  'MEM-002': [
-    {
-      action: 'status-change',
-      description: 'Installed in AST-001 slot A2, upgrade from 32 GB DIMM',
-      user: 'Jan de Vries',
-      daysAgo: 7,
-    },
-  ],
-  'DSK-001': [
-    {
-      action: 'status-change',
-      description: 'Deployed as boot disk (bay 0) in AST-001',
-      user: 'Sarah Müller',
-      daysAgo: 180,
-    },
-  ],
-  'DSK-002': [
-    {
-      action: 'status-change',
-      description: 'Deployed as data disk (bay 1) in AST-001',
-      user: 'Sarah Müller',
-      daysAgo: 180,
-    },
-  ],
-  'NIC-001': [
-    {
-      action: 'status-change',
-      description: 'Installed in AST-001 PCIe slot 3, bonded with NIC-002',
-      user: 'Pieter Hoek',
-      daysAgo: 180,
-    },
-  ],
-  'PSU-001': [
-    {
-      action: 'status-change',
-      description: 'PSU fault detected, server switched to single-PSU mode',
-      user: 'Jan de Vries',
-      daysAgo: 23,
-    },
-    {
-      action: 'status-change',
-      description: 'Replacement ordered from HPE, expected in 2 business days',
-      user: 'Pieter Hoek',
-      daysAgo: 22,
-    },
-  ],
-  'PSU-002': [
-    {
-      action: 'status-change',
-      description: 'Confirmed operational, carrying full server load while PSU-001 is faulty',
-      user: 'Jan de Vries',
-      daysAgo: 23,
-    },
-  ],
-  'CPU-001': [
-    {
-      action: 'status-change',
-      description: 'Installed in SRV-003 socket 0 during initial deployment',
-      user: 'Roos van Dijk',
-      daysAgo: 90,
-    },
-  ],
-  'CPU-002': [
-    {
-      action: 'status-change',
-      description: 'Installed in SRV-003 socket 1 during initial deployment',
-      user: 'Roos van Dijk',
-      daysAgo: 90,
-    },
-  ],
-};
-
 export interface CatalogEntry {
   id: string;
   model: string;
   manufacturer: string;
+  partNumber?: string;
   category: AssetCategory;
   specs: Record<string, string>;
 }
@@ -2032,15 +1857,6 @@ export const MOCK_ASSETS: Asset[] = [
   },
 ];
 
-type SortableColumn = 'model' | 'category' | 'datacenter' | 'status';
-
-interface FlatRow {
-  asset: Asset;
-  depth: number;
-  hasChildren: boolean;
-  isExpanded: boolean;
-}
-
 @Component({
   selector: 'app-inventory',
   templateUrl: './inventory.html',
@@ -2052,13 +1868,20 @@ interface FlatRow {
     '(document:keydown.escape)': 'closeNotes()',
   },
 })
-export default class InventoryComponent {
+export default class InventoryComponent implements OnInit {
   private readonly inventoryApi = inject(InventoryApiService);
 
-  readonly ITEMS_PER_PAGE = 50;
+  private readonly catalogApi = inject(CatalogApiService);
 
-  // ── Mutable asset list ─────────────────────────────────────────────────────
-  readonly mutableAssets = signal([...MOCK_ASSETS]);
+  private readonly placementApi = inject(PlacementApiService);
+
+  readonly assets = signal<Asset[]>([]);
+
+  readonly catalog = signal<CatalogEntry[]>([]);
+
+  private catalogById = new Map<string, CatalogEntry>();
+
+  readonly stats = signal<AssetStats | null>(null);
 
   searchQuery = signal('');
 
@@ -2066,24 +1889,44 @@ export default class InventoryComponent {
 
   categoryFilter = signal<AssetCategory | 'all'>('all');
 
-  locationFilter = signal<string>('all');
-
-  sortColumn = signal<SortableColumn>('status');
-
   sortDirection = signal<'asc' | 'desc'>('asc');
-
-  currentPage = signal(1);
 
   activeNotesAsset = signal<Asset | null>(null);
 
-  expandedIds = signal<Set<string>>(
-    new Set(
-      MOCK_ASSETS.filter((a) => MOCK_ASSETS.some((b) => b.parentId === a.id)).map((a) => a.id),
-    ),
-  );
-
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editAsset = signal<Partial<Asset> | null>(null);
+
+  /** Rack placement of the asset being edited; null when adding or unplaced. */
+  editPlacement = signal<{
+    id: string;
+    rackId: string;
+    unit: number;
+    slotType: RackSlotType;
+  } | null>(null);
+
+  /** All racks, for the location picker. */
+  readonly racks = signal<RackOption[]>([]);
+
+  /** Racks grouped by datacenter, for the location <select> optgroups. */
+  readonly racksByDatacenter = computed(() => {
+    const groups = new Map<string, RackOption[]>();
+    this.racks().forEach((rack) => {
+      const list = groups.get(rack.datacenter) ?? [];
+      list.push(rack);
+      groups.set(rack.datacenter, list);
+    });
+    return [...groups.entries()]
+      .map(([datacenter, racks]) => ({ datacenter, racks }))
+      .sort((a, b) => a.datacenter.localeCompare(b.datacenter));
+  });
+
+  readonly slotTypes: { value: RackSlotType; label: string }[] = [
+    { value: RackSlotType.UNIT, label: 'Unit' },
+    { value: RackSlotType.POWER, label: 'Power' },
+    { value: RackSlotType.ZERO_U, label: 'Zero-U' },
+  ];
+
+  readonly defaultSlotType = RackSlotType.UNIT;
 
   deleteAsset = signal<Asset | null>(null);
 
@@ -2091,21 +1934,34 @@ export default class InventoryComponent {
 
   private readonly assetModalEl = viewChild<ElementRef>('assetModal');
 
-  private readonly fAssetModel = viewChild<ElementRef>('fAssetModel');
+  private readonly fAssetDevice = viewChild<ElementRef>('fAssetDevice');
 
   private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
 
-  private readonly fAssetCat = viewChild<ElementRef>('fAssetCat');
-
   private readonly fAssetStatus = viewChild<ElementRef>('fAssetStatus');
 
-  private readonly fAssetDc = viewChild<ElementRef>('fAssetDc');
+  private readonly fAssetSerial = viewChild<ElementRef>('fAssetSerial');
+
+  private readonly fAssetWarranty = viewChild<ElementRef>('fAssetWarranty');
 
   private readonly fAssetRack = viewChild<ElementRef>('fAssetRack');
+
+  private readonly fAssetRackUnit = viewChild<ElementRef>('fAssetRackUnit');
+
+  private readonly fAssetSlotType = viewChild<ElementRef>('fAssetSlotType');
 
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
   constructor() {
+    toObservable(this.searchQuery)
+      .pipe(
+        skip(1),
+        debounce((q) => timer(q ? 250 : 0)),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.reload());
+
     effect(() => {
       const el = this.assetSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editAsset() !== null) el?.show?.();
@@ -2116,6 +1972,35 @@ export default class InventoryComponent {
       if (this.deleteAsset() !== null) el?.show?.();
       else el?.hide?.();
     });
+  }
+
+  ngOnInit(): void {
+    this.loadStats();
+    this.loadRackOptions();
+
+    firstValueFrom(this.catalogApi.listCatalog())
+      .then((res) => {
+        this.catalogById = new Map(
+          res.entries
+            .filter((s) => s.entry)
+            .map((s) => {
+              const entry = CatalogApiService.mapCatalogEntry(s.entry!);
+              return [entry.id, entry] as const;
+            }),
+        );
+        this.catalog.set([...this.catalogById.values()]);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)))
+      .finally(() => this.loadAssets());
+  }
+
+  private loadRackOptions(): void {
+    this.placementApi
+      .listRackOptions()
+      .then((racks) => this.racks.set(racks))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   readonly categories: AssetCategory[] = [
@@ -2136,10 +2021,6 @@ export default class InventoryComponent {
     'Transceiver',
   ];
 
-  readonly datacenters = [
-    ...new Set(MOCK_ASSETS.filter((a) => !a.parentId).map((a) => a.datacenter)),
-  ].sort();
-
   readonly statuses: { value: AssetStatus; label: string }[] = [
     { value: 'deployed', label: 'Deployed' },
     { value: 'available', label: 'Available' },
@@ -2149,140 +2030,87 @@ export default class InventoryComponent {
     { value: 'decommissioned', label: 'Decommissioned' },
   ];
 
-  private readonly filtered = computed(() => {
-    const q = this.searchQuery().toLowerCase();
-    const status = this.statusFilter();
-    const category = this.categoryFilter();
-    const location = this.locationFilter();
-
-    return this.mutableAssets().filter((a) => {
-      if (a.parentId) return false; // sub-assets are shown as children, not in top-level list
-      if (status !== 'all' && a.status !== status) return false;
-      if (category !== 'all' && a.category !== category) return false;
-      if (location !== 'all' && a.datacenter !== location) return false;
-      if (q && !a.model.toLowerCase().includes(q) && !a.assetTag.toLowerCase().includes(q)) {
-        return false;
-      }
-      return true;
-    });
-  });
-
-  private readonly sorted = computed(() => {
-    const col = this.sortColumn();
-    const dir = this.sortDirection();
-    return [...this.filtered()].sort((a, b) => {
-      let cmp: number;
-      if (col === 'status') {
-        cmp = STATUS_SORT_ORDER[a.status] - STATUS_SORT_ORDER[b.status];
-      } else {
-        cmp = String(a[col]).localeCompare(String(b[col]));
-      }
-      return dir === 'asc' ? cmp : -cmp;
-    });
-  });
-
-  readonly totalFiltered = computed(() => this.filtered().length);
-
-  readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.totalFiltered() / this.ITEMS_PER_PAGE)),
-  );
-
-  private readonly pagedTopLevel = computed(() => {
-    const page = this.currentPage();
-    const start = (page - 1) * this.ITEMS_PER_PAGE;
-    return this.sorted().slice(start, start + this.ITEMS_PER_PAGE);
-  });
-
-  private buildChildRows(parentId: string, depth: number, expanded: Set<string>): FlatRow[] {
-    const children = this.mutableAssets().filter((a) => a.parentId === parentId);
-    const rows: FlatRow[] = [];
-    children.forEach((child) => {
-      const hasChildren = this.mutableAssets().some((a) => a.parentId === child.id);
-      const isExpanded = expanded.has(child.id);
-      rows.push({ asset: child, depth, hasChildren, isExpanded });
-      if (isExpanded) {
-        rows.push(...this.buildChildRows(child.id, depth + 1, expanded));
-      }
-    });
-    return rows;
+  private loadAssets(): void {
+    firstValueFrom(
+      this.inventoryApi.listAssets({
+        search: this.searchQuery().trim(),
+        status: this.statusFilter(),
+        category: this.categoryFilter(),
+        sortDirection: this.sortDirection(),
+      }),
+    )
+      .then((res) =>
+        this.assets.set(res.assets.map((a) => InventoryApiService.mapAsset(a, this.catalogById))),
+      )
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  readonly flatRows = computed<FlatRow[]>(() => {
-    const topLevel = this.pagedTopLevel();
-    const expanded = this.expandedIds();
-    const rows: FlatRow[] = [];
-    topLevel.forEach((asset) => {
-      const hasChildren = this.mutableAssets().some((a) => a.parentId === asset.id);
-      const isExpanded = expanded.has(asset.id);
-      rows.push({ asset, depth: 0, hasChildren, isExpanded });
-      if (isExpanded) {
-        rows.push(...this.buildChildRows(asset.id, 1, expanded));
-      }
-    });
-    return rows;
-  });
+  private loadStats(): void {
+    firstValueFrom(this.inventoryApi.getAssetStats())
+      .then((res) => this.stats.set(res.stats ?? null))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
 
-  readonly pageStart = computed(() => (this.currentPage() - 1) * this.ITEMS_PER_PAGE + 1);
+  /** Re-query the list after a filter or sort change. */
+  private reload(): void {
+    this.loadAssets();
+  }
 
-  readonly pageEnd = computed(() =>
-    Math.min(this.currentPage() * this.ITEMS_PER_PAGE, this.totalFiltered()),
-  );
+  // ── Summary counts (from org-wide stats) ───────────────────────────────────
 
-  readonly pageNumbers = computed(() => {
-    const total = this.totalPages();
-    return Array.from({ length: total }, (_, i) => i + 1);
-  });
-
-  // Summary counts (top-level assets only, not filtered)
-  private readonly topLevelAssets = MOCK_ASSETS.filter((a) => !a.parentId);
-
-  readonly statusCounts = computed(() => {
-    const counts: Partial<Record<AssetStatus | 'all', number>> = {
-      all: this.topLevelAssets.length,
+  readonly statusCounts = computed<Partial<Record<AssetStatus | 'all', number>>>(() => {
+    const s = this.stats();
+    if (!s) return {};
+    return {
+      all: s.total,
+      deployed: s.deployed,
+      available: s.available,
+      'on-order': s.onOrder,
+      requested: s.requested,
+      'needs-repair': s.needsRepair,
+      decommissioned: s.decommissioned,
     };
-    this.topLevelAssets.forEach((a) => {
-      counts[a.status] = (counts[a.status] ?? 0) + 1;
-    });
-    return counts;
   });
 
-  readonly categoryCounts = computed(() => {
-    const counts: Partial<Record<AssetCategory, number>> = {};
-    this.topLevelAssets.forEach((a) => {
-      counts[a.category] = (counts[a.category] ?? 0) + 1;
-    });
-    return counts;
+  readonly totalCount = computed(() => this.stats()?.total ?? 0);
+
+  readonly deployedCount = computed(() => this.stats()?.deployed ?? 0);
+
+  readonly availableCount = computed(() => this.stats()?.available ?? 0);
+
+  readonly issuesCount = computed(() => {
+    const s = this.stats();
+    return s ? s.needsRepair + s.decommissioned : 0;
   });
 
-  readonly locationCounts = computed(() => {
-    const counts: Record<string, number> = {};
-    this.topLevelAssets.forEach((a) => {
-      counts[a.datacenter] = (counts[a.datacenter] ?? 0) + 1;
-    });
-    return counts;
-  });
+  // ── Filter / sort actions ──────────────────────────────────────────────────
 
-  readonly totalCount = this.topLevelAssets.length;
+  selectStatus(status: AssetStatus | 'all'): void {
+    this.statusFilter.set(status);
+    this.reload();
+  }
 
-  readonly deployedCount = this.topLevelAssets.filter((a) => a.status === 'deployed').length;
+  selectCategory(category: AssetCategory | 'all'): void {
+    this.categoryFilter.set(category);
+    this.reload();
+  }
 
-  readonly availableCount = this.topLevelAssets.filter((a) => a.status === 'available').length;
-
-  readonly issuesCount = this.topLevelAssets.filter(
-    (a) => a.status === 'needs-repair' || a.status === 'decommissioned',
-  ).length;
+  toggleSort(): void {
+    this.sortDirection.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    this.reload();
+  }
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
   openCreateAsset(): void {
+    this.editPlacement.set(null);
     this.editAsset.set({
       id: '',
-      model: '',
+      deviceCatalogId: this.catalog()[0]?.id ?? '',
       assetTag: '',
-      category: 'Server',
       status: 'available',
-      datacenter: 'AMS-01',
-      rack: '',
       notes: '',
     });
   }
@@ -2290,7 +2118,28 @@ export default class InventoryComponent {
   openEditAsset(asset: Asset, event: Event): void {
     event.preventDefault();
     event.stopPropagation();
-    this.editAsset.set({ ...asset });
+    // Resolve the existing placement before opening, so the location picker
+    // renders with the right rack pre-selected.
+    firstValueFrom(this.placementApi.getPlacementByAsset(asset.id))
+      .then((res) => {
+        const p = res.placement;
+        this.editPlacement.set(
+          p && p.location.case === 'rack'
+            ? {
+                id: p.id,
+                rackId: p.location.value.rackId,
+                unit: p.location.value.rackUnitStart,
+                slotType: p.location.value.rackSlotType,
+              }
+            : null,
+        );
+      })
+      .catch((err) => {
+        this.editPlacement.set(null);
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+      })
+      .finally(() => this.editAsset.set({ ...asset }));
   }
 
   closeAssetForm(): void {
@@ -2300,36 +2149,62 @@ export default class InventoryComponent {
   saveAsset(): void {
     const form = this.editAsset();
     if (!form) return;
+    const deviceCatalogId =
+      (this.fAssetDevice()?.nativeElement as HTMLSelectElement)?.value ??
+      form.deviceCatalogId ??
+      '';
+    const entry = this.catalogById.get(deviceCatalogId);
+    const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
     const updated: Asset = {
-      id: form.id || `AST-${String(Date.now()).slice(-5)}`,
-      model: (this.fAssetModel()?.nativeElement as HTMLInputElement)?.value ?? '',
+      id: form.id ?? '',
+      deviceCatalogId,
+      model: entry?.model ?? form.model ?? 'Unknown device',
+      category: entry?.category ?? form.category ?? 'Other',
       assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? '',
-      category: ((this.fAssetCat()?.nativeElement as HTMLInputElement)?.value ??
-        'Server') as AssetCategory,
-      status: ((this.fAssetStatus()?.nativeElement as HTMLInputElement)?.value ??
+      status: ((this.fAssetStatus()?.nativeElement as HTMLSelectElement)?.value ??
         'available') as AssetStatus,
-      datacenter: (this.fAssetDc()?.nativeElement as HTMLInputElement)?.value ?? '',
-      rack: (this.fAssetRack()?.nativeElement as HTMLInputElement)?.value ?? '',
+      serialNumber: (this.fAssetSerial()?.nativeElement as HTMLInputElement)?.value ?? '',
+      warrantyExpiry: warranty || undefined,
       notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? '',
-      parentId: form.parentId,
     };
     if (form.id) {
       firstValueFrom(this.inventoryApi.updateAsset(updated))
+        .then(() => this.reconcilePlacement(updated.id))
         .then(() => {
-          this.mutableAssets.update((list) => list.map((a) => (a.id === form.id ? updated : a)));
+          this.assets.update((list) => list.map((a) => (a.id === form.id ? updated : a)));
+          this.loadStats();
           this.editAsset.set(null);
         })
         // eslint-disable-next-line no-console
         .catch((err) => console.error(connectErrorMessage(err)));
     } else {
       firstValueFrom(this.inventoryApi.createAsset(updated))
-        .then((res) => {
-          this.mutableAssets.update((list) => [...list, { ...updated, id: res.assetId }]);
-          this.editAsset.set(null);
-        })
+        .then((res) =>
+          this.reconcilePlacement(res.assetId).then(() => {
+            this.assets.update((list) => [{ ...updated, id: res.assetId }, ...list]);
+            this.loadStats();
+            this.editAsset.set(null);
+          }),
+        )
         // eslint-disable-next-line no-console
         .catch((err) => console.error(connectErrorMessage(err)));
     }
+  }
+
+  private reconcilePlacement(assetId: string): Promise<unknown> {
+    const rackId = (this.fAssetRack()?.nativeElement as HTMLSelectElement)?.value ?? '';
+    const unit =
+      parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
+    const slotType =
+      (Number((this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value) as RackSlotType) ||
+      RackSlotType.UNIT;
+    return this.placementApi.reconcilePlacement({
+      assetId,
+      rackId,
+      unit,
+      slotType,
+      existingPlacementId: this.editPlacement()?.id ?? null,
+    });
   }
 
   openDeleteAsset(asset: Asset, event: Event): void {
@@ -2347,46 +2222,12 @@ export default class InventoryComponent {
     if (!target) return;
     firstValueFrom(this.inventoryApi.deleteAsset(target.id))
       .then(() => {
-        this.mutableAssets.update((list) =>
-          list.filter((a) => a.id !== target.id && a.parentId !== target.id),
-        );
+        this.assets.update((list) => list.filter((a) => a.id !== target.id));
+        this.loadStats();
         this.deleteAsset.set(null);
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
-  }
-
-  toggleExpand(id: string, event: Event) {
-    event.stopPropagation();
-    this.expandedIds.update((set) => {
-      const next = new Set(set);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
-  toggleSort(col: SortableColumn) {
-    if (this.sortColumn() === col) {
-      this.sortDirection.update((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      this.sortColumn.set(col);
-      this.sortDirection.set('asc');
-    }
-    this.currentPage.set(1);
-  }
-
-  onFilterChange() {
-    this.currentPage.set(1);
-  }
-
-  goToPage(page: number) {
-    if (page >= 1 && page <= this.totalPages()) {
-      this.currentPage.set(page);
-    }
   }
 
   statusLabel(status: AssetStatus): string {

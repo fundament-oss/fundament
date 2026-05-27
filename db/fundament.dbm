@@ -2157,7 +2157,7 @@ END;]]> </definition>
 		<columns names="manufacturer,model,deleted" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="device_catalogs_ck_category" type="ck-constr" table="dcim.device_catalogs">
-			<expression> <![CDATA[category IN ('server','switch','pdu','patch_panel','sfp','nic','cpu','dimm','disk','cable','adapter','power_supply','cable_manager','console_server')]]> </expression>
+			<expression> <![CDATA[category IN ('server','switch','pdu','patch_panel','sfp','nic','cpu','dimm','disk','cable','adapter','power_supply','cable_manager','console_server','storage','cooling','firewall','kvm','gpu','transceiver','other')]]> </expression>
 	</constraint>
 </table>
 

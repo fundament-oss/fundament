@@ -18,7 +18,6 @@ import { RACKS } from '../racks/rack.model';
 import IsometricCanvasComponent from './isometric-canvas';
 import {
   AisleDefinition,
-  DATACENTER_INFO,
   DatacenterInfo,
   DatacenterStatus,
   FLOOR_CONFIGS,
@@ -48,10 +47,10 @@ export default class DatacentersComponent implements OnInit {
 
   private readonly dcApi = inject(DatacenterApiService);
 
-  // ── Mutable DC list ────────────────────────────────────────────────────────
-  readonly mutableDcs = signal([...DATACENTER_INFO]);
+  // ── DC list (loaded from the API) ──────────────────────────────────────────
+  readonly mutableDcs = signal<DatacenterInfo[]>([]);
 
-  selectedDcId = signal('ams-01');
+  selectedDcId = signal('');
 
   viewMode = signal<'map' | 'isometric'>('map');
 
@@ -88,20 +87,17 @@ export default class DatacentersComponent implements OnInit {
   ngOnInit(): void {
     firstValueFrom(this.dcApi.listSites())
       .then((res) => {
-        const apiDcs = res.sites.map((s) => DatacenterApiService.mapSite(s));
-        this.mutableDcs.update((list) =>
-          list.map((dc) => {
-            const api = apiDcs.find((a) => a.id === dc.id);
-            return api ? { ...dc, name: api.name, address: api.address } : dc;
-          }),
-        );
+        this.mutableDcs.set(res.sites.map((s) => DatacenterApiService.mapSite(s)));
+        if (!this.selectedDcId()) {
+          this.selectedDcId.set(this.mutableDcs()[0]?.id ?? '');
+        }
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  readonly currentDc = computed(
-    () => this.mutableDcs().find((dc) => dc.id === this.selectedDcId())!,
+  readonly currentDc = computed(() =>
+    this.mutableDcs().find((dc) => dc.id === this.selectedDcId()),
   );
 
   readonly dcRacks = computed(() => RACKS.filter((r) => r.dcId === this.selectedDcId()));
@@ -389,13 +385,7 @@ export default class DatacentersComponent implements OnInit {
 
   private readonly fEstablished = viewChild<NativeElementRef>('fEstablished');
 
-  private readonly fPowerKw = viewChild<NativeElementRef>('fPowerKw');
-
-  private readonly fCoolingKw = viewChild<NativeElementRef>('fCoolingKw');
-
   private readonly fFloorSqm = viewChild<NativeElementRef>('fFloorSqm');
-
-  private readonly fPue = viewChild<NativeElementRef>('fPue');
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
@@ -411,9 +401,6 @@ export default class DatacentersComponent implements OnInit {
       established: new Date().getFullYear(),
       status: 'operational',
       floorSqm: 0,
-      powerCapacityKw: 0,
-      coolingCapacityKw: 0,
-      pue: 1.5,
     });
   }
 
@@ -438,13 +425,14 @@ export default class DatacentersComponent implements OnInit {
       tier: (parseInt(this.fTier()?.nativeElement.value ?? '3', 10) || 3) as 1 | 2 | 3 | 4,
       status: (this.fStatus()?.nativeElement.value ?? 'operational') as DatacenterStatus,
       established: parseFloat(this.fEstablished()?.nativeElement.value ?? '0') || 0,
-      powerCapacityKw: parseFloat(this.fPowerKw()?.nativeElement.value ?? '0') || 0,
-      coolingCapacityKw: parseFloat(this.fCoolingKw()?.nativeElement.value ?? '0') || 0,
       floorSqm: parseFloat(this.fFloorSqm()?.nativeElement.value ?? '0') || 0,
-      pue: parseFloat(this.fPue()?.nativeElement.value ?? '0') || 0,
+      // Not modelled by the API.
+      powerCapacityKw: 0,
+      coolingCapacityKw: 0,
+      pue: 0,
     };
     if (form.id) {
-      firstValueFrom(this.dcApi.updateSite(form.id, updated.name, updated.address))
+      firstValueFrom(this.dcApi.updateSite(updated))
         .then(() => {
           this.mutableDcs.update((list) => list.map((dc) => (dc.id === form.id ? updated : dc)));
           this.editForm.set(null);
@@ -452,7 +440,7 @@ export default class DatacentersComponent implements OnInit {
         // eslint-disable-next-line no-console
         .catch((err) => console.error(connectErrorMessage(err)));
     } else {
-      firstValueFrom(this.dcApi.createSite(updated.name, updated.address))
+      firstValueFrom(this.dcApi.createSite(updated))
         .then((res) => {
           const created = { ...updated, id: res.siteId || updated.id };
           this.mutableDcs.update((list) => [...list, created]);

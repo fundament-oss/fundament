@@ -40,6 +40,9 @@ const (
 	// PlacementServiceGetPlacementProcedure is the fully-qualified name of the PlacementService's
 	// GetPlacement RPC.
 	PlacementServiceGetPlacementProcedure = "/dcim.v1.PlacementService/GetPlacement"
+	// PlacementServiceGetPlacementByAssetProcedure is the fully-qualified name of the
+	// PlacementService's GetPlacementByAsset RPC.
+	PlacementServiceGetPlacementByAssetProcedure = "/dcim.v1.PlacementService/GetPlacementByAsset"
 	// PlacementServiceUpdatePlacementProcedure is the fully-qualified name of the PlacementService's
 	// UpdatePlacement RPC.
 	PlacementServiceUpdatePlacementProcedure = "/dcim.v1.PlacementService/UpdatePlacement"
@@ -58,6 +61,7 @@ const (
 type PlacementServiceClient interface {
 	CreatePlacement(context.Context, *connect.Request[v1.CreatePlacementRequest]) (*connect.Response[v1.CreatePlacementResponse], error)
 	GetPlacement(context.Context, *connect.Request[v1.GetPlacementRequest]) (*connect.Response[v1.GetPlacementResponse], error)
+	GetPlacementByAsset(context.Context, *connect.Request[v1.GetPlacementByAssetRequest]) (*connect.Response[v1.GetPlacementByAssetResponse], error)
 	UpdatePlacement(context.Context, *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[emptypb.Empty], error)
 	DeletePlacement(context.Context, *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[emptypb.Empty], error)
 	ListPlacementsByRack(context.Context, *connect.Request[v1.ListPlacementsByRackRequest]) (*connect.Response[v1.ListPlacementsByRackResponse], error)
@@ -85,6 +89,12 @@ func NewPlacementServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			httpClient,
 			baseURL+PlacementServiceGetPlacementProcedure,
 			connect.WithSchema(placementServiceMethods.ByName("GetPlacement")),
+			connect.WithClientOptions(opts...),
+		),
+		getPlacementByAsset: connect.NewClient[v1.GetPlacementByAssetRequest, v1.GetPlacementByAssetResponse](
+			httpClient,
+			baseURL+PlacementServiceGetPlacementByAssetProcedure,
+			connect.WithSchema(placementServiceMethods.ByName("GetPlacementByAsset")),
 			connect.WithClientOptions(opts...),
 		),
 		updatePlacement: connect.NewClient[v1.UpdatePlacementRequest, emptypb.Empty](
@@ -118,6 +128,7 @@ func NewPlacementServiceClient(httpClient connect.HTTPClient, baseURL string, op
 type placementServiceClient struct {
 	createPlacement      *connect.Client[v1.CreatePlacementRequest, v1.CreatePlacementResponse]
 	getPlacement         *connect.Client[v1.GetPlacementRequest, v1.GetPlacementResponse]
+	getPlacementByAsset  *connect.Client[v1.GetPlacementByAssetRequest, v1.GetPlacementByAssetResponse]
 	updatePlacement      *connect.Client[v1.UpdatePlacementRequest, emptypb.Empty]
 	deletePlacement      *connect.Client[v1.DeletePlacementRequest, emptypb.Empty]
 	listPlacementsByRack *connect.Client[v1.ListPlacementsByRackRequest, v1.ListPlacementsByRackResponse]
@@ -132,6 +143,11 @@ func (c *placementServiceClient) CreatePlacement(ctx context.Context, req *conne
 // GetPlacement calls dcim.v1.PlacementService.GetPlacement.
 func (c *placementServiceClient) GetPlacement(ctx context.Context, req *connect.Request[v1.GetPlacementRequest]) (*connect.Response[v1.GetPlacementResponse], error) {
 	return c.getPlacement.CallUnary(ctx, req)
+}
+
+// GetPlacementByAsset calls dcim.v1.PlacementService.GetPlacementByAsset.
+func (c *placementServiceClient) GetPlacementByAsset(ctx context.Context, req *connect.Request[v1.GetPlacementByAssetRequest]) (*connect.Response[v1.GetPlacementByAssetResponse], error) {
+	return c.getPlacementByAsset.CallUnary(ctx, req)
 }
 
 // UpdatePlacement calls dcim.v1.PlacementService.UpdatePlacement.
@@ -158,6 +174,7 @@ func (c *placementServiceClient) ListChildPlacements(ctx context.Context, req *c
 type PlacementServiceHandler interface {
 	CreatePlacement(context.Context, *connect.Request[v1.CreatePlacementRequest]) (*connect.Response[v1.CreatePlacementResponse], error)
 	GetPlacement(context.Context, *connect.Request[v1.GetPlacementRequest]) (*connect.Response[v1.GetPlacementResponse], error)
+	GetPlacementByAsset(context.Context, *connect.Request[v1.GetPlacementByAssetRequest]) (*connect.Response[v1.GetPlacementByAssetResponse], error)
 	UpdatePlacement(context.Context, *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[emptypb.Empty], error)
 	DeletePlacement(context.Context, *connect.Request[v1.DeletePlacementRequest]) (*connect.Response[emptypb.Empty], error)
 	ListPlacementsByRack(context.Context, *connect.Request[v1.ListPlacementsByRackRequest]) (*connect.Response[v1.ListPlacementsByRackResponse], error)
@@ -181,6 +198,12 @@ func NewPlacementServiceHandler(svc PlacementServiceHandler, opts ...connect.Han
 		PlacementServiceGetPlacementProcedure,
 		svc.GetPlacement,
 		connect.WithSchema(placementServiceMethods.ByName("GetPlacement")),
+		connect.WithHandlerOptions(opts...),
+	)
+	placementServiceGetPlacementByAssetHandler := connect.NewUnaryHandler(
+		PlacementServiceGetPlacementByAssetProcedure,
+		svc.GetPlacementByAsset,
+		connect.WithSchema(placementServiceMethods.ByName("GetPlacementByAsset")),
 		connect.WithHandlerOptions(opts...),
 	)
 	placementServiceUpdatePlacementHandler := connect.NewUnaryHandler(
@@ -213,6 +236,8 @@ func NewPlacementServiceHandler(svc PlacementServiceHandler, opts ...connect.Han
 			placementServiceCreatePlacementHandler.ServeHTTP(w, r)
 		case PlacementServiceGetPlacementProcedure:
 			placementServiceGetPlacementHandler.ServeHTTP(w, r)
+		case PlacementServiceGetPlacementByAssetProcedure:
+			placementServiceGetPlacementByAssetHandler.ServeHTTP(w, r)
 		case PlacementServiceUpdatePlacementProcedure:
 			placementServiceUpdatePlacementHandler.ServeHTTP(w, r)
 		case PlacementServiceDeletePlacementProcedure:
@@ -236,6 +261,10 @@ func (UnimplementedPlacementServiceHandler) CreatePlacement(context.Context, *co
 
 func (UnimplementedPlacementServiceHandler) GetPlacement(context.Context, *connect.Request[v1.GetPlacementRequest]) (*connect.Response[v1.GetPlacementResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PlacementService.GetPlacement is not implemented"))
+}
+
+func (UnimplementedPlacementServiceHandler) GetPlacementByAsset(context.Context, *connect.Request[v1.GetPlacementByAssetRequest]) (*connect.Response[v1.GetPlacementByAssetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PlacementService.GetPlacementByAsset is not implemented"))
 }
 
 func (UnimplementedPlacementServiceHandler) UpdatePlacement(context.Context, *connect.Request[v1.UpdatePlacementRequest]) (*connect.Response[emptypb.Empty], error) {

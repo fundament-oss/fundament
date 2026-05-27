@@ -950,6 +950,132 @@ func (b0 GetPlacementResponse_builder) Build() *GetPlacementResponse {
 	return m0
 }
 
+type GetPlacementByAssetRequest struct {
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_AssetId string                 `protobuf:"bytes,10,opt,name=asset_id,json=assetId"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *GetPlacementByAssetRequest) Reset() {
+	*x = GetPlacementByAssetRequest{}
+	mi := &file_v1_placement_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPlacementByAssetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPlacementByAssetRequest) ProtoMessage() {}
+
+func (x *GetPlacementByAssetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_placement_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetPlacementByAssetRequest) GetAssetId() string {
+	if x != nil {
+		return x.xxx_hidden_AssetId
+	}
+	return ""
+}
+
+func (x *GetPlacementByAssetRequest) SetAssetId(v string) {
+	x.xxx_hidden_AssetId = v
+}
+
+type GetPlacementByAssetRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	AssetId string
+}
+
+func (b0 GetPlacementByAssetRequest_builder) Build() *GetPlacementByAssetRequest {
+	m0 := &GetPlacementByAssetRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_AssetId = b.AssetId
+	return m0
+}
+
+// GetPlacementByAssetResponse has an unset placement when the asset is unplaced.
+type GetPlacementByAssetResponse struct {
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Placement *Placement             `protobuf:"bytes,10,opt,name=placement"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *GetPlacementByAssetResponse) Reset() {
+	*x = GetPlacementByAssetResponse{}
+	mi := &file_v1_placement_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPlacementByAssetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPlacementByAssetResponse) ProtoMessage() {}
+
+func (x *GetPlacementByAssetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_placement_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetPlacementByAssetResponse) GetPlacement() *Placement {
+	if x != nil {
+		return x.xxx_hidden_Placement
+	}
+	return nil
+}
+
+func (x *GetPlacementByAssetResponse) SetPlacement(v *Placement) {
+	x.xxx_hidden_Placement = v
+}
+
+func (x *GetPlacementByAssetResponse) HasPlacement() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Placement != nil
+}
+
+func (x *GetPlacementByAssetResponse) ClearPlacement() {
+	x.xxx_hidden_Placement = nil
+}
+
+type GetPlacementByAssetResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Placement *Placement
+}
+
+func (b0 GetPlacementByAssetResponse_builder) Build() *GetPlacementByAssetResponse {
+	m0 := &GetPlacementByAssetResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Placement = b.Placement
+	return m0
+}
+
 type UpdatePlacementRequest struct {
 	state                      protoimpl.MessageState            `protogen:"opaque.v1"`
 	xxx_hidden_Id              string                            `protobuf:"bytes,10,opt,name=id"`
@@ -964,7 +1090,7 @@ type UpdatePlacementRequest struct {
 
 func (x *UpdatePlacementRequest) Reset() {
 	*x = UpdatePlacementRequest{}
-	mi := &file_v1_placement_proto_msgTypes[7]
+	mi := &file_v1_placement_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -976,7 +1102,7 @@ func (x *UpdatePlacementRequest) String() string {
 func (*UpdatePlacementRequest) ProtoMessage() {}
 
 func (x *UpdatePlacementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[7]
+	mi := &file_v1_placement_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1180,7 +1306,7 @@ func (b0 UpdatePlacementRequest_builder) Build() *UpdatePlacementRequest {
 type case_UpdatePlacementRequest_Location protoreflect.FieldNumber
 
 func (x case_UpdatePlacementRequest_Location) String() string {
-	md := file_v1_placement_proto_msgTypes[7].Descriptor()
+	md := file_v1_placement_proto_msgTypes[9].Descriptor()
 	if x == 0 {
 		return "not set"
 	}
@@ -1212,7 +1338,7 @@ type DeletePlacementRequest struct {
 
 func (x *DeletePlacementRequest) Reset() {
 	*x = DeletePlacementRequest{}
-	mi := &file_v1_placement_proto_msgTypes[8]
+	mi := &file_v1_placement_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1224,7 +1350,7 @@ func (x *DeletePlacementRequest) String() string {
 func (*DeletePlacementRequest) ProtoMessage() {}
 
 func (x *DeletePlacementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[8]
+	mi := &file_v1_placement_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1269,7 +1395,7 @@ type ListPlacementsByRackRequest struct {
 
 func (x *ListPlacementsByRackRequest) Reset() {
 	*x = ListPlacementsByRackRequest{}
-	mi := &file_v1_placement_proto_msgTypes[9]
+	mi := &file_v1_placement_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1281,7 +1407,7 @@ func (x *ListPlacementsByRackRequest) String() string {
 func (*ListPlacementsByRackRequest) ProtoMessage() {}
 
 func (x *ListPlacementsByRackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[9]
+	mi := &file_v1_placement_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1326,7 +1452,7 @@ type ListPlacementsByRackResponse struct {
 
 func (x *ListPlacementsByRackResponse) Reset() {
 	*x = ListPlacementsByRackResponse{}
-	mi := &file_v1_placement_proto_msgTypes[10]
+	mi := &file_v1_placement_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1338,7 +1464,7 @@ func (x *ListPlacementsByRackResponse) String() string {
 func (*ListPlacementsByRackResponse) ProtoMessage() {}
 
 func (x *ListPlacementsByRackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[10]
+	mi := &file_v1_placement_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1385,7 +1511,7 @@ type ListChildPlacementsRequest struct {
 
 func (x *ListChildPlacementsRequest) Reset() {
 	*x = ListChildPlacementsRequest{}
-	mi := &file_v1_placement_proto_msgTypes[11]
+	mi := &file_v1_placement_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1397,7 +1523,7 @@ func (x *ListChildPlacementsRequest) String() string {
 func (*ListChildPlacementsRequest) ProtoMessage() {}
 
 func (x *ListChildPlacementsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[11]
+	mi := &file_v1_placement_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1442,7 +1568,7 @@ type ListChildPlacementsResponse struct {
 
 func (x *ListChildPlacementsResponse) Reset() {
 	*x = ListChildPlacementsResponse{}
-	mi := &file_v1_placement_proto_msgTypes[12]
+	mi := &file_v1_placement_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1454,7 +1580,7 @@ func (x *ListChildPlacementsResponse) String() string {
 func (*ListChildPlacementsResponse) ProtoMessage() {}
 
 func (x *ListChildPlacementsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_placement_proto_msgTypes[12]
+	mi := &file_v1_placement_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1536,6 +1662,12 @@ const file_v1_placement_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"H\n" +
 	"\x14GetPlacementResponse\x120\n" +
 	"\tplacement\x18\n" +
+	" \x01(\v2\x12.dcim.v1.PlacementR\tplacement\"A\n" +
+	"\x1aGetPlacementByAssetRequest\x12#\n" +
+	"\basset_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aassetId\"O\n" +
+	"\x1bGetPlacementByAssetResponse\x120\n" +
+	"\tplacement\x18\n" +
 	" \x01(\v2\x12.dcim.v1.PlacementR\tplacement\"\x81\x02\n" +
 	"\x16UpdatePlacementRequest\x12\x18\n" +
 	"\x02id\x18\n" +
@@ -1564,16 +1696,17 @@ const file_v1_placement_proto_rawDesc = "" +
 	"\n" +
 	"placements\x18\n" +
 	" \x03(\v2\x12.dcim.v1.PlacementR\n" +
-	"placements2\x94\x04\n" +
+	"placements2\xf6\x04\n" +
 	"\x10PlacementService\x12T\n" +
 	"\x0fCreatePlacement\x12\x1f.dcim.v1.CreatePlacementRequest\x1a .dcim.v1.CreatePlacementResponse\x12K\n" +
-	"\fGetPlacement\x12\x1c.dcim.v1.GetPlacementRequest\x1a\x1d.dcim.v1.GetPlacementResponse\x12J\n" +
+	"\fGetPlacement\x12\x1c.dcim.v1.GetPlacementRequest\x1a\x1d.dcim.v1.GetPlacementResponse\x12`\n" +
+	"\x13GetPlacementByAsset\x12#.dcim.v1.GetPlacementByAssetRequest\x1a$.dcim.v1.GetPlacementByAssetResponse\x12J\n" +
 	"\x0fUpdatePlacement\x12\x1f.dcim.v1.UpdatePlacementRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
 	"\x0fDeletePlacement\x12\x1f.dcim.v1.DeletePlacementRequest\x1a\x16.google.protobuf.Empty\x12c\n" +
 	"\x14ListPlacementsByRack\x12$.dcim.v1.ListPlacementsByRackRequest\x1a%.dcim.v1.ListPlacementsByRackResponse\x12`\n" +
 	"\x13ListChildPlacements\x12#.dcim.v1.ListChildPlacementsRequest\x1a$.dcim.v1.ListChildPlacementsResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_placement_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_v1_placement_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_v1_placement_proto_goTypes = []any{
 	(*RackLocation)(nil),                 // 0: dcim.v1.RackLocation
 	(*SubComponentLocation)(nil),         // 1: dcim.v1.SubComponentLocation
@@ -1582,46 +1715,51 @@ var file_v1_placement_proto_goTypes = []any{
 	(*CreatePlacementResponse)(nil),      // 4: dcim.v1.CreatePlacementResponse
 	(*GetPlacementRequest)(nil),          // 5: dcim.v1.GetPlacementRequest
 	(*GetPlacementResponse)(nil),         // 6: dcim.v1.GetPlacementResponse
-	(*UpdatePlacementRequest)(nil),       // 7: dcim.v1.UpdatePlacementRequest
-	(*DeletePlacementRequest)(nil),       // 8: dcim.v1.DeletePlacementRequest
-	(*ListPlacementsByRackRequest)(nil),  // 9: dcim.v1.ListPlacementsByRackRequest
-	(*ListPlacementsByRackResponse)(nil), // 10: dcim.v1.ListPlacementsByRackResponse
-	(*ListChildPlacementsRequest)(nil),   // 11: dcim.v1.ListChildPlacementsRequest
-	(*ListChildPlacementsResponse)(nil),  // 12: dcim.v1.ListChildPlacementsResponse
-	(RackSlotType)(0),                    // 13: dcim.v1.RackSlotType
-	(*timestamppb.Timestamp)(nil),        // 14: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                // 15: google.protobuf.Empty
+	(*GetPlacementByAssetRequest)(nil),   // 7: dcim.v1.GetPlacementByAssetRequest
+	(*GetPlacementByAssetResponse)(nil),  // 8: dcim.v1.GetPlacementByAssetResponse
+	(*UpdatePlacementRequest)(nil),       // 9: dcim.v1.UpdatePlacementRequest
+	(*DeletePlacementRequest)(nil),       // 10: dcim.v1.DeletePlacementRequest
+	(*ListPlacementsByRackRequest)(nil),  // 11: dcim.v1.ListPlacementsByRackRequest
+	(*ListPlacementsByRackResponse)(nil), // 12: dcim.v1.ListPlacementsByRackResponse
+	(*ListChildPlacementsRequest)(nil),   // 13: dcim.v1.ListChildPlacementsRequest
+	(*ListChildPlacementsResponse)(nil),  // 14: dcim.v1.ListChildPlacementsResponse
+	(RackSlotType)(0),                    // 15: dcim.v1.RackSlotType
+	(*timestamppb.Timestamp)(nil),        // 16: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                // 17: google.protobuf.Empty
 }
 var file_v1_placement_proto_depIdxs = []int32{
-	13, // 0: dcim.v1.RackLocation.rack_slot_type:type_name -> dcim.v1.RackSlotType
+	15, // 0: dcim.v1.RackLocation.rack_slot_type:type_name -> dcim.v1.RackSlotType
 	0,  // 1: dcim.v1.Placement.rack:type_name -> dcim.v1.RackLocation
 	1,  // 2: dcim.v1.Placement.sub_component:type_name -> dcim.v1.SubComponentLocation
-	14, // 3: dcim.v1.Placement.created:type_name -> google.protobuf.Timestamp
-	14, // 4: dcim.v1.Placement.deleted:type_name -> google.protobuf.Timestamp
+	16, // 3: dcim.v1.Placement.created:type_name -> google.protobuf.Timestamp
+	16, // 4: dcim.v1.Placement.deleted:type_name -> google.protobuf.Timestamp
 	0,  // 5: dcim.v1.CreatePlacementRequest.rack:type_name -> dcim.v1.RackLocation
 	1,  // 6: dcim.v1.CreatePlacementRequest.sub_component:type_name -> dcim.v1.SubComponentLocation
 	2,  // 7: dcim.v1.GetPlacementResponse.placement:type_name -> dcim.v1.Placement
-	0,  // 8: dcim.v1.UpdatePlacementRequest.rack:type_name -> dcim.v1.RackLocation
-	1,  // 9: dcim.v1.UpdatePlacementRequest.sub_component:type_name -> dcim.v1.SubComponentLocation
-	2,  // 10: dcim.v1.ListPlacementsByRackResponse.placements:type_name -> dcim.v1.Placement
-	2,  // 11: dcim.v1.ListChildPlacementsResponse.placements:type_name -> dcim.v1.Placement
-	3,  // 12: dcim.v1.PlacementService.CreatePlacement:input_type -> dcim.v1.CreatePlacementRequest
-	5,  // 13: dcim.v1.PlacementService.GetPlacement:input_type -> dcim.v1.GetPlacementRequest
-	7,  // 14: dcim.v1.PlacementService.UpdatePlacement:input_type -> dcim.v1.UpdatePlacementRequest
-	8,  // 15: dcim.v1.PlacementService.DeletePlacement:input_type -> dcim.v1.DeletePlacementRequest
-	9,  // 16: dcim.v1.PlacementService.ListPlacementsByRack:input_type -> dcim.v1.ListPlacementsByRackRequest
-	11, // 17: dcim.v1.PlacementService.ListChildPlacements:input_type -> dcim.v1.ListChildPlacementsRequest
-	4,  // 18: dcim.v1.PlacementService.CreatePlacement:output_type -> dcim.v1.CreatePlacementResponse
-	6,  // 19: dcim.v1.PlacementService.GetPlacement:output_type -> dcim.v1.GetPlacementResponse
-	15, // 20: dcim.v1.PlacementService.UpdatePlacement:output_type -> google.protobuf.Empty
-	15, // 21: dcim.v1.PlacementService.DeletePlacement:output_type -> google.protobuf.Empty
-	10, // 22: dcim.v1.PlacementService.ListPlacementsByRack:output_type -> dcim.v1.ListPlacementsByRackResponse
-	12, // 23: dcim.v1.PlacementService.ListChildPlacements:output_type -> dcim.v1.ListChildPlacementsResponse
-	18, // [18:24] is the sub-list for method output_type
-	12, // [12:18] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	2,  // 8: dcim.v1.GetPlacementByAssetResponse.placement:type_name -> dcim.v1.Placement
+	0,  // 9: dcim.v1.UpdatePlacementRequest.rack:type_name -> dcim.v1.RackLocation
+	1,  // 10: dcim.v1.UpdatePlacementRequest.sub_component:type_name -> dcim.v1.SubComponentLocation
+	2,  // 11: dcim.v1.ListPlacementsByRackResponse.placements:type_name -> dcim.v1.Placement
+	2,  // 12: dcim.v1.ListChildPlacementsResponse.placements:type_name -> dcim.v1.Placement
+	3,  // 13: dcim.v1.PlacementService.CreatePlacement:input_type -> dcim.v1.CreatePlacementRequest
+	5,  // 14: dcim.v1.PlacementService.GetPlacement:input_type -> dcim.v1.GetPlacementRequest
+	7,  // 15: dcim.v1.PlacementService.GetPlacementByAsset:input_type -> dcim.v1.GetPlacementByAssetRequest
+	9,  // 16: dcim.v1.PlacementService.UpdatePlacement:input_type -> dcim.v1.UpdatePlacementRequest
+	10, // 17: dcim.v1.PlacementService.DeletePlacement:input_type -> dcim.v1.DeletePlacementRequest
+	11, // 18: dcim.v1.PlacementService.ListPlacementsByRack:input_type -> dcim.v1.ListPlacementsByRackRequest
+	13, // 19: dcim.v1.PlacementService.ListChildPlacements:input_type -> dcim.v1.ListChildPlacementsRequest
+	4,  // 20: dcim.v1.PlacementService.CreatePlacement:output_type -> dcim.v1.CreatePlacementResponse
+	6,  // 21: dcim.v1.PlacementService.GetPlacement:output_type -> dcim.v1.GetPlacementResponse
+	8,  // 22: dcim.v1.PlacementService.GetPlacementByAsset:output_type -> dcim.v1.GetPlacementByAssetResponse
+	17, // 23: dcim.v1.PlacementService.UpdatePlacement:output_type -> google.protobuf.Empty
+	17, // 24: dcim.v1.PlacementService.DeletePlacement:output_type -> google.protobuf.Empty
+	12, // 25: dcim.v1.PlacementService.ListPlacementsByRack:output_type -> dcim.v1.ListPlacementsByRackResponse
+	14, // 26: dcim.v1.PlacementService.ListChildPlacements:output_type -> dcim.v1.ListChildPlacementsResponse
+	20, // [20:27] is the sub-list for method output_type
+	13, // [13:20] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_v1_placement_proto_init() }
@@ -1638,7 +1776,7 @@ func file_v1_placement_proto_init() {
 		(*createPlacementRequest_Rack)(nil),
 		(*createPlacementRequest_SubComponent)(nil),
 	}
-	file_v1_placement_proto_msgTypes[7].OneofWrappers = []any{
+	file_v1_placement_proto_msgTypes[9].OneofWrappers = []any{
 		(*updatePlacementRequest_Rack)(nil),
 		(*updatePlacementRequest_SubComponent)(nil),
 	}
@@ -1648,7 +1786,7 @@ func file_v1_placement_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_placement_proto_rawDesc), len(file_v1_placement_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

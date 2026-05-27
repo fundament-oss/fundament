@@ -24,6 +24,7 @@ export default class CatalogApiService {
       id: d.id,
       model: d.model,
       manufacturer: d.manufacturer,
+      partNumber: d.partNumber,
       category: CatalogApiService.fromProtoCategory(d.category),
       specs: d.specs as Record<string, string>,
     };
@@ -65,36 +66,53 @@ export default class CatalogApiService {
       [ProtoCategory.POWER_SUPPLY]: 'PSU',
       [ProtoCategory.CABLE_MANAGER]: 'Other',
       [ProtoCategory.CONSOLE_SERVER]: 'Other',
+      [ProtoCategory.STORAGE]: 'Storage',
+      [ProtoCategory.COOLING]: 'Cooling',
+      [ProtoCategory.FIREWALL]: 'Firewall',
+      [ProtoCategory.KVM]: 'KVM',
+      [ProtoCategory.GPU]: 'GPU',
+      [ProtoCategory.TRANSCEIVER]: 'Transceiver',
+      [ProtoCategory.OTHER]: 'Other',
     };
     return map[cat] ?? 'Other';
   }
 
   private static toProtoCategory(cat: AssetCategory): ProtoCategory {
-    const map: Partial<Record<AssetCategory, ProtoCategory>> = {
+    const map: Record<AssetCategory, ProtoCategory> = {
       Server: ProtoCategory.SERVER,
       Switch: ProtoCategory.SWITCH,
+      Storage: ProtoCategory.STORAGE,
       Power: ProtoCategory.PDU,
-      NIC: ProtoCategory.NIC,
-      CPU: ProtoCategory.CPU,
+      Firewall: ProtoCategory.FIREWALL,
+      Cooling: ProtoCategory.COOLING,
+      KVM: ProtoCategory.KVM,
       Memory: ProtoCategory.DIMM,
       Disk: ProtoCategory.DISK,
+      NIC: ProtoCategory.NIC,
       PSU: ProtoCategory.POWER_SUPPLY,
-      Transceiver: ProtoCategory.SFP,
+      CPU: ProtoCategory.CPU,
+      GPU: ProtoCategory.GPU,
+      Transceiver: ProtoCategory.TRANSCEIVER,
+      Other: ProtoCategory.OTHER,
     };
     return map[cat] ?? ProtoCategory.UNSPECIFIED;
   }
 
   // ── API methods ───────────────────────────────────────────────────────────
 
-  listCatalog() {
-    return this.client.listCatalog({});
+  listCatalog(search?: string) {
+    return this.client.listCatalog(search ? { search } : {});
+  }
+
+  getCatalogEntry(id: string) {
+    return this.client.getCatalogEntry({ id });
   }
 
   createCatalogEntry(entry: CatalogEntry) {
     return this.client.createCatalogEntry({
       manufacturer: entry.manufacturer,
       model: entry.model,
-      partNumber: '',
+      partNumber: entry.partNumber ?? '',
       category: CatalogApiService.toProtoCategory(entry.category),
       formFactor: '',
       specs: entry.specs,

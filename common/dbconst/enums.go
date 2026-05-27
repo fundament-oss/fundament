@@ -101,6 +101,13 @@ const (
 	DeviceCatalogCategory_PowerSupply   DeviceCatalogCategory = "power_supply"
 	DeviceCatalogCategory_CableManager  DeviceCatalogCategory = "cable_manager"
 	DeviceCatalogCategory_ConsoleServer DeviceCatalogCategory = "console_server"
+	DeviceCatalogCategory_Storage       DeviceCatalogCategory = "storage"
+	DeviceCatalogCategory_Cooling       DeviceCatalogCategory = "cooling"
+	DeviceCatalogCategory_Firewall      DeviceCatalogCategory = "firewall"
+	DeviceCatalogCategory_Kvm           DeviceCatalogCategory = "kvm"
+	DeviceCatalogCategory_Gpu           DeviceCatalogCategory = "gpu"
+	DeviceCatalogCategory_Transceiver   DeviceCatalogCategory = "transceiver"
+	DeviceCatalogCategory_Other         DeviceCatalogCategory = "other"
 )
 
 // LogicalConnectionConnectionType represents valid values for dcim.logical_connections.connection_type.

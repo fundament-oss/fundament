@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/placement.proto.
  */
 export const file_v1_placement: GenFile = /*@__PURE__*/
-  fileDesc("ChJ2MS9wbGFjZW1lbnQucHJvdG8SB2RjaW0udjEifQoMUmFja0xvY2F0aW9uEhkKB3JhY2tfaWQYCiABKAlCCLpIBXIDsAEBEhcKD3JhY2tfdW5pdF9zdGFydBgUIAEoBRI5Cg5yYWNrX3Nsb3RfdHlwZRgeIAEoDjIVLmRjaW0udjEuUmFja1Nsb3RUeXBlQgq6SAeCAQQQASAAImoKFFN1YkNvbXBvbmVudExvY2F0aW9uEiUKE3BhcmVudF9wbGFjZW1lbnRfaWQYCiABKAlCCLpIBXIDsAEBEisKGXBhcmVudF9wb3J0X2RlZmluaXRpb25faWQYFCABKAlCCLpIBXIDsAEBIsMCCglQbGFjZW1lbnQSCgoCaWQYCiABKAkSEAoIYXNzZXRfaWQYFCABKAkSJQoEcmFjaxgeIAEoCzIVLmRjaW0udjEuUmFja0xvY2F0aW9uSAASNgoNc3ViX2NvbXBvbmVudBgoIAEoCzIdLmRjaW0udjEuU3ViQ29tcG9uZW50TG9jYXRpb25IABIgChFsb2dpY2FsX2RldmljZV9pZBgyIAEoCUIFqgECCAESGwoMZXh0ZXJuYWxfcmVmGDwgASgJQgWqAQIIARINCgVub3RlcxhGIAEoCRIrCgdjcmVhdGVkGFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGFogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAFCCgoIbG9jYXRpb24i3gEKFkNyZWF0ZVBsYWNlbWVudFJlcXVlc3QSGgoIYXNzZXRfaWQYCiABKAlCCLpIBXIDsAEBEiUKBHJhY2sYFCABKAsyFS5kY2ltLnYxLlJhY2tMb2NhdGlvbkgAEjYKDXN1Yl9jb21wb25lbnQYHiABKAsyHS5kY2ltLnYxLlN1YkNvbXBvbmVudExvY2F0aW9uSAASIAoRbG9naWNhbF9kZXZpY2VfaWQYRiABKAlCBaoBAggBEhQKBW5vdGVzGFAgASgJQgWqAQIIAUIRCghsb2NhdGlvbhIFukgCCAEiLwoXQ3JlYXRlUGxhY2VtZW50UmVzcG9uc2USFAoMcGxhY2VtZW50X2lkGAogASgJIisKE0dldFBsYWNlbWVudFJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIj0KFEdldFBsYWNlbWVudFJlc3BvbnNlEiUKCXBsYWNlbWVudBgKIAEoCzISLmRjaW0udjEuUGxhY2VtZW50ItEBChZVcGRhdGVQbGFjZW1lbnRSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARIlCgRyYWNrGBQgASgLMhUuZGNpbS52MS5SYWNrTG9jYXRpb25IABI2Cg1zdWJfY29tcG9uZW50GB4gASgLMh0uZGNpbS52MS5TdWJDb21wb25lbnRMb2NhdGlvbkgAEiAKEWxvZ2ljYWxfZGV2aWNlX2lkGEYgASgJQgWqAQIIARIUCgVub3RlcxhQIAEoCUIFqgECCAFCCgoIbG9jYXRpb24iLgoWRGVsZXRlUGxhY2VtZW50UmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiOAobTGlzdFBsYWNlbWVudHNCeVJhY2tSZXF1ZXN0EhkKB3JhY2tfaWQYCiABKAlCCLpIBXIDsAEBIkYKHExpc3RQbGFjZW1lbnRzQnlSYWNrUmVzcG9uc2USJgoKcGxhY2VtZW50cxgKIAMoCzISLmRjaW0udjEuUGxhY2VtZW50IkMKGkxpc3RDaGlsZFBsYWNlbWVudHNSZXF1ZXN0EiUKE3BhcmVudF9wbGFjZW1lbnRfaWQYCiABKAlCCLpIBXIDsAEBIkUKG0xpc3RDaGlsZFBsYWNlbWVudHNSZXNwb25zZRImCgpwbGFjZW1lbnRzGAogAygLMhIuZGNpbS52MS5QbGFjZW1lbnQylAQKEFBsYWNlbWVudFNlcnZpY2USVAoPQ3JlYXRlUGxhY2VtZW50Eh8uZGNpbS52MS5DcmVhdGVQbGFjZW1lbnRSZXF1ZXN0GiAuZGNpbS52MS5DcmVhdGVQbGFjZW1lbnRSZXNwb25zZRJLCgxHZXRQbGFjZW1lbnQSHC5kY2ltLnYxLkdldFBsYWNlbWVudFJlcXVlc3QaHS5kY2ltLnYxLkdldFBsYWNlbWVudFJlc3BvbnNlEkoKD1VwZGF0ZVBsYWNlbWVudBIfLmRjaW0udjEuVXBkYXRlUGxhY2VtZW50UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJKCg9EZWxldGVQbGFjZW1lbnQSHy5kY2ltLnYxLkRlbGV0ZVBsYWNlbWVudFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSYwoUTGlzdFBsYWNlbWVudHNCeVJhY2sSJC5kY2ltLnYxLkxpc3RQbGFjZW1lbnRzQnlSYWNrUmVxdWVzdBolLmRjaW0udjEuTGlzdFBsYWNlbWVudHNCeVJhY2tSZXNwb25zZRJgChNMaXN0Q2hpbGRQbGFjZW1lbnRzEiMuZGNpbS52MS5MaXN0Q2hpbGRQbGFjZW1lbnRzUmVxdWVzdBokLmRjaW0udjEuTGlzdENoaWxkUGxhY2VtZW50c1Jlc3BvbnNlQk9aQ2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvZGNpbS1hcGkvcGtnL3Byb3RvL2dlbi92MTtkY2ltdjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("ChJ2MS9wbGFjZW1lbnQucHJvdG8SB2RjaW0udjEifQoMUmFja0xvY2F0aW9uEhkKB3JhY2tfaWQYCiABKAlCCLpIBXIDsAEBEhcKD3JhY2tfdW5pdF9zdGFydBgUIAEoBRI5Cg5yYWNrX3Nsb3RfdHlwZRgeIAEoDjIVLmRjaW0udjEuUmFja1Nsb3RUeXBlQgq6SAeCAQQQASAAImoKFFN1YkNvbXBvbmVudExvY2F0aW9uEiUKE3BhcmVudF9wbGFjZW1lbnRfaWQYCiABKAlCCLpIBXIDsAEBEisKGXBhcmVudF9wb3J0X2RlZmluaXRpb25faWQYFCABKAlCCLpIBXIDsAEBIsMCCglQbGFjZW1lbnQSCgoCaWQYCiABKAkSEAoIYXNzZXRfaWQYFCABKAkSJQoEcmFjaxgeIAEoCzIVLmRjaW0udjEuUmFja0xvY2F0aW9uSAASNgoNc3ViX2NvbXBvbmVudBgoIAEoCzIdLmRjaW0udjEuU3ViQ29tcG9uZW50TG9jYXRpb25IABIgChFsb2dpY2FsX2RldmljZV9pZBgyIAEoCUIFqgECCAESGwoMZXh0ZXJuYWxfcmVmGDwgASgJQgWqAQIIARINCgVub3RlcxhGIAEoCRIrCgdjcmVhdGVkGFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGFogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAFCCgoIbG9jYXRpb24i3gEKFkNyZWF0ZVBsYWNlbWVudFJlcXVlc3QSGgoIYXNzZXRfaWQYCiABKAlCCLpIBXIDsAEBEiUKBHJhY2sYFCABKAsyFS5kY2ltLnYxLlJhY2tMb2NhdGlvbkgAEjYKDXN1Yl9jb21wb25lbnQYHiABKAsyHS5kY2ltLnYxLlN1YkNvbXBvbmVudExvY2F0aW9uSAASIAoRbG9naWNhbF9kZXZpY2VfaWQYRiABKAlCBaoBAggBEhQKBW5vdGVzGFAgASgJQgWqAQIIAUIRCghsb2NhdGlvbhIFukgCCAEiLwoXQ3JlYXRlUGxhY2VtZW50UmVzcG9uc2USFAoMcGxhY2VtZW50X2lkGAogASgJIisKE0dldFBsYWNlbWVudFJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIj0KFEdldFBsYWNlbWVudFJlc3BvbnNlEiUKCXBsYWNlbWVudBgKIAEoCzISLmRjaW0udjEuUGxhY2VtZW50IjgKGkdldFBsYWNlbWVudEJ5QXNzZXRSZXF1ZXN0EhoKCGFzc2V0X2lkGAogASgJQgi6SAVyA7ABASJEChtHZXRQbGFjZW1lbnRCeUFzc2V0UmVzcG9uc2USJQoJcGxhY2VtZW50GAogASgLMhIuZGNpbS52MS5QbGFjZW1lbnQi0QEKFlVwZGF0ZVBsYWNlbWVudFJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEiUKBHJhY2sYFCABKAsyFS5kY2ltLnYxLlJhY2tMb2NhdGlvbkgAEjYKDXN1Yl9jb21wb25lbnQYHiABKAsyHS5kY2ltLnYxLlN1YkNvbXBvbmVudExvY2F0aW9uSAASIAoRbG9naWNhbF9kZXZpY2VfaWQYRiABKAlCBaoBAggBEhQKBW5vdGVzGFAgASgJQgWqAQIIAUIKCghsb2NhdGlvbiIuChZEZWxldGVQbGFjZW1lbnRSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASI4ChtMaXN0UGxhY2VtZW50c0J5UmFja1JlcXVlc3QSGQoHcmFja19pZBgKIAEoCUIIukgFcgOwAQEiRgocTGlzdFBsYWNlbWVudHNCeVJhY2tSZXNwb25zZRImCgpwbGFjZW1lbnRzGAogAygLMhIuZGNpbS52MS5QbGFjZW1lbnQiQwoaTGlzdENoaWxkUGxhY2VtZW50c1JlcXVlc3QSJQoTcGFyZW50X3BsYWNlbWVudF9pZBgKIAEoCUIIukgFcgOwAQEiRQobTGlzdENoaWxkUGxhY2VtZW50c1Jlc3BvbnNlEiYKCnBsYWNlbWVudHMYCiADKAsyEi5kY2ltLnYxLlBsYWNlbWVudDL2BAoQUGxhY2VtZW50U2VydmljZRJUCg9DcmVhdGVQbGFjZW1lbnQSHy5kY2ltLnYxLkNyZWF0ZVBsYWNlbWVudFJlcXVlc3QaIC5kY2ltLnYxLkNyZWF0ZVBsYWNlbWVudFJlc3BvbnNlEksKDEdldFBsYWNlbWVudBIcLmRjaW0udjEuR2V0UGxhY2VtZW50UmVxdWVzdBodLmRjaW0udjEuR2V0UGxhY2VtZW50UmVzcG9uc2USYAoTR2V0UGxhY2VtZW50QnlBc3NldBIjLmRjaW0udjEuR2V0UGxhY2VtZW50QnlBc3NldFJlcXVlc3QaJC5kY2ltLnYxLkdldFBsYWNlbWVudEJ5QXNzZXRSZXNwb25zZRJKCg9VcGRhdGVQbGFjZW1lbnQSHy5kY2ltLnYxLlVwZGF0ZVBsYWNlbWVudFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSSgoPRGVsZXRlUGxhY2VtZW50Eh8uZGNpbS52MS5EZWxldGVQbGFjZW1lbnRSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EmMKFExpc3RQbGFjZW1lbnRzQnlSYWNrEiQuZGNpbS52MS5MaXN0UGxhY2VtZW50c0J5UmFja1JlcXVlc3QaJS5kY2ltLnYxLkxpc3RQbGFjZW1lbnRzQnlSYWNrUmVzcG9uc2USYAoTTGlzdENoaWxkUGxhY2VtZW50cxIjLmRjaW0udjEuTGlzdENoaWxkUGxhY2VtZW50c1JlcXVlc3QaJC5kY2ltLnYxLkxpc3RDaGlsZFBsYWNlbWVudHNSZXNwb25zZUJPWkNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2RjaW0tYXBpL3BrZy9wcm90by9nZW4vdjE7ZGNpbXYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * RackLocation places an asset directly in a rack.
@@ -235,6 +235,42 @@ export const GetPlacementResponseSchema: GenMessage<GetPlacementResponse> = /*@_
   messageDesc(file_v1_placement, 6);
 
 /**
+ * @generated from message dcim.v1.GetPlacementByAssetRequest
+ */
+export type GetPlacementByAssetRequest = Message<"dcim.v1.GetPlacementByAssetRequest"> & {
+  /**
+   * @generated from field: string asset_id = 10;
+   */
+  assetId: string;
+};
+
+/**
+ * Describes the message dcim.v1.GetPlacementByAssetRequest.
+ * Use `create(GetPlacementByAssetRequestSchema)` to create a new message.
+ */
+export const GetPlacementByAssetRequestSchema: GenMessage<GetPlacementByAssetRequest> = /*@__PURE__*/
+  messageDesc(file_v1_placement, 7);
+
+/**
+ * GetPlacementByAssetResponse has an unset placement when the asset is unplaced.
+ *
+ * @generated from message dcim.v1.GetPlacementByAssetResponse
+ */
+export type GetPlacementByAssetResponse = Message<"dcim.v1.GetPlacementByAssetResponse"> & {
+  /**
+   * @generated from field: dcim.v1.Placement placement = 10;
+   */
+  placement?: Placement;
+};
+
+/**
+ * Describes the message dcim.v1.GetPlacementByAssetResponse.
+ * Use `create(GetPlacementByAssetResponseSchema)` to create a new message.
+ */
+export const GetPlacementByAssetResponseSchema: GenMessage<GetPlacementByAssetResponse> = /*@__PURE__*/
+  messageDesc(file_v1_placement, 8);
+
+/**
  * @generated from message dcim.v1.UpdatePlacementRequest
  */
 export type UpdatePlacementRequest = Message<"dcim.v1.UpdatePlacementRequest"> & {
@@ -276,7 +312,7 @@ export type UpdatePlacementRequest = Message<"dcim.v1.UpdatePlacementRequest"> &
  * Use `create(UpdatePlacementRequestSchema)` to create a new message.
  */
 export const UpdatePlacementRequestSchema: GenMessage<UpdatePlacementRequest> = /*@__PURE__*/
-  messageDesc(file_v1_placement, 7);
+  messageDesc(file_v1_placement, 9);
 
 /**
  * @generated from message dcim.v1.DeletePlacementRequest
@@ -293,7 +329,7 @@ export type DeletePlacementRequest = Message<"dcim.v1.DeletePlacementRequest"> &
  * Use `create(DeletePlacementRequestSchema)` to create a new message.
  */
 export const DeletePlacementRequestSchema: GenMessage<DeletePlacementRequest> = /*@__PURE__*/
-  messageDesc(file_v1_placement, 8);
+  messageDesc(file_v1_placement, 10);
 
 /**
  * @generated from message dcim.v1.ListPlacementsByRackRequest
@@ -310,7 +346,7 @@ export type ListPlacementsByRackRequest = Message<"dcim.v1.ListPlacementsByRackR
  * Use `create(ListPlacementsByRackRequestSchema)` to create a new message.
  */
 export const ListPlacementsByRackRequestSchema: GenMessage<ListPlacementsByRackRequest> = /*@__PURE__*/
-  messageDesc(file_v1_placement, 9);
+  messageDesc(file_v1_placement, 11);
 
 /**
  * @generated from message dcim.v1.ListPlacementsByRackResponse
@@ -327,7 +363,7 @@ export type ListPlacementsByRackResponse = Message<"dcim.v1.ListPlacementsByRack
  * Use `create(ListPlacementsByRackResponseSchema)` to create a new message.
  */
 export const ListPlacementsByRackResponseSchema: GenMessage<ListPlacementsByRackResponse> = /*@__PURE__*/
-  messageDesc(file_v1_placement, 10);
+  messageDesc(file_v1_placement, 12);
 
 /**
  * @generated from message dcim.v1.ListChildPlacementsRequest
@@ -344,7 +380,7 @@ export type ListChildPlacementsRequest = Message<"dcim.v1.ListChildPlacementsReq
  * Use `create(ListChildPlacementsRequestSchema)` to create a new message.
  */
 export const ListChildPlacementsRequestSchema: GenMessage<ListChildPlacementsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_placement, 11);
+  messageDesc(file_v1_placement, 13);
 
 /**
  * @generated from message dcim.v1.ListChildPlacementsResponse
@@ -361,7 +397,7 @@ export type ListChildPlacementsResponse = Message<"dcim.v1.ListChildPlacementsRe
  * Use `create(ListChildPlacementsResponseSchema)` to create a new message.
  */
 export const ListChildPlacementsResponseSchema: GenMessage<ListChildPlacementsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_placement, 12);
+  messageDesc(file_v1_placement, 14);
 
 /**
  * @generated from service dcim.v1.PlacementService
@@ -382,6 +418,14 @@ export const PlacementService: GenService<{
     methodKind: "unary";
     input: typeof GetPlacementRequestSchema;
     output: typeof GetPlacementResponseSchema;
+  },
+  /**
+   * @generated from rpc dcim.v1.PlacementService.GetPlacementByAsset
+   */
+  getPlacementByAsset: {
+    methodKind: "unary";
+    input: typeof GetPlacementByAssetRequestSchema;
+    output: typeof GetPlacementByAssetResponseSchema;
   },
   /**
    * @generated from rpc dcim.v1.PlacementService.UpdatePlacement
