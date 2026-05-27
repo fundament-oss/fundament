@@ -10,10 +10,14 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
 import { DatacenterInfo, DatacenterRack, RackRow, Room } from '../datacenter.model';
 import DatacenterApiService from '../datacenter-api.service';
 import connectErrorMessage from '../../../connect/error';
+import { ViolationsSchema } from '../../../generated/buf/validate/validate_pb';
+
+type InvalidFields = Record<string, string>;
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -67,6 +71,10 @@ export default class DatacenterDetailComponent implements OnInit {
   // ── Room CRUD ──────────────────────────────────────────────────────────────
 
   editRoom = signal<Partial<Room> | null>(null);
+
+  roomErrorMessage = signal<string | null>(null);
+
+  roomInvalidFields = signal<InvalidFields>({});
 
   deleteRoom = signal<Room | null>(null);
 
@@ -187,20 +195,62 @@ export default class DatacenterDetailComponent implements OnInit {
 
   openCreateRoom(): void {
     const dcId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.clearRoomErrors();
     this.editRoom.set({ id: '', siteId: dcId, name: '', floor: 1 });
   }
 
   openEditRoom(room: Room): void {
+    this.clearRoomErrors();
     this.editRoom.set({ ...room });
   }
 
   closeRoomForm(): void {
     this.editRoom.set(null);
+    this.clearRoomErrors();
+  }
+
+  isRoomFieldInvalid(field: string): boolean {
+    return field in this.roomInvalidFields();
+  }
+
+  roomFieldError(field: string): string {
+    return this.roomInvalidFields()[field] ?? '';
+  }
+
+  private clearRoomErrors(): void {
+    this.roomInvalidFields.set({});
+    this.roomErrorMessage.set(null);
+  }
+
+  private handleRoomError(err: unknown): void {
+    const ce = ConnectError.from(err);
+
+    if (ce.code === Code.InvalidArgument) {
+      const fieldErrors: InvalidFields = {};
+      const unmappedMessages: string[] = [];
+      ce.findDetails(ViolationsSchema)
+        .flatMap((violations) => violations.violations)
+        .forEach((v) => {
+          const field = v.field?.elements.map((e) => e.fieldName).join('.') ?? '';
+          if (field) fieldErrors[field] = v.message;
+          else unmappedMessages.push(v.message);
+        });
+      if (Object.keys(fieldErrors).length > 0) {
+        this.roomInvalidFields.set(fieldErrors);
+        if (unmappedMessages.length > 0) {
+          this.roomErrorMessage.set(unmappedMessages.join('\n'));
+        }
+        return;
+      }
+    }
+
+    this.roomErrorMessage.set(connectErrorMessage(err));
   }
 
   saveRoom(): void {
     const form = this.editRoom();
     if (!form) return;
+    this.clearRoomErrors();
     const name = this.fRoomName()?.nativeElement.value ?? '';
     const floor = parseInt(this.fRoomFloor()?.nativeElement.value ?? '1', 10) || 1;
     if (form.id) {
@@ -210,8 +260,7 @@ export default class DatacenterDetailComponent implements OnInit {
           this.mutableRooms.update((list) => list.map((r) => (r.id === form.id ? updated : r)));
           this.editRoom.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRoomError(err));
     } else {
       firstValueFrom(this.dcApi.createRoom(form.siteId!, name, floor))
         .then((res) => {
@@ -219,8 +268,7 @@ export default class DatacenterDetailComponent implements OnInit {
           this.mutableRooms.update((list) => [...list, created]);
           this.editRoom.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRoomError(err));
     }
   }
 

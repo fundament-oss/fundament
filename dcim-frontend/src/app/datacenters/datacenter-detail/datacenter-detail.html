@@ -262,15 +262,27 @@
       dismiss-text="Close"
       (dismiss)="closeRoomForm()"
     ></nldd-top-title-bar>
-    <nldd-simple-section>
+    <nldd-simple-section class="space-y-4">
+      @if (roomErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ roomErrorMessage() }}
+          </p>
+        </div>
+      }
       @if (editRoom(); as room) {
         <nldd-form-field label="Room name">
           <nldd-text-field
             #fRoomName
             [attr.value]="room.name ?? ''"
             placeholder="Main Hall"
+            [attr.invalid]="isRoomFieldInvalid('name') ? '' : null"
+            error-message="error-room-name"
             (keydown.enter)="saveRoom()"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-room-name">
+            {{ roomFieldError('name') }}
+          </nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Floor number">
           <nldd-number-field
@@ -279,8 +291,13 @@
             min="0"
             max="99"
             full-width
+            [attr.invalid]="isRoomFieldInvalid('floor') ? '' : null"
+            error-message="error-room-floor"
             (keydown.enter)="saveRoom()"
           ></nldd-number-field>
+          <nldd-form-field-error-text id="error-room-floor">
+            {{ roomFieldError('floor') }}
+          </nldd-form-field-error-text>
         </nldd-form-field>
       }
     </nldd-simple-section>
