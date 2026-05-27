@@ -11,9 +11,17 @@ export interface Port {
   id: string;
   deviceId: string;
   name: string;
-  label?: string;
   type: PortType;
   description?: string;
+}
+
+const CONSOLE_PORT_TYPES = new Set<PortType>(['console-port', 'console-server-port']);
+const POWER_PORT_TYPES = new Set<PortType>(['power-port', 'power-outlet']);
+
+export function portsAreCompatible(a: PortType, b: PortType): boolean {
+  if (POWER_PORT_TYPES.has(a)) return POWER_PORT_TYPES.has(b);
+  if (CONSOLE_PORT_TYPES.has(a)) return CONSOLE_PORT_TYPES.has(b);
+  return !POWER_PORT_TYPES.has(b) && !CONSOLE_PORT_TYPES.has(b);
 }
 
 // ── Cable types ───────────────────────────────────────────────────────────────
@@ -66,6 +74,7 @@ export interface Cable {
   description?: string;
   color?: CableColor;
   comments?: string;
+  length?: number;
 }
 
 // ── Color palette ─────────────────────────────────────────────────────────────
@@ -81,6 +90,22 @@ export const CABLE_COLOR_HEX: Record<CableColor, string> = {
   orange: '#f97316',
   teal: '#14b8a6',
   white: '#f8fafc',
+};
+
+export const CABLE_TYPE_LABEL: Record<CableType, string> = {
+  cat5e: 'Cat 5e',
+  cat6: 'Cat 6',
+  cat6a: 'Cat 6a',
+  cat7: 'Cat 7',
+  cat8: 'Cat 8',
+  dac: 'DAC',
+  aoc: 'AOC',
+  mmf: 'MMF',
+  smf: 'SMF',
+  power: 'Power',
+  console: 'Console',
+  usb: 'USB',
+  other: 'Other',
 };
 
 export const CABLE_STATUS_LABEL: Record<CableStatus, string> = {
@@ -124,20 +149,8 @@ export const DEVICE_PORTS: Record<string, Port[]> = {
     { id: 'p-001-02', deviceId: 'd-001', name: 'Gi0/2', type: 'network-interface' },
     { id: 'p-001-03', deviceId: 'd-001', name: 'Gi0/3', type: 'network-interface' },
     { id: 'p-001-04', deviceId: 'd-001', name: 'Gi0/4', type: 'network-interface' },
-    {
-      id: 'p-001-05',
-      deviceId: 'd-001',
-      name: 'Te1/0/1',
-      type: 'network-interface',
-      label: 'Uplink 1',
-    },
-    {
-      id: 'p-001-06',
-      deviceId: 'd-001',
-      name: 'Te1/0/2',
-      type: 'network-interface',
-      label: 'Uplink 2',
-    },
+    { id: 'p-001-05', deviceId: 'd-001', name: 'Te1/0/1', type: 'network-interface' },
+    { id: 'p-001-06', deviceId: 'd-001', name: 'Te1/0/2', type: 'network-interface' },
     { id: 'p-001-07', deviceId: 'd-001', name: 'Con0', type: 'console-port' },
     { id: 'p-001-08', deviceId: 'd-001', name: 'PSU-A', type: 'power-port' },
     { id: 'p-001-09', deviceId: 'd-001', name: 'PSU-B', type: 'power-port' },
@@ -155,13 +168,7 @@ export const DEVICE_PORTS: Record<string, Port[]> = {
   'd-003': [
     { id: 'p-003-01', deviceId: 'd-003', name: 'eth0', type: 'network-interface' },
     { id: 'p-003-02', deviceId: 'd-003', name: 'eth1', type: 'network-interface' },
-    {
-      id: 'p-003-03',
-      deviceId: 'd-003',
-      name: 'eth2',
-      type: 'network-interface',
-      label: 'Management',
-    },
+    { id: 'p-003-03', deviceId: 'd-003', name: 'eth2', type: 'network-interface' },
     { id: 'p-003-04', deviceId: 'd-003', name: 'eth3', type: 'network-interface' },
     { id: 'p-003-05', deviceId: 'd-003', name: 'COM1', type: 'console-port' },
     { id: 'p-003-06', deviceId: 'd-003', name: 'PSU-A', type: 'power-port' },
@@ -193,13 +200,7 @@ export const DEVICE_PORTS: Record<string, Port[]> = {
     { id: 'p-101-02', deviceId: 'd-101', name: 'Gi0/2', type: 'network-interface' },
     { id: 'p-101-03', deviceId: 'd-101', name: 'Gi0/3', type: 'network-interface' },
     { id: 'p-101-04', deviceId: 'd-101', name: 'Gi0/4', type: 'network-interface' },
-    {
-      id: 'p-101-05',
-      deviceId: 'd-101',
-      name: 'Te0/1',
-      type: 'network-interface',
-      label: 'Uplink',
-    },
+    { id: 'p-101-05', deviceId: 'd-101', name: 'Te0/1', type: 'network-interface' },
     { id: 'p-101-06', deviceId: 'd-101', name: 'Con0', type: 'console-port' },
     { id: 'p-101-07', deviceId: 'd-101', name: 'PSU-A', type: 'power-port' },
   ],
@@ -221,27 +222,9 @@ export const DEVICE_PORTS: Record<string, Port[]> = {
   // AMS-01-R04 ─────────────────────────────────────────────────────────────────
   // d-301: spine-switch-01
   'd-301': [
-    {
-      id: 'p-301-01',
-      deviceId: 'd-301',
-      name: 'Et1/1',
-      type: 'network-interface',
-      label: 'Downlink 1',
-    },
-    {
-      id: 'p-301-02',
-      deviceId: 'd-301',
-      name: 'Et1/2',
-      type: 'network-interface',
-      label: 'Downlink 2',
-    },
-    {
-      id: 'p-301-03',
-      deviceId: 'd-301',
-      name: 'Et1/3',
-      type: 'network-interface',
-      label: 'Downlink 3',
-    },
+    { id: 'p-301-01', deviceId: 'd-301', name: 'Et1/1', type: 'network-interface' },
+    { id: 'p-301-02', deviceId: 'd-301', name: 'Et1/2', type: 'network-interface' },
+    { id: 'p-301-03', deviceId: 'd-301', name: 'Et1/3', type: 'network-interface' },
     { id: 'p-301-04', deviceId: 'd-301', name: 'Et1/4', type: 'network-interface' },
     { id: 'p-301-05', deviceId: 'd-301', name: 'Con0', type: 'console-port' },
     { id: 'p-301-06', deviceId: 'd-301', name: 'PSU-A', type: 'power-port' },
@@ -252,13 +235,7 @@ export const DEVICE_PORTS: Record<string, Port[]> = {
   'd-601': [
     { id: 'p-601-01', deviceId: 'd-601', name: 'Gi0/1', type: 'network-interface' },
     { id: 'p-601-02', deviceId: 'd-601', name: 'Gi0/2', type: 'network-interface' },
-    {
-      id: 'p-601-03',
-      deviceId: 'd-601',
-      name: 'Te0/1',
-      type: 'network-interface',
-      label: 'Uplink',
-    },
+    { id: 'p-601-03', deviceId: 'd-601', name: 'Te0/1', type: 'network-interface' },
     { id: 'p-601-04', deviceId: 'd-601', name: 'Con0', type: 'console-port' },
     { id: 'p-601-05', deviceId: 'd-601', name: 'PSU-A', type: 'power-port' },
   ],

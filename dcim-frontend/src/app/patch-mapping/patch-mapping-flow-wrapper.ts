@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
-import { Cable, Port } from './cable.model';
+import { Cable, CableStatus, CableType, Port } from './cable.model';
 import { PatchMappingFlow } from './patch-mapping-flow';
 
 @Component({
@@ -31,9 +31,24 @@ export default class PatchMappingFlowWrapperComponent
 
   @Input() selectedCableId: string | null = null;
 
+  @Input() dcId = '';
+
+  @Input() filterStatus: CableStatus | '' = '';
+
+  @Input() filterType: CableType | '' = '';
+
   readonly cableSelected = output<string>();
 
-  readonly deviceNavigate = output<string>();
+  readonly connectionMade = output<{
+    sourceDeviceId: string;
+    sourcePortId: string;
+    targetDeviceId: string;
+    targetPortId: string;
+  }>();
+
+  readonly portsEditRequested = output<string>();
+
+  readonly cableStatusChanged = output<{ cableId: string; status: CableStatus }>();
 
   private root: ReturnType<typeof ReactDOM.createRoot> | undefined;
 
@@ -56,8 +71,14 @@ export default class PatchMappingFlowWrapperComponent
         cables: this.cables,
         devicePorts: this.devicePorts,
         selectedCableId: this.selectedCableId,
+        dcId: this.dcId,
+        filterStatus: this.filterStatus,
+        filterType: this.filterType,
         onCableClick: (id: string) => this.cableSelected.emit(id),
-        onDeviceClick: (id: string) => this.deviceNavigate.emit(id),
+        onConnectionMade: (conn) => this.connectionMade.emit(conn),
+        onEditPorts: (deviceId: string) => this.portsEditRequested.emit(deviceId),
+        onCableStatusChange: (cableId: string, status: CableStatus) =>
+          this.cableStatusChanged.emit({ cableId, status }),
       }),
     );
   }

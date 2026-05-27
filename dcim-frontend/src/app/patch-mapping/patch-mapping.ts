@@ -9,16 +9,35 @@ import {
   computed,
   viewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import PatchMappingFlowWrapperComponent from './patch-mapping-flow-wrapper';
 import CableListComponent from './cable-list/cable-list';
 import CableFormComponent from './cable-form/cable-form';
-import { Cable, DEVICE_PORTS, MOCK_CABLES } from './cable.model';
+import DevicePortsComponent from './device-ports/device-ports';
+import ShoppingListComponent from './shopping-list/shopping-list';
+import {
+  Cable,
+  CABLE_TYPE_LABEL,
+  CableSide,
+  CableStatus,
+  CableType,
+  DEVICE_PORTS,
+  MOCK_CABLES,
+  Port,
+} from './cable.model';
+import { DATACENTER_INFO } from '../datacenters/datacenter.model';
+import { RACKS } from '../racks/rack.model';
 
 @Component({
   selector: 'app-patch-mapping',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PatchMappingFlowWrapperComponent, CableListComponent, CableFormComponent],
+  imports: [
+    PatchMappingFlowWrapperComponent,
+    CableListComponent,
+    CableFormComponent,
+    DevicePortsComponent,
+    ShoppingListComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
     class: 'flex flex-col bg-white text-slate-900',
@@ -29,6 +48,8 @@ import { Cable, DEVICE_PORTS, MOCK_CABLES } from './cable.model';
   templateUrl: './patch-mapping.html',
 })
 export default class PatchMappingComponent {
+  private readonly route = inject(ActivatedRoute);
+
   private readonly router = inject(Router);
 
   readonly selectedDcId = signal('ams-01');
@@ -46,13 +67,89 @@ export default class PatchMappingComponent {
 
   readonly deleteCable = signal<Cable | null>(null);
 
-  readonly DEVICE_PORTS = DEVICE_PORTS;
+  // ── Shopping list state ────────────────────────────────────────────────────
+  readonly shoppingListOpen = signal(false);
+
+  readonly plannedCables = computed(() => this.dcCables().filter((c) => c.status === 'planned'));
+
+  readonly plannedCount = computed(() => this.plannedCables().length);
+
+  readonly selectedDcLabel = computed(
+    () => DATACENTER_INFO.find((dc) => dc.id === this.selectedDcId())?.name ?? this.selectedDcId(),
+  );
+
+  // ── Topology filters ───────────────────────────────────────────────────────
+  readonly topologyStatusFilter = signal<CableStatus | ''>('');
+
+  readonly topologyTypeFilter = signal<CableType | ''>('');
+
+  readonly localDevicePorts = signal<Record<string, Port[]>>({ ...DEVICE_PORTS });
+
+  readonly editPortsDevice = signal<{ id: string; name: string } | null>(null);
+
+  readonly editPortsPorts = computed<Port[]>(() => {
+    const dev = this.editPortsDevice();
+    if (!dev) return [];
+    return this.localDevicePorts()[dev.id] ?? [];
+  });
+
+  readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
+
+  readonly CABLE_TYPES: CableType[] = [
+    'cat5e',
+    'cat6',
+    'cat6a',
+    'cat7',
+    'cat8',
+    'dac',
+    'aoc',
+    'mmf',
+    'smf',
+    'power',
+    'console',
+    'usb',
+    'other',
+  ];
+
+  readonly CABLE_STATUSES: { value: CableStatus; label: string }[] = [
+    { value: 'planned', label: 'Planned' },
+    { value: 'connected', label: 'Connected' },
+    { value: 'decommissioned', label: 'Decommissioned' },
+  ];
 
   private readonly cableSheetEl = viewChild<ElementRef>('cableSheet');
 
   private readonly deleteModalEl = viewChild<ElementRef>('deleteModal');
 
+  private readonly shoppingSheetEl = viewChild<ElementRef>('shoppingSheet');
+
+  private readonly portEditSheetEl = viewChild<ElementRef>('portEditSheet');
+
   constructor() {
+    const params = this.route.snapshot.queryParamMap;
+    const aDeviceId = params.get('aDeviceId');
+    const aPortId = params.get('aPortId');
+    if (aDeviceId && aPortId) {
+      const ports = this.localDevicePorts();
+      const port = (ports[aDeviceId] ?? []).find((p) => p.id === aPortId);
+      const device = RACKS.flatMap((r) => r.devices).find((d) => d.id === aDeviceId);
+      if (port && device) {
+        this.editCable.set({
+          dcId: this.selectedDcId(),
+          status: 'connected',
+          aSide: {
+            deviceId: aDeviceId,
+            deviceName: device.name,
+            portId: aPortId,
+            portName: port.name,
+            portType: port.type,
+          },
+        });
+      }
+      // Remove the deep-link params so a hard-refresh doesn't re-open the form.
+      this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    }
+
     effect(() => {
       const el = this.cableSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editCable() !== null) el?.show?.();
@@ -61,6 +158,16 @@ export default class PatchMappingComponent {
     effect(() => {
       const el = this.deleteModalEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.deleteCable() !== null) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
+      const el = this.shoppingSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.shoppingListOpen()) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
+      const el = this.portEditSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.editPortsDevice() !== null) el?.show?.();
       else el?.hide?.();
     });
   }
@@ -78,6 +185,69 @@ export default class PatchMappingComponent {
   openEditCableById(id: string): void {
     const cable = this.mutableCables().find((c) => c.id === id);
     if (cable) this.openEditCable(cable);
+  }
+
+  onPortsUpdated(event: { deviceId: string; ports: Port[] }): void {
+    this.localDevicePorts.update((map) => ({ ...map, [event.deviceId]: event.ports }));
+  }
+
+  openEditPorts(deviceId: string): void {
+    const allDevices = RACKS.flatMap((r) => r.devices);
+    const device = allDevices.find((d) => d.id === deviceId);
+    if (!device) return;
+    this.editPortsDevice.set({ id: device.id, name: device.name });
+  }
+
+  saveTopologyPorts(ports: Port[]): void {
+    const dev = this.editPortsDevice();
+    if (!dev) return;
+    this.localDevicePorts.update((map) => ({ ...map, [dev.id]: ports }));
+    this.editPortsDevice.set(null);
+  }
+
+  closeEditPorts(): void {
+    this.editPortsDevice.set(null);
+  }
+
+  openAddCableFromConnection(conn: {
+    sourceDeviceId: string;
+    sourcePortId: string;
+    targetDeviceId: string;
+    targetPortId: string;
+  }): void {
+    const allDevices = RACKS.flatMap((r) => r.devices);
+    const aDevice = allDevices.find((d) => d.id === conn.sourceDeviceId);
+    const bDevice = allDevices.find((d) => d.id === conn.targetDeviceId);
+    const ports = this.localDevicePorts();
+    const aPort = (ports[conn.sourceDeviceId] ?? []).find((p) => p.id === conn.sourcePortId);
+    const bPort = (ports[conn.targetDeviceId] ?? []).find((p) => p.id === conn.targetPortId);
+
+    if (!aDevice || !bDevice || !aPort || !bPort) {
+      this.openAddCable();
+      return;
+    }
+
+    const aSide: CableSide = {
+      deviceId: conn.sourceDeviceId,
+      deviceName: aDevice.name,
+      portId: conn.sourcePortId,
+      portName: aPort.name,
+      portType: aPort.type,
+    };
+    const bSide: CableSide = {
+      deviceId: conn.targetDeviceId,
+      deviceName: bDevice.name,
+      portId: conn.targetPortId,
+      portName: bPort.name,
+      portType: bPort.type,
+    };
+
+    this.editCable.set({
+      dcId: this.selectedDcId(),
+      status: 'connected',
+      aSide,
+      bSide,
+    });
   }
 
   saveFromForm(cable: Cable): void {
@@ -110,53 +280,9 @@ export default class PatchMappingComponent {
     this.deleteCable.set(null);
   }
 
-  navigateToDevice(id: string): void {
-    this.router.navigate(['/racks/device', id]);
-  }
-
-  // ── CSV export ─────────────────────────────────────────────────────────────
-
-  exportCsv(): void {
-    const cables = this.dcCables();
-    const headers = [
-      'ID',
-      'Label',
-      'A Device',
-      'A Port',
-      'A Port Type',
-      'B Device',
-      'B Port',
-      'B Port Type',
-      'Status',
-      'Type',
-      'Color',
-      'Description',
-      'Comments',
-    ];
-    const rows = cables.map((c) => [
-      c.id,
-      c.label ?? '',
-      c.aSide.deviceName,
-      c.aSide.portName,
-      c.aSide.portType,
-      c.bSide.deviceName,
-      c.bSide.portName,
-      c.bSide.portType,
-      c.status,
-      c.type,
-      c.color ?? '',
-      c.description ?? '',
-      c.comments ?? '',
-    ]);
-    const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cables-${this.selectedDcId()}-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  updateCableStatus(event: { cableId: string; status: CableStatus }): void {
+    this.mutableCables.update((list) =>
+      list.map((c) => (c.id === event.cableId ? { ...c, status: event.status } : c)),
+    );
   }
 }

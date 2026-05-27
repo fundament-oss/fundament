@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { LowerCasePipe } from '@angular/common';
+import { DOCUMENT, LowerCasePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import RackDiagramComponent from '../rack-diagram/rack-diagram';
@@ -53,12 +53,20 @@ export default class DeviceDetailComponent {
 
   private readonly router = inject(Router);
 
-  private readonly scrollContainer = viewChild<ElementRef<HTMLElement>>('scrollContainer');
+  private readonly document = inject(DOCUMENT);
 
   constructor() {
     effect(() => {
       this.deviceId(); // track device changes
-      this.scrollContainer()?.nativeElement.scrollTo({ top: 0 });
+      this.document.defaultView?.scrollTo(0, 0);
+    });
+
+    effect(() => {
+      const show = this.showAddPortForm();
+      const el = this.portNameInput();
+      if (show && el) {
+        setTimeout(() => (el.nativeElement as HTMLElement).focus());
+      }
     });
   }
 
@@ -94,9 +102,9 @@ export default class DeviceDetailComponent {
 
   readonly showAddPortForm = signal(false);
 
-  readonly newPortName = signal('');
+  private readonly portNameInput = viewChild<ElementRef>('portNameInput');
 
-  readonly newPortLabel = signal('');
+  readonly newPortName = signal('');
 
   private readonly extraPorts = signal<Record<string, Port[]>>({});
 
@@ -133,7 +141,6 @@ export default class DeviceDetailComponent {
       id: `p-${devId}-${Date.now()}`,
       deviceId: devId,
       name,
-      label: this.newPortLabel().trim() || undefined,
       type: this.activePortTab(),
     };
     this.extraPorts.update((prev) => ({
@@ -141,7 +148,6 @@ export default class DeviceDetailComponent {
       [devId]: [...(prev[devId] ?? []), port],
     }));
     this.newPortName.set('');
-    this.newPortLabel.set('');
     this.showAddPortForm.set(false);
   }
 

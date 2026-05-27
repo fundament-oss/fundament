@@ -78,7 +78,7 @@
               </h2>
               <nldd-button
                 variant="primary"
-                text="Add Port"
+                text="Add port"
                 start-icon="plus-small"
                 size="xs"
                 (click)="openCreatePortDef()"
@@ -87,7 +87,7 @@
 
             @if (portDefs().length === 0) {
               <p class="px-5 py-4 text-xs text-slate-400 italic">
-                No port definitions. Click "Add Port" to define one.
+                No port definitions. Click "Add port" to define one.
               </p>
             } @else {
               <table class="w-full text-sm" role="grid">
@@ -423,7 +423,7 @@
 <nldd-modal-dialog
   #compatModal
   (close)="cancelAddCompatibility()"
-  text="Add Port Compatibility"
+  text="Add port compatibility"
   [attr.supporting-text]="
     'Select a catalog entry compatible with port ' + portDefName(addCompatPortDefId() ?? '')
   "
