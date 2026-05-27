@@ -397,22 +397,16 @@
       </nldd-form-field>
       @if (!editRack()?.id) {
         <nldd-form-field label="Row">
-          <nldd-dropdown>
-            <select
-              #fRackRowId
-              [attr.aria-invalid]="isFieldInvalid('row_id') ? 'true' : null"
-              (keydown.enter)="saveRack()"
-            >
-              @for (row of rowOptions(); track row.id) {
-                <option
-                  [value]="row.id"
-                  [attr.selected]="editRack()?.rowId === row.id ? true : null"
-                >
-                  {{ row.label }}
-                </option>
-              }
-            </select>
-          </nldd-dropdown>
+          <select
+            #fRackRowId
+            aria-label="Row"
+            [attr.aria-invalid]="isFieldInvalid('row_id') ? 'true' : null"
+          >
+            <option value="" disabled selected>Select a row</option>
+            @for (row of rowOptions(); track row.id) {
+              <option [value]="row.id">{{ row.label }}</option>
+            }
+          </select>
           @if (isFieldInvalid('row_id')) {
             <nldd-form-field-error-text id="error-rack-row-id">{{
               fieldError('row_id')

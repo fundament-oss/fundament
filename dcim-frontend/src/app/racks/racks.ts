@@ -418,7 +418,7 @@ export default class RacksComponent implements OnInit {
       id: '',
       name: '',
       dcId: this.currentDC(),
-      rowId: this.rowOptions()[0]?.id ?? '',
+      rowId: '',
       totalU: 42,
       devices: [],
     });
