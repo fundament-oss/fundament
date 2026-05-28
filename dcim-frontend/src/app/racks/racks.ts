@@ -23,11 +23,11 @@ import connectErrorMessage from '../../connect/error';
 import DcSelectorComponent from '../shared/dc-selector';
 import RackDiagramComponent from './rack-diagram/rack-diagram';
 import RackDiagramEditorComponent from './rack-diagram-editor/rack-diagram-editor';
-import { DeviceType, Rack, RackDevice } from './rack.model';
+import { Rack, RackDevice } from './rack.model';
 import { DatacenterInfo, RackRow, Room } from '../datacenters/datacenter.model';
 import { RackSlotType } from '../../generated/v1/common_pb';
 import { ViolationsSchema } from '../../generated/buf/validate/validate_pb';
-import { AssetCategory } from '../inventory/inventory';
+import { categoryToDeviceType, parseRackHeight } from './catalog-helpers';
 
 interface RackListItem extends Rack {
   usedU: number;
@@ -60,7 +60,7 @@ interface PlacementInfo {
   rackUnitStart: number;
   slotType: RackSlotType;
   uSize: number;
-  deviceType: DeviceType;
+  deviceType: ReturnType<typeof categoryToDeviceType>;
 }
 
 type InvalidFields = Record<string, string>;
@@ -434,8 +434,8 @@ export default class RacksComponent implements OnInit {
               assetTag: asset?.assetTag || p.assetId,
               rackUnitStart: loc.rackUnitStart,
               slotType: loc.rackSlotType,
-              uSize: RacksComponent.parseRackHeight(catalog?.specs),
-              deviceType: RacksComponent.categoryToDeviceType(catalog?.category),
+              uSize: parseRackHeight(catalog?.specs),
+              deviceType: categoryToDeviceType(catalog?.category),
             },
           ];
         },
@@ -464,28 +464,6 @@ export default class RacksComponent implements OnInit {
     }));
   }
 
-  /**
-   * Reads the rack height (in U) from a catalog entry's free-form `specs` map.
-   * Falls back to 1U when missing or unparseable.
-   */
-  private static parseRackHeight(specs: Record<string, string> | undefined): number {
-    if (!specs) return 1;
-    const raw = specs['rack_height'] ?? specs['rackHeight'] ?? specs['height'];
-    const parsed = raw ? parseInt(raw, 10) : NaN;
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
-  }
-
-  private static categoryToDeviceType(category: AssetCategory | undefined): DeviceType {
-    switch (category) {
-      case 'Switch':
-        return 'switch';
-      case 'Power':
-      case 'PSU':
-        return 'pdu';
-      default:
-        return 'machine';
-    }
-  }
 
   private async reloadRowOptions(dcId: string): Promise<void> {
     try {

@@ -58,6 +58,10 @@ export default class PlacementApiService {
       });
   }
 
+  getPlacement(id: string) {
+    return this.placementClient.getPlacement({ id });
+  }
+
   getPlacementByAsset(assetId: string) {
     return this.placementClient.getPlacementByAsset({ assetId });
   }

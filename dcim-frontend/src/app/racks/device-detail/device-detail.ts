@@ -12,7 +12,8 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT, LowerCasePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { map } from 'rxjs';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
+import { firstValueFrom, map } from 'rxjs';
 import RackDiagramComponent from '../rack-diagram/rack-diagram';
 import {
   ConnectionStatus,
@@ -26,7 +27,6 @@ import {
   Rack,
   RackDevice,
   RACKS,
-  PARTITIONS,
   DEVICE_NOTES,
   DEVICE_HISTORY,
   DEVICE_CONNECTIONS,
@@ -40,6 +40,12 @@ import {
   PORT_TABS,
   PORT_TYPE_LABEL,
 } from '../../patch-mapping/cable.model';
+import PlacementApiService from '../../inventory/placement-api.service';
+import CatalogApiService from '../../catalog/catalog-api.service';
+import RackApiService from '../rack-api.service';
+import { ASSET_CLIENT } from '../../../connect/tokens';
+import connectErrorMessage from '../../../connect/error';
+import { categoryToDeviceType, parseRackHeight } from '../catalog-helpers';
 
 @Component({
   selector: 'app-device-detail',
@@ -53,9 +59,27 @@ export default class DeviceDetailComponent {
 
   private readonly router = inject(Router);
 
+  private readonly placementApi = inject(PlacementApiService);
+
+  private readonly catalogApi = inject(CatalogApiService);
+
+  private readonly rackApi = inject(RackApiService);
+
+  private readonly assetClient = inject(ASSET_CLIENT);
+
   private readonly document = inject(DOCUMENT);
 
+  readonly device = signal<RackDevice | undefined>(undefined);
+
+  readonly rack = signal<Rack | undefined>(undefined);
+
+  readonly dcLabel = signal<string>('');
+
   constructor() {
+    effect(() => {
+      const id = this.deviceId();
+      if (id) this.loadDevice(id);
+    });
     effect(() => {
       this.deviceId(); // track device changes
       this.document.defaultView?.scrollTo(0, 0);
@@ -74,24 +98,83 @@ export default class DeviceDetailComponent {
     initialValue: this.route.snapshot.paramMap.get('id') ?? '',
   });
 
-  readonly device = computed<RackDevice | undefined>(() => {
-    const id = this.deviceId();
-    let found: RackDevice | undefined;
-    RACKS.forEach((rack) => {
-      if (!found) found = rack.devices.find((d) => d.id === id);
-    });
-    return found;
-  });
-
-  readonly rack = computed<Rack | undefined>(() => {
-    const id = this.deviceId();
-    return RACKS.find((r) => r.devices.some((d) => d.id === id));
-  });
-
-  readonly dcLabel = computed(() => {
-    const r = this.rack();
-    return r ? (PARTITIONS.find((p) => p.id === r.dcId)?.label ?? r.dcId) : '';
-  });
+  private async loadDevice(placementId: string): Promise<void> {
+    try {
+      const placementRes = await firstValueFrom(this.placementApi.getPlacement(placementId));
+      const placement = placementRes.placement;
+      if (!placement || placement.location.case !== 'rack') {
+        this.device.set(undefined);
+        this.rack.set(undefined);
+        this.dcLabel.set('');
+        return;
+      }
+      const rackId = placement.location.value.rackId;
+      const [assetRes, rackRes, placementsRes, catalogRes, allAssetsRes] = await Promise.all([
+        firstValueFrom(this.assetClient.getAsset({ id: placement.assetId })),
+        firstValueFrom(this.rackApi.getRack(rackId)),
+        firstValueFrom(this.placementApi.listPlacementsByRack(rackId)),
+        firstValueFrom(this.catalogApi.listCatalog()),
+        firstValueFrom(this.assetClient.listAssets({})),
+      ]);
+      const catalogById = new Map(
+        catalogRes.entries
+          .filter((s) => s.entry)
+          .map((s) => {
+            const entry = CatalogApiService.mapCatalogEntry(s.entry!);
+            return [entry.id, entry] as const;
+          }),
+      );
+      const asset = assetRes.asset;
+      const rackProto = rackRes.rack;
+      if (!asset || !rackProto) {
+        this.device.set(undefined);
+        this.rack.set(undefined);
+        return;
+      }
+      const catalog = catalogById.get(asset.deviceCatalogId);
+      const warrantyExpiry = asset.warrantyExpiry
+        ? timestampDate(asset.warrantyExpiry).toISOString().slice(0, 10)
+        : undefined;
+      this.device.set({
+        id: placement.id,
+        name: asset.assetTag || asset.id,
+        type: categoryToDeviceType(catalog?.category),
+        uSize: parseRackHeight(catalog?.specs),
+        uStart: placement.location.value.rackUnitStart,
+        state: 'allocated',
+        model: catalog?.model,
+        assetTag: asset.assetTag,
+        warrantyExpiry,
+      });
+      const assetById = new Map(allAssetsRes.assets.map((a) => [a.id, a]));
+      const devices: RackDevice[] = placementsRes.placements.flatMap((p): RackDevice[] => {
+        if (p.location.case !== 'rack') return [];
+        const a = assetById.get(p.assetId);
+        const cat = a ? catalogById.get(a.deviceCatalogId) : undefined;
+        return [
+          {
+            id: p.id,
+            name: a?.assetTag || p.assetId,
+            type: categoryToDeviceType(cat?.category),
+            uSize: parseRackHeight(cat?.specs),
+            uStart: p.location.value.rackUnitStart,
+            state: 'allocated',
+          },
+        ];
+      });
+      this.rack.set({
+        id: rackProto.id,
+        name: rackProto.name,
+        dcId: '',
+        totalU: rackProto.totalUnits,
+        devices,
+      });
+      this.dcLabel.set('');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+    }
+  }
 
   readonly newNoteText = signal('');
 
