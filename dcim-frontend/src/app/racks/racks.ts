@@ -16,12 +16,15 @@ import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom, map } from 'rxjs';
 import RackApiService from './rack-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
+import InventoryApiService from '../inventory/inventory-api.service';
+import PlacementApiService from '../inventory/placement-api.service';
 import connectErrorMessage from '../../connect/error';
 import DcSelectorComponent from '../shared/dc-selector';
 import RackDiagramComponent from './rack-diagram/rack-diagram';
 import RackDiagramEditorComponent from './rack-diagram-editor/rack-diagram-editor';
-import { DeviceState, DeviceType, Rack, RackDevice } from './rack.model';
+import { Rack, RackDevice } from './rack.model';
 import { DatacenterInfo, RackRow, Room } from '../datacenters/datacenter.model';
+import { RackSlotType } from '../../generated/v1/common_pb';
 import { ViolationsSchema } from '../../generated/buf/validate/validate_pb';
 
 interface RackListItem extends Rack {
@@ -35,6 +38,17 @@ interface RackListItem extends Rack {
 interface RowOption {
   id: string;
   label: string;
+}
+
+interface AssetOption {
+  id: string;
+  label: string;
+}
+
+interface AddDeviceForm {
+  assetId: string;
+  rackUnitStart: number;
+  slotType: RackSlotType;
 }
 
 type InvalidFields = Record<string, string>;
@@ -204,9 +218,19 @@ export default class RacksComponent implements OnInit {
 
   private readonly dcApi = inject(DatacenterApiService);
 
+  private readonly inventoryApi = inject(InventoryApiService);
+
+  private readonly placementApi = inject(PlacementApiService);
+
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
+
+  readonly slotTypes: { value: RackSlotType; label: string }[] = [
+    { value: RackSlotType.UNIT, label: 'Unit' },
+    { value: RackSlotType.POWER, label: 'Power' },
+    { value: RackSlotType.ZERO_U, label: 'Zero-U' },
+  ];
 
   readonly currentRackId = toSignal(this.route.paramMap.pipe(map((p) => p.get('rackId'))), {
     initialValue: this.route.snapshot.paramMap.get('rackId'),
@@ -243,11 +267,13 @@ export default class RacksComponent implements OnInit {
 
   readonly deleteDeviceTarget = signal<RackDevice | null>(null);
 
-  readonly addDeviceForm = signal<Partial<RackDevice> | null>(null);
+  readonly addDeviceForm = signal<AddDeviceForm | null>(null);
 
-  readonly addDeviceSizeInput = signal(1);
+  readonly assetOptions = signal<AssetOption[]>([]);
 
-  readonly addDeviceNameInput = signal('');
+  readonly deviceErrorMessage = signal<string | null>(null);
+
+  readonly invalidDeviceFields = signal<InvalidFields>({});
 
   private readonly rackSheetEl = viewChild<NativeElementRef>('rackSheet');
 
@@ -263,13 +289,11 @@ export default class RacksComponent implements OnInit {
 
   private readonly deviceModalEl = viewChild<NativeElementRef>('deviceModal');
 
-  private readonly fDeviceName = viewChild<NativeElementRef>('fDeviceName');
+  private readonly fDeviceAsset = viewChild<NativeElementRef>('fDeviceAsset');
 
-  private readonly fDeviceType = viewChild<NativeElementRef>('fDeviceType');
+  private readonly fDeviceSlotType = viewChild<NativeElementRef>('fDeviceSlotType');
 
-  private readonly fDeviceUSize = viewChild<NativeElementRef>('fDeviceUSize');
-
-  private readonly fDeviceState = viewChild<NativeElementRef>('fDeviceState');
+  private readonly fDeviceRackUnit = viewChild<NativeElementRef>('fDeviceRackUnit');
 
   readonly currentDC = computed(() => this.selectedDcId());
 
@@ -551,54 +575,89 @@ export default class RacksComponent implements OnInit {
   }
 
   openAddDevice(): void {
-    this.addDeviceSizeInput.set(1);
-    this.addDeviceNameInput.set('');
-    this.addDeviceForm.set({ name: '', type: 'machine', uSize: 1, state: 'allocated' });
+    const rack = this.currentRack();
+    if (!rack) return;
+    this.clearDeviceErrors();
+    const firstFree = findFirstFreeSlot(rack, 1);
+    this.addDeviceForm.set({
+      assetId: '',
+      rackUnitStart: firstFree ?? rack.totalU,
+      slotType: RackSlotType.UNIT,
+    });
+    firstValueFrom(
+      this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
+    )
+      .then((res) => {
+        this.assetOptions.set(
+          res.assets.map((a) => ({
+            id: a.id,
+            label: a.assetTag || a.id,
+          })),
+        );
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   closeAddDevice(): void {
+    this.clearDeviceErrors();
     this.addDeviceForm.set(null);
   }
-
-  onAddDeviceSizeInput(value: string): void {
-    this.addDeviceSizeInput.set(parseInt(value, 10) || 1);
-  }
-
-  readonly addDeviceCanFit = computed(() => {
-    const rack = this.currentRack();
-    if (!rack) return false;
-    return findFirstFreeSlot(rack, this.addDeviceSizeInput()) !== null;
-  });
-
-  readonly canAddDevice = computed(
-    () => this.addDeviceNameInput().trim().length > 0 && this.addDeviceCanFit(),
-  );
 
   saveDevice(): void {
     const rack = this.currentRack();
     const form = this.addDeviceForm();
     if (!rack || !form) return;
-    const name = (this.fDeviceName()?.nativeElement as HTMLInputElement)?.value?.trim() ?? '';
-    const type =
-      ((this.fDeviceType()?.nativeElement as HTMLSelectElement)?.value as DeviceType) ?? 'machine';
-    const uSize =
-      parseInt((this.fDeviceUSize()?.nativeElement as HTMLInputElement)?.value ?? '1', 10) || 1;
-    const state =
-      ((this.fDeviceState()?.nativeElement as HTMLSelectElement)?.value as DeviceState) ??
-      'allocated';
-    if (!name) return;
-    const slot = findFirstFreeSlot(rack, uSize);
-    if (slot === null) return;
-    const newDevice: RackDevice = {
-      id: `dev-${Date.now()}`,
-      name,
-      type,
-      uSize,
-      state,
-      uStart: slot,
-    };
-    this.applyDeviceChanges(rack.id, [...rack.devices, newDevice]);
-    this.addDeviceForm.set(null);
+    this.clearDeviceErrors();
+    const assetId = (this.fDeviceAsset()?.nativeElement as HTMLSelectElement)?.value ?? '';
+    const slotType =
+      (Number((this.fDeviceSlotType()?.nativeElement as HTMLSelectElement)?.value) as RackSlotType) ||
+      RackSlotType.UNIT;
+    const rackUnitStart =
+      parseInt((this.fDeviceRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '0', 10) || 0;
+    firstValueFrom(this.placementApi.createPlacement(assetId, rack.id, rackUnitStart, slotType))
+      .then(() => {
+        this.addDeviceForm.set(null);
+      })
+      .catch((err) => this.handleDeviceError(err));
+  }
+
+  isDeviceFieldInvalid(field: string): boolean {
+    return field in this.invalidDeviceFields();
+  }
+
+  deviceFieldError(field: string): string {
+    return this.invalidDeviceFields()[field] ?? '';
+  }
+
+  private clearDeviceErrors(): void {
+    this.invalidDeviceFields.set({});
+    this.deviceErrorMessage.set(null);
+  }
+
+  private handleDeviceError(err: unknown): void {
+    const ce = ConnectError.from(err);
+
+    if (ce.code === Code.InvalidArgument) {
+      const fieldErrors: InvalidFields = {};
+      const unmappedMessages: string[] = [];
+      ce.findDetails(ViolationsSchema)
+        .flatMap((violations) => violations.violations)
+        .forEach((v) => {
+          const field = v.field?.elements.map((e) => e.fieldName).join('.') ?? '';
+          if (field) fieldErrors[field] = v.message;
+          else unmappedMessages.push(v.message);
+        });
+      if (Object.keys(fieldErrors).length > 0) {
+        this.invalidDeviceFields.set(fieldErrors);
+        if (unmappedMessages.length > 0) {
+          this.deviceErrorMessage.set(unmappedMessages.join('\n'));
+        }
+        return;
+      }
+    }
+
+    this.deviceErrorMessage.set(connectErrorMessage(err));
   }
 
   readonly currentRackFreeU = computed(() => this.rackStats().freeU);

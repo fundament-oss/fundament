@@ -459,65 +459,67 @@
       ></nldd-icon-button>
     </div>
     <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
-      <nldd-form-field label="Name">
-        <nldd-text-field
-          #fDeviceName
-          placeholder="server-99"
-          (input)="addDeviceNameInput.set($any($event.target).value)"
-        ></nldd-text-field>
+      @if (deviceErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ deviceErrorMessage() }}
+          </p>
+        </div>
+      }
+      <nldd-form-field label="Asset">
+        <select
+          #fDeviceAsset
+          aria-label="Asset"
+          [attr.aria-invalid]="isDeviceFieldInvalid('asset_id') ? 'true' : null"
+        >
+          <option value="" disabled selected>Select an asset</option>
+          @for (asset of assetOptions(); track asset.id) {
+            <option [value]="asset.id">{{ asset.label }}</option>
+          }
+        </select>
+        @if (isDeviceFieldInvalid('asset_id')) {
+          <nldd-form-field-error-text id="error-device-asset">{{
+            deviceFieldError('asset_id')
+          }}</nldd-form-field-error-text>
+        }
+        @if (assetOptions().length === 0) {
+          <nldd-form-field-error-text id="error-no-assets"
+            >No assets found. Create one on the Inventory page
+            first.</nldd-form-field-error-text
+          >
+        }
       </nldd-form-field>
-      <nldd-form-field label="Type">
-        <nldd-dropdown #fDeviceType>
-          <select>
-            <option value="machine">Machine</option>
-            <option value="switch">Switch</option>
-            <option value="patch">Patch panel</option>
-            <option value="pdu">PDU</option>
-          </select>
-        </nldd-dropdown>
+      <nldd-form-field label="Slot type">
+        <select #fDeviceSlotType aria-label="Slot type">
+          @for (st of slotTypes; track st.value) {
+            <option
+              [value]="st.value"
+              [attr.selected]="addDeviceForm()?.slotType === st.value ? true : null"
+            >
+              {{ st.label }}
+            </option>
+          }
+        </select>
       </nldd-form-field>
-      <nldd-form-field label="Size (U)">
+      <nldd-form-field label="Rack unit">
         <nldd-number-field
-          #fDeviceUSize
-          [attr.value]="addDeviceForm()?.uSize ?? 1"
+          #fDeviceRackUnit
+          [attr.value]="addDeviceForm()?.rackUnitStart ?? 1"
           min="1"
           [attr.max]="currentRack()?.totalU ?? 1"
           full-width
-          (input)="onAddDeviceSizeInput($any($event.target).value)"
+          [attr.invalid]="isDeviceFieldInvalid('location.rack.rack_unit_start') ? '' : null"
+          error-message="error-device-rack-unit"
+          (keydown.enter)="saveDevice()"
         ></nldd-number-field>
+        <nldd-form-field-error-text id="error-device-rack-unit">{{
+          deviceFieldError('location.rack.rack_unit_start')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
-      <nldd-form-field label="State">
-        <nldd-dropdown #fDeviceState>
-          <select>
-            <option value="allocated">Allocated</option>
-            <option value="free">Free</option>
-            <option value="reserved">Reserved</option>
-            <option value="offline">Offline</option>
-            <option value="locked">Locked</option>
-          </select>
-        </nldd-dropdown>
-      </nldd-form-field>
-      @if (addDeviceNameInput().trim().length === 0) {
-        <p class="text-sm text-red-600">Name is required.</p>
-      } @else if (!addDeviceCanFit()) {
-        <p class="text-sm text-red-600">
-          @if (currentRackFreeU() < 1) {
-            Rack is full — no free U positions available.
-          } @else {
-            No contiguous {{ addDeviceSizeInput() }}U slot available — only
-            {{ currentRackFreeU() }}U free.
-          }
-        </p>
-      }
     </div>
     <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
       <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeAddDevice()"></nldd-button>
-      <nldd-button
-        variant="accent-filled"
-        text="Add"
-        [attr.disabled]="canAddDevice() ? null : true"
-        (click)="saveDevice()"
-      ></nldd-button>
+      <nldd-button variant="accent-filled" text="Add" (click)="saveDevice()"></nldd-button>
     </div>
   </div>
 </nldd-sheet>
