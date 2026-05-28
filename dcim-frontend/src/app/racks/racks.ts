@@ -18,14 +18,16 @@ import RackApiService from './rack-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
 import InventoryApiService from '../inventory/inventory-api.service';
 import PlacementApiService from '../inventory/placement-api.service';
+import CatalogApiService from '../catalog/catalog-api.service';
 import connectErrorMessage from '../../connect/error';
 import DcSelectorComponent from '../shared/dc-selector';
 import RackDiagramComponent from './rack-diagram/rack-diagram';
 import RackDiagramEditorComponent from './rack-diagram-editor/rack-diagram-editor';
-import { Rack, RackDevice } from './rack.model';
+import { DeviceType, Rack, RackDevice } from './rack.model';
 import { DatacenterInfo, RackRow, Room } from '../datacenters/datacenter.model';
 import { RackSlotType } from '../../generated/v1/common_pb';
 import { ViolationsSchema } from '../../generated/buf/validate/validate_pb';
+import { AssetCategory } from '../inventory/inventory';
 
 interface RackListItem extends Rack {
   usedU: number;
@@ -57,6 +59,8 @@ interface PlacementInfo {
   assetTag: string;
   rackUnitStart: number;
   slotType: RackSlotType;
+  uSize: number;
+  deviceType: DeviceType;
 }
 
 type InvalidFields = Record<string, string>;
@@ -230,6 +234,8 @@ export default class RacksComponent implements OnInit {
 
   private readonly placementApi = inject(PlacementApiService);
 
+  private readonly catalogApi = inject(CatalogApiService);
+
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
@@ -399,26 +405,37 @@ export default class RacksComponent implements OnInit {
 
   private async reloadDevicesForRack(rackId: string): Promise<void> {
     try {
-      const [placementsRes, assetsRes] = await Promise.all([
+      const [placementsRes, assetsRes, catalogRes] = await Promise.all([
         firstValueFrom(this.placementApi.listPlacementsByRack(rackId)),
         firstValueFrom(
           this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
         ),
+        firstValueFrom(this.catalogApi.listCatalog()),
       ]);
-      const assetTag = new Map<string, string>(
-        assetsRes.assets.map((a) => [a.id, a.assetTag || a.id]),
+      const catalogById = new Map(
+        catalogRes.entries
+          .filter((s) => s.entry)
+          .map((s) => {
+            const entry = CatalogApiService.mapCatalogEntry(s.entry!);
+            return [entry.id, entry] as const;
+          }),
       );
+      const assetById = new Map(assetsRes.assets.map((a) => [a.id, a]));
       const placements: PlacementInfo[] = placementsRes.placements.flatMap(
         (p): PlacementInfo[] => {
           if (p.location.case !== 'rack') return [];
           const loc = p.location.value;
+          const asset = assetById.get(p.assetId);
+          const catalog = asset ? catalogById.get(asset.deviceCatalogId) : undefined;
           return [
             {
               placementId: p.id,
               assetId: p.assetId,
-              assetTag: assetTag.get(p.assetId) ?? p.assetId,
+              assetTag: asset?.assetTag || p.assetId,
               rackUnitStart: loc.rackUnitStart,
               slotType: loc.rackSlotType,
+              uSize: RacksComponent.parseRackHeight(catalog?.specs),
+              deviceType: RacksComponent.categoryToDeviceType(catalog?.category),
             },
           ];
         },
@@ -440,11 +457,34 @@ export default class RacksComponent implements OnInit {
     return placements.map((p) => ({
       id: p.placementId,
       name: p.assetTag,
-      type: 'machine',
-      uSize: 1,
+      type: p.deviceType,
+      uSize: p.uSize,
       uStart: p.rackUnitStart,
       state: 'allocated',
     }));
+  }
+
+  /**
+   * Reads the rack height (in U) from a catalog entry's free-form `specs` map.
+   * Falls back to 1U when missing or unparseable.
+   */
+  private static parseRackHeight(specs: Record<string, string> | undefined): number {
+    if (!specs) return 1;
+    const raw = specs['rack_height'] ?? specs['rackHeight'] ?? specs['height'];
+    const parsed = raw ? parseInt(raw, 10) : NaN;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  }
+
+  private static categoryToDeviceType(category: AssetCategory | undefined): DeviceType {
+    switch (category) {
+      case 'Switch':
+        return 'switch';
+      case 'Power':
+      case 'PSU':
+        return 'pdu';
+      default:
+        return 'machine';
+    }
   }
 
   private async reloadRowOptions(dcId: string): Promise<void> {
