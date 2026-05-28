@@ -377,6 +377,7 @@ type Project struct {
 	xxx_hidden_Id        string                 `protobuf:"bytes,10,opt,name=id"`
 	xxx_hidden_ClusterId string                 `protobuf:"bytes,15,opt,name=cluster_id,json=clusterId"`
 	xxx_hidden_Name      string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Alias     string                 `protobuf:"bytes,25,opt,name=alias"`
 	xxx_hidden_Created   *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
@@ -428,6 +429,13 @@ func (x *Project) GetName() string {
 	return ""
 }
 
+func (x *Project) GetAlias() string {
+	if x != nil {
+		return x.xxx_hidden_Alias
+	}
+	return ""
+}
+
 func (x *Project) GetCreated() *timestamppb.Timestamp {
 	if x != nil {
 		return x.xxx_hidden_Created
@@ -445,6 +453,10 @@ func (x *Project) SetClusterId(v string) {
 
 func (x *Project) SetName(v string) {
 	x.xxx_hidden_Name = v
+}
+
+func (x *Project) SetAlias(v string) {
+	x.xxx_hidden_Alias = v
 }
 
 func (x *Project) SetCreated(v *timestamppb.Timestamp) {
@@ -468,6 +480,7 @@ type Project_builder struct {
 	Id        string
 	ClusterId string
 	Name      string
+	Alias     string
 	Created   *timestamppb.Timestamp
 }
 
@@ -478,17 +491,21 @@ func (b0 Project_builder) Build() *Project {
 	x.xxx_hidden_Id = b.Id
 	x.xxx_hidden_ClusterId = b.ClusterId
 	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Alias = b.Alias
 	x.xxx_hidden_Created = b.Created
 	return m0
 }
 
 // Create project request
 type CreateProjectRequest struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_ClusterId string                 `protobuf:"bytes,5,opt,name=cluster_id,json=clusterId"`
-	xxx_hidden_Name      string                 `protobuf:"bytes,10,opt,name=name"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId   string                 `protobuf:"bytes,5,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_Alias       *string                `protobuf:"bytes,20,opt,name=alias"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CreateProjectRequest) Reset() {
@@ -530,6 +547,16 @@ func (x *CreateProjectRequest) GetName() string {
 	return ""
 }
 
+func (x *CreateProjectRequest) GetAlias() string {
+	if x != nil {
+		if x.xxx_hidden_Alias != nil {
+			return *x.xxx_hidden_Alias
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *CreateProjectRequest) SetClusterId(v string) {
 	x.xxx_hidden_ClusterId = v
 }
@@ -538,11 +565,29 @@ func (x *CreateProjectRequest) SetName(v string) {
 	x.xxx_hidden_Name = v
 }
 
+func (x *CreateProjectRequest) SetAlias(v string) {
+	x.xxx_hidden_Alias = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
+}
+
+func (x *CreateProjectRequest) HasAlias() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *CreateProjectRequest) ClearAlias() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Alias = nil
+}
+
 type CreateProjectRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	ClusterId string
 	Name      string
+	Alias     *string
 }
 
 func (b0 CreateProjectRequest_builder) Build() *CreateProjectRequest {
@@ -551,6 +596,10 @@ func (b0 CreateProjectRequest_builder) Build() *CreateProjectRequest {
 	_, _ = b, x
 	x.xxx_hidden_ClusterId = b.ClusterId
 	x.xxx_hidden_Name = b.Name
+	if b.Alias != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
+		x.xxx_hidden_Alias = b.Alias
+	}
 	return m0
 }
 
@@ -616,7 +665,7 @@ func (b0 CreateProjectResponse_builder) Build() *CreateProjectResponse {
 type UpdateProjectRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_ProjectId   string                 `protobuf:"bytes,10,opt,name=project_id,json=projectId"`
-	xxx_hidden_Name        *string                `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Alias       *string                `protobuf:"bytes,20,opt,name=alias"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -655,10 +704,10 @@ func (x *UpdateProjectRequest) GetProjectId() string {
 	return ""
 }
 
-func (x *UpdateProjectRequest) GetName() string {
+func (x *UpdateProjectRequest) GetAlias() string {
 	if x != nil {
-		if x.xxx_hidden_Name != nil {
-			return *x.xxx_hidden_Name
+		if x.xxx_hidden_Alias != nil {
+			return *x.xxx_hidden_Alias
 		}
 		return ""
 	}
@@ -669,28 +718,28 @@ func (x *UpdateProjectRequest) SetProjectId(v string) {
 	x.xxx_hidden_ProjectId = v
 }
 
-func (x *UpdateProjectRequest) SetName(v string) {
-	x.xxx_hidden_Name = &v
+func (x *UpdateProjectRequest) SetAlias(v string) {
+	x.xxx_hidden_Alias = &v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
 }
 
-func (x *UpdateProjectRequest) HasName() bool {
+func (x *UpdateProjectRequest) HasAlias() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
-func (x *UpdateProjectRequest) ClearName() {
+func (x *UpdateProjectRequest) ClearAlias() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_Name = nil
+	x.xxx_hidden_Alias = nil
 }
 
 type UpdateProjectRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	ProjectId string
-	Name      *string
+	Alias     *string
 }
 
 func (b0 UpdateProjectRequest_builder) Build() *UpdateProjectRequest {
@@ -698,9 +747,9 @@ func (b0 UpdateProjectRequest_builder) Build() *UpdateProjectRequest {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_ProjectId = b.ProjectId
-	if b.Name != nil {
+	if b.Alias != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
-		x.xxx_hidden_Name = b.Name
+		x.xxx_hidden_Alias = b.Alias
 	}
 	return m0
 }
@@ -2147,29 +2196,31 @@ const file_v1_project_proto_rawDesc = "" +
 	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\"H\n" +
 	"\x12GetProjectResponse\x122\n" +
 	"\aproject\x18\n" +
-	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"\x82\x01\n" +
+	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"\x98\x01\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\x0f \x01(\tR\tclusterId\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x124\n" +
-	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"\xbc\x01\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12\x14\n" +
+	"\x05alias\x18\x19 \x01(\tR\x05alias\x124\n" +
+	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"\xe3\x01\n" +
 	"\x14CreateProjectRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\x05 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12{\n" +
 	"\x04name\x18\n" +
 	" \x01(\tBg\xbaHd\xba\x01a\n" +
-	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\"6\n" +
+	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\x12%\n" +
+	"\x05alias\x18\x14 \x01(\tB\x0f\xbaH\ar\x05\x10\x01\x18\xff\x01\xaa\x01\x02\b\x01R\x05alias\"6\n" +
 	"\x15CreateProjectResponse\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"d\n" +
+	" \x01(\tR\tprojectId\"f\n" +
 	"\x14UpdateProjectRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x12#\n" +
-	"\x04name\x18\x14 \x01(\tB\x0f\xbaH\ar\x05\x10\x01\x18\xff\x01\xaa\x01\x02\b\x01R\x04name\"\x17\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\x12%\n" +
+	"\x05alias\x18\x14 \x01(\tB\x0f\xbaH\ar\x05\x10\x01\x18\xff\x01\xaa\x01\x02\b\x01R\x05alias\"\x17\n" +
 	"\x15UpdateProjectResponse\"?\n" +
 	"\x14DeleteProjectRequest\x12'\n" +
 	"\n" +

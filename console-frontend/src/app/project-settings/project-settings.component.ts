@@ -53,7 +53,7 @@ export default class ProjectSettingsComponent implements OnInit {
 
   isEditing = signal(false);
 
-  editingName = signal('');
+  editingAlias = signal('');
 
   loading = signal(false);
 
@@ -95,20 +95,20 @@ export default class ProjectSettingsComponent implements OnInit {
     const currentProject = this.project();
     if (currentProject) {
       this.isEditing.set(true);
-      this.editingName.set(currentProject.name);
+      this.editingAlias.set(currentProject.alias);
     }
   }
 
   cancelEdit() {
     this.isEditing.set(false);
-    this.editingName.set('');
+    this.editingAlias.set('');
   }
 
   async saveEdit() {
     const currentProject = this.project();
-    const nameToSave = this.editingName();
+    const aliasToSave = this.editingAlias();
 
-    if (!nameToSave.trim() || !currentProject) {
+    if (!aliasToSave.trim() || !currentProject) {
       return;
     }
 
@@ -118,23 +118,22 @@ export default class ProjectSettingsComponent implements OnInit {
     try {
       const request = create(UpdateProjectRequestSchema, {
         projectId: currentProject.id,
-        name: nameToSave.trim(),
+        alias: aliasToSave.trim(),
       });
       await firstValueFrom(this.projectClient.updateProject(request));
 
-      // Update the local project with the new name
       this.project.set({
         ...currentProject,
-        name: nameToSave.trim(),
+        alias: aliasToSave.trim(),
       });
-      this.organizationDataService.updateProjectName(currentProject.id, nameToSave.trim());
+      this.organizationDataService.updateProjectAlias(currentProject.id, aliasToSave.trim());
       this.isEditing.set(false);
-      this.editingName.set('');
+      this.editingAlias.set('');
     } catch (err) {
       this.error.set(
         err instanceof Error
-          ? `Failed to update project name: ${err.message}`
-          : 'Failed to update project name',
+          ? `Failed to update project alias: ${err.message}`
+          : 'Failed to update project alias',
       );
     } finally {
       this.loading.set(false);

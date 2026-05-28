@@ -27,8 +27,8 @@ func (s *Server) UpdateProject(
 		ID: projectID,
 	}
 
-	if req.Msg.HasName() {
-		params.Name = pgtype.Text{String: req.Msg.GetName(), Valid: true}
+	if req.Msg.HasAlias() {
+		params.Alias = pgtype.Text{String: req.Msg.GetAlias(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.ProjectUpdate(ctx, params)

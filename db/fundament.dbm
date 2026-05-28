@@ -247,6 +247,9 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
 	</column>
+	<column name="alias" not-null="true">
+		<type name="text" length="0"/>
+	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
@@ -258,6 +261,9 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 	<constraint name="projects_uq_cluster_name" type="uq-constr" nulls-not-distinct="true" table="tenant.projects">
 		<columns names="cluster_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="projects_ck_alias" type="ck-constr" table="tenant.projects">
+			<expression> <![CDATA[char_length(alias) >= 1 AND char_length(alias) <= 255]]> </expression>
 	</constraint>
 </table>
 

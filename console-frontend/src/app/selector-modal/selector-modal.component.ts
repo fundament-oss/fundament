@@ -14,6 +14,7 @@ import {
 interface Project {
   id: string;
   name: string;
+  alias: string;
 }
 
 interface Organization {
@@ -80,7 +81,7 @@ export default class SelectorModalComponent {
       .map((org) => {
         const orgMatches = org.alias.toLowerCase().includes(filterText);
         const filteredProjects = org.projects.filter((project) =>
-          project.name.toLowerCase().includes(filterText),
+          project.alias.toLowerCase().includes(filterText),
         );
 
         if (orgMatches || filteredProjects.length > 0) {

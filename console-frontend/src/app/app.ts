@@ -389,7 +389,7 @@ export default class App implements OnInit {
     if (label === ':projectName') {
       await this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
       const projectData = this.organizationDataService.getProjectById(params['id']);
-      label = projectData?.project.name ?? 'Project';
+      label = projectData?.project.alias ?? 'Project';
     }
 
     if (label === ':pluginAlias') {
@@ -645,7 +645,7 @@ export default class App implements OnInit {
       if (projectId) {
         const projectData = this.organizationDataService.getProjectById(projectId);
         if (projectData) {
-          return { type: 'project', name: projectData.project.name };
+          return { type: 'project', name: projectData.project.alias };
         }
       }
     } else if (type === 'organization') {

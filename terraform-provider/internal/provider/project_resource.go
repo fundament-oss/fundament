@@ -66,7 +66,14 @@ func (r *ProjectResource) Schema(ctx context.Context, req resource.SchemaRequest
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "The name of the project. Can be updated to rename the project.",
+				Description: "The name of the project. Changing this forces a new resource.",
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"alias": schema.StringAttribute{
+				Description: "The human-readable label for the project. Can be updated without recreating the project.",
 				Required:    true,
 			},
 			"created": schema.StringAttribute{
@@ -179,10 +186,13 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		"cluster_id": clusterID,
 	})
 
+	alias := state.Alias.ValueString()
+
 	// Create the project
 	createReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
 		ClusterId: clusterID,
 		Name:      state.Name.ValueString(),
+		Alias:     &alias,
 	}.Build())
 
 	createResp, err := createIdempotent(ctx, r.client.ProjectService.CreateProject, createReq)
@@ -214,6 +224,8 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Populate cluster fields (both ID and name)
 	r.populateClusterFields(ctx, &state, getResp.Msg.GetProject().GetClusterId())
+
+	state.Alias = types.StringValue(getResp.Msg.GetProject().GetAlias())
 
 	if getResp.Msg.GetProject().GetCreated().CheckValid() == nil {
 		state.Created = types.StringValue(getResp.Msg.GetProject().GetCreated().String())
@@ -274,6 +286,7 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// Map response to state
 	state.ID = types.StringValue(project.GetId())
 	state.Name = types.StringValue(project.GetName())
+	state.Alias = types.StringValue(project.GetAlias())
 
 	// Populate cluster fields (both ID and name)
 	r.populateClusterFields(ctx, &state, project.GetClusterId())
@@ -309,16 +322,16 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	tflog.Debug(ctx, "Updating project", map[string]any{
-		"id":       state.ID.ValueString(),
-		"name_old": state.Name.ValueString(),
-		"name_new": plan.Name.ValueString(),
+		"id":        state.ID.ValueString(),
+		"alias_old": state.Alias.ValueString(),
+		"alias_new": plan.Alias.ValueString(),
 	})
 
-	// Update the project name
-	name := plan.Name.ValueString()
+	// Update the project alias
+	alias := plan.Alias.ValueString()
 	updateReq := connect.NewRequest(organizationv1.UpdateProjectRequest_builder{
 		ProjectId: state.ID.ValueString(),
-		Name:      &name,
+		Alias:     &alias,
 	}.Build())
 
 	_, err := r.client.ProjectService.UpdateProject(ctx, updateReq)
@@ -375,6 +388,7 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Update the plan with the server response
 	plan.ID = types.StringValue(project.GetId())
 	plan.Name = types.StringValue(project.GetName())
+	plan.Alias = types.StringValue(project.GetAlias())
 
 	// Populate cluster fields (both ID and name)
 	r.populateClusterFields(ctx, &plan, project.GetClusterId())

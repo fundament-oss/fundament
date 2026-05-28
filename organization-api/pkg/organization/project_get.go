@@ -67,6 +67,7 @@ func projectFromGetRow(row *db.TenantProject) *organizationv1.Project {
 		Id:        row.ID.String(),
 		ClusterId: row.ClusterID.String(),
 		Name:      row.Name,
+		Alias:     row.Alias,
 		Created:   timestamppb.New(row.Created.Time),
 	}.Build()
 }

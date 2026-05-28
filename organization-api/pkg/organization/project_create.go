@@ -42,9 +42,15 @@ func (s *Server) CreateProject(
 
 	qtx := s.queries.WithTx(tx)
 
+	alias := req.Msg.GetName()
+	if req.Msg.HasAlias() {
+		alias = req.Msg.GetAlias()
+	}
+
 	projectID, err := qtx.ProjectCreate(ctx, db.ProjectCreateParams{
 		ClusterID: clusterID,
 		Name:      req.Msg.GetName(),
+		Alias:     alias,
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create project: %w", err))
