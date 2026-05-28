@@ -645,7 +645,7 @@ export default class App implements OnInit {
       if (projectId) {
         const projectData = this.organizationDataService.getProjectById(projectId);
         if (projectData) {
-          return { type: 'project', name: projectData.project.alias };
+          return { type: 'project', name: projectData.project.alias ?? projectData.project.name };
         }
       }
     } else if (type === 'organization') {

@@ -81,7 +81,7 @@ export default class SelectorModalComponent {
       .map((org) => {
         const orgMatches = org.alias.toLowerCase().includes(filterText);
         const filteredProjects = org.projects.filter((project) =>
-          project.alias.toLowerCase().includes(filterText),
+          (project.alias ?? project.name).toLowerCase().includes(filterText),
         );
 
         if (orgMatches || filteredProjects.length > 0) {
