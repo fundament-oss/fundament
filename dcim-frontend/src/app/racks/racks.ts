@@ -245,6 +245,9 @@ export default class RacksComponent implements OnInit {
   // ── Mutable rack list (per selected DC) ────────────────────────────────────
   readonly mutableRacks = signal<RackListItem[]>([]);
 
+  // Devices keyed by rack id. Loaded on demand via ListPlacementsByRack.
+  readonly devicesByRack = signal<Map<string, RackDevice[]>>(new Map());
+
   // ── DC list (loaded from the API) ──────────────────────────────────────────
   readonly mutableDcs = signal<DatacenterInfo[]>([]);
 
@@ -304,6 +307,12 @@ export default class RacksComponent implements OnInit {
       if (!dcId) return;
       this.reloadRacks(dcId);
       this.reloadRowOptions(dcId);
+    });
+
+    // When the selected rack changes, load its placements as devices.
+    effect(() => {
+      const rackId = this.currentRackId();
+      if (rackId) this.reloadDevicesForRack(rackId);
     });
 
     effect(() => {
@@ -380,6 +389,44 @@ export default class RacksComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
+  private async reloadDevicesForRack(rackId: string): Promise<void> {
+    try {
+      const [placementsRes, assetsRes] = await Promise.all([
+        firstValueFrom(this.placementApi.listPlacementsByRack(rackId)),
+        firstValueFrom(
+          this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
+        ),
+      ]);
+      const assetTag = new Map<string, string>(
+        assetsRes.assets.map((a) => [a.id, a.assetTag || a.id]),
+      );
+      const devices: RackDevice[] = placementsRes.placements.flatMap((p): RackDevice[] => {
+        if (p.location.case !== 'rack') return [];
+        const loc = p.location.value;
+        return [
+          {
+            id: p.id,
+            name: assetTag.get(p.assetId) ?? p.assetId,
+            type: 'machine',
+            uSize: 1,
+            uStart: loc.rackUnitStart,
+            state: 'allocated',
+          },
+        ];
+      });
+      untracked(() => {
+        this.devicesByRack.update((prev) => {
+          const next = new Map(prev);
+          next.set(rackId, devices);
+          return next;
+        });
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+    }
+  }
+
   private async reloadRowOptions(dcId: string): Promise<void> {
     try {
       const [roomsRes, rowsRes] = await Promise.all([
@@ -407,7 +454,11 @@ export default class RacksComponent implements OnInit {
 
   readonly currentRack = computed(() => {
     const id = this.currentRackId();
-    return id ? (this.mutableRacks().find((r) => r.id === id) ?? null) : null;
+    if (!id) return null;
+    const rack = this.mutableRacks().find((r) => r.id === id);
+    if (!rack) return null;
+    const devices = this.devicesByRack().get(id) ?? rack.devices;
+    return { ...rack, devices };
   });
 
   readonly rackStats = computed(() => {
@@ -567,11 +618,14 @@ export default class RacksComponent implements OnInit {
     const target = this.deleteDeviceTarget();
     const rack = this.currentRack();
     if (!target || !rack) return;
-    this.applyDeviceChanges(
-      rack.id,
-      rack.devices.filter((d) => d.id !== target.id),
-    );
-    this.deleteDeviceTarget.set(null);
+    firstValueFrom(this.placementApi.deletePlacement(target.id))
+      .then(() => {
+        this.reloadDevicesForRack(rack.id);
+        this.reloadRacks(this.selectedDcId());
+        this.deleteDeviceTarget.set(null);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   openAddDevice(): void {
@@ -618,6 +672,8 @@ export default class RacksComponent implements OnInit {
     firstValueFrom(this.placementApi.createPlacement(assetId, rack.id, rackUnitStart, slotType))
       .then(() => {
         this.addDeviceForm.set(null);
+        this.reloadDevicesForRack(rack.id);
+        this.reloadRacks(this.selectedDcId());
       })
       .catch((err) => this.handleDeviceError(err));
   }

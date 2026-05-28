@@ -62,6 +62,10 @@ export default class PlacementApiService {
     return this.placementClient.getPlacementByAsset({ assetId });
   }
 
+  listPlacementsByRack(rackId: string) {
+    return this.placementClient.listPlacementsByRack({ rackId });
+  }
+
   createPlacement(assetId: string, rackId: string, rackUnitStart: number, slotType: RackSlotType) {
     return this.placementClient.createPlacement({
       assetId,
