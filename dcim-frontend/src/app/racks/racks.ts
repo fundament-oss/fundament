@@ -51,6 +51,14 @@ interface AddDeviceForm {
   slotType: RackSlotType;
 }
 
+interface PlacementInfo {
+  placementId: string;
+  assetId: string;
+  assetTag: string;
+  rackUnitStart: number;
+  slotType: RackSlotType;
+}
+
 type InvalidFields = Record<string, string>;
 
 // ── Notes & History types ──────────────────────────────────────────────────────
@@ -245,8 +253,8 @@ export default class RacksComponent implements OnInit {
   // ── Mutable rack list (per selected DC) ────────────────────────────────────
   readonly mutableRacks = signal<RackListItem[]>([]);
 
-  // Devices keyed by rack id. Loaded on demand via ListPlacementsByRack.
-  readonly devicesByRack = signal<Map<string, RackDevice[]>>(new Map());
+  // Placements keyed by rack id. Loaded on demand via ListPlacementsByRack.
+  readonly placementsByRack = signal<Map<string, PlacementInfo[]>>(new Map());
 
   // ── DC list (loaded from the API) ──────────────────────────────────────────
   readonly mutableDcs = signal<DatacenterInfo[]>([]);
@@ -400,24 +408,25 @@ export default class RacksComponent implements OnInit {
       const assetTag = new Map<string, string>(
         assetsRes.assets.map((a) => [a.id, a.assetTag || a.id]),
       );
-      const devices: RackDevice[] = placementsRes.placements.flatMap((p): RackDevice[] => {
-        if (p.location.case !== 'rack') return [];
-        const loc = p.location.value;
-        return [
-          {
-            id: p.id,
-            name: assetTag.get(p.assetId) ?? p.assetId,
-            type: 'machine',
-            uSize: 1,
-            uStart: loc.rackUnitStart,
-            state: 'allocated',
-          },
-        ];
-      });
+      const placements: PlacementInfo[] = placementsRes.placements.flatMap(
+        (p): PlacementInfo[] => {
+          if (p.location.case !== 'rack') return [];
+          const loc = p.location.value;
+          return [
+            {
+              placementId: p.id,
+              assetId: p.assetId,
+              assetTag: assetTag.get(p.assetId) ?? p.assetId,
+              rackUnitStart: loc.rackUnitStart,
+              slotType: loc.rackSlotType,
+            },
+          ];
+        },
+      );
       untracked(() => {
-        this.devicesByRack.update((prev) => {
+        this.placementsByRack.update((prev) => {
           const next = new Map(prev);
-          next.set(rackId, devices);
+          next.set(rackId, placements);
           return next;
         });
       });
@@ -425,6 +434,17 @@ export default class RacksComponent implements OnInit {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
     }
+  }
+
+  private static placementsToDevices(placements: PlacementInfo[]): RackDevice[] {
+    return placements.map((p) => ({
+      id: p.placementId,
+      name: p.assetTag,
+      type: 'machine',
+      uSize: 1,
+      uStart: p.rackUnitStart,
+      state: 'allocated',
+    }));
   }
 
   private async reloadRowOptions(dcId: string): Promise<void> {
@@ -457,7 +477,8 @@ export default class RacksComponent implements OnInit {
     if (!id) return null;
     const rack = this.mutableRacks().find((r) => r.id === id);
     if (!rack) return null;
-    const devices = this.devicesByRack().get(id) ?? rack.devices;
+    const placements = this.placementsByRack().get(id);
+    const devices = placements ? RacksComponent.placementsToDevices(placements) : rack.devices;
     return { ...rack, devices };
   });
 
@@ -603,7 +624,42 @@ export default class RacksComponent implements OnInit {
   }
 
   applyDeviceChanges(rackId: string, devices: RackDevice[]): void {
-    this.mutableRacks.update((list) => list.map((r) => (r.id === rackId ? { ...r, devices } : r)));
+    const placements = this.placementsByRack().get(rackId) ?? [];
+    const byPid = new Map(placements.map((p) => [p.placementId, p]));
+    const moves = devices.flatMap((d) => {
+      const prev = byPid.get(d.id);
+      if (!prev || prev.rackUnitStart === d.uStart) return [];
+      return [{ placementId: d.id, newUnit: d.uStart, slotType: prev.slotType }];
+    });
+    if (moves.length === 0) return;
+    const movedUnit = new Map(moves.map((m) => [m.placementId, m.newUnit]));
+    this.placementsByRack.update((prev) => {
+      const next = new Map(prev);
+      next.set(
+        rackId,
+        placements.map((p) =>
+          movedUnit.has(p.placementId)
+            ? { ...p, rackUnitStart: movedUnit.get(p.placementId)! }
+            : p,
+        ),
+      );
+      return next;
+    });
+    Promise.all(
+      moves.map((m) =>
+        firstValueFrom(this.placementApi.updatePlacement(m.placementId, rackId, m.newUnit, m.slotType)),
+      ),
+    )
+      .then(() => {
+        this.reloadDevicesForRack(rackId);
+        this.reloadRacks(this.selectedDcId());
+      })
+      .catch((err) => {
+        // On failure, refetch to revert the optimistic update.
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.reloadDevicesForRack(rackId);
+      });
   }
 
   openDeleteDevice(device: RackDevice): void {
