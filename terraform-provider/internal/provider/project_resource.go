@@ -74,7 +74,8 @@ func (r *ProjectResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			"alias": schema.StringAttribute{
 				Description: "The human-readable label for the project. Can be updated without recreating the project.",
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 			},
 			"created": schema.StringAttribute{
 				Description: "The timestamp when the project was created.",
@@ -186,13 +187,17 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		"cluster_id": clusterID,
 	})
 
-	alias := state.Alias.ValueString()
+	var aliasPtr *string
+	if !state.Alias.IsNull() && !state.Alias.IsUnknown() && state.Alias.ValueString() != "" {
+		a := state.Alias.ValueString()
+		aliasPtr = &a
+	}
 
 	// Create the project
 	createReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
 		ClusterId: clusterID,
 		Name:      state.Name.ValueString(),
-		Alias:     &alias,
+		Alias:     aliasPtr,
 	}.Build())
 
 	createResp, err := createIdempotent(ctx, r.client.ProjectService.CreateProject, createReq)
@@ -328,10 +333,14 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 	})
 
 	// Update the project alias
-	alias := plan.Alias.ValueString()
+	var aliasPtr *string
+	if !plan.Alias.IsNull() && !plan.Alias.IsUnknown() && plan.Alias.ValueString() != "" {
+		a := plan.Alias.ValueString()
+		aliasPtr = &a
+	}
 	updateReq := connect.NewRequest(organizationv1.UpdateProjectRequest_builder{
 		ProjectId: state.ID.ValueString(),
-		Alias:     &alias,
+		Alias:     aliasPtr,
 	}.Build())
 
 	_, err := r.client.ProjectService.UpdateProject(ctx, updateReq)
