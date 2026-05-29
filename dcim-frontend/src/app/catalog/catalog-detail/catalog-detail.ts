@@ -16,13 +16,14 @@ import {
   AssetCategory,
   AssetStatus,
   CatalogEntry,
-  MOCK_ASSETS,
   MOCK_CATALOG,
   PortDefinition,
   PortCompatibility,
 } from '../../inventory/inventory';
 import CatalogApiService from '../catalog-api.service';
+import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
+import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -41,15 +42,24 @@ export default class CatalogDetailComponent implements OnInit {
 
   private readonly catalogApi = inject(CatalogApiService);
 
+  private readonly inventoryApi = inject(InventoryApiService);
+
   readonly catalogId = computed(() => this.route.snapshot.paramMap.get('id') ?? '');
 
   readonly entry = signal<CatalogEntry | undefined>(undefined);
 
   readonly entryLoaded = signal(false);
 
+  /** Raw assets from the API; instances of this entry are derived in `assets`. */
+  private readonly rawAssets = signal<ProtoAsset[]>([]);
+
   readonly assets = computed<Asset[]>(() => {
-    const model = this.entry()?.model;
-    return model ? MOCK_ASSETS.filter((a) => a.model === model) : [];
+    const id = this.catalogId();
+    const entry = this.entry();
+    const catalog = entry ? new Map([[entry.id, entry]]) : new Map<string, CatalogEntry>();
+    return this.rawAssets()
+      .filter((a) => a.deviceCatalogId === id)
+      .map((a) => InventoryApiService.mapAsset(a, catalog));
   });
 
   readonly deployedCount = computed(
@@ -149,6 +159,13 @@ export default class CatalogDetailComponent implements OnInit {
           res.portDefinitions.map((p) => CatalogApiService.mapPortDefinition(p)),
         ),
       )
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+
+    firstValueFrom(
+      this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
+    )
+      .then((res) => this.rawAssets.set(res.assets))
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
   }

@@ -216,9 +216,11 @@
                         <p class="text-sm font-medium text-indigo-600 font-mono">
                           {{ asset.assetTag }}
                         </p>
-                        <p class="text-xs text-slate-400 mt-0.5">
-                          {{ asset.datacenter }} · {{ asset.rack }}
-                        </p>
+                        @if (asset.datacenter || asset.rack) {
+                          <p class="text-xs text-slate-400 mt-0.5">
+                            {{ asset.datacenter }} · {{ asset.rack }}
+                          </p>
+                        }
                       </div>
                       <span
                         class="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
