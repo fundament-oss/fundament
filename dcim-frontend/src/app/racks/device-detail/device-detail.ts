@@ -31,24 +31,14 @@ import {
   DEVICE_HISTORY,
   DEVICE_CONNECTIONS,
 } from '../rack.model';
-import {
-  Cable,
-  MOCK_CABLES,
-  Port,
-  PortType,
-  PORT_TABS,
-  PORT_TYPE_LABEL,
-} from '../../patch-mapping/cable.model';
+import { Cable, Port, PortType, PORT_TABS, PORT_TYPE_LABEL } from '../../patch-mapping/cable.model';
+import PatchMappingApiService from '../../patch-mapping/patch-mapping-api.service';
 import PlacementApiService from '../../inventory/placement-api.service';
 import CatalogApiService from '../../catalog/catalog-api.service';
 import RackApiService from '../rack-api.service';
 import { ASSET_CLIENT } from '../../../connect/tokens';
 import connectErrorMessage from '../../../connect/error';
-import {
-  categoryToDeviceType,
-  cablePortFromDefinition,
-  parseRackHeight,
-} from '../catalog-helpers';
+import { categoryToDeviceType, cablePortFromDefinition, parseRackHeight } from '../catalog-helpers';
 
 @Component({
   selector: 'app-device-detail',
@@ -65,6 +55,8 @@ export default class DeviceDetailComponent {
   private readonly placementApi = inject(PlacementApiService);
 
   private readonly catalogApi = inject(CatalogApiService);
+
+  private readonly patchApi = inject(PatchMappingApiService);
 
   private readonly rackApi = inject(RackApiService);
 
@@ -149,14 +141,6 @@ export default class DeviceDetailComponent {
         assetTag: asset.assetTag,
         warrantyExpiry,
       });
-      const portDefsRes = await firstValueFrom(
-        this.catalogApi.listPortDefinitions(asset.deviceCatalogId),
-      );
-      this.realPorts.set(
-        portDefsRes.portDefinitions
-          .map((pd) => cablePortFromDefinition(pd, placement.id))
-          .filter((p): p is Port => p !== null),
-      );
       const assetById = new Map(allAssetsRes.assets.map((a) => [a.id, a]));
       const devices: RackDevice[] = placementsRes.placements.flatMap((p): RackDevice[] => {
         if (p.location.case !== 'rack') return [];
@@ -181,6 +165,47 @@ export default class DeviceDetailComponent {
         devices,
       });
       this.dcLabel.set('');
+
+      // Port definitions for every device in the rack — drives this device's
+      // port list and resolves cable peer port names.
+      const catalogIds = [
+        ...new Set(
+          placementsRes.placements
+            .map((p) => assetById.get(p.assetId)?.deviceCatalogId)
+            .filter((id): id is string => !!id),
+        ),
+      ];
+      const portDefArrays = await Promise.all(
+        catalogIds.map((id) => firstValueFrom(this.catalogApi.listPortDefinitions(id))),
+      );
+      const portDefsByCatalog = new Map(
+        catalogIds.map((id, i) => [id, portDefArrays[i].portDefinitions]),
+      );
+
+      this.realPorts.set(
+        (portDefsByCatalog.get(asset.deviceCatalogId) ?? [])
+          .map((pd) => cablePortFromDefinition(pd, placement.id))
+          .filter((p): p is Port => p !== null),
+      );
+
+      // Resolve connection peer names: placement id -> name, port def id -> port.
+      const portById = new Map<string, Port>();
+      placementsRes.placements.forEach((p) => {
+        if (p.location.case !== 'rack') return;
+        const catId = assetById.get(p.assetId)?.deviceCatalogId;
+        (catId ? (portDefsByCatalog.get(catId) ?? []) : []).forEach((pd) => {
+          const port = cablePortFromDefinition(pd, p.id);
+          if (port) portById.set(port.id, port);
+        });
+      });
+      const deviceNameById = new Map(devices.map((d) => [d.id, d.name]));
+
+      const connsRes = await firstValueFrom(this.patchApi.listConnectionsByPlacement(placement.id));
+      this.cables.set(
+        connsRes.connections.map((c) =>
+          PatchMappingApiService.mapConnection(c, '', { deviceNameById, portById }),
+        ),
+      );
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
@@ -205,7 +230,8 @@ export default class DeviceDetailComponent {
   /** Ports of the current device, derived from its catalog entry's port definitions. */
   private readonly realPorts = signal<Port[]>([]);
 
-  private readonly removedCableIds = signal<Set<string>>(new Set());
+  /** Physical connections touching the current device. */
+  private readonly cables = signal<Cable[]>([]);
 
   readonly PORT_TABS = PORT_TABS;
 
@@ -221,9 +247,8 @@ export default class DeviceDetailComponent {
 
   readonly portCableMap = computed<Map<string, Cable>>(() => {
     const devId = this.deviceId();
-    const removed = this.removedCableIds();
     const cableMap = new Map<string, Cable>();
-    MOCK_CABLES.filter((cable) => !removed.has(cable.id)).forEach((cable) => {
+    this.cables().forEach((cable) => {
       if (cable.aSide.deviceId === devId) cableMap.set(cable.aSide.portId, cable);
       if (cable.bSide.deviceId === devId) cableMap.set(cable.bSide.portId, cable);
     });
@@ -251,7 +276,10 @@ export default class DeviceDetailComponent {
   disconnectCable(portId: string): void {
     const cable = this.portCableMap().get(portId);
     if (!cable) return;
-    this.removedCableIds.update((prev) => new Set([...prev, cable.id]));
+    firstValueFrom(this.patchApi.deletePhysicalConnection(cable.id))
+      .then(() => this.loadDevice(this.deviceId()))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   openConnectForm(port: Port): void {

@@ -14,16 +14,8 @@ import { firstValueFrom } from 'rxjs';
 import PatchMappingFlowWrapperComponent from './patch-mapping-flow-wrapper';
 import CableListComponent from './cable-list/cable-list';
 import CableFormComponent from './cable-form/cable-form';
-import DevicePortsComponent from './device-ports/device-ports';
 import ShoppingListComponent from './shopping-list/shopping-list';
-import {
-  Cable,
-  CABLE_TYPE_LABEL,
-  CableSide,
-  CableStatus,
-  CableType,
-  Port,
-} from './cable.model';
+import { Cable, CABLE_TYPE_LABEL, CableSide, CableStatus, CableType, Port } from './cable.model';
 import PatchMappingApiService from './patch-mapping-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
 import PlacementApiService from '../inventory/placement-api.service';
@@ -51,7 +43,6 @@ interface SiteOption {
     PatchMappingFlowWrapperComponent,
     CableListComponent,
     CableFormComponent,
-    DevicePortsComponent,
     ShoppingListComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -110,14 +101,6 @@ export default class PatchMappingComponent implements OnInit {
 
   readonly localDevicePorts = signal<Record<string, Port[]>>({});
 
-  readonly editPortsDevice = signal<{ id: string; name: string } | null>(null);
-
-  readonly editPortsPorts = computed<Port[]>(() => {
-    const dev = this.editPortsDevice();
-    if (!dev) return [];
-    return this.localDevicePorts()[dev.id] ?? [];
-  });
-
   readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
 
   readonly CABLE_TYPES: CableType[] = [
@@ -148,8 +131,6 @@ export default class PatchMappingComponent implements OnInit {
 
   private readonly shoppingSheetEl = viewChild<ElementRef>('shoppingSheet');
 
-  private readonly portEditSheetEl = viewChild<ElementRef>('portEditSheet');
-
   constructor() {
     effect(() => {
       const el = this.cableSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
@@ -164,11 +145,6 @@ export default class PatchMappingComponent implements OnInit {
     effect(() => {
       const el = this.shoppingSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.shoppingListOpen()) el?.show?.();
-      else el?.hide?.();
-    });
-    effect(() => {
-      const el = this.portEditSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
-      if (this.editPortsDevice() !== null) el?.show?.();
       else el?.hide?.();
     });
   }
@@ -255,7 +231,9 @@ export default class PatchMappingComponent implements OnInit {
         .forEach((c) => {
           if (seen.has(c.id)) return;
           seen.add(c.id);
-          cables.push(PatchMappingApiService.mapConnection(c, siteId, { deviceNameById, portById }));
+          cables.push(
+            PatchMappingApiService.mapConnection(c, siteId, { deviceNameById, portById }),
+          );
         });
 
       this.dcDevices.set(devices);
@@ -280,27 +258,6 @@ export default class PatchMappingComponent implements OnInit {
   openEditCableById(id: string): void {
     const cable = this.mutableCables().find((c) => c.id === id);
     if (cable) this.openEditCable(cable);
-  }
-
-  openEditPorts(deviceId: string): void {
-    const device = this.dcDevices().find((d) => d.id === deviceId);
-    if (!device) return;
-    this.editPortsDevice.set({ id: device.id, name: device.name });
-  }
-
-  saveTopologyPorts(ports: Port[]): void {
-    const dev = this.editPortsDevice();
-    if (!dev) return;
-    this.localDevicePorts.update((map) => ({ ...map, [dev.id]: ports }));
-    this.editPortsDevice.set(null);
-  }
-
-  closeEditPorts(): void {
-    this.editPortsDevice.set(null);
-  }
-
-  onPortsUpdated(event: { deviceId: string; ports: Port[] }): void {
-    this.localDevicePorts.update((map) => ({ ...map, [event.deviceId]: event.ports }));
   }
 
   openAddCableFromConnection(conn: {
