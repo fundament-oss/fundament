@@ -16,7 +16,6 @@ import {
   AssetCategory,
   AssetStatus,
   CatalogEntry,
-  MOCK_CATALOG,
   PortDefinition,
   PortCompatibility,
 } from '../../inventory/inventory';
@@ -119,7 +118,7 @@ export default class CatalogDetailComponent implements OnInit {
   private readonly fCompatEntry = viewChild<NativeElementRef>('fCompatEntry');
 
   // ── Catalog list for compatibility dropdown ────────────────────────────────
-  readonly allCatalogEntries = MOCK_CATALOG;
+  readonly allCatalogEntries = signal<CatalogEntry[]>([]);
 
   constructor() {
     effect(() => {
@@ -166,6 +165,16 @@ export default class CatalogDetailComponent implements OnInit {
       this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
     )
       .then((res) => this.rawAssets.set(res.assets))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+
+    // Full catalog, for the port-compatibility picker and name resolution.
+    firstValueFrom(this.catalogApi.listCatalog())
+      .then((res) =>
+        this.allCatalogEntries.set(
+          res.entries.map((s) => CatalogApiService.mapCatalogEntry(s.entry!)),
+        ),
+      )
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
   }
@@ -313,7 +322,7 @@ export default class CatalogDetailComponent implements OnInit {
   }
 
   readonly compatibleEntryName = (entryId: string): string =>
-    MOCK_CATALOG.find((e) => e.id === entryId)?.model ?? entryId;
+    this.allCatalogEntries().find((e) => e.id === entryId)?.model ?? entryId;
 
   portDefName(pdId: string): string {
     return this.mutablePortDefs().find((p) => p.id === pdId)?.name ?? pdId;
