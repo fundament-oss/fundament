@@ -231,10 +231,10 @@ func insertProjectWithMembersNamed(t *testing.T, db *testDB, clusterID uuid.UUID
 
 	var projectID uuid.UUID
 	err = tx.QueryRow(context.Background(),
-		`INSERT INTO tenant.projects (cluster_id, name)
-		 VALUES ($1, $2)
+		`INSERT INTO tenant.projects (cluster_id, name, alias)
+		 VALUES ($1, $2, $3)
 		 RETURNING id`,
-		clusterID, projectName,
+		clusterID, projectName, projectName,
 	).Scan(&projectID)
 	require.NoError(t, err)
 
@@ -295,11 +295,12 @@ func insertProjectWithMembers(t *testing.T, db *testDB, clusterID uuid.UUID, mem
 	}()
 
 	var projectID uuid.UUID
+	projectName := "project-" + clusterID.String()[:8]
 	err = tx.QueryRow(context.Background(),
-		`INSERT INTO tenant.projects (cluster_id, name)
-		 VALUES ($1, $2)
+		`INSERT INTO tenant.projects (cluster_id, name, alias)
+		 VALUES ($1, $2, $3)
 		 RETURNING id`,
-		clusterID, "project-"+clusterID.String()[:8],
+		clusterID, projectName, projectName,
 	).Scan(&projectID)
 	require.NoError(t, err)
 
