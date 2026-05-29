@@ -15,7 +15,7 @@ import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
 export interface ProjectData {
   id: string;
   name: string;
-  alias?: string;
+  alias: string;
 }
 
 export interface ClusterData {

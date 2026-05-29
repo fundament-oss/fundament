@@ -95,7 +95,7 @@ export default class ProjectSettingsComponent implements OnInit {
     const currentProject = this.project();
     if (currentProject) {
       this.isEditing.set(true);
-      this.editingAlias.set(currentProject.alias);
+      this.editingAlias.set(currentProject.alias || currentProject.name);
     }
   }
 
