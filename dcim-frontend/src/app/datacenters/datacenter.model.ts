@@ -279,26 +279,6 @@ export const FLOOR_POSITIONS: RackFloorPosition[] = [
   oc('fra-01', 'A', 6),
 ];
 
-// TODO(api): RoomService.ListRooms({ site_id })
-export const MOCK_ROOMS: Room[] = [
-  { id: 'ams-01-room-1', siteId: 'ams-01', name: 'Main Hall', floor: 1 },
-  { id: 'ams-01-room-2', siteId: 'ams-01', name: 'Expansion Wing', floor: 1 },
-  { id: 'ams-02-room-1', siteId: 'ams-02', name: 'Server Hall A', floor: 0 },
-  { id: 'fra-01-room-1', siteId: 'fra-01', name: 'Colocation Hall', floor: 1 },
-];
-
-// TODO(api): RackRowService.ListRackRows({ room_id })
-export const MOCK_RACK_ROWS: RackRow[] = [
-  { id: 'ams-01-row-A', roomId: 'ams-01-room-1', name: 'Row A', positionX: 1, positionY: 1 },
-  { id: 'ams-01-row-B', roomId: 'ams-01-room-1', name: 'Row B', positionX: 1, positionY: 2 },
-  { id: 'ams-01-row-C', roomId: 'ams-01-room-1', name: 'Row C', positionX: 1, positionY: 3 },
-  { id: 'ams-01-row-D', roomId: 'ams-01-room-1', name: 'Row D', positionX: 1, positionY: 4 },
-  { id: 'ams-01-row-E', roomId: 'ams-01-room-2', name: 'Row E', positionX: 1, positionY: 1 },
-  { id: 'ams-02-row-A', roomId: 'ams-02-room-1', name: 'Row A', positionX: 1, positionY: 1 },
-  { id: 'ams-02-row-B', roomId: 'ams-02-room-1', name: 'Row B', positionX: 1, positionY: 2 },
-  { id: 'fra-01-row-A', roomId: 'fra-01-room-1', name: 'Row A', positionX: 1, positionY: 1 },
-];
-
 // ── Derived helpers ───────────────────────────────────────────────────────────
 
 export function rackFillPct(rackId: string): number {
