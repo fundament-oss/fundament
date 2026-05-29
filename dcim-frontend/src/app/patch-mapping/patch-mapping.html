@@ -56,9 +56,10 @@
       class="flex flex-col"
       [cables]="dcCables()"
       [dcId]="selectedDcId()"
+      [sites]="sites()"
       (editCable)="openEditCable($event)"
       (deleteCable)="openDeleteCable($event)"
-      (dcSelected)="selectedDcId.set($event)"
+      (dcSelected)="selectDc($event)"
     />
   } @else {
     <!-- Topology filter bar -->
@@ -134,6 +135,7 @@
     [dcId]="selectedDcId()"
     [allCables]="dcCables()"
     [externalDevicePorts]="localDevicePorts()"
+    [devices]="dcDevices()"
     (save)="saveFromForm($event)"
     (cancelForm)="closeForm()"
     (cableDelete)="openDeleteCable($event)"

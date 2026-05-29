@@ -5,11 +5,12 @@ import {
   effect,
   ElementRef,
   inject,
+  OnInit,
   signal,
   computed,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import PatchMappingFlowWrapperComponent from './patch-mapping-flow-wrapper';
 import CableListComponent from './cable-list/cable-list';
 import CableFormComponent from './cable-form/cable-form';
@@ -21,12 +22,27 @@ import {
   CableSide,
   CableStatus,
   CableType,
-  DEVICE_PORTS,
-  MOCK_CABLES,
   Port,
 } from './cable.model';
-import { DATACENTER_INFO } from '../datacenters/datacenter.model';
-import { RACKS } from '../racks/rack.model';
+import PatchMappingApiService from './patch-mapping-api.service';
+import DatacenterApiService from '../datacenters/datacenter-api.service';
+import PlacementApiService from '../inventory/placement-api.service';
+import CatalogApiService from '../catalog/catalog-api.service';
+import { ASSET_CLIENT } from '../../connect/tokens';
+import connectErrorMessage from '../../connect/error';
+import { cablePortFromDefinition } from '../racks/catalog-helpers';
+
+/** A selectable device (placement) in the active datacenter. */
+interface DeviceOption {
+  id: string;
+  name: string;
+}
+
+/** A selectable datacenter (site). */
+interface SiteOption {
+  id: string;
+  name: string;
+}
 
 @Component({
   selector: 'app-patch-mapping',
@@ -47,21 +63,27 @@ import { RACKS } from '../racks/rack.model';
   },
   templateUrl: './patch-mapping.html',
 })
-export default class PatchMappingComponent {
-  private readonly route = inject(ActivatedRoute);
+export default class PatchMappingComponent implements OnInit {
+  private readonly patchApi = inject(PatchMappingApiService);
 
-  private readonly router = inject(Router);
+  private readonly datacenterApi = inject(DatacenterApiService);
 
-  readonly selectedDcId = signal('ams-01');
+  private readonly placementApi = inject(PlacementApiService);
+
+  private readonly catalogApi = inject(CatalogApiService);
+
+  private readonly assetClient = inject(ASSET_CLIENT);
+
+  readonly sites = signal<SiteOption[]>([]);
+
+  readonly selectedDcId = signal('');
 
   readonly activeView = signal<'list' | 'topology'>('list');
 
-  // ── Cable state ────────────────────────────────────────────────────────────
-  readonly mutableCables = signal([...MOCK_CABLES]);
+  // ── Cable state (cables of the selected datacenter) ─────────────────────────
+  readonly mutableCables = signal<Cable[]>([]);
 
-  readonly dcCables = computed(() =>
-    this.mutableCables().filter((c) => c.dcId === this.selectedDcId()),
-  );
+  readonly dcCables = computed(() => this.mutableCables());
 
   readonly editCable = signal<Partial<Cable> | null>(null);
 
@@ -75,7 +97,7 @@ export default class PatchMappingComponent {
   readonly plannedCount = computed(() => this.plannedCables().length);
 
   readonly selectedDcLabel = computed(
-    () => DATACENTER_INFO.find((dc) => dc.id === this.selectedDcId())?.name ?? this.selectedDcId(),
+    () => this.sites().find((s) => s.id === this.selectedDcId())?.name ?? this.selectedDcId(),
   );
 
   // ── Topology filters ───────────────────────────────────────────────────────
@@ -83,7 +105,10 @@ export default class PatchMappingComponent {
 
   readonly topologyTypeFilter = signal<CableType | ''>('');
 
-  readonly localDevicePorts = signal<Record<string, Port[]>>({ ...DEVICE_PORTS });
+  // Devices (placements) and their ports in the active datacenter.
+  readonly dcDevices = signal<DeviceOption[]>([]);
+
+  readonly localDevicePorts = signal<Record<string, Port[]>>({});
 
   readonly editPortsDevice = signal<{ id: string; name: string } | null>(null);
 
@@ -126,30 +151,6 @@ export default class PatchMappingComponent {
   private readonly portEditSheetEl = viewChild<ElementRef>('portEditSheet');
 
   constructor() {
-    const params = this.route.snapshot.queryParamMap;
-    const aDeviceId = params.get('aDeviceId');
-    const aPortId = params.get('aPortId');
-    if (aDeviceId && aPortId) {
-      const ports = this.localDevicePorts();
-      const port = (ports[aDeviceId] ?? []).find((p) => p.id === aPortId);
-      const device = RACKS.flatMap((r) => r.devices).find((d) => d.id === aDeviceId);
-      if (port && device) {
-        this.editCable.set({
-          dcId: this.selectedDcId(),
-          status: 'connected',
-          aSide: {
-            deviceId: aDeviceId,
-            deviceName: device.name,
-            portId: aPortId,
-            portName: port.name,
-            portType: port.type,
-          },
-        });
-      }
-      // Remove the deep-link params so a hard-refresh doesn't re-open the form.
-      this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
-    }
-
     effect(() => {
       const el = this.cableSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editCable() !== null) el?.show?.();
@@ -172,6 +173,100 @@ export default class PatchMappingComponent {
     });
   }
 
+  ngOnInit(): void {
+    firstValueFrom(this.datacenterApi.listSites())
+      .then((res) => {
+        const sites = res.sites.map((s) => ({ id: s.id, name: s.name }));
+        this.sites.set(sites);
+        if (sites.length > 0 && !this.selectedDcId()) {
+          this.selectDc(sites[0].id);
+        }
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  selectDc(siteId: string): void {
+    this.selectedDcId.set(siteId);
+    this.loadSiteGraph(siteId).catch(() => undefined);
+  }
+
+  /**
+   * Loads every device (placement) in the site, its ports (from the catalog
+   * port definitions), and the physical connections between them.
+   */
+  private async loadSiteGraph(siteId: string): Promise<void> {
+    try {
+      const racksRes = await firstValueFrom(this.datacenterApi.listRacksBySite(siteId));
+      const rackIds = racksRes.racks
+        .map((s) => s.rack?.id)
+        .filter((id): id is string => id != null);
+
+      const [placementArrays, assetsRes] = await Promise.all([
+        Promise.all(
+          rackIds.map((id) => firstValueFrom(this.placementApi.listPlacementsByRack(id))),
+        ),
+        firstValueFrom(this.assetClient.listAssets({})),
+      ]);
+      const placements = placementArrays
+        .flatMap((r) => r.placements)
+        .filter((p) => p.location.case === 'rack');
+      const assetById = new Map(assetsRes.assets.map((a) => [a.id, a]));
+
+      const devices: DeviceOption[] = [];
+      const catalogByPlacement = new Map<string, string>();
+      placements.forEach((p) => {
+        const asset = assetById.get(p.assetId);
+        devices.push({ id: p.id, name: asset?.assetTag || p.assetId });
+        if (asset?.deviceCatalogId) catalogByPlacement.set(p.id, asset.deviceCatalogId);
+      });
+      devices.sort((a, b) => a.name.localeCompare(b.name));
+
+      // Port definitions per unique catalog entry.
+      const uniqueCatalogIds = [...new Set(catalogByPlacement.values())];
+      const portDefArrays = await Promise.all(
+        uniqueCatalogIds.map((id) => firstValueFrom(this.catalogApi.listPortDefinitions(id))),
+      );
+      const portDefsByCatalog = new Map(
+        uniqueCatalogIds.map((id, i) => [id, portDefArrays[i].portDefinitions]),
+      );
+
+      const devicePorts: Record<string, Port[]> = {};
+      const portById = new Map<string, Port>();
+      placements.forEach((p) => {
+        const catalogId = catalogByPlacement.get(p.id);
+        const defs = catalogId ? (portDefsByCatalog.get(catalogId) ?? []) : [];
+        const ports = defs
+          .map((pd) => cablePortFromDefinition(pd, p.id))
+          .filter((port): port is Port => port !== null);
+        devicePorts[p.id] = ports;
+        ports.forEach((port) => portById.set(port.id, port));
+      });
+
+      // Connections touching any placement in the site, de-duplicated.
+      const connArrays = await Promise.all(
+        placements.map((p) => firstValueFrom(this.patchApi.listConnectionsByPlacement(p.id))),
+      );
+      const deviceNameById = new Map(devices.map((d) => [d.id, d.name]));
+      const seen = new Set<string>();
+      const cables: Cable[] = [];
+      connArrays
+        .flatMap((r) => r.connections)
+        .forEach((c) => {
+          if (seen.has(c.id)) return;
+          seen.add(c.id);
+          cables.push(PatchMappingApiService.mapConnection(c, siteId, { deviceNameById, portById }));
+        });
+
+      this.dcDevices.set(devices);
+      this.localDevicePorts.set(devicePorts);
+      this.mutableCables.set(cables);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+    }
+  }
+
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
   openAddCable(): void {
@@ -187,13 +282,8 @@ export default class PatchMappingComponent {
     if (cable) this.openEditCable(cable);
   }
 
-  onPortsUpdated(event: { deviceId: string; ports: Port[] }): void {
-    this.localDevicePorts.update((map) => ({ ...map, [event.deviceId]: event.ports }));
-  }
-
   openEditPorts(deviceId: string): void {
-    const allDevices = RACKS.flatMap((r) => r.devices);
-    const device = allDevices.find((d) => d.id === deviceId);
+    const device = this.dcDevices().find((d) => d.id === deviceId);
     if (!device) return;
     this.editPortsDevice.set({ id: device.id, name: device.name });
   }
@@ -209,16 +299,20 @@ export default class PatchMappingComponent {
     this.editPortsDevice.set(null);
   }
 
+  onPortsUpdated(event: { deviceId: string; ports: Port[] }): void {
+    this.localDevicePorts.update((map) => ({ ...map, [event.deviceId]: event.ports }));
+  }
+
   openAddCableFromConnection(conn: {
     sourceDeviceId: string;
     sourcePortId: string;
     targetDeviceId: string;
     targetPortId: string;
   }): void {
-    const allDevices = RACKS.flatMap((r) => r.devices);
-    const aDevice = allDevices.find((d) => d.id === conn.sourceDeviceId);
-    const bDevice = allDevices.find((d) => d.id === conn.targetDeviceId);
+    const devices = this.dcDevices();
     const ports = this.localDevicePorts();
+    const aDevice = devices.find((d) => d.id === conn.sourceDeviceId);
+    const bDevice = devices.find((d) => d.id === conn.targetDeviceId);
     const aPort = (ports[conn.sourceDeviceId] ?? []).find((p) => p.id === conn.sourcePortId);
     const bPort = (ports[conn.targetDeviceId] ?? []).find((p) => p.id === conn.targetPortId);
 
@@ -242,22 +336,20 @@ export default class PatchMappingComponent {
       portType: bPort.type,
     };
 
-    this.editCable.set({
-      dcId: this.selectedDcId(),
-      status: 'connected',
-      aSide,
-      bSide,
-    });
+    this.editCable.set({ dcId: this.selectedDcId(), status: 'connected', aSide, bSide });
   }
 
   saveFromForm(cable: Cable): void {
-    if (cable.id) {
-      this.mutableCables.update((list) => list.map((c) => (c.id === cable.id ? cable : c)));
-    } else {
-      const id = `cab-${Date.now().toString(36)}`;
-      this.mutableCables.update((list) => [...list, { ...cable, id, dcId: this.selectedDcId() }]);
-    }
-    this.editCable.set(null);
+    const request = cable.id
+      ? firstValueFrom(this.patchApi.updateCable(cable))
+      : firstValueFrom(this.patchApi.createCable(cable));
+    request
+      .then(() => {
+        this.editCable.set(null);
+        return this.loadSiteGraph(this.selectedDcId());
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   closeForm(): void {
@@ -276,13 +368,21 @@ export default class PatchMappingComponent {
   confirmDelete(): void {
     const target = this.deleteCable();
     if (!target) return;
-    this.mutableCables.update((list) => list.filter((c) => c.id !== target.id));
-    this.deleteCable.set(null);
+    firstValueFrom(this.patchApi.deletePhysicalConnection(target.id))
+      .then(() => {
+        this.deleteCable.set(null);
+        return this.loadSiteGraph(this.selectedDcId());
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   updateCableStatus(event: { cableId: string; status: CableStatus }): void {
-    this.mutableCables.update((list) =>
-      list.map((c) => (c.id === event.cableId ? { ...c, status: event.status } : c)),
-    );
+    const cable = this.mutableCables().find((c) => c.id === event.cableId);
+    if (!cable) return;
+    firstValueFrom(this.patchApi.updateCable({ ...cable, status: event.status }))
+      .then(() => this.loadSiteGraph(this.selectedDcId()))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 }

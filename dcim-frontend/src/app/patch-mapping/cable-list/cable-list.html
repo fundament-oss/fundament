@@ -26,7 +26,7 @@
         Datacenter
       </p>
       <nav aria-label="Datacenter selection">
-        @for (dc of DATACENTER_INFO; track dc.id) {
+        @for (dc of sites(); track dc.id) {
           <button
             (click)="dcSelected.emit(dc.id)"
             class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
@@ -37,11 +37,7 @@
             "
             [attr.aria-pressed]="dcId() === dc.id"
           >
-            <span
-              class="h-2 w-2 rounded-full shrink-0"
-              [class]="dcStatusDotClass(dc.status)"
-              aria-hidden="true"
-            ></span>
+            <span class="h-2 w-2 rounded-full shrink-0 bg-slate-300" aria-hidden="true"></span>
             <span class="flex-1 text-left">{{ dc.name }}</span>
           </button>
         }

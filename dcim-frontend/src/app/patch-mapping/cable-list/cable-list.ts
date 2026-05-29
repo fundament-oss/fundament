@@ -18,11 +18,15 @@ import {
   CableType,
   PORT_TYPE_LABEL,
 } from '../cable.model';
-import { DATACENTER_INFO, DatacenterStatus } from '../../datacenters/datacenter.model';
 
 type SortField = 'label' | 'aSide' | 'bSide' | 'status' | 'type' | null;
 
 interface DeviceOption {
+  id: string;
+  name: string;
+}
+
+interface SiteOption {
   id: string;
   name: string;
 }
@@ -38,6 +42,8 @@ export default class CableListComponent {
   readonly cables = input.required<Cable[]>();
 
   readonly dcId = input.required<string>();
+
+  readonly sites = input<SiteOption[]>([]);
 
   readonly editCable = output<Cable>();
 
@@ -174,17 +180,6 @@ export default class CableListComponent {
         this.searchText()
       ),
   );
-
-  readonly DATACENTER_INFO = DATACENTER_INFO;
-
-  readonly dcStatusDotClass = (status: DatacenterStatus): string => {
-    const map: Record<DatacenterStatus, string> = {
-      operational: 'bg-teal-500',
-      degraded: 'bg-amber-500',
-      maintenance: 'bg-slate-400',
-    };
-    return map[status] ?? '';
-  };
 
   readonly statusDotClass = (status: CableStatus): string => {
     const map: Record<CableStatus, string> = {

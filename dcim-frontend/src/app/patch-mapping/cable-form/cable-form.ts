@@ -12,7 +12,6 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { RACKS } from '../../racks/rack.model';
 import {
   Cable,
   CableColor,
@@ -20,7 +19,6 @@ import {
   CableStatus,
   CableType,
   CABLE_TYPE_LABEL,
-  DEVICE_PORTS,
   Port,
   portsAreCompatible,
   PortType,
@@ -52,6 +50,9 @@ export default class CableFormComponent {
   readonly allCables = input<Cable[]>([]);
 
   readonly externalDevicePorts = input<Record<string, Port[]>>({});
+
+  /** Selectable devices (placements) in the active datacenter. */
+  readonly devices = input<DeviceOption[]>([]);
 
   readonly save = output<Cable>();
 
@@ -93,7 +94,7 @@ export default class CableFormComponent {
   // ── Port management ────────────────────────────────────────────────────────
   readonly portManagementDevice = signal<{ id: string; name: string } | null>(null);
 
-  readonly localDevicePorts = signal<Record<string, Port[]>>({ ...DEVICE_PORTS });
+  readonly localDevicePorts = signal<Record<string, Port[]>>({});
 
   // ── Quick-add port ─────────────────────────────────────────────────────────
   readonly aAddingPort = signal(false);
@@ -109,13 +110,9 @@ export default class CableFormComponent {
   readonly bNewPortType = signal<PortType>('network-interface');
 
   // ── Derived: devices in this DC ───────────────────────────────────────────
-  readonly dcDevices = computed<DeviceOption[]>(() => {
-    const dcId = this.dcId();
-    const result = RACKS.filter((rack) => rack.dcId === dcId).flatMap((rack) =>
-      rack.devices.map((dev) => ({ id: dev.id, name: dev.name })),
-    );
-    return result.sort((a, b) => a.name.localeCompare(b.name));
-  });
+  readonly dcDevices = computed<DeviceOption[]>(() =>
+    [...this.devices()].sort((a, b) => a.name.localeCompare(b.name)),
+  );
 
   // ── Derived: port IDs already occupied by other cables ────────────────────
   readonly usedPortIds = computed<Set<string>>(() => {
