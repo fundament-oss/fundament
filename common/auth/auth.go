@@ -11,8 +11,11 @@ import (
 	"github.com/google/uuid"
 )
 
-// AuthCookieName is the name of the authentication cookie.
+// AuthCookieName is the name of the authentication cookie for the console.
 const AuthCookieName = "fundament_auth"
+
+// DCIMAuthCookieName is the name of the authentication cookie for DCIM.
+const DCIMAuthCookieName = "dcim_auth"
 
 // Claims represents the JWT claims used across fundament services.
 type Claims struct {
@@ -28,19 +31,21 @@ func (c *Claims) UserID() uuid.UUID {
 
 // Validator handles JWT validation from HTTP headers.
 type Validator struct {
-	jwtSecret []byte
-	logger    *slog.Logger
+	jwtSecret  []byte
+	cookieName string
+	logger     *slog.Logger
 }
 
-// NewValidator creates a new Validator with the given JWT secret.
+// NewValidator creates a new Validator with the given JWT secret and cookie name.
 // Logger is optional and can be nil.
-func NewValidator(jwtSecret []byte, logger *slog.Logger) *Validator {
+func NewValidator(jwtSecret []byte, cookieName string, logger *slog.Logger) *Validator {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	return &Validator{
-		jwtSecret: jwtSecret,
-		logger:    logger,
+		jwtSecret:  jwtSecret,
+		cookieName: cookieName,
+		logger:     logger,
 	}
 }
 
@@ -72,7 +77,7 @@ func (v *Validator) extractCookieToken(header http.Header) string {
 	// Cookie header format: "name1=value1; name2=value2"
 	for part := range strings.SplitSeq(cookieHeader, ";") {
 		part = strings.TrimSpace(part)
-		if after, ok := strings.CutPrefix(part, AuthCookieName+"="); ok {
+		if after, ok := strings.CutPrefix(part, v.cookieName+"="); ok {
 			return after
 		}
 	}

@@ -74,6 +74,11 @@ build:
       docker:
         dockerfile: dcim-frontend/Dockerfile
 
+    - image: dcim-authn-api
+      context: .
+      docker:
+        dockerfile: dcim-authn-api/Dockerfile
+
 deploy:
   kubeContext: REQUIRES-PROFILE # kubeContext is intentionally invalid to prevent accidental deployments without a profile.
   statusCheck: true
@@ -98,6 +103,7 @@ deploy:
           images.pluginController: "{{.IMAGE_FULLY_QUALIFIED_plugin_controller}}"
           images.dcimApi: "{{.IMAGE_FULLY_QUALIFIED_dcim_api}}"
           images.dcimFrontend: "{{.IMAGE_FULLY_QUALIFIED_dcim_frontend}}"
+          images.dcimAuthnApi: "{{.IMAGE_FULLY_QUALIFIED_dcim_authn_api}}"
 
 profiles:
   - name: env-local
@@ -191,6 +197,12 @@ profiles:
         value: dcim-frontend/hotreload/Dockerfile
       - op: add
         path: /build/artifacts/11/sync
+        value: {}
+      - op: replace
+        path: /build/artifacts/12/docker/dockerfile
+        value: dcim-authn-api/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/12/sync
         value: {}
 
   # Debug profile: rebuilds kube-api-proxy with dlv (port-forward handled by dev-debug in Justfile)

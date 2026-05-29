@@ -22,7 +22,7 @@ func signToken(t *testing.T, claims *Claims) string {
 }
 
 func newValidator() *Validator {
-	return NewValidator(testSecret, nil)
+	return NewValidator(testSecret, AuthCookieName, nil)
 }
 
 func TestValidateToken_RejectsNonUUIDSubject(t *testing.T) {

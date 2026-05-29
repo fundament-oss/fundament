@@ -30,6 +30,7 @@ spec:
                 secretKeyRef:
                   name: db-fun-dcim-api
                   key: uri
+            {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: LOG_LEVEL
               value: {{ .Values.dcimApi.logLevel }}
             {{- if $.Values.externalUrls.corsAllowedOrigins }}

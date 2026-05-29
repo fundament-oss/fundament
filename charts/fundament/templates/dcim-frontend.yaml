@@ -9,7 +9,8 @@ metadata:
 data:
   config.json: |
     {
-      "apiUrl": "{{ $.Values.externalUrls.dcimApi }}"
+      "apiUrl": "{{ $.Values.externalUrls.dcimApi }}",
+      "authnApiUrl": "{{ $.Values.externalUrls.dcimAuthn }}"
     }
 
 ---
