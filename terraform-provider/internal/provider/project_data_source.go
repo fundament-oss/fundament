@@ -52,6 +52,10 @@ func (d *ProjectDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				Description: "The name of the project to look up.",
 				Required:    true,
 			},
+			"alias": schema.StringAttribute{
+				Description: "The alias of the project.",
+				Computed:    true,
+			},
 			"created": schema.StringAttribute{
 				Description: "The timestamp when the project was created.",
 				Computed:    true,
@@ -135,6 +139,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	// Map response to state
 	config.ID = types.StringValue(project.GetId())
 	config.Name = types.StringValue(project.GetName())
+	config.Alias = types.StringValue(project.GetAlias())
 	config.ClusterID = types.StringValue(project.GetClusterId())
 
 	// Resolve cluster name
