@@ -33,7 +33,6 @@ import {
 } from '../rack.model';
 import {
   Cable,
-  DEVICE_PORTS,
   MOCK_CABLES,
   Port,
   PortType,
@@ -45,7 +44,11 @@ import CatalogApiService from '../../catalog/catalog-api.service';
 import RackApiService from '../rack-api.service';
 import { ASSET_CLIENT } from '../../../connect/tokens';
 import connectErrorMessage from '../../../connect/error';
-import { categoryToDeviceType, parseRackHeight } from '../catalog-helpers';
+import {
+  categoryToDeviceType,
+  cablePortFromDefinition,
+  parseRackHeight,
+} from '../catalog-helpers';
 
 @Component({
   selector: 'app-device-detail',
@@ -146,6 +149,14 @@ export default class DeviceDetailComponent {
         assetTag: asset.assetTag,
         warrantyExpiry,
       });
+      const portDefsRes = await firstValueFrom(
+        this.catalogApi.listPortDefinitions(asset.deviceCatalogId),
+      );
+      this.realPorts.set(
+        portDefsRes.portDefinitions
+          .map((pd) => cablePortFromDefinition(pd, placement.id))
+          .filter((p): p is Port => p !== null),
+      );
       const assetById = new Map(allAssetsRes.assets.map((a) => [a.id, a]));
       const devices: RackDevice[] = placementsRes.placements.flatMap((p): RackDevice[] => {
         if (p.location.case !== 'rack') return [];
@@ -191,6 +202,9 @@ export default class DeviceDetailComponent {
 
   private readonly extraPorts = signal<Record<string, Port[]>>({});
 
+  /** Ports of the current device, derived from its catalog entry's port definitions. */
+  private readonly realPorts = signal<Port[]>([]);
+
   private readonly removedCableIds = signal<Set<string>>(new Set());
 
   readonly PORT_TABS = PORT_TABS;
@@ -200,7 +214,7 @@ export default class DeviceDetailComponent {
   readonly devicePorts = computed<Port[]>(() => {
     const devId = this.deviceId();
     const tab = this.activePortTab();
-    const base = DEVICE_PORTS[devId] ?? [];
+    const base = this.realPorts();
     const extra = this.extraPorts()[devId] ?? [];
     return [...base, ...extra].filter((p) => p.type === tab);
   });
