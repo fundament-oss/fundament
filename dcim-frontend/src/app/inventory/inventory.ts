@@ -91,335 +91,6 @@ export interface NoteComment {
   content: string;
 }
 
-export interface AssetNoteDetail {
-  description: string;
-  comments: NoteComment[];
-}
-
-export const MOCK_NOTES: Record<string, AssetNoteDetail> = {
-  'AST-001': {
-    description: 'Running VMware ESXi 8.0. RAM upgraded to 512 GB in Q1 2025.',
-    comments: [
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 3,
-        content: 'RAM upgrade completed. Both DIMMs seated correctly, no memory errors in POST.',
-      },
-      {
-        author: 'Sarah Müller',
-        initials: 'SM',
-        daysAgo: 12,
-        content: 'Scheduled for ESXi 8.0 Update 3 patch next maintenance window on April 6th.',
-      },
-      {
-        author: 'Pieter Hoek',
-        initials: 'PH',
-        daysAgo: 31,
-        content:
-          'Migrated 4 VMs from AST-016 prior to decommission. All workloads confirmed healthy.',
-      },
-    ],
-  },
-  'AST-003': {
-    description: 'Expected delivery 2025-04-15. Rack space reserved in AMS-02 row C.',
-    comments: [
-      {
-        author: 'Roos van Dijk',
-        initials: 'RD',
-        daysAgo: 2,
-        content:
-          'Confirmed delivery slot with NetApp account manager. Cable management kit ships separately.',
-      },
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 8,
-        content: 'PO #20250312 approved. Budget allocated from Q1 CapEx reserve.',
-      },
-    ],
-  },
-  'AST-004': {
-    description: 'PSU failure reported 2025-03-18. Spare part ordered, awaiting arrival.',
-    comments: [
-      {
-        author: 'Pieter Hoek',
-        initials: 'PH',
-        daysAgo: 1,
-        content:
-          'HP support case #7742301 escalated to priority. ETA for replacement PSU is 2 business days.',
-      },
-      {
-        author: 'Sarah Müller',
-        initials: 'SM',
-        daysAgo: 8,
-        content: 'Workloads migrated to AST-010 temporarily. No customer impact.',
-      },
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 8,
-        content:
-          'Node taken offline at 14:23 after second PSU also showed fault codes. Ticket #4520 linked.',
-      },
-    ],
-  },
-  'AST-007': {
-    description: 'Kubernetes worker node in the AMS-01 production cluster (pool: standard).',
-    comments: [
-      {
-        author: 'Roos van Dijk',
-        initials: 'RD',
-        daysAgo: 5,
-        content:
-          'Node cordoned briefly during kernel patch at 02:00. Uncordoned after successful reboot.',
-      },
-      {
-        author: 'Sarah Müller',
-        initials: 'SM',
-        daysAgo: 19,
-        content: 'Added to the production node pool. Taint removed after smoke tests passed.',
-      },
-    ],
-  },
-  'AST-009': {
-    description: 'Primary SAN for the AMS-01 production cluster. All-flash, NVMe backend.',
-    comments: [
-      {
-        author: 'Pieter Hoek',
-        initials: 'PH',
-        daysAgo: 4,
-        content:
-          'Snapshot schedule verified. Daily snapshots retained for 14 days, weekly for 90 days.',
-      },
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 14,
-        content: 'Firmware updated to 6.6.12. No degradation in IOPS observed post-update.',
-      },
-    ],
-  },
-  'AST-012': {
-    description:
-      'Core spine switch for AMS-02. BGP sessions to upstream router and all leaf switches configured.',
-    comments: [
-      {
-        author: 'Roos van Dijk',
-        initials: 'RD',
-        daysAgo: 6,
-        content:
-          'BGP peer AMS-02-LEAF-03 flapped twice between 03:12 and 03:18. Suspected fiber issue in bundle C. Monitoring.',
-      },
-      {
-        author: 'Sarah Müller',
-        initials: 'SM',
-        daysAgo: 22,
-        content: 'Config baseline saved to Netbox and GitLab repo. Running-config diff: clean.',
-      },
-    ],
-  },
-  'AST-013': {
-    description: 'RAID controller fault detected. Ticket #4521 open with Lenovo support.',
-    comments: [
-      {
-        author: 'Pieter Hoek',
-        initials: 'PH',
-        daysAgo: 0,
-        content:
-          'Lenovo engineer on-site tomorrow morning 09:00. Replacement controller arrived at loading dock.',
-      },
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 3,
-        content:
-          'RAID rebuild aborted at 34% — controller logs show CRC errors on SAS expander. Escalated to P1.',
-      },
-      {
-        author: 'Roos van Dijk',
-        initials: 'RD',
-        daysAgo: 4,
-        content: 'Data backed up to AST-017 before taking the array offline.',
-      },
-    ],
-  },
-  'AST-016': {
-    description: 'Decommissioned. Replaced by AST-001. Asset ready for disposal or reallocation.',
-    comments: [
-      {
-        author: 'Sarah Müller',
-        initials: 'SM',
-        daysAgo: 17,
-        content:
-          'Data wiped with Blancco (certificate #BL-2025-1104). Drive sanitization log attached in ServiceNow.',
-      },
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 20,
-        content: 'All VMs migrated off. iDRAC reset to factory defaults. Asset tag label updated.',
-      },
-    ],
-  },
-  'AST-020': {
-    description: 'Leaf switch for pod A, AMS-01. Downstream of spine AST-012.',
-    comments: [
-      {
-        author: 'Roos van Dijk',
-        initials: 'RD',
-        daysAgo: 9,
-        content:
-          'Port-channel to ESXi hosts reconfigured for LACP. Confirmed no packet loss during failover test.',
-      },
-    ],
-  },
-  'AST-025': {
-    description: 'Reserved for new analytics project (Q2). Rack space allocated in AMS-01 row C.',
-    comments: [
-      {
-        author: 'Pieter Hoek',
-        initials: 'PH',
-        daysAgo: 11,
-        content:
-          'Project kickoff pushed to May. Storage reserved until June 30 per agreement with Platform team.',
-      },
-      {
-        author: 'Sarah Müller',
-        initials: 'SM',
-        daysAgo: 25,
-        content:
-          'Initial capacity sizing: 200 TB usable NVMe. Approved by architecture review board.',
-      },
-    ],
-  },
-  'AST-028': {
-    description: 'Requested by Platform team for expanding the GitLab CI runner pool.',
-    comments: [
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 7,
-        content:
-          'Request approved by Infra lead. Added to procurement backlog for Q2 budget cycle.',
-      },
-    ],
-  },
-  'AST-031': {
-    description: 'Memory DIMM errors on slot A3. Replacement in progress.',
-    comments: [
-      {
-        author: 'Pieter Hoek',
-        initials: 'PH',
-        daysAgo: 2,
-        content: 'Replacement 64 GB LRDIMM ordered from Lenovo. ETA: 3 business days.',
-      },
-      {
-        author: 'Roos van Dijk',
-        initials: 'RD',
-        daysAgo: 2,
-        content:
-          'Server running with reduced 384 GB RAM (slot A3 disabled). No workload impact confirmed.',
-      },
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 5,
-        content:
-          'DIMM errors confirmed in XClarity. EDAC counters showing uncorrectable errors on slot A3.',
-      },
-    ],
-  },
-  'AST-037': {
-    description: 'Edge router for AMS-01. Upstream BGP peering to transit providers.',
-    comments: [
-      {
-        author: 'Sarah Müller',
-        initials: 'SM',
-        daysAgo: 13,
-        content:
-          'Route policy updated to prepend AS path for secondary transit. Failover tested and confirmed < 30s convergence.',
-      },
-    ],
-  },
-  'AST-048': {
-    description: 'Coolant leak detected near rear manifold. Unit taken out of service.',
-    comments: [
-      {
-        author: 'Pieter Hoek',
-        initials: 'PH',
-        daysAgo: 1,
-        content:
-          'Emerson field engineer confirmed manifold O-ring failure. Repair kit on order. Estimated 5 day downtime.',
-      },
-      {
-        author: 'Roos van Dijk',
-        initials: 'RD',
-        daysAgo: 1,
-        content:
-          'Adjacent servers AST-050 and AST-026 inspected for moisture — no issues found. Cleanup completed.',
-      },
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 3,
-        content:
-          'Thermal load redistributed to APC unit in adjacent row. Cabinet temps stable at 22°C.',
-      },
-    ],
-  },
-  'AST-057': {
-    description: 'For new analytics cluster. ETA 2025-05-01. Will be deployed in AMS-02 row A.',
-    comments: [
-      {
-        author: 'Sarah Müller',
-        initials: 'SM',
-        daysAgo: 15,
-        content:
-          'Dell quote accepted. Spec: 2× Xeon Gold 6430, 1 TB RAM, 8× 25GbE. Lead time ~5 weeks.',
-      },
-    ],
-  },
-  'AST-068': {
-    description:
-      'Tape library for long-term backup. Weekly full backup target for all production clusters.',
-    comments: [
-      {
-        author: 'Jan de Vries',
-        initials: 'JV',
-        daysAgo: 6,
-        content:
-          'Tape media inventory refreshed. 40 LTO-9 cartridges added. Vault shipment scheduled for Friday.',
-      },
-      {
-        author: 'Roos van Dijk',
-        initials: 'RD',
-        daysAgo: 28,
-        content: 'Quantum firmware updated to 900G.2.1.0. Barcode scanner calibration verified.',
-      },
-    ],
-  },
-  'AST-069': {
-    description: 'NIC flapping issue under load. Ticket #4788 open with Dell support.',
-    comments: [
-      {
-        author: 'Pieter Hoek',
-        initials: 'PH',
-        daysAgo: 0,
-        content:
-          'Dell engineer remote session at 15:00 today. Will attempt firmware rollback on Broadcom 57414 NIC.',
-      },
-      {
-        author: 'Sarah Müller',
-        initials: 'SM',
-        daysAgo: 4,
-        content:
-          'Captured packet loss logs. Interface flaps correlate with TX queue depth > 80%. Suspect driver bug in 224.0.512.',
-      },
-    ],
-  },
-};
-
 export interface CatalogEntry {
   id: string;
   model: string;
@@ -443,23 +114,6 @@ export interface PortCompatibility {
   portDefinitionId: string;
   compatibleCatalogEntryId: string;
 }
-
-// TODO(api): CatalogService.ListPortDefinitions({ catalog_entry_id })
-export const MOCK_PORT_DEFINITIONS: PortDefinition[] = [
-  { id: 'pd-001', catalogEntryId: 'CAT-001', name: 'nic0', portType: 'SFP+', speedGbps: 10 },
-  { id: 'pd-002', catalogEntryId: 'CAT-001', name: 'nic1', portType: 'SFP+', speedGbps: 10 },
-  { id: 'pd-003', catalogEntryId: 'CAT-001', name: 'psu0', portType: 'IEC C13', powerWatts: 800 },
-  { id: 'pd-004', catalogEntryId: 'CAT-006', name: 'uplink0', portType: 'QSFP+', speedGbps: 40 },
-  { id: 'pd-005', catalogEntryId: 'CAT-006', name: 'uplink1', portType: 'QSFP+', speedGbps: 40 },
-  { id: 'pd-006', catalogEntryId: 'CAT-007', name: 'p0-p31', portType: 'QSFP28', speedGbps: 100 },
-];
-
-// TODO(api): CatalogService.ListPortCompatibilities({ port_definition_id })
-export const MOCK_PORT_COMPATIBILITIES: PortCompatibility[] = [
-  { id: 'pc-001', portDefinitionId: 'pd-001', compatibleCatalogEntryId: 'CAT-006' },
-  { id: 'pc-002', portDefinitionId: 'pd-004', compatibleCatalogEntryId: 'CAT-001' },
-  { id: 'pc-003', portDefinitionId: 'pd-006', compatibleCatalogEntryId: 'CAT-007' },
-];
 
 export const MOCK_CATALOG: CatalogEntry[] = [
   {
@@ -1865,7 +1519,6 @@ export const MOCK_ASSETS: Asset[] = [
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
     class: 'flex flex-col min-h-screen bg-white',
-    '(document:keydown.escape)': 'closeNotes()',
   },
 })
 export default class InventoryComponent implements OnInit {
@@ -1890,8 +1543,6 @@ export default class InventoryComponent implements OnInit {
   categoryFilter = signal<AssetCategory | 'all'>('all');
 
   sortDirection = signal<'asc' | 'desc'>('asc');
-
-  activeNotesAsset = signal<Asset | null>(null);
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editAsset = signal<Partial<Asset> | null>(null);
@@ -2196,8 +1847,9 @@ export default class InventoryComponent implements OnInit {
     const unit =
       parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
     const slotType =
-      (Number((this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value) as RackSlotType) ||
-      RackSlotType.UNIT;
+      (Number(
+        (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
+      ) as RackSlotType) || RackSlotType.UNIT;
     return this.placementApi.reconcilePlacement({
       assetId,
       rackId,
@@ -2279,21 +1931,4 @@ export default class InventoryComponent implements OnInit {
     return map[category] ?? 'rectangle-stack';
   };
 
-  openNotes(asset: Asset) {
-    this.activeNotesAsset.set(asset);
-  }
-
-  closeNotes() {
-    this.activeNotesAsset.set(null);
-  }
-
-  readonly getAssetNotes = (assetId: string): AssetNoteDetail | null => MOCK_NOTES[assetId] ?? null;
-
-  readonly formatDaysAgo = (days: number): string => {
-    if (days === 0) return 'Today';
-    if (days === 1) return '1 day ago';
-    if (days < 30) return `${days} days ago`;
-    const months = Math.floor(days / 30);
-    return months === 1 ? '1 month ago' : `${months} months ago`;
-  };
 }
