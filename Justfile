@@ -128,8 +128,10 @@ funops *args:
     DATABASE_URL="postgresql://fun_operator:${PASSWORD}@localhost:54328/fundament" go run ./funops/cmd/funops {{ args }}
 
 # Run functl CLI
+[positional-arguments]
 functl *args:
-    go run ./functl/cmd/functl {{ args }}
+    #!/usr/bin/env bash
+    exec go run ./functl/cmd/functl "$@"
 
 # --- Cluster Worker ---
 

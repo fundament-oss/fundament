@@ -25,7 +25,7 @@ type ProjectListCmd struct {
 
 // Run executes the project list command.
 func (c *ProjectListCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ type ProjectGetCmd struct {
 
 // Run executes the project get command.
 func (c *ProjectGetCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ type ProjectCreateCmd struct {
 
 // Run executes the project create command.
 func (c *ProjectCreateCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ type ProjectUpdateCmd struct {
 
 // Run executes the project update command.
 func (c *ProjectUpdateCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
