@@ -19,7 +19,6 @@ import {
   AssetStatus,
   CatalogEntry,
   HistoryEntry,
-  MOCK_ASSETS,
   NoteComment,
 } from '../inventory';
 import InventoryApiService from '../inventory-api.service';
@@ -154,15 +153,6 @@ export default class AssetDetailComponent implements OnInit {
   readonly assetLocation = signal<
     { datacenter: string; rack: string; rackUnit: number; slotType: RackSlotType } | undefined
   >(undefined);
-
-  readonly parentAsset = computed<Asset | undefined>(() => {
-    const parentId = this.asset()?.parentId;
-    return parentId ? MOCK_ASSETS.find((a) => a.id === parentId) : undefined;
-  });
-
-  readonly childAssets = computed<Asset[]>(() =>
-    MOCK_ASSETS.filter((a) => a.parentId === this.assetId()),
-  );
 
   readonly assetHistory = signal<HistoryEntry[]>([]);
 
@@ -382,8 +372,9 @@ export default class AssetDetailComponent implements OnInit {
     const unit =
       parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
     const slotType =
-      (Number((this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value) as RackSlotType) ||
-      RackSlotType.UNIT;
+      (Number(
+        (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
+      ) as RackSlotType) || RackSlotType.UNIT;
     return this.placementApi.reconcilePlacement({
       assetId,
       rackId,

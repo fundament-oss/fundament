@@ -229,28 +229,6 @@
                 </dd>
               </div>
 
-              @if (parentAsset(); as parent) {
-                <div class="flex items-center justify-between px-5 py-3">
-                  <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                    <nldd-icon
-                      name="puzzle-piece"
-                      class="w-4 h-4 text-slate-400"
-                      aria-hidden="true"
-                    ></nldd-icon>
-                    Part of
-                  </dt>
-                  <dd class="text-sm font-mono">
-                    <a
-                      [routerLink]="['/inventory', parent.id]"
-                      class="text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-                    >
-                      {{ parent.model }}
-                    </a>
-                    <span class="ml-1 text-slate-400 text-xs">({{ parent.assetTag }})</span>
-                  </dd>
-                </div>
-              }
-
               <div class="flex items-center justify-between px-5 py-3">
                 <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
                   <nldd-icon
@@ -325,60 +303,6 @@
             </dl>
           </section>
 
-          <!-- Components card -->
-          @if (childAssets().length > 0) {
-            <section
-              aria-labelledby="components-heading"
-              class="rounded-xl border border-slate-200 bg-white"
-            >
-              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h2 id="components-heading" class="text-sm font-semibold text-slate-900">
-                  Components
-                </h2>
-                <span
-                  class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
-                >
-                  {{ childAssets().length }}
-                </span>
-              </div>
-              <ul class="divide-y divide-slate-100" aria-label="Sub-assets and components">
-                @for (child of childAssets(); track child.id) {
-                  <li>
-                    <a
-                      [routerLink]="['/inventory', child.id]"
-                      class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors group"
-                    >
-                      <div
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors"
-                      >
-                        <nldd-icon
-                          [name]="categoryIcon(child.category)"
-                          class="w-4 h-4"
-                          aria-hidden="true"
-                        ></nldd-icon>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-slate-800 truncate">{{ child.model }}</p>
-                        <p class="text-xs text-slate-400 font-mono">{{ child.assetTag }}</p>
-                      </div>
-                      <span
-                        class="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                        [class]="statusBadgeClass(child.status)"
-                      >
-                        <span
-                          class="h-1.5 w-1.5 rounded-full"
-                          [class]="statusDotClass(child.status)"
-                          aria-hidden="true"
-                        ></span>
-                        {{ statusLabel(child.status) }}
-                      </span>
-                    </a>
-                  </li>
-                }
-              </ul>
-            </section>
-          }
-
           <!-- Notes card -->
           @if (a.notes || notes().length > 0) {
             <section
@@ -423,7 +347,9 @@
                               formatDaysAgo(comment.daysAgo)
                             }}</span>
                           </div>
-                          <p class="text-sm text-slate-600 leading-relaxed">{{ comment.content }}</p>
+                          <p class="text-sm text-slate-600 leading-relaxed">
+                            {{ comment.content }}
+                          </p>
                         </div>
                       </div>
                     </li>
