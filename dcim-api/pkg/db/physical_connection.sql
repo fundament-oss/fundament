@@ -1,11 +1,11 @@
 -- name: PhysicalConnectionGetByID :one
-SELECT id, a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, created
+SELECT id, a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, cable_type, status, color, label, created
 FROM dcim.physical_connections
 WHERE id = $1 AND deleted IS NULL;
 
 -- name: PhysicalConnectionCreate :one
-INSERT INTO dcim.physical_connections (a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO dcim.physical_connections (a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, cable_type, status, color, label)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING id;
 
 -- name: PhysicalConnectionUpdate :execrows
@@ -17,7 +17,11 @@ SET cable_asset_id        = CASE
     logical_connection_id = CASE
         WHEN sqlc.arg('clear_logical_connection_id')::bool THEN NULL
         ELSE COALESCE(sqlc.narg('logical_connection_id'), logical_connection_id)
-    END
+    END,
+    cable_type = COALESCE(sqlc.narg('cable_type'), cable_type),
+    status     = COALESCE(sqlc.narg('status'), status),
+    color      = COALESCE(sqlc.narg('color'), color),
+    label      = COALESCE(sqlc.narg('label'), label)
 WHERE id = $1 AND deleted IS NULL;
 
 -- name: PhysicalConnectionDelete :execrows
@@ -26,7 +30,7 @@ SET deleted = now()
 WHERE id = $1 AND deleted IS NULL;
 
 -- name: PhysicalConnectionListByPlacement :many
-SELECT id, a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, created
+SELECT id, a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, cable_type, status, color, label, created
 FROM dcim.physical_connections
 WHERE (a_placement_id = $1 OR b_placement_id = $1) AND deleted IS NULL
 ORDER BY created;

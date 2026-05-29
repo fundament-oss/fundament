@@ -111,6 +111,47 @@ enum SortDirection {
   SORT_DIRECTION_DESC        = 20;
 }
 
+// CableType aligns with core.physical_connections cable_type check constraint.
+enum CableType {
+  CABLE_TYPE_UNSPECIFIED = 0;
+  CABLE_TYPE_CAT5E       = 10;
+  CABLE_TYPE_CAT6        = 20;
+  CABLE_TYPE_CAT6A       = 30;
+  CABLE_TYPE_CAT7        = 40;
+  CABLE_TYPE_CAT8        = 50;
+  CABLE_TYPE_DAC         = 60;
+  CABLE_TYPE_AOC         = 70;
+  CABLE_TYPE_MMF         = 80;
+  CABLE_TYPE_SMF         = 90;
+  CABLE_TYPE_POWER       = 100;
+  CABLE_TYPE_CONSOLE     = 110;
+  CABLE_TYPE_USB         = 120;
+  CABLE_TYPE_OTHER       = 130;
+}
+
+// CableStatus aligns with core.physical_connections status check constraint.
+enum CableStatus {
+  CABLE_STATUS_UNSPECIFIED    = 0;
+  CABLE_STATUS_PLANNED        = 10;
+  CABLE_STATUS_CONNECTED      = 20;
+  CABLE_STATUS_DECOMMISSIONED = 30;
+}
+
+// CableColor aligns with core.physical_connections color check constraint.
+enum CableColor {
+  CABLE_COLOR_UNSPECIFIED = 0;
+  CABLE_COLOR_DARK_GREY   = 10;
+  CABLE_COLOR_LIGHT_GREY  = 20;
+  CABLE_COLOR_RED         = 30;
+  CABLE_COLOR_GREEN       = 40;
+  CABLE_COLOR_BLUE        = 50;
+  CABLE_COLOR_YELLOW      = 60;
+  CABLE_COLOR_PURPLE      = 70;
+  CABLE_COLOR_ORANGE      = 80;
+  CABLE_COLOR_TEAL        = 90;
+  CABLE_COLOR_WHITE       = 100;
+}
+
 // AssetEvent is an append-only audit record for asset lifecycle changes.
 message AssetEvent {
   string                    id           = 10;

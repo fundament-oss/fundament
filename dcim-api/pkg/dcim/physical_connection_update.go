@@ -43,6 +43,22 @@ func (s *Server) UpdatePhysicalConnection(
 		}
 	}
 
+	if req.Msg.HasCableType() {
+		params.CableType = cableTypeToDB(req.Msg.GetCableType())
+	}
+
+	if req.Msg.HasStatus() {
+		params.Status = cableStatusToDB(req.Msg.GetStatus())
+	}
+
+	if req.Msg.HasColor() {
+		params.Color = cableColorToDB(req.Msg.GetColor())
+	}
+
+	if req.Msg.HasLabel() {
+		params.Label = pgtype.Text{String: req.Msg.GetLabel(), Valid: true}
+	}
+
 	rowsAffected, err := s.queries.PhysicalConnectionUpdate(ctx, params)
 	if err != nil {
 		var pgErr *pgconn.PgError

@@ -434,7 +434,7 @@
   <div slot="content" class="px-1 pt-2 pb-1">
     <nldd-form-field label="Compatible product">
       <select #fCompatEntry>
-        @for (entry of allCatalogEntries; track entry.id) {
+        @for (entry of allCatalogEntries(); track entry.id) {
           <option [value]="entry.id">{{ entry.model }}</option>
         }
       </select>
