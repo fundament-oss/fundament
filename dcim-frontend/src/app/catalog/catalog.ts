@@ -9,14 +9,14 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
-import {RouterLink} from '@angular/router';
-import {Code, ConnectError} from '@connectrpc/connect';
-import {debounce, distinctUntilChanged, firstValueFrom, skip, timer} from 'rxjs';
-import {AssetCategory, CatalogEntry, MOCK_ASSETS} from '../inventory/inventory';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
+import { Code, ConnectError } from '@connectrpc/connect';
+import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
+import { AssetCategory, CatalogEntry, MOCK_ASSETS } from '../inventory/inventory';
 import CatalogApiService from './catalog-api.service';
 import connectErrorMessage from '../../connect/error';
-import {ViolationsSchema} from '../../generated/buf/validate/validate_pb';
+import { ViolationsSchema } from '../../generated/buf/validate/validate_pb';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };

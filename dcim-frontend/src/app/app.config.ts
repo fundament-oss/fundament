@@ -1,4 +1,9 @@
-import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+  ApplicationConfig,
+  inject,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import routes from './app.routes';
@@ -10,8 +15,10 @@ const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideAppInitializer(async () => {
-      await inject(ConfigService).loadConfig();
-      await inject(AuthService).initializeAuth();
+      const config = inject(ConfigService);
+      const auth = inject(AuthService);
+      await config.loadConfig();
+      await auth.initializeAuth();
     }),
   ],
 };
