@@ -622,7 +622,7 @@ export default class App implements OnInit {
         const detailed = detailedOrgs.find((d) => d.id === org.id);
         const projects = detailed
           ? detailed.clusters.flatMap((c) =>
-              c.projects.map((p) => ({ ...p, alias: p.alias ?? '' })),
+              c.projects.map((p) => ({ ...p, alias: p.alias ?? p.name })),
             )
           : [];
         return { id: org.id, name: org.name, alias: org.alias, projects };

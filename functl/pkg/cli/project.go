@@ -93,7 +93,11 @@ func (c *ProjectGetCmd) Run(ctx *Context) error {
 	w := NewTableWriter()
 	PrintKeyValue(w, "ID", project.GetId())
 	PrintKeyValue(w, "Name", project.GetName())
-	PrintKeyValue(w, "Alias", project.GetAlias())
+	alias := project.GetAlias()
+	if alias == "" {
+		alias = project.GetName()
+	}
+	PrintKeyValue(w, "Alias", alias)
 	PrintKeyValue(w, "Cluster ID", project.GetClusterId())
 
 	if project.GetCreated().IsValid() {
