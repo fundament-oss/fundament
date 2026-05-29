@@ -15,7 +15,7 @@ func TestSiteService_GetSite_HappyFlow(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	siteID := createSite(t, env, "Site Get Success")
 
@@ -34,7 +34,7 @@ func TestSiteService_GetSite(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	tests := []struct {
 		name string

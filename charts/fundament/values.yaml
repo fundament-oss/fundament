@@ -15,6 +15,7 @@ externalUrls:
   console: "" # e.g., https://app.example.com
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com
+  dcimAuthn: "" # e.g., https://dcim-authn.example.com
   dcim: "" # e.g., https://dcim.example.com
   cookieDomain: "" # e.g., example.com
 

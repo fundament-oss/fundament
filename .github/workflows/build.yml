@@ -102,6 +102,9 @@ jobs:
           - image-name: dcim-frontend
             dockerfile: dcim-frontend/Dockerfile
             context: "."
+          - image-name: dcim-authn-api
+            dockerfile: dcim-authn-api/Dockerfile
+            context: "."
     permissions:
       contents: read
       packages: write
@@ -206,6 +209,7 @@ jobs:
             | Docs | https://docs.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | DCIM | https://dcim.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | DCIM API | https://dcim-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | DCIM Auth | https://dcim-authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
 
             **Commit:** `${{ env.IMAGE_TAG }}`
             **Namespace:** `tn-fundament-pr-${{ env.PR_NUMBER }}`

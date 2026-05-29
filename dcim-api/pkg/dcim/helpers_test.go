@@ -4,13 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,9 +30,40 @@ const (
 	invalidUUID = "not-a-uuid"
 )
 
+const testJWTSecret = "test-secret"
+
 type testEnv struct {
 	server    *httptest.Server
 	adminPool *pgxpool.Pool
+	testToken string
+}
+
+type authTransport struct {
+	base  http.RoundTripper
+	token string
+}
+
+func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.Header.Set("Authorization", "Bearer "+t.token)
+	return t.base.RoundTrip(req)
+}
+
+func (e *testEnv) client() *http.Client {
+	base := e.server.Client()
+	return &http.Client{Transport: &authTransport{base: base.Transport, token: e.testToken}}
+}
+
+func signTestToken(t *testing.T) string {
+	t.Helper()
+	claims := jwt.MapClaims{
+		"sub": uuid.New().String(),
+		"exp": time.Now().Add(time.Hour).Unix(),
+	}
+	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	s, err := tok.SignedString([]byte(testJWTSecret))
+	require.NoError(t, err)
+	return s
 }
 
 type apiOptions struct {
@@ -51,13 +86,14 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 
 	testDB, adminPool := createTestDB(t, testLogger)
 
-	srv := dcim.New(testLogger, testDB)
+	srv := dcim.New(testLogger, testDB, []byte(testJWTSecret))
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 
 	return &testEnv{
 		server:    ts,
 		adminPool: adminPool,
+		testToken: signTestToken(t),
 	}
 }
 
@@ -120,7 +156,7 @@ func requireCode(t *testing.T, err error, want connect.Code) {
 func createSite(t *testing.T, env *testEnv, name string) string {
 	t.Helper()
 
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreateSite(context.Background(), connect.NewRequest(
 		(&dcimv1.CreateSiteRequest_builder{Name: name}).Build(),
@@ -135,7 +171,7 @@ func createSite(t *testing.T, env *testEnv, name string) string {
 func createRoom(t *testing.T, env *testEnv, siteID, name string) string {
 	t.Helper()
 
-	client := dcimv1connect.NewRoomServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewRoomServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreateRoom(context.Background(), connect.NewRequest(
 		(&dcimv1.CreateRoomRequest_builder{SiteId: siteID, Name: name}).Build(),
@@ -150,7 +186,7 @@ func createRoom(t *testing.T, env *testEnv, siteID, name string) string {
 func createRackRow(t *testing.T, env *testEnv, roomID, name string) string {
 	t.Helper()
 
-	client := dcimv1connect.NewRackRowServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewRackRowServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreateRackRow(context.Background(), connect.NewRequest(
 		(&dcimv1.CreateRackRowRequest_builder{RoomId: roomID, Name: name}).Build(),
@@ -177,7 +213,7 @@ func createRackRowFixture(t *testing.T, env *testEnv, prefix string) string {
 func createRack(t *testing.T, env *testEnv, rowID, name string, totalUnits int32) string {
 	t.Helper()
 
-	client := dcimv1connect.NewRackServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewRackServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreateRack(context.Background(), connect.NewRequest(
 		(&dcimv1.CreateRackRequest_builder{
@@ -196,7 +232,7 @@ func createRack(t *testing.T, env *testEnv, rowID, name string, totalUnits int32
 func createCatalogEntry(t *testing.T, env *testEnv, model string) string {
 	t.Helper()
 
-	client := dcimv1connect.NewCatalogServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewCatalogServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreateCatalogEntry(context.Background(), connect.NewRequest(
 		(&dcimv1.CreateCatalogEntryRequest_builder{
@@ -216,7 +252,7 @@ func createCatalogEntry(t *testing.T, env *testEnv, model string) string {
 func createAsset(t *testing.T, env *testEnv, catalogID string) string {
 	t.Helper()
 
-	client := dcimv1connect.NewAssetServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewAssetServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreateAsset(context.Background(), connect.NewRequest(
 		(&dcimv1.CreateAssetRequest_builder{
@@ -234,7 +270,7 @@ func createAsset(t *testing.T, env *testEnv, catalogID string) string {
 func placeAssetInRack(t *testing.T, env *testEnv, assetID, rackID string, unit int32) string {
 	t.Helper()
 
-	client := dcimv1connect.NewPlacementServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewPlacementServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreatePlacement(context.Background(), connect.NewRequest(
 		(&dcimv1.CreatePlacementRequest_builder{
@@ -256,7 +292,7 @@ func placeAssetInRack(t *testing.T, env *testEnv, assetID, rackID string, unit i
 func placeAssetInSubComponent(t *testing.T, env *testEnv, assetID, parentPlacementID, parentPortDefinitionID string) string {
 	t.Helper()
 
-	client := dcimv1connect.NewPlacementServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewPlacementServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreatePlacement(context.Background(), connect.NewRequest(
 		(&dcimv1.CreatePlacementRequest_builder{
