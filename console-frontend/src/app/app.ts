@@ -620,7 +620,11 @@ export default class App implements OnInit {
       .filter((org) => !pendingOrgIds.has(org.id))
       .map((org) => {
         const detailed = detailedOrgs.find((d) => d.id === org.id);
-        const projects = detailed ? detailed.clusters.flatMap((c) => c.projects) : [];
+        const projects = detailed
+          ? detailed.clusters.flatMap((c) =>
+              c.projects.map((p) => ({ ...p, alias: p.alias ?? '' })),
+            )
+          : [];
         return { id: org.id, name: org.name, alias: org.alias, projects };
       });
   });
