@@ -181,8 +181,8 @@
                   Manufacturer
                 </dt>
                 <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.manufacturer) {
-                    {{ extraDetail()!.manufacturer }}
+                  @if (catalogEntry()?.manufacturer) {
+                    {{ catalogEntry()!.manufacturer }}
                   } @else {
                     <span class="text-slate-300">—</span>
                   }
@@ -232,42 +232,6 @@
               <div class="flex items-center justify-between px-5 py-3">
                 <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
                   <nldd-icon
-                    name="calendar-event"
-                    class="w-4 h-4 text-slate-400"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Purchase Date
-                </dt>
-                <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.purchaseDate) {
-                    {{ extraDetail()!.purchaseDate }}
-                  } @else {
-                    <span class="text-slate-300">—</span>
-                  }
-                </dd>
-              </div>
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                  <nldd-icon
-                    name="info-circle"
-                    class="w-4 h-4 text-slate-400"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Purchase Cost
-                </dt>
-                <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.purchaseCost) {
-                    {{ extraDetail()!.purchaseCost }}
-                  } @else {
-                    <span class="text-slate-300">—</span>
-                  }
-                </dd>
-              </div>
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                  <nldd-icon
                     name="shield-check-mark"
                     class="w-4 h-4 text-slate-400"
                     aria-hidden="true"
@@ -277,24 +241,6 @@
                 <dd class="text-sm text-slate-700">
                   @if (a.warrantyExpiry) {
                     {{ a.warrantyExpiry }}
-                  } @else {
-                    <span class="text-slate-300">—</span>
-                  }
-                </dd>
-              </div>
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                  <nldd-icon
-                    name="envelope"
-                    class="w-4 h-4 text-slate-400"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Support Contract
-                </dt>
-                <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.supportContract) {
-                    {{ extraDetail()!.supportContract }}
                   } @else {
                     <span class="text-slate-300">—</span>
                   }
