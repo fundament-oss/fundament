@@ -225,13 +225,20 @@ func (w *Worker) process(ctx context.Context, row *db.OutboxGetAndLockRow) (hand
 		"source", source,
 		"retries", row.Retries)
 
-	h, err := w.registry.SyncHandlerFor(entityType, event)
+	handlers, err := w.registry.SyncHandlersFor(entityType, event)
 	if err != nil {
 		return entityType, fmt.Errorf("%w: %w", errNonRetryable, err)
 	}
 
-	if err := h.Sync(ctx, entityID, handler.SyncContext{EntityType: entityType, Event: event, Source: source}); err != nil {
-		return entityType, fmt.Errorf("sync %s %s: %w", entityType, entityID, err)
+	// An event may fan out to multiple handlers (e.g. cluster-ready drives both
+	// usersync and namespace-sync). Dispatch sequentially; the first error aborts
+	// and the whole row retries — handlers are idempotent, so re-running the ones
+	// that already succeeded is safe.
+	sc := handler.SyncContext{EntityType: entityType, Event: event, Source: source}
+	for _, h := range handlers {
+		if err := h.Sync(ctx, entityID, sc); err != nil {
+			return entityType, fmt.Errorf("sync %s %s: %w", entityType, entityID, err)
+		}
 	}
 	return entityType, nil
 }
@@ -351,6 +358,8 @@ func entityFromRow(row *db.OutboxGetAndLockRow) (handler.EntityType, uuid.UUID, 
 		return handler.EntityProjectMember, uuid.UUID(row.ProjectMemberID.Bytes), nil
 	case row.NodePoolID.Valid:
 		return handler.EntityNodePool, uuid.UUID(row.NodePoolID.Bytes), nil
+	case row.NamespaceID.Valid:
+		return handler.EntityNamespace, uuid.UUID(row.NamespaceID.Bytes), nil
 	default:
 		return "", uuid.Nil, fmt.Errorf("no valid entity FK in outbox row %s", row.ID)
 	}

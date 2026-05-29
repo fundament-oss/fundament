@@ -65,6 +65,103 @@ func (r *RealShootAccess) EnsureNamespace(ctx context.Context, clusterID uuid.UU
 	return nil
 }
 
+func (r *RealShootAccess) GetNamespace(ctx context.Context, clusterID uuid.UUID, name string) (*ResourceInfo, error) {
+	cs, err := r.clientForCluster(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	ns, err := cs.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil, nil //nolint:nilnil // absence is signalled by a nil result, not an error
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get namespace %s: %w", name, err)
+	}
+	return &ResourceInfo{
+		Name:        ns.Name,
+		Labels:      CloneStringMap(ns.Labels),
+		Annotations: CloneStringMap(ns.Annotations),
+	}, nil
+}
+
+func (r *RealShootAccess) CreateNamespace(ctx context.Context, clusterID uuid.UUID, name string, labels map[string]string) error {
+	cs, err := r.clientForCluster(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+	}
+	_, err = cs.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("create namespace %s: %w", name, err)
+	}
+	return nil
+}
+
+func (r *RealShootAccess) UpdateNamespaceLabels(ctx context.Context, clusterID uuid.UUID, name string, labels map[string]string) error {
+	cs, err := r.clientForCluster(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	existing, err := cs.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("get namespace %s: %w", name, err)
+	}
+	if existing.Labels == nil {
+		existing.Labels = make(map[string]string)
+	}
+	MergeStringMap(existing.Labels, labels)
+	if _, err := cs.CoreV1().Namespaces().Update(ctx, existing, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("update namespace %s labels: %w", name, err)
+	}
+	return nil
+}
+
+func (r *RealShootAccess) DeleteNamespace(ctx context.Context, clusterID uuid.UUID, name string) error {
+	cs, err := r.clientForCluster(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	err = cs.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("delete namespace %s: %w", name, err)
+	}
+	return nil
+}
+
+func (r *RealShootAccess) ListNamespaces(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error) {
+	cs, err := r.clientForCluster(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := cs.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: labelKey})
+	if err != nil {
+		return nil, fmt.Errorf("list namespaces: %w", err)
+	}
+
+	result := make([]ResourceInfo, len(list.Items))
+	for i := range list.Items {
+		result[i] = ResourceInfo{
+			Name:        list.Items[i].Name,
+			Labels:      CloneStringMap(list.Items[i].Labels),
+			Annotations: CloneStringMap(list.Items[i].Annotations),
+		}
+	}
+	return result, nil
+}
+
 func (r *RealShootAccess) EnsureServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string, labels, annotations map[string]string) error {
 	cs, err := r.clientForCluster(ctx, clusterID)
 	if err != nil {
