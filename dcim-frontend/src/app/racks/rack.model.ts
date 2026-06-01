@@ -39,18 +39,6 @@ export interface RackSlot {
   isFirst: boolean;
 }
 
-export interface DeviceComment {
-  author: string;
-  initials: string;
-  daysAgo: number;
-  content: string;
-}
-
-export interface DeviceNotes {
-  description: string;
-  comments: DeviceComment[];
-}
-
 export type DeviceHistoryAction =
   | 'state-change'
   | 'maintenance'
@@ -935,99 +923,6 @@ export const RACKS: Rack[] = [
     devices: [],
   },
 ];
-
-export const DEVICE_NOTES: Record<string, DeviceNotes> = {
-  'd-003': {
-    description:
-      'Primary compute node for team-alpha. RAM upgraded to 256 GB in Q1 2025. Runs VMware ESXi 8.0 with 12 VMs.',
-    comments: [
-      {
-        author: 'Alex van Dijk',
-        initials: 'AV',
-        daysAgo: 2,
-        content:
-          'Noticed elevated temperatures on CPU0 during last check. Thermal paste reapplication scheduled for next maintenance window.',
-      },
-      {
-        author: 'Sara Müller',
-        initials: 'SM',
-        daysAgo: 14,
-        content: 'Firmware updated to latest version. All checks passed. No issues found.',
-      },
-      {
-        author: 'Tom de Graaf',
-        initials: 'TG',
-        daysAgo: 42,
-        content: 'Moved from team-beta allocation to team-alpha. Config updated accordingly.',
-      },
-    ],
-  },
-  'd-001': {
-    description:
-      'Top-of-rack switch for AMS-01-R01. Provides 48x1G downlinks and 4x10G uplinks to spine layer.',
-    comments: [
-      {
-        author: 'Sara Müller',
-        initials: 'SM',
-        daysAgo: 5,
-        content:
-          'VLAN configuration updated to include new DMZ segment. Change approved in ticket #4821.',
-      },
-      {
-        author: 'Alex van Dijk',
-        initials: 'AV',
-        daysAgo: 60,
-        content:
-          'IOS-XE upgraded from 17.3.5 to 17.6.2. Rollback tested successfully before upgrade.',
-      },
-    ],
-  },
-  'd-004': {
-    description:
-      'Server currently offline after PSU failure. Replacement PSU on order (ETA: 2025-11-10). Do not reallocate.',
-    comments: [
-      {
-        author: 'Tom de Graaf',
-        initials: 'TG',
-        daysAgo: 1,
-        content:
-          'Confirmed PSU-A failed. PSU-B also showing warnings. Ordered two replacements. Server marked offline.',
-      },
-      {
-        author: 'Alex van Dijk',
-        initials: 'AV',
-        daysAgo: 3,
-        content: 'Workloads migrated to server-05 temporarily. No data loss.',
-      },
-    ],
-  },
-  'd-007': {
-    description:
-      'Compliance-locked node. Access restricted to security team. Contains audit log storage and SIEM agent.',
-    comments: [
-      {
-        author: 'Sara Müller',
-        initials: 'SM',
-        daysAgo: 30,
-        content:
-          'Annual compliance review completed. All controls passed. Node remains locked per policy.',
-      },
-    ],
-  },
-  'd-102': {
-    description:
-      'High-memory k8s worker node for team-gamma. Part of the primary cluster. Node labels: role=worker, tier=high-mem.',
-    comments: [
-      {
-        author: 'Tom de Graaf',
-        initials: 'TG',
-        daysAgo: 7,
-        content:
-          'Added to Kubernetes cluster v1.31. Joined as node k8s-worker-10. Running 42 pods currently.',
-      },
-    ],
-  },
-};
 
 export const DEVICE_HISTORY: Record<string, DeviceHistoryEntry[]> = {
   'd-003': [

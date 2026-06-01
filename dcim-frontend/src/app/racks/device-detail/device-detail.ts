@@ -18,7 +18,6 @@ import RackDiagramComponent from '../rack-diagram/rack-diagram';
 import {
   ConnectionStatus,
   ConnectionType,
-  DeviceComment,
   DeviceConnection,
   DeviceHistoryAction,
   DeviceHistoryEntry,
@@ -27,11 +26,12 @@ import {
   Rack,
   RackDevice,
   RACKS,
-  DEVICE_NOTES,
   DEVICE_HISTORY,
   DEVICE_CONNECTIONS,
 } from '../rack.model';
 import { Cable, Port, PortType, PORT_TABS, PORT_TYPE_LABEL } from '../../patch-mapping/cable.model';
+import { NoteComment } from '../../inventory/inventory';
+import NoteApiService from '../../inventory/note-api.service';
 import PatchMappingApiService from '../../patch-mapping/patch-mapping-api.service';
 import PlacementApiService from '../../inventory/placement-api.service';
 import CatalogApiService from '../../catalog/catalog-api.service';
@@ -57,6 +57,8 @@ export default class DeviceDetailComponent {
   private readonly catalogApi = inject(CatalogApiService);
 
   private readonly patchApi = inject(PatchMappingApiService);
+
+  private readonly noteApi = inject(NoteApiService);
 
   private readonly rackApi = inject(RackApiService);
 
@@ -141,6 +143,7 @@ export default class DeviceDetailComponent {
         assetTag: asset.assetTag,
         warrantyExpiry,
       });
+      this.notesDescription.set(asset.notes);
       const assetById = new Map(allAssetsRes.assets.map((a) => [a.id, a]));
       const devices: RackDevice[] = placementsRes.placements.flatMap((p): RackDevice[] => {
         if (p.location.case !== 'rack') return [];
@@ -200,21 +203,27 @@ export default class DeviceDetailComponent {
       });
       const deviceNameById = new Map(devices.map((d) => [d.id, d.name]));
 
-      const connsRes = await firstValueFrom(this.patchApi.listConnectionsByPlacement(placement.id));
+      const [connsRes, notesRes] = await Promise.all([
+        firstValueFrom(this.patchApi.listConnectionsByPlacement(placement.id)),
+        firstValueFrom(this.noteApi.listNotesForPlacement(placement.id)),
+      ]);
       this.cables.set(
         connsRes.connections.map((c) =>
           PatchMappingApiService.mapConnection(c, '', { deviceNameById, portById }),
         ),
       );
+      this.notes.set(notesRes.notes.map(NoteApiService.mapNote));
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
     }
   }
 
-  readonly newNoteText = signal('');
+  /** Free-text description shown above the comment thread (the asset's notes). */
+  readonly notesDescription = signal('');
 
-  private readonly extraComments = signal<Record<string, DeviceComment[]>>({});
+  /** Comment thread for this device (placement), loaded from the note API. */
+  readonly notes = signal<NoteComment[]>([]);
 
   // ── Port management ────────────────────────────────────────────────────────
   readonly activePortTab = signal<PortType>('network-interface');
@@ -287,16 +296,6 @@ export default class DeviceDetailComponent {
       queryParams: { aDeviceId: port.deviceId, aPortId: port.id },
     });
   }
-
-  readonly deviceNotesDescription = computed<string>(
-    () => DEVICE_NOTES[this.deviceId()]?.description ?? '',
-  );
-
-  readonly deviceComments = computed<DeviceComment[]>(() => {
-    const base = DEVICE_NOTES[this.deviceId()]?.comments ?? [];
-    const extra = this.extraComments()[this.deviceId()] ?? [];
-    return [...base, ...extra];
-  });
 
   readonly deviceHistory = computed<DeviceHistoryEntry[]>(
     () => DEVICE_HISTORY[this.deviceId()] ?? [],
@@ -414,18 +413,6 @@ export default class DeviceDetailComponent {
 
   readonly nicPorts = (device: RackDevice): readonly number[] =>
     Array.from({ length: Math.min(device.hardware?.nics ?? 1, 6) }, (_, i) => i);
-
-  addNote(): void {
-    const text = this.newNoteText().trim();
-    if (!text) return;
-    const id = this.deviceId();
-    const comment: DeviceComment = { author: 'You', initials: 'Y', daysAgo: 0, content: text };
-    this.extraComments.update((prev) => ({
-      ...prev,
-      [id]: [...(prev[id] ?? []), comment],
-    }));
-    this.newNoteText.set('');
-  }
 
   readonly formatDaysAgo = (daysAgo: number): string => {
     if (daysAgo === 0) return 'Today';

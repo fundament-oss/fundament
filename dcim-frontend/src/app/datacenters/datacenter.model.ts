@@ -80,54 +80,6 @@ export interface DatacenterFloorConfig {
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
-export const DATACENTER_INFO: DatacenterInfo[] = [
-  {
-    id: 'ams-01',
-    name: 'AMS-01',
-    fullName: 'Amsterdam West',
-    city: 'Amsterdam',
-    country: 'Netherlands',
-    tier: 3,
-    established: 2018,
-    status: 'operational',
-    floorSqm: 1200,
-    powerCapacityKw: 500,
-    coolingCapacityKw: 480,
-    pue: 1.45,
-    address: 'Westlandgracht 40, 1060 AD Amsterdam',
-  },
-  {
-    id: 'ams-02',
-    name: 'AMS-02',
-    fullName: 'Amsterdam South-East',
-    city: 'Amsterdam',
-    country: 'Netherlands',
-    tier: 3,
-    established: 2020,
-    status: 'operational',
-    floorSqm: 800,
-    powerCapacityKw: 300,
-    coolingCapacityKw: 280,
-    pue: 1.38,
-    address: 'Computerweg 14, 1105 BG Amsterdam',
-  },
-  {
-    id: 'fra-01',
-    name: 'FRA-01',
-    fullName: 'Frankfurt Central',
-    city: 'Frankfurt',
-    country: 'Germany',
-    tier: 4,
-    established: 2021,
-    status: 'maintenance',
-    floorSqm: 600,
-    powerCapacityKw: 200,
-    coolingCapacityKw: 190,
-    pue: 1.32,
-    address: 'Hanauer Landstraße 298, 60314 Frankfurt',
-  },
-];
-
 export const FLOOR_CONFIGS: DatacenterFloorConfig[] = [
   {
     dcId: 'ams-01',

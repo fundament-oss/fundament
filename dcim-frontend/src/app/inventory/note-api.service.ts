@@ -35,4 +35,8 @@ export default class NoteApiService {
   listNotesForAsset(assetId: string) {
     return this.client.listNotes({ entityType: NoteEntityType.ASSET, entityId: assetId });
   }
+
+  listNotesForPlacement(placementId: string) {
+    return this.client.listNotes({ entityType: NoteEntityType.PLACEMENT, entityId: placementId });
+  }
 }
