@@ -153,6 +153,13 @@ dcimAuthnApi:
   maxSessionAge: 168h
   # ROPC password login. Keep false in production; enable only for local/dev.
   passwordLoginEnabled: false
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - dcim-authn.example.com
 
 # Dex for DCIM (OIDC Identity Provider)
 dexDcim:
@@ -161,6 +168,13 @@ dexDcim:
   discoveryUrl: "" # Internal URL for OIDC discovery (defaults to issuer if empty)
   staticClients: []
   staticPasswords: []
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - dex-dcim.example.com
 
 # DCIM Frontend
 dcimFrontend:
