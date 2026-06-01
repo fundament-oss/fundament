@@ -6,6 +6,14 @@ metadata:
   name: db-migrations
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 4 }}
+  annotations:
+    # Run as a Helm hook so each deploy recreates the Job instead of patching
+    # it. A Job's spec.template is immutable, so an in-place upgrade (new image
+    # tag) fails with "field is immutable" and breaks the whole release.
+    # before-hook-creation deletes the previous Job before creating the new one.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   backoffLimit: 3
   ttlSecondsAfterFinished: 300
