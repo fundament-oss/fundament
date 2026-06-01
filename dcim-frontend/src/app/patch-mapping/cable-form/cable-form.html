@@ -223,6 +223,7 @@
               class="w-full font-mono"
               (change)="cableLabel.set($any($event).detail?.value ?? '')"
               (input)="cableLabel.set($any($event.target).value)"
+              (keydown.enter)="onSave()"
             ></nldd-text-field>
           </nldd-form-field>
 
@@ -342,6 +343,7 @@
                   $any($event.target).value !== '' ? +$any($event.target).value : undefined
                 )
               "
+              (keydown.enter)="onSave()"
             ></nldd-number-field>
           </nldd-form-field>
         </div>

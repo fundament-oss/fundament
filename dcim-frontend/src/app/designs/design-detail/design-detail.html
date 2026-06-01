@@ -269,6 +269,7 @@
           #fDeviceName
           [attr.value]="editDevice()?.name ?? ''"
           placeholder="E.g. Spine-1"
+          (keydown.enter)="saveDevice()"
         ></nldd-text-field>
       </nldd-form-field>
       <nldd-form-field label="Role">
@@ -359,6 +360,7 @@
             #fConnSrcPort
             [attr.value]="editConnection()?.sourcePortRole ?? ''"
             placeholder="E.g. uplink"
+            (keydown.enter)="saveConnection()"
           ></nldd-text-field>
         </nldd-form-field>
       </div>
@@ -380,6 +382,7 @@
             #fConnTgtPort
             [attr.value]="editConnection()?.targetPortRole ?? ''"
             placeholder="E.g. nic-0"
+            (keydown.enter)="saveConnection()"
           ></nldd-text-field>
         </nldd-form-field>
       </div>

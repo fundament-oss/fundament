@@ -396,6 +396,7 @@
           #fName
           [attr.value]="editForm()?.name ?? ''"
           placeholder="AMS-01"
+          (keydown.enter)="saveDc()"
         ></nldd-text-field>
       </nldd-form-field>
       <nldd-form-field label="Full name">
@@ -403,6 +404,7 @@
           #fFullName
           [attr.value]="editForm()?.fullName ?? ''"
           placeholder="Amsterdam West"
+          (keydown.enter)="saveDc()"
         ></nldd-text-field>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
@@ -411,6 +413,7 @@
             #fCity
             [attr.value]="editForm()?.city ?? ''"
             placeholder="Amsterdam"
+            (keydown.enter)="saveDc()"
           ></nldd-text-field>
         </nldd-form-field>
         <nldd-form-field label="Country">
@@ -418,6 +421,7 @@
             #fCountry
             [attr.value]="editForm()?.country ?? ''"
             placeholder="Netherlands"
+            (keydown.enter)="saveDc()"
           ></nldd-text-field>
         </nldd-form-field>
       </div>
@@ -426,6 +430,7 @@
           #fAddress
           [attr.value]="editForm()?.address ?? ''"
           placeholder="Street, City"
+          (keydown.enter)="saveDc()"
         ></nldd-text-field>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
@@ -467,6 +472,7 @@
           min="1990"
           max="2100"
           full-width
+          (keydown.enter)="saveDc()"
         ></nldd-number-field>
       </nldd-form-field>
       <nldd-form-field label="Floor space (m²)">
@@ -475,6 +481,7 @@
           [attr.value]="editForm()?.floorSqm ?? 0"
           min="0"
           full-width
+          (keydown.enter)="saveDc()"
         ></nldd-number-field>
       </nldd-form-field>
     </nldd-simple-section>

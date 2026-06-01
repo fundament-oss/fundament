@@ -358,6 +358,7 @@
           #fPortName
           [attr.value]="editPortDef()?.name ?? ''"
           placeholder="E.g. nic0"
+          (keydown.enter)="savePortDef()"
         ></nldd-text-field>
       </nldd-form-field>
       <nldd-form-field label="Port type">
@@ -365,6 +366,7 @@
           #fPortType
           [attr.value]="editPortDef()?.portType ?? ''"
           placeholder="E.g. SFP+, QSFP28, IEC C13"
+          (keydown.enter)="savePortDef()"
         ></nldd-text-field>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
@@ -375,6 +377,7 @@
             min="0"
             placeholder="optional"
             full-width
+            (keydown.enter)="savePortDef()"
           ></nldd-number-field>
         </nldd-form-field>
         <nldd-form-field label="Power (W)">
@@ -384,6 +387,7 @@
             min="0"
             placeholder="optional"
             full-width
+            (keydown.enter)="savePortDef()"
           ></nldd-number-field>
         </nldd-form-field>
       </div>

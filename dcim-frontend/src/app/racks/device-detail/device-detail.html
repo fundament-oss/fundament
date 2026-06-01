@@ -475,6 +475,7 @@
                   #portNameInput
                   [value]="newPortName()"
                   (input)="newPortName.set($any($event.target).value)"
+                  (keydown.enter)="addPort()"
                   placeholder="Port name (e.g. eth4)"
                   accessible-label="New port name"
                   size="sm"

@@ -310,6 +310,7 @@
             #fAssetTag
             [attr.value]="editAsset()?.assetTag ?? ''"
             placeholder="AST-001"
+            (keydown.enter)="saveAsset()"
           ></nldd-text-field>
         </nldd-form-field>
         <nldd-form-field label="Status">
@@ -331,6 +332,7 @@
             #fAssetSerial
             [attr.value]="editAsset()?.serialNumber ?? ''"
             placeholder="SN-…"
+            (keydown.enter)="saveAsset()"
           ></nldd-text-field>
         </nldd-form-field>
         <nldd-form-field label="Warranty expiry" [optional]="true">
@@ -338,6 +340,7 @@
             #fAssetWarranty
             type="date"
             [attr.value]="editAsset()?.warrantyExpiry ?? ''"
+            (keydown.enter)="saveAsset()"
           ></nldd-text-field>
         </nldd-form-field>
       </div>
@@ -370,6 +373,7 @@
             type="number"
             [attr.value]="editPlacement()?.unit ?? ''"
             placeholder="1"
+            (keydown.enter)="saveAsset()"
           ></nldd-text-field>
         </nldd-form-field>
         <nldd-form-field label="Slot type" [optional]="true">
