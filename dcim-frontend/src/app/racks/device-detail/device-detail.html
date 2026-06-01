@@ -359,7 +359,7 @@
                 </h2>
               </div>
               <ul class="divide-y divide-gray-50" aria-label="Device connections">
-                @for (conn of deviceConnections(); track conn.localPort) {
+                @for (conn of deviceConnections(); track conn.id) {
                   <li class="flex items-center gap-3 px-4 py-3">
                     <!-- Type icon -->
                     <span
@@ -393,22 +393,16 @@
                           [routerLink]="['/racks/device', conn.remoteDeviceId]"
                           class="font-mono text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded truncate max-w-40"
                         >
-                          {{ remoteDevice(conn.remoteDeviceId)?.name ?? conn.remoteDeviceId }}
+                          {{ conn.remoteDeviceName }}
                         </a>
                         <span class="font-mono text-xs text-gray-500">{{ conn.remotePort }}</span>
                       </div>
-                      <p class="text-[10px] text-gray-400 mt-0.5 font-mono">
-                        {{ remoteDeviceRackName(conn.remoteDeviceId) }}
-                      </p>
+                      @if (conn.remoteRackName) {
+                        <p class="text-[10px] text-gray-400 mt-0.5 font-mono">
+                          {{ conn.remoteRackName }}
+                        </p>
+                      }
                     </div>
-                    <!-- Speed badge -->
-                    @if (conn.speed) {
-                      <span
-                        class="shrink-0 rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-mono text-gray-600"
-                      >
-                        {{ conn.speed }}
-                      </span>
-                    }
                     <!-- Status -->
                     <div
                       class="shrink-0 flex items-center gap-1.5"

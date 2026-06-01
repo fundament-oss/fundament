@@ -18,18 +18,22 @@ import RackDiagramComponent from '../rack-diagram/rack-diagram';
 import {
   ConnectionStatus,
   ConnectionType,
-  DeviceConnection,
   DeviceHistoryAction,
   DeviceHistoryEntry,
   DeviceState,
   DeviceType,
   Rack,
   RackDevice,
-  RACKS,
   DEVICE_HISTORY,
-  DEVICE_CONNECTIONS,
 } from '../rack.model';
-import { Cable, Port, PortType, PORT_TABS, PORT_TYPE_LABEL } from '../../patch-mapping/cable.model';
+import {
+  Cable,
+  CableStatus,
+  Port,
+  PortType,
+  PORT_TABS,
+  PORT_TYPE_LABEL,
+} from '../../patch-mapping/cable.model';
 import { NoteComment } from '../../inventory/inventory';
 import NoteApiService from '../../inventory/note-api.service';
 import PatchMappingApiService from '../../patch-mapping/patch-mapping-api.service';
@@ -39,6 +43,18 @@ import RackApiService from '../rack-api.service';
 import { ASSET_CLIENT } from '../../../connect/tokens';
 import connectErrorMessage from '../../../connect/error';
 import { categoryToDeviceType, cablePortFromDefinition, parseRackHeight } from '../catalog-helpers';
+
+/** A physical connection of this device, rendered in the Connections panel. */
+interface DeviceConnectionView {
+  id: string;
+  localPort: string;
+  remoteDeviceId: string;
+  remoteDeviceName: string;
+  remoteRackName: string;
+  remotePort: string;
+  type: ConnectionType;
+  status: ConnectionStatus;
+}
 
 @Component({
   selector: 'app-device-detail',
@@ -303,20 +319,59 @@ export default class DeviceDetailComponent {
     () => DEVICE_HISTORY[this.deviceId()] ?? [],
   );
 
-  readonly deviceConnections = computed<DeviceConnection[]>(
-    () => DEVICE_CONNECTIONS[this.deviceId()] ?? [],
-  );
-
-  readonly allDevices = computed<Map<string, RackDevice>>(() => {
-    const devMap = new Map<string, RackDevice>();
-    RACKS.forEach((rack) => {
-      rack.devices.forEach((d) => devMap.set(d.id, d));
+  /** This device's physical connections, derived from the loaded cables. */
+  readonly deviceConnections = computed<DeviceConnectionView[]>(() => {
+    const devId = this.deviceId();
+    const rackName = this.rack()?.name ?? '';
+    return this.cables().flatMap((cable): DeviceConnectionView[] => {
+      const localIsA = cable.aSide.deviceId === devId;
+      const localIsB = cable.bSide.deviceId === devId;
+      if (!localIsA && !localIsB) return [];
+      const local = localIsA ? cable.aSide : cable.bSide;
+      const remote = localIsA ? cable.bSide : cable.aSide;
+      return [
+        {
+          id: cable.id,
+          localPort: local.portName,
+          remoteDeviceId: remote.deviceId,
+          remoteDeviceName: remote.deviceName,
+          // Peers resolve to a name only when they share this rack; otherwise
+          // mapConnection falls back to the id and the rack is unknown.
+          remoteRackName: remote.deviceName === remote.deviceId ? '' : rackName,
+          remotePort: remote.portName,
+          type: DeviceDetailComponent.connectionTypeFromPort(local.portType),
+          status: DeviceDetailComponent.connectionStatusFromCable(cable.status),
+        },
+      ];
     });
-    return devMap;
   });
 
-  remoteDevice(id: string): RackDevice | undefined {
-    return this.allDevices().get(id);
+  private static connectionTypeFromPort(portType: PortType): ConnectionType {
+    switch (portType) {
+      case 'network-interface':
+        return 'network';
+      case 'power-port':
+      case 'power-outlet':
+        return 'power';
+      case 'console-port':
+      case 'console-server-port':
+        return 'management';
+      default:
+        throw new Error(`unhandled port type: ${portType as string}`);
+    }
+  }
+
+  private static connectionStatusFromCable(status: CableStatus): ConnectionStatus {
+    switch (status) {
+      case 'connected':
+        return 'up';
+      case 'decommissioned':
+        return 'down';
+      case 'planned':
+        return 'unknown';
+      default:
+        throw new Error(`unhandled cable status: ${status as string}`);
+    }
   }
 
   readonly connectionTypeIcon = (type: ConnectionType): string => {
@@ -349,11 +404,6 @@ export default class DeviceDetailComponent {
     if (status === 'up') return 'Up';
     if (status === 'down') return 'Down';
     return 'Unknown';
-  };
-
-  readonly remoteDeviceRackName = (deviceId: string): string => {
-    const rack = RACKS.find((r) => r.devices.some((d) => d.id === deviceId));
-    return rack ? rack.name : '';
   };
 
   navigateToDevice(id: string): void {
