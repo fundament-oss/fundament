@@ -89,6 +89,10 @@ export default class DatacenterDetailComponent implements OnInit {
 
   editRackRow = signal<Partial<RackRow> | null>(null);
 
+  rowErrorMessage = signal<string | null>(null);
+
+  rowInvalidFields = signal<InvalidFields>({});
+
   deleteRackRow = signal<RackRow | null>(null);
 
   activeRoomId = signal<string>('');
@@ -106,6 +110,10 @@ export default class DatacenterDetailComponent implements OnInit {
   // ── Rack CRUD ──────────────────────────────────────────────────────────────
 
   editRack = signal<Partial<DatacenterRack> | null>(null);
+
+  rackErrorMessage = signal<string | null>(null);
+
+  rackInvalidFields = signal<InvalidFields>({});
 
   deleteRack = signal<DatacenterRack | null>(null);
 
@@ -227,6 +235,44 @@ export default class DatacenterDetailComponent implements OnInit {
     this.roomErrorMessage.set(message);
   }
 
+  isRowFieldInvalid(field: string): boolean {
+    return field in this.rowInvalidFields();
+  }
+
+  rowFieldError(field: string): string {
+    return this.rowInvalidFields()[field] ?? '';
+  }
+
+  private clearRowErrors(): void {
+    this.rowInvalidFields.set({});
+    this.rowErrorMessage.set(null);
+  }
+
+  private handleRowError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.rowInvalidFields.set(fields);
+    this.rowErrorMessage.set(message);
+  }
+
+  isRackFieldInvalid(field: string): boolean {
+    return field in this.rackInvalidFields();
+  }
+
+  rackFieldError(field: string): string {
+    return this.rackInvalidFields()[field] ?? '';
+  }
+
+  private clearRackErrors(): void {
+    this.rackInvalidFields.set({});
+    this.rackErrorMessage.set(null);
+  }
+
+  private handleRackError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.rackInvalidFields.set(fields);
+    this.rackErrorMessage.set(message);
+  }
+
   saveRoom(): void {
     const form = this.editRoom();
     if (!form) return;
@@ -276,22 +322,26 @@ export default class DatacenterDetailComponent implements OnInit {
   // ── Rack row actions ───────────────────────────────────────────────────────
 
   openCreateRackRow(roomId: string): void {
+    this.clearRowErrors();
     this.activeRoomId.set(roomId);
     this.editRackRow.set({ id: '', roomId, name: '', positionX: 1, positionY: 1 });
   }
 
   openEditRackRow(rr: RackRow): void {
+    this.clearRowErrors();
     this.activeRoomId.set(rr.roomId);
     this.editRackRow.set({ ...rr });
   }
 
   closeRackRowForm(): void {
+    this.clearRowErrors();
     this.editRackRow.set(null);
   }
 
   saveRackRow(): void {
     const form = this.editRackRow();
     if (!form) return;
+    this.clearRowErrors();
     const name = this.fRowName()?.nativeElement.value ?? '';
     const posX = parseInt(this.fRowX()?.nativeElement.value ?? '1', 10) || 1;
     const posY = parseInt(this.fRowY()?.nativeElement.value ?? '1', 10) || 1;
@@ -310,8 +360,7 @@ export default class DatacenterDetailComponent implements OnInit {
           );
           this.editRackRow.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRowError(err));
     } else {
       firstValueFrom(this.dcApi.createRackRow(form.roomId!, name, posX, posY))
         .then((res) => {
@@ -325,8 +374,7 @@ export default class DatacenterDetailComponent implements OnInit {
           this.mutableRackRows.update((list) => [...list, created]);
           this.editRackRow.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRowError(err));
     }
   }
 
@@ -353,22 +401,26 @@ export default class DatacenterDetailComponent implements OnInit {
   // ── Rack actions ───────────────────────────────────────────────────────────
 
   openCreateRack(rowId: string): void {
+    this.clearRackErrors();
     this.activeRowId.set(rowId);
     this.editRack.set({ id: '', rowId, name: '', totalU: 42 });
   }
 
   openEditRack(rack: DatacenterRack): void {
+    this.clearRackErrors();
     this.activeRowId.set(rack.rowId);
     this.editRack.set({ ...rack });
   }
 
   closeRackForm(): void {
+    this.clearRackErrors();
     this.editRack.set(null);
   }
 
   saveRack(): void {
     const form = this.editRack();
     if (!form) return;
+    this.clearRackErrors();
     const name = this.fRackName()?.nativeElement.value ?? '';
     const totalU = parseInt(this.fRackTotalU()?.nativeElement.value ?? '42', 10) || 42;
     if (form.id) {
@@ -384,8 +436,7 @@ export default class DatacenterDetailComponent implements OnInit {
           this.dcRacks.update((list) => list.map((r) => (r.id === form.id ? updated : r)));
           this.editRack.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRackError(err));
     } else {
       firstValueFrom(this.dcApi.createRack(form.rowId!, name, totalU))
         .then((res) => {
@@ -399,8 +450,7 @@ export default class DatacenterDetailComponent implements OnInit {
           this.dcRacks.update((list) => [...list, created]);
           this.editRack.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRackError(err));
     }
   }
 

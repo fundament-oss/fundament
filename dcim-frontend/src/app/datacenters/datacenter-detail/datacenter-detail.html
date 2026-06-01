@@ -343,15 +343,27 @@
       dismiss-text="Close"
       (dismiss)="closeRackRowForm()"
     ></nldd-top-title-bar>
-    <nldd-simple-section>
+    <nldd-simple-section class="space-y-4">
+      @if (rowErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ rowErrorMessage() }}
+          </p>
+        </div>
+      }
       @if (editRackRow(); as row) {
         <nldd-form-field label="Row name">
           <nldd-text-field
             #fRowName
             [attr.value]="row.name ?? ''"
             placeholder="Row A"
+            [attr.invalid]="isRowFieldInvalid('name') ? '' : null"
+            error-message="error-row-name"
             (keydown.enter)="saveRackRow()"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-row-name">
+            {{ rowFieldError('name') }}
+          </nldd-form-field-error-text>
         </nldd-form-field>
         <div class="grid grid-cols-2 gap-3">
           <nldd-form-field label="Position X">
@@ -360,8 +372,13 @@
               [attr.value]="row.positionX ?? 1"
               min="1"
               full-width
+              [attr.invalid]="isRowFieldInvalid('position_x') ? '' : null"
+              error-message="error-row-x"
               (keydown.enter)="saveRackRow()"
             ></nldd-number-field>
+            <nldd-form-field-error-text id="error-row-x">
+              {{ rowFieldError('position_x') }}
+            </nldd-form-field-error-text>
           </nldd-form-field>
           <nldd-form-field label="Position Y">
             <nldd-number-field
@@ -369,8 +386,13 @@
               [attr.value]="row.positionY ?? 1"
               min="1"
               full-width
+              [attr.invalid]="isRowFieldInvalid('position_y') ? '' : null"
+              error-message="error-row-y"
               (keydown.enter)="saveRackRow()"
             ></nldd-number-field>
+            <nldd-form-field-error-text id="error-row-y">
+              {{ rowFieldError('position_y') }}
+            </nldd-form-field-error-text>
           </nldd-form-field>
         </div>
       }
@@ -417,15 +439,27 @@
       dismiss-text="Close"
       (dismiss)="closeRackForm()"
     ></nldd-top-title-bar>
-    <nldd-simple-section>
+    <nldd-simple-section class="space-y-4">
+      @if (rackErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ rackErrorMessage() }}
+          </p>
+        </div>
+      }
       @if (editRack(); as rack) {
         <nldd-form-field label="Rack name">
           <nldd-text-field
             #fRackName
             [attr.value]="rack.name ?? ''"
             placeholder="Rack 01"
+            [attr.invalid]="isRackFieldInvalid('name') ? '' : null"
+            error-message="error-rack-name"
             (keydown.enter)="saveRack()"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-rack-name">
+            {{ rackFieldError('name') }}
+          </nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Height (U)">
           <nldd-number-field
@@ -434,8 +468,13 @@
             min="1"
             max="60"
             full-width
+            [attr.invalid]="isRackFieldInvalid('total_units') ? '' : null"
+            error-message="error-rack-totalu"
             (keydown.enter)="saveRack()"
           ></nldd-number-field>
+          <nldd-form-field-error-text id="error-rack-totalu">
+            {{ rackFieldError('total_units') }}
+          </nldd-form-field-error-text>
         </nldd-form-field>
       }
     </nldd-simple-section>
