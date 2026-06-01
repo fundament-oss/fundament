@@ -62,9 +62,47 @@ func TestAccProjectResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "created"),
 				),
 			},
+			// Set alias
+			{
+				Config: testAccProjectResourceConfigWithAlias(projectName+"-upd", suffix, "acc-alias-"+suffix, endpoint, organizationID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", projectName+"-upd"),
+					resource.TestCheckResourceAttr(resourceName, "alias", "acc-alias-"+suffix),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			// Update alias
+			{
+				Config: testAccProjectResourceConfigWithAlias(projectName+"-upd", suffix, "acc-alias-"+suffix+"-2", endpoint, organizationID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "alias", "acc-alias-"+suffix+"-2"),
+				),
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
+}
+
+func testAccProjectResourceConfigWithAlias(name, suffix, alias, endpoint, organizationID string) string {
+	return fmt.Sprintf(`
+provider "fundament" {
+  endpoint        = %[4]q
+  organization_id = %[5]q
+  # api_key read from environment variable FUNDAMENT_API_KEY
+}
+
+resource "fundament_cluster" "test" {
+  name               = "tf-acc-prc-%[2]s"
+  region             = "eu-west-1"
+  kubernetes_version = "1.28"
+}
+
+resource "fundament_project" "test" {
+  name       = %[1]q
+  alias      = %[3]q
+  cluster_id = fundament_cluster.test.id
+}
+`, name, suffix, alias, endpoint, organizationID)
 }
 
 func testAccProjectResourceConfig(name, suffix, endpoint, organizationID string) string {

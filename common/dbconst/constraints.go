@@ -285,6 +285,8 @@ const (
 	ConstraintProjectMembersFkUser = "project_members_fk_user"
 	// ConstraintProjectMembersUqProjectUser is defined on tenant.project_members.
 	ConstraintProjectMembersUqProjectUser = "project_members_uq_project_user"
+	// ConstraintProjectsCkAlias is defined on tenant.projects.
+	ConstraintProjectsCkAlias = "projects_ck_alias"
 	// ConstraintProjectsFkCluster is defined on tenant.projects.
 	ConstraintProjectsFkCluster = "projects_fk_cluster"
 	// ConstraintProjectsUqClusterName is defined on tenant.projects.

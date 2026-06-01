@@ -33,15 +33,29 @@
           </p>
         </div>
 
-        <!-- Project Name -->
+        <!-- Project Name (immutable) -->
         <div>
-          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Name</div>
+          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
+            Name <span class="font-normal text-gray-500">(cannot be changed)</span>
+          </div>
+          <p
+            class="rounded-md bg-gray-50 px-4 py-2 font-mono text-sm text-gray-900 dark:bg-gray-900 dark:text-white"
+          >
+            {{ project()!.name }}
+          </p>
+        </div>
+
+        <!-- Project Alias (editable) -->
+        <div>
+          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
+            Alias <span class="font-normal text-gray-500">(name that is displayed)</span>
+          </div>
           @if (isEditing()) {
             <div class="flex gap-2">
               <nldd-text-field
                 appAutofocus
-                [value]="editingName()"
-                (input)="editingName.set($any($event.target).value)"
+                [value]="editingAlias()"
+                (input)="editingAlias.set($any($event.target).value)"
                 class="flex-1"
                 (keyup.enter)="saveEdit()"
                 (keyup.escape)="cancelEdit()"
@@ -65,7 +79,7 @@
             </div>
           } @else {
             <div class="flex items-center gap-3">
-              <p>{{ project()!.name }}</p>
+              <p>{{ project()!.alias }}</p>
               <nldd-button
                 type="button"
                 (click)="startEdit()"
@@ -120,7 +134,7 @@
 
   <p>
     Are you sure you want to delete project
-    <strong class="font-semibold">{{ project()?.name }}</strong
+    <strong class="font-semibold">{{ project()?.alias || project()?.name }}</strong
     >?
   </p>
   <p class="text-danger-600 dark:text-danger-400 mt-2">This cannot be undone.</p>

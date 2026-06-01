@@ -13,18 +13,19 @@ import (
 )
 
 const projectCreate = `-- name: ProjectCreate :one
-INSERT INTO tenant.projects (cluster_id, name)
-VALUES ($1, $2)
+INSERT INTO tenant.projects (cluster_id, name, alias)
+VALUES ($1, $2, $3)
 RETURNING id
 `
 
 type ProjectCreateParams struct {
 	ClusterID uuid.UUID
 	Name      string
+	Alias     string
 }
 
 func (q *Queries) ProjectCreate(ctx context.Context, arg ProjectCreateParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, projectCreate, arg.ClusterID, arg.Name)
+	row := q.db.QueryRow(ctx, projectCreate, arg.ClusterID, arg.Name, arg.Alias)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -49,7 +50,7 @@ func (q *Queries) ProjectDelete(ctx context.Context, arg ProjectDeleteParams) (i
 }
 
 const projectGetByID = `-- name: ProjectGetByID :one
-SELECT id, cluster_id, name, created, deleted
+SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
 WHERE id = $1 AND deleted IS NULL
 `
@@ -65,6 +66,7 @@ func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) 
 		&i.ID,
 		&i.ClusterID,
 		&i.Name,
+		&i.Alias,
 		&i.Created,
 		&i.Deleted,
 	)
@@ -72,7 +74,7 @@ func (q *Queries) ProjectGetByID(ctx context.Context, arg ProjectGetByIDParams) 
 }
 
 const projectGetByName = `-- name: ProjectGetByName :one
-SELECT id, cluster_id, name, created, deleted
+SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
 WHERE name = $1 AND deleted IS NULL
 `
@@ -88,6 +90,7 @@ func (q *Queries) ProjectGetByName(ctx context.Context, arg ProjectGetByNamePara
 		&i.ID,
 		&i.ClusterID,
 		&i.Name,
+		&i.Alias,
 		&i.Created,
 		&i.Deleted,
 	)
@@ -95,7 +98,7 @@ func (q *Queries) ProjectGetByName(ctx context.Context, arg ProjectGetByNamePara
 }
 
 const projectList = `-- name: ProjectList :many
-SELECT id, cluster_id, name, created, deleted
+SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
 WHERE deleted IS NULL
 ORDER BY created DESC
@@ -114,6 +117,7 @@ func (q *Queries) ProjectList(ctx context.Context) ([]TenantProject, error) {
 			&i.ID,
 			&i.ClusterID,
 			&i.Name,
+			&i.Alias,
 			&i.Created,
 			&i.Deleted,
 		); err != nil {
@@ -128,7 +132,7 @@ func (q *Queries) ProjectList(ctx context.Context) ([]TenantProject, error) {
 }
 
 const projectListByClusterID = `-- name: ProjectListByClusterID :many
-SELECT id, cluster_id, name, created, deleted
+SELECT id, cluster_id, name, alias, created, deleted
 FROM tenant.projects
 WHERE cluster_id = $1 AND deleted IS NULL
 ORDER BY created DESC
@@ -151,6 +155,7 @@ func (q *Queries) ProjectListByClusterID(ctx context.Context, arg ProjectListByC
 			&i.ID,
 			&i.ClusterID,
 			&i.Name,
+			&i.Alias,
 			&i.Created,
 			&i.Deleted,
 		); err != nil {
@@ -166,17 +171,17 @@ func (q *Queries) ProjectListByClusterID(ctx context.Context, arg ProjectListByC
 
 const projectUpdate = `-- name: ProjectUpdate :execrows
 UPDATE tenant.projects
-SET name = COALESCE($2, name)
+SET alias = COALESCE($2, alias)
 WHERE id = $1 AND deleted IS NULL
 `
 
 type ProjectUpdateParams struct {
-	ID   uuid.UUID
-	Name pgtype.Text
+	ID    uuid.UUID
+	Alias pgtype.Text
 }
 
 func (q *Queries) ProjectUpdate(ctx context.Context, arg ProjectUpdateParams) (int64, error) {
-	result, err := q.db.Exec(ctx, projectUpdate, arg.ID, arg.Name)
+	result, err := q.db.Exec(ctx, projectUpdate, arg.ID, arg.Alias)
 	if err != nil {
 		return 0, err
 	}

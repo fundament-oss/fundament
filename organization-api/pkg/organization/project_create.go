@@ -2,10 +2,13 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
@@ -42,11 +45,22 @@ func (s *Server) CreateProject(
 
 	qtx := s.queries.WithTx(tx)
 
+	alias := req.Msg.GetName()
+	if req.Msg.HasAlias() {
+		alias = req.Msg.GetAlias()
+	}
+
 	projectID, err := qtx.ProjectCreate(ctx, db.ProjectCreateParams{
 		ClusterID: clusterID,
 		Name:      req.Msg.GetName(),
+		Alias:     alias,
 	})
 	if err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.CheckViolation {
+			if pgErr.ConstraintName == dbconst.ConstraintProjectsCkAlias {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("alias must be between 1 and 255 characters"))
+			}
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create project: %w", err))
 	}
 

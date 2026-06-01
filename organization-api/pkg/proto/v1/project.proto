@@ -87,6 +87,7 @@ message Project {
   string id = 10;
   string cluster_id = 15;
   string name = 20;
+  string alias = 25;
   google.protobuf.Timestamp created = 30;
 }
 
@@ -98,6 +99,13 @@ message CreateProjectRequest {
     message: "must be a valid DNS-1123 label"
     expression: "this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')"
   }];
+  string alias = 20 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 255
+    }
+  ];
 }
 
 // Create project response
@@ -108,7 +116,7 @@ message CreateProjectResponse {
 // Update project request
 message UpdateProjectRequest {
   string project_id = 10 [(buf.validate.field).string = {uuid: true}];
-  string name = 20 [
+  string alias = 20 [
     features.field_presence = EXPLICIT,
     (buf.validate.field).string = {
       min_len: 1

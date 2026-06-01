@@ -30,7 +30,7 @@
     <!-- Header -->
     <div class="card-header">
       <h1 class="text-3xl font-semibold">
-        {{ project()?.name || 'Unknown project' }}
+        {{ project()?.alias || project()?.name || 'Unknown project' }}
       </h1>
       <p class="mt-1 text-gray-600 dark:text-gray-300">
         Created {{ formatDate(project()?.created) }}
@@ -43,8 +43,12 @@
         <h3 class="mb-4 text-xl font-medium">Project details</h3>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <dl>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Project alias</dt>
+            <dd class="mt-1">{{ project()?.alias }}</dd>
+          </dl>
+          <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Project name</dt>
-            <dd class="mt-1">{{ project()?.name }}</dd>
+            <dd class="mt-1 font-mono text-sm">{{ project()?.name }}</dd>
           </dl>
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Project ID</dt>
