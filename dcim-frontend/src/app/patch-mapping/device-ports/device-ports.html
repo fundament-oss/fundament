@@ -57,16 +57,17 @@
       <!-- Type -->
       <div class="flex flex-col gap-1">
         <label class="text-xs font-medium text-slate-700" for="new-port-type">Type</label>
-        <select
-          id="new-port-type"
-          [value]="newPortType()"
-          (change)="newPortType.set($any($event.target).value)"
-          class="w-full"
-        >
-          @for (pt of PORT_TYPES; track pt.value) {
-            <option [value]="pt.value">{{ pt.label }}</option>
-          }
-        </select>
+        <nldd-dropdown size="sm">
+          <select
+            id="new-port-type"
+            [value]="newPortType()"
+            (change)="newPortType.set($any($event.target).value)"
+          >
+            @for (pt of PORT_TYPES; track pt.value) {
+              <option [value]="pt.value">{{ pt.label }}</option>
+            }
+          </select>
+        </nldd-dropdown>
       </div>
 
       <nldd-button

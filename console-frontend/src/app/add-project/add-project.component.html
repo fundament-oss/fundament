@@ -46,18 +46,19 @@
           No clusters available. <a routerLink="/clusters/add" class="link">Add a cluster first</a>.
         </p>
       } @else {
-        <select
-          id="clusterId"
-          formControlName="clusterId"
-          class="w-full"
-          [class.invalid]="
-            !!(projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty)
+        <nldd-dropdown
+          [attr.invalid]="
+            projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty
+              ? true
+              : null
           "
         >
-          @for (cluster of clusters(); track cluster.id) {
-            <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
-          }
-        </select>
+          <select id="clusterId" formControlName="clusterId">
+            @for (cluster of clusters(); track cluster.id) {
+              <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
+            }
+          </select>
+        </nldd-dropdown>
         <nldd-form-field-error-text id="add-project-cluster-error">
           @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
             {{ getClusterError() }}

@@ -119,11 +119,13 @@
         </div>
         <p class="mt-4 text-gray-600 dark:text-gray-300">Loading projects...</p>
       } @else {
-        <select id="projectId" formControlName="projectId" class="w-full">
-          @for (project of projects(); track project.id) {
-            <option [value]="project.id">{{ project.alias || project.name }}</option>
-          }
-        </select>
+        <nldd-dropdown>
+          <select id="projectId" formControlName="projectId">
+            @for (project of projects(); track project.id) {
+              <option [value]="project.id">{{  project.alias || project.name }}</option>
+            }
+          </select>
+        </nldd-dropdown>
         @if (projects().length === 0) {
           <p class="text-gray-600 dark:text-gray-400">
             No projects available.

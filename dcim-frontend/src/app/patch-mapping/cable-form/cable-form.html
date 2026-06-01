@@ -66,18 +66,19 @@
           <!-- Device + manage ports -->
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
-              <select
-                id="a-device"
-                (change)="onADeviceChange($any($event.target).value)"
-                class="flex-1"
-              >
-                <option value="" [selected]="!aDeviceId()">Select device…</option>
-                @for (dev of dcDevices(); track dev.id) {
-                  <option [value]="dev.id" [selected]="dev.id === aDeviceId()">
-                    {{ dev.name }}
-                  </option>
-                }
-              </select>
+              <nldd-dropdown class="flex-1">
+                <select
+                  id="a-device"
+                  (change)="onADeviceChange($any($event.target).value)"
+                >
+                  <option value="" [selected]="!aDeviceId()">Select device…</option>
+                  @for (dev of dcDevices(); track dev.id) {
+                    <option [value]="dev.id" [selected]="dev.id === aDeviceId()">
+                      {{ dev.name }}
+                    </option>
+                  }
+                </select>
+              </nldd-dropdown>
               <nldd-icon-button
                 icon="gear"
                 variant="neutral-transparent"
@@ -91,47 +92,49 @@
 
           <!-- Port type -->
           <nldd-form-field label="Port type">
-            <select
-              id="a-port-type"
-              (change)="onAPortTypeChange($any($event.target).value)"
-              [disabled]="!aDeviceId()"
-              class="w-full disabled:bg-neutral-50 disabled:text-slate-400"
-            >
-              <option value="" [selected]="!aPortType()">Any type</option>
-              @for (pt of PORT_TYPES; track pt.value) {
-                <option
-                  [value]="pt.value"
-                  [selected]="pt.value === aPortType()"
-                  [disabled]="!aAvailablePortTypes().has(pt.value)"
-                >
-                  {{ pt.label }}
-                </option>
-              }
-            </select>
+            <nldd-dropdown [attr.disabled]="!aDeviceId() ? true : null">
+              <select
+                id="a-port-type"
+                (change)="onAPortTypeChange($any($event.target).value)"
+                [disabled]="!aDeviceId()"
+              >
+                <option value="" [selected]="!aPortType()">Any type</option>
+                @for (pt of PORT_TYPES; track pt.value) {
+                  <option
+                    [value]="pt.value"
+                    [selected]="pt.value === aPortType()"
+                    [disabled]="!aAvailablePortTypes().has(pt.value)"
+                  >
+                    {{ pt.label }}
+                  </option>
+                }
+              </select>
+            </nldd-dropdown>
           </nldd-form-field>
 
           <!-- Port -->
           <nldd-form-field label="Port">
             <div class="flex items-center gap-1.5">
-              <select
-                id="a-port"
-                (change)="aPortId.set($any($event.target).value)"
-                [disabled]="!aDeviceId()"
-                class="flex-1 disabled:bg-neutral-50 disabled:text-slate-400"
-              >
-                <option value="" [selected]="!aPortId()">Select port…</option>
-                @for (port of aFilteredPorts(); track port.id) {
-                  <option
-                    [value]="port.id"
-                    [selected]="port.id === aPortId()"
-                    [disabled]="usedPortIds().has(port.id)"
-                  >
-                    {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
-                      usedPortIds().has(port.id) ? ' [in use]' : ''
-                    }}
-                  </option>
-                }
-              </select>
+              <nldd-dropdown class="flex-1" [attr.disabled]="!aDeviceId() ? true : null">
+                <select
+                  id="a-port"
+                  (change)="aPortId.set($any($event.target).value)"
+                  [disabled]="!aDeviceId()"
+                >
+                  <option value="" [selected]="!aPortId()">Select port…</option>
+                  @for (port of aFilteredPorts(); track port.id) {
+                    <option
+                      [value]="port.id"
+                      [selected]="port.id === aPortId()"
+                      [disabled]="usedPortIds().has(port.id)"
+                    >
+                      {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
+                        usedPortIds().has(port.id) ? ' [in use]' : ''
+                      }}
+                    </option>
+                  }
+                </select>
+              </nldd-dropdown>
               <nldd-icon-button
                 icon="plus-small"
                 variant="neutral-transparent"
@@ -154,16 +157,15 @@
                   (keydown.enter)="confirmAddPort('a')"
                   (keydown.escape)="cancelAddPort('a')"
                 ></nldd-text-field>
-                <select
-                  (change)="aNewPortType.set($any($event.target).value)"
-                  class="text-xs border border-slate-200 rounded px-1 py-1"
-                >
-                  @for (pt of PORT_TYPES; track pt.value) {
-                    <option [value]="pt.value" [selected]="pt.value === aNewPortType()">
-                      {{ pt.label }}
-                    </option>
-                  }
-                </select>
+                <nldd-dropdown size="sm">
+                  <select (change)="aNewPortType.set($any($event.target).value)">
+                    @for (pt of PORT_TYPES; track pt.value) {
+                      <option [value]="pt.value" [selected]="pt.value === aNewPortType()">
+                        {{ pt.label }}
+                      </option>
+                    }
+                  </select>
+                </nldd-dropdown>
                 <nldd-icon-button
                   icon="check-mark-small"
                   variant="primary"
@@ -220,18 +222,19 @@
           <!-- Device + manage ports -->
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
-              <select
-                id="b-device"
-                (change)="onBDeviceChange($any($event.target).value)"
-                class="flex-1"
-              >
-                <option value="" [selected]="!bDeviceId()">Select device…</option>
-                @for (dev of dcDevices(); track dev.id) {
-                  <option [value]="dev.id" [selected]="dev.id === bDeviceId()">
-                    {{ dev.name }}
-                  </option>
-                }
-              </select>
+              <nldd-dropdown class="flex-1">
+                <select
+                  id="b-device"
+                  (change)="onBDeviceChange($any($event.target).value)"
+                >
+                  <option value="" [selected]="!bDeviceId()">Select device…</option>
+                  @for (dev of dcDevices(); track dev.id) {
+                    <option [value]="dev.id" [selected]="dev.id === bDeviceId()">
+                      {{ dev.name }}
+                    </option>
+                  }
+                </select>
+              </nldd-dropdown>
               <nldd-icon-button
                 icon="gear"
                 variant="neutral-transparent"
@@ -245,49 +248,51 @@
 
           <!-- Port type -->
           <nldd-form-field label="Port type">
-            <select
-              id="b-port-type"
-              (change)="onBPortTypeChange($any($event.target).value)"
-              [disabled]="!bDeviceId()"
-              class="w-full disabled:bg-neutral-50 disabled:text-slate-400"
-            >
-              <option value="" [selected]="!bPortType()">Any type</option>
-              @for (pt of PORT_TYPES; track pt.value) {
-                <option
-                  [value]="pt.value"
-                  [selected]="pt.value === bPortType()"
-                  [disabled]="
-                    !bAvailablePortTypes().has(pt.value) || !bCompatiblePortTypes().has(pt.value)
-                  "
-                >
-                  {{ pt.label }}
-                </option>
-              }
-            </select>
+            <nldd-dropdown [attr.disabled]="!bDeviceId() ? true : null">
+              <select
+                id="b-port-type"
+                (change)="onBPortTypeChange($any($event.target).value)"
+                [disabled]="!bDeviceId()"
+              >
+                <option value="" [selected]="!bPortType()">Any type</option>
+                @for (pt of PORT_TYPES; track pt.value) {
+                  <option
+                    [value]="pt.value"
+                    [selected]="pt.value === bPortType()"
+                    [disabled]="
+                      !bAvailablePortTypes().has(pt.value) || !bCompatiblePortTypes().has(pt.value)
+                    "
+                  >
+                    {{ pt.label }}
+                  </option>
+                }
+              </select>
+            </nldd-dropdown>
           </nldd-form-field>
 
           <!-- Port -->
           <nldd-form-field label="Port">
             <div class="flex items-center gap-1.5">
-              <select
-                id="b-port"
-                (change)="bPortId.set($any($event.target).value)"
-                [disabled]="!bDeviceId()"
-                class="flex-1 disabled:bg-neutral-50 disabled:text-slate-400"
-              >
-                <option value="" [selected]="!bPortId()">Select port…</option>
-                @for (port of bFilteredPorts(); track port.id) {
-                  <option
-                    [value]="port.id"
-                    [selected]="port.id === bPortId()"
-                    [disabled]="usedPortIds().has(port.id)"
-                  >
-                    {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
-                      usedPortIds().has(port.id) ? ' [in use]' : ''
-                    }}
-                  </option>
-                }
-              </select>
+              <nldd-dropdown class="flex-1" [attr.disabled]="!bDeviceId() ? true : null">
+                <select
+                  id="b-port"
+                  (change)="bPortId.set($any($event.target).value)"
+                  [disabled]="!bDeviceId()"
+                >
+                  <option value="" [selected]="!bPortId()">Select port…</option>
+                  @for (port of bFilteredPorts(); track port.id) {
+                    <option
+                      [value]="port.id"
+                      [selected]="port.id === bPortId()"
+                      [disabled]="usedPortIds().has(port.id)"
+                    >
+                      {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
+                        usedPortIds().has(port.id) ? ' [in use]' : ''
+                      }}
+                    </option>
+                  }
+                </select>
+              </nldd-dropdown>
               <nldd-icon-button
                 icon="plus-small"
                 variant="neutral-transparent"
@@ -310,16 +315,15 @@
                   (keydown.enter)="confirmAddPort('b')"
                   (keydown.escape)="cancelAddPort('b')"
                 ></nldd-text-field>
-                <select
-                  (change)="bNewPortType.set($any($event.target).value)"
-                  class="text-xs border border-slate-200 rounded px-1 py-1"
-                >
-                  @for (pt of PORT_TYPES; track pt.value) {
-                    <option [value]="pt.value" [selected]="pt.value === bNewPortType()">
-                      {{ pt.label }}
-                    </option>
-                  }
-                </select>
+                <nldd-dropdown size="sm">
+                  <select (change)="bNewPortType.set($any($event.target).value)">
+                    @for (pt of PORT_TYPES; track pt.value) {
+                      <option [value]="pt.value" [selected]="pt.value === bNewPortType()">
+                        {{ pt.label }}
+                      </option>
+                    }
+                  </select>
+                </nldd-dropdown>
                 <nldd-icon-button
                   icon="check-mark-small"
                   variant="primary"
@@ -380,18 +384,19 @@
 
           <!-- Type -->
           <nldd-form-field label="Type">
-            <select
-              id="cable-type"
-              [value]="cableType()"
-              (change)="cableType.set($any($event.target).value)"
-              class="w-full"
-            >
-              @for (t of CABLE_TYPES; track t) {
-                <option [value]="t" [selected]="t === cableType()">
-                  {{ CABLE_TYPE_LABEL[t] }}
-                </option>
-              }
-            </select>
+            <nldd-dropdown>
+              <select
+                id="cable-type"
+                [value]="cableType()"
+                (change)="cableType.set($any($event.target).value)"
+              >
+                @for (t of CABLE_TYPES; track t) {
+                  <option [value]="t" [selected]="t === cableType()">
+                    {{ CABLE_TYPE_LABEL[t] }}
+                  </option>
+                }
+              </select>
+            </nldd-dropdown>
           </nldd-form-field>
 
           <!-- Status -->

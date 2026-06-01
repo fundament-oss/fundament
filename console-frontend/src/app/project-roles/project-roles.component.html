@@ -30,16 +30,17 @@
           variant="primary"
         ></nldd-button>
       }
-      <select
-        class="w-auto"
-        [ngModel]="namespaceFilter()"
-        (ngModelChange)="namespaceFilter.set($event)"
-      >
-        <option value="">All namespaces</option>
-        @for (ns of uniqueNamespaces(); track ns) {
-          <option [value]="ns">{{ ns }}</option>
-        }
-      </select>
+      <nldd-dropdown size="sm">
+        <select
+          [ngModel]="namespaceFilter()"
+          (ngModelChange)="namespaceFilter.set($event)"
+        >
+          <option value="">All namespaces</option>
+          @for (ns of uniqueNamespaces(); track ns) {
+            <option [value]="ns">{{ ns }}</option>
+          }
+        </select>
+      </nldd-dropdown>
     </div>
 
     @if (filteredBindings().length === 0) {
@@ -130,19 +131,20 @@
       @if (editingBinding()) {
         <p>{{ editingBinding()?.memberName }}</p>
       } @else {
-        <select
-          id="rb-member"
-          class="w-full"
-          [ngModel]="modalMemberId()"
-          (ngModelChange)="modalMemberId.set($event)"
-          name="memberId"
-          [attr.aria-invalid]="memberIdError() ? 'true' : null"
-        >
-          <option value="">Select a member</option>
-          @for (member of members(); track member.id) {
-            <option [value]="member.id">{{ member.name }}</option>
-          }
-        </select>
+        <nldd-dropdown [attr.invalid]="memberIdError() ? true : null">
+          <select
+            id="rb-member"
+            [ngModel]="modalMemberId()"
+            (ngModelChange)="modalMemberId.set($event)"
+            name="memberId"
+            [attr.aria-invalid]="memberIdError() ? 'true' : null"
+          >
+            <option value="">Select a member</option>
+            @for (member of members(); track member.id) {
+              <option [value]="member.id">{{ member.name }}</option>
+            }
+          </select>
+        </nldd-dropdown>
         @if (memberIdError()) {
           <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">Please select a member.</p>
         }
@@ -183,19 +185,20 @@
         </nldd-form-field>
         @if (namespaceMode() === 'specific') {
           <div class="mt-2">
-            <select
-              id="rb-namespace"
-              class="w-full"
-              [ngModel]="modalNamespace()"
-              (ngModelChange)="modalNamespace.set($event)"
-              name="namespace"
-              [attr.aria-invalid]="namespaceError() ? 'true' : null"
-            >
-              <option value="">Select a namespace</option>
-              @for (ns of namespaces(); track ns) {
-                <option [value]="ns">{{ ns }}</option>
-              }
-            </select>
+            <nldd-dropdown [attr.invalid]="namespaceError() ? true : null">
+              <select
+                id="rb-namespace"
+                [ngModel]="modalNamespace()"
+                (ngModelChange)="modalNamespace.set($event)"
+                name="namespace"
+                [attr.aria-invalid]="namespaceError() ? 'true' : null"
+              >
+                <option value="">Select a namespace</option>
+                @for (ns of namespaces(); track ns) {
+                  <option [value]="ns">{{ ns }}</option>
+                }
+              </select>
+            </nldd-dropdown>
             @if (namespaceError()) {
               <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">
                 Please select a namespace.

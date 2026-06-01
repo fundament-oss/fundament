@@ -40,11 +40,13 @@
 
           <!-- Machine Type -->
           <nldd-form-field label="Machine type">
-            <select [id]="'machineType-' + $index" formControlName="machineType">
-              @for (mt of machineTypes; track mt.value) {
-                <option [value]="mt.value">{{ mt.label }}</option>
-              }
-            </select>
+            <nldd-dropdown>
+              <select [id]="'machineType-' + $index" formControlName="machineType">
+                @for (mt of machineTypes; track mt.value) {
+                  <option [value]="mt.value">{{ mt.label }}</option>
+                }
+              </select>
+            </nldd-dropdown>
           </nldd-form-field>
 
           <!-- Autoscaling -->
