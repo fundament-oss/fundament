@@ -394,7 +394,13 @@ export default class DatacenterDetailComponent implements OnInit {
     if (form.id) {
       firstValueFrom(this.dcApi.updateRack(form.id, name, totalU))
         .then(() => {
-          const updated: DatacenterRack = { id: form.id!, rowId: form.rowId!, name, totalU };
+          const updated: DatacenterRack = {
+            id: form.id!,
+            rowId: form.rowId!,
+            name,
+            totalU,
+            positionInRow: form.positionInRow ?? 0,
+          };
           this.dcRacks.update((list) => list.map((r) => (r.id === form.id ? updated : r)));
           this.editRack.set(null);
         })
@@ -403,7 +409,13 @@ export default class DatacenterDetailComponent implements OnInit {
     } else {
       firstValueFrom(this.dcApi.createRack(form.rowId!, name, totalU))
         .then((res) => {
-          const created: DatacenterRack = { id: res.rackId, rowId: form.rowId!, name, totalU };
+          const created: DatacenterRack = {
+            id: res.rackId,
+            rowId: form.rowId!,
+            name,
+            totalU,
+            positionInRow: 0,
+          };
           this.dcRacks.update((list) => [...list, created]);
           this.editRack.set(null);
         })

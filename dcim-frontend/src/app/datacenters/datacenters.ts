@@ -13,23 +13,23 @@ import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import DcSelectorComponent from '../shared/dc-selector';
 import DatacenterApiService from './datacenter-api.service';
+import PlacementApiService from '../inventory/placement-api.service';
+import CatalogApiService from '../catalog/catalog-api.service';
+import { ASSET_CLIENT } from '../../connect/tokens';
 import connectErrorMessage from '../../connect/error';
-import { RACKS } from '../racks/rack.model';
+import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
-import {
-  AisleDefinition,
-  DatacenterInfo,
-  DatacenterStatus,
-  FLOOR_CONFIGS,
-  FLOOR_POSITIONS,
-  RackCell,
-  rackDeviceCount,
-  rackFillPct,
-  rackPowerW,
-} from './datacenter.model';
+import { DatacenterInfo, DatacenterStatus, RackCell } from './datacenter.model';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
+}
+
+interface DcStats {
+  rackCount: number;
+  deviceCount: number;
+  totalPowerKw: number;
+  capacityPct: number;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -47,6 +47,12 @@ export default class DatacentersComponent implements OnInit {
 
   private readonly dcApi = inject(DatacenterApiService);
 
+  private readonly placementApi = inject(PlacementApiService);
+
+  private readonly catalogApi = inject(CatalogApiService);
+
+  private readonly assetClient = inject(ASSET_CLIENT);
+
   // ── DC list (loaded from the API) ──────────────────────────────────────────
   readonly mutableDcs = signal<DatacenterInfo[]>([]);
 
@@ -61,6 +67,16 @@ export default class DatacentersComponent implements OnInit {
   tooltipY = signal(0);
 
   showRackTemplateModal = signal(false);
+
+  // ── Floor layout (loaded per datacenter from the API) ────────────────────────
+  readonly rackCells = signal<RackCell[]>([]);
+
+  readonly dcStats = signal<DcStats>({
+    rackCount: 0,
+    deviceCount: 0,
+    totalPowerKw: 0,
+    capacityPct: 0,
+  });
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editForm = signal<Partial<DatacenterInfo> | null>(null);
@@ -89,7 +105,8 @@ export default class DatacentersComponent implements OnInit {
       .then((res) => {
         this.mutableDcs.set(res.sites.map((s) => DatacenterApiService.mapSite(s)));
         if (!this.selectedDcId()) {
-          this.selectedDcId.set(this.mutableDcs()[0]?.id ?? '');
+          const first = this.mutableDcs()[0]?.id ?? '';
+          if (first) this.selectDc(first);
         }
       })
       // eslint-disable-next-line no-console
@@ -100,39 +117,88 @@ export default class DatacentersComponent implements OnInit {
     this.mutableDcs().find((dc) => dc.id === this.selectedDcId()),
   );
 
-  readonly dcRacks = computed(() => RACKS.filter((r) => r.dcId === this.selectedDcId()));
+  /**
+   * Loads the floor layout for a site: rack rows (grid rows), racks (grid
+   * columns via position_in_row), and per-rack stats derived from placements +
+   * catalog (rack units → fill %, power draw → power).
+   */
+  private async loadFloor(siteId: string): Promise<void> {
+    if (!siteId) {
+      this.rackCells.set([]);
+      this.dcStats.set({ rackCount: 0, deviceCount: 0, totalPowerKw: 0, capacityPct: 0 });
+      return;
+    }
+    try {
+      const [rowsRes, racksRes, catalogRes, assetsRes] = await Promise.all([
+        firstValueFrom(this.dcApi.listRackRowsBySite(siteId)),
+        firstValueFrom(this.dcApi.listRacksBySite(siteId)),
+        firstValueFrom(this.catalogApi.listCatalog()),
+        firstValueFrom(this.assetClient.listAssets({})),
+      ]);
 
-  readonly rackCells = computed((): RackCell[] =>
-    FLOOR_POSITIONS.filter((p) => p.dcId === this.selectedDcId()).map((p) => {
-      if (p.ownership === 'other-client') {
+      const rowNameById = new Map(rowsRes.rackRows.map((r) => [r.id, r.name]));
+      const racks = racksRes.racks
+        .map((summary) => summary.rack)
+        .filter((r) => r != null)
+        .map((r) => DatacenterApiService.mapRack(r));
+
+      // Catalog id → rack units occupied + nominal power draw.
+      const catalogStats = new Map<string, { units: number; powerW: number }>();
+      catalogRes.entries.forEach((e) => {
+        if (!e.entry) return;
+        const units = e.entry.rackUnits || parseRackHeight(e.entry.specs);
+        catalogStats.set(e.entry.id, { units, powerW: e.entry.powerDrawW });
+      });
+      const catalogByAsset = new Map(assetsRes.assets.map((a) => [a.id, a.deviceCatalogId]));
+
+      const placementArrays = await Promise.all(
+        racks.map((r) => firstValueFrom(this.placementApi.listPlacementsByRack(r.id))),
+      );
+
+      let totalUsedU = 0;
+      let totalCapacityU = 0;
+      let totalPowerW = 0;
+      let deviceCount = 0;
+
+      const cells: RackCell[] = racks.map((rack, i) => {
+        const placements = placementArrays[i].placements.filter((p) => p.location.case === 'rack');
+        const used = placements.reduce(
+          (acc, p) => {
+            const catId = catalogByAsset.get(p.assetId);
+            const stats = catId ? catalogStats.get(catId) : undefined;
+            return { units: acc.units + (stats?.units ?? 0), powerW: acc.powerW + (stats?.powerW ?? 0) };
+          },
+          { units: 0, powerW: 0 },
+        );
+        totalUsedU += used.units;
+        totalCapacityU += rack.totalU;
+        totalPowerW += used.powerW;
+        deviceCount += placements.length;
         return {
-          rackId: undefined,
-          rackName: '—',
-          row: p.row,
-          col: p.col,
-          fillPct: 0,
-          deviceCount: 0,
-          powerW: 0,
-          ownership: 'other-client' as const,
-          floorStatus: 'n/a' as const,
+          rackId: rack.id,
+          rackName: rack.name,
+          row: rowNameById.get(rack.rowId) ?? '?',
+          col: rack.positionInRow,
+          fillPct: rack.totalU > 0 ? Math.round((used.units / rack.totalU) * 100) : 0,
+          deviceCount: placements.length,
+          powerW: used.powerW,
         };
-      }
-      const id = p.rackId!;
-      return {
-        rackId: id,
-        rackName: RACKS.find((r) => r.id === id)?.name ?? id,
-        row: p.row,
-        col: p.col,
-        fillPct: rackFillPct(id),
-        deviceCount: rackDeviceCount(id),
-        powerW: rackPowerW(id),
-        ownership: 'own' as const,
-        floorStatus: p.floorStatus ?? 'operational',
-      };
-    }),
-  );
+      });
 
-  // All rows (including other-client) — used for the map view
+      this.rackCells.set(cells);
+      this.dcStats.set({
+        rackCount: racks.length,
+        deviceCount,
+        totalPowerKw: totalPowerW / 1000,
+        capacityPct: totalCapacityU > 0 ? Math.round((totalUsedU / totalCapacityU) * 100) : 0,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+    }
+  }
+
+  // All rack rows grouped for the map/isometric views.
   readonly floorRows = computed((): Map<string, RackCell[]> => {
     const floorMap = new Map<string, RackCell[]>();
     this.rackCells().forEach((cell) => {
@@ -151,183 +217,22 @@ export default class DatacentersComponent implements OnInit {
 
   readonly rowKeys = computed(() => [...this.floorRows().keys()].sort());
 
-  // Own racks only — used for the isometric view
-  readonly ownFloorRows = computed((): Map<string, RackCell[]> => {
-    const floorMap = new Map<string, RackCell[]>();
-    this.rackCells()
-      .filter((c) => c.ownership === 'own')
-      .forEach((cell) => {
-        const row = floorMap.get(cell.row) ?? [];
-        row.push(cell);
-        floorMap.set(cell.row, row);
-      });
-    floorMap.forEach((cells, key) => {
-      floorMap.set(
-        key,
-        [...cells].sort((a, b) => a.col - b.col),
-      );
-    });
-    return floorMap;
-  });
-
-  readonly ownRows = computed(() => [...this.ownFloorRows().keys()].sort());
-
-  readonly dcStats = computed(() => {
-    const racks = this.dcRacks();
-    const rackCount = racks.length;
-    const deviceCount = racks.reduce((sum, r) => sum + r.devices.length, 0);
-    const totalPowerW = racks.reduce(
-      (sum, r) => sum + r.devices.reduce((s, d) => s + (d.ipmi?.averageW ?? 0), 0),
-      0,
-    );
-    const totalUsedU = racks.reduce(
-      (sum, r) => sum + r.devices.reduce((s, d) => s + d.uSize, 0),
-      0,
-    );
-    const totalCapacity = racks.reduce((sum, r) => sum + r.totalU, 0);
-    const capacityPct = totalCapacity > 0 ? Math.round((totalUsedU / totalCapacity) * 100) : 0;
-    const issueCount = this.rackCells().filter((c) => c.floorStatus === 'issue').length;
-    return { rackCount, deviceCount, totalPowerKw: totalPowerW / 1000, capacityPct, issueCount };
-  });
-
   readonly hoveredCell = computed(() => {
     const id = this.hoveredRackId();
     return id ? (this.rackCells().find((c) => c.rackId === id) ?? null) : null;
   });
 
-  readonly currentFloorConfig = computed(() =>
-    FLOOR_CONFIGS.find((c) => c.dcId === this.selectedDcId()),
-  );
-
   readonly firstRackRoute = computed(() => {
-    const id = this.dcRacks()[0]?.id;
+    const id = this.rackCells()[0]?.rackId;
     return id ? ['/racks', id] : ['/racks'];
-  });
-
-  // ── Aisle helpers ──────────────────────────────────────────────────────────
-
-  aisleAfterRow(row: string): AisleDefinition | undefined {
-    return this.currentFloorConfig()?.aisles.find((a) => a.afterRow === row);
-  }
-
-  // ── Isometric SVG geometry ─────────────────────────────────────────────────
-
-  readonly CELL_W = 56;
-
-  readonly CELL_D = 32;
-
-  readonly MAX_H = 90;
-
-  readonly MIN_H = 20;
-
-  readonly COL_GAP = 10;
-
-  readonly ROW_GAP = 24;
-
-  isoPoints(
-    cell: RackCell,
-    rowIndex: number,
-  ): {
-    top: string;
-    left: string;
-    right: string;
-    label: { x: number; y: number };
-    pctLabel: { x: number; y: number };
-  } {
-    const h = this.MIN_H + (cell.fillPct / 100) * (this.MAX_H - this.MIN_H);
-
-    const originX =
-      260 +
-      (cell.col - 1) * (this.CELL_W / 2 + this.CELL_D / 2 + this.COL_GAP) -
-      rowIndex * (this.CELL_W / 2 + this.COL_GAP);
-    const originY =
-      80 + rowIndex * (this.CELL_D / 2 + this.ROW_GAP) + (cell.col - 1) * (this.CELL_D / 2);
-
-    const bx = originX;
-    const by = originY + h;
-
-    const t0x = bx;
-    const t0y = by - h - this.CELL_D / 2;
-    const t1x = bx + this.CELL_W / 2;
-    const t1y = by - h;
-    const t2x = bx;
-    const t2y = by - h + this.CELL_D / 2;
-    const t3x = bx - this.CELL_W / 2;
-    const t3y = by - h;
-
-    const l0x = bx - this.CELL_W / 2;
-    const l0y = by - h;
-    const l1x = bx;
-    const l1y = by - h + this.CELL_D / 2;
-    const l2x = bx;
-    const l2y = by + this.CELL_D / 2;
-    const l3x = bx - this.CELL_W / 2;
-    const l3y = by;
-
-    const r0x = bx;
-    const r0y = by - h + this.CELL_D / 2;
-    const r1x = bx + this.CELL_W / 2;
-    const r1y = by - h;
-    const r2x = bx + this.CELL_W / 2;
-    const r2y = by;
-    const r3x = bx;
-    const r3y = by + this.CELL_D / 2;
-
-    const pt = (...pairs: number[]) =>
-      pairs
-        .reduce<string[]>((acc, v, i) => {
-          if (i % 2 === 0) acc.push(`${v}`);
-          else acc[acc.length - 1] += `,${v}`;
-          return acc;
-        }, [])
-        .join(' ');
-
-    return {
-      top: pt(t0x, t0y, t1x, t1y, t2x, t2y, t3x, t3y),
-      left: pt(l0x, l0y, l1x, l1y, l2x, l2y, l3x, l3y),
-      right: pt(r0x, r0y, r1x, r1y, r2x, r2y, r3x, r3y),
-      label: { x: bx, y: by + this.CELL_D / 2 + 14 },
-      pctLabel: { x: bx, y: t0y - 4 },
-    };
-  }
-
-  readonly isoViewBox = computed((): string => {
-    const rows = this.ownRows().length;
-    const maxCols = Math.max(...this.ownRows().map((r) => this.ownFloorRows().get(r)!.length), 1);
-    const w = 520 + maxCols * (this.CELL_W + this.COL_GAP);
-    const h = 200 + rows * (this.MAX_H + this.CELL_D + this.ROW_GAP * 2);
-    return `0 0 ${w} ${h}`;
   });
 
   // ── Color helpers ──────────────────────────────────────────────────────────
 
-  readonly rackCellClass = (cell: RackCell): string => {
-    if (cell.floorStatus === 'issue')
-      return 'bg-red-50 border-red-300 text-red-600 hover:border-red-500 cursor-pointer';
-    return 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:border-emerald-500 cursor-pointer';
-  };
+  readonly rackCellClass = (): string =>
+    'bg-emerald-50 border-emerald-300 text-emerald-700 hover:border-emerald-500 cursor-pointer';
 
-  readonly rackFillBarClass = (cell: RackCell): string => {
-    if (cell.floorStatus === 'issue') return 'bg-red-200';
-    return 'bg-emerald-200';
-  };
-
-  static isoColorTop(cell: RackCell): string {
-    return cell.floorStatus === 'issue' ? '#fca5a5' : '#6ee7b7';
-  }
-
-  static isoColorLeft(cell: RackCell): string {
-    return cell.floorStatus === 'issue' ? '#f87171' : '#34d399';
-  }
-
-  static isoColorRight(cell: RackCell): string {
-    return cell.floorStatus === 'issue' ? '#ef4444' : '#10b981';
-  }
-
-  static isoStroke(cell: RackCell, hovered: boolean): string {
-    if (hovered) return '#6366f1';
-    return cell.floorStatus === 'issue' ? '#fca5a5' : '#6ee7b7';
-  }
+  readonly rackFillBarClass = (): string => 'bg-emerald-200';
 
   readonly statusBadgeClass = (status: DatacenterStatus): string => {
     switch (status) {
@@ -444,7 +349,7 @@ export default class DatacentersComponent implements OnInit {
         .then((res) => {
           const created = { ...updated, id: res.siteId || updated.id };
           this.mutableDcs.update((list) => [...list, created]);
-          this.selectedDcId.set(created.id);
+          this.selectDc(created.id);
           this.editForm.set(null);
         })
         // eslint-disable-next-line no-console
@@ -468,7 +373,7 @@ export default class DatacentersComponent implements OnInit {
         this.mutableDcs.update((list) => list.filter((dc) => dc.id !== target.id));
         if (this.selectedDcId() === target.id) {
           const remaining = this.mutableDcs();
-          this.selectedDcId.set(remaining[0]?.id ?? '');
+          this.selectDc(remaining[0]?.id ?? '');
         }
         this.deleteTarget.set(null);
       })
@@ -481,6 +386,7 @@ export default class DatacentersComponent implements OnInit {
   selectDc(id: string): void {
     this.selectedDcId.set(id);
     this.hoveredRackId.set(null);
+    this.loadFloor(id).catch(() => undefined);
   }
 
   onMapMouseMove(event: MouseEvent): void {
