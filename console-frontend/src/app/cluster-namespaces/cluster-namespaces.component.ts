@@ -147,7 +147,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   getProjectName(projectId: string): string {
     const project = this.projects().find((p) => p.id === projectId);
-    return project?.name || projectId;
+    return project?.alias || projectId;
   }
 
   openAddNamespaceModal(): void {

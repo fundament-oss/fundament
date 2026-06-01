@@ -389,7 +389,7 @@ export default class App implements OnInit {
     if (label === ':projectName') {
       await this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
       const projectData = this.organizationDataService.getProjectById(params['id']);
-      label = projectData?.project.name ?? 'Project';
+      label = projectData?.project.alias ?? 'Project';
     }
 
     if (label === ':pluginAlias') {
@@ -620,7 +620,11 @@ export default class App implements OnInit {
       .filter((org) => !pendingOrgIds.has(org.id))
       .map((org) => {
         const detailed = detailedOrgs.find((d) => d.id === org.id);
-        const projects = detailed ? detailed.clusters.flatMap((c) => c.projects) : [];
+        const projects = detailed
+          ? detailed.clusters.flatMap((c) =>
+              c.projects.map((p) => ({ ...p, alias: p.alias ?? p.name })),
+            )
+          : [];
         return { id: org.id, name: org.name, alias: org.alias, projects };
       });
   });
@@ -645,7 +649,7 @@ export default class App implements OnInit {
       if (projectId) {
         const projectData = this.organizationDataService.getProjectById(projectId);
         if (projectData) {
-          return { type: 'project', name: projectData.project.name };
+          return { type: 'project', name: projectData.project.alias ?? projectData.project.name };
         }
       }
     } else if (type === 'organization') {

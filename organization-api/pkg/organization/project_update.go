@@ -2,13 +2,17 @@ package organization
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -27,12 +31,17 @@ func (s *Server) UpdateProject(
 		ID: projectID,
 	}
 
-	if req.Msg.HasName() {
-		params.Name = pgtype.Text{String: req.Msg.GetName(), Valid: true}
+	if req.Msg.HasAlias() {
+		params.Alias = pgtype.Text{String: req.Msg.GetAlias(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.ProjectUpdate(ctx, params)
 	if err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.CheckViolation {
+			if pgErr.ConstraintName == dbconst.ConstraintProjectsCkAlias {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("alias must be between 1 and 255 characters"))
+			}
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update project: %w", err))
 	}
 

@@ -15,6 +15,7 @@ import { ListProjectsRequestSchema } from '../generated/v1/project_pb';
 export interface ProjectData {
   id: string;
   name: string;
+  alias: string;
 }
 
 export interface ClusterData {
@@ -180,6 +181,7 @@ export class OrganizationDataService {
             projects: projectsResponse.projects.map((project) => ({
               id: project.id,
               name: project.name,
+              alias: project.alias,
             })),
           };
         }),
@@ -264,15 +266,15 @@ export class OrganizationDataService {
   }
 
   /**
-   * Update the cached project name without a full reload
+   * Update the cached project alias without a full reload
    */
-  updateProjectName(projectId: string, name: string) {
+  updateProjectAlias(projectId: string, alias: string) {
     this.organizations.update((orgs) =>
       orgs.map((org) => ({
         ...org,
         clusters: org.clusters.map((c) => ({
           ...c,
-          projects: c.projects.map((p) => (p.id === projectId ? { ...p, name } : p)),
+          projects: c.projects.map((p) => (p.id === projectId ? { ...p, alias } : p)),
         })),
       })),
     );
