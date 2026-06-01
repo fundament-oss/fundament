@@ -180,6 +180,8 @@ dcimAuthnApi:
   enabled: true
   replicas: 1
   logLevel: debug
+  # ROPC login against dex static passwords is convenient for local dev only.
+  passwordLoginEnabled: true
 
 authzWorker:
   enabled: true

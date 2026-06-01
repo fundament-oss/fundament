@@ -31,13 +31,15 @@ type config struct {
 	CookieSecure       bool          `env:"COOKIE_SECURE"`
 	ListenAddr         string        `env:"LISTEN_ADDR" envDefault:":8080"`
 	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
+	MaxSessionAge      time.Duration `env:"MAX_SESSION_AGE" envDefault:"168h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"https://dcim.fundament.localhost:8443"`
 	// PasswordLoginEnabled exposes the OAuth2 resource-owner-password-credentials
 	// (ROPC) login endpoint. ROPC is convenient against dex's static passwords for
-	// local/dev, but is discouraged for real identity providers, so it can be
-	// disabled in production in favour of the redirect-based OIDC flow.
-	PasswordLoginEnabled bool `env:"PASSWORD_LOGIN_ENABLED" envDefault:"true"`
+	// local/dev, but is discouraged for real identity providers, so it defaults to
+	// disabled and must be explicitly enabled (e.g. only in local/dev) in favour of
+	// the redirect-based OIDC flow.
+	PasswordLoginEnabled bool `env:"PASSWORD_LOGIN_ENABLED" envDefault:"false"`
 }
 
 func main() {
@@ -99,15 +101,19 @@ func run() error {
 		Scopes:      []string{oidc.ScopeOpenID, "profile", "email"},
 	}
 
-	sessionStore := dcimauthn.NewSessionStore([]byte(cfg.JWTSecret))
+	sessionStore, err := dcimauthn.NewSessionStore([]byte(cfg.JWTSecret))
+	if err != nil {
+		return fmt.Errorf("creating session store: %w", err)
+	}
 	sessionStore.ConfigureOptions(cfg.CookieDomain, cfg.CookieSecure)
 
 	serverCfg := &dcimauthn.Config{
-		TokenExpiry:  cfg.TokenExpiry,
-		JWTSecret:    []byte(cfg.JWTSecret),
-		CookieDomain: cfg.CookieDomain,
-		CookieSecure: cfg.CookieSecure,
-		FrontendURL:  cfg.FrontendURL,
+		TokenExpiry:   cfg.TokenExpiry,
+		JWTSecret:     []byte(cfg.JWTSecret),
+		CookieDomain:  cfg.CookieDomain,
+		CookieSecure:  cfg.CookieSecure,
+		FrontendURL:   cfg.FrontendURL,
+		MaxSessionAge: cfg.MaxSessionAge,
 	}
 
 	server := dcimauthn.New(logger, serverCfg, oauth2Config, verifier, sessionStore)

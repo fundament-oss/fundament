@@ -32,6 +32,7 @@ images:
   openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
   pluginController: ghcr.io/fundament-oss/fundament/plugin-controller:latest
   dcimApi: ghcr.io/fundament-oss/fundament/dcim-api:latest
+  dcimAuthnApi: ghcr.io/fundament-oss/fundament/dcim-authn-api:latest
   dcimFrontend: ghcr.io/fundament-oss/fundament/dcim-frontend:latest
 
 # Database (CloudNativePG)
@@ -142,6 +143,24 @@ dcimApi:
     enabled: false
     parentRefs: []
     hostnames: []
+
+# DCIM Auth API
+dcimAuthnApi:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  # Absolute session lifetime across token refreshes (Go duration).
+  maxSessionAge: 168h
+  # ROPC password login. Keep false in production; enable only for local/dev.
+  passwordLoginEnabled: false
+
+# Dex for DCIM (OIDC Identity Provider)
+dexDcim:
+  enabled: false
+  issuer: ""
+  discoveryUrl: "" # Internal URL for OIDC discovery (defaults to issuer if empty)
+  staticClients: []
+  staticPasswords: []
 
 # DCIM Frontend
 dcimFrontend:

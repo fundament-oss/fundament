@@ -75,6 +75,8 @@ metadata:
 spec:
   type: ClusterIP
   ports:
+    # dex listens only on 5556; 8080 is an alias so callers using the common
+    # backend port convention reach the same container port.
     - port: 5556
       targetPort: http
       name: http

@@ -31,6 +31,10 @@ type Claims struct {
 	OrganizationIDs []uuid.UUID `json:"organization_ids"`
 	Groups          []string    `json:"groups"`
 	Name            string      `json:"name"`
+	// AuthTime is the time at which the user originally authenticated. It is
+	// preserved across token refreshes so services can enforce an absolute
+	// session lifetime independent of the (shorter) per-token expiry.
+	AuthTime *jwt.NumericDate `json:"auth_time,omitempty"`
 }
 
 func (c *Claims) UserID() uuid.UUID {

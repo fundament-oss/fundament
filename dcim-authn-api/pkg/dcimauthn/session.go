@@ -1,6 +1,8 @@
 package dcimauthn
 
 import (
+	"crypto/hkdf"
+	"crypto/sha256"
 	"fmt"
 	"net/http"
 
@@ -18,9 +20,28 @@ type SessionStore struct {
 	store *sessions.CookieStore
 }
 
-// NewSessionStore creates a new session store with the given secret key.
-func NewSessionStore(secret []byte) *SessionStore {
-	store := sessions.NewCookieStore(secret)
+// deriveKey derives a fixed-length key from secret using HKDF-SHA256 with a
+// distinct info label, so that keys used for different purposes are
+// cryptographically independent even when seeded from the same input secret.
+func deriveKey(secret []byte, info string, length int) ([]byte, error) {
+	return hkdf.Key(sha256.New, secret, nil, info, length)
+}
+
+// NewSessionStore creates a new session store keyed from the given secret.
+// The cookie store's authentication (hash) and encryption (block) keys are
+// derived from secret via HKDF rather than using it directly, which keeps them
+// independent from the JWT signing secret and encrypts the stored OAuth state.
+func NewSessionStore(secret []byte) (*SessionStore, error) {
+	hashKey, err := deriveKey(secret, "dcim-authn-session-hash", 32)
+	if err != nil {
+		return nil, fmt.Errorf("deriving session hash key: %w", err)
+	}
+	blockKey, err := deriveKey(secret, "dcim-authn-session-block", 32)
+	if err != nil {
+		return nil, fmt.Errorf("deriving session block key: %w", err)
+	}
+
+	store := sessions.NewCookieStore(hashKey, blockKey)
 	store.Options = &sessions.Options{
 		Path:     "/",
 		MaxAge:   600, // 10 minutes for OAuth state
@@ -28,7 +49,7 @@ func NewSessionStore(secret []byte) *SessionStore {
 		Secure:   false,
 		SameSite: http.SameSiteStrictMode,
 	}
-	return &SessionStore{store: store}
+	return &SessionStore{store: store}, nil
 }
 
 // ConfigureOptions allows customizing session options.
