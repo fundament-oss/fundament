@@ -18,13 +18,10 @@ import RackDiagramComponent from '../rack-diagram/rack-diagram';
 import {
   ConnectionStatus,
   ConnectionType,
-  DeviceHistoryAction,
-  DeviceHistoryEntry,
   DeviceState,
   DeviceType,
   Rack,
   RackDevice,
-  DEVICE_HISTORY,
 } from '../rack.model';
 import {
   Cable,
@@ -34,8 +31,9 @@ import {
   PORT_TABS,
   PORT_TYPE_LABEL,
 } from '../../patch-mapping/cable.model';
-import { NoteComment } from '../../inventory/inventory';
+import { HistoryEntry, NoteComment } from '../../inventory/inventory';
 import NoteApiService from '../../inventory/note-api.service';
+import InventoryApiService from '../../inventory/inventory-api.service';
 import PatchMappingApiService from '../../patch-mapping/patch-mapping-api.service';
 import PlacementApiService from '../../inventory/placement-api.service';
 import CatalogApiService from '../../catalog/catalog-api.service';
@@ -75,6 +73,8 @@ export default class DeviceDetailComponent {
   private readonly patchApi = inject(PatchMappingApiService);
 
   private readonly noteApi = inject(NoteApiService);
+
+  private readonly inventoryApi = inject(InventoryApiService);
 
   private readonly rackApi = inject(RackApiService);
 
@@ -219,9 +219,10 @@ export default class DeviceDetailComponent {
       });
       const deviceNameById = new Map(devices.map((d) => [d.id, d.name]));
 
-      const [connsRes, notesRes] = await Promise.all([
+      const [connsRes, notesRes, eventsRes] = await Promise.all([
         firstValueFrom(this.patchApi.listConnectionsByPlacement(placement.id)),
         firstValueFrom(this.noteApi.listNotesForPlacement(placement.id)),
+        firstValueFrom(this.inventoryApi.getAssetEvents(asset.id)),
       ]);
       this.cables.set(
         connsRes.connections.map((c) =>
@@ -229,6 +230,7 @@ export default class DeviceDetailComponent {
         ),
       );
       this.notes.set(notesRes.notes.map(NoteApiService.mapNote));
+      this.deviceHistory.set(eventsRes.events.map(InventoryApiService.mapAssetEvent));
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
@@ -315,9 +317,8 @@ export default class DeviceDetailComponent {
     });
   }
 
-  readonly deviceHistory = computed<DeviceHistoryEntry[]>(
-    () => DEVICE_HISTORY[this.deviceId()] ?? [],
-  );
+  /** Audit timeline for this device's asset, loaded from the asset-events API. */
+  readonly deviceHistory = signal<HistoryEntry[]>([]);
 
   /** This device's physical connections, derived from the loaded cables. */
   readonly deviceConnections = computed<DeviceConnectionView[]>(() => {
@@ -489,24 +490,30 @@ export default class DeviceDetailComponent {
     return months === 1 ? '1 month ago' : `${months} months ago`;
   };
 
-  readonly historyIcon = (action: DeviceHistoryAction): string => {
-    const icons: Record<DeviceHistoryAction, string> = {
-      'state-change': 'ti-refresh text-indigo-500',
-      maintenance: 'ti-tool text-amber-500',
-      allocation: 'ti-users text-teal-500',
-      hardware: 'ti-cpu text-blue-500',
-      created: 'ti-plus text-green-500',
+  readonly historyIcon = (action: HistoryEntry['action']): string => {
+    const icons: Record<HistoryEntry['action'], string> = {
+      received: 'ti-arrow-right text-sky-500',
+      deployed: 'ti-circle-check text-teal-500',
+      moved: 'ti-arrows-up-down text-sky-500',
+      'repair-sent': 'ti-tool text-amber-500',
+      'repair-received': 'ti-tool text-amber-500',
+      decommissioned: 'ti-circle-off text-slate-500',
+      requested: 'ti-clock text-purple-500',
+      note: 'ti-info-circle text-indigo-500',
     };
     return icons[action];
   };
 
-  readonly historyIconBg = (action: DeviceHistoryAction): string => {
-    const bg: Record<DeviceHistoryAction, string> = {
-      'state-change': 'bg-indigo-50',
-      maintenance: 'bg-amber-50',
-      allocation: 'bg-teal-50',
-      hardware: 'bg-blue-50',
-      created: 'bg-green-50',
+  readonly historyIconBg = (action: HistoryEntry['action']): string => {
+    const bg: Record<HistoryEntry['action'], string> = {
+      received: 'bg-sky-50',
+      deployed: 'bg-teal-50',
+      moved: 'bg-sky-50',
+      'repair-sent': 'bg-amber-50',
+      'repair-received': 'bg-amber-50',
+      decommissioned: 'bg-slate-100',
+      requested: 'bg-purple-50',
+      note: 'bg-indigo-50',
     };
     return bg[action];
   };
