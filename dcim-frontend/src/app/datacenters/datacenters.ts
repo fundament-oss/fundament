@@ -17,6 +17,7 @@ import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import { ASSET_CLIENT } from '../../connect/tokens';
 import connectErrorMessage from '../../connect/error';
+import parseValidationError from '../../connect/validation';
 import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
 import { DatacenterInfo, DatacenterStatus, RackCell } from './datacenter.model';
@@ -82,6 +83,11 @@ export default class DatacentersComponent implements OnInit {
   editForm = signal<Partial<DatacenterInfo> | null>(null);
 
   deleteTarget = signal<DatacenterInfo | null>(null);
+
+  // ── Validation feedback ──────────────────────────────────────────────────────
+  readonly invalidFields = signal<Record<string, string>>({});
+
+  readonly formErrorMessage = signal<string | null>(null);
 
   private readonly editSheetEl = viewChild<NativeElementRef>('editSheet');
 
@@ -294,7 +300,27 @@ export default class DatacentersComponent implements OnInit {
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearErrors(): void {
+    this.invalidFields.set({});
+    this.formErrorMessage.set(null);
+  }
+
+  private handleError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.formErrorMessage.set(message);
+  }
+
   openCreateDc(): void {
+    this.clearErrors();
     this.editForm.set({
       id: '',
       name: '',
@@ -310,16 +336,19 @@ export default class DatacentersComponent implements OnInit {
   }
 
   openEditDc(dc: DatacenterInfo): void {
+    this.clearErrors();
     this.editForm.set({ ...dc });
   }
 
   closeEditForm(): void {
+    this.clearErrors();
     this.editForm.set(null);
   }
 
   saveDc(): void {
     const form = this.editForm();
     if (!form) return;
+    this.clearErrors();
     const updated: DatacenterInfo = {
       id: form.id || `dc-${Date.now()}`,
       name: this.fName()?.nativeElement.value ?? '',
@@ -342,8 +371,7 @@ export default class DatacentersComponent implements OnInit {
           this.mutableDcs.update((list) => list.map((dc) => (dc.id === form.id ? updated : dc)));
           this.editForm.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     } else {
       firstValueFrom(this.dcApi.createSite(updated))
         .then((res) => {
@@ -352,8 +380,7 @@ export default class DatacentersComponent implements OnInit {
           this.selectDc(created.id);
           this.editForm.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     }
   }
 

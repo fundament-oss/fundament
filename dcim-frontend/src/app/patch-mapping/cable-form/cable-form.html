@@ -8,6 +8,13 @@
 
   <nldd-simple-section>
     <div class="flex flex-col gap-6">
+      @if (serverError()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ serverError() }}
+          </p>
+        </div>
+      }
       <!-- ── A Side ──────────────────────────────────────────────────────────── -->
       <section aria-labelledby="aside-heading">
         <h3

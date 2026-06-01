@@ -53,6 +53,9 @@ export default class CableFormComponent {
   /** Selectable devices (placements) in the active datacenter. */
   readonly devices = input<DeviceOption[]>([]);
 
+  /** Server-side validation/error message from the last save attempt. */
+  readonly serverError = input<string | null>(null);
+
   readonly save = output<Cable>();
 
   readonly cancelForm = output<void>();

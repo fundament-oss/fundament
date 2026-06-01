@@ -189,13 +189,25 @@
       (dismiss)="closeDesignForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section>
+      @if (formErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ formErrorMessage() }}
+          </p>
+        </div>
+      }
       <nldd-form-field label="Design name">
         <nldd-text-field
           #fDesignName
           value=""
           placeholder="E.g. AMS-01 Compute Cluster v2"
           (keydown.enter)="saveDesign()"
+          [attr.invalid]="isFieldInvalid('name') ? '' : null"
+          error-message="error-design-name"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-design-name">{{
+          fieldError('name')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       <p class="text-xs text-slate-400">Version will be set to 1 and status to Draft.</p>
     </nldd-simple-section>

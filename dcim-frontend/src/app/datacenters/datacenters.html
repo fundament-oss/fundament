@@ -391,13 +391,25 @@
       (dismiss)="closeEditForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
+      @if (formErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ formErrorMessage() }}
+          </p>
+        </div>
+      }
       <nldd-form-field label="Short name (e.g. AMS-01)">
         <nldd-text-field
           #fName
           [attr.value]="editForm()?.name ?? ''"
           placeholder="AMS-01"
           (keydown.enter)="saveDc()"
+          [attr.invalid]="isFieldInvalid('name') ? '' : null"
+          error-message="error-dc-name"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-dc-name">{{
+          fieldError('name')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       <nldd-form-field label="Full name">
         <nldd-text-field
@@ -405,7 +417,12 @@
           [attr.value]="editForm()?.fullName ?? ''"
           placeholder="Amsterdam West"
           (keydown.enter)="saveDc()"
+          [attr.invalid]="isFieldInvalid('full_name') ? '' : null"
+          error-message="error-dc-fullname"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-dc-fullname">{{
+          fieldError('full_name')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="City">
@@ -414,7 +431,12 @@
             [attr.value]="editForm()?.city ?? ''"
             placeholder="Amsterdam"
             (keydown.enter)="saveDc()"
+            [attr.invalid]="isFieldInvalid('city') ? '' : null"
+            error-message="error-dc-city"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-dc-city">{{
+            fieldError('city')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Country">
           <nldd-text-field
@@ -422,7 +444,12 @@
             [attr.value]="editForm()?.country ?? ''"
             placeholder="Netherlands"
             (keydown.enter)="saveDc()"
+            [attr.invalid]="isFieldInvalid('country') ? '' : null"
+            error-message="error-dc-country"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-dc-country">{{
+            fieldError('country')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
       </div>
       <nldd-form-field label="Address">
@@ -431,7 +458,12 @@
           [attr.value]="editForm()?.address ?? ''"
           placeholder="Street, City"
           (keydown.enter)="saveDc()"
+          [attr.invalid]="isFieldInvalid('address') ? '' : null"
+          error-message="error-dc-address"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-dc-address">{{
+          fieldError('address')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Tier">
@@ -473,7 +505,12 @@
           max="2100"
           full-width
           (keydown.enter)="saveDc()"
+          [attr.invalid]="isFieldInvalid('established') ? '' : null"
+          error-message="error-dc-established"
         ></nldd-number-field>
+        <nldd-form-field-error-text id="error-dc-established">{{
+          fieldError('established')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       <nldd-form-field label="Floor space (m²)">
         <nldd-number-field
@@ -482,7 +519,12 @@
           min="0"
           full-width
           (keydown.enter)="saveDc()"
+          [attr.invalid]="isFieldInvalid('floor_sqm') ? '' : null"
+          error-message="error-dc-floorsqm"
         ></nldd-number-field>
+        <nldd-form-field-error-text id="error-dc-floorsqm">{{
+          fieldError('floor_sqm')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
     </nldd-simple-section>
     <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">

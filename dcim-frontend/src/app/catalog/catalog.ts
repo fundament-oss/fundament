@@ -11,13 +11,12 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { Code, ConnectError } from '@connectrpc/connect';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import { AssetCategory, CatalogEntry } from '../inventory/inventory';
 import CatalogApiService from './catalog-api.service';
 import InventoryApiService from '../inventory/inventory-api.service';
 import connectErrorMessage from '../../connect/error';
-import { ViolationsSchema } from '../../generated/buf/validate/validate_pb';
+import parseValidationError from '../../connect/validation';
 import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
 
@@ -293,30 +292,9 @@ export default class CatalogComponent implements OnInit {
   }
 
   private handleEntryError(err: unknown): void {
-    const ce = ConnectError.from(err);
-
-    if (ce.code === Code.InvalidArgument) {
-      const fieldErrors: InvalidFields = {};
-      const unmappedMessages: string[] = [];
-      ce.findDetails(ViolationsSchema)
-        .flatMap((violations) => violations.violations)
-        .forEach((v) => {
-          const field = v.field?.elements.map((e) => e.fieldName).join('.') ?? '';
-          if (field) fieldErrors[field] = v.message;
-          else unmappedMessages.push(v.message);
-        });
-      if (Object.keys(fieldErrors).length > 0) {
-        this.invalidFields.set(fieldErrors);
-        // Violations without a field path can't attach to an input — show them in the banner.
-        if (unmappedMessages.length > 0) {
-          this.entryErrorMessage.set(unmappedMessages.join('\n'));
-        }
-        return;
-      }
-    }
-
-    // Non-validation errors (e.g. AlreadyExists) have no input to attach to.
-    this.entryErrorMessage.set(connectErrorMessage(err));
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.entryErrorMessage.set(message);
   }
 
   openDeleteEntry(entry: CatalogEntry, event: Event): void {

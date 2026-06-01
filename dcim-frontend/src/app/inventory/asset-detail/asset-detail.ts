@@ -26,6 +26,7 @@ import CatalogApiService from '../../catalog/catalog-api.service';
 import NoteApiService from '../note-api.service';
 import PlacementApiService, { RackOption } from '../placement-api.service';
 import connectErrorMessage from '../../../connect/error';
+import parseValidationError from '../../../connect/validation';
 
 @Component({
   selector: 'app-asset-detail',
@@ -68,6 +69,10 @@ export default class AssetDetailComponent implements OnInit {
 
   /** Holds the asset being edited; non-null while the edit sheet is open. */
   readonly editAsset = signal<Partial<Asset> | null>(null);
+
+  readonly invalidFields = signal<Record<string, string>>({});
+
+  readonly formErrorMessage = signal<string | null>(null);
 
   readonly statuses: { value: AssetStatus; label: string }[] = [
     { value: 'deployed', label: 'Deployed' },
@@ -217,9 +222,29 @@ export default class AssetDetailComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearErrors(): void {
+    this.invalidFields.set({});
+    this.formErrorMessage.set(null);
+  }
+
+  private handleError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.formErrorMessage.set(message);
+  }
+
   openEditAsset(): void {
     const current = this.asset();
     if (!current) return;
+    this.clearErrors();
     // Resolve the existing placement before opening, so the location picker
     // renders with the right rack pre-selected.
     firstValueFrom(this.placementApi.getPlacementByAsset(current.id))
@@ -245,12 +270,14 @@ export default class AssetDetailComponent implements OnInit {
   }
 
   closeAssetForm(): void {
+    this.clearErrors();
     this.editAsset.set(null);
   }
 
   saveAsset(): void {
     const current = this.asset();
     if (!current) return;
+    this.clearErrors();
     const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
     const updated: Asset = {
       ...current,
@@ -271,8 +298,7 @@ export default class AssetDetailComponent implements OnInit {
         this.editAsset.set(null);
         this.loadLocation();
       })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+      .catch((err) => this.handleError(err));
   }
 
   private reconcilePlacement(assetId: string): Promise<unknown> {

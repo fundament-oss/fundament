@@ -10,12 +10,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
+import parseValidationError from '../../../connect/validation';
 import { DatacenterInfo, DatacenterRack, RackRow, Room } from '../datacenter.model';
 import DatacenterApiService from '../datacenter-api.service';
 import connectErrorMessage from '../../../connect/error';
-import { ViolationsSchema } from '../../../generated/buf/validate/validate_pb';
 
 type InvalidFields = Record<string, string>;
 
@@ -223,28 +222,9 @@ export default class DatacenterDetailComponent implements OnInit {
   }
 
   private handleRoomError(err: unknown): void {
-    const ce = ConnectError.from(err);
-
-    if (ce.code === Code.InvalidArgument) {
-      const fieldErrors: InvalidFields = {};
-      const unmappedMessages: string[] = [];
-      ce.findDetails(ViolationsSchema)
-        .flatMap((violations) => violations.violations)
-        .forEach((v) => {
-          const field = v.field?.elements.map((e) => e.fieldName).join('.') ?? '';
-          if (field) fieldErrors[field] = v.message;
-          else unmappedMessages.push(v.message);
-        });
-      if (Object.keys(fieldErrors).length > 0) {
-        this.roomInvalidFields.set(fieldErrors);
-        if (unmappedMessages.length > 0) {
-          this.roomErrorMessage.set(unmappedMessages.join('\n'));
-        }
-        return;
-      }
-    }
-
-    this.roomErrorMessage.set(connectErrorMessage(err));
+    const { fields, message } = parseValidationError(err);
+    this.roomInvalidFields.set(fields);
+    this.roomErrorMessage.set(message);
   }
 
   saveRoom(): void {

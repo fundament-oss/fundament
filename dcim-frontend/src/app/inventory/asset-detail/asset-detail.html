@@ -547,6 +547,13 @@
       (dismiss)="closeAssetForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
+      @if (formErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ formErrorMessage() }}
+          </p>
+        </div>
+      }
       <nldd-form-field label="Device">
         <select disabled>
           <option selected>{{ editAsset()?.model }}</option>
@@ -559,7 +566,12 @@
             [attr.value]="editAsset()?.assetTag ?? ''"
             placeholder="AST-001"
             (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('asset_tag') ? '' : null"
+            error-message="error-ad-asset-tag"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-ad-asset-tag">{{
+            fieldError('asset_tag')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Status">
           <select #fAssetStatus>
@@ -581,7 +593,12 @@
             [attr.value]="editAsset()?.serialNumber ?? ''"
             placeholder="SN-…"
             (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('serial_number') ? '' : null"
+            error-message="error-ad-asset-serial"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-ad-asset-serial">{{
+            fieldError('serial_number')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Warranty expiry" [optional]="true">
           <nldd-text-field

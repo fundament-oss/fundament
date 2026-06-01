@@ -19,6 +19,7 @@ import InventoryApiService from './inventory-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import PlacementApiService, { RackOption } from './placement-api.service';
 import connectErrorMessage from '../../connect/error';
+import parseValidationError from '../../connect/validation';
 
 export type AssetStatus =
   | 'needs-repair'
@@ -184,6 +185,11 @@ export default class InventoryComponent implements OnInit {
   readonly defaultSlotType = RackSlotType.UNIT;
 
   deleteAsset = signal<Asset | null>(null);
+
+  // ── Validation feedback ──────────────────────────────────────────────────────
+  readonly invalidFields = signal<Record<string, string>>({});
+
+  readonly formErrorMessage = signal<string | null>(null);
 
   private readonly assetSheetEl = viewChild<ElementRef>('assetSheet');
 
@@ -359,7 +365,27 @@ export default class InventoryComponent implements OnInit {
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearErrors(): void {
+    this.invalidFields.set({});
+    this.formErrorMessage.set(null);
+  }
+
+  private handleError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.formErrorMessage.set(message);
+  }
+
   openCreateAsset(): void {
+    this.clearErrors();
     this.editPlacement.set(null);
     this.editAsset.set({
       id: '',
@@ -373,6 +399,7 @@ export default class InventoryComponent implements OnInit {
   openEditAsset(asset: Asset, event: Event): void {
     event.preventDefault();
     event.stopPropagation();
+    this.clearErrors();
     // Resolve the existing placement before opening, so the location picker
     // renders with the right rack pre-selected.
     firstValueFrom(this.placementApi.getPlacementByAsset(asset.id))
@@ -398,12 +425,14 @@ export default class InventoryComponent implements OnInit {
   }
 
   closeAssetForm(): void {
+    this.clearErrors();
     this.editAsset.set(null);
   }
 
   saveAsset(): void {
     const form = this.editAsset();
     if (!form) return;
+    this.clearErrors();
     const deviceCatalogId =
       (this.fAssetDevice()?.nativeElement as HTMLSelectElement)?.value ??
       form.deviceCatalogId ??
@@ -430,8 +459,7 @@ export default class InventoryComponent implements OnInit {
           this.loadStats();
           this.editAsset.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     } else {
       firstValueFrom(this.inventoryApi.createAsset(updated))
         .then((res) =>
@@ -441,8 +469,7 @@ export default class InventoryComponent implements OnInit {
             this.editAsset.set(null);
           }),
         )
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     }
   }
 

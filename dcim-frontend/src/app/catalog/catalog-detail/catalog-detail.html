@@ -353,13 +353,25 @@
       (dismiss)="closePortDefForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section>
+      @if (formErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ formErrorMessage() }}
+          </p>
+        </div>
+      }
       <nldd-form-field label="Port name">
         <nldd-text-field
           #fPortName
           [attr.value]="editPortDef()?.name ?? ''"
           placeholder="E.g. nic0"
           (keydown.enter)="savePortDef()"
+          [attr.invalid]="isFieldInvalid('name') ? '' : null"
+          error-message="error-port-name"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-port-name">{{
+          fieldError('name')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       <nldd-form-field label="Port type">
         <nldd-text-field
@@ -367,7 +379,12 @@
           [attr.value]="editPortDef()?.portType ?? ''"
           placeholder="E.g. SFP+, QSFP28, IEC C13"
           (keydown.enter)="savePortDef()"
+          [attr.invalid]="isFieldInvalid('port_type') ? '' : null"
+          error-message="error-port-type"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-port-type">{{
+          fieldError('port_type')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Speed (Gbps)">
@@ -436,6 +453,13 @@
   accessible-label="Add port compatibility"
 >
   <div slot="content" class="px-1 pt-2 pb-1">
+    @if (formErrorMessage()) {
+      <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
+        <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+          {{ formErrorMessage() }}
+        </p>
+      </div>
+    }
     <nldd-form-field label="Compatible product">
       <select #fCompatEntry>
         @for (entry of allCatalogEntries(); track entry.id) {

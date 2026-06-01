@@ -135,6 +135,7 @@
     [allCables]="dcCables()"
     [externalDevicePorts]="localDevicePorts()"
     [devices]="dcDevices()"
+    [serverError]="cableFormError()"
     (save)="saveFromForm($event)"
     (cancelForm)="closeForm()"
     (cableDelete)="openDeleteCable($event)"

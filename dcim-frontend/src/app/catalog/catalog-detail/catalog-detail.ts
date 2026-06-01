@@ -22,6 +22,7 @@ import {
 import CatalogApiService from '../catalog-api.service';
 import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
+import parseValidationError from '../../../connect/validation';
 import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
 
 interface NativeElementRef {
@@ -93,6 +94,11 @@ export default class CatalogDetailComponent implements OnInit {
   editPortDef = signal<Partial<PortDefinition> | null>(null);
 
   deletePortDef = signal<PortDefinition | null>(null);
+
+  // ── Validation feedback (shared by the port + compatibility forms) ────────────
+  readonly invalidFields = signal<Record<string, string>>({});
+
+  readonly formErrorMessage = signal<string | null>(null);
 
   private readonly portSheetEl = viewChild<NativeElementRef>('portSheet');
 
@@ -181,21 +187,44 @@ export default class CatalogDetailComponent implements OnInit {
 
   // ── Port definition actions ────────────────────────────────────────────────
 
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearErrors(): void {
+    this.invalidFields.set({});
+    this.formErrorMessage.set(null);
+  }
+
+  private handleError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.formErrorMessage.set(message);
+  }
+
   openCreatePortDef(): void {
+    this.clearErrors();
     this.editPortDef.set({ id: '', catalogEntryId: this.catalogId(), name: '', portType: '' });
   }
 
   openEditPortDef(pd: PortDefinition): void {
+    this.clearErrors();
     this.editPortDef.set({ ...pd });
   }
 
   closePortDefForm(): void {
+    this.clearErrors();
     this.editPortDef.set(null);
   }
 
   savePortDef(): void {
     const form = this.editPortDef();
     if (!form) return;
+    this.clearErrors();
     const name = this.fPortName()?.nativeElement.value ?? '';
     const portType = this.fPortType()?.nativeElement.value ?? '';
     const speedRaw = this.fPortSpeed()?.nativeElement.value;
@@ -216,16 +245,14 @@ export default class CatalogDetailComponent implements OnInit {
           this.mutablePortDefs.update((list) => list.map((p) => (p.id === form.id ? pd : p)));
           this.editPortDef.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     } else {
       firstValueFrom(this.catalogApi.createPortDefinition(pd))
         .then((res) => {
           this.mutablePortDefs.update((list) => [...list, { ...pd, id: res.portDefinitionId }]);
           this.editPortDef.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     }
   }
 
@@ -255,6 +282,7 @@ export default class CatalogDetailComponent implements OnInit {
   // ── Port compatibility actions ─────────────────────────────────────────────
 
   openAddCompatibility(portDefId: string): void {
+    this.clearErrors();
     this.addCompatPortDefId.set(portDefId);
     firstValueFrom(this.catalogApi.listPortCompatibilities(portDefId))
       .then((res) => {
@@ -275,6 +303,7 @@ export default class CatalogDetailComponent implements OnInit {
   }
 
   cancelAddCompatibility(): void {
+    this.clearErrors();
     this.addCompatPortDefId.set(null);
   }
 
@@ -282,6 +311,7 @@ export default class CatalogDetailComponent implements OnInit {
     const pdId = this.addCompatPortDefId();
     const entryId = this.fCompatEntry()?.nativeElement.value ?? '';
     if (!pdId || !entryId) return;
+    this.clearErrors();
     firstValueFrom(this.catalogApi.createPortCompatibility(pdId, entryId))
       .then(() => {
         const created: PortCompatibility = {
@@ -292,8 +322,7 @@ export default class CatalogDetailComponent implements OnInit {
         this.mutableCompatibilities.update((list) => [...list, created]);
         this.addCompatPortDefId.set(null);
       })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+      .catch((err) => this.handleError(err));
   }
 
   openDeleteCompat(compat: PortCompatibility): void {

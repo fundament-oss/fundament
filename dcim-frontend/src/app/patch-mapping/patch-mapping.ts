@@ -22,6 +22,7 @@ import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import { ASSET_CLIENT } from '../../connect/tokens';
 import connectErrorMessage from '../../connect/error';
+import parseValidationError from '../../connect/validation';
 import { cablePortFromDefinition } from '../racks/catalog-helpers';
 
 /** A selectable device (placement) in the active datacenter. */
@@ -77,6 +78,9 @@ export default class PatchMappingComponent implements OnInit {
   readonly dcCables = computed(() => this.mutableCables());
 
   readonly editCable = signal<Partial<Cable> | null>(null);
+
+  /** Server-side error from the last cable save, shown in the cable form banner. */
+  readonly cableFormError = signal<string | null>(null);
 
   readonly deleteCable = signal<Cable | null>(null);
 
@@ -248,10 +252,12 @@ export default class PatchMappingComponent implements OnInit {
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
   openAddCable(): void {
+    this.cableFormError.set(null);
     this.editCable.set({ dcId: this.selectedDcId(), status: 'connected' });
   }
 
   openEditCable(cable: Cable): void {
+    this.cableFormError.set(null);
     this.editCable.set({ ...cable });
   }
 
@@ -293,10 +299,12 @@ export default class PatchMappingComponent implements OnInit {
       portType: bPort.type,
     };
 
+    this.cableFormError.set(null);
     this.editCable.set({ dcId: this.selectedDcId(), status: 'connected', aSide, bSide });
   }
 
   saveFromForm(cable: Cable): void {
+    this.cableFormError.set(null);
     const request = cable.id
       ? firstValueFrom(this.patchApi.updateCable(cable))
       : firstValueFrom(this.patchApi.createCable(cable));
@@ -305,11 +313,15 @@ export default class PatchMappingComponent implements OnInit {
         this.editCable.set(null);
         return this.loadSiteGraph(this.selectedDcId());
       })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+      .catch((err) => {
+        const { fields, message } = parseValidationError(err);
+        const all = [message, ...Object.values(fields)].filter(Boolean);
+        this.cableFormError.set(all.join('\n') || 'Failed to save cable.');
+      });
   }
 
   closeForm(): void {
+    this.cableFormError.set(null);
     this.editCable.set(null);
   }
 

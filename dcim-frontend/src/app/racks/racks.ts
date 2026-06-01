@@ -12,7 +12,6 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom, map } from 'rxjs';
 import RackApiService from './rack-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
@@ -26,7 +25,7 @@ import RackDiagramEditorComponent from './rack-diagram-editor/rack-diagram-edito
 import { Rack, RackDevice } from './rack.model';
 import { DatacenterInfo, RackRow, Room } from '../datacenters/datacenter.model';
 import { RackSlotType } from '../../generated/v1/common_pb';
-import { ViolationsSchema } from '../../generated/buf/validate/validate_pb';
+import parseValidationError from '../../connect/validation';
 import { categoryToDeviceType, parseRackHeight } from './catalog-helpers';
 
 interface RackListItem extends Rack {
@@ -590,28 +589,9 @@ export default class RacksComponent implements OnInit {
   }
 
   private handleRackError(err: unknown): void {
-    const ce = ConnectError.from(err);
-
-    if (ce.code === Code.InvalidArgument) {
-      const fieldErrors: InvalidFields = {};
-      const unmappedMessages: string[] = [];
-      ce.findDetails(ViolationsSchema)
-        .flatMap((violations) => violations.violations)
-        .forEach((v) => {
-          const field = v.field?.elements.map((e) => e.fieldName).join('.') ?? '';
-          if (field) fieldErrors[field] = v.message;
-          else unmappedMessages.push(v.message);
-        });
-      if (Object.keys(fieldErrors).length > 0) {
-        this.invalidFields.set(fieldErrors);
-        if (unmappedMessages.length > 0) {
-          this.rackErrorMessage.set(unmappedMessages.join('\n'));
-        }
-        return;
-      }
-    }
-
-    this.rackErrorMessage.set(connectErrorMessage(err));
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.rackErrorMessage.set(message);
   }
 
   openDeleteRack(rack: Rack): void {
@@ -766,28 +746,9 @@ export default class RacksComponent implements OnInit {
   }
 
   private handleDeviceError(err: unknown): void {
-    const ce = ConnectError.from(err);
-
-    if (ce.code === Code.InvalidArgument) {
-      const fieldErrors: InvalidFields = {};
-      const unmappedMessages: string[] = [];
-      ce.findDetails(ViolationsSchema)
-        .flatMap((violations) => violations.violations)
-        .forEach((v) => {
-          const field = v.field?.elements.map((e) => e.fieldName).join('.') ?? '';
-          if (field) fieldErrors[field] = v.message;
-          else unmappedMessages.push(v.message);
-        });
-      if (Object.keys(fieldErrors).length > 0) {
-        this.invalidDeviceFields.set(fieldErrors);
-        if (unmappedMessages.length > 0) {
-          this.deviceErrorMessage.set(unmappedMessages.join('\n'));
-        }
-        return;
-      }
-    }
-
-    this.deviceErrorMessage.set(connectErrorMessage(err));
+    const { fields, message } = parseValidationError(err);
+    this.invalidDeviceFields.set(fields);
+    this.deviceErrorMessage.set(message);
   }
 
   readonly currentRackFreeU = computed(() => this.rackStats().freeU);
