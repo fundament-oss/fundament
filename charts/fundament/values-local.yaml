@@ -141,40 +141,42 @@ dexDcim:
       redirectURIs:
         - https://dcim-authn.fundament.localhost:8443/callback
       public: true
+  # DCIM is a separate trust domain from the console/tenant. For dev convenience
+  # the same test credentials (emails + password) work here, but each user gets
+  # a DCIM-specific userID (019d0000 prefix) that is intentionally distinct from
+  # the tenant userID in `dex` above. dcim-authn-api derives the JWT subject from
+  # the dex `sub` and never correlates it with tenant.users, so these IDs must
+  # stay decoupled — do not reuse the tenant userIDs here.
   staticPasswords:
     # All passwords are 'password' (echo 'password' | htpasswd -BinC 10 user)
-    - email: admin@example.com
-      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
-      username: admin
-      userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
     - email: alice@acme-corp.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Alice
-      userID: "019b4000-1000-7000-8000-000000000001"
+      userID: "019d0000-1000-7000-8000-000000000001"
     - email: bart@acme-corp.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Bart
-      userID: "019b4000-1000-7000-8000-000000000002"
+      userID: "019d0000-1000-7000-8000-000000000002"
     - email: cindy@acme-corp.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Cindy
-      userID: "019b4000-1000-7000-8000-000000000003"
+      userID: "019d0000-1000-7000-8000-000000000003"
     - email: david@globex.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: David
-      userID: "019b4000-1000-7000-8000-000000000004"
+      userID: "019d0000-1000-7000-8000-000000000004"
     - email: emily@globex.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Emily
-      userID: "019b4000-1000-7000-8000-000000000005"
+      userID: "019d0000-1000-7000-8000-000000000005"
     - email: frank@initech.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Frank
-      userID: "019b4000-1000-7000-8000-000000000006"
+      userID: "019d0000-1000-7000-8000-000000000006"
     - email: grace@initech.com
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Grace
-      userID: "019b4000-1000-7000-8000-000000000007"
+      userID: "019d0000-1000-7000-8000-000000000007"
 
 dcimAuthnApi:
   enabled: true
