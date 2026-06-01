@@ -100,6 +100,20 @@ export default class CatalogDetailComponent implements OnInit {
 
   readonly formErrorMessage = signal<string | null>(null);
 
+  /** Selectable port-type enum values (proto-aligned keys + display labels). */
+  readonly PORT_TYPES: { value: string; label: string }[] = [
+    { value: 'network', label: 'Network' },
+    { value: 'power_in', label: 'Power in' },
+    { value: 'power_out', label: 'Power out' },
+    { value: 'slot', label: 'Slot' },
+    { value: 'bay', label: 'Bay' },
+    { value: 'console', label: 'Console' },
+  ];
+
+  portTypeLabel(value: string): string {
+    return this.PORT_TYPES.find((t) => t.value === value)?.label ?? value;
+  }
+
   private readonly portSheetEl = viewChild<NativeElementRef>('portSheet');
 
   private readonly portModalEl = viewChild<NativeElementRef>('portModal');
@@ -107,6 +121,8 @@ export default class CatalogDetailComponent implements OnInit {
   private readonly fPortName = viewChild<NativeElementRef>('fPortName');
 
   private readonly fPortType = viewChild<NativeElementRef>('fPortType');
+
+  private readonly fPortMedia = viewChild<NativeElementRef>('fPortMedia');
 
   private readonly fPortSpeed = viewChild<NativeElementRef>('fPortSpeed');
 
@@ -253,6 +269,7 @@ export default class CatalogDetailComponent implements OnInit {
     this.clearErrors();
     const name = this.fPortName()?.nativeElement.value ?? '';
     const portType = this.fPortType()?.nativeElement.value ?? '';
+    const mediaType = this.fPortMedia()?.nativeElement.value ?? '';
     const speedRaw = this.fPortSpeed()?.nativeElement.value;
     const powerRaw = this.fPortPower()?.nativeElement.value;
     const speedGbps = speedRaw ? parseFloat(speedRaw) : undefined;
@@ -262,6 +279,7 @@ export default class CatalogDetailComponent implements OnInit {
       catalogEntryId: this.catalogId(),
       name,
       portType,
+      ...(mediaType ? { mediaType } : {}),
       ...(speedGbps != null && !Number.isNaN(speedGbps) ? { speedGbps } : {}),
       ...(powerWatts != null && !Number.isNaN(powerWatts) ? { powerWatts } : {}),
     };

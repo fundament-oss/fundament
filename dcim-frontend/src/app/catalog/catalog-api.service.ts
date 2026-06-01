@@ -36,10 +36,35 @@ export default class CatalogApiService {
       id: p.id,
       catalogEntryId: p.deviceCatalogId,
       name: p.name,
-      portType: String(p.portType),
+      portType: CatalogApiService.fromProtoPortType(p.portType),
+      ...(p.mediaType ? { mediaType: p.mediaType } : {}),
       ...(speedGbps != null ? { speedGbps } : {}),
       ...(p.maxPowerW ? { powerWatts: p.maxPowerW } : {}),
     };
+  }
+
+  private static fromProtoPortType(t: PortType): string {
+    const map: Record<number, string> = {
+      [PortType.NETWORK]: 'network',
+      [PortType.POWER_IN]: 'power_in',
+      [PortType.POWER_OUT]: 'power_out',
+      [PortType.SLOT]: 'slot',
+      [PortType.BAY]: 'bay',
+      [PortType.CONSOLE]: 'console',
+    };
+    return map[t] ?? '';
+  }
+
+  private static toProtoPortType(key: string): PortType {
+    const map: Record<string, PortType> = {
+      network: PortType.NETWORK,
+      power_in: PortType.POWER_IN,
+      power_out: PortType.POWER_OUT,
+      slot: PortType.SLOT,
+      bay: PortType.BAY,
+      console: PortType.CONSOLE,
+    };
+    return map[key] ?? PortType.UNSPECIFIED;
   }
 
   static mapPortCompatibility(c: ProtoPortCompat): PortCompatibility {
@@ -141,8 +166,8 @@ export default class CatalogApiService {
     return this.client.createPortDefinition({
       deviceCatalogId: pd.catalogEntryId,
       name: pd.name,
-      portType: PortType.UNSPECIFIED,
-      mediaType: pd.portType,
+      portType: CatalogApiService.toProtoPortType(pd.portType),
+      mediaType: pd.mediaType ?? '',
       ...(pd.speedGbps != null ? { speed: String(pd.speedGbps) } : {}),
       ...(pd.powerWatts != null ? { maxPowerW: pd.powerWatts } : {}),
     });
@@ -152,7 +177,8 @@ export default class CatalogApiService {
     return this.client.updatePortDefinition({
       id: pd.id,
       name: pd.name,
-      mediaType: pd.portType,
+      portType: CatalogApiService.toProtoPortType(pd.portType),
+      mediaType: pd.mediaType ?? '',
       ...(pd.speedGbps != null ? { speed: String(pd.speedGbps) } : {}),
       ...(pd.powerWatts != null ? { maxPowerW: pd.powerWatts } : {}),
     });

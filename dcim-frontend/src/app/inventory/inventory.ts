@@ -105,7 +105,10 @@ export interface PortDefinition {
   id: string;
   catalogEntryId: string;
   name: string;
+  /** Port category enum key: network | power_in | power_out | slot | bay | console. */
   portType: string;
+  /** Free-text connector/media (e.g. SFP+, QSFP28, IEC C13). */
+  mediaType?: string;
   speedGbps?: number;
   powerWatts?: number;
 }

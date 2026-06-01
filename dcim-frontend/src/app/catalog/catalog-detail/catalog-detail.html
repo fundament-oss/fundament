@@ -127,7 +127,12 @@
                       <td class="px-5 py-2.5 font-medium text-slate-800 font-mono text-xs">
                         {{ pd.name }}
                       </td>
-                      <td class="px-3 py-2.5 text-slate-600">{{ pd.portType }}</td>
+                      <td class="px-3 py-2.5 text-slate-600">
+                        {{ portTypeLabel(pd.portType) }}
+                        @if (pd.mediaType) {
+                          <span class="text-slate-400">· {{ pd.mediaType }}</span>
+                        }
+                      </td>
                       <td class="px-3 py-2.5 text-slate-600 tabular-nums">
                         @if (pd.speedGbps !== null && pd.speedGbps !== undefined) {
                           {{ pd.speedGbps }} Gbps
@@ -374,17 +379,25 @@
         }}</nldd-form-field-error-text>
       </nldd-form-field>
       <nldd-form-field label="Port type">
-        <nldd-text-field
-          #fPortType
-          [attr.value]="editPortDef()?.portType ?? ''"
-          placeholder="E.g. SFP+, QSFP28, IEC C13"
-          (keydown.enter)="savePortDef()"
-          [attr.invalid]="isFieldInvalid('port_type') ? '' : null"
-          error-message="error-port-type"
-        ></nldd-text-field>
+        <select #fPortType [attr.invalid]="isFieldInvalid('port_type') ? '' : null">
+          <option value="">— Select a port type —</option>
+          @for (t of PORT_TYPES; track t.value) {
+            <option [value]="t.value" [attr.selected]="editPortDef()?.portType === t.value ? true : null">
+              {{ t.label }}
+            </option>
+          }
+        </select>
         <nldd-form-field-error-text id="error-port-type">{{
           fieldError('port_type')
         }}</nldd-form-field-error-text>
+      </nldd-form-field>
+      <nldd-form-field label="Media type" [optional]="true">
+        <nldd-text-field
+          #fPortMedia
+          [attr.value]="editPortDef()?.mediaType ?? ''"
+          placeholder="E.g. SFP+, QSFP28, IEC C13"
+          (keydown.enter)="savePortDef()"
+        ></nldd-text-field>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Speed (Gbps)">
