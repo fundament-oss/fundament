@@ -26,6 +26,8 @@ func (a *authInterceptorImpl) WrapUnary(next connect.UnaryFunc) connect.UnaryFun
 	}
 }
 
+// WrapStreamingClient is a no-op: this interceptor only authenticates inbound
+// server requests, not outbound client calls made by this service.
 func (a *authInterceptorImpl) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return next
 }

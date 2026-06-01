@@ -74,7 +74,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		config:         cfg,
 		db:             database,
 		queries:        db.New(database.Pool),
-		authValidator:  auth.NewValidator(cfg.JWTSecret, auth.AuthCookieName, logger),
+		authValidator:  auth.NewValidator(cfg.JWTSecret, auth.AuthCookieName, auth.ConsoleIssuer, logger),
 		authz:          authzClient,
 		clock:          clk,
 		mockPromClient: cfg.MockPrometheusClient,

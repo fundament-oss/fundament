@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -45,7 +46,7 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		oauth2Config:  oauth2Config,
 		oidcVerifier:  verifier,
 		sessionStore:  sessionStore,
-		validator:     auth.NewValidator(cfg.JWTSecret, auth.DCIMAuthCookieName, logger),
+		validator:     auth.NewValidator(cfg.JWTSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger),
 		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.DCIMAuthCookieName),
 	}
 }
@@ -95,7 +96,7 @@ func (s *Server) mintJWT(subject, name string) (string, error) {
 	now := time.Now()
 	jwtClaims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "dcim-authn-api",
+			Issuer:    auth.DCIMIssuer,
 			Subject:   subject,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.config.TokenExpiry)),
@@ -167,10 +168,34 @@ func (s *Server) getRedirectURL(state string) string {
 		s.logger.Warn("failed to parse state for return_to", "error", err)
 		return s.config.FrontendURL
 	}
-	if stateData.ReturnTo != "" {
+	if stateData.ReturnTo != "" && s.isSafeReturnTo(stateData.ReturnTo) {
 		return stateData.ReturnTo
 	}
 	return s.config.FrontendURL
+}
+
+// isSafeReturnTo reports whether returnTo is a trusted post-login redirect
+// target. Only same-origin absolute URLs (matching the configured frontend) are
+// allowed, which prevents using return_to as an open-redirect for phishing.
+func (s *Server) isSafeReturnTo(returnTo string) bool {
+	target, err := url.Parse(returnTo)
+	if err != nil {
+		s.logger.Warn("rejecting unparsable return_to", "return_to", returnTo)
+		return false
+	}
+
+	frontend, err := url.Parse(s.config.FrontendURL)
+	if err != nil {
+		s.logger.Error("invalid configured frontend URL", "frontend_url", s.config.FrontendURL, "error", err)
+		return false
+	}
+
+	if target.Scheme != frontend.Scheme || target.Host != frontend.Host {
+		s.logger.Warn("rejecting cross-origin return_to", "return_to", returnTo)
+		return false
+	}
+
+	return true
 }
 
 func (s *Server) writeJSON(w http.ResponseWriter, status int, v any) {

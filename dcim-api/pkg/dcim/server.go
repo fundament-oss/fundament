@@ -29,7 +29,7 @@ func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
 		logger:        logger,
 		db:            database,
 		queries:       db.New(database.Pool),
-		authValidator: auth.NewValidator(jwtSecret, auth.DCIMAuthCookieName, logger),
+		authValidator: auth.NewValidator(jwtSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger),
 	}
 
 	mux := http.NewServeMux()

@@ -42,7 +42,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ $.Values.dexDcim.issuer | sha256sum }}
+        checksum/config: {{ $.Values.dexDcim | toYaml | sha256sum }}
       labels:
         {{- include "fundament.labels" (dict "root" $ "name" "dex-dcim" "component" "backend") | nindent 8 }}
     spec:

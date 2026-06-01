@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/dcim"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
@@ -57,6 +58,7 @@ func (e *testEnv) client() *http.Client {
 func signTestToken(t *testing.T) string {
 	t.Helper()
 	claims := jwt.MapClaims{
+		"iss": auth.DCIMIssuer,
 		"sub": uuid.New().String(),
 		"exp": time.Now().Add(time.Hour).Unix(),
 	}

@@ -33,6 +33,11 @@ type config struct {
 	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"https://dcim.fundament.localhost:8443"`
+	// PasswordLoginEnabled exposes the OAuth2 resource-owner-password-credentials
+	// (ROPC) login endpoint. ROPC is convenient against dex's static passwords for
+	// local/dev, but is discouraged for real identity providers, so it can be
+	// disabled in production in favour of the redirect-based OIDC flow.
+	PasswordLoginEnabled bool `env:"PASSWORD_LOGIN_ENABLED" envDefault:"true"`
 }
 
 func main() {
@@ -116,7 +121,11 @@ func run() error {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("POST /login/password", server.HandlePasswordLogin)
+	if cfg.PasswordLoginEnabled {
+		mux.HandleFunc("POST /login/password", server.HandlePasswordLogin)
+	} else {
+		logger.Info("password login (ROPC) endpoint disabled")
+	}
 	mux.HandleFunc("GET /login", server.HandleLogin)
 	mux.HandleFunc("GET /callback", server.HandleCallback)
 	mux.HandleFunc("POST /refresh", server.HandleRefresh)

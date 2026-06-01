@@ -25,7 +25,7 @@ func (s *Server) HandlePasswordLogin(w http.ResponseWriter, r *http.Request) {
 
 	token, err := s.authenticateWithPassword(r, req.Email, req.Password)
 	if err != nil {
-		s.logger.Warn("password authentication failed", "email", req.Email, "error", err)
+		s.logger.Warn("password authentication failed", "error", err)
 		s.writeError(w, http.StatusUnauthorized, "authentication failed")
 		return
 	}

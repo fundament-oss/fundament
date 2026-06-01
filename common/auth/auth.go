@@ -17,6 +17,14 @@ const AuthCookieName = "fundament_auth"
 // DCIMAuthCookieName is the name of the authentication cookie for DCIM.
 const DCIMAuthCookieName = "dcim_auth"
 
+// Issuer values for the JWTs minted by each authentication service. Validators
+// pin the expected issuer so that a token minted for one trust domain cannot be
+// replayed against another service that happens to share the same JWT secret.
+const (
+	ConsoleIssuer = "fundament-authn-api"
+	DCIMIssuer    = "dcim-authn-api"
+)
+
 // Claims represents the JWT claims used across fundament services.
 type Claims struct {
 	jwt.RegisteredClaims
@@ -31,21 +39,25 @@ func (c *Claims) UserID() uuid.UUID {
 
 // Validator handles JWT validation from HTTP headers.
 type Validator struct {
-	jwtSecret  []byte
-	cookieName string
-	logger     *slog.Logger
+	jwtSecret      []byte
+	cookieName     string
+	expectedIssuer string
+	logger         *slog.Logger
 }
 
-// NewValidator creates a new Validator with the given JWT secret and cookie name.
-// Logger is optional and can be nil.
-func NewValidator(jwtSecret []byte, cookieName string, logger *slog.Logger) *Validator {
+// NewValidator creates a new Validator with the given JWT secret, cookie name
+// and expected issuer. Tokens whose "iss" claim does not match expectedIssuer
+// are rejected, which prevents tokens minted by another service that shares the
+// same JWT secret from being accepted here. Logger is optional and can be nil.
+func NewValidator(jwtSecret []byte, cookieName, expectedIssuer string, logger *slog.Logger) *Validator {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	return &Validator{
-		jwtSecret:  jwtSecret,
-		cookieName: cookieName,
-		logger:     logger,
+		jwtSecret:      jwtSecret,
+		cookieName:     cookieName,
+		expectedIssuer: expectedIssuer,
+		logger:         logger,
 	}
 }
 
@@ -87,13 +99,17 @@ func (v *Validator) extractCookieToken(header http.Header) string {
 
 // validateToken parses and validates a JWT token string.
 func (v *Validator) validateToken(tokenString string) (*Claims, error) {
+	parserOpts := []jwt.ParserOption{}
+	if v.expectedIssuer != "" {
+		parserOpts = append(parserOpts, jwt.WithIssuer(v.expectedIssuer))
+	}
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			v.logger.Debug("unexpected signing method", "alg", token.Header["alg"])
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return v.jwtSecret, nil
-	})
+	}, parserOpts...)
 	if err != nil {
 		v.logger.Debug("token validation failed", "error", err)
 		return nil, fmt.Errorf("invalid token: %w", err)
