@@ -39,4 +39,17 @@ export default class NoteApiService {
   listNotesForPlacement(placementId: string) {
     return this.client.listNotes({ entityType: NoteEntityType.PLACEMENT, entityId: placementId });
   }
+
+  // TODO: replace the placeholder author with the authenticated user once the
+  // frontend has an identity source (authnApiUrl is configured but unused).
+  private static readonly PLACEHOLDER_AUTHOR = 'You';
+
+  createNoteForPlacement(placementId: string, body: string) {
+    return this.client.createNote({
+      entityType: NoteEntityType.PLACEMENT,
+      entityId: placementId,
+      body,
+      createdBy: NoteApiService.PLACEHOLDER_AUTHOR,
+    });
+  }
 }

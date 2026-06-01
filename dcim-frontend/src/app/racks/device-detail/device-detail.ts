@@ -225,6 +225,8 @@ export default class DeviceDetailComponent {
   /** Comment thread for this device (placement), loaded from the note API. */
   readonly notes = signal<NoteComment[]>([]);
 
+  private readonly noteInput = viewChild<ElementRef>('noteInput');
+
   // ── Port management ────────────────────────────────────────────────────────
   readonly activePortTab = signal<PortType>('network-interface');
 
@@ -413,6 +415,21 @@ export default class DeviceDetailComponent {
 
   readonly nicPorts = (device: RackDevice): readonly number[] =>
     Array.from({ length: Math.min(device.hardware?.nics ?? 1, 6) }, (_, i) => i);
+
+  addNote(): void {
+    const field = this.noteInput()?.nativeElement as HTMLInputElement | undefined;
+    const text = (field?.value ?? '').trim();
+    if (!text) return;
+    const placementId = this.deviceId();
+    firstValueFrom(this.noteApi.createNoteForPlacement(placementId, text))
+      .then(() => {
+        if (field) field.value = '';
+        return firstValueFrom(this.noteApi.listNotesForPlacement(placementId));
+      })
+      .then((res) => this.notes.set(res.notes.map(NoteApiService.mapNote)))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
 
   readonly formatDaysAgo = (daysAgo: number): string => {
     if (daysAgo === 0) return 'Today';

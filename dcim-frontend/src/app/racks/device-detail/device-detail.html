@@ -640,6 +640,32 @@
                   </div>
                 </div>
               }
+              <!-- Add note input -->
+              <div class="flex gap-2.5 pt-1">
+                <div
+                  class="h-8 w-8 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold select-none"
+                  aria-hidden="true"
+                >
+                  Y
+                </div>
+                <div class="flex-1 relative">
+                  <nldd-text-field
+                    #noteInput
+                    (keydown.enter)="addNote()"
+                    placeholder="Add a note…"
+                    accessible-label="Add a note"
+                    size="sm"
+                    class="w-full"
+                  ></nldd-text-field>
+                  <button
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
+                    aria-label="Send note"
+                    (click)="addNote()"
+                  >
+                    <nldd-icon name="arrow-right" class="w-4 h-4 block"></nldd-icon>
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
 
