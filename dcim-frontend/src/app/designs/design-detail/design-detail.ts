@@ -23,6 +23,7 @@ import {
 } from '../design.model';
 import DesignApiService from '../design-api.service';
 import connectErrorMessage from '../../../connect/error';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -51,7 +52,7 @@ const ALL_ROLES: LogicalDeviceRole[] = [
   selector: 'app-design-detail',
   templateUrl: './design-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DesignFlowWrapperComponent],
+  imports: [RouterLink, DesignFlowWrapperComponent, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col overflow-hidden', style: 'height: calc(100dvh - 4.25rem)' },
 })

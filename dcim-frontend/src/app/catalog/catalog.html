@@ -238,9 +238,11 @@
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
       @if (entryErrorMessage()) {
-      <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-        <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">{{ entryErrorMessage() }}</p>
-      </div>
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ entryErrorMessage() }}
+          </p>
+        </div>
       }
 
       <nldd-form-field label="Model name">
@@ -252,7 +254,9 @@
           error-message="error-model"
           (keydown.enter)="saveEntry()"
         ></nldd-text-field>
-        <nldd-form-field-error-text id="error-model">{{ fieldError('model') }}</nldd-form-field-error-text>
+        <nldd-form-field-error-text id="error-model">{{
+          fieldError('model')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       <nldd-form-field label="Manufacturer">
         <nldd-text-field
@@ -263,7 +267,9 @@
           error-message="error-manufacturer"
           (keydown.enter)="saveEntry()"
         ></nldd-text-field>
-        <nldd-form-field-error-text id="error-manufacturer">{{ fieldError('manufacturer') }}</nldd-form-field-error-text>
+        <nldd-form-field-error-text id="error-manufacturer">{{
+          fieldError('manufacturer')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       @if (!editEntry()?.id) {
         <nldd-form-field label="Part number">
@@ -275,15 +281,14 @@
             error-message="error-part-number"
             (keydown.enter)="saveEntry()"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="error-part-number">{{ fieldError('part_number') }}</nldd-form-field-error-text>
+          <nldd-form-field-error-text id="error-part-number">{{
+            fieldError('part_number')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
       }
       <nldd-form-field label="Category">
         <nldd-dropdown [attr.invalid]="isFieldInvalid('category') ? true : null">
-          <select
-            #fEntryCat
-            [attr.aria-invalid]="isFieldInvalid('category') ? 'true' : null"
-          >
+          <select #fEntryCat [attr.aria-invalid]="isFieldInvalid('category') ? 'true' : null">
             @for (cat of categories; track cat) {
               <option
                 [value]="cat"
@@ -295,7 +300,9 @@
           </select>
         </nldd-dropdown>
         @if (isFieldInvalid('category')) {
-          <nldd-form-field-error-text id="error-category">{{ fieldError('category') }}</nldd-form-field-error-text>
+          <nldd-form-field-error-text id="error-category">{{
+            fieldError('category')
+          }}</nldd-form-field-error-text>
         }
       </nldd-form-field>
 

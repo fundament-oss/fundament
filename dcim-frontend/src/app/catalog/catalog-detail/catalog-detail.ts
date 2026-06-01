@@ -23,6 +23,7 @@ import {
 } from '../../inventory/inventory';
 import CatalogApiService from '../catalog-api.service';
 import connectErrorMessage from '../../../connect/error';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -32,7 +33,7 @@ interface NativeElementRef {
   selector: 'app-catalog-detail',
   templateUrl: './catalog-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'block bg-slate-50 min-h-screen' },
 })

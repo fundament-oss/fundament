@@ -9,10 +9,12 @@ import {
   signal,
 } from '@angular/core';
 import { Port, PortType, PORT_TYPE_LABEL } from '../cable.model';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 @Component({
   selector: 'app-device-ports',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './device-ports.html',
 })

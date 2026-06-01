@@ -27,6 +27,7 @@ import {
 } from './cable.model';
 import { DATACENTER_INFO } from '../datacenters/datacenter.model';
 import { RACKS } from '../racks/rack.model';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 @Component({
   selector: 'app-patch-mapping',
@@ -37,6 +38,7 @@ import { RACKS } from '../racks/rack.model';
     CableFormComponent,
     DevicePortsComponent,
     ShoppingListComponent,
+    DropdownSyncDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {

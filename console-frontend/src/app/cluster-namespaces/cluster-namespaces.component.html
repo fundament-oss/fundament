@@ -122,7 +122,7 @@
         <nldd-dropdown>
           <select id="projectId" formControlName="projectId">
             @for (project of projects(); track project.id) {
-              <option [value]="project.id">{{  project.alias || project.name }}</option>
+              <option [value]="project.id">{{ project.alias || project.name }}</option>
             }
           </select>
         </nldd-dropdown>

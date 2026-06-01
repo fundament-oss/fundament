@@ -552,10 +552,18 @@
         <nldd-form-field label="Tier">
           <nldd-dropdown>
             <select #fTier>
-              <option value="1" [attr.selected]="editForm()?.tier === 1 ? true : null">Tier 1</option>
-              <option value="2" [attr.selected]="editForm()?.tier === 2 ? true : null">Tier 2</option>
-              <option value="3" [attr.selected]="editForm()?.tier === 3 ? true : null">Tier 3</option>
-              <option value="4" [attr.selected]="editForm()?.tier === 4 ? true : null">Tier 4</option>
+              <option value="1" [attr.selected]="editForm()?.tier === 1 ? true : null">
+                Tier 1
+              </option>
+              <option value="2" [attr.selected]="editForm()?.tier === 2 ? true : null">
+                Tier 2
+              </option>
+              <option value="3" [attr.selected]="editForm()?.tier === 3 ? true : null">
+                Tier 3
+              </option>
+              <option value="4" [attr.selected]="editForm()?.tier === 4 ? true : null">
+                Tier 4
+              </option>
             </select>
           </nldd-dropdown>
         </nldd-form-field>

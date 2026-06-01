@@ -350,7 +350,9 @@
               @for (dev of devices(); track dev.id) {
                 <option
                   [value]="dev.id"
-                  [attr.selected]="(editConnection()?.sourceDeviceId ?? '') === dev.id ? true : null"
+                  [attr.selected]="
+                    (editConnection()?.sourceDeviceId ?? '') === dev.id ? true : null
+                  "
                 >
                   {{ dev.name }}
                 </option>
@@ -373,7 +375,9 @@
               @for (dev of devices(); track dev.id) {
                 <option
                   [value]="dev.id"
-                  [attr.selected]="(editConnection()?.targetDeviceId ?? '') === dev.id ? true : null"
+                  [attr.selected]="
+                    (editConnection()?.targetDeviceId ?? '') === dev.id ? true : null
+                  "
                 >
                   {{ dev.name }}
                 </option>

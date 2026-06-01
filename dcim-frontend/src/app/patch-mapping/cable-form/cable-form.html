@@ -67,10 +67,7 @@
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
               <nldd-dropdown class="flex-1">
-                <select
-                  id="a-device"
-                  (change)="onADeviceChange($any($event.target).value)"
-                >
+                <select id="a-device" (change)="onADeviceChange($any($event.target).value)">
                   <option value="" [selected]="!aDeviceId()">Select device…</option>
                   @for (dev of dcDevices(); track dev.id) {
                     <option [value]="dev.id" [selected]="dev.id === aDeviceId()">
@@ -223,10 +220,7 @@
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
               <nldd-dropdown class="flex-1">
-                <select
-                  id="b-device"
-                  (change)="onBDeviceChange($any($event.target).value)"
-                >
+                <select id="b-device" (change)="onBDeviceChange($any($event.target).value)">
                   <option value="" [selected]="!bDeviceId()">Select device…</option>
                   @for (dev of dcDevices(); track dev.id) {
                     <option [value]="dev.id" [selected]="dev.id === bDeviceId()">

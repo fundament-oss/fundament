@@ -90,7 +90,10 @@
           >Type</label
         >
         <nldd-dropdown size="sm">
-          <select id="topo-type-filter" (change)="topologyTypeFilter.set($any($event.target).value)">
+          <select
+            id="topo-type-filter"
+            (change)="topologyTypeFilter.set($any($event.target).value)"
+          >
             <option value="" [selected]="topologyTypeFilter() === ''">All types</option>
             @for (t of CABLE_TYPES; track t) {
               <option [value]="t" [selected]="topologyTypeFilter() === t">

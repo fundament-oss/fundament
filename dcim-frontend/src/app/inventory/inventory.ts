@@ -19,6 +19,7 @@ import InventoryApiService from './inventory-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import PlacementApiService, { RackOption } from './placement-api.service';
 import connectErrorMessage from '../../connect/error';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 export type AssetStatus =
   | 'needs-repair'
@@ -1861,7 +1862,7 @@ export const MOCK_ASSETS: Asset[] = [
   selector: 'app-inventory',
   templateUrl: './inventory.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
     class: 'flex flex-col min-h-screen bg-white',
@@ -1925,8 +1926,6 @@ export default class InventoryComponent implements OnInit {
     { value: RackSlotType.POWER, label: 'Power' },
     { value: RackSlotType.ZERO_U, label: 'Zero-U' },
   ];
-
-  readonly defaultSlotType = RackSlotType.UNIT;
 
   deleteAsset = signal<Asset | null>(null);
 
@@ -2196,8 +2195,9 @@ export default class InventoryComponent implements OnInit {
     const unit =
       parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
     const slotType =
-      (Number((this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value) as RackSlotType) ||
-      RackSlotType.UNIT;
+      (Number(
+        (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
+      ) as RackSlotType) || RackSlotType.UNIT;
     return this.placementApi.reconcilePlacement({
       assetId,
       rackId,

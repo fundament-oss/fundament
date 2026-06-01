@@ -18,6 +18,7 @@ import RackDiagramComponent from './rack-diagram/rack-diagram';
 import RackDiagramEditorComponent from './rack-diagram-editor/rack-diagram-editor';
 import { DeviceState, DeviceType, Rack, RackDevice, RACKS } from './rack.model';
 import { DATACENTER_INFO, MOCK_RACK_ROWS } from '../datacenters/datacenter.model';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 // ── Notes & History types ──────────────────────────────────────────────────────
 
@@ -176,7 +177,12 @@ interface NativeElementRef {
   selector: 'app-racks',
   templateUrl: './racks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DcSelectorComponent, RackDiagramComponent, RackDiagramEditorComponent],
+  imports: [
+    DcSelectorComponent,
+    RackDiagramComponent,
+    RackDiagramEditorComponent,
+    DropdownSyncDirective,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class RacksComponent {

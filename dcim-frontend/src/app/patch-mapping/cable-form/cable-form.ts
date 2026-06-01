@@ -27,6 +27,7 @@ import {
   PORT_TYPE_LABEL,
 } from '../cable.model';
 import DevicePortsComponent from '../device-ports/device-ports';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface DeviceOption {
   id: string;
@@ -36,7 +37,7 @@ interface DeviceOption {
 @Component({
   selector: 'app-cable-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DevicePortsComponent],
+  imports: [DevicePortsComponent, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cable-form.html',
 })

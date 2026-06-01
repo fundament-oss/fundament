@@ -31,10 +31,7 @@
         ></nldd-button>
       }
       <nldd-dropdown size="sm">
-        <select
-          [ngModel]="namespaceFilter()"
-          (ngModelChange)="namespaceFilter.set($event)"
-        >
+        <select [ngModel]="namespaceFilter()" (ngModelChange)="namespaceFilter.set($event)">
           <option value="">All namespaces</option>
           @for (ns of uniqueNamespaces(); track ns) {
             <option [value]="ns">{{ ns }}</option>

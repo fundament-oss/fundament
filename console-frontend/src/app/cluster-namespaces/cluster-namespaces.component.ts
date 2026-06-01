@@ -26,13 +26,20 @@ import {
 import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_pb';
 import { fetchClusterName } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
+import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-cluster-namespaces',
-  imports: [ReactiveFormsModule, DialogSyncDirective, RouterLink, LoadingIndicatorComponent],
+  imports: [
+    ReactiveFormsModule,
+    DialogSyncDirective,
+    DropdownSyncDirective,
+    RouterLink,
+    LoadingIndicatorComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-namespaces.component.html',

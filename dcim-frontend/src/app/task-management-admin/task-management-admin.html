@@ -635,10 +635,7 @@
               >Status</label
             >
             <nldd-dropdown>
-              <select
-                id="editStatus"
-                (change)="editFormStatus.set($any($event).target.value)"
-              >
+              <select id="editStatus" (change)="editFormStatus.set($any($event).target.value)">
                 <option [selected]="editFormStatus() === 'Ready'">Ready</option>
                 <option [selected]="editFormStatus() === 'In Progress'">In Progress</option>
                 <option [selected]="editFormStatus() === 'Review'">Review</option>
@@ -652,10 +649,7 @@
               >Priority</label
             >
             <nldd-dropdown>
-              <select
-                id="editPriority"
-                (change)="editFormPriority.set($any($event).target.value)"
-              >
+              <select id="editPriority" (change)="editFormPriority.set($any($event).target.value)">
                 <option [selected]="editFormPriority() === 'Critical'">Critical</option>
                 <option [selected]="editFormPriority() === 'High'">High</option>
                 <option [selected]="editFormPriority() === 'Medium'">Medium</option>
@@ -670,10 +664,7 @@
               >Category</label
             >
             <nldd-dropdown>
-              <select
-                id="editCategory"
-                (change)="editFormCategory.set($any($event).target.value)"
-              >
+              <select id="editCategory" (change)="editFormCategory.set($any($event).target.value)">
                 <option [selected]="editFormCategory() === 'Hardware'">Hardware</option>
                 <option [selected]="editFormCategory() === 'Network'">Network</option>
                 <option [selected]="editFormCategory() === 'Cooling'">Cooling</option>

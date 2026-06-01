@@ -16,6 +16,7 @@ import DatacenterApiService from './datacenter-api.service';
 import connectErrorMessage from '../../connect/error';
 import { RACKS } from '../racks/rack.model';
 import IsometricCanvasComponent from './isometric-canvas';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import {
   AisleDefinition,
   DatacenterInfo,
@@ -38,7 +39,7 @@ interface NativeElementRef {
   selector: 'app-datacenters',
   templateUrl: './datacenters.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DcSelectorComponent, IsometricCanvasComponent],
+  imports: [RouterLink, DcSelectorComponent, IsometricCanvasComponent, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col bg-white text-slate-900' },
 })

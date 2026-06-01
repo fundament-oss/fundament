@@ -437,14 +437,14 @@
         </nldd-form-field>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Serial number" [optional]="true">
+        <nldd-form-field label="Serial number">
           <nldd-text-field
             #fAssetSerial
             [attr.value]="editAsset()?.serialNumber ?? ''"
             placeholder="SN-…"
           ></nldd-text-field>
         </nldd-form-field>
-        <nldd-form-field label="Warranty expiry" [optional]="true">
+        <nldd-form-field label="Warranty expiry">
           <nldd-text-field
             #fAssetWarranty
             type="date"
@@ -452,7 +452,7 @@
           ></nldd-text-field>
         </nldd-form-field>
       </div>
-      <nldd-form-field label="Rack" [optional]="true">
+      <nldd-form-field label="Rack">
         @if (racksByDatacenter().length === 0) {
           <nldd-form-field-help-text>
             No racks available yet. Add a room, rack row, and rack to a datacenter first.
@@ -477,7 +477,7 @@
         </nldd-dropdown>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Rack unit" [optional]="true">
+        <nldd-form-field label="Rack unit">
           <nldd-text-field
             #fAssetRackUnit
             type="number"
@@ -485,15 +485,16 @@
             placeholder="1"
           ></nldd-text-field>
         </nldd-form-field>
-        <nldd-form-field label="Slot type" [optional]="true">
+        <nldd-form-field label="Slot type">
           <nldd-dropdown>
             <select #fAssetSlotType>
+              <option value="" [attr.selected]="!editPlacement()?.slotType ? true : null">
+                Unknown
+              </option>
               @for (st of slotTypes; track st.value) {
                 <option
                   [value]="st.value"
-                  [attr.selected]="
-                    (editPlacement()?.slotType ?? defaultSlotType) === st.value ? true : null
-                  "
+                  [attr.selected]="editPlacement()?.slotType === st.value ? true : null"
                 >
                   {{ st.label }}
                 </option>
@@ -502,7 +503,7 @@
           </nldd-dropdown>
         </nldd-form-field>
       </div>
-      <nldd-form-field label="Notes" [optional]="true">
+      <nldd-form-field label="Notes">
         <nldd-multi-line-text-field
           #fAssetNotes
           [attr.value]="editAsset()?.notes ?? ''"

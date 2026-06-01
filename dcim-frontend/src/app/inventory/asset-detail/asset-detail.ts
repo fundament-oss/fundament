@@ -27,6 +27,7 @@ import CatalogApiService from '../../catalog/catalog-api.service';
 import NoteApiService from '../note-api.service';
 import PlacementApiService, { RackOption } from '../placement-api.service';
 import connectErrorMessage from '../../../connect/error';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface AssetExtraDetail {
   serial: string;
@@ -124,7 +125,7 @@ const MOCK_EXTRA_DETAILS: Record<string, AssetExtraDetail> = {
   selector: 'app-asset-detail',
   templateUrl: './asset-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'block bg-slate-50 min-h-screen' },
 })
@@ -209,8 +210,6 @@ export default class AssetDetailComponent implements OnInit {
     { value: RackSlotType.POWER, label: 'Power' },
     { value: RackSlotType.ZERO_U, label: 'Zero-U' },
   ];
-
-  readonly defaultSlotType = RackSlotType.UNIT;
 
   readonly slotTypeLabel = (slotType: RackSlotType): string =>
     this.slotTypes.find((s) => s.value === slotType)?.label ?? '—';
@@ -382,8 +381,9 @@ export default class AssetDetailComponent implements OnInit {
     const unit =
       parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
     const slotType =
-      (Number((this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value) as RackSlotType) ||
-      RackSlotType.UNIT;
+      (Number(
+        (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
+      ) as RackSlotType) || RackSlotType.UNIT;
     return this.placementApi.reconcilePlacement({
       assetId,
       rackId,
