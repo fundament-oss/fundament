@@ -143,6 +143,73 @@ func TestGenerateShootName_DifferentIDsProduceDifferentNames(t *testing.T) {
 	}
 }
 
+func TestGenerateWorkerName(t *testing.T) {
+	tests := []struct {
+		name       string
+		poolName   string
+		wantPrefix string
+	}{
+		{name: "frontend generated name", poolName: "node-pool-ldp", wantPrefix: "node"},
+		{name: "default pool", poolName: "default", wantPrefix: "defa"},
+		{name: "short name gets padded", poolName: "gpu", wantPrefix: "gpu"},
+		{name: "special chars removed", poolName: "My-Pool!", wantPrefix: "mypo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GenerateWorkerName(tt.poolName)
+
+			if len(got) != WorkerNameTotalLength {
+				t.Errorf("expected length %d, got %d (%q)", WorkerNameTotalLength, len(got), got)
+			}
+			if !hasPrefix(got, tt.wantPrefix) {
+				t.Errorf("expected prefix %q, got %q", tt.wantPrefix, got)
+			}
+		})
+	}
+}
+
+func TestGenerateWorkerName_Deterministic(t *testing.T) {
+	name1 := GenerateWorkerName("node-pool-ldp")
+	name2 := GenerateWorkerName("node-pool-ldp")
+
+	if name1 != name2 {
+		t.Errorf("GenerateWorkerName is not deterministic: %q != %q", name1, name2)
+	}
+}
+
+func TestGenerateWorkerName_DifferentNamesProduceDifferentNames(t *testing.T) {
+	// Two frontend-generated names share the "node-pool-" prefix; the hash suffix
+	// must keep the bounded names distinct.
+	name1 := GenerateWorkerName("node-pool-abc")
+	name2 := GenerateWorkerName("node-pool-xyz")
+
+	if name1 == name2 {
+		t.Errorf("different pool names produced same worker name: %q", name1)
+	}
+}
+
+// TestWorkerNameKeepsMachineServiceNameValid verifies the end-to-end budget: even
+// with project and shoot names at their fixed maximum and a two-digit zone index,
+// the local provider's "machine-<machineName>" Service name stays within 63 chars.
+func TestWorkerNameKeepsMachineServiceNameValid(t *testing.T) {
+	project := ProjectName("Some Very Long Organization Name") // fixed 10
+	shoot := GenerateShootName("some-very-long-cluster-name", uuid.New())
+	technicalID := "shoot--" + project + "--" + shoot
+	worker := GenerateWorkerName("node-pool-with-an-extremely-long-name")
+
+	// machine name = <technicalID>-<worker>-z<idx>-<poolHash 5>-<machineSuffix 5>,
+	// then the local provider prefixes "machine-" to form the Service name.
+	machineName := technicalID + "-" + worker + "-z99" + "-aaaaa" + "-bbbbb"
+	serviceName := "machine-" + machineName
+
+	const maxServiceNameLen = 63
+	if len(serviceName) > maxServiceNameLen {
+		t.Errorf("machine Service name %q is %d chars, exceeds %d",
+			serviceName, len(serviceName), maxServiceNameLen)
+	}
+}
+
 func TestNamingLengthConstraints(t *testing.T) {
 	orgs := []string{"Acme Corp", "Very Long Organization Name", "a", "123 Corp"}
 	clusters := []string{"production", "very-long-cluster-name", "a", "123-cluster"}

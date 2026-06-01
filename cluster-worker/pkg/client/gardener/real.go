@@ -633,7 +633,10 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 		}
 
 		workers[i] = gardencorev1beta1.Worker{
-			Name: np.Name,
+			// Bound the worker name so the derived Gardener machine name (and the
+			// local provider's "machine-<name>" Service) stays within the 63-char
+			// limit. See GenerateWorkerName for the budget derivation.
+			Name: GenerateWorkerName(np.Name),
 			Machine: gardencorev1beta1.Machine{
 				Type: machineType,
 				Image: &gardencorev1beta1.ShootMachineImage{
