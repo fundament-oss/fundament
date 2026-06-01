@@ -28,6 +28,38 @@ export function extractOrganizationId(token: string): string {
   return orgIds[0];
 }
 
+// Authz propagation tolerance: after a fresh deploy (DB reset + test-data
+// seed), a user can authenticate before the authz-worker has written their
+// org-membership tuples to OpenFGA, so permission checks transiently fail with
+// permission_denied. Poll until they propagate.
+const AUTHZ_READY_TIMEOUT_MS = 60_000;
+const AUTHZ_READY_INTERVAL_MS = 2_000;
+
+/**
+ * Wait until the authenticated user's org-membership tuples have propagated to
+ * OpenFGA, using a read-only permission-gated call (ListAPIKeys) as the probe.
+ * Mirrors the retry the terraform acceptance tests do around CreateAPIKey.
+ */
+async function waitForAuthzReady(service: APIKeyService): Promise<void> {
+  const deadline = Date.now() + AUTHZ_READY_TIMEOUT_MS;
+  for (;;) {
+    try {
+      await service.listAPIKeys();
+      return;
+    } catch (err) {
+      if (
+        err instanceof ConnectRpcError &&
+        err.code === 'permission_denied' &&
+        Date.now() < deadline
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, AUTHZ_READY_INTERVAL_MS));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 /**
  * Authenticate via password login and get JWT.
  */
@@ -56,7 +88,7 @@ export async function authenticateWithPassword(email: string): Promise<string> {
 
 // --- Common Given Steps ---
 
-Given('I am authenticated as {string}', async function (this: ICustomWorld, email: string) {
+Given('I am authenticated as {string}', { timeout: AUTHZ_READY_TIMEOUT_MS + 10_000 }, async function (this: ICustomWorld, email: string) {
   this.authToken = await authenticateWithPassword(email);
   this.organizationId = extractOrganizationId(this.authToken);
   this.currentUserEmail = email;
@@ -65,6 +97,10 @@ Given('I am authenticated as {string}', async function (this: ICustomWorld, emai
   if (!this.createdApiKeysByUser.has(email)) {
     this.createdApiKeysByUser.set(email, new Map());
   }
+  // Tolerate authz-worker -> OpenFGA propagation lag before any
+  // permission-gated step runs (otherwise CreateAPIKey etc. flake with
+  // permission_denied right after a fresh deploy).
+  await waitForAuthzReady(this.apiKeyService);
 });
 
 Given('I have no authentication', async function (this: ICustomWorld) {
