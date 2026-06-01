@@ -1,9 +1,9 @@
-<div class="flex min-h-screen flex-col bg-neutral-25">
+<div class="flex min-h-screen flex-col bg-neutral-25 dark:bg-gray-900">
   <!-- Identity strip (lintblauw) + simplified header: just brand and theme switcher -->
   <div class="sticky top-0 z-40">
     <div class="h-1 bg-accent-750" aria-hidden="true"></div>
     <header
-      class="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6 dark:border-gray-800 dark:bg-gray-900"
+      class="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6 dark:border-gray-800 dark:bg-gray-950"
       role="banner"
     >
       <div class="flex items-center gap-2 leading-tight">
@@ -35,7 +35,7 @@
     </div>
     <div class="sm:mx-auto sm:w-full sm:max-w-md">
       <div
-        class="rounded-lg border border-gray-200 bg-white px-4 py-8 sm:px-10 dark:border-gray-800 dark:bg-gray-900"
+        class="rounded-lg border border-gray-200 bg-white px-4 py-8 sm:px-10 dark:border-gray-800 dark:bg-gray-950"
       >
         <form
           [formGroup]="loginForm"
@@ -83,8 +83,8 @@
           </nldd-form-field>
 
           @if (error()) {
-            <div class="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-              <p class="text-red-800 dark:text-red-200">{{ error() }}</p>
+            <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+              <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
             </div>
           }
 

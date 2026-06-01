@@ -135,7 +135,7 @@ html.dark {
 }
 
 body {
-  @apply bg-white text-gray-800 font-body dark:bg-gray-950 dark:text-gray-100;
+  @apply bg-white text-gray-800 font-body dark:bg-gray-900 dark:text-gray-100;
 }
 
 button {
