@@ -391,6 +391,21 @@
           fieldError('port_type')
         }}</nldd-form-field-error-text>
       </nldd-form-field>
+      <nldd-form-field label="Direction">
+        <select #fPortDirection [attr.invalid]="isFieldInvalid('direction') ? '' : null">
+          @for (d of PORT_DIRECTIONS; track d.value) {
+            <option
+              [value]="d.value"
+              [attr.selected]="(editPortDef()?.direction ?? 'bidir') === d.value ? true : null"
+            >
+              {{ d.label }}
+            </option>
+          }
+        </select>
+        <nldd-form-field-error-text id="error-port-direction">{{
+          fieldError('direction')
+        }}</nldd-form-field-error-text>
+      </nldd-form-field>
       <nldd-form-field label="Media type" [optional]="true">
         <nldd-text-field
           #fPortMedia

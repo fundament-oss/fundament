@@ -114,6 +114,13 @@ export default class CatalogDetailComponent implements OnInit {
     return this.PORT_TYPES.find((t) => t.value === value)?.label ?? value;
   }
 
+  /** Selectable port-direction enum values (proto-aligned keys + labels). */
+  readonly PORT_DIRECTIONS: { value: string; label: string }[] = [
+    { value: 'bidir', label: 'Bidirectional' },
+    { value: 'in', label: 'In' },
+    { value: 'out', label: 'Out' },
+  ];
+
   private readonly portSheetEl = viewChild<NativeElementRef>('portSheet');
 
   private readonly portModalEl = viewChild<NativeElementRef>('portModal');
@@ -121,6 +128,8 @@ export default class CatalogDetailComponent implements OnInit {
   private readonly fPortName = viewChild<NativeElementRef>('fPortName');
 
   private readonly fPortType = viewChild<NativeElementRef>('fPortType');
+
+  private readonly fPortDirection = viewChild<NativeElementRef>('fPortDirection');
 
   private readonly fPortMedia = viewChild<NativeElementRef>('fPortMedia');
 
@@ -250,7 +259,13 @@ export default class CatalogDetailComponent implements OnInit {
 
   openCreatePortDef(): void {
     this.clearErrors();
-    this.editPortDef.set({ id: '', catalogEntryId: this.catalogId(), name: '', portType: '' });
+    this.editPortDef.set({
+      id: '',
+      catalogEntryId: this.catalogId(),
+      name: '',
+      portType: '',
+      direction: 'bidir',
+    });
   }
 
   openEditPortDef(pd: PortDefinition): void {
@@ -269,6 +284,7 @@ export default class CatalogDetailComponent implements OnInit {
     this.clearErrors();
     const name = this.fPortName()?.nativeElement.value ?? '';
     const portType = this.fPortType()?.nativeElement.value ?? '';
+    const direction = this.fPortDirection()?.nativeElement.value ?? '';
     const mediaType = this.fPortMedia()?.nativeElement.value ?? '';
     const speedRaw = this.fPortSpeed()?.nativeElement.value;
     const powerRaw = this.fPortPower()?.nativeElement.value;
@@ -279,6 +295,8 @@ export default class CatalogDetailComponent implements OnInit {
       catalogEntryId: this.catalogId(),
       name,
       portType,
+      direction,
+      ordinal: form.ordinal ?? this.portDefs().length,
       ...(mediaType ? { mediaType } : {}),
       ...(speedGbps != null && !Number.isNaN(speedGbps) ? { speedGbps } : {}),
       ...(powerWatts != null && !Number.isNaN(powerWatts) ? { powerWatts } : {}),

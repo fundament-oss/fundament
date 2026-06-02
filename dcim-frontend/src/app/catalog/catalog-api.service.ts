@@ -1,5 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { AssetCategory as ProtoCategory, PortType } from '../../generated/v1/common_pb';
+import {
+  AssetCategory as ProtoCategory,
+  PortType,
+  PortDirection,
+} from '../../generated/v1/common_pb';
 import type {
   DeviceCatalog,
   PortDefinition as ProtoPortDef,
@@ -37,10 +41,30 @@ export default class CatalogApiService {
       catalogEntryId: p.deviceCatalogId,
       name: p.name,
       portType: CatalogApiService.fromProtoPortType(p.portType),
+      direction: CatalogApiService.fromProtoDirection(p.direction),
+      ordinal: p.ordinal,
       ...(p.mediaType ? { mediaType: p.mediaType } : {}),
       ...(speedGbps != null ? { speedGbps } : {}),
       ...(p.maxPowerW ? { powerWatts: p.maxPowerW } : {}),
     };
+  }
+
+  private static fromProtoDirection(d: PortDirection): string {
+    const map: Record<number, string> = {
+      [PortDirection.IN]: 'in',
+      [PortDirection.OUT]: 'out',
+      [PortDirection.BIDIR]: 'bidir',
+    };
+    return map[d] ?? '';
+  }
+
+  private static toProtoDirection(key: string): PortDirection {
+    const map: Record<string, PortDirection> = {
+      in: PortDirection.IN,
+      out: PortDirection.OUT,
+      bidir: PortDirection.BIDIR,
+    };
+    return map[key] ?? PortDirection.UNSPECIFIED;
   }
 
   private static fromProtoPortType(t: PortType): string {
@@ -167,6 +191,8 @@ export default class CatalogApiService {
       deviceCatalogId: pd.catalogEntryId,
       name: pd.name,
       portType: CatalogApiService.toProtoPortType(pd.portType),
+      direction: CatalogApiService.toProtoDirection(pd.direction),
+      ordinal: pd.ordinal ?? 0,
       mediaType: pd.mediaType ?? '',
       ...(pd.speedGbps != null ? { speed: String(pd.speedGbps) } : {}),
       ...(pd.powerWatts != null ? { maxPowerW: pd.powerWatts } : {}),
@@ -178,6 +204,8 @@ export default class CatalogApiService {
       id: pd.id,
       name: pd.name,
       portType: CatalogApiService.toProtoPortType(pd.portType),
+      direction: CatalogApiService.toProtoDirection(pd.direction),
+      ordinal: pd.ordinal ?? 0,
       mediaType: pd.mediaType ?? '',
       ...(pd.speedGbps != null ? { speed: String(pd.speedGbps) } : {}),
       ...(pd.powerWatts != null ? { maxPowerW: pd.powerWatts } : {}),

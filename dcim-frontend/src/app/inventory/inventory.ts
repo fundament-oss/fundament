@@ -107,10 +107,13 @@ export interface PortDefinition {
   name: string;
   /** Port category enum key: network | power_in | power_out | slot | bay | console. */
   portType: string;
+  /** Direction enum key: in | out | bidir. */
+  direction: string;
   /** Free-text connector/media (e.g. SFP+, QSFP28, IEC C13). */
   mediaType?: string;
   speedGbps?: number;
   powerWatts?: number;
+  ordinal?: number;
 }
 
 export interface PortCompatibility {
