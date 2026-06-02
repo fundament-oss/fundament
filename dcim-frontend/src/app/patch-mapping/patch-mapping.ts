@@ -168,6 +168,8 @@ export default class PatchMappingComponent implements OnInit {
 
   selectDc(siteId: string): void {
     this.selectedDcId.set(siteId);
+    // loadSiteGraph handles its own errors; the no-op catch just marks the
+    // promise as handled for the floating-promise lint.
     this.loadSiteGraph(siteId).catch(() => undefined);
   }
 
@@ -223,22 +225,12 @@ export default class PatchMappingComponent implements OnInit {
         ports.forEach((port) => portById.set(port.id, port));
       });
 
-      // Connections touching any placement in the site, de-duplicated.
-      const connArrays = await Promise.all(
-        placements.map((p) => firstValueFrom(this.patchApi.listConnectionsByPlacement(p.id))),
-      );
+      // Every connection in the site, fetched in a single call.
+      const connRes = await firstValueFrom(this.patchApi.listConnectionsBySite(siteId));
       const deviceNameById = new Map(devices.map((d) => [d.id, d.name]));
-      const seen = new Set<string>();
-      const cables: Cable[] = [];
-      connArrays
-        .flatMap((r) => r.connections)
-        .forEach((c) => {
-          if (seen.has(c.id)) return;
-          seen.add(c.id);
-          cables.push(
-            PatchMappingApiService.mapConnection(c, siteId, { deviceNameById, portById }),
-          );
-        });
+      const cables = connRes.connections.map((c) =>
+        PatchMappingApiService.mapConnection(c, siteId, { deviceNameById, portById }),
+      );
 
       this.dcDevices.set(devices);
       this.localDevicePorts.set(devicePorts);

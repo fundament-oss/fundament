@@ -39,6 +39,7 @@ service PhysicalConnectionService {
   rpc UpdatePhysicalConnection  (UpdatePhysicalConnectionRequest)  returns (google.protobuf.Empty);
   rpc DeletePhysicalConnection  (DeletePhysicalConnectionRequest)  returns (google.protobuf.Empty);
   rpc ListConnectionsByPlacement(ListConnectionsByPlacementRequest) returns (ListConnectionsByPlacementResponse);
+  rpc ListConnectionsBySite     (ListConnectionsBySiteRequest)      returns (ListConnectionsBySiteResponse);
 }
 
 message CreatePhysicalConnectionRequest {
@@ -87,5 +88,17 @@ message ListConnectionsByPlacementRequest {
 }
 
 message ListConnectionsByPlacementResponse {
+  repeated PhysicalConnection connections = 10;
+}
+
+// ListConnectionsBySite returns every physical connection that touches a
+// placement with a direct rack in the site, in one call (avoids fanning out per
+// placement). Connections to sub-component placements (which have no rack_id of
+// their own) are not included.
+message ListConnectionsBySiteRequest {
+  string site_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListConnectionsBySiteResponse {
   repeated PhysicalConnection connections = 10;
 }

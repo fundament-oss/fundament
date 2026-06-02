@@ -224,3 +224,12 @@ func physicalConnectionFromListRow(row *db.PhysicalConnectionListByPlacementRow)
 		row.Created,
 	)
 }
+
+func physicalConnectionFromListBySiteRow(row *db.PhysicalConnectionListBySiteRow) *dcimv1.PhysicalConnection {
+	return physicalConnectionFromFields(
+		row.ID, row.APlacementID, row.APortDefinitionID, row.BPlacementID, row.BPortDefinitionID,
+		row.CableAssetID, row.LogicalConnectionID,
+		row.CableType, row.Status, row.Color, row.Label,
+		row.Created,
+	)
+}

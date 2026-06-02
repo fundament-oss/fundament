@@ -1208,6 +1208,126 @@ func (b0 ListConnectionsByPlacementResponse_builder) Build() *ListConnectionsByP
 	return m0
 }
 
+// ListConnectionsBySite returns every physical connection that touches a
+// placement with a direct rack in the site, in one call (avoids fanning out per
+// placement). Connections to sub-component placements (which have no rack_id of
+// their own) are not included.
+type ListConnectionsBySiteRequest struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_SiteId string                 `protobuf:"bytes,10,opt,name=site_id,json=siteId"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ListConnectionsBySiteRequest) Reset() {
+	*x = ListConnectionsBySiteRequest{}
+	mi := &file_v1_connection_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConnectionsBySiteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConnectionsBySiteRequest) ProtoMessage() {}
+
+func (x *ListConnectionsBySiteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_connection_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListConnectionsBySiteRequest) GetSiteId() string {
+	if x != nil {
+		return x.xxx_hidden_SiteId
+	}
+	return ""
+}
+
+func (x *ListConnectionsBySiteRequest) SetSiteId(v string) {
+	x.xxx_hidden_SiteId = v
+}
+
+type ListConnectionsBySiteRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	SiteId string
+}
+
+func (b0 ListConnectionsBySiteRequest_builder) Build() *ListConnectionsBySiteRequest {
+	m0 := &ListConnectionsBySiteRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_SiteId = b.SiteId
+	return m0
+}
+
+type ListConnectionsBySiteResponse struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Connections *[]*PhysicalConnection `protobuf:"bytes,10,rep,name=connections"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ListConnectionsBySiteResponse) Reset() {
+	*x = ListConnectionsBySiteResponse{}
+	mi := &file_v1_connection_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConnectionsBySiteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConnectionsBySiteResponse) ProtoMessage() {}
+
+func (x *ListConnectionsBySiteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_connection_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListConnectionsBySiteResponse) GetConnections() []*PhysicalConnection {
+	if x != nil {
+		if x.xxx_hidden_Connections != nil {
+			return *x.xxx_hidden_Connections
+		}
+	}
+	return nil
+}
+
+func (x *ListConnectionsBySiteResponse) SetConnections(v []*PhysicalConnection) {
+	x.xxx_hidden_Connections = &v
+}
+
+type ListConnectionsBySiteResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Connections []*PhysicalConnection
+}
+
+func (b0 ListConnectionsBySiteResponse_builder) Build() *ListConnectionsBySiteResponse {
+	m0 := &ListConnectionsBySiteResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Connections = &b.Connections
+	return m0
+}
+
 var File_v1_connection_proto protoreflect.FileDescriptor
 
 const file_v1_connection_proto_rawDesc = "" +
@@ -1274,15 +1394,22 @@ const file_v1_connection_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vplacementId\"c\n" +
 	"\"ListConnectionsByPlacementResponse\x12=\n" +
 	"\vconnections\x18\n" +
-	" \x03(\v2\x1b.dcim.v1.PhysicalConnectionR\vconnections2\xa7\x04\n" +
+	" \x03(\v2\x1b.dcim.v1.PhysicalConnectionR\vconnections\"A\n" +
+	"\x1cListConnectionsBySiteRequest\x12!\n" +
+	"\asite_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06siteId\"^\n" +
+	"\x1dListConnectionsBySiteResponse\x12=\n" +
+	"\vconnections\x18\n" +
+	" \x03(\v2\x1b.dcim.v1.PhysicalConnectionR\vconnections2\x8f\x05\n" +
 	"\x19PhysicalConnectionService\x12o\n" +
 	"\x18CreatePhysicalConnection\x12(.dcim.v1.CreatePhysicalConnectionRequest\x1a).dcim.v1.CreatePhysicalConnectionResponse\x12f\n" +
 	"\x15GetPhysicalConnection\x12%.dcim.v1.GetPhysicalConnectionRequest\x1a&.dcim.v1.GetPhysicalConnectionResponse\x12\\\n" +
 	"\x18UpdatePhysicalConnection\x12(.dcim.v1.UpdatePhysicalConnectionRequest\x1a\x16.google.protobuf.Empty\x12\\\n" +
 	"\x18DeletePhysicalConnection\x12(.dcim.v1.DeletePhysicalConnectionRequest\x1a\x16.google.protobuf.Empty\x12u\n" +
-	"\x1aListConnectionsByPlacement\x12*.dcim.v1.ListConnectionsByPlacementRequest\x1a+.dcim.v1.ListConnectionsByPlacementResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x1aListConnectionsByPlacement\x12*.dcim.v1.ListConnectionsByPlacementRequest\x1a+.dcim.v1.ListConnectionsByPlacementResponse\x12f\n" +
+	"\x15ListConnectionsBySite\x12%.dcim.v1.ListConnectionsBySiteRequest\x1a&.dcim.v1.ListConnectionsBySiteResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_connection_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_v1_connection_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_v1_connection_proto_goTypes = []any{
 	(*PhysicalConnection)(nil),                 // 0: dcim.v1.PhysicalConnection
 	(*CreatePhysicalConnectionRequest)(nil),    // 1: dcim.v1.CreatePhysicalConnectionRequest
@@ -1293,41 +1420,46 @@ var file_v1_connection_proto_goTypes = []any{
 	(*DeletePhysicalConnectionRequest)(nil),    // 6: dcim.v1.DeletePhysicalConnectionRequest
 	(*ListConnectionsByPlacementRequest)(nil),  // 7: dcim.v1.ListConnectionsByPlacementRequest
 	(*ListConnectionsByPlacementResponse)(nil), // 8: dcim.v1.ListConnectionsByPlacementResponse
-	(*timestamppb.Timestamp)(nil),              // 9: google.protobuf.Timestamp
-	(CableType)(0),                             // 10: dcim.v1.CableType
-	(CableStatus)(0),                           // 11: dcim.v1.CableStatus
-	(CableColor)(0),                            // 12: dcim.v1.CableColor
-	(*emptypb.Empty)(nil),                      // 13: google.protobuf.Empty
+	(*ListConnectionsBySiteRequest)(nil),       // 9: dcim.v1.ListConnectionsBySiteRequest
+	(*ListConnectionsBySiteResponse)(nil),      // 10: dcim.v1.ListConnectionsBySiteResponse
+	(*timestamppb.Timestamp)(nil),              // 11: google.protobuf.Timestamp
+	(CableType)(0),                             // 12: dcim.v1.CableType
+	(CableStatus)(0),                           // 13: dcim.v1.CableStatus
+	(CableColor)(0),                            // 14: dcim.v1.CableColor
+	(*emptypb.Empty)(nil),                      // 15: google.protobuf.Empty
 }
 var file_v1_connection_proto_depIdxs = []int32{
-	9,  // 0: dcim.v1.PhysicalConnection.created:type_name -> google.protobuf.Timestamp
-	9,  // 1: dcim.v1.PhysicalConnection.deleted:type_name -> google.protobuf.Timestamp
-	10, // 2: dcim.v1.PhysicalConnection.cable_type:type_name -> dcim.v1.CableType
-	11, // 3: dcim.v1.PhysicalConnection.status:type_name -> dcim.v1.CableStatus
-	12, // 4: dcim.v1.PhysicalConnection.color:type_name -> dcim.v1.CableColor
-	10, // 5: dcim.v1.CreatePhysicalConnectionRequest.cable_type:type_name -> dcim.v1.CableType
-	11, // 6: dcim.v1.CreatePhysicalConnectionRequest.status:type_name -> dcim.v1.CableStatus
-	12, // 7: dcim.v1.CreatePhysicalConnectionRequest.color:type_name -> dcim.v1.CableColor
+	11, // 0: dcim.v1.PhysicalConnection.created:type_name -> google.protobuf.Timestamp
+	11, // 1: dcim.v1.PhysicalConnection.deleted:type_name -> google.protobuf.Timestamp
+	12, // 2: dcim.v1.PhysicalConnection.cable_type:type_name -> dcim.v1.CableType
+	13, // 3: dcim.v1.PhysicalConnection.status:type_name -> dcim.v1.CableStatus
+	14, // 4: dcim.v1.PhysicalConnection.color:type_name -> dcim.v1.CableColor
+	12, // 5: dcim.v1.CreatePhysicalConnectionRequest.cable_type:type_name -> dcim.v1.CableType
+	13, // 6: dcim.v1.CreatePhysicalConnectionRequest.status:type_name -> dcim.v1.CableStatus
+	14, // 7: dcim.v1.CreatePhysicalConnectionRequest.color:type_name -> dcim.v1.CableColor
 	0,  // 8: dcim.v1.GetPhysicalConnectionResponse.connection:type_name -> dcim.v1.PhysicalConnection
-	10, // 9: dcim.v1.UpdatePhysicalConnectionRequest.cable_type:type_name -> dcim.v1.CableType
-	11, // 10: dcim.v1.UpdatePhysicalConnectionRequest.status:type_name -> dcim.v1.CableStatus
-	12, // 11: dcim.v1.UpdatePhysicalConnectionRequest.color:type_name -> dcim.v1.CableColor
+	12, // 9: dcim.v1.UpdatePhysicalConnectionRequest.cable_type:type_name -> dcim.v1.CableType
+	13, // 10: dcim.v1.UpdatePhysicalConnectionRequest.status:type_name -> dcim.v1.CableStatus
+	14, // 11: dcim.v1.UpdatePhysicalConnectionRequest.color:type_name -> dcim.v1.CableColor
 	0,  // 12: dcim.v1.ListConnectionsByPlacementResponse.connections:type_name -> dcim.v1.PhysicalConnection
-	1,  // 13: dcim.v1.PhysicalConnectionService.CreatePhysicalConnection:input_type -> dcim.v1.CreatePhysicalConnectionRequest
-	3,  // 14: dcim.v1.PhysicalConnectionService.GetPhysicalConnection:input_type -> dcim.v1.GetPhysicalConnectionRequest
-	5,  // 15: dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection:input_type -> dcim.v1.UpdatePhysicalConnectionRequest
-	6,  // 16: dcim.v1.PhysicalConnectionService.DeletePhysicalConnection:input_type -> dcim.v1.DeletePhysicalConnectionRequest
-	7,  // 17: dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement:input_type -> dcim.v1.ListConnectionsByPlacementRequest
-	2,  // 18: dcim.v1.PhysicalConnectionService.CreatePhysicalConnection:output_type -> dcim.v1.CreatePhysicalConnectionResponse
-	4,  // 19: dcim.v1.PhysicalConnectionService.GetPhysicalConnection:output_type -> dcim.v1.GetPhysicalConnectionResponse
-	13, // 20: dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection:output_type -> google.protobuf.Empty
-	13, // 21: dcim.v1.PhysicalConnectionService.DeletePhysicalConnection:output_type -> google.protobuf.Empty
-	8,  // 22: dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement:output_type -> dcim.v1.ListConnectionsByPlacementResponse
-	18, // [18:23] is the sub-list for method output_type
-	13, // [13:18] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	0,  // 13: dcim.v1.ListConnectionsBySiteResponse.connections:type_name -> dcim.v1.PhysicalConnection
+	1,  // 14: dcim.v1.PhysicalConnectionService.CreatePhysicalConnection:input_type -> dcim.v1.CreatePhysicalConnectionRequest
+	3,  // 15: dcim.v1.PhysicalConnectionService.GetPhysicalConnection:input_type -> dcim.v1.GetPhysicalConnectionRequest
+	5,  // 16: dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection:input_type -> dcim.v1.UpdatePhysicalConnectionRequest
+	6,  // 17: dcim.v1.PhysicalConnectionService.DeletePhysicalConnection:input_type -> dcim.v1.DeletePhysicalConnectionRequest
+	7,  // 18: dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement:input_type -> dcim.v1.ListConnectionsByPlacementRequest
+	9,  // 19: dcim.v1.PhysicalConnectionService.ListConnectionsBySite:input_type -> dcim.v1.ListConnectionsBySiteRequest
+	2,  // 20: dcim.v1.PhysicalConnectionService.CreatePhysicalConnection:output_type -> dcim.v1.CreatePhysicalConnectionResponse
+	4,  // 21: dcim.v1.PhysicalConnectionService.GetPhysicalConnection:output_type -> dcim.v1.GetPhysicalConnectionResponse
+	15, // 22: dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection:output_type -> google.protobuf.Empty
+	15, // 23: dcim.v1.PhysicalConnectionService.DeletePhysicalConnection:output_type -> google.protobuf.Empty
+	8,  // 24: dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement:output_type -> dcim.v1.ListConnectionsByPlacementResponse
+	10, // 25: dcim.v1.PhysicalConnectionService.ListConnectionsBySite:output_type -> dcim.v1.ListConnectionsBySiteResponse
+	20, // [20:26] is the sub-list for method output_type
+	14, // [14:20] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_v1_connection_proto_init() }
@@ -1342,7 +1474,7 @@ func file_v1_connection_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_connection_proto_rawDesc), len(file_v1_connection_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

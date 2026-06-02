@@ -50,6 +50,9 @@ const (
 	// PhysicalConnectionServiceListConnectionsByPlacementProcedure is the fully-qualified name of the
 	// PhysicalConnectionService's ListConnectionsByPlacement RPC.
 	PhysicalConnectionServiceListConnectionsByPlacementProcedure = "/dcim.v1.PhysicalConnectionService/ListConnectionsByPlacement"
+	// PhysicalConnectionServiceListConnectionsBySiteProcedure is the fully-qualified name of the
+	// PhysicalConnectionService's ListConnectionsBySite RPC.
+	PhysicalConnectionServiceListConnectionsBySiteProcedure = "/dcim.v1.PhysicalConnectionService/ListConnectionsBySite"
 )
 
 // PhysicalConnectionServiceClient is a client for the dcim.v1.PhysicalConnectionService service.
@@ -59,6 +62,7 @@ type PhysicalConnectionServiceClient interface {
 	UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 	DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 	ListConnectionsByPlacement(context.Context, *connect.Request[v1.ListConnectionsByPlacementRequest]) (*connect.Response[v1.ListConnectionsByPlacementResponse], error)
+	ListConnectionsBySite(context.Context, *connect.Request[v1.ListConnectionsBySiteRequest]) (*connect.Response[v1.ListConnectionsBySiteResponse], error)
 }
 
 // NewPhysicalConnectionServiceClient constructs a client for the dcim.v1.PhysicalConnectionService
@@ -102,6 +106,12 @@ func NewPhysicalConnectionServiceClient(httpClient connect.HTTPClient, baseURL s
 			connect.WithSchema(physicalConnectionServiceMethods.ByName("ListConnectionsByPlacement")),
 			connect.WithClientOptions(opts...),
 		),
+		listConnectionsBySite: connect.NewClient[v1.ListConnectionsBySiteRequest, v1.ListConnectionsBySiteResponse](
+			httpClient,
+			baseURL+PhysicalConnectionServiceListConnectionsBySiteProcedure,
+			connect.WithSchema(physicalConnectionServiceMethods.ByName("ListConnectionsBySite")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -112,6 +122,7 @@ type physicalConnectionServiceClient struct {
 	updatePhysicalConnection   *connect.Client[v1.UpdatePhysicalConnectionRequest, emptypb.Empty]
 	deletePhysicalConnection   *connect.Client[v1.DeletePhysicalConnectionRequest, emptypb.Empty]
 	listConnectionsByPlacement *connect.Client[v1.ListConnectionsByPlacementRequest, v1.ListConnectionsByPlacementResponse]
+	listConnectionsBySite      *connect.Client[v1.ListConnectionsBySiteRequest, v1.ListConnectionsBySiteResponse]
 }
 
 // CreatePhysicalConnection calls dcim.v1.PhysicalConnectionService.CreatePhysicalConnection.
@@ -139,6 +150,11 @@ func (c *physicalConnectionServiceClient) ListConnectionsByPlacement(ctx context
 	return c.listConnectionsByPlacement.CallUnary(ctx, req)
 }
 
+// ListConnectionsBySite calls dcim.v1.PhysicalConnectionService.ListConnectionsBySite.
+func (c *physicalConnectionServiceClient) ListConnectionsBySite(ctx context.Context, req *connect.Request[v1.ListConnectionsBySiteRequest]) (*connect.Response[v1.ListConnectionsBySiteResponse], error) {
+	return c.listConnectionsBySite.CallUnary(ctx, req)
+}
+
 // PhysicalConnectionServiceHandler is an implementation of the dcim.v1.PhysicalConnectionService
 // service.
 type PhysicalConnectionServiceHandler interface {
@@ -147,6 +163,7 @@ type PhysicalConnectionServiceHandler interface {
 	UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 	DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
 	ListConnectionsByPlacement(context.Context, *connect.Request[v1.ListConnectionsByPlacementRequest]) (*connect.Response[v1.ListConnectionsByPlacementResponse], error)
+	ListConnectionsBySite(context.Context, *connect.Request[v1.ListConnectionsBySiteRequest]) (*connect.Response[v1.ListConnectionsBySiteResponse], error)
 }
 
 // NewPhysicalConnectionServiceHandler builds an HTTP handler from the service implementation. It
@@ -186,6 +203,12 @@ func NewPhysicalConnectionServiceHandler(svc PhysicalConnectionServiceHandler, o
 		connect.WithSchema(physicalConnectionServiceMethods.ByName("ListConnectionsByPlacement")),
 		connect.WithHandlerOptions(opts...),
 	)
+	physicalConnectionServiceListConnectionsBySiteHandler := connect.NewUnaryHandler(
+		PhysicalConnectionServiceListConnectionsBySiteProcedure,
+		svc.ListConnectionsBySite,
+		connect.WithSchema(physicalConnectionServiceMethods.ByName("ListConnectionsBySite")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dcim.v1.PhysicalConnectionService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PhysicalConnectionServiceCreatePhysicalConnectionProcedure:
@@ -198,6 +221,8 @@ func NewPhysicalConnectionServiceHandler(svc PhysicalConnectionServiceHandler, o
 			physicalConnectionServiceDeletePhysicalConnectionHandler.ServeHTTP(w, r)
 		case PhysicalConnectionServiceListConnectionsByPlacementProcedure:
 			physicalConnectionServiceListConnectionsByPlacementHandler.ServeHTTP(w, r)
+		case PhysicalConnectionServiceListConnectionsBySiteProcedure:
+			physicalConnectionServiceListConnectionsBySiteHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -225,4 +250,8 @@ func (UnimplementedPhysicalConnectionServiceHandler) DeletePhysicalConnection(co
 
 func (UnimplementedPhysicalConnectionServiceHandler) ListConnectionsByPlacement(context.Context, *connect.Request[v1.ListConnectionsByPlacementRequest]) (*connect.Response[v1.ListConnectionsByPlacementResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement is not implemented"))
+}
+
+func (UnimplementedPhysicalConnectionServiceHandler) ListConnectionsBySite(context.Context, *connect.Request[v1.ListConnectionsBySiteRequest]) (*connect.Response[v1.ListConnectionsBySiteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.ListConnectionsBySite is not implemented"))
 }

@@ -358,7 +358,9 @@ export default class DeviceDetailComponent {
       case 'console-server-port':
         return 'management';
       default:
-        throw new Error(`unhandled port type: ${portType as string}`);
+        // Runs inside a computed during change detection — degrade rather than
+        // crash the connections panel on an unexpected port type.
+        return 'network';
     }
   }
 
@@ -371,7 +373,9 @@ export default class DeviceDetailComponent {
       case 'planned':
         return 'unknown';
       default:
-        throw new Error(`unhandled cable status: ${status as string}`);
+        // Runs inside a computed during change detection — degrade rather than
+        // crash the connections panel on an unexpected cable status.
+        return 'unknown';
     }
   }
 

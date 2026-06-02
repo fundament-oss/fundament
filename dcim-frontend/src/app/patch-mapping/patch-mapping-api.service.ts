@@ -198,6 +198,10 @@ export default class PatchMappingApiService {
     return this.client.listConnectionsByPlacement({ placementId });
   }
 
+  listConnectionsBySite(siteId: string) {
+    return this.client.listConnectionsBySite({ siteId });
+  }
+
   createCable(cable: Cable) {
     return this.client.createPhysicalConnection({
       sourcePlacementId: cable.aSide.deviceId,
