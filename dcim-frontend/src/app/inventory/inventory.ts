@@ -119,6 +119,9 @@ export interface PortDefinition {
 export interface PortCompatibility {
   id: string;
   portDefinitionId: string;
+  /** Category the port accepts. Always set. */
+  compatibleCategory: AssetCategory;
+  /** Specific catalog entry the compatibility is narrowed to. Empty for category-wide matches. */
   compatibleCatalogEntryId: string;
 }
 

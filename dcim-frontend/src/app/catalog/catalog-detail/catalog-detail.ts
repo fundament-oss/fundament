@@ -360,11 +360,13 @@ export default class CatalogDetailComponent implements OnInit {
     const entryId = this.compatEntryId();
     if (!pdId || !entryId) return;
     this.clearErrors();
+    const entry = this.allCatalogEntries().find((e) => e.id === entryId);
     firstValueFrom(this.catalogApi.createPortCompatibility(pdId, entryId))
       .then(() => {
         const created: PortCompatibility = {
           id: `${pdId}:${entryId}`,
           portDefinitionId: pdId,
+          compatibleCategory: entry?.category ?? 'Other',
           compatibleCatalogEntryId: entryId,
         };
         this.mutableCompatibilities.update((list) => [...list, created]);
@@ -401,6 +403,15 @@ export default class CatalogDetailComponent implements OnInit {
 
   readonly compatibleEntryName = (entryId: string): string =>
     this.allCatalogEntries().find((e) => e.id === entryId)?.model ?? entryId;
+
+  /**
+   * Chip label for a compatibility: the specific model when narrowed to one
+   * catalog entry, otherwise the whole accepted category (e.g. "Any Server").
+   */
+  readonly compatLabel = (compat: PortCompatibility): string =>
+    compat.compatibleCatalogEntryId
+      ? this.compatibleEntryName(compat.compatibleCatalogEntryId)
+      : `Any ${compat.compatibleCategory}`;
 
   portDefName(pdId: string): string {
     return this.mutablePortDefs().find((p) => p.id === pdId)?.name ?? pdId;

@@ -46,10 +46,13 @@ message PortDefinition {
 }
 
 // PortCompatibility records that a sub-component catalog entry fits a port (core.port_compatibilities).
+// compatible_category is always set; compatible_catalog_id is only set when the
+// compatibility is narrowed to one specific catalog entry within that category.
 message PortCompatibility {
-  string port_definition_id    = 10;
-  string compatible_catalog_id = 20;
-  string notes                 = 30;
+  string        port_definition_id    = 10;
+  string        compatible_catalog_id = 20;
+  string        notes                 = 30;
+  AssetCategory compatible_category   = 40;
 }
 
 // ── CatalogService ────────────────────────────────────────────────────────────

@@ -92,9 +92,11 @@ export default class CatalogApiService {
   }
 
   static mapPortCompatibility(c: ProtoPortCompat): PortCompatibility {
+    const category = CatalogApiService.fromProtoCategory(c.compatibleCategory);
     return {
-      id: `${c.portDefinitionId}:${c.compatibleCatalogId}`,
+      id: `${c.portDefinitionId}:${c.compatibleCatalogId || category}`,
       portDefinitionId: c.portDefinitionId,
+      compatibleCategory: category,
       compatibleCatalogEntryId: c.compatibleCatalogId,
     };
   }

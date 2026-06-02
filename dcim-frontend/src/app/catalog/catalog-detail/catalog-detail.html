@@ -149,17 +149,16 @@
                             <span
                               class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 text-xs rounded-full px-2 py-0.5"
                             >
-                              {{ compatibleEntryName(compat.compatibleCatalogEntryId) }}
-                              <button
-                                (click)="openDeleteCompat(compat)"
-                                class="text-slate-400 hover:text-red-500 transition-colors"
-                                [attr.aria-label]="
-                                  'Remove compatibility with ' +
-                                  compatibleEntryName(compat.compatibleCatalogEntryId)
-                                "
-                              >
-                                ×
-                              </button>
+                              {{ compatLabel(compat) }}
+                              @if (compat.compatibleCatalogEntryId) {
+                                <button
+                                  (click)="openDeleteCompat(compat)"
+                                  class="text-slate-400 hover:text-red-500 transition-colors"
+                                  [attr.aria-label]="'Remove compatibility with ' + compatLabel(compat)"
+                                >
+                                  ×
+                                </button>
+                              }
                             </span>
                           }
                           <nldd-icon-button
