@@ -291,8 +291,13 @@ export default class AssetDetailComponent implements OnInit {
       warrantyExpiry: warranty || undefined,
       notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? current.notes,
     };
+    // Validate the placement input before any write so a missing/zero unit
+    // can't be saved as an off-grid (U0) placement.
+    const placement = this.readPlacementInput();
+    if (placement === 'invalid') return;
+
     firstValueFrom(this.inventoryApi.updateAsset(updated))
-      .then(() => this.reconcilePlacement(updated.id))
+      .then(() => this.placementApi.reconcilePlacement({ ...placement, assetId: updated.id }))
       .then(() => {
         this.asset.set(updated);
         this.editAsset.set(null);
@@ -301,21 +306,34 @@ export default class AssetDetailComponent implements OnInit {
       .catch((err) => this.handleError(err));
   }
 
-  private reconcilePlacement(assetId: string): Promise<unknown> {
+  /**
+   * Reads the rack/unit/slot inputs and validates them. Returns `'invalid'`
+   * (after surfacing an inline error) when a rack is selected but the unit is
+   * missing or below 1; the rack diagram only draws units 1…totalU, so a U0
+   * placement would be invisible.
+   */
+  private readPlacementInput():
+    | { rackId: string; unit: number; slotType: RackSlotType; existingPlacementId: string | null }
+    | 'invalid' {
     const rackId = (this.fAssetRack()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const unit =
-      parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
     const slotType =
       (Number(
         (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
       ) as RackSlotType) || RackSlotType.UNIT;
-    return this.placementApi.reconcilePlacement({
-      assetId,
-      rackId,
-      unit,
-      slotType,
-      existingPlacementId: this.editPlacement()?.id ?? null,
-    });
+    const existingPlacementId = this.editPlacement()?.id ?? null;
+
+    if (!rackId) {
+      // No rack selected: clears any existing placement, unit is irrelevant.
+      return { rackId: '', unit: 0, slotType, existingPlacementId };
+    }
+
+    const unit = parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10);
+    if (!Number.isInteger(unit) || unit < 1) {
+      this.invalidFields.set({ rack_unit_start: 'Enter a rack unit of 1 or higher.' });
+      return 'invalid';
+    }
+
+    return { rackId, unit, slotType, existingPlacementId };
   }
 
   readonly notes = signal<NoteComment[]>([]);

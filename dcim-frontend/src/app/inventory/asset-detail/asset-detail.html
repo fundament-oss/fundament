@@ -639,7 +639,12 @@
             [attr.value]="editPlacement()?.unit ?? ''"
             placeholder="1"
             (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('rack_unit_start') ? '' : null"
+            error-message="error-ad-rack-unit"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-ad-rack-unit">{{
+            fieldError('rack_unit_start')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Slot type" [optional]="true">
           <select #fAssetSlotType>
