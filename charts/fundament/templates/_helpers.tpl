@@ -78,3 +78,44 @@ Ingress controller service for internal access
 {{- define "fundament.ingressService" -}}
 ingress-nginx-controller.ingress-nginx.svc.cluster.local
 {{- end }}
+
+{{/*
+livenessProbe rendered with Air-friendly cadence in hotreload mode and
+production-tight cadence otherwise. In hotreload mode, failureThreshold *
+periodSeconds gives ~5 minutes for any `go build` (initial *or* mid-life
+rebuild after a source change) to finish before kubelet kills the pod —
+a startupProbe wouldn't help here because it only covers the first start.
+
+Usage: {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+*/}}
+{{- define "fundament.livenessProbe" -}}
+livenessProbe:
+  httpGet:
+    path: /livez
+    port: {{ .port }}
+  initialDelaySeconds: 5
+{{- if .root.Values.hotreload.enabled }}
+  periodSeconds: 5
+  failureThreshold: 60
+{{- else }}
+  periodSeconds: 10
+{{- end }}
+{{- end }}
+
+{{/*
+readinessProbe rendered with the same hotreload tolerance as liveness so
+the pod isn't yanked out of Service endpoints mid-rebuild either.
+
+Usage: {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+*/}}
+{{- define "fundament.readinessProbe" -}}
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: {{ .port }}
+  initialDelaySeconds: 5
+  periodSeconds: 5
+{{- if .root.Values.hotreload.enabled }}
+  failureThreshold: 60
+{{- end }}
+{{- end }}
