@@ -22,7 +22,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// AssetCategory aligns with core.device_catalogs category check constraint.
+// AssetCategory aligns with dcim.device_catalogs category check constraint.
 type AssetCategory int32
 
 const (
@@ -124,7 +124,7 @@ func (x AssetCategory) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// AssetStatus aligns with core.assets status check constraint.
+// AssetStatus aligns with dcim.assets status check constraint.
 type AssetStatus int32
 
 const (
@@ -181,7 +181,7 @@ func (x AssetStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// AssetEventType aligns with core.asset_events event_type check constraint.
+// AssetEventType aligns with dcim.asset_events event_type check constraint.
 type AssetEventType int32
 
 const (
@@ -244,7 +244,7 @@ func (x AssetEventType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// RackSlotType aligns with core.placements slot_type check constraint.
+// RackSlotType aligns with dcim.placements slot_type check constraint.
 type RackSlotType int32
 
 const (
@@ -292,7 +292,7 @@ func (x RackSlotType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// PortType aligns with core.port_definitions port_type check constraint.
+// PortType aligns with dcim.port_definitions port_type check constraint.
 type PortType int32
 
 const (
@@ -349,7 +349,7 @@ func (x PortType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// PortDirection aligns with core.port_definitions direction check constraint.
+// PortDirection aligns with dcim.port_definitions direction check constraint.
 type PortDirection int32
 
 const (
@@ -520,7 +520,7 @@ func (x SortDirection) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// CableType aligns with core.physical_connections cable_type check constraint.
+// CableType aligns with dcim.physical_connections cable_type check constraint.
 type CableType int32
 
 const (
@@ -598,7 +598,7 @@ func (x CableType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// CableStatus aligns with core.physical_connections status check constraint.
+// CableStatus aligns with dcim.physical_connections status check constraint.
 type CableStatus int32
 
 const (
@@ -646,7 +646,7 @@ func (x CableStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// CableColor aligns with core.physical_connections color check constraint.
+// CableColor aligns with dcim.physical_connections color check constraint.
 type CableColor int32
 
 const (

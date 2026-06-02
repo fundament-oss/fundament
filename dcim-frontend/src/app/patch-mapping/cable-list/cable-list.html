@@ -345,20 +345,20 @@
               <div role="cell">
                 <span
                   class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  [class]="CABLE_STATUS_COLORS[cable.status]"
+                  [class]="cableStatusColors(cable.status)"
                 >
                   <span
                     class="h-1.5 w-1.5 rounded-full"
                     [class]="statusDotClass(cable.status)"
                     aria-hidden="true"
                   ></span>
-                  {{ CABLE_STATUS_LABEL[cable.status] }}
+                  {{ cableStatusLabel(cable.status) }}
                 </span>
               </div>
 
               <!-- Type -->
               <div role="cell">
-                <span class="text-sm text-slate-600">{{ CABLE_TYPE_LABEL[cable.type] }}</span>
+                <span class="text-sm text-slate-600">{{ cableTypeLabel(cable.type) }}</span>
               </div>
 
               <!-- Row actions -->

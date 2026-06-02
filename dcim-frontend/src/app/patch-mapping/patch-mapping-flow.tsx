@@ -853,7 +853,7 @@ interface ContextMenu {
   x: number;
   y: number;
   cableId: string;
-  currentStatus: CableStatus;
+  currentStatus: CableStatus | undefined;
 }
 
 function CableContextMenu({

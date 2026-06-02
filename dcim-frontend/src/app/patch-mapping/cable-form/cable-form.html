@@ -242,6 +242,7 @@
               (change)="cableType.set($any($event.target).value)"
               class="w-full"
             >
+              <option value="" [selected]="cableType() === ''">Unspecified</option>
               @for (t of CABLE_TYPES; track t) {
                 <option [value]="t" [selected]="t === cableType()">
                   {{ CABLE_TYPE_LABEL[t] }}
@@ -261,6 +262,10 @@
               aria-labelledby="cable-status-label"
               (change)="cableStatus.set($any($event).detail.value)"
             >
+              <nldd-segmented-control-item
+                [attr.value]="''"
+                [attr.text]="'Unspecified'"
+              ></nldd-segmented-control-item>
               @for (s of CABLE_STATUSES; track s.value) {
                 <nldd-segmented-control-item
                   [attr.value]="s.value"

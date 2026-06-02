@@ -60,7 +60,7 @@ export const AssetEventSchema: GenMessage<AssetEvent> = /*@__PURE__*/
   messageDesc(file_v1_common, 0);
 
 /**
- * AssetCategory aligns with core.device_catalogs category check constraint.
+ * AssetCategory aligns with dcim.device_catalogs category check constraint.
  *
  * @generated from enum dcim.v1.AssetCategory
  */
@@ -183,7 +183,7 @@ export const AssetCategorySchema: GenEnum<AssetCategory> = /*@__PURE__*/
   enumDesc(file_v1_common, 0);
 
 /**
- * AssetStatus aligns with core.assets status check constraint.
+ * AssetStatus aligns with dcim.assets status check constraint.
  *
  * @generated from enum dcim.v1.AssetStatus
  */
@@ -231,7 +231,7 @@ export const AssetStatusSchema: GenEnum<AssetStatus> = /*@__PURE__*/
   enumDesc(file_v1_common, 1);
 
 /**
- * AssetEventType aligns with core.asset_events event_type check constraint.
+ * AssetEventType aligns with dcim.asset_events event_type check constraint.
  *
  * @generated from enum dcim.v1.AssetEventType
  */
@@ -289,7 +289,7 @@ export const AssetEventTypeSchema: GenEnum<AssetEventType> = /*@__PURE__*/
   enumDesc(file_v1_common, 2);
 
 /**
- * RackSlotType aligns with core.placements slot_type check constraint.
+ * RackSlotType aligns with dcim.placements slot_type check constraint.
  *
  * @generated from enum dcim.v1.RackSlotType
  */
@@ -322,7 +322,7 @@ export const RackSlotTypeSchema: GenEnum<RackSlotType> = /*@__PURE__*/
   enumDesc(file_v1_common, 3);
 
 /**
- * PortType aligns with core.port_definitions port_type check constraint.
+ * PortType aligns with dcim.port_definitions port_type check constraint.
  *
  * @generated from enum dcim.v1.PortType
  */
@@ -370,7 +370,7 @@ export const PortTypeSchema: GenEnum<PortType> = /*@__PURE__*/
   enumDesc(file_v1_common, 4);
 
 /**
- * PortDirection aligns with core.port_definitions direction check constraint.
+ * PortDirection aligns with dcim.port_definitions direction check constraint.
  *
  * @generated from enum dcim.v1.PortDirection
  */
@@ -514,7 +514,7 @@ export const SortDirectionSchema: GenEnum<SortDirection> = /*@__PURE__*/
   enumDesc(file_v1_common, 7);
 
 /**
- * CableType aligns with core.physical_connections cable_type check constraint.
+ * CableType aligns with dcim.physical_connections cable_type check constraint.
  *
  * @generated from enum dcim.v1.CableType
  */
@@ -597,7 +597,7 @@ export const CableTypeSchema: GenEnum<CableType> = /*@__PURE__*/
   enumDesc(file_v1_common, 8);
 
 /**
- * CableStatus aligns with core.physical_connections status check constraint.
+ * CableStatus aligns with dcim.physical_connections status check constraint.
  *
  * @generated from enum dcim.v1.CableStatus
  */
@@ -630,7 +630,7 @@ export const CableStatusSchema: GenEnum<CableStatus> = /*@__PURE__*/
   enumDesc(file_v1_common, 9);
 
 /**
- * CableColor aligns with core.physical_connections color check constraint.
+ * CableColor aligns with dcim.physical_connections color check constraint.
  *
  * @generated from enum dcim.v1.CableColor
  */

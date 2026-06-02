@@ -68,8 +68,10 @@ export interface Cable {
   dcId: string;
   aSide: CableSide;
   bSide: CableSide;
-  type: CableType;
-  status: CableStatus;
+  /** Undefined when the connection has no cable type set (NULL in the DB). */
+  type?: CableType;
+  /** Undefined when the connection has no status set (NULL in the DB). */
+  status?: CableStatus;
   label?: string;
   description?: string;
   color?: CableColor;
@@ -119,6 +121,21 @@ export const CABLE_STATUS_COLORS: Record<CableStatus, string> = {
   connected: 'bg-teal-100 text-teal-700',
   decommissioned: 'bg-slate-100 text-slate-500',
 };
+
+/** Label shown for an unset (NULL) cable type/status. */
+export const UNSPECIFIED_LABEL = 'Unspecified';
+
+export function cableTypeLabel(type: CableType | undefined): string {
+  return type ? CABLE_TYPE_LABEL[type] : UNSPECIFIED_LABEL;
+}
+
+export function cableStatusLabel(status: CableStatus | undefined): string {
+  return status ? CABLE_STATUS_LABEL[status] : UNSPECIFIED_LABEL;
+}
+
+export function cableStatusColors(status: CableStatus | undefined): string {
+  return status ? CABLE_STATUS_COLORS[status] : 'bg-slate-100 text-slate-500';
+}
 
 // ── Port type labels ──────────────────────────────────────────────────────────
 

@@ -79,7 +79,7 @@ export default class CableFormComponent {
   // ── Cable fields ───────────────────────────────────────────────────────────
   readonly cableType = signal<CableType | ''>('cat5e');
 
-  readonly cableStatus = signal<CableStatus>('connected');
+  readonly cableStatus = signal<CableStatus | ''>('connected');
 
   readonly cableLabel = signal('');
 
@@ -174,13 +174,7 @@ export default class CableFormComponent {
 
   readonly canSave = computed(
     () =>
-      !!(
-        this.aDeviceId() &&
-        this.aPortId() &&
-        this.bDeviceId() &&
-        this.bPortId() &&
-        this.cableType()
-      ) &&
+      !!(this.aDeviceId() && this.aPortId() && this.bDeviceId() && this.bPortId()) &&
       !this.isSamePort() &&
       !this.incompatibleSides(),
   );
@@ -214,8 +208,12 @@ export default class CableFormComponent {
         this.bDeviceId.set('');
         this.bPortId.set('');
       }
-      this.cableType.set(c.type ?? this.CABLE_TYPES[0]);
-      this.cableStatus.set(c.status ?? 'connected');
+      // Preserve an unset (NULL) type/status when editing an existing
+      // connection so we don't silently rewrite it on the next save. New
+      // cables still get sensible defaults.
+      const isExisting = !!c.id;
+      this.cableType.set(c.type ?? (isExisting ? '' : this.CABLE_TYPES[0]));
+      this.cableStatus.set(c.status ?? (isExisting ? '' : 'connected'));
       this.cableLabel.set(c.label ?? '');
       this.cableColor.set(c.color ?? undefined);
       this.cableLength.set(c.length ?? undefined);
@@ -299,8 +297,8 @@ export default class CableFormComponent {
         portName: bPort.name,
         portType: bPort.type,
       },
-      type: this.cableType() as CableType,
-      status: this.cableStatus(),
+      type: this.cableType() || undefined,
+      status: this.cableStatus() || undefined,
       label: this.cableLabel() || undefined,
       color: this.cableColor(),
       description: this.cableDescription() || undefined,

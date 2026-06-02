@@ -9,7 +9,7 @@ option features.(pb.go).api_level = API_OPAQUE;
 option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
 
-// AssetCategory aligns with core.device_catalogs category check constraint.
+// AssetCategory aligns with dcim.device_catalogs category check constraint.
 enum AssetCategory {
   ASSET_CATEGORY_UNSPECIFIED    = 0;
   ASSET_CATEGORY_SERVER         = 10;
@@ -35,7 +35,7 @@ enum AssetCategory {
   ASSET_CATEGORY_OTHER          = 210;
 }
 
-// AssetStatus aligns with core.assets status check constraint.
+// AssetStatus aligns with dcim.assets status check constraint.
 enum AssetStatus {
   ASSET_STATUS_UNSPECIFIED    = 0;
   ASSET_STATUS_AVAILABLE      = 10;
@@ -46,7 +46,7 @@ enum AssetStatus {
   ASSET_STATUS_DECOMMISSIONED = 60;
 }
 
-// AssetEventType aligns with core.asset_events event_type check constraint.
+// AssetEventType aligns with dcim.asset_events event_type check constraint.
 enum AssetEventType {
   ASSET_EVENT_TYPE_UNSPECIFIED     = 0;
   ASSET_EVENT_TYPE_RECEIVED        = 10;
@@ -59,7 +59,7 @@ enum AssetEventType {
   ASSET_EVENT_TYPE_NOTE            = 80;
 }
 
-// RackSlotType aligns with core.placements slot_type check constraint.
+// RackSlotType aligns with dcim.placements slot_type check constraint.
 enum RackSlotType {
   RACK_SLOT_TYPE_UNSPECIFIED = 0;
   RACK_SLOT_TYPE_UNIT        = 10;
@@ -67,7 +67,7 @@ enum RackSlotType {
   RACK_SLOT_TYPE_ZERO_U      = 30;
 }
 
-// PortType aligns with core.port_definitions port_type check constraint.
+// PortType aligns with dcim.port_definitions port_type check constraint.
 enum PortType {
   PORT_TYPE_UNSPECIFIED = 0;
   PORT_TYPE_NETWORK     = 10;
@@ -78,7 +78,7 @@ enum PortType {
   PORT_TYPE_CONSOLE     = 60;
 }
 
-// PortDirection aligns with core.port_definitions direction check constraint.
+// PortDirection aligns with dcim.port_definitions direction check constraint.
 enum PortDirection {
   PORT_DIRECTION_UNSPECIFIED = 0;
   PORT_DIRECTION_IN          = 10;
@@ -111,7 +111,7 @@ enum SortDirection {
   SORT_DIRECTION_DESC        = 20;
 }
 
-// CableType aligns with core.physical_connections cable_type check constraint.
+// CableType aligns with dcim.physical_connections cable_type check constraint.
 enum CableType {
   CABLE_TYPE_UNSPECIFIED = 0;
   CABLE_TYPE_CAT5E       = 10;
@@ -129,7 +129,7 @@ enum CableType {
   CABLE_TYPE_OTHER       = 130;
 }
 
-// CableStatus aligns with core.physical_connections status check constraint.
+// CableStatus aligns with dcim.physical_connections status check constraint.
 enum CableStatus {
   CABLE_STATUS_UNSPECIFIED    = 0;
   CABLE_STATUS_PLANNED        = 10;
@@ -137,7 +137,7 @@ enum CableStatus {
   CABLE_STATUS_DECOMMISSIONED = 30;
 }
 
-// CableColor aligns with core.physical_connections color check constraint.
+// CableColor aligns with dcim.physical_connections color check constraint.
 enum CableColor {
   CABLE_COLOR_UNSPECIFIED = 0;
   CABLE_COLOR_DARK_GREY   = 10;

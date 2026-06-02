@@ -22,7 +22,7 @@ export default class PatchMappingApiService {
 
   // ── Enum mapping (UI union <-> proto enum) ─────────────────────────────────
 
-  static cableTypeToProto(t: CableType): ProtoCableType {
+  static cableTypeToProto(t: CableType | undefined): ProtoCableType {
     switch (t) {
       case 'cat5e':
         return ProtoCableType.CAT5E;
@@ -55,7 +55,7 @@ export default class PatchMappingApiService {
     }
   }
 
-  static cableTypeFromProto(t: ProtoCableType): CableType {
+  static cableTypeFromProto(t: ProtoCableType): CableType | undefined {
     switch (t) {
       case ProtoCableType.CAT5E:
         return 'cat5e';
@@ -81,12 +81,14 @@ export default class PatchMappingApiService {
         return 'console';
       case ProtoCableType.USB:
         return 'usb';
-      default:
+      case ProtoCableType.OTHER:
         return 'other';
+      default:
+        return undefined;
     }
   }
 
-  static cableStatusToProto(s: CableStatus): ProtoCableStatus {
+  static cableStatusToProto(s: CableStatus | undefined): ProtoCableStatus {
     switch (s) {
       case 'planned':
         return ProtoCableStatus.PLANNED;
@@ -99,14 +101,16 @@ export default class PatchMappingApiService {
     }
   }
 
-  static cableStatusFromProto(s: ProtoCableStatus): CableStatus {
+  static cableStatusFromProto(s: ProtoCableStatus): CableStatus | undefined {
     switch (s) {
       case ProtoCableStatus.PLANNED:
         return 'planned';
+      case ProtoCableStatus.CONNECTED:
+        return 'connected';
       case ProtoCableStatus.DECOMMISSIONED:
         return 'decommissioned';
       default:
-        return 'connected';
+        return undefined;
     }
   }
 

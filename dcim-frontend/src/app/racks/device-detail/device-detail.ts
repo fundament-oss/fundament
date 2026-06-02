@@ -364,7 +364,7 @@ export default class DeviceDetailComponent {
     }
   }
 
-  private static connectionStatusFromCable(status: CableStatus): ConnectionStatus {
+  private static connectionStatusFromCable(status: CableStatus | undefined): ConnectionStatus {
     switch (status) {
       case 'connected':
         return 'up';

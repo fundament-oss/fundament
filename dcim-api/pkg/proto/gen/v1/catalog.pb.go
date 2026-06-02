@@ -24,7 +24,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// DeviceCatalog is a device type definition (core.device_catalogs).
+// DeviceCatalog is a device type definition (dcim.device_catalogs).
 type DeviceCatalog struct {
 	state                   protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id           string                 `protobuf:"bytes,10,opt,name=id"`
@@ -277,7 +277,7 @@ func (b0 DeviceCatalog_builder) Build() *DeviceCatalog {
 	return m0
 }
 
-// PortDefinition describes a port or slot on a device catalog entry (core.port_definitions).
+// PortDefinition describes a port or slot on a device catalog entry (dcim.port_definitions).
 type PortDefinition struct {
 	state                      protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id              string                 `protobuf:"bytes,10,opt,name=id"`
@@ -486,7 +486,7 @@ func (b0 PortDefinition_builder) Build() *PortDefinition {
 	return m0
 }
 
-// PortCompatibility records that a sub-component catalog entry fits a port (core.port_compatibilities).
+// PortCompatibility records that a sub-component catalog entry fits a port (dcim.port_compatibilities).
 // compatible_category is always set; compatible_catalog_id is only set when the
 // compatibility is narrowed to one specific catalog entry within that category.
 type PortCompatibility struct {
