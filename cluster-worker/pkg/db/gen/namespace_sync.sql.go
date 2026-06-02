@@ -17,6 +17,7 @@ SELECT
     tenant.namespaces.id,
     tenant.namespaces.project_id,
     tenant.projects.cluster_id,
+    tenant.projects.name AS project_name,
     tenant.clusters.organization_id,
     tenant.namespaces.name,
     tenant.namespaces.deleted,
@@ -35,6 +36,7 @@ type NamespaceGetForSyncRow struct {
 	ID             uuid.UUID
 	ProjectID      uuid.UUID
 	ClusterID      uuid.UUID
+	ProjectName    string
 	OrganizationID uuid.UUID
 	Name           string
 	Deleted        pgtype.Timestamptz
@@ -47,6 +49,8 @@ type NamespaceGetForSyncRow struct {
 // strictly one cluster per project). shoot_status is returned so the handler
 // can defer (PreconditionError) while the shoot is not yet ready. The row is
 // returned regardless of cluster/shoot readiness so the handler can decide.
+// project_name leads the deterministic cluster-side namespace name so namespaces
+// from different projects on the same shoot never collide.
 func (q *Queries) NamespaceGetForSync(ctx context.Context, arg NamespaceGetForSyncParams) (NamespaceGetForSyncRow, error) {
 	row := q.db.QueryRow(ctx, namespaceGetForSync, arg.ID)
 	var i NamespaceGetForSyncRow
@@ -54,6 +58,7 @@ func (q *Queries) NamespaceGetForSync(ctx context.Context, arg NamespaceGetForSy
 		&i.ID,
 		&i.ProjectID,
 		&i.ClusterID,
+		&i.ProjectName,
 		&i.OrganizationID,
 		&i.Name,
 		&i.Deleted,

@@ -5,10 +5,13 @@
 -- strictly one cluster per project). shoot_status is returned so the handler
 -- can defer (PreconditionError) while the shoot is not yet ready. The row is
 -- returned regardless of cluster/shoot readiness so the handler can decide.
+-- project_name leads the deterministic cluster-side namespace name so namespaces
+-- from different projects on the same shoot never collide.
 SELECT
     tenant.namespaces.id,
     tenant.namespaces.project_id,
     tenant.projects.cluster_id,
+    tenant.projects.name AS project_name,
     tenant.clusters.organization_id,
     tenant.namespaces.name,
     tenant.namespaces.deleted,

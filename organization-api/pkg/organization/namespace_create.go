@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/fundament-oss/fundament/common/authz"
+	"github.com/fundament-oss/fundament/common/namespacename"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -20,6 +21,13 @@ func (s *Server) CreateNamespace(
 
 	if err := s.checkPermission(ctx, authz.CanCreateNamespace(), authz.Project(projectID)); err != nil {
 		return nil, err
+	}
+
+	// The name is materialized verbatim into a v1/Namespace on the shoot, so reject
+	// anything that isn't a usable (DNS-1123, non-reserved, length-bounded) name
+	// here rather than letting the cluster-worker sync fail indefinitely.
+	if err := namespacename.Validate(req.Msg.GetName()); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	params := db.NamespaceCreateParams{

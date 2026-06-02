@@ -6,7 +6,9 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // MockShootAccess implements ShootAccess with in-memory state for testing and mock mode.
@@ -91,7 +93,9 @@ func (m *MockShootAccess) CreateNamespace(_ context.Context, clusterID uuid.UUID
 		m.Namespaces[clusterID] = make(map[string]ResourceInfo)
 	}
 	if _, ok := m.Namespaces[clusterID][name]; ok {
-		return nil // already exists — idempotent
+		// Mirror the real client: Create on an existing name is a conflict, not a
+		// no-op. The handler relies on this to detect a lost create race.
+		return apierrors.NewAlreadyExists(corev1.Resource("namespaces"), name)
 	}
 	m.Namespaces[clusterID][name] = ResourceInfo{Name: name, Labels: CloneStringMap(labels)}
 	m.logger.Debug("MOCK: created namespace", "cluster_id", clusterID, "namespace", name)

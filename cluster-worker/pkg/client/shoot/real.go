@@ -2,6 +2,7 @@ package shoot
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -10,6 +11,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -97,8 +99,12 @@ func (r *RealShootAccess) CreateNamespace(ctx context.Context, clusterID uuid.UU
 			Labels: labels,
 		},
 	}
-	_, err = cs.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	if err != nil && !apierrors.IsAlreadyExists(err) {
+	// Do NOT swallow AlreadyExists here (unlike EnsureNamespace): the handler only
+	// calls Create after confirming the name is absent, so a conflict means another
+	// actor won a race for that name. Surfacing it lets the row retry and re-run the
+	// ownership/label check rather than silently "adopting" a namespace that may not
+	// carry our fundament.io/namespace-id label.
+	if _, err := cs.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{}); err != nil {
 		return fmt.Errorf("create namespace %s: %w", name, err)
 	}
 	return nil
@@ -110,16 +116,18 @@ func (r *RealShootAccess) UpdateNamespaceLabels(ctx context.Context, clusterID u
 		return err
 	}
 
-	existing, err := cs.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	// Merge the labels with a JSON merge patch rather than a read-modify-write
+	// Update: it is a single atomic request (no lost-update race under concurrent
+	// reconciles), and only the listed keys are set, so operator-added labels are
+	// left untouched.
+	patch, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{"labels": labels},
+	})
 	if err != nil {
-		return fmt.Errorf("get namespace %s: %w", name, err)
+		return fmt.Errorf("marshal namespace %s label patch: %w", name, err)
 	}
-	if existing.Labels == nil {
-		existing.Labels = make(map[string]string)
-	}
-	MergeStringMap(existing.Labels, labels)
-	if _, err := cs.CoreV1().Namespaces().Update(ctx, existing, metav1.UpdateOptions{}); err != nil {
-		return fmt.Errorf("update namespace %s labels: %w", name, err)
+	if _, err := cs.CoreV1().Namespaces().Patch(ctx, name, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
+		return fmt.Errorf("patch namespace %s labels: %w", name, err)
 	}
 	return nil
 }

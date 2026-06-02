@@ -21,14 +21,18 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/common/namespacename"
 )
 
 // Label keys applied to every fundament-managed namespace on a shoot. The
 // fundament.io/ prefix matches the existing convention (usersync uses
 // fundament.io/user-id). LabelNamespaceID is the canonical ownership marker:
-// reconcile and delete only ever touch namespaces carrying it.
+// reconcile and delete only ever touch namespaces carrying it. LabelNamespaceName
+// records the fundament-side name, which (unlike the immutable k8s resource name)
+// tracks renames — see ensure.
 const (
 	LabelNamespaceID    = "fundament.io/namespace-id"
+	LabelNamespaceName  = "fundament.io/namespace-name"
 	LabelProjectID      = "fundament.io/project-id"
 	LabelOrganizationID = "fundament.io/organization-id"
 	LabelClusterID      = "fundament.io/cluster-id"
@@ -104,84 +108,107 @@ func (h *Handler) syncNamespace(ctx context.Context, id uuid.UUID) error {
 }
 
 // ensure creates or label-reconciles the cluster-side namespace for an active row.
+// The cluster-side resource name is derived from the project and the namespace
+// name (namespacename.Generate) so two projects on the same shoot never collide.
+// Ownership is tracked by the LabelNamespaceID label, not the name: a rename in
+// the DB updates LabelNamespaceName on the existing (immutable) resource rather
+// than recreating it, so workloads are never destroyed by a rename.
 func (h *Handler) ensure(ctx context.Context, row *db.NamespaceGetForSyncRow) error {
 	desired := desiredLabels(row)
+	name := namespacename.Generate(row.ProjectName, row.ProjectID, row.Name)
 
-	existing, err := h.shoot.GetNamespace(ctx, row.ClusterID, row.Name)
+	// Fast path: the expected name already exists and is ours.
+	existing, err := h.shoot.GetNamespace(ctx, row.ClusterID, name)
 	if err != nil {
-		return fmt.Errorf("get namespace %s: %w", row.Name, err)
+		return fmt.Errorf("get namespace %s: %w", name, err)
+	}
+	if existing != nil && existing.Labels[LabelNamespaceID] == row.ID.String() {
+		return h.reconcileLabels(ctx, row, name, desired)
 	}
 
-	if existing == nil {
-		// The target name is absent. If this row previously had a different name
-		// (an unsupported rename), remove the stale cluster-side namespace first.
-		if err := h.deleteRenamed(ctx, row); err != nil {
-			return err
-		}
-		if err := h.shoot.CreateNamespace(ctx, row.ClusterID, row.Name, desired); err != nil {
-			return fmt.Errorf("create namespace %s: %w", row.Name, err)
-		}
-		h.logger.Info("created namespace",
-			"namespace_id", row.ID, "cluster_id", row.ClusterID, "name", row.Name)
-		return nil
+	// The expected name is absent or held by something else. A rename leaves our
+	// namespace under its original (immutable) name, so look it up by id label
+	// before concluding it doesn't exist.
+	byID, err := h.findByID(ctx, row.ClusterID, row.ID)
+	if err != nil {
+		return err
+	}
+	if byID != nil {
+		// Found under a different name (rename): refresh labels only; the k8s
+		// resource name cannot change.
+		return h.reconcileLabels(ctx, row, byID.Name, desired)
 	}
 
-	// The name exists. Only adopt it if it already carries our id; otherwise it
-	// is someone else's namespace and adopting it would be dangerous.
-	if existing.Labels[LabelNamespaceID] != row.ID.String() {
-		return fmt.Errorf("namespace name collision: %s already exists on shoot without matching label", row.Name)
+	// Genuinely not ours. Refuse to adopt an existing same-named namespace we
+	// don't own — it could be a system or operator-managed namespace.
+	if existing != nil {
+		return fmt.Errorf("namespace name collision: %s already exists on shoot without matching label", name)
 	}
+	if err := h.shoot.CreateNamespace(ctx, row.ClusterID, name, desired); err != nil {
+		return fmt.Errorf("create namespace %s: %w", name, err)
+	}
+	h.logger.Info("created namespace",
+		"namespace_id", row.ID, "cluster_id", row.ClusterID, "name", name)
+	return nil
+}
 
-	if err := h.shoot.UpdateNamespaceLabels(ctx, row.ClusterID, row.Name, desired); err != nil {
-		return fmt.Errorf("update namespace %s labels: %w", row.Name, err)
+// reconcileLabels merges the desired managed labels onto the existing namespace,
+// preserving any operator-added labels.
+func (h *Handler) reconcileLabels(ctx context.Context, row *db.NamespaceGetForSyncRow, name string, desired map[string]string) error {
+	if err := h.shoot.UpdateNamespaceLabels(ctx, row.ClusterID, name, desired); err != nil {
+		return fmt.Errorf("update namespace %s labels: %w", name, err)
 	}
 	h.logger.Debug("namespace present, labels reconciled",
-		"namespace_id", row.ID, "cluster_id", row.ClusterID, "name", row.Name)
+		"namespace_id", row.ID, "cluster_id", row.ClusterID, "name", name)
 	return nil
 }
 
-// delete hard-deletes the cluster-side namespace for a soft-deleted row, but
-// only when it carries our matching label. A name match without a label match
-// means the namespace is not ours — log and skip rather than destroy it.
+// delete hard-deletes the cluster-side namespace for a soft-deleted row, located
+// by the LabelNamespaceID label so a renamed namespace is still found. A
+// namespace that doesn't carry our id is never touched.
 func (h *Handler) delete(ctx context.Context, row *db.NamespaceGetForSyncRow) error {
-	existing, err := h.shoot.GetNamespace(ctx, row.ClusterID, row.Name)
+	name := namespacename.Generate(row.ProjectName, row.ProjectID, row.Name)
+
+	existing, err := h.shoot.GetNamespace(ctx, row.ClusterID, name)
 	if err != nil {
-		return fmt.Errorf("get namespace %s: %w", row.Name, err)
+		return fmt.Errorf("get namespace %s: %w", name, err)
 	}
-	if existing == nil {
-		return nil // already gone — idempotent
+	// If the expected name isn't ours, fall back to a label lookup (covers renames
+	// and avoids deleting a same-named namespace we don't own).
+	if existing == nil || existing.Labels[LabelNamespaceID] != row.ID.String() {
+		byID, err := h.findByID(ctx, row.ClusterID, row.ID)
+		if err != nil {
+			return err
+		}
+		if byID == nil {
+			return nil // already gone (or never ours) — idempotent
+		}
+		name = byID.Name
 	}
-	if existing.Labels[LabelNamespaceID] != row.ID.String() {
-		h.logger.Warn("refusing to delete namespace without matching label",
-			"namespace_id", row.ID, "cluster_id", row.ClusterID, "name", row.Name,
-			"found_label", existing.Labels[LabelNamespaceID])
-		return nil
-	}
-	if err := h.shoot.DeleteNamespace(ctx, row.ClusterID, row.Name); err != nil {
-		return fmt.Errorf("delete namespace %s: %w", row.Name, err)
+
+	if err := h.shoot.DeleteNamespace(ctx, row.ClusterID, name); err != nil {
+		return fmt.Errorf("delete namespace %s: %w", name, err)
 	}
 	h.logger.Info("deleted namespace",
-		"namespace_id", row.ID, "cluster_id", row.ClusterID, "name", row.Name)
+		"namespace_id", row.ID, "cluster_id", row.ClusterID, "name", name)
 	return nil
 }
 
-// deleteRenamed removes any cluster-side namespace that carries this row's id
-// label but a different name — the residue of a (rare, unsupported) rename.
-func (h *Handler) deleteRenamed(ctx context.Context, row *db.NamespaceGetForSyncRow) error {
-	existing, err := h.shoot.ListNamespaces(ctx, row.ClusterID, LabelNamespaceID)
+// findByID returns the cluster-side namespace owned by this fundament namespace
+// id (matched on LabelNamespaceID), or nil if none exists. Lookups go through the
+// label rather than the name so a renamed namespace is never lost.
+func (h *Handler) findByID(ctx context.Context, clusterID, namespaceID uuid.UUID) (*shoot.ResourceInfo, error) {
+	existing, err := h.shoot.ListNamespaces(ctx, clusterID, LabelNamespaceID)
 	if err != nil {
-		return fmt.Errorf("list namespaces: %w", err)
+		return nil, fmt.Errorf("list namespaces: %w", err)
 	}
+	want := namespaceID.String()
 	for i := range existing {
-		if existing[i].Labels[LabelNamespaceID] == row.ID.String() && existing[i].Name != row.Name {
-			if err := h.shoot.DeleteNamespace(ctx, row.ClusterID, existing[i].Name); err != nil {
-				return fmt.Errorf("delete renamed namespace %s: %w", existing[i].Name, err)
-			}
-			h.logger.Info("deleted renamed namespace",
-				"namespace_id", row.ID, "old_name", existing[i].Name, "new_name", row.Name)
+		if existing[i].Labels[LabelNamespaceID] == want {
+			return &existing[i], nil
 		}
 	}
-	return nil
+	return nil, nil //nolint:nilnil // absence is signalled by a nil result, not an error
 }
 
 // enqueueClusterNamespaces fans out a sync for every active namespace on a
@@ -281,10 +308,13 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 	return nil
 }
 
-// desiredLabels is the full managed label set for a namespace row.
+// desiredLabels is the full managed label set for a namespace row. LabelNamespaceName
+// carries the current fundament-side name (which tracks renames; the k8s resource
+// name does not).
 func desiredLabels(row *db.NamespaceGetForSyncRow) map[string]string {
 	return map[string]string{
 		LabelNamespaceID:    row.ID.String(),
+		LabelNamespaceName:  row.Name,
 		LabelProjectID:      row.ProjectID.String(),
 		LabelOrganizationID: row.OrganizationID.String(),
 		LabelClusterID:      row.ClusterID.String(),

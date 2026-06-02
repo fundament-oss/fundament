@@ -44,17 +44,25 @@ A Kubernetes namespace within a project. Since a project runs on one cluster, th
 Creating a namespace via org-api records it in fundament's database; the
 cluster-worker then materializes it as an actual `v1/Namespace` on the owning
 shoot cluster once that cluster's shoot is ready (namespaces created earlier
-materialize at ready-time). Each managed namespace carries labels operators can
-use to correlate it back to fundament without parsing names:
+materialize at ready-time). The cluster-side resource name is derived as
+`<project-prefix>-<name>` so namespaces from different projects on the same
+cluster never collide; org-api rejects names that aren't valid, length-bounded
+DNS-1123 labels or that clash with reserved namespaces (`default`, `kube-*`,
+`fundament-system`). Each managed namespace carries labels operators can use to
+correlate it back to fundament without parsing names:
 
 | Label | Meaning |
 |-------|---------|
 | `fundament.io/namespace-id` | fundament namespace id (ownership marker) |
+| `fundament.io/namespace-name` | fundament namespace name (tracks renames) |
 | `fundament.io/project-id` | parent project id |
 | `fundament.io/organization-id` | owning organization id |
 | `fundament.io/cluster-id` | owning cluster id |
 | `fundament.io/managed-by` | always `cluster-worker` |
 
+Ownership is tracked by `fundament.io/namespace-id`, not the name: renaming a
+namespace in fundament only updates the `fundament.io/namespace-name` label (the
+k8s resource name is immutable), so workloads are never destroyed by a rename.
 Deleting a namespace in fundament hard-deletes the cluster-side namespace and
 all workloads within it. See [cluster-worker](../cluster-worker/README.md#namespace-sync)
 for the sync mechanism.

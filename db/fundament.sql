@@ -231,16 +231,18 @@ CREATE OR REPLACE FUNCTION tenant.namespace_outbox_trigger ()
 	AS 
 $function$
 BEGIN
-    INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
-    VALUES (
-        COALESCE(NEW.id, OLD.id),
-        CASE
-            WHEN TG_OP = 'INSERT' THEN 'created'
-            WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
-            ELSE 'updated'
-        END,
-        'trigger'
-    );
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        VALUES (
+            COALESCE(NEW.id, OLD.id),
+            CASE
+                WHEN TG_OP = 'INSERT' THEN 'created'
+                WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                ELSE 'updated'
+            END,
+            'trigger'
+        );
+    END IF;
     RETURN NULL;
 END;
 $function$;

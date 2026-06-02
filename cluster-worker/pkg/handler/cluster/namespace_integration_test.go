@@ -13,6 +13,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	namespacehandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/namespace"
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/namespacename"
 )
 
 // nsSyncCtx is the SyncContext the outbox worker passes for namespace rows.
@@ -28,7 +29,7 @@ func insertProject(t *testing.T, db *testDB, clusterID uuid.UUID, name string) u
 	var id uuid.UUID
 	err := db.adminPool.QueryRow(t.Context(),
 		`WITH p AS (
-		     INSERT INTO tenant.projects (cluster_id, name) VALUES ($1, $2) RETURNING id
+		     INSERT INTO tenant.projects (cluster_id, name, alias) VALUES ($1, $2, $2) RETURNING id
 		 ), u AS (
 		     INSERT INTO tenant.users (name) VALUES ($2 || '-admin') RETURNING id
 		 ), m AS (
@@ -176,12 +177,16 @@ func TestNamespaceSync_CreateResyncDelete(t *testing.T) {
 	projectID := insertProject(t, db, clusterID, "proj-cycle")
 	nsID := insertNamespace(t, db, projectID, "team-a")
 
+	// The cluster-side resource carries a project-scoped, collision-free name.
+	clusterNS := namespacename.Generate("proj-cycle", projectID, "team-a")
+
 	// Create.
 	require.NoError(t, h.Sync(ctx, nsID, nsSyncCtx))
-	got, err := mock.GetNamespace(ctx, clusterID, "team-a")
+	got, err := mock.GetNamespace(ctx, clusterID, clusterNS)
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	require.Equal(t, nsID.String(), got.Labels[namespacehandler.LabelNamespaceID])
+	require.Equal(t, "team-a", got.Labels[namespacehandler.LabelNamespaceName])
 	require.Equal(t, clusterID.String(), got.Labels[namespacehandler.LabelClusterID])
 	require.Equal(t, namespacehandler.ManagedByValue, got.Labels[namespacehandler.LabelManagedBy])
 
@@ -192,7 +197,7 @@ func TestNamespaceSync_CreateResyncDelete(t *testing.T) {
 	_, err = db.adminPool.Exec(ctx, `UPDATE tenant.namespaces SET deleted = now() WHERE id = $1`, nsID)
 	require.NoError(t, err)
 	require.NoError(t, h.Sync(ctx, nsID, nsSyncCtx))
-	gone, err := mock.GetNamespace(ctx, clusterID, "team-a")
+	gone, err := mock.GetNamespace(ctx, clusterID, clusterNS)
 	require.NoError(t, err)
 	require.Nil(t, gone)
 }
@@ -213,7 +218,7 @@ func TestNamespaceSync_ShootNotReady_Precondition(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorContains(t, err, "precondition not met")
 
-	got, err := mock.GetNamespace(ctx, clusterID, "team-a")
+	got, err := mock.GetNamespace(ctx, clusterID, namespacename.Generate("proj-not-ready", projectID, "team-a"))
 	require.NoError(t, err)
 	require.Nil(t, got, "no namespace should be created while the shoot is not ready")
 }
