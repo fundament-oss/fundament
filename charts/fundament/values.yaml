@@ -1,5 +1,12 @@
 # Fundament Helm Chart - Default Values
 
+# Hot-reload (Air) mode for local development. When true, a startupProbe
+# absorbs the first cold `go build` so the liveness probe doesn't kill the
+# pod mid-build and put skaffold in a rebuild loop. Production-tight
+# liveness/readiness are unchanged once startup completes.
+hotreload:
+  enabled: false
+
 # JWT Secret - required for token signing/validation across services
 jwtSecret: ""
 jwtSecretRef:
