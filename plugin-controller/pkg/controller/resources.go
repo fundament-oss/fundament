@@ -53,7 +53,7 @@ func pluginNamespace(pluginName string) string {
 func childLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 	return map[string]string{
 		labelManagedBy:        managedByValue,
-		labelPlugin:           cr.Spec.PluginName,
+		labelPlugin:           cr.Name,
 		labelInstallationName: cr.Name,
 	}
 }
@@ -72,7 +72,7 @@ func mergeLabels(dst, src map[string]string) map[string]string {
 
 func selectorLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 	return map[string]string{
-		labelPlugin:           cr.Spec.PluginName,
+		labelPlugin:           cr.Name,
 		labelInstallationName: cr.Name,
 	}
 }
@@ -99,8 +99,8 @@ func mutateRoleBinding(rb *rbacv1.RoleBinding, cr *pluginsv1.PluginInstallation)
 	rb.Subjects = []rbacv1.Subject{
 		{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      childName(cr.Spec.PluginName),
-			Namespace: pluginNamespace(cr.Spec.PluginName),
+			Name:      childName(cr.Name),
+			Namespace: pluginNamespace(cr.Name),
 		},
 	}
 }
@@ -117,8 +117,8 @@ func mutateClusterRoleBinding(crb *rbacv1.ClusterRoleBinding, cr *pluginsv1.Plug
 	crb.Subjects = []rbacv1.Subject{
 		{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      childName(cr.Spec.PluginName),
-			Namespace: pluginNamespace(cr.Spec.PluginName),
+			Name:      childName(cr.Name),
+			Namespace: pluginNamespace(cr.Name),
 		},
 	}
 }
@@ -154,10 +154,10 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 			Labels: labels,
 		},
 		Spec: corev1.PodSpec{
-			ServiceAccountName: childName(cr.Spec.PluginName),
+			ServiceAccountName: childName(cr.Name),
 			Containers: []corev1.Container{
 				{
-					Name:            cr.Spec.PluginName,
+					Name:            cr.Name,
 					Image:           cr.Spec.Image,
 					ImagePullPolicy: cr.Spec.ImagePullPolicy,
 					Ports: []corev1.ContainerPort{

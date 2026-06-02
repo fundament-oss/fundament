@@ -35,17 +35,6 @@ func validPluginClaims() *PluginClaims {
 	}
 }
 
-func TestPluginClaims_Type(t *testing.T) {
-	c := validPluginClaims()
-	if got := c.Type(); got != TokenTypePlugin {
-		t.Errorf("Type() = %q, want %q", got, TokenTypePlugin)
-	}
-	empty := &PluginClaims{}
-	if got := empty.Type(); got != "" {
-		t.Errorf("Type() on empty = %q, want empty", got)
-	}
-}
-
 func TestParsePluginToken_AcceptsValidToken(t *testing.T) {
 	secret := []byte("test-secret")
 	want := validPluginClaims()
@@ -69,6 +58,20 @@ func TestParsePluginToken_AcceptsValidToken(t *testing.T) {
 	}
 }
 
+// TestParsePluginToken_AcceptsMultiAudience verifies that audience matching is
+// set-membership: a token listing both fundament-user and fundament-plugin in
+// its aud claim is accepted by ParsePluginToken regardless of element order.
+func TestParsePluginToken_AcceptsMultiAudience(t *testing.T) {
+	secret := []byte("test-secret")
+	c := validPluginClaims()
+	c.Audience = jwt.ClaimStrings{string(TokenTypeUser), string(TokenTypePlugin)}
+	tokenStr := signPluginToken(t, secret, c)
+
+	if _, err := ParsePluginToken(tokenStr, secret); err != nil {
+		t.Fatalf("ParsePluginToken: %v", err)
+	}
+}
+
 func TestParsePluginToken_RejectsUserAudience(t *testing.T) {
 	secret := []byte("test-secret")
 	c := validPluginClaims()
@@ -83,7 +86,7 @@ func TestParsePluginToken_RejectsUserAudience(t *testing.T) {
 func TestParsePluginToken_RejectsExpiredToken(t *testing.T) {
 	secret := []byte("test-secret")
 	c := validPluginClaims()
-	c.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-time.Minute))
+	c.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-time.Hour))
 	tokenStr := signPluginToken(t, secret, c)
 
 	if _, err := ParsePluginToken(tokenStr, secret); err == nil {

@@ -37,12 +37,11 @@ func newTestScheme() *runtime.Scheme {
 func testCR() *pluginsv1.PluginInstallation {
 	return &pluginsv1.PluginInstallation{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-cert-manager",
+			Name:       "cert-manager",
 			Generation: 1,
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
-			Image:      "ghcr.io/fundament-oss/fundament/cert-manager-plugin:latest",
-			PluginName: "cert-manager",
+			Image: "ghcr.io/fundament-oss/fundament/cert-manager-plugin:latest",
 			Config: map[string]string{
 				"LOG_LEVEL": "debug",
 			},
@@ -162,7 +161,7 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
 	require.NoError(t, err)
 
-	nsName := pluginNamespace(cr.Spec.PluginName)
+	nsName := pluginNamespace(cr.Name)
 
 	// Verify Namespace created
 	var ns corev1.Namespace
@@ -302,7 +301,7 @@ func TestHandleDeletion_CleansUpNamespace(t *testing.T) {
 	// Pre-create the plugin namespace
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   pluginNamespace(cr.Spec.PluginName),
+			Name:   pluginNamespace(cr.Name),
 			Labels: childLabels(cr),
 		},
 	}
@@ -325,7 +324,7 @@ func TestHandleDeletion_CleansUpNamespace(t *testing.T) {
 	// Verify Namespace deleted
 	var deletedNS corev1.Namespace
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: pluginNamespace(cr.Spec.PluginName),
+		Name: pluginNamespace(cr.Name),
 	}, &deletedNS)
 	assert.Error(t, err)
 
@@ -344,13 +343,13 @@ func TestHandleDeletion_CleansUpClusterRoleBindings(t *testing.T) {
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   pluginNamespace(cr.Spec.PluginName),
+			Name:   pluginNamespace(cr.Name),
 			Labels: childLabels(cr),
 		},
 	}
 	crb := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   clusterRoleBindingName(cr.Spec.PluginName, "cluster-admin"),
+			Name:   clusterRoleBindingName(cr.Name, "cluster-admin"),
 			Labels: childLabels(cr),
 		},
 	}
@@ -373,14 +372,14 @@ func TestHandleDeletion_CleansUpClusterRoleBindings(t *testing.T) {
 	// Verify ClusterRoleBinding deleted
 	var deletedCRB rbacv1.ClusterRoleBinding
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: clusterRoleBindingName(cr.Spec.PluginName, "cluster-admin"),
+		Name: clusterRoleBindingName(cr.Name, "cluster-admin"),
 	}, &deletedCRB)
 	assert.Error(t, err)
 
 	// Verify Namespace deleted
 	var deletedNS corev1.Namespace
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: pluginNamespace(cr.Spec.PluginName),
+		Name: pluginNamespace(cr.Name),
 	}, &deletedNS)
 	assert.Error(t, err)
 
@@ -438,7 +437,7 @@ func deletionTestCR(t *testing.T) (*pluginsv1.PluginInstallation, *corev1.Namesp
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   pluginNamespace(cr.Spec.PluginName),
+			Name:   pluginNamespace(cr.Name),
 			Labels: childLabels(cr),
 		},
 	}
@@ -508,7 +507,7 @@ func TestHandleDeletion_UnreachablePlugin_ProceedsWithCleanup(t *testing.T) {
 	// Verify namespace was cleaned up despite plugin being unreachable
 	var deletedNS corev1.Namespace
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: pluginNamespace(cr.Spec.PluginName),
+		Name: pluginNamespace(cr.Name),
 	}, &deletedNS)
 	assert.Error(t, err)
 
@@ -556,7 +555,7 @@ func TestHandleDeletion_UninstallError_Requeues(t *testing.T) {
 	// Verify namespace NOT deleted
 	var existingNS corev1.Namespace
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: pluginNamespace(cr.Spec.PluginName),
+		Name: pluginNamespace(cr.Name),
 	}, &existingNS)
 	assert.NoError(t, err, "namespace should still exist when uninstall fails")
 }

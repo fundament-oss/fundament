@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -29,14 +30,6 @@ type PluginClaims struct {
 	DefinitionHash string `json:"definition_hash"`
 }
 
-// Type returns the token type from the first audience claim, or empty if none.
-func (c *PluginClaims) Type() TokenType {
-	if len(c.Audience) == 0 {
-		return ""
-	}
-	return TokenType(c.Audience[0])
-}
-
 // ParsePluginToken parses and verifies a PluginToken with the given HMAC
 // secret. It checks the signing method, signature, expiry, and that the
 // audience is fundament-plugin. It does NOT check the cluster/installation
@@ -55,8 +48,8 @@ func ParsePluginToken(tokenStr string, secret []byte) (*PluginClaims, error) {
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid plugin token claims")
 	}
-	if c.Type() != TokenTypePlugin {
-		return nil, fmt.Errorf("token audience %q is not %q", c.Type(), TokenTypePlugin)
+	if !slices.Contains(c.Audience, string(TokenTypePlugin)) {
+		return nil, fmt.Errorf("token audience %v does not contain %q", c.Audience, TokenTypePlugin)
 	}
 	return c, nil
 }

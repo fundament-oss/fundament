@@ -1,13 +1,21 @@
 package authn
 
 import (
+	"context"
+	"io"
+	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
+	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
+	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
 	"github.com/fundament-oss/fundament/common/auth"
 )
 
@@ -27,34 +35,39 @@ func TestGenerateJWT_SetsUserAudience(t *testing.T) {
 	}
 
 	tokenStr, err := server.generateJWT(u, []string{"admin"})
-	if err != nil {
-		t.Fatalf("generateJWT: %v", err)
-	}
+	require.NoError(t, err)
 
 	parsed, err := jwt.ParseWithClaims(tokenStr, &auth.Claims{}, func(_ *jwt.Token) (any, error) {
 		return secret, nil
 	})
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
+	require.NoError(t, err)
+
 	claims, ok := parsed.Claims.(*auth.Claims)
-	if !ok {
-		t.Fatal("claims type assertion failed")
-	}
-	if got := claims.Type(); got != auth.TokenTypeUser {
-		t.Errorf("Type() = %q, want %q", got, auth.TokenTypeUser)
-	}
+	require.True(t, ok, "claims type assertion failed")
+	require.Equal(t, auth.TokenTypeUser, claims.Type())
 }
 
-func TestAuthnServer_RejectsPluginAudience(t *testing.T) {
+// TestGetUserInfo_RejectsPluginToken verifies that a PluginToken presented to
+// GetUserInfo over the real Connect HTTP path is rejected with Unauthenticated.
+// This exercises the wire-up between the Connect handler and the audience-aware
+// validator end to end, not just the validator field in isolation.
+func TestGetUserInfo_RejectsPluginToken(t *testing.T) {
 	secret := []byte("test-secret")
 
-	// Construct an AuthnServer the way main.go would (without a DB pool).
-	// We only exercise the validator field.
+	// GetUserInfo only reads s.validator before returning; constructing
+	// AuthnServer with only the fields it touches lets the test stay
+	// DB-less. The full authn.New constructor requires a real Postgres pool.
 	server := &AuthnServer{
 		config:    &Config{JWTSecret: secret, TokenExpiry: time.Minute},
+		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
 		validator: auth.NewValidatorForAudience(secret, auth.TokenTypeUser, nil),
 	}
+
+	path, handler := authnv1connect.NewAuthnServiceHandler(server)
+	mux := http.NewServeMux()
+	mux.Handle(path, handler)
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
 
 	pluginClaims := &auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -63,16 +76,14 @@ func TestAuthnServer_RejectsPluginAudience(t *testing.T) {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, pluginClaims)
-	tokenStr, err := token.SignedString(secret)
-	if err != nil {
-		t.Fatalf("sign: %v", err)
-	}
+	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodHS256, pluginClaims).SignedString(secret)
+	require.NoError(t, err)
 
-	h := http.Header{}
-	h.Set("Authorization", "Bearer "+tokenStr)
+	client := authnv1connect.NewAuthnServiceClient(ts.Client(), ts.URL)
+	req := connect.NewRequest(&authnv1.GetUserInfoRequest{})
+	req.Header().Set("Authorization", "Bearer "+tokenStr)
 
-	if _, err := server.validator.Validate(h); err == nil {
-		t.Fatal("expected error for plugin-audience token, got nil")
-	}
+	_, err = client.GetUserInfo(context.Background(), req)
+	require.Error(t, err)
+	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }

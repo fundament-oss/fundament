@@ -137,6 +137,30 @@ func TestValidatorForAudience_RejectsMismatchedAudience(t *testing.T) {
 	}
 }
 
+// TestValidatorForAudience_AcceptsMultiAudienceWhenExpectedPresent verifies
+// that audience matching is set-membership, not first-element equality. JWT
+// `aud` is a set per RFC 7519 and tokens may legitimately list more than one
+// audience.
+func TestValidatorForAudience_AcceptsMultiAudienceWhenExpectedPresent(t *testing.T) {
+	userID := uuid.New()
+	claims := &Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID.String(),
+			Audience:  jwt.ClaimStrings{"fundament-plugin", "fundament-user"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}
+	tokenString := signToken(t, claims)
+
+	v := NewValidatorForAudience(testSecret, TokenTypeUser, nil)
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+tokenString)
+
+	if _, err := v.Validate(header); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestValidatorForAudience_RejectsMissingAudience(t *testing.T) {
 	userID := uuid.New()
 	claims := &Claims{

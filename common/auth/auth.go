@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,8 +16,8 @@ import (
 const AuthCookieName = "fundament_auth"
 
 // TokenType is the value carried in the JWT `aud` claim. It distinguishes
-// user-session tokens from plugin-delegation tokens so that services can
-// refuse the wrong kind at validation time.
+// user tokens from plugin tokens so that services can refuse the wrong kind
+// at validation time.
 type TokenType string
 
 const (
@@ -134,9 +135,9 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 	}
 
 	if v.expectedAudience != "" {
-		if got := claims.Type(); got != v.expectedAudience {
-			v.logger.Debug("token audience mismatch", "got", got, "want", v.expectedAudience)
-			return nil, fmt.Errorf("token audience %q does not match expected %q", got, v.expectedAudience)
+		if !slices.Contains(claims.Audience, string(v.expectedAudience)) {
+			v.logger.Debug("token audience mismatch", "got", claims.Audience, "want", v.expectedAudience)
+			return nil, fmt.Errorf("token audience %v does not contain expected %q", claims.Audience, v.expectedAudience)
 		}
 	}
 

@@ -2,13 +2,13 @@ package v1
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
 func TestPluginInstallationSpec_DefinitionRefRoundTrip(t *testing.T) {
 	spec := PluginInstallationSpec{
-		Image:      "ghcr.io/example/cert-manager:v1.17.2",
-		PluginName: "cert-manager",
+		Image: "ghcr.io/example/cert-manager:v1.17.2",
 		DefinitionRef: DefinitionRef{
 			PluginName:     "cert-manager",
 			PluginVersion:  "v1.17.2",
@@ -39,8 +39,7 @@ func TestPluginInstallationSpec_DefinitionRefRoundTrip(t *testing.T) {
 
 func TestPluginInstallationSpec_DefinitionRefMarshalsExpectedKeys(t *testing.T) {
 	spec := PluginInstallationSpec{
-		Image:      "ghcr.io/example/cert-manager:v1.17.2",
-		PluginName: "cert-manager",
+		Image: "ghcr.io/example/cert-manager:v1.17.2",
 		DefinitionRef: DefinitionRef{
 			PluginName:     "cert-manager",
 			PluginVersion:  "v1.17.2",
@@ -51,19 +50,10 @@ func TestPluginInstallationSpec_DefinitionRefMarshalsExpectedKeys(t *testing.T) 
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	if got := string(data); !contains(got, "definitionRef") {
+	if got := string(data); !strings.Contains(got, "definitionRef") {
 		t.Errorf("expected JSON to contain 'definitionRef', got: %s", got)
 	}
-	if got := string(data); contains(got, "permissions") {
+	if got := string(data); strings.Contains(got, "permissions") {
 		t.Errorf("expected no 'permissions' key (removed by FUN-17), got: %s", got)
 	}
-}
-
-func contains(haystack, needle string) bool {
-	for i := 0; i+len(needle) <= len(haystack); i++ {
-		if haystack[i:i+len(needle)] == needle {
-			return true
-		}
-	}
-	return false
 }

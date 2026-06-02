@@ -19,7 +19,7 @@ spec:
       additionalPrinterColumns:
         - name: Plugin
           type: string
-          jsonPath: .spec.pluginName
+          jsonPath: .spec.definitionRef.pluginName
         - name: Phase
           type: string
           jsonPath: .status.phase
@@ -36,15 +36,11 @@ spec:
           type: object
           required:
             - spec
-          x-kubernetes-validations:
-            - rule: "self.metadata.name == self.spec.pluginName"
-              message: "metadata.name must match spec.pluginName"
           properties:
             spec:
               type: object
               required:
                 - image
-                - pluginName
               properties:
                 image:
                   type: string
@@ -54,11 +50,6 @@ spec:
                     - Always
                     - IfNotPresent
                     - Never
-                pluginName:
-                  type: string
-                  x-kubernetes-validations:
-                    - rule: "self == oldSelf"
-                      message: "spec.pluginName is immutable"
                 clusterRoles:
                   type: array
                   items:
