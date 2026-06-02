@@ -1,5 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { AssetCategory as ProtoCategory, PortType } from '../../generated/v1/common_pb';
+import {
+  AssetCategory as ProtoCategory,
+  PortType,
+  PortDirection,
+} from '../../generated/v1/common_pb';
 import type {
   DeviceCatalog,
   PortDefinition as ProtoPortDef,
@@ -36,16 +40,63 @@ export default class CatalogApiService {
       id: p.id,
       catalogEntryId: p.deviceCatalogId,
       name: p.name,
-      portType: String(p.portType),
+      portType: CatalogApiService.fromProtoPortType(p.portType),
+      direction: CatalogApiService.fromProtoDirection(p.direction),
+      ordinal: p.ordinal,
+      ...(p.mediaType ? { mediaType: p.mediaType } : {}),
       ...(speedGbps != null ? { speedGbps } : {}),
       ...(p.maxPowerW ? { powerWatts: p.maxPowerW } : {}),
     };
   }
 
+  private static fromProtoDirection(d: PortDirection): string {
+    const map: Record<number, string> = {
+      [PortDirection.IN]: 'in',
+      [PortDirection.OUT]: 'out',
+      [PortDirection.BIDIR]: 'bidir',
+    };
+    return map[d] ?? '';
+  }
+
+  private static toProtoDirection(key: string): PortDirection {
+    const map: Record<string, PortDirection> = {
+      in: PortDirection.IN,
+      out: PortDirection.OUT,
+      bidir: PortDirection.BIDIR,
+    };
+    return map[key] ?? PortDirection.UNSPECIFIED;
+  }
+
+  private static fromProtoPortType(t: PortType): string {
+    const map: Record<number, string> = {
+      [PortType.NETWORK]: 'network',
+      [PortType.POWER_IN]: 'power_in',
+      [PortType.POWER_OUT]: 'power_out',
+      [PortType.SLOT]: 'slot',
+      [PortType.BAY]: 'bay',
+      [PortType.CONSOLE]: 'console',
+    };
+    return map[t] ?? '';
+  }
+
+  private static toProtoPortType(key: string): PortType {
+    const map: Record<string, PortType> = {
+      network: PortType.NETWORK,
+      power_in: PortType.POWER_IN,
+      power_out: PortType.POWER_OUT,
+      slot: PortType.SLOT,
+      bay: PortType.BAY,
+      console: PortType.CONSOLE,
+    };
+    return map[key] ?? PortType.UNSPECIFIED;
+  }
+
   static mapPortCompatibility(c: ProtoPortCompat): PortCompatibility {
+    const category = CatalogApiService.fromProtoCategory(c.compatibleCategory);
     return {
-      id: `${c.portDefinitionId}:${c.compatibleCatalogId}`,
+      id: `${c.portDefinitionId}:${c.compatibleCatalogId || category}`,
       portDefinitionId: c.portDefinitionId,
+      compatibleCategory: category,
       compatibleCatalogEntryId: c.compatibleCatalogId,
     };
   }
@@ -141,8 +192,10 @@ export default class CatalogApiService {
     return this.client.createPortDefinition({
       deviceCatalogId: pd.catalogEntryId,
       name: pd.name,
-      portType: PortType.UNSPECIFIED,
-      mediaType: pd.portType,
+      portType: CatalogApiService.toProtoPortType(pd.portType),
+      direction: CatalogApiService.toProtoDirection(pd.direction),
+      ordinal: pd.ordinal ?? 0,
+      mediaType: pd.mediaType ?? '',
       ...(pd.speedGbps != null ? { speed: String(pd.speedGbps) } : {}),
       ...(pd.powerWatts != null ? { maxPowerW: pd.powerWatts } : {}),
     });
@@ -152,7 +205,10 @@ export default class CatalogApiService {
     return this.client.updatePortDefinition({
       id: pd.id,
       name: pd.name,
-      mediaType: pd.portType,
+      portType: CatalogApiService.toProtoPortType(pd.portType),
+      direction: CatalogApiService.toProtoDirection(pd.direction),
+      ordinal: pd.ordinal ?? 0,
+      mediaType: pd.mediaType ?? '',
       ...(pd.speedGbps != null ? { speed: String(pd.speedGbps) } : {}),
       ...(pd.powerWatts != null ? { maxPowerW: pd.powerWatts } : {}),
     });

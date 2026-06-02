@@ -5,10 +5,16 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   input,
 } from '@angular/core';
-import { Cable, CableColor, CableType, CABLE_COLOR_HEX, CABLE_TYPE_LABEL } from '../cable.model';
+import {
+  Cable,
+  CableColor,
+  CableType,
+  CABLE_COLOR_HEX,
+  cableTypeLabel,
+} from '../cable.model';
 
 function groupKey(group: ShoppingGroup): string {
-  return `${group.type}|${group.color ?? 'none'}|${group.length ?? '?'}`;
+  return `${group.type ?? 'none'}|${group.color ?? 'none'}|${group.length ?? '?'}`;
 }
 
 function cableLabel(cable: Cable): string {
@@ -17,7 +23,7 @@ function cableLabel(cable: Cable): string {
 }
 
 interface ShoppingGroup {
-  type: CableType;
+  type: CableType | undefined;
   color: CableColor | undefined;
   length: number | undefined;
   count: number;
@@ -37,7 +43,7 @@ export default class ShoppingListComponent {
 
   readonly groups = computed<ShoppingGroup[]>(() => {
     const map = this.cables().reduce((acc, cable) => {
-      const key = `${cable.type}|${cable.color ?? 'none'}|${cable.length ?? '?'}`;
+      const key = `${cable.type ?? 'none'}|${cable.color ?? 'none'}|${cable.length ?? '?'}`;
       const existing = acc.get(key);
       if (existing) {
         existing.count += 1;
@@ -56,7 +62,7 @@ export default class ShoppingListComponent {
 
     return [...map.values()].sort((a, b) => {
       if (b.count !== a.count) return b.count - a.count;
-      return CABLE_TYPE_LABEL[a.type].localeCompare(CABLE_TYPE_LABEL[b.type]);
+      return cableTypeLabel(a.type).localeCompare(cableTypeLabel(b.type));
     });
   });
 
@@ -68,12 +74,12 @@ export default class ShoppingListComponent {
 
   readonly CABLE_COLOR_HEX = CABLE_COLOR_HEX;
 
-  readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
+  readonly cableTypeLabel = cableTypeLabel;
 
   exportCsv(): void {
     const headers = ['Type', 'Color', 'Length (m)', 'Count', 'Cables'];
     const rows = this.groups().map((g) => [
-      CABLE_TYPE_LABEL[g.type],
+      cableTypeLabel(g.type),
       g.color ?? '',
       g.length != null ? String(g.length) : '',
       String(g.count),

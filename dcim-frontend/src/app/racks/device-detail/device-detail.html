@@ -359,7 +359,7 @@
                 </h2>
               </div>
               <ul class="divide-y divide-gray-50" aria-label="Device connections">
-                @for (conn of deviceConnections(); track conn.localPort) {
+                @for (conn of deviceConnections(); track conn.id) {
                   <li class="flex items-center gap-3 px-4 py-3">
                     <!-- Type icon -->
                     <span
@@ -393,22 +393,16 @@
                           [routerLink]="['/racks/device', conn.remoteDeviceId]"
                           class="font-mono text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded truncate max-w-40"
                         >
-                          {{ remoteDevice(conn.remoteDeviceId)?.name ?? conn.remoteDeviceId }}
+                          {{ conn.remoteDeviceName }}
                         </a>
                         <span class="font-mono text-xs text-gray-500">{{ conn.remotePort }}</span>
                       </div>
-                      <p class="text-[10px] text-gray-400 mt-0.5 font-mono">
-                        {{ remoteDeviceRackName(conn.remoteDeviceId) }}
-                      </p>
+                      @if (conn.remoteRackName) {
+                        <p class="text-[10px] text-gray-400 mt-0.5 font-mono">
+                          {{ conn.remoteRackName }}
+                        </p>
+                      }
                     </div>
-                    <!-- Speed badge -->
-                    @if (conn.speed) {
-                      <span
-                        class="shrink-0 rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-mono text-gray-600"
-                      >
-                        {{ conn.speed }}
-                      </span>
-                    }
                     <!-- Status -->
                     <div
                       class="shrink-0 flex items-center gap-1.5"
@@ -481,6 +475,7 @@
                   #portNameInput
                   [value]="newPortName()"
                   (input)="newPortName.set($any($event.target).value)"
+                  (keydown.enter)="addPort()"
                   placeholder="Port name (e.g. eth4)"
                   accessible-label="New port name"
                   size="sm"
@@ -603,23 +598,23 @@
             <div class="px-4 py-3 border-b border-gray-100">
               <h2 id="notes-heading" class="font-semibold text-gray-700">
                 Notes
-                @if (deviceComments().length > 0) {
+                @if (notes().length > 0) {
                   <span class="ml-1.5 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-500">{{
-                    deviceComments().length
+                    notes().length
                   }}</span>
                 }
               </h2>
             </div>
-            @if (deviceNotesDescription()) {
+            @if (notesDescription()) {
               <div class="px-4 py-3 border-b border-gray-100">
-                <p class="text-sm text-gray-500 leading-relaxed">{{ deviceNotesDescription() }}</p>
+                <p class="text-sm text-gray-500 leading-relaxed">{{ notesDescription() }}</p>
               </div>
             }
             <div class="px-4 py-4 space-y-3">
-              @if (deviceComments().length === 0) {
+              @if (notes().length === 0) {
                 <p class="text-sm text-gray-400 text-center py-2">No notes yet</p>
               }
-              @for (comment of deviceComments(); track $index) {
+              @for (comment of notes(); track comment.id) {
                 <div class="flex gap-3">
                   <div class="shrink-0 pt-0.5">
                     <span
@@ -650,8 +645,7 @@
                 </div>
                 <div class="flex-1 relative">
                   <nldd-text-field
-                    [value]="newNoteText()"
-                    (change)="newNoteText.set($any($event).detail?.value ?? '')"
+                    #noteInput
                     (keydown.enter)="addNote()"
                     placeholder="Add a note…"
                     accessible-label="Add a note"

@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 2.0.0-alpha
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -2035,9 +2035,16 @@ CREATE TABLE dcim.physical_connections (
 	b_port_definition_id uuid NOT NULL,
 	cable_asset_id uuid,
 	logical_connection_id uuid,
+	cable_type text,
+	status text,
+	color text,
+	label text,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
-	CONSTRAINT physical_connections_pk PRIMARY KEY (id)
+	CONSTRAINT physical_connections_pk PRIMARY KEY (id),
+	CONSTRAINT physical_connections_ck_cable_type CHECK (cable_type IS NULL OR cable_type IN ('cat5e','cat6','cat6a','cat7','cat8','dac','aoc','mmf','smf','power','console','usb','other')),
+	CONSTRAINT physical_connections_ck_status CHECK (status IS NULL OR status IN ('planned','connected','decommissioned')),
+	CONSTRAINT physical_connections_ck_color CHECK (color IS NULL OR color IN ('dark_grey','light_grey','red','green','blue','yellow','purple','orange','teal','white'))
 );
 -- ddl-end --
 ALTER TABLE dcim.physical_connections OWNER TO fun_owner;

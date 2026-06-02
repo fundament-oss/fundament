@@ -229,6 +229,12 @@ const (
 	ConstraintOutboxFkProject = "outbox_fk_project"
 	// ConstraintOutboxFkProjectMember is defined on authz.outbox.
 	ConstraintOutboxFkProjectMember = "outbox_fk_project_member"
+	// ConstraintPhysicalConnectionsCkCableType is defined on dcim.physical_connections.
+	ConstraintPhysicalConnectionsCkCableType = "physical_connections_ck_cable_type"
+	// ConstraintPhysicalConnectionsCkColor is defined on dcim.physical_connections.
+	ConstraintPhysicalConnectionsCkColor = "physical_connections_ck_color"
+	// ConstraintPhysicalConnectionsCkStatus is defined on dcim.physical_connections.
+	ConstraintPhysicalConnectionsCkStatus = "physical_connections_ck_status"
 	// ConstraintPlacementsCkExclusiveArc is defined on dcim.placements.
 	ConstraintPlacementsCkExclusiveArc = "placements_ck_exclusive_arc"
 	// ConstraintPlacementsCkSlotType is defined on dcim.placements.

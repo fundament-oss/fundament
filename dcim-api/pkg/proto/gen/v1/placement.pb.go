@@ -95,7 +95,9 @@ func (x *RackLocation) SetRackSlotType(v RackSlotType) {
 type RackLocation_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	RackId        string
+	RackId string
+	// Racks are numbered from 1; a unit of 0 (or below) would place the asset
+	// off the rendered grid, so it is rejected.
 	RackUnitStart int32
 	RackSlotType  RackSlotType
 }
@@ -1622,11 +1624,11 @@ var File_v1_placement_proto protoreflect.FileDescriptor
 
 const file_v1_placement_proto_rawDesc = "" +
 	"\n" +
-	"\x12v1/placement.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xa2\x01\n" +
+	"\x12v1/placement.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xab\x01\n" +
 	"\fRackLocation\x12!\n" +
 	"\arack_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06rackId\x12&\n" +
-	"\x0frack_unit_start\x18\x14 \x01(\x05R\rrackUnitStart\x12G\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06rackId\x12/\n" +
+	"\x0frack_unit_start\x18\x14 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rrackUnitStart\x12G\n" +
 	"\x0erack_slot_type\x18\x1e \x01(\x0e2\x15.dcim.v1.RackSlotTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\frackSlotType\"\x95\x01\n" +
 	"\x14SubComponentLocation\x128\n" +

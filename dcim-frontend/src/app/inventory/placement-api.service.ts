@@ -58,8 +58,16 @@ export default class PlacementApiService {
       });
   }
 
+  getPlacement(id: string) {
+    return this.placementClient.getPlacement({ id });
+  }
+
   getPlacementByAsset(assetId: string) {
     return this.placementClient.getPlacementByAsset({ assetId });
+  }
+
+  listPlacementsByRack(rackId: string) {
+    return this.placementClient.listPlacementsByRack({ rackId });
   }
 
   createPlacement(assetId: string, rackId: string, rackUnitStart: number, slotType: RackSlotType) {

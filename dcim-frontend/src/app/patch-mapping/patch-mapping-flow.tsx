@@ -90,24 +90,6 @@ const TYPE_COLOR: Record<string, string> = {
   pdu: '#ede9fe',
 };
 
-function WrenchIcon() {
-  return (
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-    </svg>
-  );
-}
-
 function PortRow({
   port,
   index,
@@ -236,7 +218,6 @@ function computeDeviceHeight(ports: Port[]): number {
 
 function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
   const [hovered, setHovered] = useState(false);
-  const [btnHovered, setBtnHovered] = useState(false);
   const [hoveredPortId, setHoveredPortId] = useState<string | null>(null);
 
   const leftPorts = useMemo(
@@ -365,35 +346,6 @@ function DeviceNode({ data }: NodeProps<DeviceNodeData>) {
         >
           {data.label}
         </span>
-        {hovered && (
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 18,
-              height: 18,
-              borderRadius: 3,
-              border: 'none',
-              background: btnHovered ? '#e2e8f0' : 'transparent',
-              color: btnHovered ? '#334155' : '#94a3b8',
-              cursor: 'pointer',
-              padding: 0,
-              flexShrink: 0,
-              transition: 'background 0.1s, color 0.1s',
-            }}
-            title="Edit ports"
-            aria-label={`Edit ports for ${data.label}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              data.onEditPorts(data.nodeId);
-            }}
-            onMouseEnter={() => setBtnHovered(true)}
-            onMouseLeave={() => setBtnHovered(false)}
-          >
-            <WrenchIcon />
-          </button>
-        )}
       </div>
 
       {/* Port name footers */}
@@ -901,7 +853,7 @@ interface ContextMenu {
   x: number;
   y: number;
   cableId: string;
-  currentStatus: CableStatus;
+  currentStatus: CableStatus | undefined;
 }
 
 function CableContextMenu({
