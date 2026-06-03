@@ -362,7 +362,7 @@
     once added.
   </p>
 
-  <form (ngSubmit)="submitInvitation()" (keydown.enter)="submitInvitation()" novalidate>
+  <nldd-form (submit)="submitInvitation($event)" (keydown.enter)="submitInvitation($event)" novalidate>
     <nldd-form-field label="Email address" class="mb-4">
       <nldd-text-field
         type="email"
@@ -413,7 +413,7 @@
         </nldd-radio-button-group>
       </nldd-form-field>
     </div>
-  </form>
+  </nldd-form>
 
   <nldd-button
     slot="actions"

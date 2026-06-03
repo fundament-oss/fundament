@@ -157,7 +157,10 @@ export default class OrganizationMembersComponent implements OnInit {
     this.isModalOpen.set(false);
   }
 
-  async submitInvitation() {
+  async submitInvitation(event?: Event) {
+    // Prevent the native form submission triggered by nldd-form.
+    event?.preventDefault();
+
     const email = this.inviteEmail().trim();
 
     if (!email) {

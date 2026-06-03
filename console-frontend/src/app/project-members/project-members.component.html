@@ -194,7 +194,7 @@
 >
   <nldd-spacer size="24"></nldd-spacer>
 
-  <form [formGroup]="memberForm" (ngSubmit)="saveMember()" (keydown.enter)="saveMember()">
+  <nldd-form [formGroup]="memberForm" (submit)="saveMember($event)" (keydown.enter)="saveMember($event)">
     @if (!editingMemberView()) {
       <nldd-form-field label="User" class="mb-4">
         <nldd-dropdown>
@@ -252,7 +252,7 @@
         </nldd-radio-button-group>
       </nldd-form-field>
     </div>
-  </form>
+  </nldd-form>
 
   <nldd-button
     slot="actions"

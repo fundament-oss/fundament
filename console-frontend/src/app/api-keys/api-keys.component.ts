@@ -200,7 +200,10 @@ export default class ApiKeysComponent implements OnInit {
     this.newKeyExpiresIn.set('');
   }
 
-  async createApiKey() {
+  async createApiKey(event?: Event) {
+    // Prevent the native form submission triggered by nldd-form.
+    event?.preventDefault();
+
     const name = this.newKeyName().trim();
     if (!name) {
       return;

@@ -123,7 +123,7 @@
 >
   <nldd-spacer size="24"></nldd-spacer>
 
-  <form (ngSubmit)="saveBinding()" (keydown.enter)="saveBinding()" novalidate>
+  <nldd-form (submit)="saveBinding($event)" (keydown.enter)="saveBinding($event)" novalidate>
     <nldd-form-field label="Member" class="mb-4">
       @if (editingBinding()) {
         <p>{{ editingBinding()?.memberName }}</p>
@@ -240,7 +240,7 @@
         }
       </div>
     </div>
-  </form>
+  </nldd-form>
 
   <nldd-button
     slot="actions"

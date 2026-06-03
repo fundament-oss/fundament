@@ -1,4 +1,4 @@
-<form [formGroup]="nodePoolsForm" (ngSubmit)="onSubmit()" class="space-y-6">
+<nldd-form [formGroup]="nodePoolsForm" (submit)="onSubmit($event)" class="space-y-6">
   <!-- Node Pools -->
   <div formArrayName="nodePools" class="space-y-6">
     @for (nodePoolControl of nodePools.controls; track nodePoolControl) {
@@ -97,4 +97,4 @@
   <div class="border-t border-gray-200 pt-6 dark:border-gray-800">
     <ng-content></ng-content>
   </div>
-</form>
+</nldd-form>

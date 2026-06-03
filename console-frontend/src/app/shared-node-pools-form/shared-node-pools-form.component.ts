@@ -179,7 +179,10 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     this.onSubmit();
   }
 
-  onSubmit() {
+  onSubmit(event?: Event) {
+    // Prevent the native form submission triggered by nldd-form.
+    event?.preventDefault();
+
     if (this.nodePoolsForm.invalid) {
       this.nodePoolsForm.markAllAsTouched();
       SharedNodePoolsFormComponent.scrollToFirstError();

@@ -104,10 +104,10 @@
 >
   <nldd-spacer size="24"></nldd-spacer>
 
-  <form
+  <nldd-form
     [formGroup]="namespaceForm"
-    (ngSubmit)="createNamespace()"
-    (keydown.enter)="createNamespace()"
+    (submit)="createNamespace($event)"
+    (keydown.enter)="createNamespace($event)"
   >
     <nldd-form-field label="Project" class="mb-4">
       @if (isLoadingProjects()) {
@@ -148,7 +148,7 @@
         {{ getNamespaceNameError() }}
       </nldd-form-field-error-text>
     </nldd-form-field>
-  </form>
+  </nldd-form>
 
   <nldd-button
     slot="actions"
