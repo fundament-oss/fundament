@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
 func signPluginToken(t *testing.T, secret []byte, c *PluginClaims) string {
@@ -99,4 +100,45 @@ func TestParsePluginToken_RejectsWrongSecret(t *testing.T) {
 	if _, err := ParsePluginToken(tokenStr, []byte("secret-b")); err == nil {
 		t.Fatal("expected error for wrong signing secret, got nil")
 	}
+}
+
+func TestParsePluginToken_RejectsMissingExp(t *testing.T) {
+	secret := []byte("test-secret")
+	c := validPluginClaims()
+	c.ExpiresAt = nil
+	tokenStr := signPluginToken(t, secret, c)
+
+	_, err := ParsePluginToken(tokenStr, secret)
+	require.Error(t, err, "token without exp must be rejected")
+}
+
+func TestParsePluginToken_RejectsWrongIssuer(t *testing.T) {
+	secret := []byte("test-secret")
+	c := validPluginClaims()
+	c.Issuer = "evil-issuer"
+	tokenStr := signPluginToken(t, secret, c)
+
+	_, err := ParsePluginToken(tokenStr, secret)
+	require.Error(t, err, "token with unexpected issuer must be rejected")
+}
+
+func TestParsePluginToken_RejectsNonUUIDSubject(t *testing.T) {
+	secret := []byte("test-secret")
+	c := validPluginClaims()
+	c.Subject = "not-a-uuid"
+	tokenStr := signPluginToken(t, secret, c)
+
+	_, err := ParsePluginToken(tokenStr, secret)
+	require.Error(t, err, "token with non-UUID subject must be rejected")
+}
+
+func TestParsePluginToken_RejectsNonHS256Method(t *testing.T) {
+	secret := []byte("test-secret-long-enough-for-hs384-and-hs512")
+	c := validPluginClaims()
+	tok := jwt.NewWithClaims(jwt.SigningMethodHS384, c)
+	tokenStr, err := tok.SignedString(secret)
+	require.NoError(t, err)
+
+	_, err = ParsePluginToken(tokenStr, secret)
+	require.Error(t, err, "non-HS256 signing method must be rejected")
 }

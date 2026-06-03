@@ -90,8 +90,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // re-queue with updated resource version
 	}
 
-	// Validate plugin name
-	if err := validatePluginName(cr.Name); err != nil {
+	// Validate installation name (used to derive every child resource name).
+	if err := validateInstallationName(cr.Name); err != nil {
 		cr.Status = pluginsv1.PluginInstallationStatus{
 			Phase:              pluginsv1.PluginPhaseFailed,
 			Message:            err.Error(),

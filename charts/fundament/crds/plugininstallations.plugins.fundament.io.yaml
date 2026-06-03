@@ -41,6 +41,7 @@ spec:
               type: object
               required:
                 - image
+                - definitionRef
               properties:
                 image:
                   type: string
@@ -67,6 +68,11 @@ spec:
                       type: string
                     definitionHash:
                       type: string
+                  x-kubernetes-validations:
+                    - rule: self.definitionHash.startsWith('sha256:')
+                      message: definitionHash must be a sha256 content hash (prefixed with 'sha256:')
+                    - rule: self == oldSelf
+                      message: definitionRef is immutable once set
                 config:
                   type: object
                   additionalProperties:

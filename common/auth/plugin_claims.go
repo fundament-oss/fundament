@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // PluginClaims is the parsed shape of a PluginToken (aud=fundament-plugin).
@@ -31,16 +32,21 @@ type PluginClaims struct {
 }
 
 // ParsePluginToken parses and verifies a PluginToken with the given HMAC
-// secret. It checks the signing method, signature, expiry, and that the
-// audience is fundament-plugin. It does NOT check the cluster/installation
-// binding — that is the caller's job, against its own request context.
+// secret. It checks the signing method, signature, expiry, issuer, that the
+// audience contains fundament-plugin, and that the subject is a UUID. It does
+// NOT check the cluster/installation binding — that is the caller's job,
+// against its own request context.
 func ParsePluginToken(tokenStr string, secret []byte) (*PluginClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &PluginClaims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return secret, nil
-	})
+	},
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuer("fundament-authn-api"),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("invalid plugin token: %w", err)
 	}
@@ -50,6 +56,9 @@ func ParsePluginToken(tokenStr string, secret []byte) (*PluginClaims, error) {
 	}
 	if !slices.Contains(c.Audience, string(TokenTypePlugin)) {
 		return nil, fmt.Errorf("token audience %v does not contain %q", c.Audience, TokenTypePlugin)
+	}
+	if _, err := uuid.Parse(c.Subject); err != nil {
+		return nil, fmt.Errorf("invalid user ID in token subject: %w", err)
 	}
 	return c, nil
 }

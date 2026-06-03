@@ -44,7 +44,8 @@ func TestGenerateJWT_SetsUserAudience(t *testing.T) {
 
 	claims, ok := parsed.Claims.(*auth.Claims)
 	require.True(t, ok, "claims type assertion failed")
-	require.Equal(t, auth.TokenTypeUser, claims.Type())
+	require.Len(t, claims.Audience, 1)
+	require.Equal(t, auth.TokenTypeUser, claims.Audience[0])
 }
 
 // TestGetUserInfo_RejectsPluginToken verifies that a PluginToken presented to

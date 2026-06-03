@@ -37,14 +37,6 @@ func (c *Claims) UserID() uuid.UUID {
 	return uuid.MustParse(c.Subject)
 }
 
-// Type returns the token type from the first audience claim, or empty if none.
-func (c *Claims) Type() TokenType {
-	if len(c.Audience) == 0 {
-		return ""
-	}
-	return TokenType(c.Audience[0])
-}
-
 // Validator handles JWT validation from HTTP headers.
 type Validator struct {
 	jwtSecret        []byte
@@ -52,9 +44,12 @@ type Validator struct {
 	logger           *slog.Logger
 }
 
-// NewValidator creates a Validator that accepts any audience. Prefer
-// NewValidatorForAudience in new code so that services explicitly declare
-// the token type they accept.
+// NewValidator creates a Validator that accepts any audience.
+//
+// Deprecated: prefer NewValidatorForAudience so services explicitly declare
+// the token type they accept. The escalation wall described in FUN-17 depends
+// on every UserToken validator rejecting fundament-plugin; an any-audience
+// validator silently accepts both.
 func NewValidator(jwtSecret []byte, logger *slog.Logger) *Validator {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -117,7 +112,11 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return v.jwtSecret, nil
-	})
+	},
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuer("fundament-authn-api"),
+	)
 	if err != nil {
 		v.logger.Debug("token validation failed", "error", err)
 		return nil, fmt.Errorf("invalid token: %w", err)

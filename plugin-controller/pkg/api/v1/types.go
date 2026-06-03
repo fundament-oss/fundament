@@ -54,6 +54,8 @@ type PluginInstallationSpec struct {
 // A published PluginDefinition is content-addressed: (PluginName,
 // PluginVersion) resolves to exactly one DefinitionHash forever, so the pin is
 // itself the consent record (FUN-17 "Where the scope comes from").
+//
+// +k8s:deepcopy-gen=true
 type DefinitionRef struct {
 	PluginName     string `json:"pluginName"`
 	PluginVersion  string `json:"pluginVersion"`
