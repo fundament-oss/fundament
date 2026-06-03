@@ -61,7 +61,11 @@
     @if (isCreating()) {
       <div class="card card-body-lg mb-6 bg-gray-50! dark:bg-gray-900!">
         <h3 class="-mt-2 mb-4 text-lg font-semibold">Create new API key</h3>
-        <nldd-form class="space-y-4" (submit)="createApiKey($event)" (keydown.enter)="createApiKey($event)">
+        <nldd-form
+          class="space-y-4"
+          (submit)="createApiKey($event)"
+          (keydown.enter)="createApiKey($event)"
+        >
           <nldd-form-field label="Name">
             <nldd-text-field
               appAutofocus

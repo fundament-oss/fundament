@@ -362,7 +362,11 @@
     once added.
   </p>
 
-  <nldd-form (submit)="submitInvitation($event)" (keydown.enter)="submitInvitation($event)" novalidate>
+  <nldd-form
+    (submit)="submitInvitation($event)"
+    (keydown.enter)="submitInvitation($event)"
+    novalidate
+  >
     <nldd-form-field label="Email address" class="mb-4">
       <nldd-text-field
         type="email"

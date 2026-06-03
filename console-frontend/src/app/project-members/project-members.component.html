@@ -194,7 +194,11 @@
 >
   <nldd-spacer size="24"></nldd-spacer>
 
-  <nldd-form [formGroup]="memberForm" (submit)="saveMember($event)" (keydown.enter)="saveMember($event)">
+  <nldd-form
+    [formGroup]="memberForm"
+    (submit)="saveMember($event)"
+    (keydown.enter)="saveMember($event)"
+  >
     @if (!editingMemberView()) {
       <nldd-form-field label="User" class="mb-4">
         <nldd-dropdown>
