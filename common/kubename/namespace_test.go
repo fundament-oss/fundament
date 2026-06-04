@@ -1,6 +1,7 @@
 package kubename
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -40,10 +41,7 @@ func TestValidateNamespace_Rejects(t *testing.T) {
 
 func TestValidateNamespace_MaxLengthBoundary(t *testing.T) {
 	t.Parallel()
-	atLimit := string(make([]byte, MaxNamespaceNameLength))
-	for i := range atLimit {
-		atLimit = atLimit[:i] + "a" + atLimit[i+1:]
-	}
+	atLimit := strings.Repeat("a", MaxNamespaceNameLength)
 	require.NoError(t, ValidateNamespace(atLimit))
 	require.Error(t, ValidateNamespace(atLimit+"a"))
 }
@@ -68,10 +66,7 @@ func TestGenerateNamespace_DistinctPerProject(t *testing.T) {
 // accepted name combined with any project name yields a valid DNS-1123 label.
 func TestGenerateNamespace_StaysWithinDNS1123(t *testing.T) {
 	t.Parallel()
-	longestName := string(make([]byte, MaxNamespaceNameLength))
-	for i := range longestName {
-		longestName = longestName[:i] + "a" + longestName[i+1:]
-	}
+	longestName := strings.Repeat("a", MaxNamespaceNameLength)
 	require.NoError(t, ValidateNamespace(longestName))
 
 	for _, projectName := range []string{"", "x", "A Very Long Organization Project Name Indeed", "!!!"} {

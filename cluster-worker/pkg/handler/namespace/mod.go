@@ -290,16 +290,13 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 			errs = append(errs, fmt.Errorf("enqueue namespace %s: %w", id, err))
 		}
 	}
-	// Re-check ownership at delete time. The cluster-side name omits the row id, so
-	// a name can be reused across a soft-delete + recreate; a name that was an
-	// orphan in the snapshot above may since have been recreated under a now-active
-	// id. Deleting by the stale name would destroy a live namespace, so re-read the
-	// live labels and only delete a namespace that is still a fundament-managed
-	// orphan (carries our id label and its id is not in the active set).
-	active := make(map[uuid.UUID]struct{}, len(activeIDs))
-	for _, id := range activeIDs {
-		active[id] = struct{}{}
-	}
+	// Re-check ownership against live DB state at delete time, not the snapshot
+	// above. The cluster-side name omits the row id, so a name can be reused across
+	// a soft-delete + recreate; a name that was an orphan in the snapshot may since
+	// have been recreated under a now-active id — including a row created after the
+	// snapshot, which activeIDs cannot see. Deleting it would destroy a live
+	// namespace, so re-read the live label and confirm the id it carries is
+	// genuinely gone or soft-deleted in the DB before removing it.
 	for _, name := range plan.DeleteNames {
 		current, err := h.shoot.GetNamespace(ctx, clusterID, name)
 		if err != nil {
@@ -313,10 +310,17 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 		if !ok {
 			continue // no longer fundament-managed; never touch
 		}
-		if id, perr := uuid.Parse(rawID); perr == nil {
-			if _, isActive := active[id]; isActive {
-				continue // recreated and now active — not an orphan anymore
-			}
+		id, perr := uuid.Parse(rawID)
+		if perr != nil {
+			continue // malformed id label; leave it alone
+		}
+		row, gerr := h.queries.NamespaceGetForSync(ctx, db.NamespaceGetForSyncParams{ID: id})
+		if gerr != nil && !errors.Is(gerr, pgx.ErrNoRows) {
+			errs = append(errs, fmt.Errorf("recheck orphan namespace %s: %w", name, gerr))
+			continue
+		}
+		if gerr == nil && !row.Deleted.Valid {
+			continue // recreated and now active — not an orphan anymore
 		}
 		if err := h.shoot.DeleteNamespace(ctx, clusterID, name); err != nil {
 			errs = append(errs, fmt.Errorf("delete orphan namespace %s: %w", name, err))
@@ -332,8 +336,9 @@ func (h *Handler) reconcileCluster(ctx context.Context, clusterID uuid.UUID) err
 }
 
 // desiredLabels is the full managed label set for a namespace row. LabelNamespaceName
-// carries the current fundament-side name (which tracks renames; the k8s resource
-// name does not).
+// records the fundament-side name as informational metadata so operators can correlate
+// the resource back to fundament; the namespace name is immutable, so it never diverges
+// from the generated resource name.
 func desiredLabels(row *db.NamespaceGetForSyncRow) map[string]string {
 	return map[string]string{
 		LabelNamespaceID:    row.ID.String(),

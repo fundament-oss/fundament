@@ -163,6 +163,64 @@ func TestEnsure_ManagedSiblingDefers(t *testing.T) {
 	require.ErrorAs(t, err, &pe, "a managed sibling must defer, not hard-fail")
 }
 
+// raceCreateShoot simulates a lost create race: the first CreateNamespace call
+// lands a namespace under racedLabels (as a concurrent actor would) and then
+// reports AlreadyExists, so ensure's post-conflict re-read sees that namespace.
+type raceCreateShoot struct {
+	*shoot.MockShootAccess
+	racedLabels map[string]string
+	fired       bool
+}
+
+func (s *raceCreateShoot) CreateNamespace(ctx context.Context, clusterID uuid.UUID, name string, labels map[string]string) error {
+	if !s.fired {
+		s.fired = true
+		// The racer wins: store their namespace, then fail our own create.
+		if err := s.MockShootAccess.CreateNamespace(ctx, clusterID, name, s.racedLabels); err != nil {
+			return err
+		}
+		return apierrors.NewAlreadyExists(corev1.Resource("namespaces"), name)
+	}
+	return s.MockShootAccess.CreateNamespace(ctx, clusterID, name, labels)
+}
+
+func newRaceHandler(t *testing.T, racedLabels map[string]string) (*Handler, *shoot.MockShootAccess) {
+	t.Helper()
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+	mock := shoot.NewMockShootAccess(logger)
+	race := &raceCreateShoot{MockShootAccess: mock, racedLabels: racedLabels}
+	return &Handler{shoot: race, logger: logger}, mock
+}
+
+// When a create conflict turns out to be our own namespace (a duplicate reconcile
+// row processed concurrently), ensure must re-read, see it is ours, and converge
+// by reconciling labels — not fail the row.
+func TestEnsure_CreateRaceAdoptsWhenNowOurs(t *testing.T) {
+	t.Parallel()
+	row := testRow("team-a")
+	h, mock := newRaceHandler(t, map[string]string{LabelNamespaceID: row.ID.String()})
+
+	require.NoError(t, h.ensure(context.Background(), row))
+
+	// The raced namespace was adopted and its labels reconciled to the full set.
+	labels := nsLabels(t, mock, row.ClusterID, clusterName(row))
+	require.Equal(t, row.ID.String(), labels[LabelNamespaceID])
+	require.Equal(t, ManagedByValue, labels[LabelManagedBy])
+	require.Equal(t, row.ProjectID.String(), labels[LabelProjectID])
+}
+
+// When a create conflict is a foreign (non-managed) namespace, ensure must report
+// a real collision rather than adopt it.
+func TestEnsure_CreateRaceForeignReportsCollision(t *testing.T) {
+	t.Parallel()
+	row := testRow("team-a")
+	h, _ := newRaceHandler(t, map[string]string{"someone": "else"})
+
+	err := h.ensure(context.Background(), row)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "namespace name collision")
+}
+
 func TestDelete_AlreadyGoneIsNoop(t *testing.T) {
 	t.Parallel()
 	h, _ := newTestHandler(t)

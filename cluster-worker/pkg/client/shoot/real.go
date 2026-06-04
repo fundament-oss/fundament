@@ -23,6 +23,10 @@ import (
 type RealShootAccess struct {
 	gardener gardener.Client
 	logger   *slog.Logger
+	// newClient builds a Kubernetes client for a shoot. It exists as a field so
+	// tests can inject a fake clientset; in production it is nil and
+	// clientForCluster falls back to the real AdminKubeconfigRequest path.
+	newClient func(ctx context.Context, clusterID uuid.UUID) (kubernetes.Interface, error)
 }
 
 // NewRealShootAccess creates a ShootAccess backed by real Gardener AdminKubeconfigRequest calls.
@@ -33,7 +37,11 @@ func NewRealShootAccess(gardenerClient gardener.Client, logger *slog.Logger) *Re
 	}
 }
 
-func (r *RealShootAccess) clientForCluster(ctx context.Context, clusterID uuid.UUID) (*kubernetes.Clientset, error) {
+func (r *RealShootAccess) clientForCluster(ctx context.Context, clusterID uuid.UUID) (kubernetes.Interface, error) {
+	if r.newClient != nil {
+		return r.newClient(ctx, clusterID)
+	}
+
 	adminKC, err := r.gardener.RequestAdminKubeconfig(ctx, clusterID, 600)
 	if err != nil {
 		return nil, fmt.Errorf("request admin kubeconfig: %w", err)
@@ -192,6 +200,12 @@ func (r *RealShootAccess) EnsureServiceAccount(ctx context.Context, clusterID uu
 		if getErr != nil {
 			return fmt.Errorf("get existing SA %s/%s: %w", namespace, name, getErr)
 		}
+		if existing.Labels == nil {
+			existing.Labels = make(map[string]string)
+		}
+		if existing.Annotations == nil {
+			existing.Annotations = make(map[string]string)
+		}
 		maps.Copy(existing.Labels, labels)
 		maps.Copy(existing.Annotations, annotations)
 		_, err = cs.CoreV1().ServiceAccounts(namespace).Update(ctx, existing, metav1.UpdateOptions{})
@@ -249,6 +263,12 @@ func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterI
 			return nil
 		}
 
+		if existing.Labels == nil {
+			existing.Labels = make(map[string]string)
+		}
+		if existing.Annotations == nil {
+			existing.Annotations = make(map[string]string)
+		}
 		maps.Copy(existing.Labels, labels)
 		maps.Copy(existing.Annotations, annotations)
 		existing.Subjects = crb.Subjects
