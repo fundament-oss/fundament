@@ -70,8 +70,7 @@
 
         <div class="mt-6">
           <nldd-button
-            type="button"
-            (click)="saveClusterLimits()"
+            type="submit"
             [disabled]="clusterSaving()"
             [text]="clusterSaving() ? 'Saving…' : 'Save cluster limits'"
             variant="primary"
@@ -176,7 +175,6 @@
         <div class="mt-6">
           <nldd-button
             type="button"
-            (click)="saveNamespaceLimits()"
             [disabled]="namespaceSaving()"
             [text]="namespaceSaving() ? 'Saving…' : 'Save namespace defaults'"
             variant="primary"

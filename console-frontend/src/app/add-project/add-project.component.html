@@ -88,8 +88,7 @@
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
       <nldd-button routerLink="/projects" text="Cancel" variant="secondary"></nldd-button>
       <nldd-button
-        type="button"
-        (click)="onSubmit()"
+        type="submit"
         text="Create project"
         [text]="isSubmitting() ? 'Creating...' : 'Create project'"
         [disabled]="isSubmitting()"
