@@ -24,7 +24,7 @@ func validPluginClaims() *PluginClaims {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
 			Subject:   uuid.New().String(),
-			Audience:  jwt.ClaimStrings{string(TokenTypePlugin)},
+			Audience:  jwt.ClaimStrings{TokenTypePlugin},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
@@ -65,7 +65,7 @@ func TestParsePluginToken_AcceptsValidToken(t *testing.T) {
 func TestParsePluginToken_AcceptsMultiAudience(t *testing.T) {
 	secret := []byte("test-secret")
 	c := validPluginClaims()
-	c.Audience = jwt.ClaimStrings{string(TokenTypeUser), string(TokenTypePlugin)}
+	c.Audience = jwt.ClaimStrings{TokenTypeUser, TokenTypePlugin}
 	tokenStr := signPluginToken(t, secret, c)
 
 	if _, err := ParsePluginToken(tokenStr, secret); err != nil {
@@ -76,7 +76,7 @@ func TestParsePluginToken_AcceptsMultiAudience(t *testing.T) {
 func TestParsePluginToken_RejectsUserAudience(t *testing.T) {
 	secret := []byte("test-secret")
 	c := validPluginClaims()
-	c.Audience = jwt.ClaimStrings{string(TokenTypeUser)}
+	c.Audience = jwt.ClaimStrings{TokenTypeUser}
 	tokenStr := signPluginToken(t, secret, c)
 
 	if _, err := ParsePluginToken(tokenStr, secret); err == nil {

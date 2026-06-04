@@ -31,7 +31,7 @@ func validUserClaims(subject string) *Claims {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
 			Subject:   subject,
-			Audience:  jwt.ClaimStrings{string(TokenTypeUser)},
+			Audience:  jwt.ClaimStrings{TokenTypeUser},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 	}
@@ -133,7 +133,7 @@ func TestValidatorForAudience_AcceptsMatchingAudience(t *testing.T) {
 
 func TestValidatorForAudience_RejectsMismatchedAudience(t *testing.T) {
 	c := validUserClaims(uuid.New().String())
-	c.Audience = jwt.ClaimStrings{string(TokenTypePlugin)}
+	c.Audience = jwt.ClaimStrings{TokenTypePlugin}
 	tokenString := signToken(t, c)
 
 	v := NewValidatorForAudience(testSecret, TokenTypeUser, nil)
@@ -151,7 +151,7 @@ func TestValidatorForAudience_RejectsMismatchedAudience(t *testing.T) {
 // audience.
 func TestValidatorForAudience_AcceptsMultiAudienceWhenExpectedPresent(t *testing.T) {
 	c := validUserClaims(uuid.New().String())
-	c.Audience = jwt.ClaimStrings{string(TokenTypePlugin), string(TokenTypeUser)}
+	c.Audience = jwt.ClaimStrings{TokenTypePlugin, TokenTypeUser}
 	tokenString := signToken(t, c)
 
 	v := NewValidatorForAudience(testSecret, TokenTypeUser, nil)

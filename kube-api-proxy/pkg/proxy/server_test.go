@@ -35,7 +35,7 @@ func TestClusterProxy_RejectsPluginToken(t *testing.T) {
 	pluginClaims := &auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   uuid.New().String(),
-			Audience:  jwt.ClaimStrings{string(auth.TokenTypePlugin)},
+			Audience:  jwt.ClaimStrings{auth.TokenTypePlugin},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
 	}

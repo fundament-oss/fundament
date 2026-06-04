@@ -32,7 +32,7 @@ func TestAuthenticate_RejectsPluginToken(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
 			Subject:   uuid.New().String(),
-			Audience:  jwt.ClaimStrings{string(auth.TokenTypePlugin)},
+			Audience:  jwt.ClaimStrings{auth.TokenTypePlugin},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
 	}

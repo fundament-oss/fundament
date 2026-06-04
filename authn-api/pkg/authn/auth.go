@@ -101,7 +101,7 @@ func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry tim
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "fundament-authn-api",
 			Subject:   u.ID.String(),
-			Audience:  jwt.ClaimStrings{string(auth.TokenTypeUser)},
+			Audience:  jwt.ClaimStrings{auth.TokenTypeUser},
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
 		},

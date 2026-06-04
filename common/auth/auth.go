@@ -18,7 +18,7 @@ const AuthCookieName = "fundament_auth"
 // TokenType is the value carried in the JWT `aud` claim. It distinguishes
 // user tokens from plugin tokens so that services can refuse the wrong kind
 // at validation time.
-type TokenType string
+type TokenType = string
 
 const (
 	TokenTypeUser   TokenType = "fundament-user"

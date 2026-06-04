@@ -54,7 +54,7 @@ func ParsePluginToken(tokenStr string, secret []byte) (*PluginClaims, error) {
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid plugin token claims")
 	}
-	if !slices.Contains(c.Audience, string(TokenTypePlugin)) {
+	if !slices.Contains(c.Audience, TokenTypePlugin) {
 		return nil, fmt.Errorf("token audience %v does not contain %q", c.Audience, TokenTypePlugin)
 	}
 	if _, err := uuid.Parse(c.Subject); err != nil {
