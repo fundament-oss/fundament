@@ -19,7 +19,7 @@ spec:
       additionalPrinterColumns:
         - name: Plugin
           type: string
-          jsonPath: .spec.pluginName
+          jsonPath: .spec.definitionRef.pluginName
         - name: Phase
           type: string
           jsonPath: .status.phase
@@ -36,15 +36,12 @@ spec:
           type: object
           required:
             - spec
-          x-kubernetes-validations:
-            - rule: "self.metadata.name == self.spec.pluginName"
-              message: "metadata.name must match spec.pluginName"
           properties:
             spec:
               type: object
               required:
                 - image
-                - pluginName
+                - definitionRef
               properties:
                 image:
                   type: string
@@ -54,15 +51,28 @@ spec:
                     - Always
                     - IfNotPresent
                     - Never
-                pluginName:
-                  type: string
-                  x-kubernetes-validations:
-                    - rule: "self == oldSelf"
-                      message: "spec.pluginName is immutable"
                 clusterRoles:
                   type: array
                   items:
                     type: string
+                definitionRef:
+                  type: object
+                  required:
+                    - pluginName
+                    - pluginVersion
+                    - definitionHash
+                  properties:
+                    pluginName:
+                      type: string
+                    pluginVersion:
+                      type: string
+                    definitionHash:
+                      type: string
+                  x-kubernetes-validations:
+                    - rule: self.definitionHash.startsWith('sha256:')
+                      message: definitionHash must be a sha256 content hash (prefixed with 'sha256:')
+                    - rule: self == oldSelf
+                      message: definitionRef is immutable once set
                 config:
                   type: object
                   additionalProperties:
