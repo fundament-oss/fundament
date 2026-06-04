@@ -243,6 +243,11 @@ export default class PatchMappingComponent implements OnInit {
     }
   }
 
+  /** Reflects port edits made from the cable form back into the local cache. */
+  onPortsUpdated(event: { deviceId: string; ports: Port[] }): void {
+    this.localDevicePorts.update((map) => ({ ...map, [event.deviceId]: event.ports }));
+  }
+
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
   openAddCable(): void {
