@@ -30,7 +30,7 @@
           variant="primary"
         ></nldd-button>
       }
-      <nldd-dropdown size="sm">
+      <nldd-dropdown style="width: auto">
         <select [ngModel]="namespaceFilter()" (ngModelChange)="namespaceFilter.set($event)">
           <option value="">All namespaces</option>
           @for (ns of uniqueNamespaces(); track ns) {
