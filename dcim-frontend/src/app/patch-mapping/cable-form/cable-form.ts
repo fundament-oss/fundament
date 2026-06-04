@@ -23,6 +23,7 @@ import {
   portsAreCompatible,
   PortType,
   PORT_TYPE_LABEL,
+  newLocalPortId,
 } from '../cable.model';
 import DevicePortsComponent from '../device-ports/device-ports';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
@@ -335,7 +336,7 @@ export default class CableFormComponent {
     const deviceId = side === 'a' ? this.aDeviceId() : this.bDeviceId();
     if (!deviceId) return;
     const portType = typeSignal();
-    const id = `p-${deviceId}-${Date.now().toString(36)}`;
+    const id = newLocalPortId(deviceId);
     const port: Port = { id, deviceId, name, type: portType };
     this.localDevicePorts.update((map) => ({
       ...map,

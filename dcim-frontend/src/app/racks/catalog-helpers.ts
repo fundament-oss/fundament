@@ -1,4 +1,4 @@
-import { AssetCategory } from '../inventory/inventory';
+import { AssetCategory, PortDirectionKey, PortTypeKey } from '../inventory/inventory';
 import { DeviceType } from './rack.model';
 import { Port, PortType } from '../patch-mapping/cable.model';
 import {
@@ -69,7 +69,10 @@ export function cablePortFromDefinition(pd: ProtoPortDefinition, deviceId: strin
  * the catalog port-definition `portType`/`direction` enum keys, so ports added
  * from the cabling views can be written back as catalog port definitions.
  */
-export function cablePortTypeToDefinition(type: PortType): { portType: string; direction: string } {
+export function cablePortTypeToDefinition(type: PortType): {
+  portType: PortTypeKey;
+  direction: PortDirectionKey;
+} {
   switch (type) {
     case 'network-interface':
       return { portType: 'network', direction: 'bidir' };

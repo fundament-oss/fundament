@@ -102,13 +102,19 @@ export interface CatalogEntry {
   specs: Record<string, string>;
 }
 
+/** Catalog port-type enum keys, as used on the wire by the catalog API. */
+export type PortTypeKey = 'network' | 'power_in' | 'power_out' | 'slot' | 'bay' | 'console';
+
+/** Catalog port-direction enum keys. */
+export type PortDirectionKey = 'in' | 'out' | 'bidir';
+
 export interface PortDefinition {
   id: string;
   catalogEntryId: string;
   name: string;
-  /** Port category enum key: network | power_in | power_out | slot | bay | console. */
+  /** Port category enum key ({@link PortTypeKey}), or '' while a draft port is unsaved. */
   portType: string;
-  /** Direction enum key: in | out | bidir. */
+  /** Direction enum key ({@link PortDirectionKey}). */
   direction: string;
   /** Free-text connector/media (e.g. SFP+, QSFP28, IEC C13). */
   mediaType?: string;

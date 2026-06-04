@@ -8,7 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { Port, PortType, PORT_TYPE_LABEL } from '../cable.model';
+import { Port, PortType, PORT_TYPE_LABEL, newLocalPortId } from '../cable.model';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 @Component({
@@ -59,7 +59,7 @@ export default class DevicePortsComponent {
 
   addPort(): void {
     if (!this.canAddPort()) return;
-    const id = `p-${this.deviceId()}-${Date.now().toString(36)}`;
+    const id = newLocalPortId(this.deviceId());
     const port: Port = {
       id,
       deviceId: this.deviceId(),
