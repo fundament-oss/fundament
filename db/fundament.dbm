@@ -2561,6 +2561,18 @@ END;]]> </definition>
 	<column name="logical_connection_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="cable_type">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status">
+		<type name="text" length="0"/>
+	</column>
+	<column name="color">
+		<type name="text" length="0"/>
+	</column>
+	<column name="label">
+		<type name="text" length="0"/>
+	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
@@ -2569,6 +2581,15 @@ END;]]> </definition>
 	</column>
 	<constraint name="physical_connections_pk" type="pk-constr" table="dcim.physical_connections">
 		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="physical_connections_ck_cable_type" type="ck-constr" table="dcim.physical_connections">
+			<expression> <![CDATA[cable_type IS NULL OR cable_type IN ('cat5e','cat6','cat6a','cat7','cat8','dac','aoc','mmf','smf','power','console','usb','other')]]> </expression>
+	</constraint>
+	<constraint name="physical_connections_ck_status" type="ck-constr" table="dcim.physical_connections">
+			<expression> <![CDATA[status IS NULL OR status IN ('planned','connected','decommissioned')]]> </expression>
+	</constraint>
+	<constraint name="physical_connections_ck_color" type="ck-constr" table="dcim.physical_connections">
+			<expression> <![CDATA[color IS NULL OR color IN ('dark_grey','light_grey','red','green','blue','yellow','purple','orange','teal','white')]]> </expression>
 	</constraint>
 </table>
 

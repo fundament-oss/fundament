@@ -56,9 +56,10 @@
       class="flex flex-col"
       [cables]="dcCables()"
       [dcId]="selectedDcId()"
+      [sites]="sites()"
       (editCable)="openEditCable($event)"
       (deleteCable)="openDeleteCable($event)"
-      (dcSelected)="selectedDcId.set($event)"
+      (dcSelected)="selectDc($event)"
     />
   } @else {
     <!-- Topology filter bar -->
@@ -124,7 +125,6 @@
       [filterType]="topologyTypeFilter()"
       (cableSelected)="openEditCableById($event)"
       (connectionMade)="openAddCableFromConnection($event)"
-      (portsEditRequested)="openEditPorts($event)"
       (cableStatusChanged)="updateCableStatus($event)"
     />
   }
@@ -139,43 +139,12 @@
     [dcId]="selectedDcId()"
     [allCables]="dcCables()"
     [externalDevicePorts]="localDevicePorts()"
+    [devices]="dcDevices()"
+    [serverError]="cableFormError()"
     (save)="saveFromForm($event)"
     (cancelForm)="closeForm()"
     (cableDelete)="openDeleteCable($event)"
-    (portsUpdated)="onPortsUpdated($event)"
   />
-</nldd-sheet>
-
-<!-- ══════════════════════════════════════════════════════════════
-     PORT EDIT SHEET (topology view)
-     ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet
-  #portEditSheet
-  accessible-label="Edit device ports"
-  placement="right"
-  width="420px"
-  (close)="closeEditPorts()"
->
-  @if (editPortsDevice() !== null) {
-    <nldd-page sticky-header="" sticky-footer="">
-      <nldd-top-title-bar
-        slot="header"
-        [attr.text]="'Manage ports — ' + editPortsDevice()!.name"
-        dismiss-text="Close"
-        (dismiss)="closeEditPorts()"
-      ></nldd-top-title-bar>
-      <nldd-simple-section>
-        <app-device-ports
-          [deviceId]="editPortsDevice()!.id"
-          [deviceName]="editPortsDevice()!.name"
-          [ports]="editPortsPorts()"
-          [embedded]="true"
-          (portsChange)="saveTopologyPorts($event)"
-          (cancelEdit)="closeEditPorts()"
-        />
-      </nldd-simple-section>
-    </nldd-page>
-  }
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════

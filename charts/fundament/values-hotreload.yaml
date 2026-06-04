@@ -1,0 +1,5 @@
+# Overlay for `just dev-hotreload` (skaffold --profile hotreload).
+# Toggles a startupProbe on each Air-driven Go service so the first cold
+# build doesn't trip the liveness probe and put us in a rebuild loop.
+hotreload:
+  enabled: true

@@ -67,7 +67,13 @@ export default class DatacenterApiService {
   }
 
   static mapRack(r: ProtoRack): DatacenterRack {
-    return { id: r.id, rowId: r.rowId, name: r.name, totalU: r.totalUnits };
+    return {
+      id: r.id,
+      rowId: r.rowId,
+      name: r.name,
+      totalU: r.totalUnits,
+      positionInRow: r.positionInRow,
+    };
   }
 
   listSites() {

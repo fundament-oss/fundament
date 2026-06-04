@@ -19,7 +19,6 @@ import {
   AssetStatus,
   CatalogEntry,
   HistoryEntry,
-  MOCK_ASSETS,
   NoteComment,
 } from '../inventory';
 import InventoryApiService from '../inventory-api.service';
@@ -27,99 +26,8 @@ import CatalogApiService from '../../catalog/catalog-api.service';
 import NoteApiService from '../note-api.service';
 import PlacementApiService, { RackOption } from '../placement-api.service';
 import connectErrorMessage from '../../../connect/error';
+import parseValidationError from '../../../connect/validation';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
-
-interface AssetExtraDetail {
-  serial: string;
-  manufacturer: string;
-  purchaseDate: string;
-  purchaseCost: string;
-  warrantyExpires: string;
-  supportContract: string;
-}
-
-const MOCK_EXTRA_DETAILS: Record<string, AssetExtraDetail> = {
-  'AST-001': {
-    serial: 'SN-DELL-R750-00A12X',
-    manufacturer: 'Dell Technologies',
-    purchaseDate: '2024-03-15',
-    purchaseCost: '€ 18.450',
-    warrantyExpires: '2027-03-15',
-    supportContract: 'ProSupport Plus 3yr',
-  },
-  'AST-002': {
-    serial: 'SN-CSC-9300-B05YZ',
-    manufacturer: 'Cisco Systems',
-    purchaseDate: '2023-11-20',
-    purchaseCost: '€ 9.200',
-    warrantyExpires: '2026-11-20',
-    supportContract: 'SmartNet 3yr',
-  },
-  'AST-003': {
-    serial: 'SN-NTAP-A800-C08AB',
-    manufacturer: 'NetApp',
-    purchaseDate: '2025-01-08',
-    purchaseCost: '€ 124.000',
-    warrantyExpires: '2028-01-08',
-    supportContract: 'SupportEdge Premium 3yr',
-  },
-  'AST-004': {
-    serial: 'SN-HPE-DL380-D14CC',
-    manufacturer: 'Hewlett Packard Enterprise',
-    purchaseDate: '2022-07-10',
-    purchaseCost: '€ 14.700',
-    warrantyExpires: '2025-07-10',
-    supportContract: 'HPE Foundation Care 3yr',
-  },
-  'AST-007': {
-    serial: 'SN-DELL-R650-A13QR',
-    manufacturer: 'Dell Technologies',
-    purchaseDate: '2024-06-01',
-    purchaseCost: '€ 11.800',
-    warrantyExpires: '2027-06-01',
-    supportContract: 'ProSupport Plus 3yr',
-  },
-  'AST-008': {
-    serial: 'SN-PA-5250-F01MN',
-    manufacturer: 'Palo Alto Networks',
-    purchaseDate: '2023-09-05',
-    purchaseCost: '€ 42.000',
-    warrantyExpires: '2026-09-05',
-    supportContract: 'Premium Support 3yr',
-  },
-  'AST-009': {
-    serial: 'SN-PURE-X70-C04KL',
-    manufacturer: 'Pure Storage',
-    purchaseDate: '2024-01-22',
-    purchaseCost: '€ 87.500',
-    warrantyExpires: '2027-01-22',
-    supportContract: 'Evergreen//One',
-  },
-  'AST-012': {
-    serial: 'SN-ARIS-7050-B01PQ',
-    manufacturer: 'Arista Networks',
-    purchaseDate: '2023-04-14',
-    purchaseCost: '€ 31.200',
-    warrantyExpires: '2026-04-14',
-    supportContract: 'Arista TAC 3yr',
-  },
-  'AST-013': {
-    serial: 'SN-LNV-SR650-A05RR',
-    manufacturer: 'Lenovo',
-    purchaseDate: '2021-12-03',
-    purchaseCost: '€ 12.600',
-    warrantyExpires: '2024-12-03',
-    supportContract: 'Foundation Service 3yr',
-  },
-  'AST-018': {
-    serial: 'SN-FTN-FG600-F02ST',
-    manufacturer: 'Fortinet',
-    purchaseDate: '2023-08-17',
-    purchaseCost: '€ 28.900',
-    warrantyExpires: '2026-08-17',
-    supportContract: 'FortiCare 360 3yr',
-  },
-};
 
 @Component({
   selector: 'app-asset-detail',
@@ -156,21 +64,16 @@ export default class AssetDetailComponent implements OnInit {
     { datacenter: string; rack: string; rackUnit: number; slotType: RackSlotType } | undefined
   >(undefined);
 
-  readonly parentAsset = computed<Asset | undefined>(() => {
-    const parentId = this.asset()?.parentId;
-    return parentId ? MOCK_ASSETS.find((a) => a.id === parentId) : undefined;
-  });
-
-  readonly childAssets = computed<Asset[]>(() =>
-    MOCK_ASSETS.filter((a) => a.parentId === this.assetId()),
-  );
-
   readonly assetHistory = signal<HistoryEntry[]>([]);
 
   // ── Edit asset ─────────────────────────────────────────────────────────────
 
   /** Holds the asset being edited; non-null while the edit sheet is open. */
   readonly editAsset = signal<Partial<Asset> | null>(null);
+
+  readonly invalidFields = signal<Record<string, string>>({});
+
+  readonly formErrorMessage = signal<string | null>(null);
 
   readonly statuses: { value: AssetStatus; label: string }[] = [
     { value: 'deployed', label: 'Deployed' },
@@ -318,9 +221,29 @@ export default class AssetDetailComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearErrors(): void {
+    this.invalidFields.set({});
+    this.formErrorMessage.set(null);
+  }
+
+  private handleError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.formErrorMessage.set(message);
+  }
+
   openEditAsset(): void {
     const current = this.asset();
     if (!current) return;
+    this.clearErrors();
     // Resolve the existing placement before opening, so the location picker
     // renders with the right rack pre-selected.
     firstValueFrom(this.placementApi.getPlacementByAsset(current.id))
@@ -346,12 +269,14 @@ export default class AssetDetailComponent implements OnInit {
   }
 
   closeAssetForm(): void {
+    this.clearErrors();
     this.editAsset.set(null);
   }
 
   saveAsset(): void {
     const current = this.asset();
     if (!current) return;
+    this.clearErrors();
     const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
     const updated: Asset = {
       ...current,
@@ -365,37 +290,50 @@ export default class AssetDetailComponent implements OnInit {
       warrantyExpiry: warranty || undefined,
       notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? current.notes,
     };
+    // Validate the placement input before any write so a missing/zero unit
+    // can't be saved as an off-grid (U0) placement.
+    const placement = this.readPlacementInput();
+    if (placement === 'invalid') return;
+
     firstValueFrom(this.inventoryApi.updateAsset(updated))
-      .then(() => this.reconcilePlacement(updated.id))
+      .then(() => this.placementApi.reconcilePlacement({ ...placement, assetId: updated.id }))
       .then(() => {
         this.asset.set(updated);
         this.editAsset.set(null);
         this.loadLocation();
       })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+      .catch((err) => this.handleError(err));
   }
 
-  private reconcilePlacement(assetId: string): Promise<unknown> {
+  /**
+   * Reads the rack/unit/slot inputs and validates them. Returns `'invalid'`
+   * (after surfacing an inline error) when a rack is selected but the unit is
+   * missing or below 1; the rack diagram only draws units 1…totalU, so a U0
+   * placement would be invisible.
+   */
+  private readPlacementInput():
+    | { rackId: string; unit: number; slotType: RackSlotType; existingPlacementId: string | null }
+    | 'invalid' {
     const rackId = (this.fAssetRack()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const unit =
-      parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
     const slotType =
       (Number(
         (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
       ) as RackSlotType) || RackSlotType.UNIT;
-    return this.placementApi.reconcilePlacement({
-      assetId,
-      rackId,
-      unit,
-      slotType,
-      existingPlacementId: this.editPlacement()?.id ?? null,
-    });
-  }
+    const existingPlacementId = this.editPlacement()?.id ?? null;
 
-  readonly extraDetail = computed<AssetExtraDetail | undefined>(
-    () => MOCK_EXTRA_DETAILS[this.assetId()],
-  );
+    if (!rackId) {
+      // No rack selected: clears any existing placement, unit is irrelevant.
+      return { rackId: '', unit: 0, slotType, existingPlacementId };
+    }
+
+    const unit = parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10);
+    if (!Number.isInteger(unit) || unit < 1) {
+      this.invalidFields.set({ rack_unit_start: 'Enter a rack unit of 1 or higher.' });
+      return 'invalid';
+    }
+
+    return { rackId, unit, slotType, existingPlacementId };
+  }
 
   readonly notes = signal<NoteComment[]>([]);
 

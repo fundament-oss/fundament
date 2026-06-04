@@ -26,7 +26,7 @@
         Datacenter
       </p>
       <nav aria-label="Datacenter selection">
-        @for (dc of DATACENTER_INFO; track dc.id) {
+        @for (dc of sites(); track dc.id) {
           <button
             (click)="dcSelected.emit(dc.id)"
             class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
@@ -37,11 +37,7 @@
             "
             [attr.aria-pressed]="dcId() === dc.id"
           >
-            <span
-              class="h-2 w-2 rounded-full shrink-0"
-              [class]="dcStatusDotClass(dc.status)"
-              aria-hidden="true"
-            ></span>
+            <span class="h-2 w-2 rounded-full shrink-0 bg-slate-300" aria-hidden="true"></span>
             <span class="flex-1 text-left">{{ dc.name }}</span>
           </button>
         }
@@ -349,20 +345,20 @@
               <div role="cell">
                 <span
                   class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  [class]="CABLE_STATUS_COLORS[cable.status]"
+                  [class]="cableStatusColors(cable.status)"
                 >
                   <span
                     class="h-1.5 w-1.5 rounded-full"
                     [class]="statusDotClass(cable.status)"
                     aria-hidden="true"
                   ></span>
-                  {{ CABLE_STATUS_LABEL[cable.status] }}
+                  {{ cableStatusLabel(cable.status) }}
                 </span>
               </div>
 
               <!-- Type -->
               <div role="cell">
-                <span class="text-sm text-slate-600">{{ CABLE_TYPE_LABEL[cable.type] }}</span>
+                <span class="text-sm text-slate-600">{{ cableTypeLabel(cable.type) }}</span>
               </div>
 
               <!-- Row actions -->

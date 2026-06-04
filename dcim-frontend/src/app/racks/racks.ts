@@ -5,20 +5,65 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
   inject,
+  OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import RackApiService from './rack-api.service';
+import DatacenterApiService from '../datacenters/datacenter-api.service';
+import InventoryApiService from '../inventory/inventory-api.service';
+import PlacementApiService from '../inventory/placement-api.service';
+import CatalogApiService from '../catalog/catalog-api.service';
 import connectErrorMessage from '../../connect/error';
 import DcSelectorComponent from '../shared/dc-selector';
 import RackDiagramComponent from './rack-diagram/rack-diagram';
 import RackDiagramEditorComponent from './rack-diagram-editor/rack-diagram-editor';
-import { DeviceState, DeviceType, Rack, RackDevice, RACKS } from './rack.model';
-import { DATACENTER_INFO, MOCK_RACK_ROWS } from '../datacenters/datacenter.model';
+import { Rack, RackDevice } from './rack.model';
+import { DatacenterInfo, RackRow, Room } from '../datacenters/datacenter.model';
+import { RackSlotType } from '../../generated/v1/common_pb';
+import parseValidationError from '../../connect/validation';
+import { categoryToDeviceType, parseRackHeight } from './catalog-helpers';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
+
+interface RackListItem extends Rack {
+  usedU: number;
+  freeU: number;
+  totalPowerW: number;
+  deviceCount: number;
+  rowId: string;
+}
+
+interface RowOption {
+  id: string;
+  label: string;
+}
+
+interface AssetOption {
+  id: string;
+  label: string;
+}
+
+interface AddDeviceForm {
+  assetId: string;
+  rackUnitStart: number;
+  slotType: RackSlotType;
+}
+
+interface PlacementInfo {
+  placementId: string;
+  assetId: string;
+  assetTag: string;
+  rackUnitStart: number;
+  slotType: RackSlotType;
+  uSize: number;
+  deviceType: ReturnType<typeof categoryToDeviceType>;
+}
+
+type InvalidFields = Record<string, string>;
 
 // ── Notes & History types ──────────────────────────────────────────────────────
 
@@ -185,12 +230,26 @@ interface NativeElementRef {
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export default class RacksComponent {
+export default class RacksComponent implements OnInit {
   private readonly rackApi = inject(RackApiService);
+
+  private readonly dcApi = inject(DatacenterApiService);
+
+  private readonly inventoryApi = inject(InventoryApiService);
+
+  private readonly placementApi = inject(PlacementApiService);
+
+  private readonly catalogApi = inject(CatalogApiService);
 
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
+
+  readonly slotTypes: { value: RackSlotType; label: string }[] = [
+    { value: RackSlotType.UNIT, label: 'Unit' },
+    { value: RackSlotType.POWER, label: 'Power' },
+    { value: RackSlotType.ZERO_U, label: 'Zero-U' },
+  ];
 
   readonly currentRackId = toSignal(this.route.paramMap.pipe(map((p) => p.get('rackId'))), {
     initialValue: this.route.snapshot.paramMap.get('rackId'),
@@ -202,11 +261,26 @@ export default class RacksComponent {
 
   activeModal = signal<'notes' | 'history' | null>(null);
 
-  // ── Mutable rack list ──────────────────────────────────────────────────────
-  readonly mutableRacks = signal([...RACKS]);
+  // ── Mutable rack list (per selected DC) ────────────────────────────────────
+  readonly mutableRacks = signal<RackListItem[]>([]);
+
+  // Placements keyed by rack id. Loaded on demand via ListPlacementsByRack.
+  readonly placementsByRack = signal<Map<string, PlacementInfo[]>>(new Map());
+
+  // ── DC list (loaded from the API) ──────────────────────────────────────────
+  readonly mutableDcs = signal<DatacenterInfo[]>([]);
+
+  readonly selectedDcId = signal('');
+
+  // ── Row options for the create-rack form (rooms + rows in the selected DC) ─
+  readonly rowOptions = signal<RowOption[]>([]);
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
-  readonly editRack = signal<Partial<Rack> | null>(null);
+  readonly editRack = signal<(Partial<Rack> & { rowId?: string }) | null>(null);
+
+  readonly rackErrorMessage = signal<string | null>(null);
+
+  readonly invalidFields = signal<InvalidFields>({});
 
   readonly deleteRack = signal<Rack | null>(null);
 
@@ -215,15 +289,13 @@ export default class RacksComponent {
 
   readonly deleteDeviceTarget = signal<RackDevice | null>(null);
 
-  readonly addDeviceForm = signal<Partial<RackDevice> | null>(null);
+  readonly addDeviceForm = signal<AddDeviceForm | null>(null);
 
-  readonly addDeviceSizeInput = signal(1);
+  readonly assetOptions = signal<AssetOption[]>([]);
 
-  readonly addDeviceNameInput = signal('');
+  readonly deviceErrorMessage = signal<string | null>(null);
 
-  readonly datacenters = DATACENTER_INFO;
-
-  readonly rackRows = MOCK_RACK_ROWS;
+  readonly invalidDeviceFields = signal<InvalidFields>({});
 
   private readonly rackSheetEl = viewChild<NativeElementRef>('rackSheet');
 
@@ -231,7 +303,7 @@ export default class RacksComponent {
 
   private readonly fRackName = viewChild<NativeElementRef>('fRackName');
 
-  private readonly fRackDcId = viewChild<NativeElementRef>('fRackDcId');
+  private readonly fRackRowId = viewChild<NativeElementRef>('fRackRowId');
 
   private readonly fRackTotalU = viewChild<NativeElementRef>('fRackTotalU');
 
@@ -239,17 +311,29 @@ export default class RacksComponent {
 
   private readonly deviceModalEl = viewChild<NativeElementRef>('deviceModal');
 
-  private readonly fDeviceName = viewChild<NativeElementRef>('fDeviceName');
+  private readonly fDeviceAsset = viewChild<NativeElementRef>('fDeviceAsset');
 
-  private readonly fDeviceType = viewChild<NativeElementRef>('fDeviceType');
+  private readonly fDeviceSlotType = viewChild<NativeElementRef>('fDeviceSlotType');
 
-  private readonly fDeviceUSize = viewChild<NativeElementRef>('fDeviceUSize');
+  private readonly fDeviceRackUnit = viewChild<NativeElementRef>('fDeviceRackUnit');
 
-  private readonly fDeviceState = viewChild<NativeElementRef>('fDeviceState');
-
-  readonly currentDC = computed(() => this.currentRack()?.dcId ?? 'ams-01');
+  readonly currentDC = computed(() => this.selectedDcId());
 
   constructor() {
+    // When the selected DC changes, fetch its racks and row options.
+    effect(() => {
+      const dcId = this.selectedDcId();
+      if (!dcId) return;
+      this.reloadRacks(dcId);
+      this.reloadRowOptions(dcId);
+    });
+
+    // When the selected rack changes, load its placements as devices.
+    effect(() => {
+      const rackId = this.currentRackId();
+      if (rackId) this.reloadDevicesForRack(rackId);
+    });
+
     effect(() => {
       if (!this.currentRackId()) {
         const first = this.mutableRacks()[0];
@@ -284,30 +368,152 @@ export default class RacksComponent {
     });
   }
 
+  ngOnInit(): void {
+    firstValueFrom(this.dcApi.listSites())
+      .then((res) => {
+        const dcs = res.sites.map((s) => DatacenterApiService.mapSite(s));
+        this.mutableDcs.set(dcs);
+        if (!this.selectedDcId() && dcs.length > 0) {
+          this.selectedDcId.set(dcs[0].id);
+        }
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private reloadRacks(dcId: string): void {
+    firstValueFrom(this.rackApi.listRacksBySite(dcId))
+      .then((res) => {
+        const racks: RackListItem[] = res.racks.flatMap((summary): RackListItem[] => {
+          const rack = summary.rack;
+          if (!rack) return [];
+          return [
+            {
+              id: rack.id,
+              name: rack.name,
+              dcId,
+              rowId: rack.rowId,
+              totalU: rack.totalUnits,
+              devices: [] as RackDevice[],
+              usedU: summary.usedUnits,
+              freeU: summary.freeUnits,
+              totalPowerW: summary.powerDrawW,
+              deviceCount: summary.deviceCount,
+            },
+          ];
+        });
+        untracked(() => this.mutableRacks.set(racks));
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private async reloadDevicesForRack(rackId: string): Promise<void> {
+    try {
+      const [placementsRes, assetsRes, catalogRes] = await Promise.all([
+        firstValueFrom(this.placementApi.listPlacementsByRack(rackId)),
+        firstValueFrom(
+          this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
+        ),
+        firstValueFrom(this.catalogApi.listCatalog()),
+      ]);
+      const catalogById = new Map(
+        catalogRes.entries
+          .filter((s) => s.entry)
+          .map((s) => {
+            const entry = CatalogApiService.mapCatalogEntry(s.entry!);
+            return [entry.id, entry] as const;
+          }),
+      );
+      const assetById = new Map(assetsRes.assets.map((a) => [a.id, a]));
+      const placements: PlacementInfo[] = placementsRes.placements.flatMap(
+        (p): PlacementInfo[] => {
+          if (p.location.case !== 'rack') return [];
+          const loc = p.location.value;
+          const asset = assetById.get(p.assetId);
+          const catalog = asset ? catalogById.get(asset.deviceCatalogId) : undefined;
+          return [
+            {
+              placementId: p.id,
+              assetId: p.assetId,
+              assetTag: asset?.assetTag || p.assetId,
+              rackUnitStart: loc.rackUnitStart,
+              slotType: loc.rackSlotType,
+              uSize: parseRackHeight(catalog?.specs),
+              deviceType: categoryToDeviceType(catalog?.category),
+            },
+          ];
+        },
+      );
+      untracked(() => {
+        this.placementsByRack.update((prev) => {
+          const next = new Map(prev);
+          next.set(rackId, placements);
+          return next;
+        });
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+    }
+  }
+
+  private static placementsToDevices(placements: PlacementInfo[]): RackDevice[] {
+    return placements.map((p) => ({
+      id: p.placementId,
+      name: p.assetTag,
+      type: p.deviceType,
+      uSize: p.uSize,
+      uStart: p.rackUnitStart,
+      state: 'allocated',
+    }));
+  }
+
+
+  private async reloadRowOptions(dcId: string): Promise<void> {
+    try {
+      const [roomsRes, rowsRes] = await Promise.all([
+        firstValueFrom(this.dcApi.listRooms(dcId)),
+        firstValueFrom(this.dcApi.listRackRowsBySite(dcId)),
+      ]);
+      const rooms = roomsRes.rooms.map((r) => DatacenterApiService.mapRoom(r));
+      const rows = rowsRes.rackRows.map((r) => DatacenterApiService.mapRackRow(r));
+      const roomName = new Map<string, string>(rooms.map((r: Room) => [r.id, r.name]));
+      const options = rows.map((r: RackRow) => ({
+        id: r.id,
+        label: `${roomName.get(r.roomId) ?? '—'} · ${r.name}`,
+      }));
+      this.rowOptions.set(options);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+    }
+  }
+
   readonly filteredRacks = computed(() => {
-    const dc = this.currentDC();
     const q = this.searchQuery().toLowerCase();
-    return this.mutableRacks().filter(
-      (r) => r.dcId === dc && (!q || r.name.toLowerCase().includes(q)),
-    );
+    return this.mutableRacks().filter((r) => !q || r.name.toLowerCase().includes(q));
   });
 
   readonly currentRack = computed(() => {
     const id = this.currentRackId();
-    return id ? (this.mutableRacks().find((r) => r.id === id) ?? null) : null;
+    if (!id) return null;
+    const rack = this.mutableRacks().find((r) => r.id === id);
+    if (!rack) return null;
+    const placements = this.placementsByRack().get(id);
+    const devices = placements ? RacksComponent.placementsToDevices(placements) : rack.devices;
+    return { ...rack, devices };
   });
 
   readonly rackStats = computed(() => {
     const rack = this.currentRack();
     if (!rack) return { usedU: 0, freeU: 0, totalU: 42, totalPowerW: 0, deviceCount: 0 };
-    const usedU = rack.devices.reduce((sum, d) => sum + d.uSize, 0);
-    const totalPowerW = rack.devices.reduce((sum, d) => sum + (d.ipmi?.averageW ?? 0), 0);
     return {
-      usedU,
-      freeU: rack.totalU - usedU,
+      usedU: rack.usedU,
+      freeU: rack.freeU,
       totalU: rack.totalU,
-      totalPowerW,
-      deviceCount: rack.devices.length,
+      totalPowerW: rack.totalPowerW,
+      deviceCount: rack.deviceCount,
     };
   });
 
@@ -326,50 +532,72 @@ export default class RacksComponent {
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
   openCreateRack(): void {
-    this.editRack.set({ id: '', name: '', dcId: this.currentDC(), totalU: 42, devices: [] });
+    this.clearRackErrors();
+    this.editRack.set({
+      id: '',
+      name: '',
+      dcId: this.currentDC(),
+      rowId: '',
+      totalU: 42,
+      devices: [],
+    });
   }
 
-  openEditRack(rack: Rack): void {
+  openEditRack(rack: RackListItem): void {
+    this.clearRackErrors();
     this.editRack.set({ ...rack });
   }
 
   closeRackForm(): void {
+    this.clearRackErrors();
     this.editRack.set(null);
   }
 
   saveRack(): void {
     const form = this.editRack();
     if (!form) return;
+    this.clearRackErrors();
     const name = (this.fRackName()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const dcId = (this.fRackDcId()?.nativeElement as HTMLInputElement)?.value ?? '';
+    const rowId = (this.fRackRowId()?.nativeElement as HTMLSelectElement)?.value ?? '';
     const totalU =
       parseInt((this.fRackTotalU()?.nativeElement as HTMLInputElement)?.value ?? '42', 10) || 42;
-    const updated: Rack = {
-      id: form.id || `rack-${Date.now()}`,
-      name,
-      dcId,
-      totalU,
-      devices: form.devices ?? [],
-    };
     if (form.id) {
       firstValueFrom(this.rackApi.updateRack(form.id, name, totalU))
         .then(() => {
-          this.mutableRacks.update((list) => list.map((r) => (r.id === form.id ? updated : r)));
+          this.reloadRacks(this.selectedDcId());
           this.editRack.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRackError(err));
     } else {
-      firstValueFrom(this.rackApi.createRack(name, totalU, ''))
+      firstValueFrom(this.rackApi.createRack(name, totalU, rowId))
         .then((res) => {
-          const created = { ...updated, id: res.rackId ?? updated.id };
-          this.mutableRacks.update((list) => [...list, created]);
-          this.router.navigate(['/racks', created.id]);
+          this.reloadRacks(this.selectedDcId());
+          if (res.rackId) {
+            this.router.navigate(['/racks', res.rackId]);
+          }
           this.editRack.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRackError(err));
     }
+  }
+
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearRackErrors(): void {
+    this.invalidFields.set({});
+    this.rackErrorMessage.set(null);
+  }
+
+  private handleRackError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.rackErrorMessage.set(message);
   }
 
   openDeleteRack(rack: Rack): void {
@@ -385,13 +613,8 @@ export default class RacksComponent {
     if (!target) return;
     firstValueFrom(this.rackApi.deleteRack(target.id))
       .then(() => {
-        this.mutableRacks.update((list) => list.filter((r) => r.id !== target.id));
-        const remaining = this.mutableRacks().filter((r) => r.dcId === this.currentDC());
-        if (remaining.length > 0) {
-          this.router.navigate(['/racks', remaining[0].id]);
-        } else {
-          this.router.navigate(['/racks']);
-        }
+        this.router.navigate(['/racks']);
+        this.reloadRacks(this.selectedDcId());
         this.deleteRack.set(null);
       })
       // eslint-disable-next-line no-console
@@ -405,7 +628,42 @@ export default class RacksComponent {
   }
 
   applyDeviceChanges(rackId: string, devices: RackDevice[]): void {
-    this.mutableRacks.update((list) => list.map((r) => (r.id === rackId ? { ...r, devices } : r)));
+    const placements = this.placementsByRack().get(rackId) ?? [];
+    const byPid = new Map(placements.map((p) => [p.placementId, p]));
+    const moves = devices.flatMap((d) => {
+      const prev = byPid.get(d.id);
+      if (!prev || prev.rackUnitStart === d.uStart) return [];
+      return [{ placementId: d.id, newUnit: d.uStart, slotType: prev.slotType }];
+    });
+    if (moves.length === 0) return;
+    const movedUnit = new Map(moves.map((m) => [m.placementId, m.newUnit]));
+    this.placementsByRack.update((prev) => {
+      const next = new Map(prev);
+      next.set(
+        rackId,
+        placements.map((p) =>
+          movedUnit.has(p.placementId)
+            ? { ...p, rackUnitStart: movedUnit.get(p.placementId)! }
+            : p,
+        ),
+      );
+      return next;
+    });
+    Promise.all(
+      moves.map((m) =>
+        firstValueFrom(this.placementApi.updatePlacement(m.placementId, rackId, m.newUnit, m.slotType)),
+      ),
+    )
+      .then(() => {
+        this.reloadDevicesForRack(rackId);
+        this.reloadRacks(this.selectedDcId());
+      })
+      .catch((err) => {
+        // On failure, refetch to revert the optimistic update.
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.reloadDevicesForRack(rackId);
+      });
   }
 
   openDeleteDevice(device: RackDevice): void {
@@ -420,62 +678,83 @@ export default class RacksComponent {
     const target = this.deleteDeviceTarget();
     const rack = this.currentRack();
     if (!target || !rack) return;
-    this.applyDeviceChanges(
-      rack.id,
-      rack.devices.filter((d) => d.id !== target.id),
-    );
-    this.deleteDeviceTarget.set(null);
+    firstValueFrom(this.placementApi.deletePlacement(target.id))
+      .then(() => {
+        this.reloadDevicesForRack(rack.id);
+        this.reloadRacks(this.selectedDcId());
+        this.deleteDeviceTarget.set(null);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   openAddDevice(): void {
-    this.addDeviceSizeInput.set(1);
-    this.addDeviceNameInput.set('');
-    this.addDeviceForm.set({ name: '', type: 'machine', uSize: 1, state: 'allocated' });
+    const rack = this.currentRack();
+    if (!rack) return;
+    this.clearDeviceErrors();
+    const firstFree = findFirstFreeSlot(rack, 1);
+    this.addDeviceForm.set({
+      assetId: '',
+      rackUnitStart: firstFree ?? rack.totalU,
+      slotType: RackSlotType.UNIT,
+    });
+    firstValueFrom(
+      this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
+    )
+      .then((res) => {
+        this.assetOptions.set(
+          res.assets.map((a) => ({
+            id: a.id,
+            label: a.assetTag || a.id,
+          })),
+        );
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   closeAddDevice(): void {
+    this.clearDeviceErrors();
     this.addDeviceForm.set(null);
   }
-
-  onAddDeviceSizeInput(value: string): void {
-    this.addDeviceSizeInput.set(parseInt(value, 10) || 1);
-  }
-
-  readonly addDeviceCanFit = computed(() => {
-    const rack = this.currentRack();
-    if (!rack) return false;
-    return findFirstFreeSlot(rack, this.addDeviceSizeInput()) !== null;
-  });
-
-  readonly canAddDevice = computed(
-    () => this.addDeviceNameInput().trim().length > 0 && this.addDeviceCanFit(),
-  );
 
   saveDevice(): void {
     const rack = this.currentRack();
     const form = this.addDeviceForm();
     if (!rack || !form) return;
-    const name = (this.fDeviceName()?.nativeElement as HTMLInputElement)?.value?.trim() ?? '';
-    const type =
-      ((this.fDeviceType()?.nativeElement as HTMLSelectElement)?.value as DeviceType) ?? 'machine';
-    const uSize =
-      parseInt((this.fDeviceUSize()?.nativeElement as HTMLInputElement)?.value ?? '1', 10) || 1;
-    const state =
-      ((this.fDeviceState()?.nativeElement as HTMLSelectElement)?.value as DeviceState) ??
-      'allocated';
-    if (!name) return;
-    const slot = findFirstFreeSlot(rack, uSize);
-    if (slot === null) return;
-    const newDevice: RackDevice = {
-      id: `dev-${Date.now()}`,
-      name,
-      type,
-      uSize,
-      state,
-      uStart: slot,
-    };
-    this.applyDeviceChanges(rack.id, [...rack.devices, newDevice]);
-    this.addDeviceForm.set(null);
+    this.clearDeviceErrors();
+    const assetId = (this.fDeviceAsset()?.nativeElement as HTMLSelectElement)?.value ?? '';
+    const slotType =
+      (Number((this.fDeviceSlotType()?.nativeElement as HTMLSelectElement)?.value) as RackSlotType) ||
+      RackSlotType.UNIT;
+    const rackUnitStart =
+      parseInt((this.fDeviceRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '0', 10) || 0;
+    firstValueFrom(this.placementApi.createPlacement(assetId, rack.id, rackUnitStart, slotType))
+      .then(() => {
+        this.addDeviceForm.set(null);
+        this.reloadDevicesForRack(rack.id);
+        this.reloadRacks(this.selectedDcId());
+      })
+      .catch((err) => this.handleDeviceError(err));
+  }
+
+  isDeviceFieldInvalid(field: string): boolean {
+    return field in this.invalidDeviceFields();
+  }
+
+  deviceFieldError(field: string): string {
+    return this.invalidDeviceFields()[field] ?? '';
+  }
+
+  private clearDeviceErrors(): void {
+    this.invalidDeviceFields.set({});
+    this.deviceErrorMessage.set(null);
+  }
+
+  private handleDeviceError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidDeviceFields.set(fields);
+    this.deviceErrorMessage.set(message);
   }
 
   readonly currentRackFreeU = computed(() => this.rackStats().freeU);
@@ -483,12 +762,8 @@ export default class RacksComponent {
   selectDC(dc: string): void {
     this.searchQuery.set('');
     this.activeModal.set(null);
-    const first = RACKS.find((r) => r.dcId === dc);
-    if (first) {
-      this.router.navigate(['/racks', first.id]);
-    } else {
-      this.router.navigate(['/racks']);
-    }
+    this.selectedDcId.set(dc);
+    this.router.navigate(['/racks']);
   }
 
   selectRack(id: string): void {
@@ -508,7 +783,7 @@ export default class RacksComponent {
     this.activeModal.set(null);
   }
 
-  readonly rackUsedU = (rack: Rack): number => rack.devices.reduce((sum, d) => sum + d.uSize, 0);
+  readonly rackUsedU = (rack: RackListItem): number => rack.usedU;
 
   readonly formatPowerKw = (watts: number): string => (watts / 1000).toFixed(1);
 

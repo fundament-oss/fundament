@@ -13,8 +13,8 @@ import (
 )
 
 const physicalConnectionCreate = `-- name: PhysicalConnectionCreate :one
-INSERT INTO dcim.physical_connections (a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO dcim.physical_connections (a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, cable_type, status, color, label)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING id
 `
 
@@ -25,6 +25,10 @@ type PhysicalConnectionCreateParams struct {
 	BPortDefinitionID   uuid.UUID
 	CableAssetID        pgtype.UUID
 	LogicalConnectionID pgtype.UUID
+	CableType           pgtype.Text
+	Status              pgtype.Text
+	Color               pgtype.Text
+	Label               pgtype.Text
 }
 
 func (q *Queries) PhysicalConnectionCreate(ctx context.Context, arg PhysicalConnectionCreateParams) (uuid.UUID, error) {
@@ -35,6 +39,10 @@ func (q *Queries) PhysicalConnectionCreate(ctx context.Context, arg PhysicalConn
 		arg.BPortDefinitionID,
 		arg.CableAssetID,
 		arg.LogicalConnectionID,
+		arg.CableType,
+		arg.Status,
+		arg.Color,
+		arg.Label,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -60,7 +68,7 @@ func (q *Queries) PhysicalConnectionDelete(ctx context.Context, arg PhysicalConn
 }
 
 const physicalConnectionGetByID = `-- name: PhysicalConnectionGetByID :one
-SELECT id, a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, created
+SELECT id, a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, cable_type, status, color, label, created
 FROM dcim.physical_connections
 WHERE id = $1 AND deleted IS NULL
 `
@@ -77,6 +85,10 @@ type PhysicalConnectionGetByIDRow struct {
 	BPortDefinitionID   uuid.UUID
 	CableAssetID        pgtype.UUID
 	LogicalConnectionID pgtype.UUID
+	CableType           pgtype.Text
+	Status              pgtype.Text
+	Color               pgtype.Text
+	Label               pgtype.Text
 	Created             pgtype.Timestamptz
 }
 
@@ -91,13 +103,17 @@ func (q *Queries) PhysicalConnectionGetByID(ctx context.Context, arg PhysicalCon
 		&i.BPortDefinitionID,
 		&i.CableAssetID,
 		&i.LogicalConnectionID,
+		&i.CableType,
+		&i.Status,
+		&i.Color,
+		&i.Label,
 		&i.Created,
 	)
 	return i, err
 }
 
 const physicalConnectionListByPlacement = `-- name: PhysicalConnectionListByPlacement :many
-SELECT id, a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, created
+SELECT id, a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, cable_type, status, color, label, created
 FROM dcim.physical_connections
 WHERE (a_placement_id = $1 OR b_placement_id = $1) AND deleted IS NULL
 ORDER BY created
@@ -115,6 +131,10 @@ type PhysicalConnectionListByPlacementRow struct {
 	BPortDefinitionID   uuid.UUID
 	CableAssetID        pgtype.UUID
 	LogicalConnectionID pgtype.UUID
+	CableType           pgtype.Text
+	Status              pgtype.Text
+	Color               pgtype.Text
+	Label               pgtype.Text
 	Created             pgtype.Timestamptz
 }
 
@@ -135,6 +155,83 @@ func (q *Queries) PhysicalConnectionListByPlacement(ctx context.Context, arg Phy
 			&i.BPortDefinitionID,
 			&i.CableAssetID,
 			&i.LogicalConnectionID,
+			&i.CableType,
+			&i.Status,
+			&i.Color,
+			&i.Label,
+			&i.Created,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const physicalConnectionListBySite = `-- name: PhysicalConnectionListBySite :many
+WITH site_placements AS (
+    SELECT dcim.placements.id
+    FROM dcim.placements
+    JOIN dcim.racks ON dcim.racks.id = dcim.placements.rack_id AND dcim.racks.deleted IS NULL
+    JOIN dcim.rack_rows ON dcim.rack_rows.id = dcim.racks.rack_row_id AND dcim.rack_rows.deleted IS NULL
+    JOIN dcim.rooms ON dcim.rooms.id = dcim.rack_rows.room_id AND dcim.rooms.deleted IS NULL
+    WHERE dcim.placements.deleted IS NULL
+      AND dcim.rooms.site_id = $1
+)
+SELECT id, a_placement_id, a_port_definition_id, b_placement_id, b_port_definition_id, cable_asset_id, logical_connection_id, cable_type, status, color, label, created
+FROM dcim.physical_connections
+WHERE deleted IS NULL
+  AND (a_placement_id IN (SELECT site_placements.id FROM site_placements)
+       OR b_placement_id IN (SELECT site_placements.id FROM site_placements))
+ORDER BY created
+`
+
+type PhysicalConnectionListBySiteParams struct {
+	SiteID uuid.UUID
+}
+
+type PhysicalConnectionListBySiteRow struct {
+	ID                  uuid.UUID
+	APlacementID        uuid.UUID
+	APortDefinitionID   uuid.UUID
+	BPlacementID        uuid.UUID
+	BPortDefinitionID   uuid.UUID
+	CableAssetID        pgtype.UUID
+	LogicalConnectionID pgtype.UUID
+	CableType           pgtype.Text
+	Status              pgtype.Text
+	Color               pgtype.Text
+	Label               pgtype.Text
+	Created             pgtype.Timestamptz
+}
+
+// Every connection whose a- or b-side placement sits in a rack belonging to the
+// given site. Resolved through placement -> rack -> rack_row -> room -> site,
+// skipping any soft-deleted link in that chain.
+func (q *Queries) PhysicalConnectionListBySite(ctx context.Context, arg PhysicalConnectionListBySiteParams) ([]PhysicalConnectionListBySiteRow, error) {
+	rows, err := q.db.Query(ctx, physicalConnectionListBySite, arg.SiteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PhysicalConnectionListBySiteRow
+	for rows.Next() {
+		var i PhysicalConnectionListBySiteRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.APlacementID,
+			&i.APortDefinitionID,
+			&i.BPlacementID,
+			&i.BPortDefinitionID,
+			&i.CableAssetID,
+			&i.LogicalConnectionID,
+			&i.CableType,
+			&i.Status,
+			&i.Color,
+			&i.Label,
 			&i.Created,
 		); err != nil {
 			return nil, err
@@ -156,6 +253,22 @@ SET cable_asset_id        = CASE
     logical_connection_id = CASE
         WHEN $4::bool THEN NULL
         ELSE COALESCE($5, logical_connection_id)
+    END,
+    cable_type = CASE
+        WHEN $6::bool THEN NULL
+        ELSE COALESCE($7, cable_type)
+    END,
+    status     = CASE
+        WHEN $8::bool THEN NULL
+        ELSE COALESCE($9, status)
+    END,
+    color      = CASE
+        WHEN $10::bool THEN NULL
+        ELSE COALESCE($11, color)
+    END,
+    label      = CASE
+        WHEN $12::bool THEN NULL
+        ELSE COALESCE($13, label)
     END
 WHERE id = $1 AND deleted IS NULL
 `
@@ -166,6 +279,14 @@ type PhysicalConnectionUpdateParams struct {
 	CableAssetID             pgtype.UUID
 	ClearLogicalConnectionID bool
 	LogicalConnectionID      pgtype.UUID
+	ClearCableType           bool
+	CableType                pgtype.Text
+	ClearStatus              bool
+	Status                   pgtype.Text
+	ClearColor               bool
+	Color                    pgtype.Text
+	ClearLabel               bool
+	Label                    pgtype.Text
 }
 
 func (q *Queries) PhysicalConnectionUpdate(ctx context.Context, arg PhysicalConnectionUpdateParams) (int64, error) {
@@ -175,6 +296,14 @@ func (q *Queries) PhysicalConnectionUpdate(ctx context.Context, arg PhysicalConn
 		arg.CableAssetID,
 		arg.ClearLogicalConnectionID,
 		arg.LogicalConnectionID,
+		arg.ClearCableType,
+		arg.CableType,
+		arg.ClearStatus,
+		arg.Status,
+		arg.ClearColor,
+		arg.Color,
+		arg.ClearLabel,
+		arg.Label,
 	)
 	if err != nil {
 		return 0, err

@@ -33,3 +33,26 @@ func (s *Server) ListConnectionsByPlacement(
 		Connections: connections,
 	}.Build()), nil
 }
+
+func (s *Server) ListConnectionsBySite(
+	ctx context.Context,
+	req *connect.Request[dcimv1.ListConnectionsBySiteRequest],
+) (*connect.Response[dcimv1.ListConnectionsBySiteResponse], error) {
+	siteID := uuid.MustParse(req.Msg.GetSiteId())
+
+	rows, err := s.queries.PhysicalConnectionListBySite(ctx, db.PhysicalConnectionListBySiteParams{
+		SiteID: siteID,
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list physical connections: %w", err))
+	}
+
+	connections := make([]*dcimv1.PhysicalConnection, 0, len(rows))
+	for _, row := range rows {
+		connections = append(connections, physicalConnectionFromListBySiteRow(&row))
+	}
+
+	return connect.NewResponse(dcimv1.ListConnectionsBySiteResponse_builder{
+		Connections: connections,
+	}.Build()), nil
+}

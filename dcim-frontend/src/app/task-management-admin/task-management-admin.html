@@ -611,6 +611,8 @@
             [attr.invalid]="editTitleInvalid() ? '' : null"
             [value]="editFormTitle()"
             (change)="editFormTitle.set($any($event).detail?.value ?? '')"
+            (input)="editFormTitle.set($any($event.target).value)"
+            (keydown.enter)="saveTask()"
             (focusout)="editTitleTouched.set(true)"
           ></nldd-text-field>
           <nldd-form-field-error-text id="editTitle-error"
@@ -698,6 +700,8 @@
             class="w-full"
             [value]="editFormLocation()"
             (change)="editFormLocation.set($any($event).detail?.value ?? '')"
+            (input)="editFormLocation.set($any($event.target).value)"
+            (keydown.enter)="saveTask()"
           ></nldd-text-field>
         </div>
         <div>

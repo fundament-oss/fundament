@@ -23,6 +23,7 @@ import {
 } from '../design.model';
 import DesignApiService from '../design-api.service';
 import connectErrorMessage from '../../../connect/error';
+import parseValidationError from '../../../connect/validation';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
@@ -118,6 +119,11 @@ export default class DesignDetailComponent implements OnInit {
 
   deleteConnection = signal<LogicalConnection | null>(null);
 
+  // ── Validation feedback (shared by the device + connection forms) ─────────────
+  readonly invalidFields = signal<Record<string, string>>({});
+
+  readonly formErrorMessage = signal<string | null>(null);
+
   private readonly connSheetEl = viewChild<NativeElementRef>('connSheet');
 
   private readonly connModalEl = viewChild<NativeElementRef>('connModal');
@@ -188,21 +194,44 @@ export default class DesignDetailComponent implements OnInit {
 
   // ── Device actions ─────────────────────────────────────────────────────────
 
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearErrors(): void {
+    this.invalidFields.set({});
+    this.formErrorMessage.set(null);
+  }
+
+  private handleError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.formErrorMessage.set(message);
+  }
+
   openAddDevice(): void {
+    this.clearErrors();
     this.editDevice.set({ id: '', designId: this.designId, name: '', role: 'Compute' });
   }
 
   openEditDevice(device: LogicalDevice): void {
+    this.clearErrors();
     this.editDevice.set({ ...device });
   }
 
   closeDeviceForm(): void {
+    this.clearErrors();
     this.editDevice.set(null);
   }
 
   saveDevice(): void {
     const form = this.editDevice();
     if (!form) return;
+    this.clearErrors();
     const name = this.fDeviceName()?.nativeElement.value ?? '';
     const role = (this.fDeviceRole()?.nativeElement.value ?? 'Compute') as LogicalDeviceRole;
     if (form.id) {
@@ -217,8 +246,7 @@ export default class DesignDetailComponent implements OnInit {
           this.mutableDevices.update((list) => list.map((d) => (d.id === form.id ? updated : d)));
           this.editDevice.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     } else {
       firstValueFrom(this.designApi.createDevice(this.designId, name, role))
         .then((res) => {
@@ -230,8 +258,7 @@ export default class DesignDetailComponent implements OnInit {
           ]);
           this.editDevice.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     }
   }
 
@@ -264,6 +291,7 @@ export default class DesignDetailComponent implements OnInit {
   // ── Connection actions ─────────────────────────────────────────────────────
 
   openAddConnection(): void {
+    this.clearErrors();
     this.editConnection.set({
       id: '',
       designId: this.designId,
@@ -276,16 +304,19 @@ export default class DesignDetailComponent implements OnInit {
   }
 
   openEditConnection(conn: LogicalConnection): void {
+    this.clearErrors();
     this.editConnection.set({ ...conn });
   }
 
   closeConnForm(): void {
+    this.clearErrors();
     this.editConnection.set(null);
   }
 
   saveConnection(): void {
     const form = this.editConnection();
     if (!form) return;
+    this.clearErrors();
     const srcDeviceId = this.fConnSrcDevice()?.nativeElement.value ?? '';
     const srcPort = this.fConnSrcPort()?.nativeElement.value ?? '';
     const tgtDeviceId = this.fConnTgtDevice()?.nativeElement.value ?? '';
@@ -306,16 +337,14 @@ export default class DesignDetailComponent implements OnInit {
           this.mutableConnections.update((list) => list.map((c) => (c.id === form.id ? conn : c)));
           this.editConnection.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     } else {
       firstValueFrom(this.designApi.createConnection(conn))
         .then((res) => {
           this.mutableConnections.update((list) => [...list, { ...conn, id: res.connectionId }]);
           this.editConnection.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     }
   }
 

@@ -25,6 +25,10 @@ func (s *Server) CreatePhysicalConnection(
 		APortDefinitionID: uuid.MustParse(req.Msg.GetSourcePortDefinitionId()),
 		BPlacementID:      uuid.MustParse(req.Msg.GetTargetPlacementId()),
 		BPortDefinitionID: uuid.MustParse(req.Msg.GetTargetPortDefinitionId()),
+		CableType:         cableTypeToDB(req.Msg.GetCableType()),
+		Status:            cableStatusToDB(req.Msg.GetStatus()),
+		Color:             cableColorToDB(req.Msg.GetColor()),
+		Label:             pgtype.Text{String: req.Msg.GetLabel(), Valid: req.Msg.GetLabel() != ""},
 	}
 
 	if req.Msg.HasCableAssetId() {
