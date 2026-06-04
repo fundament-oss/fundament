@@ -164,9 +164,7 @@ export default class CatalogDetailComponent implements OnInit {
         .filter((c) => c.portDefinitionId === pdId)
         .map((c) => c.compatibleCatalogEntryId),
     );
-    return this.allCatalogEntries().filter(
-      (e) => e.id !== this.catalogId() && !taken.has(e.id),
-    );
+    return this.allCatalogEntries().filter((e) => e.id !== this.catalogId() && !taken.has(e.id));
   });
 
   constructor() {

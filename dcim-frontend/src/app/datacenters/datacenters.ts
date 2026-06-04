@@ -173,7 +173,10 @@ export default class DatacentersComponent implements OnInit {
           (acc, p) => {
             const catId = catalogByAsset.get(p.assetId);
             const stats = catId ? catalogStats.get(catId) : undefined;
-            return { units: acc.units + (stats?.units ?? 0), powerW: acc.powerW + (stats?.powerW ?? 0) };
+            return {
+              units: acc.units + (stats?.units ?? 0),
+              powerW: acc.powerW + (stats?.powerW ?? 0),
+            };
           },
           { units: 0, powerW: 0 },
         );

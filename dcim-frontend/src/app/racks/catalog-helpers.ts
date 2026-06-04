@@ -63,3 +63,25 @@ export function cablePortFromDefinition(pd: ProtoPortDefinition, deviceId: strin
   if (!type) return null;
   return { id: pd.id, deviceId, name: pd.name, type };
 }
+
+/**
+ * Reverse of {@link cablePortFromDefinition}: maps a cabling UI port type onto
+ * the catalog port-definition `portType`/`direction` enum keys, so ports added
+ * from the cabling views can be written back as catalog port definitions.
+ */
+export function cablePortTypeToDefinition(type: PortType): { portType: string; direction: string } {
+  switch (type) {
+    case 'network-interface':
+      return { portType: 'network', direction: 'bidir' };
+    case 'power-port':
+      return { portType: 'power_in', direction: 'in' };
+    case 'power-outlet':
+      return { portType: 'power_out', direction: 'out' };
+    case 'console-port':
+      return { portType: 'console', direction: 'in' };
+    case 'console-server-port':
+      return { portType: 'console', direction: 'out' };
+    default:
+      throw new Error(`Unhandled cabling port type: ${type as string}`);
+  }
+}

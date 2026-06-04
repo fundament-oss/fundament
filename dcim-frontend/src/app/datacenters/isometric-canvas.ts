@@ -122,11 +122,7 @@ export default class IsometricCanvasComponent implements OnDestroy {
 
   // ── Scene ──────────────────────────────────────────────────────────────────
 
-  private drawScene(
-    canvas: HTMLCanvasElement,
-    cells: RackCell[],
-    hoveredId: string | null,
-  ): void {
+  private drawScene(canvas: HTMLCanvasElement, cells: RackCell[], hoveredId: string | null): void {
     const rows = [...new Set(cells.map((c) => c.row))].sort();
     const maxCol = Math.max(...cells.map((c) => c.col), 1);
     const offsets = IsometricCanvasComponent.computeOffsets(rows);
@@ -230,11 +226,7 @@ export default class IsometricCanvasComponent implements OnDestroy {
 
   // ── Draw primitives ────────────────────────────────────────────────────────
 
-  private readonly floorTile = (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-  ): void => {
+  private readonly floorTile = (ctx: CanvasRenderingContext2D, x: number, y: number): void => {
     const w2 = TW / 2;
     const d2 = TH / 2;
     ctx.beginPath();

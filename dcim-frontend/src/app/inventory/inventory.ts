@@ -569,5 +569,4 @@ export default class InventoryComponent implements OnInit {
     };
     return map[category] ?? 'rectangle-stack';
   };
-
 }

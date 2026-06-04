@@ -154,7 +154,9 @@
                                 <button
                                   (click)="openDeleteCompat(compat)"
                                   class="text-slate-400 hover:text-red-500 transition-colors"
-                                  [attr.aria-label]="'Remove compatibility with ' + compatLabel(compat)"
+                                  [attr.aria-label]="
+                                    'Remove compatibility with ' + compatLabel(compat)
+                                  "
                                 >
                                   ×
                                 </button>
@@ -381,7 +383,10 @@
         <select #fPortType [attr.invalid]="isFieldInvalid('port_type') ? '' : null">
           <option value="">— Select a port type —</option>
           @for (t of PORT_TYPES; track t.value) {
-            <option [value]="t.value" [attr.selected]="editPortDef()?.portType === t.value ? true : null">
+            <option
+              [value]="t.value"
+              [attr.selected]="editPortDef()?.portType === t.value ? true : null"
+            >
               {{ t.label }}
             </option>
           }
@@ -493,10 +498,7 @@
       </p>
       <nldd-form-field label="Compatible product">
         <nldd-dropdown>
-          <select
-            [value]="compatEntryId()"
-            (change)="compatEntryId.set($any($event.target).value)"
-          >
+          <select [value]="compatEntryId()" (change)="compatEntryId.set($any($event.target).value)">
             <option value="">— Select a product —</option>
             @for (entry of availableCompatEntries(); track entry.id) {
               <option [value]="entry.id">{{ entry.model }}</option>

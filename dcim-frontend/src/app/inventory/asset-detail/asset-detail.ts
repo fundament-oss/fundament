@@ -326,7 +326,10 @@ export default class AssetDetailComponent implements OnInit {
       return { rackId: '', unit: 0, slotType, existingPlacementId };
     }
 
-    const unit = parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10);
+    const unit = parseInt(
+      (this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '',
+      10,
+    );
     if (!Number.isInteger(unit) || unit < 1) {
       this.invalidFields.set({ rack_unit_start: 'Enter a rack unit of 1 or higher.' });
       return 'invalid';

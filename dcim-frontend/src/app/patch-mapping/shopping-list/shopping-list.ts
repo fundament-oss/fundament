@@ -5,13 +5,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   input,
 } from '@angular/core';
-import {
-  Cable,
-  CableColor,
-  CableType,
-  CABLE_COLOR_HEX,
-  cableTypeLabel,
-} from '../cable.model';
+import { Cable, CableColor, CableType, CABLE_COLOR_HEX, cableTypeLabel } from '../cable.model';
 
 function groupKey(group: ShoppingGroup): string {
   return `${group.type ?? 'none'}|${group.color ?? 'none'}|${group.length ?? '?'}`;
