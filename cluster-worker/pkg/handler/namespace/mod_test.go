@@ -14,15 +14,16 @@ import (
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
-	"github.com/fundament-oss/fundament/common/namespacename"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 func newTestHandler(t *testing.T) (*Handler, *shoot.MockShootAccess) {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	mock := shoot.NewMockShootAccess(logger)
-	// queries is intentionally nil: ensure/delete/findByID only touch the shoot
-	// client, so these branches can be exercised without a database.
+	// queries is intentionally nil: ensure/delete only touch the shoot client, so
+	// these branches can be exercised without a database.
 	return &Handler{shoot: mock, logger: logger}, mock
 }
 
@@ -40,7 +41,7 @@ func testRow(name string) *db.NamespaceGetForSyncRow {
 
 // clusterName is the cluster-side resource name the handler derives for a row.
 func clusterName(row *db.NamespaceGetForSyncRow) string {
-	return namespacename.Generate(row.ProjectName, row.ProjectID, row.Name)
+	return kubename.GenerateNamespace(row.ProjectName, row.ProjectID, row.Name)
 }
 
 func nsLabels(t *testing.T, mock *shoot.MockShootAccess, clusterID uuid.UUID, name string) map[string]string {
@@ -141,31 +142,25 @@ func TestEnsure_NameCollisionReturnsError(t *testing.T) {
 	require.Contains(t, err.Error(), "namespace name collision")
 }
 
-// A rename in the DB must not destroy the cluster-side namespace: the immutable
-// resource keeps its original name and only the name label is updated.
-func TestEnsure_RenameUpdatesLabelKeepsNamespace(t *testing.T) {
+// A same-named sibling still being cleaned up (a soft-delete + recreate of the
+// same name maps to the same cluster-side name) must defer via a
+// PreconditionError, not a hard collision. Deferrals don't increment retries, so
+// the new row can't exhaust them and wedge before the old namespace is removed.
+func TestEnsure_ManagedSiblingDefers(t *testing.T) {
 	t.Parallel()
 	h, mock := newTestHandler(t)
+	row := testRow("team-a")
 	ctx := context.Background()
 
-	row := testRow("old-name")
-	require.NoError(t, h.ensure(ctx, row))
-	originalName := clusterName(row)
+	// A fundament-managed namespace holds the target name under a different id.
+	require.NoError(t, mock.CreateNamespace(ctx, row.ClusterID, clusterName(row), map[string]string{
+		LabelNamespaceID: uuid.New().String(),
+		LabelManagedBy:   ManagedByValue,
+	}))
 
-	// Rename: same id/project, new name. The expected name changes, but the
-	// resource must stay put.
-	row.Name = "new-name"
-	require.NoError(t, h.ensure(ctx, row))
-
-	// No new namespace was created under the renamed expected name.
-	renamed, err := mock.GetNamespace(ctx, row.ClusterID, clusterName(row))
-	require.NoError(t, err)
-	require.Nil(t, renamed, "rename must not create a second namespace")
-
-	// The original namespace still exists and now reflects the new name label.
-	labels := nsLabels(t, mock, row.ClusterID, originalName)
-	require.Equal(t, row.ID.String(), labels[LabelNamespaceID])
-	require.Equal(t, "new-name", labels[LabelNamespaceName], "name label must track the rename")
+	err := h.ensure(ctx, row)
+	var pe *handler.PreconditionError
+	require.ErrorAs(t, err, &pe, "a managed sibling must defer, not hard-fail")
 }
 
 func TestDelete_AlreadyGoneIsNoop(t *testing.T) {

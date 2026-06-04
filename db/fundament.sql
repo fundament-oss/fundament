@@ -1234,6 +1234,16 @@ USING btree
 );
 -- ddl-end --
 
+-- object: cluster_outbox_uq_ns_reconcile | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.cluster_outbox_uq_ns_reconcile CASCADE;
+CREATE UNIQUE INDEX cluster_outbox_uq_ns_reconcile ON tenant.cluster_outbox
+USING btree
+(
+	namespace_id
+)
+WHERE (source = 'reconcile' AND status IN ('pending', 'retrying'));
+-- ddl-end --
+
 -- object: node_pools_idx_cluster_id | type: INDEX --
 -- DROP INDEX IF EXISTS tenant.node_pools_idx_cluster_id CASCADE;
 CREATE INDEX node_pools_idx_cluster_id ON tenant.node_pools

@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // ProviderConfig holds cloud provider-specific configuration.
@@ -636,7 +638,7 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 			// Bound the worker name so the derived Gardener machine name (and the
 			// local provider's "machine-<name>" Service) stays within the 63-char
 			// limit. See GenerateWorkerName for the budget derivation.
-			Name: GenerateWorkerName(np.Name),
+			Name: kubename.GenerateWorkerName(np.Name),
 			Machine: gardencorev1beta1.Machine{
 				Type: machineType,
 				Image: &gardencorev1beta1.ShootMachineImage{

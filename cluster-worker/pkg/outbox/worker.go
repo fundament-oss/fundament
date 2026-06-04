@@ -231,14 +231,33 @@ func (w *Worker) process(ctx context.Context, row *db.OutboxGetAndLockRow) (hand
 	}
 
 	// An event may fan out to multiple handlers (e.g. cluster-ready drives both
-	// usersync and namespace-sync). Dispatch sequentially; the first error aborts
-	// and the whole row retries — handlers are idempotent, so re-running the ones
-	// that already succeeded is safe.
+	// usersync and namespace-sync). Run every handler even when an earlier one
+	// fails, so one subscriber's failure can't starve the others; handlers are
+	// idempotent, so re-running the ones that already succeeded on a later retry is
+	// safe.
 	sc := handler.SyncContext{EntityType: entityType, Event: event, Source: source}
+	var hardErrs, precondErrs []error
 	for _, h := range handlers {
-		if err := h.Sync(ctx, entityID, sc); err != nil {
-			return entityType, fmt.Errorf("sync %s %s: %w", entityType, entityID, err)
+		err := h.Sync(ctx, entityID, sc)
+		if err == nil {
+			continue
 		}
+		if _, isPrecond := errors.AsType[*handler.PreconditionError](err); isPrecond {
+			precondErrs = append(precondErrs, err)
+		} else {
+			hardErrs = append(hardErrs, err)
+		}
+	}
+	// A hard error retries the whole row. A precondition is only surfaced (to defer
+	// the row without burning a retry) when every failure was a precondition —
+	// otherwise the hard error wins and the precondition handler simply re-runs on
+	// the retry. Returning only the hard errors keeps complete() from mistaking the
+	// row for a deferrable one when a real failure is present.
+	if len(hardErrs) > 0 {
+		return entityType, fmt.Errorf("sync %s %s: %w", entityType, entityID, errors.Join(hardErrs...))
+	}
+	if len(precondErrs) > 0 {
+		return entityType, fmt.Errorf("sync %s %s: %w", entityType, entityID, errors.Join(precondErrs...))
 	}
 	return entityType, nil
 }

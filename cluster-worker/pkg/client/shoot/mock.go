@@ -3,6 +3,7 @@ package shoot
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"sync"
 
 	"github.com/google/uuid"
@@ -77,7 +78,7 @@ func (m *MockShootAccess) GetNamespace(_ context.Context, clusterID uuid.UUID, n
 	if !ok {
 		return nil, nil //nolint:nilnil // absence is signalled by a nil result, not an error
 	}
-	clone := ResourceInfo{Name: ns.Name, Labels: CloneStringMap(ns.Labels), Annotations: CloneStringMap(ns.Annotations)}
+	clone := ResourceInfo{Name: ns.Name, Labels: maps.Clone(ns.Labels), Annotations: maps.Clone(ns.Annotations)}
 	return &clone, nil
 }
 
@@ -97,7 +98,7 @@ func (m *MockShootAccess) CreateNamespace(_ context.Context, clusterID uuid.UUID
 		// no-op. The handler relies on this to detect a lost create race.
 		return apierrors.NewAlreadyExists(corev1.Resource("namespaces"), name)
 	}
-	m.Namespaces[clusterID][name] = ResourceInfo{Name: name, Labels: CloneStringMap(labels)}
+	m.Namespaces[clusterID][name] = ResourceInfo{Name: name, Labels: maps.Clone(labels)}
 	m.logger.Debug("MOCK: created namespace", "cluster_id", clusterID, "namespace", name)
 	return nil
 }
@@ -117,7 +118,7 @@ func (m *MockShootAccess) UpdateNamespaceLabels(_ context.Context, clusterID uui
 	if ns.Labels == nil {
 		ns.Labels = make(map[string]string)
 	}
-	MergeStringMap(ns.Labels, labels)
+	maps.Copy(ns.Labels, labels)
 	m.Namespaces[clusterID][name] = ns
 	m.logger.Debug("MOCK: updated namespace labels", "cluster_id", clusterID, "namespace", name)
 	return nil
@@ -153,7 +154,7 @@ func (m *MockShootAccess) ListNamespaces(_ context.Context, clusterID uuid.UUID,
 				continue
 			}
 		}
-		result = append(result, ResourceInfo{Name: ns.Name, Labels: CloneStringMap(ns.Labels), Annotations: CloneStringMap(ns.Annotations)})
+		result = append(result, ResourceInfo{Name: ns.Name, Labels: maps.Clone(ns.Labels), Annotations: maps.Clone(ns.Annotations)})
 	}
 	return result, nil
 }
@@ -174,8 +175,8 @@ func (m *MockShootAccess) EnsureServiceAccount(_ context.Context, clusterID uuid
 	}
 	m.ServiceAccounts[clusterID][namespace][name] = ResourceInfo{
 		Name:        name,
-		Labels:      CloneStringMap(labels),
-		Annotations: CloneStringMap(annotations),
+		Labels:      maps.Clone(labels),
+		Annotations: maps.Clone(annotations),
 	}
 	m.logger.Debug("MOCK: ensured SA", "cluster_id", clusterID, "namespace", namespace, "name", name)
 	return nil
@@ -194,8 +195,8 @@ func (m *MockShootAccess) EnsureClusterRoleBinding(_ context.Context, clusterID 
 	}
 	m.ClusterRoleBindings[clusterID][name] = ResourceInfo{
 		Name:        name,
-		Labels:      CloneStringMap(labels),
-		Annotations: CloneStringMap(annotations),
+		Labels:      maps.Clone(labels),
+		Annotations: maps.Clone(annotations),
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",

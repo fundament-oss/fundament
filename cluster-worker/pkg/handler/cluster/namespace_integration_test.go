@@ -13,7 +13,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	namespacehandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/namespace"
 	"github.com/fundament-oss/fundament/common/dbconst"
-	"github.com/fundament-oss/fundament/common/namespacename"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // nsSyncCtx is the SyncContext the outbox worker passes for namespace rows.
@@ -178,7 +178,7 @@ func TestNamespaceSync_CreateResyncDelete(t *testing.T) {
 	nsID := insertNamespace(t, db, projectID, "team-a")
 
 	// The cluster-side resource carries a project-scoped, collision-free name.
-	clusterNS := namespacename.Generate("proj-cycle", projectID, "team-a")
+	clusterNS := kubename.GenerateNamespace("proj-cycle", projectID, "team-a")
 
 	// Create.
 	require.NoError(t, h.Sync(ctx, nsID, nsSyncCtx))
@@ -218,7 +218,7 @@ func TestNamespaceSync_ShootNotReady_Precondition(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorContains(t, err, "precondition not met")
 
-	got, err := mock.GetNamespace(ctx, clusterID, namespacename.Generate("proj-not-ready", projectID, "team-a"))
+	got, err := mock.GetNamespace(ctx, clusterID, kubename.GenerateNamespace("proj-not-ready", projectID, "team-a"))
 	require.NoError(t, err)
 	require.Nil(t, got, "no namespace should be created while the shoot is not ready")
 }

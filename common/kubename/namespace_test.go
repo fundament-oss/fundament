@@ -1,4 +1,4 @@
-package namespacename
+package kubename
 
 import (
 	"testing"
@@ -8,14 +8,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-func TestValidate_Accepts(t *testing.T) {
+func TestValidateNamespace_Accepts(t *testing.T) {
 	t.Parallel()
 	for _, name := range []string{"team-a", "billing", "a", "ns123", "0abc", "a-b-c"} {
-		require.NoError(t, Validate(name), "expected %q to be valid", name)
+		require.NoError(t, ValidateNamespace(name), "expected %q to be valid", name)
 	}
 }
 
-func TestValidate_Rejects(t *testing.T) {
+func TestValidateNamespace_Rejects(t *testing.T) {
 	t.Parallel()
 	tests := map[string]string{
 		"empty":            "",
@@ -33,49 +33,49 @@ func TestValidate_Rejects(t *testing.T) {
 	for desc, name := range tests {
 		t.Run(desc, func(t *testing.T) {
 			t.Parallel()
-			require.Error(t, Validate(name), "expected %q (%s) to be rejected", name, desc)
+			require.Error(t, ValidateNamespace(name), "expected %q (%s) to be rejected", name, desc)
 		})
 	}
 }
 
-func TestValidate_MaxLengthBoundary(t *testing.T) {
+func TestValidateNamespace_MaxLengthBoundary(t *testing.T) {
 	t.Parallel()
-	atLimit := string(make([]byte, MaxNameLength))
+	atLimit := string(make([]byte, MaxNamespaceNameLength))
 	for i := range atLimit {
 		atLimit = atLimit[:i] + "a" + atLimit[i+1:]
 	}
-	require.NoError(t, Validate(atLimit))
-	require.Error(t, Validate(atLimit+"a"))
+	require.NoError(t, ValidateNamespace(atLimit))
+	require.Error(t, ValidateNamespace(atLimit+"a"))
 }
 
-func TestGenerate_Deterministic(t *testing.T) {
+func TestGenerateNamespace_Deterministic(t *testing.T) {
 	t.Parallel()
 	id := uuid.New()
-	require.Equal(t, Generate("Platform Team", id, "team-a"), Generate("Platform Team", id, "team-a"))
+	require.Equal(t, GenerateNamespace("Platform Team", id, "team-a"), GenerateNamespace("Platform Team", id, "team-a"))
 }
 
-func TestGenerate_DistinctPerProject(t *testing.T) {
+func TestGenerateNamespace_DistinctPerProject(t *testing.T) {
 	t.Parallel()
 	// Two projects whose names sanitize identically must still produce distinct
 	// cluster-side names for the same namespace name — this is the cross-project
 	// collision guard.
-	a := Generate("Team A", uuid.New(), "billing")
-	b := Generate("team-a", uuid.New(), "billing")
+	a := GenerateNamespace("Team A", uuid.New(), "billing")
+	b := GenerateNamespace("team-a", uuid.New(), "billing")
 	require.NotEqual(t, a, b)
 }
 
-// TestGenerate_StaysWithinDNS1123 verifies the budget: the longest accepted name
-// combined with any project name yields a valid DNS-1123 label.
-func TestGenerate_StaysWithinDNS1123(t *testing.T) {
+// TestGenerateNamespace_StaysWithinDNS1123 verifies the budget: the longest
+// accepted name combined with any project name yields a valid DNS-1123 label.
+func TestGenerateNamespace_StaysWithinDNS1123(t *testing.T) {
 	t.Parallel()
-	longestName := string(make([]byte, MaxNameLength))
+	longestName := string(make([]byte, MaxNamespaceNameLength))
 	for i := range longestName {
 		longestName = longestName[:i] + "a" + longestName[i+1:]
 	}
-	require.NoError(t, Validate(longestName))
+	require.NoError(t, ValidateNamespace(longestName))
 
 	for _, projectName := range []string{"", "x", "A Very Long Organization Project Name Indeed", "!!!"} {
-		got := Generate(projectName, uuid.New(), longestName)
+		got := GenerateNamespace(projectName, uuid.New(), longestName)
 		require.LessOrEqual(t, len(got), validation.DNS1123LabelMaxLength, "generated %q exceeds limit", got)
 		require.Empty(t, validation.IsDNS1123Label(got), "generated %q is not a valid DNS-1123 label", got)
 	}

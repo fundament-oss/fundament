@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
@@ -82,8 +83,8 @@ func (r *RealShootAccess) GetNamespace(ctx context.Context, clusterID uuid.UUID,
 	}
 	return &ResourceInfo{
 		Name:        ns.Name,
-		Labels:      CloneStringMap(ns.Labels),
-		Annotations: CloneStringMap(ns.Annotations),
+		Labels:      maps.Clone(ns.Labels),
+		Annotations: maps.Clone(ns.Annotations),
 	}, nil
 }
 
@@ -163,8 +164,8 @@ func (r *RealShootAccess) ListNamespaces(ctx context.Context, clusterID uuid.UUI
 	for i := range list.Items {
 		result[i] = ResourceInfo{
 			Name:        list.Items[i].Name,
-			Labels:      CloneStringMap(list.Items[i].Labels),
-			Annotations: CloneStringMap(list.Items[i].Annotations),
+			Labels:      maps.Clone(list.Items[i].Labels),
+			Annotations: maps.Clone(list.Items[i].Annotations),
 		}
 	}
 	return result, nil
@@ -191,8 +192,8 @@ func (r *RealShootAccess) EnsureServiceAccount(ctx context.Context, clusterID uu
 		if getErr != nil {
 			return fmt.Errorf("get existing SA %s/%s: %w", namespace, name, getErr)
 		}
-		MergeStringMap(existing.Labels, labels)
-		MergeStringMap(existing.Annotations, annotations)
+		maps.Copy(existing.Labels, labels)
+		maps.Copy(existing.Annotations, annotations)
 		_, err = cs.CoreV1().ServiceAccounts(namespace).Update(ctx, existing, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("update SA %s/%s: %w", namespace, name, err)
@@ -248,8 +249,8 @@ func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterI
 			return nil
 		}
 
-		MergeStringMap(existing.Labels, labels)
-		MergeStringMap(existing.Annotations, annotations)
+		maps.Copy(existing.Labels, labels)
+		maps.Copy(existing.Annotations, annotations)
 		existing.Subjects = crb.Subjects
 		_, err = cs.RbacV1().ClusterRoleBindings().Update(ctx, existing, metav1.UpdateOptions{})
 		if err != nil {
@@ -310,8 +311,8 @@ func (r *RealShootAccess) ListServiceAccounts(ctx context.Context, clusterID uui
 	for i := range list.Items {
 		result[i] = ResourceInfo{
 			Name:        list.Items[i].Name,
-			Labels:      CloneStringMap(list.Items[i].Labels),
-			Annotations: CloneStringMap(list.Items[i].Annotations),
+			Labels:      maps.Clone(list.Items[i].Labels),
+			Annotations: maps.Clone(list.Items[i].Annotations),
 		}
 	}
 	return result, nil
@@ -332,8 +333,8 @@ func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID
 	for i := range list.Items {
 		result[i] = ResourceInfo{
 			Name:        list.Items[i].Name,
-			Labels:      CloneStringMap(list.Items[i].Labels),
-			Annotations: CloneStringMap(list.Items[i].Annotations),
+			Labels:      maps.Clone(list.Items[i].Labels),
+			Annotations: maps.Clone(list.Items[i].Annotations),
 			RoleRef:     list.Items[i].RoleRef,
 			Subjects:    append([]rbacv1.Subject(nil), list.Items[i].Subjects...),
 		}
@@ -344,27 +345,6 @@ func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID
 // ClusterRoleBindingNeedsRecreate returns true if the RoleRef has changed (immutable field).
 func ClusterRoleBindingNeedsRecreate(existing, desired *rbacv1.ClusterRoleBinding) bool {
 	return existing.RoleRef != desired.RoleRef
-}
-
-// MergeStringMap copies all entries from src into dst, overwriting existing keys.
-// Existing keys in dst that are not in src are preserved.
-func MergeStringMap(dst, src map[string]string) {
-	for k, v := range src {
-		dst[k] = v
-	}
-}
-
-// CloneStringMap returns a shallow copy of the map.
-func CloneStringMap(src map[string]string) map[string]string {
-	if src == nil {
-		return nil
-	}
-
-	dst := make(map[string]string, len(src))
-	for k, v := range src {
-		dst[k] = v
-	}
-	return dst
 }
 
 var _ ShootAccess = (*RealShootAccess)(nil)

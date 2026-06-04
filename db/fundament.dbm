@@ -1492,6 +1492,15 @@ END;]]> </definition>
 		</idxelement>
 </index>
 
+<index name="cluster_outbox_uq_ns_reconcile" table="tenant.cluster_outbox"
+	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="namespace_id"/>
+		</idxelement>
+	<predicate> <![CDATA[source = 'reconcile' AND status IN ('pending', 'retrying')]]> </predicate>
+</index>
+
 <index name="node_pools_idx_cluster_id" table="tenant.node_pools"
 	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
 	 index-type="btree" factor="0">
