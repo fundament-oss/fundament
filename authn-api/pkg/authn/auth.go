@@ -67,8 +67,8 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		db:            database,
 		queries:       db.New(database.Pool),
 		sessionStore:  sessionStore,
-		validator:     auth.NewValidator(cfg.JWTSecret, auth.AuthCookieName, auth.ConsoleIssuer, logger),
-		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.AuthCookieName),
+		validator:     auth.NewValidator(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, logger),
+		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.ConsoleAuthCookieName),
 		authz:         authzClient,
 	}, nil
 }

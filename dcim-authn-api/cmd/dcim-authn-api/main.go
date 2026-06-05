@@ -31,7 +31,6 @@ type config struct {
 	CookieSecure       bool          `env:"COOKIE_SECURE"`
 	ListenAddr         string        `env:"LISTEN_ADDR" envDefault:":8080"`
 	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
-	MaxSessionAge      time.Duration `env:"MAX_SESSION_AGE" envDefault:"168h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"https://dcim.fundament.localhost:8443"`
 	// PasswordLoginEnabled exposes the OAuth2 resource-owner-password-credentials
@@ -113,34 +112,33 @@ func run() error {
 		CookieDomain:  cfg.CookieDomain,
 		CookieSecure:  cfg.CookieSecure,
 		FrontendURL:   cfg.FrontendURL,
-		MaxSessionAge: cfg.MaxSessionAge,
 	}
 
 	server := dcimauthn.New(logger, serverCfg, oauth2Config, verifier, sessionStore)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc(http.MethodGet+" /livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc(http.MethodGet+" /readyz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
 	if cfg.PasswordLoginEnabled {
-		mux.HandleFunc("POST /login/password", server.HandlePasswordLogin)
+		mux.HandleFunc(http.MethodPost+" /login/password", server.HandlePasswordLogin)
 	} else {
 		logger.Info("password login (ROPC) endpoint disabled")
 	}
-	mux.HandleFunc("GET /login", server.HandleLogin)
-	mux.HandleFunc("GET /callback", server.HandleCallback)
-	mux.HandleFunc("POST /refresh", server.HandleRefresh)
-	mux.HandleFunc("POST /logout", server.HandleLogout)
-	mux.HandleFunc("GET /userinfo", server.HandleUserInfo)
+	mux.HandleFunc(http.MethodGet+" /login", server.HandleLogin)
+	mux.HandleFunc(http.MethodGet+" /callback", server.HandleCallback)
+	mux.HandleFunc(http.MethodPost+" /refresh", server.HandleRefresh)
+	mux.HandleFunc(http.MethodPost+" /logout", server.HandleLogout)
+	mux.HandleFunc(http.MethodGet+" /userinfo", server.HandleUserInfo)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodOptions},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})

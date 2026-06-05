@@ -44,8 +44,6 @@ spec:
               value: {{ .Values.dcimAuthnApi.logLevel }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ .Values.externalUrls.corsAllowedOrigins | default .Values.externalUrls.dcim }}
-            - name: MAX_SESSION_AGE
-              value: {{ .Values.dcimAuthnApi.maxSessionAge | quote }}
             # ROPC (resource-owner-password-credentials) login. Keep disabled in
             # production; enable only for local/dev against dex static passwords.
             - name: PASSWORD_LOGIN_ENABLED

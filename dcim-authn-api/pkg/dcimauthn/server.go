@@ -25,10 +25,6 @@ type Config struct {
 	CookieDomain string
 	CookieSecure bool
 	FrontendURL  string
-	// MaxSessionAge bounds the absolute lifetime of a session across refreshes.
-	// Once a session is older than this (measured from the original
-	// authentication time), HandleRefresh requires a fresh login.
-	MaxSessionAge time.Duration
 }
 
 // Server handles DCIM authentication.
@@ -87,16 +83,14 @@ func (s *Server) verifyAndParseIDToken(r *http.Request, rawIDToken string) (*oid
 }
 
 // generateJWT mints the initial token for a freshly authenticated user. The
-// OIDC sub is mapped to a deterministic UUID subject and authTime is set to now.
+// OIDC sub is mapped to a deterministic UUID subject.
 func (s *Server) generateJWT(claims *oidcClaims) (string, error) {
 	userID := subjectUUID(claims.Sub)
-	return s.mintJWT(userID.String(), claims.Name, time.Now())
+	return s.mintJWT(userID.String(), claims.Name)
 }
 
 // mintJWT signs a DCIM token for the given (already-resolved) UUID subject.
-// authTime records when the user originally authenticated and is preserved
-// across refreshes to enforce the absolute session lifetime.
-func (s *Server) mintJWT(subject, name string, authTime time.Time) (string, error) {
+func (s *Server) mintJWT(subject, name string) (string, error) {
 	now := time.Now()
 	jwtClaims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -105,8 +99,7 @@ func (s *Server) mintJWT(subject, name string, authTime time.Time) (string, erro
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.config.TokenExpiry)),
 		},
-		Name:     name,
-		AuthTime: jwt.NewNumericDate(authTime),
+		Name: name,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtClaims)

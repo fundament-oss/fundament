@@ -149,8 +149,6 @@ dcimAuthnApi:
   enabled: false
   replicas: 1
   logLevel: info
-  # Absolute session lifetime across token refreshes (Go duration).
-  maxSessionAge: 168h
   # ROPC password login. Keep false in production; enable only for local/dev.
   passwordLoginEnabled: false
   httproute:

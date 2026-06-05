@@ -3,7 +3,6 @@ package dcimauthn
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -142,8 +141,7 @@ func (s *Server) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 }
 
-// HandleRefresh re-issues the auth cookie from a valid existing token, up to the
-// absolute session lifetime. Beyond that the user must authenticate again.
+// HandleRefresh re-issues the auth cookie from a valid existing token.
 func (s *Server) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.validator.Validate(r.Header)
 	if err != nil {
@@ -151,21 +149,8 @@ func (s *Server) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce the absolute session lifetime measured from the original login.
-	// Tokens without an auth_time predate this claim and cannot be refreshed.
-	if claims.AuthTime == nil {
-		s.writeError(w, http.StatusUnauthorized, "session cannot be refreshed, please log in again")
-		return
-	}
-	authTime := claims.AuthTime.Time
-	if s.config.MaxSessionAge > 0 && time.Since(authTime) > s.config.MaxSessionAge {
-		s.logger.Info("refresh rejected: session exceeded max lifetime", "subject", claims.Subject)
-		s.writeError(w, http.StatusUnauthorized, "session expired, please log in again")
-		return
-	}
-
-	// Re-sign with fresh expiry using the same identity, preserving auth_time.
-	accessToken, err := s.mintJWT(claims.Subject, claims.Name, authTime)
+	// Re-sign with fresh expiry using the same identity.
+	accessToken, err := s.mintJWT(claims.Subject, claims.Name)
 	if err != nil {
 		s.logger.Error("failed to generate JWT on refresh", "error", err)
 		s.writeError(w, http.StatusInternalServerError, "internal server error")

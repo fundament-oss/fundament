@@ -1,4 +1,4 @@
-package dcim
+package auth
 
 import (
 	"context"
