@@ -107,11 +107,11 @@ func run() error {
 	sessionStore.ConfigureOptions(cfg.CookieDomain, cfg.CookieSecure)
 
 	serverCfg := &dcimauthn.Config{
-		TokenExpiry:   cfg.TokenExpiry,
-		JWTSecret:     []byte(cfg.JWTSecret),
-		CookieDomain:  cfg.CookieDomain,
-		CookieSecure:  cfg.CookieSecure,
-		FrontendURL:   cfg.FrontendURL,
+		TokenExpiry:  cfg.TokenExpiry,
+		JWTSecret:    []byte(cfg.JWTSecret),
+		CookieDomain: cfg.CookieDomain,
+		CookieSecure: cfg.CookieSecure,
+		FrontendURL:  cfg.FrontendURL,
 	}
 
 	server := dcimauthn.New(logger, serverCfg, oauth2Config, verifier, sessionStore)
