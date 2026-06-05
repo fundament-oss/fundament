@@ -39,7 +39,7 @@ func TestPhysicalConnectionService_CableAttributesRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewPhysicalConnectionServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewPhysicalConnectionServiceClient(env.client(), env.server.URL)
 
 	aPlacement, aPort, bPlacement, bPort := physicalConnectionFixture(t, env)
 
@@ -110,7 +110,7 @@ func TestPhysicalConnectionService_CableAttributesOptional(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewPhysicalConnectionServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewPhysicalConnectionServiceClient(env.client(), env.server.URL)
 
 	aPlacement, aPort, bPlacement, bPort := physicalConnectionFixture(t, env)
 
@@ -167,7 +167,7 @@ func TestPhysicalConnectionService_CableAttributesClear(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewPhysicalConnectionServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewPhysicalConnectionServiceClient(env.client(), env.server.URL)
 
 	aPlacement, aPort, bPlacement, bPort := physicalConnectionFixture(t, env)
 
@@ -224,7 +224,7 @@ func TestPhysicalConnectionService_ListConnectionsBySite(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewPhysicalConnectionServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewPhysicalConnectionServiceClient(env.client(), env.server.URL)
 
 	// Site under test: one rack, two placed/ported assets, one connection.
 	siteID := createSite(t, env, "Graph site")
