@@ -281,113 +281,6 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     NOTES MODAL
-     ══════════════════════════════════════════════════════════════ -->
-@if (activeNotesAsset(); as asset) {
-  <div
-    class="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/50 p-4 pt-10 backdrop-blur-sm overflow-y-auto"
-    role="dialog"
-    aria-modal="true"
-    tabindex="0"
-    [attr.aria-label]="'Notes for ' + asset.model"
-    (click)="closeNotes()"
-    (keydown.escape)="closeNotes()"
-  >
-    <div
-      class="w-full max-w-lg rounded-2xl bg-white shadow-2xl shadow-slate-900/20 my-4 ring-1 ring-slate-200/80"
-      tabindex="-1"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    >
-      <!-- Modal header -->
-      <div class="flex items-start justify-between border-b border-slate-100 px-6 pt-6 pb-5">
-        <div class="flex-1 min-w-0 pr-4">
-          <h2 class="text-base font-semibold text-slate-900 leading-snug">{{ asset.model }}</h2>
-          <div class="mt-2 flex flex-wrap items-center gap-2">
-            <span
-              class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-              [class]="statusBadgeClass(asset.status)"
-            >
-              <span
-                class="h-1.5 w-1.5 rounded-full"
-                [class]="statusDotClass(asset.status)"
-                aria-hidden="true"
-              ></span>
-              {{ statusLabel(asset.status) }}
-            </span>
-            <span
-              class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"
-            >
-              {{ asset.category }}
-            </span>
-            <span class="font-mono text-xs text-slate-400">{{ asset.assetTag }}</span>
-          </div>
-        </div>
-        <button
-          (click)="closeNotes()"
-          class="cursor-pointer rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors shrink-0"
-          aria-label="Close notes"
-        >
-          <nldd-icon name="dismiss" class="w-5 h-5" aria-hidden="true"></nldd-icon>
-        </button>
-      </div>
-
-      <!-- Modal body -->
-      @if (getAssetNotes(asset.id); as notes) {
-        <div class="px-6 py-5 space-y-5">
-          <!-- Description -->
-          <div>
-            <p class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">
-              Description
-            </p>
-            <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg px-4 py-3">
-              {{ notes.description }}
-            </p>
-          </div>
-
-          <!-- Comments -->
-          <div>
-            <p class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
-              Notes
-              <span
-                class="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-slate-500 normal-case tracking-normal"
-              >
-                {{ notes.comments.length }}
-              </span>
-            </p>
-            <ul class="space-y-4">
-              @for (comment of notes.comments; track $index) {
-                <li class="flex gap-3">
-                  <!-- Avatar -->
-                  <div
-                    class="h-7 w-7 shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-semibold select-none"
-                    aria-hidden="true"
-                  >
-                    {{ comment.initials }}
-                  </div>
-                  <!-- Content -->
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-baseline gap-2 flex-wrap">
-                      <span class="text-sm font-medium text-slate-800">{{ comment.author }}</span>
-                      <span class="text-xs text-slate-400">{{
-                        formatDaysAgo(comment.daysAgo)
-                      }}</span>
-                    </div>
-                    <p class="mt-0.5 text-sm text-slate-600 leading-relaxed">
-                      {{ comment.content }}
-                    </p>
-                  </div>
-                </li>
-              }
-            </ul>
-          </div>
-        </div>
-      }
-    </div>
-  </div>
-}
-
-<!-- ══════════════════════════════════════════════════════════════
      ASSET EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #assetSheet accessible-label="Asset details" placement="right" width="480px">
@@ -399,6 +292,13 @@
       (dismiss)="closeAssetForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
+      @if (formErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ formErrorMessage() }}
+          </p>
+        </div>
+      }
       <nldd-form-field label="Device">
         <select #fAssetDevice [disabled]="!!editAsset()?.id">
           @for (entry of catalog(); track entry.id) {
@@ -417,7 +317,13 @@
             #fAssetTag
             [attr.value]="editAsset()?.assetTag ?? ''"
             placeholder="AST-001"
+            (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('asset_tag') ? '' : null"
+            error-message="error-asset-tag"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-asset-tag">{{
+            fieldError('asset_tag')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Status">
           <select #fAssetStatus>
@@ -438,13 +344,20 @@
             #fAssetSerial
             [attr.value]="editAsset()?.serialNumber ?? ''"
             placeholder="SN-…"
+            (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('serial_number') ? '' : null"
+            error-message="error-asset-serial"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-asset-serial">{{
+            fieldError('serial_number')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Warranty expiry" [optional]="true">
           <nldd-text-field
             #fAssetWarranty
             type="date"
             [attr.value]="editAsset()?.warrantyExpiry ?? ''"
+            (keydown.enter)="saveAsset()"
           ></nldd-text-field>
         </nldd-form-field>
       </div>
@@ -477,6 +390,7 @@
             type="number"
             [attr.value]="editPlacement()?.unit ?? ''"
             placeholder="1"
+            (keydown.enter)="saveAsset()"
           ></nldd-text-field>
         </nldd-form-field>
         <nldd-form-field label="Slot type" [optional]="true">

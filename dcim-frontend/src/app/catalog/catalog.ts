@@ -11,12 +11,14 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { Code, ConnectError } from '@connectrpc/connect';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
-import { AssetCategory, CatalogEntry, MOCK_ASSETS } from '../inventory/inventory';
+import { AssetCategory, CatalogEntry } from '../inventory/inventory';
 import CatalogApiService from './catalog-api.service';
+import InventoryApiService from '../inventory/inventory-api.service';
 import connectErrorMessage from '../../connect/error';
-import { ViolationsSchema } from '../../generated/buf/validate/validate_pb';
+import parseValidationError from '../../connect/validation';
+import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
+import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -42,6 +44,11 @@ type InvalidFields = Record<string, string>;
 })
 export default class CatalogComponent implements OnInit {
   private readonly catalogApi = inject(CatalogApiService);
+
+  private readonly inventoryApi = inject(InventoryApiService);
+
+  /** All assets, used to derive instance counts per catalog entry. */
+  private readonly assets = signal<ProtoAsset[]>([]);
 
   searchQuery = signal('');
 
@@ -115,6 +122,16 @@ export default class CatalogComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCatalog();
+    this.loadAssets();
+  }
+
+  private loadAssets(): void {
+    firstValueFrom(
+      this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
+    )
+      .then((res) => this.assets.set(res.assets))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   private loadCatalog(search?: string): void {
@@ -128,19 +145,23 @@ export default class CatalogComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  private readonly allRows = computed<CatalogRow[]>(() =>
-    this.mutableCatalog().map((entry) => {
-      const assets = MOCK_ASSETS.filter((a) => a.model === entry.model);
-      return {
-        entry,
-        total: assets.length,
-        deployed: assets.filter((a) => a.status === 'deployed').length,
-        available: assets.filter((a) => a.status === 'available').length,
-        issues: assets.filter((a) => a.status === 'needs-repair' || a.status === 'decommissioned')
-          .length,
-      };
-    }),
-  );
+  private readonly allRows = computed<CatalogRow[]>(() => {
+    const counts = new Map<string, Omit<CatalogRow, 'entry'>>();
+    this.assets().forEach((a) => {
+      const c = counts.get(a.deviceCatalogId) ?? { total: 0, deployed: 0, available: 0, issues: 0 };
+      c.total += 1;
+      if (a.status === ProtoStatus.DEPLOYED) c.deployed += 1;
+      else if (a.status === ProtoStatus.AVAILABLE) c.available += 1;
+      if (a.status === ProtoStatus.NEEDS_REPAIR || a.status === ProtoStatus.DECOMMISSIONED) {
+        c.issues += 1;
+      }
+      counts.set(a.deviceCatalogId, c);
+    });
+    return this.mutableCatalog().map((entry) => ({
+      entry,
+      ...(counts.get(entry.id) ?? { total: 0, deployed: 0, available: 0, issues: 0 }),
+    }));
+  });
 
   readonly rows = computed<CatalogRow[]>(() => {
     const cat = this.categoryFilter();
@@ -271,30 +292,9 @@ export default class CatalogComponent implements OnInit {
   }
 
   private handleEntryError(err: unknown): void {
-    const ce = ConnectError.from(err);
-
-    if (ce.code === Code.InvalidArgument) {
-      const fieldErrors: InvalidFields = {};
-      const unmappedMessages: string[] = [];
-      ce.findDetails(ViolationsSchema)
-        .flatMap((violations) => violations.violations)
-        .forEach((v) => {
-          const field = v.field?.elements.map((e) => e.fieldName).join('.') ?? '';
-          if (field) fieldErrors[field] = v.message;
-          else unmappedMessages.push(v.message);
-        });
-      if (Object.keys(fieldErrors).length > 0) {
-        this.invalidFields.set(fieldErrors);
-        // Violations without a field path can't attach to an input — show them in the banner.
-        if (unmappedMessages.length > 0) {
-          this.entryErrorMessage.set(unmappedMessages.join('\n'));
-        }
-        return;
-      }
-    }
-
-    // Non-validation errors (e.g. AlreadyExists) have no input to attach to.
-    this.entryErrorMessage.set(connectErrorMessage(err));
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.entryErrorMessage.set(message);
   }
 
   openDeleteEntry(entry: CatalogEntry, event: Event): void {

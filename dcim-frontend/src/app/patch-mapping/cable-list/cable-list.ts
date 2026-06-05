@@ -12,17 +12,22 @@ import {
   CableColor,
   CABLE_COLOR_HEX,
   CableStatus,
-  CABLE_STATUS_COLORS,
-  CABLE_STATUS_LABEL,
   CABLE_TYPE_LABEL,
   CableType,
+  cableStatusColors,
+  cableStatusLabel,
+  cableTypeLabel,
   PORT_TYPE_LABEL,
 } from '../cable.model';
-import { DATACENTER_INFO, DatacenterStatus } from '../../datacenters/datacenter.model';
 
 type SortField = 'label' | 'aSide' | 'bSide' | 'status' | 'type' | null;
 
 interface DeviceOption {
+  id: string;
+  name: string;
+}
+
+interface SiteOption {
   id: string;
   name: string;
 }
@@ -38,6 +43,8 @@ export default class CableListComponent {
   readonly cables = input.required<Cable[]>();
 
   readonly dcId = input.required<string>();
+
+  readonly sites = input<SiteOption[]>([]);
 
   readonly editCable = output<Cable>();
 
@@ -125,12 +132,12 @@ export default class CableListComponent {
           valB = b.bSide.deviceName;
           break;
         case 'status':
-          valA = a.status;
-          valB = b.status;
+          valA = a.status ?? '';
+          valB = b.status ?? '';
           break;
         case 'type':
-          valA = CABLE_TYPE_LABEL[a.type];
-          valB = CABLE_TYPE_LABEL[b.type];
+          valA = cableTypeLabel(a.type);
+          valB = cableTypeLabel(b.type);
           break;
         default:
           return 0;
@@ -143,7 +150,8 @@ export default class CableListComponent {
   readonly statusCounts = computed(() => {
     const counts: Record<string, number> = { all: this.cables().length };
     this.cables().forEach((c) => {
-      counts[c.status] = (counts[c.status] ?? 0) + 1;
+      const key = c.status ?? 'unspecified';
+      counts[key] = (counts[key] ?? 0) + 1;
     });
     return counts;
   });
@@ -151,7 +159,8 @@ export default class CableListComponent {
   readonly typeCounts = computed(() => {
     const counts: Record<string, number> = {};
     this.cables().forEach((c) => {
-      counts[c.type] = (counts[c.type] ?? 0) + 1;
+      const key = c.type ?? 'unspecified';
+      counts[key] = (counts[key] ?? 0) + 1;
     });
     return counts;
   });
@@ -175,24 +184,13 @@ export default class CableListComponent {
       ),
   );
 
-  readonly DATACENTER_INFO = DATACENTER_INFO;
-
-  readonly dcStatusDotClass = (status: DatacenterStatus): string => {
-    const map: Record<DatacenterStatus, string> = {
-      operational: 'bg-teal-500',
-      degraded: 'bg-amber-500',
-      maintenance: 'bg-slate-400',
-    };
-    return map[status] ?? '';
-  };
-
-  readonly statusDotClass = (status: CableStatus): string => {
+  readonly statusDotClass = (status: CableStatus | undefined): string => {
     const map: Record<CableStatus, string> = {
       planned: 'bg-amber-400',
       connected: 'bg-teal-500',
       decommissioned: 'bg-slate-400',
     };
-    return map[status] ?? 'bg-slate-300';
+    return status ? map[status] : 'bg-slate-300';
   };
 
   clearFilters(): void {
@@ -257,9 +255,11 @@ export default class CableListComponent {
     URL.revokeObjectURL(url);
   }
 
-  readonly CABLE_STATUS_COLORS = CABLE_STATUS_COLORS;
+  readonly cableStatusColors = cableStatusColors;
 
-  readonly CABLE_STATUS_LABEL = CABLE_STATUS_LABEL;
+  readonly cableStatusLabel = cableStatusLabel;
+
+  readonly cableTypeLabel = cableTypeLabel;
 
   readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
 

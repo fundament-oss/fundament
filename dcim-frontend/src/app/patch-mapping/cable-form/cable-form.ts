@@ -12,7 +12,6 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { RACKS } from '../../racks/rack.model';
 import {
   Cable,
   CableColor,
@@ -20,13 +19,11 @@ import {
   CableStatus,
   CableType,
   CABLE_TYPE_LABEL,
-  DEVICE_PORTS,
   Port,
   portsAreCompatible,
   PortType,
   PORT_TYPE_LABEL,
 } from '../cable.model';
-import DevicePortsComponent from '../device-ports/device-ports';
 
 interface DeviceOption {
   id: string;
@@ -36,7 +33,7 @@ interface DeviceOption {
 @Component({
   selector: 'app-cable-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DevicePortsComponent],
+  imports: [],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cable-form.html',
 })
@@ -53,13 +50,17 @@ export default class CableFormComponent {
 
   readonly externalDevicePorts = input<Record<string, Port[]>>({});
 
+  /** Selectable devices (placements) in the active datacenter. */
+  readonly devices = input<DeviceOption[]>([]);
+
+  /** Server-side validation/error message from the last save attempt. */
+  readonly serverError = input<string | null>(null);
+
   readonly save = output<Cable>();
 
   readonly cancelForm = output<void>();
 
   readonly cableDelete = output<Cable>();
-
-  readonly portsUpdated = output<{ deviceId: string; ports: Port[] }>();
 
   // ── A Side ─────────────────────────────────────────────────────────────────
   readonly aPortType = signal<PortType | ''>('');
@@ -78,7 +79,7 @@ export default class CableFormComponent {
   // ── Cable fields ───────────────────────────────────────────────────────────
   readonly cableType = signal<CableType | ''>('cat5e');
 
-  readonly cableStatus = signal<CableStatus>('connected');
+  readonly cableStatus = signal<CableStatus | ''>('connected');
 
   readonly cableLabel = signal('');
 
@@ -90,32 +91,12 @@ export default class CableFormComponent {
 
   readonly cableLength = signal<number | undefined>(undefined);
 
-  // ── Port management ────────────────────────────────────────────────────────
-  readonly portManagementDevice = signal<{ id: string; name: string } | null>(null);
-
-  readonly localDevicePorts = signal<Record<string, Port[]>>({ ...DEVICE_PORTS });
-
-  // ── Quick-add port ─────────────────────────────────────────────────────────
-  readonly aAddingPort = signal(false);
-
-  readonly bAddingPort = signal(false);
-
-  readonly aNewPortName = signal('');
-
-  readonly aNewPortType = signal<PortType>('network-interface');
-
-  readonly bNewPortName = signal('');
-
-  readonly bNewPortType = signal<PortType>('network-interface');
+  readonly localDevicePorts = signal<Record<string, Port[]>>({});
 
   // ── Derived: devices in this DC ───────────────────────────────────────────
-  readonly dcDevices = computed<DeviceOption[]>(() => {
-    const dcId = this.dcId();
-    const result = RACKS.filter((rack) => rack.dcId === dcId).flatMap((rack) =>
-      rack.devices.map((dev) => ({ id: dev.id, name: dev.name })),
-    );
-    return result.sort((a, b) => a.name.localeCompare(b.name));
-  });
+  readonly dcDevices = computed<DeviceOption[]>(() =>
+    [...this.devices()].sort((a, b) => a.name.localeCompare(b.name)),
+  );
 
   // ── Derived: port IDs already occupied by other cables ────────────────────
   readonly usedPortIds = computed<Set<string>>(() => {
@@ -193,23 +174,10 @@ export default class CableFormComponent {
 
   readonly canSave = computed(
     () =>
-      !!(
-        this.aDeviceId() &&
-        this.aPortId() &&
-        this.bDeviceId() &&
-        this.bPortId() &&
-        this.cableType()
-      ) &&
+      !!(this.aDeviceId() && this.aPortId() && this.bDeviceId() && this.bPortId()) &&
       !this.isSamePort() &&
       !this.incompatibleSides(),
   );
-
-  // ── Derived: port management device ports ────────────────────────────────
-  readonly portManagementPorts = computed<Port[]>(() => {
-    const dev = this.portManagementDevice();
-    if (!dev) return [];
-    return this.localDevicePorts()[dev.id] ?? [];
-  });
 
   constructor() {
     effect(() => {
@@ -222,7 +190,6 @@ export default class CableFormComponent {
       if (c.aSide && c.bSide && !c.id) {
         afterNextRender(() => this.focusAndScrollNameField(), { injector: this.injector });
       }
-      this.portManagementDevice.set(null);
       if (c.aSide) {
         this.aPortType.set(c.aSide.portType);
         this.aDeviceId.set(c.aSide.deviceId);
@@ -241,8 +208,12 @@ export default class CableFormComponent {
         this.bDeviceId.set('');
         this.bPortId.set('');
       }
-      this.cableType.set(c.type ?? this.CABLE_TYPES[0]);
-      this.cableStatus.set(c.status ?? 'connected');
+      // Preserve an unset (NULL) type/status when editing an existing
+      // connection so we don't silently rewrite it on the next save. New
+      // cables still get sensible defaults.
+      const isExisting = !!c.id;
+      this.cableType.set(c.type ?? (isExisting ? '' : this.CABLE_TYPES[0]));
+      this.cableStatus.set(c.status ?? (isExisting ? '' : 'connected'));
       this.cableLabel.set(c.label ?? '');
       this.cableColor.set(c.color ?? undefined);
       this.cableLength.set(c.length ?? undefined);
@@ -291,70 +262,6 @@ export default class CableFormComponent {
     this.bPortId.set(aPort);
   }
 
-  // ── Port management ────────────────────────────────────────────────────────
-
-  openPortManagement(deviceId: string): void {
-    const device = this.dcDevices().find((d) => d.id === deviceId);
-    if (!device) return;
-    this.portManagementDevice.set({ id: device.id, name: device.name });
-  }
-
-  closePortManagement(): void {
-    this.portManagementDevice.set(null);
-  }
-
-  onPortsSaved(ports: Port[]): void {
-    const dev = this.portManagementDevice();
-    if (!dev) return;
-    this.localDevicePorts.update((map) => ({ ...map, [dev.id]: ports }));
-    // Clear selected port if it no longer exists
-    if (this.aDeviceId() === dev.id && !ports.find((p) => p.id === this.aPortId())) {
-      this.aPortId.set('');
-    }
-    if (this.bDeviceId() === dev.id && !ports.find((p) => p.id === this.bPortId())) {
-      this.bPortId.set('');
-    }
-    this.portsUpdated.emit({ deviceId: dev.id, ports });
-    this.portManagementDevice.set(null);
-  }
-
-  confirmAddPort(side: 'a' | 'b'): void {
-    const nameSignal = side === 'a' ? this.aNewPortName : this.bNewPortName;
-    const typeSignal = side === 'a' ? this.aNewPortType : this.bNewPortType;
-    const name = nameSignal().trim();
-    if (!name) return;
-    const deviceId = side === 'a' ? this.aDeviceId() : this.bDeviceId();
-    if (!deviceId) return;
-    const portType = typeSignal();
-    const id = `p-${deviceId}-${Date.now().toString(36)}`;
-    const port: Port = { id, deviceId, name, type: portType };
-    this.localDevicePorts.update((map) => ({
-      ...map,
-      [deviceId]: [...(map[deviceId] ?? []), port],
-    }));
-    this.portsUpdated.emit({ deviceId, ports: this.localDevicePorts()[deviceId] });
-    if (side === 'a') {
-      this.aPortType.set(portType);
-      this.aPortId.set(id);
-      this.aAddingPort.set(false);
-    } else {
-      this.bPortType.set(portType);
-      this.bPortId.set(id);
-      this.bAddingPort.set(false);
-    }
-    nameSignal.set('');
-  }
-
-  cancelAddPort(side: 'a' | 'b'): void {
-    if (side === 'a') {
-      this.aAddingPort.set(false);
-      this.aNewPortName.set('');
-    } else {
-      this.bAddingPort.set(false);
-      this.bNewPortName.set('');
-    }
-  }
-
   // ── Actions ────────────────────────────────────────────────────────────────
 
   onSave(): void {
@@ -390,8 +297,8 @@ export default class CableFormComponent {
         portName: bPort.name,
         portType: bPort.type,
       },
-      type: this.cableType() as CableType,
-      status: this.cableStatus(),
+      type: this.cableType() || undefined,
+      status: this.cableStatus() || undefined,
       label: this.cableLabel() || undefined,
       color: this.cableColor(),
       description: this.cableDescription() || undefined,
@@ -421,26 +328,6 @@ export default class CableFormComponent {
       el;
     target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     target.focus();
-  }
-
-  private focusAddPortNameField(side: 'a' | 'b'): void {
-    const id = side === 'a' ? 'a-new-port-name' : 'b-new-port-name';
-    const el: HTMLElement | null = this.elRef.nativeElement.querySelector(`#${id}`);
-    if (!el) return;
-    const target: HTMLElement =
-      (el.shadowRoot?.querySelector('input') as HTMLElement | null) ??
-      (el.querySelector('input') as HTMLElement | null) ??
-      el;
-    target.focus();
-  }
-
-  startAddPort(side: 'a' | 'b'): void {
-    const portType = side === 'a' ? this.aPortType() : this.bPortType();
-    const typeSignal = side === 'a' ? this.aNewPortType : this.bNewPortType;
-    typeSignal.set((portType as PortType) || 'network-interface');
-    if (side === 'a') this.aAddingPort.set(true);
-    else this.bAddingPort.set(true);
-    afterNextRender(() => this.focusAddPortNameField(side), { injector: this.injector });
   }
 
   // ── Constants for template ─────────────────────────────────────────────────

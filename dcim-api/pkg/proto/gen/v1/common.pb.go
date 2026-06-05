@@ -22,7 +22,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// AssetCategory aligns with core.device_catalogs category check constraint.
+// AssetCategory aligns with dcim.device_catalogs category check constraint.
 type AssetCategory int32
 
 const (
@@ -124,7 +124,7 @@ func (x AssetCategory) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// AssetStatus aligns with core.assets status check constraint.
+// AssetStatus aligns with dcim.assets status check constraint.
 type AssetStatus int32
 
 const (
@@ -181,7 +181,7 @@ func (x AssetStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// AssetEventType aligns with core.asset_events event_type check constraint.
+// AssetEventType aligns with dcim.asset_events event_type check constraint.
 type AssetEventType int32
 
 const (
@@ -244,7 +244,7 @@ func (x AssetEventType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// RackSlotType aligns with core.placements slot_type check constraint.
+// RackSlotType aligns with dcim.placements slot_type check constraint.
 type RackSlotType int32
 
 const (
@@ -292,7 +292,7 @@ func (x RackSlotType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// PortType aligns with core.port_definitions port_type check constraint.
+// PortType aligns with dcim.port_definitions port_type check constraint.
 type PortType int32
 
 const (
@@ -349,7 +349,7 @@ func (x PortType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// PortDirection aligns with core.port_definitions direction check constraint.
+// PortDirection aligns with dcim.port_definitions direction check constraint.
 type PortDirection int32
 
 const (
@@ -517,6 +517,201 @@ func (SortDirection) Type() protoreflect.EnumType {
 }
 
 func (x SortDirection) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// CableType aligns with dcim.physical_connections cable_type check constraint.
+type CableType int32
+
+const (
+	CableType_CABLE_TYPE_UNSPECIFIED CableType = 0
+	CableType_CABLE_TYPE_CAT5E       CableType = 10
+	CableType_CABLE_TYPE_CAT6        CableType = 20
+	CableType_CABLE_TYPE_CAT6A       CableType = 30
+	CableType_CABLE_TYPE_CAT7        CableType = 40
+	CableType_CABLE_TYPE_CAT8        CableType = 50
+	CableType_CABLE_TYPE_DAC         CableType = 60
+	CableType_CABLE_TYPE_AOC         CableType = 70
+	CableType_CABLE_TYPE_MMF         CableType = 80
+	CableType_CABLE_TYPE_SMF         CableType = 90
+	CableType_CABLE_TYPE_POWER       CableType = 100
+	CableType_CABLE_TYPE_CONSOLE     CableType = 110
+	CableType_CABLE_TYPE_USB         CableType = 120
+	CableType_CABLE_TYPE_OTHER       CableType = 130
+)
+
+// Enum value maps for CableType.
+var (
+	CableType_name = map[int32]string{
+		0:   "CABLE_TYPE_UNSPECIFIED",
+		10:  "CABLE_TYPE_CAT5E",
+		20:  "CABLE_TYPE_CAT6",
+		30:  "CABLE_TYPE_CAT6A",
+		40:  "CABLE_TYPE_CAT7",
+		50:  "CABLE_TYPE_CAT8",
+		60:  "CABLE_TYPE_DAC",
+		70:  "CABLE_TYPE_AOC",
+		80:  "CABLE_TYPE_MMF",
+		90:  "CABLE_TYPE_SMF",
+		100: "CABLE_TYPE_POWER",
+		110: "CABLE_TYPE_CONSOLE",
+		120: "CABLE_TYPE_USB",
+		130: "CABLE_TYPE_OTHER",
+	}
+	CableType_value = map[string]int32{
+		"CABLE_TYPE_UNSPECIFIED": 0,
+		"CABLE_TYPE_CAT5E":       10,
+		"CABLE_TYPE_CAT6":        20,
+		"CABLE_TYPE_CAT6A":       30,
+		"CABLE_TYPE_CAT7":        40,
+		"CABLE_TYPE_CAT8":        50,
+		"CABLE_TYPE_DAC":         60,
+		"CABLE_TYPE_AOC":         70,
+		"CABLE_TYPE_MMF":         80,
+		"CABLE_TYPE_SMF":         90,
+		"CABLE_TYPE_POWER":       100,
+		"CABLE_TYPE_CONSOLE":     110,
+		"CABLE_TYPE_USB":         120,
+		"CABLE_TYPE_OTHER":       130,
+	}
+)
+
+func (x CableType) Enum() *CableType {
+	p := new(CableType)
+	*p = x
+	return p
+}
+
+func (x CableType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CableType) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1_common_proto_enumTypes[8].Descriptor()
+}
+
+func (CableType) Type() protoreflect.EnumType {
+	return &file_v1_common_proto_enumTypes[8]
+}
+
+func (x CableType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// CableStatus aligns with dcim.physical_connections status check constraint.
+type CableStatus int32
+
+const (
+	CableStatus_CABLE_STATUS_UNSPECIFIED    CableStatus = 0
+	CableStatus_CABLE_STATUS_PLANNED        CableStatus = 10
+	CableStatus_CABLE_STATUS_CONNECTED      CableStatus = 20
+	CableStatus_CABLE_STATUS_DECOMMISSIONED CableStatus = 30
+)
+
+// Enum value maps for CableStatus.
+var (
+	CableStatus_name = map[int32]string{
+		0:  "CABLE_STATUS_UNSPECIFIED",
+		10: "CABLE_STATUS_PLANNED",
+		20: "CABLE_STATUS_CONNECTED",
+		30: "CABLE_STATUS_DECOMMISSIONED",
+	}
+	CableStatus_value = map[string]int32{
+		"CABLE_STATUS_UNSPECIFIED":    0,
+		"CABLE_STATUS_PLANNED":        10,
+		"CABLE_STATUS_CONNECTED":      20,
+		"CABLE_STATUS_DECOMMISSIONED": 30,
+	}
+)
+
+func (x CableStatus) Enum() *CableStatus {
+	p := new(CableStatus)
+	*p = x
+	return p
+}
+
+func (x CableStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CableStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1_common_proto_enumTypes[9].Descriptor()
+}
+
+func (CableStatus) Type() protoreflect.EnumType {
+	return &file_v1_common_proto_enumTypes[9]
+}
+
+func (x CableStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// CableColor aligns with dcim.physical_connections color check constraint.
+type CableColor int32
+
+const (
+	CableColor_CABLE_COLOR_UNSPECIFIED CableColor = 0
+	CableColor_CABLE_COLOR_DARK_GREY   CableColor = 10
+	CableColor_CABLE_COLOR_LIGHT_GREY  CableColor = 20
+	CableColor_CABLE_COLOR_RED         CableColor = 30
+	CableColor_CABLE_COLOR_GREEN       CableColor = 40
+	CableColor_CABLE_COLOR_BLUE        CableColor = 50
+	CableColor_CABLE_COLOR_YELLOW      CableColor = 60
+	CableColor_CABLE_COLOR_PURPLE      CableColor = 70
+	CableColor_CABLE_COLOR_ORANGE      CableColor = 80
+	CableColor_CABLE_COLOR_TEAL        CableColor = 90
+	CableColor_CABLE_COLOR_WHITE       CableColor = 100
+)
+
+// Enum value maps for CableColor.
+var (
+	CableColor_name = map[int32]string{
+		0:   "CABLE_COLOR_UNSPECIFIED",
+		10:  "CABLE_COLOR_DARK_GREY",
+		20:  "CABLE_COLOR_LIGHT_GREY",
+		30:  "CABLE_COLOR_RED",
+		40:  "CABLE_COLOR_GREEN",
+		50:  "CABLE_COLOR_BLUE",
+		60:  "CABLE_COLOR_YELLOW",
+		70:  "CABLE_COLOR_PURPLE",
+		80:  "CABLE_COLOR_ORANGE",
+		90:  "CABLE_COLOR_TEAL",
+		100: "CABLE_COLOR_WHITE",
+	}
+	CableColor_value = map[string]int32{
+		"CABLE_COLOR_UNSPECIFIED": 0,
+		"CABLE_COLOR_DARK_GREY":   10,
+		"CABLE_COLOR_LIGHT_GREY":  20,
+		"CABLE_COLOR_RED":         30,
+		"CABLE_COLOR_GREEN":       40,
+		"CABLE_COLOR_BLUE":        50,
+		"CABLE_COLOR_YELLOW":      60,
+		"CABLE_COLOR_PURPLE":      70,
+		"CABLE_COLOR_ORANGE":      80,
+		"CABLE_COLOR_TEAL":        90,
+		"CABLE_COLOR_WHITE":       100,
+	}
+)
+
+func (x CableColor) Enum() *CableColor {
+	p := new(CableColor)
+	*p = x
+	return p
+}
+
+func (x CableColor) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CableColor) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1_common_proto_enumTypes[10].Descriptor()
+}
+
+func (CableColor) Type() protoreflect.EnumType {
+	return &file_v1_common_proto_enumTypes[10]
+}
+
+func (x CableColor) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
@@ -759,9 +954,45 @@ const file_v1_common_proto_rawDesc = "" +
 	"\x1aSORT_DIRECTION_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12SORT_DIRECTION_ASC\x10\n" +
 	"\x12\x17\n" +
-	"\x13SORT_DIRECTION_DESC\x10\x14BOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x13SORT_DIRECTION_DESC\x10\x14*\xbb\x02\n" +
+	"\tCableType\x12\x1a\n" +
+	"\x16CABLE_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10CABLE_TYPE_CAT5E\x10\n" +
+	"\x12\x13\n" +
+	"\x0fCABLE_TYPE_CAT6\x10\x14\x12\x14\n" +
+	"\x10CABLE_TYPE_CAT6A\x10\x1e\x12\x13\n" +
+	"\x0fCABLE_TYPE_CAT7\x10(\x12\x13\n" +
+	"\x0fCABLE_TYPE_CAT8\x102\x12\x12\n" +
+	"\x0eCABLE_TYPE_DAC\x10<\x12\x12\n" +
+	"\x0eCABLE_TYPE_AOC\x10F\x12\x12\n" +
+	"\x0eCABLE_TYPE_MMF\x10P\x12\x12\n" +
+	"\x0eCABLE_TYPE_SMF\x10Z\x12\x14\n" +
+	"\x10CABLE_TYPE_POWER\x10d\x12\x16\n" +
+	"\x12CABLE_TYPE_CONSOLE\x10n\x12\x12\n" +
+	"\x0eCABLE_TYPE_USB\x10x\x12\x15\n" +
+	"\x10CABLE_TYPE_OTHER\x10\x82\x01*\x82\x01\n" +
+	"\vCableStatus\x12\x1c\n" +
+	"\x18CABLE_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14CABLE_STATUS_PLANNED\x10\n" +
+	"\x12\x1a\n" +
+	"\x16CABLE_STATUS_CONNECTED\x10\x14\x12\x1f\n" +
+	"\x1bCABLE_STATUS_DECOMMISSIONED\x10\x1e*\x97\x02\n" +
+	"\n" +
+	"CableColor\x12\x1b\n" +
+	"\x17CABLE_COLOR_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15CABLE_COLOR_DARK_GREY\x10\n" +
+	"\x12\x1a\n" +
+	"\x16CABLE_COLOR_LIGHT_GREY\x10\x14\x12\x13\n" +
+	"\x0fCABLE_COLOR_RED\x10\x1e\x12\x15\n" +
+	"\x11CABLE_COLOR_GREEN\x10(\x12\x14\n" +
+	"\x10CABLE_COLOR_BLUE\x102\x12\x16\n" +
+	"\x12CABLE_COLOR_YELLOW\x10<\x12\x16\n" +
+	"\x12CABLE_COLOR_PURPLE\x10F\x12\x16\n" +
+	"\x12CABLE_COLOR_ORANGE\x10P\x12\x14\n" +
+	"\x10CABLE_COLOR_TEAL\x10Z\x12\x15\n" +
+	"\x11CABLE_COLOR_WHITE\x10dBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
+var file_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
 var file_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_v1_common_proto_goTypes = []any{
 	(AssetCategory)(0),            // 0: dcim.v1.AssetCategory
@@ -772,17 +1003,20 @@ var file_v1_common_proto_goTypes = []any{
 	(PortDirection)(0),            // 5: dcim.v1.PortDirection
 	(NoteEntityType)(0),           // 6: dcim.v1.NoteEntityType
 	(SortDirection)(0),            // 7: dcim.v1.SortDirection
-	(*AssetEvent)(nil),            // 8: dcim.v1.AssetEvent
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(CableType)(0),                // 8: dcim.v1.CableType
+	(CableStatus)(0),              // 9: dcim.v1.CableStatus
+	(CableColor)(0),               // 10: dcim.v1.CableColor
+	(*AssetEvent)(nil),            // 11: dcim.v1.AssetEvent
+	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
 }
 var file_v1_common_proto_depIdxs = []int32{
-	2, // 0: dcim.v1.AssetEvent.event_type:type_name -> dcim.v1.AssetEventType
-	9, // 1: dcim.v1.AssetEvent.created:type_name -> google.protobuf.Timestamp
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2,  // 0: dcim.v1.AssetEvent.event_type:type_name -> dcim.v1.AssetEventType
+	12, // 1: dcim.v1.AssetEvent.created:type_name -> google.protobuf.Timestamp
+	2,  // [2:2] is the sub-list for method output_type
+	2,  // [2:2] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_v1_common_proto_init() }
@@ -795,7 +1029,7 @@ func file_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_common_proto_rawDesc), len(file_v1_common_proto_rawDesc)),
-			NumEnums:      8,
+			NumEnums:      11,
 			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,

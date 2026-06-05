@@ -37,6 +37,10 @@ type PhysicalConnection struct {
 	xxx_hidden_Notes                  string                 `protobuf:"bytes,80,opt,name=notes"`
 	xxx_hidden_Created                *timestamppb.Timestamp `protobuf:"bytes,90,opt,name=created"`
 	xxx_hidden_Deleted                *timestamppb.Timestamp `protobuf:"bytes,100,opt,name=deleted"`
+	xxx_hidden_CableType              CableType              `protobuf:"varint,110,opt,name=cable_type,json=cableType,enum=dcim.v1.CableType"`
+	xxx_hidden_Status                 CableStatus            `protobuf:"varint,120,opt,name=status,enum=dcim.v1.CableStatus"`
+	xxx_hidden_Color                  CableColor             `protobuf:"varint,130,opt,name=color,enum=dcim.v1.CableColor"`
+	xxx_hidden_Label                  string                 `protobuf:"bytes,140,opt,name=label"`
 	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
 	XXX_presence                      [1]uint32
 	unknownFields                     protoimpl.UnknownFields
@@ -144,6 +148,34 @@ func (x *PhysicalConnection) GetDeleted() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *PhysicalConnection) GetCableType() CableType {
+	if x != nil {
+		return x.xxx_hidden_CableType
+	}
+	return CableType_CABLE_TYPE_UNSPECIFIED
+}
+
+func (x *PhysicalConnection) GetStatus() CableStatus {
+	if x != nil {
+		return x.xxx_hidden_Status
+	}
+	return CableStatus_CABLE_STATUS_UNSPECIFIED
+}
+
+func (x *PhysicalConnection) GetColor() CableColor {
+	if x != nil {
+		return x.xxx_hidden_Color
+	}
+	return CableColor_CABLE_COLOR_UNSPECIFIED
+}
+
+func (x *PhysicalConnection) GetLabel() string {
+	if x != nil {
+		return x.xxx_hidden_Label
+	}
+	return ""
+}
+
 func (x *PhysicalConnection) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -166,12 +198,12 @@ func (x *PhysicalConnection) SetTargetPortDefinitionId(v string) {
 
 func (x *PhysicalConnection) SetCableAssetId(v string) {
 	x.xxx_hidden_CableAssetId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 14)
 }
 
 func (x *PhysicalConnection) SetLogicalConnectionId(v string) {
 	x.xxx_hidden_LogicalConnectionId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 14)
 }
 
 func (x *PhysicalConnection) SetNotes(v string) {
@@ -184,6 +216,22 @@ func (x *PhysicalConnection) SetCreated(v *timestamppb.Timestamp) {
 
 func (x *PhysicalConnection) SetDeleted(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Deleted = v
+}
+
+func (x *PhysicalConnection) SetCableType(v CableType) {
+	x.xxx_hidden_CableType = v
+}
+
+func (x *PhysicalConnection) SetStatus(v CableStatus) {
+	x.xxx_hidden_Status = v
+}
+
+func (x *PhysicalConnection) SetColor(v CableColor) {
+	x.xxx_hidden_Color = v
+}
+
+func (x *PhysicalConnection) SetLabel(v string) {
+	x.xxx_hidden_Label = v
 }
 
 func (x *PhysicalConnection) HasCableAssetId() bool {
@@ -247,6 +295,11 @@ type PhysicalConnection_builder struct {
 	Notes               string
 	Created             *timestamppb.Timestamp
 	Deleted             *timestamppb.Timestamp
+	// Cable presentation/metadata, mirrored from the core.physical_connections columns.
+	CableType CableType
+	Status    CableStatus
+	Color     CableColor
+	Label     string
 }
 
 func (b0 PhysicalConnection_builder) Build() *PhysicalConnection {
@@ -259,16 +312,20 @@ func (b0 PhysicalConnection_builder) Build() *PhysicalConnection {
 	x.xxx_hidden_TargetPlacementId = b.TargetPlacementId
 	x.xxx_hidden_TargetPortDefinitionId = b.TargetPortDefinitionId
 	if b.CableAssetId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 14)
 		x.xxx_hidden_CableAssetId = b.CableAssetId
 	}
 	if b.LogicalConnectionId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 14)
 		x.xxx_hidden_LogicalConnectionId = b.LogicalConnectionId
 	}
 	x.xxx_hidden_Notes = b.Notes
 	x.xxx_hidden_Created = b.Created
 	x.xxx_hidden_Deleted = b.Deleted
+	x.xxx_hidden_CableType = b.CableType
+	x.xxx_hidden_Status = b.Status
+	x.xxx_hidden_Color = b.Color
+	x.xxx_hidden_Label = b.Label
 	return m0
 }
 
@@ -281,6 +338,10 @@ type CreatePhysicalConnectionRequest struct {
 	xxx_hidden_CableAssetId           *string                `protobuf:"bytes,50,opt,name=cable_asset_id,json=cableAssetId"`
 	xxx_hidden_LogicalConnectionId    *string                `protobuf:"bytes,60,opt,name=logical_connection_id,json=logicalConnectionId"`
 	xxx_hidden_Notes                  string                 `protobuf:"bytes,70,opt,name=notes"`
+	xxx_hidden_CableType              CableType              `protobuf:"varint,80,opt,name=cable_type,json=cableType,enum=dcim.v1.CableType"`
+	xxx_hidden_Status                 CableStatus            `protobuf:"varint,90,opt,name=status,enum=dcim.v1.CableStatus"`
+	xxx_hidden_Color                  CableColor             `protobuf:"varint,100,opt,name=color,enum=dcim.v1.CableColor"`
+	xxx_hidden_Label                  string                 `protobuf:"bytes,110,opt,name=label"`
 	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
 	XXX_presence                      [1]uint32
 	unknownFields                     protoimpl.UnknownFields
@@ -367,6 +428,34 @@ func (x *CreatePhysicalConnectionRequest) GetNotes() string {
 	return ""
 }
 
+func (x *CreatePhysicalConnectionRequest) GetCableType() CableType {
+	if x != nil {
+		return x.xxx_hidden_CableType
+	}
+	return CableType_CABLE_TYPE_UNSPECIFIED
+}
+
+func (x *CreatePhysicalConnectionRequest) GetStatus() CableStatus {
+	if x != nil {
+		return x.xxx_hidden_Status
+	}
+	return CableStatus_CABLE_STATUS_UNSPECIFIED
+}
+
+func (x *CreatePhysicalConnectionRequest) GetColor() CableColor {
+	if x != nil {
+		return x.xxx_hidden_Color
+	}
+	return CableColor_CABLE_COLOR_UNSPECIFIED
+}
+
+func (x *CreatePhysicalConnectionRequest) GetLabel() string {
+	if x != nil {
+		return x.xxx_hidden_Label
+	}
+	return ""
+}
+
 func (x *CreatePhysicalConnectionRequest) SetSourcePlacementId(v string) {
 	x.xxx_hidden_SourcePlacementId = v
 }
@@ -385,16 +474,32 @@ func (x *CreatePhysicalConnectionRequest) SetTargetPortDefinitionId(v string) {
 
 func (x *CreatePhysicalConnectionRequest) SetCableAssetId(v string) {
 	x.xxx_hidden_CableAssetId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 7)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 11)
 }
 
 func (x *CreatePhysicalConnectionRequest) SetLogicalConnectionId(v string) {
 	x.xxx_hidden_LogicalConnectionId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 7)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 11)
 }
 
 func (x *CreatePhysicalConnectionRequest) SetNotes(v string) {
 	x.xxx_hidden_Notes = v
+}
+
+func (x *CreatePhysicalConnectionRequest) SetCableType(v CableType) {
+	x.xxx_hidden_CableType = v
+}
+
+func (x *CreatePhysicalConnectionRequest) SetStatus(v CableStatus) {
+	x.xxx_hidden_Status = v
+}
+
+func (x *CreatePhysicalConnectionRequest) SetColor(v CableColor) {
+	x.xxx_hidden_Color = v
+}
+
+func (x *CreatePhysicalConnectionRequest) SetLabel(v string) {
+	x.xxx_hidden_Label = v
 }
 
 func (x *CreatePhysicalConnectionRequest) HasCableAssetId() bool {
@@ -431,6 +536,10 @@ type CreatePhysicalConnectionRequest_builder struct {
 	CableAssetId           *string
 	LogicalConnectionId    *string
 	Notes                  string
+	CableType              CableType
+	Status                 CableStatus
+	Color                  CableColor
+	Label                  string
 }
 
 func (b0 CreatePhysicalConnectionRequest_builder) Build() *CreatePhysicalConnectionRequest {
@@ -442,14 +551,18 @@ func (b0 CreatePhysicalConnectionRequest_builder) Build() *CreatePhysicalConnect
 	x.xxx_hidden_TargetPlacementId = b.TargetPlacementId
 	x.xxx_hidden_TargetPortDefinitionId = b.TargetPortDefinitionId
 	if b.CableAssetId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 7)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 11)
 		x.xxx_hidden_CableAssetId = b.CableAssetId
 	}
 	if b.LogicalConnectionId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 7)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 11)
 		x.xxx_hidden_LogicalConnectionId = b.LogicalConnectionId
 	}
 	x.xxx_hidden_Notes = b.Notes
+	x.xxx_hidden_CableType = b.CableType
+	x.xxx_hidden_Status = b.Status
+	x.xxx_hidden_Color = b.Color
+	x.xxx_hidden_Label = b.Label
 	return m0
 }
 
@@ -641,6 +754,10 @@ type UpdatePhysicalConnectionRequest struct {
 	xxx_hidden_CableAssetId        *string                `protobuf:"bytes,20,opt,name=cable_asset_id,json=cableAssetId"`
 	xxx_hidden_LogicalConnectionId *string                `protobuf:"bytes,30,opt,name=logical_connection_id,json=logicalConnectionId"`
 	xxx_hidden_Notes               *string                `protobuf:"bytes,40,opt,name=notes"`
+	xxx_hidden_CableType           CableType              `protobuf:"varint,50,opt,name=cable_type,json=cableType,enum=dcim.v1.CableType"`
+	xxx_hidden_Status              CableStatus            `protobuf:"varint,60,opt,name=status,enum=dcim.v1.CableStatus"`
+	xxx_hidden_Color               CableColor             `protobuf:"varint,70,opt,name=color,enum=dcim.v1.CableColor"`
+	xxx_hidden_Label               *string                `protobuf:"bytes,80,opt,name=label"`
 	XXX_raceDetectHookData         protoimpl.RaceDetectHookData
 	XXX_presence                   [1]uint32
 	unknownFields                  protoimpl.UnknownFields
@@ -709,23 +826,80 @@ func (x *UpdatePhysicalConnectionRequest) GetNotes() string {
 	return ""
 }
 
+func (x *UpdatePhysicalConnectionRequest) GetCableType() CableType {
+	if x != nil {
+		if protoimpl.X.Present(&(x.XXX_presence[0]), 4) {
+			return x.xxx_hidden_CableType
+		}
+	}
+	return CableType_CABLE_TYPE_UNSPECIFIED
+}
+
+func (x *UpdatePhysicalConnectionRequest) GetStatus() CableStatus {
+	if x != nil {
+		if protoimpl.X.Present(&(x.XXX_presence[0]), 5) {
+			return x.xxx_hidden_Status
+		}
+	}
+	return CableStatus_CABLE_STATUS_UNSPECIFIED
+}
+
+func (x *UpdatePhysicalConnectionRequest) GetColor() CableColor {
+	if x != nil {
+		if protoimpl.X.Present(&(x.XXX_presence[0]), 6) {
+			return x.xxx_hidden_Color
+		}
+	}
+	return CableColor_CABLE_COLOR_UNSPECIFIED
+}
+
+func (x *UpdatePhysicalConnectionRequest) GetLabel() string {
+	if x != nil {
+		if x.xxx_hidden_Label != nil {
+			return *x.xxx_hidden_Label
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *UpdatePhysicalConnectionRequest) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
 
 func (x *UpdatePhysicalConnectionRequest) SetCableAssetId(v string) {
 	x.xxx_hidden_CableAssetId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 8)
 }
 
 func (x *UpdatePhysicalConnectionRequest) SetLogicalConnectionId(v string) {
 	x.xxx_hidden_LogicalConnectionId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 8)
 }
 
 func (x *UpdatePhysicalConnectionRequest) SetNotes(v string) {
 	x.xxx_hidden_Notes = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 4)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 8)
+}
+
+func (x *UpdatePhysicalConnectionRequest) SetCableType(v CableType) {
+	x.xxx_hidden_CableType = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 8)
+}
+
+func (x *UpdatePhysicalConnectionRequest) SetStatus(v CableStatus) {
+	x.xxx_hidden_Status = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 8)
+}
+
+func (x *UpdatePhysicalConnectionRequest) SetColor(v CableColor) {
+	x.xxx_hidden_Color = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 8)
+}
+
+func (x *UpdatePhysicalConnectionRequest) SetLabel(v string) {
+	x.xxx_hidden_Label = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 8)
 }
 
 func (x *UpdatePhysicalConnectionRequest) HasCableAssetId() bool {
@@ -749,6 +923,34 @@ func (x *UpdatePhysicalConnectionRequest) HasNotes() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
 }
 
+func (x *UpdatePhysicalConnectionRequest) HasCableType() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
+}
+
+func (x *UpdatePhysicalConnectionRequest) HasStatus() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
+}
+
+func (x *UpdatePhysicalConnectionRequest) HasColor() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
+}
+
+func (x *UpdatePhysicalConnectionRequest) HasLabel() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
 func (x *UpdatePhysicalConnectionRequest) ClearCableAssetId() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
 	x.xxx_hidden_CableAssetId = nil
@@ -764,6 +966,26 @@ func (x *UpdatePhysicalConnectionRequest) ClearNotes() {
 	x.xxx_hidden_Notes = nil
 }
 
+func (x *UpdatePhysicalConnectionRequest) ClearCableType() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
+	x.xxx_hidden_CableType = CableType_CABLE_TYPE_UNSPECIFIED
+}
+
+func (x *UpdatePhysicalConnectionRequest) ClearStatus() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
+	x.xxx_hidden_Status = CableStatus_CABLE_STATUS_UNSPECIFIED
+}
+
+func (x *UpdatePhysicalConnectionRequest) ClearColor() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
+	x.xxx_hidden_Color = CableColor_CABLE_COLOR_UNSPECIFIED
+}
+
+func (x *UpdatePhysicalConnectionRequest) ClearLabel() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_Label = nil
+}
+
 type UpdatePhysicalConnectionRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -771,6 +993,10 @@ type UpdatePhysicalConnectionRequest_builder struct {
 	CableAssetId        *string
 	LogicalConnectionId *string
 	Notes               *string
+	CableType           *CableType
+	Status              *CableStatus
+	Color               *CableColor
+	Label               *string
 }
 
 func (b0 UpdatePhysicalConnectionRequest_builder) Build() *UpdatePhysicalConnectionRequest {
@@ -779,16 +1005,32 @@ func (b0 UpdatePhysicalConnectionRequest_builder) Build() *UpdatePhysicalConnect
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	if b.CableAssetId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 8)
 		x.xxx_hidden_CableAssetId = b.CableAssetId
 	}
 	if b.LogicalConnectionId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 8)
 		x.xxx_hidden_LogicalConnectionId = b.LogicalConnectionId
 	}
 	if b.Notes != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 4)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 8)
 		x.xxx_hidden_Notes = b.Notes
+	}
+	if b.CableType != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 8)
+		x.xxx_hidden_CableType = *b.CableType
+	}
+	if b.Status != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 8)
+		x.xxx_hidden_Status = *b.Status
+	}
+	if b.Color != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 8)
+		x.xxx_hidden_Color = *b.Color
+	}
+	if b.Label != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 8)
+		x.xxx_hidden_Label = b.Label
 	}
 	return m0
 }
@@ -966,11 +1208,131 @@ func (b0 ListConnectionsByPlacementResponse_builder) Build() *ListConnectionsByP
 	return m0
 }
 
+// ListConnectionsBySite returns every physical connection that touches a
+// placement with a direct rack in the site, in one call (avoids fanning out per
+// placement). Connections to sub-component placements (which have no rack_id of
+// their own) are not included.
+type ListConnectionsBySiteRequest struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_SiteId string                 `protobuf:"bytes,10,opt,name=site_id,json=siteId"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ListConnectionsBySiteRequest) Reset() {
+	*x = ListConnectionsBySiteRequest{}
+	mi := &file_v1_connection_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConnectionsBySiteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConnectionsBySiteRequest) ProtoMessage() {}
+
+func (x *ListConnectionsBySiteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_connection_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListConnectionsBySiteRequest) GetSiteId() string {
+	if x != nil {
+		return x.xxx_hidden_SiteId
+	}
+	return ""
+}
+
+func (x *ListConnectionsBySiteRequest) SetSiteId(v string) {
+	x.xxx_hidden_SiteId = v
+}
+
+type ListConnectionsBySiteRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	SiteId string
+}
+
+func (b0 ListConnectionsBySiteRequest_builder) Build() *ListConnectionsBySiteRequest {
+	m0 := &ListConnectionsBySiteRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_SiteId = b.SiteId
+	return m0
+}
+
+type ListConnectionsBySiteResponse struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Connections *[]*PhysicalConnection `protobuf:"bytes,10,rep,name=connections"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ListConnectionsBySiteResponse) Reset() {
+	*x = ListConnectionsBySiteResponse{}
+	mi := &file_v1_connection_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConnectionsBySiteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConnectionsBySiteResponse) ProtoMessage() {}
+
+func (x *ListConnectionsBySiteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_connection_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListConnectionsBySiteResponse) GetConnections() []*PhysicalConnection {
+	if x != nil {
+		if x.xxx_hidden_Connections != nil {
+			return *x.xxx_hidden_Connections
+		}
+	}
+	return nil
+}
+
+func (x *ListConnectionsBySiteResponse) SetConnections(v []*PhysicalConnection) {
+	x.xxx_hidden_Connections = &v
+}
+
+type ListConnectionsBySiteResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Connections []*PhysicalConnection
+}
+
+func (b0 ListConnectionsBySiteResponse_builder) Build() *ListConnectionsBySiteResponse {
+	m0 := &ListConnectionsBySiteResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Connections = &b.Connections
+	return m0
+}
+
 var File_v1_connection_proto protoreflect.FileDescriptor
 
 const file_v1_connection_proto_rawDesc = "" +
 	"\n" +
-	"\x13v1/connection.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xeb\x03\n" +
+	"\x13v1/connection.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x8f\x05\n" +
 	"\x12PhysicalConnection\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12.\n" +
@@ -982,7 +1344,12 @@ const file_v1_connection_proto_rawDesc = "" +
 	"\x15logical_connection_id\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\x13logicalConnectionId\x12\x14\n" +
 	"\x05notes\x18P \x01(\tR\x05notes\x124\n" +
 	"\acreated\x18Z \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x18d \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\x9d\x03\n" +
+	"\adeleted\x18d \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\x121\n" +
+	"\n" +
+	"cable_type\x18n \x01(\x0e2\x12.dcim.v1.CableTypeR\tcableType\x12,\n" +
+	"\x06status\x18x \x01(\x0e2\x14.dcim.v1.CableStatusR\x06status\x12*\n" +
+	"\x05color\x18\x82\x01 \x01(\x0e2\x13.dcim.v1.CableColorR\x05color\x12\x15\n" +
+	"\x05label\x18\x8c\x01 \x01(\tR\x05label\"\xdd\x04\n" +
 	"\x1fCreatePhysicalConnectionRequest\x128\n" +
 	"\x13source_placement_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x11sourcePlacementId\x12C\n" +
@@ -991,7 +1358,12 @@ const file_v1_connection_proto_rawDesc = "" +
 	"\x19target_port_definition_id\x18( \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x16targetPortDefinitionId\x12+\n" +
 	"\x0ecable_asset_id\x182 \x01(\tB\x05\xaa\x01\x02\b\x01R\fcableAssetId\x129\n" +
 	"\x15logical_connection_id\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x13logicalConnectionId\x12\x14\n" +
-	"\x05notes\x18F \x01(\tR\x05notes\"G\n" +
+	"\x05notes\x18F \x01(\tR\x05notes\x12;\n" +
+	"\n" +
+	"cable_type\x18P \x01(\x0e2\x12.dcim.v1.CableTypeB\b\xbaH\x05\x82\x01\x02\x10\x01R\tcableType\x126\n" +
+	"\x06status\x18Z \x01(\x0e2\x14.dcim.v1.CableStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\x123\n" +
+	"\x05color\x18d \x01(\x0e2\x13.dcim.v1.CableColorB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05color\x12\x14\n" +
+	"\x05label\x18n \x01(\tR\x05label\"G\n" +
 	" CreatePhysicalConnectionResponse\x12#\n" +
 	"\rconnection_id\x18\n" +
 	" \x01(\tR\fconnectionId\"8\n" +
@@ -1002,13 +1374,18 @@ const file_v1_connection_proto_rawDesc = "" +
 	"\n" +
 	"connection\x18\n" +
 	" \x01(\v2\x1b.dcim.v1.PhysicalConnectionR\n" +
-	"connection\"\xc0\x01\n" +
+	"connection\"\x96\x03\n" +
 	"\x1fUpdatePhysicalConnectionRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12+\n" +
 	"\x0ecable_asset_id\x18\x14 \x01(\tB\x05\xaa\x01\x02\b\x01R\fcableAssetId\x129\n" +
 	"\x15logical_connection_id\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x13logicalConnectionId\x12\x1b\n" +
-	"\x05notes\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\";\n" +
+	"\x05notes\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\x12@\n" +
+	"\n" +
+	"cable_type\x182 \x01(\x0e2\x12.dcim.v1.CableTypeB\r\xbaH\x05\x82\x01\x02\x10\x01\xaa\x01\x02\b\x01R\tcableType\x12;\n" +
+	"\x06status\x18< \x01(\x0e2\x14.dcim.v1.CableStatusB\r\xbaH\x05\x82\x01\x02\x10\x01\xaa\x01\x02\b\x01R\x06status\x128\n" +
+	"\x05color\x18F \x01(\x0e2\x13.dcim.v1.CableColorB\r\xbaH\x05\x82\x01\x02\x10\x01\xaa\x01\x02\b\x01R\x05color\x12\x1b\n" +
+	"\x05label\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\x05label\";\n" +
 	"\x1fDeletePhysicalConnectionRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"P\n" +
@@ -1017,15 +1394,22 @@ const file_v1_connection_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vplacementId\"c\n" +
 	"\"ListConnectionsByPlacementResponse\x12=\n" +
 	"\vconnections\x18\n" +
-	" \x03(\v2\x1b.dcim.v1.PhysicalConnectionR\vconnections2\xa7\x04\n" +
+	" \x03(\v2\x1b.dcim.v1.PhysicalConnectionR\vconnections\"A\n" +
+	"\x1cListConnectionsBySiteRequest\x12!\n" +
+	"\asite_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06siteId\"^\n" +
+	"\x1dListConnectionsBySiteResponse\x12=\n" +
+	"\vconnections\x18\n" +
+	" \x03(\v2\x1b.dcim.v1.PhysicalConnectionR\vconnections2\x8f\x05\n" +
 	"\x19PhysicalConnectionService\x12o\n" +
 	"\x18CreatePhysicalConnection\x12(.dcim.v1.CreatePhysicalConnectionRequest\x1a).dcim.v1.CreatePhysicalConnectionResponse\x12f\n" +
 	"\x15GetPhysicalConnection\x12%.dcim.v1.GetPhysicalConnectionRequest\x1a&.dcim.v1.GetPhysicalConnectionResponse\x12\\\n" +
 	"\x18UpdatePhysicalConnection\x12(.dcim.v1.UpdatePhysicalConnectionRequest\x1a\x16.google.protobuf.Empty\x12\\\n" +
 	"\x18DeletePhysicalConnection\x12(.dcim.v1.DeletePhysicalConnectionRequest\x1a\x16.google.protobuf.Empty\x12u\n" +
-	"\x1aListConnectionsByPlacement\x12*.dcim.v1.ListConnectionsByPlacementRequest\x1a+.dcim.v1.ListConnectionsByPlacementResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\x1aListConnectionsByPlacement\x12*.dcim.v1.ListConnectionsByPlacementRequest\x1a+.dcim.v1.ListConnectionsByPlacementResponse\x12f\n" +
+	"\x15ListConnectionsBySite\x12%.dcim.v1.ListConnectionsBySiteRequest\x1a&.dcim.v1.ListConnectionsBySiteResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_connection_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_v1_connection_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_v1_connection_proto_goTypes = []any{
 	(*PhysicalConnection)(nil),                 // 0: dcim.v1.PhysicalConnection
 	(*CreatePhysicalConnectionRequest)(nil),    // 1: dcim.v1.CreatePhysicalConnectionRequest
@@ -1036,29 +1420,46 @@ var file_v1_connection_proto_goTypes = []any{
 	(*DeletePhysicalConnectionRequest)(nil),    // 6: dcim.v1.DeletePhysicalConnectionRequest
 	(*ListConnectionsByPlacementRequest)(nil),  // 7: dcim.v1.ListConnectionsByPlacementRequest
 	(*ListConnectionsByPlacementResponse)(nil), // 8: dcim.v1.ListConnectionsByPlacementResponse
-	(*timestamppb.Timestamp)(nil),              // 9: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                      // 10: google.protobuf.Empty
+	(*ListConnectionsBySiteRequest)(nil),       // 9: dcim.v1.ListConnectionsBySiteRequest
+	(*ListConnectionsBySiteResponse)(nil),      // 10: dcim.v1.ListConnectionsBySiteResponse
+	(*timestamppb.Timestamp)(nil),              // 11: google.protobuf.Timestamp
+	(CableType)(0),                             // 12: dcim.v1.CableType
+	(CableStatus)(0),                           // 13: dcim.v1.CableStatus
+	(CableColor)(0),                            // 14: dcim.v1.CableColor
+	(*emptypb.Empty)(nil),                      // 15: google.protobuf.Empty
 }
 var file_v1_connection_proto_depIdxs = []int32{
-	9,  // 0: dcim.v1.PhysicalConnection.created:type_name -> google.protobuf.Timestamp
-	9,  // 1: dcim.v1.PhysicalConnection.deleted:type_name -> google.protobuf.Timestamp
-	0,  // 2: dcim.v1.GetPhysicalConnectionResponse.connection:type_name -> dcim.v1.PhysicalConnection
-	0,  // 3: dcim.v1.ListConnectionsByPlacementResponse.connections:type_name -> dcim.v1.PhysicalConnection
-	1,  // 4: dcim.v1.PhysicalConnectionService.CreatePhysicalConnection:input_type -> dcim.v1.CreatePhysicalConnectionRequest
-	3,  // 5: dcim.v1.PhysicalConnectionService.GetPhysicalConnection:input_type -> dcim.v1.GetPhysicalConnectionRequest
-	5,  // 6: dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection:input_type -> dcim.v1.UpdatePhysicalConnectionRequest
-	6,  // 7: dcim.v1.PhysicalConnectionService.DeletePhysicalConnection:input_type -> dcim.v1.DeletePhysicalConnectionRequest
-	7,  // 8: dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement:input_type -> dcim.v1.ListConnectionsByPlacementRequest
-	2,  // 9: dcim.v1.PhysicalConnectionService.CreatePhysicalConnection:output_type -> dcim.v1.CreatePhysicalConnectionResponse
-	4,  // 10: dcim.v1.PhysicalConnectionService.GetPhysicalConnection:output_type -> dcim.v1.GetPhysicalConnectionResponse
-	10, // 11: dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection:output_type -> google.protobuf.Empty
-	10, // 12: dcim.v1.PhysicalConnectionService.DeletePhysicalConnection:output_type -> google.protobuf.Empty
-	8,  // 13: dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement:output_type -> dcim.v1.ListConnectionsByPlacementResponse
-	9,  // [9:14] is the sub-list for method output_type
-	4,  // [4:9] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	11, // 0: dcim.v1.PhysicalConnection.created:type_name -> google.protobuf.Timestamp
+	11, // 1: dcim.v1.PhysicalConnection.deleted:type_name -> google.protobuf.Timestamp
+	12, // 2: dcim.v1.PhysicalConnection.cable_type:type_name -> dcim.v1.CableType
+	13, // 3: dcim.v1.PhysicalConnection.status:type_name -> dcim.v1.CableStatus
+	14, // 4: dcim.v1.PhysicalConnection.color:type_name -> dcim.v1.CableColor
+	12, // 5: dcim.v1.CreatePhysicalConnectionRequest.cable_type:type_name -> dcim.v1.CableType
+	13, // 6: dcim.v1.CreatePhysicalConnectionRequest.status:type_name -> dcim.v1.CableStatus
+	14, // 7: dcim.v1.CreatePhysicalConnectionRequest.color:type_name -> dcim.v1.CableColor
+	0,  // 8: dcim.v1.GetPhysicalConnectionResponse.connection:type_name -> dcim.v1.PhysicalConnection
+	12, // 9: dcim.v1.UpdatePhysicalConnectionRequest.cable_type:type_name -> dcim.v1.CableType
+	13, // 10: dcim.v1.UpdatePhysicalConnectionRequest.status:type_name -> dcim.v1.CableStatus
+	14, // 11: dcim.v1.UpdatePhysicalConnectionRequest.color:type_name -> dcim.v1.CableColor
+	0,  // 12: dcim.v1.ListConnectionsByPlacementResponse.connections:type_name -> dcim.v1.PhysicalConnection
+	0,  // 13: dcim.v1.ListConnectionsBySiteResponse.connections:type_name -> dcim.v1.PhysicalConnection
+	1,  // 14: dcim.v1.PhysicalConnectionService.CreatePhysicalConnection:input_type -> dcim.v1.CreatePhysicalConnectionRequest
+	3,  // 15: dcim.v1.PhysicalConnectionService.GetPhysicalConnection:input_type -> dcim.v1.GetPhysicalConnectionRequest
+	5,  // 16: dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection:input_type -> dcim.v1.UpdatePhysicalConnectionRequest
+	6,  // 17: dcim.v1.PhysicalConnectionService.DeletePhysicalConnection:input_type -> dcim.v1.DeletePhysicalConnectionRequest
+	7,  // 18: dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement:input_type -> dcim.v1.ListConnectionsByPlacementRequest
+	9,  // 19: dcim.v1.PhysicalConnectionService.ListConnectionsBySite:input_type -> dcim.v1.ListConnectionsBySiteRequest
+	2,  // 20: dcim.v1.PhysicalConnectionService.CreatePhysicalConnection:output_type -> dcim.v1.CreatePhysicalConnectionResponse
+	4,  // 21: dcim.v1.PhysicalConnectionService.GetPhysicalConnection:output_type -> dcim.v1.GetPhysicalConnectionResponse
+	15, // 22: dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection:output_type -> google.protobuf.Empty
+	15, // 23: dcim.v1.PhysicalConnectionService.DeletePhysicalConnection:output_type -> google.protobuf.Empty
+	8,  // 24: dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement:output_type -> dcim.v1.ListConnectionsByPlacementResponse
+	10, // 25: dcim.v1.PhysicalConnectionService.ListConnectionsBySite:output_type -> dcim.v1.ListConnectionsBySiteResponse
+	20, // [20:26] is the sub-list for method output_type
+	14, // [14:20] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_v1_connection_proto_init() }
@@ -1066,13 +1467,14 @@ func file_v1_connection_proto_init() {
 	if File_v1_connection_proto != nil {
 		return
 	}
+	file_v1_common_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_connection_proto_rawDesc), len(file_v1_connection_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

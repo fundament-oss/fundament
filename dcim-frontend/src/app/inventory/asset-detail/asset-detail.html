@@ -181,8 +181,8 @@
                   Manufacturer
                 </dt>
                 <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.manufacturer) {
-                    {{ extraDetail()!.manufacturer }}
+                  @if (catalogEntry()?.manufacturer) {
+                    {{ catalogEntry()!.manufacturer }}
                   } @else {
                     <span class="text-slate-300">—</span>
                   }
@@ -229,64 +229,6 @@
                 </dd>
               </div>
 
-              @if (parentAsset(); as parent) {
-                <div class="flex items-center justify-between px-5 py-3">
-                  <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                    <nldd-icon
-                      name="puzzle-piece"
-                      class="w-4 h-4 text-slate-400"
-                      aria-hidden="true"
-                    ></nldd-icon>
-                    Part of
-                  </dt>
-                  <dd class="text-sm font-mono">
-                    <a
-                      [routerLink]="['/inventory', parent.id]"
-                      class="text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-                    >
-                      {{ parent.model }}
-                    </a>
-                    <span class="ml-1 text-slate-400 text-xs">({{ parent.assetTag }})</span>
-                  </dd>
-                </div>
-              }
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                  <nldd-icon
-                    name="calendar-event"
-                    class="w-4 h-4 text-slate-400"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Purchase Date
-                </dt>
-                <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.purchaseDate) {
-                    {{ extraDetail()!.purchaseDate }}
-                  } @else {
-                    <span class="text-slate-300">—</span>
-                  }
-                </dd>
-              </div>
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                  <nldd-icon
-                    name="info-circle"
-                    class="w-4 h-4 text-slate-400"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Purchase Cost
-                </dt>
-                <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.purchaseCost) {
-                    {{ extraDetail()!.purchaseCost }}
-                  } @else {
-                    <span class="text-slate-300">—</span>
-                  }
-                </dd>
-              </div>
-
               <div class="flex items-center justify-between px-5 py-3">
                 <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
                   <nldd-icon
@@ -304,80 +246,8 @@
                   }
                 </dd>
               </div>
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                  <nldd-icon
-                    name="envelope"
-                    class="w-4 h-4 text-slate-400"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Support Contract
-                </dt>
-                <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.supportContract) {
-                    {{ extraDetail()!.supportContract }}
-                  } @else {
-                    <span class="text-slate-300">—</span>
-                  }
-                </dd>
-              </div>
             </dl>
           </section>
-
-          <!-- Components card -->
-          @if (childAssets().length > 0) {
-            <section
-              aria-labelledby="components-heading"
-              class="rounded-xl border border-slate-200 bg-white"
-            >
-              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h2 id="components-heading" class="text-sm font-semibold text-slate-900">
-                  Components
-                </h2>
-                <span
-                  class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
-                >
-                  {{ childAssets().length }}
-                </span>
-              </div>
-              <ul class="divide-y divide-slate-100" aria-label="Sub-assets and components">
-                @for (child of childAssets(); track child.id) {
-                  <li>
-                    <a
-                      [routerLink]="['/inventory', child.id]"
-                      class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors group"
-                    >
-                      <div
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors"
-                      >
-                        <nldd-icon
-                          [name]="categoryIcon(child.category)"
-                          class="w-4 h-4"
-                          aria-hidden="true"
-                        ></nldd-icon>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-slate-800 truncate">{{ child.model }}</p>
-                        <p class="text-xs text-slate-400 font-mono">{{ child.assetTag }}</p>
-                      </div>
-                      <span
-                        class="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                        [class]="statusBadgeClass(child.status)"
-                      >
-                        <span
-                          class="h-1.5 w-1.5 rounded-full"
-                          [class]="statusDotClass(child.status)"
-                          aria-hidden="true"
-                        ></span>
-                        {{ statusLabel(child.status) }}
-                      </span>
-                    </a>
-                  </li>
-                }
-              </ul>
-            </section>
-          }
 
           <!-- Notes card -->
           @if (a.notes || notes().length > 0) {
@@ -677,6 +547,13 @@
       (dismiss)="closeAssetForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
+      @if (formErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ formErrorMessage() }}
+          </p>
+        </div>
+      }
       <nldd-form-field label="Device">
         <select disabled>
           <option selected>{{ editAsset()?.model }}</option>
@@ -688,7 +565,13 @@
             #fAssetTag
             [attr.value]="editAsset()?.assetTag ?? ''"
             placeholder="AST-001"
+            (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('asset_tag') ? '' : null"
+            error-message="error-ad-asset-tag"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-ad-asset-tag">{{
+            fieldError('asset_tag')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Status">
           <select #fAssetStatus>
@@ -709,13 +592,20 @@
             #fAssetSerial
             [attr.value]="editAsset()?.serialNumber ?? ''"
             placeholder="SN-…"
+            (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('serial_number') ? '' : null"
+            error-message="error-ad-asset-serial"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-ad-asset-serial">{{
+            fieldError('serial_number')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Warranty expiry" [optional]="true">
           <nldd-text-field
             #fAssetWarranty
             type="date"
             [attr.value]="editAsset()?.warrantyExpiry ?? ''"
+            (keydown.enter)="saveAsset()"
           ></nldd-text-field>
         </nldd-form-field>
       </div>
@@ -748,7 +638,13 @@
             type="number"
             [attr.value]="editPlacement()?.unit ?? ''"
             placeholder="1"
+            (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('rack_unit_start') ? '' : null"
+            error-message="error-ad-rack-unit"
           ></nldd-text-field>
+          <nldd-form-field-error-text id="error-ad-rack-unit">{{
+            fieldError('rack_unit_start')
+          }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Slot type" [optional]="true">
           <select #fAssetSlotType>

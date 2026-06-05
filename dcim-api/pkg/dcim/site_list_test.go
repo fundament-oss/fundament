@@ -29,5 +29,8 @@ func TestSiteService_ListSites_Populated(t *testing.T) {
 	for _, s := range resp.Msg.GetSites() {
 		got = append(got, s.GetName())
 	}
-	assert.ElementsMatch(t, want, got)
+	// ListSites is unfiltered, so the response also includes seeded sites
+	// (the template DB is created with --insert-test-data). Assert the sites
+	// we created are present rather than expecting an exact match.
+	assert.Subset(t, got, want)
 }

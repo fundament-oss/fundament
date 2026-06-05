@@ -127,7 +127,12 @@
                       <td class="px-5 py-2.5 font-medium text-slate-800 font-mono text-xs">
                         {{ pd.name }}
                       </td>
-                      <td class="px-3 py-2.5 text-slate-600">{{ pd.portType }}</td>
+                      <td class="px-3 py-2.5 text-slate-600">
+                        {{ portTypeLabel(pd.portType) }}
+                        @if (pd.mediaType) {
+                          <span class="text-slate-400">· {{ pd.mediaType }}</span>
+                        }
+                      </td>
                       <td class="px-3 py-2.5 text-slate-600 tabular-nums">
                         @if (pd.speedGbps !== null && pd.speedGbps !== undefined) {
                           {{ pd.speedGbps }} Gbps
@@ -144,17 +149,16 @@
                             <span
                               class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 text-xs rounded-full px-2 py-0.5"
                             >
-                              {{ compatibleEntryName(compat.compatibleCatalogEntryId) }}
-                              <button
-                                (click)="openDeleteCompat(compat)"
-                                class="text-slate-400 hover:text-red-500 transition-colors"
-                                [attr.aria-label]="
-                                  'Remove compatibility with ' +
-                                  compatibleEntryName(compat.compatibleCatalogEntryId)
-                                "
-                              >
-                                ×
-                              </button>
+                              {{ compatLabel(compat) }}
+                              @if (compat.compatibleCatalogEntryId) {
+                                <button
+                                  (click)="openDeleteCompat(compat)"
+                                  class="text-slate-400 hover:text-red-500 transition-colors"
+                                  [attr.aria-label]="'Remove compatibility with ' + compatLabel(compat)"
+                                >
+                                  ×
+                                </button>
+                              }
                             </span>
                           }
                           <nldd-icon-button
@@ -216,9 +220,11 @@
                         <p class="text-sm font-medium text-indigo-600 font-mono">
                           {{ asset.assetTag }}
                         </p>
-                        <p class="text-xs text-slate-400 mt-0.5">
-                          {{ asset.datacenter }} · {{ asset.rack }}
-                        </p>
+                        @if (asset.datacenter || asset.rack) {
+                          <p class="text-xs text-slate-400 mt-0.5">
+                            {{ asset.datacenter }} · {{ asset.rack }}
+                          </p>
+                        }
                       </div>
                       <span
                         class="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -351,18 +357,60 @@
       (dismiss)="closePortDefForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section>
+      @if (formErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ formErrorMessage() }}
+          </p>
+        </div>
+      }
       <nldd-form-field label="Port name">
         <nldd-text-field
           #fPortName
           [attr.value]="editPortDef()?.name ?? ''"
           placeholder="E.g. nic0"
+          (keydown.enter)="savePortDef()"
+          [attr.invalid]="isFieldInvalid('name') ? '' : null"
+          error-message="error-port-name"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-port-name">{{
+          fieldError('name')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
       <nldd-form-field label="Port type">
+        <select #fPortType [attr.invalid]="isFieldInvalid('port_type') ? '' : null">
+          <option value="">— Select a port type —</option>
+          @for (t of PORT_TYPES; track t.value) {
+            <option [value]="t.value" [attr.selected]="editPortDef()?.portType === t.value ? true : null">
+              {{ t.label }}
+            </option>
+          }
+        </select>
+        <nldd-form-field-error-text id="error-port-type">{{
+          fieldError('port_type')
+        }}</nldd-form-field-error-text>
+      </nldd-form-field>
+      <nldd-form-field label="Direction">
+        <select #fPortDirection [attr.invalid]="isFieldInvalid('direction') ? '' : null">
+          @for (d of PORT_DIRECTIONS; track d.value) {
+            <option
+              [value]="d.value"
+              [attr.selected]="(editPortDef()?.direction ?? 'bidir') === d.value ? true : null"
+            >
+              {{ d.label }}
+            </option>
+          }
+        </select>
+        <nldd-form-field-error-text id="error-port-direction">{{
+          fieldError('direction')
+        }}</nldd-form-field-error-text>
+      </nldd-form-field>
+      <nldd-form-field label="Media type" [optional]="true">
         <nldd-text-field
-          #fPortType
-          [attr.value]="editPortDef()?.portType ?? ''"
+          #fPortMedia
+          [attr.value]="editPortDef()?.mediaType ?? ''"
           placeholder="E.g. SFP+, QSFP28, IEC C13"
+          (keydown.enter)="savePortDef()"
         ></nldd-text-field>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
@@ -373,6 +421,7 @@
             min="0"
             placeholder="optional"
             full-width
+            (keydown.enter)="savePortDef()"
           ></nldd-number-field>
         </nldd-form-field>
         <nldd-form-field label="Power (W)">
@@ -382,6 +431,7 @@
             min="0"
             placeholder="optional"
             full-width
+            (keydown.enter)="savePortDef()"
           ></nldd-number-field>
         </nldd-form-field>
       </div>
@@ -418,39 +468,56 @@
 </nldd-modal-dialog>
 
 <!-- ══════════════════════════════════════════════════════════════
-     ADD COMPATIBILITY MODAL
+     ADD COMPATIBILITY SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-modal-dialog
-  #compatModal
-  (close)="cancelAddCompatibility()"
-  text="Add port compatibility"
-  [attr.supporting-text]="
-    'Select a catalog entry compatible with port ' + portDefName(addCompatPortDefId() ?? '')
-  "
-  accessible-label="Add port compatibility"
->
-  <div slot="content" class="px-1 pt-2 pb-1">
-    <nldd-form-field label="Compatible product">
-      <select #fCompatEntry>
-        @for (entry of allCatalogEntries; track entry.id) {
-          <option [value]="entry.id">{{ entry.model }}</option>
-        }
-      </select>
-    </nldd-form-field>
-  </div>
-  <nldd-button
-    slot="actions"
-    variant="primary"
-    text="Add"
-    (click)="confirmAddCompatibility()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelAddCompatibility()"
-  ></nldd-button>
-</nldd-modal-dialog>
+<nldd-sheet #compatSheet accessible-label="Add port compatibility" placement="right" width="400px">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      text="Add port compatibility"
+      dismiss-text="Close"
+      (dismiss)="cancelAddCompatibility()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      @if (formErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ formErrorMessage() }}
+          </p>
+        </div>
+      }
+      <p class="text-sm text-slate-500 mb-3">
+        Select a catalog entry compatible with port
+        <span class="font-medium text-slate-700">{{ portDefName(addCompatPortDefId() ?? '') }}</span
+        >.
+      </p>
+      <nldd-form-field label="Compatible product">
+        <select
+          [value]="compatEntryId()"
+          (change)="compatEntryId.set($any($event.target).value)"
+        >
+          <option value="">— Select a product —</option>
+          @for (entry of availableCompatEntries(); track entry.id) {
+            <option [value]="entry.id">{{ entry.model }}</option>
+          }
+        </select>
+      </nldd-form-field>
+    </nldd-simple-section>
+    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+      <nldd-button
+        variant="secondary"
+        text="Cancel"
+        (click)="cancelAddCompatibility()"
+      ></nldd-button>
+      <nldd-button
+        variant="primary"
+        text="Add"
+        [attr.disabled]="compatEntryId() ? null : ''"
+        (click)="confirmAddCompatibility()"
+      ></nldd-button>
+    </div>
+  </nldd-page>
+</nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
      DELETE COMPATIBILITY MODAL

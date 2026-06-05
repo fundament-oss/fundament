@@ -80,7 +80,7 @@ export default class ClusterPluginsComponent implements OnInit {
     this.allPlugins = pluginsResponse.plugins;
     this.currentInstallations = installations;
 
-    const installedNames = new Set(installations.map((i) => i.spec.pluginName));
+    const installedNames = new Set(installations.map((i) => i.spec.definitionRef.pluginName));
     this.currentPluginIds.set(
       this.allPlugins.filter((p) => installedNames.has(p.name)).map((p) => p.id),
     );
@@ -96,11 +96,15 @@ export default class ClusterPluginsComponent implements OnInit {
         .map((id) => this.allPlugins.find((p) => p.id === id))
         .filter((p): p is PluginSummary => !!p);
 
-      const currentNames = new Set(this.currentInstallations.map((i) => i.spec.pluginName));
+      const currentNames = new Set(
+        this.currentInstallations.map((i) => i.spec.definitionRef.pluginName),
+      );
       const newNames = new Set(newPlugins.map((p) => p.name));
 
       const toInstall = newPlugins.filter((p) => !currentNames.has(p.name));
-      const toUninstall = this.currentInstallations.filter((i) => !newNames.has(i.spec.pluginName));
+      const toUninstall = this.currentInstallations.filter(
+        (i) => !newNames.has(i.spec.definitionRef.pluginName),
+      );
 
       await Promise.all([
         ...toInstall.map((p) =>
