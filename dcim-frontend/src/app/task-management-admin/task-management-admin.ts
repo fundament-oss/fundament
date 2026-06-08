@@ -353,6 +353,10 @@ export default class TaskManagementAdminComponent {
 
   editFormAssignee = signal<number | null>(null);
 
+  editTitleTouched = signal(false);
+
+  editTitleInvalid = computed(() => this.editTitleTouched() && !this.editFormTitle().trim());
+
   newNoteText = signal('');
 
   toastMessage = signal<string | null>(null);
@@ -493,6 +497,7 @@ export default class TaskManagementAdminComponent {
     this.editFormDue.set(task?.due ?? '');
     this.editFormLocation.set(task?.location ?? '');
     this.editFormAssignee.set(task?.assignee ?? null);
+    this.editTitleTouched.set(false);
     this.editModalEl()?.nativeElement.show();
   }
 
@@ -502,6 +507,7 @@ export default class TaskManagementAdminComponent {
   }
 
   saveTask(): void {
+    this.editTitleTouched.set(true);
     const title = this.editFormTitle().trim();
     if (!title) return;
 

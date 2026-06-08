@@ -48,6 +48,15 @@ message ComponentMapping {
   string detail = 2;
 }
 
+// AllowedResource declares a Kubernetes resource the plugin's UI iframe
+// is permitted to read via the host-mediated SDK broker.
+message AllowedResource {
+  string group = 1;        // "" for the core API group
+  string version = 2;      // e.g. "v1"
+  string resource = 3;     // plural, e.g. "certificates"
+  repeated string verbs = 4; // e.g. ["list", "get"]
+}
+
 message FormGroup {
   string name = 1;
   repeated string fields = 2;
@@ -84,6 +93,7 @@ message GetDefinitionResponse {
   map<string, UIHint> ui_hints = 13;
   repeated string crds = 14;
   string api_version = 15;
+  repeated AllowedResource allowed_resources = 16;
 }
 
 message RequestUninstallRequest {}

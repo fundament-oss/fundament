@@ -23,7 +23,7 @@ func (s *Server) CreateSite(
 		Name: req.Msg.GetName(),
 	}
 
-	if req.Msg.GetAddress() != "" {
+	if req.Msg.HasAddress() {
 		params.Address = pgtype.Text{String: req.Msg.GetAddress(), Valid: true}
 	}
 

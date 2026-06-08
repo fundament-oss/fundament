@@ -21,6 +21,8 @@ import {
   ListNodePoolsRequestSchema,
   DeleteClusterRequestSchema,
   GetClusterActivityRequestSchema,
+  GetKubeconfigRequestSchema,
+  GetClusterMetricsCredentialsRequestSchema,
   NodePool,
   type ClusterEvent,
   type SyncState,
@@ -147,8 +149,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
-  // Expose enum for use in template
+  // Expose enums for use in template
   NodePoolStatus = NodePoolStatus;
+
+  ClusterStatus = ClusterStatus;
 
   // Expose utility functions for template
   getStatusColor = getStatusColor;
@@ -160,6 +164,17 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   isLoading = signal<boolean>(true);
 
   showDeleteModal = signal<boolean>(false);
+
+  showCredentialsModal = signal<boolean>(false);
+
+  credentialsLoading = signal<boolean>(false);
+
+  credentialsError = signal<string | null>(null);
+
+  credentials = signal<{ username: string; password: string } | null>(null);
+
+  // Tracks which field was just copied so we can flip the icon to a checkmark.
+  copiedField = signal<'username' | 'password' | null>(null);
 
   // Namespace management
   namespaces = signal<Namespace[]>([]);
@@ -184,6 +199,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     },
     status: ClusterStatus.UNSPECIFIED,
     syncState: null as SyncState | null,
+    observabilityUrl: '',
     creationDate: '2024-11-15T10:30:00Z', // Mock data - not available from API
     activity: [
       {
@@ -268,6 +284,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       };
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
+      this.clusterData.observabilityUrl = response.cluster.observabilityUrl;
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
       this.titleService.setTitle(response.cluster.name);
@@ -300,19 +317,20 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       if (!response.cluster) {
         // Cluster has been deleted
         this.stopPolling();
-        this.toastService.info(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+        this.toastService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
         this.router.navigate(['/']);
         return;
       }
 
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
+      this.clusterData.observabilityUrl = response.cluster.observabilityUrl;
       this.cdr.markForCheck();
       this.updatePolling();
     } catch {
       // If the request fails with a not-found-like error, the cluster was deleted
       this.stopPolling();
-      this.toastService.info(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+      this.toastService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
       this.router.navigate(['/']);
     }
   }
@@ -345,10 +363,37 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     console.log('Opening terminal for cluster:', this.clusterData.basics.name);
   }
 
-  downloadKubeconfig(): void {
-    // Mock implementation - would download kubeconfig in real app
-    // eslint-disable-next-line no-console
-    console.log('Downloading kubeconfig for cluster:', this.clusterData.basics.name);
+  isDownloadingKubeconfig = signal<boolean>(false);
+
+  async downloadKubeconfig(): Promise<void> {
+    if (this.isDownloadingKubeconfig()) {
+      return;
+    }
+    this.isDownloadingKubeconfig.set(true);
+    try {
+      const request = create(GetKubeconfigRequestSchema, {
+        clusterId: this.clusterData.basics.id,
+      });
+      const response = await firstValueFrom(this.client.getKubeconfig(request));
+
+      const blob = new Blob([response.kubeconfigContent], { type: 'application/yaml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `kubeconfig-${this.clusterData.basics.name}.yaml`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      this.toastService.error(
+        error instanceof Error
+          ? `Failed to download kubeconfig: ${error.message}`
+          : 'Failed to download kubeconfig',
+      );
+    } finally {
+      this.isDownloadingKubeconfig.set(false);
+    }
   }
 
   getNodePoolStatusLabel = getNodePoolStatusLabel;
@@ -391,7 +436,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   getProjectName(projectId: string): string {
-    return this.organizationDataService.getProjectById(projectId)?.project.name ?? projectId;
+    return this.organizationDataService.getProjectById(projectId)?.project.alias ?? projectId;
   }
 
   // Load installed plugins for the cluster
@@ -404,7 +449,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         this.pluginInstallationService.listInstallations(clusterId).catch(() => []),
       ]);
 
-      const installedNames = new Set(installations.map((item) => item.spec.pluginName));
+      const installedNames = new Set(installations.map((item) => item.spec.definitionRef.pluginName));
       this.installedPlugins.set(pluginsResponse.plugins.filter((p) => installedNames.has(p.name)));
     } catch (error) {
       this.toastService.error(
@@ -449,5 +494,59 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   onDeleteModalOpen(): void {
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
+  }
+
+  openObservabilityDashboard(): void {
+    const url = this.clusterData.observabilityUrl;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  async openCredentialsModal(): Promise<void> {
+    this.showCredentialsModal.set(true);
+    this.credentialsError.set(null);
+    this.copiedField.set(null);
+
+    // Credentials are cached for the component lifetime; if Gardener rotates
+    // them between reconciles, the user must refresh the page to see the new ones.
+    if (this.credentials()) {
+      return;
+    }
+
+    this.credentialsLoading.set(true);
+    try {
+      const request = create(GetClusterMetricsCredentialsRequestSchema, {
+        clusterId: this.clusterData.basics.id,
+      });
+      const response = await firstValueFrom(this.client.getClusterMetricsCredentials(request));
+      this.credentials.set({ username: response.username, password: response.password });
+    } catch (error) {
+      this.credentialsError.set(
+        error instanceof Error
+          ? `Failed to load credentials: ${error.message}`
+          : 'Failed to load credentials',
+      );
+    } finally {
+      this.credentialsLoading.set(false);
+    }
+  }
+
+  closeCredentialsModal(): void {
+    this.showCredentialsModal.set(false);
+  }
+
+  async copyCredential(field: 'username' | 'password'): Promise<void> {
+    const creds = this.credentials();
+    if (!creds) return;
+    try {
+      await navigator.clipboard.writeText(creds[field]);
+      this.copiedField.set(field);
+      setTimeout(() => {
+        if (this.copiedField() === field) {
+          this.copiedField.set(null);
+        }
+      }, 1500);
+    } catch {
+      this.toastService.error('Failed to copy to clipboard');
+    }
   }
 }

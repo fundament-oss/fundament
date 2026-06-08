@@ -17,6 +17,8 @@ import (
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/fundament-oss/fundament/common/testdb"
 )
 
 const testDBPort = 45327
@@ -80,7 +82,7 @@ func TestMain(m *testing.M) {
 	adminPool := newAdminPool()
 
 	useGlobalTrustAuth(dataDir, adminPool)
-	createRoles(adminPool)
+	testdb.CreateRoles(context.Background(), adminPool)
 
 	if err = setupTemplateDatabaseWithMigrations(adminPool); err != nil {
 		adminPool.Close()
@@ -227,41 +229,6 @@ func newAdminPool() *pgxpool.Pool {
 		log.Fatalf("failed to connect to postgres: %v", err)
 	}
 	return pool
-}
-
-func createRoles(pool *pgxpool.Pool) {
-	ctx := context.Background()
-	type dbRole struct {
-		name      string
-		bypassrls bool
-	}
-
-	roles := []dbRole{
-		{name: "fun_authn_api"},
-		{name: "fun_fundament_api"},
-		{name: "fun_operator", bypassrls: true},
-		{name: "fun_owner"},
-		{name: "fun_authz", bypassrls: true},
-		{name: "fun_cluster_worker"},
-		{name: "fun_authz_worker", bypassrls: true},
-		{name: "fun_dcim_api"},
-	}
-	for _, role := range roles {
-		_, err := pool.Exec(ctx, fmt.Sprintf(`DO $$ BEGIN CREATE ROLE %s WITH LOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$`, role.name))
-		if err != nil {
-			log.Fatalf("failed to create role %s: %v", role.name, err)
-		}
-
-		bypassrls := "NOBYPASSRLS"
-		if role.bypassrls {
-			bypassrls = "BYPASSRLS"
-		}
-
-		_, err = pool.Exec(ctx, fmt.Sprintf(`ALTER ROLE %s %s`, role.name, bypassrls))
-		if err != nil {
-			log.Fatalf("failed to alter role %s: %v", role.name, err)
-		}
-	}
 }
 
 func useGlobalTrustAuth(dataDir string, pool *pgxpool.Pool) {

@@ -13,7 +13,7 @@ option features.(pb.go).api_level = API_OPAQUE;
 option features.field_presence = IMPLICIT;
 option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
 
-// DeviceCatalog is a device type definition (core.device_catalogs).
+// DeviceCatalog is a device type definition (dcim.device_catalogs).
 message DeviceCatalog {
   string              id           = 10;
   string              manufacturer = 20;
@@ -30,7 +30,7 @@ message DeviceCatalog {
   google.protobuf.Timestamp deleted = 120 [features.field_presence = EXPLICIT];
 }
 
-// PortDefinition describes a port or slot on a device catalog entry (core.port_definitions).
+// PortDefinition describes a port or slot on a device catalog entry (dcim.port_definitions).
 message PortDefinition {
   string        id                = 10;
   string        device_catalog_id = 20;
@@ -45,11 +45,14 @@ message PortDefinition {
   int32         ordinal           = 90;
 }
 
-// PortCompatibility records that a sub-component catalog entry fits a port (core.port_compatibilities).
+// PortCompatibility records that a sub-component catalog entry fits a port (dcim.port_compatibilities).
+// compatible_category is always set; compatible_catalog_id is only set when the
+// compatibility is narrowed to one specific catalog entry within that category.
 message PortCompatibility {
-  string port_definition_id    = 10;
-  string compatible_catalog_id = 20;
-  string notes                 = 30;
+  string        port_definition_id    = 10;
+  string        compatible_catalog_id = 20;
+  string        notes                 = 30;
+  AssetCategory compatible_category   = 40;
 }
 
 // ── CatalogService ────────────────────────────────────────────────────────────
@@ -77,8 +80,8 @@ service CatalogService {
 // ── Device catalog requests/responses ─────────────────────────────────────────
 
 message ListCatalogRequest {
-  AssetCategory category_filter = 10 [features.field_presence = EXPLICIT];
-  string        search          = 20;
+  AssetCategory category_filter = 10 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string        search          = 20 [features.field_presence = EXPLICIT];
 }
 
 message ListCatalogResponse {
@@ -106,7 +109,7 @@ message CreateCatalogEntryRequest {
   string              model        = 20 [(buf.validate.field).string.min_len = 1];
   string              part_number  = 30 [(buf.validate.field).string.min_len = 1];
   AssetCategory       category     = 40 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
-  string              form_factor  = 50;
+  string              form_factor  = 50 [features.field_presence = EXPLICIT];
   int32               rack_units   = 60 [features.field_presence = EXPLICIT];
   double              weight_kg    = 70;
   double              power_draw_w = 80;
@@ -164,7 +167,7 @@ message CreatePortDefinitionRequest {
   string        device_catalog_id = 10 [(buf.validate.field).string = {uuid: true}];
   string        name              = 20 [(buf.validate.field).string.min_len = 1];
   PortType      port_type         = 30 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
-  string        media_type        = 40;
+  string        media_type        = 40 [features.field_presence = EXPLICIT];
   string        speed             = 50 [features.field_presence = EXPLICIT];
   double        max_power_w       = 60 [features.field_presence = EXPLICIT];
   PortDirection direction         = 70 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];

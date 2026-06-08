@@ -59,18 +59,24 @@ spec:
                 configMapKeyRef:
                   name: openfga-config
                   key: authorization-model-id
-          livenessProbe:
-            httpGet:
-              path: /livez
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 5
+            {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+            - name: GARDENER_KUBECONFIG
+              value: /etc/gardener/kubeconfig
+            {{- end }}
+          {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+          volumeMounts:
+            - name: gardener-kubeconfig
+              mountPath: /etc/gardener
+              readOnly: true
+          {{- end }}
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
+      {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+      volumes:
+        - name: gardener-kubeconfig
+          secret:
+            secretName: {{ $.Values.clusterWorker.gardenerKubeconfigSecret }}
+      {{- end }}
 
 ---
 apiVersion: v1

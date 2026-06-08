@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cluster issuers</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Cluster issuers</h1>
+      <table class="plugin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Ready</th>
+            <th>Type</th>
+            <th>Age</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr>
+            <td colspan="4" class="plugin-text">Loading…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <script type="module">
+      import {
+        loadSdk,
+        escapeHtml,
+        formatAge,
+        readyText,
+        issuerType,
+        emptyRow,
+        errorRow,
+        navigateToDetail,
+      } from './_shared.js';
+
+      await loadSdk();
+      await fundament.init;
+      const tbody = document.getElementById('rows');
+
+      try {
+        const { items } = await fundament.k8s.list({
+          group: 'cert-manager.io',
+          version: 'v1',
+          resource: 'clusterissuers',
+        });
+        if (!items || items.length === 0) {
+          tbody.innerHTML = emptyRow(4, 'No cluster issuers found.');
+        } else {
+          tbody.innerHTML = items
+            .map((item) => {
+              const name = item.metadata?.name ?? '';
+              return `
+                <tr data-name="${escapeHtml(name)}">
+                  <td><a href="#" class="row-link">${escapeHtml(name)}</a></td>
+                  <td>${escapeHtml(readyText(item))}</td>
+                  <td>${escapeHtml(issuerType(item))}</td>
+                  <td>${escapeHtml(formatAge(item.metadata?.creationTimestamp))}</td>
+                </tr>`;
+            })
+            .join('');
+          tbody.querySelectorAll('a.row-link').forEach((link) => {
+            link.addEventListener('click', (e) => {
+              e.preventDefault();
+              const row = link.closest('tr');
+              navigateToDetail(row.dataset.name);
+            });
+          });
+        }
+      } catch (err) {
+        tbody.innerHTML = errorRow(4, err);
+      }
+    </script>
+  </body>
+</html>

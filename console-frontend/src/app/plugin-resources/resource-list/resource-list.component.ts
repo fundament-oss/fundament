@@ -16,7 +16,9 @@ import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
 import { TitleService } from '../../title.service';
+import { ConfigService } from '../../config.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
+import buildPluginConsoleUrl from '../plugin-console-url.utils';
 import {
   resolveJsonPath,
   formatColumnValue,
@@ -56,6 +58,8 @@ export default class ResourceListComponent implements OnInit {
 
   private loader = inject(KubePluginLoaderService);
 
+  private config = inject(ConfigService);
+
   private routeParams = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
@@ -77,8 +81,19 @@ export default class ResourceListComponent implements OnInit {
   customUIUrl = computed(() => {
     const kind = this.crdDef()?.kind;
     if (!kind) return null;
-    return this.plugin()?.customUI?.[kind]?.list ?? null;
+    const plugin = this.plugin();
+    const path = plugin?.customComponents?.[kind]?.list;
+    const clusterId = this.clusterContext.selectedClusterId();
+    if (!plugin || !path || !clusterId) return null;
+    return buildPluginConsoleUrl({
+      kubeApiProxyUrl: this.config.getConfig().kubeApiProxyUrl,
+      clusterId,
+      pluginName: plugin.name,
+      path,
+    });
   });
+
+  allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
 
   columns = computed<AdditionalPrinterColumn[]>(() => {
     const crd = this.crdDef();

@@ -21,6 +21,7 @@ import (
 	"github.com/fundament-oss/fundament/common/idempotency"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	dbgen "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
@@ -34,6 +35,7 @@ type config struct {
 	CORSAllowedOrigins         []string      `env:"CORS_ALLOWED_ORIGINS"`
 	PrometheusURL              string        `env:"PROMETHEUS_URL" envDefault:"mock"`
 	KubeAPIProxyURL            string        `env:"KUBE_API_PROXY_URL"`
+	GardenerKubeconfig         string        `env:"GARDENER_KUBECONFIG"`
 	CircuitBreakerThreshold    time.Duration `env:"CIRCUIT_BREAKER_THRESHOLD" envDefault:"5s"`
 	CircuitBreakerPollInterval time.Duration `env:"CIRCUIT_BREAKER_POLL_INTERVAL" envDefault:"2s"`
 }
@@ -140,6 +142,17 @@ func run() error {
 
 	opts = append(opts, organization.WithCircuitBreaker(breaker))
 
+	var gardenerClient gardener.Client = gardener.NoopClient{}
+	if cfg.GardenerKubeconfig != "" {
+		realGardener, err := gardener.NewReal(cfg.GardenerKubeconfig, logger)
+		if err != nil {
+			return fmt.Errorf("failed to create gardener client: %w", err)
+		}
+		gardenerClient = realGardener
+	} else {
+		logger.Info("GARDENER_KUBECONFIG not set, observability URLs disabled")
+	}
+
 	orgcfg := &organization.Config{
 		JWTSecret:            []byte(cfg.JWTSecret),
 		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
@@ -147,6 +160,7 @@ func run() error {
 		MockPrometheusClient: mockClient,
 		PrometheusURL:        cfg.PrometheusURL,
 		KubeAPIProxyURL:      cfg.KubeAPIProxyURL,
+		GardenerClient:       gardenerClient,
 	}
 
 	server, err := organization.New(logger, orgcfg, db, authzClient, idempotencyStore, opts...)

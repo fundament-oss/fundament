@@ -28,7 +28,7 @@ type ProjectMemberListCmd struct {
 
 // Run executes the project member list command.
 func (c *ProjectMemberListCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ type ProjectMemberAddCmd struct {
 
 // Run executes the project member add command.
 func (c *ProjectMemberAddCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ type ProjectMemberUpdateRoleCmd struct {
 
 // Run executes the project member update-role command.
 func (c *ProjectMemberUpdateRoleCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ type ProjectMemberRemoveCmd struct {
 
 // Run executes the project member remove command.
 func (c *ProjectMemberRemoveCmd) Run(ctx *Context) error {
-	apiClient, err := NewClientFromConfig()
+	apiClient, err := NewClientFromConfigWithOrg(ctx)
 	if err != nil {
 		return err
 	}

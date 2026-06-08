@@ -810,10 +810,15 @@ func sumTimeSeries(allSeries [][]prom.TimeSeries) []prom.TimeSeries {
 	return []prom.TimeSeries{{Labels: map[string]string{}, Samples: points}}
 }
 
-// promEscapeLabelValue escapes backslashes and double-quotes in a PromQL label value.
+// promEscapeLabelValue escapes characters that are special in PromQL regex label values:
+// backslashes, double-quotes, and regex metacharacters.
 func promEscapeLabelValue(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
+	// Escape regex metacharacters so the alternation is treated as a literal match.
+	for _, ch := range []string{".", "+", "*", "?", "(", ")", "[", "]", "{", "}", "^", "$"} {
+		s = strings.ReplaceAll(s, ch, `\`+ch)
+	}
 	return s
 }
 
@@ -826,7 +831,11 @@ func buildNamespaceFilter(names []string) string {
 		// Kubernetes namespace names must be valid DNS labels, so "_" is impossible.
 		return `namespace="_"`
 	}
-	return fmt.Sprintf(`namespace=~"%s"`, strings.Join(names, "|"))
+	escaped := make([]string, len(names))
+	for i, n := range names {
+		escaped[i] = promEscapeLabelValue(n)
+	}
+	return fmt.Sprintf(`namespace=~"%s"`, strings.Join(escaped, "|"))
 }
 
 // resolveTimeRange returns start, end, and step for a Prometheus range query,
@@ -854,4 +863,211 @@ func namespaceNames(rows []db.NamespaceListByProjectIDRow) []string {
 		names = append(names, r.Name)
 	}
 	return names
+}
+
+// -- Streaming RPCs --
+
+const streamInterval = 15 * time.Second
+
+// StreamOrgWorkloadMetrics streams org-wide metrics every 15 seconds.
+func (s *Server) StreamOrgWorkloadMetrics(
+	ctx context.Context,
+	req *connect.Request[organizationv1.StreamOrgWorkloadMetricsRequest],
+	stream *connect.ServerStream[organizationv1.StreamWorkloadMetricsResponse],
+) error {
+	if err := s.sendOrgSnapshot(ctx, req.Msg, stream); err != nil {
+		return err
+	}
+	ticker := time.NewTicker(streamInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			if err := s.sendOrgSnapshot(ctx, req.Msg, stream); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// StreamClusterWorkloadMetrics streams cluster metrics every 15 seconds.
+func (s *Server) StreamClusterWorkloadMetrics(
+	ctx context.Context,
+	req *connect.Request[organizationv1.StreamClusterWorkloadMetricsRequest],
+	stream *connect.ServerStream[organizationv1.StreamWorkloadMetricsResponse],
+) error {
+	if err := s.sendClusterSnapshot(ctx, req.Msg, stream); err != nil {
+		return err
+	}
+	ticker := time.NewTicker(streamInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			if err := s.sendClusterSnapshot(ctx, req.Msg, stream); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// StreamProjectWorkloadMetrics streams project metrics every 15 seconds.
+func (s *Server) StreamProjectWorkloadMetrics(
+	ctx context.Context,
+	req *connect.Request[organizationv1.StreamProjectWorkloadMetricsRequest],
+	stream *connect.ServerStream[organizationv1.StreamWorkloadMetricsResponse],
+) error {
+	if err := s.sendProjectSnapshot(ctx, req.Msg, stream); err != nil {
+		return err
+	}
+	ticker := time.NewTicker(streamInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			if err := s.sendProjectSnapshot(ctx, req.Msg, stream); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (s *Server) sendOrgSnapshot(
+	ctx context.Context,
+	req *organizationv1.StreamOrgWorkloadMetricsRequest,
+	stream *connect.ServerStream[organizationv1.StreamWorkloadMetricsResponse],
+) error {
+	start, end, step := resolveStreamTimeRange(req.GetWindowSeconds(), req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
+
+	var (
+		workload *connect.Response[organizationv1.GetOrgWorkloadMetricsResponse]
+		ts       *connect.Response[organizationv1.GetWorkloadTimeSeriesResponse]
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		var err error
+		workload, err = s.GetOrgWorkloadMetrics(gctx, connect.NewRequest(organizationv1.GetOrgWorkloadMetricsRequest_builder{}.Build()))
+		return err
+	})
+	g.Go(func() error {
+		var err error
+		ts, err = s.GetOrgWorkloadTimeSeries(gctx, connect.NewRequest(organizationv1.GetOrgWorkloadTimeSeriesRequest_builder{
+			Start:       timestamppb.New(start),
+			End:         timestamppb.New(end),
+			StepSeconds: int32(step.Seconds()),
+		}.Build()))
+		return err
+	})
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
+		Totals:      workload.Msg.GetTotals(),
+		Clusters:    workload.Msg.GetClusters(),
+		Namespaces:  workload.Msg.GetNamespaces(),
+		TimeSeries:  ts.Msg,
+		RefreshedAt: timestamppb.Now(),
+	}.Build())
+}
+
+func (s *Server) sendClusterSnapshot(
+	ctx context.Context,
+	req *organizationv1.StreamClusterWorkloadMetricsRequest,
+	stream *connect.ServerStream[organizationv1.StreamWorkloadMetricsResponse],
+) error {
+	start, end, step := resolveStreamTimeRange(req.GetWindowSeconds(), req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
+
+	var (
+		workload *connect.Response[organizationv1.GetClusterWorkloadMetricsResponse]
+		ts       *connect.Response[organizationv1.GetWorkloadTimeSeriesResponse]
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		var err error
+		workload, err = s.GetClusterWorkloadMetrics(gctx, connect.NewRequest(organizationv1.GetClusterWorkloadMetricsRequest_builder{
+			ClusterId: req.GetClusterId(),
+		}.Build()))
+		return err
+	})
+	g.Go(func() error {
+		var err error
+		ts, err = s.GetClusterWorkloadTimeSeries(gctx, connect.NewRequest(organizationv1.GetClusterWorkloadTimeSeriesRequest_builder{
+			ClusterId:   req.GetClusterId(),
+			Start:       timestamppb.New(start),
+			End:         timestamppb.New(end),
+			StepSeconds: int32(step.Seconds()),
+		}.Build()))
+		return err
+	})
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
+		Totals:      workload.Msg.GetTotals(),
+		Nodes:       workload.Msg.GetNodes(),
+		Namespaces:  workload.Msg.GetNamespaces(),
+		TimeSeries:  ts.Msg,
+		RefreshedAt: timestamppb.Now(),
+	}.Build())
+}
+
+func (s *Server) sendProjectSnapshot(
+	ctx context.Context,
+	req *organizationv1.StreamProjectWorkloadMetricsRequest,
+	stream *connect.ServerStream[organizationv1.StreamWorkloadMetricsResponse],
+) error {
+	start, end, step := resolveStreamTimeRange(req.GetWindowSeconds(), req.HasStart(), req.GetStart().AsTime(), req.HasEnd(), req.GetEnd().AsTime(), req.GetStepSeconds())
+
+	var (
+		workload *connect.Response[organizationv1.GetProjectWorkloadMetricsResponse]
+		ts       *connect.Response[organizationv1.GetWorkloadTimeSeriesResponse]
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		var err error
+		workload, err = s.GetProjectWorkloadMetrics(gctx, connect.NewRequest(organizationv1.GetProjectWorkloadMetricsRequest_builder{
+			ProjectId: req.GetProjectId(),
+		}.Build()))
+		return err
+	})
+	g.Go(func() error {
+		var err error
+		ts, err = s.GetProjectWorkloadTimeSeries(gctx, connect.NewRequest(organizationv1.GetProjectWorkloadTimeSeriesRequest_builder{
+			ProjectId:   req.GetProjectId(),
+			Start:       timestamppb.New(start),
+			End:         timestamppb.New(end),
+			StepSeconds: int32(step.Seconds()),
+		}.Build()))
+		return err
+	})
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
+		Totals:      workload.Msg.GetTotals(),
+		Namespaces:  workload.Msg.GetNamespaces(),
+		TimeSeries:  ts.Msg,
+		RefreshedAt: timestamppb.Now(),
+	}.Build())
+}
+
+// resolveStreamTimeRange computes start/end/step for a streaming snapshot.
+// If windowSeconds > 0, start slides as now−window on each call.
+// Otherwise falls back to resolveTimeRange (fixed range or 7-day default).
+func resolveStreamTimeRange(windowSeconds int32, hasStart bool, start time.Time, hasEnd bool, end time.Time, stepSeconds int32) (time.Time, time.Time, time.Duration) {
+	if windowSeconds > 0 {
+		now := time.Now()
+		_, _, step := resolveTimeRange(false, time.Time{}, false, time.Time{}, stepSeconds)
+		return now.Add(-time.Duration(windowSeconds) * time.Second), now, step
+	}
+	return resolveTimeRange(hasStart, start, hasEnd, end, stepSeconds)
 }

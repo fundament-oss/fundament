@@ -6,6 +6,7 @@ import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/go_features.proto";
 import "google/protobuf/timestamp.proto";
+import "v1/common.proto";
 
 option features.(pb.go).api_level = API_OPAQUE;
 option features.field_presence = IMPLICIT;
@@ -13,11 +14,11 @@ option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v
 
 // PhysicalConnection records a cable between two placement ports (core.physical_connections).
 message PhysicalConnection {
-  string                    id                    = 10;
-  string                    source_placement_id   = 20;
-  string                    source_port_name      = 30;
-  string                    target_placement_id   = 40;
-  string                    target_port_name      = 50;
+  string                    id                         = 10;
+  string                    source_placement_id        = 20;
+  string                    source_port_definition_id  = 30;
+  string                    target_placement_id        = 40;
+  string                    target_port_definition_id  = 50;
   // cable_asset_id is absent when the cable itself is not individually tracked.
   string                    cable_asset_id        = 60 [features.field_presence = EXPLICIT];
   // logical_connection_id links this physical cable to the intended logical design.
@@ -25,6 +26,11 @@ message PhysicalConnection {
   string                    notes                 = 80;
   google.protobuf.Timestamp created               = 90;
   google.protobuf.Timestamp deleted               = 100 [features.field_presence = EXPLICIT];
+  // Cable presentation/metadata, mirrored from the core.physical_connections columns.
+  CableType                 cable_type            = 110;
+  CableStatus               status                = 120;
+  CableColor                color                 = 130;
+  string                    label                 = 140;
 }
 
 service PhysicalConnectionService {
@@ -33,16 +39,21 @@ service PhysicalConnectionService {
   rpc UpdatePhysicalConnection  (UpdatePhysicalConnectionRequest)  returns (google.protobuf.Empty);
   rpc DeletePhysicalConnection  (DeletePhysicalConnectionRequest)  returns (google.protobuf.Empty);
   rpc ListConnectionsByPlacement(ListConnectionsByPlacementRequest) returns (ListConnectionsByPlacementResponse);
+  rpc ListConnectionsBySite     (ListConnectionsBySiteRequest)      returns (ListConnectionsBySiteResponse);
 }
 
 message CreatePhysicalConnectionRequest {
-  string source_placement_id   = 10 [(buf.validate.field).string = {uuid: true}];
-  string source_port_name      = 20 [(buf.validate.field).string.min_len = 1];
-  string target_placement_id   = 30 [(buf.validate.field).string = {uuid: true}];
-  string target_port_name      = 40 [(buf.validate.field).string.min_len = 1];
-  string cable_asset_id        = 50 [features.field_presence = EXPLICIT];
-  string logical_connection_id = 60 [features.field_presence = EXPLICIT];
-  string notes                 = 70;
+  string source_placement_id       = 10 [(buf.validate.field).string = {uuid: true}];
+  string source_port_definition_id = 20 [(buf.validate.field).string = {uuid: true}];
+  string target_placement_id       = 30 [(buf.validate.field).string = {uuid: true}];
+  string target_port_definition_id = 40 [(buf.validate.field).string = {uuid: true}];
+  string cable_asset_id            = 50 [features.field_presence = EXPLICIT];
+  string logical_connection_id     = 60 [features.field_presence = EXPLICIT];
+  string notes                     = 70;
+  CableType   cable_type           = 80 [(buf.validate.field).enum = {defined_only: true}];
+  CableStatus status               = 90 [(buf.validate.field).enum = {defined_only: true}];
+  CableColor  color                = 100 [(buf.validate.field).enum = {defined_only: true}];
+  string      label                = 110;
 }
 
 message CreatePhysicalConnectionResponse {
@@ -62,6 +73,10 @@ message UpdatePhysicalConnectionRequest {
   string cable_asset_id        = 20 [features.field_presence = EXPLICIT];
   string logical_connection_id = 30 [features.field_presence = EXPLICIT];
   string notes                 = 40 [features.field_presence = EXPLICIT];
+  CableType   cable_type       = 50 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true}];
+  CableStatus status           = 60 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true}];
+  CableColor  color            = 70 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true}];
+  string      label            = 80 [features.field_presence = EXPLICIT];
 }
 
 message DeletePhysicalConnectionRequest {
@@ -73,5 +88,17 @@ message ListConnectionsByPlacementRequest {
 }
 
 message ListConnectionsByPlacementResponse {
+  repeated PhysicalConnection connections = 10;
+}
+
+// ListConnectionsBySite returns every physical connection that touches a
+// placement with a direct rack in the site, in one call (avoids fanning out per
+// placement). Connections to sub-component placements (which have no rack_id of
+// their own) are not included.
+message ListConnectionsBySiteRequest {
+  string site_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListConnectionsBySiteResponse {
   repeated PhysicalConnection connections = 10;
 }

@@ -36,7 +36,7 @@
         ></nldd-icon-button>
       }
       <nldd-button
-        variant="accent-filled"
+        variant="primary"
         text="Add rack"
         start-icon="plus-small"
         size="sm"
@@ -50,7 +50,11 @@
        ══════════════════════════════════════════════════════════════ -->
   <div class="shrink-0 border-b border-slate-200 bg-white">
     <div class="px-6">
-      <app-dc-selector [selectedId]="currentDC()" (dcSelected)="selectDC($event)" />
+      <app-dc-selector
+        [datacenters]="mutableDcs()"
+        [selectedId]="currentDC()"
+        (dcSelected)="selectDC($event)"
+      />
     </div>
   </div>
 
@@ -171,16 +175,44 @@
               }}</span
             >
           </div>
+
+          <!-- Spacer -->
+          <div class="flex-1"></div>
+
+          <!-- Edit-layout controls -->
+          @if (editMode()) {
+            <nldd-button
+              variant="accent-tinted"
+              text="Add device"
+              start-icon="plus-small"
+              size="sm"
+              (click)="openAddDevice()"
+            ></nldd-button>
+          }
+          <nldd-button
+            [variant]="editMode() ? 'accent-filled' : 'neutral-tinted'"
+            [text]="editMode() ? 'Done' : 'Edit layout'"
+            size="sm"
+            (click)="toggleEditMode()"
+          ></nldd-button>
         </div>
 
         <!-- Rack frame -->
         <div class="mx-6 my-6 flex items-start justify-center">
           <div class="w-full max-w-xs min-w-0 shrink-0">
-            <app-rack-diagram
-              [rack]="rack"
-              [viewMode]="viewMode()"
-              (deviceSelect)="selectDevice($event)"
-            />
+            @if (editMode()) {
+              <app-rack-diagram-editor
+                [rack]="rack"
+                (devicesChange)="applyDeviceChanges(rack.id, $event)"
+                (deleteDeviceRequest)="openDeleteDevice($event)"
+              />
+            } @else {
+              <app-rack-diagram
+                [rack]="rack"
+                [viewMode]="viewMode()"
+                (deviceSelect)="selectDevice($event)"
+              />
+            }
           </div>
         </div>
       } @else {
@@ -335,38 +367,59 @@
      RACK EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #rackSheet accessible-label="Rack details" placement="right" width="400px">
-  <div class="flex flex-col h-full">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-      <h2 class="text-base font-semibold text-slate-900">
-        {{ editRack()?.id ? 'Edit rack' : 'Add rack' }}
-      </h2>
-      <nldd-icon-button
-        icon="dismiss"
-        variant="neutral-transparent"
-        size="sm"
-        text="Close"
-        (click)="closeRackForm()"
-      ></nldd-icon-button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="editRack()?.id ? 'Edit rack' : 'Add rack'"
+      dismiss-text="Close"
+      (dismiss)="closeRackForm()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section class="space-y-4">
+      @if (rackErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ rackErrorMessage() }}
+          </p>
+        </div>
+      }
       <nldd-form-field label="Rack name">
         <nldd-text-field
           #fRackName
           [attr.value]="editRack()?.name ?? ''"
           placeholder="AMS-01-R01"
+          [attr.invalid]="isFieldInvalid('name') ? '' : null"
+          error-message="error-rack-name"
+          (keydown.enter)="saveRack()"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-rack-name">{{
+          fieldError('name')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
-      <nldd-form-field label="Datacenter">
-        <nldd-dropdown #fRackDcId>
-          <select>
-            @for (dc of datacenters; track dc.id) {
-              <option [value]="dc.id" [attr.selected]="editRack()?.dcId === dc.id ? true : null">
-                {{ dc.name }}
-              </option>
+      @if (!editRack()?.id) {
+        <nldd-form-field label="Row">
+          <select
+            #fRackRowId
+            aria-label="Row"
+            [attr.aria-invalid]="isFieldInvalid('row_id') ? 'true' : null"
+          >
+            <option value="" disabled selected>Select a row</option>
+            @for (row of rowOptions(); track row.id) {
+              <option [value]="row.id">{{ row.label }}</option>
             }
           </select>
-        </nldd-dropdown>
-      </nldd-form-field>
+          @if (isFieldInvalid('row_id')) {
+            <nldd-form-field-error-text id="error-rack-row-id">{{
+              fieldError('row_id')
+            }}</nldd-form-field-error-text>
+          }
+          @if (rowOptions().length === 0) {
+            <nldd-form-field-error-text id="error-no-rows"
+              >No rack rows in this datacenter. Create one on the Datacenters page
+              first.</nldd-form-field-error-text
+            >
+          }
+        </nldd-form-field>
+      }
       <nldd-form-field label="Unit count (U)">
         <nldd-number-field
           #fRackTotalU
@@ -374,15 +427,125 @@
           min="1"
           max="52"
           full-width
+          [attr.invalid]="isFieldInvalid('total_units') ? '' : null"
+          error-message="error-rack-total-u"
+          (keydown.enter)="saveRack()"
         ></nldd-number-field>
+        <nldd-form-field-error-text id="error-rack-total-u">{{
+          fieldError('total_units')
+        }}</nldd-form-field-error-text>
+      </nldd-form-field>
+    </nldd-simple-section>
+    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+      <nldd-button variant="secondary" text="Cancel" (click)="closeRackForm()"></nldd-button>
+      <nldd-button variant="primary" text="Save" (click)="saveRack()"></nldd-button>
+    </div>
+  </nldd-page>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DEVICE ADD SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #deviceSheet accessible-label="Add device" placement="right" width="400px">
+  <div class="flex flex-col h-full">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+      <h2 class="text-base font-semibold text-slate-900">Add device</h2>
+      <nldd-icon-button
+        icon="dismiss"
+        variant="neutral-transparent"
+        size="sm"
+        text="Close"
+        (click)="closeAddDevice()"
+      ></nldd-icon-button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+      @if (deviceErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ deviceErrorMessage() }}
+          </p>
+        </div>
+      }
+      <nldd-form-field label="Asset">
+        <select
+          #fDeviceAsset
+          aria-label="Asset"
+          [attr.aria-invalid]="isDeviceFieldInvalid('asset_id') ? 'true' : null"
+        >
+          <option value="" disabled selected>Select an asset</option>
+          @for (asset of assetOptions(); track asset.id) {
+            <option [value]="asset.id">{{ asset.label }}</option>
+          }
+        </select>
+        @if (isDeviceFieldInvalid('asset_id')) {
+          <nldd-form-field-error-text id="error-device-asset">{{
+            deviceFieldError('asset_id')
+          }}</nldd-form-field-error-text>
+        }
+        @if (assetOptions().length === 0) {
+          <nldd-form-field-error-text id="error-no-assets"
+            >No assets found. Create one on the Inventory page
+            first.</nldd-form-field-error-text
+          >
+        }
+      </nldd-form-field>
+      <nldd-form-field label="Slot type">
+        <select #fDeviceSlotType aria-label="Slot type">
+          @for (st of slotTypes; track st.value) {
+            <option
+              [value]="st.value"
+              [attr.selected]="addDeviceForm()?.slotType === st.value ? true : null"
+            >
+              {{ st.label }}
+            </option>
+          }
+        </select>
+      </nldd-form-field>
+      <nldd-form-field label="Rack unit">
+        <nldd-number-field
+          #fDeviceRackUnit
+          [attr.value]="addDeviceForm()?.rackUnitStart ?? 1"
+          min="1"
+          [attr.max]="currentRack()?.totalU ?? 1"
+          full-width
+          [attr.invalid]="isDeviceFieldInvalid('location.rack.rack_unit_start') ? '' : null"
+          error-message="error-device-rack-unit"
+          (keydown.enter)="saveDevice()"
+        ></nldd-number-field>
+        <nldd-form-field-error-text id="error-device-rack-unit">{{
+          deviceFieldError('location.rack.rack_unit_start')
+        }}</nldd-form-field-error-text>
       </nldd-form-field>
     </div>
     <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
-      <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeRackForm()"></nldd-button>
-      <nldd-button variant="accent-filled" text="Save" (click)="saveRack()"></nldd-button>
+      <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeAddDevice()"></nldd-button>
+      <nldd-button variant="accent-filled" text="Add" (click)="saveDevice()"></nldd-button>
     </div>
   </div>
 </nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DEVICE DELETE MODAL
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #deviceModal
+  [attr.text]="'Delete ' + (deleteDeviceTarget()?.name ?? '') + '?'"
+  supporting-text="This removes the device from the rack. This action cannot be undone."
+  accessible-label="Confirm device deletion"
+>
+  <nldd-button
+    slot="actions"
+    variant="neutral-tinted"
+    text="Cancel"
+    (click)="cancelDeleteDevice()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    (click)="confirmDeleteDevice()"
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- ══════════════════════════════════════════════════════════════
      RACK DELETE MODAL
@@ -396,14 +559,14 @@
 >
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
-    (click)="cancelDeleteRack()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
     variant="destructive"
     text="Delete"
     (click)="confirmDeleteRack()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    (click)="cancelDeleteRack()"
   ></nldd-button>
 </nldd-modal-dialog>

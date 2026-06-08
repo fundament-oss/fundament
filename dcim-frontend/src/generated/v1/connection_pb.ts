@@ -8,13 +8,15 @@ import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
 import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { CableColor, CableStatus, CableType } from "./common_pb";
+import { file_v1_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file v1/connection.proto.
  */
 export const file_v1_connection: GenFile = /*@__PURE__*/
-  fileDesc("ChN2MS9jb25uZWN0aW9uLnByb3RvEgdkY2ltLnYxIsMCChJQaHlzaWNhbENvbm5lY3Rpb24SCgoCaWQYCiABKAkSGwoTc291cmNlX3BsYWNlbWVudF9pZBgUIAEoCRIYChBzb3VyY2VfcG9ydF9uYW1lGB4gASgJEhsKE3RhcmdldF9wbGFjZW1lbnRfaWQYKCABKAkSGAoQdGFyZ2V0X3BvcnRfbmFtZRgyIAEoCRIdCg5jYWJsZV9hc3NldF9pZBg8IAEoCUIFqgECCAESJAoVbG9naWNhbF9jb25uZWN0aW9uX2lkGEYgASgJQgWqAQIIARINCgVub3RlcxhQIAEoCRIrCgdjcmVhdGVkGFogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAEiiQIKH0NyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlcXVlc3QSJQoTc291cmNlX3BsYWNlbWVudF9pZBgKIAEoCUIIukgFcgOwAQESIQoQc291cmNlX3BvcnRfbmFtZRgUIAEoCUIHukgEcgIQARIlChN0YXJnZXRfcGxhY2VtZW50X2lkGB4gASgJQgi6SAVyA7ABARIhChB0YXJnZXRfcG9ydF9uYW1lGCggASgJQge6SARyAhABEh0KDmNhYmxlX2Fzc2V0X2lkGDIgASgJQgWqAQIIARIkChVsb2dpY2FsX2Nvbm5lY3Rpb25faWQYPCABKAlCBaoBAggBEg0KBW5vdGVzGEYgASgJIjkKIENyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlc3BvbnNlEhUKDWNvbm5lY3Rpb25faWQYCiABKAkiNAocR2V0UGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiUAodR2V0UGh5c2ljYWxDb25uZWN0aW9uUmVzcG9uc2USLwoKY29ubmVjdGlvbhgKIAEoCzIbLmRjaW0udjEuUGh5c2ljYWxDb25uZWN0aW9uIpIBCh9VcGRhdGVQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABARIdCg5jYWJsZV9hc3NldF9pZBgUIAEoCUIFqgECCAESJAoVbG9naWNhbF9jb25uZWN0aW9uX2lkGB4gASgJQgWqAQIIARIUCgVub3RlcxgoIAEoCUIFqgECCAEiNwofRGVsZXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQEiQwohTGlzdENvbm5lY3Rpb25zQnlQbGFjZW1lbnRSZXF1ZXN0Eh4KDHBsYWNlbWVudF9pZBgKIAEoCUIIukgFcgOwAQEiVgoiTGlzdENvbm5lY3Rpb25zQnlQbGFjZW1lbnRSZXNwb25zZRIwCgtjb25uZWN0aW9ucxgKIAMoCzIbLmRjaW0udjEuUGh5c2ljYWxDb25uZWN0aW9uMqcEChlQaHlzaWNhbENvbm5lY3Rpb25TZXJ2aWNlEm8KGENyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvbhIoLmRjaW0udjEuQ3JlYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBopLmRjaW0udjEuQ3JlYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVzcG9uc2USZgoVR2V0UGh5c2ljYWxDb25uZWN0aW9uEiUuZGNpbS52MS5HZXRQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0GiYuZGNpbS52MS5HZXRQaHlzaWNhbENvbm5lY3Rpb25SZXNwb25zZRJcChhVcGRhdGVQaHlzaWNhbENvbm5lY3Rpb24SKC5kY2ltLnYxLlVwZGF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSXAoYRGVsZXRlUGh5c2ljYWxDb25uZWN0aW9uEiguZGNpbS52MS5EZWxldGVQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EnUKGkxpc3RDb25uZWN0aW9uc0J5UGxhY2VtZW50EiouZGNpbS52MS5MaXN0Q29ubmVjdGlvbnNCeVBsYWNlbWVudFJlcXVlc3QaKy5kY2ltLnYxLkxpc3RDb25uZWN0aW9uc0J5UGxhY2VtZW50UmVzcG9uc2VCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp]);
+  fileDesc("ChN2MS9jb25uZWN0aW9uLnByb3RvEgdkY2ltLnYxItgDChJQaHlzaWNhbENvbm5lY3Rpb24SCgoCaWQYCiABKAkSGwoTc291cmNlX3BsYWNlbWVudF9pZBgUIAEoCRIhChlzb3VyY2VfcG9ydF9kZWZpbml0aW9uX2lkGB4gASgJEhsKE3RhcmdldF9wbGFjZW1lbnRfaWQYKCABKAkSIQoZdGFyZ2V0X3BvcnRfZGVmaW5pdGlvbl9pZBgyIAEoCRIdCg5jYWJsZV9hc3NldF9pZBg8IAEoCUIFqgECCAESJAoVbG9naWNhbF9jb25uZWN0aW9uX2lkGEYgASgJQgWqAQIIARINCgVub3RlcxhQIAEoCRIrCgdjcmVhdGVkGFogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCgdkZWxldGVkGGQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESJgoKY2FibGVfdHlwZRhuIAEoDjISLmRjaW0udjEuQ2FibGVUeXBlEiQKBnN0YXR1cxh4IAEoDjIULmRjaW0udjEuQ2FibGVTdGF0dXMSIwoFY29sb3IYggEgASgOMhMuZGNpbS52MS5DYWJsZUNvbG9yEg4KBWxhYmVsGIwBIAEoCSK8AwofQ3JlYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBIlChNzb3VyY2VfcGxhY2VtZW50X2lkGAogASgJQgi6SAVyA7ABARIrChlzb3VyY2VfcG9ydF9kZWZpbml0aW9uX2lkGBQgASgJQgi6SAVyA7ABARIlChN0YXJnZXRfcGxhY2VtZW50X2lkGB4gASgJQgi6SAVyA7ABARIrChl0YXJnZXRfcG9ydF9kZWZpbml0aW9uX2lkGCggASgJQgi6SAVyA7ABARIdCg5jYWJsZV9hc3NldF9pZBgyIAEoCUIFqgECCAESJAoVbG9naWNhbF9jb25uZWN0aW9uX2lkGDwgASgJQgWqAQIIARINCgVub3RlcxhGIAEoCRIwCgpjYWJsZV90eXBlGFAgASgOMhIuZGNpbS52MS5DYWJsZVR5cGVCCLpIBYIBAhABEi4KBnN0YXR1cxhaIAEoDjIULmRjaW0udjEuQ2FibGVTdGF0dXNCCLpIBYIBAhABEiwKBWNvbG9yGGQgASgOMhMuZGNpbS52MS5DYWJsZUNvbG9yQgi6SAWCAQIQARINCgVsYWJlbBhuIAEoCSI5CiBDcmVhdGVQaHlzaWNhbENvbm5lY3Rpb25SZXNwb25zZRIVCg1jb25uZWN0aW9uX2lkGAogASgJIjQKHEdldFBoeXNpY2FsQ29ubmVjdGlvblJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIlAKHUdldFBoeXNpY2FsQ29ubmVjdGlvblJlc3BvbnNlEi8KCmNvbm5lY3Rpb24YCiABKAsyGy5kY2ltLnYxLlBoeXNpY2FsQ29ubmVjdGlvbiLHAgofVXBkYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESHQoOY2FibGVfYXNzZXRfaWQYFCABKAlCBaoBAggBEiQKFWxvZ2ljYWxfY29ubmVjdGlvbl9pZBgeIAEoCUIFqgECCAESFAoFbm90ZXMYKCABKAlCBaoBAggBEjUKCmNhYmxlX3R5cGUYMiABKA4yEi5kY2ltLnYxLkNhYmxlVHlwZUINqgECCAG6SAWCAQIQARIzCgZzdGF0dXMYPCABKA4yFC5kY2ltLnYxLkNhYmxlU3RhdHVzQg2qAQIIAbpIBYIBAhABEjEKBWNvbG9yGEYgASgOMhMuZGNpbS52MS5DYWJsZUNvbG9yQg2qAQIIAbpIBYIBAhABEhQKBWxhYmVsGFAgASgJQgWqAQIIASI3Ch9EZWxldGVQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASJDCiFMaXN0Q29ubmVjdGlvbnNCeVBsYWNlbWVudFJlcXVlc3QSHgoMcGxhY2VtZW50X2lkGAogASgJQgi6SAVyA7ABASJWCiJMaXN0Q29ubmVjdGlvbnNCeVBsYWNlbWVudFJlc3BvbnNlEjAKC2Nvbm5lY3Rpb25zGAogAygLMhsuZGNpbS52MS5QaHlzaWNhbENvbm5lY3Rpb24iOQocTGlzdENvbm5lY3Rpb25zQnlTaXRlUmVxdWVzdBIZCgdzaXRlX2lkGAogASgJQgi6SAVyA7ABASJRCh1MaXN0Q29ubmVjdGlvbnNCeVNpdGVSZXNwb25zZRIwCgtjb25uZWN0aW9ucxgKIAMoCzIbLmRjaW0udjEuUGh5c2ljYWxDb25uZWN0aW9uMo8FChlQaHlzaWNhbENvbm5lY3Rpb25TZXJ2aWNlEm8KGENyZWF0ZVBoeXNpY2FsQ29ubmVjdGlvbhIoLmRjaW0udjEuQ3JlYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVxdWVzdBopLmRjaW0udjEuQ3JlYXRlUGh5c2ljYWxDb25uZWN0aW9uUmVzcG9uc2USZgoVR2V0UGh5c2ljYWxDb25uZWN0aW9uEiUuZGNpbS52MS5HZXRQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0GiYuZGNpbS52MS5HZXRQaHlzaWNhbENvbm5lY3Rpb25SZXNwb25zZRJcChhVcGRhdGVQaHlzaWNhbENvbm5lY3Rpb24SKC5kY2ltLnYxLlVwZGF0ZVBoeXNpY2FsQ29ubmVjdGlvblJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSXAoYRGVsZXRlUGh5c2ljYWxDb25uZWN0aW9uEiguZGNpbS52MS5EZWxldGVQaHlzaWNhbENvbm5lY3Rpb25SZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EnUKGkxpc3RDb25uZWN0aW9uc0J5UGxhY2VtZW50EiouZGNpbS52MS5MaXN0Q29ubmVjdGlvbnNCeVBsYWNlbWVudFJlcXVlc3QaKy5kY2ltLnYxLkxpc3RDb25uZWN0aW9uc0J5UGxhY2VtZW50UmVzcG9uc2USZgoVTGlzdENvbm5lY3Rpb25zQnlTaXRlEiUuZGNpbS52MS5MaXN0Q29ubmVjdGlvbnNCeVNpdGVSZXF1ZXN0GiYuZGNpbS52MS5MaXN0Q29ubmVjdGlvbnNCeVNpdGVSZXNwb25zZUJPWkNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2RjaW0tYXBpL3BrZy9wcm90by9nZW4vdjE7ZGNpbXYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * PhysicalConnection records a cable between two placement ports (core.physical_connections).
@@ -33,9 +35,9 @@ export type PhysicalConnection = Message<"dcim.v1.PhysicalConnection"> & {
   sourcePlacementId: string;
 
   /**
-   * @generated from field: string source_port_name = 30;
+   * @generated from field: string source_port_definition_id = 30;
    */
-  sourcePortName: string;
+  sourcePortDefinitionId: string;
 
   /**
    * @generated from field: string target_placement_id = 40;
@@ -43,9 +45,9 @@ export type PhysicalConnection = Message<"dcim.v1.PhysicalConnection"> & {
   targetPlacementId: string;
 
   /**
-   * @generated from field: string target_port_name = 50;
+   * @generated from field: string target_port_definition_id = 50;
    */
-  targetPortName: string;
+  targetPortDefinitionId: string;
 
   /**
    * cable_asset_id is absent when the cable itself is not individually tracked.
@@ -75,6 +77,28 @@ export type PhysicalConnection = Message<"dcim.v1.PhysicalConnection"> & {
    * @generated from field: google.protobuf.Timestamp deleted = 100 [features.field_presence = EXPLICIT];
    */
   deleted?: Timestamp;
+
+  /**
+   * Cable presentation/metadata, mirrored from the core.physical_connections columns.
+   *
+   * @generated from field: dcim.v1.CableType cable_type = 110;
+   */
+  cableType: CableType;
+
+  /**
+   * @generated from field: dcim.v1.CableStatus status = 120;
+   */
+  status: CableStatus;
+
+  /**
+   * @generated from field: dcim.v1.CableColor color = 130;
+   */
+  color: CableColor;
+
+  /**
+   * @generated from field: string label = 140;
+   */
+  label: string;
 };
 
 /**
@@ -94,9 +118,9 @@ export type CreatePhysicalConnectionRequest = Message<"dcim.v1.CreatePhysicalCon
   sourcePlacementId: string;
 
   /**
-   * @generated from field: string source_port_name = 20;
+   * @generated from field: string source_port_definition_id = 20;
    */
-  sourcePortName: string;
+  sourcePortDefinitionId: string;
 
   /**
    * @generated from field: string target_placement_id = 30;
@@ -104,9 +128,9 @@ export type CreatePhysicalConnectionRequest = Message<"dcim.v1.CreatePhysicalCon
   targetPlacementId: string;
 
   /**
-   * @generated from field: string target_port_name = 40;
+   * @generated from field: string target_port_definition_id = 40;
    */
-  targetPortName: string;
+  targetPortDefinitionId: string;
 
   /**
    * @generated from field: string cable_asset_id = 50 [features.field_presence = EXPLICIT];
@@ -122,6 +146,26 @@ export type CreatePhysicalConnectionRequest = Message<"dcim.v1.CreatePhysicalCon
    * @generated from field: string notes = 70;
    */
   notes: string;
+
+  /**
+   * @generated from field: dcim.v1.CableType cable_type = 80;
+   */
+  cableType: CableType;
+
+  /**
+   * @generated from field: dcim.v1.CableStatus status = 90;
+   */
+  status: CableStatus;
+
+  /**
+   * @generated from field: dcim.v1.CableColor color = 100;
+   */
+  color: CableColor;
+
+  /**
+   * @generated from field: string label = 110;
+   */
+  label: string;
 };
 
 /**
@@ -205,6 +249,26 @@ export type UpdatePhysicalConnectionRequest = Message<"dcim.v1.UpdatePhysicalCon
    * @generated from field: string notes = 40 [features.field_presence = EXPLICIT];
    */
   notes: string;
+
+  /**
+   * @generated from field: dcim.v1.CableType cable_type = 50 [features.field_presence = EXPLICIT];
+   */
+  cableType: CableType;
+
+  /**
+   * @generated from field: dcim.v1.CableStatus status = 60 [features.field_presence = EXPLICIT];
+   */
+  status: CableStatus;
+
+  /**
+   * @generated from field: dcim.v1.CableColor color = 70 [features.field_presence = EXPLICIT];
+   */
+  color: CableColor;
+
+  /**
+   * @generated from field: string label = 80 [features.field_presence = EXPLICIT];
+   */
+  label: string;
 };
 
 /**
@@ -266,6 +330,45 @@ export const ListConnectionsByPlacementResponseSchema: GenMessage<ListConnection
   messageDesc(file_v1_connection, 8);
 
 /**
+ * ListConnectionsBySite returns every physical connection that touches a
+ * placement with a direct rack in the site, in one call (avoids fanning out per
+ * placement). Connections to sub-component placements (which have no rack_id of
+ * their own) are not included.
+ *
+ * @generated from message dcim.v1.ListConnectionsBySiteRequest
+ */
+export type ListConnectionsBySiteRequest = Message<"dcim.v1.ListConnectionsBySiteRequest"> & {
+  /**
+   * @generated from field: string site_id = 10;
+   */
+  siteId: string;
+};
+
+/**
+ * Describes the message dcim.v1.ListConnectionsBySiteRequest.
+ * Use `create(ListConnectionsBySiteRequestSchema)` to create a new message.
+ */
+export const ListConnectionsBySiteRequestSchema: GenMessage<ListConnectionsBySiteRequest> = /*@__PURE__*/
+  messageDesc(file_v1_connection, 9);
+
+/**
+ * @generated from message dcim.v1.ListConnectionsBySiteResponse
+ */
+export type ListConnectionsBySiteResponse = Message<"dcim.v1.ListConnectionsBySiteResponse"> & {
+  /**
+   * @generated from field: repeated dcim.v1.PhysicalConnection connections = 10;
+   */
+  connections: PhysicalConnection[];
+};
+
+/**
+ * Describes the message dcim.v1.ListConnectionsBySiteResponse.
+ * Use `create(ListConnectionsBySiteResponseSchema)` to create a new message.
+ */
+export const ListConnectionsBySiteResponseSchema: GenMessage<ListConnectionsBySiteResponse> = /*@__PURE__*/
+  messageDesc(file_v1_connection, 10);
+
+/**
  * @generated from service dcim.v1.PhysicalConnectionService
  */
 export const PhysicalConnectionService: GenService<{
@@ -308,6 +411,14 @@ export const PhysicalConnectionService: GenService<{
     methodKind: "unary";
     input: typeof ListConnectionsByPlacementRequestSchema;
     output: typeof ListConnectionsByPlacementResponseSchema;
+  },
+  /**
+   * @generated from rpc dcim.v1.PhysicalConnectionService.ListConnectionsBySite
+   */
+  listConnectionsBySite: {
+    methodKind: "unary";
+    input: typeof ListConnectionsBySiteRequestSchema;
+    output: typeof ListConnectionsBySiteResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_connection, 0);

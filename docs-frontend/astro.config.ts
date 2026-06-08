@@ -52,6 +52,8 @@ export default defineConfig({
     }),
     starlight({
       title: 'Fundament Docs',
+      description:
+        'Fundament documentation - Open-source platform for deploying and managing Kubernetes clusters with bare-metal provisioning',
       logo: {
         src: '/public/img/favicon.svg',
       },

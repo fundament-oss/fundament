@@ -80,6 +80,16 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 		}
 	}
 
+	allowedResources := make([]*pb.AllowedResource, len(def.Spec.AllowedResources))
+	for i, r := range def.Spec.AllowedResources {
+		allowedResources[i] = &pb.AllowedResource{
+			Group:    ptr(r.Group),
+			Version:  ptr(r.Version),
+			Resource: ptr(r.Resource),
+			Verbs:    r.Verbs,
+		}
+	}
+
 	uiHints := make(map[string]*pb.UIHint, len(def.Spec.UIHints))
 	for k, v := range def.Spec.UIHints {
 		formGroups := make([]*pb.FormGroup, len(v.FormGroups))
@@ -132,6 +142,7 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 		CustomComponents: customComponents,
 		UiHints:          uiHints,
 		Crds:             def.Spec.CRDs,
+		AllowedResources: allowedResources,
 	}), nil
 }
 

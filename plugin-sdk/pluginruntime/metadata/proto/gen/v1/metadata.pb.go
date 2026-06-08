@@ -497,6 +497,76 @@ func (x *ComponentMapping) GetDetail() string {
 	return ""
 }
 
+// AllowedResource declares a Kubernetes resource the plugin's UI iframe
+// is permitted to read via the host-mediated SDK broker.
+type AllowedResource struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Group         *string                `protobuf:"bytes,1,opt,name=group" json:"group,omitempty"`       // "" for the core API group
+	Version       *string                `protobuf:"bytes,2,opt,name=version" json:"version,omitempty"`   // e.g. "v1"
+	Resource      *string                `protobuf:"bytes,3,opt,name=resource" json:"resource,omitempty"` // plural, e.g. "certificates"
+	Verbs         []string               `protobuf:"bytes,4,rep,name=verbs" json:"verbs,omitempty"`       // e.g. ["list", "get"]
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AllowedResource) Reset() {
+	*x = AllowedResource{}
+	mi := &file_v1_metadata_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AllowedResource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AllowedResource) ProtoMessage() {}
+
+func (x *AllowedResource) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_metadata_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AllowedResource.ProtoReflect.Descriptor instead.
+func (*AllowedResource) Descriptor() ([]byte, []int) {
+	return file_v1_metadata_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AllowedResource) GetGroup() string {
+	if x != nil && x.Group != nil {
+		return *x.Group
+	}
+	return ""
+}
+
+func (x *AllowedResource) GetVersion() string {
+	if x != nil && x.Version != nil {
+		return *x.Version
+	}
+	return ""
+}
+
+func (x *AllowedResource) GetResource() string {
+	if x != nil && x.Resource != nil {
+		return *x.Resource
+	}
+	return ""
+}
+
+func (x *AllowedResource) GetVerbs() []string {
+	if x != nil {
+		return x.Verbs
+	}
+	return nil
+}
+
 type FormGroup struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          *string                `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
@@ -507,7 +577,7 @@ type FormGroup struct {
 
 func (x *FormGroup) Reset() {
 	*x = FormGroup{}
-	mi := &file_v1_metadata_proto_msgTypes[9]
+	mi := &file_v1_metadata_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -519,7 +589,7 @@ func (x *FormGroup) String() string {
 func (*FormGroup) ProtoMessage() {}
 
 func (x *FormGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metadata_proto_msgTypes[9]
+	mi := &file_v1_metadata_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -532,7 +602,7 @@ func (x *FormGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FormGroup.ProtoReflect.Descriptor instead.
 func (*FormGroup) Descriptor() ([]byte, []int) {
-	return file_v1_metadata_proto_rawDescGZIP(), []int{9}
+	return file_v1_metadata_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *FormGroup) GetName() string {
@@ -559,7 +629,7 @@ type StatusValue struct {
 
 func (x *StatusValue) Reset() {
 	*x = StatusValue{}
-	mi := &file_v1_metadata_proto_msgTypes[10]
+	mi := &file_v1_metadata_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -571,7 +641,7 @@ func (x *StatusValue) String() string {
 func (*StatusValue) ProtoMessage() {}
 
 func (x *StatusValue) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metadata_proto_msgTypes[10]
+	mi := &file_v1_metadata_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -584,7 +654,7 @@ func (x *StatusValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusValue.ProtoReflect.Descriptor instead.
 func (*StatusValue) Descriptor() ([]byte, []int) {
-	return file_v1_metadata_proto_rawDescGZIP(), []int{10}
+	return file_v1_metadata_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *StatusValue) GetBadge() string {
@@ -611,7 +681,7 @@ type StatusMapping struct {
 
 func (x *StatusMapping) Reset() {
 	*x = StatusMapping{}
-	mi := &file_v1_metadata_proto_msgTypes[11]
+	mi := &file_v1_metadata_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -623,7 +693,7 @@ func (x *StatusMapping) String() string {
 func (*StatusMapping) ProtoMessage() {}
 
 func (x *StatusMapping) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metadata_proto_msgTypes[11]
+	mi := &file_v1_metadata_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -636,7 +706,7 @@ func (x *StatusMapping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusMapping.ProtoReflect.Descriptor instead.
 func (*StatusMapping) Descriptor() ([]byte, []int) {
-	return file_v1_metadata_proto_rawDescGZIP(), []int{11}
+	return file_v1_metadata_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *StatusMapping) GetJsonPath() string {
@@ -663,7 +733,7 @@ type UIHint struct {
 
 func (x *UIHint) Reset() {
 	*x = UIHint{}
-	mi := &file_v1_metadata_proto_msgTypes[12]
+	mi := &file_v1_metadata_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -675,7 +745,7 @@ func (x *UIHint) String() string {
 func (*UIHint) ProtoMessage() {}
 
 func (x *UIHint) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metadata_proto_msgTypes[12]
+	mi := &file_v1_metadata_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -688,7 +758,7 @@ func (x *UIHint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UIHint.ProtoReflect.Descriptor instead.
 func (*UIHint) Descriptor() ([]byte, []int) {
-	return file_v1_metadata_proto_rawDescGZIP(), []int{12}
+	return file_v1_metadata_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UIHint) GetFormGroups() []*FormGroup {
@@ -722,13 +792,14 @@ type GetDefinitionResponse struct {
 	UiHints          map[string]*UIHint           `protobuf:"bytes,13,rep,name=ui_hints,json=uiHints" json:"ui_hints,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Crds             []string                     `protobuf:"bytes,14,rep,name=crds" json:"crds,omitempty"`
 	ApiVersion       *string                      `protobuf:"bytes,15,opt,name=api_version,json=apiVersion" json:"api_version,omitempty"`
+	AllowedResources []*AllowedResource           `protobuf:"bytes,16,rep,name=allowed_resources,json=allowedResources" json:"allowed_resources,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GetDefinitionResponse) Reset() {
 	*x = GetDefinitionResponse{}
-	mi := &file_v1_metadata_proto_msgTypes[13]
+	mi := &file_v1_metadata_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -740,7 +811,7 @@ func (x *GetDefinitionResponse) String() string {
 func (*GetDefinitionResponse) ProtoMessage() {}
 
 func (x *GetDefinitionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metadata_proto_msgTypes[13]
+	mi := &file_v1_metadata_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -753,7 +824,7 @@ func (x *GetDefinitionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDefinitionResponse.ProtoReflect.Descriptor instead.
 func (*GetDefinitionResponse) Descriptor() ([]byte, []int) {
-	return file_v1_metadata_proto_rawDescGZIP(), []int{13}
+	return file_v1_metadata_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetDefinitionResponse) GetName() string {
@@ -861,6 +932,13 @@ func (x *GetDefinitionResponse) GetApiVersion() string {
 	return ""
 }
 
+func (x *GetDefinitionResponse) GetAllowedResources() []*AllowedResource {
+	if x != nil {
+		return x.AllowedResources
+	}
+	return nil
+}
+
 type RequestUninstallRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -869,7 +947,7 @@ type RequestUninstallRequest struct {
 
 func (x *RequestUninstallRequest) Reset() {
 	*x = RequestUninstallRequest{}
-	mi := &file_v1_metadata_proto_msgTypes[14]
+	mi := &file_v1_metadata_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -881,7 +959,7 @@ func (x *RequestUninstallRequest) String() string {
 func (*RequestUninstallRequest) ProtoMessage() {}
 
 func (x *RequestUninstallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metadata_proto_msgTypes[14]
+	mi := &file_v1_metadata_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -894,7 +972,7 @@ func (x *RequestUninstallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestUninstallRequest.ProtoReflect.Descriptor instead.
 func (*RequestUninstallRequest) Descriptor() ([]byte, []int) {
-	return file_v1_metadata_proto_rawDescGZIP(), []int{14}
+	return file_v1_metadata_proto_rawDescGZIP(), []int{15}
 }
 
 type RequestUninstallResponse struct {
@@ -905,7 +983,7 @@ type RequestUninstallResponse struct {
 
 func (x *RequestUninstallResponse) Reset() {
 	*x = RequestUninstallResponse{}
-	mi := &file_v1_metadata_proto_msgTypes[15]
+	mi := &file_v1_metadata_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -917,7 +995,7 @@ func (x *RequestUninstallResponse) String() string {
 func (*RequestUninstallResponse) ProtoMessage() {}
 
 func (x *RequestUninstallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_metadata_proto_msgTypes[15]
+	mi := &file_v1_metadata_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -930,7 +1008,7 @@ func (x *RequestUninstallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestUninstallResponse.ProtoReflect.Descriptor instead.
 func (*RequestUninstallResponse) Descriptor() ([]byte, []int) {
-	return file_v1_metadata_proto_rawDescGZIP(), []int{15}
+	return file_v1_metadata_proto_rawDescGZIP(), []int{16}
 }
 
 var File_v1_metadata_proto protoreflect.FileDescriptor
@@ -970,7 +1048,12 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\aproject\x18\x02 \x03(\v2\x1c.pluginmetadata.v1.MenuEntryR\aproject\">\n" +
 	"\x10ComponentMapping\x12\x12\n" +
 	"\x04list\x18\x01 \x01(\tR\x04list\x12\x16\n" +
-	"\x06detail\x18\x02 \x01(\tR\x06detail\"7\n" +
+	"\x06detail\x18\x02 \x01(\tR\x06detail\"s\n" +
+	"\x0fAllowedResource\x12\x14\n" +
+	"\x05group\x18\x01 \x01(\tR\x05group\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x12\x1a\n" +
+	"\bresource\x18\x03 \x01(\tR\bresource\x12\x14\n" +
+	"\x05verbs\x18\x04 \x03(\tR\x05verbs\"7\n" +
 	"\tFormGroup\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06fields\x18\x02 \x03(\tR\x06fields\"9\n" +
@@ -986,7 +1069,7 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\x06UIHint\x12=\n" +
 	"\vform_groups\x18\x01 \x03(\v2\x1c.pluginmetadata.v1.FormGroupR\n" +
 	"formGroups\x12G\n" +
-	"\x0estatus_mapping\x18\x02 \x01(\v2 .pluginmetadata.v1.StatusMappingR\rstatusMapping\"\xc5\x06\n" +
+	"\x0estatus_mapping\x18\x02 \x01(\v2 .pluginmetadata.v1.StatusMappingR\rstatusMapping\"\x96\a\n" +
 	"\x15GetDefinitionResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12 \n" +
@@ -1004,7 +1087,8 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\bui_hints\x18\r \x03(\v25.pluginmetadata.v1.GetDefinitionResponse.UiHintsEntryR\auiHints\x12\x12\n" +
 	"\x04crds\x18\x0e \x03(\tR\x04crds\x12\x1f\n" +
 	"\vapi_version\x18\x0f \x01(\tR\n" +
-	"apiVersion\x1ah\n" +
+	"apiVersion\x12O\n" +
+	"\x11allowed_resources\x18\x10 \x03(\v2\".pluginmetadata.v1.AllowedResourceR\x10allowedResources\x1ah\n" +
 	"\x15CustomComponentsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x129\n" +
 	"\x05value\x18\x02 \x01(\v2#.pluginmetadata.v1.ComponentMappingR\x05value:\x028\x01\x1aU\n" +
@@ -1030,7 +1114,7 @@ func file_v1_metadata_proto_rawDescGZIP() []byte {
 	return file_v1_metadata_proto_rawDescData
 }
 
-var file_v1_metadata_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_v1_metadata_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_v1_metadata_proto_goTypes = []any{
 	(*GetStatusRequest)(nil),         // 0: pluginmetadata.v1.GetStatusRequest
 	(*GetStatusResponse)(nil),        // 1: pluginmetadata.v1.GetStatusResponse
@@ -1041,43 +1125,45 @@ var file_v1_metadata_proto_goTypes = []any{
 	(*MenuEntry)(nil),                // 6: pluginmetadata.v1.MenuEntry
 	(*MenuDefinition)(nil),           // 7: pluginmetadata.v1.MenuDefinition
 	(*ComponentMapping)(nil),         // 8: pluginmetadata.v1.ComponentMapping
-	(*FormGroup)(nil),                // 9: pluginmetadata.v1.FormGroup
-	(*StatusValue)(nil),              // 10: pluginmetadata.v1.StatusValue
-	(*StatusMapping)(nil),            // 11: pluginmetadata.v1.StatusMapping
-	(*UIHint)(nil),                   // 12: pluginmetadata.v1.UIHint
-	(*GetDefinitionResponse)(nil),    // 13: pluginmetadata.v1.GetDefinitionResponse
-	(*RequestUninstallRequest)(nil),  // 14: pluginmetadata.v1.RequestUninstallRequest
-	(*RequestUninstallResponse)(nil), // 15: pluginmetadata.v1.RequestUninstallResponse
-	nil,                              // 16: pluginmetadata.v1.StatusMapping.ValuesEntry
-	nil,                              // 17: pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry
-	nil,                              // 18: pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry
+	(*AllowedResource)(nil),          // 9: pluginmetadata.v1.AllowedResource
+	(*FormGroup)(nil),                // 10: pluginmetadata.v1.FormGroup
+	(*StatusValue)(nil),              // 11: pluginmetadata.v1.StatusValue
+	(*StatusMapping)(nil),            // 12: pluginmetadata.v1.StatusMapping
+	(*UIHint)(nil),                   // 13: pluginmetadata.v1.UIHint
+	(*GetDefinitionResponse)(nil),    // 14: pluginmetadata.v1.GetDefinitionResponse
+	(*RequestUninstallRequest)(nil),  // 15: pluginmetadata.v1.RequestUninstallRequest
+	(*RequestUninstallResponse)(nil), // 16: pluginmetadata.v1.RequestUninstallResponse
+	nil,                              // 17: pluginmetadata.v1.StatusMapping.ValuesEntry
+	nil,                              // 18: pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry
+	nil,                              // 19: pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry
 }
 var file_v1_metadata_proto_depIdxs = []int32{
 	4,  // 0: pluginmetadata.v1.Permissions.rbac:type_name -> pluginmetadata.v1.PolicyRule
 	6,  // 1: pluginmetadata.v1.MenuDefinition.organization:type_name -> pluginmetadata.v1.MenuEntry
 	6,  // 2: pluginmetadata.v1.MenuDefinition.project:type_name -> pluginmetadata.v1.MenuEntry
-	16, // 3: pluginmetadata.v1.StatusMapping.values:type_name -> pluginmetadata.v1.StatusMapping.ValuesEntry
-	9,  // 4: pluginmetadata.v1.UIHint.form_groups:type_name -> pluginmetadata.v1.FormGroup
-	11, // 5: pluginmetadata.v1.UIHint.status_mapping:type_name -> pluginmetadata.v1.StatusMapping
+	17, // 3: pluginmetadata.v1.StatusMapping.values:type_name -> pluginmetadata.v1.StatusMapping.ValuesEntry
+	10, // 4: pluginmetadata.v1.UIHint.form_groups:type_name -> pluginmetadata.v1.FormGroup
+	12, // 5: pluginmetadata.v1.UIHint.status_mapping:type_name -> pluginmetadata.v1.StatusMapping
 	3,  // 6: pluginmetadata.v1.GetDefinitionResponse.urls:type_name -> pluginmetadata.v1.PluginURLs
 	5,  // 7: pluginmetadata.v1.GetDefinitionResponse.permissions:type_name -> pluginmetadata.v1.Permissions
 	7,  // 8: pluginmetadata.v1.GetDefinitionResponse.menu:type_name -> pluginmetadata.v1.MenuDefinition
-	17, // 9: pluginmetadata.v1.GetDefinitionResponse.custom_components:type_name -> pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry
-	18, // 10: pluginmetadata.v1.GetDefinitionResponse.ui_hints:type_name -> pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry
-	10, // 11: pluginmetadata.v1.StatusMapping.ValuesEntry.value:type_name -> pluginmetadata.v1.StatusValue
-	8,  // 12: pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry.value:type_name -> pluginmetadata.v1.ComponentMapping
-	12, // 13: pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry.value:type_name -> pluginmetadata.v1.UIHint
-	0,  // 14: pluginmetadata.v1.PluginMetadataService.GetStatus:input_type -> pluginmetadata.v1.GetStatusRequest
-	2,  // 15: pluginmetadata.v1.PluginMetadataService.GetDefinition:input_type -> pluginmetadata.v1.GetDefinitionRequest
-	14, // 16: pluginmetadata.v1.PluginMetadataService.RequestUninstall:input_type -> pluginmetadata.v1.RequestUninstallRequest
-	1,  // 17: pluginmetadata.v1.PluginMetadataService.GetStatus:output_type -> pluginmetadata.v1.GetStatusResponse
-	13, // 18: pluginmetadata.v1.PluginMetadataService.GetDefinition:output_type -> pluginmetadata.v1.GetDefinitionResponse
-	15, // 19: pluginmetadata.v1.PluginMetadataService.RequestUninstall:output_type -> pluginmetadata.v1.RequestUninstallResponse
-	17, // [17:20] is the sub-list for method output_type
-	14, // [14:17] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	18, // 9: pluginmetadata.v1.GetDefinitionResponse.custom_components:type_name -> pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry
+	19, // 10: pluginmetadata.v1.GetDefinitionResponse.ui_hints:type_name -> pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry
+	9,  // 11: pluginmetadata.v1.GetDefinitionResponse.allowed_resources:type_name -> pluginmetadata.v1.AllowedResource
+	11, // 12: pluginmetadata.v1.StatusMapping.ValuesEntry.value:type_name -> pluginmetadata.v1.StatusValue
+	8,  // 13: pluginmetadata.v1.GetDefinitionResponse.CustomComponentsEntry.value:type_name -> pluginmetadata.v1.ComponentMapping
+	13, // 14: pluginmetadata.v1.GetDefinitionResponse.UiHintsEntry.value:type_name -> pluginmetadata.v1.UIHint
+	0,  // 15: pluginmetadata.v1.PluginMetadataService.GetStatus:input_type -> pluginmetadata.v1.GetStatusRequest
+	2,  // 16: pluginmetadata.v1.PluginMetadataService.GetDefinition:input_type -> pluginmetadata.v1.GetDefinitionRequest
+	15, // 17: pluginmetadata.v1.PluginMetadataService.RequestUninstall:input_type -> pluginmetadata.v1.RequestUninstallRequest
+	1,  // 18: pluginmetadata.v1.PluginMetadataService.GetStatus:output_type -> pluginmetadata.v1.GetStatusResponse
+	14, // 19: pluginmetadata.v1.PluginMetadataService.GetDefinition:output_type -> pluginmetadata.v1.GetDefinitionResponse
+	16, // 20: pluginmetadata.v1.PluginMetadataService.RequestUninstall:output_type -> pluginmetadata.v1.RequestUninstallResponse
+	18, // [18:21] is the sub-list for method output_type
+	15, // [15:18] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_v1_metadata_proto_init() }
@@ -1091,7 +1177,7 @@ func file_v1_metadata_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_metadata_proto_rawDesc), len(file_v1_metadata_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -80,7 +80,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
             !response.clusters.some((c) => c.id === prev.id),
         )
         .forEach((prev) => {
-          this.toastService.info(`Cluster '${prev.name}' has been deleted`);
+          this.toastService.success(`Cluster '${prev.name}' has been deleted`);
         });
 
       const needsPolling = response.clusters.some((c) => isTransitionalStatus(c.status));

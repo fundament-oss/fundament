@@ -41,6 +41,22 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Rewrite the URL to the forwarded path so downstream handlers (and the
+	// public-asset check below) see the canonical Kubernetes API path.
+	r.URL.Path = "/" + path
+	r.URL.RawPath = ""
+
+	// Plugin console assets are public static UI files. The sandboxed iframe
+	// that loads them runs with an opaque origin and cannot send credentials,
+	// so the auth/authz check is skipped. The mock handler serves these from
+	// disk; in real mode the apiserver service proxy would forward to the
+	// plugin pod's HTTP handler (which itself does not authenticate them).
+	if kube.IsPluginConsoleAssetPath(r.URL.Path) {
+		ctx := context.WithValue(r.Context(), kube.ClusterIDContextKey{}, clusterID.String())
+		s.kubeHandler.ServeHTTP(w, r.WithContext(ctx))
+		return
+	}
+
 	// --- Authentication ---
 
 	claims, err := s.authValidator.Validate(r.Header)
@@ -80,10 +96,6 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- Proxy to Kubernetes API ---
-
-	// Rewrite the URL to the forwarded path (prepend leading slash).
-	r.URL.Path = "/" + path
-	r.URL.RawPath = ""
 
 	// Store cluster ID in context for the multi-cluster proxy.
 	ctx = context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterID.String())

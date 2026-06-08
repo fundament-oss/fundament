@@ -4,51 +4,97 @@ sidebar:
   order: 3
 ---
 
-When a plugin does not provide a custom UI, the Fundament console automatically generates read-only list and detail views for each CRD the plugin manages. These default views are derived directly from the CRD schema: the list view uses `additionalPrinterColumns` to build its table columns, and the detail view renders the resource's spec and status fields. No extra configuration is needed to get this default UI.
+Plugins are responsible for shipping their own UI. For every CRD a plugin
+exposes in the sidebar, the plugin must provide custom list and detail
+views — the console does not generate fallback views from the CRD schema.
 
-Custom UIs replace the default views for the CRDs you specify. Plugin UIs run inside sandboxed iframes in the Fundament console. Each plugin serves its own HTML pages from its Go backend and includes two SDK files provided by Fundament.
+Plugin UIs run inside sandboxed iframes in the Fundament console. Each
+plugin embeds its own HTML pages alongside the plugin binary and uses the
+SDK provided by Fundament to talk to the host.
+
+This page is the practical reference for plugin authors — what files to write and what the SDK gives you. For the architecture behind the iframe, including the full `postMessage` protocol and the kube-api-proxy mock/real modes, see [Console integration](console-integration).
 
 ## SDK files
 
-Every plugin HTML page must include both SDK files. They are served by the Fundament console and are available at a stable, versioned path:
+The SDK is served by the Fundament console at a stable path under
+`/plugin-ui/`. Because the iframe is sandboxed (`allow-scripts` only, no
+`allow-same-origin`), it cannot statically link to the console origin —
+the console passes its origin via a `?host=...` query parameter on the
+iframe URL and your page injects the `<script>` and `<link>` tags using
+that origin:
 
-```html
-<link rel="stylesheet" href="/plugin-ui/plugin-sdk.css" />
-<script src="/plugin-ui/plugin-sdk.js"></script>
+```js
+const host = new URLSearchParams(location.search).get('host') ?? '';
+const link = document.createElement('link');
+link.rel = 'stylesheet';
+link.href = `${host}/plugin-ui/plugin-sdk.css`;
+document.head.appendChild(link);
+
+await new Promise((resolve, reject) => {
+  const script = document.createElement('script');
+  script.src = `${host}/plugin-ui/plugin-sdk.js`;
+  script.onload = resolve;
+  script.onerror = reject;
+  document.head.appendChild(script);
+});
+// window.fundament is now available.
 ```
+
+The cert-manager plugin's `_shared.js:loadSdk()` is the reference
+implementation — copy it as a starting point.
 
 | File | Purpose |
 |------|---------|
 | `plugin-sdk.css` | Base styles, dark-mode support, and component classes |
-| `plugin-sdk.js` | Handles the host↔plugin message protocol, theme application, and iframe auto-resize |
+| `plugin-sdk.js` | Sets `window.fundament`; handles the host↔plugin message protocol, theme application, iframe auto-resize, and the Kubernetes broker |
 
-## Message protocol
+## SDK API
 
-The host sends messages to the plugin after it signals readiness.
+Once the SDK is loaded, use `window.fundament` instead of `postMessage`
+directly. The SDK takes care of the protocol, request IDs, and timeouts.
 
-### Plugin → host (sent automatically by `plugin-sdk.js`)
+```js
+const ctx = await fundament.init;
+// ctx: { theme, pluginName, crdKind, view, resource? }
 
-| Message | When | Payload |
-|---------|------|---------|
-| `plugin:ready` | On script load | _(no payload)_ |
-| `plugin:resize` | When content height changes | `{ height: number }` |
-| `plugin:navigate` | When the plugin navigates | `{ path: string }` |
+const { items } = await fundament.k8s.list({
+  group: 'cert-manager.io',
+  version: 'v1',
+  resource: 'certificates',
+  namespace: ctx.resource?.namespace, // optional
+});
 
-### Host → plugin
+const certificate = await fundament.k8s.get({
+  group: 'cert-manager.io',
+  version: 'v1',
+  resource: 'certificates',
+  name: ctx.resource.name,
+  namespace: ctx.resource.namespace,
+});
 
-| Message | When | Payload |
-|---------|------|---------|
-| `fundament:init` | After `plugin:ready` | `{ theme, pluginName, crdKind, view }` |
-| `fundament:theme-changed` | User switches theme | `{ theme: 'light' \| 'dark' }` |
+const unsubscribe = fundament.onThemeChange((theme) => { /* ... */ });
+```
 
-The `fundament:init` message contains everything the plugin needs to render the correct view:
+`init` resolves once with the initial context. `k8s.list` and `k8s.get` are
+brokered by the console host — every call is validated against the
+`allowedResources` declared in your `definition.yaml` and rejected with
+`SdkError('forbidden', ...)` if not allowed. Each request times out after
+10 seconds.
 
-| Field | Description |
-|-------|-------------|
-| `theme` | `'light'` or `'dark'` — applied automatically by the SDK |
-| `pluginName` | Name of the installed plugin |
-| `crdKind` | The CRD kind being shown (e.g. `certificates.cert-manager.io`) |
-| `view` | `'list'` or `'detail'` |
+For navigating from a list row into a detail page, post `plugin:navigate`
+yourself — the host resolves the path relative to the iframe's current
+route:
+
+```js
+window.parent.postMessage(
+  { type: 'plugin:navigate', name, namespace },
+  '*',
+);
+```
+
+The full message reference (including `plugin:ready`, `plugin:resize`, and
+`fundament:k8s:result`) lives in
+[Console integration](console-integration#the-postmessage-protocol).
 
 ## CSS component classes
 
@@ -63,14 +109,20 @@ The `fundament:init` message contains everything the plugin needs to render the 
 
 ## Fetching data
 
-The plugin page is served from the plugin's own Go backend (via `ConsoleProvider`). Use `fetch` with relative URLs to call your backend's API:
+The plugin iframe is sandboxed with `allow-scripts` only, runs with an
+opaque origin, and cannot send the user's session cookie. Direct `fetch`
+calls — to your own plugin backend or to the Kubernetes API — will not
+carry credentials and should not be used.
 
-```js
-const response = await fetch('/api/resources');
-const data = await response.json();
-```
+Instead, read Kubernetes resources through `fundament.k8s.list` /
+`fundament.k8s.get`. The console host validates every call against the
+`allowedResources` declared in your `definition.yaml`, then forwards it to
+the kube-api-proxy with the user's session. The plugin sees the result via
+`postMessage`, never the user's credentials.
 
-Your Go backend handles authentication — the Fundament console proxies requests to your plugin's service, so session credentials are not exposed to the iframe.
+If you need a custom API beyond plain Kubernetes reads, expose it as a CRD
+(or a subresource) and read it the same way — the broker is the only
+supported data path for the iframe.
 
 ## Complete example
 
@@ -81,7 +133,6 @@ Your Go backend handles authentication — the Fundament console proxies request
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>My plugin</title>
-    <link rel="stylesheet" href="/plugin-ui/plugin-sdk.css" />
   </head>
   <body>
     <div class="plugin-card">
@@ -100,31 +151,41 @@ Your Go backend handles authentication — the Fundament console proxies request
       </table>
     </div>
 
-    <script src="/plugin-ui/plugin-sdk.js"></script>
-    <script>
-      window.addEventListener('message', async (event) => {
-        const data = event.data;
-        if (data?.type !== 'fundament:init') return;
-
-        // Update the heading to show the resource kind from context.
-        document.getElementById('heading').textContent = data.crdKind;
-
-        // Fetch resources from the plugin backend.
-        const response = await fetch('/api/resources');
-        const items = await response.json();
-
-        const tbody = document.getElementById('items');
-        tbody.innerHTML = '';
-        for (const item of items) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${item.metadata.name}</td>
-            <td>${item.metadata.namespace}</td>
-            <td>${item.status?.phase ?? '—'}</td>
-          `;
-          tbody.appendChild(tr);
-        }
+    <script type="module">
+      // Load the SDK from the console origin (passed in via ?host=...).
+      const host = new URLSearchParams(location.search).get('host') ?? '';
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = `${host}/plugin-ui/plugin-sdk.css`;
+      document.head.appendChild(link);
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = `${host}/plugin-ui/plugin-sdk.js`;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
       });
+
+      const ctx = await fundament.init;
+      document.getElementById('heading').textContent = ctx.crdKind;
+
+      const { items } = await fundament.k8s.list({
+        group: 'my-api.io',
+        version: 'v1',
+        resource: 'myresources',
+      });
+
+      const tbody = document.getElementById('items');
+      tbody.innerHTML = '';
+      for (const item of items) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.metadata.name}</td>
+          <td>${item.metadata.namespace ?? ''}</td>
+          <td>${item.status?.phase ?? '—'}</td>
+        `;
+        tbody.appendChild(tr);
+      }
     </script>
   </body>
 </html>
@@ -145,14 +206,26 @@ func (p *MyPlugin) ConsoleAssets() http.FileSystem {
 }
 ```
 
-The runtime mounts these assets at `/console/`. Your `definition.yaml` references them:
+The runtime mounts these assets at `/console/`. Your `definition.yaml` references them through `spec.customComponents`:
 
 ```yaml
-menu:
-  project:
-    - crd: myresources.my-api.io
-      list: true    # served from /console/list.html
-      detail: true  # served from /console/detail.html
+spec:
+  customComponents:
+    MyResource:
+      list: myresources-list.html       # served from /console/myresources-list.html
+      detail: myresources-detail.html   # served from /console/myresources-detail.html
+
+  allowedResources:
+    - group: my-api.io
+      version: v1
+      resource: myresources
+      verbs: [get, list]
 ```
 
-See [Writing a plugin](writing-a-plugin) for the full plugin setup.
+`allowedResources` is the allowlist the console host checks every
+`fundament.k8s.list` / `.get` call against — keep it in sync with what your
+UI actually reads.
+
+See [Writing a plugin](writing-a-plugin) for the full plugin setup and
+[Console integration](console-integration) for the architecture behind the
+iframe and the broker.

@@ -38,6 +38,9 @@ func New(logger *slog.Logger, database *psqldb.DB) *Server {
 		logging.WithLogOnEvents(logging.FinishCall),
 	)
 
+	// TODO(FUN-17): when dcim-api gains JWT validation it MUST build its
+	// validator with auth.NewValidatorForAudience(secret, auth.TokenTypeUser, …)
+	// so a fundament-plugin token cannot be replayed against this surface.
 	interceptors := connect.WithInterceptors(
 		connectrecovery.NewInterceptor(logger),
 		loggingInterceptor,

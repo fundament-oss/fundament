@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -13,6 +14,16 @@ import (
 
 // AuthCookieName is the name of the authentication cookie.
 const AuthCookieName = "fundament_auth"
+
+// TokenType is the value carried in the JWT `aud` claim. It distinguishes
+// user tokens from plugin tokens so that services can refuse the wrong kind
+// at validation time.
+type TokenType = string
+
+const (
+	TokenTypeUser   TokenType = "fundament-user"
+	TokenTypePlugin TokenType = "fundament-plugin"
+)
 
 // Claims represents the JWT claims used across fundament services.
 type Claims struct {
@@ -28,12 +39,17 @@ func (c *Claims) UserID() uuid.UUID {
 
 // Validator handles JWT validation from HTTP headers.
 type Validator struct {
-	jwtSecret []byte
-	logger    *slog.Logger
+	jwtSecret        []byte
+	expectedAudience TokenType // empty = accept any audience (legacy)
+	logger           *slog.Logger
 }
 
-// NewValidator creates a new Validator with the given JWT secret.
-// Logger is optional and can be nil.
+// NewValidator creates a Validator that accepts any audience.
+//
+// Deprecated: prefer NewValidatorForAudience so services explicitly declare
+// the token type they accept. The escalation wall described in FUN-17 depends
+// on every UserToken validator rejecting fundament-plugin; an any-audience
+// validator silently accepts both.
 func NewValidator(jwtSecret []byte, logger *slog.Logger) *Validator {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -42,6 +58,14 @@ func NewValidator(jwtSecret []byte, logger *slog.Logger) *Validator {
 		jwtSecret: jwtSecret,
 		logger:    logger,
 	}
+}
+
+// NewValidatorForAudience creates a Validator that requires the JWT `aud`
+// claim to contain the given TokenType.
+func NewValidatorForAudience(jwtSecret []byte, audience TokenType, logger *slog.Logger) *Validator {
+	v := NewValidator(jwtSecret, logger)
+	v.expectedAudience = audience
+	return v
 }
 
 // Validate validates a JWT from the Authorization header,
@@ -88,7 +112,11 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return v.jwtSecret, nil
-	})
+	},
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuer("fundament-authn-api"),
+	)
 	if err != nil {
 		v.logger.Debug("token validation failed", "error", err)
 		return nil, fmt.Errorf("invalid token: %w", err)
@@ -103,6 +131,13 @@ func (v *Validator) validateToken(tokenString string) (*Claims, error) {
 	if _, err := uuid.Parse(claims.Subject); err != nil {
 		v.logger.Debug("invalid user ID in token subject", "subject", claims.Subject)
 		return nil, fmt.Errorf("invalid user ID in token subject: %w", err)
+	}
+
+	if v.expectedAudience != "" {
+		if !slices.Contains(claims.Audience, string(v.expectedAudience)) {
+			v.logger.Debug("token audience mismatch", "got", claims.Audience, "want", v.expectedAudience)
+			return nil, fmt.Errorf("token audience %v does not contain expected %q", claims.Audience, v.expectedAudience)
+		}
 	}
 
 	v.logger.Debug("token validated", "user_id", claims.Subject, "organization_ids", claims.OrganizationIDs)

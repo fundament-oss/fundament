@@ -101,6 +101,13 @@ const (
 	DeviceCatalogCategory_PowerSupply   DeviceCatalogCategory = "power_supply"
 	DeviceCatalogCategory_CableManager  DeviceCatalogCategory = "cable_manager"
 	DeviceCatalogCategory_ConsoleServer DeviceCatalogCategory = "console_server"
+	DeviceCatalogCategory_Storage       DeviceCatalogCategory = "storage"
+	DeviceCatalogCategory_Cooling       DeviceCatalogCategory = "cooling"
+	DeviceCatalogCategory_Firewall      DeviceCatalogCategory = "firewall"
+	DeviceCatalogCategory_Kvm           DeviceCatalogCategory = "kvm"
+	DeviceCatalogCategory_Gpu           DeviceCatalogCategory = "gpu"
+	DeviceCatalogCategory_Transceiver   DeviceCatalogCategory = "transceiver"
+	DeviceCatalogCategory_Other         DeviceCatalogCategory = "other"
 )
 
 // LogicalConnectionConnectionType represents valid values for dcim.logical_connections.connection_type.
@@ -167,6 +174,50 @@ const (
 	OutboxStatus_Failed    OutboxStatus = "failed"
 )
 
+// PhysicalConnectionCableType represents valid values for dcim.physical_connections.cable_type.
+type PhysicalConnectionCableType string
+
+const (
+	PhysicalConnectionCableType_Cat5e   PhysicalConnectionCableType = "cat5e"
+	PhysicalConnectionCableType_Cat6    PhysicalConnectionCableType = "cat6"
+	PhysicalConnectionCableType_Cat6a   PhysicalConnectionCableType = "cat6a"
+	PhysicalConnectionCableType_Cat7    PhysicalConnectionCableType = "cat7"
+	PhysicalConnectionCableType_Cat8    PhysicalConnectionCableType = "cat8"
+	PhysicalConnectionCableType_Dac     PhysicalConnectionCableType = "dac"
+	PhysicalConnectionCableType_Aoc     PhysicalConnectionCableType = "aoc"
+	PhysicalConnectionCableType_Mmf     PhysicalConnectionCableType = "mmf"
+	PhysicalConnectionCableType_Smf     PhysicalConnectionCableType = "smf"
+	PhysicalConnectionCableType_Power   PhysicalConnectionCableType = "power"
+	PhysicalConnectionCableType_Console PhysicalConnectionCableType = "console"
+	PhysicalConnectionCableType_Usb     PhysicalConnectionCableType = "usb"
+	PhysicalConnectionCableType_Other   PhysicalConnectionCableType = "other"
+)
+
+// PhysicalConnectionColor represents valid values for dcim.physical_connections.color.
+type PhysicalConnectionColor string
+
+const (
+	PhysicalConnectionColor_DarkGrey  PhysicalConnectionColor = "dark_grey"
+	PhysicalConnectionColor_LightGrey PhysicalConnectionColor = "light_grey"
+	PhysicalConnectionColor_Red       PhysicalConnectionColor = "red"
+	PhysicalConnectionColor_Green     PhysicalConnectionColor = "green"
+	PhysicalConnectionColor_Blue      PhysicalConnectionColor = "blue"
+	PhysicalConnectionColor_Yellow    PhysicalConnectionColor = "yellow"
+	PhysicalConnectionColor_Purple    PhysicalConnectionColor = "purple"
+	PhysicalConnectionColor_Orange    PhysicalConnectionColor = "orange"
+	PhysicalConnectionColor_Teal      PhysicalConnectionColor = "teal"
+	PhysicalConnectionColor_White     PhysicalConnectionColor = "white"
+)
+
+// PhysicalConnectionStatus represents valid values for dcim.physical_connections.status.
+type PhysicalConnectionStatus string
+
+const (
+	PhysicalConnectionStatus_Planned        PhysicalConnectionStatus = "planned"
+	PhysicalConnectionStatus_Connected      PhysicalConnectionStatus = "connected"
+	PhysicalConnectionStatus_Decommissioned PhysicalConnectionStatus = "decommissioned"
+)
+
 // PlacementSlotType represents valid values for dcim.placements.slot_type.
 type PlacementSlotType string
 
@@ -223,4 +274,37 @@ type ProjectMemberRole string
 const (
 	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
+)
+
+// TaskCategory represents valid values for dcim.tasks.category.
+type TaskCategory string
+
+const (
+	TaskCategory_Hardware TaskCategory = "hardware"
+	TaskCategory_Network  TaskCategory = "network"
+	TaskCategory_Cooling  TaskCategory = "cooling"
+	TaskCategory_Power    TaskCategory = "power"
+	TaskCategory_Security TaskCategory = "security"
+	TaskCategory_Other    TaskCategory = "other"
+)
+
+// TaskPriority represents valid values for dcim.tasks.priority.
+type TaskPriority string
+
+const (
+	TaskPriority_Low      TaskPriority = "low"
+	TaskPriority_Medium   TaskPriority = "medium"
+	TaskPriority_High     TaskPriority = "high"
+	TaskPriority_Critical TaskPriority = "critical"
+)
+
+// TaskStatus represents valid values for dcim.tasks.status.
+type TaskStatus string
+
+const (
+	TaskStatus_Ready      TaskStatus = "ready"
+	TaskStatus_InProgress TaskStatus = "in_progress"
+	TaskStatus_Review     TaskStatus = "review"
+	TaskStatus_Blocked    TaskStatus = "blocked"
+	TaskStatus_Done       TaskStatus = "done"
 )

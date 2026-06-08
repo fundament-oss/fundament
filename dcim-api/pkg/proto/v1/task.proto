@@ -80,9 +80,9 @@ service TaskService {
 }
 
 message ListTasksRequest {
-  TaskStatus   status      = 10 [features.field_presence = EXPLICIT];
-  TaskPriority priority    = 20 [features.field_presence = EXPLICIT];
-  TaskCategory category    = 30 [features.field_presence = EXPLICIT];
+  TaskStatus   status      = 10 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  TaskPriority priority    = 20 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  TaskCategory category    = 30 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string       assignee_id = 40 [features.field_presence = EXPLICIT];
 }
 
@@ -100,13 +100,13 @@ message GetTaskResponse {
 
 message CreateTaskRequest {
   string                    title       = 10 [(buf.validate.field).string.min_len = 1];
-  string                    description = 20;
-  TaskStatus                status      = 30;
-  TaskPriority              priority    = 40;
-  TaskCategory              category    = 50;
+  string                    description = 20 [features.field_presence = EXPLICIT];
+  TaskStatus                status      = 30 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  TaskPriority              priority    = 40 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  TaskCategory              category    = 50 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string                    assignee_id = 60 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp due_date    = 70 [features.field_presence = EXPLICIT];
-  string                    location    = 80;
+  string                    location    = 80 [features.field_presence = EXPLICIT];
 }
 
 message CreateTaskResponse {
@@ -117,9 +117,9 @@ message UpdateTaskRequest {
   string                    id          = 10 [(buf.validate.field).string = {uuid: true}];
   string                    title       = 20 [features.field_presence = EXPLICIT];
   string                    description = 30 [features.field_presence = EXPLICIT];
-  TaskStatus                status      = 40 [features.field_presence = EXPLICIT];
-  TaskPriority              priority    = 50 [features.field_presence = EXPLICIT];
-  TaskCategory              category    = 60 [features.field_presence = EXPLICIT];
+  TaskStatus                status      = 40 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  TaskPriority              priority    = 50 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  TaskCategory              category    = 60 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string                    assignee_id = 70 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp due_date    = 80 [features.field_presence = EXPLICIT];
   string                    location    = 90 [features.field_presence = EXPLICIT];
@@ -149,7 +149,7 @@ message ListTaskStepsResponse {
 message CreateTaskStepRequest {
   string task_id     = 10 [(buf.validate.field).string = {uuid: true}];
   string title       = 20 [(buf.validate.field).string.min_len = 1];
-  string description = 30;
+  string description = 30 [features.field_presence = EXPLICIT];
   int32  ordinal     = 40;
 }
 

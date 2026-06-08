@@ -8,7 +8,7 @@ import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf
 import { file_buf_validate_validate } from "../buf/validate/validate_pb";
 import type { EmptySchema, Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { AssetCategory, AssetEvent, AssetStatus, SortDirection } from "./common_pb";
+import type { AssetCategory, AssetEvent, AssetStatus, RackSlotType, SortDirection } from "./common_pb";
 import { file_v1_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/asset.proto.
  */
 export const file_v1_asset: GenFile = /*@__PURE__*/
-  fileDesc("Cg52MS9hc3NldC5wcm90bxIHZGNpbS52MSKRAwoFQXNzZXQSCgoCaWQYCiABKAkSGQoRZGV2aWNlX2NhdGFsb2dfaWQYFCABKAkSJAoGc3RhdHVzGB4gASgOMhQuZGNpbS52MS5Bc3NldFN0YXR1cxIcCg1zZXJpYWxfbnVtYmVyGCggASgJQgWqAQIIARIYCglhc3NldF90YWcYMiABKAlCBaoBAggBEjgKDXB1cmNoYXNlX2RhdGUYPCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIdCg5wdXJjaGFzZV9vcmRlchhGIAEoCUIFqgECCAESOgoPd2FycmFudHlfZXhwaXJ5GFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESDQoFbm90ZXMYWiABKAkSKwoHY3JlYXRlZBhkIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoHZGVsZXRlZBhuIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBIpMBCgpBc3NldFN0YXRzEg0KBXRvdGFsGAogASgFEhEKCWF2YWlsYWJsZRgUIAEoBRIQCghkZXBsb3llZBgeIAEoBRIUCgxuZWVkc19yZXBhaXIYKCABKAUSEAoIb25fb3JkZXIYMiABKAUSEQoJcmVxdWVzdGVkGDwgASgFEhYKDmRlY29tbWlzc2lvbmVkGEYgASgFIqQCChFMaXN0QXNzZXRzUmVxdWVzdBIyCg1zdGF0dXNfZmlsdGVyGAogASgOMhQuZGNpbS52MS5Bc3NldFN0YXR1c0IFqgECCAESNgoPY2F0ZWdvcnlfZmlsdGVyGBQgASgOMhYuZGNpbS52MS5Bc3NldENhdGVnb3J5QgWqAQIIARIgChFkZXZpY2VfY2F0YWxvZ19pZBgeIAEoCUIFqgECCAESDgoGc2VhcmNoGCggASgJEigKB3NvcnRfYnkYMiABKA4yFy5kY2ltLnYxLkFzc2V0U29ydEZpZWxkEi4KDnNvcnRfZGlyZWN0aW9uGDwgASgOMhYuZGNpbS52MS5Tb3J0RGlyZWN0aW9uEhcKD2luY2x1ZGVfZGVsZXRlZBhGIAEoCCI0ChJMaXN0QXNzZXRzUmVzcG9uc2USHgoGYXNzZXRzGAogAygLMg4uZGNpbS52MS5Bc3NldCInCg9HZXRBc3NldFJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIjEKEEdldEFzc2V0UmVzcG9uc2USHQoFYXNzZXQYCiABKAsyDi5kY2ltLnYxLkFzc2V0IscCChJDcmVhdGVBc3NldFJlcXVlc3QSIwoRZGV2aWNlX2NhdGFsb2dfaWQYCiABKAlCCLpIBXIDsAEBEjAKBnN0YXR1cxgUIAEoDjIULmRjaW0udjEuQXNzZXRTdGF0dXNCCrpIB4IBBBABIAASHAoNc2VyaWFsX251bWJlchgeIAEoCUIFqgECCAESGAoJYXNzZXRfdGFnGCggASgJQgWqAQIIARI4Cg1wdXJjaGFzZV9kYXRlGDIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESHQoOcHVyY2hhc2Vfb3JkZXIYPCABKAlCBaoBAggBEjoKD3dhcnJhbnR5X2V4cGlyeRhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEg0KBW5vdGVzGFAgASgJIicKE0NyZWF0ZUFzc2V0UmVzcG9uc2USEAoIYXNzZXRfaWQYCiABKAki4QEKElVwZGF0ZUFzc2V0UmVxdWVzdBIUCgJpZBgKIAEoCUIIukgFcgOwAQESKwoGc3RhdHVzGBQgASgOMhQuZGNpbS52MS5Bc3NldFN0YXR1c0IFqgECCAESHAoNc2VyaWFsX251bWJlchgeIAEoCUIFqgECCAESGAoJYXNzZXRfdGFnGCggASgJQgWqAQIIARI6Cg93YXJyYW50eV9leHBpcnkYMiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIUCgVub3Rlcxg8IAEoCUIFqgECCAEiKgoSRGVsZXRlQXNzZXRSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABASIzChVHZXRBc3NldEV2ZW50c1JlcXVlc3QSGgoIYXNzZXRfaWQYCiABKAlCCLpIBXIDsAEBIj0KFkdldEFzc2V0RXZlbnRzUmVzcG9uc2USIwoGZXZlbnRzGAogAygLMhMuZGNpbS52MS5Bc3NldEV2ZW50Ii4KFEdldEFzc2V0U3RhdHNSZXF1ZXN0EhYKB3NpdGVfaWQYCiABKAlCBaoBAggBIjsKFUdldEFzc2V0U3RhdHNSZXNwb25zZRIiCgVzdGF0cxgKIAEoCzITLmRjaW0udjEuQXNzZXRTdGF0cyrdAQoOQXNzZXRTb3J0RmllbGQSIAocQVNTRVRfU09SVF9GSUVMRF9VTlNQRUNJRklFRBAAEhsKF0FTU0VUX1NPUlRfRklFTERfU1RBVFVTEAoSIgoeQVNTRVRfU09SVF9GSUVMRF9TRVJJQUxfTlVNQkVSEBQSHgoaQVNTRVRfU09SVF9GSUVMRF9BU1NFVF9UQUcQHhIiCh5BU1NFVF9TT1JUX0ZJRUxEX1BVUkNIQVNFX0RBVEUQKBIkCiBBU1NFVF9TT1JUX0ZJRUxEX1dBUlJBTlRZX0VYUElSWRAyMosECgxBc3NldFNlcnZpY2USRQoKTGlzdEFzc2V0cxIaLmRjaW0udjEuTGlzdEFzc2V0c1JlcXVlc3QaGy5kY2ltLnYxLkxpc3RBc3NldHNSZXNwb25zZRI/CghHZXRBc3NldBIYLmRjaW0udjEuR2V0QXNzZXRSZXF1ZXN0GhkuZGNpbS52MS5HZXRBc3NldFJlc3BvbnNlEkgKC0NyZWF0ZUFzc2V0EhsuZGNpbS52MS5DcmVhdGVBc3NldFJlcXVlc3QaHC5kY2ltLnYxLkNyZWF0ZUFzc2V0UmVzcG9uc2USQgoLVXBkYXRlQXNzZXQSGy5kY2ltLnYxLlVwZGF0ZUFzc2V0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJCCgtEZWxldGVBc3NldBIbLmRjaW0udjEuRGVsZXRlQXNzZXRSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5ElEKDkdldEFzc2V0RXZlbnRzEh4uZGNpbS52MS5HZXRBc3NldEV2ZW50c1JlcXVlc3QaHy5kY2ltLnYxLkdldEFzc2V0RXZlbnRzUmVzcG9uc2USTgoNR2V0QXNzZXRTdGF0cxIdLmRjaW0udjEuR2V0QXNzZXRTdGF0c1JlcXVlc3QaHi5kY2ltLnYxLkdldEFzc2V0U3RhdHNSZXNwb25zZUJPWkNnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2RjaW0tYXBpL3BrZy9wcm90by9nZW4vdjE7ZGNpbXYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("Cg52MS9hc3NldC5wcm90bxIHZGNpbS52MSKRAwoFQXNzZXQSCgoCaWQYCiABKAkSGQoRZGV2aWNlX2NhdGFsb2dfaWQYFCABKAkSJAoGc3RhdHVzGB4gASgOMhQuZGNpbS52MS5Bc3NldFN0YXR1cxIcCg1zZXJpYWxfbnVtYmVyGCggASgJQgWqAQIIARIYCglhc3NldF90YWcYMiABKAlCBaoBAggBEjgKDXB1cmNoYXNlX2RhdGUYPCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIdCg5wdXJjaGFzZV9vcmRlchhGIAEoCUIFqgECCAESOgoPd2FycmFudHlfZXhwaXJ5GFAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESDQoFbm90ZXMYWiABKAkSKwoHY3JlYXRlZBhkIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoHZGVsZXRlZBhuIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBIpMBCgpBc3NldFN0YXRzEg0KBXRvdGFsGAogASgFEhEKCWF2YWlsYWJsZRgUIAEoBRIQCghkZXBsb3llZBgeIAEoBRIUCgxuZWVkc19yZXBhaXIYKCABKAUSEAoIb25fb3JkZXIYMiABKAUSEQoJcmVxdWVzdGVkGDwgASgFEhYKDmRlY29tbWlzc2lvbmVkGEYgASgFIr8CChFMaXN0QXNzZXRzUmVxdWVzdBI8Cg1zdGF0dXNfZmlsdGVyGAogASgOMhQuZGNpbS52MS5Bc3NldFN0YXR1c0IPqgECCAG6SAeCAQQQASAAEkAKD2NhdGVnb3J5X2ZpbHRlchgUIAEoDjIWLmRjaW0udjEuQXNzZXRDYXRlZ29yeUIPqgECCAG6SAeCAQQQASAAEiAKEWRldmljZV9jYXRhbG9nX2lkGB4gASgJQgWqAQIIARIVCgZzZWFyY2gYKCABKAlCBaoBAggBEigKB3NvcnRfYnkYMiABKA4yFy5kY2ltLnYxLkFzc2V0U29ydEZpZWxkEi4KDnNvcnRfZGlyZWN0aW9uGDwgASgOMhYuZGNpbS52MS5Tb3J0RGlyZWN0aW9uEhcKD2luY2x1ZGVfZGVsZXRlZBhGIAEoCCI0ChJMaXN0QXNzZXRzUmVzcG9uc2USHgoGYXNzZXRzGAogAygLMg4uZGNpbS52MS5Bc3NldCInCg9HZXRBc3NldFJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIjEKEEdldEFzc2V0UmVzcG9uc2USHQoFYXNzZXQYCiABKAsyDi5kY2ltLnYxLkFzc2V0Is4CChJDcmVhdGVBc3NldFJlcXVlc3QSIwoRZGV2aWNlX2NhdGFsb2dfaWQYCiABKAlCCLpIBXIDsAEBEjAKBnN0YXR1cxgUIAEoDjIULmRjaW0udjEuQXNzZXRTdGF0dXNCCrpIB4IBBBABIAASHAoNc2VyaWFsX251bWJlchgeIAEoCUIFqgECCAESGAoJYXNzZXRfdGFnGCggASgJQgWqAQIIARI4Cg1wdXJjaGFzZV9kYXRlGDIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIFqgECCAESHQoOcHVyY2hhc2Vfb3JkZXIYPCABKAlCBaoBAggBEjoKD3dhcnJhbnR5X2V4cGlyeRhGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhQKBW5vdGVzGFAgASgJQgWqAQIIASInChNDcmVhdGVBc3NldFJlc3BvbnNlEhAKCGFzc2V0X2lkGAogASgJIusBChJVcGRhdGVBc3NldFJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBEjUKBnN0YXR1cxgUIAEoDjIULmRjaW0udjEuQXNzZXRTdGF0dXNCD6oBAggBukgHggEEEAEgABIcCg1zZXJpYWxfbnVtYmVyGB4gASgJQgWqAQIIARIYCglhc3NldF90YWcYKCABKAlCBaoBAggBEjoKD3dhcnJhbnR5X2V4cGlyeRgyIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBaoBAggBEhQKBW5vdGVzGDwgASgJQgWqAQIIASIqChJEZWxldGVBc3NldFJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBIjMKFUdldEFzc2V0RXZlbnRzUmVxdWVzdBIaCghhc3NldF9pZBgKIAEoCUIIukgFcgOwAQEiPQoWR2V0QXNzZXRFdmVudHNSZXNwb25zZRIjCgZldmVudHMYCiADKAsyEy5kY2ltLnYxLkFzc2V0RXZlbnQiuAEKDUFzc2V0TG9jYXRpb24SEQoJc2l0ZV9uYW1lGAogASgJEhEKCXJvb21fbmFtZRgUIAEoCRIVCg1yYWNrX3Jvd19uYW1lGB4gASgJEhEKCXJhY2tfbmFtZRgoIAEoCRIXCg9yYWNrX3VuaXRfc3RhcnQYMiABKAUSDwoHcmFja19pZBg8IAEoCRItCg5yYWNrX3Nsb3RfdHlwZRhGIAEoDjIVLmRjaW0udjEuUmFja1Nsb3RUeXBlIjUKF0dldEFzc2V0TG9jYXRpb25SZXF1ZXN0EhoKCGFzc2V0X2lkGAogASgJQgi6SAVyA7ABASJEChhHZXRBc3NldExvY2F0aW9uUmVzcG9uc2USKAoIbG9jYXRpb24YCiABKAsyFi5kY2ltLnYxLkFzc2V0TG9jYXRpb24iLgoUR2V0QXNzZXRTdGF0c1JlcXVlc3QSFgoHc2l0ZV9pZBgKIAEoCUIFqgECCAEiOwoVR2V0QXNzZXRTdGF0c1Jlc3BvbnNlEiIKBXN0YXRzGAogASgLMhMuZGNpbS52MS5Bc3NldFN0YXRzKt0BCg5Bc3NldFNvcnRGaWVsZBIgChxBU1NFVF9TT1JUX0ZJRUxEX1VOU1BFQ0lGSUVEEAASGwoXQVNTRVRfU09SVF9GSUVMRF9TVEFUVVMQChIiCh5BU1NFVF9TT1JUX0ZJRUxEX1NFUklBTF9OVU1CRVIQFBIeChpBU1NFVF9TT1JUX0ZJRUxEX0FTU0VUX1RBRxAeEiIKHkFTU0VUX1NPUlRfRklFTERfUFVSQ0hBU0VfREFURRAoEiQKIEFTU0VUX1NPUlRfRklFTERfV0FSUkFOVFlfRVhQSVJZEDIy5AQKDEFzc2V0U2VydmljZRJFCgpMaXN0QXNzZXRzEhouZGNpbS52MS5MaXN0QXNzZXRzUmVxdWVzdBobLmRjaW0udjEuTGlzdEFzc2V0c1Jlc3BvbnNlEj8KCEdldEFzc2V0EhguZGNpbS52MS5HZXRBc3NldFJlcXVlc3QaGS5kY2ltLnYxLkdldEFzc2V0UmVzcG9uc2USSAoLQ3JlYXRlQXNzZXQSGy5kY2ltLnYxLkNyZWF0ZUFzc2V0UmVxdWVzdBocLmRjaW0udjEuQ3JlYXRlQXNzZXRSZXNwb25zZRJCCgtVcGRhdGVBc3NldBIbLmRjaW0udjEuVXBkYXRlQXNzZXRSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EkIKC0RlbGV0ZUFzc2V0EhsuZGNpbS52MS5EZWxldGVBc3NldFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSUQoOR2V0QXNzZXRFdmVudHMSHi5kY2ltLnYxLkdldEFzc2V0RXZlbnRzUmVxdWVzdBofLmRjaW0udjEuR2V0QXNzZXRFdmVudHNSZXNwb25zZRJXChBHZXRBc3NldExvY2F0aW9uEiAuZGNpbS52MS5HZXRBc3NldExvY2F0aW9uUmVxdWVzdBohLmRjaW0udjEuR2V0QXNzZXRMb2NhdGlvblJlc3BvbnNlEk4KDUdldEFzc2V0U3RhdHMSHS5kY2ltLnYxLkdldEFzc2V0U3RhdHNSZXF1ZXN0Gh4uZGNpbS52MS5HZXRBc3NldFN0YXRzUmVzcG9uc2VCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * Asset is a physical inventory item (core.assets).
@@ -157,7 +157,7 @@ export type ListAssetsRequest = Message<"dcim.v1.ListAssetsRequest"> & {
   deviceCatalogId: string;
 
   /**
-   * @generated from field: string search = 40;
+   * @generated from field: string search = 40 [features.field_presence = EXPLICIT];
    */
   search: string;
 
@@ -275,7 +275,7 @@ export type CreateAssetRequest = Message<"dcim.v1.CreateAssetRequest"> & {
   warrantyExpiry?: Timestamp;
 
   /**
-   * @generated from field: string notes = 80;
+   * @generated from field: string notes = 80 [features.field_presence = EXPLICIT];
    */
   notes: string;
 };
@@ -398,6 +398,93 @@ export const GetAssetEventsResponseSchema: GenMessage<GetAssetEventsResponse> = 
   messageDesc(file_v1_asset, 11);
 
 /**
+ * AssetLocation is an asset's physical location with names resolved from the
+ * placement -> rack -> rack_row -> room -> site hierarchy.
+ *
+ * @generated from message dcim.v1.AssetLocation
+ */
+export type AssetLocation = Message<"dcim.v1.AssetLocation"> & {
+  /**
+   * @generated from field: string site_name = 10;
+   */
+  siteName: string;
+
+  /**
+   * @generated from field: string room_name = 20;
+   */
+  roomName: string;
+
+  /**
+   * @generated from field: string rack_row_name = 30;
+   */
+  rackRowName: string;
+
+  /**
+   * @generated from field: string rack_name = 40;
+   */
+  rackName: string;
+
+  /**
+   * @generated from field: int32 rack_unit_start = 50;
+   */
+  rackUnitStart: number;
+
+  /**
+   * @generated from field: string rack_id = 60;
+   */
+  rackId: string;
+
+  /**
+   * @generated from field: dcim.v1.RackSlotType rack_slot_type = 70;
+   */
+  rackSlotType: RackSlotType;
+};
+
+/**
+ * Describes the message dcim.v1.AssetLocation.
+ * Use `create(AssetLocationSchema)` to create a new message.
+ */
+export const AssetLocationSchema: GenMessage<AssetLocation> = /*@__PURE__*/
+  messageDesc(file_v1_asset, 12);
+
+/**
+ * @generated from message dcim.v1.GetAssetLocationRequest
+ */
+export type GetAssetLocationRequest = Message<"dcim.v1.GetAssetLocationRequest"> & {
+  /**
+   * @generated from field: string asset_id = 10;
+   */
+  assetId: string;
+};
+
+/**
+ * Describes the message dcim.v1.GetAssetLocationRequest.
+ * Use `create(GetAssetLocationRequestSchema)` to create a new message.
+ */
+export const GetAssetLocationRequestSchema: GenMessage<GetAssetLocationRequest> = /*@__PURE__*/
+  messageDesc(file_v1_asset, 13);
+
+/**
+ * GetAssetLocationResponse has an unset location when the asset has no
+ * rack-based placement.
+ *
+ * @generated from message dcim.v1.GetAssetLocationResponse
+ */
+export type GetAssetLocationResponse = Message<"dcim.v1.GetAssetLocationResponse"> & {
+  /**
+   * @generated from field: dcim.v1.AssetLocation location = 10;
+   */
+  location?: AssetLocation;
+};
+
+/**
+ * Describes the message dcim.v1.GetAssetLocationResponse.
+ * Use `create(GetAssetLocationResponseSchema)` to create a new message.
+ */
+export const GetAssetLocationResponseSchema: GenMessage<GetAssetLocationResponse> = /*@__PURE__*/
+  messageDesc(file_v1_asset, 14);
+
+/**
  * @generated from message dcim.v1.GetAssetStatsRequest
  */
 export type GetAssetStatsRequest = Message<"dcim.v1.GetAssetStatsRequest"> & {
@@ -414,7 +501,7 @@ export type GetAssetStatsRequest = Message<"dcim.v1.GetAssetStatsRequest"> & {
  * Use `create(GetAssetStatsRequestSchema)` to create a new message.
  */
 export const GetAssetStatsRequestSchema: GenMessage<GetAssetStatsRequest> = /*@__PURE__*/
-  messageDesc(file_v1_asset, 12);
+  messageDesc(file_v1_asset, 15);
 
 /**
  * @generated from message dcim.v1.GetAssetStatsResponse
@@ -431,7 +518,7 @@ export type GetAssetStatsResponse = Message<"dcim.v1.GetAssetStatsResponse"> & {
  * Use `create(GetAssetStatsResponseSchema)` to create a new message.
  */
 export const GetAssetStatsResponseSchema: GenMessage<GetAssetStatsResponse> = /*@__PURE__*/
-  messageDesc(file_v1_asset, 13);
+  messageDesc(file_v1_asset, 16);
 
 /**
  * @generated from enum dcim.v1.AssetSortField
@@ -525,6 +612,14 @@ export const AssetService: GenService<{
     methodKind: "unary";
     input: typeof GetAssetEventsRequestSchema;
     output: typeof GetAssetEventsResponseSchema;
+  },
+  /**
+   * @generated from rpc dcim.v1.AssetService.GetAssetLocation
+   */
+  getAssetLocation: {
+    methodKind: "unary";
+    input: typeof GetAssetLocationRequestSchema;
+    output: typeof GetAssetLocationResponseSchema;
   },
   /**
    * @generated from rpc dcim.v1.AssetService.GetAssetStats

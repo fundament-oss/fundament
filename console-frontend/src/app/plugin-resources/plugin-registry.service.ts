@@ -64,7 +64,8 @@ function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
       })),
     },
     crds: def.crds ?? [],
-    customUI: def.customUI,
+    customComponents: def.customComponents,
+    allowedResources: def.allowedResources ?? [],
   };
 }
 
@@ -104,13 +105,17 @@ export default class PluginRegistryService {
 
     const results = await Promise.allSettled(
       runningPlugins.map(async (item) => {
-        const { pluginName } = item.spec;
+        // Child resource names (namespace, service) derive from metadata.name —
+        // see plugin-controller resources.go childName/pluginNamespace.
+        const installationName = item.metadata.name;
         const defRes = await fetch(
-          `${kubeApiProxyUrl}/clusters/${clusterId}/api/v1/namespaces/plugin-${pluginName}/services/http:plugin-${pluginName}:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
+          `${kubeApiProxyUrl}/clusters/${clusterId}/api/v1/namespaces/plugin-${installationName}/services/http:plugin-${installationName}:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
           { credentials: 'include' },
         );
         if (!defRes.ok) {
-          throw new Error(`Failed to fetch definition for ${pluginName}: ${defRes.status}`);
+          throw new Error(
+            `Failed to fetch definition for ${installationName}: ${defRes.status}`,
+          );
         }
 
         return defRes.json() as Promise<GetDefinitionResponse>;

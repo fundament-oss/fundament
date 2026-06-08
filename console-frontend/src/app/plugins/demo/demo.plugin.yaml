@@ -11,6 +11,11 @@ menu:
       icon: business-suitcase
 crds:
   - demoitems.demo.fundament.io
-customUI:
+customComponents:
   DemoItem:
     list: /plugin-ui/demo/list.html
+allowedResources:
+  - group: demo.fundament.io
+    version: v1
+    resource: demoitems
+    verbs: [list, get]

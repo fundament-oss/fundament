@@ -13,9 +13,6 @@ import {
 } from '@angular/core';
 import '@nldd/design-system/icon';
 import '@nldd/design-system/icon-button';
-import '@nldd/design-system/sheet';
-import '@nldd/design-system/page';
-import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/form';
@@ -32,9 +29,13 @@ import '@nldd/design-system/switch-field';
 import '@nldd/design-system/text-field';
 import '@nldd/design-system/toggle-button';
 import '@nldd/design-system/pagination';
+import '@nldd/design-system/segmented-control';
+import '@nldd/design-system/navigation-split-view';
+import '@nldd/design-system/inline-dialog';
 import {
   RouterOutlet,
   RouterLink,
+  RouterLinkActive,
   Router,
   NavigationEnd,
   ActivatedRouteSnapshot,
@@ -58,7 +59,6 @@ import KubeClusterContextService from './plugin-resources/kube-cluster-context.s
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
-import SidebarNavComponent from './sidebar-nav/sidebar-nav';
 
 const reloadApp = () => {
   window.location.reload();
@@ -69,11 +69,11 @@ const reloadApp = () => {
   imports: [
     RouterOutlet,
     RouterLink,
+    RouterLinkActive,
     SelectorModalComponent,
     OrgPickerComponent,
     FundamentLogoIconComponent,
     BreadcrumbComponent,
-    SidebarNavComponent,
   ],
   host: {
     '(document:click)': 'onDocumentClick($event)',
@@ -109,7 +109,13 @@ export default class App implements OnInit {
 
   private inviteClient = inject(INVITE);
 
-  @ViewChild('mobileSheet') private mobileSheetRef?: ElementRef<HTMLElement>;
+  @ViewChild('splitView') private splitViewRef?: ElementRef<
+    HTMLElement & { showSidebarSheet(): Promise<void>; hideSidebarSheet(): void }
+  >;
+
+  private readonly mobileMq = window.matchMedia('(max-width: 1023px)');
+
+  isMobile = signal(this.mobileMq.matches);
 
   private clusterNameCache = new Map<string, string>();
 
@@ -179,6 +185,7 @@ export default class App implements OnInit {
   }
 
   async ngOnInit() {
+    this.mobileMq.addEventListener('change', (e) => this.isMobile.set(e.matches));
     this.initializeTheme();
 
     // Initialize authentication state
@@ -384,7 +391,7 @@ export default class App implements OnInit {
     if (label === ':projectName') {
       await this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
       const projectData = this.organizationDataService.getProjectById(params['id']);
-      label = projectData?.project.name ?? 'Project';
+      label = projectData?.project.alias ?? 'Project';
     }
 
     if (label === ':pluginAlias') {
@@ -475,6 +482,17 @@ export default class App implements OnInit {
     this.applyTheme();
   }
 
+  // Set theme explicitly
+  setTheme(value: string) {
+    this.isDarkMode.set(value === 'dark');
+
+    if (document.startViewTransition) {
+      document.startViewTransition(this.applyTheme.bind(this));
+    } else {
+      this.applyTheme();
+    }
+  }
+
   // Toggle theme
   toggleTheme() {
     this.isDarkMode.set(!this.isDarkMode());
@@ -545,11 +563,11 @@ export default class App implements OnInit {
   }
 
   toggleSidebar() {
-    (this.mobileSheetRef?.nativeElement as (HTMLElement & { show(): void }) | undefined)?.show();
+    this.splitViewRef?.nativeElement.showSidebarSheet();
   }
 
   closeSidebar() {
-    (this.mobileSheetRef?.nativeElement as (HTMLElement & { hide(): void }) | undefined)?.hide();
+    this.splitViewRef?.nativeElement.hideSidebarSheet();
   }
 
   // Nested selector methods
@@ -604,7 +622,11 @@ export default class App implements OnInit {
       .filter((org) => !pendingOrgIds.has(org.id))
       .map((org) => {
         const detailed = detailedOrgs.find((d) => d.id === org.id);
-        const projects = detailed ? detailed.clusters.flatMap((c) => c.projects) : [];
+        const projects = detailed
+          ? detailed.clusters.flatMap((c) =>
+              c.projects.map((p) => ({ ...p, alias: p.alias ?? p.name })),
+            )
+          : [];
         return { id: org.id, name: org.name, alias: org.alias, projects };
       });
   });
@@ -629,7 +651,7 @@ export default class App implements OnInit {
       if (projectId) {
         const projectData = this.organizationDataService.getProjectById(projectId);
         if (projectData) {
-          return { type: 'project', name: projectData.project.name };
+          return { type: 'project', name: projectData.project.alias ?? projectData.project.name };
         }
       }
     } else if (type === 'organization') {

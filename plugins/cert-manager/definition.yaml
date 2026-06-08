@@ -58,11 +58,21 @@ spec:
         detail: true
         create: true
         icon: file-text
+      - crd: issuers.cert-manager.io
+        list: true
+        detail: true
+        create: true
+        icon: rectangle-stack
       - crd: certificaterequests.cert-manager.io
         list: true
         detail: true
         create: false
         icon: magnifier
+  crds:
+    - certificates.cert-manager.io
+    - certificaterequests.cert-manager.io
+    - issuers.cert-manager.io
+    - clusterissuers.cert-manager.io
   uiHints:
     certificates.cert-manager.io:
       statusMapping:
@@ -84,3 +94,33 @@ spec:
           "False":
             badge: danger
             label: Not Ready
+  customComponents:
+    Certificate:
+      list: certificates-list.html
+      detail: certificates-detail.html
+    CertificateRequest:
+      list: certificaterequests-list.html
+      detail: certificaterequests-detail.html
+    Issuer:
+      list: issuers-list.html
+      detail: issuers-detail.html
+    ClusterIssuer:
+      list: clusterissuers-list.html
+      detail: clusterissuers-detail.html
+  allowedResources:
+    - group: cert-manager.io
+      version: v1
+      resource: certificates
+      verbs: [list, get]
+    - group: cert-manager.io
+      version: v1
+      resource: certificaterequests
+      verbs: [list, get]
+    - group: cert-manager.io
+      version: v1
+      resource: issuers
+      verbs: [list, get]
+    - group: cert-manager.io
+      version: v1
+      resource: clusterissuers
+      verbs: [list, get]

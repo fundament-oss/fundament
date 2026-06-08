@@ -32,9 +32,34 @@ type PluginInstallation struct {
 type PluginInstallationSpec struct {
 	Image           string            `json:"image"`
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-	PluginName      string            `json:"pluginName"`
-	ClusterRoles    []string          `json:"clusterRoles,omitempty"`
-	Config          map[string]string `json:"config,omitempty"`
+	// DefinitionRef is the immutable pin to the published PluginDefinition the
+	// installer consented to. plugin-controller resolves the definition by
+	// DefinitionHash and materialises the plugin SA's Role from it (FUN-17).
+	// It is the source of truth for the plugin's RBAC scope — no RBAC is
+	// copied onto this CR.
+	//
+	// The installation's addressable handle is metadata.name (Kubernetes
+	// convention — no spec.pluginName echo of it). The controller uses
+	// metadata.name to derive child resource names (namespace, SA, etc.);
+	// DefinitionRef.PluginName names the pinned definition and may differ.
+	DefinitionRef DefinitionRef `json:"definitionRef"`
+	// ClusterRoles is legacy: once the controller materialises the SA Role
+	// from DefinitionRef it is no longer bound. Retained for backward
+	// compatibility; removal is a follow-up.
+	ClusterRoles []string          `json:"clusterRoles,omitempty"`
+	Config       map[string]string `json:"config,omitempty"`
+}
+
+// DefinitionRef pins an immutable, content-addressed PluginDefinition.
+// A published PluginDefinition is content-addressed: (PluginName,
+// PluginVersion) resolves to exactly one DefinitionHash forever, so the pin is
+// itself the consent record (FUN-17 "Where the scope comes from").
+//
+// +k8s:deepcopy-gen=true
+type DefinitionRef struct {
+	PluginName     string `json:"pluginName"`
+	PluginVersion  string `json:"pluginVersion"`
+	DefinitionHash string `json:"definitionHash"`
 }
 
 type PluginInstallationStatus struct {

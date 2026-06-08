@@ -45,8 +45,8 @@ Use `functl config dir` to see the resolved directory, or `functl config path` f
 Create `~/.config/fundament/config.yaml` to override defaults:
 
 ```yaml
-api_endpoint: http://organization.fundament.localhost:8080
-authn_url: http://authn.fundament.localhost:8080
+api_endpoint: https://organization.fundament.localhost:8443
+authn_url: https://authn.fundament.localhost:8443
 output: table
 ```
 

@@ -16,6 +16,8 @@ import (
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/fundament-oss/fundament/common/testdb"
 )
 
 const testDBPort = 45326
@@ -78,7 +80,7 @@ func TestMain(m *testing.M) {
 
 	adminPool := newAdminPool()
 
-	createRoles(adminPool)
+	testdb.CreateRoles(context.Background(), adminPool)
 
 	if err = setupTemplateDatabaseWithMigrations(adminPool); err != nil {
 		adminPool.Close()
@@ -225,17 +227,6 @@ func newAdminPool() *pgxpool.Pool {
 		log.Fatalf("failed to connect to postgres: %v", err)
 	}
 	return pool
-}
-
-func createRoles(pool *pgxpool.Pool) {
-	ctx := context.Background()
-	roles := []string{"fun_authn_api", "fun_fundament_api", "fun_operator", "fun_owner", "fun_authz", "fun_cluster_worker", "fun_authz_worker", "fun_dcim_api"}
-	for _, role := range roles {
-		_, err := pool.Exec(ctx, fmt.Sprintf(`DO $$ BEGIN CREATE ROLE %s WITH LOGIN PASSWORD '%s'; EXCEPTION WHEN duplicate_object THEN ALTER ROLE %s WITH PASSWORD '%s'; END $$`, role, role, role, role))
-		if err != nil {
-			log.Fatalf("failed to create role %s: %v", role, err)
-		}
-	}
 }
 
 func trekApply(projectRoot string) {

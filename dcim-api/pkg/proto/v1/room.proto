@@ -50,7 +50,7 @@ message GetRoomResponse {
 message CreateRoomRequest {
   string site_id = 10 [(buf.validate.field).string = {uuid: true}];
   string name    = 20 [(buf.validate.field).string.min_len = 1];
-  string floor   = 30;
+  string floor   = 30 [features.field_presence = EXPLICIT];
 }
 
 message CreateRoomResponse {

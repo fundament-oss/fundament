@@ -526,7 +526,7 @@ type ListAssetsRequest struct {
 	xxx_hidden_StatusFilter    AssetStatus            `protobuf:"varint,10,opt,name=status_filter,json=statusFilter,enum=dcim.v1.AssetStatus"`
 	xxx_hidden_CategoryFilter  AssetCategory          `protobuf:"varint,20,opt,name=category_filter,json=categoryFilter,enum=dcim.v1.AssetCategory"`
 	xxx_hidden_DeviceCatalogId *string                `protobuf:"bytes,30,opt,name=device_catalog_id,json=deviceCatalogId"`
-	xxx_hidden_Search          string                 `protobuf:"bytes,40,opt,name=search"`
+	xxx_hidden_Search          *string                `protobuf:"bytes,40,opt,name=search"`
 	xxx_hidden_SortBy          AssetSortField         `protobuf:"varint,50,opt,name=sort_by,json=sortBy,enum=dcim.v1.AssetSortField"`
 	xxx_hidden_SortDirection   SortDirection          `protobuf:"varint,60,opt,name=sort_direction,json=sortDirection,enum=dcim.v1.SortDirection"`
 	xxx_hidden_IncludeDeleted  bool                   `protobuf:"varint,70,opt,name=include_deleted,json=includeDeleted"`
@@ -591,7 +591,10 @@ func (x *ListAssetsRequest) GetDeviceCatalogId() string {
 
 func (x *ListAssetsRequest) GetSearch() string {
 	if x != nil {
-		return x.xxx_hidden_Search
+		if x.xxx_hidden_Search != nil {
+			return *x.xxx_hidden_Search
+		}
+		return ""
 	}
 	return ""
 }
@@ -633,7 +636,8 @@ func (x *ListAssetsRequest) SetDeviceCatalogId(v string) {
 }
 
 func (x *ListAssetsRequest) SetSearch(v string) {
-	x.xxx_hidden_Search = v
+	x.xxx_hidden_Search = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 7)
 }
 
 func (x *ListAssetsRequest) SetSortBy(v AssetSortField) {
@@ -669,6 +673,13 @@ func (x *ListAssetsRequest) HasDeviceCatalogId() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
+func (x *ListAssetsRequest) HasSearch() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
 func (x *ListAssetsRequest) ClearStatusFilter() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_StatusFilter = AssetStatus_ASSET_STATUS_UNSPECIFIED
@@ -684,13 +695,18 @@ func (x *ListAssetsRequest) ClearDeviceCatalogId() {
 	x.xxx_hidden_DeviceCatalogId = nil
 }
 
+func (x *ListAssetsRequest) ClearSearch() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_Search = nil
+}
+
 type ListAssetsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	StatusFilter    *AssetStatus
 	CategoryFilter  *AssetCategory
 	DeviceCatalogId *string
-	Search          string
+	Search          *string
 	SortBy          AssetSortField
 	SortDirection   SortDirection
 	IncludeDeleted  bool
@@ -712,7 +728,10 @@ func (b0 ListAssetsRequest_builder) Build() *ListAssetsRequest {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 7)
 		x.xxx_hidden_DeviceCatalogId = b.DeviceCatalogId
 	}
-	x.xxx_hidden_Search = b.Search
+	if b.Search != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 7)
+		x.xxx_hidden_Search = b.Search
+	}
 	x.xxx_hidden_SortBy = b.SortBy
 	x.xxx_hidden_SortDirection = b.SortDirection
 	x.xxx_hidden_IncludeDeleted = b.IncludeDeleted
@@ -912,7 +931,7 @@ type CreateAssetRequest struct {
 	xxx_hidden_PurchaseDate    *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=purchase_date,json=purchaseDate"`
 	xxx_hidden_PurchaseOrder   *string                `protobuf:"bytes,60,opt,name=purchase_order,json=purchaseOrder"`
 	xxx_hidden_WarrantyExpiry  *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=warranty_expiry,json=warrantyExpiry"`
-	xxx_hidden_Notes           string                 `protobuf:"bytes,80,opt,name=notes"`
+	xxx_hidden_Notes           *string                `protobuf:"bytes,80,opt,name=notes"`
 	XXX_raceDetectHookData     protoimpl.RaceDetectHookData
 	XXX_presence               [1]uint32
 	unknownFields              protoimpl.UnknownFields
@@ -1004,7 +1023,10 @@ func (x *CreateAssetRequest) GetWarrantyExpiry() *timestamppb.Timestamp {
 
 func (x *CreateAssetRequest) GetNotes() string {
 	if x != nil {
-		return x.xxx_hidden_Notes
+		if x.xxx_hidden_Notes != nil {
+			return *x.xxx_hidden_Notes
+		}
+		return ""
 	}
 	return ""
 }
@@ -1041,7 +1063,8 @@ func (x *CreateAssetRequest) SetWarrantyExpiry(v *timestamppb.Timestamp) {
 }
 
 func (x *CreateAssetRequest) SetNotes(v string) {
-	x.xxx_hidden_Notes = v
+	x.xxx_hidden_Notes = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 8)
 }
 
 func (x *CreateAssetRequest) HasSerialNumber() bool {
@@ -1079,6 +1102,13 @@ func (x *CreateAssetRequest) HasWarrantyExpiry() bool {
 	return x.xxx_hidden_WarrantyExpiry != nil
 }
 
+func (x *CreateAssetRequest) HasNotes() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
 func (x *CreateAssetRequest) ClearSerialNumber() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
 	x.xxx_hidden_SerialNumber = nil
@@ -1102,6 +1132,11 @@ func (x *CreateAssetRequest) ClearWarrantyExpiry() {
 	x.xxx_hidden_WarrantyExpiry = nil
 }
 
+func (x *CreateAssetRequest) ClearNotes() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_Notes = nil
+}
+
 type CreateAssetRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -1112,7 +1147,7 @@ type CreateAssetRequest_builder struct {
 	PurchaseDate    *timestamppb.Timestamp
 	PurchaseOrder   *string
 	WarrantyExpiry  *timestamppb.Timestamp
-	Notes           string
+	Notes           *string
 }
 
 func (b0 CreateAssetRequest_builder) Build() *CreateAssetRequest {
@@ -1135,7 +1170,10 @@ func (b0 CreateAssetRequest_builder) Build() *CreateAssetRequest {
 		x.xxx_hidden_PurchaseOrder = b.PurchaseOrder
 	}
 	x.xxx_hidden_WarrantyExpiry = b.WarrantyExpiry
-	x.xxx_hidden_Notes = b.Notes
+	if b.Notes != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 8)
+		x.xxx_hidden_Notes = b.Notes
+	}
 	return m0
 }
 
@@ -1584,6 +1622,276 @@ func (b0 GetAssetEventsResponse_builder) Build() *GetAssetEventsResponse {
 	return m0
 }
 
+// AssetLocation is an asset's physical location with names resolved from the
+// placement -> rack -> rack_row -> room -> site hierarchy.
+type AssetLocation struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_SiteName      string                 `protobuf:"bytes,10,opt,name=site_name,json=siteName"`
+	xxx_hidden_RoomName      string                 `protobuf:"bytes,20,opt,name=room_name,json=roomName"`
+	xxx_hidden_RackRowName   string                 `protobuf:"bytes,30,opt,name=rack_row_name,json=rackRowName"`
+	xxx_hidden_RackName      string                 `protobuf:"bytes,40,opt,name=rack_name,json=rackName"`
+	xxx_hidden_RackUnitStart int32                  `protobuf:"varint,50,opt,name=rack_unit_start,json=rackUnitStart"`
+	xxx_hidden_RackId        string                 `protobuf:"bytes,60,opt,name=rack_id,json=rackId"`
+	xxx_hidden_RackSlotType  RackSlotType           `protobuf:"varint,70,opt,name=rack_slot_type,json=rackSlotType,enum=dcim.v1.RackSlotType"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *AssetLocation) Reset() {
+	*x = AssetLocation{}
+	mi := &file_v1_asset_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AssetLocation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AssetLocation) ProtoMessage() {}
+
+func (x *AssetLocation) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_asset_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *AssetLocation) GetSiteName() string {
+	if x != nil {
+		return x.xxx_hidden_SiteName
+	}
+	return ""
+}
+
+func (x *AssetLocation) GetRoomName() string {
+	if x != nil {
+		return x.xxx_hidden_RoomName
+	}
+	return ""
+}
+
+func (x *AssetLocation) GetRackRowName() string {
+	if x != nil {
+		return x.xxx_hidden_RackRowName
+	}
+	return ""
+}
+
+func (x *AssetLocation) GetRackName() string {
+	if x != nil {
+		return x.xxx_hidden_RackName
+	}
+	return ""
+}
+
+func (x *AssetLocation) GetRackUnitStart() int32 {
+	if x != nil {
+		return x.xxx_hidden_RackUnitStart
+	}
+	return 0
+}
+
+func (x *AssetLocation) GetRackId() string {
+	if x != nil {
+		return x.xxx_hidden_RackId
+	}
+	return ""
+}
+
+func (x *AssetLocation) GetRackSlotType() RackSlotType {
+	if x != nil {
+		return x.xxx_hidden_RackSlotType
+	}
+	return RackSlotType_RACK_SLOT_TYPE_UNSPECIFIED
+}
+
+func (x *AssetLocation) SetSiteName(v string) {
+	x.xxx_hidden_SiteName = v
+}
+
+func (x *AssetLocation) SetRoomName(v string) {
+	x.xxx_hidden_RoomName = v
+}
+
+func (x *AssetLocation) SetRackRowName(v string) {
+	x.xxx_hidden_RackRowName = v
+}
+
+func (x *AssetLocation) SetRackName(v string) {
+	x.xxx_hidden_RackName = v
+}
+
+func (x *AssetLocation) SetRackUnitStart(v int32) {
+	x.xxx_hidden_RackUnitStart = v
+}
+
+func (x *AssetLocation) SetRackId(v string) {
+	x.xxx_hidden_RackId = v
+}
+
+func (x *AssetLocation) SetRackSlotType(v RackSlotType) {
+	x.xxx_hidden_RackSlotType = v
+}
+
+type AssetLocation_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	SiteName      string
+	RoomName      string
+	RackRowName   string
+	RackName      string
+	RackUnitStart int32
+	RackId        string
+	RackSlotType  RackSlotType
+}
+
+func (b0 AssetLocation_builder) Build() *AssetLocation {
+	m0 := &AssetLocation{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_SiteName = b.SiteName
+	x.xxx_hidden_RoomName = b.RoomName
+	x.xxx_hidden_RackRowName = b.RackRowName
+	x.xxx_hidden_RackName = b.RackName
+	x.xxx_hidden_RackUnitStart = b.RackUnitStart
+	x.xxx_hidden_RackId = b.RackId
+	x.xxx_hidden_RackSlotType = b.RackSlotType
+	return m0
+}
+
+type GetAssetLocationRequest struct {
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_AssetId string                 `protobuf:"bytes,10,opt,name=asset_id,json=assetId"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *GetAssetLocationRequest) Reset() {
+	*x = GetAssetLocationRequest{}
+	mi := &file_v1_asset_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAssetLocationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAssetLocationRequest) ProtoMessage() {}
+
+func (x *GetAssetLocationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_asset_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetAssetLocationRequest) GetAssetId() string {
+	if x != nil {
+		return x.xxx_hidden_AssetId
+	}
+	return ""
+}
+
+func (x *GetAssetLocationRequest) SetAssetId(v string) {
+	x.xxx_hidden_AssetId = v
+}
+
+type GetAssetLocationRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	AssetId string
+}
+
+func (b0 GetAssetLocationRequest_builder) Build() *GetAssetLocationRequest {
+	m0 := &GetAssetLocationRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_AssetId = b.AssetId
+	return m0
+}
+
+// GetAssetLocationResponse has an unset location when the asset has no
+// rack-based placement.
+type GetAssetLocationResponse struct {
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Location *AssetLocation         `protobuf:"bytes,10,opt,name=location"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *GetAssetLocationResponse) Reset() {
+	*x = GetAssetLocationResponse{}
+	mi := &file_v1_asset_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAssetLocationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAssetLocationResponse) ProtoMessage() {}
+
+func (x *GetAssetLocationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_asset_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetAssetLocationResponse) GetLocation() *AssetLocation {
+	if x != nil {
+		return x.xxx_hidden_Location
+	}
+	return nil
+}
+
+func (x *GetAssetLocationResponse) SetLocation(v *AssetLocation) {
+	x.xxx_hidden_Location = v
+}
+
+func (x *GetAssetLocationResponse) HasLocation() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Location != nil
+}
+
+func (x *GetAssetLocationResponse) ClearLocation() {
+	x.xxx_hidden_Location = nil
+}
+
+type GetAssetLocationResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Location *AssetLocation
+}
+
+func (b0 GetAssetLocationResponse_builder) Build() *GetAssetLocationResponse {
+	m0 := &GetAssetLocationResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Location = b.Location
+	return m0
+}
+
 type GetAssetStatsRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_SiteId      *string                `protobuf:"bytes,10,opt,name=site_id,json=siteId"`
@@ -1595,7 +1903,7 @@ type GetAssetStatsRequest struct {
 
 func (x *GetAssetStatsRequest) Reset() {
 	*x = GetAssetStatsRequest{}
-	mi := &file_v1_asset_proto_msgTypes[12]
+	mi := &file_v1_asset_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1607,7 +1915,7 @@ func (x *GetAssetStatsRequest) String() string {
 func (*GetAssetStatsRequest) ProtoMessage() {}
 
 func (x *GetAssetStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_asset_proto_msgTypes[12]
+	mi := &file_v1_asset_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1672,7 +1980,7 @@ type GetAssetStatsResponse struct {
 
 func (x *GetAssetStatsResponse) Reset() {
 	*x = GetAssetStatsResponse{}
-	mi := &file_v1_asset_proto_msgTypes[13]
+	mi := &file_v1_asset_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1684,7 +1992,7 @@ func (x *GetAssetStatsResponse) String() string {
 func (*GetAssetStatsResponse) ProtoMessage() {}
 
 func (x *GetAssetStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1_asset_proto_msgTypes[13]
+	mi := &file_v1_asset_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1758,13 +2066,13 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\fneeds_repair\x18( \x01(\x05R\vneedsRepair\x12\x19\n" +
 	"\bon_order\x182 \x01(\x05R\aonOrder\x12\x1c\n" +
 	"\trequested\x18< \x01(\x05R\trequested\x12&\n" +
-	"\x0edecommissioned\x18F \x01(\x05R\x0edecommissioned\"\x82\x03\n" +
-	"\x11ListAssetsRequest\x12@\n" +
+	"\x0edecommissioned\x18F \x01(\x05R\x0edecommissioned\"\x9d\x03\n" +
+	"\x11ListAssetsRequest\x12J\n" +
 	"\rstatus_filter\x18\n" +
-	" \x01(\x0e2\x14.dcim.v1.AssetStatusB\x05\xaa\x01\x02\b\x01R\fstatusFilter\x12F\n" +
-	"\x0fcategory_filter\x18\x14 \x01(\x0e2\x16.dcim.v1.AssetCategoryB\x05\xaa\x01\x02\b\x01R\x0ecategoryFilter\x121\n" +
-	"\x11device_catalog_id\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x0fdeviceCatalogId\x12\x16\n" +
-	"\x06search\x18( \x01(\tR\x06search\x120\n" +
+	" \x01(\x0e2\x14.dcim.v1.AssetStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\fstatusFilter\x12P\n" +
+	"\x0fcategory_filter\x18\x14 \x01(\x0e2\x16.dcim.v1.AssetCategoryB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x0ecategoryFilter\x121\n" +
+	"\x11device_catalog_id\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\x0fdeviceCatalogId\x12\x1d\n" +
+	"\x06search\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\x06search\x120\n" +
 	"\asort_by\x182 \x01(\x0e2\x17.dcim.v1.AssetSortFieldR\x06sortBy\x12=\n" +
 	"\x0esort_direction\x18< \x01(\x0e2\x16.dcim.v1.SortDirectionR\rsortDirection\x12'\n" +
 	"\x0finclude_deleted\x18F \x01(\bR\x0eincludeDeleted\"<\n" +
@@ -1776,7 +2084,7 @@ const file_v1_asset_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"8\n" +
 	"\x10GetAssetResponse\x12$\n" +
 	"\x05asset\x18\n" +
-	" \x01(\v2\x0e.dcim.v1.AssetR\x05asset\"\xac\x03\n" +
+	" \x01(\v2\x0e.dcim.v1.AssetR\x05asset\"\xb3\x03\n" +
 	"\x12CreateAssetRequest\x124\n" +
 	"\x11device_catalog_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fdeviceCatalogId\x128\n" +
@@ -1786,15 +2094,15 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\tasset_tag\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\bassetTag\x12F\n" +
 	"\rpurchase_date\x182 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\fpurchaseDate\x12,\n" +
 	"\x0epurchase_order\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\rpurchaseOrder\x12J\n" +
-	"\x0fwarranty_expiry\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x0ewarrantyExpiry\x12\x14\n" +
-	"\x05notes\x18P \x01(\tR\x05notes\"0\n" +
+	"\x0fwarranty_expiry\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x0ewarrantyExpiry\x12\x1b\n" +
+	"\x05notes\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\x05notes\"0\n" +
 	"\x13CreateAssetResponse\x12\x19\n" +
 	"\basset_id\x18\n" +
-	" \x01(\tR\aassetId\"\x9c\x02\n" +
+	" \x01(\tR\aassetId\"\xa6\x02\n" +
 	"\x12UpdateAssetRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x123\n" +
-	"\x06status\x18\x14 \x01(\x0e2\x14.dcim.v1.AssetStatusB\x05\xaa\x01\x02\b\x01R\x06status\x12*\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12=\n" +
+	"\x06status\x18\x14 \x01(\x0e2\x14.dcim.v1.AssetStatusB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x06status\x12*\n" +
 	"\rserial_number\x18\x1e \x01(\tB\x05\xaa\x01\x02\b\x01R\fserialNumber\x12\"\n" +
 	"\tasset_tag\x18( \x01(\tB\x05\xaa\x01\x02\b\x01R\bassetTag\x12J\n" +
 	"\x0fwarranty_expiry\x182 \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x0ewarrantyExpiry\x12\x1b\n" +
@@ -1807,7 +2115,22 @@ const file_v1_asset_proto_rawDesc = "" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aassetId\"E\n" +
 	"\x16GetAssetEventsResponse\x12+\n" +
 	"\x06events\x18\n" +
-	" \x03(\v2\x13.dcim.v1.AssetEventR\x06events\"6\n" +
+	" \x03(\v2\x13.dcim.v1.AssetEventR\x06events\"\x88\x02\n" +
+	"\rAssetLocation\x12\x1b\n" +
+	"\tsite_name\x18\n" +
+	" \x01(\tR\bsiteName\x12\x1b\n" +
+	"\troom_name\x18\x14 \x01(\tR\broomName\x12\"\n" +
+	"\rrack_row_name\x18\x1e \x01(\tR\vrackRowName\x12\x1b\n" +
+	"\track_name\x18( \x01(\tR\brackName\x12&\n" +
+	"\x0frack_unit_start\x182 \x01(\x05R\rrackUnitStart\x12\x17\n" +
+	"\arack_id\x18< \x01(\tR\x06rackId\x12;\n" +
+	"\x0erack_slot_type\x18F \x01(\x0e2\x15.dcim.v1.RackSlotTypeR\frackSlotType\">\n" +
+	"\x17GetAssetLocationRequest\x12#\n" +
+	"\basset_id\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aassetId\"N\n" +
+	"\x18GetAssetLocationResponse\x122\n" +
+	"\blocation\x18\n" +
+	" \x01(\v2\x16.dcim.v1.AssetLocationR\blocation\"6\n" +
 	"\x14GetAssetStatsRequest\x12\x1e\n" +
 	"\asite_id\x18\n" +
 	" \x01(\tB\x05\xaa\x01\x02\b\x01R\x06siteId\"B\n" +
@@ -1821,7 +2144,7 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\x1eASSET_SORT_FIELD_SERIAL_NUMBER\x10\x14\x12\x1e\n" +
 	"\x1aASSET_SORT_FIELD_ASSET_TAG\x10\x1e\x12\"\n" +
 	"\x1eASSET_SORT_FIELD_PURCHASE_DATE\x10(\x12$\n" +
-	" ASSET_SORT_FIELD_WARRANTY_EXPIRY\x1022\x8b\x04\n" +
+	" ASSET_SORT_FIELD_WARRANTY_EXPIRY\x1022\xe4\x04\n" +
 	"\fAssetService\x12E\n" +
 	"\n" +
 	"ListAssets\x12\x1a.dcim.v1.ListAssetsRequest\x1a\x1b.dcim.v1.ListAssetsResponse\x12?\n" +
@@ -1829,72 +2152,81 @@ const file_v1_asset_proto_rawDesc = "" +
 	"\vCreateAsset\x12\x1b.dcim.v1.CreateAssetRequest\x1a\x1c.dcim.v1.CreateAssetResponse\x12B\n" +
 	"\vUpdateAsset\x12\x1b.dcim.v1.UpdateAssetRequest\x1a\x16.google.protobuf.Empty\x12B\n" +
 	"\vDeleteAsset\x12\x1b.dcim.v1.DeleteAssetRequest\x1a\x16.google.protobuf.Empty\x12Q\n" +
-	"\x0eGetAssetEvents\x12\x1e.dcim.v1.GetAssetEventsRequest\x1a\x1f.dcim.v1.GetAssetEventsResponse\x12N\n" +
+	"\x0eGetAssetEvents\x12\x1e.dcim.v1.GetAssetEventsRequest\x1a\x1f.dcim.v1.GetAssetEventsResponse\x12W\n" +
+	"\x10GetAssetLocation\x12 .dcim.v1.GetAssetLocationRequest\x1a!.dcim.v1.GetAssetLocationResponse\x12N\n" +
 	"\rGetAssetStats\x12\x1d.dcim.v1.GetAssetStatsRequest\x1a\x1e.dcim.v1.GetAssetStatsResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
 var file_v1_asset_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_v1_asset_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_v1_asset_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_v1_asset_proto_goTypes = []any{
-	(AssetSortField)(0),            // 0: dcim.v1.AssetSortField
-	(*Asset)(nil),                  // 1: dcim.v1.Asset
-	(*AssetStats)(nil),             // 2: dcim.v1.AssetStats
-	(*ListAssetsRequest)(nil),      // 3: dcim.v1.ListAssetsRequest
-	(*ListAssetsResponse)(nil),     // 4: dcim.v1.ListAssetsResponse
-	(*GetAssetRequest)(nil),        // 5: dcim.v1.GetAssetRequest
-	(*GetAssetResponse)(nil),       // 6: dcim.v1.GetAssetResponse
-	(*CreateAssetRequest)(nil),     // 7: dcim.v1.CreateAssetRequest
-	(*CreateAssetResponse)(nil),    // 8: dcim.v1.CreateAssetResponse
-	(*UpdateAssetRequest)(nil),     // 9: dcim.v1.UpdateAssetRequest
-	(*DeleteAssetRequest)(nil),     // 10: dcim.v1.DeleteAssetRequest
-	(*GetAssetEventsRequest)(nil),  // 11: dcim.v1.GetAssetEventsRequest
-	(*GetAssetEventsResponse)(nil), // 12: dcim.v1.GetAssetEventsResponse
-	(*GetAssetStatsRequest)(nil),   // 13: dcim.v1.GetAssetStatsRequest
-	(*GetAssetStatsResponse)(nil),  // 14: dcim.v1.GetAssetStatsResponse
-	(AssetStatus)(0),               // 15: dcim.v1.AssetStatus
-	(*timestamppb.Timestamp)(nil),  // 16: google.protobuf.Timestamp
-	(AssetCategory)(0),             // 17: dcim.v1.AssetCategory
-	(SortDirection)(0),             // 18: dcim.v1.SortDirection
-	(*AssetEvent)(nil),             // 19: dcim.v1.AssetEvent
-	(*emptypb.Empty)(nil),          // 20: google.protobuf.Empty
+	(AssetSortField)(0),              // 0: dcim.v1.AssetSortField
+	(*Asset)(nil),                    // 1: dcim.v1.Asset
+	(*AssetStats)(nil),               // 2: dcim.v1.AssetStats
+	(*ListAssetsRequest)(nil),        // 3: dcim.v1.ListAssetsRequest
+	(*ListAssetsResponse)(nil),       // 4: dcim.v1.ListAssetsResponse
+	(*GetAssetRequest)(nil),          // 5: dcim.v1.GetAssetRequest
+	(*GetAssetResponse)(nil),         // 6: dcim.v1.GetAssetResponse
+	(*CreateAssetRequest)(nil),       // 7: dcim.v1.CreateAssetRequest
+	(*CreateAssetResponse)(nil),      // 8: dcim.v1.CreateAssetResponse
+	(*UpdateAssetRequest)(nil),       // 9: dcim.v1.UpdateAssetRequest
+	(*DeleteAssetRequest)(nil),       // 10: dcim.v1.DeleteAssetRequest
+	(*GetAssetEventsRequest)(nil),    // 11: dcim.v1.GetAssetEventsRequest
+	(*GetAssetEventsResponse)(nil),   // 12: dcim.v1.GetAssetEventsResponse
+	(*AssetLocation)(nil),            // 13: dcim.v1.AssetLocation
+	(*GetAssetLocationRequest)(nil),  // 14: dcim.v1.GetAssetLocationRequest
+	(*GetAssetLocationResponse)(nil), // 15: dcim.v1.GetAssetLocationResponse
+	(*GetAssetStatsRequest)(nil),     // 16: dcim.v1.GetAssetStatsRequest
+	(*GetAssetStatsResponse)(nil),    // 17: dcim.v1.GetAssetStatsResponse
+	(AssetStatus)(0),                 // 18: dcim.v1.AssetStatus
+	(*timestamppb.Timestamp)(nil),    // 19: google.protobuf.Timestamp
+	(AssetCategory)(0),               // 20: dcim.v1.AssetCategory
+	(SortDirection)(0),               // 21: dcim.v1.SortDirection
+	(*AssetEvent)(nil),               // 22: dcim.v1.AssetEvent
+	(RackSlotType)(0),                // 23: dcim.v1.RackSlotType
+	(*emptypb.Empty)(nil),            // 24: google.protobuf.Empty
 }
 var file_v1_asset_proto_depIdxs = []int32{
-	15, // 0: dcim.v1.Asset.status:type_name -> dcim.v1.AssetStatus
-	16, // 1: dcim.v1.Asset.purchase_date:type_name -> google.protobuf.Timestamp
-	16, // 2: dcim.v1.Asset.warranty_expiry:type_name -> google.protobuf.Timestamp
-	16, // 3: dcim.v1.Asset.created:type_name -> google.protobuf.Timestamp
-	16, // 4: dcim.v1.Asset.deleted:type_name -> google.protobuf.Timestamp
-	15, // 5: dcim.v1.ListAssetsRequest.status_filter:type_name -> dcim.v1.AssetStatus
-	17, // 6: dcim.v1.ListAssetsRequest.category_filter:type_name -> dcim.v1.AssetCategory
+	18, // 0: dcim.v1.Asset.status:type_name -> dcim.v1.AssetStatus
+	19, // 1: dcim.v1.Asset.purchase_date:type_name -> google.protobuf.Timestamp
+	19, // 2: dcim.v1.Asset.warranty_expiry:type_name -> google.protobuf.Timestamp
+	19, // 3: dcim.v1.Asset.created:type_name -> google.protobuf.Timestamp
+	19, // 4: dcim.v1.Asset.deleted:type_name -> google.protobuf.Timestamp
+	18, // 5: dcim.v1.ListAssetsRequest.status_filter:type_name -> dcim.v1.AssetStatus
+	20, // 6: dcim.v1.ListAssetsRequest.category_filter:type_name -> dcim.v1.AssetCategory
 	0,  // 7: dcim.v1.ListAssetsRequest.sort_by:type_name -> dcim.v1.AssetSortField
-	18, // 8: dcim.v1.ListAssetsRequest.sort_direction:type_name -> dcim.v1.SortDirection
+	21, // 8: dcim.v1.ListAssetsRequest.sort_direction:type_name -> dcim.v1.SortDirection
 	1,  // 9: dcim.v1.ListAssetsResponse.assets:type_name -> dcim.v1.Asset
 	1,  // 10: dcim.v1.GetAssetResponse.asset:type_name -> dcim.v1.Asset
-	15, // 11: dcim.v1.CreateAssetRequest.status:type_name -> dcim.v1.AssetStatus
-	16, // 12: dcim.v1.CreateAssetRequest.purchase_date:type_name -> google.protobuf.Timestamp
-	16, // 13: dcim.v1.CreateAssetRequest.warranty_expiry:type_name -> google.protobuf.Timestamp
-	15, // 14: dcim.v1.UpdateAssetRequest.status:type_name -> dcim.v1.AssetStatus
-	16, // 15: dcim.v1.UpdateAssetRequest.warranty_expiry:type_name -> google.protobuf.Timestamp
-	19, // 16: dcim.v1.GetAssetEventsResponse.events:type_name -> dcim.v1.AssetEvent
-	2,  // 17: dcim.v1.GetAssetStatsResponse.stats:type_name -> dcim.v1.AssetStats
-	3,  // 18: dcim.v1.AssetService.ListAssets:input_type -> dcim.v1.ListAssetsRequest
-	5,  // 19: dcim.v1.AssetService.GetAsset:input_type -> dcim.v1.GetAssetRequest
-	7,  // 20: dcim.v1.AssetService.CreateAsset:input_type -> dcim.v1.CreateAssetRequest
-	9,  // 21: dcim.v1.AssetService.UpdateAsset:input_type -> dcim.v1.UpdateAssetRequest
-	10, // 22: dcim.v1.AssetService.DeleteAsset:input_type -> dcim.v1.DeleteAssetRequest
-	11, // 23: dcim.v1.AssetService.GetAssetEvents:input_type -> dcim.v1.GetAssetEventsRequest
-	13, // 24: dcim.v1.AssetService.GetAssetStats:input_type -> dcim.v1.GetAssetStatsRequest
-	4,  // 25: dcim.v1.AssetService.ListAssets:output_type -> dcim.v1.ListAssetsResponse
-	6,  // 26: dcim.v1.AssetService.GetAsset:output_type -> dcim.v1.GetAssetResponse
-	8,  // 27: dcim.v1.AssetService.CreateAsset:output_type -> dcim.v1.CreateAssetResponse
-	20, // 28: dcim.v1.AssetService.UpdateAsset:output_type -> google.protobuf.Empty
-	20, // 29: dcim.v1.AssetService.DeleteAsset:output_type -> google.protobuf.Empty
-	12, // 30: dcim.v1.AssetService.GetAssetEvents:output_type -> dcim.v1.GetAssetEventsResponse
-	14, // 31: dcim.v1.AssetService.GetAssetStats:output_type -> dcim.v1.GetAssetStatsResponse
-	25, // [25:32] is the sub-list for method output_type
-	18, // [18:25] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	18, // 11: dcim.v1.CreateAssetRequest.status:type_name -> dcim.v1.AssetStatus
+	19, // 12: dcim.v1.CreateAssetRequest.purchase_date:type_name -> google.protobuf.Timestamp
+	19, // 13: dcim.v1.CreateAssetRequest.warranty_expiry:type_name -> google.protobuf.Timestamp
+	18, // 14: dcim.v1.UpdateAssetRequest.status:type_name -> dcim.v1.AssetStatus
+	19, // 15: dcim.v1.UpdateAssetRequest.warranty_expiry:type_name -> google.protobuf.Timestamp
+	22, // 16: dcim.v1.GetAssetEventsResponse.events:type_name -> dcim.v1.AssetEvent
+	23, // 17: dcim.v1.AssetLocation.rack_slot_type:type_name -> dcim.v1.RackSlotType
+	13, // 18: dcim.v1.GetAssetLocationResponse.location:type_name -> dcim.v1.AssetLocation
+	2,  // 19: dcim.v1.GetAssetStatsResponse.stats:type_name -> dcim.v1.AssetStats
+	3,  // 20: dcim.v1.AssetService.ListAssets:input_type -> dcim.v1.ListAssetsRequest
+	5,  // 21: dcim.v1.AssetService.GetAsset:input_type -> dcim.v1.GetAssetRequest
+	7,  // 22: dcim.v1.AssetService.CreateAsset:input_type -> dcim.v1.CreateAssetRequest
+	9,  // 23: dcim.v1.AssetService.UpdateAsset:input_type -> dcim.v1.UpdateAssetRequest
+	10, // 24: dcim.v1.AssetService.DeleteAsset:input_type -> dcim.v1.DeleteAssetRequest
+	11, // 25: dcim.v1.AssetService.GetAssetEvents:input_type -> dcim.v1.GetAssetEventsRequest
+	14, // 26: dcim.v1.AssetService.GetAssetLocation:input_type -> dcim.v1.GetAssetLocationRequest
+	16, // 27: dcim.v1.AssetService.GetAssetStats:input_type -> dcim.v1.GetAssetStatsRequest
+	4,  // 28: dcim.v1.AssetService.ListAssets:output_type -> dcim.v1.ListAssetsResponse
+	6,  // 29: dcim.v1.AssetService.GetAsset:output_type -> dcim.v1.GetAssetResponse
+	8,  // 30: dcim.v1.AssetService.CreateAsset:output_type -> dcim.v1.CreateAssetResponse
+	24, // 31: dcim.v1.AssetService.UpdateAsset:output_type -> google.protobuf.Empty
+	24, // 32: dcim.v1.AssetService.DeleteAsset:output_type -> google.protobuf.Empty
+	12, // 33: dcim.v1.AssetService.GetAssetEvents:output_type -> dcim.v1.GetAssetEventsResponse
+	15, // 34: dcim.v1.AssetService.GetAssetLocation:output_type -> dcim.v1.GetAssetLocationResponse
+	17, // 35: dcim.v1.AssetService.GetAssetStats:output_type -> dcim.v1.GetAssetStatsResponse
+	28, // [28:36] is the sub-list for method output_type
+	20, // [20:28] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_v1_asset_proto_init() }
@@ -1909,7 +2241,7 @@ func file_v1_asset_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_asset_proto_rawDesc), len(file_v1_asset_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   14,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

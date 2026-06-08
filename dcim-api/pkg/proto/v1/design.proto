@@ -126,7 +126,7 @@ message GetDesignResponse {
 
 message CreateDesignRequest {
   string name        = 10 [(buf.validate.field).string.min_len = 1];
-  string description = 20;
+  string description = 20 [features.field_presence = EXPLICIT];
 }
 
 message CreateDesignResponse {
@@ -137,7 +137,7 @@ message UpdateDesignRequest {
   string              id          = 10 [(buf.validate.field).string = {uuid: true}];
   string              name        = 20 [features.field_presence = EXPLICIT];
   string              description = 30 [features.field_presence = EXPLICIT];
-  LogicalDesignStatus status      = 40 [features.field_presence = EXPLICIT];
+  LogicalDesignStatus status      = 40 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
 }
 
 message DeleteDesignRequest {
@@ -176,7 +176,7 @@ message CreateDeviceRequest {
   LogicalDeviceRole role              = 30 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string            device_catalog_id = 40 [features.field_presence = EXPLICIT];
   string            requirements      = 50 [features.field_presence = EXPLICIT];
-  string            notes             = 60;
+  string            notes             = 60 [features.field_presence = EXPLICIT];
 }
 
 message CreateDeviceResponse {
@@ -186,7 +186,7 @@ message CreateDeviceResponse {
 message UpdateDeviceRequest {
   string            id                = 10 [(buf.validate.field).string = {uuid: true}];
   string            label             = 20 [features.field_presence = EXPLICIT];
-  LogicalDeviceRole role              = 30 [features.field_presence = EXPLICIT];
+  LogicalDeviceRole role              = 30 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string            device_catalog_id = 40 [features.field_presence = EXPLICIT];
   string            requirements      = 50 [features.field_presence = EXPLICIT];
   string            notes             = 60 [features.field_presence = EXPLICIT];
@@ -230,7 +230,7 @@ message CreateConnectionRequest {
   string                target_port_role = 50 [(buf.validate.field).string.min_len = 1];
   LogicalConnectionType connection_type  = 60 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string                requirements     = 70 [features.field_presence = EXPLICIT];
-  string                label            = 80;
+  string                label            = 80 [features.field_presence = EXPLICIT];
 }
 
 message CreateConnectionResponse {
@@ -241,7 +241,7 @@ message UpdateConnectionRequest {
   string                id               = 10 [(buf.validate.field).string = {uuid: true}];
   string                source_port_role = 20 [features.field_presence = EXPLICIT];
   string                target_port_role = 30 [features.field_presence = EXPLICIT];
-  LogicalConnectionType connection_type  = 40 [features.field_presence = EXPLICIT];
+  LogicalConnectionType connection_type  = 40 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string                requirements     = 50 [features.field_presence = EXPLICIT];
   string                label            = 60 [features.field_presence = EXPLICIT];
 }

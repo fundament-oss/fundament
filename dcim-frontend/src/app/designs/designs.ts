@@ -14,6 +14,7 @@ import { firstValueFrom } from 'rxjs';
 import { LogicalDesign, LogicalDesignStatus } from './design.model';
 import DesignApiService from './design-api.service';
 import connectErrorMessage from '../../connect/error';
+import parseValidationError from '../../connect/validation';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -41,6 +42,11 @@ export default class DesignsComponent implements OnInit {
   editDesign = signal<Partial<LogicalDesign> | null>(null);
 
   deleteDesign = signal<LogicalDesign | null>(null);
+
+  // ── Validation feedback ──────────────────────────────────────────────────────
+  readonly invalidFields = signal<Record<string, string>>({});
+
+  readonly formErrorMessage = signal<string | null>(null);
 
   private readonly designSheetEl = viewChild<NativeElementRef>('designSheet');
 
@@ -91,24 +97,50 @@ export default class DesignsComponent implements OnInit {
   // ── Actions ────────────────────────────────────────────────────────────────
 
   openNewDesign(): void {
+    this.clearErrors();
     this.editDesign.set({ id: '', name: '', version: 1, status: 'draft' });
   }
 
   closeDesignForm(): void {
+    this.clearErrors();
     this.editDesign.set(null);
   }
 
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearErrors(): void {
+    this.invalidFields.set({});
+    this.formErrorMessage.set(null);
+  }
+
+  private handleError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.formErrorMessage.set(message);
+  }
+
   saveDesign(): void {
+    this.clearErrors();
     const name = this.fDesignName()?.nativeElement.value ?? '';
-    if (!name?.trim()) return;
     firstValueFrom(this.designApi.createDesign(name.trim()))
       .then((res) => {
-        const design: LogicalDesign = { id: res.designId, name: name.trim(), version: 1, status: 'draft', created: new Date().toISOString() };
+        const design: LogicalDesign = {
+          id: res.designId,
+          name: name.trim(),
+          version: 1,
+          status: 'draft',
+          created: new Date().toISOString(),
+        };
         this.mutableDesigns.update((list) => [design, ...list]);
         this.editDesign.set(null);
       })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+      .catch((err) => this.handleError(err));
   }
 
   archiveDesign(design: LogicalDesign): void {

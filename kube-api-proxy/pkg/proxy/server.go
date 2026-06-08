@@ -21,6 +21,10 @@ type Config struct {
 	CORSAllowedOrigins []string
 	Mode               string // "mock" (default) or "real"
 	GardenerClient     *gardener.Client
+	// MockPluginTemplatesDir is the on-disk root from which `/proxy/console/*`
+	// requests are answered in mock mode. Layout: <dir>/<pluginName>/console/<file>.
+	// Ignored in "real" mode.
+	MockPluginTemplatesDir string
 }
 
 type Server struct {
@@ -44,14 +48,14 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		tokenCache = tokenpkg.NewCache(cfg.GardenerClient, logger)
 		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, logger)
 	case "mock":
-		kubeHandler = &kube.MockClient{}
+		kubeHandler = &kube.MockClient{PluginTemplatesDir: cfg.MockPluginTemplatesDir}
 	default:
 		return nil, fmt.Errorf("invalid Mode %q: must be \"mock\" or \"real\"", cfg.Mode)
 	}
 
 	s := &Server{
 		logger:        logger,
-		authValidator: auth.NewValidator(cfg.JWTSecret, logger),
+		authValidator: auth.NewValidatorForAudience(cfg.JWTSecret, auth.TokenTypeUser, logger),
 		authz:         authzClient,
 		tokenCache:    tokenCache,
 		kubeHandler:   kubeHandler,

@@ -22,13 +22,14 @@ import (
 )
 
 type config struct {
-	OpenFGA            authz.Config
-	JWTSecret          string     `env:"JWT_SECRET,required,notEmpty"`
-	ListenAddr         string     `env:"LISTEN_ADDR" envDefault:":8081"`
-	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	CORSAllowedOrigins []string   `env:"CORS_ALLOWED_ORIGINS"`
-	KubeProxyMode      string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
-	GardenerKubeconfig string     `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
+	OpenFGA                authz.Config
+	JWTSecret              string     `env:"JWT_SECRET,required,notEmpty"`
+	ListenAddr             string     `env:"LISTEN_ADDR" envDefault:":8081"`
+	LogLevel               slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	CORSAllowedOrigins     []string   `env:"CORS_ALLOWED_ORIGINS"`
+	KubeProxyMode          string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
+	GardenerKubeconfig     string     `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
+	MockPluginTemplatesDir string     `env:"MOCK_PLUGIN_TEMPLATES_DIR" envDefault:"./plugins"`
 }
 
 func main() {
@@ -72,10 +73,11 @@ func run() error {
 	}
 
 	server, err := proxy.New(logger, &proxy.Config{
-		JWTSecret:          []byte(cfg.JWTSecret),
-		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
-		Mode:               cfg.KubeProxyMode,
-		GardenerClient:     gardenerClient,
+		JWTSecret:              []byte(cfg.JWTSecret),
+		CORSAllowedOrigins:     cfg.CORSAllowedOrigins,
+		Mode:                   cfg.KubeProxyMode,
+		GardenerClient:         gardenerClient,
+		MockPluginTemplatesDir: cfg.MockPluginTemplatesDir,
 	}, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy server: %w", err)
