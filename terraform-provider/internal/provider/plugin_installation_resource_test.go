@@ -163,20 +163,91 @@ func TestPluginInstallationResource_ImportID_parsing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.id, func(t *testing.T) {
-			parts := strings.SplitN(tt.id, "/", 2)
-			invalid := len(parts) != 2 || parts[0] == "" || parts[1] == ""
-			if invalid != tt.wantErr {
-				t.Errorf("id %q: wantErr=%v, gotErr=%v", tt.id, tt.wantErr, invalid)
+			cluster, plugin, err := parseImportID(tt.id)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("id %q: wantErr=%v, gotErr=%v", tt.id, tt.wantErr, err)
 				return
 			}
-			if !invalid {
-				if parts[0] != tt.wantCluster {
-					t.Errorf("id %q: cluster = %q, want %q", tt.id, parts[0], tt.wantCluster)
+			if err == nil {
+				if cluster != tt.wantCluster {
+					t.Errorf("id %q: cluster = %q, want %q", tt.id, cluster, tt.wantCluster)
 				}
-				if parts[1] != tt.wantPlugin {
-					t.Errorf("id %q: plugin = %q, want %q", tt.id, parts[1], tt.wantPlugin)
+				if plugin != tt.wantPlugin {
+					t.Errorf("id %q: plugin = %q, want %q", tt.id, plugin, tt.wantPlugin)
 				}
 			}
 		})
+	}
+}
+
+func TestPluginInstallationResource_URLConstruction_Escaping(t *testing.T) {
+	r := &PluginInstallationResource{
+		client: &FundamentClient{KubeProxyURL: "https://proxy.example.com"},
+	}
+
+	got := r.resourceURL("c/d", "a b")
+	want := "https://proxy.example.com/clusters/c%2Fd/apis/plugins.fundament.io/v1/plugininstallations/a%20b"
+	if got != want {
+		t.Errorf("resourceURL with special chars = %q, want %q", got, want)
+	}
+}
+
+func TestClassifyPluginPhase(t *testing.T) {
+	tests := []struct {
+		phase        string
+		wantDone     bool
+		wantTerminal bool
+	}{
+		{phase: "Running", wantDone: true, wantTerminal: false},
+		{phase: "Failed", wantDone: false, wantTerminal: true},
+		{phase: "Terminating", wantDone: false, wantTerminal: true},
+		{phase: "Degraded", wantDone: false, wantTerminal: true},
+		{phase: "Pending", wantDone: false, wantTerminal: false},
+		{phase: "Deploying", wantDone: false, wantTerminal: false},
+		{phase: "", wantDone: false, wantTerminal: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.phase, func(t *testing.T) {
+			done, terminal := classifyPluginPhase(tt.phase)
+			if done != tt.wantDone || terminal != tt.wantTerminal {
+				t.Errorf("classifyPluginPhase(%q) = (done=%v, terminal=%v), want (done=%v, terminal=%v)",
+					tt.phase, done, terminal, tt.wantDone, tt.wantTerminal)
+			}
+		})
+	}
+}
+
+func TestDefinitionHashRegex(t *testing.T) {
+	hex64 := strings.Repeat("a", 64)
+
+	valid := []string{
+		"sha256:unknown",
+		"sha256:" + hex64,
+		"sha256:" + strings.Repeat("0", 64),
+		"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+	}
+	for _, v := range valid {
+		if !definitionHashRegex.MatchString(v) {
+			t.Errorf("expected %q to be valid", v)
+		}
+	}
+
+	invalid := []string{
+		"",
+		"unknown",
+		"sha256:",
+		"sha256:" + strings.Repeat("A", 64), // uppercase not allowed
+		"sha256:" + strings.Repeat("a", 63), // too short
+		"sha256:" + strings.Repeat("a", 65), // too long
+		"sha512:" + hex64,                   // wrong algo prefix
+		"sha256:xyz",                        // non-hex
+		" sha256:unknown",                   // leading space
+		"sha256:unknown ",                   // trailing space
+	}
+	for _, v := range invalid {
+		if definitionHashRegex.MatchString(v) {
+			t.Errorf("expected %q to be invalid", v)
+		}
 	}
 }

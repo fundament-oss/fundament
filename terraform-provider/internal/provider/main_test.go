@@ -137,16 +137,17 @@ func TestMain(m *testing.M) {
 		fmt.Printf("TestMain: deleting dynamic API key %s\n", apiKeyID)
 		cleanupLogin, err := passwordLogin(authnEndpoint, testUserEmail, testUserPassword)
 		if err != nil {
+			// Best-effort: a cleanup failure must not change the test exit code.
 			fmt.Fprintf(os.Stderr, "TestMain: failed to get cleanup JWT (best-effort): %v\n", err)
-			os.Exit(code)
-		}
-		deleteReq := connect.NewRequest(organizationv1.DeleteAPIKeyRequest_builder{
-			ApiKeyId: apiKeyID,
-		}.Build())
-		deleteReq.Header().Set("Authorization", "Bearer "+cleanupLogin.accessToken)
-		deleteReq.Header().Set(organization.OrganizationHeader, orgID)
-		if _, err := apiKeyClient.DeleteAPIKey(ctx, deleteReq); err != nil {
-			fmt.Fprintf(os.Stderr, "TestMain: failed to delete API key (best-effort): %v\n", err)
+		} else {
+			deleteReq := connect.NewRequest(organizationv1.DeleteAPIKeyRequest_builder{
+				ApiKeyId: apiKeyID,
+			}.Build())
+			deleteReq.Header().Set("Authorization", "Bearer "+cleanupLogin.accessToken)
+			deleteReq.Header().Set(organization.OrganizationHeader, orgID)
+			if _, err := apiKeyClient.DeleteAPIKey(ctx, deleteReq); err != nil {
+				fmt.Fprintf(os.Stderr, "TestMain: failed to delete API key (best-effort): %v\n", err)
+			}
 		}
 	}
 

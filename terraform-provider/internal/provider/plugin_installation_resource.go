@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -69,6 +70,11 @@ type pluginInstallationStatus struct {
 }
 
 const pluginInstallationAPIVersion = "plugins.fundament.io/v1"
+
+// definitionHashRegex validates definition_hash: "sha256:" followed by a
+// 64-character lowercase hex digest, or the placeholder "sha256:unknown" used
+// until the marketplace (FUN-11) supplies real content hashes.
+var definitionHashRegex = regexp.MustCompile(`^sha256:([a-f0-9]{64}|unknown)$`)
 
 type pluginInstallationCRD struct {
 	APIVersion string                     `json:"apiVersion"`
@@ -138,7 +144,7 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 				Computed:    true,
 				Default:     stringdefault.StaticString("sha256:unknown"),
 				Validators: []validator.String{
-					stringvalidator.RegexMatches(regexp.MustCompile(`^sha256:`), "definition_hash must be a sha256 content hash prefixed with 'sha256:'"),
+					stringvalidator.RegexMatches(definitionHashRegex, "definition_hash must be 'sha256:' followed by a 64-character hex digest (or the placeholder 'sha256:unknown')"),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -260,14 +266,22 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 			resp.Diagnostics.AddError("Unable to Read Existing Plugin Installation on 409", err.Error())
 			return
 		}
-		if existingCRD.Spec.Image != image {
+		if existingCRD.Spec.Image != image ||
+			existingCRD.Spec.DefinitionRef.PluginVersion != pluginVersion ||
+			existingCRD.Spec.DefinitionRef.DefinitionHash != definitionHash {
 			resp.Diagnostics.AddError(
-				"Plugin Installation Already Exists With Different Image",
-				fmt.Sprintf("A plugin installation for %q already exists on cluster %q with image %q. Import it with `terraform import fundament_plugin_installation.<name> %s/%s` or delete it manually.", pluginName, clusterID, existingCRD.Spec.Image, clusterID, pluginName),
+				"Plugin Installation Already Exists With Different Configuration",
+				fmt.Sprintf("A plugin installation for %q already exists on cluster %q with a different spec "+
+					"(existing: image=%q version=%q hash=%q; planned: image=%q version=%q hash=%q). "+
+					"Import it with `terraform import fundament_plugin_installation.<name> %s/%s` or delete it manually.",
+					pluginName, clusterID,
+					existingCRD.Spec.Image, existingCRD.Spec.DefinitionRef.PluginVersion, existingCRD.Spec.DefinitionRef.DefinitionHash,
+					image, pluginVersion, definitionHash,
+					clusterID, pluginName),
 			)
 			return
 		}
-		tflog.Info(ctx, "Plugin installation already exists with matching image, treating as idempotent success", map[string]any{"plugin_name": pluginName})
+		tflog.Info(ctx, "Plugin installation already exists with matching spec, treating as idempotent success", map[string]any{"plugin_name": pluginName})
 	} else if httpResp.StatusCode != http.StatusCreated && httpResp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(io.LimitReader(httpResp.Body, 64*1024))
 		resp.Diagnostics.AddError(
@@ -277,7 +291,15 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
+	// Persist partial state now: the CRD exists on the server, so if the wait
+	// below fails we must still track the resource — otherwise Terraform treats
+	// Create as failed and orphans the CRD (the next apply hits the 409 path).
 	plan.ID = types.StringValue(clusterID + "/" + pluginName)
+	plan.Phase = types.StringNull()
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	tflog.Debug(ctx, "Polling plugin installation until phase is Running", map[string]any{"plugin_name": pluginName})
 
@@ -482,18 +504,24 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 }
 
 func (r *PluginInstallationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, "/", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError(
-			"Invalid Import ID",
-			fmt.Sprintf("Import ID must be in the form {cluster_id}/{plugin_name}, got: %q", req.ID),
-		)
+	clusterID, pluginName, err := parseImportID(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Import ID", err.Error())
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), parts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("plugin_name"), parts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("cluster_id"), clusterID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("plugin_name"), pluginName)...)
+}
+
+// parseImportID splits a composite import ID of the form {cluster_id}/{plugin_name}.
+func parseImportID(id string) (clusterID, pluginName string, err error) {
+	parts := strings.SplitN(id, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", fmt.Errorf("import ID must be in the form {cluster_id}/{plugin_name}, got: %q", id)
+	}
+	return parts[0], parts[1], nil
 }
 
 func (r *PluginInstallationResource) listURL(clusterID string) string {
@@ -531,56 +559,56 @@ func (r *PluginInstallationResource) fetchCRD(ctx context.Context, clusterID, pl
 	return &crd, nil
 }
 
+// classifyPluginPhase maps a plugin installation status phase to a polling
+// decision: done signals success (Running), terminal signals an unrecoverable
+// phase. Any other phase (Pending, Deploying, or empty) means keep polling.
+func classifyPluginPhase(phase string) (done bool, terminal bool) {
+	switch phase {
+	case "Running":
+		return true, false
+	case "Failed", "Terminating", "Degraded":
+		return false, true
+	default:
+		return false, false
+	}
+}
+
 // waitForPluginRunning polls fetchCRD until phase is Running, or a terminal/timeout condition.
 // Returns the final phase string on success, or an error.
 // Transient fetch errors are retried; only maxConsecutiveErrors consecutive failures are fatal.
 func (r *PluginInstallationResource) waitForPluginRunning(ctx context.Context, clusterID, pluginName string) (string, error) {
 	const maxConsecutiveErrors = 5
 
-	consecutiveErrors := 0
 	lastPhase := ""
 
-	for {
+	err := pollWithBackoff(ctx, 10*time.Second, maxConsecutiveErrors, func(ctx context.Context) (done bool, fatal bool, err error) {
 		crdState, err := r.fetchCRD(ctx, clusterID, pluginName)
 		if err != nil {
-			consecutiveErrors++
-			if consecutiveErrors >= maxConsecutiveErrors {
-				return "", fmt.Errorf("polling plugin installation status: %w", err)
-			}
 			tflog.Debug(ctx, "Transient error polling plugin installation, retrying", map[string]any{
-				"plugin_name":        pluginName,
-				"consecutive_errors": consecutiveErrors,
-				"error":              err.Error(),
+				"plugin_name": pluginName,
+				"error":       err.Error(),
 			})
-			t := time.NewTimer(10 * time.Second)
-			select {
-			case <-ctx.Done():
-				t.Stop()
-				return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q): %w", pluginName, lastPhase, ctx.Err())
-			case <-t.C:
-			}
-			continue
+			return false, false, fmt.Errorf("polling plugin installation status: %w", err)
 		}
 
-		consecutiveErrors = 0
 		lastPhase = crdState.Status.Phase
-
-		switch lastPhase {
-		case "Running":
-			return lastPhase, nil
-		case "Failed", "Terminating", "Degraded":
-			return "", fmt.Errorf("plugin installation for %q entered phase %q: %s", pluginName, lastPhase, crdState.Status.Message)
+		done, terminal := classifyPluginPhase(lastPhase)
+		switch {
+		case done:
+			return true, false, nil
+		case terminal:
+			return false, true, fmt.Errorf("plugin installation for %q entered phase %q: %s", pluginName, lastPhase, crdState.Status.Message)
 		default:
-			// Pending, Deploying, or empty — keep polling.
 			tflog.Debug(ctx, "Plugin installation not yet running", map[string]any{"plugin_name": pluginName, "phase": lastPhase})
+			return false, false, nil
 		}
+	})
 
-		t := time.NewTimer(10 * time.Second)
-		select {
-		case <-ctx.Done():
-			t.Stop()
-			return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q): %w", pluginName, lastPhase, ctx.Err())
-		case <-t.C:
-		}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return "", fmt.Errorf("timed out waiting for plugin %q to reach Running (last phase: %q): %w", pluginName, lastPhase, err)
 	}
+	if err != nil {
+		return "", err
+	}
+	return lastPhase, nil
 }
