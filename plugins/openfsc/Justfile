@@ -1,0 +1,31 @@
+kube_context := env("kube_context", "k3d-fundament-plugin")
+
+# Verify the OpenFSC plugin installation: the PluginInstallation reaches Running
+# (the plugin installs cert-manager + CloudNativePG + the OpenFSC Manager/
+# Controller umbrella) and the auto-seeded self Peer reaches Active (both the
+# Manager and Controller Deployments are Available).
+#
+# The first install clones the OpenFSC repo and pulls many images, so the waits
+# are generous. Prereq: plugin installed (`just plugin-install openfsc`).
+
+# Verify the OpenFSC install: PluginInstallation Running + self Peer Active
+test:
+    @echo "Waiting for PluginInstallation/openfsc to be Running (first install pulls many images)..."
+    kubectl --context {{ kube_context }} wait --for=jsonpath='{.status.phase}'=Running plugininstallation/openfsc --timeout=900s
+    @echo "Waiting for the self Peer to become Active..."
+    kubectl --context {{ kube_context }} wait --for=jsonpath='{.status.phase}'=Active peer/self --timeout=600s
+    kubectl --context {{ kube_context }} get peer
+    kubectl --context {{ kube_context }} -n fsc get pods,deploy
+
+# Remove the OpenFSC directory (umbrella) and the self Peer. cert-manager and
+# CloudNativePG are left in place (they may be shared with other plugins).
+
+# Remove the OpenFSC umbrella and the self Peer
+test-cleanup:
+    kubectl --context {{ kube_context }} delete peer/self --ignore-not-found
+    helm --kube-context {{ kube_context }} uninstall shared -n fsc --ignore-not-found
+
+# Preview the console HTML templates in a browser against the running cluster
+# (live CR data via kubectl; no Console host needed). Prereq: plugin installed.
+console-preview port="4319":
+    PORT={{ port }} kube_context={{ kube_context }} bun scripts/console-preview/serve.js

@@ -1,4 +1,5 @@
 mod cert-manager
+mod openfsc
 
 cluster := "fundament-plugin"
 registry := "plugin-registry.localhost"
@@ -53,6 +54,8 @@ plugin-install plugin:
     image="localhost:{{ registry_port }}/{{ plugin }}-plugin:${tag}"
     docker build -t "${image}" -f "{{ plugin }}/Dockerfile" ..
     docker push "${image}"
+    # definitionRef is immutable, so delete any existing install before (re)applying
+    kubectl --context {{ kube_context }} delete plugininstallation {{ plugin }} --ignore-not-found --wait
     kubectl --context {{ kube_context }} apply -f - <<EOF
     apiVersion: plugins.fundament.io/v1
     kind: PluginInstallation

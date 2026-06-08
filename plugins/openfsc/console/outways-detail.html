@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Outway</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading" id="heading">Outway</h1>
+      <div id="content" class="plugin-text">Loading…</div>
+    </div>
+    <script type="module">
+      import {
+        loadSdk,
+        renderDefList,
+        renderConditionsTable,
+        escapeHtml,
+      } from './_shared.js';
+
+      await loadSdk();
+      const ctx = await fundament.init;
+      const content = document.getElementById('content');
+      const heading = document.getElementById('heading');
+
+      if (!ctx.resource?.name) {
+        content.textContent = 'No outway selected.';
+      } else {
+        try {
+          const item = await fundament.k8s.get({
+            group: 'openfsc.fundament.io',
+            version: 'v1',
+            resource: 'outways',
+            name: ctx.resource.name,
+          });
+          heading.textContent = `Outway · ${item.metadata?.name ?? ctx.resource.name}`;
+          const spec = {
+            Name: item.metadata?.name,
+            'Outway name': item.spec?.outwayName,
+            Created: item.metadata?.creationTimestamp,
+          };
+          const status = {
+            Phase: item.status?.phase ?? '—',
+            Message: item.status?.message,
+            'Last synced': item.status?.lastSyncedTime,
+          };
+          const url = item.status?.url;
+          let consumeBlock = '';
+          if (url) {
+            // Parse the service + namespace out of the in-cluster URL
+            // (http://<svc>.<ns>) for the host port-forward instructions.
+            const m = url.match(/^https?:\/\/([^.:/]+)\.([^.:/]+)/);
+            const svc = m?.[1];
+            const ns = m?.[2];
+            const localPort = '8081';
+            const pf =
+              svc && ns
+                ? `<p class="plugin-text">Or reach it from your host:</p>
+                   <pre class="plugin-text"><code>kubectl port-forward -n ${escapeHtml(ns)} svc/${escapeHtml(svc)} ${localPort}:80
+curl http://localhost:${localPort}/&lt;service-path&gt;</code></pre>`
+                : '';
+            consumeBlock = `<h2 class="plugin-heading">Consume endpoint</h2>
+               <p class="plugin-text">Reach FSC services through this outway in-cluster:</p>
+               <pre class="plugin-text"><code>curl ${escapeHtml(url)}/&lt;service-path&gt;</code></pre>${pf}`;
+          }
+          content.innerHTML = `
+            <h2 class="plugin-heading">Spec</h2>
+            ${renderDefList(spec)}
+            <h2 class="plugin-heading">Status</h2>
+            ${renderDefList(status)}
+            ${consumeBlock}
+            <h2 class="plugin-heading">Conditions</h2>
+            ${renderConditionsTable(item)}`;
+        } catch (err) {
+          content.textContent = `Failed to load: ${err?.message ?? err}`;
+        }
+      }
+    </script>
+  </body>
+</html>

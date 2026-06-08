@@ -1,0 +1,6 @@
+apiVersion: v2
+name: open-fsc-outway
+description: OpenFSC Outway
+type: application
+version: 2.3.0
+appVersion: 2.3.0

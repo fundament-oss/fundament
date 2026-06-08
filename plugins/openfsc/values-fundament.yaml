@@ -1,0 +1,59 @@
+# Fundament override for the OpenFSC v2.3.0 `shared` umbrella
+# (gitlab.com/rinis-oss/fsc/open-fsc, helm/deploy/shared), installed by the
+# OpenFSC Fundament plugin (see installer.go).
+#
+# Layered on top of the chart's own values.yaml, which is already in-cluster
+# friendly (service-name SANs, CNPG wiring, cert-manager existingSecrets). This
+# file only adjusts what the public demo (values-demo.yaml) assumes about
+# ingress/DNS so the directory peer runs headless in a Fundament cluster. The
+# Manager functions as the group's Directory (no external Directory required);
+# the demo CA keypair is injected at install time via --set-file.
+global:
+  groupID: "fsc-demo"
+
+open-fsc-manager:
+  config:
+    selfAddress: "https://shared-open-fsc-manager-external:8443"
+    directoryManagerAddress: "https://shared-open-fsc-manager-external:8443"
+  service:
+    external:
+      type: ClusterIP
+
+open-fsc-controller:
+  config:
+    directoryManagerAddress: "https://shared-open-fsc-manager-external:8443"
+  ingress:
+    enabled: false
+
+open-fsc-directory-ui:
+  # The Directory UI is out of scope for the Fundament directory peer (we only
+  # need the Manager + Controller). The subchart has no enable/condition toggle,
+  # so scale it to zero replicas: the Deployment renders but runs no pods.
+  replicaCount: 0
+  config:
+    directoryManagerAddress: "https://shared-open-fsc-manager-external:8443"
+  service:
+    type: ClusterIP
+  ingress:
+    # This subchart always renders an Ingress (no enable toggle); give it a
+    # dummy in-cluster host so the manifest is valid. It is not routed.
+    hosts:
+      - "directory-ui.fsc.local"
+
+open-fsc-docs:
+  ingress:
+    enabled: false
+
+open-fsc-ca-certportal:
+  ingress:
+    enabled: false
+
+open-fsc-keycloak:
+  config:
+    keycloakHostURL: "http://shared-open-fsc-keycloak"
+    keycloakHostAdminURL: "http://shared-open-fsc-keycloak"
+  extraEnv:
+    - name: KC_HOSTNAME_STRICT
+      value: "false"
+  ingress:
+    enabled: false

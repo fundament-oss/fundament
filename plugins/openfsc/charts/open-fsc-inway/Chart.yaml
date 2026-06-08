@@ -1,0 +1,6 @@
+apiVersion: v2
+name: open-fsc-inway
+description: OpenFSC Inway
+type: application
+version: 2.3.0
+appVersion: 2.3.0

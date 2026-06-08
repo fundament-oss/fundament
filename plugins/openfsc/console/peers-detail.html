@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Peer</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading" id="heading">Peer</h1>
+      <div id="content" class="plugin-text">Loading…</div>
+    </div>
+    <script type="module">
+      import {
+        loadSdk,
+        renderDefList,
+        renderConditionsTable,
+        peerPhase,
+        escapeHtml,
+      } from './_shared.js';
+
+      await loadSdk();
+      const ctx = await fundament.init;
+      const content = document.getElementById('content');
+      const heading = document.getElementById('heading');
+
+      if (!ctx.resource?.name) {
+        content.textContent = 'No peer selected.';
+      } else {
+        try {
+          const item = await fundament.k8s.get({
+            group: 'openfsc.fundament.io',
+            version: 'v1',
+            resource: 'peers',
+            name: ctx.resource.name,
+          });
+          heading.textContent = `Peer · ${item.metadata?.name ?? ctx.resource.name}`;
+          const spec = {
+            Name: item.metadata?.name,
+            Group: item.spec?.groupID,
+            'Peer ID': item.spec?.peerID,
+            'Manager address': item.spec?.managerAddress,
+            Directory: item.spec?.directory,
+            Created: item.metadata?.creationTimestamp,
+          };
+          const status = {
+            Phase: peerPhase(item),
+            Message: item.status?.message,
+            'Last synced': item.status?.lastSyncedTime,
+          };
+          // Only the directory (our own) peer carries a controllerURL.
+          const controllerURL = item.status?.controllerURL;
+          let controllerBlock = '';
+          if (controllerURL) {
+            // For a localhost URL, the controller isn't reachable until the
+            // service is port-forwarded; show the command.
+            const port = (controllerURL.match(/localhost:(\d+)/) || [])[1];
+            const hint = port
+              ? `<p class="plugin-text">Reach it locally with:</p>
+                 <pre class="plugin-text"><code>kubectl port-forward -n fsc svc/shared-open-fsc-controller ${escapeHtml(port)}:80</code></pre>`
+              : '';
+            controllerBlock = `<h2 class="plugin-heading">Controller</h2>
+               <p class="plugin-text">FSC Controller UI:
+                 <a href="${escapeHtml(controllerURL)}" target="_blank" rel="noopener noreferrer">${escapeHtml(controllerURL)}</a>
+               </p>${hint}`;
+          }
+          content.innerHTML = `
+            <h2 class="plugin-heading">Spec</h2>
+            ${renderDefList(spec)}
+            <h2 class="plugin-heading">Status</h2>
+            ${renderDefList(status)}
+            ${controllerBlock}
+            <h2 class="plugin-heading">Conditions</h2>
+            ${renderConditionsTable(item)}`;
+        } catch (err) {
+          content.textContent = `Failed to load: ${err?.message ?? err}`;
+        }
+      }
+    </script>
+  </body>
+</html>
