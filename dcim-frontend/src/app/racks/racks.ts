@@ -420,25 +420,23 @@ export default class RacksComponent implements OnInit {
           }),
       );
       const assetById = new Map(assetsRes.assets.map((a) => [a.id, a]));
-      const placements: PlacementInfo[] = placementsRes.placements.flatMap(
-        (p): PlacementInfo[] => {
-          if (p.location.case !== 'rack') return [];
-          const loc = p.location.value;
-          const asset = assetById.get(p.assetId);
-          const catalog = asset ? catalogById.get(asset.deviceCatalogId) : undefined;
-          return [
-            {
-              placementId: p.id,
-              assetId: p.assetId,
-              assetTag: asset?.assetTag || p.assetId,
-              rackUnitStart: loc.rackUnitStart,
-              slotType: loc.rackSlotType,
-              uSize: parseRackHeight(catalog?.specs),
-              deviceType: categoryToDeviceType(catalog?.category),
-            },
-          ];
-        },
-      );
+      const placements: PlacementInfo[] = placementsRes.placements.flatMap((p): PlacementInfo[] => {
+        if (p.location.case !== 'rack') return [];
+        const loc = p.location.value;
+        const asset = assetById.get(p.assetId);
+        const catalog = asset ? catalogById.get(asset.deviceCatalogId) : undefined;
+        return [
+          {
+            placementId: p.id,
+            assetId: p.assetId,
+            assetTag: asset?.assetTag || p.assetId,
+            rackUnitStart: loc.rackUnitStart,
+            slotType: loc.rackSlotType,
+            uSize: parseRackHeight(catalog?.specs),
+            deviceType: categoryToDeviceType(catalog?.category),
+          },
+        ];
+      });
       untracked(() => {
         this.placementsByRack.update((prev) => {
           const next = new Map(prev);
@@ -462,7 +460,6 @@ export default class RacksComponent implements OnInit {
       state: 'allocated',
     }));
   }
-
 
   private async reloadRowOptions(dcId: string): Promise<void> {
     try {
@@ -636,16 +633,16 @@ export default class RacksComponent implements OnInit {
       next.set(
         rackId,
         placements.map((p) =>
-          movedUnit.has(p.placementId)
-            ? { ...p, rackUnitStart: movedUnit.get(p.placementId)! }
-            : p,
+          movedUnit.has(p.placementId) ? { ...p, rackUnitStart: movedUnit.get(p.placementId)! } : p,
         ),
       );
       return next;
     });
     Promise.all(
       moves.map((m) =>
-        firstValueFrom(this.placementApi.updatePlacement(m.placementId, rackId, m.newUnit, m.slotType)),
+        firstValueFrom(
+          this.placementApi.updatePlacement(m.placementId, rackId, m.newUnit, m.slotType),
+        ),
       ),
     )
       .then(() => {
@@ -719,8 +716,9 @@ export default class RacksComponent implements OnInit {
     this.clearDeviceErrors();
     const assetId = (this.fDeviceAsset()?.nativeElement as HTMLSelectElement)?.value ?? '';
     const slotType =
-      (Number((this.fDeviceSlotType()?.nativeElement as HTMLSelectElement)?.value) as RackSlotType) ||
-      RackSlotType.UNIT;
+      (Number(
+        (this.fDeviceSlotType()?.nativeElement as HTMLSelectElement)?.value,
+      ) as RackSlotType) || RackSlotType.UNIT;
     const rackUnitStart =
       parseInt((this.fDeviceRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '0', 10) || 0;
     firstValueFrom(this.placementApi.createPlacement(assetId, rack.id, rackUnitStart, slotType))
@@ -811,10 +809,10 @@ export default class RacksComponent implements OnInit {
 
   readonly historyEventIconBg = (type: RackEvent['type']): string => {
     const eventMap: Record<RackEvent['type'], string> = {
-      power: 'bg-amber-50',
-      hardware: 'bg-blue-50',
-      config: 'bg-indigo-50',
-      alert: 'bg-red-50',
+      power: 'bg-amber-50 dark:bg-amber-950',
+      hardware: 'bg-blue-50 dark:bg-blue-950',
+      config: 'bg-indigo-50 dark:bg-indigo-950',
+      alert: 'bg-red-50 dark:bg-red-950',
     };
     return eventMap[type];
   };

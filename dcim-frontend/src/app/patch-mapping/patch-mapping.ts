@@ -48,7 +48,7 @@ interface SiteOption {
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
-    class: 'flex flex-col bg-white text-slate-900',
+    class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',
     '[class.min-h-screen]': "activeView() === 'list'",
     '[class.overflow-hidden]': "activeView() === 'topology'",
     '[style.height]': "activeView() === 'topology' ? 'calc(100dvh - 4.25rem)' : null",

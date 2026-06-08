@@ -1,9 +1,13 @@
 <!-- ══════════════════════════════════════════════════════════════
      PAGE HEADER
      ══════════════════════════════════════════════════════════════ -->
-<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
+<div
+  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
+>
   <div class="flex-1 min-w-0">
-    <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0">Patch mapping</h1>
+    <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0">
+      Patch mapping
+    </h1>
   </div>
 
   <!-- View toggle -->
@@ -64,10 +68,10 @@
   } @else {
     <!-- Topology filter bar -->
     <div
-      class="shrink-0 border-b border-slate-200 bg-white px-4 py-2 flex items-center gap-3"
+      class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-2 flex items-center gap-3"
       aria-label="Topology filters"
     >
-      <span class="text-xs font-medium text-slate-500">Filter:</span>
+      <span class="text-xs font-medium text-slate-500 dark:text-gray-400">Filter:</span>
 
       <nldd-segmented-control
         [value]="topologyStatusFilter()"
@@ -87,7 +91,9 @@
       </nldd-segmented-control>
 
       <div class="flex items-center gap-1.5">
-        <label for="topo-type-filter" class="text-xs font-medium text-slate-500 whitespace-nowrap"
+        <label
+          for="topo-type-filter"
+          class="text-xs font-medium text-slate-500 dark:text-gray-400 whitespace-nowrap"
           >Type</label
         >
         <select id="topo-type-filter" (change)="topologyTypeFilter.set($any($event.target).value)">

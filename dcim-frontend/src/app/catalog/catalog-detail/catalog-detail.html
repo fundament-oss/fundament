@@ -1,23 +1,27 @@
 <main class="pb-6">
   @if (entry(); as e) {
     <!-- Page header -->
-    <div class="bg-white border-b border-slate-200">
+    <div class="bg-white dark:bg-gray-950 border-b border-slate-200 dark:border-gray-800">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
         <!-- Breadcrumb -->
         <nav aria-label="Breadcrumb" class="mb-3">
-          <ol class="flex items-center gap-1.5 text-sm text-slate-400">
+          <ol class="flex items-center gap-1.5 text-sm text-slate-400 dark:text-gray-500">
             <li>
-              <a routerLink="/catalog" class="hover:text-slate-600 transition-colors">Catalog</a>
+              <a
+                routerLink="/catalog"
+                class="hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
+                >Catalog</a
+              >
             </li>
             <li aria-hidden="true">/</li>
-            <li class="text-slate-500" aria-current="page">{{ e.model }}</li>
+            <li class="text-slate-500 dark:text-gray-400" aria-current="page">{{ e.model }}</li>
           </ol>
         </nav>
 
         <div class="flex items-start justify-between gap-4 flex-wrap">
           <div class="flex items-center gap-3 min-w-0">
             <div
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500"
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400"
               [attr.aria-label]="e.category"
             >
               <nldd-icon
@@ -27,8 +31,10 @@
               ></nldd-icon>
             </div>
             <div class="min-w-0">
-              <h1 class="text-xl font-semibold text-slate-900 leading-tight">{{ e.model }}</h1>
-              <p class="text-sm text-slate-400 mt-0.5">{{ e.manufacturer }}</p>
+              <h1 class="text-xl font-semibold text-slate-900 dark:text-white leading-tight">
+                {{ e.model }}
+              </h1>
+              <p class="text-sm text-slate-400 dark:text-gray-500 mt-0.5">{{ e.manufacturer }}</p>
             </div>
           </div>
           <nldd-button
@@ -50,18 +56,20 @@
           <!-- Specs card -->
           <section
             aria-labelledby="specs-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 id="specs-heading" class="text-sm font-semibold text-slate-900">
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 id="specs-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
                 Specifications
               </h2>
             </div>
-            <dl class="divide-y divide-slate-100">
+            <dl class="divide-y divide-slate-100 dark:divide-gray-800">
               @for (spec of specEntries(e.specs); track spec.key) {
                 <div class="flex items-center justify-between px-5 py-3">
-                  <dt class="text-sm text-slate-500">{{ spec.key }}</dt>
-                  <dd class="text-sm font-mono text-slate-800">{{ spec.value }}</dd>
+                  <dt class="text-sm text-slate-500 dark:text-gray-400">{{ spec.key }}</dt>
+                  <dd class="text-sm font-mono text-slate-800 dark:text-gray-100">
+                    {{ spec.value }}
+                  </dd>
                 </div>
               }
             </dl>
@@ -70,10 +78,12 @@
           <!-- Port Definitions card -->
           <section
             aria-labelledby="ports-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 id="ports-heading" class="text-sm font-semibold text-slate-900">
+            <div
+              class="px-5 py-4 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between"
+            >
+              <h2 id="ports-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
                 Port Definitions
               </h2>
               <nldd-button
@@ -86,59 +96,63 @@
             </div>
 
             @if (portDefs().length === 0) {
-              <p class="px-5 py-4 text-xs text-slate-400 italic">
+              <p class="px-5 py-4 text-xs text-slate-400 dark:text-gray-500 italic">
                 No port definitions. Click "Add port" to define one.
               </p>
             } @else {
               <table class="w-full text-sm" role="grid">
                 <thead>
-                  <tr class="border-b border-slate-100">
+                  <tr class="border-b border-slate-100 dark:border-gray-800">
                     <th
-                      class="px-5 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                      class="px-5 py-2 text-left text-xs font-medium text-slate-500 dark:text-gray-400 uppercase tracking-wide"
                     >
                       Name
                     </th>
                     <th
-                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-gray-400 uppercase tracking-wide"
                     >
                       Type
                     </th>
                     <th
-                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-gray-400 uppercase tracking-wide"
                     >
                       Speed
                     </th>
                     <th
-                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-gray-400 uppercase tracking-wide"
                     >
                       Power
                     </th>
                     <th
-                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wide"
+                      class="px-3 py-2 text-left text-xs font-medium text-slate-500 dark:text-gray-400 uppercase tracking-wide"
                     >
                       Compatible with
                     </th>
                     <th class="px-3 py-2 w-24"></th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-slate-100 dark:divide-gray-800">
                   @for (pd of portDefs(); track pd.id) {
-                    <tr class="hover:bg-slate-50 transition-colors">
-                      <td class="px-5 py-2.5 font-medium text-slate-800 font-mono text-xs">
+                    <tr class="hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors">
+                      <td
+                        class="px-5 py-2.5 font-medium text-slate-800 dark:text-gray-100 font-mono text-xs"
+                      >
                         {{ pd.name }}
                       </td>
-                      <td class="px-3 py-2.5 text-slate-600">
+                      <td class="px-3 py-2.5 text-slate-600 dark:text-gray-300">
                         {{ portTypeLabel(pd.portType) }}
                         @if (pd.mediaType) {
-                          <span class="text-slate-400">· {{ pd.mediaType }}</span>
+                          <span class="text-slate-400 dark:text-gray-500"
+                            >· {{ pd.mediaType }}</span
+                          >
                         }
                       </td>
-                      <td class="px-3 py-2.5 text-slate-600 tabular-nums">
+                      <td class="px-3 py-2.5 text-slate-600 dark:text-gray-300 tabular-nums">
                         @if (pd.speedGbps !== null && pd.speedGbps !== undefined) {
                           {{ pd.speedGbps }} Gbps
                         }
                       </td>
-                      <td class="px-3 py-2.5 text-slate-600 tabular-nums">
+                      <td class="px-3 py-2.5 text-slate-600 dark:text-gray-300 tabular-nums">
                         @if (pd.powerWatts !== null && pd.powerWatts !== undefined) {
                           {{ pd.powerWatts }} W
                         }
@@ -147,14 +161,16 @@
                         <div class="flex flex-wrap gap-1 items-center">
                           @for (compat of compatibilitiesForPortDef(pd.id); track compat.id) {
                             <span
-                              class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 text-xs rounded-full px-2 py-0.5"
+                              class="inline-flex items-center gap-1 bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300 text-xs rounded-full px-2 py-0.5"
                             >
                               {{ compatLabel(compat) }}
                               @if (compat.compatibleCatalogEntryId) {
                                 <button
                                   (click)="openDeleteCompat(compat)"
-                                  class="text-slate-400 hover:text-red-500 transition-colors"
-                                  [attr.aria-label]="'Remove compatibility with ' + compatLabel(compat)"
+                                  class="text-slate-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                  [attr.aria-label]="
+                                    'Remove compatibility with ' + compatLabel(compat)
+                                  "
                                 >
                                   ×
                                 </button>
@@ -199,29 +215,41 @@
           @if (assets().length > 0) {
             <section
               aria-labelledby="assets-heading"
-              class="rounded-xl border border-slate-200 bg-white"
+              class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
             >
-              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h2 id="assets-heading" class="text-sm font-semibold text-slate-900">Assets</h2>
+              <div
+                class="px-5 py-4 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between"
+              >
+                <h2
+                  id="assets-heading"
+                  class="text-sm font-semibold text-slate-900 dark:text-white"
+                >
+                  Assets
+                </h2>
                 <span
-                  class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+                  class="inline-flex items-center rounded-full bg-slate-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-slate-500 dark:text-gray-400"
                 >
                   {{ assets().length }}
                 </span>
               </div>
-              <ul class="divide-y divide-slate-100" aria-label="Assets of this product model">
+              <ul
+                class="divide-y divide-slate-100 dark:divide-gray-800"
+                aria-label="Assets of this product model"
+              >
                 @for (asset of assets(); track asset.id) {
                   <li>
                     <a
                       [routerLink]="['/inventory', asset.id]"
-                      class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors group"
+                      class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
                     >
                       <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-indigo-600 font-mono">
+                        <p
+                          class="text-sm font-medium text-indigo-600 dark:text-indigo-300 font-mono"
+                        >
                           {{ asset.assetTag }}
                         </p>
                         @if (asset.datacenter || asset.rack) {
-                          <p class="text-xs text-slate-400 mt-0.5">
+                          <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
                             {{ asset.datacenter }} · {{ asset.rack }}
                           </p>
                         }
@@ -249,31 +277,41 @@
         <div class="flex flex-col gap-6">
           <section
             aria-labelledby="summary-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 id="summary-heading" class="text-sm font-semibold text-slate-900">
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 id="summary-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
                 Inventory Summary
               </h2>
             </div>
-            <div class="divide-y divide-slate-100">
+            <div class="divide-y divide-slate-100 dark:divide-gray-800">
               <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500">Total assets</span>
-                <span class="text-sm font-semibold text-slate-900">{{ assets().length }}</span>
+                <span class="text-sm text-slate-500 dark:text-gray-400">Total assets</span>
+                <span class="text-sm font-semibold text-slate-900 dark:text-white">{{
+                  assets().length
+                }}</span>
               </div>
               <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500">Deployed</span>
-                <span class="text-sm font-semibold text-teal-600">{{ deployedCount() }}</span>
+                <span class="text-sm text-slate-500 dark:text-gray-400">Deployed</span>
+                <span class="text-sm font-semibold text-teal-600 dark:text-teal-300">{{
+                  deployedCount()
+                }}</span>
               </div>
               <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500">Available</span>
-                <span class="text-sm font-semibold text-green-600">{{ availableCount() }}</span>
+                <span class="text-sm text-slate-500 dark:text-gray-400">Available</span>
+                <span class="text-sm font-semibold text-green-600 dark:text-green-300">{{
+                  availableCount()
+                }}</span>
               </div>
               <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500">Issues</span>
+                <span class="text-sm text-slate-500 dark:text-gray-400">Issues</span>
                 <span
                   class="text-sm font-semibold"
-                  [class]="issuesCount() > 0 ? 'text-amber-600' : 'text-slate-400'"
+                  [class]="
+                    issuesCount() > 0
+                      ? 'text-amber-600 dark:text-amber-300'
+                      : 'text-slate-400 dark:text-gray-500'
+                  "
                   >{{ issuesCount() }}</span
                 >
               </div>
@@ -282,22 +320,25 @@
 
           <section
             aria-labelledby="catalog-meta-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 id="catalog-meta-heading" class="text-sm font-semibold text-slate-900">
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2
+                id="catalog-meta-heading"
+                class="text-sm font-semibold text-slate-900 dark:text-white"
+              >
                 Product Info
               </h2>
             </div>
-            <div class="divide-y divide-slate-100">
+            <div class="divide-y divide-slate-100 dark:divide-gray-800">
               <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500">Catalog ID</span>
-                <span class="text-sm font-mono text-slate-700">{{ e.id }}</span>
+                <span class="text-sm text-slate-500 dark:text-gray-400">Catalog ID</span>
+                <span class="text-sm font-mono text-slate-700 dark:text-gray-300">{{ e.id }}</span>
               </div>
               <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500">Category</span>
+                <span class="text-sm text-slate-500 dark:text-gray-400">Category</span>
                 <span
-                  class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"
+                  class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-gray-300"
                 >
                   <nldd-icon
                     [name]="categoryIcon(e.category)"
@@ -308,12 +349,14 @@
                 </span>
               </div>
               <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500">Manufacturer</span>
-                <span class="text-sm text-slate-700">{{ e.manufacturer }}</span>
+                <span class="text-sm text-slate-500 dark:text-gray-400">Manufacturer</span>
+                <span class="text-sm text-slate-700 dark:text-gray-300">{{ e.manufacturer }}</span>
               </div>
               <div class="flex items-center justify-between px-5 py-3">
-                <span class="text-sm text-slate-500">Port definitions</span>
-                <span class="text-sm font-semibold text-slate-900">{{ portDefs().length }}</span>
+                <span class="text-sm text-slate-500 dark:text-gray-400">Port definitions</span>
+                <span class="text-sm font-semibold text-slate-900 dark:text-white">{{
+                  portDefs().length
+                }}</span>
               </div>
             </div>
           </section>
@@ -325,12 +368,12 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col items-center justify-center py-24 text-center">
         <div
-          class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-4"
+          class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-4"
         >
           <nldd-icon name="rectangle-stack" class="w-8 h-8" aria-hidden="true"></nldd-icon>
         </div>
-        <h1 class="text-lg font-semibold text-slate-800">Product not found</h1>
-        <p class="mt-1 text-sm text-slate-400 max-w-xs">
+        <h1 class="text-lg font-semibold text-slate-800 dark:text-gray-100">Product not found</h1>
+        <p class="mt-1 text-sm text-slate-400 dark:text-gray-500 max-w-xs">
           No catalog entry with ID <span class="font-mono">{{ catalogId() }}</span> exists.
         </p>
         <nldd-button
@@ -381,7 +424,10 @@
         <select #fPortType [attr.invalid]="isFieldInvalid('port_type') ? '' : null">
           <option value="">— Select a port type —</option>
           @for (t of PORT_TYPES; track t.value) {
-            <option [value]="t.value" [attr.selected]="editPortDef()?.portType === t.value ? true : null">
+            <option
+              [value]="t.value"
+              [attr.selected]="editPortDef()?.portType === t.value ? true : null"
+            >
               {{ t.label }}
             </option>
           }
@@ -436,7 +482,10 @@
         </nldd-form-field>
       </div>
     </nldd-simple-section>
-    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+    <div
+      slot="footer"
+      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
+    >
       <nldd-button variant="secondary" text="Cancel" (click)="closePortDefForm()"></nldd-button>
       <nldd-button variant="primary" text="Save" (click)="savePortDef()"></nldd-button>
     </div>
@@ -486,16 +535,15 @@
           </p>
         </div>
       }
-      <p class="text-sm text-slate-500 mb-3">
+      <p class="text-sm text-slate-500 dark:text-gray-400 mb-3">
         Select a catalog entry compatible with port
-        <span class="font-medium text-slate-700">{{ portDefName(addCompatPortDefId() ?? '') }}</span
+        <span class="font-medium text-slate-700 dark:text-gray-300">{{
+          portDefName(addCompatPortDefId() ?? '')
+        }}</span
         >.
       </p>
       <nldd-form-field label="Compatible product">
-        <select
-          [value]="compatEntryId()"
-          (change)="compatEntryId.set($any($event.target).value)"
-        >
+        <select [value]="compatEntryId()" (change)="compatEntryId.set($any($event.target).value)">
           <option value="">— Select a product —</option>
           @for (entry of availableCompatEntries(); track entry.id) {
             <option [value]="entry.id">{{ entry.model }}</option>
@@ -503,7 +551,10 @@
         </select>
       </nldd-form-field>
     </nldd-simple-section>
-    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+    <div
+      slot="footer"
+      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
+    >
       <nldd-button
         variant="secondary"
         text="Cancel"

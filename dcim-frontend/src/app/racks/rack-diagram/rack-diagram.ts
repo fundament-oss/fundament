@@ -57,13 +57,15 @@ export default class RackDiagramComponent {
   deviceButtonClasses(device: RackDevice): string {
     const stateClasses = RackDiagramComponent.deviceSlotClasses(device);
     if (this.isActive(device)) {
-      return `${stateClasses} relative z-10 ring-yellow-300! ring-2 ring-offset-1 ring-offset-gray-300"`;
+      return `${stateClasses} relative z-10 ring-yellow-300! ring-2 ring-offset-1 ring-offset-gray-300`;
     }
     return stateClasses;
   }
 
   readonly powerBadgeClass = (powerstate: 'ON' | 'OFF'): string =>
-    powerstate === 'ON' ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-600';
+    powerstate === 'ON'
+      ? 'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300'
+      : 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-300';
 
   isActive(device: RackDevice): boolean {
     return device.id === this.activeDeviceId();

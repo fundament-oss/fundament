@@ -135,9 +135,9 @@ export const CABLE_STATUS_LABEL: Record<CableStatus, string> = {
 };
 
 export const CABLE_STATUS_COLORS: Record<CableStatus, string> = {
-  planned: 'bg-amber-100 text-amber-700',
-  connected: 'bg-teal-100 text-teal-700',
-  decommissioned: 'bg-slate-100 text-slate-500',
+  planned: 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
+  connected: 'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
+  decommissioned: 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400',
 };
 
 /** Label shown for an unset (NULL) cable type/status. */
@@ -152,7 +152,9 @@ export function cableStatusLabel(status: CableStatus | undefined): string {
 }
 
 export function cableStatusColors(status: CableStatus | undefined): string {
-  return status ? CABLE_STATUS_COLORS[status] : 'bg-slate-100 text-slate-500';
+  return status
+    ? CABLE_STATUS_COLORS[status]
+    : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400';
 }
 
 // ── Port type labels ──────────────────────────────────────────────────────────

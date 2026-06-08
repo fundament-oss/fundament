@@ -132,7 +132,7 @@ export interface PortCompatibility {
   imports: [RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
-    class: 'flex flex-col min-h-screen bg-white',
+    class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950',
   },
 })
 export default class InventoryComponent implements OnInit {
@@ -528,12 +528,12 @@ export default class InventoryComponent implements OnInit {
 
   readonly statusBadgeClass = (status: AssetStatus): string => {
     const map: Record<AssetStatus, string> = {
-      'needs-repair': 'bg-amber-50 text-amber-700',
-      decommissioned: 'bg-red-50 text-red-600',
-      deployed: 'bg-teal-50 text-teal-700',
-      available: 'bg-green-50 text-green-700',
-      'on-order': 'bg-indigo-50 text-indigo-600',
-      requested: 'bg-slate-100 text-slate-600',
+      'needs-repair': 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
+      decommissioned: 'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-300',
+      deployed: 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
+      available: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
+      'on-order': 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300',
+      requested: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
     };
     return map[status];
   };
@@ -570,5 +570,4 @@ export default class InventoryComponent implements OnInit {
     };
     return map[category] ?? 'rectangle-stack';
   };
-
 }

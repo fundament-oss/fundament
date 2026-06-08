@@ -1,13 +1,19 @@
 <!-- ══════════════════════════════════════════════════════════════
      PAGE HEADER (subbar)
      ══════════════════════════════════════════════════════════════ -->
-<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
+<div
+  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
+>
   <div class="flex-1 min-w-0">
     @if (currentDc(); as dc) {
       <div class="flex items-center gap-3 min-w-0">
-        <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0">{{ dc.name }}</h1>
-        <span class="text-slate-300 hidden sm:inline" aria-hidden="true">·</span>
-        <span class="text-sm text-slate-400 hidden sm:inline truncate">{{ dc.fullName }}</span>
+        <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0">
+          {{ dc.name }}
+        </h1>
+        <span class="text-slate-300 dark:text-gray-600 hidden sm:inline" aria-hidden="true">·</span>
+        <span class="text-sm text-slate-400 dark:text-gray-500 hidden sm:inline truncate">{{
+          dc.fullName
+        }}</span>
         <span
           class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
           [class]="statusBadgeClass(dc.status)"
@@ -21,22 +27,24 @@
           {{ statusLabel(dc.status) }}
         </span>
       </div>
-      <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">
+      <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5 hidden sm:block">
         {{ dc.city }}, {{ dc.country }}
-        <span class="mx-1.5 text-slate-300" aria-hidden="true">·</span>
+        <span class="mx-1.5 text-slate-300 dark:text-gray-600" aria-hidden="true">·</span>
         Tier {{ dc.tier }}
-        <span class="mx-1.5 text-slate-300" aria-hidden="true">·</span>
+        <span class="mx-1.5 text-slate-300 dark:text-gray-600" aria-hidden="true">·</span>
         Est. {{ dc.established }}
       </p>
     } @else {
-      <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0">Data centers</h1>
+      <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0">
+        Data centers
+      </h1>
     }
   </div>
   <div class="flex items-center gap-2 shrink-0">
     @if (currentDc(); as dc) {
       <a
         [routerLink]="['/datacenters', dc.id]"
-        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800 hover:text-slate-700 dark:hover:text-gray-300 transition-colors"
         aria-label="View rooms and rack rows"
       >
         <nldd-icon name="apartment-building" class="w-3.5 h-3.5" aria-hidden="true"></nldd-icon>
@@ -71,7 +79,7 @@
 <!-- ══════════════════════════════════════════════════════════════
      DC SELECTOR TOOLBAR
      ══════════════════════════════════════════════════════════════ -->
-<div class="shrink-0 border-b border-slate-200 bg-white px-6">
+<div class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6">
   <app-dc-selector
     [datacenters]="mutableDcs()"
     [selectedId]="selectedDcId()"
@@ -88,29 +96,45 @@
       <!-- Stats row -->
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-5 pb-4">
         <div
-          class="bg-white border border-slate-200 border-l-[3px] border-l-accent-700 px-4 py-3.5 grid gap-1"
+          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-accent-700 px-4 py-3.5 grid gap-1"
         >
-          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Racks</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ dcStats().rackCount }}</p>
-          <p class="text-xs text-slate-400">in this datacenter</p>
+          <p
+            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
+          >
+            Racks
+          </p>
+          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
+            {{ dcStats().rackCount }}
+          </p>
+          <p class="text-xs text-slate-400 dark:text-gray-500">in this datacenter</p>
         </div>
         <div
-          class="bg-white border border-slate-200 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
+          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
         >
-          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Devices</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">
+          <p
+            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
+          >
+            Devices
+          </p>
+          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
             {{ dcStats().deviceCount }}
           </p>
-          <p class="text-xs text-slate-400">{{ dcStats().capacityPct }}% capacity used</p>
+          <p class="text-xs text-slate-400 dark:text-gray-500">
+            {{ dcStats().capacityPct }}% capacity used
+          </p>
         </div>
         <div
-          class="bg-white border border-slate-200 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
+          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
         >
-          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Power Draw</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">
+          <p
+            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
+          >
+            Power Draw
+          </p>
+          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
             {{ formatPowerKw(dcStats().totalPowerKw) }}
           </p>
-          <p class="text-xs text-slate-400">across all racks</p>
+          <p class="text-xs text-slate-400 dark:text-gray-500">across all racks</p>
         </div>
       </div>
 
@@ -120,19 +144,24 @@
         <div class="lg:col-span-2">
           <section
             aria-labelledby="floor-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
             <!-- Card header with view toggle -->
             <div
-              class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-4"
+              class="px-5 py-4 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between gap-4"
             >
-              <h2 id="floor-heading" class="text-sm font-semibold text-slate-900 shrink-0">
+              <h2
+                id="floor-heading"
+                class="text-sm font-semibold text-slate-900 dark:text-white shrink-0"
+              >
                 Floor layout
               </h2>
 
               <div class="flex items-center gap-3 min-w-0">
                 <!-- Legend -->
-                <div class="hidden sm:flex items-center gap-3 text-xs text-slate-500 min-w-0">
+                <div
+                  class="hidden sm:flex items-center gap-3 text-xs text-slate-500 dark:text-gray-400 min-w-0"
+                >
                   <span class="flex items-center gap-1.5 shrink-0">
                     <span class="h-2.5 w-2.5 rounded-sm bg-emerald-300" aria-hidden="true"></span
                     >Rack (fill %)
@@ -171,16 +200,16 @@
                 <!-- Floor plan -->
                 <div class="inline-block min-w-full">
                   <div
-                    class="rounded-md border-2 border-slate-300 bg-slate-50 overflow-hidden shadow-inner"
+                    class="rounded-md border-2 border-slate-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-900 overflow-hidden shadow-inner"
                   >
                     <!-- Top wall / entrance -->
                     <div
-                      class="flex items-stretch border-b-2 border-slate-300 bg-slate-200/80"
+                      class="flex items-stretch border-b-2 border-slate-300 dark:border-gray-700 bg-slate-200/80 dark:bg-gray-800/80"
                       style="height: 38px"
                     >
                       <!-- Left solid wall -->
                       <div
-                        class="w-16 shrink-0 bg-slate-300 border-r-2 border-slate-400 flex items-center justify-center"
+                        class="w-16 shrink-0 bg-slate-300 dark:bg-gray-700 border-r-2 border-slate-400 flex items-center justify-center"
                       >
                         <nldd-icon
                           name="apartment-building"
@@ -190,7 +219,7 @@
                       </div>
                       <!-- Door opening -->
                       <div
-                        class="w-14 shrink-0 bg-white/60 border-x-2 border-dashed border-slate-400 flex items-center justify-center gap-1"
+                        class="w-14 shrink-0 bg-white/60 dark:bg-gray-950/60 border-x-2 border-dashed border-slate-400 flex items-center justify-center gap-1"
                       >
                         <nldd-icon
                           name="arrow-right"
@@ -200,7 +229,8 @@
                       </div>
                       <!-- Remainder of top wall -->
                       <div class="flex-1 flex items-center px-3 gap-2">
-                        <span class="text-xs font-medium text-slate-500 uppercase tracking-widest"
+                        <span
+                          class="text-xs font-medium text-slate-500 dark:text-gray-400 uppercase tracking-widest"
                           >Entrance</span
                         >
                       </div>
@@ -213,9 +243,10 @@
                         <div class="flex items-center gap-2.5 py-1.5">
                           <!-- Row letter -->
                           <div class="w-5 shrink-0 text-center">
-                            <span class="text-xs font-bold text-slate-400 uppercase select-none">{{
-                              row
-                            }}</span>
+                            <span
+                              class="text-xs font-bold text-slate-400 dark:text-gray-500 uppercase select-none"
+                              >{{ row }}</span
+                            >
                           </div>
 
                           <!-- Rack cells -->
@@ -284,14 +315,18 @@
           <!-- Datacenter Properties card -->
           <section
             aria-labelledby="props-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 id="props-heading" class="text-sm font-semibold text-slate-900">Properties</h2>
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 id="props-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
+                Properties
+              </h2>
             </div>
-            <dl class="divide-y divide-slate-100">
+            <dl class="divide-y divide-slate-100 dark:divide-gray-800">
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-36">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-36"
+                >
                   <nldd-icon
                     name="info-circle"
                     class="w-4 h-4 text-[#94a3b8]"
@@ -299,11 +334,15 @@
                   ></nldd-icon>
                   Address
                 </dt>
-                <dd class="text-xs text-right text-slate-700 font-medium">{{ dc.address }}</dd>
+                <dd class="text-xs text-right text-slate-700 dark:text-gray-300 font-medium">
+                  {{ dc.address }}
+                </dd>
               </div>
 
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-36">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-36"
+                >
                   <nldd-icon
                     name="shield-check-mark"
                     class="w-4 h-4 text-[#94a3b8]"
@@ -311,11 +350,15 @@
                   ></nldd-icon>
                   Tier
                 </dt>
-                <dd class="text-sm font-medium text-slate-800">Tier {{ dc.tier }}</dd>
+                <dd class="text-sm font-medium text-slate-800 dark:text-gray-100">
+                  Tier {{ dc.tier }}
+                </dd>
               </div>
 
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-36">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-36"
+                >
                   <nldd-icon
                     name="pencil-on-square"
                     class="w-4 h-4 text-[#94a3b8]"
@@ -323,11 +366,15 @@
                   ></nldd-icon>
                   Floor Space
                 </dt>
-                <dd class="text-sm font-medium text-slate-800">{{ dc.floorSqm }} m²</dd>
+                <dd class="text-sm font-medium text-slate-800 dark:text-gray-100">
+                  {{ dc.floorSqm }} m²
+                </dd>
               </div>
 
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-36">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-36"
+                >
                   <nldd-icon
                     name="calendar-event"
                     class="w-4 h-4 text-[#94a3b8]"
@@ -335,7 +382,9 @@
                   ></nldd-icon>
                   Established
                 </dt>
-                <dd class="text-sm font-medium text-slate-800">{{ dc.established }}</dd>
+                <dd class="text-sm font-medium text-slate-800 dark:text-gray-100">
+                  {{ dc.established }}
+                </dd>
               </div>
             </dl>
           </section>
@@ -343,15 +392,17 @@
           <!-- Quick Links card -->
           <section
             aria-labelledby="links-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 id="links-heading" class="text-sm font-semibold text-slate-900">Quick Links</h2>
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 id="links-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
+                Quick Links
+              </h2>
             </div>
             <div class="px-5 py-4 flex flex-col gap-2">
               <a
                 [routerLink]="firstRackRoute()"
-                class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors w-full text-left"
+                class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors w-full text-left"
               >
                 <nldd-icon
                   name="cylinder-split"
@@ -362,7 +413,7 @@
               </a>
               <a
                 routerLink="/task-management-admin"
-                class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors w-full text-left"
+                class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors w-full text-left"
               >
                 <nldd-icon
                   name="check-mark-circle"
@@ -527,7 +578,10 @@
         }}</nldd-form-field-error-text>
       </nldd-form-field>
     </nldd-simple-section>
-    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+    <div
+      slot="footer"
+      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
+    >
       <nldd-button variant="secondary" text="Cancel" (click)="closeEditForm()"></nldd-button>
       <nldd-button variant="primary" text="Save" (click)="saveDc()"></nldd-button>
     </div>
@@ -572,19 +626,24 @@
     (keydown.escape)="showRackTemplateModal.set(false)"
   >
     <div
-      class="w-full max-w-sm rounded-2xl bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-200/80"
+      class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-950 shadow-2xl shadow-slate-900/20 ring-1 ring-slate-200/80 dark:ring-gray-700/80"
       tabindex="-1"
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     >
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-        <h2 id="rack-template-heading" class="text-base font-semibold text-slate-900">
+      <div
+        class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-gray-800"
+      >
+        <h2
+          id="rack-template-heading"
+          class="text-base font-semibold text-slate-900 dark:text-white"
+        >
           Add rack from template
         </h2>
         <button
           type="button"
           (click)="showRackTemplateModal.set(false)"
-          class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          class="rounded-lg p-1.5 text-slate-400 dark:text-gray-500 hover:bg-slate-100 dark:hover:bg-gray-800 hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
           aria-label="Close"
         >
           <nldd-icon name="dismiss" class="w-4.5 h-4.5 block" aria-hidden="true"></nldd-icon>
@@ -594,10 +653,10 @@
         <li>
           <button
             type="button"
-            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 transition-colors group"
+            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
           >
             <span
-              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600 group-hover:bg-accent-100 transition-colors"
+              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-950 text-accent-600 dark:text-accent-300 group-hover:bg-accent-100 dark:group-hover:bg-accent-950 transition-colors"
             >
               <nldd-icon
                 name="arrow-up-arrow-down"
@@ -606,10 +665,10 @@
               ></nldd-icon>
             </span>
             <span class="flex flex-col">
-              <span class="text-sm font-medium text-slate-800"
+              <span class="text-sm font-medium text-slate-800 dark:text-gray-100"
                 >ToR switch + compute (full rack)</span
               >
-              <span class="text-xs text-slate-400 mt-0.5"
+              <span class="text-xs text-slate-400 dark:text-gray-500 mt-0.5"
                 >1× Top-of-Rack switch, 20× Gardener Shoot servers</span
               >
             </span>
@@ -618,16 +677,18 @@
         <li>
           <button
             type="button"
-            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 transition-colors group"
+            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
           >
             <span
-              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600 group-hover:bg-accent-100 transition-colors"
+              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-950 text-accent-600 dark:text-accent-300 group-hover:bg-accent-100 dark:group-hover:bg-accent-950 transition-colors"
             >
               <nldd-icon name="cylinder-split" class="w-4 h-4 block" aria-hidden="true"></nldd-icon>
             </span>
             <span class="flex flex-col">
-              <span class="text-sm font-medium text-slate-800">Gardener Shoots (full rack)</span>
-              <span class="text-xs text-slate-400 mt-0.5"
+              <span class="text-sm font-medium text-slate-800 dark:text-gray-100"
+                >Gardener Shoots (full rack)</span
+              >
+              <span class="text-xs text-slate-400 dark:text-gray-500 mt-0.5"
                 >42U compute-only, no switching layer</span
               >
             </span>
@@ -636,16 +697,18 @@
         <li>
           <button
             type="button"
-            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 transition-colors group"
+            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
           >
             <span
-              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600 group-hover:bg-accent-100 transition-colors"
+              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-950 text-accent-600 dark:text-accent-300 group-hover:bg-accent-100 dark:group-hover:bg-accent-950 transition-colors"
             >
               <nldd-icon name="cylinder-split" class="w-4 h-4 block" aria-hidden="true"></nldd-icon>
             </span>
             <span class="flex flex-col">
-              <span class="text-sm font-medium text-slate-800">Gardener Shoots (half rack)</span>
-              <span class="text-xs text-slate-400 mt-0.5"
+              <span class="text-sm font-medium text-slate-800 dark:text-gray-100"
+                >Gardener Shoots (half rack)</span
+              >
+              <span class="text-xs text-slate-400 dark:text-gray-500 mt-0.5"
                 >21U, shared rack — suitable for partial deployments</span
               >
             </span>
@@ -654,10 +717,10 @@
         <li>
           <button
             type="button"
-            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 transition-colors group"
+            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
           >
             <span
-              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600 group-hover:bg-accent-100 transition-colors"
+              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-950 text-accent-600 dark:text-accent-300 group-hover:bg-accent-100 dark:group-hover:bg-accent-950 transition-colors"
             >
               <nldd-icon
                 name="apartment-building"
@@ -666,16 +729,18 @@
               ></nldd-icon>
             </span>
             <span class="flex flex-col">
-              <span class="text-sm font-medium text-slate-800">Empty rack (no devices)</span>
-              <span class="text-xs text-slate-400 mt-0.5"
+              <span class="text-sm font-medium text-slate-800 dark:text-gray-100"
+                >Empty rack (no devices)</span
+              >
+              <span class="text-xs text-slate-400 dark:text-gray-500 mt-0.5"
                 >Reserve a rack slot without pre-filling any hardware</span
               >
             </span>
           </button>
         </li>
       </ul>
-      <div class="px-6 py-4 border-t border-slate-100">
-        <p class="text-xs text-slate-400">
+      <div class="px-6 py-4 border-t border-slate-100 dark:border-gray-800">
+        <p class="text-xs text-slate-400 dark:text-gray-500">
           Selecting a template is a preview only — no changes will be saved.
         </p>
       </div>
@@ -688,26 +753,30 @@
      ══════════════════════════════════════════════════════════════ -->
 @if (hoveredCell(); as cell) {
   <div
-    class="fixed z-50 pointer-events-none w-48 rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-900/10 p-3"
+    class="fixed z-50 pointer-events-none w-48 rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-lg shadow-slate-900/10 p-3"
     [style.left.px]="tooltipX()"
     [style.top.px]="tooltipY()"
     role="tooltip"
   >
     <div class="flex items-center justify-between mb-1.5">
-      <p class="text-xs font-semibold text-slate-800 truncate">{{ cell.rackName }}</p>
+      <p class="text-xs font-semibold text-slate-800 dark:text-gray-100 truncate">
+        {{ cell.rackName }}
+      </p>
     </div>
     <div class="space-y-1">
-      <div class="flex items-center justify-between text-xs text-slate-500">
+      <div class="flex items-center justify-between text-xs text-slate-500 dark:text-gray-400">
         <span>Devices</span>
-        <span class="font-medium text-slate-700">{{ cell.deviceCount }}</span>
+        <span class="font-medium text-slate-700 dark:text-gray-300">{{ cell.deviceCount }}</span>
       </div>
-      <div class="flex items-center justify-between text-xs text-slate-500">
+      <div class="flex items-center justify-between text-xs text-slate-500 dark:text-gray-400">
         <span>Power</span>
-        <span class="font-medium text-slate-700">{{ formatPowerKw(cell.powerW / 1000) }}</span>
+        <span class="font-medium text-slate-700 dark:text-gray-300">{{
+          formatPowerKw(cell.powerW / 1000)
+        }}</span>
       </div>
-      <div class="flex items-center justify-between text-xs text-slate-500">
+      <div class="flex items-center justify-between text-xs text-slate-500 dark:text-gray-400">
         <span>Fill</span>
-        <span class="font-medium text-slate-700">{{ cell.fillPct }}%</span>
+        <span class="font-medium text-slate-700 dark:text-gray-300">{{ cell.fillPct }}%</span>
       </div>
     </div>
   </div>

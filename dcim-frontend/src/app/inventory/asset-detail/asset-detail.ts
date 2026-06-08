@@ -34,7 +34,7 @@ import parseValidationError from '../../../connect/validation';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'block bg-slate-50 min-h-screen' },
+  host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
 export default class AssetDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -327,7 +327,10 @@ export default class AssetDetailComponent implements OnInit {
       return { rackId: '', unit: 0, slotType, existingPlacementId };
     }
 
-    const unit = parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10);
+    const unit = parseInt(
+      (this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '',
+      10,
+    );
     if (!Number.isInteger(unit) || unit < 1) {
       this.invalidFields.set({ rack_unit_start: 'Enter a rack unit of 1 or higher.' });
       return 'invalid';
@@ -354,12 +357,12 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly statusBadgeClass = (status: AssetStatus): string => {
     const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-50 text-teal-700',
-      available: 'bg-green-50 text-green-700',
-      'needs-repair': 'bg-amber-50 text-amber-700',
-      decommissioned: 'bg-slate-100 text-slate-500',
-      'on-order': 'bg-blue-50 text-blue-700',
-      requested: 'bg-purple-50 text-purple-700',
+      deployed: 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
+      available: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
+      'needs-repair': 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
+      decommissioned: 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400',
+      'on-order': 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300',
+      requested: 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300',
     };
     return classes[status];
   };
@@ -390,24 +393,24 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly statusIconColor = (status: AssetStatus): string => {
     const colors: Record<AssetStatus, string> = {
-      deployed: 'text-teal-500',
-      available: 'text-green-500',
-      'needs-repair': 'text-amber-500',
-      decommissioned: 'text-slate-400',
-      'on-order': 'text-blue-500',
-      requested: 'text-purple-500',
+      deployed: 'text-teal-500 dark:text-teal-400',
+      available: 'text-green-500 dark:text-green-400',
+      'needs-repair': 'text-amber-500 dark:text-amber-400',
+      decommissioned: 'text-slate-400 dark:text-gray-500',
+      'on-order': 'text-blue-500 dark:text-blue-400',
+      requested: 'text-purple-500 dark:text-purple-400',
     };
     return colors[status];
   };
 
   readonly statusIconBgClass = (status: AssetStatus): string => {
     const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-50',
-      available: 'bg-green-50',
-      'needs-repair': 'bg-amber-50',
-      decommissioned: 'bg-slate-100',
-      'on-order': 'bg-blue-50',
-      requested: 'bg-purple-50',
+      deployed: 'bg-teal-50 dark:bg-teal-950',
+      available: 'bg-green-50 dark:bg-green-950',
+      'needs-repair': 'bg-amber-50 dark:bg-amber-950',
+      decommissioned: 'bg-slate-100 dark:bg-gray-800',
+      'on-order': 'bg-blue-50 dark:bg-blue-950',
+      requested: 'bg-purple-50 dark:bg-purple-950',
     };
     return `flex h-14 w-14 items-center justify-center rounded-full ${classes[status]}`;
   };
@@ -436,14 +439,14 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly historyIconBg = (action: HistoryEntry['action']): string => {
     const classes: Record<HistoryEntry['action'], string> = {
-      received: 'bg-sky-50 text-sky-500',
-      deployed: 'bg-teal-50 text-teal-500',
-      moved: 'bg-sky-50 text-sky-500',
-      'repair-sent': 'bg-amber-50 text-amber-500',
-      'repair-received': 'bg-amber-50 text-amber-500',
-      decommissioned: 'bg-slate-100 text-slate-500',
-      requested: 'bg-purple-50 text-purple-500',
-      note: 'bg-indigo-50 text-indigo-500',
+      received: 'bg-sky-50 dark:bg-sky-950 text-sky-500 dark:text-sky-400',
+      deployed: 'bg-teal-50 dark:bg-teal-950 text-teal-500 dark:text-teal-400',
+      moved: 'bg-sky-50 dark:bg-sky-950 text-sky-500 dark:text-sky-400',
+      'repair-sent': 'bg-amber-50 dark:bg-amber-950 text-amber-500 dark:text-amber-400',
+      'repair-received': 'bg-amber-50 dark:bg-amber-950 text-amber-500 dark:text-amber-400',
+      decommissioned: 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400',
+      requested: 'bg-purple-50 dark:bg-purple-950 text-purple-500 dark:text-purple-400',
+      note: 'bg-indigo-50 dark:bg-indigo-950 text-indigo-500 dark:text-indigo-400',
     };
     return classes[action];
   };

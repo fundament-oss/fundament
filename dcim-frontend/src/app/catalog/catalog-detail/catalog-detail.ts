@@ -35,7 +35,7 @@ interface NativeElementRef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'block bg-slate-50 min-h-screen' },
+  host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
 export default class CatalogDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -163,9 +163,7 @@ export default class CatalogDetailComponent implements OnInit {
         .filter((c) => c.portDefinitionId === pdId)
         .map((c) => c.compatibleCatalogEntryId),
     );
-    return this.allCatalogEntries().filter(
-      (e) => e.id !== this.catalogId() && !taken.has(e.id),
-    );
+    return this.allCatalogEntries().filter((e) => e.id !== this.catalogId() && !taken.has(e.id));
   });
 
   constructor() {
@@ -459,12 +457,12 @@ export default class CatalogDetailComponent implements OnInit {
 
   readonly statusBadgeClass = (status: AssetStatus): string => {
     const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-50 text-teal-700',
-      available: 'bg-green-50 text-green-700',
-      'needs-repair': 'bg-amber-50 text-amber-700',
-      decommissioned: 'bg-slate-100 text-slate-500',
-      'on-order': 'bg-blue-50 text-blue-700',
-      requested: 'bg-purple-50 text-purple-700',
+      deployed: 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
+      available: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
+      'needs-repair': 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
+      decommissioned: 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400',
+      'on-order': 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300',
+      requested: 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300',
     };
     return classes[status];
   };
@@ -474,7 +472,7 @@ export default class CatalogDetailComponent implements OnInit {
       deployed: 'bg-teal-400',
       available: 'bg-green-400',
       'needs-repair': 'bg-amber-400',
-      decommissioned: 'bg-slate-300',
+      decommissioned: 'bg-slate-300 dark:bg-gray-700',
       'on-order': 'bg-blue-400',
       requested: 'bg-purple-400',
     };

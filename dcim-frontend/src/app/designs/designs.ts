@@ -26,7 +26,7 @@ interface NativeElementRef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col min-h-screen bg-white' },
+  host: { class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950' },
 })
 export default class DesignsComponent implements OnInit {
   private readonly designApi = inject(DesignApiService);
@@ -178,9 +178,9 @@ export default class DesignsComponent implements OnInit {
 
   readonly statusBadgeClass = (status: LogicalDesignStatus): string => {
     const statusMap: Record<LogicalDesignStatus, string> = {
-      draft: 'bg-slate-100 text-slate-600',
-      active: 'bg-green-50 text-green-700',
-      archived: 'bg-amber-50 text-amber-700',
+      draft: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
+      active: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
+      archived: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
     };
     return statusMap[status];
   };

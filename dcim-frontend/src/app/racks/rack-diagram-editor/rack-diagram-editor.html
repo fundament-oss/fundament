@@ -3,7 +3,7 @@
   <div class="shrink-0 w-5 flex flex-col gap-px mr-2" style="padding-top: 37px" aria-hidden="true">
     @for (u of uNumbers(); track u) {
       <div
-        class="h-7 text-right text-[10px] text-neutral-500 font-mono select-none flex items-start justify-end pt-1"
+        class="h-7 text-right text-[10px] text-neutral-500 dark:text-gray-400 font-mono select-none flex items-start justify-end pt-1"
       >
         {{ u }}
       </div>
@@ -14,25 +14,30 @@
   <div class="flex-1 flex items-stretch">
     <!-- Left power bar -->
     <div
-      class="w-6 shrink-0 bg-neutral-100 border border-r-0 border-neutral-200 rounded-l-xl flex items-center justify-center"
+      class="w-6 shrink-0 bg-neutral-100 dark:bg-gray-800 border border-r-0 border-neutral-200 dark:border-gray-800 rounded-l-xl flex items-center justify-center"
       aria-hidden="true"
     >
       <span
-        class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest select-none"
+        class="text-[10px] font-mono text-neutral-500 dark:text-gray-400 uppercase tracking-widest select-none"
         style="writing-mode: vertical-rl; transform: rotate(180deg)"
         >Power</span
       >
     </div>
 
     <!-- Rack frame -->
-    <div class="flex-1 min-w-0 overflow-hidden border border-neutral-200 bg-neutral-100">
+    <div
+      class="flex-1 min-w-0 overflow-hidden border border-neutral-200 dark:border-gray-800 bg-neutral-100 dark:bg-gray-800"
+    >
       <!-- Top cap -->
       <div
-        class="px-3 py-1.5 border-b border-neutral-200 flex items-center justify-between"
+        class="px-3 py-1.5 border-b border-neutral-200 dark:border-gray-800 flex items-center justify-between"
         aria-hidden="true"
       >
-        <span class="text-xs font-mono text-neutral-600">{{ rack().totalU }}U</span>
-        <span class="text-xs font-mono text-amber-600 font-semibold uppercase tracking-wider"
+        <span class="text-xs font-mono text-neutral-600 dark:text-gray-300"
+          >{{ rack().totalU }}U</span
+        >
+        <span
+          class="text-xs font-mono text-amber-600 dark:text-amber-300 font-semibold uppercase tracking-wider"
           >editing</span
         >
       </div>
@@ -98,9 +103,11 @@
             <div
               cdkDrag
               [cdkDragDisabled]="true"
-              class="w-full h-7 rounded border border-dashed border-neutral-200 bg-neutral-200/60 flex items-center px-2"
+              class="w-full h-7 rounded border border-dashed border-neutral-200 dark:border-gray-800 bg-neutral-200/60 dark:bg-gray-800/60 flex items-center px-2"
             >
-              <span class="text-xs text-neutral-400 font-mono select-none">—</span>
+              <span class="text-xs text-neutral-400 dark:text-gray-500 font-mono select-none"
+                >—</span
+              >
             </div>
           }
         }
@@ -109,11 +116,11 @@
 
     <!-- Right power bar -->
     <div
-      class="w-6 shrink-0 bg-neutral-100 border border-l-0 border-neutral-200 rounded-r-xl flex items-center justify-center"
+      class="w-6 shrink-0 bg-neutral-100 dark:bg-gray-800 border border-l-0 border-neutral-200 dark:border-gray-800 rounded-r-xl flex items-center justify-center"
       aria-hidden="true"
     >
       <span
-        class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest select-none"
+        class="text-[10px] font-mono text-neutral-500 dark:text-gray-400 uppercase tracking-widest select-none"
         style="writing-mode: vertical-rl"
         >Power</span
       >

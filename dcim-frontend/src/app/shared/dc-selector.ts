@@ -12,8 +12,8 @@ import { DatacenterInfo, DatacenterStatus } from '../datacenters/datacenter.mode
           class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer"
           [class]="
             selectedId() === dc.id
-              ? 'bg-slate-100 text-slate-900'
-              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              ? 'bg-slate-100 dark:bg-gray-800 text-slate-900 dark:text-white'
+              : 'text-slate-500 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-900 hover:text-slate-700 dark:hover:text-gray-300'
           "
           [attr.aria-pressed]="selectedId() === dc.id"
         >
