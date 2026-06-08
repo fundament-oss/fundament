@@ -90,8 +90,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // re-queue with updated resource version
 	}
 
-	// Validate plugin name
-	if err := validatePluginName(cr.Spec.PluginName); err != nil {
+	// Validate installation name (used to derive every child resource name).
+	if err := validateInstallationName(cr.Name); err != nil {
 		cr.Status = pluginsv1.PluginInstallationStatus{
 			Phase:              pluginsv1.PluginPhaseFailed,
 			Message:            err.Error(),
@@ -136,7 +136,7 @@ func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *p
 
 	// Delete ClusterRoleBindings
 	for _, clusterRole := range cr.Spec.ClusterRoles {
-		crbName := clusterRoleBindingName(cr.Spec.PluginName, clusterRole)
+		crbName := clusterRoleBindingName(cr.Name, clusterRole)
 		crb := &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{Name: crbName},
 		}
@@ -147,7 +147,7 @@ func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *p
 
 	// Delete the plugin namespace — this cascades to all namespace-scoped resources
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: pluginNamespace(cr.Spec.PluginName)},
+		ObjectMeta: metav1.ObjectMeta{Name: pluginNamespace(cr.Name)},
 	}
 	if err := r.client.Delete(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{}, fmt.Errorf("delete Namespace: %w", err)
@@ -163,7 +163,7 @@ func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *p
 }
 
 func (r *Reconciler) requestPluginUninstall(ctx context.Context, log *slog.Logger, cr *pluginsv1.PluginInstallation) (ctrl.Result, error) {
-	url := pluginServiceURL(cr.Spec.PluginName)
+	url := pluginServiceURL(cr.Name)
 	rpcClient := pluginmetadatav1connect.NewPluginMetadataServiceClient(r.uninstallHTTPClient, url)
 
 	_, err := rpcClient.RequestUninstall(ctx, connect.NewRequest(&pluginmetadatav1.RequestUninstallRequest{}))
@@ -185,7 +185,7 @@ func (r *Reconciler) requestPluginUninstall(ctx context.Context, log *slog.Logge
 
 func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr *pluginsv1.PluginInstallation) error {
 	fundEnvVars := r.fundamentEnvVars()
-	nsName := pluginNamespace(cr.Spec.PluginName)
+	nsName := pluginNamespace(cr.Name)
 
 	// Namespace (no owner ref — cleaned up via finalizer)
 	ns := &corev1.Namespace{
@@ -202,7 +202,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 
 	// ServiceAccount (in plugin namespace, no owner ref — cleaned up via namespace deletion)
 	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Spec.PluginName), Namespace: nsName},
+		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Name), Namespace: nsName},
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, sa, func() error {
 		mutateServiceAccount(sa, cr)
@@ -215,7 +215,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 
 	// RoleBinding (in plugin namespace, no owner ref — cleaned up via namespace deletion)
 	rb := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Spec.PluginName), Namespace: nsName},
+		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Name), Namespace: nsName},
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, rb, func() error {
 		mutateRoleBinding(rb, cr)
@@ -232,7 +232,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 	// (e.g. cluster-admin) to the plugin's ServiceAccount, which runs a user-specified image.
 	desiredCRBs := make(map[string]struct{}, len(cr.Spec.ClusterRoles))
 	for _, clusterRole := range cr.Spec.ClusterRoles {
-		crbName := clusterRoleBindingName(cr.Spec.PluginName, clusterRole)
+		crbName := clusterRoleBindingName(cr.Name, clusterRole)
 		desiredCRBs[crbName] = struct{}{}
 		crb := &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{Name: crbName},
@@ -251,7 +251,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 	var existingCRBs rbacv1.ClusterRoleBindingList
 	if err := r.client.List(ctx, &existingCRBs, client.MatchingLabels{
 		labelManagedBy: managedByValue,
-		labelPlugin:    cr.Spec.PluginName,
+		labelPlugin:    cr.Name,
 	}); err != nil {
 		return fmt.Errorf("list ClusterRoleBindings: %w", err)
 	}
@@ -267,7 +267,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 
 	// Deployment (in plugin namespace, no owner ref — cleaned up via namespace deletion)
 	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Spec.PluginName), Namespace: nsName},
+		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Name), Namespace: nsName},
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, deploy, func() error {
 		mutateDeployment(deploy, cr, fundEnvVars)
@@ -280,7 +280,7 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 
 	// Service (in plugin namespace, no owner ref — cleaned up via namespace deletion)
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Spec.PluginName), Namespace: nsName},
+		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Name), Namespace: nsName},
 	}
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, svc, func() error {
 		mutateService(svc, cr)

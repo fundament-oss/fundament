@@ -32,7 +32,9 @@ service RackService {
 
 message ListRacksRequest {
   // Filter by row; omit to list all racks.
-  string row_id = 10 [features.field_presence = EXPLICIT];
+  string row_id  = 10 [features.field_presence = EXPLICIT];
+  // Filter by site; returns every rack across the site's rooms and rows.
+  string site_id = 20 [features.field_presence = EXPLICIT];
 }
 
 message ListRacksResponse {

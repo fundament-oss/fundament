@@ -229,6 +229,12 @@ const (
 	ConstraintOutboxFkProject = "outbox_fk_project"
 	// ConstraintOutboxFkProjectMember is defined on authz.outbox.
 	ConstraintOutboxFkProjectMember = "outbox_fk_project_member"
+	// ConstraintPhysicalConnectionsCkCableType is defined on dcim.physical_connections.
+	ConstraintPhysicalConnectionsCkCableType = "physical_connections_ck_cable_type"
+	// ConstraintPhysicalConnectionsCkColor is defined on dcim.physical_connections.
+	ConstraintPhysicalConnectionsCkColor = "physical_connections_ck_color"
+	// ConstraintPhysicalConnectionsCkStatus is defined on dcim.physical_connections.
+	ConstraintPhysicalConnectionsCkStatus = "physical_connections_ck_status"
 	// ConstraintPlacementsCkExclusiveArc is defined on dcim.placements.
 	ConstraintPlacementsCkExclusiveArc = "placements_ck_exclusive_arc"
 	// ConstraintPlacementsCkSlotType is defined on dcim.placements.
@@ -285,6 +291,8 @@ const (
 	ConstraintProjectMembersFkUser = "project_members_fk_user"
 	// ConstraintProjectMembersUqProjectUser is defined on tenant.project_members.
 	ConstraintProjectMembersUqProjectUser = "project_members_uq_project_user"
+	// ConstraintProjectsCkAlias is defined on tenant.projects.
+	ConstraintProjectsCkAlias = "projects_ck_alias"
 	// ConstraintProjectsFkCluster is defined on tenant.projects.
 	ConstraintProjectsFkCluster = "projects_fk_cluster"
 	// ConstraintProjectsUqClusterName is defined on tenant.projects.

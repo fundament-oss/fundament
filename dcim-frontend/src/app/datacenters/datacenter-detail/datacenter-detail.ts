@@ -11,10 +11,12 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { DATACENTER_INFO, DatacenterInfo, RackRow, Room } from '../datacenter.model';
-import { RACKS } from '../../racks/rack.model';
+import parseValidationError from '../../../connect/validation';
+import { DatacenterInfo, DatacenterRack, RackRow, Room } from '../datacenter.model';
 import DatacenterApiService from '../datacenter-api.service';
 import connectErrorMessage from '../../../connect/error';
+
+type InvalidFields = Record<string, string>;
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -35,10 +37,10 @@ export default class DatacenterDetailComponent implements OnInit {
 
   private readonly dcApi = inject(DatacenterApiService);
 
-  readonly dc = computed<DatacenterInfo | undefined>(() => {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
-    return DATACENTER_INFO.find((d) => d.id === id);
-  });
+  readonly dc = signal<DatacenterInfo | undefined>(undefined);
+
+  /** False until the site request settles, so "not found" only shows after loading. */
+  readonly dcLoaded = signal(false);
 
   // ── Rooms ──────────────────────────────────────────────────────────────────
 
@@ -59,14 +61,19 @@ export default class DatacenterDetailComponent implements OnInit {
 
   // ── Racks in this DC ───────────────────────────────────────────────────────
 
-  readonly dcRacks = computed(() => {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
-    return RACKS.filter((r) => r.dcId === id);
-  });
+  readonly dcRacks = signal<DatacenterRack[]>([]);
+
+  racksForRow(rowId: string): DatacenterRack[] {
+    return this.dcRacks().filter((rack) => rack.rowId === rowId);
+  }
 
   // ── Room CRUD ──────────────────────────────────────────────────────────────
 
   editRoom = signal<Partial<Room> | null>(null);
+
+  roomErrorMessage = signal<string | null>(null);
+
+  roomInvalidFields = signal<InvalidFields>({});
 
   deleteRoom = signal<Room | null>(null);
 
@@ -82,6 +89,10 @@ export default class DatacenterDetailComponent implements OnInit {
 
   editRackRow = signal<Partial<RackRow> | null>(null);
 
+  rowErrorMessage = signal<string | null>(null);
+
+  rowInvalidFields = signal<InvalidFields>({});
+
   deleteRackRow = signal<RackRow | null>(null);
 
   activeRoomId = signal<string>('');
@@ -95,6 +106,26 @@ export default class DatacenterDetailComponent implements OnInit {
   private readonly fRowX = viewChild<NativeElementRef>('fRowX');
 
   private readonly fRowY = viewChild<NativeElementRef>('fRowY');
+
+  // ── Rack CRUD ──────────────────────────────────────────────────────────────
+
+  editRack = signal<Partial<DatacenterRack> | null>(null);
+
+  rackErrorMessage = signal<string | null>(null);
+
+  rackInvalidFields = signal<InvalidFields>({});
+
+  deleteRack = signal<DatacenterRack | null>(null);
+
+  activeRowId = signal<string>('');
+
+  private readonly rackSheetEl = viewChild<NativeElementRef>('rackSheet');
+
+  private readonly rackModalEl = viewChild<NativeElementRef>('rackModal');
+
+  private readonly fRackName = viewChild<NativeElementRef>('fRackName');
+
+  private readonly fRackTotalU = viewChild<NativeElementRef>('fRackTotalU');
 
   constructor() {
     effect(() => {
@@ -117,24 +148,51 @@ export default class DatacenterDetailComponent implements OnInit {
       if (this.deleteRackRow() !== null) el?.show?.();
       else el?.hide?.();
     });
+    effect(() => {
+      const el = this.rackSheetEl()?.nativeElement;
+      if (this.editRack() !== null) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
+      const el = this.rackModalEl()?.nativeElement;
+      if (this.deleteRack() !== null) el?.show?.();
+      else el?.hide?.();
+    });
   }
 
   ngOnInit(): void {
     const siteId = this.route.snapshot.paramMap.get('id') ?? '';
-    firstValueFrom(this.dcApi.listRooms(siteId))
+    this.loadSite(siteId);
+    this.loadRoomsAndRacks(siteId);
+  }
+
+  private loadSite(siteId: string): void {
+    firstValueFrom(this.dcApi.getSite(siteId))
       .then((res) => {
-        const rooms = res.rooms.map((r) => DatacenterApiService.mapRoom(r));
-        this.mutableRooms.set(rooms);
-        return Promise.all(
-          rooms.map((room) =>
-            firstValueFrom(this.dcApi.listRackRows(room.id)).then((rr) =>
-              rr.rackRows.map((row) => DatacenterApiService.mapRackRow(row)),
-            ),
-          ),
-        );
+        if (res.site) this.dc.set(DatacenterApiService.mapSite(res.site));
       })
-      .then((allRows) => {
-        this.mutableRackRows.set(allRows.flat());
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)))
+      .finally(() => this.dcLoaded.set(true));
+  }
+
+  private loadRoomsAndRacks(siteId: string): void {
+    Promise.all([
+      firstValueFrom(this.dcApi.listRooms(siteId)),
+      firstValueFrom(this.dcApi.listRackRowsBySite(siteId)),
+      firstValueFrom(this.dcApi.listRacksBySite(siteId)),
+    ])
+      .then(([roomsRes, rowsRes, racksRes]) => {
+        this.mutableRooms.set(roomsRes.rooms.map((r) => DatacenterApiService.mapRoom(r)));
+        this.mutableRackRows.set(
+          rowsRes.rackRows.map((row) => DatacenterApiService.mapRackRow(row)),
+        );
+        this.dcRacks.set(
+          racksRes.racks
+            .map((summary) => summary.rack)
+            .filter((rack): rack is NonNullable<typeof rack> => rack != null)
+            .map((rack) => DatacenterApiService.mapRack(rack)),
+        );
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
@@ -144,20 +202,81 @@ export default class DatacenterDetailComponent implements OnInit {
 
   openCreateRoom(): void {
     const dcId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.clearRoomErrors();
     this.editRoom.set({ id: '', siteId: dcId, name: '', floor: 1 });
   }
 
   openEditRoom(room: Room): void {
+    this.clearRoomErrors();
     this.editRoom.set({ ...room });
   }
 
   closeRoomForm(): void {
     this.editRoom.set(null);
+    this.clearRoomErrors();
+  }
+
+  isRoomFieldInvalid(field: string): boolean {
+    return field in this.roomInvalidFields();
+  }
+
+  roomFieldError(field: string): string {
+    return this.roomInvalidFields()[field] ?? '';
+  }
+
+  private clearRoomErrors(): void {
+    this.roomInvalidFields.set({});
+    this.roomErrorMessage.set(null);
+  }
+
+  private handleRoomError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.roomInvalidFields.set(fields);
+    this.roomErrorMessage.set(message);
+  }
+
+  isRowFieldInvalid(field: string): boolean {
+    return field in this.rowInvalidFields();
+  }
+
+  rowFieldError(field: string): string {
+    return this.rowInvalidFields()[field] ?? '';
+  }
+
+  private clearRowErrors(): void {
+    this.rowInvalidFields.set({});
+    this.rowErrorMessage.set(null);
+  }
+
+  private handleRowError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.rowInvalidFields.set(fields);
+    this.rowErrorMessage.set(message);
+  }
+
+  isRackFieldInvalid(field: string): boolean {
+    return field in this.rackInvalidFields();
+  }
+
+  rackFieldError(field: string): string {
+    return this.rackInvalidFields()[field] ?? '';
+  }
+
+  private clearRackErrors(): void {
+    this.rackInvalidFields.set({});
+    this.rackErrorMessage.set(null);
+  }
+
+  private handleRackError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.rackInvalidFields.set(fields);
+    this.rackErrorMessage.set(message);
   }
 
   saveRoom(): void {
     const form = this.editRoom();
     if (!form) return;
+    this.clearRoomErrors();
     const name = this.fRoomName()?.nativeElement.value ?? '';
     const floor = parseInt(this.fRoomFloor()?.nativeElement.value ?? '1', 10) || 1;
     if (form.id) {
@@ -167,8 +286,7 @@ export default class DatacenterDetailComponent implements OnInit {
           this.mutableRooms.update((list) => list.map((r) => (r.id === form.id ? updated : r)));
           this.editRoom.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRoomError(err));
     } else {
       firstValueFrom(this.dcApi.createRoom(form.siteId!, name, floor))
         .then((res) => {
@@ -176,8 +294,7 @@ export default class DatacenterDetailComponent implements OnInit {
           this.mutableRooms.update((list) => [...list, created]);
           this.editRoom.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRoomError(err));
     }
   }
 
@@ -205,22 +322,26 @@ export default class DatacenterDetailComponent implements OnInit {
   // ── Rack row actions ───────────────────────────────────────────────────────
 
   openCreateRackRow(roomId: string): void {
+    this.clearRowErrors();
     this.activeRoomId.set(roomId);
     this.editRackRow.set({ id: '', roomId, name: '', positionX: 1, positionY: 1 });
   }
 
   openEditRackRow(rr: RackRow): void {
+    this.clearRowErrors();
     this.activeRoomId.set(rr.roomId);
     this.editRackRow.set({ ...rr });
   }
 
   closeRackRowForm(): void {
+    this.clearRowErrors();
     this.editRackRow.set(null);
   }
 
   saveRackRow(): void {
     const form = this.editRackRow();
     if (!form) return;
+    this.clearRowErrors();
     const name = this.fRowName()?.nativeElement.value ?? '';
     const posX = parseInt(this.fRowX()?.nativeElement.value ?? '1', 10) || 1;
     const posY = parseInt(this.fRowY()?.nativeElement.value ?? '1', 10) || 1;
@@ -239,8 +360,7 @@ export default class DatacenterDetailComponent implements OnInit {
           );
           this.editRackRow.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRowError(err));
     } else {
       firstValueFrom(this.dcApi.createRackRow(form.roomId!, name, posX, posY))
         .then((res) => {
@@ -254,8 +374,7 @@ export default class DatacenterDetailComponent implements OnInit {
           this.mutableRackRows.update((list) => [...list, created]);
           this.editRackRow.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleRowError(err));
     }
   }
 
@@ -274,6 +393,82 @@ export default class DatacenterDetailComponent implements OnInit {
       .then(() => {
         this.mutableRackRows.update((list) => list.filter((rr) => rr.id !== target.id));
         this.deleteRackRow.set(null);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  // ── Rack actions ───────────────────────────────────────────────────────────
+
+  openCreateRack(rowId: string): void {
+    this.clearRackErrors();
+    this.activeRowId.set(rowId);
+    this.editRack.set({ id: '', rowId, name: '', totalU: 42 });
+  }
+
+  openEditRack(rack: DatacenterRack): void {
+    this.clearRackErrors();
+    this.activeRowId.set(rack.rowId);
+    this.editRack.set({ ...rack });
+  }
+
+  closeRackForm(): void {
+    this.clearRackErrors();
+    this.editRack.set(null);
+  }
+
+  saveRack(): void {
+    const form = this.editRack();
+    if (!form) return;
+    this.clearRackErrors();
+    const name = this.fRackName()?.nativeElement.value ?? '';
+    const totalU = parseInt(this.fRackTotalU()?.nativeElement.value ?? '42', 10) || 42;
+    if (form.id) {
+      firstValueFrom(this.dcApi.updateRack(form.id, name, totalU))
+        .then(() => {
+          const updated: DatacenterRack = {
+            id: form.id!,
+            rowId: form.rowId!,
+            name,
+            totalU,
+            positionInRow: form.positionInRow ?? 0,
+          };
+          this.dcRacks.update((list) => list.map((r) => (r.id === form.id ? updated : r)));
+          this.editRack.set(null);
+        })
+        .catch((err) => this.handleRackError(err));
+    } else {
+      firstValueFrom(this.dcApi.createRack(form.rowId!, name, totalU))
+        .then((res) => {
+          const created: DatacenterRack = {
+            id: res.rackId,
+            rowId: form.rowId!,
+            name,
+            totalU,
+            positionInRow: 0,
+          };
+          this.dcRacks.update((list) => [...list, created]);
+          this.editRack.set(null);
+        })
+        .catch((err) => this.handleRackError(err));
+    }
+  }
+
+  openDeleteRack(rack: DatacenterRack): void {
+    this.deleteRack.set(rack);
+  }
+
+  cancelDeleteRack(): void {
+    this.deleteRack.set(null);
+  }
+
+  confirmDeleteRack(): void {
+    const target = this.deleteRack();
+    if (!target) return;
+    firstValueFrom(this.dcApi.deleteRack(target.id))
+      .then(() => {
+        this.dcRacks.update((list) => list.filter((r) => r.id !== target.id));
+        this.deleteRack.set(null);
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));

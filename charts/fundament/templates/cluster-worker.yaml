@@ -48,18 +48,8 @@ spec:
               mountPath: /etc/gardener
               readOnly: true
           {{- end }}
-          livenessProbe:
-            httpGet:
-              path: /livez
-              port: health
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: health
-            initialDelaySeconds: 5
-            periodSeconds: 5
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "health") | nindent 10 }}
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "health") | nindent 10 }}
       {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
       volumes:
         - name: gardener-kubeconfig

@@ -69,6 +69,7 @@
               size="sm"
               text="Edit Asset"
               start-icon="pencil-on-square"
+              (click)="openEditAsset()"
             ></nldd-button>
           </div>
         </div>
@@ -162,8 +163,8 @@
                   Serial Number
                 </dt>
                 <dd class="text-sm font-mono text-slate-700">
-                  @if (extraDetail()?.serial) {
-                    {{ extraDetail()!.serial }}
+                  @if (a.serialNumber) {
+                    {{ a.serialNumber }}
                   } @else {
                     <span class="text-slate-300">—</span>
                   }
@@ -180,8 +181,8 @@
                   Manufacturer
                 </dt>
                 <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.manufacturer) {
-                    {{ extraDetail()!.manufacturer }}
+                  @if (catalogEntry()?.manufacturer) {
+                    {{ catalogEntry()!.manufacturer }}
                   } @else {
                     <span class="text-slate-300">—</span>
                   }
@@ -198,11 +199,15 @@
                   Datacenter
                 </dt>
                 <dd>
-                  <span
-                    class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-mono font-medium text-slate-700"
-                  >
-                    {{ a.datacenter }}
-                  </span>
+                  @if (assetLocation(); as loc) {
+                    <span
+                      class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-mono font-medium text-slate-700"
+                    >
+                      {{ loc.datacenter }}
+                    </span>
+                  } @else {
+                    <span class="text-slate-300">—</span>
+                  }
                 </dd>
               </div>
 
@@ -215,61 +220,9 @@
                   ></nldd-icon>
                   Rack
                 </dt>
-                <dd class="text-sm font-mono font-medium text-slate-700">{{ a.rack }}</dd>
-              </div>
-
-              @if (parentAsset(); as parent) {
-                <div class="flex items-center justify-between px-5 py-3">
-                  <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                    <nldd-icon
-                      name="puzzle-piece"
-                      class="w-4 h-4 text-slate-400"
-                      aria-hidden="true"
-                    ></nldd-icon>
-                    Part of
-                  </dt>
-                  <dd class="text-sm font-mono">
-                    <a
-                      [routerLink]="['/inventory', parent.id]"
-                      class="text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-                    >
-                      {{ parent.model }}
-                    </a>
-                    <span class="ml-1 text-slate-400 text-xs">({{ parent.assetTag }})</span>
-                  </dd>
-                </div>
-              }
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                  <nldd-icon
-                    name="calendar-event"
-                    class="w-4 h-4 text-slate-400"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Purchase Date
-                </dt>
-                <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.purchaseDate) {
-                    {{ extraDetail()!.purchaseDate }}
-                  } @else {
-                    <span class="text-slate-300">—</span>
-                  }
-                </dd>
-              </div>
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                  <nldd-icon
-                    name="info-circle"
-                    class="w-4 h-4 text-slate-400"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Purchase Cost
-                </dt>
-                <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.purchaseCost) {
-                    {{ extraDetail()!.purchaseCost }}
+                <dd class="text-sm font-mono font-medium text-slate-700">
+                  @if (assetLocation(); as loc) {
+                    {{ loc.rack }}
                   } @else {
                     <span class="text-slate-300">—</span>
                   }
@@ -286,26 +239,8 @@
                   Warranty Expires
                 </dt>
                 <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.warrantyExpires) {
-                    {{ extraDetail()!.warrantyExpires }}
-                  } @else {
-                    <span class="text-slate-300">—</span>
-                  }
-                </dd>
-              </div>
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
-                  <nldd-icon
-                    name="envelope"
-                    class="w-4 h-4 text-slate-400"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Support Contract
-                </dt>
-                <dd class="text-sm text-slate-700">
-                  @if (extraDetail()?.supportContract) {
-                    {{ extraDetail()!.supportContract }}
+                  @if (a.warrantyExpiry) {
+                    {{ a.warrantyExpiry }}
                   } @else {
                     <span class="text-slate-300">—</span>
                   }
@@ -314,106 +249,59 @@
             </dl>
           </section>
 
-          <!-- Components card -->
-          @if (childAssets().length > 0) {
-            <section
-              aria-labelledby="components-heading"
-              class="rounded-xl border border-slate-200 bg-white"
-            >
-              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h2 id="components-heading" class="text-sm font-semibold text-slate-900">
-                  Components
-                </h2>
-                <span
-                  class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
-                >
-                  {{ childAssets().length }}
-                </span>
-              </div>
-              <ul class="divide-y divide-slate-100" aria-label="Sub-assets and components">
-                @for (child of childAssets(); track child.id) {
-                  <li>
-                    <a
-                      [routerLink]="['/inventory', child.id]"
-                      class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors group"
-                    >
-                      <div
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors"
-                      >
-                        <nldd-icon
-                          [name]="categoryIcon(child.category)"
-                          class="w-4 h-4"
-                          aria-hidden="true"
-                        ></nldd-icon>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-slate-800 truncate">{{ child.model }}</p>
-                        <p class="text-xs text-slate-400 font-mono">{{ child.assetTag }}</p>
-                      </div>
-                      <span
-                        class="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                        [class]="statusBadgeClass(child.status)"
-                      >
-                        <span
-                          class="h-1.5 w-1.5 rounded-full"
-                          [class]="statusDotClass(child.status)"
-                          aria-hidden="true"
-                        ></span>
-                        {{ statusLabel(child.status) }}
-                      </span>
-                    </a>
-                  </li>
-                }
-              </ul>
-            </section>
-          }
-
           <!-- Notes card -->
-          @if (noteDetail(); as notes) {
+          @if (a.notes || notes().length > 0) {
             <section
               aria-labelledby="notes-heading"
               class="rounded-xl border border-slate-200 bg-white"
             >
               <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                 <h2 id="notes-heading" class="text-sm font-semibold text-slate-900">Notes</h2>
-                <span
-                  class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
-                >
-                  {{ notes.comments.length }} comment{{ notes.comments.length === 1 ? '' : 's' }}
-                </span>
+                @if (notes().length > 0) {
+                  <span
+                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+                  >
+                    {{ notes().length }} comment{{ notes().length === 1 ? '' : 's' }}
+                  </span>
+                }
               </div>
 
-              <!-- Description -->
-              <div class="px-5 py-4 border-b border-slate-100">
-                <p class="text-sm text-slate-700 leading-relaxed">{{ notes.description }}</p>
-              </div>
+              @if (a.notes) {
+                <div class="px-5 py-4">
+                  <p class="text-sm text-slate-700 leading-relaxed">{{ a.notes }}</p>
+                </div>
+              }
 
               <!-- Comments -->
-              <ul class="divide-y divide-slate-100" aria-label="Comments">
-                @for (comment of notes.comments; track comment.author + comment.daysAgo) {
-                  <li class="px-5 py-4">
-                    <div class="flex items-start gap-3">
-                      <div
-                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700 select-none"
-                        aria-hidden="true"
-                      >
-                        {{ comment.initials }}
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                          <span class="text-sm font-medium text-slate-800">{{
-                            comment.author
-                          }}</span>
-                          <span class="text-xs text-slate-400">{{
-                            formatDaysAgo(comment.daysAgo)
-                          }}</span>
+              @if (notes().length > 0) {
+                <ul class="divide-y divide-slate-100" aria-label="Comments">
+                  @for (comment of notes(); track comment.id) {
+                    <li class="px-5 py-4">
+                      <div class="flex items-start gap-3">
+                        <div
+                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700 select-none"
+                          aria-hidden="true"
+                        >
+                          {{ comment.initials }}
                         </div>
-                        <p class="text-sm text-slate-600 leading-relaxed">{{ comment.content }}</p>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center gap-2 mb-1">
+                            <span class="text-sm font-medium text-slate-800">{{
+                              comment.author
+                            }}</span>
+                            <span class="text-xs text-slate-400">{{
+                              formatDaysAgo(comment.daysAgo)
+                            }}</span>
+                          </div>
+                          <p class="text-sm text-slate-600 leading-relaxed">
+                            {{ comment.content }}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                }
-              </ul>
+                    </li>
+                  }
+                </ul>
+              }
             </section>
           }
 
@@ -507,7 +395,9 @@
                   <p class="text-xs text-slate-400 uppercase tracking-wide font-medium">
                     Datacenter
                   </p>
-                  <p class="text-sm font-semibold text-slate-800 font-mono">{{ a.datacenter }}</p>
+                  <p class="text-sm font-semibold text-slate-800 font-mono">
+                    {{ assetLocation()?.datacenter ?? '—' }}
+                  </p>
                 </div>
               </div>
 
@@ -519,7 +409,49 @@
                 </div>
                 <div>
                   <p class="text-xs text-slate-400 uppercase tracking-wide font-medium">Rack</p>
-                  <p class="text-sm font-semibold text-slate-800 font-mono">{{ a.rack }}</p>
+                  <p class="text-sm font-semibold text-slate-800 font-mono">
+                    {{ assetLocation()?.rack ?? '—' }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"
+                >
+                  <nldd-icon
+                    name="brackets-ellipsis"
+                    class="w-4 h-4"
+                    aria-hidden="true"
+                  ></nldd-icon>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-400 uppercase tracking-wide font-medium">
+                    Rack unit
+                  </p>
+                  <p class="text-sm font-semibold text-slate-800 font-mono">
+                    {{ assetLocation()?.rackUnit ?? '—' }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"
+                >
+                  <nldd-icon name="list" class="w-4 h-4" aria-hidden="true"></nldd-icon>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-400 uppercase tracking-wide font-medium">
+                    Slot type
+                  </p>
+                  <p class="text-sm font-semibold text-slate-800">
+                    @if (assetLocation(); as loc) {
+                      {{ slotTypeLabel(loc.slotType) }}
+                    } @else {
+                      —
+                    }
+                  </p>
                 </div>
               </div>
 
@@ -578,7 +510,7 @@
         </div>
       </div>
     </div>
-  } @else {
+  } @else if (assetLoaded()) {
     <!-- Not found state -->
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col items-center justify-center py-24 text-center">
@@ -602,3 +534,144 @@
     </div>
   }
 </main>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ASSET EDIT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #assetSheet accessible-label="Edit asset" placement="right" width="480px">
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit asset"
+      dismiss-text="Close"
+      (dismiss)="closeAssetForm()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section class="space-y-4">
+      @if (formErrorMessage()) {
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+            {{ formErrorMessage() }}
+          </p>
+        </div>
+      }
+      <nldd-form-field label="Device">
+        <select disabled>
+          <option selected>{{ editAsset()?.model }}</option>
+        </select>
+      </nldd-form-field>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Asset tag">
+          <nldd-text-field
+            #fAssetTag
+            [attr.value]="editAsset()?.assetTag ?? ''"
+            placeholder="AST-001"
+            (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('asset_tag') ? '' : null"
+            error-message="error-ad-asset-tag"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="error-ad-asset-tag">{{
+            fieldError('asset_tag')
+          }}</nldd-form-field-error-text>
+        </nldd-form-field>
+        <nldd-form-field label="Status">
+          <select #fAssetStatus>
+            @for (s of statuses; track s.value) {
+              <option
+                [value]="s.value"
+                [attr.selected]="editAsset()?.status === s.value ? true : null"
+              >
+                {{ s.label }}
+              </option>
+            }
+          </select>
+        </nldd-form-field>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Serial number" [optional]="true">
+          <nldd-text-field
+            #fAssetSerial
+            [attr.value]="editAsset()?.serialNumber ?? ''"
+            placeholder="SN-…"
+            (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('serial_number') ? '' : null"
+            error-message="error-ad-asset-serial"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="error-ad-asset-serial">{{
+            fieldError('serial_number')
+          }}</nldd-form-field-error-text>
+        </nldd-form-field>
+        <nldd-form-field label="Warranty expiry" [optional]="true">
+          <nldd-text-field
+            #fAssetWarranty
+            type="date"
+            [attr.value]="editAsset()?.warrantyExpiry ?? ''"
+            (keydown.enter)="saveAsset()"
+          ></nldd-text-field>
+        </nldd-form-field>
+      </div>
+      <nldd-form-field label="Rack" [optional]="true">
+        @if (racksByDatacenter().length === 0) {
+          <nldd-form-field-help-text>
+            No racks available yet. Add a room, rack row, and rack to a datacenter first.
+          </nldd-form-field-help-text>
+        }
+        <select #fAssetRack>
+          <option value="">— Not placed —</option>
+          @for (group of racksByDatacenter(); track group.datacenter) {
+            <optgroup [attr.label]="group.datacenter">
+              @for (rack of group.racks; track rack.id) {
+                <option
+                  [value]="rack.id"
+                  [attr.selected]="editPlacement()?.rackId === rack.id ? true : null"
+                >
+                  {{ rack.name }}
+                </option>
+              }
+            </optgroup>
+          }
+        </select>
+      </nldd-form-field>
+      <div class="grid grid-cols-2 gap-3">
+        <nldd-form-field label="Rack unit" [optional]="true">
+          <nldd-text-field
+            #fAssetRackUnit
+            type="number"
+            [attr.value]="editPlacement()?.unit ?? ''"
+            placeholder="1"
+            (keydown.enter)="saveAsset()"
+            [attr.invalid]="isFieldInvalid('rack_unit_start') ? '' : null"
+            error-message="error-ad-rack-unit"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="error-ad-rack-unit">{{
+            fieldError('rack_unit_start')
+          }}</nldd-form-field-error-text>
+        </nldd-form-field>
+        <nldd-form-field label="Slot type" [optional]="true">
+          <select #fAssetSlotType>
+            @for (st of slotTypes; track st.value) {
+              <option
+                [value]="st.value"
+                [attr.selected]="
+                  (editPlacement()?.slotType ?? defaultSlotType) === st.value ? true : null
+                "
+              >
+                {{ st.label }}
+              </option>
+            }
+          </select>
+        </nldd-form-field>
+      </div>
+      <nldd-form-field label="Notes" [optional]="true">
+        <nldd-multi-line-text-field
+          #fAssetNotes
+          [attr.value]="editAsset()?.notes ?? ''"
+          placeholder="Additional notes…"
+        ></nldd-multi-line-text-field>
+      </nldd-form-field>
+    </nldd-simple-section>
+    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+      <nldd-button variant="secondary" text="Cancel" (click)="closeAssetForm()"></nldd-button>
+      <nldd-button variant="primary" text="Save" (click)="saveAsset()"></nldd-button>
+    </div>
+  </nldd-page>
+</nldd-sheet>

@@ -436,7 +436,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   getProjectName(projectId: string): string {
-    return this.organizationDataService.getProjectById(projectId)?.project.name ?? projectId;
+    return this.organizationDataService.getProjectById(projectId)?.project.alias ?? projectId;
   }
 
   // Load installed plugins for the cluster
@@ -449,7 +449,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         this.pluginInstallationService.listInstallations(clusterId).catch(() => []),
       ]);
 
-      const installedNames = new Set(installations.map((item) => item.spec.pluginName));
+      const installedNames = new Set(installations.map((item) => item.spec.definitionRef.pluginName));
       this.installedPlugins.set(pluginsResponse.plugins.filter((p) => installedNames.has(p.name)));
     } catch (error) {
       this.toastService.error(

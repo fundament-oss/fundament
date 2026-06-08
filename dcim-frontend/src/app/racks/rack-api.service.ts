@@ -5,6 +5,14 @@ import { RACK_CLIENT } from '../../connect/tokens';
 export default class RackApiService {
   private readonly client = inject(RACK_CLIENT);
 
+  listRacksBySite(siteId: string) {
+    return this.client.listRacks({ siteId });
+  }
+
+  getRack(id: string) {
+    return this.client.getRack({ id });
+  }
+
   createRack(name: string, totalUnits: number, rowId: string) {
     return this.client.createRack({ rowId, name, totalUnits, positionInRow: 0 });
   }

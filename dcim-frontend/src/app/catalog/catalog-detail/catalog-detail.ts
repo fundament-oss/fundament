@@ -16,13 +16,14 @@ import {
   AssetCategory,
   AssetStatus,
   CatalogEntry,
-  MOCK_ASSETS,
-  MOCK_CATALOG,
   PortDefinition,
   PortCompatibility,
 } from '../../inventory/inventory';
 import CatalogApiService from '../catalog-api.service';
+import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
+import parseValidationError from '../../../connect/validation';
+import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -41,15 +42,24 @@ export default class CatalogDetailComponent implements OnInit {
 
   private readonly catalogApi = inject(CatalogApiService);
 
+  private readonly inventoryApi = inject(InventoryApiService);
+
   readonly catalogId = computed(() => this.route.snapshot.paramMap.get('id') ?? '');
 
-  readonly entry = computed<CatalogEntry | undefined>(() =>
-    MOCK_CATALOG.find((e) => e.id === this.catalogId()),
-  );
+  readonly entry = signal<CatalogEntry | undefined>(undefined);
+
+  readonly entryLoaded = signal(false);
+
+  /** Raw assets from the API; instances of this entry are derived in `assets`. */
+  private readonly rawAssets = signal<ProtoAsset[]>([]);
 
   readonly assets = computed<Asset[]>(() => {
-    const model = this.entry()?.model;
-    return model ? MOCK_ASSETS.filter((a) => a.model === model) : [];
+    const id = this.catalogId();
+    const entry = this.entry();
+    const catalog = entry ? new Map([[entry.id, entry]]) : new Map<string, CatalogEntry>();
+    return this.rawAssets()
+      .filter((a) => a.deviceCatalogId === id)
+      .map((a) => InventoryApiService.mapAsset(a, catalog));
   });
 
   readonly deployedCount = computed(
@@ -85,6 +95,32 @@ export default class CatalogDetailComponent implements OnInit {
 
   deletePortDef = signal<PortDefinition | null>(null);
 
+  // ── Validation feedback (shared by the port + compatibility forms) ────────────
+  readonly invalidFields = signal<Record<string, string>>({});
+
+  readonly formErrorMessage = signal<string | null>(null);
+
+  /** Selectable port-type enum values (proto-aligned keys + display labels). */
+  readonly PORT_TYPES: { value: string; label: string }[] = [
+    { value: 'network', label: 'Network' },
+    { value: 'power_in', label: 'Power in' },
+    { value: 'power_out', label: 'Power out' },
+    { value: 'slot', label: 'Slot' },
+    { value: 'bay', label: 'Bay' },
+    { value: 'console', label: 'Console' },
+  ];
+
+  portTypeLabel(value: string): string {
+    return this.PORT_TYPES.find((t) => t.value === value)?.label ?? value;
+  }
+
+  /** Selectable port-direction enum values (proto-aligned keys + labels). */
+  readonly PORT_DIRECTIONS: { value: string; label: string }[] = [
+    { value: 'bidir', label: 'Bidirectional' },
+    { value: 'in', label: 'In' },
+    { value: 'out', label: 'Out' },
+  ];
+
   private readonly portSheetEl = viewChild<NativeElementRef>('portSheet');
 
   private readonly portModalEl = viewChild<NativeElementRef>('portModal');
@@ -93,6 +129,10 @@ export default class CatalogDetailComponent implements OnInit {
 
   private readonly fPortType = viewChild<NativeElementRef>('fPortType');
 
+  private readonly fPortDirection = viewChild<NativeElementRef>('fPortDirection');
+
+  private readonly fPortMedia = viewChild<NativeElementRef>('fPortMedia');
+
   private readonly fPortSpeed = viewChild<NativeElementRef>('fPortSpeed');
 
   private readonly fPortPower = viewChild<NativeElementRef>('fPortPower');
@@ -100,16 +140,33 @@ export default class CatalogDetailComponent implements OnInit {
   // ── Port compatibility CRUD state ─────────────────────────────────────────
   addCompatPortDefId = signal<string | null>(null);
 
+  /** Catalog entry selected in the "Add compatibility" sheet (empty = none). */
+  readonly compatEntryId = signal('');
+
   deleteCompat = signal<PortCompatibility | null>(null);
 
-  private readonly compatModalEl = viewChild<NativeElementRef>('compatModal');
+  private readonly compatSheetEl = viewChild<NativeElementRef>('compatSheet');
 
   private readonly compatDeleteModalEl = viewChild<NativeElementRef>('compatDeleteModal');
 
-  private readonly fCompatEntry = viewChild<NativeElementRef>('fCompatEntry');
-
   // ── Catalog list for compatibility dropdown ────────────────────────────────
-  readonly allCatalogEntries = MOCK_CATALOG;
+  readonly allCatalogEntries = signal<CatalogEntry[]>([]);
+
+  /**
+   * Catalog entries selectable in the picker: every entry except this device
+   * itself and the ones already marked compatible with the active port.
+   */
+  readonly availableCompatEntries = computed<CatalogEntry[]>(() => {
+    const pdId = this.addCompatPortDefId();
+    const taken = new Set(
+      this.mutableCompatibilities()
+        .filter((c) => c.portDefinitionId === pdId)
+        .map((c) => c.compatibleCatalogEntryId),
+    );
+    return this.allCatalogEntries().filter(
+      (e) => e.id !== this.catalogId() && !taken.has(e.id),
+    );
+  });
 
   constructor() {
     effect(() => {
@@ -123,7 +180,7 @@ export default class CatalogDetailComponent implements OnInit {
       else el?.hide?.();
     });
     effect(() => {
-      const el = this.compatModalEl()?.nativeElement;
+      const el = this.compatSheetEl()?.nativeElement;
       if (this.addCompatPortDefId() !== null) el?.show?.();
       else el?.hide?.();
     });
@@ -135,10 +192,44 @@ export default class CatalogDetailComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    firstValueFrom(this.catalogApi.getCatalogEntry(this.catalogId()))
+      .then((res) => {
+        if (res.entry) this.entry.set(CatalogApiService.mapCatalogEntry(res.entry));
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)))
+      .finally(() => this.entryLoaded.set(true));
+
     firstValueFrom(this.catalogApi.listPortDefinitions(this.catalogId()))
+      .then((res) => {
+        const portDefs = res.portDefinitions.map((p) => CatalogApiService.mapPortDefinition(p));
+        this.mutablePortDefs.set(portDefs);
+        // Load each port's existing compatibilities so the "Compatible with"
+        // chips render on initial page load, not just after opening the picker.
+        return Promise.all(
+          portDefs.map((pd) =>
+            firstValueFrom(this.catalogApi.listPortCompatibilities(pd.id)).then((compatRes) =>
+              compatRes.compatibilities.map((c) => CatalogApiService.mapPortCompatibility(c)),
+            ),
+          ),
+        );
+      })
+      .then((compatArrays) => this.mutableCompatibilities.set(compatArrays.flat()))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+
+    firstValueFrom(
+      this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
+    )
+      .then((res) => this.rawAssets.set(res.assets))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+
+    // Full catalog, for the port-compatibility picker and name resolution.
+    firstValueFrom(this.catalogApi.listCatalog())
       .then((res) =>
-        this.mutablePortDefs.set(
-          res.portDefinitions.map((p) => CatalogApiService.mapPortDefinition(p)),
+        this.allCatalogEntries.set(
+          res.entries.map((s) => CatalogApiService.mapCatalogEntry(s.entry!)),
         ),
       )
       // eslint-disable-next-line no-console
@@ -147,23 +238,54 @@ export default class CatalogDetailComponent implements OnInit {
 
   // ── Port definition actions ────────────────────────────────────────────────
 
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearErrors(): void {
+    this.invalidFields.set({});
+    this.formErrorMessage.set(null);
+  }
+
+  private handleError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.formErrorMessage.set(message);
+  }
+
   openCreatePortDef(): void {
-    this.editPortDef.set({ id: '', catalogEntryId: this.catalogId(), name: '', portType: '' });
+    this.clearErrors();
+    this.editPortDef.set({
+      id: '',
+      catalogEntryId: this.catalogId(),
+      name: '',
+      portType: '',
+      direction: 'bidir',
+    });
   }
 
   openEditPortDef(pd: PortDefinition): void {
+    this.clearErrors();
     this.editPortDef.set({ ...pd });
   }
 
   closePortDefForm(): void {
+    this.clearErrors();
     this.editPortDef.set(null);
   }
 
   savePortDef(): void {
     const form = this.editPortDef();
     if (!form) return;
+    this.clearErrors();
     const name = this.fPortName()?.nativeElement.value ?? '';
     const portType = this.fPortType()?.nativeElement.value ?? '';
+    const direction = this.fPortDirection()?.nativeElement.value ?? '';
+    const mediaType = this.fPortMedia()?.nativeElement.value ?? '';
     const speedRaw = this.fPortSpeed()?.nativeElement.value;
     const powerRaw = this.fPortPower()?.nativeElement.value;
     const speedGbps = speedRaw ? parseFloat(speedRaw) : undefined;
@@ -173,6 +295,9 @@ export default class CatalogDetailComponent implements OnInit {
       catalogEntryId: this.catalogId(),
       name,
       portType,
+      direction,
+      ordinal: form.ordinal ?? this.portDefs().length,
+      ...(mediaType ? { mediaType } : {}),
       ...(speedGbps != null && !Number.isNaN(speedGbps) ? { speedGbps } : {}),
       ...(powerWatts != null && !Number.isNaN(powerWatts) ? { powerWatts } : {}),
     };
@@ -182,16 +307,14 @@ export default class CatalogDetailComponent implements OnInit {
           this.mutablePortDefs.update((list) => list.map((p) => (p.id === form.id ? pd : p)));
           this.editPortDef.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     } else {
       firstValueFrom(this.catalogApi.createPortDefinition(pd))
         .then((res) => {
           this.mutablePortDefs.update((list) => [...list, { ...pd, id: res.portDefinitionId }]);
           this.editPortDef.set(null);
         })
-        // eslint-disable-next-line no-console
-        .catch((err) => console.error(connectErrorMessage(err)));
+        .catch((err) => this.handleError(err));
     }
   }
 
@@ -221,45 +344,36 @@ export default class CatalogDetailComponent implements OnInit {
   // ── Port compatibility actions ─────────────────────────────────────────────
 
   openAddCompatibility(portDefId: string): void {
+    this.clearErrors();
+    this.compatEntryId.set('');
     this.addCompatPortDefId.set(portDefId);
-    firstValueFrom(this.catalogApi.listPortCompatibilities(portDefId))
-      .then((res) => {
-        const existing = new Set(
-          this.mutableCompatibilities().map(
-            (c) => `${c.portDefinitionId}:${c.compatibleCatalogEntryId}`,
-          ),
-        );
-        const newOnes = res.compatibilities
-          .map((c) => CatalogApiService.mapPortCompatibility(c))
-          .filter((c) => !existing.has(`${c.portDefinitionId}:${c.compatibleCatalogEntryId}`));
-        if (newOnes.length) {
-          this.mutableCompatibilities.update((list) => [...list, ...newOnes]);
-        }
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   cancelAddCompatibility(): void {
+    this.clearErrors();
+    this.compatEntryId.set('');
     this.addCompatPortDefId.set(null);
   }
 
   confirmAddCompatibility(): void {
     const pdId = this.addCompatPortDefId();
-    const entryId = this.fCompatEntry()?.nativeElement.value ?? '';
+    const entryId = this.compatEntryId();
     if (!pdId || !entryId) return;
+    this.clearErrors();
+    const entry = this.allCatalogEntries().find((e) => e.id === entryId);
     firstValueFrom(this.catalogApi.createPortCompatibility(pdId, entryId))
       .then(() => {
         const created: PortCompatibility = {
           id: `${pdId}:${entryId}`,
           portDefinitionId: pdId,
+          compatibleCategory: entry?.category ?? 'Other',
           compatibleCatalogEntryId: entryId,
         };
         this.mutableCompatibilities.update((list) => [...list, created]);
+        this.compatEntryId.set('');
         this.addCompatPortDefId.set(null);
       })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+      .catch((err) => this.handleError(err));
   }
 
   openDeleteCompat(compat: PortCompatibility): void {
@@ -288,7 +402,16 @@ export default class CatalogDetailComponent implements OnInit {
   }
 
   readonly compatibleEntryName = (entryId: string): string =>
-    MOCK_CATALOG.find((e) => e.id === entryId)?.model ?? entryId;
+    this.allCatalogEntries().find((e) => e.id === entryId)?.model ?? entryId;
+
+  /**
+   * Chip label for a compatibility: the specific model when narrowed to one
+   * catalog entry, otherwise the whole accepted category (e.g. "Any Server").
+   */
+  readonly compatLabel = (compat: PortCompatibility): string =>
+    compat.compatibleCatalogEntryId
+      ? this.compatibleEntryName(compat.compatibleCatalogEntryId)
+      : `Any ${compat.compatibleCategory}`;
 
   portDefName(pdId: string): string {
     return this.mutablePortDefs().find((p) => p.id === pdId)?.name ?? pdId;

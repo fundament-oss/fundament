@@ -109,7 +109,14 @@ export interface PluginNavItem {
 
 export interface PluginInstallationItem {
   metadata: { name: string };
-  spec: { pluginName: string };
+  spec: {
+    image: string;
+    definitionRef: {
+      pluginName: string;
+      pluginVersion: string;
+      definitionHash: string;
+    };
+  };
   status: { phase: string; ready: boolean };
 }
 

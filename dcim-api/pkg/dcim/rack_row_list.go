@@ -22,6 +22,10 @@ func (s *Server) ListRackRows(
 		roomID := uuid.MustParse(req.Msg.GetRoomId())
 		params.RoomID = pgtype.UUID{Bytes: roomID, Valid: true}
 	}
+	if req.Msg.HasSiteId() {
+		siteID := uuid.MustParse(req.Msg.GetSiteId())
+		params.SiteID = pgtype.UUID{Bytes: siteID, Valid: true}
+	}
 
 	rows, err := s.queries.RackRowList(ctx, params)
 	if err != nil {

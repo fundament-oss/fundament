@@ -1,4 +1,5 @@
 {
   "age": "7d",
-  "ignore": ["buf.build/*"]
+  "ignore": ["buf.build/*"],
+  "allow": [{ "module": "golang.org/x/net", "version": "v0.55.0", "reason": "required to update in order for the vulnerability CI job to succeed" }]
 }

@@ -11,6 +11,7 @@ func TestProjectModel_Resource(t *testing.T) {
 	model := ProjectModel{
 		ID:      types.StringValue("test-id"),
 		Name:    types.StringValue("test-project"),
+		Alias:   types.StringValue("my-alias"),
 		Created: types.StringValue("2024-01-15T10:30:00Z"),
 	}
 
@@ -20,6 +21,10 @@ func TestProjectModel_Resource(t *testing.T) {
 
 	if model.Name.ValueString() != "test-project" {
 		t.Errorf("Expected name 'test-project', got '%s'", model.Name.ValueString())
+	}
+
+	if model.Alias.ValueString() != "my-alias" {
+		t.Errorf("Expected alias 'my-alias', got '%s'", model.Alias.ValueString())
 	}
 
 	if model.Created.ValueString() != "2024-01-15T10:30:00Z" {
@@ -32,6 +37,7 @@ func TestProjectModelNullValues(t *testing.T) {
 	model := ProjectModel{
 		ID:      types.StringNull(),
 		Name:    types.StringValue("test-project"),
+		Alias:   types.StringNull(),
 		Created: types.StringNull(),
 	}
 
@@ -41,6 +47,10 @@ func TestProjectModelNullValues(t *testing.T) {
 
 	if !model.Created.IsNull() {
 		t.Error("Expected Created to be null")
+	}
+
+	if !model.Alias.IsNull() {
+		t.Error("Expected Alias to be null")
 	}
 
 	if model.Name.IsNull() {

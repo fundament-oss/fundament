@@ -14,11 +14,13 @@ func TestProjectsDataSourceModel(t *testing.T) {
 			{
 				ID:      types.StringValue("project-1"),
 				Name:    types.StringValue("test-project-1"),
+				Alias:   types.StringValue("alias-1"),
 				Created: types.StringValue("2024-01-15T10:30:00Z"),
 			},
 			{
 				ID:      types.StringValue("project-2"),
 				Name:    types.StringValue("test-project-2"),
+				Alias:   types.StringNull(),
 				Created: types.StringValue("2024-01-16T11:45:00Z"),
 			},
 		},
@@ -40,7 +42,15 @@ func TestProjectsDataSourceModel(t *testing.T) {
 		t.Errorf("Expected first project name 'test-project-1', got '%s'", model.Projects[0].Name.ValueString())
 	}
 
+	if model.Projects[0].Alias.ValueString() != "alias-1" {
+		t.Errorf("Expected first project alias 'alias-1', got '%s'", model.Projects[0].Alias.ValueString())
+	}
+
 	if model.Projects[1].ID.ValueString() != "project-2" {
 		t.Errorf("Expected second project ID 'project-2', got '%s'", model.Projects[1].ID.ValueString())
+	}
+
+	if !model.Projects[1].Alias.IsNull() {
+		t.Errorf("Expected second project alias to be null, got '%s'", model.Projects[1].Alias.ValueString())
 	}
 }

@@ -24,36 +24,39 @@ const (
 // dnsLabelRegex matches valid DNS label names (RFC 1123).
 var dnsLabelRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
 
-// maxPluginNameLen is the maximum length for a plugin name.
-// Kubernetes names are max 63 chars; the "plugin-" prefix takes 7.
-const maxPluginNameLen = 56
+// maxInstallationNameLen caps metadata.name so that child resource names —
+// which are prefixed with "plugin-" — stay within Kubernetes' 63-character
+// DNS-label limit.
+const maxInstallationNameLen = 56
 
-// validatePluginName checks that pluginName is a valid DNS label component.
-func validatePluginName(pluginName string) error {
-	if pluginName == "" {
-		return fmt.Errorf("pluginName must not be empty")
+// validateInstallationName checks that the PluginInstallation's metadata.name
+// is a valid DNS label and short enough to derive prefixed child resource
+// names from it.
+func validateInstallationName(name string) error {
+	if name == "" {
+		return fmt.Errorf("metadata.name must not be empty")
 	}
-	if len(pluginName) > maxPluginNameLen {
-		return fmt.Errorf("pluginName %q exceeds maximum length of %d characters", pluginName, maxPluginNameLen)
+	if len(name) > maxInstallationNameLen {
+		return fmt.Errorf("metadata.name %q exceeds maximum length of %d characters (child resources are prefixed with %q)", name, maxInstallationNameLen, "plugin-")
 	}
-	if !dnsLabelRegex.MatchString(pluginName) {
-		return fmt.Errorf("pluginName %q is not a valid DNS label (must be lowercase alphanumeric or '-', and must start and end with an alphanumeric character)", pluginName)
+	if !dnsLabelRegex.MatchString(name) {
+		return fmt.Errorf("metadata.name %q is not a valid DNS label (must be lowercase alphanumeric or '-', and must start and end with an alphanumeric character)", name)
 	}
 	return nil
 }
 
-func childName(pluginName string) string {
-	return fmt.Sprintf("plugin-%s", pluginName)
+func childName(installationName string) string {
+	return fmt.Sprintf("plugin-%s", installationName)
 }
 
-func pluginNamespace(pluginName string) string {
-	return fmt.Sprintf("plugin-%s", pluginName)
+func pluginNamespace(installationName string) string {
+	return fmt.Sprintf("plugin-%s", installationName)
 }
 
 func childLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 	return map[string]string{
 		labelManagedBy:        managedByValue,
-		labelPlugin:           cr.Spec.PluginName,
+		labelPlugin:           cr.Name,
 		labelInstallationName: cr.Name,
 	}
 }
@@ -72,7 +75,7 @@ func mergeLabels(dst, src map[string]string) map[string]string {
 
 func selectorLabels(cr *pluginsv1.PluginInstallation) map[string]string {
 	return map[string]string{
-		labelPlugin:           cr.Spec.PluginName,
+		labelPlugin:           cr.Name,
 		labelInstallationName: cr.Name,
 	}
 }
@@ -99,8 +102,8 @@ func mutateRoleBinding(rb *rbacv1.RoleBinding, cr *pluginsv1.PluginInstallation)
 	rb.Subjects = []rbacv1.Subject{
 		{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      childName(cr.Spec.PluginName),
-			Namespace: pluginNamespace(cr.Spec.PluginName),
+			Name:      childName(cr.Name),
+			Namespace: pluginNamespace(cr.Name),
 		},
 	}
 }
@@ -117,15 +120,15 @@ func mutateClusterRoleBinding(crb *rbacv1.ClusterRoleBinding, cr *pluginsv1.Plug
 	crb.Subjects = []rbacv1.Subject{
 		{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      childName(cr.Spec.PluginName),
-			Namespace: pluginNamespace(cr.Spec.PluginName),
+			Name:      childName(cr.Name),
+			Namespace: pluginNamespace(cr.Name),
 		},
 	}
 }
 
 // clusterRoleBindingName returns a unique name for a plugin's ClusterRoleBinding.
-func clusterRoleBindingName(pluginName, clusterRoleName string) string {
-	return fmt.Sprintf("plugin-%s-%s", pluginName, clusterRoleName)
+func clusterRoleBindingName(installationName, clusterRoleName string) string {
+	return fmt.Sprintf("plugin-%s-%s", installationName, clusterRoleName)
 }
 
 // mutateDeployment applies the desired state to an existing or empty Deployment.
@@ -154,10 +157,10 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 			Labels: labels,
 		},
 		Spec: corev1.PodSpec{
-			ServiceAccountName: childName(cr.Spec.PluginName),
+			ServiceAccountName: childName(cr.Name),
 			Containers: []corev1.Container{
 				{
-					Name:            cr.Spec.PluginName,
+					Name:            cr.Name,
 					Image:           cr.Spec.Image,
 					ImagePullPolicy: cr.Spec.ImagePullPolicy,
 					Ports: []corev1.ContainerPort{

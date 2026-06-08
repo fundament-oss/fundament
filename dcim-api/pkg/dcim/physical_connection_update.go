@@ -43,6 +43,41 @@ func (s *Server) UpdatePhysicalConnection(
 		}
 	}
 
+	// For the presentation attributes, an explicitly-set field clears the column
+	// when it carries the "empty" sentinel (UNSPECIFIED enum / empty label) and
+	// otherwise overwrites it. Leaving the field unset keeps the current value.
+	if req.Msg.HasCableType() {
+		if t := req.Msg.GetCableType(); t == dcimv1.CableType_CABLE_TYPE_UNSPECIFIED {
+			params.ClearCableType = true
+		} else {
+			params.CableType = cableTypeToDB(t)
+		}
+	}
+
+	if req.Msg.HasStatus() {
+		if st := req.Msg.GetStatus(); st == dcimv1.CableStatus_CABLE_STATUS_UNSPECIFIED {
+			params.ClearStatus = true
+		} else {
+			params.Status = cableStatusToDB(st)
+		}
+	}
+
+	if req.Msg.HasColor() {
+		if c := req.Msg.GetColor(); c == dcimv1.CableColor_CABLE_COLOR_UNSPECIFIED {
+			params.ClearColor = true
+		} else {
+			params.Color = cableColorToDB(c)
+		}
+	}
+
+	if req.Msg.HasLabel() {
+		if v := req.Msg.GetLabel(); v == "" {
+			params.ClearLabel = true
+		} else {
+			params.Label = pgtype.Text{String: v, Valid: true}
+		}
+	}
+
 	rowsAffected, err := s.queries.PhysicalConnectionUpdate(ctx, params)
 	if err != nil {
 		var pgErr *pgconn.PgError

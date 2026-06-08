@@ -35,6 +35,7 @@ service RackRowService {
 
 message ListRackRowsRequest {
   string room_id = 10 [features.field_presence = EXPLICIT];
+  string site_id = 20 [features.field_presence = EXPLICIT];
 }
 
 message ListRackRowsResponse {

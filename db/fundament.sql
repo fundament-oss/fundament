@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 2.0.0-alpha
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -128,10 +128,12 @@ CREATE TABLE tenant.projects (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	cluster_id uuid NOT NULL,
 	name text NOT NULL,
+	alias text NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
 	CONSTRAINT projects_pk PRIMARY KEY (id),
-	CONSTRAINT projects_uq_cluster_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted)
+	CONSTRAINT projects_uq_cluster_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted),
+	CONSTRAINT projects_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255)
 );
 -- ddl-end --
 ALTER TABLE tenant.projects OWNER TO fun_owner;
@@ -1840,7 +1842,7 @@ CREATE TABLE dcim.device_catalogs (
 	deleted timestamptz,
 	CONSTRAINT device_catalogs_pk PRIMARY KEY (id),
 	CONSTRAINT device_catalogs_uq_manufacturer_model UNIQUE NULLS NOT DISTINCT (manufacturer,model,deleted),
-	CONSTRAINT device_catalogs_ck_category CHECK (category IN ('server','switch','pdu','patch_panel','sfp','nic','cpu','dimm','disk','cable','adapter','power_supply','cable_manager','console_server'))
+	CONSTRAINT device_catalogs_ck_category CHECK (category IN ('server','switch','pdu','patch_panel','sfp','nic','cpu','dimm','disk','cable','adapter','power_supply','cable_manager','console_server','storage','cooling','firewall','kvm','gpu','transceiver','other'))
 );
 -- ddl-end --
 ALTER TABLE dcim.device_catalogs OWNER TO fun_owner;
@@ -2033,9 +2035,16 @@ CREATE TABLE dcim.physical_connections (
 	b_port_definition_id uuid NOT NULL,
 	cable_asset_id uuid,
 	logical_connection_id uuid,
+	cable_type text,
+	status text,
+	color text,
+	label text,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
-	CONSTRAINT physical_connections_pk PRIMARY KEY (id)
+	CONSTRAINT physical_connections_pk PRIMARY KEY (id),
+	CONSTRAINT physical_connections_ck_cable_type CHECK (cable_type IS NULL OR cable_type IN ('cat5e','cat6','cat6a','cat7','cat8','dac','aoc','mmf','smf','power','console','usb','other')),
+	CONSTRAINT physical_connections_ck_status CHECK (status IS NULL OR status IN ('planned','connected','decommissioned')),
+	CONSTRAINT physical_connections_ck_color CHECK (color IS NULL OR color IN ('dark_grey','light_grey','red','green','blue','yellow','purple','orange','teal','white'))
 );
 -- ddl-end --
 ALTER TABLE dcim.physical_connections OWNER TO fun_owner;

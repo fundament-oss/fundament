@@ -60,7 +60,10 @@ plugin-install plugin:
       name: {{ plugin }}
     spec:
       image: ${image}
-      pluginName: {{ plugin }}
+      definitionRef:
+        pluginName: {{ plugin }}
+        pluginVersion: ${tag}
+        definitionHash: sha256:dev-${tag}
       clusterRoles:
         - cluster-admin
     EOF

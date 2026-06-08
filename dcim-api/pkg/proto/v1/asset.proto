@@ -53,9 +53,10 @@ service AssetService {
   rpc GetAsset      (GetAssetRequest)       returns (GetAssetResponse);
   rpc CreateAsset   (CreateAssetRequest)    returns (CreateAssetResponse);
   rpc UpdateAsset   (UpdateAssetRequest)    returns (google.protobuf.Empty);
-  rpc DeleteAsset   (DeleteAssetRequest)    returns (google.protobuf.Empty);
-  rpc GetAssetEvents(GetAssetEventsRequest) returns (GetAssetEventsResponse);
-  rpc GetAssetStats (GetAssetStatsRequest)  returns (GetAssetStatsResponse);
+  rpc DeleteAsset     (DeleteAssetRequest)      returns (google.protobuf.Empty);
+  rpc GetAssetEvents  (GetAssetEventsRequest)   returns (GetAssetEventsResponse);
+  rpc GetAssetLocation(GetAssetLocationRequest) returns (GetAssetLocationResponse);
+  rpc GetAssetStats   (GetAssetStatsRequest)    returns (GetAssetStatsResponse);
 }
 
 message ListAssetsRequest {
@@ -114,6 +115,28 @@ message GetAssetEventsRequest {
 
 message GetAssetEventsResponse {
   repeated AssetEvent events = 10;
+}
+
+// AssetLocation is an asset's physical location with names resolved from the
+// placement -> rack -> rack_row -> room -> site hierarchy.
+message AssetLocation {
+  string       site_name       = 10;
+  string       room_name       = 20;
+  string       rack_row_name   = 30;
+  string       rack_name       = 40;
+  int32        rack_unit_start = 50;
+  string       rack_id         = 60;
+  RackSlotType rack_slot_type  = 70;
+}
+
+message GetAssetLocationRequest {
+  string asset_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+// GetAssetLocationResponse has an unset location when the asset has no
+// rack-based placement.
+message GetAssetLocationResponse {
+  AssetLocation location = 10;
 }
 
 message GetAssetStatsRequest {

@@ -25,7 +25,8 @@ func (s *Server) ListPortCompatibilities(
 	compatibilities := make([]*dcimv1.PortCompatibility, 0, len(rows))
 	for _, row := range rows {
 		pc := dcimv1.PortCompatibility_builder{
-			PortDefinitionId: row.PortDefinitionID.String(),
+			PortDefinitionId:   row.PortDefinitionID.String(),
+			CompatibleCategory: assetCategoryToProto(row.CompatibleCategory),
 		}.Build()
 
 		if row.CompatibleCatalogID.Valid {

@@ -1,9 +1,17 @@
 import { Injectable, inject } from '@angular/core';
+import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import type { Site } from '../../generated/v1/site_pb';
 import type { Room as ProtoRoom } from '../../generated/v1/room_pb';
 import type { RackRow as ProtoRackRow } from '../../generated/v1/rack_row_pb';
-import type { DatacenterInfo, Room, RackRow } from './datacenter.model';
-import { SITE_CLIENT, ROOM_CLIENT, RACK_ROW_CLIENT } from '../../connect/tokens';
+import type { Rack as ProtoRack } from '../../generated/v1/rack_pb';
+import type {
+  DatacenterInfo,
+  DatacenterRack,
+  DatacenterStatus,
+  Room,
+  RackRow,
+} from './datacenter.model';
+import { SITE_CLIENT, ROOM_CLIENT, RACK_ROW_CLIENT, RACK_CLIENT } from '../../connect/tokens';
 
 @Injectable({ providedIn: 'root' })
 export default class DatacenterApiService {
@@ -13,8 +21,30 @@ export default class DatacenterApiService {
 
   private readonly rackRowClient = inject(RACK_ROW_CLIENT);
 
-  static mapSite(s: Site): Pick<DatacenterInfo, 'id' | 'name' | 'address'> {
-    return { id: s.id, name: s.name, address: s.address };
+  private readonly rackClient = inject(RACK_CLIENT);
+
+  static mapSite(s: Site): DatacenterInfo {
+    return {
+      id: s.id,
+      name: s.name,
+      fullName: s.fullName,
+      address: s.address,
+      city: s.city,
+      country: s.country,
+      tier: (parseInt(s.tier, 10) || 3) as 1 | 2 | 3 | 4,
+      established: s.established ? timestampDate(s.established).getFullYear() : 0,
+      status: DatacenterApiService.mapStatus(s.status),
+      floorSqm: s.floorSqm,
+      // Power, cooling and PUE are not modelled by the API; kept at 0 and not
+      // shown on the datacenters page.
+      powerCapacityKw: 0,
+      coolingCapacityKw: 0,
+      pue: 0,
+    };
+  }
+
+  private static mapStatus(status: string): DatacenterStatus {
+    return status === 'degraded' || status === 'maintenance' ? status : 'operational';
   }
 
   static mapRoom(r: ProtoRoom): Room {
@@ -36,16 +66,55 @@ export default class DatacenterApiService {
     };
   }
 
+  static mapRack(r: ProtoRack): DatacenterRack {
+    return {
+      id: r.id,
+      rowId: r.rowId,
+      name: r.name,
+      totalU: r.totalUnits,
+      positionInRow: r.positionInRow,
+    };
+  }
+
   listSites() {
     return this.siteClient.listSites({});
   }
 
-  createSite(name: string, address: string) {
-    return this.siteClient.createSite({ name, address });
+  getSite(id: string) {
+    return this.siteClient.getSite({ id });
   }
 
-  updateSite(id: string, name: string, address: string) {
-    return this.siteClient.updateSite({ id, name, address });
+  createSite(dc: DatacenterInfo) {
+    return this.siteClient.createSite({
+      name: dc.name,
+      fullName: dc.fullName,
+      address: dc.address,
+      city: dc.city,
+      country: dc.country,
+      tier: String(dc.tier),
+      floorSqm: dc.floorSqm,
+      status: dc.status,
+      ...(dc.established > 0
+        ? { established: timestampFromDate(new Date(dc.established, 0, 1)) }
+        : {}),
+    });
+  }
+
+  updateSite(dc: DatacenterInfo) {
+    return this.siteClient.updateSite({
+      id: dc.id,
+      name: dc.name,
+      fullName: dc.fullName,
+      address: dc.address,
+      city: dc.city,
+      country: dc.country,
+      tier: String(dc.tier),
+      floorSqm: dc.floorSqm,
+      status: dc.status,
+      ...(dc.established > 0
+        ? { established: timestampFromDate(new Date(dc.established, 0, 1)) }
+        : {}),
+    });
   }
 
   deleteSite(id: string) {
@@ -72,6 +141,10 @@ export default class DatacenterApiService {
     return this.rackRowClient.listRackRows({ roomId });
   }
 
+  listRackRowsBySite(siteId: string) {
+    return this.rackRowClient.listRackRows({ siteId });
+  }
+
   createRackRow(roomId: string, name: string, positionX: number, positionY: number) {
     return this.rackRowClient.createRackRow({ roomId, name, positionX, positionY });
   }
@@ -82,5 +155,25 @@ export default class DatacenterApiService {
 
   deleteRackRow(id: string) {
     return this.rackRowClient.deleteRackRow({ id });
+  }
+
+  listRacks(rowId: string) {
+    return this.rackClient.listRacks({ rowId });
+  }
+
+  listRacksBySite(siteId: string) {
+    return this.rackClient.listRacks({ siteId });
+  }
+
+  createRack(rowId: string, name: string, totalUnits: number) {
+    return this.rackClient.createRack({ rowId, name, totalUnits, positionInRow: 0 });
+  }
+
+  updateRack(id: string, name: string, totalUnits: number) {
+    return this.rackClient.updateRack({ id, name, totalUnits });
+  }
+
+  deleteRack(id: string) {
+    return this.rackClient.deleteRack({ id });
   }
 }

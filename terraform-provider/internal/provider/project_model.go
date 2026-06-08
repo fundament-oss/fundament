@@ -8,5 +8,6 @@ type ProjectModel struct {
 	ClusterID   types.String `tfsdk:"cluster_id"`
 	ClusterName types.String `tfsdk:"cluster_name"`
 	Name        types.String `tfsdk:"name"`
+	Alias       types.String `tfsdk:"alias"`
 	Created     types.String `tfsdk:"created"`
 }

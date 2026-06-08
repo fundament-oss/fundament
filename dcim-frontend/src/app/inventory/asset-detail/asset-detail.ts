@@ -3,114 +3,30 @@ import {
   Component,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
+  effect,
+  ElementRef,
   inject,
+  OnInit,
   signal,
+  viewChild,
 } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { RackSlotType } from '../../../generated/v1/common_pb';
 import {
   Asset,
   AssetCategory,
   AssetStatus,
   CatalogEntry,
   HistoryEntry,
-  MOCK_ASSETS,
-  MOCK_CATALOG,
-  MOCK_HISTORY,
-  MOCK_NOTES,
-  AssetNoteDetail,
+  NoteComment,
 } from '../inventory';
-
-interface AssetExtraDetail {
-  serial: string;
-  manufacturer: string;
-  purchaseDate: string;
-  purchaseCost: string;
-  warrantyExpires: string;
-  supportContract: string;
-}
-
-const MOCK_EXTRA_DETAILS: Record<string, AssetExtraDetail> = {
-  'AST-001': {
-    serial: 'SN-DELL-R750-00A12X',
-    manufacturer: 'Dell Technologies',
-    purchaseDate: '2024-03-15',
-    purchaseCost: '€ 18.450',
-    warrantyExpires: '2027-03-15',
-    supportContract: 'ProSupport Plus 3yr',
-  },
-  'AST-002': {
-    serial: 'SN-CSC-9300-B05YZ',
-    manufacturer: 'Cisco Systems',
-    purchaseDate: '2023-11-20',
-    purchaseCost: '€ 9.200',
-    warrantyExpires: '2026-11-20',
-    supportContract: 'SmartNet 3yr',
-  },
-  'AST-003': {
-    serial: 'SN-NTAP-A800-C08AB',
-    manufacturer: 'NetApp',
-    purchaseDate: '2025-01-08',
-    purchaseCost: '€ 124.000',
-    warrantyExpires: '2028-01-08',
-    supportContract: 'SupportEdge Premium 3yr',
-  },
-  'AST-004': {
-    serial: 'SN-HPE-DL380-D14CC',
-    manufacturer: 'Hewlett Packard Enterprise',
-    purchaseDate: '2022-07-10',
-    purchaseCost: '€ 14.700',
-    warrantyExpires: '2025-07-10',
-    supportContract: 'HPE Foundation Care 3yr',
-  },
-  'AST-007': {
-    serial: 'SN-DELL-R650-A13QR',
-    manufacturer: 'Dell Technologies',
-    purchaseDate: '2024-06-01',
-    purchaseCost: '€ 11.800',
-    warrantyExpires: '2027-06-01',
-    supportContract: 'ProSupport Plus 3yr',
-  },
-  'AST-008': {
-    serial: 'SN-PA-5250-F01MN',
-    manufacturer: 'Palo Alto Networks',
-    purchaseDate: '2023-09-05',
-    purchaseCost: '€ 42.000',
-    warrantyExpires: '2026-09-05',
-    supportContract: 'Premium Support 3yr',
-  },
-  'AST-009': {
-    serial: 'SN-PURE-X70-C04KL',
-    manufacturer: 'Pure Storage',
-    purchaseDate: '2024-01-22',
-    purchaseCost: '€ 87.500',
-    warrantyExpires: '2027-01-22',
-    supportContract: 'Evergreen//One',
-  },
-  'AST-012': {
-    serial: 'SN-ARIS-7050-B01PQ',
-    manufacturer: 'Arista Networks',
-    purchaseDate: '2023-04-14',
-    purchaseCost: '€ 31.200',
-    warrantyExpires: '2026-04-14',
-    supportContract: 'Arista TAC 3yr',
-  },
-  'AST-013': {
-    serial: 'SN-LNV-SR650-A05RR',
-    manufacturer: 'Lenovo',
-    purchaseDate: '2021-12-03',
-    purchaseCost: '€ 12.600',
-    warrantyExpires: '2024-12-03',
-    supportContract: 'Foundation Service 3yr',
-  },
-  'AST-018': {
-    serial: 'SN-FTN-FG600-F02ST',
-    manufacturer: 'Fortinet',
-    purchaseDate: '2023-08-17',
-    purchaseCost: '€ 28.900',
-    warrantyExpires: '2026-08-17',
-    supportContract: 'FortiCare 360 3yr',
-  },
-};
+import InventoryApiService from '../inventory-api.service';
+import CatalogApiService from '../../catalog/catalog-api.service';
+import NoteApiService from '../note-api.service';
+import PlacementApiService, { RackOption } from '../placement-api.service';
+import connectErrorMessage from '../../../connect/error';
+import parseValidationError from '../../../connect/validation';
 
 @Component({
   selector: 'app-asset-detail',
@@ -120,37 +36,307 @@ const MOCK_EXTRA_DETAILS: Record<string, AssetExtraDetail> = {
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'block bg-slate-50 min-h-screen' },
 })
-export default class AssetDetailComponent {
+export default class AssetDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
 
+  private readonly inventoryApi = inject(InventoryApiService);
+
+  private readonly catalogApi = inject(CatalogApiService);
+
+  private readonly noteApi = inject(NoteApiService);
+
+  private readonly placementApi = inject(PlacementApiService);
+
   readonly assetId = computed(() => this.route.snapshot.paramMap.get('id') ?? '');
 
-  readonly asset = computed<Asset | undefined>(() =>
-    MOCK_ASSETS.find((a) => a.id === this.assetId()),
-  );
+  readonly asset = signal<Asset | undefined>(undefined);
 
-  readonly parentAsset = computed<Asset | undefined>(() => {
-    const parentId = this.asset()?.parentId;
-    return parentId ? MOCK_ASSETS.find((a) => a.id === parentId) : undefined;
+  /** False until the API call settles, so "not found" only shows after loading. */
+  readonly assetLoaded = signal(false);
+
+  readonly catalogEntry = signal<CatalogEntry | undefined>(undefined);
+
+  /** Resolved physical location; undefined until loaded, or when the asset is unplaced. */
+  readonly assetLocation = signal<
+    { datacenter: string; rack: string; rackUnit: number; slotType: RackSlotType } | undefined
+  >(undefined);
+
+  readonly assetHistory = signal<HistoryEntry[]>([]);
+
+  // ── Edit asset ─────────────────────────────────────────────────────────────
+
+  /** Holds the asset being edited; non-null while the edit sheet is open. */
+  readonly editAsset = signal<Partial<Asset> | null>(null);
+
+  readonly invalidFields = signal<Record<string, string>>({});
+
+  readonly formErrorMessage = signal<string | null>(null);
+
+  readonly statuses: { value: AssetStatus; label: string }[] = [
+    { value: 'deployed', label: 'Deployed' },
+    { value: 'available', label: 'Available' },
+    { value: 'on-order', label: 'On Order' },
+    { value: 'requested', label: 'Requested' },
+    { value: 'needs-repair', label: 'Needs Repair' },
+    { value: 'decommissioned', label: 'Decommissioned' },
+  ];
+
+  /** Rack placement of the asset being edited; null while loading or when unplaced. */
+  readonly editPlacement = signal<{
+    id: string;
+    rackId: string;
+    unit: number;
+    slotType: RackSlotType;
+  } | null>(null);
+
+  /** All racks, for the location picker. */
+  readonly racks = signal<RackOption[]>([]);
+
+  /** Racks grouped by datacenter, for the location <select> optgroups. */
+  readonly racksByDatacenter = computed(() => {
+    const groups = new Map<string, RackOption[]>();
+    this.racks().forEach((rack) => {
+      const list = groups.get(rack.datacenter) ?? [];
+      list.push(rack);
+      groups.set(rack.datacenter, list);
+    });
+    return [...groups.entries()]
+      .map(([datacenter, racks]) => ({ datacenter, racks }))
+      .sort((a, b) => a.datacenter.localeCompare(b.datacenter));
   });
 
-  readonly childAssets = computed<Asset[]>(() =>
-    MOCK_ASSETS.filter((a) => a.parentId === this.assetId()),
-  );
+  readonly slotTypes: { value: RackSlotType; label: string }[] = [
+    { value: RackSlotType.UNIT, label: 'Unit' },
+    { value: RackSlotType.POWER, label: 'Power' },
+    { value: RackSlotType.ZERO_U, label: 'Zero-U' },
+  ];
 
-  readonly assetHistory = computed<HistoryEntry[]>(() => MOCK_HISTORY[this.assetId()] ?? []);
+  readonly defaultSlotType = RackSlotType.UNIT;
 
-  readonly catalogEntry = computed<CatalogEntry | undefined>(() =>
-    MOCK_CATALOG.find((e) => e.model === this.asset()?.model),
-  );
+  readonly slotTypeLabel = (slotType: RackSlotType): string =>
+    this.slotTypes.find((s) => s.value === slotType)?.label ?? '—';
 
-  readonly extraDetail = computed<AssetExtraDetail | undefined>(
-    () => MOCK_EXTRA_DETAILS[this.assetId()],
-  );
+  private readonly assetSheetEl = viewChild<ElementRef>('assetSheet');
 
-  readonly noteDetail = computed<AssetNoteDetail | undefined>(() => MOCK_NOTES[this.assetId()]);
+  private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
+
+  private readonly fAssetStatus = viewChild<ElementRef>('fAssetStatus');
+
+  private readonly fAssetSerial = viewChild<ElementRef>('fAssetSerial');
+
+  private readonly fAssetWarranty = viewChild<ElementRef>('fAssetWarranty');
+
+  private readonly fAssetRack = viewChild<ElementRef>('fAssetRack');
+
+  private readonly fAssetRackUnit = viewChild<ElementRef>('fAssetRackUnit');
+
+  private readonly fAssetSlotType = viewChild<ElementRef>('fAssetSlotType');
+
+  private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
+
+  constructor() {
+    effect(() => {
+      const el = this.assetSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.editAsset() !== null) el?.show?.();
+      else el?.hide?.();
+    });
+  }
+
+  ngOnInit(): void {
+    this.loadAsset();
+    this.loadHistory();
+    this.loadNotes();
+    this.loadLocation();
+    this.loadRackOptions();
+  }
+
+  private loadRackOptions(): void {
+    this.placementApi
+      .listRackOptions()
+      .then((racks) => this.racks.set(racks))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private loadAsset(): void {
+    firstValueFrom(this.inventoryApi.getAsset(this.assetId()))
+      .then((res) => {
+        const protoAsset = res.asset;
+        if (!protoAsset) return undefined;
+        if (!protoAsset.deviceCatalogId) {
+          this.asset.set(InventoryApiService.mapAsset(protoAsset, new Map()));
+          return undefined;
+        }
+        // Resolve the catalog entry so model, category and the specs panel populate.
+        return firstValueFrom(this.catalogApi.getCatalogEntry(protoAsset.deviceCatalogId))
+          .then((catRes) =>
+            catRes.entry ? CatalogApiService.mapCatalogEntry(catRes.entry) : undefined,
+          )
+          .catch(() => undefined)
+          .then((entry) => {
+            const catalog = new Map<string, CatalogEntry>();
+            if (entry) {
+              catalog.set(entry.id, entry);
+              this.catalogEntry.set(entry);
+            }
+            this.asset.set(InventoryApiService.mapAsset(protoAsset, catalog));
+          });
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)))
+      .finally(() => this.assetLoaded.set(true));
+  }
+
+  private loadHistory(): void {
+    firstValueFrom(this.inventoryApi.getAssetEvents(this.assetId()))
+      .then((res) => this.assetHistory.set(res.events.map(InventoryApiService.mapAssetEvent)))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private loadNotes(): void {
+    firstValueFrom(this.noteApi.listNotesForAsset(this.assetId()))
+      .then((res) => this.notes.set(res.notes.map(NoteApiService.mapNote)))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private loadLocation(): void {
+    firstValueFrom(this.inventoryApi.getAssetLocation(this.assetId()))
+      .then((res) => {
+        const loc = res.location;
+        this.assetLocation.set(
+          loc
+            ? {
+                datacenter: loc.siteName,
+                rack: loc.rackName,
+                rackUnit: loc.rackUnitStart,
+                slotType: loc.rackSlotType,
+              }
+            : undefined,
+        );
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  isFieldInvalid(field: string): boolean {
+    return field in this.invalidFields();
+  }
+
+  fieldError(field: string): string {
+    return this.invalidFields()[field] ?? '';
+  }
+
+  private clearErrors(): void {
+    this.invalidFields.set({});
+    this.formErrorMessage.set(null);
+  }
+
+  private handleError(err: unknown): void {
+    const { fields, message } = parseValidationError(err);
+    this.invalidFields.set(fields);
+    this.formErrorMessage.set(message);
+  }
+
+  openEditAsset(): void {
+    const current = this.asset();
+    if (!current) return;
+    this.clearErrors();
+    // Resolve the existing placement before opening, so the location picker
+    // renders with the right rack pre-selected.
+    firstValueFrom(this.placementApi.getPlacementByAsset(current.id))
+      .then((res) => {
+        const p = res.placement;
+        this.editPlacement.set(
+          p && p.location.case === 'rack'
+            ? {
+                id: p.id,
+                rackId: p.location.value.rackId,
+                unit: p.location.value.rackUnitStart,
+                slotType: p.location.value.rackSlotType,
+              }
+            : null,
+        );
+      })
+      .catch((err) => {
+        this.editPlacement.set(null);
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+      })
+      .finally(() => this.editAsset.set({ ...current }));
+  }
+
+  closeAssetForm(): void {
+    this.clearErrors();
+    this.editAsset.set(null);
+  }
+
+  saveAsset(): void {
+    const current = this.asset();
+    if (!current) return;
+    this.clearErrors();
+    const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
+    const updated: Asset = {
+      ...current,
+      assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? current.assetTag,
+      status: ((this.fAssetStatus()?.nativeElement as HTMLSelectElement)?.value ??
+        current.status) as AssetStatus,
+      serialNumber:
+        (this.fAssetSerial()?.nativeElement as HTMLInputElement)?.value ??
+        current.serialNumber ??
+        '',
+      warrantyExpiry: warranty || undefined,
+      notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? current.notes,
+    };
+    // Validate the placement input before any write so a missing/zero unit
+    // can't be saved as an off-grid (U0) placement.
+    const placement = this.readPlacementInput();
+    if (placement === 'invalid') return;
+
+    firstValueFrom(this.inventoryApi.updateAsset(updated))
+      .then(() => this.placementApi.reconcilePlacement({ ...placement, assetId: updated.id }))
+      .then(() => {
+        this.asset.set(updated);
+        this.editAsset.set(null);
+        this.loadLocation();
+      })
+      .catch((err) => this.handleError(err));
+  }
+
+  /**
+   * Reads the rack/unit/slot inputs and validates them. Returns `'invalid'`
+   * (after surfacing an inline error) when a rack is selected but the unit is
+   * missing or below 1; the rack diagram only draws units 1…totalU, so a U0
+   * placement would be invisible.
+   */
+  private readPlacementInput():
+    | { rackId: string; unit: number; slotType: RackSlotType; existingPlacementId: string | null }
+    | 'invalid' {
+    const rackId = (this.fAssetRack()?.nativeElement as HTMLSelectElement)?.value ?? '';
+    const slotType =
+      (Number(
+        (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
+      ) as RackSlotType) || RackSlotType.UNIT;
+    const existingPlacementId = this.editPlacement()?.id ?? null;
+
+    if (!rackId) {
+      // No rack selected: clears any existing placement, unit is irrelevant.
+      return { rackId: '', unit: 0, slotType, existingPlacementId };
+    }
+
+    const unit = parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10);
+    if (!Number.isInteger(unit) || unit < 1) {
+      this.invalidFields.set({ rack_unit_start: 'Enter a rack unit of 1 or higher.' });
+      return 'invalid';
+    }
+
+    return { rackId, unit, slotType, existingPlacementId };
+  }
+
+  readonly notes = signal<NoteComment[]>([]);
 
   readonly newNoteText = signal('');
 
@@ -236,18 +422,28 @@ export default class AssetDetailComponent {
 
   readonly historyIcon = (action: HistoryEntry['action']): string => {
     const icons: Record<HistoryEntry['action'], string> = {
-      'status-change': 'tag',
-      'location-change': 'info-circle',
-      maintenance: 'gear',
+      received: 'arrow-right',
+      deployed: 'check-mark-circle',
+      moved: 'arrow-up-arrow-down',
+      'repair-sent': 'gear',
+      'repair-received': 'gear',
+      decommissioned: 'slash-circle',
+      requested: 'clock-arrow-counter-clockwise',
+      note: 'info-circle',
     };
     return icons[action];
   };
 
   readonly historyIconBg = (action: HistoryEntry['action']): string => {
     const classes: Record<HistoryEntry['action'], string> = {
-      'status-change': 'bg-indigo-50 text-indigo-500',
-      'location-change': 'bg-sky-50 text-sky-500',
-      maintenance: 'bg-amber-50 text-amber-500',
+      received: 'bg-sky-50 text-sky-500',
+      deployed: 'bg-teal-50 text-teal-500',
+      moved: 'bg-sky-50 text-sky-500',
+      'repair-sent': 'bg-amber-50 text-amber-500',
+      'repair-received': 'bg-amber-50 text-amber-500',
+      decommissioned: 'bg-slate-100 text-slate-500',
+      requested: 'bg-purple-50 text-purple-500',
+      note: 'bg-indigo-50 text-indigo-500',
     };
     return classes[action];
   };

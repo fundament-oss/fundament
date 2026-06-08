@@ -237,26 +237,64 @@
       (dismiss)="closeEntryForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
+      @if (entryErrorMessage()) {
+      <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+        <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">{{ entryErrorMessage() }}</p>
+      </div>
+      }
+
       <nldd-form-field label="Model name">
         <nldd-text-field
           #fEntryModel
           [attr.value]="editEntry()?.model ?? ''"
           placeholder="E.g. Dell PowerEdge R750"
+          [attr.invalid]="isFieldInvalid('model') ? '' : null"
+          error-message="error-model"
+          (keydown.enter)="saveEntry()"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-model">{{ fieldError('model') }}</nldd-form-field-error-text>
       </nldd-form-field>
       <nldd-form-field label="Manufacturer">
         <nldd-text-field
           #fEntryMfr
           [attr.value]="editEntry()?.manufacturer ?? ''"
           placeholder="E.g. Dell Technologies"
+          [attr.invalid]="isFieldInvalid('manufacturer') ? '' : null"
+          error-message="error-manufacturer"
+          (keydown.enter)="saveEntry()"
         ></nldd-text-field>
+        <nldd-form-field-error-text id="error-manufacturer">{{ fieldError('manufacturer') }}</nldd-form-field-error-text>
       </nldd-form-field>
+      @if (!editEntry()?.id) {
+        <nldd-form-field label="Part number">
+          <nldd-text-field
+            #fEntryPart
+            [attr.value]="editEntry()?.partNumber ?? ''"
+            placeholder="E.g. R750-2024"
+            [attr.invalid]="isFieldInvalid('part_number') ? '' : null"
+            error-message="error-part-number"
+            (keydown.enter)="saveEntry()"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="error-part-number">{{ fieldError('part_number') }}</nldd-form-field-error-text>
+        </nldd-form-field>
+      }
       <nldd-form-field label="Category">
-        <select #fEntryCat>
+        <select
+          #fEntryCat
+          [attr.aria-invalid]="isFieldInvalid('category') ? 'true' : null"
+        >
           @for (cat of categories; track cat) {
-            <option [value]="cat" [attr.selected]="(editEntry()?.category ?? 'Server') === cat ? true : null">{{ cat }}</option>
+            <option
+              [value]="cat"
+              [attr.selected]="(editEntry()?.category ?? 'Server') === cat ? true : null"
+            >
+              {{ cat }}
+            </option>
           }
         </select>
+        @if (isFieldInvalid('category')) {
+          <nldd-form-field-error-text id="error-category">{{ fieldError('category') }}</nldd-form-field-error-text>
+        }
       </nldd-form-field>
 
       <!-- Specs section -->

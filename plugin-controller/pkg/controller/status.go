@@ -34,7 +34,7 @@ func (s *statusPoller) WithClient(client connect.HTTPClient) *statusPoller {
 }
 
 func (s *statusPoller) poll(ctx context.Context, cr *pluginsv1.PluginInstallation) pluginsv1.PluginInstallationStatus {
-	url := pluginServiceURL(cr.Spec.PluginName)
+	url := pluginServiceURL(cr.Name)
 	client := pluginmetadatav1connect.NewPluginMetadataServiceClient(s.httpClient, url)
 
 	resp, err := client.GetStatus(ctx, connect.NewRequest(&pluginmetadatav1.GetStatusRequest{}))

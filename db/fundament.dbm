@@ -247,6 +247,9 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
 	</column>
+	<column name="alias" not-null="true">
+		<type name="text" length="0"/>
+	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
@@ -258,6 +261,9 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 	<constraint name="projects_uq_cluster_name" type="uq-constr" nulls-not-distinct="true" table="tenant.projects">
 		<columns names="cluster_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="projects_ck_alias" type="ck-constr" table="tenant.projects">
+			<expression> <![CDATA[char_length(alias) >= 1 AND char_length(alias) <= 255]]> </expression>
 	</constraint>
 </table>
 
@@ -2157,7 +2163,7 @@ END;]]> </definition>
 		<columns names="manufacturer,model,deleted" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="device_catalogs_ck_category" type="ck-constr" table="dcim.device_catalogs">
-			<expression> <![CDATA[category IN ('server','switch','pdu','patch_panel','sfp','nic','cpu','dimm','disk','cable','adapter','power_supply','cable_manager','console_server')]]> </expression>
+			<expression> <![CDATA[category IN ('server','switch','pdu','patch_panel','sfp','nic','cpu','dimm','disk','cable','adapter','power_supply','cable_manager','console_server','storage','cooling','firewall','kvm','gpu','transceiver','other')]]> </expression>
 	</constraint>
 </table>
 
@@ -2555,6 +2561,18 @@ END;]]> </definition>
 	<column name="logical_connection_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="cable_type">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status">
+		<type name="text" length="0"/>
+	</column>
+	<column name="color">
+		<type name="text" length="0"/>
+	</column>
+	<column name="label">
+		<type name="text" length="0"/>
+	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
@@ -2563,6 +2581,15 @@ END;]]> </definition>
 	</column>
 	<constraint name="physical_connections_pk" type="pk-constr" table="dcim.physical_connections">
 		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="physical_connections_ck_cable_type" type="ck-constr" table="dcim.physical_connections">
+			<expression> <![CDATA[cable_type IS NULL OR cable_type IN ('cat5e','cat6','cat6a','cat7','cat8','dac','aoc','mmf','smf','power','console','usb','other')]]> </expression>
+	</constraint>
+	<constraint name="physical_connections_ck_status" type="ck-constr" table="dcim.physical_connections">
+			<expression> <![CDATA[status IS NULL OR status IN ('planned','connected','decommissioned')]]> </expression>
+	</constraint>
+	<constraint name="physical_connections_ck_color" type="ck-constr" table="dcim.physical_connections">
+			<expression> <![CDATA[color IS NULL OR color IN ('dark_grey','light_grey','red','green','blue','yellow','purple','orange','teal','white')]]> </expression>
 	</constraint>
 </table>
 

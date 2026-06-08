@@ -24,7 +24,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// DeviceCatalog is a device type definition (core.device_catalogs).
+// DeviceCatalog is a device type definition (dcim.device_catalogs).
 type DeviceCatalog struct {
 	state                   protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id           string                 `protobuf:"bytes,10,opt,name=id"`
@@ -277,7 +277,7 @@ func (b0 DeviceCatalog_builder) Build() *DeviceCatalog {
 	return m0
 }
 
-// PortDefinition describes a port or slot on a device catalog entry (core.port_definitions).
+// PortDefinition describes a port or slot on a device catalog entry (dcim.port_definitions).
 type PortDefinition struct {
 	state                      protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id              string                 `protobuf:"bytes,10,opt,name=id"`
@@ -486,12 +486,15 @@ func (b0 PortDefinition_builder) Build() *PortDefinition {
 	return m0
 }
 
-// PortCompatibility records that a sub-component catalog entry fits a port (core.port_compatibilities).
+// PortCompatibility records that a sub-component catalog entry fits a port (dcim.port_compatibilities).
+// compatible_category is always set; compatible_catalog_id is only set when the
+// compatibility is narrowed to one specific catalog entry within that category.
 type PortCompatibility struct {
 	state                          protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_PortDefinitionId    string                 `protobuf:"bytes,10,opt,name=port_definition_id,json=portDefinitionId"`
 	xxx_hidden_CompatibleCatalogId string                 `protobuf:"bytes,20,opt,name=compatible_catalog_id,json=compatibleCatalogId"`
 	xxx_hidden_Notes               string                 `protobuf:"bytes,30,opt,name=notes"`
+	xxx_hidden_CompatibleCategory  AssetCategory          `protobuf:"varint,40,opt,name=compatible_category,json=compatibleCategory,enum=dcim.v1.AssetCategory"`
 	unknownFields                  protoimpl.UnknownFields
 	sizeCache                      protoimpl.SizeCache
 }
@@ -542,6 +545,13 @@ func (x *PortCompatibility) GetNotes() string {
 	return ""
 }
 
+func (x *PortCompatibility) GetCompatibleCategory() AssetCategory {
+	if x != nil {
+		return x.xxx_hidden_CompatibleCategory
+	}
+	return AssetCategory_ASSET_CATEGORY_UNSPECIFIED
+}
+
 func (x *PortCompatibility) SetPortDefinitionId(v string) {
 	x.xxx_hidden_PortDefinitionId = v
 }
@@ -554,12 +564,17 @@ func (x *PortCompatibility) SetNotes(v string) {
 	x.xxx_hidden_Notes = v
 }
 
+func (x *PortCompatibility) SetCompatibleCategory(v AssetCategory) {
+	x.xxx_hidden_CompatibleCategory = v
+}
+
 type PortCompatibility_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	PortDefinitionId    string
 	CompatibleCatalogId string
 	Notes               string
+	CompatibleCategory  AssetCategory
 }
 
 func (b0 PortCompatibility_builder) Build() *PortCompatibility {
@@ -569,6 +584,7 @@ func (b0 PortCompatibility_builder) Build() *PortCompatibility {
 	x.xxx_hidden_PortDefinitionId = b.PortDefinitionId
 	x.xxx_hidden_CompatibleCatalogId = b.CompatibleCatalogId
 	x.xxx_hidden_Notes = b.Notes
+	x.xxx_hidden_CompatibleCategory = b.CompatibleCategory
 	return m0
 }
 
@@ -2893,12 +2909,13 @@ const file_v1_catalog_proto_rawDesc = "" +
 	"\x05speed\x18< \x01(\tB\x05\xaa\x01\x02\b\x01R\x05speed\x12%\n" +
 	"\vmax_power_w\x18F \x01(\x01B\x05\xaa\x01\x02\b\x01R\tmaxPowerW\x124\n" +
 	"\tdirection\x18P \x01(\x0e2\x16.dcim.v1.PortDirectionR\tdirection\x12\x18\n" +
-	"\aordinal\x18Z \x01(\x05R\aordinal\"\x8b\x01\n" +
+	"\aordinal\x18Z \x01(\x05R\aordinal\"\xd4\x01\n" +
 	"\x11PortCompatibility\x12,\n" +
 	"\x12port_definition_id\x18\n" +
 	" \x01(\tR\x10portDefinitionId\x122\n" +
 	"\x15compatible_catalog_id\x18\x14 \x01(\tR\x13compatibleCatalogId\x12\x14\n" +
-	"\x05notes\x18\x1e \x01(\tR\x05notes\"\x85\x01\n" +
+	"\x05notes\x18\x1e \x01(\tR\x05notes\x12G\n" +
+	"\x13compatible_category\x18( \x01(\x0e2\x16.dcim.v1.AssetCategoryR\x12compatibleCategory\"\x85\x01\n" +
 	"\x12ListCatalogRequest\x12P\n" +
 	"\x0fcategory_filter\x18\n" +
 	" \x01(\x0e2\x16.dcim.v1.AssetCategoryB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\x0ecategoryFilter\x12\x1d\n" +
@@ -3091,55 +3108,56 @@ var file_v1_catalog_proto_depIdxs = []int32{
 	30, // 3: dcim.v1.DeviceCatalog.deleted:type_name -> google.protobuf.Timestamp
 	31, // 4: dcim.v1.PortDefinition.port_type:type_name -> dcim.v1.PortType
 	32, // 5: dcim.v1.PortDefinition.direction:type_name -> dcim.v1.PortDirection
-	29, // 6: dcim.v1.ListCatalogRequest.category_filter:type_name -> dcim.v1.AssetCategory
-	26, // 7: dcim.v1.ListCatalogResponse.entries:type_name -> dcim.v1.ListCatalogResponse.CatalogSummary
-	0,  // 8: dcim.v1.GetCatalogEntryResponse.entry:type_name -> dcim.v1.DeviceCatalog
-	29, // 9: dcim.v1.CreateCatalogEntryRequest.category:type_name -> dcim.v1.AssetCategory
-	27, // 10: dcim.v1.CreateCatalogEntryRequest.specs:type_name -> dcim.v1.CreateCatalogEntryRequest.SpecsEntry
-	29, // 11: dcim.v1.UpdateCatalogEntryRequest.category:type_name -> dcim.v1.AssetCategory
-	28, // 12: dcim.v1.UpdateCatalogEntryRequest.specs:type_name -> dcim.v1.UpdateCatalogEntryRequest.SpecsEntry
-	33, // 13: dcim.v1.ListAssetsByCatalogEntryResponse.assets:type_name -> dcim.v1.Asset
-	1,  // 14: dcim.v1.ListPortDefinitionsResponse.port_definitions:type_name -> dcim.v1.PortDefinition
-	1,  // 15: dcim.v1.GetPortDefinitionResponse.port_definition:type_name -> dcim.v1.PortDefinition
-	31, // 16: dcim.v1.CreatePortDefinitionRequest.port_type:type_name -> dcim.v1.PortType
-	32, // 17: dcim.v1.CreatePortDefinitionRequest.direction:type_name -> dcim.v1.PortDirection
-	31, // 18: dcim.v1.UpdatePortDefinitionRequest.port_type:type_name -> dcim.v1.PortType
-	32, // 19: dcim.v1.UpdatePortDefinitionRequest.direction:type_name -> dcim.v1.PortDirection
-	2,  // 20: dcim.v1.ListPortCompatibilitiesResponse.compatibilities:type_name -> dcim.v1.PortCompatibility
-	0,  // 21: dcim.v1.ListCatalogResponse.CatalogSummary.entry:type_name -> dcim.v1.DeviceCatalog
-	3,  // 22: dcim.v1.CatalogService.ListCatalog:input_type -> dcim.v1.ListCatalogRequest
-	5,  // 23: dcim.v1.CatalogService.GetCatalogEntry:input_type -> dcim.v1.GetCatalogEntryRequest
-	7,  // 24: dcim.v1.CatalogService.CreateCatalogEntry:input_type -> dcim.v1.CreateCatalogEntryRequest
-	9,  // 25: dcim.v1.CatalogService.UpdateCatalogEntry:input_type -> dcim.v1.UpdateCatalogEntryRequest
-	10, // 26: dcim.v1.CatalogService.DeleteCatalogEntry:input_type -> dcim.v1.DeleteCatalogEntryRequest
-	11, // 27: dcim.v1.CatalogService.ListAssetsByCatalogEntry:input_type -> dcim.v1.ListAssetsByCatalogEntryRequest
-	13, // 28: dcim.v1.CatalogService.ListPortDefinitions:input_type -> dcim.v1.ListPortDefinitionsRequest
-	15, // 29: dcim.v1.CatalogService.GetPortDefinition:input_type -> dcim.v1.GetPortDefinitionRequest
-	17, // 30: dcim.v1.CatalogService.CreatePortDefinition:input_type -> dcim.v1.CreatePortDefinitionRequest
-	19, // 31: dcim.v1.CatalogService.UpdatePortDefinition:input_type -> dcim.v1.UpdatePortDefinitionRequest
-	20, // 32: dcim.v1.CatalogService.DeletePortDefinition:input_type -> dcim.v1.DeletePortDefinitionRequest
-	21, // 33: dcim.v1.CatalogService.ListPortCompatibilities:input_type -> dcim.v1.ListPortCompatibilitiesRequest
-	23, // 34: dcim.v1.CatalogService.CreatePortCompatibility:input_type -> dcim.v1.CreatePortCompatibilityRequest
-	24, // 35: dcim.v1.CatalogService.DeletePortCompatibility:input_type -> dcim.v1.DeletePortCompatibilityRequest
-	4,  // 36: dcim.v1.CatalogService.ListCatalog:output_type -> dcim.v1.ListCatalogResponse
-	6,  // 37: dcim.v1.CatalogService.GetCatalogEntry:output_type -> dcim.v1.GetCatalogEntryResponse
-	8,  // 38: dcim.v1.CatalogService.CreateCatalogEntry:output_type -> dcim.v1.CreateCatalogEntryResponse
-	34, // 39: dcim.v1.CatalogService.UpdateCatalogEntry:output_type -> google.protobuf.Empty
-	34, // 40: dcim.v1.CatalogService.DeleteCatalogEntry:output_type -> google.protobuf.Empty
-	12, // 41: dcim.v1.CatalogService.ListAssetsByCatalogEntry:output_type -> dcim.v1.ListAssetsByCatalogEntryResponse
-	14, // 42: dcim.v1.CatalogService.ListPortDefinitions:output_type -> dcim.v1.ListPortDefinitionsResponse
-	16, // 43: dcim.v1.CatalogService.GetPortDefinition:output_type -> dcim.v1.GetPortDefinitionResponse
-	18, // 44: dcim.v1.CatalogService.CreatePortDefinition:output_type -> dcim.v1.CreatePortDefinitionResponse
-	34, // 45: dcim.v1.CatalogService.UpdatePortDefinition:output_type -> google.protobuf.Empty
-	34, // 46: dcim.v1.CatalogService.DeletePortDefinition:output_type -> google.protobuf.Empty
-	22, // 47: dcim.v1.CatalogService.ListPortCompatibilities:output_type -> dcim.v1.ListPortCompatibilitiesResponse
-	34, // 48: dcim.v1.CatalogService.CreatePortCompatibility:output_type -> google.protobuf.Empty
-	34, // 49: dcim.v1.CatalogService.DeletePortCompatibility:output_type -> google.protobuf.Empty
-	36, // [36:50] is the sub-list for method output_type
-	22, // [22:36] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	29, // 6: dcim.v1.PortCompatibility.compatible_category:type_name -> dcim.v1.AssetCategory
+	29, // 7: dcim.v1.ListCatalogRequest.category_filter:type_name -> dcim.v1.AssetCategory
+	26, // 8: dcim.v1.ListCatalogResponse.entries:type_name -> dcim.v1.ListCatalogResponse.CatalogSummary
+	0,  // 9: dcim.v1.GetCatalogEntryResponse.entry:type_name -> dcim.v1.DeviceCatalog
+	29, // 10: dcim.v1.CreateCatalogEntryRequest.category:type_name -> dcim.v1.AssetCategory
+	27, // 11: dcim.v1.CreateCatalogEntryRequest.specs:type_name -> dcim.v1.CreateCatalogEntryRequest.SpecsEntry
+	29, // 12: dcim.v1.UpdateCatalogEntryRequest.category:type_name -> dcim.v1.AssetCategory
+	28, // 13: dcim.v1.UpdateCatalogEntryRequest.specs:type_name -> dcim.v1.UpdateCatalogEntryRequest.SpecsEntry
+	33, // 14: dcim.v1.ListAssetsByCatalogEntryResponse.assets:type_name -> dcim.v1.Asset
+	1,  // 15: dcim.v1.ListPortDefinitionsResponse.port_definitions:type_name -> dcim.v1.PortDefinition
+	1,  // 16: dcim.v1.GetPortDefinitionResponse.port_definition:type_name -> dcim.v1.PortDefinition
+	31, // 17: dcim.v1.CreatePortDefinitionRequest.port_type:type_name -> dcim.v1.PortType
+	32, // 18: dcim.v1.CreatePortDefinitionRequest.direction:type_name -> dcim.v1.PortDirection
+	31, // 19: dcim.v1.UpdatePortDefinitionRequest.port_type:type_name -> dcim.v1.PortType
+	32, // 20: dcim.v1.UpdatePortDefinitionRequest.direction:type_name -> dcim.v1.PortDirection
+	2,  // 21: dcim.v1.ListPortCompatibilitiesResponse.compatibilities:type_name -> dcim.v1.PortCompatibility
+	0,  // 22: dcim.v1.ListCatalogResponse.CatalogSummary.entry:type_name -> dcim.v1.DeviceCatalog
+	3,  // 23: dcim.v1.CatalogService.ListCatalog:input_type -> dcim.v1.ListCatalogRequest
+	5,  // 24: dcim.v1.CatalogService.GetCatalogEntry:input_type -> dcim.v1.GetCatalogEntryRequest
+	7,  // 25: dcim.v1.CatalogService.CreateCatalogEntry:input_type -> dcim.v1.CreateCatalogEntryRequest
+	9,  // 26: dcim.v1.CatalogService.UpdateCatalogEntry:input_type -> dcim.v1.UpdateCatalogEntryRequest
+	10, // 27: dcim.v1.CatalogService.DeleteCatalogEntry:input_type -> dcim.v1.DeleteCatalogEntryRequest
+	11, // 28: dcim.v1.CatalogService.ListAssetsByCatalogEntry:input_type -> dcim.v1.ListAssetsByCatalogEntryRequest
+	13, // 29: dcim.v1.CatalogService.ListPortDefinitions:input_type -> dcim.v1.ListPortDefinitionsRequest
+	15, // 30: dcim.v1.CatalogService.GetPortDefinition:input_type -> dcim.v1.GetPortDefinitionRequest
+	17, // 31: dcim.v1.CatalogService.CreatePortDefinition:input_type -> dcim.v1.CreatePortDefinitionRequest
+	19, // 32: dcim.v1.CatalogService.UpdatePortDefinition:input_type -> dcim.v1.UpdatePortDefinitionRequest
+	20, // 33: dcim.v1.CatalogService.DeletePortDefinition:input_type -> dcim.v1.DeletePortDefinitionRequest
+	21, // 34: dcim.v1.CatalogService.ListPortCompatibilities:input_type -> dcim.v1.ListPortCompatibilitiesRequest
+	23, // 35: dcim.v1.CatalogService.CreatePortCompatibility:input_type -> dcim.v1.CreatePortCompatibilityRequest
+	24, // 36: dcim.v1.CatalogService.DeletePortCompatibility:input_type -> dcim.v1.DeletePortCompatibilityRequest
+	4,  // 37: dcim.v1.CatalogService.ListCatalog:output_type -> dcim.v1.ListCatalogResponse
+	6,  // 38: dcim.v1.CatalogService.GetCatalogEntry:output_type -> dcim.v1.GetCatalogEntryResponse
+	8,  // 39: dcim.v1.CatalogService.CreateCatalogEntry:output_type -> dcim.v1.CreateCatalogEntryResponse
+	34, // 40: dcim.v1.CatalogService.UpdateCatalogEntry:output_type -> google.protobuf.Empty
+	34, // 41: dcim.v1.CatalogService.DeleteCatalogEntry:output_type -> google.protobuf.Empty
+	12, // 42: dcim.v1.CatalogService.ListAssetsByCatalogEntry:output_type -> dcim.v1.ListAssetsByCatalogEntryResponse
+	14, // 43: dcim.v1.CatalogService.ListPortDefinitions:output_type -> dcim.v1.ListPortDefinitionsResponse
+	16, // 44: dcim.v1.CatalogService.GetPortDefinition:output_type -> dcim.v1.GetPortDefinitionResponse
+	18, // 45: dcim.v1.CatalogService.CreatePortDefinition:output_type -> dcim.v1.CreatePortDefinitionResponse
+	34, // 46: dcim.v1.CatalogService.UpdatePortDefinition:output_type -> google.protobuf.Empty
+	34, // 47: dcim.v1.CatalogService.DeletePortDefinition:output_type -> google.protobuf.Empty
+	22, // 48: dcim.v1.CatalogService.ListPortCompatibilities:output_type -> dcim.v1.ListPortCompatibilitiesResponse
+	34, // 49: dcim.v1.CatalogService.CreatePortCompatibility:output_type -> google.protobuf.Empty
+	34, // 50: dcim.v1.CatalogService.DeletePortCompatibility:output_type -> google.protobuf.Empty
+	37, // [37:51] is the sub-list for method output_type
+	23, // [23:37] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_v1_catalog_proto_init() }

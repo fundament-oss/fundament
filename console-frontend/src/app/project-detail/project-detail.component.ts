@@ -69,7 +69,7 @@ export default class ProjectDetailComponent implements OnInit {
       }
 
       this.project.set(response.project);
-      this.titleService.setTitle(response.project.name);
+      this.titleService.setTitle(response.project.alias || response.project.name);
 
       // Load namespaces and clusters for read-only display
       await Promise.all([this.loadNamespaces(projectId), this.loadClusters()]);
