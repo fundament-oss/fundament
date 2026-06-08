@@ -239,7 +239,7 @@
             <select
               id="cable-type"
               [value]="cableType()"
-              (change)="cableType.set($any($event.target).value)"
+              (change)="onCableTypeChange($any($event.target).value)"
               class="w-full"
             >
               <option value="" [selected]="cableType() === ''">Unspecified</option>
@@ -287,7 +287,7 @@
                     ? 'border-accent-500 bg-white'
                     : 'border-slate-200 bg-white hover:border-slate-400'
                 "
-                (click)="cableColor.set(undefined)"
+                (click)="onCableColorChange(undefined)"
                 aria-label="No color"
                 [attr.aria-pressed]="cableColor() === undefined"
                 title="No color"
@@ -313,7 +313,7 @@
                       : 'border-transparent hover:border-slate-300 hover:scale-105'
                   "
                   [style.background]="CABLE_COLOR_HEX[color]"
-                  (click)="cableColor.set(color)"
+                  (click)="onCableColorChange(color)"
                   [attr.aria-label]="'Color: ' + color"
                   [attr.aria-pressed]="cableColor() === color"
                   [title]="color"

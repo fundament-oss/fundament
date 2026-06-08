@@ -94,6 +94,24 @@ export const CABLE_COLOR_HEX: Record<CableColor, string> = {
   white: '#f8fafc',
 };
 
+/** Default/preset color per cable type, following common industry conventions
+ *  (TIA-598 for fiber; vendor/cabling conventions otherwise). */
+export const CABLE_TYPE_DEFAULT_COLOR: Record<CableType, CableColor> = {
+  cat5e: 'blue',
+  cat6: 'green',
+  cat6a: 'light-grey',
+  cat7: 'purple',
+  cat8: 'white',
+  dac: 'dark-grey', // twinax DAC — typically black
+  aoc: 'teal', // active optical — aqua
+  mmf: 'orange', // multimode OM1/OM2 — TIA-598
+  smf: 'yellow', // single-mode — TIA-598
+  power: 'red',
+  console: 'light-grey', // Cisco console cable — light blue/grey
+  usb: 'dark-grey',
+  other: 'light-grey',
+};
+
 export const CABLE_TYPE_LABEL: Record<CableType, string> = {
   cat5e: 'Cat 5e',
   cat6: 'Cat 6',

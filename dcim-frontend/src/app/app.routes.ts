@@ -7,7 +7,8 @@ const routes: Routes = [
     children: [
       {
         path: '',
-        loadComponent: () => import('./home/home').then((m) => m.default),
+        pathMatch: 'full',
+        redirectTo: 'datacenters',
       },
       {
         path: 'catalog/:id',
