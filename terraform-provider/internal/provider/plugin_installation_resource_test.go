@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -9,11 +10,13 @@ import (
 
 func TestPluginInstallationResourceModel(t *testing.T) {
 	model := PluginInstallationResourceModel{
-		ID:         types.StringValue("cluster-123/grafana"),
-		ClusterID:  types.StringValue("cluster-123"),
-		PluginName: types.StringValue("grafana"),
-		Image:      types.StringValue("ghcr.io/fundament/grafana:v10.2.0"),
-		Phase:      types.StringValue("Running"),
+		ID:             types.StringValue("cluster-123/grafana"),
+		ClusterID:      types.StringValue("cluster-123"),
+		PluginName:     types.StringValue("grafana"),
+		PluginVersion:  types.StringValue("10.2.0"),
+		DefinitionHash: types.StringValue("sha256:abc123"),
+		Image:          types.StringValue("ghcr.io/fundament/grafana:v10.2.0"),
+		Phase:          types.StringValue("Running"),
 	}
 
 	if model.ID.ValueString() != "cluster-123/grafana" {
@@ -25,11 +28,51 @@ func TestPluginInstallationResourceModel(t *testing.T) {
 	if model.PluginName.ValueString() != "grafana" {
 		t.Errorf("expected PluginName 'grafana', got %q", model.PluginName.ValueString())
 	}
+	if model.PluginVersion.ValueString() != "10.2.0" {
+		t.Errorf("expected PluginVersion '10.2.0', got %q", model.PluginVersion.ValueString())
+	}
+	if model.DefinitionHash.ValueString() != "sha256:abc123" {
+		t.Errorf("expected DefinitionHash 'sha256:abc123', got %q", model.DefinitionHash.ValueString())
+	}
 	if model.Image.ValueString() != "ghcr.io/fundament/grafana:v10.2.0" {
 		t.Errorf("expected Image 'ghcr.io/fundament/grafana:v10.2.0', got %q", model.Image.ValueString())
 	}
 	if model.Phase.ValueString() != "Running" {
 		t.Errorf("expected Phase 'Running', got %q", model.Phase.ValueString())
+	}
+}
+
+func TestPluginInstallationCreatePayload_DefinitionRef(t *testing.T) {
+	payload := pluginInstallationCreatePayload{
+		APIVersion: pluginInstallationAPIVersion,
+		Kind:       "PluginInstallation",
+		Metadata:   pluginInstallationMetadata{Name: "grafana"},
+		Spec: pluginInstallationSpec{
+			Image: "ghcr.io/fundament/grafana:v10.2.0",
+			DefinitionRef: pluginDefinitionRef{
+				PluginName:     "grafana",
+				PluginVersion:  "unknown",
+				DefinitionHash: "sha256:unknown",
+			},
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	got := string(body)
+	for _, want := range []string{
+		`"definitionRef":{"pluginName":"grafana","pluginVersion":"unknown","definitionHash":"sha256:unknown"}`,
+		`"image":"ghcr.io/fundament/grafana:v10.2.0"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("payload %s does not contain %s", got, want)
+		}
+	}
+	if strings.Contains(got, `"pluginName":"grafana","image"`) || strings.Contains(got, `"spec":{"pluginName"`) {
+		t.Errorf("payload must not carry the legacy top-level spec.pluginName: %s", got)
 	}
 }
 

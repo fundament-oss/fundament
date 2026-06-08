@@ -24,6 +24,14 @@ resource "fundament_plugin_installation" "grafana" {
   cluster_id  = fundament_cluster.prod.id
   plugin_name = "grafana"
   image       = "ghcr.io/fundament/grafana:v10.2.0"
+
+  # plugin_version and definition_hash pin an immutable, content-addressed
+  # PluginDefinition (FUN-17). They are optional and default to placeholders
+  # ("unknown" / "sha256:unknown") until the marketplace (FUN-11) supplies real
+  # values. definition_hash must be prefixed with "sha256:". Changing either
+  # forces a replacement.
+  # plugin_version  = "10.2.0"
+  # definition_hash = "sha256:..."
 }
 
 # Import an existing plugin installation:

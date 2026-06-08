@@ -8,16 +8,20 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -31,20 +35,32 @@ type PluginInstallationResource struct {
 }
 
 type PluginInstallationResourceModel struct {
-	ID         types.String `tfsdk:"id"`
-	ClusterID  types.String `tfsdk:"cluster_id"`
-	PluginName types.String `tfsdk:"plugin_name"`
-	Image      types.String `tfsdk:"image"`
-	Phase      types.String `tfsdk:"phase"`
+	ID             types.String `tfsdk:"id"`
+	ClusterID      types.String `tfsdk:"cluster_id"`
+	PluginName     types.String `tfsdk:"plugin_name"`
+	PluginVersion  types.String `tfsdk:"plugin_version"`
+	DefinitionHash types.String `tfsdk:"definition_hash"`
+	Image          types.String `tfsdk:"image"`
+	Phase          types.String `tfsdk:"phase"`
 }
 
 type pluginInstallationMetadata struct {
 	Name string `json:"name"`
 }
 
+// pluginDefinitionRef is the immutable, content-addressed pin to the published
+// PluginDefinition the installer consented to (FUN-17). The plugin-controller
+// resolves the definition by DefinitionHash and materialises the plugin SA's
+// RBAC from it.
+type pluginDefinitionRef struct {
+	PluginName     string `json:"pluginName"`
+	PluginVersion  string `json:"pluginVersion"`
+	DefinitionHash string `json:"definitionHash"`
+}
+
 type pluginInstallationSpec struct {
-	PluginName string `json:"pluginName"`
-	Image      string `json:"image"`
+	Image         string              `json:"image"`
+	DefinitionRef pluginDefinitionRef `json:"definitionRef"`
 }
 
 type pluginInstallationStatus struct {
@@ -100,9 +116,32 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 				},
 			},
 			"plugin_name": schema.StringAttribute{
-				Description: "The name of the plugin to install. Must match a plugin in the Fundament catalog. Changing this value forces a replacement.",
+				Description: "The name of the plugin to install. Must match a plugin in the Fundament catalog. Used as the installation's metadata.name and as definitionRef.pluginName. Changing this value forces a replacement.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"plugin_version": schema.StringAttribute{
+				Description: "The published version of the plugin definition to pin (definitionRef.pluginVersion). Optional; defaults to \"unknown\" until the marketplace supplies real versions (FUN-11). The pin is immutable, so changing this value forces a replacement.",
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("unknown"),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"definition_hash": schema.StringAttribute{
+				Description: "The sha256 content hash of the pinned plugin definition (definitionRef.definitionHash), prefixed with \"sha256:\". Optional; defaults to \"sha256:unknown\" until the marketplace supplies real hashes (FUN-11). The pin is immutable, so changing this value forces a replacement.",
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("sha256:unknown"),
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(regexp.MustCompile(`^sha256:`), "definition_hash must be a sha256 content hash prefixed with 'sha256:'"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -161,6 +200,8 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 
 	clusterID := plan.ClusterID.ValueString()
 	pluginName := plan.PluginName.ValueString()
+	pluginVersion := plan.PluginVersion.ValueString()
+	definitionHash := plan.DefinitionHash.ValueString()
 	image := plan.Image.ValueString()
 
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
@@ -181,8 +222,12 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		Kind:       "PluginInstallation",
 		Metadata:   pluginInstallationMetadata{Name: pluginName},
 		Spec: pluginInstallationSpec{
-			PluginName: pluginName,
-			Image:      image,
+			Image: image,
+			DefinitionRef: pluginDefinitionRef{
+				PluginName:     pluginName,
+				PluginVersion:  pluginVersion,
+				DefinitionHash: definitionHash,
+			},
 		},
 	}
 
@@ -336,6 +381,16 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		state.Image = types.StringValue(crd.Spec.Image)
 	} else {
 		state.Image = types.StringNull()
+	}
+	if crd.Spec.DefinitionRef.PluginVersion != "" {
+		state.PluginVersion = types.StringValue(crd.Spec.DefinitionRef.PluginVersion)
+	} else {
+		state.PluginVersion = types.StringValue("unknown")
+	}
+	if crd.Spec.DefinitionRef.DefinitionHash != "" {
+		state.DefinitionHash = types.StringValue(crd.Spec.DefinitionRef.DefinitionHash)
+	} else {
+		state.DefinitionHash = types.StringValue("sha256:unknown")
 	}
 	if crd.Status.Phase != "" {
 		state.Phase = types.StringValue(crd.Status.Phase)
