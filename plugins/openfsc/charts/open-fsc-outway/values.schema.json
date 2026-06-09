@@ -264,6 +264,11 @@
                     "description": "Internal address of the Manager",
                     "default": ""
                 },
+                "controllerApiAddress": {
+                    "type": "string",
+                    "description": "The address of the Controller API (DEPRECATED use value controllerRegistrationApiAddress instead)",
+                    "default": ""
+                },
                 "controllerRegistrationApiAddress": {
                     "type": "string",
                     "description": "The address of the Controller API",
@@ -373,12 +378,6 @@
                     "type": "string",
                     "description": "The time to live of the Grant Links cache, format is specified in string, e.g. '1h', '300s' or '5m'",
                     "default": "30s"
-                },
-                "xffAllowedAddresses": {
-                    "type": "array",
-                    "description": "List of addresses allowed in the 'x-forwarded-for' header",
-                    "default": [],
-                    "items": {}
                 }
             }
         },

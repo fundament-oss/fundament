@@ -1,0 +1,28 @@
+# CloudNativePG cluster backing the OpenFSC components. The open-fsc umbrella has
+# no Postgres template (a real deployment uses managed Postgres), so the
+# self-contained directory peer provisions its own. CNPG creates the
+# "shared-postgresql-rw" service and the "shared-postgresql-app" secret
+# (username/password keys) the umbrella override references.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: shared-postgresql
+spec:
+  instances: {{ .Values.postgresql.instances }}
+  imageName: {{ .Values.postgresql.image | quote }}
+  storage:
+    size: {{ .Values.postgresql.storageSize }}
+    storageClass: {{ .Values.postgresql.storageClass }}
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      # One database per component: the OpenFSC images ignore the
+      # x-migrations-table DSN param, so every component would otherwise share a
+      # single public.schema_migrations table on a shared database and corrupt
+      # each other's migration state. Separate databases keep them isolated.
+      postInitSQL:
+        - CREATE DATABASE open_fsc_manager WITH OWNER app;
+        - CREATE DATABASE open_fsc_controller WITH OWNER app;
+        - CREATE DATABASE open_fsc_auditlog WITH OWNER app;
+        - CREATE DATABASE open_fsc_tx_log WITH OWNER app;

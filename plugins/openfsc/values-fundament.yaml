@@ -1,59 +1,120 @@
-# Fundament override for the OpenFSC v2.3.0 `shared` umbrella
-# (gitlab.com/rinis-oss/fsc/open-fsc, helm/deploy/shared), installed by the
-# OpenFSC Fundament plugin (see installer.go).
+# Fundament override for the digilab OpenFSC umbrella
+# (gitlab.com/digilab.overheid.nl/platform/helm-charts/open-fsc, version 1.43.0,
+# vendored as charts/open-fsc-1.43.0.tgz), installed by the OpenFSC plugin (see
+# installer.go).
 #
-# Layered on top of the chart's own values.yaml, which is already in-cluster
-# friendly (service-name SANs, CNPG wiring, cert-manager existingSecrets). This
-# file only adjusts what the public demo (values-demo.yaml) assumes about
-# ingress/DNS so the directory peer runs headless in a Fundament cluster. The
-# Manager functions as the group's Directory (no external Directory required);
-# the demo CA keypair is injected at install time via --set-file.
+# The umbrella is installed as release "shared" with fullnameOverride=shared so
+# its internal-TLS certificate CommonNames/SANs match the subchart service names
+# (shared-open-fsc-<component>). The umbrella ships only the internal mTLS CA; the
+# group (federation) CA, the Manager's group certificate and a Postgres cluster
+# are provided by the openfsc-directory helper chart, installed first. This file
+# wires every component to those secrets and runs the Manager as the group's own
+# Directory.
 global:
   groupID: "fsc-demo"
 
+# The plugin's gateway reconciler installs inways/outways dynamically (one helm
+# release per CR, from the vendored open-fsc-inway/outway charts), so the
+# umbrella's bundled inway/outway are disabled.
+open-fsc-inway:
+  enabled: false
+open-fsc-outway:
+  enabled: false
+
 open-fsc-manager:
   config:
+    # The Manager is its own group Directory: selfAddress and
+    # directoryManagerAddress both point at this Manager's external service.
     selfAddress: "https://shared-open-fsc-manager-external:8443"
     directoryManagerAddress: "https://shared-open-fsc-manager-external:8443"
-  service:
-    external:
-      type: ClusterIP
+    directoryPeerID: "12345678901234567899"
+    controllerRegistrationApiAddress: "https://shared-open-fsc-controller:9443"
+    autoSignGrants:
+      - "servicePublication"
+      - "delegatedServicePublication"
+  postgresql:
+    hostname: "shared-postgresql-rw"
+    database: "open_fsc_manager"
+    existingSecret:
+      name: "shared-postgresql-app"
+      usernameKey: "username"
+      passwordKey: "password"
+  certificates:
+    internal:
+      existingSecret: "shared-open-fsc-manager-internal-tls"
+      caCertificatePEMExistingSecret:
+        name: "shared-open-fsc-internal-ca"
+        key: "tls.crt"
+    internalUnauthenticated:
+      existingSecret: "shared-open-fsc-manager-internal-unauthenticated-tls"
+      caCertificatePEMExistingSecret:
+        name: "shared-open-fsc-internal-ca"
+        key: "tls.crt"
+    group:
+      # Group CA trust anchor (self-signed by the openfsc-directory chart).
+      caCertificatePEMExistingSecret:
+        name: "shared-ca-issuer"
+        key: "tls.crt"
+      # The Manager presents one group certificate for its peer, token and
+      # signature identities (issued by the openfsc-directory chart).
+      peer:
+        existingSecret: "shared-directory-manager-external-tls"
+      token:
+        existingSecret: "shared-directory-manager-external-tls"
+      signature:
+        existingSecret: "shared-directory-manager-external-tls"
 
 open-fsc-controller:
   config:
-    directoryManagerAddress: "https://shared-open-fsc-manager-external:8443"
+    managerInternalAddress: "https://shared-open-fsc-manager-internal:9443"
+    auditlog:
+      type: rest
+      rest:
+        address: "https://shared-open-fsc-auditlog:9443"
+  # No external ingress for the Controller UI; access is via the host
+  # port-forward surfaced by FUNP_CONTROLLER_URL.
   ingress:
     enabled: false
+  postgresql:
+    hostname: "shared-postgresql-rw"
+    database: "open_fsc_controller"
+    existingSecret:
+      name: "shared-postgresql-app"
+      usernameKey: "username"
+      passwordKey: "password"
+  certificates:
+    internal:
+      existingSecret: "shared-open-fsc-controller-internal-tls"
+      caCertificatePEMExistingSecret:
+        name: "shared-open-fsc-internal-ca"
+        key: "tls.crt"
 
-open-fsc-directory-ui:
-  # The Directory UI is out of scope for the Fundament directory peer (we only
-  # need the Manager + Controller). The subchart has no enable/condition toggle,
-  # so scale it to zero replicas: the Deployment renders but runs no pods.
-  replicaCount: 0
-  config:
-    directoryManagerAddress: "https://shared-open-fsc-manager-external:8443"
-  service:
-    type: ClusterIP
-  ingress:
-    # This subchart always renders an Ingress (no enable toggle); give it a
-    # dummy in-cluster host so the manifest is valid. It is not routed.
-    hosts:
-      - "directory-ui.fsc.local"
+open-fsc-auditlog:
+  db:
+    hostname: "shared-postgresql-rw"
+    database: "open_fsc_auditlog"
+    existingSecret:
+      name: "shared-postgresql-app"
+      usernameKey: "username"
+      passwordKey: "password"
+  certificates:
+    internal:
+      existingSecret: "shared-open-fsc-auditlog-internal-tls"
+      caCertificatePEMExistingSecret:
+        name: "shared-open-fsc-internal-ca"
+        key: "tls.crt"
 
-open-fsc-docs:
-  ingress:
-    enabled: false
-
-open-fsc-ca-certportal:
-  ingress:
-    enabled: false
-
-open-fsc-keycloak:
-  config:
-    keycloakHostURL: "http://shared-open-fsc-keycloak"
-    keycloakHostAdminURL: "http://shared-open-fsc-keycloak"
-  extraEnv:
-    - name: KC_HOSTNAME_STRICT
-      value: "false"
-  ingress:
-    enabled: false
+open-fsc-txlog-api:
+  txlogdb:
+    hostname: "shared-postgresql-rw"
+    database: "open_fsc_tx_log"
+    existingSecret:
+      name: "shared-postgresql-app"
+      usernameKey: "username"
+      passwordKey: "password"
+  certificates:
+    internal:
+      existingSecret: "shared-open-fsc-txlog-api-internal-tls"
+      caCertificatePEMExistingSecret:
+        name: "shared-open-fsc-internal-ca"
+        key: "tls.crt"

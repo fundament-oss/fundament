@@ -9,13 +9,15 @@ RUN CGO_ENABLED=0 go build -o /openfsc-plugin ./plugins/openfsc/
 
 FROM alpine:3.21
 
-# helm + git: the plugin clones the OpenFSC charts and installs them at runtime.
-RUN apk add --no-cache helm git
+# helm: the plugin installs the vendored OpenFSC charts at runtime (no clone).
+RUN apk add --no-cache helm
 
 COPY --from=build /openfsc-plugin /usr/local/bin/openfsc-plugin
 COPY plugins/openfsc/definition.yaml /app/definition.yaml
-# Vendored OpenFSC inway/outway charts (pinned v2.3.0); the operator helm-installs
-# one release per Inway/Outway CR from these paths (no runtime fetch).
+# Vendored OpenFSC charts, installed at runtime with no network fetch: the
+# digilab umbrella (open-fsc-1.43.0.tgz) and the openfsc-directory helper chart
+# for the install, plus the open-fsc-inway/outway charts the operator
+# helm-installs one release per Inway/Outway CR.
 COPY plugins/openfsc/charts /charts
 
 WORKDIR /app

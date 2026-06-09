@@ -276,6 +276,11 @@
                     "description": "Internal unauthenticated address of the Manager",
                     "default": ""
                 },
+                "controllerApiAddress": {
+                    "type": "string",
+                    "description": "The address of the Controller API (DEPRECATED use controllerRegistrationApiAddress instead)",
+                    "default": ""
+                },
                 "controllerRegistrationApiAddress": {
                     "type": "string",
                     "description": "The address of the Controller Registration API",
@@ -410,7 +415,7 @@
                                 },
                                 "key": {
                                     "type": "string",
-                                    "description": "The key in the secret that contains the certificate",
+                                    "description": "The key in the secret that contains the certificatesM The Group certificate",
                                     "default": ""
                                 }
                             }
@@ -490,7 +495,7 @@
                 "type": {
                     "type": "string",
                     "description": "Service Type (ClusterIP, NodePort, LoadBalancer)",
-                    "default": "ClusterIP"
+                    "default": "LoadBalancer"
                 },
                 "annotations": {
                     "type": "object",

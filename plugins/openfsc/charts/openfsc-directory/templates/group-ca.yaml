@@ -1,0 +1,64 @@
+# Group (federation) PKI. The open-fsc umbrella ships only the internal mTLS CA;
+# it expects group certificates to be supplied (in a real deployment, signed by
+# the federation's external CA). For the self-contained Fundament directory peer
+# we self-sign a group CA here and issue the Manager's group certificate from it.
+# The inway/outway group certificates are issued from the same "shared" Issuer by
+# the plugin's gateway reconciler (see gateways.go).
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: shared-group-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: shared-ca-issuer
+spec:
+  isCA: true
+  commonName: OpenFSC Directory Group CA
+  secretName: shared-ca-issuer
+  privateKey:
+    algorithm: RSA
+    size: 4096
+  duration: 87600h # 10 years
+  renewBefore: 8760h # 1 year
+  issuerRef:
+    name: shared-group-selfsigned
+    kind: Issuer
+---
+# The group Issuer. gateways.go references this by name ("shared") when issuing
+# inway/outway group certificates.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: shared
+spec:
+  ca:
+    secretName: shared-ca-issuer
+---
+# The directory Manager's group certificate (peer/token/signature identity). The
+# subject serialNumber is the directory peer ID; the SAN is the manager-external
+# service name so other peers (and the Manager itself, acting as the Directory)
+# can verify it.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: shared-directory-manager-external-tls
+spec:
+  secretName: shared-directory-manager-external-tls
+  commonName: {{ .Values.managerExternalName }}
+  dnsNames:
+    - {{ .Values.managerExternalName }}
+  subject:
+    organizations:
+      - OpenFSC Directory
+    serialNumber: {{ .Values.directoryPeerID | quote }}
+  privateKey:
+    size: 4096
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+  issuerRef:
+    name: shared
+    kind: Issuer

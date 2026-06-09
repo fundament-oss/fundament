@@ -2,6 +2,15 @@
 
 Installs OpenFSC with a Manager, Controller, Inway and Outway on the Cluster.
 
+The Manager/Controller (plus auditlog and txlog-api) come from the digilab OpenFSC
+umbrella chart
+([gitlab.com/digilab.overheid.nl/platform/helm-charts/open-fsc](https://gitlab.com/digilab.overheid.nl/platform/helm-charts/open-fsc),
+version 1.43.0), vendored as `charts/open-fsc-1.43.0.tgz`. That umbrella ships only
+the internal mTLS CA, so the group (federation) CA, the Manager's group certificate
+and a CloudNativePG cluster are provided by the `charts/openfsc-directory` helper
+chart, installed first as release `shared-directory`. The umbrella is installed as
+release `shared` with `fullnameOverride=shared`; see `values-fundament.yaml`.
+
 ## Configuration
 
 The plugin installs with development configuration by default.

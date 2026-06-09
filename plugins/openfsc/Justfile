@@ -1,12 +1,12 @@
 kube_context := env("kube_context", "k3d-fundament-plugin")
 
 # Verify the OpenFSC plugin installation: the PluginInstallation reaches Running
-# (the plugin installs cert-manager + CloudNativePG + the OpenFSC Manager/
-# Controller umbrella) and the auto-seeded self Peer reaches Active (both the
-# Manager and Controller Deployments are Available).
+# (the plugin installs cert-manager + CloudNativePG + the openfsc-directory helper
+# chart + the OpenFSC Manager/Controller umbrella) and the auto-seeded self Peer
+# reaches Active (both the Manager and Controller Deployments are Available).
 #
-# The first install clones the OpenFSC repo and pulls many images, so the waits
-# are generous. Prereq: plugin installed (`just plugin-install openfsc`).
+# The first install pulls many images, so the waits are generous. Prereq: plugin
+# installed (`just plugin-install openfsc`).
 
 # Verify the OpenFSC install: PluginInstallation Running + self Peer Active
 test:
@@ -17,13 +17,15 @@ test:
     kubectl --context {{ kube_context }} get peer
     kubectl --context {{ kube_context }} -n fsc get pods,deploy
 
-# Remove the OpenFSC directory (umbrella) and the self Peer. cert-manager and
-# CloudNativePG are left in place (they may be shared with other plugins).
+# Remove the OpenFSC umbrella, the directory helper chart and the self Peer.
+# cert-manager and CloudNativePG are left in place (they may be shared with other
+# plugins).
 
-# Remove the OpenFSC umbrella and the self Peer
+# Remove the OpenFSC umbrella, directory helper chart and the self Peer
 test-cleanup:
     kubectl --context {{ kube_context }} delete peer/self --ignore-not-found
     helm --kube-context {{ kube_context }} uninstall shared -n fsc --ignore-not-found
+    helm --kube-context {{ kube_context }} uninstall shared-directory -n fsc --ignore-not-found
 
 # Preview the console HTML templates in a browser against the running cluster
 # (live CR data via kubectl; no Console host needed). Prereq: plugin installed.

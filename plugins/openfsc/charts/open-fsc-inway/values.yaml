@@ -106,6 +106,7 @@ fullnameOverride: ""
 ## @param config.name Name of the Inway
 ## @param config.selfAddress The Address that can be used by the OpenFSC network to reach this Inway. The address must contain the scheme https and port 443. E.g. https://my-inway.com:443.
 ## @param config.managerInternalUnauthenticatedAddress Internal unauthenticated address of the Manager
+## @param config.controllerApiAddress The address of the Controller API (DEPRECATED use controllerRegistrationApiAddress instead)
 ## @param config.controllerRegistrationApiAddress The address of the Controller Registration API
 ## @param config.transactionLogApiAddress The Address of the Transaction Log API
 ## @param config.authorizationService.enabled If 'true', the Inway will use the authorization service
@@ -131,6 +132,7 @@ config:
   name: ""
   selfAddress: ""
   managerInternalUnauthenticatedAddress: ""
+  controllerApiAddress: ""
   controllerRegistrationApiAddress: ""
   transactionLogApiAddress: ""
   disableCrlChecks: false
@@ -157,7 +159,7 @@ config:
 ## @section TLS certificates used by OpenFSC components for communications
 ## @param certificates.group.caCertificatePEM The CA certificate of the Group
 ## @param certificates.group.caCertificatePEMExistingSecret.name Name of the existing secret
-## @param certificates.group.caCertificatePEMExistingSecret.key The key in the secret that contains the certificate
+## @param certificates.group.caCertificatePEMExistingSecret.key The key in the secret that contains the certificatesM The Group certificate
 ## @param certificates.group.certificatePEM The certificate of the Group
 ## @param certificates.group.keyPEM Private Key of 'certificates.group.certificatePEM'
 ## @param certificates.group.existingSecret Use existing secret with your OpenFSC keypair (`certificates.group.certificatePEM` and `certificates.group.keyPEM` will be ignored and picked up from the secret)
@@ -195,7 +197,7 @@ certificates:
 ## @param service.nodePort Port exposed for Inway traffic if 'service.type' is 'NodePort'
 ## @param service.loadBalancerIP Only applies when using 'service.type' 'LoadBalancer'. A loadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying the loadbalancerIP when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature.
 service:
-  type: ClusterIP
+  type: LoadBalancer
   annotations: {}
   port: 443
   nodePort: 443

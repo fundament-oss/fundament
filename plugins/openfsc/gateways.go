@@ -24,17 +24,20 @@ const (
 	inwayChartPath  = "/charts/open-fsc-inway"
 	outwayChartPath = "/charts/open-fsc-outway"
 
-	// cert-manager issuers and CA secrets the `shared` umbrella creates.
+	// cert-manager issuers and CA secrets. The group Issuer + its CA secret are
+	// created by the openfsc-directory helper chart; the internal Issuer + its CA
+	// secret are created by the open-fsc umbrella (release "shared",
+	// fullnameOverride=shared).
 	groupIssuer      = "shared"
-	internalIssuer   = "shared-internal"
+	internalIssuer   = "shared-open-fsc-internal"
 	groupCASecret    = "shared-ca-issuer"
-	internalCASecret = "shared-ca-internal-issuer"
+	internalCASecret = "shared-open-fsc-internal-ca"
 
 	// OpenFSC component service endpoints in the peer namespace (release "shared").
 	controllerRegistrationAddr = "https://shared-open-fsc-controller:9443"
 	managerInternalAddr        = "https://shared-open-fsc-manager-internal:9443"
 	managerUnauthAddr          = "https://shared-open-fsc-manager-internal-unauthenticated:9444"
-	transactionLogAddr         = "https://shared-open-fsc-auditlog:9443"
+	transactionLogAddr         = "https://shared-open-fsc-txlog-api:9443"
 
 	// peerOrg is the directory peer's certificate organization; the gateway group
 	// certs carry it (plus the peer's serial number) so they belong to the peer.

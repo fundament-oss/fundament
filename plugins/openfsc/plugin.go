@@ -15,7 +15,7 @@ import (
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/crd"
 )
 
-// valuesFundament is the Helm override layered on top of the upstream `shared`
+// valuesFundament is the Helm override layered on top of the vendored OpenFSC
 // umbrella's values.yaml (see installer.installUmbrella).
 //
 //go:embed values-fundament.yaml

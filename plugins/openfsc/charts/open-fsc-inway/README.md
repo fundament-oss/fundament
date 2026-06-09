@@ -12,7 +12,11 @@ An organization can provide services to the FSC ecosystem through an Inway. The 
 To install the Chart with the release name `inway`:
 
 ```console
-$ helm install inway oci://registry-1.docker.io/federatedserviceconnectivity/open-fsc-inway --version {latest version}
+## add the Common Ground Helm repository
+$ helm repo add commonground https://charts.commonground.nl
+
+## Install the open-fsc-inway helm Chart
+$ helm install inway commonground/open-fsc-inway
 ```
 
 > **Tip**: List all releases using `helm list`
@@ -20,7 +24,7 @@ $ helm install inway oci://registry-1.docker.io/federatedserviceconnectivity/ope
 ## Upgrading the Chart
 
 Currently, our Helm charts use the same release version as the OpenFSC release version.
-To know what has changed for the Helm charts, look at the changes in our [CHANGELOG](https://gitlab.com/rinis-oss/open-fsc/-/blob/main/CHANGELOG.md)
+To know what has changed for the Helm charts, look at the changes in our [CHANGELOG](https://gitlab.com/commonground/fsc/open-fsc/-/blob/main/CHANGELOG.md)
 that are prefixed with 'Helm'.
 
 ## Uninstalling the Chart
@@ -93,6 +97,7 @@ $ helm delete inway
 | `config.name`                                                     | Name of the Inway                                                                                                                                                                                               | `""`     |
 | `config.selfAddress`                                              | The Address that can be used by the OpenFSC network to reach this Inway. The address must contain the scheme https and port 443. E.g. https://my-inway.com:443.                                                 | `""`     |
 | `config.managerInternalUnauthenticatedAddress`                    | Internal unauthenticated address of the Manager                                                                                                                                                                 | `""`     |
+| `config.controllerApiAddress`                                     | The address of the Controller API (DEPRECATED use controllerRegistrationApiAddress instead)                                                                                                                     | `""`     |
 | `config.controllerRegistrationApiAddress`                         | The address of the Controller Registration API                                                                                                                                                                  | `""`     |
 | `config.transactionLogApiAddress`                                 | The Address of the Transaction Log API                                                                                                                                                                          | `""`     |
 | `config.authorizationService.enabled`                             | If 'true', the Inway will use the authorization service                                                                                                                                                         | `false`  |
@@ -118,7 +123,7 @@ $ helm delete inway
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | `certificates.group.caCertificatePEM`                       | The CA certificate of the Group                                                                                                                                                                | `""`  |
 | `certificates.group.caCertificatePEMExistingSecret.name`    | Name of the existing secret                                                                                                                                                                    | `""`  |
-| `certificates.group.caCertificatePEMExistingSecret.key`     | The key in the secret that contains the certificate                                                                                                                                            | `""`  |
+| `certificates.group.caCertificatePEMExistingSecret.key`     | The key in the secret that contains the certificatesM The Group certificate                                                                                                                    | `""`  |
 | `certificates.group.certificatePEM`                         | The certificate of the Group                                                                                                                                                                   | `""`  |
 | `certificates.group.keyPEM`                                 | Private Key of 'certificates.group.certificatePEM'                                                                                                                                             | `""`  |
 | `certificates.group.existingSecret`                         | Use existing secret with your OpenFSC keypair (`certificates.group.certificatePEM` and `certificates.group.keyPEM` will be ignored and picked up from the secret)                              | `""`  |
@@ -132,13 +137,13 @@ $ helm delete inway
 
 ### Exposure parameters
 
-| Name                     | Description                                                                                                                                                                                                                                                                                                                                      | Value       |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| `service.type`           | Service Type (ClusterIP, NodePort, LoadBalancer)                                                                                                                                                                                                                                                                                                 | `ClusterIP` |
-| `service.annotations`    | Annotations to be added to the service                                                                                                                                                                                                                                                                                                           | `{}`        |
-| `service.port`           | Port exposed by the service                                                                                                                                                                                                                                                                                                                      | `443`       |
-| `service.nodePort`       | Port exposed for Inway traffic if 'service.type' is 'NodePort'                                                                                                                                                                                                                                                                                   | `443`       |
-| `service.loadBalancerIP` | Only applies when using 'service.type' 'LoadBalancer'. A loadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying the loadbalancerIP when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature. | `""`        |
+| Name                     | Description                                                                                                                                                                                                                                                                                                                                      | Value          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| `service.type`           | Service Type (ClusterIP, NodePort, LoadBalancer)                                                                                                                                                                                                                                                                                                 | `LoadBalancer` |
+| `service.annotations`    | Annotations to be added to the service                                                                                                                                                                                                                                                                                                           | `{}`           |
+| `service.port`           | Port exposed by the service                                                                                                                                                                                                                                                                                                                      | `443`          |
+| `service.nodePort`       | Port exposed for Inway traffic if 'service.type' is 'NodePort'                                                                                                                                                                                                                                                                                   | `443`          |
+| `service.loadBalancerIP` | Only applies when using 'service.type' 'LoadBalancer'. A loadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying the loadbalancerIP when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature. | `""`           |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
@@ -148,4 +153,4 @@ Alternatively, a YAML file that specifies the values for the above parameters ca
 $ helm install inway -f values.yaml .
 ```
 
-> **Tip**: You can use the default [values.yaml](https://gitlab.com/rinis-oss/fsc/open-fsc/blob/main/helm/charts/open-fsc-inway/values.yaml)
+> **Tip**: You can use the default [values.yaml](https://gitlab.com/commonground/fsc/open-fsc/blob/main/helm/charts/open-fsc-inway/values.yaml)

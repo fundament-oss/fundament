@@ -254,10 +254,10 @@ func (p *OpenFSCPlugin) runOperator(ctx context.Context, host pluginruntime.Host
 }
 
 // defaultControllerInternalSecret is the controller's own internal TLS Secret as
-// named by the `shared` umbrella (certificates.internal.existingSecret). The
+// named by the open-fsc umbrella (release "shared", fullnameOverride=shared). The
 // Administration API accepts this identity, so the operator reuses it as its
 // mTLS client bundle unless FUNP_FSC_CERT_SECRET overrides it.
-const defaultControllerInternalSecret = "shared-directory-controller-internal-tls"
+const defaultControllerInternalSecret = "shared-open-fsc-controller-internal-tls"
 
 // errAdminNotConfigured signals that the Controller Administration API client
 // could not be built yet because its mTLS Secret is unavailable. The Inway/Outway

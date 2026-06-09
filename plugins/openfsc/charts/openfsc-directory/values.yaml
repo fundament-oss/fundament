@@ -1,0 +1,20 @@
+# Directory peer ID: the value the Manager registers as the Directory's peer ID
+# and the subject serialNumber carried on the group certificate. In OpenFSC a
+# peer is identified by its certificate's subject serialNumber, so the group CA
+# itself can be self-signed (this is a self-contained, single-peer directory
+# with no federation partners to share a CA with).
+directoryPeerID: "12345678901234567899"
+
+# In-cluster service name (and group certificate SAN) of the directory Manager's
+# external API. Must match the open-fsc umbrella's manager-external service,
+# which is "<release>-open-fsc-manager-external" (release "shared").
+managerExternalName: shared-open-fsc-manager-external
+
+postgresql:
+  instances: 1
+  # Pinned major matching the OpenFSC charts' expectations.
+  image: ghcr.io/cloudnative-pg/postgresql:16
+  storageSize: 1Gi
+  # StorageClass the installer creates as an alias of the k3s local-path
+  # provisioner.
+  storageClass: basic-csi

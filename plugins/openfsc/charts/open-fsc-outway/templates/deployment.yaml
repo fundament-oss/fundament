@@ -73,7 +73,7 @@ spec:
             - name: NAME
               value: {{ default (include "open-fsc-outway.fullname" .) .Values.config.name }}
             - name: CONTROLLER_REGISTRATION_API_ADDRESS
-              value: {{ required "Controller Registration API address is required" .Values.config.controllerRegistrationApiAddress }}
+              value: {{ required "Controller Registration API address is required" ( default .Values.config.controllerApiAddress .Values.config.controllerRegistrationApiAddress )}}
             - name: MANAGER_INTERNAL_ADDRESS
               value: {{ .Values.config.managerInternalAddress }}
             - name: TLS_ROOT_CERT
@@ -139,8 +139,6 @@ spec:
               value: {{ .Values.config.enableGrantHashSuggestion | quote }}
             - name: DISABLE_CRL_CHECKS
               value: {{ quote .Values.config.disableCrlChecks }}
-            - name: XFF_ALLOWED_ADDRESSES
-              value: {{ join "," .Values.config.xffAllowedAddresses | quote }}
           {{- if .Values.extraEnv }}
             {{- toYaml .Values.extraEnv | nindent 12 }}
           {{- end }}

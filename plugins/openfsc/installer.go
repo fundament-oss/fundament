@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"log/slog"
@@ -19,18 +18,24 @@ import (
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
-// OpenFSC v2.3.0 reference implementation (https://gitlab.com/rinis-oss/fsc/open-fsc).
-// The v2 charts are NOT published to a Helm registry; they live in-repo under
-// helm/charts/open-fsc-* and are assembled into the `shared` directory umbrella
-// at helm/deploy/shared. We fetch them at install time (clone + dependency
-// build) and install the umbrella, which stands up a Manager + Controller whose
-// Manager functions as the group's Directory.
+// OpenFSC is installed from the digilab umbrella chart
+// (gitlab.com/digilab.overheid.nl/platform/helm-charts/open-fsc, version 1.43.0),
+// vendored as charts/open-fsc-1.43.0.tgz and baked into the plugin image at
+// /charts. The umbrella stands up a Manager + Controller (+ auditlog + txlog-api)
+// whose Manager functions as the group's Directory.
+//
+// The umbrella ships only the internal mTLS CA, so the group (federation) CA, the
+// Manager's group certificate and a Postgres cluster — all of which a
+// self-contained directory peer needs — are provided by the openfsc-directory
+// helper chart, installed first as release "shared-directory". See
+// values-fundament.yaml for how the umbrella is wired to those resources.
 const (
-	openFSCRepo    = "https://gitlab.com/rinis-oss/fsc/open-fsc.git"
-	openFSCTag     = "v2.3.0"
-	umbrellaSubdir = "helm/deploy/shared"
+	// Vendored charts (see Dockerfile COPY plugins/openfsc/charts /charts).
+	umbrellaChart  = "/charts/open-fsc-1.43.0.tgz"
+	directoryChart = "/charts/openfsc-directory"
 
-	releaseName = "shared"
+	releaseName      = "shared"
+	directoryRelease = "shared-directory"
 
 	certManagerRepo  = "https://charts.jetstack.io"
 	certManagerChart = "cert-manager"
@@ -40,8 +45,8 @@ const (
 
 // installer stands up a self-contained OpenFSC directory peer: it installs the
 // prerequisite operators (cert-manager, CloudNativePG) and a `basic-csi`
-// StorageClass, then clones and installs the upstream `shared` umbrella with the
-// demo CA injected.
+// StorageClass, then the openfsc-directory helper chart (group CA + Manager group
+// cert + Postgres) and the OpenFSC umbrella.
 type installer struct {
 	cfg  pluginConfig
 	kube client.Client
@@ -62,31 +67,31 @@ func (i *installer) isInstalled(ctx context.Context) (bool, error) {
 }
 
 // install runs the full standup. cert-manager and CloudNativePG are installed
-// with --wait (the umbrella's Certificates and CNPG Cluster need their CRDs and
-// controllers present); the umbrella itself is applied without --wait so the
-// operator can start promptly and the Peer reconciler tracks readiness.
+// with --wait (the directory chart's Certificates and CNPG Cluster need their
+// CRDs and controllers present); the helper chart and umbrella are applied without
+// --wait so the operator can start promptly and the Peer reconciler tracks
+// readiness.
 func (i *installer) install(ctx context.Context, host pluginruntime.Host) error {
 	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "installing prerequisites (cert-manager, CloudNativePG)"})
 	if err := i.ensurePrerequisites(ctx); err != nil {
 		return fmt.Errorf("ensure prerequisites: %w", err)
 	}
 
-	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "fetching OpenFSC charts"})
-	umbrella, err := i.fetchUmbrella(ctx)
-	if err != nil {
-		return fmt.Errorf("fetch OpenFSC charts: %w", err)
+	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "provisioning directory CA and database"})
+	if err := i.installDirectory(ctx); err != nil {
+		return fmt.Errorf("install directory prerequisites: %w", err)
 	}
 
 	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "installing OpenFSC Manager + Controller"})
-	if err := i.installUmbrella(ctx, umbrella); err != nil {
+	if err := i.installUmbrella(ctx); err != nil {
 		return fmt.Errorf("install OpenFSC umbrella: %w", err)
 	}
 	return nil
 }
 
 // ensurePrerequisites installs cert-manager and CloudNativePG (idempotent helm
-// upgrade --install) and the `basic-csi` StorageClass the umbrella's CNPG
-// Cluster hardcodes.
+// upgrade --install) and the `basic-csi` StorageClass the directory chart's CNPG
+// Cluster references.
 func (i *installer) ensurePrerequisites(ctx context.Context) error {
 	if err := i.runHelm(ctx,
 		"upgrade", "--install", "cert-manager", certManagerChart,
@@ -108,7 +113,7 @@ func (i *installer) ensurePrerequisites(ctx context.Context) error {
 }
 
 // ensureStorageClass creates the `basic-csi` StorageClass (an alias of the k3s
-// local-path provisioner) that the umbrella's CNPG Cluster references.
+// local-path provisioner) that the directory chart's CNPG Cluster references.
 func (i *installer) ensureStorageClass(ctx context.Context) error {
 	volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 	reclaim := corev1.PersistentVolumeReclaimDelete
@@ -124,50 +129,33 @@ func (i *installer) ensureStorageClass(ctx context.Context) error {
 	return nil
 }
 
-// fetchUmbrella clones the OpenFSC repo at the pinned tag (cached across
-// retries) and runs `helm dependency build` so the local file:// subcharts are
-// packaged into the umbrella. It returns the umbrella chart directory.
-func (i *installer) fetchUmbrella(ctx context.Context) (string, error) {
-	src := filepath.Join(pluginWorkDir(), "open-fsc-"+openFSCTag)
-	umbrella := filepath.Join(src, umbrellaSubdir)
-
-	if _, err := os.Stat(filepath.Join(umbrella, "Chart.yaml")); err != nil {
-		// Re-clone if the cache is absent or incomplete.
-		_ = os.RemoveAll(src)
-		if err := i.run(ctx, "git", "clone", "--quiet", "--depth", "1", "--branch", openFSCTag, openFSCRepo, src); err != nil {
-			return "", fmt.Errorf("git clone: %w", err)
-		}
-	}
-
-	if err := i.runHelmIn(ctx, umbrella, "dependency", "build"); err != nil {
-		return "", fmt.Errorf("helm dependency build: %w", err)
-	}
-	return umbrella, nil
+// installDirectory installs the openfsc-directory helper chart: the self-signed
+// group CA + group Issuer "shared", the Manager's group certificate, and the
+// CloudNativePG cluster the umbrella's components share.
+func (i *installer) installDirectory(ctx context.Context) error {
+	return i.runHelm(ctx,
+		"upgrade", "--install", directoryRelease, directoryChart,
+		"--namespace", i.cfg.Namespace, "--create-namespace",
+		"--set", "directoryPeerID="+i.cfg.DirectoryPeerID,
+	)
 }
 
-// installUmbrella installs the `shared` umbrella with the chart defaults, the
-// embedded Fundament override, and the upstream demo CA keypair (extracted from
-// the umbrella's values-demo.yaml and passed via --set-file so it is never on
-// the command line).
-func (i *installer) installUmbrella(ctx context.Context, umbrella string) error {
+// installUmbrella installs the vendored OpenFSC umbrella as release "shared" with
+// fullnameOverride=shared (so its internal-TLS certificate CommonNames/SANs match
+// the subchart service names) and the embedded Fundament override.
+func (i *installer) installUmbrella(ctx context.Context) error {
 	override, err := i.writeOverride()
 	if err != nil {
 		return err
 	}
-	caCrt, caKey, err := i.extractDemoCA(umbrella)
-	if err != nil {
-		return fmt.Errorf("extract demo CA: %w", err)
-	}
-
 	return i.runHelm(ctx,
-		"upgrade", "--install", releaseName, umbrella,
+		"upgrade", "--install", releaseName, umbrellaChart,
 		"--namespace", i.cfg.Namespace, "--create-namespace",
-		"-f", filepath.Join(umbrella, "values.yaml"),
 		"-f", override,
+		"--set", "fullnameOverride=shared",
 		"--set", "global.groupID="+i.cfg.GroupID,
-		"--set-file", "global.certificates.group.caCertificatePEM="+caCrt,
-		"--set-file", "ca.issuer.certificatePEM="+caCrt,
-		"--set-file", "ca.issuer.keyPEM="+caKey,
+		"--set", "open-fsc-manager.config.groupID="+i.cfg.GroupID,
+		"--set", "open-fsc-manager.config.directoryPeerID="+i.cfg.DirectoryPeerID,
 	)
 }
 
@@ -180,64 +168,14 @@ func (i *installer) writeOverride() (string, error) {
 	return path, nil
 }
 
-// extractDemoCA pulls the first CERTIFICATE and EC PRIVATE KEY PEM blocks out of
-// the umbrella's values-demo.yaml (where they are indented under YAML keys),
-// dedents them, and writes them to temp files. The demo CA is public (shipped in
-// the upstream chart) and is only used for this self-contained dev directory.
-func (i *installer) extractDemoCA(umbrella string) (crtPath, keyPath string, err error) {
-	data, err := os.ReadFile(filepath.Join(umbrella, "values-demo.yaml"))
-	if err != nil {
-		return "", "", fmt.Errorf("read values-demo.yaml: %w", err)
-	}
-	crt, err := extractPEMBlock(string(data), "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----")
-	if err != nil {
-		return "", "", fmt.Errorf("certificate: %w", err)
-	}
-	key, err := extractPEMBlock(string(data), "-----BEGIN EC PRIVATE KEY-----", "-----END EC PRIVATE KEY-----")
-	if err != nil {
-		return "", "", fmt.Errorf("private key: %w", err)
-	}
-
-	crtPath = filepath.Join(pluginWorkDir(), "ca.crt")
-	keyPath = filepath.Join(pluginWorkDir(), "ca.key")
-	if err := os.WriteFile(crtPath, []byte(crt), 0o600); err != nil {
-		return "", "", err
-	}
-	if err := os.WriteFile(keyPath, []byte(key), 0o600); err != nil {
-		return "", "", err
-	}
-	return crtPath, keyPath, nil
-}
-
-// extractPEMBlock returns the dedented PEM block bounded by begin/end markers.
-func extractPEMBlock(content, begin, end string) (string, error) {
-	var b strings.Builder
-	in := false
-	scanner := bufio.NewScanner(strings.NewReader(content))
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == begin {
-			in = true
-		}
-		if in {
-			b.WriteString(line)
-			b.WriteByte('\n')
-		}
-		if line == end && in {
-			return b.String(), nil
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-	return "", fmt.Errorf("PEM block %q not found", begin)
-}
-
-// uninstall removes the umbrella release. Prerequisite operators (cert-manager,
-// CloudNativePG) are left in place; they may be shared with other plugins.
+// uninstall removes the umbrella and directory helper releases. Prerequisite
+// operators (cert-manager, CloudNativePG) are left in place; they may be shared
+// with other plugins.
 func (i *installer) uninstall(ctx context.Context) error {
-	return i.runHelm(ctx, "uninstall", releaseName, "--namespace", i.cfg.Namespace)
+	if err := i.runHelm(ctx, "uninstall", releaseName, "--namespace", i.cfg.Namespace, "--ignore-not-found"); err != nil {
+		return err
+	}
+	return i.runHelm(ctx, "uninstall", directoryRelease, "--namespace", i.cfg.Namespace, "--ignore-not-found")
 }
 
 // helm builds a helm command with HELM_* env pointed at the writable work dir.
@@ -249,18 +187,6 @@ func (i *installer) helm(ctx context.Context, args ...string) *exec.Cmd {
 
 func (i *installer) runHelm(ctx context.Context, args ...string) error {
 	return i.runCmd(i.helm(ctx, args...))
-}
-
-func (i *installer) runHelmIn(ctx context.Context, dir string, args ...string) error {
-	cmd := i.helm(ctx, args...)
-	cmd.Dir = dir
-	return i.runCmd(cmd)
-}
-
-func (i *installer) run(ctx context.Context, name string, args ...string) error {
-	cmd := exec.CommandContext(ctx, name, args...) //nolint:gosec // args are constructed internally
-	cmd.Env = helmEnv()
-	return i.runCmd(cmd)
 }
 
 func (i *installer) runCmd(cmd *exec.Cmd) error {

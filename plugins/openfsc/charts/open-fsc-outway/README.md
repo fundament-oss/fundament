@@ -12,7 +12,11 @@ Through an Outway an organization can query services on the OpenFSC ecosystem. I
 To install the Chart with the release name `outway`:
 
 ```console
-$ helm install outway oci://registry-1.docker.io/federatedserviceconnectivity/open-fsc-outway --version {latest version}
+## add the Common Ground Helm repository
+$ helm repo add commonground https://charts.commonground.nl
+
+## Install the open-fsc-outway helm Chart
+$ helm install outway commonground/open-fsc-outway
 ```
 
 > **Tip**: List all releases using `helm list`
@@ -20,7 +24,7 @@ $ helm install outway oci://registry-1.docker.io/federatedserviceconnectivity/op
 ## Upgrading the Chart
 
 Currently, our Helm charts use the same release version as the OpenFSC release version.
-To know what has changed for the Helm charts, look at the changes in our [CHANGELOG](https://gitlab.com/rinis-oss/fsc/open-fsc/-/blob/main/CHANGELOG.md)
+To know what has changed for the Helm charts, look at the changes in our [CHANGELOG](https://gitlab.com/commonground/fsc/open-fsc/-/blob/main/CHANGELOG.md)
 that are prefixed with 'Helm'.
 
 ## Uninstalling the Chart
@@ -91,6 +95,7 @@ $ helm delete outway
 | `config.groupID`                                                  | FSC Group ID                                                                                                                                                                                                | `""`     |
 | `config.name`                                                     | Name of the Outway                                                                                                                                                                                          | `""`     |
 | `config.managerInternalAddress`                                   | Internal address of the Manager                                                                                                                                                                             | `""`     |
+| `config.controllerApiAddress`                                     | The address of the Controller API (DEPRECATED use value controllerRegistrationApiAddress instead)                                                                                                           | `""`     |
 | `config.controllerRegistrationApiAddress`                         | The address of the Controller API                                                                                                                                                                           | `""`     |
 | `config.transactionLogApiAddress`                                 | The Address of the Transaction Log API                                                                                                                                                                      | `""`     |
 | `config.authorizationService.enabled`                             | If 'true', the Outway will use the authorization service                                                                                                                                                    | `false`  |
@@ -109,7 +114,6 @@ $ helm delete outway
 | `config.authZenService.bodyChunkSize`                             | The chunk size in bytes that is used to process each HTTP request body chunk.                                                                                                                               | `1024`   |
 | `config.disableCrlChecks`                                         | If 'true', the Outway will not check if the Client Certificate of the Inway or Manager is on the Certificate Revocation List. This means the Outway will accept client certificates that have been revoked. | `false`  |
 | `config.grantLinksCacheTTL`                                       | The time to live of the Grant Links cache, format is specified in string, e.g. '1h', '300s' or '5m'                                                                                                         | `30s`    |
-| `config.xffAllowedAddresses`                                      | List of addresses allowed in the 'x-forwarded-for' header                                                                                                                                                   | `[]`     |
 
 ### TLS certificates used by OpenFSC components for communications
 
@@ -151,4 +155,4 @@ Alternatively, a YAML file that specifies the values for the above parameters ca
 $ helm install outway -f values.yaml .
 ```
 
-> **Tip**: You can use the default [values.yaml](https://gitlab.com/rinis-oss/fsc/open-fsc/blob/main/helm/charts/open-fsc-outway/values.yaml)
+> **Tip**: You can use the default [values.yaml](https://gitlab.com/commonground/fsc/open-fsc/blob/main/helm/charts/open-fsc-outway/values.yaml)

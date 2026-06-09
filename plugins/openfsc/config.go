@@ -3,13 +3,14 @@ package main
 // pluginConfig holds OpenFSC plugin configuration from FUNP_* env vars.
 //
 // All fields have defaults so the plugin installs a self-contained, single-peer
-// directory with zero configuration. The defaults match the upstream demo CA
-// shipped with the OpenFSC charts (the directory peer ID is the demo CA's
-// certificate serial number).
+// directory with zero configuration. The directory peer ID is carried as the
+// subject serialNumber on the Manager's group certificate (issued by the
+// openfsc-directory helper chart), so the group CA can be self-signed.
 type pluginConfig struct {
 	// GroupID is the FSC group the directory peer belongs to.
 	GroupID string `env:"FUNP_GROUP_ID" envDefault:"fsc-demo"`
-	// DirectoryPeerID is the peer ID of the directory (the demo CA serial number).
+	// DirectoryPeerID is the peer ID of the directory (the subject serialNumber on
+	// its group certificate).
 	DirectoryPeerID string `env:"FUNP_DIRECTORY_PEER_ID" envDefault:"12345678901234567899"`
 	// Namespace is where the OpenFSC Manager/Controller are installed.
 	Namespace string `env:"FUNP_FSC_NAMESPACE" envDefault:"fsc"`
@@ -35,7 +36,7 @@ type pluginConfig struct {
 	// FSCCertSecret is a "namespace/name" reference to the mTLS client bundle
 	// (tls.crt/tls.key/ca.crt) the operator presents to the Controller
 	// Administration API. Empty defaults to the controller's own internal TLS
-	// Secret (shared-directory-controller-internal-tls) in Namespace, whose
+	// Secret (shared-open-fsc-controller-internal-tls) in Namespace, whose
 	// identity the Administration API accepts; if that Secret is absent the
 	// Inway/Outway reconcilers report a not-configured status instead of observing.
 	FSCCertSecret string `env:"FUNP_FSC_CERT_SECRET" envDefault:""`

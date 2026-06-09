@@ -19,7 +19,8 @@ metadata:
 spec:
   permissions:
     capabilities:
-      # Clone the OpenFSC charts and pull container images from public registries.
+      # Pull container images (and the cert-manager/CloudNativePG charts) from
+      # public registries during install.
       - internet_access
     # NOTE: this rbac block is informational metadata only — the plugin-controller
     # does not turn it into a Role. The plugin's real permissions come from the

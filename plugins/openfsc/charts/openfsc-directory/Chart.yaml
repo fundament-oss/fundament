@@ -1,0 +1,10 @@
+apiVersion: v2
+name: openfsc-directory
+description: >-
+  Fundament-provided directory prerequisites for the OpenFSC umbrella: the group
+  (federation) CA the umbrella deliberately omits, the directory Manager's group
+  certificate, and a CloudNativePG cluster. Installed before the open-fsc
+  umbrella as release "shared".
+type: application
+version: 1.43.0
+appVersion: 1.43.0
