@@ -19,7 +19,9 @@ import {
   LogicalDevice,
   LogicalDeviceLayout,
   LogicalDeviceRole,
+  LogicalDesignStatus,
   deviceRoleColors,
+  LOGICAL_DESIGN_STATUS_BADGE_CLASS,
 } from '../design.model';
 import DesignApiService from '../design-api.service';
 import connectErrorMessage from '../../../connect/error';
@@ -433,12 +435,7 @@ export default class DesignDetailComponent implements OnInit {
     return connMap[type];
   };
 
-  readonly statusBadgeClass = (status: string): string => {
-    const statusMap: Record<string, string> = {
-      draft: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
-      active: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
-      archived: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
-    };
-    return statusMap[status] ?? 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300';
-  };
+  readonly statusBadgeClass = (status: string): string =>
+    LOGICAL_DESIGN_STATUS_BADGE_CLASS[status as LogicalDesignStatus] ??
+    LOGICAL_DESIGN_STATUS_BADGE_CLASS.draft;
 }

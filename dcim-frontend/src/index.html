@@ -11,6 +11,20 @@
     <link rel="shortcut icon" href="/img/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Apply the saved/system theme before first paint to avoid a flash of the
+         wrong theme on reload. Mirrors ThemeService.initializeTheme(). -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          var dark =
+            saved === 'dark' ||
+            (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-neutral-25 text-gray-800 dark:bg-gray-900 dark:text-white">
     <app-root></app-root>

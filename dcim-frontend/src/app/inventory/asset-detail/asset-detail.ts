@@ -21,6 +21,11 @@ import {
   HistoryEntry,
   NoteComment,
 } from '../inventory';
+import {
+  ASSET_STATUS_BADGE_CLASS,
+  ASSET_STATUS_DOT_CLASS,
+  ASSET_STATUS_LABEL,
+} from '../asset-status';
 import InventoryApiService from '../inventory-api.service';
 import CatalogApiService from '../../catalog/catalog-api.service';
 import NoteApiService from '../note-api.service';
@@ -343,41 +348,11 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly newNoteText = signal('');
 
-  readonly statusLabel = (status: AssetStatus): string => {
-    const labels: Record<AssetStatus, string> = {
-      deployed: 'Deployed',
-      available: 'Available',
-      'needs-repair': 'Needs Repair',
-      decommissioned: 'Decommissioned',
-      'on-order': 'On Order',
-      requested: 'Requested',
-    };
-    return labels[status];
-  };
+  readonly statusLabel = (status: AssetStatus): string => ASSET_STATUS_LABEL[status];
 
-  readonly statusBadgeClass = (status: AssetStatus): string => {
-    const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
-      available: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
-      'needs-repair': 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
-      decommissioned: 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400',
-      'on-order': 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300',
-      requested: 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300',
-    };
-    return classes[status];
-  };
+  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
 
-  readonly statusDotClass = (status: AssetStatus): string => {
-    const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-500',
-      available: 'bg-green-500',
-      'needs-repair': 'bg-amber-500',
-      decommissioned: 'bg-slate-400',
-      'on-order': 'bg-blue-500',
-      requested: 'bg-purple-500',
-    };
-    return classes[status];
-  };
+  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
 
   readonly statusIcon = (status: AssetStatus): string => {
     const icons: Record<AssetStatus, string> = {

@@ -32,20 +32,6 @@ export default class ThemeService {
     }
   }
 
-  // Toggle theme.
-  toggleTheme() {
-    this.isDarkMode.set(!this.isDarkMode());
-
-    // Apply with view transition if supported. Use 80 ms delay to allow CSS transition on the switch to start
-    setTimeout(() => {
-      if (document.startViewTransition) {
-        document.startViewTransition(this.applyTheme.bind(this));
-      } else {
-        this.applyTheme();
-      }
-    }, 80);
-  }
-
   // Apply theme to HTML element and save to localStorage.
   private applyTheme() {
     const htmlElement = document.documentElement;

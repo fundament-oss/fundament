@@ -18,6 +18,7 @@ import { RackSlotType } from '../../generated/v1/common_pb';
 import InventoryApiService from './inventory-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import PlacementApiService, { RackOption } from './placement-api.service';
+import { ASSET_STATUS_BADGE_CLASS, ASSET_STATUS_DOT_CLASS } from './asset-status';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
 
@@ -526,29 +527,9 @@ export default class InventoryComponent implements OnInit {
     return this.statuses.find((s) => s.value === status)?.label ?? status;
   }
 
-  readonly statusBadgeClass = (status: AssetStatus): string => {
-    const map: Record<AssetStatus, string> = {
-      'needs-repair': 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
-      decommissioned: 'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-300',
-      deployed: 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
-      available: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
-      'on-order': 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300',
-      requested: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
-    };
-    return map[status];
-  };
+  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
 
-  readonly statusDotClass = (status: AssetStatus): string => {
-    const map: Record<AssetStatus, string> = {
-      'needs-repair': 'bg-amber-400',
-      decommissioned: 'bg-red-400',
-      deployed: 'bg-teal-400',
-      available: 'bg-green-400',
-      'on-order': 'bg-indigo-400',
-      requested: 'bg-slate-400',
-    };
-    return map[status];
-  };
+  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
 
   readonly categoryIcon = (category: AssetCategory): string => {
     const map: Partial<Record<AssetCategory, string>> = {

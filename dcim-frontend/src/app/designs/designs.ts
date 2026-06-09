@@ -11,7 +11,11 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { LogicalDesign, LogicalDesignStatus } from './design.model';
+import {
+  LogicalDesign,
+  LogicalDesignStatus,
+  LOGICAL_DESIGN_STATUS_BADGE_CLASS,
+} from './design.model';
 import DesignApiService from './design-api.service';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
@@ -176,14 +180,8 @@ export default class DesignsComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  readonly statusBadgeClass = (status: LogicalDesignStatus): string => {
-    const statusMap: Record<LogicalDesignStatus, string> = {
-      draft: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
-      active: 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300',
-      archived: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
-    };
-    return statusMap[status];
-  };
+  readonly statusBadgeClass = (status: LogicalDesignStatus): string =>
+    LOGICAL_DESIGN_STATUS_BADGE_CLASS[status];
 
   readonly statusLabel = (status: LogicalDesignStatus): string => {
     const statusMap: Record<LogicalDesignStatus, string> = {
