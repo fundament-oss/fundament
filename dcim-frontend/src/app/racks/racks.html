@@ -491,14 +491,13 @@
         }
       </nldd-form-field>
       <nldd-form-field label="Slot type">
-        <select #fDeviceSlotType aria-label="Slot type">
+        <select
+          aria-label="Slot type"
+          [ngModel]="deviceSlotType()"
+          (ngModelChange)="deviceSlotType.set($event)"
+        >
           @for (st of slotTypes; track st.value) {
-            <option
-              [value]="st.value"
-              [attr.selected]="addDeviceForm()?.slotType === st.value ? true : null"
-            >
-              {{ st.label }}
-            </option>
+            <option [value]="st.value">{{ st.label }}</option>
           }
         </select>
       </nldd-form-field>

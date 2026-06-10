@@ -577,14 +577,9 @@
         </nldd-form-field>
         <nldd-form-field label="Status">
           <nldd-dropdown>
-            <select #fAssetStatus>
+            <select [ngModel]="assetStatus()" (ngModelChange)="assetStatus.set($event)">
               @for (s of statuses; track s.value) {
-                <option
-                  [value]="s.value"
-                  [attr.selected]="editAsset()?.status === s.value ? true : null"
-                >
-                  {{ s.label }}
-                </option>
+                <option [value]="s.value">{{ s.label }}</option>
               }
             </select>
           </nldd-dropdown>
@@ -620,17 +615,12 @@
           </nldd-form-field-help-text>
         }
         <nldd-dropdown>
-          <select #fAssetRack>
+          <select [ngModel]="assetRackId()" (ngModelChange)="assetRackId.set($event)">
             <option value="">— Not placed —</option>
             @for (group of racksByDatacenter(); track group.datacenter) {
               <optgroup [attr.label]="group.datacenter">
                 @for (rack of group.racks; track rack.id) {
-                  <option
-                    [value]="rack.id"
-                    [attr.selected]="editPlacement()?.rackId === rack.id ? true : null"
-                  >
-                    {{ rack.name }}
-                  </option>
+                  <option [value]="rack.id">{{ rack.name }}</option>
                 }
               </optgroup>
             }
@@ -654,17 +644,10 @@
         </nldd-form-field>
         <nldd-form-field label="Slot type">
           <nldd-dropdown>
-            <select #fAssetSlotType>
-              <option value="" [attr.selected]="!editPlacement()?.slotType ? true : null">
-                Unknown
-              </option>
+            <select [ngModel]="assetSlotType()" (ngModelChange)="assetSlotType.set($event)">
+              <option value="">Unknown</option>
               @for (st of slotTypes; track st.value) {
-                <option
-                  [value]="st.value"
-                  [attr.selected]="editPlacement()?.slotType === st.value ? true : null"
-                >
-                  {{ st.label }}
-                </option>
+                <option [value]="st.value">{{ st.label }}</option>
               }
             </select>
           </nldd-dropdown>

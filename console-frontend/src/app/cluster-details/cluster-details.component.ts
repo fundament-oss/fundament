@@ -449,7 +449,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         this.pluginInstallationService.listInstallations(clusterId).catch(() => []),
       ]);
 
-      const installedNames = new Set(installations.map((item) => item.spec.definitionRef.pluginName));
+      const installedNames = new Set(
+        installations.map((item) => item.spec.definitionRef.pluginName),
+      );
       this.installedPlugins.set(pluginsResponse.plugins.filter((p) => installedNames.has(p.name)));
     } catch (error) {
       this.toastService.error(

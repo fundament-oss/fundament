@@ -107,7 +107,6 @@ export default class AddClusterComponent implements OnInit {
   }
 
   onSubmit(event?: Event) {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     this.formSubmitted.set(true);

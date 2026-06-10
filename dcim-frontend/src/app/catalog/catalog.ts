@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import { AssetCategory, CatalogEntry } from '../inventory/inventory';
@@ -39,7 +40,7 @@ type InvalidFields = Record<string, string>;
   selector: 'app-catalog',
   templateUrl: './catalog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DropdownSyncDirective],
+  imports: [RouterLink, FormsModule, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col min-h-screen bg-white' },
 })
@@ -79,6 +80,8 @@ export default class CatalogComponent implements OnInit {
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editEntry = signal<Partial<CatalogEntry> | null>(null);
 
+  entryCategory = signal<AssetCategory>('Server');
+
   entryErrorMessage = signal<string | null>(null);
 
   invalidFields = signal<InvalidFields>({});
@@ -96,8 +99,6 @@ export default class CatalogComponent implements OnInit {
   private readonly fEntryMfr = viewChild<NativeElementRef>('fEntryMfr');
 
   private readonly fEntryPart = viewChild<NativeElementRef>('fEntryPart');
-
-  private readonly fEntryCat = viewChild<NativeElementRef>('fEntryCat');
 
   constructor() {
     toObservable(this.searchQuery)
@@ -202,6 +203,7 @@ export default class CatalogComponent implements OnInit {
       category: 'Server',
       specs: {},
     });
+    this.entryCategory.set('Server');
     this.specRows.set([{ key: '', value: '' }]);
   }
 
@@ -210,6 +212,7 @@ export default class CatalogComponent implements OnInit {
     event.stopPropagation();
     this.clearEntryErrors();
     this.editEntry.set({ ...entry });
+    this.entryCategory.set(entry.category);
     this.specRows.set(Object.entries(entry.specs).map(([key, value]) => ({ key, value })));
   }
 
@@ -244,7 +247,7 @@ export default class CatalogComponent implements OnInit {
     const model = this.fEntryModel()?.nativeElement.value ?? '';
     const manufacturer = this.fEntryMfr()?.nativeElement.value ?? '';
     const partNumber = this.fEntryPart()?.nativeElement.value ?? form.partNumber ?? '';
-    const category = (this.fEntryCat()?.nativeElement.value ?? 'Server') as AssetCategory;
+    const category = this.entryCategory();
     const specs: Record<string, string> = {};
 
     this.specRows().forEach((row) => {

@@ -107,7 +107,6 @@ export default class NamespacesComponent implements OnInit {
   }
 
   async createNamespace(event?: Event) {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     if (this.namespaceForm.invalid) {

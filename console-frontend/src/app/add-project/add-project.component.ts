@@ -104,7 +104,6 @@ export default class AddProjectComponent implements OnInit {
   }
 
   async onSubmit(event?: Event) {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     if (this.projectForm.invalid) {

@@ -81,7 +81,6 @@ export default class ProjectLimitsComponent implements OnInit {
   }
 
   async save(event?: Event) {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     const projectId = this.route.snapshot.params['id'];

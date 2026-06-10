@@ -135,7 +135,6 @@ export default class OrganizationLimitsComponent implements OnInit {
   }
 
   async saveClusterLimits(event?: Event) {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     const orgId = this.organizationContextService.currentOrganizationId();
@@ -168,7 +167,6 @@ export default class OrganizationLimitsComponent implements OnInit {
   }
 
   async saveNamespaceLimits(event?: Event) {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     const orgId = this.organizationContextService.currentOrganizationId();

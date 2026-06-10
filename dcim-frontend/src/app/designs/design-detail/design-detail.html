@@ -286,14 +286,9 @@
       </nldd-form-field>
       <nldd-form-field label="Role">
         <nldd-dropdown>
-          <select #fDeviceRole>
+          <select [ngModel]="deviceRole()" (ngModelChange)="deviceRole.set($event)">
             @for (role of allRoles; track role) {
-              <option
-                [value]="role"
-                [attr.selected]="(editDevice()?.role ?? 'Compute') === role ? true : null"
-              >
-                {{ role }}
-              </option>
+              <option [value]="role">{{ role }}</option>
             }
           </select>
         </nldd-dropdown>
@@ -366,16 +361,9 @@
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Source device">
           <nldd-dropdown>
-            <select #fConnSrcDevice>
+            <select [ngModel]="connSrcDeviceId()" (ngModelChange)="connSrcDeviceId.set($event)">
               @for (dev of devices(); track dev.id) {
-                <option
-                  [value]="dev.id"
-                  [attr.selected]="
-                    (editConnection()?.sourceDeviceId ?? '') === dev.id ? true : null
-                  "
-                >
-                  {{ dev.name }}
-                </option>
+                <option [value]="dev.id">{{ dev.name }}</option>
               }
             </select>
           </nldd-dropdown>
@@ -397,16 +385,9 @@
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Target device">
           <nldd-dropdown>
-            <select #fConnTgtDevice>
+            <select [ngModel]="connTgtDeviceId()" (ngModelChange)="connTgtDeviceId.set($event)">
               @for (dev of devices(); track dev.id) {
-                <option
-                  [value]="dev.id"
-                  [attr.selected]="
-                    (editConnection()?.targetDeviceId ?? '') === dev.id ? true : null
-                  "
-                >
-                  {{ dev.name }}
-                </option>
+                <option [value]="dev.id">{{ dev.name }}</option>
               }
             </select>
           </nldd-dropdown>
@@ -427,31 +408,10 @@
       </div>
       <nldd-form-field label="Connection type">
         <nldd-dropdown>
-          <select #fConnType>
-            <option
-              value="network"
-              [attr.selected]="
-                (editConnection()?.connectionType ?? 'network') === 'network' ? true : null
-              "
-            >
-              Network
-            </option>
-            <option
-              value="power"
-              [attr.selected]="
-                (editConnection()?.connectionType ?? 'network') === 'power' ? true : null
-              "
-            >
-              Power
-            </option>
-            <option
-              value="console"
-              [attr.selected]="
-                (editConnection()?.connectionType ?? 'network') === 'console' ? true : null
-              "
-            >
-              Console
-            </option>
+          <select [ngModel]="connType()" (ngModelChange)="connType.set($event)">
+            <option value="network">Network</option>
+            <option value="power">Power</option>
+            <option value="console">Console</option>
           </select>
         </nldd-dropdown>
       </nldd-form-field>

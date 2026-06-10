@@ -184,7 +184,6 @@ export default class ProjectMembersComponent implements OnInit {
   }
 
   async saveMember(event?: Event) {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     if (this.memberForm.invalid) {

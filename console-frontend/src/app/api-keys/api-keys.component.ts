@@ -201,7 +201,6 @@ export default class ApiKeysComponent implements OnInit {
   }
 
   async createApiKey(event?: Event) {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     const name = this.newKeyName().trim();

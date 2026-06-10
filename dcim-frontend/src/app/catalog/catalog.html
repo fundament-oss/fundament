@@ -288,14 +288,13 @@
       }
       <nldd-form-field label="Category">
         <nldd-dropdown [attr.invalid]="isFieldInvalid('category') ? true : null">
-          <select #fEntryCat [attr.aria-invalid]="isFieldInvalid('category') ? 'true' : null">
+          <select
+            [ngModel]="entryCategory()"
+            (ngModelChange)="entryCategory.set($event)"
+            [attr.aria-invalid]="isFieldInvalid('category') ? 'true' : null"
+          >
             @for (cat of categories; track cat) {
-              <option
-                [value]="cat"
-                [attr.selected]="(editEntry()?.category ?? 'Server') === cat ? true : null"
-              >
-                {{ cat }}
-              </option>
+              <option [value]="cat">{{ cat }}</option>
             }
           </select>
         </nldd-dropdown>

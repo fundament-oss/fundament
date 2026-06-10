@@ -164,7 +164,6 @@ export default class ClusterNamespacesComponent implements OnInit {
   }
 
   async createNamespace(event?: Event): Promise<void> {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     if (this.namespaceForm.invalid) {

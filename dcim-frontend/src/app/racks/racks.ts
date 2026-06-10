@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import RackApiService from './rack-api.service';
@@ -223,6 +224,7 @@ interface NativeElementRef {
   templateUrl: './racks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    FormsModule,
     DcSelectorComponent,
     RackDiagramComponent,
     RackDiagramEditorComponent,
@@ -291,6 +293,8 @@ export default class RacksComponent implements OnInit {
 
   readonly addDeviceForm = signal<AddDeviceForm | null>(null);
 
+  readonly deviceSlotType = signal<string>(String(RackSlotType.UNIT));
+
   readonly assetOptions = signal<AssetOption[]>([]);
 
   readonly deviceErrorMessage = signal<string | null>(null);
@@ -312,8 +316,6 @@ export default class RacksComponent implements OnInit {
   private readonly deviceModalEl = viewChild<NativeElementRef>('deviceModal');
 
   private readonly fDeviceAsset = viewChild<NativeElementRef>('fDeviceAsset');
-
-  private readonly fDeviceSlotType = viewChild<NativeElementRef>('fDeviceSlotType');
 
   private readonly fDeviceRackUnit = viewChild<NativeElementRef>('fDeviceRackUnit');
 
@@ -695,6 +697,7 @@ export default class RacksComponent implements OnInit {
       rackUnitStart: firstFree ?? rack.totalU,
       slotType: RackSlotType.UNIT,
     });
+    this.deviceSlotType.set(String(RackSlotType.UNIT));
     firstValueFrom(
       this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
     )
@@ -721,10 +724,7 @@ export default class RacksComponent implements OnInit {
     if (!rack || !form) return;
     this.clearDeviceErrors();
     const assetId = (this.fDeviceAsset()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const slotType =
-      (Number(
-        (this.fDeviceSlotType()?.nativeElement as HTMLSelectElement)?.value,
-      ) as RackSlotType) || RackSlotType.UNIT;
+    const slotType = (Number(this.deviceSlotType()) as RackSlotType) || RackSlotType.UNIT;
     const rackUnitStart =
       parseInt((this.fDeviceRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '0', 10) || 0;
     firstValueFrom(this.placementApi.createPlacement(assetId, rack.id, rackUnitStart, slotType))

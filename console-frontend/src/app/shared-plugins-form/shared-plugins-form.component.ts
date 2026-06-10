@@ -124,7 +124,6 @@ export class SharedPluginsFormComponent implements OnInit {
   }
 
   onSubmit(event?: Event) {
-    // Prevent the native form submission triggered by nldd-form.
     event?.preventDefault();
 
     const selectedPlugins = this.plugins.filter((plugin) => plugin.selected);
