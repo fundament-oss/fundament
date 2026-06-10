@@ -57,48 +57,31 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	apiKeyClient := organizationv1connect.NewAPIKeyServiceClient(http.DefaultClient, endpoint)
-
-	const maxRetries = 30
+	// 60 retries × 2 s = 2 min; bumped from 30 to accommodate slower CI
+	// environments where the authz-worker takes longer to propagate tuples.
+	const maxRetries = 60
 	const retryInterval = 2 * time.Second
 
-	// Create a dynamic test API key.
-	// Retry until the authz-worker has written Alice's org-membership tuples to
-	// OpenFGA (required by the CreateAPIKey permission check).
-	fmt.Println("TestMain: creating dynamic test API key")
-	var apiKeyToken, apiKeyID string
-	for i := range maxRetries {
-		createReq := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
-			Name: "terraform-acc-test-" + acctest.RandString(6),
-		}.Build())
-		createReq.Header().Set("Authorization", "Bearer "+login.accessToken)
-		createReq.Header().Set(organization.OrganizationHeader, orgID)
+	// If FUNDAMENT_API_KEY is already set (e.g. when the authz-worker is not
+	// running locally), skip dynamic key creation and use the provided key directly.
+	apiKeyToken := os.Getenv("FUNDAMENT_API_KEY")
+	usingPresetKey := apiKeyToken != ""
+	var apiKeyID string // only set when we create the key dynamically; used for cleanup
 
-		createResp, err := apiKeyClient.CreateAPIKey(ctx, createReq)
+	if usingPresetKey {
+		fmt.Println("TestMain: using pre-set FUNDAMENT_API_KEY, skipping dynamic key creation")
+	} else {
+		apiKeyToken, apiKeyID, err = createDynamicAPIKey(ctx, endpoint, orgID, login.accessToken, maxRetries, retryInterval)
 		if err != nil {
-			if connect.CodeOf(err) == connect.CodePermissionDenied {
-				fmt.Printf("TestMain: CreateAPIKey not authorized yet (authz-worker pending), attempt %d/%d, retrying...\n", i+1, maxRetries)
-				time.Sleep(retryInterval)
-				continue
-			}
-			fmt.Fprintf(os.Stderr, "TestMain: CreateAPIKey failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "TestMain: %v\n", err)
 			os.Exit(1)
 		}
+		fmt.Printf("TestMain: created API key %s\n", apiKeyID)
 
-		apiKeyToken = createResp.Msg.GetToken()
-		apiKeyID = createResp.Msg.GetId()
-		break
-	}
-
-	if apiKeyToken == "" {
-		fmt.Fprintln(os.Stderr, "TestMain: could not create dynamic API key within timeout")
-		os.Exit(1)
-	}
-	fmt.Printf("TestMain: created API key %s\n", apiKeyID)
-
-	if err := os.Setenv("FUNDAMENT_API_KEY", apiKeyToken); err != nil {
-		fmt.Fprintf(os.Stderr, "TestMain: failed to set FUNDAMENT_API_KEY: %v\n", err)
-		os.Exit(1)
+		if err := os.Setenv("FUNDAMENT_API_KEY", apiKeyToken); err != nil {
+			fmt.Fprintf(os.Stderr, "TestMain: failed to set FUNDAMENT_API_KEY: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	tokenClient := authnv1connect.NewTokenServiceClient(http.DefaultClient, authnEndpoint)
@@ -110,6 +93,15 @@ func TestMain(m *testing.M) {
 		exchangeReq.Header().Set("Authorization", "Bearer "+apiKeyToken)
 		exchangeResp, err := tokenClient.ExchangeToken(ctx, exchangeReq)
 		if err != nil {
+			code := connect.CodeOf(err)
+			// For a pre-set key, unauthenticated/internal means the key is
+			// permanently invalid — retrying won't help.
+			// For a dynamically created key, unauthenticated can be transient
+			// while the authn-worker propagates the new key.
+			if usingPresetKey && (code == connect.CodeInternal || code == connect.CodeUnauthenticated) {
+				fmt.Fprintf(os.Stderr, "TestMain: token exchange failed permanently — FUNDAMENT_API_KEY may be invalid or not found on the server: %v\n", err)
+				os.Exit(1)
+			}
 			fmt.Printf("TestMain: token exchange attempt %d/%d failed: %v\n", i+1, maxRetries, err)
 			time.Sleep(retryInterval)
 			continue
@@ -138,24 +130,59 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	// Best-effort cleanup — delete the dynamic API key using a fresh JWT
-	// (the earlier JWT may have expired after long test runs).
-	fmt.Printf("TestMain: deleting dynamic API key %s\n", apiKeyID)
-	cleanupLogin, err := passwordLogin(authnEndpoint, testUserEmail, testUserPassword)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "TestMain: failed to get cleanup JWT (best-effort): %v\n", err)
-	} else {
-		deleteReq := connect.NewRequest(organizationv1.DeleteAPIKeyRequest_builder{
-			ApiKeyId: apiKeyID,
-		}.Build())
-		deleteReq.Header().Set("Authorization", "Bearer "+cleanupLogin.accessToken)
-		deleteReq.Header().Set(organization.OrganizationHeader, orgID)
-		if _, err := apiKeyClient.DeleteAPIKey(ctx, deleteReq); err != nil {
-			fmt.Fprintf(os.Stderr, "TestMain: failed to delete API key (best-effort): %v\n", err)
+	// Best-effort cleanup: a pre-set key is the caller's to manage; only delete
+	// keys we created dynamically.
+	if !usingPresetKey {
+		apiKeyClient := organizationv1connect.NewAPIKeyServiceClient(http.DefaultClient, endpoint)
+		fmt.Printf("TestMain: deleting dynamic API key %s\n", apiKeyID)
+		cleanupLogin, err := passwordLogin(authnEndpoint, testUserEmail, testUserPassword)
+		if err != nil {
+			// Best-effort: a cleanup failure must not change the test exit code.
+			fmt.Fprintf(os.Stderr, "TestMain: failed to get cleanup JWT (best-effort): %v\n", err)
+		} else {
+			deleteReq := connect.NewRequest(organizationv1.DeleteAPIKeyRequest_builder{
+				ApiKeyId: apiKeyID,
+			}.Build())
+			deleteReq.Header().Set("Authorization", "Bearer "+cleanupLogin.accessToken)
+			deleteReq.Header().Set(organization.OrganizationHeader, orgID)
+			if _, err := apiKeyClient.DeleteAPIKey(ctx, deleteReq); err != nil {
+				fmt.Fprintf(os.Stderr, "TestMain: failed to delete API key (best-effort): %v\n", err)
+			}
 		}
 	}
 
 	os.Exit(code)
+}
+
+// createDynamicAPIKey creates a test API key, retrying until the authz-worker
+// has written Alice's org-membership tuples to OpenFGA (required by the
+// CreateAPIKey permission check). It returns the key token and its ID; the ID
+// is needed for cleanup.
+func createDynamicAPIKey(ctx context.Context, endpoint, orgID, accessToken string, maxRetries int, retryInterval time.Duration) (token, id string, err error) {
+	apiKeyClient := organizationv1connect.NewAPIKeyServiceClient(http.DefaultClient, endpoint)
+
+	fmt.Println("TestMain: creating dynamic test API key")
+	for i := range maxRetries {
+		createReq := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+			Name: "terraform-acc-test-" + acctest.RandString(6),
+		}.Build())
+		createReq.Header().Set("Authorization", "Bearer "+accessToken)
+		createReq.Header().Set(organization.OrganizationHeader, orgID)
+
+		createResp, err := apiKeyClient.CreateAPIKey(ctx, createReq)
+		if err != nil {
+			if connect.CodeOf(err) == connect.CodePermissionDenied {
+				fmt.Printf("TestMain: CreateAPIKey not authorized yet (authz-worker pending), attempt %d/%d, retrying...\n", i+1, maxRetries)
+				time.Sleep(retryInterval)
+				continue
+			}
+			return "", "", fmt.Errorf("CreateAPIKey failed: %w", err)
+		}
+
+		return createResp.Msg.GetToken(), createResp.Msg.GetId(), nil
+	}
+
+	return "", "", fmt.Errorf("could not create dynamic API key within timeout")
 }
 
 type loginResponse struct {

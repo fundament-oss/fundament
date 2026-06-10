@@ -61,7 +61,7 @@ func TestGetUserInfo_RejectsPluginToken(t *testing.T) {
 	server := &AuthnServer{
 		config:    &Config{JWTSecret: secret, TokenExpiry: time.Minute},
 		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
-		validator: auth.NewValidatorForAudience(secret, auth.TokenTypeUser, nil),
+		validator: auth.NewValidatorForAudience(secret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil),
 	}
 
 	path, handler := authnv1connect.NewAuthnServiceHandler(server)
@@ -72,6 +72,7 @@ func TestGetUserInfo_RejectsPluginToken(t *testing.T) {
 
 	pluginClaims := &auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    auth.ConsoleIssuer,
 			Subject:   uuid.New().String(),
 			Audience:  jwt.ClaimStrings{auth.TokenTypePlugin},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),

@@ -510,6 +510,9 @@ func (m *MockClient) findShootByClusterID(clusterID uuid.UUID) (*mockShoot, stri
 // semverRegex matches semantic versions like "1.31.1", "1.32.0-rc.1".
 var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$`)
 
+// minorOnlyRegex matches versions like "1.28" (major.minor without patch).
+var minorOnlyRegex = regexp.MustCompile(`^\d+\.\d+$`)
+
 // dnsLabelRegex matches valid DNS labels (lowercase alphanumeric, hyphens, max 63 chars).
 var dnsLabelRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 
@@ -529,11 +532,16 @@ func (m *MockClient) validateClusterSpec(cluster *ClusterToSync) error {
 		return fmt.Errorf("shoot.core.gardener.cloud is invalid: spec.region: %w", ErrEmptyRegion)
 	}
 
-	// Validate Kubernetes version (must be semver, not "1.31.x")
+	// Validate Kubernetes version. Accept "major.minor" (e.g. "1.28") in addition
+	// to full semver "major.minor.patch" — users commonly omit the patch level.
 	if cluster.KubernetesVersion == "" {
 		return fmt.Errorf("shoot.core.gardener.cloud is invalid: spec.kubernetes.version: required value")
 	}
-	if !semverRegex.MatchString(cluster.KubernetesVersion) {
+	version := cluster.KubernetesVersion
+	if minorOnlyRegex.MatchString(version) {
+		version = version + ".0"
+	}
+	if !semverRegex.MatchString(version) {
 		return fmt.Errorf("shoot.core.gardener.cloud %q is invalid: failed to parse shoot version %q: %w",
 			cluster.Name, cluster.KubernetesVersion, ErrInvalidVersion)
 	}

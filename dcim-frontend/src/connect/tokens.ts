@@ -24,7 +24,10 @@ export const DCIM_TRANSPORT = new InjectionToken<Transport>('dcim-transport', {
   providedIn: 'root',
   factory: () => {
     const config = inject(ConfigService).getConfig();
-    return createConnectTransport({ baseUrl: config.apiUrl });
+    return createConnectTransport({
+      baseUrl: config.apiUrl,
+      fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
+    });
   },
 });
 

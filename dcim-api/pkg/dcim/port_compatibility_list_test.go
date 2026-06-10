@@ -15,7 +15,7 @@ import (
 func createPortDefinition(t *testing.T, env *testEnv, catalogID, name string) string {
 	t.Helper()
 
-	client := dcimv1connect.NewCatalogServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewCatalogServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreatePortDefinition(context.Background(), connect.NewRequest(
 		(&dcimv1.CreatePortDefinitionRequest_builder{
@@ -41,7 +41,7 @@ func TestCatalogService_ListPortCompatibilities(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewCatalogServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewCatalogServiceClient(env.client(), env.server.URL)
 
 	hostID := createCatalogEntry(t, env, "Host Switch")
 	portDefID := createPortDefinition(t, env, hostID, "eth0")

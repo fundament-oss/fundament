@@ -15,7 +15,7 @@ func TestSiteService_ListSites_Populated(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	want := []string{"List Site A", "List Site B", "List Site C"}
 	for _, name := range want {
