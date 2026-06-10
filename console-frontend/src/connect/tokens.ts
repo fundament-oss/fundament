@@ -2,6 +2,7 @@ import { AuthnService } from '../generated/authn/v1/authn_pb';
 import { OrganizationService } from '../generated/v1/organization_pb';
 import { ClusterService } from '../generated/v1/cluster_pb';
 import { MetricsService } from '../generated/v1/metrics_pb';
+import { LogsService } from '../generated/v1/logs_pb';
 import { NamespaceService } from '../generated/v1/namespace_pb';
 import { PluginService } from '../generated/v1/plugin_pb';
 import { ProjectService } from '../generated/v1/project_pb';
@@ -39,3 +40,6 @@ export const APIKEY = createClientToken(APIKeyService, ORGANIZATION_TRANSPORT);
 
 // Create an injection token for the Metrics service client
 export const METRICS = createClientToken(MetricsService, ORGANIZATION_TRANSPORT);
+
+// Create an injection token for the Logs service client
+export const LOGS = createClientToken(LogsService, ORGANIZATION_TRANSPORT);

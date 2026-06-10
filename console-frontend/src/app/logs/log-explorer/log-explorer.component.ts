@@ -8,15 +8,18 @@ import {
   signal,
   computed,
   effect,
+  OnInit,
   OnDestroy,
   AfterViewInit,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import type { LogEntry, LogLevel, HistogramBucket } from '../log.types';
-import { generateMockLogs, generateLiveTailEntry } from '../log-mock-data';
+import { LogsApiService, type ClusterOption } from '../logs.service';
+import { LogBackend } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
 import { ToastService } from '../../toast.service';
 
@@ -108,10 +111,12 @@ function fieldEntries(log: LogEntry): { key: string; value: string }[] {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './log-explorer.component.html',
 })
-export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
+export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly titleService = inject(TitleService);
 
   private readonly toastService = inject(ToastService);
+
+  private readonly logsApi = inject(LogsApiService);
 
   @ViewChild('histogramChart') private histogramCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -119,7 +124,15 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
 
   private histogram: Chart | null = null;
 
-  private liveTailInterval: ReturnType<typeof setInterval> | null = null;
+  private liveTailSub: Subscription | null = null;
+
+  private liveTailRateInterval: ReturnType<typeof setInterval> | null = null;
+
+  private liveTailReceived = 0;
+
+  private searchDebounce: ReturnType<typeof setTimeout> | null = null;
+
+  private readonly LOG_LIMIT = 2000;
 
   // ── static UI data
   readonly ALL_LEVELS = ALL_LEVELS;
@@ -157,50 +170,28 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
 
   readonly showRawJson = signal(false);
 
-  // ── all log data
-  private readonly allLogs = signal<LogEntry[]>(generateMockLogs(300));
+  // ── all log data (loaded from the backend for the selected cluster)
+  private readonly allLogs = signal<LogEntry[]>([]);
 
-  // ── derived: available filter options
-  readonly clusters = computed(() => [...new Set(this.allLogs().map((l) => l.cluster))].sort());
+  // ── request state
+  readonly isLoading = signal(false);
 
-  readonly namespaces = computed(() => {
-    const cl = this.selectedCluster();
-    return [
-      ...new Set(
-        this.allLogs()
-          .filter((l) => !cl || l.cluster === cl)
-          .map((l) => l.namespace),
-      ),
-    ].sort();
-  });
+  readonly loadError = signal(false);
 
-  readonly pods = computed(() => {
-    const cl = this.selectedCluster();
-    const ns = this.selectedNamespace();
-    return [
-      ...new Set(
-        this.allLogs()
-          .filter((l) => !cl || l.cluster === cl)
-          .filter((l) => !ns || l.namespace === ns)
-          .map((l) => l.pod),
-      ),
-    ].sort();
-  });
+  readonly backend = signal<LogBackend>(LogBackend.UNSPECIFIED);
 
-  readonly containers = computed(() => {
-    const cl = this.selectedCluster();
-    const ns = this.selectedNamespace();
-    const pod = this.selectedPod();
-    return [
-      ...new Set(
-        this.allLogs()
-          .filter((l) => !cl || l.cluster === cl)
-          .filter((l) => !ns || l.namespace === ns)
-          .filter((l) => !pod || l.pod === pod)
-          .map((l) => l.container),
-      ),
-    ].sort();
-  });
+  readonly isFallback = computed(() => this.backend() === LogBackend.KUBERNETES);
+
+  readonly isNoBackend = computed(() => this.backend() === LogBackend.NONE);
+
+  // ── filter options (sourced from the backend label values, not the loaded logs)
+  readonly clusters = signal<ClusterOption[]>([]);
+
+  readonly namespaces = signal<string[]>([]);
+
+  readonly pods = signal<string[]>([]);
+
+  readonly containers = signal<string[]>([]);
 
   // ── time range
   private readonly timeRange = computed((): { from: Date; to: Date } => {
@@ -331,11 +322,10 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
     return this.pagedLogs().findIndex((l) => l.id === log.id);
   });
 
-  // ── all active filter chips (for display)
+  // ── all active filter chips (for display). Cluster is always selected, so it
+  // is shown in the dropdown rather than as a removable chip.
   readonly activeFilterChips = computed(() => {
     const chips: { label: string; key: string }[] = [];
-    if (this.selectedCluster())
-      chips.push({ label: `cluster: ${this.selectedCluster()}`, key: 'cluster' });
     if (this.selectedNamespace())
       chips.push({ label: `namespace: ${this.selectedNamespace()}`, key: 'namespace' });
     if (this.selectedPod()) chips.push({ label: `pod: ${this.selectedPod()}`, key: 'pod' });
@@ -362,13 +352,96 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  async ngOnInit(): Promise<void> {
+    try {
+      const clusters = await this.logsApi.listClusters();
+      this.clusters.set(clusters);
+      if (clusters.length > 0) {
+        this.selectedCluster.set(clusters[0].id);
+        await this.onClusterSelected();
+      }
+    } catch {
+      this.loadError.set(true);
+    }
+  }
+
   ngAfterViewInit(): void {
     this.createHistogram();
   }
 
   ngOnDestroy(): void {
-    this.stopLiveTailTimer();
+    this.stopLiveTail();
+    if (this.searchDebounce !== null) clearTimeout(this.searchDebounce);
     this.histogram?.destroy();
+  }
+
+  // ── data loading
+  clusterName(id: string): string {
+    return this.clusters().find((c) => c.id === id)?.name ?? id;
+  }
+
+  private async onClusterSelected(): Promise<void> {
+    const clusterId = this.selectedCluster();
+    if (!clusterId) return;
+    try {
+      const labels = await this.logsApi.labels(clusterId);
+      this.backend.set(labels.backend);
+      this.namespaces.set(labels.namespaces);
+      this.pods.set(labels.pods);
+      this.containers.set(labels.containers);
+    } catch {
+      // Labels are best-effort; a failure should not block log loading.
+    }
+    await this.loadLogs();
+  }
+
+  private async refineLabels(): Promise<void> {
+    const clusterId = this.selectedCluster();
+    if (!clusterId) return;
+    try {
+      const labels = await this.logsApi.labels(clusterId, this.selectedNamespace() || undefined);
+      this.pods.set(labels.pods);
+      this.containers.set(labels.containers);
+    } catch {
+      // best-effort
+    }
+  }
+
+  private async loadLogs(): Promise<void> {
+    const clusterId = this.selectedCluster();
+    if (!clusterId) {
+      this.allLogs.set([]);
+      return;
+    }
+    // The Kubernetes fallback can only read a single pod, so require one.
+    if (this.isFallback() && (!this.selectedNamespace() || !this.selectedPod())) {
+      this.allLogs.set([]);
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.loadError.set(false);
+    try {
+      const { from, to } = this.timeRange();
+      const result = await this.logsApi.query({
+        clusterId,
+        namespace: this.selectedNamespace() || undefined,
+        pod: this.selectedPod() || undefined,
+        container: this.selectedContainer() || undefined,
+        search: this.searchText() || undefined,
+        from,
+        to,
+        limit: this.LOG_LIMIT,
+      });
+      this.backend.set(result.backend);
+      this.allLogs.set(result.entries);
+      this.currentPage.set(0);
+    } catch {
+      this.loadError.set(true);
+      this.allLogs.set([]);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   // ── chart
@@ -443,43 +516,65 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
   // ── live tail
   toggleLiveTail(): void {
     if (this.liveTailEnabled()) {
-      this.stopLiveTailTimer();
-      this.liveTailEnabled.set(false);
-      this.liveTailPaused.set(false);
-      this.liveTailRate.set(0);
+      this.stopLiveTail();
     } else {
-      this.liveTailEnabled.set(true);
-      this.liveTailPaused.set(false);
-      this.currentPage.set(0);
-      this.startLiveTailTimer();
+      this.startLiveTail();
     }
   }
 
   pauseLiveTail(): void {
-    this.toggleLiveTail();
+    this.liveTailPaused.set(true);
   }
 
   resumeLiveTail(): void {
     this.liveTailPaused.set(false);
   }
 
-  private startLiveTailTimer(): void {
-    this.liveTailInterval = setInterval(() => {
-      if (this.liveTailPaused()) return;
-      const count = 1 + Math.floor(Math.random() * 3);
-      const newEntries = Array.from({ length: count }, () =>
-        generateLiveTailEntry(this.selectedCluster(), this.selectedNamespace()),
-      );
-      this.allLogs.update((logs) => [...newEntries, ...logs].slice(0, 2000));
-      this.liveTailRate.set(count);
+  private startLiveTail(): void {
+    const clusterId = this.selectedCluster();
+    if (!clusterId) return;
+    this.liveTailEnabled.set(true);
+    this.liveTailPaused.set(false);
+    this.liveTailReceived = 0;
+    this.liveTailRate.set(0);
+    this.currentPage.set(0);
+
+    this.liveTailRateInterval = setInterval(() => {
+      this.liveTailRate.set(this.liveTailReceived);
+      this.liveTailReceived = 0;
     }, 1000);
+
+    this.liveTailSub = this.logsApi
+      .tail({
+        clusterId,
+        namespace: this.selectedNamespace() || undefined,
+        pod: this.selectedPod() || undefined,
+        container: this.selectedContainer() || undefined,
+        search: this.searchText() || undefined,
+      })
+      .subscribe({
+        next: (entry) => {
+          if (this.liveTailPaused()) return;
+          this.liveTailReceived += 1;
+          this.allLogs.update((logs) => [entry, ...logs].slice(0, this.LOG_LIMIT));
+        },
+        error: () => {
+          this.toastService.error('Live tail disconnected');
+          this.stopLiveTail();
+        },
+      });
   }
 
-  private stopLiveTailTimer(): void {
-    if (this.liveTailInterval !== null) {
-      clearInterval(this.liveTailInterval);
-      this.liveTailInterval = null;
+  private stopLiveTail(): void {
+    this.liveTailSub?.unsubscribe();
+    this.liveTailSub = null;
+    if (this.liveTailRateInterval !== null) {
+      clearInterval(this.liveTailRateInterval);
+      this.liveTailRateInterval = null;
     }
+    this.liveTailEnabled.set(false);
+    this.liveTailPaused.set(false);
+    this.liveTailRate.set(0);
   }
 
   // ── filter actions
@@ -489,6 +584,8 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
     this.selectedPod.set('');
     this.selectedContainer.set('');
     this.currentPage.set(0);
+    this.stopLiveTail();
+    void this.onClusterSelected();
   }
 
   onNamespaceChange(value: string): void {
@@ -496,54 +593,61 @@ export default class LogExplorerComponent implements AfterViewInit, OnDestroy {
     this.selectedPod.set('');
     this.selectedContainer.set('');
     this.currentPage.set(0);
+    void this.refineLabels();
+    void this.loadLogs();
   }
 
   onPodChange(value: string): void {
     this.selectedPod.set(value);
     this.selectedContainer.set('');
     this.currentPage.set(0);
+    void this.loadLogs();
   }
 
   onContainerChange(value: string): void {
     this.selectedContainer.set(value);
     this.currentPage.set(0);
+    void this.loadLogs();
   }
 
   onTimePresetChange(value: string): void {
     this.timePreset.set(value);
     this.currentPage.set(0);
+    void this.loadLogs();
   }
 
   onSearchChange(value: string): void {
     this.searchText.set(value);
     this.currentPage.set(0);
+    if (this.searchDebounce !== null) clearTimeout(this.searchDebounce);
+    this.searchDebounce = setTimeout(() => void this.loadLogs(), 400);
   }
 
   clearAllFilters(): void {
-    this.selectedCluster.set('');
     this.selectedNamespace.set('');
     this.selectedPod.set('');
     this.selectedContainer.set('');
     this.searchText.set('');
     this.selectedLevels.set(new Set(ALL_LEVELS));
     this.currentPage.set(0);
+    void this.refineLabels();
+    void this.loadLogs();
   }
 
   removeChip(key: string): void {
-    if (key === 'cluster') {
-      this.selectedCluster.set('');
+    if (key === 'namespace') {
       this.selectedNamespace.set('');
       this.selectedPod.set('');
       this.selectedContainer.set('');
-    } else if (key === 'namespace') {
-      this.selectedNamespace.set('');
-      this.selectedPod.set('');
-      this.selectedContainer.set('');
+      void this.refineLabels();
     } else if (key === 'pod') {
       this.selectedPod.set('');
       this.selectedContainer.set('');
-    } else if (key === 'container') this.selectedContainer.set('');
+    } else if (key === 'container') {
+      this.selectedContainer.set('');
+    }
     this.currentPage.set(0);
+    void this.loadLogs();
   }
 
   toggleAllLevels(): void {

@@ -12,9 +12,8 @@
           (ngModelChange)="onClusterChange($event)"
           class="text-sm"
         >
-          <option value="">All clusters</option>
-          @for (c of clusters(); track c) {
-            <option [value]="c">{{ c }}</option>
+          @for (c of clusters(); track c.id) {
+            <option [value]="c.id">{{ c.name }}</option>
           }
         </select>
       </label>
@@ -47,6 +46,28 @@
       </label>
     </div>
   </div>
+
+  <!-- Backend status banners -->
+  @if (isNoBackend()) {
+    <div
+      class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+    >
+      No log backend is configured. Configure Loki to view log analytics.
+    </div>
+  } @else if (isFallback()) {
+    <div
+      class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+    >
+      Log analytics requires Loki. The Kubernetes pod-log fallback cannot aggregate across pods, so
+      analytics is unavailable in this mode.
+    </div>
+  } @else if (loadError()) {
+    <div
+      class="border-danger-200 bg-danger-50 text-danger-700 dark:border-danger-800 dark:bg-danger-950/50 dark:text-danger-300 rounded-lg border px-4 py-2.5 text-sm"
+    >
+      Failed to load logs. Please try again.
+    </div>
+  }
 
   <!-- KPI cards -->
   <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">

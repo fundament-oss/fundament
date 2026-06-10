@@ -1,0 +1,105 @@
+edition = "2023";
+
+package organization.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1";
+
+// LogsService serves container/application logs for clusters. Logs are sourced
+// from a configured Grafana Loki instance when available, otherwise from the
+// Kubernetes pod-log endpoint via the kube-api-proxy. When neither is
+// configured, all RPCs return empty results.
+service LogsService {
+  // Query returns a bounded set of log entries matching the given filters.
+  rpc QueryLogs(QueryLogsRequest) returns (QueryLogsResponse);
+
+  // TailLogs streams new log entries as they arrive (live tail).
+  rpc TailLogs(TailLogsRequest) returns (stream LogEntry);
+
+  // GetLogLabels returns the distinct label values (namespaces, pods,
+  // containers) available for a cluster, used to populate filter dropdowns.
+  rpc GetLogLabels(GetLogLabelsRequest) returns (GetLogLabelsResponse);
+}
+
+// LogBackend identifies which backend served a response, so the frontend can
+// adapt its UI (e.g. the Kubernetes fallback cannot do cross-pod search).
+enum LogBackend {
+  LOG_BACKEND_UNSPECIFIED = 0;
+  // Grafana Loki — full features (cross-pod search, history, label queries).
+  LOG_BACKEND_LOKI = 1;
+  // Kubernetes pod logs via kube-api-proxy — requires a specific pod, no
+  // cross-pod search, no history beyond what the node retains.
+  LOG_BACKEND_KUBERNETES = 2;
+  // No log backend configured — empty results.
+  LOG_BACKEND_NONE = 3;
+}
+
+// LogEntry is a single log line. Mirrors the console-frontend LogEntry view type.
+message LogEntry {
+  google.protobuf.Timestamp timestamp = 10;
+  // Severity, normalised to ERROR / WARN / INFO / DEBUG. Empty when unknown.
+  string level = 20;
+  string cluster = 30;
+  string namespace = 40;
+  string pod = 50;
+  string container = 60;
+  string message = 70;
+  // Structured key/value fields parsed from the log line (and stream labels).
+  map<string, string> fields = 80;
+}
+
+// QueryLogsRequest filters logs for a single cluster.
+message QueryLogsRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Optional label filters. Empty means "all".
+  string namespace = 20;
+  string pod = 30;
+  string container = 40;
+  // Optional severity filter (ERROR / WARN / INFO / DEBUG). Empty means "all".
+  repeated string levels = 50;
+  // Optional free-text line filter.
+  string search = 60;
+  // Optional time range. Defaults to the last hour when not set.
+  google.protobuf.Timestamp start = 70 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp end = 80 [features.field_presence = EXPLICIT];
+  // Maximum number of entries to return. Defaults to 1000 when zero.
+  int32 limit = 90;
+}
+
+// QueryLogsResponse contains the matched log entries.
+message QueryLogsResponse {
+  repeated LogEntry entries = 10;
+  // Which backend served this response.
+  LogBackend backend = 20;
+}
+
+// TailLogsRequest starts a live tail for a single cluster.
+message TailLogsRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string namespace = 20;
+  string pod = 30;
+  string container = 40;
+  repeated string levels = 50;
+  string search = 60;
+}
+
+// GetLogLabelsRequest requests the available filter values for a cluster.
+message GetLogLabelsRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  // Optional: scope the pod/container results to a single namespace.
+  string namespace = 20;
+}
+
+// GetLogLabelsResponse contains distinct label values for filter dropdowns.
+message GetLogLabelsResponse {
+  repeated string namespaces = 10;
+  repeated string pods = 20;
+  repeated string containers = 30;
+  // Which backend answered (the Kubernetes fallback returns empty lists).
+  LogBackend backend = 40;
+}

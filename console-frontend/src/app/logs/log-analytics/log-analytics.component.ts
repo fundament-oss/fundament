@@ -8,6 +8,7 @@ import {
   signal,
   computed,
   effect,
+  OnInit,
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
@@ -15,8 +16,9 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
-import type { LogLevel } from '../log.types';
-import { generateMockLogs } from '../log-mock-data';
+import type { LogEntry, LogLevel } from '../log.types';
+import { LogsApiService, type ClusterOption } from '../logs.service';
+import { LogBackend } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
 
 Chart.register(...registerables);
@@ -42,8 +44,10 @@ interface ErrorPattern {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './log-analytics.component.html',
 })
-export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
+export default class LogAnalyticsComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly titleService = inject(TitleService);
+
+  private readonly logsApi = inject(LogsApiService);
 
   @ViewChild('volumeChart') private volumeCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -66,22 +70,26 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
 
   readonly TIME_PRESETS = TIME_PRESETS;
 
-  // ── raw data
-  private readonly allLogs = signal(generateMockLogs(300));
+  // ── raw data (loaded from the backend for the selected cluster)
+  private readonly allLogs = signal<LogEntry[]>([]);
 
-  // ── derived filter options
-  readonly clusters = computed(() => [...new Set(this.allLogs().map((l) => l.cluster))].sort());
+  // ── request state
+  readonly isLoading = signal(false);
 
-  readonly namespaces = computed(() => {
-    const cl = this.selectedCluster();
-    return [
-      ...new Set(
-        this.allLogs()
-          .filter((l) => !cl || l.cluster === cl)
-          .map((l) => l.namespace),
-      ),
-    ].sort();
-  });
+  readonly loadError = signal(false);
+
+  readonly backend = signal<LogBackend>(LogBackend.UNSPECIFIED);
+
+  readonly isFallback = computed(() => this.backend() === LogBackend.KUBERNETES);
+
+  readonly isNoBackend = computed(() => this.backend() === LogBackend.NONE);
+
+  // ── filter options (from the backend)
+  readonly clusters = signal<ClusterOption[]>([]);
+
+  readonly namespaces = signal<string[]>([]);
+
+  private readonly LOG_LIMIT = 5000;
 
   // ── time range
   private readonly timeRange = computed(() => {
@@ -228,6 +236,19 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  async ngOnInit(): Promise<void> {
+    try {
+      const clusters = await this.logsApi.listClusters();
+      this.clusters.set(clusters);
+      if (clusters.length > 0) {
+        this.selectedCluster.set(clusters[0].id);
+        await this.onClusterSelected();
+      }
+    } catch {
+      this.loadError.set(true);
+    }
+  }
+
   ngAfterViewInit(): void {
     this.createVolumeChart();
     this.createSeverityChart();
@@ -240,17 +261,64 @@ export default class LogAnalyticsComponent implements AfterViewInit, OnDestroy {
     this.namespaceChart?.destroy();
   }
 
+  clusterName(id: string): string {
+    return this.clusters().find((c) => c.id === id)?.name ?? id;
+  }
+
+  private async onClusterSelected(): Promise<void> {
+    const clusterId = this.selectedCluster();
+    if (!clusterId) return;
+    try {
+      const labels = await this.logsApi.labels(clusterId);
+      this.backend.set(labels.backend);
+      this.namespaces.set(labels.namespaces);
+    } catch {
+      // best-effort
+    }
+    await this.loadLogs();
+  }
+
+  private async loadLogs(): Promise<void> {
+    const clusterId = this.selectedCluster();
+    if (!clusterId || this.isFallback() || this.isNoBackend()) {
+      this.allLogs.set([]);
+      return;
+    }
+    this.isLoading.set(true);
+    this.loadError.set(false);
+    try {
+      const { from, to } = this.timeRange();
+      const result = await this.logsApi.query({
+        clusterId,
+        namespace: this.selectedNamespace() || undefined,
+        from,
+        to,
+        limit: this.LOG_LIMIT,
+      });
+      this.backend.set(result.backend);
+      this.allLogs.set(result.entries);
+    } catch {
+      this.loadError.set(true);
+      this.allLogs.set([]);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
   onClusterChange(value: string): void {
     this.selectedCluster.set(value);
     this.selectedNamespace.set('');
+    void this.onClusterSelected();
   }
 
   onNamespaceChange(value: string): void {
     this.selectedNamespace.set(value);
+    void this.loadLogs();
   }
 
   onTimePresetChange(value: string): void {
     this.timePreset.set(value);
+    void this.loadLogs();
   }
 
   private createVolumeChart(): void {

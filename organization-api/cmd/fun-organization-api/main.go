@@ -34,6 +34,7 @@ type config struct {
 	LogLevel                   slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins         []string      `env:"CORS_ALLOWED_ORIGINS"`
 	PrometheusURL              string        `env:"PROMETHEUS_URL" envDefault:"mock"`
+	LokiURL                    string        `env:"LOKI_URL"`
 	KubeAPIProxyURL            string        `env:"KUBE_API_PROXY_URL"`
 	GardenerKubeconfig         string        `env:"GARDENER_KUBECONFIG"`
 	CircuitBreakerThreshold    time.Duration `env:"CIRCUIT_BREAKER_THRESHOLD" envDefault:"5s"`
@@ -159,6 +160,7 @@ func run() error {
 		Clock:                clock.New(),
 		MockPrometheusClient: mockClient,
 		PrometheusURL:        cfg.PrometheusURL,
+		LokiURL:              cfg.LokiURL,
 		KubeAPIProxyURL:      cfg.KubeAPIProxyURL,
 		GardenerClient:       gardenerClient,
 	}

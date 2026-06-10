@@ -29,6 +29,7 @@ type Config struct {
 	Clock                clock.Clock
 	MockPrometheusClient *prom.MockClient
 	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
+	LokiURL              string // Loki URL for logs; empty/"mock" falls back to the kube-api-proxy pod logs
 	KubeAPIProxyURL      string // Base URL for the kube-api-proxy (e.g. "https://kube-proxy.fundament.example")
 	GardenerClient       gardener.Client
 }
@@ -45,6 +46,7 @@ type Server struct {
 	handler        http.Handler
 	mockPromClient *prom.MockClient
 	prometheusURL  string
+	lokiURL        string
 	gardener       gardener.Client
 }
 
@@ -79,6 +81,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		clock:          clk,
 		mockPromClient: cfg.MockPrometheusClient,
 		prometheusURL:  cfg.PrometheusURL,
+		lokiURL:        cfg.LokiURL,
 		gardener:       gardenerClient,
 	}
 
@@ -133,6 +136,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		"organization.v1.APIKeyService",
 		"organization.v1.NamespaceService",
 		"organization.v1.MetricsService",
+		"organization.v1.LogsService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)
@@ -156,6 +160,9 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 
 	metricsPath, metricsHandler := organizationv1connect.NewMetricsServiceHandler(s, interceptors)
 	mux.Handle(metricsPath, metricsHandler)
+
+	logsPath, logsHandler := organizationv1connect.NewLogsServiceHandler(s, interceptors)
+	mux.Handle(logsPath, logsHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
