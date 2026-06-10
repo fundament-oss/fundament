@@ -31,6 +31,7 @@ const (
 	EntityOrgUser       EntityType = "org_user"
 	EntityProjectMember EntityType = "project_member"
 	EntityNodePool      EntityType = "node_pool"
+	EntityNamespace     EntityType = "namespace"
 )
 
 // SyncContext carries metadata from the outbox row to the sync handler.
@@ -82,25 +83,30 @@ type RouteKey struct {
 // Registry holds all registered handlers. The outbox worker and status worker
 // use this to discover which handlers exist and route work to them.
 type Registry struct {
-	syncHandlers      map[RouteKey]SyncHandler
+	// syncHandlers holds the default (non-event-specific) handler per entity type.
+	syncHandlers map[EntityType]SyncHandler
+	// eventSyncHandlers holds event-specific handlers. An event may have more
+	// than one handler — e.g. both usersync and namespace-sync react to a
+	// cluster becoming ready — so they are dispatched as a fan-out.
+	eventSyncHandlers map[RouteKey][]SyncHandler
 	statusHandlers    []StatusHandler
 	reconcileHandlers []ReconcileHandler
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		syncHandlers: make(map[RouteKey]SyncHandler),
+		syncHandlers:      make(map[EntityType]SyncHandler),
+		eventSyncHandlers: make(map[RouteKey][]SyncHandler),
 	}
 }
 
-// RegisterSync registers a SyncHandler for an entity type (default, non-event-specific).
+// RegisterSync registers the default SyncHandler for an entity type (non-event-specific).
 // Panics if a handler is already registered for that type (catch wiring bugs early).
 func (r *Registry) RegisterSync(entityType EntityType, h SyncHandler) {
-	key := RouteKey{Entity: entityType}
-	if _, exists := r.syncHandlers[key]; exists {
+	if _, exists := r.syncHandlers[entityType]; exists {
 		panic(fmt.Sprintf("duplicate sync handler for %s", entityType))
 	}
-	r.syncHandlers[key] = h
+	r.syncHandlers[entityType] = h
 }
 
 // RegisterStatus registers a StatusHandler to be polled periodically.
@@ -114,26 +120,24 @@ func (r *Registry) RegisterReconcile(h ReconcileHandler) {
 }
 
 // RegisterSyncForEvent registers a SyncHandler for a specific entity type + event combination.
-// This takes precedence over the default entity-type handler.
-// Panics if a handler is already registered for that combination (catch wiring bugs early).
+// Event-specific handlers take precedence over the default entity-type handler.
+// Multiple handlers may register for the same combination; all of them are
+// dispatched (fan-out) when a matching row is processed — e.g. both usersync
+// and namespace-sync react to a cluster's ready event.
 func (r *Registry) RegisterSyncForEvent(entityType EntityType, event dbconst.ClusterOutboxEvent, h SyncHandler) {
 	key := RouteKey{Entity: entityType, Event: event}
-	if _, exists := r.syncHandlers[key]; exists {
-		panic(fmt.Sprintf("duplicate event sync handler for %s:%s", entityType, event))
-	}
-	r.syncHandlers[key] = h
+	r.eventSyncHandlers[key] = append(r.eventSyncHandlers[key], h)
 }
 
-// SyncHandlerFor returns the handler for an entity type and event.
-// Checks event-specific handlers first, then falls back to the default entity-type handler.
-func (r *Registry) SyncHandlerFor(entityType EntityType, event dbconst.ClusterOutboxEvent) (SyncHandler, error) {
-	// Check event-specific handler first
-	if h, ok := r.syncHandlers[RouteKey{Entity: entityType, Event: event}]; ok {
-		return h, nil
+// SyncHandlersFor returns the handlers for an entity type and event.
+// Event-specific handlers take precedence; if none are registered for the event,
+// it falls back to the default entity-type handler. Returns an error if neither exists.
+func (r *Registry) SyncHandlersFor(entityType EntityType, event dbconst.ClusterOutboxEvent) ([]SyncHandler, error) {
+	if hs, ok := r.eventSyncHandlers[RouteKey{Entity: entityType, Event: event}]; ok && len(hs) > 0 {
+		return hs, nil
 	}
-	// Fall back to default handler for entity type
-	if h, ok := r.syncHandlers[RouteKey{Entity: entityType}]; ok {
-		return h, nil
+	if h, ok := r.syncHandlers[entityType]; ok {
+		return []SyncHandler{h}, nil
 	}
 	return nil, fmt.Errorf("no sync handler registered for %s (event=%s)", entityType, event)
 }

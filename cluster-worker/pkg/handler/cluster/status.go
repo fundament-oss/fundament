@@ -113,7 +113,9 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 				}
 			}
 
-			// On transition to ready, insert outbox row to trigger initial user sync.
+			// On transition to ready, insert a ready outbox row. Handlers that
+			// react to cluster-ready (usersync, namespace-sync) subscribe to this
+			// event via the registry — the status handler stays agnostic of them.
 			if shootStatus.Status == gardener.StatusReady {
 				if err := h.queries.OutboxInsertReady(ctx, db.OutboxInsertReadyParams{
 					ClusterID: pgtype.UUID{Bytes: cluster.ID, Valid: true},
