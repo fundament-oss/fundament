@@ -14,7 +14,7 @@ func TestSiteService_DeleteSite_HappyFlow(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	siteID := createSite(t, env, "Site To Delete")
 
@@ -33,7 +33,7 @@ func TestSiteService_DeleteSite(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	tests := []struct {
 		name string

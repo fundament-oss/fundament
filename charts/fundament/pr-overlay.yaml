@@ -91,6 +91,7 @@ spec:
       cookieDomain: pr${PR_NUM}.${DOMAIN}
       dcimApi: https://dcim-api.pr${PR_NUM}.${DOMAIN}
       dcim: https://dcim.pr${PR_NUM}.${DOMAIN}
+      dcimAuthn: https://dcim-authn.pr${PR_NUM}.${DOMAIN}
       corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN}"
 
     images:
@@ -105,6 +106,7 @@ spec:
       openfgaSetup: ${IMAGE_PREFIX}/openfga-setup:${IMAGE_TAG}
       dcimApi: ${IMAGE_PREFIX}/dcim-api:${IMAGE_TAG}
       dcimFrontend: ${IMAGE_PREFIX}/dcim-frontend:${IMAGE_TAG}
+      dcimAuthnApi: ${IMAGE_PREFIX}/dcim-authn-api:${IMAGE_TAG}
 
     authnApi:
       replicas: 1
@@ -202,6 +204,28 @@ spec:
             - https://authn.pr${PR_NUM}.${DOMAIN}/callback
           public: true
 
+    # DCIM OIDC provider. staticPasswords (with DCIM-specific 019d0000 userIDs)
+    # are inherited from values-sandbox.yaml; only PR-URL-specific fields are
+    # overridden here.
+    dexDcim:
+      issuer: https://dex-dcim.pr${PR_NUM}.${DOMAIN}
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.x-k8s.io
+            kind: XListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - dex-dcim.pr${PR_NUM}.${DOMAIN}
+      staticClients:
+        - id: dcim
+          name: "DCIM Auth API"
+          redirectURIs:
+            - https://dcim-authn.pr${PR_NUM}.${DOMAIN}/callback
+          public: true
+
     dcimApi:
       enabled: true
       replicas: 1
@@ -230,6 +254,21 @@ spec:
             sectionName: tn-fundament-pr-${PR_NUM}
         hostnames:
           - dcim.pr${PR_NUM}.${DOMAIN}
+
+    # DCIM auth backend. enabled + passwordLoginEnabled are inherited from
+    # values-sandbox.yaml; only the PR route is added here.
+    dcimAuthnApi:
+      replicas: 1
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.x-k8s.io
+            kind: XListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - dcim-authn.pr${PR_NUM}.${DOMAIN}
 
     ingress:
       enabled: false

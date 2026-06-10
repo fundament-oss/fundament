@@ -15,7 +15,7 @@ func TestSiteService_CreateSite_InvalidInput(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	_, err := client.CreateSite(context.Background(), connect.NewRequest(
 		(&dcimv1.CreateSiteRequest_builder{Name: ""}).Build(),
@@ -27,7 +27,7 @@ func TestSiteService_CreateSite(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	resp, err := client.CreateSite(context.Background(), connect.NewRequest(
 		(&dcimv1.CreateSiteRequest_builder{Name: "Site A"}).Build(),

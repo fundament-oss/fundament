@@ -15,7 +15,7 @@ func TestRackRowService_ListRackRows_FilterBySite(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewRackRowServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewRackRowServiceClient(env.client(), env.server.URL)
 
 	// Two rooms in the target site, one rack row each.
 	siteID := createSite(t, env, "Target site")

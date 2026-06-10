@@ -3,7 +3,9 @@
 @import 'tailwindcss';
 @import '@nldd/design-system/styles';
 
-/* Dark mode variant using the 'dark' class on the HTML element */
+/* Drive Tailwind's `dark:` variant from the `.dark` class on <html> (managed by
+   ThemeService) instead of the OS `prefers-color-scheme` media query, so the
+   in-app theme switcher controls dark mode. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Make the CSS color-scheme follow the app's .dark class so that Overheid web
