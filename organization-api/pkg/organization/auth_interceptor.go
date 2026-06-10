@@ -8,42 +8,15 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+
+	"github.com/fundament-oss/fundament/common/auth"
 )
 
 // OrganizationHeader is the header name for selecting the active organization.
 const OrganizationHeader = "Fun-Organization"
 
-// authInterceptorImpl implements connect.Interceptor for both unary and server-streaming calls.
-type authInterceptorImpl struct {
-	s *Server
-}
-
 func (s *Server) authInterceptor() connect.Interceptor {
-	return &authInterceptorImpl{s: s}
-}
-
-func (a *authInterceptorImpl) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
-	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		ctx, err := a.s.authenticate(ctx, req.Spec().Procedure, req.Header())
-		if err != nil {
-			return nil, err
-		}
-		return next(ctx, req)
-	}
-}
-
-func (a *authInterceptorImpl) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
-	return next
-}
-
-func (a *authInterceptorImpl) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
-	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
-		ctx, err := a.s.authenticate(ctx, conn.Spec().Procedure, conn.RequestHeader())
-		if err != nil {
-			return err
-		}
-		return next(ctx, conn)
-	}
+	return auth.NewInterceptor(s.authenticate)
 }
 
 // authenticate validates the JWT and injects user/org info into ctx.

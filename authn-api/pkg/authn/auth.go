@@ -67,8 +67,8 @@ func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier
 		db:            database,
 		queries:       db.New(database.Pool),
 		sessionStore:  sessionStore,
-		validator:     auth.NewValidatorForAudience(cfg.JWTSecret, auth.TokenTypeUser, logger),
-		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure),
+		validator:     auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
+		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.ConsoleAuthCookieName),
 		authz:         authzClient,
 	}, nil
 }
@@ -99,7 +99,7 @@ func (s *AuthnServer) generateJWTWithExpiry(u *user, groups []string, expiry tim
 
 	claims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "fundament-authn-api",
+			Issuer:    auth.ConsoleIssuer,
 			Subject:   u.ID.String(),
 			Audience:  jwt.ClaimStrings{auth.TokenTypeUser},
 			IssuedAt:  jwt.NewNumericDate(now),

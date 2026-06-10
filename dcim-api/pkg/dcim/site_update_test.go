@@ -15,7 +15,7 @@ func TestSiteService_UpdateSite_HappyFlow(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	siteID := createSite(t, env, "Site Before Update")
 
@@ -44,7 +44,7 @@ func TestSiteService_UpdateSite(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewSiteServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
 	tests := []struct {
 		name string

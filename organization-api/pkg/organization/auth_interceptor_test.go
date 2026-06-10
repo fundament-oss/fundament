@@ -25,7 +25,7 @@ func TestAuthenticate_RejectsPluginToken(t *testing.T) {
 	secret := []byte("test-secret")
 	s := &Server{
 		logger:        slog.New(slog.NewTextHandler(io.Discard, nil)),
-		authValidator: auth.NewValidatorForAudience(secret, auth.TokenTypeUser, nil),
+		authValidator: auth.NewValidatorForAudience(secret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil),
 	}
 
 	pluginClaims := auth.Claims{
