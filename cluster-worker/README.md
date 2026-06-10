@@ -199,7 +199,7 @@ The `cluster_outbox` table tracks changes from multiple sources:
 
 | Source | Trigger |
 |--------|---------|
-| `trigger` | Database trigger on `clusters`, `organizations_users`, or `project_members` |
+| `trigger` | Database trigger on `clusters`, `organizations_users`, `project_members`, `node_pools`, or `namespaces` |
 | `reconcile` | Periodic reconciliation loop |
 | `manual` | Manual intervention |
 | `node_pool` | Node pool configuration change |
