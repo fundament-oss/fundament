@@ -466,7 +466,9 @@ export default class App implements OnInit {
     );
   }
 
-  // Initialize theme from localStorage or system preference
+  // Initialize theme from an explicit saved choice, falling back to the OS
+  // preference. The OS preference is never persisted here, so it keeps tracking
+  // the OS on later visits until the user explicitly picks a theme.
   private initializeTheme() {
     const savedTheme = localStorage.getItem('theme');
 
@@ -480,9 +482,10 @@ export default class App implements OnInit {
     this.applyTheme();
   }
 
-  // Set theme explicitly
+  // Set theme explicitly in response to a user action, and persist the choice.
   setTheme(value: string) {
     this.isDarkMode.set(value === 'dark');
+    this.persistTheme();
 
     if (document.startViewTransition) {
       document.startViewTransition(this.applyTheme.bind(this));
@@ -491,9 +494,10 @@ export default class App implements OnInit {
     }
   }
 
-  // Toggle theme
+  // Toggle theme in response to a user action, and persist the choice.
   toggleTheme() {
     this.isDarkMode.set(!this.isDarkMode());
+    this.persistTheme();
 
     // Apply with view transition if supported. Use 80 ms delay to allow CSS transition on the switch to start
     setTimeout(() => {
@@ -505,7 +509,7 @@ export default class App implements OnInit {
     }, 80);
   }
 
-  // Apply theme to HTML element and save to localStorage
+  // Apply the active theme to the <html> element.
   private applyTheme() {
     const htmlElement = document.documentElement;
 
@@ -514,7 +518,10 @@ export default class App implements OnInit {
     } else {
       htmlElement.classList.remove('dark');
     }
+  }
 
+  // Persist the user's explicit theme choice to localStorage.
+  private persistTheme() {
     localStorage.setItem('theme', this.isDarkMode() ? 'dark' : 'light');
   }
 

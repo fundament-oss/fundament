@@ -2,12 +2,15 @@ import { Injectable, signal } from '@angular/core';
 
 // Manages the app's light/dark theme. The active theme is reflected by a `dark`
 // class on the <html> element (so Tailwind `dark:` variants and the CSS
-// color-scheme follow it) and persisted to localStorage.
+// color-scheme follow it). An explicit user choice is persisted to
+// localStorage; without one, the OS `prefers-color-scheme` setting is followed
+// so it keeps tracking the OS on later visits.
 @Injectable({ providedIn: 'root' })
 export default class ThemeService {
   readonly isDarkMode = signal(false);
 
-  // Initialize theme from localStorage or system preference.
+  // Initialize theme from an explicit saved choice, falling back to the OS
+  // preference. The OS preference is never persisted here.
   initializeTheme() {
     const savedTheme = localStorage.getItem('theme');
 
@@ -21,9 +24,10 @@ export default class ThemeService {
     this.applyTheme();
   }
 
-  // Set theme explicitly.
+  // Set theme explicitly in response to a user action, and persist the choice.
   setTheme(value: string) {
     this.isDarkMode.set(value === 'dark');
+    localStorage.setItem('theme', this.isDarkMode() ? 'dark' : 'light');
 
     if (document.startViewTransition) {
       document.startViewTransition(this.applyTheme.bind(this));
@@ -32,7 +36,7 @@ export default class ThemeService {
     }
   }
 
-  // Apply theme to HTML element and save to localStorage.
+  // Apply the active theme to the <html> element.
   private applyTheme() {
     const htmlElement = document.documentElement;
 
@@ -41,7 +45,5 @@ export default class ThemeService {
     } else {
       htmlElement.classList.remove('dark');
     }
-
-    localStorage.setItem('theme', this.isDarkMode() ? 'dark' : 'light');
   }
 }

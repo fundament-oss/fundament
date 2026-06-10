@@ -10,8 +10,6 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import ThemeToggleComponent from '../shared/theme-toggle';
 import AuthService from '../auth.service';
 
-import ThemeToggleComponent from '../shared/theme-toggle';
-
 // Shell wraps routes that share the nav header; task-management-technician sits outside it, since it has a different layout.
 @Component({
   selector: 'app-shell',
