@@ -12,8 +12,19 @@ import (
 	"github.com/google/uuid"
 )
 
-// AuthCookieName is the name of the authentication cookie.
-const AuthCookieName = "fundament_auth"
+// ConsoleAuthCookieName is the name of the authentication cookie for the console.
+const ConsoleAuthCookieName = "fundament_auth"
+
+// DCIMAuthCookieName is the name of the authentication cookie for DCIM.
+const DCIMAuthCookieName = "dcim_auth"
+
+// Issuer values for the JWTs minted by each authentication service. Validators
+// pin the expected issuer so that a token minted for one trust domain cannot be
+// replayed against another service that happens to share the same JWT secret.
+const (
+	ConsoleIssuer = "fundament-authn-api"
+	DCIMIssuer    = "dcim-authn-api"
+)
 
 // TokenType is the value carried in the JWT `aud` claim. It distinguishes
 // user tokens from plugin tokens so that services can refuse the wrong kind
@@ -40,30 +51,37 @@ func (c *Claims) UserID() uuid.UUID {
 // Validator handles JWT validation from HTTP headers.
 type Validator struct {
 	jwtSecret        []byte
+	cookieName       string
+	expectedIssuer   string
 	expectedAudience TokenType // empty = accept any audience (legacy)
 	logger           *slog.Logger
 }
 
-// NewValidator creates a Validator that accepts any audience.
-//
-// Deprecated: prefer NewValidatorForAudience so services explicitly declare
-// the token type they accept. The escalation wall described in FUN-17 depends
-// on every UserToken validator rejecting fundament-plugin; an any-audience
-// validator silently accepts both.
-func NewValidator(jwtSecret []byte, logger *slog.Logger) *Validator {
+// NewValidator creates a new Validator with the given JWT secret, cookie name
+// and expected issuer. Tokens whose "iss" claim does not match expectedIssuer
+// are rejected, which prevents tokens minted by another service that shares the
+// same JWT secret from being accepted here. The validator accepts any audience;
+// prefer NewValidatorForAudience so services explicitly declare the token type
+// they accept. The escalation wall described in FUN-17 depends on every
+// UserToken validator rejecting fundament-plugin; an any-audience validator
+// silently accepts both. Logger is optional and can be nil.
+func NewValidator(jwtSecret []byte, cookieName, expectedIssuer string, logger *slog.Logger) *Validator {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	return &Validator{
-		jwtSecret: jwtSecret,
-		logger:    logger,
+		jwtSecret:      jwtSecret,
+		cookieName:     cookieName,
+		expectedIssuer: expectedIssuer,
+		logger:         logger,
 	}
 }
 
-// NewValidatorForAudience creates a Validator that requires the JWT `aud`
-// claim to contain the given TokenType.
-func NewValidatorForAudience(jwtSecret []byte, audience TokenType, logger *slog.Logger) *Validator {
-	v := NewValidator(jwtSecret, logger)
+// NewValidatorForAudience creates a Validator that, in addition to pinning the
+// cookie name and issuer, requires the JWT `aud` claim to contain the given
+// TokenType.
+func NewValidatorForAudience(jwtSecret []byte, cookieName, expectedIssuer string, audience TokenType, logger *slog.Logger) *Validator {
+	v := NewValidator(jwtSecret, cookieName, expectedIssuer, logger)
 	v.expectedAudience = audience
 	return v
 }
@@ -96,7 +114,7 @@ func (v *Validator) extractCookieToken(header http.Header) string {
 	// Cookie header format: "name1=value1; name2=value2"
 	for part := range strings.SplitSeq(cookieHeader, ";") {
 		part = strings.TrimSpace(part)
-		if after, ok := strings.CutPrefix(part, AuthCookieName+"="); ok {
+		if after, ok := strings.CutPrefix(part, v.cookieName+"="); ok {
 			return after
 		}
 	}
@@ -106,17 +124,20 @@ func (v *Validator) extractCookieToken(header http.Header) string {
 
 // validateToken parses and validates a JWT token string.
 func (v *Validator) validateToken(tokenString string) (*Claims, error) {
+	parserOpts := []jwt.ParserOption{
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+	}
+	if v.expectedIssuer != "" {
+		parserOpts = append(parserOpts, jwt.WithIssuer(v.expectedIssuer))
+	}
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			v.logger.Debug("unexpected signing method", "alg", token.Header["alg"])
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return v.jwtSecret, nil
-	},
-		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
-		jwt.WithExpirationRequired(),
-		jwt.WithIssuer("fundament-authn-api"),
-	)
+	}, parserOpts...)
 	if err != nil {
 		v.logger.Debug("token validation failed", "error", err)
 		return nil, fmt.Errorf("invalid token: %w", err)

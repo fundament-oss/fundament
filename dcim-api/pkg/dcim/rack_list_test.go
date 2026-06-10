@@ -15,7 +15,7 @@ func TestRackService_ListRacks_HappyFlow(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewRackServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewRackServiceClient(env.client(), env.server.URL)
 
 	rowID := createRackRowFixture(t, env, "Rack List")
 
@@ -41,7 +41,7 @@ func TestRackService_ListRacks_FilterBySite(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewRackServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewRackServiceClient(env.client(), env.server.URL)
 
 	// Build a site with two rooms; each room has one rack row with one rack.
 	siteID := createSite(t, env, "Target site")

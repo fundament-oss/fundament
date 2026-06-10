@@ -1,8 +1,14 @@
 import { Routes } from '@angular/router';
+import authGuard from './auth.guard';
 
 const routes: Routes = [
   {
+    path: 'login',
+    loadComponent: () => import('./login/login').then((m) => m.default),
+  },
+  {
     path: '',
+    canActivate: [authGuard],
     loadComponent: () => import('./shell/shell').then((m) => m.default),
     children: [
       {
@@ -60,6 +66,7 @@ const routes: Routes = [
   },
   {
     path: 'task-management-technician',
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./task-management-technician/task-management-technician').then((m) => m.default),
   },

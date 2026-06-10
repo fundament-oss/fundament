@@ -2,9 +2,12 @@
 <div class="sticky top-0 z-40">
   <div class="h-1 bg-accent-750" aria-hidden="true"></div>
 
-  <header class="flex h-16 bg-white border-b border-slate-200" role="banner">
+  <header
+    class="flex h-16 bg-white border-b border-slate-200 dark:bg-gray-950 dark:border-gray-800"
+    role="banner"
+  >
     <!-- Brand -->
-    <div class="flex items-center px-6 border-r border-slate-200 shrink-0">
+    <div class="flex items-center px-6 border-r border-slate-200 shrink-0 dark:border-gray-800">
       <a
         routerLink="/"
         aria-label="Fundament DCIM home"
@@ -20,7 +23,7 @@
             d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
           />
         </svg>
-        <span class="font-semibold tracking-tight text-slate-900">
+        <span class="font-semibold tracking-tight text-slate-900 dark:text-gray-100">
           Fundament <span class="text-slate-400 font-normal ml-0.5">DCIM</span>
         </span>
       </a>
@@ -35,8 +38,8 @@
         class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
         [class]="
           catalogLink.isActive
-            ? 'text-slate-900 font-medium border-accent-600'
-            : 'text-slate-500 border-transparent hover:text-slate-900'
+            ? 'text-slate-900 font-medium border-accent-600 dark:text-gray-100'
+            : 'text-slate-500 border-transparent hover:text-slate-900 dark:text-slate-400 dark:hover:text-gray-100'
         "
       >
         <nldd-icon name="folder-stack" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
@@ -50,8 +53,8 @@
         class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
         [class]="
           inventoryLink.isActive
-            ? 'text-slate-900 font-medium border-accent-600'
-            : 'text-slate-500 border-transparent hover:text-slate-900'
+            ? 'text-slate-900 font-medium border-accent-600 dark:text-gray-100'
+            : 'text-slate-500 border-transparent hover:text-slate-900 dark:text-slate-400 dark:hover:text-gray-100'
         "
       >
         <nldd-icon name="rectangle-stack" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
@@ -65,8 +68,8 @@
         class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
         [class]="
           dcLink.isActive
-            ? 'text-slate-900 font-medium border-accent-600'
-            : 'text-slate-500 border-transparent hover:text-slate-900'
+            ? 'text-slate-900 font-medium border-accent-600 dark:text-gray-100'
+            : 'text-slate-500 border-transparent hover:text-slate-900 dark:text-slate-400 dark:hover:text-gray-100'
         "
       >
         <nldd-icon name="apartment-building" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
@@ -80,8 +83,8 @@
         class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
         [class]="
           racksLink.isActive
-            ? 'text-slate-900 font-medium border-accent-600'
-            : 'text-slate-500 border-transparent hover:text-slate-900'
+            ? 'text-slate-900 font-medium border-accent-600 dark:text-gray-100'
+            : 'text-slate-500 border-transparent hover:text-slate-900 dark:text-slate-400 dark:hover:text-gray-100'
         "
       >
         <nldd-icon name="cylinder-split" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
@@ -95,8 +98,8 @@
         class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
         [class]="
           patchLink.isActive
-            ? 'text-slate-900 font-medium border-accent-600'
-            : 'text-slate-500 border-transparent hover:text-slate-900'
+            ? 'text-slate-900 font-medium border-accent-600 dark:text-gray-100'
+            : 'text-slate-500 border-transparent hover:text-slate-900 dark:text-slate-400 dark:hover:text-gray-100'
         "
       >
         <nldd-icon name="list" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
@@ -110,8 +113,8 @@
         class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
         [class]="
           tasksLink.isActive
-            ? 'text-slate-900 font-medium border-accent-600'
-            : 'text-slate-500 border-transparent hover:text-slate-900'
+            ? 'text-slate-900 font-medium border-accent-600 dark:text-gray-100'
+            : 'text-slate-500 border-transparent hover:text-slate-900 dark:text-slate-400 dark:hover:text-gray-100'
         "
       >
         <nldd-icon name="check-mark-circle" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
@@ -120,18 +123,56 @@
     </nav>
 
     <!-- User section -->
-    <div class="flex items-center gap-3 px-6 border-l border-slate-200 shrink-0">
-      <div class="text-right leading-tight hidden sm:block">
-        <div class="text-sm text-slate-900">Piet Bakker</div>
-        <div class="text-xs text-slate-400">Admin</div>
-      </div>
+    <div
+      class="flex items-center gap-3 px-6 border-l border-slate-200 shrink-0 dark:border-gray-800"
+    >
+      <app-theme-toggle />
 
-      <div
-        class="h-8 w-8 rounded-full bg-[#154273] flex items-center justify-center text-white text-xs font-medium select-none shrink-0"
-        aria-label="User avatar: Piet Bakker"
-        role="img"
-      >
-        PB
+      <div class="user-dropdown relative">
+        <button
+          type="button"
+          (click)="toggleUserDropdown()"
+          [attr.aria-expanded]="userDropdownOpen()"
+          aria-haspopup="menu"
+          aria-label="User menu"
+          class="flex items-center gap-3 rounded-md cursor-pointer focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:outline-none dark:focus:ring-offset-gray-950"
+        >
+          <div class="text-right hidden sm:block">
+            <div class="text-sm text-slate-900 dark:text-gray-100">{{ userName() }}</div>
+          </div>
+
+          <div
+            class="h-8 w-8 rounded-full bg-[#154273] flex items-center justify-center text-white text-xs font-medium select-none shrink-0"
+            [attr.aria-label]="'User avatar: ' + userName()"
+            role="img"
+          >
+            {{ userInitials() }}
+          </div>
+        </button>
+
+        @if (userDropdownOpen()) {
+          <div
+            class="absolute right-0 z-10 mt-2 w-52 rounded-lg border border-slate-200 bg-white py-1 shadow-md dark:border-gray-800 dark:bg-gray-950"
+            role="menu"
+          >
+            <div class="border-b border-slate-100 px-4 py-2.5 dark:border-gray-800">
+              <p class="text-sm text-slate-500 dark:text-gray-400">Logged in as</p>
+              <p class="mt-1 truncate font-medium text-slate-700 dark:text-gray-200">
+                {{ userName() || 'Unknown' }}
+              </p>
+            </div>
+            <div class="pt-1">
+              <button
+                type="button"
+                role="menuitem"
+                (click)="handleLogout()"
+                class="block w-full cursor-pointer px-4 py-2 text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        }
       </div>
     </div>
   </header>

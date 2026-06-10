@@ -11,8 +11,23 @@
     <link rel="shortcut icon" href="/img/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Apply the persisted theme before first paint to avoid a flash of the
+         wrong color scheme. Kept in sync with ThemeService. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('dcim-theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = stored ? stored === 'dark' : prefersDark;
+          document.documentElement.classList.toggle('dark', dark);
+        } catch (e) {
+          /* ignore: storage unavailable */
+        }
+      })();
+    </script>
   </head>
-  <body class="bg-white text-gray-800">
+  <body>
     <app-root></app-root>
   </body>
 </html>
