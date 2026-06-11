@@ -22,9 +22,16 @@ just plugin-install external-dns   # Build plugin, push to registry, apply CR
 just external-dns test             # Creates a DNSEndpoint resource
 just external-dns test-cleanup     # Remove test resources
 
+# Install and verify OpenFSC (plugin installs the standalone openfsc-operator):
+just openfsc::operator-push        # Build + push the operator image, record OPERATOR_IMAGE
+just plugin-install openfsc        # Build plugin, push to registry, apply CR
+just openfsc test                  # Waits for Directory/Peer/gateways to be Active
+just openfsc test-cleanup          # Remove the OpenFSC resources
+
 # Cleanup:
 just plugin-uninstall cert-manager
 just plugin-uninstall external-dns
+just plugin-uninstall openfsc
 just cluster-delete
 ```
 

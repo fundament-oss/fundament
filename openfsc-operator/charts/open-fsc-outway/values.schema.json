@@ -1,0 +1,535 @@
+{
+    "title": "Chart Values",
+    "type": "object",
+    "properties": {
+        "global": {
+            "type": "object",
+            "properties": {
+                "imageRegistry": {
+                    "type": "string",
+                    "description": "Global Docker Image registry",
+                    "default": ""
+                },
+                "imageTag": {
+                    "type": "string",
+                    "description": "Global Docker Image tag",
+                    "default": ""
+                },
+                "groupID": {
+                    "type": "string",
+                    "description": "Global FSC Group ID",
+                    "default": ""
+                },
+                "imagePullSecrets": {
+                    "type": "array",
+                    "description": "Global image pull secrets",
+                    "default": [],
+                    "items": {}
+                },
+                "certificates": {
+                    "type": "object",
+                    "properties": {
+                        "group": {
+                            "type": "object",
+                            "properties": {
+                                "caCertificatePEM": {
+                                    "type": "string",
+                                    "description": "OpenFSC CA root certificate. If not set the value of 'certificates.group.caCertificatePEM' is used",
+                                    "default": ""
+                                },
+                                "caCertificatePEMExistingSecret": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "Name of the existing secret",
+                                            "default": ""
+                                        },
+                                        "key": {
+                                            "type": "string",
+                                            "description": "The key in the secret that contains the certificate",
+                                            "default": "tls.crt"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "internal": {
+                            "type": "object",
+                            "properties": {
+                                "caCertificatePEM": {
+                                    "type": "string",
+                                    "description": "Global CA root certificate of your internal PKI. If not set the value of 'certificates.internal.caCertificatePEM' is used",
+                                    "default": ""
+                                },
+                                "caCertificatePEMExistingSecret": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "Name of the existing secret",
+                                            "default": ""
+                                        },
+                                        "key": {
+                                            "type": "string",
+                                            "description": "The key in the secret that contains the certificate",
+                                            "default": "tls.crt"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "image": {
+            "type": "object",
+            "properties": {
+                "registry": {
+                    "type": "string",
+                    "description": "Image registry (ignored if 'global.imageRegistry' is set)",
+                    "default": "docker.io"
+                },
+                "repository": {
+                    "type": "string",
+                    "description": "Image repository of the Outway.",
+                    "default": "federatedserviceconnectivity/outway"
+                },
+                "tag": {
+                    "type": "string",
+                    "description": "Image tag (ignored if 'global.imageTag' is set). When set to null, the AppVersion from the chart is used",
+                    "default": ""
+                },
+                "pullPolicy": {
+                    "type": "string",
+                    "description": "Image pull policy",
+                    "default": "Always"
+                },
+                "pullSecrets": {
+                    "type": "array",
+                    "description": "Image pull secrets",
+                    "default": [],
+                    "items": {}
+                }
+            }
+        },
+        "replicaCount": {
+            "type": "number",
+            "description": "Number of controller replicas",
+            "default": 1
+        },
+        "securityContext": {
+            "type": "object",
+            "properties": {
+                "allowPrivilegeEscalation": {
+                    "type": "boolean",
+                    "description": "Controls whether a process can gain more privileges than its parent process",
+                    "default": false
+                },
+                "runAsNonRoot": {
+                    "type": "boolean",
+                    "description": "Run container as a non-root user",
+                    "default": true
+                },
+                "runAsUser": {
+                    "type": "number",
+                    "description": "Run container as specified user",
+                    "default": 1001
+                },
+                "capabilities": {
+                    "type": "object",
+                    "properties": {
+                        "drop": {
+                            "type": "array",
+                            "description": "Drop all capabilities by default",
+                            "default": [
+                                "ALL"
+                            ],
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "deploymentAnnotations": {
+            "type": "object",
+            "description": "Annotations to add to the deployment",
+            "default": {}
+        },
+        "podSecurityContext": {
+            "type": "object",
+            "properties": {
+                "fsGroup": {
+                    "type": "number",
+                    "description": "GroupID under which the pod should be started",
+                    "default": 1001
+                }
+            }
+        },
+        "resources": {
+            "type": "object",
+            "description": "Pod resource requests & limits",
+            "default": {}
+        },
+        "nodeSelector": {
+            "type": "object",
+            "description": "Node labels for pod assignment",
+            "default": {}
+        },
+        "affinity": {
+            "type": "object",
+            "description": "Node affinity for pod assignment",
+            "default": {}
+        },
+        "tolerations": {
+            "type": "array",
+            "description": "Node tolerations for pod assignment",
+            "default": [],
+            "items": {}
+        },
+        "extraEnv": {
+            "type": "array",
+            "description": "Extra env items for pod assignment",
+            "default": [],
+            "items": {}
+        },
+        "serviceAccount": {
+            "type": "object",
+            "properties": {
+                "create": {
+                    "type": "boolean",
+                    "description": "Specifies whether a service account should be created",
+                    "default": true
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Annotations to add to the service account",
+                    "default": {}
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The name of the service account to use. If not set and create is true, a name is generated using the fullname template",
+                    "default": ""
+                }
+            }
+        },
+        "podLabels": {
+            "type": "object",
+            "description": "Extra labels added to the pod",
+            "default": {}
+        },
+        "nameOverride": {
+            "type": "string",
+            "description": "Override deployment name",
+            "default": ""
+        },
+        "fullnameOverride": {
+            "type": "string",
+            "description": "Override full deployment name",
+            "default": ""
+        },
+        "config": {
+            "type": "object",
+            "properties": {
+                "logType": {
+                    "type": "string",
+                    "description": "Possible values 'live', 'local'. Affects the log output. See NewProduction and NewDevelopment at https://godoc.org/go.uber.org/zap#Logger",
+                    "default": "live"
+                },
+                "logLevel": {
+                    "type": "string",
+                    "description": "Possible values 'debug', 'warn', 'info'. Override the default logLevel set by 'config.logType'",
+                    "default": "info"
+                },
+                "enableGrantHashSuggestion": {
+                    "type": "boolean",
+                    "description": "Possible values 'true' and 'false'. Whether the Outway should return valid services and Grant Hashes",
+                    "default": false
+                },
+                "groupID": {
+                    "type": "string",
+                    "description": "FSC Group ID",
+                    "default": ""
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Name of the Outway",
+                    "default": ""
+                },
+                "managerInternalAddress": {
+                    "type": "string",
+                    "description": "Internal address of the Manager",
+                    "default": ""
+                },
+                "controllerApiAddress": {
+                    "type": "string",
+                    "description": "The address of the Controller API (DEPRECATED use value controllerRegistrationApiAddress instead)",
+                    "default": ""
+                },
+                "controllerRegistrationApiAddress": {
+                    "type": "string",
+                    "description": "The address of the Controller API",
+                    "default": ""
+                },
+                "transactionLogApiAddress": {
+                    "type": "string",
+                    "description": "The Address of the Transaction Log API",
+                    "default": ""
+                },
+                "authorizationService": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "If 'true', the Outway will use the authorization service",
+                            "default": false
+                        },
+                        "url": {
+                            "type": "string",
+                            "description": "URL of the authorization service to use",
+                            "default": ""
+                        },
+                        "caCertificatePEMExistingSecret": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "Name of an existing secret that contains the CA certificate",
+                                    "default": ""
+                                },
+                                "key": {
+                                    "type": "string",
+                                    "description": "Key in the existing secret that contains the CA certificate",
+                                    "default": "ca.crt"
+                                }
+                            }
+                        },
+                        "withBody": {
+                            "type": "boolean",
+                            "description": "When set to true, the HTTP request body (if available) will be send to the Authorization Server in base64 encoded format.",
+                            "default": false
+                        },
+                        "maxBodySize": {
+                            "type": "number",
+                            "description": "The maximum HTTP request body size in bytes that is allowed for sending to the authorization server. If a body exceeds this limits, the body is not send to the Authorization Server.",
+                            "default": 4096
+                        },
+                        "bodyChunkSize": {
+                            "type": "number",
+                            "description": "The chunk size in bytes that is used to process each HTTP request body chunk.",
+                            "default": 1024
+                        }
+                    }
+                },
+                "authZenService": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "If 'true', the Inway will use the AuthZen service",
+                            "default": false
+                        },
+                        "url": {
+                            "type": "string",
+                            "description": "URL of the AuthZen service to use",
+                            "default": ""
+                        },
+                        "caCertificatePEMExistingSecret": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "Name of an existing secret that contains the CA certificate",
+                                    "default": ""
+                                },
+                                "key": {
+                                    "type": "string",
+                                    "description": "Key in the existing secret that contains the CA certificate",
+                                    "default": "ca.crt"
+                                }
+                            }
+                        },
+                        "withBody": {
+                            "type": "boolean",
+                            "description": "When set to true, the HTTP request body (if available) will be send to the AuthZen Server in base64 encoded format.",
+                            "default": false
+                        },
+                        "maxBodySize": {
+                            "type": "number",
+                            "description": "The maximum HTTP request body size in bytes that is allowed for sending to the AuthZen server. If a body exceeds this limits, the body is not send to the Authorization Server.",
+                            "default": 4096
+                        },
+                        "bodyChunkSize": {
+                            "type": "number",
+                            "description": "The chunk size in bytes that is used to process each HTTP request body chunk.",
+                            "default": 1024
+                        }
+                    }
+                },
+                "disableCrlChecks": {
+                    "type": "boolean",
+                    "description": "If 'true', the Outway will not check if the Client Certificate of the Inway or Manager is on the Certificate Revocation List. This means the Outway will accept client certificates that have been revoked.",
+                    "default": false
+                },
+                "grantLinksCacheTTL": {
+                    "type": "string",
+                    "description": "The time to live of the Grant Links cache, format is specified in string, e.g. '1h', '300s' or '5m'",
+                    "default": "30s"
+                }
+            }
+        },
+        "certificates": {
+            "type": "object",
+            "properties": {
+                "group": {
+                    "type": "object",
+                    "properties": {
+                        "caCertificatePEM": {
+                            "type": "string",
+                            "description": "The CA certificate of the Group",
+                            "default": ""
+                        },
+                        "caCertificatePEMExistingSecret": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "Name of the existing secret",
+                                    "default": ""
+                                },
+                                "key": {
+                                    "type": "string",
+                                    "description": "The key in the secret that contains the certificates",
+                                    "default": ""
+                                }
+                            }
+                        },
+                        "certificatePEM": {
+                            "type": "string",
+                            "description": "The Group certificate",
+                            "default": ""
+                        },
+                        "keyPEM": {
+                            "type": "string",
+                            "description": "Private Key of 'certificates.group.certificatePEM'",
+                            "default": ""
+                        },
+                        "existingSecret": {
+                            "type": "string",
+                            "description": "Use existing secret with your OpenFSC keypair (`certificates.group.certificatePEM` and `certificates.group.keyPEM` will be ignored and picked up from the secret)",
+                            "default": ""
+                        }
+                    }
+                },
+                "internal": {
+                    "type": "object",
+                    "properties": {
+                        "caCertificatePEM": {
+                            "type": "string",
+                            "description": "The CA root certificate of your internal PKI",
+                            "default": ""
+                        },
+                        "caCertificatePEMExistingSecret": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "Name of the existing secret",
+                                    "default": ""
+                                },
+                                "key": {
+                                    "type": "string",
+                                    "description": "The key in the secret that contains the certificate",
+                                    "default": ""
+                                }
+                            }
+                        },
+                        "certificatePEM": {
+                            "type": "string",
+                            "description": "The certificate signed by your internal PKI",
+                            "default": ""
+                        },
+                        "keyPEM": {
+                            "type": "string",
+                            "description": "the private key of 'certificates.internal.certificatePEM'",
+                            "default": ""
+                        },
+                        "existingSecret": {
+                            "type": "string",
+                            "description": "Use of existing secret with your OpenFSC keypair ('certificates.internal.certificatePEM' and 'certificates.internal.keyPEM'. will be ingored and picked up from this secret)",
+                            "default": ""
+                        }
+                    }
+                }
+            }
+        },
+        "service": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "Service Type (ClusterIP, NodePort, LoadBalancer)",
+                    "default": "ClusterIP"
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Annotations to be added to the service",
+                    "default": {}
+                },
+                "httpPort": {
+                    "type": "number",
+                    "description": "Port exposed by the service",
+                    "default": 80
+                },
+                "httpsPort": {
+                    "type": "number",
+                    "description": "Port exposed by the service if 'https.enabled' is 'true'",
+                    "default": 443
+                }
+            }
+        },
+        "https": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "If 'true' HTTPs will be enabled",
+                    "default": false
+                },
+                "keyPEM": {
+                    "type": "string",
+                    "description": "Private Key of the 'https.certificatePEM' as PEM. Required if 'https.enabled' is 'true'",
+                    "default": ""
+                },
+                "certificatePEM": {
+                    "type": "string",
+                    "description": "TLS Certificate of PEM. Required if 'https.enabled' is 'true'",
+                    "default": ""
+                },
+                "existingSecret": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "The name of the secret that contains the certificate and private key",
+                            "default": ""
+                        },
+                        "keyCertificate": {
+                            "type": "string",
+                            "description": "The key in the secret that contains the certificate",
+                            "default": "tls.crt"
+                        },
+                        "keyPrivateKey": {
+                            "type": "string",
+                            "description": "The key in the secret that contains the private key",
+                            "default": "tls.key"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

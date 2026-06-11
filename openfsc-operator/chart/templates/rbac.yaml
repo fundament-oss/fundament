@@ -1,0 +1,103 @@
+# The operator's cluster-wide permissions: its own CRDs, the prerequisite-CRD
+# preflight, the directory prerequisites it server-side-applies (cert-manager
+# Issuers/Certificates, CloudNativePG Cluster), and the resources rendered by
+# the Helm charts it installs (the OpenFSC umbrella and the per-gateway
+# inway/outway charts: Deployments, Services, ServiceAccounts, Secrets — plus
+# Helm's own release-state Secrets).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "openfsc-operator.fullname" . }}
+  labels:
+    {{- include "openfsc-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["openfsc.fundament.io"]
+    resources: ["directories", "peers", "inways", "outways"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["openfsc.fundament.io"]
+    resources: ["directories/status", "peers/status", "inways/status", "outways/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["openfsc.fundament.io"]
+    resources: ["directories/finalizers", "inways/finalizers", "outways/finalizers"]
+    verbs: ["update"]
+  # Preflight: report PrerequisitesMet=False while the cert-manager /
+  # CloudNativePG CRDs are missing (the operator never installs them).
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+  # Directory prerequisites (group CA + Manager group certificate) and the
+  # per-gateway mTLS certificates.
+  - apiGroups: ["cert-manager.io"]
+    resources: ["issuers", "certificates"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # The CloudNativePG cluster backing the OpenFSC components.
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Resources rendered by the installed Helm charts; Deployments are also
+  # watched for the directory readiness signal.
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "serviceaccounts", "secrets", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # The directory namespace is created on demand.
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch", "create"]
+  # Rendered by the umbrella only when explicitly enabled, but covered so a
+  # values override does not strand the install on RBAC.
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "openfsc-operator.fullname" . }}
+  labels:
+    {{- include "openfsc-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "openfsc-operator.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "openfsc-operator.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+---
+# Leader election state in the operator's own namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "openfsc-operator.fullname" . }}-leader-election
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openfsc-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "openfsc-operator.fullname" . }}-leader-election
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "openfsc-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "openfsc-operator.fullname" . }}-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "openfsc-operator.fullname" . }}
+    namespace: {{ .Release.Namespace }}

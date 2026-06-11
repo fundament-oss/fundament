@@ -1,0 +1,230 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "open-fsc-inway.fullname" . }}
+  labels:
+    {{- include "open-fsc-inway.labels" . | nindent 4 }}
+  {{- with .Values.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "open-fsc-inway.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "open-fsc-inway.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/secret-group-ca: {{ include (print $.Template.BasePath "/secret-group-ca-certificate.yaml") . | sha256sum }}
+        checksum/secret-internal-ca: {{ include (print $.Template.BasePath "/secret-internal-ca-certificate.yaml") . | sha256sum }}
+        checksum/secret-tls: {{ include (print $.Template.BasePath "/secret-tls.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+        {{- include "open-fsc-inway.imagePullSecrets" . }}
+      serviceAccountName: {{ include "open-fsc-inway.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: open-fsc-inway
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ template "open-fsc-inway.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+            - name: management
+              containerPort: 8444
+              protocol: TCP
+            - name: monitoring
+              containerPort: 8081
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: monitoring
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: monitoring
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          env:
+            - name: LISTEN_ADDRESS
+              value: 0.0.0.0:8443
+            - name: MONITORING_ADDRESS
+              value: 0.0.0.0:8081
+            - name: GROUP_ID
+              value: {{ default .Values.config.groupID .Values.global.groupID }}
+            - name: NAME
+              value: {{ default (include "open-fsc-inway.fullname" .) .Values.config.name }}
+            - name: SELF_ADDRESS
+              value: {{ include "open-fsc-inway.selfAddress" . }}
+            - name: MANAGER_INTERNAL_UNAUTHENTICATED_ADDRESS
+              value: {{ .Values.config.managerInternalUnauthenticatedAddress }}
+            - name: CONTROLLER_REGISTRATION_API_ADDRESS
+              value: {{ default .Values.config.controllerApiAddress .Values.config.controllerRegistrationApiAddress }}
+            - name: TLS_ROOT_CERT
+              value: /config/internal/ca.crt
+            - name: TLS_CERT
+              value: /certificate-internal/tls.crt
+            - name: TLS_KEY
+              value: /certificate-internal/tls.key
+            - name: TX_LOG_API_ADDRESS
+              value: {{ required "Transaction Log API address is required" .Values.config.transactionLogApiAddress }}
+            - name: DISABLE_CRL_CHECKS
+              value: {{ quote .Values.config.disableCrlChecks }}
+          {{- if .Values.config.authorizationService.enabled }}
+            - name: AUTHORIZATION_SERVICE_ADDRESS
+              value: {{ .Values.config.authorizationService.url }}
+            - name: AUTHORIZATION_ROOT_CA
+              value: /config/authorization-service/ca.crt
+            - name: AUTHORIZATION_WITH_BODY
+              value: {{ quote .Values.config.authorizationService.withBody }}
+            - name: AUTHORIZATION_MAX_BODY_SIZE
+              value: {{ quote .Values.config.authorizationService.maxBodySize }}
+            - name: AUTHORIZATION_BODY_CHUNK_SIZE
+              value: {{ quote .Values.config.authorizationService.bodyChunkSize }}
+          {{- end }}
+          {{- if .Values.config.authZenService.enabled }}
+            - name: AUTHZEN_SERVICE_ADDRESS
+              value: {{ .Values.config.authZenService.url }}
+            - name: AUTHZEN_ROOT_CA
+              value: /config/authzen-service/ca.crt
+            - name: AUTHZEN_WITH_BODY
+              value: {{ quote .Values.config.authZenService.withBody }}
+            - name: AUTHZEN_MAX_BODY_SIZE
+              value: {{ quote .Values.config.authZenService.maxBodySize }}
+            - name: AUTHZEN_BODY_CHUNK_SIZE
+              value: {{ quote .Values.config.authZenService.bodyChunkSize }}
+          {{- end }}
+          {{- if .Values.config.serviceProxyCacheSize }}
+            - name: SERVICE_PROXY_CACHE_SIZE
+              value: {{ .Values.config.serviceProxyCacheSize | quote }}
+          {{- end }}
+            - name: TLS_GROUP_ROOT_CERT
+              value: "/config/group/ca-group.pem"
+            - name: TLS_GROUP_CERT
+              value: "/certificate-group/tls.crt"
+            - name: TLS_GROUP_KEY
+              value: "/certificate-group/tls.key"
+            - name: LOG_TYPE
+              value: {{ .Values.config.logType }}
+            - name: LOG_LEVEL
+              value: {{ .Values.config.logLevel }}
+            {{ if .Values.certificates.serviceCA.certificatePEM }}
+            - name: TLS_SERVICE_CA_CERT
+              value: /config/service/service-ca.pem
+            {{ end }}
+          {{- if .Values.extraEnv }}
+            {{- toYaml .Values.extraEnv | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: certificate-group
+              mountPath: /certificate-group
+            - name: certificate-internal
+              mountPath: /certificate-internal
+            - name: group-ca-certificate
+              mountPath: /config/group
+            - name: internal-ca-certificate
+              mountPath: /config/internal
+            {{ if .Values.certificates.serviceCA.certificatePEM }}
+            - name: service-ca-certificate
+              mountPath: /config/service
+            {{ end }}
+            {{- if .Values.config.authorizationService.enabled }}
+            - name: {{ if .Values.config.authorizationService.caCertificatePEMExistingSecret.name }}authorization-service-ca-certificate{{ else }}internal-ca-certificate{{ end }}
+              mountPath: /config/authorization-service
+            {{- end }}
+            {{- if .Values.config.authZenService.enabled }}
+            - name: {{ if .Values.config.authZenService.caCertificatePEMExistingSecret.name }}authzen-service-ca-certificate{{ else }}internal-ca-certificate{{ end }}
+              mountPath: /config/authzen-service
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.extraContainers }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: certificate-group
+          secret:
+            secretName: {{ default (printf "%s-group-tls" (include  "open-fsc-inway.fullname" .)) .Values.certificates.group.existingSecret }}
+            defaultMode: 0640
+        - name: certificate-internal
+          secret:
+            secretName: {{ default (printf "%s-internal-tls" (include "open-fsc-inway.fullname" .)) .Values.certificates.internal.existingSecret }}
+            defaultMode: 0640
+        - name: group-ca-certificate
+          secret:
+            secretName: {{ default (printf "%s-group-ca-certificate" (include  "open-fsc-inway.fullname" .)) (default .Values.global.certificates.group.caCertificatePEMExistingSecret.name .Values.certificates.group.caCertificatePEMExistingSecret.name ) }}
+            defaultMode: 0640
+            items:
+              - key: {{ default "tls.crt" (default .Values.global.certificates.group.caCertificatePEMExistingSecret.key .Values.certificates.group.caCertificatePEMExistingSecret.key) }}
+                path: ca-group.pem
+        {{ if .Values.certificates.serviceCA.certificatePEM }}
+        - name: service-ca-certificate
+          secret:
+            secretName: {{ template "open-fsc-inway.fullname" . }}-service-ca-certificate
+            defaultMode: 0640
+            items:
+              - key: tls.crt
+                path: service-ca.pem
+        {{ end}}
+        - name: internal-ca-certificate
+          secret:
+            secretName: {{ default (printf "%s-internal-ca-certificate" (include  "open-fsc-inway.fullname" .)) (default .Values.global.certificates.internal.caCertificatePEMExistingSecret.name .Values.certificates.internal.caCertificatePEMExistingSecret.name ) }}
+            defaultMode: 0640
+            items:
+              - key: {{ default "tls.crt" (default .Values.global.certificates.internal.caCertificatePEMExistingSecret.key .Values.certificates.internal.caCertificatePEMExistingSecret.key) }}
+                path: ca.crt
+      {{- if and .Values.config.authorizationService.enabled .Values.config.authorizationService.caCertificatePEMExistingSecret.name }}
+        - name: authorization-service-ca-certificate
+          secret:
+          {{- with .Values.config.authorizationService.caCertificatePEMExistingSecret }}
+            secretName: {{ .name }}
+            defaultMode: 0640
+            items:
+              - key: {{ .key }}
+                path: ca.crt
+          {{- end }}
+      {{- end }}
+      {{- if and .Values.config.authZenService.enabled .Values.config.authZenService.caCertificatePEMExistingSecret.name }}
+        - name: authzen-service-ca-certificate
+          secret:
+          {{- with .Values.config.authZenService.caCertificatePEMExistingSecret }}
+            secretName: {{ .name }}
+            defaultMode: 0640
+            items:
+              - key: {{ .key }}
+                path: ca.crt
+          {{- end }}
+      {{- end }}
+      {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

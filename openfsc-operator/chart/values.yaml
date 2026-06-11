@@ -1,0 +1,18 @@
+image:
+  repository: ghcr.io/fundament-oss/fundament/openfsc-operator
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# Leader election lets multiple replicas run with a single active reconciler.
+leaderElect: true
+
+# slog level: debug, info, warn or error.
+logLevel: info
+
+resources: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

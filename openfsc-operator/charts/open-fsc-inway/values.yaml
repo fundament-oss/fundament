@@ -1,0 +1,204 @@
+## @section Global parameters
+## @param global.imageRegistry Global Docker Image registry
+## @param global.imageTag Global Docker Image tag
+## @param global.groupID Global FSC Group ID
+## @param global.imagePullSecrets Global image pull secrets
+## @param global.certificates.group.caCertificatePEM OpenFSC CA root certificate. If not set the value of 'certificates.group.caCertificatePEM' is used.
+## @param global.certificates.group.caCertificatePEMExistingSecret.name Name of the existing secret
+## @param global.certificates.group.caCertificatePEMExistingSecret.key The key in the secret that contains the certificate
+## @param global.certificates.internal.caCertificatePEM CA root certificate of your internal PKI. If not set the value of 'certificates.internal.caCertificatePEM' is used
+## @param global.certificates.internal.caCertificatePEMExistingSecret.name Name of the existing secret
+## @param global.certificates.internal.caCertificatePEMExistingSecret.key The key in the secret that contains the certificate
+global:
+  imageRegistry: ""
+  imageTag: ""
+  groupID: ""
+  imagePullSecrets: []
+  certificates:
+    group:
+      caCertificatePEM: ""
+      caCertificatePEMExistingSecret:
+        name: ""
+        key: "tls.crt"
+    internal:
+      caCertificatePEM: ""
+      caCertificatePEMExistingSecret:
+        name: ""
+        key: "tls.crt"
+
+## @section Deployment Parameters
+## @param image.registry Image registry (ignored if 'global.imageRegistry' is set)
+## @param image.repository Image repository of the docs API.
+## @param image.tag Image tag (ignored if 'global.imageTag' is set). When set to null, the AppVersion from the chart is used
+## @param image.pullPolicy Image pull policy
+## @param image.pullSecrets Secrets for the image repository
+image:
+  registry: docker.io
+  repository: federatedserviceconnectivity/inway
+  tag: ""
+  pullPolicy: Always
+  pullSecrets: []
+
+## @param replicaCount Number of controller replicas
+replicaCount: 1
+
+## @param serviceAccount.create Specifies whether a service account should be created
+## @param serviceAccount.annotations Annotations to add to the service account
+## @param serviceAccount.name The name of the service account to use. If not set and create is true, a name is generated using the fullname template
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+## @param deploymentAnnotations Annotations to add to the deployment
+deploymentAnnotations: {}
+
+## @param podLabels Extra labels added to the pod
+podLabels: {}
+
+## @param securityContext.allowPrivilegeEscalation Controls whether a process can gain more privileges than its parent process
+## @param securityContext.runAsNonRoot Run container as a non-root user
+## @param securityContext.runAsUser Run container as specified user
+## @param securityContext.capabilities.drop Drop all capabilities by default
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1001
+  capabilities:
+    drop:
+      - "ALL"
+
+## @param podSecurityContext.fsGroup GroupID under which the pod should be started
+podSecurityContext:
+  fsGroup: 1001
+
+## @param resources Pod resource requests & limits
+resources: {}
+
+## @param nodeSelector Node labels for pod assignment
+nodeSelector: {}
+
+## @param affinity Node affinity for pod assignment
+affinity: {}
+
+## @param tolerations Node tolerations for pod assignment
+tolerations: []
+
+## @param extraEnv Extra env items for pod assignment
+extraEnv: []
+
+## @param extraContainers Additional containers to be added to the pod as sidecars
+extraContainers: []
+
+## @param extraVolumes Additional volumes to be added to the pod
+extraVolumes: []
+
+## @section Common Parameters
+## @param nameOverride Override deployment name
+## @param fullnameOverride Override full deployment name
+nameOverride: ""
+fullnameOverride: ""
+
+## @section OpenFSC Inway parameters
+## @param config.logType Possible values 'live', 'local'. Affects the log output. See NewProduction and NewDevelopment at https://godoc.org/go.uber.org/zap#Logger
+## @param config.logLevel Possible values 'debug', 'warn', 'info'. Override the default logLevel set by 'config.logType'
+## @param config.groupID FSC Group ID
+## @param config.name Name of the Inway
+## @param config.selfAddress The Address that can be used by the OpenFSC network to reach this Inway. The address must contain the scheme https and port 443. E.g. https://my-inway.com:443.
+## @param config.managerInternalUnauthenticatedAddress Internal unauthenticated address of the Manager
+## @param config.controllerApiAddress The address of the Controller API (DEPRECATED use controllerRegistrationApiAddress instead)
+## @param config.controllerRegistrationApiAddress The address of the Controller Registration API
+## @param config.transactionLogApiAddress The Address of the Transaction Log API
+## @param config.authorizationService.enabled If 'true', the Inway will use the authorization service
+## @param config.authorizationService.url URL of the authorization service to use
+## @param config.authorizationService.caCertificatePEMExistingSecret.name Name of an existing secret that contains the CA certificate
+## @param config.authorizationService.caCertificatePEMExistingSecret.key Key in the existing secret that contains the CA certificate
+## @param config.authorizationService.withBody When set to true, the HTTP request body (if available) will be send to the Authorization Server in base64 encoded format.
+## @param config.authorizationService.maxBodySize The maximum HTTP request body size in bytes that is allowed for sending to the authorization server. If a body exceeds this limits, the body is not send to the Authorization Server.
+## @param config.authorizationService.bodyChunkSize The chunk size in bytes that is used to process each HTTP request body chunk.
+## @param config.authZenService.enabled If 'true', the Inway will use the AuthZen service
+## @param config.authZenService.url URL of the AuthZen service to use
+## @param config.authZenService.caCertificatePEMExistingSecret.name Name of an existing secret that contains the CA certificate
+## @param config.authZenService.caCertificatePEMExistingSecret.key Key in the existing secret that contains the CA certificate
+## @param config.authZenService.withBody When set to true, the HTTP request body (if available) will be send to the AuthZen Server in base64 encoded format.
+## @param config.authZenService.maxBodySize The maximum HTTP request body size in bytes that is allowed for sending to the AuthZen server. If a body exceeds this limits, the body is not send to the Authorization Server.
+## @param config.authZenService.bodyChunkSize The chunk size in bytes that is used to process each HTTP request body chunk.
+## @param config.serviceProxyCacheSize [nullable] Size of the Service proxy cache
+## @param config.disableCrlChecks If 'true', the Inway will not check if the certificate provided by the Outway is present on the CRLs specified by the certificate. This means the Inway will accept client certificates that have been revoked.
+config:
+  logType: live
+  logLevel: info
+  groupID: ""
+  name: ""
+  selfAddress: ""
+  managerInternalUnauthenticatedAddress: ""
+  controllerApiAddress: ""
+  controllerRegistrationApiAddress: ""
+  transactionLogApiAddress: ""
+  disableCrlChecks: false
+  authorizationService:
+    enabled: false
+    url: ""
+    caCertificatePEMExistingSecret:
+      name: ""
+      key: ca.crt
+    withBody: false
+    maxBodySize: 4096
+    bodyChunkSize: 1024
+  authZenService:
+    enabled: false
+    url: ""
+    caCertificatePEMExistingSecret:
+      name: ""
+      key: ca.crt
+    withBody: false
+    maxBodySize: 4096
+    bodyChunkSize: 1024
+  serviceProxyCacheSize: 1024
+
+## @section TLS certificates used by OpenFSC components for communications
+## @param certificates.group.caCertificatePEM The CA certificate of the Group
+## @param certificates.group.caCertificatePEMExistingSecret.name Name of the existing secret
+## @param certificates.group.caCertificatePEMExistingSecret.key The key in the secret that contains the certificatesM The Group certificate
+## @param certificates.group.certificatePEM The certificate of the Group
+## @param certificates.group.keyPEM Private Key of 'certificates.group.certificatePEM'
+## @param certificates.group.existingSecret Use existing secret with your OpenFSC keypair (`certificates.group.certificatePEM` and `certificates.group.keyPEM` will be ignored and picked up from the secret)
+## @param certificates.internal.caCertificatePEM The CA root certificate of your internal PKI
+## @param certificates.internal.caCertificatePEMExistingSecret.name Name of the existing secret
+## @param certificates.internal.caCertificatePEMExistingSecret.key The key in the secret that contains the certificate
+## @param certificates.internal.certificatePEM The certificate signed by your internal PKI
+## @param certificates.internal.keyPEM the private key of 'certificates.internal.certificatePEM'
+## @param certificates.internal.existingSecret Use of existing secret with your OpenFSC keypair ('certificates.internal.certificatePEM' and 'certificates.internal.keyPEM'. will be ingored and picked up from this secret)
+## @param certificates.serviceCA.certificatePEM If a service offered by this Inway uses certificates signed by your own CA you can use this value to mount the CA certificate on the Inway so the Inway is able to validate the TLS connection
+certificates:
+  group:
+    caCertificatePEM: ""
+    caCertificatePEMExistingSecret:
+      name: ""
+      key: ""
+    certificatePEM: ""
+    keyPEM: ""
+    existingSecret: ""
+  internal:
+    caCertificatePEM: ""
+    caCertificatePEMExistingSecret:
+      name: ""
+      key: ""
+    certificatePEM: ""
+    keyPEM: ""
+    existingSecret: ""
+  serviceCA:
+    certificatePEM: ""
+
+## @section Exposure parameters
+## @param service.type Service Type (ClusterIP, NodePort, LoadBalancer)
+## @param service.annotations Annotations to be added to the service
+## @param service.port Port exposed by the service
+## @param service.nodePort Port exposed for Inway traffic if 'service.type' is 'NodePort'
+## @param service.loadBalancerIP Only applies when using 'service.type' 'LoadBalancer'. A loadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying the loadbalancerIP when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature.
+service:
+  type: LoadBalancer
+  annotations: {}
+  port: 443
+  nodePort: 443
+  loadBalancerIP: ""

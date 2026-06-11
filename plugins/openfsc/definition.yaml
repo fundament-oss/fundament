@@ -1,0 +1,115 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: openfsc
+  displayName: OpenFSC
+  version: v3.0.0
+  description: Federated Service Connectivity (FSC) directory peer. Installs the standalone openfsc-operator, which deploys an OpenFSC Manager and Controller from a Directory resource; the Manager functions as the group's Directory.
+  author: Fundament
+  license: EUPL-1.2
+  icon: share-nodes
+  urls:
+    homepage: https://fsc-standaard.nl
+    repository: https://gitlab.com/rinis-oss/fsc/open-fsc
+    documentation: https://logius-standaarden.github.io/fsc-core/
+  tags:
+    - fsc
+    - federation
+    - common-ground
+spec:
+  permissions:
+    capabilities:
+      # Pull container images (and the cert-manager/CloudNativePG charts) from
+      # public registries during install.
+      - internet_access
+    # NOTE: this rbac block is informational metadata only — the plugin-controller
+    # does not turn it into a Role. The plugin's real permissions come from the
+    # built-in `admin` ClusterRole bound in its namespace plus any ClusterRoles the
+    # PluginInstallation requests. Install bootstraps cluster-scoped operators
+    # (cert-manager, CloudNativePG, openfsc-operator — CRDs, ClusterRoles), and
+    # creates a StorageClass and Namespaces, so it effectively needs cluster-admin.
+    # The rules below document the steady-state resources the plugin itself
+    # touches; everything else is reconciled by the openfsc-operator under its
+    # own scoped ClusterRole (see openfsc-operator/chart).
+    rbac:
+      - apiGroups: ["openfsc.fundament.io"]
+        resources: ["directories", "peers", "inways", "outways"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Helm-install the openfsc-operator chart (Deployment + RBAC +
+      # ServiceAccount, plus Helm's own release-state Secrets).
+      - apiGroups: ["apps"]
+        resources: ["deployments"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: [""]
+        resources: ["services", "serviceaccounts", "secrets", "configmaps"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  crds:
+    - directories.openfsc.fundament.io
+    - peers.openfsc.fundament.io
+    - inways.openfsc.fundament.io
+    - outways.openfsc.fundament.io
+
+  menu:
+    organization:
+      - crd: peers.openfsc.fundament.io
+        list: true
+        detail: true
+        create: true
+        icon: share-nodes
+      - crd: inways.openfsc.fundament.io
+        list: true
+        detail: true
+        create: true
+        icon: arrow-right-to-bracket
+      - crd: outways.openfsc.fundament.io
+        list: true
+        detail: true
+        create: true
+        icon: arrow-right-from-bracket
+
+  customComponents:
+    Peer:
+      list: peers-list.html
+      detail: peers-detail.html
+    Inway:
+      list: inways-list.html
+      detail: inways-detail.html
+    Outway:
+      list: outways-list.html
+      detail: outways-detail.html
+
+  allowedResources:
+    - group: openfsc.fundament.io
+      version: v1
+      resource: directories
+      verbs: [list, get]
+    - group: openfsc.fundament.io
+      version: v1
+      resource: peers
+      verbs: [list, get]
+    - group: openfsc.fundament.io
+      version: v1
+      resource: inways
+      verbs: [list, get]
+    - group: openfsc.fundament.io
+      version: v1
+      resource: outways
+      verbs: [list, get]
+
+  uiHints:
+    peers.openfsc.fundament.io: &statusMapping
+      statusMapping:
+        jsonPath: ".status.phase"
+        values:
+          "Active":
+            badge: success
+            label: Active
+          "Pending":
+            badge: warning
+            label: Pending
+          "Error":
+            badge: danger
+            label: Error
+    inways.openfsc.fundament.io: *statusMapping
+    outways.openfsc.fundament.io: *statusMapping

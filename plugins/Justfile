@@ -1,4 +1,5 @@
 mod cert-manager
+mod openfsc
 
 cluster := "fundament-plugin"
 registry := "plugin-registry.localhost"
@@ -45,7 +46,10 @@ undeploy:
 
 # --- Plugin commands ---
 
-# Build a plugin image, push to registry, and apply the PluginInstallation CR
+# Build a plugin image, push to registry, and apply the PluginInstallation CR.
+# An optional <plugin>/.sandbox-config file (KEY=VALUE lines) becomes
+# spec.config, surfaced to the plugin as FUNP_<KEY> env vars (e.g. the openfsc
+# `operator-push` recipe records OPERATOR_IMAGE there).
 plugin-install plugin:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -53,6 +57,14 @@ plugin-install plugin:
     image="localhost:{{ registry_port }}/{{ plugin }}-plugin:${tag}"
     docker build -t "${image}" -f "{{ plugin }}/Dockerfile" ..
     docker push "${image}"
+    config=""
+    if [ -f "{{ plugin }}/.sandbox-config" ]; then
+      config=$'\n  config:'
+      while IFS='=' read -r key value; do
+        [ -n "${key}" ] || continue
+        config+=$'\n'"    ${key}: \"${value}\""
+      done < "{{ plugin }}/.sandbox-config"
+    fi
     kubectl --context {{ kube_context }} apply -f - <<EOF
     apiVersion: plugins.fundament.io/v1
     kind: PluginInstallation
@@ -65,7 +77,7 @@ plugin-install plugin:
         pluginVersion: ${tag}
         definitionHash: sha256:dev-${tag}
       clusterRoles:
-        - cluster-admin
+        - cluster-admin${config}
     EOF
 
 # Delete a PluginInstallation CR

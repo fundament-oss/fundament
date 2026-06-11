@@ -1,0 +1,56 @@
+kube_context := env("kube_context", "k3d-fundament-plugin")
+registry_port := "5112"
+
+# Build the openfsc-operator image, push it to the sandbox registry and record
+# the ref in .sandbox-config, which `just plugin-install openfsc` turns into
+# PluginInstallation.spec.config (→ FUNP_OPERATOR_IMAGE). Run before
+# plugin-install so the plugin deploys the locally-built operator instead of
+# the published image.
+
+# Build and push the openfsc-operator image for the sandbox cluster
+operator-push:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tag=$(git describe --always --dirty)
+    image="localhost:{{ registry_port }}/openfsc-operator:${tag}"
+    docker build -t "${image}" -f ../../openfsc-operator/Dockerfile ../..
+    docker push "${image}"
+    echo "OPERATOR_IMAGE=${image}" > .sandbox-config
+    echo "wrote .sandbox-config: OPERATOR_IMAGE=${image}"
+
+# Verify the OpenFSC plugin installation: the PluginInstallation reaches Running
+# (the plugin installs cert-manager + CloudNativePG + the openfsc-operator and
+# creates the Directory), the operator deploys the OpenFSC core (Directory and
+# self Peer Active) and provisions the default gateways.
+#
+# The first install pulls many images, so the waits are generous. Prereqs:
+# `just openfsc::operator-push`, then `just plugin-install openfsc`.
+
+# Verify the OpenFSC install: PluginInstallation Running + Directory/Peer/gateways Active
+test:
+    @echo "Waiting for PluginInstallation/openfsc to be Running (first install pulls many images)..."
+    kubectl --context {{ kube_context }} wait --for=jsonpath='{.status.phase}'=Running plugininstallation/openfsc --timeout=900s
+    @echo "Waiting for the Directory to become Active..."
+    kubectl --context {{ kube_context }} wait --for=jsonpath='{.status.phase}'=Active directory/default --timeout=600s
+    @echo "Waiting for the self Peer to become Active..."
+    kubectl --context {{ kube_context }} wait --for=jsonpath='{.status.phase}'=Active peer/self --timeout=600s
+    @echo "Waiting for the default gateways to become Active..."
+    kubectl --context {{ kube_context }} wait --for=jsonpath='{.status.phase}'=Active inway/default-inway --timeout=600s
+    kubectl --context {{ kube_context }} wait --for=jsonpath='{.status.phase}'=Active outway/default-outway --timeout=600s
+    kubectl --context {{ kube_context }} get directory,peer,inway,outway
+    kubectl --context {{ kube_context }} -n fsc get pods,deploy
+
+# Remove the OpenFSC resources; the operator's finalizers tear down the helm
+# releases and certificates. cert-manager, CloudNativePG and the operator
+# itself are left in place (rerunning the plugin re-seeds the resources).
+
+# Remove the Directory, the self Peer and the default gateways
+test-cleanup:
+    kubectl --context {{ kube_context }} delete inway/default-inway outway/default-outway --ignore-not-found
+    kubectl --context {{ kube_context }} delete directory/default --ignore-not-found
+    kubectl --context {{ kube_context }} delete peer/self --ignore-not-found
+
+# Preview the console HTML templates in a browser against the running cluster
+# (live CR data via kubectl; no Console host needed). Prereq: plugin installed.
+console-preview port="4319":
+    PORT={{ port }} kube_context={{ kube_context }} bun scripts/console-preview/serve.js
