@@ -1,4 +1,4 @@
-<form [formGroup]="nodePoolsForm" (ngSubmit)="onSubmit()" class="space-y-6">
+<nldd-form [formGroup]="nodePoolsForm" (submit)="onSubmit($event)" class="space-y-6">
   <!-- Node Pools -->
   <div formArrayName="nodePools" class="space-y-6">
     @for (nodePoolControl of nodePools.controls; track nodePoolControl) {
@@ -40,11 +40,13 @@
 
           <!-- Machine Type -->
           <nldd-form-field label="Machine type">
-            <select [id]="'machineType-' + $index" formControlName="machineType">
-              @for (mt of machineTypes; track mt.value) {
-                <option [value]="mt.value">{{ mt.label }}</option>
-              }
-            </select>
+            <nldd-dropdown>
+              <select [id]="'machineType-' + $index" formControlName="machineType">
+                @for (mt of machineTypes; track mt.value) {
+                  <option [value]="mt.value">{{ mt.label }}</option>
+                }
+              </select>
+            </nldd-dropdown>
           </nldd-form-field>
 
           <!-- Autoscaling -->
@@ -63,7 +65,7 @@
               ></nldd-number-field>
             </nldd-form-field>
 
-            <nldd-form-field label="Autoscale maximum">
+            <nldd-form-field label="Autoscale maximum" style="margin-top: 0">
               <nldd-number-field
                 [id]="'autoscaleMax-' + $index"
                 [value]="nodePoolControl.get('autoscaleMax')?.value"
@@ -95,4 +97,4 @@
   <div class="border-t border-gray-200 pt-6 dark:border-gray-800">
     <ng-content></ng-content>
   </div>
-</form>
+</nldd-form>

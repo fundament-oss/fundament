@@ -467,34 +467,23 @@
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Tier">
-          <select #fTier>
-            <option value="1" [attr.selected]="editForm()?.tier === 1 ? true : null">Tier 1</option>
-            <option value="2" [attr.selected]="editForm()?.tier === 2 ? true : null">Tier 2</option>
-            <option value="3" [attr.selected]="editForm()?.tier === 3 ? true : null">Tier 3</option>
-            <option value="4" [attr.selected]="editForm()?.tier === 4 ? true : null">Tier 4</option>
-          </select>
+          <nldd-dropdown>
+            <select [ngModel]="dcTier()" (ngModelChange)="dcTier.set($event)">
+              <option value="1">Tier 1</option>
+              <option value="2">Tier 2</option>
+              <option value="3">Tier 3</option>
+              <option value="4">Tier 4</option>
+            </select>
+          </nldd-dropdown>
         </nldd-form-field>
         <nldd-form-field label="Status">
-          <select #fStatus>
-            <option
-              value="operational"
-              [attr.selected]="editForm()?.status === 'operational' ? true : null"
-            >
-              Operational
-            </option>
-            <option
-              value="degraded"
-              [attr.selected]="editForm()?.status === 'degraded' ? true : null"
-            >
-              Degraded
-            </option>
-            <option
-              value="maintenance"
-              [attr.selected]="editForm()?.status === 'maintenance' ? true : null"
-            >
-              Maintenance
-            </option>
-          </select>
+          <nldd-dropdown>
+            <select [ngModel]="dcStatus()" (ngModelChange)="dcStatus.set($event)">
+              <option value="operational">Operational</option>
+              <option value="degraded">Degraded</option>
+              <option value="maintenance">Maintenance</option>
+            </select>
+          </nldd-dropdown>
         </nldd-form-field>
       </div>
       <nldd-form-field label="Established (year)">

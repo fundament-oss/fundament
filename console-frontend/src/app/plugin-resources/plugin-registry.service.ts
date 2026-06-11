@@ -113,9 +113,7 @@ export default class PluginRegistryService {
           { credentials: 'include' },
         );
         if (!defRes.ok) {
-          throw new Error(
-            `Failed to fetch definition for ${installationName}: ${defRes.status}`,
-          );
+          throw new Error(`Failed to fetch definition for ${installationName}: ${defRes.status}`);
         }
 
         return defRes.json() as Promise<GetDefinitionResponse>;

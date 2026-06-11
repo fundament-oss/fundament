@@ -555,9 +555,11 @@
         </div>
       }
       <nldd-form-field label="Device">
-        <select disabled>
-          <option selected>{{ editAsset()?.model }}</option>
-        </select>
+        <nldd-dropdown disabled>
+          <select disabled>
+            <option selected>{{ editAsset()?.model }}</option>
+          </select>
+        </nldd-dropdown>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Asset tag">
@@ -574,20 +576,17 @@
           }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Status">
-          <select #fAssetStatus>
-            @for (s of statuses; track s.value) {
-              <option
-                [value]="s.value"
-                [attr.selected]="editAsset()?.status === s.value ? true : null"
-              >
-                {{ s.label }}
-              </option>
-            }
-          </select>
+          <nldd-dropdown>
+            <select [ngModel]="assetStatus()" (ngModelChange)="assetStatus.set($event)">
+              @for (s of statuses; track s.value) {
+                <option [value]="s.value">{{ s.label }}</option>
+              }
+            </select>
+          </nldd-dropdown>
         </nldd-form-field>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Serial number" [optional]="true">
+        <nldd-form-field label="Serial number">
           <nldd-text-field
             #fAssetSerial
             [attr.value]="editAsset()?.serialNumber ?? ''"
@@ -600,7 +599,7 @@
             fieldError('serial_number')
           }}</nldd-form-field-error-text>
         </nldd-form-field>
-        <nldd-form-field label="Warranty expiry" [optional]="true">
+        <nldd-form-field label="Warranty expiry">
           <nldd-text-field
             #fAssetWarranty
             type="date"
@@ -609,30 +608,27 @@
           ></nldd-text-field>
         </nldd-form-field>
       </div>
-      <nldd-form-field label="Rack" [optional]="true">
+      <nldd-form-field label="Rack">
         @if (racksByDatacenter().length === 0) {
           <nldd-form-field-help-text>
             No racks available yet. Add a room, rack row, and rack to a datacenter first.
           </nldd-form-field-help-text>
         }
-        <select #fAssetRack>
-          <option value="">— Not placed —</option>
-          @for (group of racksByDatacenter(); track group.datacenter) {
-            <optgroup [attr.label]="group.datacenter">
-              @for (rack of group.racks; track rack.id) {
-                <option
-                  [value]="rack.id"
-                  [attr.selected]="editPlacement()?.rackId === rack.id ? true : null"
-                >
-                  {{ rack.name }}
-                </option>
-              }
-            </optgroup>
-          }
-        </select>
+        <nldd-dropdown>
+          <select [ngModel]="assetRackId()" (ngModelChange)="assetRackId.set($event)">
+            <option value="">— Not placed —</option>
+            @for (group of racksByDatacenter(); track group.datacenter) {
+              <optgroup [attr.label]="group.datacenter">
+                @for (rack of group.racks; track rack.id) {
+                  <option [value]="rack.id">{{ rack.name }}</option>
+                }
+              </optgroup>
+            }
+          </select>
+        </nldd-dropdown>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Rack unit" [optional]="true">
+        <nldd-form-field label="Rack unit">
           <nldd-text-field
             #fAssetRackUnit
             type="number"
@@ -646,22 +642,18 @@
             fieldError('rack_unit_start')
           }}</nldd-form-field-error-text>
         </nldd-form-field>
-        <nldd-form-field label="Slot type" [optional]="true">
-          <select #fAssetSlotType>
-            @for (st of slotTypes; track st.value) {
-              <option
-                [value]="st.value"
-                [attr.selected]="
-                  (editPlacement()?.slotType ?? defaultSlotType) === st.value ? true : null
-                "
-              >
-                {{ st.label }}
-              </option>
-            }
-          </select>
+        <nldd-form-field label="Slot type">
+          <nldd-dropdown>
+            <select [ngModel]="assetSlotType()" (ngModelChange)="assetSlotType.set($event)">
+              <option value="">Unknown</option>
+              @for (st of slotTypes; track st.value) {
+                <option [value]="st.value">{{ st.label }}</option>
+              }
+            </select>
+          </nldd-dropdown>
         </nldd-form-field>
       </div>
-      <nldd-form-field label="Notes" [optional]="true">
+      <nldd-form-field label="Notes">
         <nldd-multi-line-text-field
           #fAssetNotes
           [attr.value]="editAsset()?.notes ?? ''"

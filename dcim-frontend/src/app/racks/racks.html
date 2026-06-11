@@ -397,16 +397,18 @@
       </nldd-form-field>
       @if (!editRack()?.id) {
         <nldd-form-field label="Row">
-          <select
-            #fRackRowId
-            aria-label="Row"
-            [attr.aria-invalid]="isFieldInvalid('row_id') ? 'true' : null"
-          >
-            <option value="" disabled selected>Select a row</option>
-            @for (row of rowOptions(); track row.id) {
-              <option [value]="row.id">{{ row.label }}</option>
-            }
-          </select>
+          <nldd-dropdown>
+            <select
+              #fRackRowId
+              aria-label="Row"
+              [attr.aria-invalid]="isFieldInvalid('row_id') ? 'true' : null"
+            >
+              <option value="" disabled selected>Select a row</option>
+              @for (row of rowOptions(); track row.id) {
+                <option [value]="row.id">{{ row.label }}</option>
+              }
+            </select>
+          </nldd-dropdown>
           @if (isFieldInvalid('row_id')) {
             <nldd-form-field-error-text id="error-rack-row-id">{{
               fieldError('row_id')
@@ -484,20 +486,18 @@
         }
         @if (assetOptions().length === 0) {
           <nldd-form-field-error-text id="error-no-assets"
-            >No assets found. Create one on the Inventory page
-            first.</nldd-form-field-error-text
+            >No assets found. Create one on the Inventory page first.</nldd-form-field-error-text
           >
         }
       </nldd-form-field>
       <nldd-form-field label="Slot type">
-        <select #fDeviceSlotType aria-label="Slot type">
+        <select
+          aria-label="Slot type"
+          [ngModel]="deviceSlotType()"
+          (ngModelChange)="deviceSlotType.set($event)"
+        >
           @for (st of slotTypes; track st.value) {
-            <option
-              [value]="st.value"
-              [attr.selected]="addDeviceForm()?.slotType === st.value ? true : null"
-            >
-              {{ st.label }}
-            </option>
+            <option [value]="st.value">{{ st.label }}</option>
           }
         </select>
       </nldd-form-field>

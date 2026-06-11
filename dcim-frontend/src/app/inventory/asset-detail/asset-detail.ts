@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { RackSlotType } from '../../../generated/v1/common_pb';
@@ -27,12 +28,13 @@ import NoteApiService from '../note-api.service';
 import PlacementApiService, { RackOption } from '../placement-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 @Component({
   selector: 'app-asset-detail',
   templateUrl: './asset-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'block bg-slate-50 min-h-screen' },
 })
@@ -69,6 +71,13 @@ export default class AssetDetailComponent implements OnInit {
 
   /** Holds the asset being edited; non-null while the edit sheet is open. */
   readonly editAsset = signal<Partial<Asset> | null>(null);
+
+  /** Bound values for the edit form's <select>s (seeded on open, read on save). */
+  readonly assetStatus = signal<AssetStatus>('available');
+
+  readonly assetRackId = signal<string>('');
+
+  readonly assetSlotType = signal<string>('');
 
   readonly invalidFields = signal<Record<string, string>>({});
 
@@ -113,8 +122,6 @@ export default class AssetDetailComponent implements OnInit {
     { value: RackSlotType.ZERO_U, label: 'Zero-U' },
   ];
 
-  readonly defaultSlotType = RackSlotType.UNIT;
-
   readonly slotTypeLabel = (slotType: RackSlotType): string =>
     this.slotTypes.find((s) => s.value === slotType)?.label ?? '—';
 
@@ -122,17 +129,11 @@ export default class AssetDetailComponent implements OnInit {
 
   private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
 
-  private readonly fAssetStatus = viewChild<ElementRef>('fAssetStatus');
-
   private readonly fAssetSerial = viewChild<ElementRef>('fAssetSerial');
 
   private readonly fAssetWarranty = viewChild<ElementRef>('fAssetWarranty');
 
-  private readonly fAssetRack = viewChild<ElementRef>('fAssetRack');
-
   private readonly fAssetRackUnit = viewChild<ElementRef>('fAssetRackUnit');
-
-  private readonly fAssetSlotType = viewChild<ElementRef>('fAssetSlotType');
 
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
@@ -250,7 +251,7 @@ export default class AssetDetailComponent implements OnInit {
     firstValueFrom(this.placementApi.getPlacementByAsset(current.id))
       .then((res) => {
         const p = res.placement;
-        this.editPlacement.set(
+        const placement =
           p && p.location.case === 'rack'
             ? {
                 id: p.id,
@@ -258,15 +259,22 @@ export default class AssetDetailComponent implements OnInit {
                 unit: p.location.value.rackUnitStart,
                 slotType: p.location.value.rackSlotType,
               }
-            : null,
-        );
+            : null;
+        this.editPlacement.set(placement);
+        this.assetRackId.set(placement?.rackId ?? '');
+        this.assetSlotType.set(placement?.slotType ? String(placement.slotType) : '');
       })
       .catch((err) => {
         this.editPlacement.set(null);
+        this.assetRackId.set('');
+        this.assetSlotType.set('');
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
       })
-      .finally(() => this.editAsset.set({ ...current }));
+      .finally(() => {
+        this.assetStatus.set(current.status);
+        this.editAsset.set({ ...current });
+      });
   }
 
   closeAssetForm(): void {
@@ -282,8 +290,7 @@ export default class AssetDetailComponent implements OnInit {
     const updated: Asset = {
       ...current,
       assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? current.assetTag,
-      status: ((this.fAssetStatus()?.nativeElement as HTMLSelectElement)?.value ??
-        current.status) as AssetStatus,
+      status: this.assetStatus(),
       serialNumber:
         (this.fAssetSerial()?.nativeElement as HTMLInputElement)?.value ??
         current.serialNumber ??
@@ -315,11 +322,8 @@ export default class AssetDetailComponent implements OnInit {
   private readPlacementInput():
     | { rackId: string; unit: number; slotType: RackSlotType; existingPlacementId: string | null }
     | 'invalid' {
-    const rackId = (this.fAssetRack()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const slotType =
-      (Number(
-        (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
-      ) as RackSlotType) || RackSlotType.UNIT;
+    const rackId = this.assetRackId();
+    const slotType = (Number(this.assetSlotType()) as RackSlotType) || RackSlotType.UNIT;
     const existingPlacementId = this.editPlacement()?.id ?? null;
 
     if (!rackId) {
@@ -327,7 +331,10 @@ export default class AssetDetailComponent implements OnInit {
       return { rackId: '', unit: 0, slotType, existingPlacementId };
     }
 
-    const unit = parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10);
+    const unit = parseInt(
+      (this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '',
+      10,
+    );
     if (!Number.isInteger(unit) || unit < 1) {
       this.invalidFields.set({ rack_unit_start: 'Enter a rack unit of 1 or higher.' });
       return 'invalid';

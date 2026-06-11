@@ -200,7 +200,9 @@ export default class ApiKeysComponent implements OnInit {
     this.newKeyExpiresIn.set('');
   }
 
-  async createApiKey() {
+  async createApiKey(event?: Event) {
+    event?.preventDefault();
+
     const name = this.newKeyName().trim();
     if (!name) {
       return;

@@ -106,7 +106,9 @@ export default class AddClusterComponent implements OnInit {
     this.clusterNameExists.set(false);
   }
 
-  onSubmit() {
+  onSubmit(event?: Event) {
+    event?.preventDefault();
+
     this.formSubmitted.set(true);
     this.onClusterNameBlur();
     if (this.clusterForm.invalid || this.clusterNameExists()) {

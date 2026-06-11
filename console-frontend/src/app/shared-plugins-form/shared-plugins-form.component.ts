@@ -9,7 +9,6 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { PLUGIN } from '../../connect/tokens';
@@ -29,7 +28,6 @@ export interface Plugin {
 
 @Component({
   selector: 'app-shared-plugins-form',
-  imports: [FormsModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-plugins-form.component.html',
@@ -125,7 +123,9 @@ export class SharedPluginsFormComponent implements OnInit {
     this.onSubmit();
   }
 
-  onSubmit() {
+  onSubmit(event?: Event) {
+    event?.preventDefault();
+
     const selectedPlugins = this.plugins.filter((plugin) => plugin.selected);
 
     const data = {
