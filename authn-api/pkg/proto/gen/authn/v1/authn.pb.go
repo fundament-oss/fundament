@@ -384,6 +384,172 @@ func (b0 ExchangeTokenResponse_builder) Build() *ExchangeTokenResponse {
 	return m0
 }
 
+// MintPluginToken request - identifies the plugin installation the caller
+// wants to act through. The caller's UserToken is taken from the
+// Authorization header or auth cookie.
+type MintPluginTokenRequest struct {
+	state                     protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId      string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_InstallationId string                 `protobuf:"bytes,20,opt,name=installation_id,json=installationId"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *MintPluginTokenRequest) Reset() {
+	*x = MintPluginTokenRequest{}
+	mi := &file_authn_v1_authn_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MintPluginTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MintPluginTokenRequest) ProtoMessage() {}
+
+func (x *MintPluginTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_authn_v1_authn_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *MintPluginTokenRequest) GetClusterId() string {
+	if x != nil {
+		return x.xxx_hidden_ClusterId
+	}
+	return ""
+}
+
+func (x *MintPluginTokenRequest) GetInstallationId() string {
+	if x != nil {
+		return x.xxx_hidden_InstallationId
+	}
+	return ""
+}
+
+func (x *MintPluginTokenRequest) SetClusterId(v string) {
+	x.xxx_hidden_ClusterId = v
+}
+
+func (x *MintPluginTokenRequest) SetInstallationId(v string) {
+	x.xxx_hidden_InstallationId = v
+}
+
+type MintPluginTokenRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// The cluster the plugin installation lives on.
+	ClusterId string
+	// The plugin installation to act through (PluginInstallation CR name).
+	InstallationId string
+}
+
+func (b0 MintPluginTokenRequest_builder) Build() *MintPluginTokenRequest {
+	m0 := &MintPluginTokenRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ClusterId = b.ClusterId
+	x.xxx_hidden_InstallationId = b.InstallationId
+	return m0
+}
+
+// MintPluginToken response
+type MintPluginTokenResponse struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_AccessToken string                 `protobuf:"bytes,10,opt,name=access_token,json=accessToken"`
+	xxx_hidden_TokenType   string                 `protobuf:"bytes,20,opt,name=token_type,json=tokenType"`
+	xxx_hidden_ExpiresIn   int64                  `protobuf:"varint,30,opt,name=expires_in,json=expiresIn"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *MintPluginTokenResponse) Reset() {
+	*x = MintPluginTokenResponse{}
+	mi := &file_authn_v1_authn_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MintPluginTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MintPluginTokenResponse) ProtoMessage() {}
+
+func (x *MintPluginTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_authn_v1_authn_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *MintPluginTokenResponse) GetAccessToken() string {
+	if x != nil {
+		return x.xxx_hidden_AccessToken
+	}
+	return ""
+}
+
+func (x *MintPluginTokenResponse) GetTokenType() string {
+	if x != nil {
+		return x.xxx_hidden_TokenType
+	}
+	return ""
+}
+
+func (x *MintPluginTokenResponse) GetExpiresIn() int64 {
+	if x != nil {
+		return x.xxx_hidden_ExpiresIn
+	}
+	return 0
+}
+
+func (x *MintPluginTokenResponse) SetAccessToken(v string) {
+	x.xxx_hidden_AccessToken = v
+}
+
+func (x *MintPluginTokenResponse) SetTokenType(v string) {
+	x.xxx_hidden_TokenType = v
+}
+
+func (x *MintPluginTokenResponse) SetExpiresIn(v int64) {
+	x.xxx_hidden_ExpiresIn = v
+}
+
+type MintPluginTokenResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// JWT access token (aud=fundament-plugin) for API calls to
+	// kube-api-proxy and plugin-proxy.
+	AccessToken string
+	// Token type (always "Bearer")
+	TokenType string
+	// Seconds until token expires (15 minutes; mint again to refresh)
+	ExpiresIn int64
+}
+
+func (b0 MintPluginTokenResponse_builder) Build() *MintPluginTokenResponse {
+	m0 := &MintPluginTokenResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_AccessToken = b.AccessToken
+	x.xxx_hidden_TokenType = b.TokenType
+	x.xxx_hidden_ExpiresIn = b.ExpiresIn
+	return m0
+}
+
 var File_authn_v1_authn_proto protoreflect.FileDescriptor
 
 const file_authn_v1_authn_proto_rawDesc = "" +
@@ -407,28 +573,45 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\n" +
 	"token_type\x18\x14 \x01(\tR\ttokenType\x12\x1d\n" +
 	"\n" +
+	"expires_in\x18\x1e \x01(\x03R\texpiresIn\"`\n" +
+	"\x16MintPluginTokenRequest\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\n" +
+	" \x01(\tR\tclusterId\x12'\n" +
+	"\x0finstallation_id\x18\x14 \x01(\tR\x0einstallationId\"z\n" +
+	"\x17MintPluginTokenResponse\x12!\n" +
+	"\faccess_token\x18\n" +
+	" \x01(\tR\vaccessToken\x12\x1d\n" +
+	"\n" +
+	"token_type\x18\x14 \x01(\tR\ttokenType\x12\x1d\n" +
+	"\n" +
 	"expires_in\x18\x1e \x01(\x03R\texpiresIn2Z\n" +
 	"\fAuthnService\x12J\n" +
-	"\vGetUserInfo\x12\x1c.authn.v1.GetUserInfoRequest\x1a\x1d.authn.v1.GetUserInfoResponse2`\n" +
+	"\vGetUserInfo\x12\x1c.authn.v1.GetUserInfoRequest\x1a\x1d.authn.v1.GetUserInfoResponse2\xb8\x01\n" +
 	"\fTokenService\x12P\n" +
-	"\rExchangeToken\x12\x1e.authn.v1.ExchangeTokenRequest\x1a\x1f.authn.v1.ExchangeTokenResponseBWZKgithub.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1;authnv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\rExchangeToken\x12\x1e.authn.v1.ExchangeTokenRequest\x1a\x1f.authn.v1.ExchangeTokenResponse\x12V\n" +
+	"\x0fMintPluginToken\x12 .authn.v1.MintPluginTokenRequest\x1a!.authn.v1.MintPluginTokenResponseBWZKgithub.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1;authnv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_authn_v1_authn_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_authn_v1_authn_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_authn_v1_authn_proto_goTypes = []any{
-	(*GetUserInfoRequest)(nil),    // 0: authn.v1.GetUserInfoRequest
-	(*GetUserInfoResponse)(nil),   // 1: authn.v1.GetUserInfoResponse
-	(*User)(nil),                  // 2: authn.v1.User
-	(*ExchangeTokenRequest)(nil),  // 3: authn.v1.ExchangeTokenRequest
-	(*ExchangeTokenResponse)(nil), // 4: authn.v1.ExchangeTokenResponse
+	(*GetUserInfoRequest)(nil),      // 0: authn.v1.GetUserInfoRequest
+	(*GetUserInfoResponse)(nil),     // 1: authn.v1.GetUserInfoResponse
+	(*User)(nil),                    // 2: authn.v1.User
+	(*ExchangeTokenRequest)(nil),    // 3: authn.v1.ExchangeTokenRequest
+	(*ExchangeTokenResponse)(nil),   // 4: authn.v1.ExchangeTokenResponse
+	(*MintPluginTokenRequest)(nil),  // 5: authn.v1.MintPluginTokenRequest
+	(*MintPluginTokenResponse)(nil), // 6: authn.v1.MintPluginTokenResponse
 }
 var file_authn_v1_authn_proto_depIdxs = []int32{
 	2, // 0: authn.v1.GetUserInfoResponse.user:type_name -> authn.v1.User
 	0, // 1: authn.v1.AuthnService.GetUserInfo:input_type -> authn.v1.GetUserInfoRequest
 	3, // 2: authn.v1.TokenService.ExchangeToken:input_type -> authn.v1.ExchangeTokenRequest
-	1, // 3: authn.v1.AuthnService.GetUserInfo:output_type -> authn.v1.GetUserInfoResponse
-	4, // 4: authn.v1.TokenService.ExchangeToken:output_type -> authn.v1.ExchangeTokenResponse
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
+	5, // 3: authn.v1.TokenService.MintPluginToken:input_type -> authn.v1.MintPluginTokenRequest
+	1, // 4: authn.v1.AuthnService.GetUserInfo:output_type -> authn.v1.GetUserInfoResponse
+	4, // 5: authn.v1.TokenService.ExchangeToken:output_type -> authn.v1.ExchangeTokenResponse
+	6, // 6: authn.v1.TokenService.MintPluginToken:output_type -> authn.v1.MintPluginTokenResponse
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -445,7 +628,7 @@ func file_authn_v1_authn_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_authn_v1_authn_proto_rawDesc), len(file_authn_v1_authn_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

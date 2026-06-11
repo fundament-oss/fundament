@@ -28,6 +28,7 @@ import (
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/dbversion"
 	"github.com/fundament-oss/fundament/common/psqldb"
+	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
 )
 
 type config struct {
@@ -46,6 +47,7 @@ type config struct {
 	TokenExpiry        time.Duration `env:"TOKEN_EXPIRY" envDefault:"24h"`
 	LogLevel           slog.Level    `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string      `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:4200,http://console.fundament.localhost:8080"`
+	PluginProxyURL     string        `env:"PLUGIN_PROXY_INTERNAL_URL" envDefault:"http://plugin-proxy:8083"`
 }
 
 func main() {
@@ -152,7 +154,15 @@ func run() error {
 		FrontendURL:  cfg.FrontendURL,
 	}
 
-	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, authzClient)
+	// MintPluginToken resolves installation identity via plugin-proxy's
+	// internal PluginInstallationService. The Connect protocol works over
+	// HTTP/1.1; a bounded timeout keeps a hung plugin-proxy from stalling the
+	// mint hot path.
+	pluginProxyClient := pluginproxyv1connect.NewPluginInstallationServiceClient(
+		&http.Client{Timeout: 10 * time.Second}, cfg.PluginProxyURL)
+	pluginInstallations := authn.NewPluginProxyLookup(pluginProxyClient)
+
+	server, err := authn.New(logger, authnCfg, oauth2Config, verifier, sessionStore, db, authzClient, pluginInstallations)
 	if err != nil {
 		return fmt.Errorf("failed to create authn api: %w", err)
 	}

@@ -39,9 +39,15 @@ const (
 // Claims represents the JWT claims used across fundament services.
 type Claims struct {
 	jwt.RegisteredClaims
-	OrganizationIDs []uuid.UUID `json:"organization_ids"`
-	Groups          []string    `json:"groups"`
-	Name            string      `json:"name"`
+	OrganizationIDs []uuid.UUID `json:"organization_ids,omitempty"`
+	Groups          []string    `json:"groups,omitempty"`
+	Name            string      `json:"name,omitempty"`
+
+	// PluginToken-only fields. Empty on UserTokens.
+	InstallationID uuid.UUID `json:"installation_id,omitempty"`
+	ClusterID      uuid.UUID `json:"cluster_id,omitempty"`
+	PluginName     string    `json:"plugin_name,omitempty"`
+	PluginVersion  string    `json:"plugin_version,omitempty"`
 }
 
 func (c *Claims) UserID() uuid.UUID {

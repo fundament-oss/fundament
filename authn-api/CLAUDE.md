@@ -88,5 +88,6 @@ Optional with defaults:
 - `LISTEN_ADDR` (:8080)
 - `LOG_LEVEL` (info)
 - `CORS_ALLOWED_ORIGINS` (http://localhost:5173,http://localhost:4200,http://console.fundament.localhost:8080)
+- `PLUGIN_PROXY_INTERNAL_URL` (http://plugin-proxy:8083) - plugin-proxy internal RPC URL, called by `MintPluginToken`
 - `COOKIE_DOMAIN` (fundament.localhost)
 - `COOKIE_SECURE` (false)

@@ -133,6 +133,10 @@ functl *args:
     #!/usr/bin/env bash
     exec go run ./functl/cmd/functl "$@"
 
+# Run plugin-proxy locally (mock mode)
+plugin-proxy:
+    LISTEN_ADDR=:10200 INTERNAL_LISTEN_ADDR=:10201 PLUGIN_PROXY_MODE=mock go run ./plugin-proxy/cmd/fun-plugin-proxy
+
 # --- Cluster Worker ---
 
 # Set up local Gardener for testing real Gardener client
