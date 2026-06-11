@@ -105,15 +105,15 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Documentation',
-          autogenerate: { directory: 'docs' },
+          items: [{ autogenerate: { directory: 'docs' } }],
         },
         {
           label: 'Fundament Update Notes',
-          autogenerate: { directory: 'funs' },
+          items: [{ autogenerate: { directory: 'funs' } }],
         },
         {
           label: 'Architecture Decision Records',
-          autogenerate: { directory: 'adr' },
+          items: [{ autogenerate: { directory: 'adr' } }],
         },
       ],
       customCss: [

@@ -173,7 +173,7 @@
     #splitView
     [attr.sidebar-as-sheet]="!isLoginPage() && isMobile() ? '' : null"
     sidebar-accessible-label="Navigation"
-    style="--_sidebar-min-width: 15rem; min-height: calc(100vh - 3.5rem - 1px)"
+    style="--_sidebar-min-width: 15rem; height: calc(100vh - 3.5rem - 1px)"
   >
     @if (!isLoginPage()) {
       <nldd-split-view-pane slot="sidebar" class="bg-white dark:bg-gray-950">
@@ -417,7 +417,9 @@
       </nldd-split-view-pane>
     }
     <nldd-split-view-pane slot="main" has-content class="bg-neutral-25 dark:bg-gray-900">
-      <main class="mx-auto max-w-7xl min-w-0 flex-1 px-4 py-6 sm:px-6">
+      <main
+        class="mx-auto h-[calc(100dvh-3.5rem-1px)] min-h-0 w-full max-w-7xl min-w-0 grow-0 overflow-y-auto px-4 py-6 sm:px-6"
+      >
         @if (isLoginPage() || selectedOrgId() || selectedProjectId()) {
           @if (!isLoginPage()) {
             <app-breadcrumb [segments]="breadcrumbSegments()" />

@@ -5,7 +5,7 @@
     </div>
   } @else {
     <!-- Cluster Limits (Gardener) -->
-    <form class="card" (ngSubmit)="saveClusterLimits()" ngNativeValidate>
+    <nldd-form class="card" (submit)="saveClusterLimits($event)">
       <div class="card-header">
         <h2 class="text-xl font-semibold dark:text-white">Cluster Limits</h2>
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
@@ -70,18 +70,17 @@
 
         <div class="mt-6">
           <nldd-button
-            type="button"
-            (click)="saveClusterLimits()"
+            type="submit"
             [disabled]="clusterSaving()"
             [text]="clusterSaving() ? 'Saving…' : 'Save cluster limits'"
             variant="primary"
           ></nldd-button>
         </div>
       </div>
-    </form>
+    </nldd-form>
 
     <!-- Namespace Resource Defaults (Kubernetes) -->
-    <form class="card" (ngSubmit)="saveNamespaceLimits()" ngNativeValidate>
+    <nldd-form class="card" (submit)="saveNamespaceLimits($event)">
       <div class="card-header">
         <h2 class="text-xl font-semibold dark:text-white">Namespace resource defaults</h2>
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
@@ -176,13 +175,12 @@
         <div class="mt-6">
           <nldd-button
             type="button"
-            (click)="saveNamespaceLimits()"
             [disabled]="namespaceSaving()"
             [text]="namespaceSaving() ? 'Saving…' : 'Save namespace defaults'"
             variant="primary"
           ></nldd-button>
         </div>
       </div>
-    </form>
+    </nldd-form>
   }
 </div>

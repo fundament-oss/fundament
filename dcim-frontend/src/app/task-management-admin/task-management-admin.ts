@@ -7,6 +7,7 @@ import {
   viewChild,
   ElementRef,
 } from '@angular/core';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 interface Technician {
   id: number;
@@ -60,6 +61,7 @@ interface NlddSheet extends HTMLElement {
   selector: 'app-task-management-admin',
   templateUrl: './task-management-admin.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
     class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',

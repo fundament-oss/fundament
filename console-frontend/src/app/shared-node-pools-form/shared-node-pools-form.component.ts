@@ -19,6 +19,7 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import AutofocusDirective from '../autofocus.directive';
+import DropdownSyncDirective from '../dropdown-sync.directive';
 
 export interface NodePoolData {
   name: string;
@@ -29,7 +30,7 @@ export interface NodePoolData {
 
 @Component({
   selector: 'app-shared-node-pools-form',
-  imports: [ReactiveFormsModule, AutofocusDirective],
+  imports: [ReactiveFormsModule, AutofocusDirective, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-node-pools-form.component.html',
@@ -178,7 +179,9 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     this.onSubmit();
   }
 
-  onSubmit() {
+  onSubmit(event?: Event) {
+    event?.preventDefault();
+
     if (this.nodePoolsForm.invalid) {
       this.nodePoolsForm.markAllAsTouched();
       SharedNodePoolsFormComponent.scrollToFirstError();

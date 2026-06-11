@@ -15,6 +15,18 @@ export interface Port {
   description?: string;
 }
 
+/**
+ * Generates a collision-free, client-only id for a port added in the UI before
+ * the server has assigned a real one. The catalog create endpoint ignores this
+ * id and the site graph is reloaded afterwards to pick up the server-assigned
+ * id. `crypto.randomUUID()` avoids the same-millisecond collisions a
+ * timestamp-based id can produce — collisions would corrupt the id-keyed port
+ * diff in patch-mapping.
+ */
+export function newLocalPortId(deviceId: string): string {
+  return `p-${deviceId}-${crypto.randomUUID()}`;
+}
+
 const CONSOLE_PORT_TYPES = new Set<PortType>(['console-port', 'console-server-port']);
 const POWER_PORT_TYPES = new Set<PortType>(['power-port', 'power-outlet']);
 

@@ -21,6 +21,7 @@ import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/prot
 import { TitleService } from '../title.service';
 import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
 import { CLUSTER, METRICS } from '../../connect/tokens';
+import DropdownSyncDirective from '../dropdown-sync.directive';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary,
@@ -176,7 +177,7 @@ function lineDataset(
 
 @Component({
   selector: 'app-metrics',
-  imports: [FormsModule, DateRangePickerComponent, DecimalPipe],
+  imports: [FormsModule, DateRangePickerComponent, DecimalPipe, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './metrics.component.html',

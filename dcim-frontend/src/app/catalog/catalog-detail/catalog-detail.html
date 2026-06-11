@@ -421,15 +421,14 @@
         }}</nldd-form-field-error-text>
       </nldd-form-field>
       <nldd-form-field label="Port type">
-        <select #fPortType [attr.invalid]="isFieldInvalid('port_type') ? '' : null">
+        <select
+          [ngModel]="portType()"
+          (ngModelChange)="portType.set($event)"
+          [attr.invalid]="isFieldInvalid('port_type') ? '' : null"
+        >
           <option value="">— Select a port type —</option>
           @for (t of PORT_TYPES; track t.value) {
-            <option
-              [value]="t.value"
-              [attr.selected]="editPortDef()?.portType === t.value ? true : null"
-            >
-              {{ t.label }}
-            </option>
+            <option [value]="t.value">{{ t.label }}</option>
           }
         </select>
         <nldd-form-field-error-text id="error-port-type">{{
@@ -437,14 +436,13 @@
         }}</nldd-form-field-error-text>
       </nldd-form-field>
       <nldd-form-field label="Direction">
-        <select #fPortDirection [attr.invalid]="isFieldInvalid('direction') ? '' : null">
+        <select
+          [ngModel]="portDirection()"
+          (ngModelChange)="portDirection.set($event)"
+          [attr.invalid]="isFieldInvalid('direction') ? '' : null"
+        >
           @for (d of PORT_DIRECTIONS; track d.value) {
-            <option
-              [value]="d.value"
-              [attr.selected]="(editPortDef()?.direction ?? 'bidir') === d.value ? true : null"
-            >
-              {{ d.label }}
-            </option>
+            <option [value]="d.value">{{ d.label }}</option>
           }
         </select>
         <nldd-form-field-error-text id="error-port-direction">{{
@@ -543,12 +541,14 @@
         >.
       </p>
       <nldd-form-field label="Compatible product">
-        <select [value]="compatEntryId()" (change)="compatEntryId.set($any($event.target).value)">
-          <option value="">— Select a product —</option>
-          @for (entry of availableCompatEntries(); track entry.id) {
-            <option [value]="entry.id">{{ entry.model }}</option>
-          }
-        </select>
+        <nldd-dropdown>
+          <select [value]="compatEntryId()" (change)="compatEntryId.set($any($event.target).value)">
+            <option value="">— Select a product —</option>
+            @for (entry of availableCompatEntries(); track entry.id) {
+              <option [value]="entry.id">{{ entry.model }}</option>
+            }
+          </select>
+        </nldd-dropdown>
       </nldd-form-field>
     </nldd-simple-section>
     <div

@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import DesignFlowWrapperComponent from '../design-flow-wrapper';
@@ -27,6 +28,7 @@ import DesignApiService from '../design-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import ThemeService from '../../theme.service';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -55,7 +57,7 @@ const ALL_ROLES: LogicalDeviceRole[] = [
   selector: 'app-design-detail',
   templateUrl: './design-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DesignFlowWrapperComponent],
+  imports: [RouterLink, FormsModule, DesignFlowWrapperComponent, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col overflow-hidden', style: 'height: calc(100dvh - 4.25rem)' },
 })
@@ -108,6 +110,8 @@ export default class DesignDetailComponent implements OnInit {
   // ── Device CRUD state ──────────────────────────────────────────────────────
   editDevice = signal<Partial<LogicalDevice> | null>(null);
 
+  deviceRole = signal<LogicalDeviceRole>('Compute');
+
   deleteDevice = signal<LogicalDevice | null>(null);
 
   private readonly deviceSheetEl = viewChild<NativeElementRef>('deviceSheet');
@@ -116,10 +120,14 @@ export default class DesignDetailComponent implements OnInit {
 
   private readonly fDeviceName = viewChild<NativeElementRef>('fDeviceName');
 
-  private readonly fDeviceRole = viewChild<NativeElementRef>('fDeviceRole');
-
   // ── Connection CRUD state ──────────────────────────────────────────────────
   editConnection = signal<Partial<LogicalConnection> | null>(null);
+
+  connSrcDeviceId = signal<string>('');
+
+  connTgtDeviceId = signal<string>('');
+
+  connType = signal<LogicalConnectionType>('network');
 
   deleteConnection = signal<LogicalConnection | null>(null);
 
@@ -132,15 +140,9 @@ export default class DesignDetailComponent implements OnInit {
 
   private readonly connModalEl = viewChild<NativeElementRef>('connModal');
 
-  private readonly fConnSrcDevice = viewChild<NativeElementRef>('fConnSrcDevice');
-
   private readonly fConnSrcPort = viewChild<NativeElementRef>('fConnSrcPort');
 
-  private readonly fConnTgtDevice = viewChild<NativeElementRef>('fConnTgtDevice');
-
   private readonly fConnTgtPort = viewChild<NativeElementRef>('fConnTgtPort');
-
-  private readonly fConnType = viewChild<NativeElementRef>('fConnType');
 
   readonly allRoles = ALL_ROLES;
 
@@ -220,11 +222,13 @@ export default class DesignDetailComponent implements OnInit {
   openAddDevice(): void {
     this.clearErrors();
     this.editDevice.set({ id: '', designId: this.designId, name: '', role: 'Compute' });
+    this.deviceRole.set('Compute');
   }
 
   openEditDevice(device: LogicalDevice): void {
     this.clearErrors();
     this.editDevice.set({ ...device });
+    this.deviceRole.set(device.role);
   }
 
   closeDeviceForm(): void {
@@ -237,7 +241,7 @@ export default class DesignDetailComponent implements OnInit {
     if (!form) return;
     this.clearErrors();
     const name = this.fDeviceName()?.nativeElement.value ?? '';
-    const role = (this.fDeviceRole()?.nativeElement.value ?? 'Compute') as LogicalDeviceRole;
+    const role = this.deviceRole();
     if (form.id) {
       firstValueFrom(this.designApi.updateDevice(form.id, name, role))
         .then(() => {
@@ -305,11 +309,17 @@ export default class DesignDetailComponent implements OnInit {
       targetPortRole: '',
       connectionType: 'network',
     });
+    this.connSrcDeviceId.set(this.selectedDeviceId() ?? '');
+    this.connTgtDeviceId.set('');
+    this.connType.set('network');
   }
 
   openEditConnection(conn: LogicalConnection): void {
     this.clearErrors();
     this.editConnection.set({ ...conn });
+    this.connSrcDeviceId.set(conn.sourceDeviceId);
+    this.connTgtDeviceId.set(conn.targetDeviceId);
+    this.connType.set(conn.connectionType);
   }
 
   closeConnForm(): void {
@@ -321,11 +331,11 @@ export default class DesignDetailComponent implements OnInit {
     const form = this.editConnection();
     if (!form) return;
     this.clearErrors();
-    const srcDeviceId = this.fConnSrcDevice()?.nativeElement.value ?? '';
+    const srcDeviceId = this.connSrcDeviceId();
     const srcPort = this.fConnSrcPort()?.nativeElement.value ?? '';
-    const tgtDeviceId = this.fConnTgtDevice()?.nativeElement.value ?? '';
+    const tgtDeviceId = this.connTgtDeviceId();
     const tgtPort = this.fConnTgtPort()?.nativeElement.value ?? '';
-    const connType = (this.fConnType()?.nativeElement.value ?? 'network') as LogicalConnectionType;
+    const connType = this.connType();
     const conn: LogicalConnection = {
       id: form.id || '',
       designId: this.designId,

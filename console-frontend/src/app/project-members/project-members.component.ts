@@ -16,6 +16,7 @@ import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency
 import { TitleService } from '../title.service';
 import { PROJECT, MEMBER } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
+import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
@@ -53,7 +54,13 @@ const formatMemberDate = (member: ProjectMember): string =>
 
 @Component({
   selector: 'app-project-members',
-  imports: [ReactiveFormsModule, DialogSyncDirective, RouterLink, LoadingIndicatorComponent],
+  imports: [
+    ReactiveFormsModule,
+    DialogSyncDirective,
+    DropdownSyncDirective,
+    RouterLink,
+    LoadingIndicatorComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-members.component.html',
@@ -176,7 +183,9 @@ export default class ProjectMembersComponent implements OnInit {
     this.memberForm.get('permission')?.setValue(value);
   }
 
-  async saveMember() {
+  async saveMember(event?: Event) {
+    event?.preventDefault();
+
     if (this.memberForm.invalid) {
       this.memberForm.markAllAsTouched();
       return;

@@ -18,6 +18,7 @@ import '@nldd/design-system/button';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
+import '@nldd/design-system/dropdown';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/number-field';
 import '@nldd/design-system/password-field';

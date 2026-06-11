@@ -9,6 +9,7 @@ import {
   viewChild,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import DcSelectorComponent from '../shared/dc-selector';
@@ -21,6 +22,7 @@ import parseValidationError from '../../connect/validation';
 import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
 import { DatacenterInfo, DatacenterStatus, RackCell } from './datacenter.model';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -39,7 +41,13 @@ interface DcStats {
   selector: 'app-datacenters',
   templateUrl: './datacenters.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DcSelectorComponent, IsometricCanvasComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    DcSelectorComponent,
+    IsometricCanvasComponent,
+    DropdownSyncDirective,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
@@ -81,6 +89,10 @@ export default class DatacentersComponent implements OnInit {
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editForm = signal<Partial<DatacenterInfo> | null>(null);
+
+  dcTier = signal<string>('3');
+
+  dcStatus = signal<DatacenterStatus>('operational');
 
   deleteTarget = signal<DatacenterInfo | null>(null);
 
@@ -293,10 +305,6 @@ export default class DatacentersComponent implements OnInit {
 
   private readonly fAddress = viewChild<NativeElementRef>('fAddress');
 
-  private readonly fTier = viewChild<NativeElementRef>('fTier');
-
-  private readonly fStatus = viewChild<NativeElementRef>('fStatus');
-
   private readonly fEstablished = viewChild<NativeElementRef>('fEstablished');
 
   private readonly fFloorSqm = viewChild<NativeElementRef>('fFloorSqm');
@@ -336,11 +344,15 @@ export default class DatacentersComponent implements OnInit {
       status: 'operational',
       floorSqm: 0,
     });
+    this.dcTier.set('3');
+    this.dcStatus.set('operational');
   }
 
   openEditDc(dc: DatacenterInfo): void {
     this.clearErrors();
     this.editForm.set({ ...dc });
+    this.dcTier.set(String(dc.tier));
+    this.dcStatus.set(dc.status);
   }
 
   closeEditForm(): void {
@@ -359,8 +371,8 @@ export default class DatacentersComponent implements OnInit {
       city: this.fCity()?.nativeElement.value ?? '',
       country: this.fCountry()?.nativeElement.value ?? '',
       address: this.fAddress()?.nativeElement.value ?? '',
-      tier: (parseInt(this.fTier()?.nativeElement.value ?? '3', 10) || 3) as 1 | 2 | 3 | 4,
-      status: (this.fStatus()?.nativeElement.value ?? 'operational') as DatacenterStatus,
+      tier: (parseInt(this.dcTier(), 10) || 3) as 1 | 2 | 3 | 4,
+      status: this.dcStatus(),
       established: parseFloat(this.fEstablished()?.nativeElement.value ?? '0') || 0,
       floorSqm: parseFloat(this.fFloorSqm()?.nativeElement.value ?? '0') || 0,
       // Not modelled by the API.

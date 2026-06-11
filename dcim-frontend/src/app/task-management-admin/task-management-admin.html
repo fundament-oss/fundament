@@ -683,17 +683,15 @@
               for="editStatus"
               >Status</label
             >
-            <select
-              id="editStatus"
-              class="w-full rounded-lg border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
-              (change)="editFormStatus.set($any($event).target.value)"
-            >
-              <option [selected]="editFormStatus() === 'Ready'">Ready</option>
-              <option [selected]="editFormStatus() === 'In Progress'">In Progress</option>
-              <option [selected]="editFormStatus() === 'Review'">Review</option>
-              <option [selected]="editFormStatus() === 'Blocked'">Blocked</option>
-              <option [selected]="editFormStatus() === 'Done'">Done</option>
-            </select>
+            <nldd-dropdown>
+              <select id="editStatus" (change)="editFormStatus.set($any($event).target.value)">
+                <option [selected]="editFormStatus() === 'Ready'">Ready</option>
+                <option [selected]="editFormStatus() === 'In Progress'">In Progress</option>
+                <option [selected]="editFormStatus() === 'Review'">Review</option>
+                <option [selected]="editFormStatus() === 'Blocked'">Blocked</option>
+                <option [selected]="editFormStatus() === 'Done'">Done</option>
+              </select>
+            </nldd-dropdown>
           </div>
           <div>
             <label
@@ -701,16 +699,14 @@
               for="editPriority"
               >Priority</label
             >
-            <select
-              id="editPriority"
-              class="w-full rounded-lg border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
-              (change)="editFormPriority.set($any($event).target.value)"
-            >
-              <option [selected]="editFormPriority() === 'Critical'">Critical</option>
-              <option [selected]="editFormPriority() === 'High'">High</option>
-              <option [selected]="editFormPriority() === 'Medium'">Medium</option>
-              <option [selected]="editFormPriority() === 'Low'">Low</option>
-            </select>
+            <nldd-dropdown>
+              <select id="editPriority" (change)="editFormPriority.set($any($event).target.value)">
+                <option [selected]="editFormPriority() === 'Critical'">Critical</option>
+                <option [selected]="editFormPriority() === 'High'">High</option>
+                <option [selected]="editFormPriority() === 'Medium'">Medium</option>
+                <option [selected]="editFormPriority() === 'Low'">Low</option>
+              </select>
+            </nldd-dropdown>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
@@ -720,18 +716,16 @@
               for="editCategory"
               >Category</label
             >
-            <select
-              id="editCategory"
-              class="w-full rounded-lg border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
-              (change)="editFormCategory.set($any($event).target.value)"
-            >
-              <option [selected]="editFormCategory() === 'Hardware'">Hardware</option>
-              <option [selected]="editFormCategory() === 'Network'">Network</option>
-              <option [selected]="editFormCategory() === 'Cooling'">Cooling</option>
-              <option [selected]="editFormCategory() === 'Power'">Power</option>
-              <option [selected]="editFormCategory() === 'Security'">Security</option>
-              <option [selected]="editFormCategory() === 'Other'">Other</option>
-            </select>
+            <nldd-dropdown>
+              <select id="editCategory" (change)="editFormCategory.set($any($event).target.value)">
+                <option [selected]="editFormCategory() === 'Hardware'">Hardware</option>
+                <option [selected]="editFormCategory() === 'Network'">Network</option>
+                <option [selected]="editFormCategory() === 'Cooling'">Cooling</option>
+                <option [selected]="editFormCategory() === 'Power'">Power</option>
+                <option [selected]="editFormCategory() === 'Security'">Security</option>
+                <option [selected]="editFormCategory() === 'Other'">Other</option>
+              </select>
+            </nldd-dropdown>
           </div>
           <div>
             <label

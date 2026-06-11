@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -29,6 +30,7 @@ import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -38,7 +40,7 @@ interface NativeElementRef {
   selector: 'app-catalog-detail',
   templateUrl: './catalog-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
@@ -98,6 +100,10 @@ export default class CatalogDetailComponent implements OnInit {
   // ── Port definition CRUD state ────────────────────────────────────────────
   editPortDef = signal<Partial<PortDefinition> | null>(null);
 
+  portType = signal<string>('');
+
+  portDirection = signal<string>('bidir');
+
   deletePortDef = signal<PortDefinition | null>(null);
 
   // ── Validation feedback (shared by the port + compatibility forms) ────────────
@@ -131,10 +137,6 @@ export default class CatalogDetailComponent implements OnInit {
   private readonly portModalEl = viewChild<NativeElementRef>('portModal');
 
   private readonly fPortName = viewChild<NativeElementRef>('fPortName');
-
-  private readonly fPortType = viewChild<NativeElementRef>('fPortType');
-
-  private readonly fPortDirection = viewChild<NativeElementRef>('fPortDirection');
 
   private readonly fPortMedia = viewChild<NativeElementRef>('fPortMedia');
 
@@ -269,11 +271,15 @@ export default class CatalogDetailComponent implements OnInit {
       portType: '',
       direction: 'bidir',
     });
+    this.portType.set('');
+    this.portDirection.set('bidir');
   }
 
   openEditPortDef(pd: PortDefinition): void {
     this.clearErrors();
     this.editPortDef.set({ ...pd });
+    this.portType.set(pd.portType);
+    this.portDirection.set(pd.direction ?? 'bidir');
   }
 
   closePortDefForm(): void {
@@ -286,8 +292,8 @@ export default class CatalogDetailComponent implements OnInit {
     if (!form) return;
     this.clearErrors();
     const name = this.fPortName()?.nativeElement.value ?? '';
-    const portType = this.fPortType()?.nativeElement.value ?? '';
-    const direction = this.fPortDirection()?.nativeElement.value ?? '';
+    const portType = this.portType();
+    const direction = this.portDirection();
     const mediaType = this.fPortMedia()?.nativeElement.value ?? '';
     const speedRaw = this.fPortSpeed()?.nativeElement.value;
     const powerRaw = this.fPortPower()?.nativeElement.value;
