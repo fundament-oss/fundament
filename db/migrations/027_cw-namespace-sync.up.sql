@@ -41,6 +41,11 @@ ALTER TABLE "tenant"."cluster_outbox" VALIDATE CONSTRAINT "cluster_outbox_ck_sin
 CREATE INDEX cluster_outbox_idx_namespace_id ON tenant.cluster_outbox USING btree (namespace_id, id DESC NULLS LAST);
 
 /* Hazards:
+ - ACQUIRES_SHARE_LOCK: Non-concurrent index creates will lock out writes to the table during the duration of the index build.
+*/
+CREATE UNIQUE INDEX cluster_outbox_uq_ns_reconcile ON tenant.cluster_outbox USING btree (namespace_id) WHERE ((source = 'reconcile'::text) AND (status = ANY (ARRAY['pending'::text, 'retrying'::text])));
+
+/* Hazards:
  - AUTHZ_UPDATE: Adding a permissive policy could allow unauthorized access to data.
 */
 CREATE POLICY "namespaces_cluster_worker_policy" ON "tenant"."namespaces"
