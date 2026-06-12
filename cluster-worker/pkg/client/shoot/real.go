@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -360,6 +361,90 @@ func (r *RealShootAccess) ListClusterRoleBindings(ctx context.Context, clusterID
 		}
 	}
 	return result, nil
+}
+
+func (r *RealShootAccess) EnsureLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error {
+	cs, err := r.clientForCluster(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	lr := &corev1.LimitRange{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      LimitRangeName,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: limitRangeSpec(defaults),
+	}
+
+	_, err = cs.CoreV1().LimitRanges(namespace).Create(ctx, lr, metav1.CreateOptions{})
+	if apierrors.IsAlreadyExists(err) {
+		existing, getErr := cs.CoreV1().LimitRanges(namespace).Get(ctx, LimitRangeName, metav1.GetOptions{})
+		if getErr != nil {
+			return fmt.Errorf("get existing LimitRange %s/%s: %w", namespace, LimitRangeName, getErr)
+		}
+		if existing.Labels == nil {
+			existing.Labels = make(map[string]string)
+		}
+		maps.Copy(existing.Labels, labels)
+		existing.Spec = lr.Spec
+		_, err = cs.CoreV1().LimitRanges(namespace).Update(ctx, existing, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("update LimitRange %s/%s: %w", namespace, LimitRangeName, err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("create LimitRange %s/%s: %w", namespace, LimitRangeName, err)
+	}
+	return nil
+}
+
+func (r *RealShootAccess) DeleteLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string) error {
+	cs, err := r.clientForCluster(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	err = cs.CoreV1().LimitRanges(namespace).Delete(ctx, LimitRangeName, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("delete LimitRange %s/%s: %w", namespace, LimitRangeName, err)
+	}
+	return nil
+}
+
+// limitRangeSpec converts the defaults to a single-Container LimitRangeSpec.
+// Only set fields are populated: `default` (the limit ceiling) from the limit
+// values, `defaultRequest` from the request values; CPU as millicores (500m),
+// memory as mebibytes (512Mi).
+func limitRangeSpec(defaults LimitDefaults) corev1.LimitRangeSpec {
+	defaultLimits := corev1.ResourceList{}
+	defaultRequests := corev1.ResourceList{}
+	if defaults.CPULimitMilli != nil {
+		defaultLimits[corev1.ResourceCPU] = *resource.NewMilliQuantity(int64(*defaults.CPULimitMilli), resource.DecimalSI)
+	}
+	if defaults.MemoryLimitMi != nil {
+		defaultLimits[corev1.ResourceMemory] = *resource.NewQuantity(int64(*defaults.MemoryLimitMi)<<20, resource.BinarySI)
+	}
+	if defaults.CPURequestMilli != nil {
+		defaultRequests[corev1.ResourceCPU] = *resource.NewMilliQuantity(int64(*defaults.CPURequestMilli), resource.DecimalSI)
+	}
+	if defaults.MemoryRequestMi != nil {
+		defaultRequests[corev1.ResourceMemory] = *resource.NewQuantity(int64(*defaults.MemoryRequestMi)<<20, resource.BinarySI)
+	}
+
+	item := corev1.LimitRangeItem{Type: corev1.LimitTypeContainer}
+	if len(defaultLimits) > 0 {
+		item.Default = defaultLimits
+	}
+	if len(defaultRequests) > 0 {
+		item.DefaultRequest = defaultRequests
+	}
+	return corev1.LimitRangeSpec{Limits: []corev1.LimitRangeItem{item}}
 }
 
 // ClusterRoleBindingNeedsRecreate returns true if the RoleRef has changed (immutable field).
