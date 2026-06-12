@@ -199,11 +199,34 @@ The `cluster_outbox` table tracks changes from multiple sources:
 
 | Source | Trigger |
 |--------|---------|
-| `trigger` | Database trigger on `clusters`, `organizations_users`, `project_members`, `node_pools`, or `namespaces` |
+| `trigger` | Database trigger on `clusters`, `organizations_users`, `project_members`, `node_pools`, `namespaces`, `organization_limits` (node-cap change → `cluster_id` rows; `default_*` change → `namespace_id` rows), or `project_limits` (`default_*` change → `namespace_id` rows) |
 | `reconcile` | Periodic reconciliation loop |
 | `manual` | Manual intervention |
 | `node_pool` | Node pool configuration change |
 | `status` | Status poller detected a state change |
+
+### Organization Limits Enforcement
+
+The Limits page values are enforced by the cluster-worker:
+
+- **Node caps** (`tenant.organization_limits`) are applied at Shoot apply time.
+  `max_nodes_per_node_pool` clamps each worker pool's autoscaler maximum (the
+  minimum is lowered too when needed). `max_node_pools_per_cluster` and
+  `max_nodes_per_cluster` have no Gardener field: when exceeded, the sync fails
+  with a descriptive error in `cluster_outbox.status_info` instead of silently
+  shrinking or dropping pools. NULL caps (or no limits row) mean unlimited.
+- **Per-container resource defaults** (`organization_limits`/`project_limits`
+  `default_*` columns) are materialized as a managed `fundament-defaults`
+  `LimitRange` in each project namespace during namespace sync. Per field the
+  lowest of the org and project value wins, so a project can only tighten the
+  org default; when no defaults apply the managed `LimitRange` is removed. A
+  mixed-NULL combination where a merged request exceeds the merged limit fails
+  the namespace sync visibly rather than applying an object the kube-apiserver
+  would reject.
+
+Write-time validation of limit values (rejecting e.g. an `autoscale_max` above
+the org cap when it is set) is an org-api concern and intentionally not handled
+here — the cluster-worker is the materialization/backstop layer.
 
 ## Quick Start: Full Local Development
 
