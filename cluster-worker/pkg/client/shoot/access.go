@@ -16,7 +16,23 @@ const (
 
 	// AnnotationUserName is the annotation key for user email.
 	AnnotationUserName = "fundament.io/user-name"
+
+	// LimitRangeName is the name of the managed LimitRange that materializes
+	// the merged organization/project per-container resource defaults inside a
+	// project namespace.
+	LimitRangeName = "fundament-defaults"
 )
+
+// LimitDefaults are the effective per-container resource defaults applied as
+// the managed LimitRange. Nil fields are omitted from the object. CPU values
+// are millicores, memory values mebibytes (matching the tenant.*_limits
+// column units).
+type LimitDefaults struct {
+	CPURequestMilli *int32
+	CPULimitMilli   *int32
+	MemoryRequestMi *int32
+	MemoryLimitMi   *int32
+}
 
 // SAName returns the ServiceAccount name for a user.
 func SAName(userID uuid.UUID) string {
@@ -57,6 +73,14 @@ type ShootAccess interface {
 
 	// ListNamespaces lists namespaces filtered by label key existence.
 	ListNamespaces(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
+
+	// EnsureLimitRange creates or updates the managed fundament-defaults
+	// LimitRange in a namespace to match the given defaults.
+	EnsureLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error
+
+	// DeleteLimitRange deletes the managed fundament-defaults LimitRange from
+	// a namespace (no-op if absent).
+	DeleteLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string) error
 
 	// EnsureServiceAccount creates or updates a ServiceAccount.
 	EnsureServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string, labels, annotations map[string]string) error
