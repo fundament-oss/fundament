@@ -179,6 +179,62 @@ func TestServeConsoleAsset(t *testing.T) {
 	}
 }
 
+func TestMockFSCInstallations(t *testing.T) {
+	mc := &MockClient{}
+
+	// List.
+	status, body, err := mc.Do(context.Background(), http.MethodGet, "/apis/openfsc.fundament.io/v1/fscinstallations", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != 200 {
+		t.Fatalf("list status = %d", status)
+	}
+	b, _ := io.ReadAll(body)
+	body.Close()
+	if !strings.Contains(string(b), `"kind": "FSCInstallationList"`) {
+		t.Errorf("body did not contain FSCInstallationList: %s", string(b))
+	}
+
+	// Namespaced get of a known item.
+	status, body, err = mc.Do(context.Background(), http.MethodGet, "/apis/openfsc.fundament.io/v1/namespaces/fsc-demo/fscinstallations/demo", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != 200 {
+		t.Fatalf("get status = %d", status)
+	}
+	b, _ = io.ReadAll(body)
+	body.Close()
+	var item map[string]any
+	if err := json.Unmarshal(b, &item); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	meta, _ := item["metadata"].(map[string]any)
+	if meta["name"] != "demo" {
+		t.Fatalf("wrong name: %v", meta["name"])
+	}
+
+	// GetDefinition for the openfsc plugin.
+	status, body, err = mc.Do(context.Background(), http.MethodGet, "/api/v1/namespaces/plugin-openfsc/services/http:plugin-openfsc:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != 200 {
+		t.Fatalf("definition status = %d", status)
+	}
+	b, _ = io.ReadAll(body)
+	body.Close()
+	if !strings.Contains(string(b), `"name": "openfsc"`) {
+		t.Errorf("definition body did not contain openfsc: %s", string(b))
+	}
+
+	// CRD is registered and resolvable by name.
+	if _, ok := mockCRDForName("fscinstallations.openfsc.fundament.io"); !ok {
+		t.Error("fscinstallations CRD not registered in mockCRDForName")
+	}
+}
+
 func TestMockCertificateRequestList(t *testing.T) {
 	mc := &MockClient{}
 	status, body, err := mc.Do(context.Background(), http.MethodGet, "/apis/cert-manager.io/v1/certificaterequests", nil)

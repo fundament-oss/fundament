@@ -23,6 +23,8 @@ func mockCRDForName(name string) (string, bool) {
 		return mockSubscriptionCRD, true
 	case "demoitems.demo.fundament.io":
 		return mockDemoItemCRD, true
+	case "fscinstallations.openfsc.fundament.io":
+		return mockFSCInstallationCRD, true
 	default:
 		return "", false
 	}
@@ -39,6 +41,7 @@ var mockCRDListJSON = `{"apiVersion":"apiextensions.k8s.io/v1","kind":"CustomRes
 		mockBackupCRD,
 		mockSubscriptionCRD,
 		mockDemoItemCRD,
+		mockFSCInstallationCRD,
 	}, ",") + `]}`
 
 const mockCertificateCRD = `{
@@ -574,6 +577,164 @@ const mockDemoItemCRD = `{
               "type": "object",
               "properties": {
                 "message": {"description": "A greeting message", "type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }]
+  }
+}`
+
+const mockFSCInstallationCRD = `{
+  "apiVersion": "apiextensions.k8s.io/v1",
+  "kind": "CustomResourceDefinition",
+  "metadata": {"name": "fscinstallations.openfsc.fundament.io"},
+  "spec": {
+    "group": "openfsc.fundament.io",
+    "names": {"kind": "FSCInstallation", "plural": "fscinstallations", "singular": "fscinstallation", "shortNames": ["fsci"]},
+    "scope": "Namespaced",
+    "versions": [{
+      "name": "v1",
+      "served": true,
+      "storage": true,
+      "additionalPrinterColumns": [
+        {"jsonPath": ".spec.groupID", "name": "Group", "type": "string"},
+        {"jsonPath": ".spec.directory.mode", "name": "Directory", "type": "string"},
+        {"jsonPath": ".status.phase", "name": "Phase", "type": "string"},
+        {"jsonPath": ".metadata.creationTimestamp", "name": "Age", "type": "date"}
+      ],
+      "schema": {
+        "openAPIV3Schema": {
+          "description": "FSCInstallation makes its namespace a peer in an FSC group.",
+          "type": "object",
+          "required": ["metadata", "spec"],
+          "properties": {
+            "apiVersion": {"type": "string"},
+            "kind": {"type": "string"},
+            "metadata": {"type": "object"},
+            "spec": {
+              "type": "object",
+              "required": ["groupID", "peerID", "directory", "postgres"],
+              "properties": {
+                "groupID": {"description": "The FSC group this installation belongs to.", "type": "string"},
+                "peerID": {"description": "This installation's identity within the group.", "type": "string"},
+                "directory": {
+                  "description": "Declares where the group Directory lives.",
+                  "type": "object",
+                  "required": ["mode"],
+                  "properties": {
+                    "mode": {"description": "Self runs this Manager as the group Directory; External joins an existing group.", "type": "string", "enum": ["Self", "External"]},
+                    "external": {
+                      "description": "The existing group Directory to join (External mode only).",
+                      "type": "object",
+                      "required": ["address", "peerID", "trustAnchor"],
+                      "properties": {
+                        "address": {"description": "The https:// address of the Directory peer's Manager.", "type": "string"},
+                        "peerID": {"description": "The Directory peer's identifier within the group.", "type": "string"},
+                        "trustAnchor": {
+                          "description": "References the group CA certificate PEM all peers trust.",
+                          "type": "object",
+                          "required": ["name"],
+                          "properties": {
+                            "name": {"description": "Name of the Secret.", "type": "string"},
+                            "key": {"description": "Key within the Secret.", "type": "string", "default": "ca.crt"}
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "certificate": {
+                  "description": "Group certificate the Manager presents. Required for External, forbidden for Self.",
+                  "type": "object",
+                  "required": ["existingSecret"],
+                  "properties": {"existingSecret": {"description": "Name of the kubernetes.io/tls Secret.", "type": "string"}}
+                },
+                "managerAddress": {"description": "The https:// address other peers use to reach this Manager.", "type": "string"},
+                "controllerURL": {"description": "Host-reachable URL of the Controller UI, surfaced in the status.", "type": "string"},
+                "postgres": {
+                  "description": "Sizes the CloudNativePG cluster the operator provisions.",
+                  "type": "object",
+                  "required": ["storageClass"],
+                  "properties": {
+                    "instances": {"description": "Number of PostgreSQL instances.", "type": "integer", "default": 1},
+                    "storageClass": {"description": "StorageClass for the data volumes.", "type": "string"},
+                    "storageSize": {"description": "Size of each data volume.", "type": "string", "default": "1Gi"}
+                  }
+                },
+                "inways": {
+                  "description": "Provider gateways: services are published to the group through them.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                      "name": {"description": "FSC name the inway registers under.", "type": "string"},
+                      "selfAddress": {"description": "The https:// address other peers use to reach this inway.", "type": "string"}
+                    }
+                  }
+                },
+                "outways": {
+                  "description": "Consumer gateways: services of the group are consumed through them.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                      "name": {"description": "FSC name the outway registers under.", "type": "string"}
+                    }
+                  }
+                }
+              }
+            },
+            "status": {
+              "type": "object",
+              "properties": {
+                "phase": {"description": "The high-level reconciliation state.", "type": "string"},
+                "message": {"description": "A human-readable status detail.", "type": "string"},
+                "managerAddress": {"description": "The address other peers use to reach this Manager.", "type": "string"},
+                "controllerURL": {"description": "The OpenFSC Controller UI address.", "type": "string"},
+                "observedGeneration": {"description": "The .metadata.generation last reconciled.", "type": "integer", "format": "int64"},
+                "conditions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {"type": "string"},
+                      "status": {"type": "string", "enum": ["True", "False", "Unknown"]},
+                      "lastTransitionTime": {"type": "string", "format": "date-time"},
+                      "message": {"type": "string"},
+                      "reason": {"type": "string"}
+                    }
+                  }
+                },
+                "inways": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {"type": "string"},
+                      "phase": {"type": "string"},
+                      "message": {"type": "string"},
+                      "url": {"type": "string"},
+                      "lastSyncedTime": {"type": "string", "format": "date-time"}
+                    }
+                  }
+                },
+                "outways": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {"type": "string"},
+                      "phase": {"type": "string"},
+                      "message": {"type": "string"},
+                      "url": {"type": "string"},
+                      "lastSyncedTime": {"type": "string", "format": "date-time"}
+                    }
+                  }
+                }
               }
             }
           }

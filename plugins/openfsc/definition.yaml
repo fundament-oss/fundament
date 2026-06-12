@@ -1,0 +1,81 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: openfsc
+  displayName: OpenFSC
+  version: v4.0.0
+  description: Federated Service Connectivity (FSC) for teams. Installs the standalone openfsc-operator; each team declares an FSCInstallation in its namespace to run an OpenFSC peer there — joining an existing FSC group, or acting as its own group Directory.
+  author: Fundament
+  license: AGPL-3.0
+  icon: share-nodes
+  urls:
+    homepage: https://fsc-standaard.nl
+    repository: https://gitlab.com/rinis-oss/fsc/open-fsc
+    documentation: https://logius-standaarden.github.io/fsc-core/
+  tags:
+    - fsc
+    - federation
+    - common-ground
+spec:
+  permissions:
+    capabilities:
+      # Pull container images (and the cert-manager/CloudNativePG charts) from
+      # public registries during install.
+      - internet_access
+    # NOTE: this rbac block is informational metadata only — the plugin-controller
+    # does not turn it into a Role. The plugin's real permissions come from the
+    # built-in `admin` ClusterRole bound in its namespace plus any ClusterRoles the
+    # PluginInstallation requests. Install bootstraps cluster-scoped operators
+    # (cert-manager, CloudNativePG, openfsc-operator — CRDs, ClusterRoles), so it
+    # effectively needs cluster-admin. The rules below document the steady-state
+    # resources the plugin itself touches; everything else is reconciled by the
+    # openfsc-operator under its own scoped ClusterRole (see openfsc-operator/chart).
+    rbac:
+      - apiGroups: ["openfsc.fundament.io"]
+        resources: ["fscinstallations"]
+        verbs: ["get", "list", "watch"]
+      # Helm-install the openfsc-operator chart (Deployment + RBAC +
+      # ServiceAccount, plus Helm's own release-state Secrets).
+      - apiGroups: ["apps"]
+        resources: ["deployments"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      - apiGroups: [""]
+        resources: ["services", "serviceaccounts", "secrets", "configmaps"]
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  crds:
+    - fscinstallations.openfsc.fundament.io
+
+  menu:
+    project:
+      - crd: fscinstallations.openfsc.fundament.io
+        list: true
+        detail: true
+        create: false
+        icon: share-nodes
+
+  customComponents:
+    FSCInstallation:
+      list: fscinstallations-list.html
+      detail: fscinstallations-detail.html
+
+  allowedResources:
+    - group: openfsc.fundament.io
+      version: v1
+      resource: fscinstallations
+      verbs: [list, get]
+
+  uiHints:
+    fscinstallations.openfsc.fundament.io:
+      statusMapping:
+        jsonPath: ".status.phase"
+        values:
+          "Active":
+            badge: success
+            label: Active
+          "Pending":
+            badge: warning
+            label: Pending
+          "Error":
+            badge: danger
+            label: Error
