@@ -5,6 +5,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/common/dbconst"
 )
 
 // insertOrg inserts a fresh organization so limit-trigger fan-out counts are
@@ -183,6 +186,81 @@ func TestLimitsTrigger_SoftDeleteEnqueues(t *testing.T) {
 	clustersFinal, namespacesFinal := outboxCounts(t, db)
 	require.Equal(t, clustersAfter, clustersFinal, "project limits soft-delete must not enqueue clusters")
 	require.Equal(t, namespacesAfter+1, namespacesFinal, "project limits soft-delete re-syncs namespaces")
+}
+
+// Task 4.4: syncCluster loads the owning org's node caps into ClusterToSync.
+func TestSyncPopulatesNodeLimits(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "sync-limits")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 4)
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.organization_limits
+		     (organization_id, max_nodes_per_cluster, max_node_pools_per_cluster, max_nodes_per_node_pool)
+		 VALUES ($1, 10, 3, 5)`, acmeCorpOrgID)
+	require.NoError(t, err)
+
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
+
+	require.Len(t, mock.ApplyCalls, 1)
+	limits := mock.ApplyCalls[0].NodeLimits
+	require.NotNil(t, limits.MaxNodesPerCluster)
+	require.EqualValues(t, 10, *limits.MaxNodesPerCluster)
+	require.NotNil(t, limits.MaxNodePoolsPerCluster)
+	require.EqualValues(t, 3, *limits.MaxNodePoolsPerCluster)
+	require.NotNil(t, limits.MaxNodesPerNodePool)
+	require.EqualValues(t, 5, *limits.MaxNodesPerNodePool)
+}
+
+// Task 4.4: no active limits row means all caps nil (unlimited).
+func TestSyncNoLimitsRowMeansUnlimited(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "sync-no-limits")
+
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+	require.NoError(t, h.Sync(t.Context(), clusterID, sc))
+
+	require.Len(t, mock.ApplyCalls, 1)
+	limits := mock.ApplyCalls[0].NodeLimits
+	require.Nil(t, limits.MaxNodesPerCluster)
+	require.Nil(t, limits.MaxNodePoolsPerCluster)
+	require.Nil(t, limits.MaxNodesPerNodePool)
+}
+
+// Tasks 4.3/4.4: an aggregate-cap violation fails the sync through syncError
+// with a sync_failed event, and the error names the cap and the observed value.
+func TestSyncAggregateCapExceededFails(t *testing.T) {
+	t.Parallel()
+
+	db := createTestDB(t)
+	mock := newMock(t)
+	h := newTestHandler(t, db, mock)
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "sync-cap-exceeded")
+	insertNodePool(t, db, clusterID, "workers", "n1-standard-4", 1, 5)
+	_, err := db.adminPool.Exec(t.Context(),
+		`INSERT INTO tenant.organization_limits (organization_id, max_nodes_per_cluster)
+		 VALUES ($1, 3)`, acmeCorpOrgID)
+	require.NoError(t, err)
+
+	sc := handler.SyncContext{EntityType: handler.EntityCluster, Event: dbconst.ClusterOutboxEvent_Created, Source: dbconst.ClusterOutboxSource_Trigger}
+	err = h.Sync(t.Context(), clusterID, sc)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "max_nodes_per_cluster is 3")
+	require.ErrorContains(t, err, "sum to 5")
+
+	assertEventExists(t, db, clusterID, "sync_failed")
+	assertNoEvent(t, db, clusterID, "sync_succeeded")
 }
 
 // Task 1.12: a limit change affecting zero active clusters/namespaces inserts

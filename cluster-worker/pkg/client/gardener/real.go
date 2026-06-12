@@ -185,6 +185,10 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 	if existing != nil {
 		r.updateShootSpec(existing, cluster)
 
+		if err := validateAggregateNodeLimits(existing.Spec.Provider.Workers, cluster.NodeLimits); err != nil {
+			return err
+		}
+
 		r.logger.Info("updating shoot",
 			"shoot", existing.Name,
 			"cluster_id", cluster.ID,
@@ -197,6 +201,10 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 	}
 
 	shoot := r.buildShootSpec(cluster)
+
+	if err := validateAggregateNodeLimits(shoot.Spec.Provider.Workers, cluster.NodeLimits); err != nil {
+		return err
+	}
 
 	r.logger.Info("creating shoot",
 		"shoot", cluster.ShootName,
@@ -598,7 +606,7 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 		maxSurge := intstr.FromInt32(1)
 		maxUnavailable := intstr.FromInt32(0)
 		imageVersion := r.provider.MachineImageVersion
-		return []gardencorev1beta1.Worker{
+		workers := []gardencorev1beta1.Worker{
 			{
 				Name: "default",
 				Machine: gardencorev1beta1.Machine{
@@ -610,12 +618,14 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 				},
 				// TODO: make these configurable via env vars once different environments need
 				// different defaults (e.g., GARDENER_DEFAULT_MIN_WORKERS / GARDENER_DEFAULT_MAX_WORKERS).
-				Minimum:        1,
-				Maximum:        3,
+				Minimum:        defaultWorkerMinimum,
+				Maximum:        defaultWorkerMaximum,
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
 			},
 		}
+		clampWorkerMaxima(workers, cluster.NodeLimits.MaxNodesPerNodePool)
+		return workers
 	}
 
 	workers := make([]gardencorev1beta1.Worker, len(cluster.NodePools))
@@ -655,6 +665,7 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 			workers[i].Zones = []string{np.Zone}
 		}
 	}
+	clampWorkerMaxima(workers, cluster.NodeLimits.MaxNodesPerNodePool)
 	return workers
 }
 

@@ -91,6 +91,17 @@ type ClusterToSync struct {
 	KubernetesVersion string
 	Deleted           *time.Time
 	NodePools         []NodePool // Node pool configurations for Gardener worker groups
+	NodeLimits        NodeLimits // Owning organization's node caps, applied at Shoot build time
+}
+
+// NodeLimits are an organization's node caps from tenant.organization_limits.
+// A nil cap is unlimited. MaxNodesPerNodePool clamps each worker's autoscaler
+// maximum; the other two have no Gardener field and fail the apply when
+// exceeded (see clampWorkerMaxima / validateAggregateNodeLimits).
+type NodeLimits struct {
+	MaxNodesPerCluster     *int32
+	MaxNodePoolsPerCluster *int32
+	MaxNodesPerNodePool    *int32
 }
 
 // ShootInfo contains information about a Shoot retrieved from Gardener.
