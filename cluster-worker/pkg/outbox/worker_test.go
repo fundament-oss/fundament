@@ -123,6 +123,26 @@ func TestEntityFromRow_NodePoolID(t *testing.T) {
 	}
 }
 
+func TestEntityFromRow_NamespaceID(t *testing.T) {
+	id := uuid.New()
+	row := &db.OutboxGetAndLockRow{
+		ID:          uuid.New(),
+		NamespaceID: pgtype.UUID{Bytes: id, Valid: true},
+	}
+
+	entityType, entityID, err := entityFromRow(row)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if entityType != handler.EntityNamespace {
+		t.Errorf("expected EntityNamespace, got %q", entityType)
+	}
+	if entityID != id {
+		t.Errorf("expected %s, got %s", id, entityID)
+	}
+}
+
 func newTestWorker() *Worker {
 	return &Worker{
 		logger: slog.Default(),

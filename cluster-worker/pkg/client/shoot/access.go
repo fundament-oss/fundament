@@ -42,6 +42,22 @@ type ShootAccess interface {
 	// EnsureNamespace creates the namespace if it doesn't exist.
 	EnsureNamespace(ctx context.Context, clusterID uuid.UUID, name string) error
 
+	// GetNamespace returns the namespace's metadata, or nil if it does not exist.
+	GetNamespace(ctx context.Context, clusterID uuid.UUID, name string) (*ResourceInfo, error)
+
+	// CreateNamespace creates a namespace with the given labels.
+	CreateNamespace(ctx context.Context, clusterID uuid.UUID, name string, labels map[string]string) error
+
+	// UpdateNamespaceLabels merges the given labels onto an existing namespace,
+	// preserving labels not in the provided set (e.g. operator-added labels).
+	UpdateNamespaceLabels(ctx context.Context, clusterID uuid.UUID, name string, labels map[string]string) error
+
+	// DeleteNamespace deletes a namespace (no-op if absent).
+	DeleteNamespace(ctx context.Context, clusterID uuid.UUID, name string) error
+
+	// ListNamespaces lists namespaces filtered by label key existence.
+	ListNamespaces(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error)
+
 	// EnsureServiceAccount creates or updates a ServiceAccount.
 	EnsureServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string, labels, annotations map[string]string) error
 

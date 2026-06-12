@@ -3,6 +3,7 @@ package usersync
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"os"
 	"testing"
 
@@ -144,13 +145,13 @@ func TestClassifyServiceAccountsDetectsDuplicates(t *testing.T) {
 	resources := []shoot.ResourceInfo{
 		{
 			Name:        shoot.SAName(userID),
-			Labels:      shoot.CloneStringMap(labels),
-			Annotations: shoot.CloneStringMap(annotations),
+			Labels:      maps.Clone(labels),
+			Annotations: maps.Clone(annotations),
 		},
 		{
 			Name:        "fundament-duplicate",
-			Labels:      shoot.CloneStringMap(labels),
-			Annotations: shoot.CloneStringMap(annotations),
+			Labels:      maps.Clone(labels),
+			Annotations: maps.Clone(annotations),
 		},
 	}
 
@@ -172,8 +173,8 @@ func TestClassifyClusterRoleBindingsDetectsDriftAndDuplicates(t *testing.T) {
 	resources := []shoot.ResourceInfo{
 		{
 			Name:        shoot.CRBName(userID),
-			Labels:      shoot.CloneStringMap(labels),
-			Annotations: shoot.CloneStringMap(annotations),
+			Labels:      maps.Clone(labels),
+			Annotations: maps.Clone(annotations),
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "ClusterRole",
@@ -187,8 +188,8 @@ func TestClassifyClusterRoleBindingsDetectsDriftAndDuplicates(t *testing.T) {
 		},
 		{
 			Name:        "fundament:admin:duplicate",
-			Labels:      shoot.CloneStringMap(labels),
-			Annotations: shoot.CloneStringMap(annotations),
+			Labels:      maps.Clone(labels),
+			Annotations: maps.Clone(annotations),
 		},
 	}
 

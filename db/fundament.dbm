@@ -356,6 +356,38 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="namespace_outbox_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        VALUES (
+            COALESCE(NEW.id, OLD.id),
+            CASE
+                WHEN TG_OP = 'INSERT' THEN 'created'
+                WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                ELSE 'updated'
+            END,
+            'trigger'
+        );
+    END IF;
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
 <function name="cluster_outbox_cluster_trigger"
 		window-func="false"
 		returns-setof="false"
@@ -1257,6 +1289,10 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
 </policy>
 
+<policy name="namespaces_cluster_worker_policy" table="tenant.namespaces" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <policy name="organizations_organization_policy" table="tenant.organizations" command="ALL" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[id = authn.current_organization_id()]]> </expression>
 </policy>
@@ -1386,6 +1422,9 @@ END;]]> </definition>
 	<column name="node_pool_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="namespace_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<column name="deferrals" not-null="true" default-value="0">
 		<type name="integer" length="0"/>
 	</column>
@@ -1393,7 +1432,7 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="cluster_outbox_ck_single_fk" type="ck-constr" table="tenant.cluster_outbox">
-			<expression> <![CDATA[num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id) = 1]]> </expression>
+			<expression> <![CDATA[num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id, namespace_id) = 1]]> </expression>
 	</constraint>
 	<constraint name="cluster_outbox_ck_status" type="ck-constr" table="tenant.cluster_outbox">
 			<expression> <![CDATA[status IN ('pending', 'completed', 'retrying', 'failed')]]> </expression>
@@ -1440,6 +1479,26 @@ END;]]> </definition>
 		<idxelement use-sorting="true" nulls-first="false" asc-order="false">
 			<column name="id"/>
 		</idxelement>
+</index>
+
+<index name="cluster_outbox_idx_namespace_id" table="tenant.cluster_outbox"
+	 concurrent="false" unique="false" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="namespace_id"/>
+		</idxelement>
+		<idxelement use-sorting="true" nulls-first="false" asc-order="false">
+			<column name="id"/>
+		</idxelement>
+</index>
+
+<index name="cluster_outbox_uq_ns_reconcile" table="tenant.cluster_outbox"
+	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="namespace_id"/>
+		</idxelement>
+	<predicate> <![CDATA[source = 'reconcile' AND status IN ('pending', 'retrying')]]> </predicate>
 </index>
 
 <index name="node_pools_idx_cluster_id" table="tenant.node_pools"
@@ -1752,6 +1811,13 @@ END;]]> </definition>
 	 table="tenant.node_pools">
 		<function signature="tenant.node_pool_outbox_trigger()"/>
 		<columns names="name,machine_type,autoscale_min,autoscale_max,deleted"/>
+</trigger>
+
+<trigger name="namespace_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.namespaces">
+		<function signature="tenant.namespace_outbox_trigger()"/>
+		<columns names="name,deleted"/>
 </trigger>
 
 <index name="namespaces_idx_project_id" table="tenant.namespaces"
@@ -2875,6 +2941,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="cluster_outbox_fk_namespace" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.namespaces" table="tenant.cluster_outbox">
+	<columns names="namespace_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="outbox_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="authz.outbox">
 	<columns names="project_id" ref-type="src-columns"/>
@@ -3370,6 +3442,11 @@ END;]]> </definition>
 <relationship name="rel_cluster_outbox_node_pools" type="relfk" layers="0"
 	 src-table="tenant.cluster_outbox"
 	 dst-table="tenant.node_pools" reference-fk="cluster_outbox_fk_node_pool"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_cluster_outbox_namespaces" type="relfk" layers="0"
+	 src-table="tenant.cluster_outbox"
+	 dst-table="tenant.namespaces" reference-fk="cluster_outbox_fk_namespace"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_organizations_users_organizations" type="relfk" layers="0"
