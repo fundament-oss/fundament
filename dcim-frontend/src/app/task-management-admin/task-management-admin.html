@@ -778,8 +778,10 @@
                 editFormAssignee.set($any($event).detail.value ? +$any($event).detail.value : null)
               "
             >
+              <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- click delegates to the inner radio button, which remains keyboard-focusable via the radio group -->
               <div
                 class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-800 p-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors"
+                (click)="editFormAssignee.set(null)"
               >
                 <span [class]="unassignedAvatarClass('h-8 w-8 text-sm')" aria-hidden="true">
                   <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
@@ -787,12 +789,15 @@
                 <nldd-radio-button-field
                   value=""
                   label="Unassigned"
+                  class="grow"
                   [attr.checked]="editFormAssignee() === null ? '' : null"
                 ></nldd-radio-button-field>
               </div>
               @for (tech of technicians; track tech.id) {
+                <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- click delegates to the inner radio button, which remains keyboard-focusable via the radio group -->
                 <div
                   class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-800 p-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors"
+                  (click)="editFormAssignee.set(tech.id)"
                 >
                   <span [class]="techInitialsClass(tech, 'h-8 w-8 text-sm')" aria-hidden="true">{{
                     tech.initials
@@ -800,6 +805,7 @@
                   <nldd-radio-button-field
                     [attr.value]="tech.id"
                     [attr.label]="tech.name"
+                    class="grow"
                     [attr.checked]="editFormAssignee() === tech.id ? '' : null"
                   ></nldd-radio-button-field>
                   <span

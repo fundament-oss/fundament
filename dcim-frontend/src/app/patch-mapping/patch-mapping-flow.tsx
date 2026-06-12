@@ -42,9 +42,16 @@ const PORT_INSET = 6; // distance outside card edge for port square center
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+/** A device (placement) in the active datacenter, used to build topology nodes. */
+export interface DeviceInfo {
+  id: string;
+  name: string;
+}
+
 interface PatchMappingFlowProps {
   cables: Cable[];
   devicePorts: Record<string, Port[]>;
+  devices: DeviceInfo[];
   selectedCableId: string | null;
   dcId: string;
   filterStatus: CableStatus | '';
@@ -557,138 +564,30 @@ function CurlyEdge(props: EdgeProps) {
 
 const edgeTypes = { default: CurlyEdge };
 
-// ── Layout data ───────────────────────────────────────────────────────────────
+// ── Layout ────────────────────────────────────────────────────────────────────
+// Device nodes are laid out from the live placement data (no hardcoded racks):
+// devices are distributed across a roughly-square set of columns, each column
+// stacked top-to-bottom by the actual rendered height of its devices. ReactFlow's
+// `fitView` then frames whatever was produced.
 
-interface RackLayout {
-  id: string;
-  label: string;
-  dcId: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+const COL_SPACING = 320; // horizontal gap between device columns (leaves room for edges)
+const DEVICE_GAP = 28; // vertical gap between stacked devices
+const LAYOUT_TOP = 20;
+const LAYOUT_LEFT = 20;
+
+type DeviceType = 'server' | 'switch' | 'patch' | 'pdu';
+
+/** Infers a device category from its ports and name for the node badge/colour. */
+function inferDeviceType(name: string, ports: Port[]): DeviceType {
+  if (ports.some((p) => p.type === 'power-outlet')) return 'pdu';
+  const n = name.toLowerCase();
+  if (/(^|[^a-z])(sw|switch|tor|leaf|spine)/.test(n)) return 'switch';
+  if (n.includes('patch') || n.includes('pp')) return 'patch';
+  return 'server';
 }
-
-interface DeviceLayout {
-  id: string;
-  label: string;
-  deviceType: 'server' | 'switch' | 'patch' | 'pdu';
-  parentNode: string;
-  dcId: string;
-  position: { x: number; y: number };
-}
-
-const RACK_LAYOUTS: RackLayout[] = [
-  // AMS-01
-  { id: 'rack-r01', label: 'AMS-01-R01', dcId: 'ams-01', x: 40, y: 40, width: 230, height: 480 },
-  { id: 'rack-r02', label: 'AMS-01-R02', dcId: 'ams-01', x: 320, y: 40, width: 230, height: 360 },
-  { id: 'rack-r04', label: 'AMS-01-R04', dcId: 'ams-01', x: 600, y: 40, width: 230, height: 200 },
-  // FRA-01
-  {
-    id: 'rack-fra01-r01',
-    label: 'FRA-01-R01',
-    dcId: 'fra-01',
-    x: 40,
-    y: 40,
-    width: 230,
-    height: 320,
-  },
-];
-
-const DEVICE_LAYOUTS: DeviceLayout[] = [
-  // AMS-01 R01
-  {
-    id: 'd-001',
-    label: 'tor-switch-01',
-    deviceType: 'switch',
-    parentNode: 'rack-r01',
-    dcId: 'ams-01',
-    position: { x: 20, y: 50 },
-  },
-  {
-    id: 'd-002',
-    label: 'patch-panel-01',
-    deviceType: 'patch',
-    parentNode: 'rack-r01',
-    dcId: 'ams-01',
-    position: { x: 20, y: 185 },
-  },
-  {
-    id: 'd-003',
-    label: 'server-01',
-    deviceType: 'server',
-    parentNode: 'rack-r01',
-    dcId: 'ams-01',
-    position: { x: 20, y: 290 },
-  },
-  {
-    id: 'd-008',
-    label: 'pdu-01',
-    deviceType: 'pdu',
-    parentNode: 'rack-r01',
-    dcId: 'ams-01',
-    position: { x: 20, y: 400 },
-  },
-  // AMS-01 R02
-  {
-    id: 'd-101',
-    label: 'leaf-switch-01',
-    deviceType: 'switch',
-    parentNode: 'rack-r02',
-    dcId: 'ams-01',
-    position: { x: 20, y: 50 },
-  },
-  {
-    id: 'd-102',
-    label: 'server-10',
-    deviceType: 'server',
-    parentNode: 'rack-r02',
-    dcId: 'ams-01',
-    position: { x: 20, y: 195 },
-  },
-  {
-    id: 'd-103',
-    label: 'server-11',
-    deviceType: 'server',
-    parentNode: 'rack-r02',
-    dcId: 'ams-01',
-    position: { x: 20, y: 305 },
-  },
-  // AMS-01 R04
-  {
-    id: 'd-301',
-    label: 'spine-switch-01',
-    deviceType: 'switch',
-    parentNode: 'rack-r04',
-    dcId: 'ams-01',
-    position: { x: 20, y: 50 },
-  },
-  // FRA-01 R01
-  {
-    id: 'd-601',
-    label: 'tor-switch-01',
-    deviceType: 'switch',
-    parentNode: 'rack-fra01-r01',
-    dcId: 'fra-01',
-    position: { x: 20, y: 50 },
-  },
-  {
-    id: 'd-603',
-    label: 'server-61',
-    deviceType: 'server',
-    parentNode: 'rack-fra01-r01',
-    dcId: 'fra-01',
-    position: { x: 20, y: 195 },
-  },
-];
-
-const RACK_PADDING_TOP = 50;
-const RACK_PADDING_BOTTOM = 20;
-const DEVICE_GAP = 12;
-const DEVICE_X = 20;
 
 function buildNodes(
-  dcId: string,
+  devices: DeviceInfo[],
   devicePorts: Record<string, Port[]>,
   usedPortIds: Set<string>,
   pendingSourcePortId: string | null,
@@ -698,58 +597,41 @@ function buildNodes(
   onEditPorts: (deviceId: string) => void,
   onPortClick: (deviceId: string, portId: string, isFree: boolean) => void,
 ): Node[] {
-  const dcRacks = RACK_LAYOUTS.filter((r) => r.dcId === dcId);
-  const dcDevices = DEVICE_LAYOUTS.filter((d) => d.dcId === dcId);
+  // Fall back to the keys of devicePorts when no device list is supplied so the
+  // graph still renders (labels degrade to the device id).
+  const list: DeviceInfo[] =
+    devices.length > 0 ? devices : Object.keys(devicePorts).map((id) => ({ id, name: id }));
+  if (list.length === 0) return [];
 
-  // Stack devices top-to-bottom per rack and derive rack height from actual content
-  const devicePositions: Record<string, { x: number; y: number }> = {};
-  const rackHeights: Record<string, number> = {};
+  const cols = Math.max(1, Math.ceil(Math.sqrt(list.length)));
+  const perCol = Math.ceil(list.length / cols);
+  const yByCol: number[] = new Array(cols).fill(LAYOUT_TOP);
 
-  for (const rack of dcRacks) {
-    const rackDevices = dcDevices.filter((d) => d.parentNode === rack.id);
-    let y = RACK_PADDING_TOP;
-    for (const device of rackDevices) {
-      devicePositions[device.id] = { x: DEVICE_X, y };
-      const h = computeDeviceHeight(devicePorts[device.id] ?? []);
-      y += h + DEVICE_GAP;
-    }
-    rackHeights[rack.id] =
-      rackDevices.length > 0 ? y - DEVICE_GAP + RACK_PADDING_BOTTOM : rack.height;
-  }
-
-  const rackNodes: Node[] = dcRacks.map((r) => ({
-    id: r.id,
-    type: 'rack',
-    position: { x: r.x, y: r.y },
-    style: { width: r.width, height: rackHeights[r.id] },
-    data: { label: r.label },
-    selectable: false,
-    draggable: false,
-  }));
-
-  const deviceNodes: Node[] = dcDevices.map((d) => ({
-    id: d.id,
-    type: 'device',
-    parentNode: d.parentNode,
-    extent: 'parent' as const,
-    position: devicePositions[d.id] ?? d.position,
-    draggable: false,
-    data: {
-      label: d.label,
-      deviceType: d.deviceType,
-      ports: devicePorts[d.id] ?? [],
-      nodeId: d.id,
-      usedPortIds,
-      pendingSourcePortId,
-      activeSourceType,
-      onBodyClick,
-      onHover,
-      onEditPorts,
-      onPortClick,
-    },
-  }));
-
-  return [...rackNodes, ...deviceNodes];
+  return list.map((d, i) => {
+    const col = Math.floor(i / perCol);
+    const ports = devicePorts[d.id] ?? [];
+    const y = yByCol[col];
+    yByCol[col] = y + computeDeviceHeight(ports) + DEVICE_GAP;
+    return {
+      id: d.id,
+      type: 'device',
+      position: { x: LAYOUT_LEFT + col * COL_SPACING, y },
+      draggable: true,
+      data: {
+        label: d.name,
+        deviceType: inferDeviceType(d.name, ports),
+        ports,
+        nodeId: d.id,
+        usedPortIds,
+        pendingSourcePortId,
+        activeSourceType,
+        onBodyClick,
+        onHover,
+        onEditPorts,
+        onPortClick,
+      },
+    };
+  });
 }
 
 // ── Legend panel ─────────────────────────────────────────────────────────────
@@ -968,8 +850,8 @@ if (typeof document !== 'undefined' && !document.getElementById(PULSE_STYLE_ID))
 export function PatchMappingFlow({
   cables,
   devicePorts,
+  devices,
   selectedCableId,
-  dcId,
   filterStatus,
   filterType,
   onCableClick,
@@ -1073,7 +955,7 @@ export function PatchMappingFlow({
   const nodes = useMemo(
     () =>
       buildNodes(
-        dcId,
+        devices,
         devicePorts,
         usedPortIds,
         pendingSource?.portId ?? null,
@@ -1084,7 +966,7 @@ export function PatchMappingFlow({
         onPortClick,
       ),
     [
-      dcId,
+      devices,
       devicePorts,
       usedPortIds,
       pendingSource,
@@ -1189,7 +1071,7 @@ export function PatchMappingFlow({
       pendingSource.portId)
     : null;
   const pendingDeviceLabel = pendingSource
-    ? (DEVICE_LAYOUTS.find((d) => d.id === pendingSource.deviceId)?.label ?? pendingSource.deviceId)
+    ? (devices.find((d) => d.id === pendingSource.deviceId)?.name ?? pendingSource.deviceId)
     : null;
 
   return (

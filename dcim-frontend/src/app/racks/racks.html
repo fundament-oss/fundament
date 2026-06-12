@@ -521,16 +521,18 @@
         </div>
       }
       <nldd-form-field label="Asset">
-        <select
-          #fDeviceAsset
-          aria-label="Asset"
-          [attr.aria-invalid]="isDeviceFieldInvalid('asset_id') ? 'true' : null"
-        >
-          <option value="" disabled selected>Select an asset</option>
-          @for (asset of assetOptions(); track asset.id) {
-            <option [value]="asset.id">{{ asset.label }}</option>
-          }
-        </select>
+        <nldd-dropdown [attr.invalid]="isDeviceFieldInvalid('asset_id') ? true : null">
+          <select
+            #fDeviceAsset
+            aria-label="Asset"
+            [attr.aria-invalid]="isDeviceFieldInvalid('asset_id') ? 'true' : null"
+          >
+            <option value="" disabled selected>Select an asset</option>
+            @for (asset of assetOptions(); track asset.id) {
+              <option [value]="asset.id">{{ asset.label }}</option>
+            }
+          </select>
+        </nldd-dropdown>
         @if (isDeviceFieldInvalid('asset_id')) {
           <nldd-form-field-error-text id="error-device-asset">{{
             deviceFieldError('asset_id')
@@ -543,15 +545,17 @@
         }
       </nldd-form-field>
       <nldd-form-field label="Slot type">
-        <select
-          aria-label="Slot type"
-          [ngModel]="deviceSlotType()"
-          (ngModelChange)="deviceSlotType.set($event)"
-        >
-          @for (st of slotTypes; track st.value) {
-            <option [value]="st.value">{{ st.label }}</option>
-          }
-        </select>
+        <nldd-dropdown>
+          <select
+            aria-label="Slot type"
+            [ngModel]="deviceSlotType()"
+            (ngModelChange)="deviceSlotType.set($event)"
+          >
+            @for (st of slotTypes; track st.value) {
+              <option [value]="st.value">{{ st.label }}</option>
+            }
+          </select>
+        </nldd-dropdown>
       </nldd-form-field>
       <nldd-form-field label="Rack unit">
         <nldd-number-field

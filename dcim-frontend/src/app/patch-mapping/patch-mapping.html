@@ -125,6 +125,7 @@
       class="block w-full flex-1 min-h-0"
       [cables]="dcCables()"
       [devicePorts]="localDevicePorts()"
+      [devices]="dcDevices()"
       [selectedCableId]="editCable()?.id ?? null"
       [dcId]="selectedDcId()"
       [filterStatus]="topologyStatusFilter()"
