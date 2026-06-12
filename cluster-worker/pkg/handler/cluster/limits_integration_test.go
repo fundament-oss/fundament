@@ -7,7 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	namespacehandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/namespace"
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // insertOrg inserts a fresh organization so limit-trigger fan-out counts are
@@ -261,6 +263,54 @@ func TestSyncAggregateCapExceededFails(t *testing.T) {
 
 	assertEventExists(t, db, clusterID, "sync_failed")
 	assertNoEvent(t, db, clusterID, "sync_succeeded")
+}
+
+// Tasks 2.2/6.6 end-to-end: the namespace sync reads the limits tables through
+// the fun_cluster_worker role (exercising the RLS read policies and grants),
+// merges org and project defaults lowest-wins, and materializes/clears the
+// managed LimitRange on the shoot.
+func TestNamespaceSync_LimitRangeFromMergedDefaults(t *testing.T) {
+	db := createTestDB(t)
+	mock := newMockShoot(t)
+	h := newNamespaceHandler(t, db, mock)
+	ctx := t.Context()
+
+	clusterID := insertCluster(t, db, acmeCorpOrgID, "ns-limits-e2e")
+	setShootStatus(t, db, clusterID, "ready")
+	projectID := insertProject(t, db, clusterID, "proj-limits")
+	nsID := insertNamespace(t, db, projectID, "team-a")
+	clusterNS := kubename.GenerateNamespace("proj-limits", projectID, "team-a")
+
+	_, err := db.adminPool.Exec(ctx,
+		`INSERT INTO tenant.organization_limits (organization_id, default_cpu_request_m, default_cpu_limit_m, default_memory_limit_mi)
+		 VALUES ($1, 100, 500, 512)`, acmeCorpOrgID)
+	require.NoError(t, err)
+	_, err = db.adminPool.Exec(ctx,
+		`INSERT INTO tenant.project_limits (project_id, default_cpu_limit_m)
+		 VALUES ($1, 250)`, projectID)
+	require.NoError(t, err)
+
+	require.NoError(t, h.Sync(ctx, nsID, nsSyncCtx))
+
+	lr := mock.GetLimitRange(clusterID, clusterNS)
+	require.NotNil(t, lr, "managed LimitRange must be applied")
+	require.NotNil(t, lr.Defaults.CPURequestMilli)
+	require.EqualValues(t, 100, *lr.Defaults.CPURequestMilli, "org request applies")
+	require.NotNil(t, lr.Defaults.CPULimitMilli)
+	require.EqualValues(t, 250, *lr.Defaults.CPULimitMilli, "lower project limit wins")
+	require.NotNil(t, lr.Defaults.MemoryLimitMi)
+	require.EqualValues(t, 512, *lr.Defaults.MemoryLimitMi)
+	require.Nil(t, lr.Defaults.MemoryRequestMi, "unset field stays absent")
+	require.Equal(t, namespacehandler.ManagedByValue, lr.Labels[namespacehandler.LabelManagedBy])
+
+	// Clearing all defaults removes the managed LimitRange on the next sync.
+	_, err = db.adminPool.Exec(ctx, `UPDATE tenant.organization_limits SET deleted = now() WHERE organization_id = $1`, acmeCorpOrgID)
+	require.NoError(t, err)
+	_, err = db.adminPool.Exec(ctx, `UPDATE tenant.project_limits SET deleted = now() WHERE project_id = $1`, projectID)
+	require.NoError(t, err)
+
+	require.NoError(t, h.Sync(ctx, nsID, nsSyncCtx))
+	require.Nil(t, mock.GetLimitRange(clusterID, clusterNS), "cleared defaults must remove the LimitRange")
 }
 
 // Task 1.12: a limit change affecting zero active clusters/namespaces inserts
