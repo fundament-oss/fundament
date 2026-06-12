@@ -106,6 +106,10 @@ gardener-up: check-prerequisites
 
     # Unset SKAFFOLD_DEFAULT_REPO so Gardener uses its own registry
     # (registry.local.gardener.cloud:5001), not the fundament k3d registry.
+    # mise.toml exports the fundament registry, which would override the ?=
+    # default in Gardener's Makefile; the kind nodes cannot pull from it, so
+    # the operator/gardenlet pods would wedge in ImagePullBackOff. The same
+    # applies when running Gardener make targets by hand: unset it first.
     unset SKAFFOLD_DEFAULT_REPO
     make kind-single-node-up
     make operator-up
@@ -129,6 +133,11 @@ gardener-down:
     fi
 
     cd "$GARDENER_DIR"
+    # Unset SKAFFOLD_DEFAULT_REPO so Gardener uses its own registry
+    # (registry.local.gardener.cloud:5001), not the fundament k3d registry.
+    # mise.toml exports the fundament registry, which would override the ?=
+    # default in Gardener's Makefile and break skaffold's render/delete.
+    unset SKAFFOLD_DEFAULT_REPO
     make operator-seed-down 2>/dev/null || true
     make kind-single-node-down
     echo "Gardener stopped"
