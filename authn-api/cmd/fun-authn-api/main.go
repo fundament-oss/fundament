@@ -154,10 +154,6 @@ func run() error {
 		FrontendURL:  cfg.FrontendURL,
 	}
 
-	// MintPluginToken resolves installation identity via plugin-proxy's
-	// internal PluginInstallationService. The Connect protocol works over
-	// HTTP/1.1; a bounded timeout keeps a hung plugin-proxy from stalling the
-	// mint hot path.
 	pluginProxyClient := pluginproxyv1connect.NewPluginInstallationServiceClient(
 		&http.Client{Timeout: 10 * time.Second}, cfg.PluginProxyURL)
 	pluginInstallations := authn.NewPluginProxyLookup(pluginProxyClient)

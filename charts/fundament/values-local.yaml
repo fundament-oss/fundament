@@ -122,6 +122,12 @@ pluginController:
   enabled: true
   logLevel: debug
 
+pluginProxy:
+  enabled: true
+  replicas: 1
+  logLevel: debug
+  mode: mock
+
 dcimApi:
   enabled: true
   replicas: 1

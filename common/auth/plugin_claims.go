@@ -45,7 +45,7 @@ func ParsePluginToken(tokenStr string, secret []byte) (*PluginClaims, error) {
 	},
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 		jwt.WithExpirationRequired(),
-		jwt.WithIssuer("fundament-authn-api"),
+		jwt.WithIssuer(ConsoleIssuer),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("invalid plugin token: %w", err)

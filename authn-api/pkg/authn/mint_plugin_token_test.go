@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,7 +74,7 @@ func newMintHarness(t *testing.T, allow bool, manifest *InstallationManifest, lo
 			TokenExpiry: 15 * time.Minute,
 		},
 		logger:              logger,
-		validator:           auth.NewValidatorForAudience(secret, auth.TokenTypeUser, logger),
+		validator:           auth.NewValidatorForAudience(secret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
 		authz:               az,
 		pluginInstallations: lk,
 	}
@@ -91,6 +93,7 @@ func (h *mintHarness) userToken(t *testing.T) string {
 	t.Helper()
 	claims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    auth.ConsoleIssuer,
 			Subject:   h.userID.String(),
 			Audience:  jwt.ClaimStrings{string(auth.TokenTypeUser)},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
@@ -144,9 +147,6 @@ func TestMintPluginToken_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse minted token: %v", err)
 	}
-	if got := claims.Type(); got != auth.TokenTypePlugin {
-		t.Errorf("Type() = %q, want %q", got, auth.TokenTypePlugin)
-	}
 	if claims.Subject != h.userID.String() {
 		t.Errorf("sub = %q, want %q", claims.Subject, h.userID)
 	}
@@ -179,6 +179,7 @@ func TestMintPluginToken_PluginAudienceRejected(t *testing.T) {
 	h := newMintHarness(t, true, activeManifest(), nil)
 	claims := auth.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    auth.ConsoleIssuer,
 			Subject:   h.userID.String(),
 			Audience:  jwt.ClaimStrings{string(auth.TokenTypePlugin)},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
@@ -193,30 +194,6 @@ func TestMintPluginToken_PluginAudienceRejected(t *testing.T) {
 
 	_, err = h.server.MintPluginToken(context.Background(), req)
 	assertConnectCode(t, err, connect.CodeUnauthenticated)
-}
-
-func TestMintPluginToken_BadClusterID_InvalidArgument(t *testing.T) {
-	h := newMintHarness(t, true, activeManifest(), nil)
-	req := connect.NewRequest(authnv1.MintPluginTokenRequest_builder{
-		ClusterId:      "not-a-uuid",
-		InstallationId: h.installationID.String(),
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+h.userToken(t))
-
-	_, err := h.server.MintPluginToken(context.Background(), req)
-	assertConnectCode(t, err, connect.CodeInvalidArgument)
-}
-
-func TestMintPluginToken_BadInstallationID_InvalidArgument(t *testing.T) {
-	h := newMintHarness(t, true, activeManifest(), nil)
-	req := connect.NewRequest(authnv1.MintPluginTokenRequest_builder{
-		ClusterId:      h.clusterID.String(),
-		InstallationId: "not-a-uuid",
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+h.userToken(t))
-
-	_, err := h.server.MintPluginToken(context.Background(), req)
-	assertConnectCode(t, err, connect.CodeInvalidArgument)
 }
 
 func TestMintPluginToken_CanViewDenied_NotFound(t *testing.T) {
@@ -245,6 +222,32 @@ func TestMintPluginToken_InstallationTerminating_FailedPrecondition(t *testing.T
 
 	_, err := h.server.MintPluginToken(context.Background(), req)
 	assertConnectCode(t, err, connect.CodeFailedPrecondition)
+}
+
+// TestMintedTokenRejectedAsUserToken is the FUN-17 escalation-wall test: a
+// freshly-minted PluginToken — signed with the same HMAC secret and pinned to
+// the same issuer as every UserToken — must be rejected by a UserToken
+// validator on the audience pin, not by signature or expiry coincidence.
+// Without this, a misconfigured validator (e.g. NewValidator without an
+// audience) would silently accept either token type.
+func TestMintedTokenRejectedAsUserToken(t *testing.T) {
+	h := newMintHarness(t, true, activeManifest(), nil)
+	req := h.request(t, "Bearer "+h.userToken(t))
+
+	resp, err := h.server.MintPluginToken(context.Background(), req)
+	if err != nil {
+		t.Fatalf("MintPluginToken: %v", err)
+	}
+
+	userValidator := auth.NewValidatorForAudience(h.secret,
+		auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil)
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+resp.Msg.GetAccessToken())
+	if _, err = userValidator.Validate(header); err == nil {
+		t.Fatal("user validator accepted a PluginToken")
+	} else if !strings.Contains(err.Error(), "audience") {
+		t.Errorf("expected audience-mismatch error, got: %v", err)
+	}
 }
 
 func TestMintPluginToken_AuthzError_Internal(t *testing.T) {

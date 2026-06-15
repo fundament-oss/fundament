@@ -33,6 +33,24 @@ type Service struct {
 
 var _ pluginproxyv1connect.PluginInstallationServiceHandler = (*Service)(nil)
 
+// NewService constructs a Service and rejects a nil ClusterClient or
+// OrgIDForCluster at startup. Without this, a misconfigured wiring surfaces
+// as a runtime nil-call panic at first traffic — recovered to a 500 by the
+// recovery interceptor, but the cause is invisible from the outside.
+func NewService(logger *slog.Logger, clusterClient ClusterClientFn, orgIDForCluster OrgIDForClusterFn) *Service {
+	if clusterClient == nil {
+		panic("installation.NewService: clusterClient is nil")
+	}
+	if orgIDForCluster == nil {
+		panic("installation.NewService: orgIDForCluster is nil")
+	}
+	return &Service{
+		Logger:          logger,
+		ClusterClient:   clusterClient,
+		OrgIDForCluster: orgIDForCluster,
+	}
+}
+
 // GetInstallationManifest resolves a PluginInstallation's identity from its
 // spec.definitionRef. It returns NotFound when the installation does not
 // exist and FailedPrecondition when it is terminating; per FUN-17 it never

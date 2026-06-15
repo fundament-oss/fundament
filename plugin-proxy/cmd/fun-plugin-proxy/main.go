@@ -72,11 +72,11 @@ func run() error {
 
 	// PluginInstallationService is the internal RPC authn-api calls at mint
 	// time. Real-mode cluster access lands in Plan C; this plan uses mocks.
-	installSvc := &installation.Service{
-		Logger:          logger,
-		ClusterClient:   installation.NewMockClusterClient(),
-		OrgIDForCluster: installation.NewMockOrgIDResolver(),
-	}
+	installSvc := installation.NewService(
+		logger,
+		installation.NewMockClusterClient(),
+		installation.NewMockOrgIDResolver(),
+	)
 	installPath, installHandler := pluginproxyv1connect.NewPluginInstallationServiceHandler(
 		installSvc,
 		connect.WithInterceptors(connectrecovery.NewInterceptor(logger)),

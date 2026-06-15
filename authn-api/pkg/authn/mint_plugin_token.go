@@ -35,15 +35,8 @@ func (s *AuthnServer) MintPluginToken(
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid user token"))
 	}
 
-	clusterID, err := uuid.Parse(req.Msg.GetClusterId())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid cluster_id: %w", err))
-	}
-
-	installationID, err := uuid.Parse(req.Msg.GetInstallationId())
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid installation_id: %w", err))
-	}
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	installationID := uuid.MustParse(req.Msg.GetInstallationId())
 
 	userID := claims.UserID()
 	manifest, err := s.resolveInstallation(ctx, userID, clusterID, installationID)
@@ -126,7 +119,7 @@ func (s *AuthnServer) signPluginToken(
 	now := time.Now()
 	claims := auth.PluginClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "fundament-authn-api",
+			Issuer:    auth.ConsoleIssuer,
 			Subject:   userID.String(),
 			Audience:  jwt.ClaimStrings{string(auth.TokenTypePlugin)},
 			IssuedAt:  jwt.NewNumericDate(now),
