@@ -245,8 +245,7 @@ just dev -p local-gardener
 # 4. Access the console frontend
 open http://console.fundament.localhost:8080
 
-# 5. Create a test cluster via console or CLI:
-just cluster-worker create-test-cluster t1
+# 5. Create a test cluster via the console (http://console.fundament.localhost:8080)
 
 # Watch progress:
 just cluster-worker shoots    # shoots in Gardener
