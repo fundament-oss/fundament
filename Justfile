@@ -132,9 +132,3 @@ funops *args:
 functl *args:
     #!/usr/bin/env bash
     exec go run ./functl/cmd/functl "$@"
-
-# --- Cluster Worker ---
-
-# Set up local Gardener for testing real Gardener client
-local-gardener:
-    just -f cluster-worker/justfile local-gardener

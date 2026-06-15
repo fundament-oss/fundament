@@ -8,7 +8,7 @@ ports:
   - port: 8080:80
     nodeFilters:
       - loadbalancer
-  - port: 8443:30443
+  - port: 127.0.0.1:8443:30443
     nodeFilters:
       - loadbalancer
   - port: 54328:54328
