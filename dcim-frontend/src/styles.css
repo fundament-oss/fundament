@@ -18,6 +18,53 @@ html.dark {
   color-scheme: dark;
 }
 
+:root {
+  /* Custom focus ring, since the NLDD default is very dark */
+  --semantics-focus-ring-outline: none;
+  --semantics-focus-ring-box-shadow:
+    var(--semantics-surfaces-background-color) 0 0 0 2px,
+    var(--primitives-color-accent-200) 0 0 0 4px;
+}
+
+/* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
+::view-transition-group(root) {
+  @apply animate-[700ms_ease-out];
+}
+
+::view-transition-new(root) {
+  animation-name: reveal-light;
+  animation-fill-mode: both;
+}
+
+::view-transition-old(root),
+.dark::view-transition-old(root) {
+  @apply -z-10 animate-none;
+  animation-fill-mode: both;
+}
+
+.dark::view-transition-new(root) {
+  animation-name: reveal-dark;
+  animation-fill-mode: both;
+}
+
+@keyframes reveal-light {
+  from {
+    clip-path: polygon(171% 50%, 50% 171%, 50% 171%, 171% 50%);
+  }
+  to {
+    clip-path: polygon(171% 50%, 50% 171%, -50% 71%, 50% -71%);
+  }
+}
+
+@keyframes reveal-dark {
+  from {
+    clip-path: polygon(50% -71%, -50% 71%, -50% 71%, 50% -71%);
+  }
+  to {
+    clip-path: polygon(50% -71%, -50% 71%, 50% 171%, 171% 50%);
+  }
+}
+
 @theme {
   --color-accent-25: oklch(0.973 0.013 253.4);
   --color-accent-50: oklch(0.947 0.026 253.4);
@@ -135,7 +182,7 @@ html.dark {
 }
 
 body {
-  @apply bg-white text-gray-800 font-body dark:bg-gray-900 dark:text-gray-100;
+  @apply text-content font-body bg-neutral-25 dark:bg-gray-900 dark:text-white;
 }
 
 button {
@@ -183,4 +230,17 @@ input[type='radio']:checked {
   );
   border: 1px dashed #94a3b8;
   color: #94a3b8;
+}
+
+.dark .rack-slot-free {
+  background-color: #111827;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    #374151 4px,
+    #374151 5px
+  );
+  border-color: #475569;
+  color: #64748b;
 }

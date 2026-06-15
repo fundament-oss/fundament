@@ -1,9 +1,11 @@
 <!-- ══════════════════════════════════════════════════════════════
      PAGE HEADER (subbar)
      ══════════════════════════════════════════════════════════════ -->
-<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
+<div
+  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
+>
   <div class="flex-1 min-w-0">
-    <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0">Tasks</h1>
+    <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0">Tasks</h1>
   </div>
   <div class="flex items-center gap-4 shrink-0">
     <!-- View toggle -->
@@ -39,12 +41,14 @@
      TOOLBAR
      ══════════════════════════════════════════════════════════════ -->
 <div
-  class="shrink-0 border-b border-slate-200 bg-white px-6 py-2.5"
+  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-2.5"
   [class.hidden]="selectedTasks().size === 0"
 >
   <div class="flex items-center gap-2.5">
     <!-- Bulk actions -->
-    <span class="text-xs font-medium text-slate-600">{{ selectedTasks().size }} selected</span>
+    <span class="text-xs font-medium text-slate-600 dark:text-gray-300"
+      >{{ selectedTasks().size }} selected</span
+    >
     <nldd-button
       variant="neutral-transparent"
       text="Status"
@@ -62,7 +66,7 @@
       start-icon="trash"
       size="sm"
       accessible-label="Delete selected"
-      class="text-danger-700"
+      class="text-danger-700 dark:text-danger-300"
     ></nldd-button>
   </div>
 </div>
@@ -73,7 +77,7 @@
 <div class="flex flex-1 min-h-0">
   <!-- ── LEFT SIDEBAR: Filters ──────────────────────────────────── -->
   <aside
-    class="w-60 shrink-0 border-r border-slate-200 bg-white flex flex-col overflow-y-auto"
+    class="w-60 shrink-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-y-auto"
     aria-label="Task filters"
   >
     <div class="px-4 py-3 flex flex-col gap-5">
@@ -89,7 +93,9 @@
 
       <!-- Status -->
       <div>
-        <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        <p
+          class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
+        >
           Status
         </p>
         <button
@@ -97,12 +103,12 @@
           class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             statusFilter() === 'all'
-              ? 'bg-accent-50 text-accent-700 font-medium'
-              : 'text-slate-600 hover:bg-slate-50'
+              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
           "
         >
           <span class="flex-1 text-left">All</span>
-          <span class="text-xs text-slate-400">{{ tasks().length }}</span>
+          <span class="text-xs text-slate-400 dark:text-gray-500">{{ tasks().length }}</span>
         </button>
         @for (status of kanbanColumns; track status) {
           <button
@@ -110,8 +116,8 @@
             class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
             [class]="
               statusFilter() === status
-                ? 'bg-accent-50 text-accent-700 font-medium'
-                : 'text-slate-600 hover:bg-slate-50'
+                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+                : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
             "
           >
             <span
@@ -121,7 +127,9 @@
             ></span>
             <span class="flex-1 text-left">{{ status }}</span>
             @if (statusCounts()[status]) {
-              <span class="text-xs text-slate-400">{{ statusCounts()[status] }}</span>
+              <span class="text-xs text-slate-400 dark:text-gray-500">{{
+                statusCounts()[status]
+              }}</span>
             }
           </button>
         }
@@ -129,7 +137,9 @@
 
       <!-- Priority -->
       <div>
-        <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        <p
+          class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
+        >
           Priority
         </p>
         <button
@@ -137,8 +147,8 @@
           class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             priorityFilter() === 'all'
-              ? 'bg-accent-50 text-accent-700 font-medium'
-              : 'text-slate-600 hover:bg-slate-50'
+              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
           "
         >
           <span class="flex-1 text-left">All</span>
@@ -149,8 +159,8 @@
             class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
             [class]="
               priorityFilter() === priority
-                ? 'bg-accent-50 text-accent-700 font-medium'
-                : 'text-slate-600 hover:bg-slate-50'
+                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+                : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
             "
           >
             <span
@@ -160,7 +170,9 @@
             ></span>
             <span class="flex-1 text-left">{{ priority }}</span>
             @if (priorityCounts()[priority]) {
-              <span class="text-xs text-slate-400">{{ priorityCounts()[priority] }}</span>
+              <span class="text-xs text-slate-400 dark:text-gray-500">{{
+                priorityCounts()[priority]
+              }}</span>
             }
           </button>
         }
@@ -168,7 +180,9 @@
 
       <!-- Category -->
       <div>
-        <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+        <p
+          class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
+        >
           Category
         </p>
         <button
@@ -176,8 +190,8 @@
           class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             categoryFilter() === 'all'
-              ? 'bg-accent-50 text-accent-700 font-medium'
-              : 'text-slate-600 hover:bg-slate-50'
+              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
           "
         >
           <span class="flex-1 text-left">All</span>
@@ -188,18 +202,20 @@
             class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
             [class]="
               categoryFilter() === cat
-                ? 'bg-accent-50 text-accent-700 font-medium'
-                : 'text-slate-600 hover:bg-slate-50'
+                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+                : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
             "
           >
             <nldd-icon
               [name]="categoryIcon(cat)"
-              class="w-4 h-4 shrink-0 text-slate-400"
+              class="w-4 h-4 shrink-0 text-slate-400 dark:text-gray-500"
               aria-hidden="true"
             ></nldd-icon>
             <span class="flex-1 text-left">{{ cat }}</span>
             @if (categoryCounts()[cat]) {
-              <span class="text-xs text-slate-400">{{ categoryCounts()[cat] }}</span>
+              <span class="text-xs text-slate-400 dark:text-gray-500">{{
+                categoryCounts()[cat]
+              }}</span>
             }
           </button>
         }
@@ -213,7 +229,7 @@
     <div [class.hidden]="currentView() === 'kanban'">
       <table class="w-full border-collapse">
         <thead>
-          <tr class="border-b border-slate-100">
+          <tr class="border-b border-slate-100 dark:border-gray-800">
             <th class="w-10 px-3 py-2.5 text-left">
               <nldd-checkbox
                 accessible-label="Select all tasks"
@@ -221,37 +237,37 @@
               ></nldd-checkbox>
             </th>
             <th
-              class="w-20 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+              class="w-20 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
             >
               ID
             </th>
             <th
-              class="py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+              class="py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
             >
               Task
             </th>
             <th
-              class="w-32 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+              class="w-32 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
             >
               Status
             </th>
             <th
-              class="w-24 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+              class="w-24 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
             >
               Priority
             </th>
             <th
-              class="w-28 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+              class="w-28 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
             >
               Category
             </th>
             <th
-              class="w-12 py-2.5 px-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wide"
+              class="w-12 py-2.5 px-2 text-center text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
             >
               Who
             </th>
             <th
-              class="w-28 py-2.5 px-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wide"
+              class="w-28 py-2.5 px-2 text-left text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
             >
               Due
             </th>
@@ -260,7 +276,7 @@
         <tbody>
           @for (task of filteredTasks(); track task.id) {
             <tr
-              class="border-b border-slate-100 transition-colors hover:bg-slate-50 cursor-pointer"
+              class="border-b border-slate-100 dark:border-gray-800 transition-colors hover:bg-slate-50 dark:hover:bg-gray-900 cursor-pointer"
               [class.bg-indigo-50]="isSelected(task.id)"
               (click)="openDetail(task.id)"
             >
@@ -273,13 +289,19 @@
                 ></nldd-checkbox>
               </td>
               <td class="w-20 px-2 py-3">
-                <span class="font-mono text-xs text-slate-400">{{ taskDisplayId(task) }}</span>
+                <span class="font-mono text-xs text-slate-400 dark:text-gray-500">{{
+                  taskDisplayId(task)
+                }}</span>
               </td>
               <td class="min-w-0 px-2 py-3">
-                <p class="text-sm font-medium text-slate-900 leading-snug truncate max-w-xs">
+                <p
+                  class="text-sm font-medium text-slate-900 dark:text-white leading-snug truncate max-w-xs"
+                >
                   {{ task.title }}
                 </p>
-                <p class="mt-0.5 text-xs text-slate-400 truncate flex items-center gap-1">
+                <p
+                  class="mt-0.5 text-xs text-slate-400 dark:text-gray-500 truncate flex items-center gap-1"
+                >
                   <nldd-icon
                     name="apartment-building"
                     style="width: 11px; height: 11px; display: inline-block; vertical-align: middle"
@@ -301,7 +323,9 @@
                 </span>
               </td>
               <td class="w-28 px-2 py-3">
-                <span class="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                <span
+                  class="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-gray-400"
+                >
                   <nldd-icon
                     [attr.name]="categoryIcon(task.category)"
                     style="
@@ -327,11 +351,11 @@
                   </span>
                 }
               </td>
-              <td class="w-28 px-2 py-3 text-xs text-slate-500">
+              <td class="w-28 px-2 py-3 text-xs text-slate-500 dark:text-gray-400">
                 @if (task.due) {
                   {{ formatDate(task.due) }}
                 } @else {
-                  <span class="text-slate-300">—</span>
+                  <span class="text-slate-300 dark:text-gray-600">—</span>
                 }
               </td>
             </tr>
@@ -339,7 +363,7 @@
         </tbody>
       </table>
 
-      <div class="py-3 text-xs text-slate-400">
+      <div class="py-3 text-xs text-slate-400 dark:text-gray-500">
         {{ filteredTasks().length }} task{{ filteredTasks().length !== 1 ? 's' : '' }}
       </div>
     </div>
@@ -355,9 +379,9 @@
                 [class]="statusStyles[col].dot"
                 aria-hidden="true"
               ></span>
-              <h3 class="text-sm font-semibold text-slate-700">{{ col }}</h3>
+              <h3 class="text-sm font-semibold text-slate-700 dark:text-gray-300">{{ col }}</h3>
               <span
-                class="ml-auto inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+                class="ml-auto inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-slate-500 dark:text-gray-400"
                 >{{ tasksForColumn(col).length }}</span
               >
             </div>
@@ -370,13 +394,17 @@
                   (keydown.enter)="openDetail(task.id)"
                   (keydown.space)="openDetail(task.id)"
                 >
-                  <h4 class="text-sm font-medium text-slate-900 leading-snug">{{ task.title }}</h4>
+                  <h4 class="text-sm font-medium text-slate-900 dark:text-white leading-snug">
+                    {{ task.title }}
+                  </h4>
                   <div class="mt-2 flex items-center gap-1.5">
                     <span [class]="priorityBadgeClass(task.priority)">
                       <span [class]="priorityDotClass(task.priority)" aria-hidden="true"></span
                       >{{ task.priority }}
                     </span>
-                    <span class="inline-flex items-center gap-1 text-xs text-slate-400">
+                    <span
+                      class="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500"
+                    >
                       <nldd-icon
                         [attr.name]="categoryIcon(task.category)"
                         style="width: 13px; height: 13px"
@@ -387,7 +415,7 @@
                   </div>
                   <div class="mt-3 flex items-center justify-between">
                     <span
-                      class="inline-flex items-center gap-1 text-xs text-slate-400 truncate max-w-[60%]"
+                      class="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500 truncate max-w-[60%]"
                     >
                       <nldd-icon
                         name="apartment-building"
@@ -398,7 +426,9 @@
                     </span>
                     <div class="flex items-center gap-2">
                       @if (task.due) {
-                        <span class="text-xs text-slate-400">{{ shortDate(task.due) }}</span>
+                        <span class="text-xs text-slate-400 dark:text-gray-500">{{
+                          shortDate(task.due)
+                        }}</span>
                       }
                       @if (getTech(task.assignee); as tech) {
                         <span
@@ -419,7 +449,7 @@
                   </div>
                   @if (task.notes.length) {
                     <div
-                      class="mt-2.5 flex items-center gap-1 text-xs text-slate-400 border-t border-slate-100 pt-2.5"
+                      class="mt-2.5 flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500 border-t border-slate-100 dark:border-gray-800 pt-2.5"
                     >
                       <nldd-icon
                         name="envelope"
@@ -433,7 +463,7 @@
               }
               @if (tasksForColumn(col).length === 0) {
                 <div
-                  class="rounded-xl border-2 border-dashed border-slate-200 p-6 text-center text-xs text-slate-400"
+                  class="rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-800 p-6 text-center text-xs text-slate-400 dark:text-gray-500"
                 >
                   No tasks
                 </div>
@@ -465,8 +495,8 @@
           <!-- Properties -->
           <div class="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
             <div>
-              <p class="text-xs font-medium text-slate-400 mb-1.5">Assignee</p>
-              <div class="flex items-center gap-2 text-slate-700 font-medium">
+              <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-1.5">Assignee</p>
+              <div class="flex items-center gap-2 text-slate-700 dark:text-gray-300 font-medium">
                 @if (getTech(task.assignee); as tech) {
                   <span [class]="techInitialsClass(tech)" aria-hidden="true">{{
                     tech.initials
@@ -476,28 +506,30 @@
                   <span [class]="unassignedAvatarClass()" aria-hidden="true">
                     <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
                   </span>
-                  <span class="text-slate-400 font-normal">Unassigned</span>
+                  <span class="text-slate-400 dark:text-gray-500 font-normal">Unassigned</span>
                 }
               </div>
             </div>
             <div>
-              <p class="text-xs font-medium text-slate-400 mb-1.5">Due date</p>
-              <p class="text-slate-700">{{ formatDate(task.due) }}</p>
+              <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-1.5">Due date</p>
+              <p class="text-slate-700 dark:text-gray-300">{{ formatDate(task.due) }}</p>
             </div>
             <div>
-              <p class="text-xs font-medium text-slate-400 mb-1.5">Location</p>
-              <p class="text-slate-700">{{ task.location }}</p>
+              <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-1.5">Location</p>
+              <p class="text-slate-700 dark:text-gray-300">{{ task.location }}</p>
             </div>
             <div>
-              <p class="text-xs font-medium text-slate-400 mb-1.5">Created</p>
-              <p class="text-slate-700">{{ formatDate(task.created) }}</p>
+              <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-1.5">Created</p>
+              <p class="text-slate-700 dark:text-gray-300">{{ formatDate(task.created) }}</p>
             </div>
           </div>
 
           <!-- Description -->
-          <div class="rounded-xl bg-slate-50 px-4 py-3.5">
-            <p class="text-xs font-medium text-slate-400 mb-2">Description</p>
-            <p class="text-sm leading-relaxed text-slate-600">{{ task.description }}</p>
+          <div class="rounded-xl bg-slate-50 dark:bg-gray-900 px-4 py-3.5">
+            <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-2">Description</p>
+            <p class="text-sm leading-relaxed text-slate-600 dark:text-gray-300">
+              {{ task.description }}
+            </p>
           </div>
 
           <!-- Actions -->
@@ -520,12 +552,17 @@
 
           <!-- Notes -->
           <div>
-            <p class="text-xs font-medium text-slate-400 mb-3">
-              Notes <span class="text-slate-300 ml-0.5">({{ task.notes.length }})</span>
+            <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-3">
+              Notes
+              <span class="text-slate-300 dark:text-gray-600 ml-0.5"
+                >({{ task.notes.length }})</span
+              >
             </p>
             <div class="space-y-3">
               @if (task.notes.length === 0) {
-                <p class="text-sm text-slate-400 text-center py-4">No notes yet</p>
+                <p class="text-sm text-slate-400 dark:text-gray-500 text-center py-4">
+                  No notes yet
+                </p>
               }
               @for (note of task.notes; track $index) {
                 @let author = noteAuthor(note);
@@ -543,12 +580,18 @@
                       >
                     }
                   </div>
-                  <div class="flex-1 rounded-xl bg-slate-50 px-3.5 py-3">
+                  <div class="flex-1 rounded-xl bg-slate-50 dark:bg-gray-900 px-3.5 py-3">
                     <div class="flex items-center justify-between gap-2 mb-1">
-                      <span class="text-xs font-semibold text-slate-700">{{ author.name }}</span>
-                      <span class="text-xs text-slate-400 shrink-0">{{ note.time }}</span>
+                      <span class="text-xs font-semibold text-slate-700 dark:text-gray-300">{{
+                        author.name
+                      }}</span>
+                      <span class="text-xs text-slate-400 dark:text-gray-500 shrink-0">{{
+                        note.time
+                      }}</span>
                     </div>
-                    <p class="text-sm text-slate-600 leading-relaxed">{{ note.text }}</p>
+                    <p class="text-sm text-slate-600 dark:text-gray-300 leading-relaxed">
+                      {{ note.text }}
+                    </p>
                   </div>
                 </div>
               }
@@ -575,7 +618,7 @@
               (keydown.enter)="addNote()"
             ></nldd-text-field>
             <button
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
               aria-label="Send note"
               (click)="addNote()"
             >
@@ -620,7 +663,9 @@
           >
         </nldd-form-field>
         <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editDescription"
+          <label
+            class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
+            for="editDescription"
             >Description</label
           >
           <nldd-multi-line-text-field
@@ -633,7 +678,9 @@
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editStatus"
+            <label
+              class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
+              for="editStatus"
               >Status</label
             >
             <nldd-dropdown>
@@ -647,7 +694,9 @@
             </nldd-dropdown>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editPriority"
+            <label
+              class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
+              for="editPriority"
               >Priority</label
             >
             <nldd-dropdown>
@@ -662,7 +711,9 @@
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editCategory"
+            <label
+              class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
+              for="editCategory"
               >Category</label
             >
             <nldd-dropdown>
@@ -677,20 +728,24 @@
             </nldd-dropdown>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editDue"
+            <label
+              class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
+              for="editDue"
               >Due date</label
             >
             <input
               id="editDue"
               type="date"
-              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+              class="w-full rounded-lg border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
               [value]="editFormDue()"
               (change)="editFormDue.set($any($event).target.value)"
             />
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1.5" for="editLocation"
+          <label
+            class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
+            for="editLocation"
             >Location</label
           >
           <nldd-text-field
@@ -705,7 +760,10 @@
           ></nldd-text-field>
         </div>
         <div>
-          <p class="block text-xs font-medium text-slate-500 mb-1.5" id="assigneeSelectorLabel">
+          <p
+            class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
+            id="assigneeSelectorLabel"
+          >
             Assignee
           </p>
           <div
@@ -720,8 +778,10 @@
                 editFormAssignee.set($any($event).detail.value ? +$any($event).detail.value : null)
               "
             >
+              <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- click delegates to the inner radio button, which remains keyboard-focusable via the radio group -->
               <div
-                class="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5 hover:bg-slate-50 transition-colors"
+                class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-800 p-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors"
+                (click)="editFormAssignee.set(null)"
               >
                 <span [class]="unassignedAvatarClass('h-8 w-8 text-sm')" aria-hidden="true">
                   <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
@@ -729,12 +789,15 @@
                 <nldd-radio-button-field
                   value=""
                   label="Unassigned"
+                  class="grow"
                   [attr.checked]="editFormAssignee() === null ? '' : null"
                 ></nldd-radio-button-field>
               </div>
               @for (tech of technicians; track tech.id) {
+                <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- click delegates to the inner radio button, which remains keyboard-focusable via the radio group -->
                 <div
-                  class="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5 hover:bg-slate-50 transition-colors"
+                  class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-800 p-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors"
+                  (click)="editFormAssignee.set(tech.id)"
                 >
                   <span [class]="techInitialsClass(tech, 'h-8 w-8 text-sm')" aria-hidden="true">{{
                     tech.initials
@@ -742,14 +805,15 @@
                   <nldd-radio-button-field
                     [attr.value]="tech.id"
                     [attr.label]="tech.name"
+                    class="grow"
                     [attr.checked]="editFormAssignee() === tech.id ? '' : null"
                   ></nldd-radio-button-field>
                   <span
                     class="ml-auto inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
                     [class]="
                       tech.available
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400'
                     "
                     >{{ tech.available ? 'Available' : 'Busy' }}</span
                   >
@@ -762,7 +826,7 @@
     </nldd-simple-section>
     <div
       slot="footer"
-      class="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4"
+      class="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-gray-800 px-6 py-4"
     >
       <nldd-button
         variant="secondary"

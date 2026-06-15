@@ -106,6 +106,24 @@ export const CABLE_COLOR_HEX: Record<CableColor, string> = {
   white: '#f8fafc',
 };
 
+/** Default/preset color per cable type, following common industry conventions
+ *  (TIA-598 for fiber; vendor/cabling conventions otherwise). */
+export const CABLE_TYPE_DEFAULT_COLOR: Record<CableType, CableColor> = {
+  cat5e: 'blue',
+  cat6: 'green',
+  cat6a: 'light-grey',
+  cat7: 'purple',
+  cat8: 'white',
+  dac: 'dark-grey', // twinax DAC — typically black
+  aoc: 'teal', // active optical — aqua
+  mmf: 'orange', // multimode OM1/OM2 — TIA-598
+  smf: 'yellow', // single-mode — TIA-598
+  power: 'red',
+  console: 'light-grey', // Cisco console cable — light blue/grey
+  usb: 'dark-grey',
+  other: 'light-grey',
+};
+
 export const CABLE_TYPE_LABEL: Record<CableType, string> = {
   cat5e: 'Cat 5e',
   cat6: 'Cat 6',
@@ -129,9 +147,9 @@ export const CABLE_STATUS_LABEL: Record<CableStatus, string> = {
 };
 
 export const CABLE_STATUS_COLORS: Record<CableStatus, string> = {
-  planned: 'bg-amber-100 text-amber-700',
-  connected: 'bg-teal-100 text-teal-700',
-  decommissioned: 'bg-slate-100 text-slate-500',
+  planned: 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
+  connected: 'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
+  decommissioned: 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400',
 };
 
 /** Label shown for an unset (NULL) cable type/status. */
@@ -146,7 +164,9 @@ export function cableStatusLabel(status: CableStatus | undefined): string {
 }
 
 export function cableStatusColors(status: CableStatus | undefined): string {
-  return status ? CABLE_STATUS_COLORS[status] : 'bg-slate-100 text-slate-500';
+  return status
+    ? CABLE_STATUS_COLORS[status]
+    : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400';
 }
 
 // ── Port type labels ──────────────────────────────────────────────────────────

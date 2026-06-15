@@ -20,11 +20,14 @@ import {
   LogicalDevice,
   LogicalDeviceLayout,
   LogicalDeviceRole,
-  DEVICE_ROLE_COLORS,
+  LogicalDesignStatus,
+  deviceRoleColors,
+  LOGICAL_DESIGN_STATUS_BADGE_CLASS,
 } from '../design.model';
 import DesignApiService from '../design-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
+import ThemeService from '../../theme.service';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
@@ -62,6 +65,8 @@ export default class DesignDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   private readonly designApi = inject(DesignApiService);
+
+  protected readonly theme = inject(ThemeService);
 
   readonly designId = this.route.snapshot.paramMap.get('id') ?? '';
 
@@ -411,13 +416,16 @@ export default class DesignDetailComponent implements OnInit {
     return this.mutableDevices().find((d) => d.id === id)?.name ?? id;
   }
 
-  readonly roleColor = (role: LogicalDeviceRole): string =>
-    DEVICE_ROLE_COLORS[role]?.text ?? '#475569';
+  // `isDark` is passed from the template (via theme.isDarkMode()) so the inline
+  // style bindings re-evaluate when the theme is toggled under OnPush.
+  readonly roleColor = (role: LogicalDeviceRole, isDark: boolean): string =>
+    deviceRoleColors(role, isDark).text;
 
-  readonly roleBg = (role: LogicalDeviceRole): string => DEVICE_ROLE_COLORS[role]?.bg ?? '#f8fafc';
+  readonly roleBg = (role: LogicalDeviceRole, isDark: boolean): string =>
+    deviceRoleColors(role, isDark).bg;
 
-  readonly roleBorder = (role: LogicalDeviceRole): string =>
-    DEVICE_ROLE_COLORS[role]?.border ?? '#94a3b8';
+  readonly roleBorder = (role: LogicalDeviceRole, isDark: boolean): string =>
+    deviceRoleColors(role, isDark).border;
 
   readonly connTypeLabel = (type: LogicalConnectionType): string => {
     const connMap: Record<LogicalConnectionType, string> = {
@@ -430,19 +438,14 @@ export default class DesignDetailComponent implements OnInit {
 
   readonly connTypeBadgeClass = (type: LogicalConnectionType): string => {
     const connMap: Record<LogicalConnectionType, string> = {
-      network: 'bg-blue-50 text-blue-700',
-      power: 'bg-amber-50 text-amber-700',
-      console: 'bg-slate-100 text-slate-600',
+      network: 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300',
+      power: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
+      console: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
     };
     return connMap[type];
   };
 
-  readonly statusBadgeClass = (status: string): string => {
-    const statusMap: Record<string, string> = {
-      draft: 'bg-slate-100 text-slate-600',
-      active: 'bg-green-50 text-green-700',
-      archived: 'bg-amber-50 text-amber-700',
-    };
-    return statusMap[status] ?? 'bg-slate-100 text-slate-600';
-  };
+  readonly statusBadgeClass = (status: string): string =>
+    LOGICAL_DESIGN_STATUS_BADGE_CLASS[status as LogicalDesignStatus] ??
+    LOGICAL_DESIGN_STATUS_BADGE_CLASS.draft;
 }

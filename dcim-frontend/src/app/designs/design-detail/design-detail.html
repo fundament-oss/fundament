@@ -2,23 +2,27 @@
   <!-- ══════════════════════════════════════════════════════════════
      PAGE HEADER
      ══════════════════════════════════════════════════════════════ -->
-  <div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-3">
+  <div
+    class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-3"
+  >
     <a
       routerLink="/designs"
-      class="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition-colors"
+      class="flex items-center gap-1.5 text-sm text-slate-400 dark:text-gray-500 hover:text-slate-700 dark:hover:text-gray-300 transition-colors"
       aria-label="Back to Designs"
     >
       <nldd-icon name="arrow-left" class="w-4 h-4" aria-hidden="true"></nldd-icon>
       Designs
     </a>
-    <span class="text-slate-300" aria-hidden="true">/</span>
-    <h1 class="text-base font-semibold text-slate-900 m-0 truncate">{{ d.name }}</h1>
+    <span class="text-slate-300 dark:text-gray-600" aria-hidden="true">/</span>
+    <h1 class="text-base font-semibold text-slate-900 dark:text-white m-0 truncate">
+      {{ d.name }}
+    </h1>
     <span
       class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0"
       [class]="statusBadgeClass(d.status)"
       >{{ d.status }}</span
     >
-    <span class="text-xs text-slate-400 shrink-0">v{{ d.version }}</span>
+    <span class="text-xs text-slate-400 dark:text-gray-500 shrink-0">v{{ d.version }}</span>
 
     <div class="flex-1"></div>
 
@@ -65,11 +69,13 @@
   <div class="flex flex-1 min-h-0">
     <!-- ── LEFT PANEL: Device palette ──────────────────────────────── -->
     <aside
-      class="w-56 shrink-0 border-r border-slate-200 bg-white flex flex-col overflow-hidden"
+      class="w-56 shrink-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-hidden"
       aria-label="Devices"
     >
-      <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
-        <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+      <div
+        class="px-4 py-3 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between shrink-0"
+      >
+        <h2 class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wide">
           Devices ({{ devices().length }})
         </h2>
         <nldd-icon-button
@@ -84,25 +90,29 @@
         @for (device of devices(); track device.id) {
           <button
             (click)="selectedDeviceId.set(device.id)"
-            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-            [class]="selectedDeviceId() === device.id ? 'bg-accent-50' : ''"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+            [class]="selectedDeviceId() === device.id ? 'bg-accent-50 dark:bg-accent-950' : ''"
             [attr.aria-pressed]="selectedDeviceId() === device.id"
           >
             <span
               class="w-2 h-2 rounded-full shrink-0"
-              [style.background]="roleBorder(device.role)"
+              [style.background]="roleBorder(device.role, theme.isDarkMode())"
               aria-hidden="true"
             ></span>
             <span class="flex-1 min-w-0">
-              <span class="block truncate text-slate-800 font-medium">{{ device.name }}</span>
-              <span class="block text-xs truncate" [style.color]="roleColor(device.role)">{{
-                device.role
+              <span class="block truncate text-slate-800 dark:text-gray-100 font-medium">{{
+                device.name
               }}</span>
+              <span
+                class="block text-xs truncate"
+                [style.color]="roleColor(device.role, theme.isDarkMode())"
+                >{{ device.role }}</span
+              >
             </span>
           </button>
         }
         @if (devices().length === 0) {
-          <p class="px-4 py-3 text-xs text-slate-400 italic">No devices yet.</p>
+          <p class="px-4 py-3 text-xs text-slate-400 dark:text-gray-500 italic">No devices yet.</p>
         }
       </div>
     </aside>
@@ -124,11 +134,17 @@
     <!-- ── RIGHT INSPECTOR: selected device ────────────────────────── -->
     @if (selectedDevice(); as dev) {
       <aside
-        class="w-72 shrink-0 border-l border-slate-200 bg-white flex flex-col overflow-hidden"
+        class="w-72 shrink-0 border-l border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-hidden"
         aria-label="Device inspector"
       >
-        <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
-          <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inspector</h2>
+        <div
+          class="px-4 py-3 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between shrink-0"
+        >
+          <h2
+            class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wide"
+          >
+            Inspector
+          </h2>
           <nldd-icon-button
             icon="dismiss"
             variant="neutral-transparent"
@@ -142,12 +158,12 @@
           <div>
             <div class="flex items-start justify-between gap-2 mb-3">
               <div>
-                <p class="text-sm font-semibold text-slate-900">{{ dev.name }}</p>
+                <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ dev.name }}</p>
                 <span
                   class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                  [style.background]="roleBg(dev.role)"
-                  [style.color]="roleColor(dev.role)"
-                  [style.border]="'1px solid ' + roleBorder(dev.role)"
+                  [style.background]="roleBg(dev.role, theme.isDarkMode())"
+                  [style.color]="roleColor(dev.role, theme.isDarkMode())"
+                  [style.border]="'1px solid ' + roleBorder(dev.role, theme.isDarkMode())"
                 >
                   {{ dev.role }}
                 </span>
@@ -174,7 +190,9 @@
           <!-- Connections -->
           <div>
             <div class="flex items-center justify-between mb-2">
-              <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <p
+                class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wide"
+              >
                 Connections
               </p>
               <nldd-icon-button
@@ -186,23 +204,23 @@
               ></nldd-icon-button>
             </div>
             @if (selectedDeviceConnections().length === 0) {
-              <p class="text-xs text-slate-400 italic">No connections.</p>
+              <p class="text-xs text-slate-400 dark:text-gray-500 italic">No connections.</p>
             }
             @for (conn of selectedDeviceConnections(); track conn.id) {
               <div
-                class="group flex items-start gap-2 py-2 border-b border-slate-100 last:border-0"
+                class="group flex items-start gap-2 py-2 border-b border-slate-100 dark:border-gray-800 last:border-0"
               >
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-1.5 text-xs">
-                    <span class="font-mono text-slate-600 truncate">
+                    <span class="font-mono text-slate-600 dark:text-gray-300 truncate">
                       @if (conn.sourceDeviceId === dev.id) {
                         {{ conn.sourcePortRole }} →
-                        <span class="font-medium text-slate-800">{{
+                        <span class="font-medium text-slate-800 dark:text-gray-100">{{
                           deviceName(conn.targetDeviceId)
                         }}</span
                         >:{{ conn.targetPortRole }}
                       } @else {
-                        <span class="font-medium text-slate-800">{{
+                        <span class="font-medium text-slate-800 dark:text-gray-100">{{
                           deviceName(conn.sourceDeviceId)
                         }}</span
                         >:{{ conn.sourcePortRole }} → {{ conn.targetPortRole }}
@@ -243,10 +261,12 @@
   </div>
 } @else {
   <!-- Design not found -->
-  <div class="flex flex-col items-center justify-center flex-1 text-slate-400">
+  <div class="flex flex-col items-center justify-center flex-1 text-slate-400 dark:text-gray-500">
     <nldd-icon name="pencil-on-square" class="w-8 h-8" aria-hidden="true"></nldd-icon>
     <p class="mt-3 text-sm">Design not found.</p>
-    <a routerLink="/designs" class="mt-2 text-xs text-accent-700 hover:underline"
+    <a
+      routerLink="/designs"
+      class="mt-2 text-xs text-accent-700 dark:text-accent-300 hover:underline"
       >Back to Designs</a
     >
   </div>
@@ -296,7 +316,7 @@
     </nldd-simple-section>
     <div
       slot="footer"
-      class="flex items-center justify-between px-6 py-4 border-t border-slate-200"
+      class="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-gray-800"
     >
       @if (editDevice()?.id) {
         <nldd-button
@@ -418,7 +438,7 @@
     </nldd-simple-section>
     <div
       slot="footer"
-      class="flex items-center justify-between px-6 py-4 border-t border-slate-200"
+      class="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-gray-800"
     >
       @if (editConnection()?.id) {
         <nldd-button

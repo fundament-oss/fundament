@@ -20,6 +20,11 @@ import {
   PortDefinition,
   PortCompatibility,
 } from '../../inventory/inventory';
+import {
+  ASSET_STATUS_BADGE_CLASS,
+  ASSET_STATUS_DOT_CLASS,
+  ASSET_STATUS_LABEL,
+} from '../../inventory/asset-status';
 import CatalogApiService from '../catalog-api.service';
 import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
@@ -37,7 +42,7 @@ interface NativeElementRef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, FormsModule, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'block bg-slate-50 min-h-screen' },
+  host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
 export default class CatalogDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -449,39 +454,9 @@ export default class CatalogDetailComponent implements OnInit {
     return map[category] ?? 'rectangle-stack';
   };
 
-  readonly statusLabel = (status: AssetStatus): string => {
-    const labels: Record<AssetStatus, string> = {
-      deployed: 'Deployed',
-      available: 'Available',
-      'needs-repair': 'Needs Repair',
-      decommissioned: 'Decommissioned',
-      'on-order': 'On Order',
-      requested: 'Requested',
-    };
-    return labels[status];
-  };
+  readonly statusLabel = (status: AssetStatus): string => ASSET_STATUS_LABEL[status];
 
-  readonly statusBadgeClass = (status: AssetStatus): string => {
-    const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-50 text-teal-700',
-      available: 'bg-green-50 text-green-700',
-      'needs-repair': 'bg-amber-50 text-amber-700',
-      decommissioned: 'bg-slate-100 text-slate-500',
-      'on-order': 'bg-blue-50 text-blue-700',
-      requested: 'bg-purple-50 text-purple-700',
-    };
-    return classes[status];
-  };
+  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
 
-  readonly statusDotClass = (status: AssetStatus): string => {
-    const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-400',
-      available: 'bg-green-400',
-      'needs-repair': 'bg-amber-400',
-      decommissioned: 'bg-slate-300',
-      'on-order': 'bg-blue-400',
-      requested: 'bg-purple-400',
-    };
-    return classes[status];
-  };
+  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
 }

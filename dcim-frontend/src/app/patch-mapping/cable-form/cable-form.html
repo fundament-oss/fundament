@@ -59,10 +59,10 @@
       <section aria-labelledby="aside-heading">
         <h3
           id="aside-heading"
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"
+          class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"
         >
           <span
-            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-100 text-accent-700 text-[10px] font-bold"
+            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-100 dark:bg-accent-950 text-accent-700 dark:text-accent-300 text-[10px] font-bold"
             aria-hidden="true"
             >A</span
           >
@@ -188,7 +188,9 @@
               </div>
             }
             @if (aDeviceId() && aFilteredPorts().length === 0) {
-              <p class="text-[10px] text-amber-600 mt-0.5">No ports of this type on this device.</p>
+              <p class="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5">
+                No ports of this type on this device.
+              </p>
             }
           </nldd-form-field>
         </div>
@@ -196,7 +198,7 @@
 
       <!-- ── Swap button ──────────────────────────────────────────────────────── -->
       <div class="flex items-center gap-3">
-        <div class="flex-1 border-t border-slate-100"></div>
+        <div class="flex-1 border-t border-slate-100 dark:border-gray-800"></div>
         <nldd-icon-button
           icon="arrow-up-down"
           variant="neutral-transparent"
@@ -205,17 +207,17 @@
           (click)="swapSides()"
           [disabled]="!aDeviceId() && !bDeviceId()"
         ></nldd-icon-button>
-        <div class="flex-1 border-t border-slate-100"></div>
+        <div class="flex-1 border-t border-slate-100 dark:border-gray-800"></div>
       </div>
 
       <!-- ── B Side ──────────────────────────────────────────────────────────── -->
       <section aria-labelledby="bside-heading">
         <h3
           id="bside-heading"
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"
+          class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"
         >
           <span
-            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-200 text-slate-700 text-[10px] font-bold"
+            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-200 dark:bg-gray-800 text-slate-700 dark:text-gray-300 text-[10px] font-bold"
             aria-hidden="true"
             >B</span
           >
@@ -343,15 +345,17 @@
               </div>
             }
             @if (bDeviceId() && bFilteredPorts().length === 0) {
-              <p class="text-[10px] text-amber-600 mt-0.5">No ports of this type on this device.</p>
+              <p class="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5">
+                No ports of this type on this device.
+              </p>
             }
             @if (isSamePort()) {
-              <p class="text-[10px] text-red-600 mt-0.5" role="alert">
+              <p class="text-[10px] text-red-600 dark:text-red-300 mt-0.5" role="alert">
                 A and B sides cannot use the same port.
               </p>
             }
             @if (incompatibleSides()) {
-              <p class="text-[10px] text-amber-600 mt-0.5" role="alert">
+              <p class="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5" role="alert">
                 Power and data ports cannot be combined.
               </p>
             }
@@ -359,13 +363,13 @@
         </div>
       </section>
 
-      <div class="border-t border-slate-100"></div>
+      <div class="border-t border-slate-100 dark:border-gray-800"></div>
 
       <!-- ── Cable properties ────────────────────────────────────────────────── -->
       <section aria-labelledby="cable-props-heading">
         <h3
           id="cable-props-heading"
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3"
+          class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3"
         >
           Cable
         </h3>
@@ -390,7 +394,7 @@
               <select
                 id="cable-type"
                 [value]="cableType()"
-                (change)="cableType.set($any($event.target).value)"
+                (change)="onCableTypeChange($any($event.target).value)"
               >
                 <option value="" [selected]="cableType() === ''">Unspecified</option>
                 @for (t of CABLE_TYPES; track t) {
@@ -404,7 +408,11 @@
 
           <!-- Status -->
           <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium text-slate-700" id="cable-status-label">Status</span>
+            <span
+              class="text-xs font-medium text-slate-700 dark:text-gray-300"
+              id="cable-status-label"
+              >Status</span
+            >
             <nldd-segmented-control
               [value]="cableStatus()"
               size="sm"
@@ -428,23 +436,25 @@
 
           <!-- Color -->
           <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium text-slate-700" id="color-label">Color</span>
+            <span class="text-xs font-medium text-slate-700 dark:text-gray-300" id="color-label"
+              >Color</span
+            >
             <div class="flex flex-wrap gap-1.5" role="group" aria-labelledby="color-label">
               <!-- No color option -->
               <button
                 class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1"
                 [class]="
                   cableColor() === undefined
-                    ? 'border-accent-500 bg-white'
-                    : 'border-slate-200 bg-white hover:border-slate-400'
+                    ? 'border-accent-500 bg-white dark:bg-gray-950'
+                    : 'border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 hover:border-slate-400'
                 "
-                (click)="cableColor.set(undefined)"
+                (click)="onCableColorChange(undefined)"
                 aria-label="No color"
                 [attr.aria-pressed]="cableColor() === undefined"
                 title="No color"
               >
                 <svg
-                  class="w-3 h-3 text-slate-300"
+                  class="w-3 h-3 text-slate-300 dark:text-gray-600"
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
@@ -461,10 +471,10 @@
                   [class]="
                     cableColor() === color
                       ? 'border-accent-500 scale-110'
-                      : 'border-transparent hover:border-slate-300 hover:scale-105'
+                      : 'border-transparent hover:border-slate-300 dark:hover:border-gray-700 hover:scale-105'
                   "
                   [style.background]="CABLE_COLOR_HEX[color]"
-                  (click)="cableColor.set(color)"
+                  (click)="onCableColorChange(color)"
                   [attr.aria-label]="'Color: ' + color"
                   [attr.aria-pressed]="cableColor() === color"
                   [title]="color"
@@ -514,7 +524,7 @@
     </div>
   </nldd-simple-section>
 
-  <div slot="footer" class="border-t border-slate-100 px-6 py-4">
+  <div slot="footer" class="border-t border-slate-100 dark:border-gray-800 px-6 py-4">
     <nldd-button-group orientation="vertical">
       <nldd-button
         variant="primary"

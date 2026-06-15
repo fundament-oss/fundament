@@ -1,48 +1,49 @@
 import { Injectable, signal } from '@angular/core';
 
-type Theme = 'light' | 'dark';
-
-const STORAGE_KEY = 'dcim-theme';
-
-function readInitialTheme(): Theme {
-  // The inline script in index.html has already applied the class; trust it.
-  if (document.documentElement.classList.contains('dark')) return 'dark';
-
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'dark' || stored === 'light') return stored;
-  } catch {
-    /* ignore: storage unavailable */
-  }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-/**
- * Manages the app's color theme by toggling the `.dark` class on <html>, which
- * drives both Tailwind's `dark:` variant and the CSS `color-scheme` (see
- * styles.css). The initial class is set by an inline script in index.html to
- * avoid a flash; this service mirrors that state into a signal and persists
- * changes to localStorage.
- */
+// Manages the app's light/dark theme. The active theme is reflected by a `dark`
+// class on the <html> element (so Tailwind `dark:` variants and the CSS
+// color-scheme follow it). An explicit user choice is persisted to
+// localStorage; without one, the OS `prefers-color-scheme` setting is followed
+// so it keeps tracking the OS on later visits.
 @Injectable({ providedIn: 'root' })
 export default class ThemeService {
-  private readonly darkState = signal(readInitialTheme() === 'dark');
+  readonly isDarkMode = signal(false);
 
-  /** Whether dark mode is currently active. */
-  readonly isDark = this.darkState.asReadonly();
+  // Initialize theme from an explicit saved choice, falling back to the OS
+  // preference. The OS preference is never persisted here.
+  initializeTheme() {
+    const savedTheme = localStorage.getItem('theme');
 
-  toggle(): void {
-    this.set(this.darkState() ? 'light' : 'dark');
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      this.isDarkMode.set(savedTheme === 'dark');
+    } else {
+      // Use system preference
+      this.isDarkMode.set(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+
+    this.applyTheme();
   }
 
-  set(theme: Theme): void {
-    const dark = theme === 'dark';
-    this.darkState.set(dark);
-    document.documentElement.classList.toggle('dark', dark);
-    try {
-      localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      /* ignore: storage unavailable */
+  // Set theme explicitly in response to a user action, and persist the choice.
+  setTheme(value: string) {
+    this.isDarkMode.set(value === 'dark');
+    localStorage.setItem('theme', this.isDarkMode() ? 'dark' : 'light');
+
+    if (document.startViewTransition) {
+      document.startViewTransition(this.applyTheme.bind(this));
+    } else {
+      this.applyTheme();
+    }
+  }
+
+  // Apply the active theme to the <html> element.
+  private applyTheme() {
+    const htmlElement = document.documentElement;
+
+    if (this.isDarkMode()) {
+      htmlElement.classList.add('dark');
+    } else {
+      htmlElement.classList.remove('dark');
     }
   }
 }

@@ -12,22 +12,21 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <!-- Apply the persisted theme before first paint to avoid a flash of the
-         wrong color scheme. Kept in sync with ThemeService. -->
+    <!-- Apply the saved/system theme before first paint to avoid a flash of the
+         wrong theme on reload. Mirrors ThemeService.initializeTheme(). -->
     <script>
       (function () {
         try {
-          var stored = localStorage.getItem('dcim-theme');
-          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var dark = stored ? stored === 'dark' : prefersDark;
-          document.documentElement.classList.toggle('dark', dark);
-        } catch (e) {
-          /* ignore: storage unavailable */
-        }
+          var saved = localStorage.getItem('theme');
+          var dark =
+            saved === 'dark' ||
+            (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
       })();
     </script>
   </head>
-  <body>
+  <body class="bg-neutral-25 text-gray-800 dark:bg-gray-900 dark:text-white">
     <app-root></app-root>
   </body>
 </html>

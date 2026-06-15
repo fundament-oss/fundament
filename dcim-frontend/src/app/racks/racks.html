@@ -1,19 +1,24 @@
-<div class="flex flex-col h-screen overflow-hidden bg-white">
+<div class="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-950">
   <!-- ══════════════════════════════════════════════════════════════
        SUBBAR
        ══════════════════════════════════════════════════════════════ -->
-  <div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
+  <div
+    class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
+  >
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb" class="flex-1 min-w-0">
       <ol class="flex items-center gap-1.5 text-sm">
         <li>
-          <span class="font-semibold text-slate-900">Racks</span>
+          <span class="font-semibold text-slate-900 dark:text-white">Racks</span>
         </li>
         @if (breadcrumbRack(); as rackName) {
-          <li class="flex items-center gap-1.5 text-slate-400" aria-hidden="true">
+          <li
+            class="flex items-center gap-1.5 text-slate-400 dark:text-gray-500"
+            aria-hidden="true"
+          >
             <nldd-icon name="chevron-right-small" class="w-3.5 h-3.5"></nldd-icon>
           </li>
-          <li class="text-slate-500 truncate">{{ rackName }}</li>
+          <li class="text-slate-500 dark:text-gray-400 truncate">{{ rackName }}</li>
         }
       </ol>
     </nav>
@@ -48,7 +53,7 @@
   <!-- ══════════════════════════════════════════════════════════════
        DC TABS
        ══════════════════════════════════════════════════════════════ -->
-  <div class="shrink-0 border-b border-slate-200 bg-white">
+  <div class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950">
     <div class="px-6">
       <app-dc-selector
         [datacenters]="mutableDcs()"
@@ -64,11 +69,11 @@
   <div class="flex flex-1 min-h-0 overflow-hidden">
     <!-- ── SIDEBAR: Rack list ──────────────────────────────────── -->
     <aside
-      class="w-56 shrink-0 border-r border-slate-200 bg-white flex flex-col"
+      class="w-56 shrink-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col"
       aria-label="Rack list"
     >
       <!-- Search -->
-      <div class="shrink-0 px-3 py-2.5 border-b border-slate-100">
+      <div class="shrink-0 px-3 py-2.5 border-b border-slate-100 dark:border-gray-800">
         <nldd-text-field
           accessible-label="Search racks"
           placeholder="Search…"
@@ -88,8 +93,12 @@
               <button
                 role="option"
                 (click)="selectRack(rack.id)"
-                class="relative w-full px-3 py-2.5 text-left transition-colors border-b border-slate-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-                [class]="currentRackId() === rack.id ? 'bg-accent-50' : 'hover:bg-slate-50'"
+                class="relative w-full px-3 py-2.5 text-left transition-colors border-b border-slate-100 dark:border-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
+                [class]="
+                  currentRackId() === rack.id
+                    ? 'bg-accent-50 dark:bg-accent-950'
+                    : 'hover:bg-slate-50 dark:hover:bg-gray-900'
+                "
                 [attr.aria-selected]="currentRackId() === rack.id"
               >
                 @if (currentRackId() === rack.id) {
@@ -101,12 +110,13 @@
 
                 <div class="pl-1.5">
                   <div class="flex items-center gap-1.5 mb-1.5">
-                    <span class="text-sm font-medium text-slate-900 font-mono truncate">{{
-                      rack.name
-                    }}</span>
+                    <span
+                      class="text-sm font-medium text-slate-900 dark:text-white font-mono truncate"
+                      >{{ rack.name }}</span
+                    >
                   </div>
                   <div
-                    class="h-1.5 rounded-full bg-slate-200 overflow-hidden"
+                    class="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden"
                     role="progressbar"
                     [attr.aria-valuenow]="rackUsedU(rack)"
                     [attr.aria-valuemax]="rack.totalU"
@@ -117,7 +127,7 @@
                       [style.width.%]="(rackUsedU(rack) / rack.totalU) * 100"
                     ></div>
                   </div>
-                  <p class="mt-1 text-xs text-slate-400 font-mono">
+                  <p class="mt-1 text-xs text-slate-400 dark:text-gray-500 font-mono">
                     {{ rackUsedU(rack) }}/{{ rack.totalU }}U
                   </p>
                 </div>
@@ -126,7 +136,10 @@
           }
 
           @if (filteredRacks().length === 0) {
-            <li class="px-4 py-8 text-center text-xs text-slate-400" role="status">
+            <li
+              class="px-4 py-8 text-center text-xs text-slate-400 dark:text-gray-500"
+              role="status"
+            >
               <nldd-icon
                 name="cylinder-split-slash"
                 style="width: 24px; height: 24px; display: block; margin: 0 auto 8px"
@@ -140,13 +153,18 @@
     </aside>
 
     <!-- ── MAIN: Rack diagram ──────────────────────────────────── -->
-    <main class="flex-1 min-w-0 overflow-y-auto bg-slate-50" aria-label="Rack diagram">
+    <main
+      class="flex-1 min-w-0 overflow-y-auto bg-slate-50 dark:bg-gray-900"
+      aria-label="Rack diagram"
+    >
       @if (currentRack(); as rack) {
         <!-- Diagram toolbar -->
         <div
-          class="sticky top-0 z-10 border-b border-slate-200 bg-white px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-2"
+          class="sticky top-0 z-10 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-2"
         >
-          <span class="font-semibold text-slate-900 text-sm font-mono">{{ rack.name }}</span>
+          <span class="font-semibold text-slate-900 dark:text-white text-sm font-mono">{{
+            rack.name
+          }}</span>
 
           <!-- Front / Back toggle -->
           <nldd-segmented-control
@@ -161,14 +179,16 @@
           </nldd-segmented-control>
 
           <!-- Stats -->
-          <div class="flex items-center gap-3 text-xs text-slate-500">
+          <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-400">
             <span>
-              <span class="font-semibold text-slate-900">{{ rackStats().usedU }}</span
+              <span class="font-semibold text-slate-900 dark:text-white">{{
+                rackStats().usedU
+              }}</span
               >/{{ rackStats().totalU }}U
             </span>
-            <span class="text-slate-300" aria-hidden="true">·</span>
+            <span class="text-slate-300 dark:text-gray-600" aria-hidden="true">·</span>
             <span>{{ formatPowerKw(rackStats().totalPowerW) }}kW</span>
-            <span class="text-slate-300" aria-hidden="true">·</span>
+            <span class="text-slate-300 dark:text-gray-600" aria-hidden="true">·</span>
             <span
               >{{ rackStats().deviceCount }} device{{
                 rackStats().deviceCount === 1 ? '' : 's'
@@ -218,97 +238,116 @@
       } @else {
         <div class="flex flex-col items-center justify-center h-full py-24 text-center">
           <div
-            class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200 text-slate-400 mb-4"
+            class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-4"
           >
             <nldd-icon name="cylinder-split" class="w-8 h-8" aria-hidden="true"></nldd-icon>
           </div>
-          <p class="text-sm font-medium text-slate-600">Select a rack from the sidebar</p>
-          <p class="mt-1 text-xs text-slate-400">Click any rack to view its diagram</p>
+          <p class="text-sm font-medium text-slate-600 dark:text-gray-300">
+            Select a rack from the sidebar
+          </p>
+          <p class="mt-1 text-xs text-slate-400 dark:text-gray-500">
+            Click any rack to view its diagram
+          </p>
         </div>
       }
     </main>
 
     <!-- ── RIGHT SIDEBAR: Legend + Notes + History ───────────── -->
     <aside
-      class="w-72 shrink-0 border-l border-slate-200 bg-white flex flex-col overflow-y-auto"
+      class="w-72 shrink-0 border-l border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-y-auto"
       aria-label="Rack info"
     >
       @if (currentRack(); as rack) {
         <!-- Legend -->
-        <div class="shrink-0 px-5 pt-5 pb-4 border-b border-slate-100">
-          <h2 class="font-semibold text-gray-700 text-sm mb-3">Legend</h2>
+        <div class="shrink-0 px-5 pt-5 pb-4 border-b border-slate-100 dark:border-gray-800">
+          <h2 class="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-3">Legend</h2>
           <ul class="space-y-2">
             <li class="flex items-center gap-2">
               <span class="h-3 w-3 rounded-sm bg-accent-700 shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600">Allocated</span>
+              <span class="text-sm text-slate-600 dark:text-gray-300">Allocated</span>
             </li>
             <li class="flex items-center gap-2">
               <span class="h-3 w-3 rounded-sm bg-[#ffb612] shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600">Switch</span>
+              <span class="text-sm text-slate-600 dark:text-gray-300">Switch</span>
             </li>
             <li class="flex items-center gap-2">
               <span class="h-3 w-3 rounded-sm bg-[#8fcae7] shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600">Reserved</span>
+              <span class="text-sm text-slate-600 dark:text-gray-300">Reserved</span>
             </li>
             <li class="flex items-center gap-2">
               <span class="h-3 w-3 rounded-sm bg-[#42145f] shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600">Locked / PDU</span>
+              <span class="text-sm text-slate-600 dark:text-gray-300">Locked / PDU</span>
             </li>
             <li class="flex items-center gap-2">
               <span class="h-3 w-3 rounded-sm bg-[#a90061] shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600">Patch panel</span>
+              <span class="text-sm text-slate-600 dark:text-gray-300">Patch panel</span>
             </li>
             <li class="flex items-center gap-2">
               <span class="h-3 w-3 rounded-sm bg-red-700 shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600">Offline</span>
+              <span class="text-sm text-slate-600 dark:text-gray-300">Offline</span>
             </li>
             <li class="flex items-center gap-2">
               <span class="rack-slot-free h-3 w-3 rounded-sm shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600">Free</span>
+              <span class="text-sm text-slate-600 dark:text-gray-300">Free</span>
             </li>
           </ul>
         </div>
 
         <!-- Notes -->
         @if (currentRackNotes(); as notes) {
-          <section class="border-b border-slate-100" aria-labelledby="rack-notes-heading">
-            <div class="px-5 py-3 border-b border-slate-100">
-              <h2 id="rack-notes-heading" class="font-semibold text-gray-700 text-sm">
+          <section
+            class="border-b border-slate-100 dark:border-gray-800"
+            aria-labelledby="rack-notes-heading"
+          >
+            <div class="px-5 py-3 border-b border-slate-100 dark:border-gray-800">
+              <h2
+                id="rack-notes-heading"
+                class="font-semibold text-gray-700 dark:text-gray-300 text-sm"
+              >
                 Notes
                 @if (notes.comments.length > 0) {
-                  <span class="ml-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{{
-                    notes.comments.length
-                  }}</span>
+                  <span
+                    class="ml-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400"
+                    >{{ notes.comments.length }}</span
+                  >
                 }
               </h2>
             </div>
             @if (notes.description) {
-              <div class="px-5 py-3 border-b border-gray-100">
-                <p class="text-sm text-gray-500 leading-relaxed">{{ notes.description }}</p>
+              <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+                <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                  {{ notes.description }}
+                </p>
               </div>
             }
             <div class="px-5 py-3 space-y-3">
               @if (notes.comments.length === 0) {
-                <p class="text-sm text-gray-400 text-center py-2">No notes yet</p>
+                <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-2">
+                  No notes yet
+                </p>
               }
               @for (comment of notes.comments; track $index) {
                 <div class="flex gap-2.5">
                   <div class="shrink-0 pt-0.5">
                     <span
-                      class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 text-xs font-semibold text-accent-700 shrink-0 select-none"
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 dark:bg-accent-950 text-xs font-semibold text-accent-700 dark:text-accent-300 shrink-0 select-none"
                       aria-hidden="true"
                     >
                       {{ comment.initials }}
                     </span>
                   </div>
-                  <div class="flex-1 rounded-xl bg-gray-50 px-3 py-2">
+                  <div class="flex-1 rounded-xl bg-gray-50 dark:bg-gray-900 px-3 py-2">
                     <div class="flex items-center justify-between gap-2 mb-0.5">
-                      <span class="text-sm font-semibold text-gray-700">{{ comment.author }}</span>
-                      <span class="text-xs text-gray-400 shrink-0">{{
+                      <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{
+                        comment.author
+                      }}</span>
+                      <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">{{
                         formatDaysAgo(comment.daysAgo)
                       }}</span>
                     </div>
-                    <p class="text-sm text-gray-600 leading-relaxed">{{ comment.content }}</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                      {{ comment.content }}
+                    </p>
                   </div>
                 </div>
               }
@@ -319,7 +358,10 @@
         <!-- History -->
         @if (currentRackHistory().length > 0) {
           <section class="px-5 py-4" aria-labelledby="rack-history-heading">
-            <h2 id="rack-history-heading" class="font-semibold text-gray-700 text-sm mb-3">
+            <h2
+              id="rack-history-heading"
+              class="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-3"
+            >
               History
             </h2>
             <ol class="flex flex-col gap-0" aria-label="Rack history">
@@ -343,13 +385,18 @@
                       </nldd-icon>
                     </div>
                     @if (!last) {
-                      <div class="w-px flex-1 bg-gray-100 my-1 min-h-3" aria-hidden="true"></div>
+                      <div
+                        class="w-px flex-1 bg-gray-100 dark:bg-gray-800 my-1 min-h-3"
+                        aria-hidden="true"
+                      ></div>
                     }
                   </div>
                   <!-- Content -->
                   <div class="pb-3 min-w-0 flex-1">
-                    <p class="text-sm text-gray-800 leading-snug">{{ event.description }}</p>
-                    <p class="text-xs text-gray-400 mt-0.5">
+                    <p class="text-sm text-gray-800 dark:text-gray-100 leading-snug">
+                      {{ event.description }}
+                    </p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                       {{ event.user }} · {{ formatDaysAgo(event.daysAgo) }}
                     </p>
                   </div>
@@ -438,7 +485,10 @@
         }}</nldd-form-field-error-text>
       </nldd-form-field>
     </nldd-simple-section>
-    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+    <div
+      slot="footer"
+      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
+    >
       <nldd-button variant="secondary" text="Cancel" (click)="closeRackForm()"></nldd-button>
       <nldd-button variant="primary" text="Save" (click)="saveRack()"></nldd-button>
     </div>
@@ -450,8 +500,10 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #deviceSheet accessible-label="Add device" placement="right" width="400px">
   <div class="flex flex-col h-full">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
-      <h2 class="text-base font-semibold text-slate-900">Add device</h2>
+    <div
+      class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-gray-800 shrink-0"
+    >
+      <h2 class="text-base font-semibold text-slate-900 dark:text-white">Add device</h2>
       <nldd-icon-button
         icon="dismiss"
         variant="neutral-transparent"
@@ -469,16 +521,18 @@
         </div>
       }
       <nldd-form-field label="Asset">
-        <select
-          #fDeviceAsset
-          aria-label="Asset"
-          [attr.aria-invalid]="isDeviceFieldInvalid('asset_id') ? 'true' : null"
-        >
-          <option value="" disabled selected>Select an asset</option>
-          @for (asset of assetOptions(); track asset.id) {
-            <option [value]="asset.id">{{ asset.label }}</option>
-          }
-        </select>
+        <nldd-dropdown [attr.invalid]="isDeviceFieldInvalid('asset_id') ? true : null">
+          <select
+            #fDeviceAsset
+            aria-label="Asset"
+            [attr.aria-invalid]="isDeviceFieldInvalid('asset_id') ? 'true' : null"
+          >
+            <option value="" disabled selected>Select an asset</option>
+            @for (asset of assetOptions(); track asset.id) {
+              <option [value]="asset.id">{{ asset.label }}</option>
+            }
+          </select>
+        </nldd-dropdown>
         @if (isDeviceFieldInvalid('asset_id')) {
           <nldd-form-field-error-text id="error-device-asset">{{
             deviceFieldError('asset_id')
@@ -491,15 +545,17 @@
         }
       </nldd-form-field>
       <nldd-form-field label="Slot type">
-        <select
-          aria-label="Slot type"
-          [ngModel]="deviceSlotType()"
-          (ngModelChange)="deviceSlotType.set($event)"
-        >
-          @for (st of slotTypes; track st.value) {
-            <option [value]="st.value">{{ st.label }}</option>
-          }
-        </select>
+        <nldd-dropdown>
+          <select
+            aria-label="Slot type"
+            [ngModel]="deviceSlotType()"
+            (ngModelChange)="deviceSlotType.set($event)"
+          >
+            @for (st of slotTypes; track st.value) {
+              <option [value]="st.value">{{ st.label }}</option>
+            }
+          </select>
+        </nldd-dropdown>
       </nldd-form-field>
       <nldd-form-field label="Rack unit">
         <nldd-number-field
@@ -517,7 +573,9 @@
         }}</nldd-form-field-error-text>
       </nldd-form-field>
     </div>
-    <div class="shrink-0 px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
+    <div
+      class="shrink-0 px-6 py-4 border-t border-slate-200 dark:border-gray-800 flex justify-end gap-2"
+    >
       <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeAddDevice()"></nldd-button>
       <nldd-button variant="accent-filled" text="Add" (click)="saveDevice()"></nldd-button>
     </div>

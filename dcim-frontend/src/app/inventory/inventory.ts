@@ -19,6 +19,7 @@ import { RackSlotType } from '../../generated/v1/common_pb';
 import InventoryApiService from './inventory-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import PlacementApiService, { RackOption } from './placement-api.service';
+import { ASSET_STATUS_BADGE_CLASS, ASSET_STATUS_DOT_CLASS } from './asset-status';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
@@ -140,7 +141,7 @@ export interface PortCompatibility {
   imports: [RouterLink, FormsModule, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
-    class: 'flex flex-col min-h-screen bg-white',
+    class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950',
   },
 })
 export default class InventoryComponent implements OnInit {
@@ -538,29 +539,9 @@ export default class InventoryComponent implements OnInit {
     return this.statuses.find((s) => s.value === status)?.label ?? status;
   }
 
-  readonly statusBadgeClass = (status: AssetStatus): string => {
-    const map: Record<AssetStatus, string> = {
-      'needs-repair': 'bg-amber-50 text-amber-700',
-      decommissioned: 'bg-red-50 text-red-600',
-      deployed: 'bg-teal-50 text-teal-700',
-      available: 'bg-green-50 text-green-700',
-      'on-order': 'bg-indigo-50 text-indigo-600',
-      requested: 'bg-slate-100 text-slate-600',
-    };
-    return map[status];
-  };
+  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
 
-  readonly statusDotClass = (status: AssetStatus): string => {
-    const map: Record<AssetStatus, string> = {
-      'needs-repair': 'bg-amber-400',
-      decommissioned: 'bg-red-400',
-      deployed: 'bg-teal-400',
-      available: 'bg-green-400',
-      'on-order': 'bg-indigo-400',
-      requested: 'bg-slate-400',
-    };
-    return map[status];
-  };
+  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
 
   readonly categoryIcon = (category: AssetCategory): string => {
     const map: Partial<Record<AssetCategory, string>> = {

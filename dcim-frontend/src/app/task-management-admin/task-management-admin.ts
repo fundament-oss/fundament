@@ -64,7 +64,7 @@ interface NlddSheet extends HTMLElement {
   imports: [DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
-    class: 'flex flex-col bg-white text-slate-900',
+    class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',
     '(document:keydown.escape)': 'onEscape()',
   },
 })
@@ -241,66 +241,66 @@ export default class TaskManagementAdminComponent {
 
   readonly statusStyles: Record<string, StatusStyle> = {
     Ready: {
-      bg: 'bg-slate-100',
-      text: 'text-slate-600',
+      bg: 'bg-slate-100 dark:bg-gray-800',
+      text: 'text-slate-600 dark:text-gray-300',
       dot: 'bg-slate-400',
       kanbanAccent: 'bg-slate-400',
-      kanbanBorder: 'border-slate-200',
+      kanbanBorder: 'border-slate-200 dark:border-gray-800',
     },
     'In Progress': {
-      bg: 'bg-indigo-50',
-      text: 'text-indigo-700',
+      bg: 'bg-indigo-50 dark:bg-indigo-950',
+      text: 'text-indigo-700 dark:text-indigo-300',
       dot: 'bg-indigo-500',
       kanbanAccent: 'bg-indigo-500',
-      kanbanBorder: 'border-indigo-200',
+      kanbanBorder: 'border-indigo-200 dark:border-indigo-800',
     },
     Review: {
-      bg: 'bg-amber-50',
-      text: 'text-amber-700',
+      bg: 'bg-amber-50 dark:bg-amber-950',
+      text: 'text-amber-700 dark:text-amber-300',
       dot: 'bg-amber-500',
       kanbanAccent: 'bg-amber-500',
-      kanbanBorder: 'border-amber-200',
+      kanbanBorder: 'border-amber-200 dark:border-amber-800',
     },
     Blocked: {
-      bg: 'bg-red-50',
-      text: 'text-red-700',
+      bg: 'bg-red-50 dark:bg-red-950',
+      text: 'text-red-700 dark:text-red-300',
       dot: 'bg-red-500',
       kanbanAccent: 'bg-red-500',
-      kanbanBorder: 'border-red-200',
+      kanbanBorder: 'border-red-200 dark:border-red-800',
     },
     Done: {
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-700',
+      bg: 'bg-emerald-50 dark:bg-emerald-950',
+      text: 'text-emerald-700 dark:text-emerald-300',
       dot: 'bg-emerald-500',
       kanbanAccent: 'bg-emerald-500',
-      kanbanBorder: 'border-emerald-200',
+      kanbanBorder: 'border-emerald-200 dark:border-emerald-800',
     },
   };
 
   readonly priorityStyles: Record<string, PriorityStyle> = {
     Critical: {
-      bg: 'bg-red-50',
-      text: 'text-red-700',
+      bg: 'bg-red-50 dark:bg-red-950',
+      text: 'text-red-700 dark:text-red-300',
       dot: 'bg-red-500',
-      ring: 'ring-red-200/80',
+      ring: 'ring-red-200/80 dark:ring-red-800/80',
     },
     High: {
-      bg: 'bg-orange-50',
-      text: 'text-orange-700',
+      bg: 'bg-orange-50 dark:bg-orange-950',
+      text: 'text-orange-700 dark:text-orange-300',
       dot: 'bg-orange-500',
-      ring: 'ring-orange-200/80',
+      ring: 'ring-orange-200/80 dark:ring-orange-800/80',
     },
     Medium: {
-      bg: 'bg-yellow-50',
-      text: 'text-yellow-700',
+      bg: 'bg-yellow-50 dark:bg-yellow-950',
+      text: 'text-yellow-700 dark:text-yellow-300',
       dot: 'bg-yellow-400',
-      ring: 'ring-yellow-200/80',
+      ring: 'ring-yellow-200/80 dark:ring-yellow-800/80',
     },
     Low: {
-      bg: 'bg-slate-100',
-      text: 'text-slate-500',
+      bg: 'bg-slate-100 dark:bg-gray-800',
+      text: 'text-slate-500 dark:text-gray-400',
       dot: 'bg-slate-400',
-      ring: 'ring-slate-200/80',
+      ring: 'ring-slate-200/80 dark:ring-gray-700/80',
     },
   };
 
@@ -599,7 +599,7 @@ export default class TaskManagementAdminComponent {
 
   kanbanCardClass(status: string): string {
     const s = this.statusStyle(status);
-    return `cursor-pointer rounded-xl border ${s.kanbanBorder} bg-white p-3.5 hover:shadow-md hover:shadow-slate-200/80 transition-shadow`;
+    return `cursor-pointer rounded-xl border ${s.kanbanBorder} bg-white dark:bg-gray-950 p-3.5 hover:shadow-md hover:shadow-slate-200/80 transition-shadow`;
   }
 
   detailStatusClass(status: string): string {
@@ -616,7 +616,7 @@ export default class TaskManagementAdminComponent {
     `inline-flex ${size} items-center justify-center rounded-full ${tech.color} text-white font-semibold shrink-0`;
 
   readonly unassignedAvatarClass = (size = 'h-7 w-7 text-xs'): string =>
-    `inline-flex ${size} items-center justify-center rounded-full bg-slate-200 text-slate-500 font-medium shrink-0`;
+    `inline-flex ${size} items-center justify-center rounded-full bg-slate-200 dark:bg-gray-800 text-slate-500 dark:text-gray-400 font-medium shrink-0`;
 
   shortDate(str: string | null): string {
     if (!str) return '';

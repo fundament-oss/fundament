@@ -1,8 +1,12 @@
 <!-- ══════════════════════════════════════════════════════════════
      SUBBAR
      ══════════════════════════════════════════════════════════════ -->
-<div class="shrink-0 border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
-  <h1 class="text-lg font-semibold text-slate-900 leading-tight m-0 flex-1">Inventory</h1>
+<div
+  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
+>
+  <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0 flex-1">
+    Inventory
+  </h1>
   <div class="flex items-center gap-2 shrink-0">
     <nldd-button
       variant="primary"
@@ -20,11 +24,11 @@
 <div class="flex flex-1 min-h-0">
   <!-- ── LEFT SIDEBAR ─────────────────────────────────────────── -->
   <aside
-    class="w-60 shrink-0 border-r border-slate-200 bg-white flex-col overflow-y-auto hidden sm:flex"
+    class="w-60 shrink-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex-col overflow-y-auto hidden sm:flex"
     aria-label="Filters"
   >
     <!-- Search -->
-    <div class="px-4 py-3 border-b border-slate-100">
+    <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
       <nldd-search-field
         accessible-label="Search assets"
         placeholder="Search assets…"
@@ -38,21 +42,25 @@
     </div>
 
     <!-- Status -->
-    <div class="px-4 py-3 border-b border-slate-100">
-      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</p>
+    <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
+      <p
+        class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
+      >
+        Status
+      </p>
 
       <button
         (click)="selectStatus('all')"
         class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
         [class]="
           statusFilter() === 'all'
-            ? 'bg-accent-50 text-accent-700 font-medium'
-            : 'text-slate-600 hover:bg-slate-50'
+            ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+            : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
         "
       >
         <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
         <span class="flex-1 text-left">All assets</span>
-        <span class="text-xs text-slate-400">{{ statusCounts()['all'] }}</span>
+        <span class="text-xs text-slate-400 dark:text-gray-500">{{ statusCounts()['all'] }}</span>
       </button>
 
       @for (s of statuses; track s.value) {
@@ -61,8 +69,8 @@
           class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             statusFilter() === s.value
-              ? 'bg-accent-50 text-accent-700 font-medium'
-              : 'text-slate-600 hover:bg-slate-50'
+              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
           "
         >
           <span
@@ -72,7 +80,9 @@
           ></span>
           <span class="flex-1 text-left">{{ s.label }}</span>
           @if (statusCounts()[s.value]) {
-            <span class="text-xs text-slate-400">{{ statusCounts()[s.value] }}</span>
+            <span class="text-xs text-slate-400 dark:text-gray-500">{{
+              statusCounts()[s.value]
+            }}</span>
           }
         </button>
       }
@@ -80,7 +90,9 @@
 
     <!-- Categories -->
     <div class="px-4 py-3">
-      <p class="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+      <p
+        class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
+      >
         Category
       </p>
 
@@ -89,13 +101,13 @@
         class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
         [class]="
           categoryFilter() === 'all'
-            ? 'bg-accent-50 text-accent-700 font-medium'
-            : 'text-slate-600 hover:bg-slate-50'
+            ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+            : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
         "
       >
         <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
         <span class="flex-1 text-left">All categories</span>
-        <span class="text-xs text-slate-400">{{ statusCounts()['all'] }}</span>
+        <span class="text-xs text-slate-400 dark:text-gray-500">{{ statusCounts()['all'] }}</span>
       </button>
 
       @for (cat of categories; track cat) {
@@ -104,8 +116,8 @@
           class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             categoryFilter() === cat
-              ? 'bg-accent-50 text-accent-700 font-medium'
-              : 'text-slate-600 hover:bg-slate-50'
+              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
+              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
           "
         >
           <nldd-icon
@@ -125,49 +137,76 @@
       <!-- Stats row -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 pb-5">
         <div
-          class="bg-white border border-slate-200 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
+          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
         >
-          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Total Assets</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ totalCount() }}</p>
-          <p class="text-xs text-slate-400">across all locations</p>
+          <p
+            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
+          >
+            Total Assets
+          </p>
+          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
+            {{ totalCount() }}
+          </p>
+          <p class="text-xs text-slate-400 dark:text-gray-500">across all locations</p>
         </div>
         <div
-          class="bg-white border border-slate-200 border-l-[3px] border-l-teal-600 px-4 py-3.5 grid gap-1"
+          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-teal-600 px-4 py-3.5 grid gap-1"
         >
-          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Deployed</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ deployedCount() }}</p>
-          <p class="text-xs text-slate-400">in production</p>
+          <p
+            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
+          >
+            Deployed
+          </p>
+          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
+            {{ deployedCount() }}
+          </p>
+          <p class="text-xs text-slate-400 dark:text-gray-500">in production</p>
         </div>
         <div
-          class="bg-white border border-slate-200 border-l-[3px] border-l-emerald-600 px-4 py-3.5 grid gap-1"
+          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-emerald-600 px-4 py-3.5 grid gap-1"
         >
-          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Available</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ availableCount() }}</p>
-          <p class="text-xs text-slate-400">ready to deploy</p>
+          <p
+            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
+          >
+            Available
+          </p>
+          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
+            {{ availableCount() }}
+          </p>
+          <p class="text-xs text-slate-400 dark:text-gray-500">ready to deploy</p>
         </div>
         <div
-          class="bg-white border border-slate-200 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
+          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
         >
-          <p class="text-xs text-slate-400 uppercase tracking-widest font-medium">Issues</p>
-          <p class="text-3xl font-medium text-slate-900 tabular-nums">{{ issuesCount() }}</p>
-          <p class="text-xs text-slate-400">need attention</p>
+          <p
+            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
+          >
+            Issues
+          </p>
+          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
+            {{ issuesCount() }}
+          </p>
+          <p class="text-xs text-slate-400 dark:text-gray-500">need attention</p>
         </div>
       </div>
 
       <!-- ── TABLE ── -->
       <div role="table" aria-label="Asset inventory">
         <!-- Column headers -->
-        <div role="row" class="flex items-center gap-3 border-b border-slate-100 py-2.5">
+        <div
+          role="row"
+          class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5"
+        >
           <div class="w-9 shrink-0"></div>
           <div
-            class="flex-1 min-w-0 grid grid-cols-[1fr_110px_148px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 uppercase tracking-wide mr-18"
+            class="flex-1 min-w-0 grid grid-cols-[1fr_110px_148px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide mr-18"
           >
             <span role="columnheader" class="uppercase">Model</span>
             <span role="columnheader" class="uppercase hidden sm:block">Category</span>
             <button
               role="columnheader"
               (click)="toggleSort()"
-              class="uppercase cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 transition-colors"
+              class="uppercase cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
               [attr.aria-sort]="sortDirection() === 'asc' ? 'ascending' : 'descending'"
             >
               Status
@@ -187,12 +226,12 @@
           <a
             role="row"
             [routerLink]="['/inventory', asset.id]"
-            class="flex items-center gap-3 border-b border-slate-100 py-2.5 hover:bg-slate-50 transition-colors group cursor-pointer"
+            class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group cursor-pointer"
           >
             <!-- Category icon -->
             <div
               role="cell"
-              class="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors"
+              class="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 group-hover:bg-slate-200 dark:group-hover:bg-gray-800 transition-colors"
               [attr.aria-label]="asset.category"
             >
               <nldd-icon
@@ -208,14 +247,18 @@
             >
               <!-- Model + asset tag -->
               <div role="cell" class="min-w-0">
-                <p class="truncate text-sm font-medium text-slate-900">{{ asset.model }}</p>
-                <p class="text-xs text-slate-400 font-mono">{{ asset.assetTag }}</p>
+                <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
+                  {{ asset.model }}
+                </p>
+                <p class="text-xs text-slate-400 dark:text-gray-500 font-mono">
+                  {{ asset.assetTag }}
+                </p>
               </div>
 
               <!-- Category badge -->
               <div role="cell" class="hidden sm:block">
                 <span
-                  class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"
+                  class="inline-flex items-center rounded-full bg-slate-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-gray-300"
                 >
                   {{ asset.category }}
                 </span>
@@ -267,12 +310,14 @@
         @if (assets().length === 0) {
           <div class="flex flex-col items-center justify-center py-16 text-center">
             <div
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400 mb-3"
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-3"
             >
               <nldd-icon name="rectangle-stack" class="w-6 h-6" aria-hidden="true"></nldd-icon>
             </div>
-            <p class="text-sm font-medium text-slate-600">No assets found</p>
-            <p class="mt-1 text-xs text-slate-400">Try adjusting your search or filter criteria.</p>
+            <p class="text-sm font-medium text-slate-600 dark:text-gray-300">No assets found</p>
+            <p class="mt-1 text-xs text-slate-400 dark:text-gray-500">
+              Try adjusting your search or filter criteria.
+            </p>
           </div>
         }
       </div>
@@ -407,7 +452,10 @@
         ></nldd-multi-line-text-field>
       </nldd-form-field>
     </nldd-simple-section>
-    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+    <div
+      slot="footer"
+      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
+    >
       <nldd-button variant="secondary" text="Cancel" (click)="closeAssetForm()"></nldd-button>
       <nldd-button variant="primary" text="Save" (click)="saveAsset()"></nldd-button>
     </div>

@@ -1,10 +1,10 @@
 <!-- Top Navigation -->
 <nav
-  class="sticky top-0 z-40 flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3"
+  class="sticky top-0 z-40 flex items-center justify-between border-b border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3"
 >
   <a
     href="#"
-    class="flex items-center gap-1.5 text-sm font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
+    class="flex items-center gap-1.5 text-sm font-medium text-neutral-500 dark:text-gray-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
     aria-label="Back to my tasks"
   >
     <nldd-icon name="arrow-left" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
@@ -23,59 +23,65 @@
         d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
       />
     </svg>
-    <span class="text-sm font-semibold tracking-tight text-neutral-900">Fundament</span>
+    <span class="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white"
+      >Fundament</span
+    >
   </a>
 
-  <div class="relative">
-    <button
-      class="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-25 hover:text-neutral-700 transition-colors"
-      aria-label="Task menu"
-      (click)="toggleMenu($event)"
-    >
-      <nldd-icon name="list" class="w-5 h-5 block" aria-hidden="true"></nldd-icon>
-    </button>
-    <div
-      class="absolute right-0 top-full mt-1 w-64 rounded-xl border border-neutral-200 bg-white py-1 shadow-lg shadow-neutral-900/10"
-      [class.hidden]="!menuOpen()"
-    >
+  <div class="flex items-center gap-2">
+    <app-theme-toggle />
+
+    <div class="relative">
+      <button
+        class="rounded-lg p-1.5 text-neutral-500 dark:text-gray-400 hover:bg-neutral-25 dark:hover:bg-gray-900 hover:text-neutral-700 dark:hover:text-gray-300 transition-colors"
+        aria-label="Task menu"
+        (click)="toggleMenu($event)"
+      >
+        <nldd-icon name="list" class="w-5 h-5 block" aria-hidden="true"></nldd-icon>
+      </button>
       <div
-        class="border-b border-neutral-100 px-3 py-2 text-xs font-semibold tracking-wide text-neutral-400 uppercase"
+        class="absolute right-0 top-full mt-1 w-64 rounded-xl border border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-1 shadow-lg shadow-neutral-900/10"
+        [class.hidden]="!menuOpen()"
       >
-        Other Tasks
+        <div
+          class="border-b border-neutral-100 dark:border-gray-800 px-3 py-2 text-xs font-semibold tracking-wide text-neutral-400 dark:text-gray-500 uppercase"
+        >
+          Other Tasks
+        </div>
+        <a
+          href="#"
+          class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
+        >
+          <nldd-icon
+            name="rectangle-stack"
+            class="w-4 h-4 text-neutral-400 dark:text-gray-500"
+            aria-hidden="true"
+          ></nldd-icon>
+          Replace network switch — Rack 87
+        </a>
+        <a
+          href="#"
+          class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
+        >
+          <nldd-icon
+            name="slash-circle"
+            class="w-4 h-4 text-neutral-400 dark:text-gray-500"
+            aria-hidden="true"
+          ></nldd-icon>
+          Inspect PDU — Hall A
+        </a>
+        <a
+          href="#"
+          class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
+        >
+          <nldd-icon
+            name="exclamation-circle"
+            class="w-4 h-4 text-neutral-400 dark:text-gray-500"
+            aria-hidden="true"
+          ></nldd-icon>
+          Check cooling unit — Row 5
+        </a>
       </div>
-      <a
-        href="#"
-        class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-      >
-        <nldd-icon
-          name="rectangle-stack"
-          class="w-4 h-4 text-neutral-400"
-          aria-hidden="true"
-        ></nldd-icon>
-        Replace network switch — Rack 87
-      </a>
-      <a
-        href="#"
-        class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-      >
-        <nldd-icon
-          name="slash-circle"
-          class="w-4 h-4 text-neutral-400"
-          aria-hidden="true"
-        ></nldd-icon>
-        Inspect PDU — Hall A
-      </a>
-      <a
-        href="#"
-        class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-      >
-        <nldd-icon
-          name="exclamation-circle"
-          class="w-4 h-4 text-neutral-400"
-          aria-hidden="true"
-        ></nldd-icon>
-        Check cooling unit — Row 5
-      </a>
     </div>
   </div>
 </nav>
@@ -85,16 +91,18 @@
   <!-- Task Header -->
   <div class="mb-6" [class.hidden]="showCompleteScreen()">
     @if (phase() === 'gather') {
-      <h1 class="text-xl font-semibold text-slate-900">{{ dcName }}</h1>
-      <p class="mt-1.5 text-sm text-slate-400">
+      <h1 class="text-xl font-semibold text-slate-900 dark:text-white">{{ dcName }}</h1>
+      <p class="mt-1.5 text-sm text-slate-400 dark:text-gray-500">
         {{ tasks.length }} tasks &middot; Work order WO-2241
       </p>
     } @else {
-      <h1 class="text-xl font-semibold text-slate-900">{{ currentTask().title }}</h1>
+      <h1 class="text-xl font-semibold text-slate-900 dark:text-white">
+        {{ currentTask().title }}
+      </h1>
       <div class="mt-2 flex flex-wrap items-center gap-2">
         @if (currentTask().priority === 'critical') {
           <span
-            class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-red-200/80"
+            class="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-950 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300 ring-1 ring-red-200/80 dark:ring-red-800/80"
             aria-label="Priority: Critical"
           >
             <span class="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" aria-hidden="true"></span
@@ -103,7 +111,7 @@
         }
         @if (currentTask().priority === 'high') {
           <span
-            class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200/80"
+            class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-950 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300 ring-1 ring-amber-200/80 dark:ring-amber-800/80"
             aria-label="Priority: High"
           >
             <span class="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden="true"></span
@@ -111,14 +119,14 @@
           </span>
         }
         <span
-          class="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-2.5 py-0.5 text-xs font-medium text-accent-700 ring-1 ring-accent-200/80"
+          class="inline-flex items-center gap-1.5 rounded-full bg-accent-50 dark:bg-accent-950 px-2.5 py-0.5 text-xs font-medium text-accent-700 dark:text-accent-300 ring-1 ring-accent-200/80 dark:ring-accent-800/80"
           aria-label="Status: In progress"
         >
           <span class="h-1.5 w-1.5 rounded-full bg-accent-500 shrink-0" aria-hidden="true"></span>In
           Progress
         </span>
       </div>
-      <p class="mt-1.5 text-sm text-slate-400">{{ currentTask().location }}</p>
+      <p class="mt-1.5 text-sm text-slate-400 dark:text-gray-500">{{ currentTask().location }}</p>
     }
   </div>
 
@@ -138,8 +146,8 @@
             gatherCompleted()
               ? 'bg-accent-600 text-white'
               : phase() === 'gather'
-                ? 'border-2 border-accent-600 bg-white font-semibold text-accent-600 text-sm'
-                : 'border-2 border-slate-300 bg-white text-sm font-medium text-slate-400'
+                ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-sm'
+                : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
           "
           aria-hidden="true"
         >
@@ -151,7 +159,7 @@
         </div>
         <div
           class="my-1 w-0.5 flex-1"
-          [class]="gatherCompleted() ? 'bg-accent-300' : 'bg-slate-200'"
+          [class]="gatherCompleted() ? 'bg-accent-300' : 'bg-slate-200 dark:bg-gray-800'"
         ></div>
       </div>
 
@@ -159,7 +167,7 @@
         class="flex-1 pb-8"
         [class]="
           phase() === 'gather'
-            ? 'rounded-xl bg-white p-4 shadow-sm outline outline-2 outline-accent-500 outline-offset-0'
+            ? 'rounded-xl bg-white dark:bg-gray-950 p-4 shadow-sm outline outline-2 outline-accent-500 outline-offset-0'
             : 'py-2'
         "
       >
@@ -169,29 +177,33 @@
             style="width: 20px; height: 20px"
             [class]="
               phase() === 'gather'
-                ? 'text-accent-600'
+                ? 'text-accent-600 dark:text-accent-300'
                 : gatherCompleted()
-                  ? 'text-accent-400'
-                  : 'text-slate-400'
+                  ? 'text-accent-400 dark:text-accent-300'
+                  : 'text-slate-400 dark:text-gray-500'
             "
             aria-hidden="true"
           ></nldd-icon>
           <h3
             class="text-sm font-semibold"
-            [class]="phase() === 'gather' ? 'text-slate-900' : 'text-slate-700'"
+            [class]="
+              phase() === 'gather'
+                ? 'text-slate-900 dark:text-white'
+                : 'text-slate-700 dark:text-gray-300'
+            "
           >
             Gather tools &amp; parts
           </h3>
         </div>
 
         @if (phase() === 'gather') {
-          <p class="mt-1.5 text-sm leading-relaxed text-slate-500">
+          <p class="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-gray-400">
             Collect all items from the supply room before heading to the floor.
           </p>
           <div class="mt-3 space-y-1" role="list" aria-label="Items to gather">
             @for (item of gatherItems; track $index) {
               <div
-                class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-slate-50"
+                class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-slate-50 dark:hover:bg-gray-900"
                 role="listitem"
                 (click)="toggleGatherItem($index)"
                 (keydown.enter)="toggleGatherItem($index)"
@@ -207,19 +219,23 @@
                   <span
                     class="text-sm"
                     [class]="
-                      checkedItems().has($index) ? 'text-slate-400 line-through' : 'text-slate-700'
+                      checkedItems().has($index)
+                        ? 'text-slate-400 dark:text-gray-500 line-through'
+                        : 'text-slate-700 dark:text-gray-300'
                     "
                     >{{ item.label }}</span
                   >
                   @if (item.taskFor) {
-                    <p class="text-xs text-slate-400 mt-0.5">for: {{ item.taskFor }}</p>
+                    <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
+                      for: {{ item.taskFor }}
+                    </p>
                   }
                 </div>
               </div>
             }
           </div>
           @if (checkedItems().size > 0) {
-            <p class="mt-2 text-xs text-slate-400">
+            <p class="mt-2 text-xs text-slate-400 dark:text-gray-500">
               {{ checkedItems().size }} of {{ gatherItems.length }} collected
             </p>
           }
@@ -242,8 +258,8 @@
               isTaskDone(taskIdx)
                 ? 'bg-accent-600 text-white'
                 : isTaskActive(taskIdx)
-                  ? 'border-2 border-accent-600 bg-white font-semibold text-accent-600 text-sm'
-                  : 'border-2 border-slate-300 bg-white text-sm font-medium text-slate-400'
+                  ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-sm'
+                  : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
             "
             aria-hidden="true"
           >
@@ -256,7 +272,7 @@
           @if (taskIdx < tasks.length - 1) {
             <div
               class="my-1 w-0.5 flex-1"
-              [class]="isTaskDone(taskIdx) ? 'bg-accent-300' : 'bg-slate-200'"
+              [class]="isTaskDone(taskIdx) ? 'bg-accent-300' : 'bg-slate-200 dark:bg-gray-800'"
             ></div>
           }
         </div>
@@ -268,16 +284,16 @@
                 class="text-sm font-semibold"
                 [class]="
                   isTaskActive(taskIdx)
-                    ? 'text-slate-900'
+                    ? 'text-slate-900 dark:text-white'
                     : isTaskDone(taskIdx)
-                      ? 'text-slate-500'
-                      : 'text-slate-600'
+                      ? 'text-slate-500 dark:text-gray-400'
+                      : 'text-slate-600 dark:text-gray-300'
                 "
                 >{{ task.title }}</span
               >
               @if (task.priority === 'critical') {
                 <span
-                  class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-red-200/80"
+                  class="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-950 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300 ring-1 ring-red-200/80 dark:ring-red-800/80"
                   aria-label="Priority: Critical"
                 >
                   <span
@@ -289,7 +305,7 @@
               }
               @if (task.priority === 'high') {
                 <span
-                  class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200/80"
+                  class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-950 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300 ring-1 ring-amber-200/80 dark:ring-amber-800/80"
                   aria-label="Priority: High"
                 >
                   <span
@@ -300,7 +316,7 @@
                 </span>
               }
             </div>
-            <p class="text-xs text-slate-400 mt-0.5">{{ task.location }}</p>
+            <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">{{ task.location }}</p>
           </div>
 
           <!-- Sub-steps (visible when this task is active) -->
@@ -332,8 +348,8 @@
                         isStepDone(taskIdx, si)
                           ? 'bg-accent-600 text-white'
                           : isStepActive(taskIdx, si)
-                            ? 'border-2 border-accent-600 bg-white font-semibold text-accent-600 text-xs'
-                            : 'border-2 border-slate-200 bg-white text-xs font-medium text-slate-400'
+                            ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-xs'
+                            : 'border-2 border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-medium text-slate-400 dark:text-gray-500'
                       "
                       aria-hidden="true"
                     >
@@ -350,7 +366,11 @@
                     @if (si < task.steps.length - 1) {
                       <div
                         class="my-1 w-0.5 flex-1"
-                        [class]="isStepDone(taskIdx, si) ? 'bg-accent-300' : 'bg-slate-200'"
+                        [class]="
+                          isStepDone(taskIdx, si)
+                            ? 'bg-accent-300'
+                            : 'bg-slate-200 dark:bg-gray-800'
+                        "
                       ></div>
                     }
                   </div>
@@ -359,7 +379,7 @@
                     class="flex-1 pb-4"
                     [class]="
                       isStepActive(taskIdx, si)
-                        ? 'rounded-xl bg-white p-4 shadow-sm outline outline-2 outline-accent-500 outline-offset-0 mb-4'
+                        ? 'rounded-xl bg-white dark:bg-gray-950 p-4 shadow-sm outline outline-2 outline-accent-500 outline-offset-0 mb-4'
                         : 'py-1.5'
                     "
                   >
@@ -369,25 +389,29 @@
                         style="width: 18px; height: 18px"
                         [class]="
                           isStepActive(taskIdx, si)
-                            ? 'text-accent-600'
+                            ? 'text-accent-600 dark:text-accent-300'
                             : isStepDone(taskIdx, si)
-                              ? 'text-accent-400'
-                              : 'text-slate-400'
+                              ? 'text-accent-400 dark:text-accent-300'
+                              : 'text-slate-400 dark:text-gray-500'
                         "
                         aria-hidden="true"
                       ></nldd-icon>
                       <h3
                         class="text-sm font-medium"
-                        [class]="isStepActive(taskIdx, si) ? 'text-slate-900' : 'text-slate-600'"
+                        [class]="
+                          isStepActive(taskIdx, si)
+                            ? 'text-slate-900 dark:text-white'
+                            : 'text-slate-600 dark:text-gray-300'
+                        "
                       >
                         {{ step.title }}
                       </h3>
                     </div>
                     @if (isStepActive(taskIdx, si)) {
-                      <p class="mt-1.5 text-sm leading-relaxed text-slate-500">
+                      <p class="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-gray-400">
                         {{ step.description }}
                       </p>
-                      <div class="mt-3" [innerHTML]="safeSvg(step.svg)"></div>
+                      <div class="mt-3" [innerHTML]="safeSvg(step.svg, theme.isDarkMode())"></div>
                     }
                   </div>
                 </div>
@@ -402,7 +426,7 @@
   <!-- Task Complete Screen -->
   <div [class.hidden]="!showCompleteScreen()" class="py-16 text-center">
     <div
-      class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 ring-1 ring-emerald-200/60"
+      class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950 ring-1 ring-emerald-200/60 dark:ring-emerald-800/60"
     >
       <nldd-icon
         name="check-mark-circle"
@@ -410,8 +434,10 @@
         aria-hidden="true"
       ></nldd-icon>
     </div>
-    <h2 class="text-xl font-semibold text-neutral-900">Work order complete!</h2>
-    <p class="mt-2 text-sm text-neutral-500">All tasks for {{ dcName }} have been finished.</p>
+    <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">Work order complete!</h2>
+    <p class="mt-2 text-sm text-neutral-500 dark:text-gray-400">
+      All tasks for {{ dcName }} have been finished.
+    </p>
     <a href="#">
       <nldd-button
         variant="neutral-filled"
@@ -425,14 +451,14 @@
 
 <!-- Sticky Bottom Bar -->
 <div
-  class="fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 bg-white shadow-[0_-1px_8px_rgba(0,0,0,0.04)]"
+  class="fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]"
   [class.hidden]="showCompleteScreen()"
 >
   <div class="mx-auto max-w-2xl">
     <!-- Progress Bar -->
     <div class="flex items-center gap-3 px-4 pt-3">
       <div
-        class="h-1 flex-1 overflow-hidden rounded-full bg-neutral-100"
+        class="h-1 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-gray-800"
         role="progressbar"
         [attr.aria-valuemin]="0"
         [attr.aria-valuemax]="totalSteps()"
@@ -446,7 +472,7 @@
           [style.width.%]="progressPct()"
         ></div>
       </div>
-      <span class="text-xs font-medium tabular-nums text-neutral-400"
+      <span class="text-xs font-medium tabular-nums text-neutral-400 dark:text-gray-500"
         >{{ completedCount() }}/{{ totalSteps() }}</span
       >
     </div>
@@ -503,27 +529,29 @@
   (keydown.escape)="onModalBackdropClick($event, 'photo')"
 >
   <div
-    class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl shadow-neutral-900/20 ring-1 ring-neutral-200/80"
+    class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-950 p-6 shadow-2xl shadow-neutral-900/20 ring-1 ring-neutral-200/80 dark:ring-gray-700/80"
   >
-    <div class="flex items-center gap-2 text-base font-semibold text-neutral-900">
+    <div class="flex items-center gap-2 text-base font-semibold text-neutral-900 dark:text-white">
       <nldd-icon
         name="square-arrow-up"
-        class="w-4.5 h-4.5 text-accent-600"
+        class="w-4.5 h-4.5 text-accent-600 dark:text-accent-300"
         aria-hidden="true"
       ></nldd-icon>
       Take Photo
     </div>
-    <p class="mt-1 text-sm text-neutral-400">{{ currentStepLabel() }}</p>
+    <p class="mt-1 text-sm text-neutral-400 dark:text-gray-500">{{ currentStepLabel() }}</p>
     <div class="mt-4">
       <label
-        class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50 px-4 py-8 transition hover:border-accent-400 hover:bg-accent-50/30"
+        class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-200 dark:border-gray-800 bg-neutral-50 dark:bg-gray-900 px-4 py-8 transition hover:border-accent-400 hover:bg-accent-50/30 dark:hover:bg-accent-950/30"
       >
         <nldd-icon
           name="square-plus-on-square"
-          class="w-8 h-8 text-neutral-400 mb-2"
+          class="w-8 h-8 text-neutral-400 dark:text-gray-500 mb-2"
           aria-hidden="true"
         ></nldd-icon>
-        <span class="text-sm font-medium text-neutral-500">Tap to take photo</span>
+        <span class="text-sm font-medium text-neutral-500 dark:text-gray-400"
+          >Tap to take photo</span
+        >
         <input
           type="file"
           accept="image/*"
@@ -566,17 +594,17 @@
   (keydown.escape)="onModalBackdropClick($event, 'note')"
 >
   <div
-    class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl shadow-neutral-900/20 ring-1 ring-neutral-200/80"
+    class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-950 p-6 shadow-2xl shadow-neutral-900/20 ring-1 ring-neutral-200/80 dark:ring-gray-700/80"
   >
-    <div class="flex items-center gap-2 text-base font-semibold text-neutral-900">
+    <div class="flex items-center gap-2 text-base font-semibold text-neutral-900 dark:text-white">
       <nldd-icon
         name="pencil-on-square"
-        class="w-4.5 h-4.5 text-accent-600"
+        class="w-4.5 h-4.5 text-accent-600 dark:text-accent-300"
         aria-hidden="true"
       ></nldd-icon>
       Add Note
     </div>
-    <p class="mt-1 text-sm text-neutral-400">{{ currentStepLabel() }}</p>
+    <p class="mt-1 text-sm text-neutral-400 dark:text-gray-500">{{ currentStepLabel() }}</p>
     <nldd-multi-line-text-field
       rows="4"
       placeholder="Add your observations…"

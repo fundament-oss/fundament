@@ -815,10 +815,10 @@ export default class RacksComponent implements OnInit {
 
   readonly historyEventIconBg = (type: RackEvent['type']): string => {
     const eventMap: Record<RackEvent['type'], string> = {
-      power: 'bg-amber-50',
-      hardware: 'bg-blue-50',
-      config: 'bg-indigo-50',
-      alert: 'bg-red-50',
+      power: 'bg-amber-50 dark:bg-amber-950',
+      hardware: 'bg-blue-50 dark:bg-blue-950',
+      config: 'bg-indigo-50 dark:bg-indigo-950',
+      alert: 'bg-red-50 dark:bg-red-950',
     };
     return eventMap[type];
   };

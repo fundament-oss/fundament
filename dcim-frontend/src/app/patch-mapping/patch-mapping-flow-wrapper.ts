@@ -12,7 +12,7 @@ import {
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
 import { Cable, CableStatus, CableType, Port } from './cable.model';
-import { PatchMappingFlow } from './patch-mapping-flow';
+import { PatchMappingFlow, DeviceInfo } from './patch-mapping-flow';
 
 @Component({
   selector: 'app-patch-mapping-flow',
@@ -28,6 +28,8 @@ export default class PatchMappingFlowWrapperComponent
   @Input() cables: Cable[] = [];
 
   @Input() devicePorts: Record<string, Port[]> = {};
+
+  @Input() devices: DeviceInfo[] = [];
 
   @Input() selectedCableId: string | null = null;
 
@@ -70,6 +72,7 @@ export default class PatchMappingFlowWrapperComponent
       React.createElement(PatchMappingFlow, {
         cables: this.cables,
         devicePorts: this.devicePorts,
+        devices: this.devices,
         selectedCableId: this.selectedCableId,
         dcId: this.dcId,
         filterStatus: this.filterStatus,

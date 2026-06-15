@@ -49,7 +49,7 @@ interface DcStats {
     DropdownSyncDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col bg-white text-slate-900' },
+  host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
 export default class DatacentersComponent implements OnInit {
   private readonly router = inject(Router);
@@ -251,18 +251,18 @@ export default class DatacentersComponent implements OnInit {
   // ── Color helpers ──────────────────────────────────────────────────────────
 
   readonly rackCellClass = (): string =>
-    'bg-emerald-50 border-emerald-300 text-emerald-700 hover:border-emerald-500 cursor-pointer';
+    'bg-emerald-50 dark:bg-emerald-950 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:border-emerald-500 cursor-pointer';
 
-  readonly rackFillBarClass = (): string => 'bg-emerald-200';
+  readonly rackFillBarClass = (): string => 'bg-emerald-200 dark:bg-emerald-900';
 
   readonly statusBadgeClass = (status: DatacenterStatus): string => {
     switch (status) {
       case 'operational':
-        return 'bg-teal-50 text-teal-700 ring-1 ring-teal-200';
+        return 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 ring-1 ring-teal-200 dark:ring-teal-800';
       case 'degraded':
-        return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200';
+        return 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800';
       case 'maintenance':
-        return 'bg-slate-100 text-slate-500 ring-1 ring-slate-200';
+        return 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 ring-1 ring-slate-200 dark:ring-gray-700';
       default:
         return '';
     }

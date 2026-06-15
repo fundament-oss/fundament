@@ -4,12 +4,14 @@ import {
   ElementRef,
   OnDestroy,
   effect,
+  inject,
   input,
   output,
   signal,
   viewChild,
 } from '@angular/core';
 import { RackCell } from './datacenter.model';
+import ThemeService from '../theme.service';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -19,6 +21,24 @@ const MIN_RACK_H = 20;
 const MAX_RACK_H = 80;
 const MARGIN_TOP = MAX_RACK_H + 60; // headroom above first row
 const MARGIN_LEFT = 80;
+
+// Floor tiles and labels are drawn on the page background, so they switch with
+// the theme. The rack bodies are self-contained bright objects that read well on
+// either background and keep their colors.
+const PALETTE = {
+  light: {
+    floorFill: '#f0fdf4',
+    floorStroke: '#e2e8f0',
+    entranceLabel: '#64748b',
+    rowLabel: '#94a3b8',
+  },
+  dark: {
+    floorFill: '#111827',
+    floorStroke: '#1f2937',
+    entranceLabel: '#94a3b8',
+    rowLabel: '#94a3b8',
+  },
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -48,6 +68,10 @@ export default class IsometricCanvasComponent implements OnDestroy {
   private readonly canvasEl = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
 
   private readonly hoveredId = signal<string | null>(null);
+
+  private readonly theme = inject(ThemeService);
+
+  private pal = PALETTE.light;
 
   private resizeObserver?: ResizeObserver;
 
@@ -123,6 +147,9 @@ export default class IsometricCanvasComponent implements OnDestroy {
   // ── Scene ──────────────────────────────────────────────────────────────────
 
   private drawScene(canvas: HTMLCanvasElement, cells: RackCell[], hoveredId: string | null): void {
+    // Read inside drawScene (called from the effect) so a theme toggle repaints.
+    this.pal = this.theme.isDarkMode() ? PALETTE.dark : PALETTE.light;
+
     const rows = [...new Set(cells.map((c) => c.row))].sort();
     const maxCol = Math.max(...cells.map((c) => c.col), 1);
     const offsets = IsometricCanvasComponent.computeOffsets(rows);
@@ -205,7 +232,7 @@ export default class IsometricCanvasComponent implements OnDestroy {
     const { x: ex, y: ey } = S((maxCol - 1) / 2, backOff);
     ctx.save();
     ctx.font = '10px ui-sans-serif, sans-serif';
-    ctx.fillStyle = '#64748b';
+    ctx.fillStyle = this.pal.entranceLabel;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('Entrance', ex, ey + TH / 4);
@@ -216,7 +243,7 @@ export default class IsometricCanvasComponent implements OnDestroy {
       const { x, y } = S(-2, ro);
       ctx.save();
       ctx.font = 'bold 11px ui-sans-serif, sans-serif';
-      ctx.fillStyle = '#94a3b8';
+      ctx.fillStyle = this.pal.rowLabel;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(row, x + TW / 2, y + TH / 4);
@@ -235,9 +262,9 @@ export default class IsometricCanvasComponent implements OnDestroy {
     ctx.lineTo(x, y + TH);
     ctx.lineTo(x - w2, y + d2);
     ctx.closePath();
-    ctx.fillStyle = '#f0fdf4';
+    ctx.fillStyle = this.pal.floorFill;
     ctx.fill();
-    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeStyle = this.pal.floorStroke;
     ctx.lineWidth = 0.5;
     ctx.stroke();
   };

@@ -7,10 +7,10 @@ import ThemeService from '../theme.service';
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <nldd-segmented-control
-      [value]="theme.isDark() ? 'dark' : 'light'"
+      [value]="theme.isDarkMode() ? 'dark' : 'light'"
       variant="icon"
       size="sm"
-      (change)="onChange($event)"
+      (change)="theme.setTheme($any($event).detail.value)"
     >
       <nldd-segmented-control-item
         value="light"
@@ -27,9 +27,4 @@ import ThemeService from '../theme.service';
 })
 export default class ThemeToggleComponent {
   protected readonly theme = inject(ThemeService);
-
-  protected onChange(event: Event): void {
-    const value = (event as CustomEvent<{ value: string }>).detail.value;
-    this.theme.set(value === 'dark' ? 'dark' : 'light');
-  }
 }
