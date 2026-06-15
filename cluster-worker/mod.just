@@ -173,11 +173,18 @@ gardener-status:
     echo ""
 
     echo "=== Garden ==="
-    if [ -f "$RUNTIME_KC" ]; then
-        kubectl --kubeconfig "$RUNTIME_KC" get garden -n garden 2>/dev/null || echo "(garden not ready)"
+    # The on-disk runtime kubeconfig goes stale on restart (kind API port + CA),
+    # so pull a live one straight from kind to query the runtime cluster.
+    RUNTIME_KC_LIVE="$(mktemp)"
+    if kind get kubeconfig --name "{{KIND_CLUSTER}}" > "$RUNTIME_KC_LIVE" 2>/dev/null; then
+        kubectl --kubeconfig "$RUNTIME_KC_LIVE" --request-timeout=10s get garden -n garden 2>/dev/null || echo "(garden not found)"
+        # Surface any non-healthy conditions (e.g. provider-local extension down).
+        kubectl --kubeconfig "$RUNTIME_KC_LIVE" --request-timeout=10s get garden -n garden \
+            -o jsonpath='{range .items[0].status.conditions[?(@.status!="True")]}  ! {.type}: {.reason} - {.message}{"\n"}{end}' 2>/dev/null
     else
-        echo "Runtime kubeconfig not found at $RUNTIME_KC"
+        echo "(could not get runtime kubeconfig via kind)"
     fi
+    rm -f "$RUNTIME_KC_LIVE"
     echo ""
 
     echo "=== Shoots ==="
@@ -197,6 +204,11 @@ gardener-status:
     else
         echo "k3d network: NOT connected (run: just cluster-worker gardener-connect)"
     fi
+    if ( ifconfig lo0 || ip -o addr show lo ) 2>/dev/null | grep -q "172.18.255.53"; then
+        echo "Gardener DNS loopback (172.18.255.53): present"
+    else
+        echo "Gardener DNS loopback (172.18.255.53): MISSING — run: just cluster-worker gardener-connect"
+    fi
 
 # Connect Docker networks so k3d can reach Gardener
 gardener-connect:
@@ -215,6 +227,68 @@ gardener-connect:
     if ! docker network ls --format '{{{{.Name}}' | grep -q "^${K3D_NETWORK}$"; then
         echo "Error: k3d network not found. Is the k3d cluster running?"
         exit 1
+    fi
+
+    # Refresh the k3d-fundament kubeconfig and make it the active context.
+    # Docker reassigns the serverlb's published port on every restart, leaving a
+    # stale port in the kubeconfig, and k3d writes the server as 0.0.0.0 which is
+    # an unreliable connect target on macOS. Write to the kubeconfig kubectl will
+    # actually read: the first entry of $KUBECONFIG (the repo .envrc/direnv points
+    # this at deploy/k3d/kubeconfig.yaml), else ~/.kube/config. Restore the
+    # entry/certs/context with a one-shot merge, then pin the server to 127.0.0.1
+    # with the *live* port read straight from docker (ground truth, not k3d's
+    # cached value). Right after a Docker restart the serverlb is still
+    # stabilizing, so probe /livez -- with a per-attempt timeout so it can't block
+    # forever -- until it answers.
+    TARGET_KC="${KUBECONFIG:-}"
+    TARGET_KC="${TARGET_KC%%:*}"
+    TARGET_KC="${TARGET_KC:-$HOME/.kube/config}"
+    k3d kubeconfig merge fundament --output "$TARGET_KC" --kubeconfig-switch-context >/dev/null
+    waited=false
+    for attempt in $(seq 1 30); do
+        LB_PORT=$(docker port k3d-fundament-serverlb 6443 2>/dev/null | head -1 | sed 's/.*://')
+        if [ -n "$LB_PORT" ]; then
+            kubectl config --kubeconfig "$TARGET_KC" set-cluster k3d-fundament \
+                --server="https://127.0.0.1:${LB_PORT}" >/dev/null 2>&1 || true
+            if kubectl --context k3d-fundament --request-timeout=3s get --raw /livez >/dev/null 2>&1; then
+                break
+            fi
+        fi
+        if [ "$attempt" -eq 1 ]; then
+            printf '- Waiting for k3d-fundament API to stabilize'
+            waited=true
+        fi
+        printf '.'
+        if [ "$attempt" -eq 30 ]; then
+            printf '\n'
+            echo "Error: k3d-fundament API not reachable after ~2min."
+            echo "  Check it:    just cluster-worker gardener-status"
+            echo "  Restart it:  k3d cluster stop fundament && k3d cluster start fundament"
+            exit 1
+        fi
+        sleep 2
+    done
+    if [ "$waited" = "true" ]; then printf '\n'; fi
+    echo "- Refreshed k3d-fundament kubeconfig (127.0.0.1:${LB_PORT})"
+
+    # Re-assert the host loopback aliases the local Gardener DNS depends on.
+    # hack/kind-setup-loopback-devices.sh adds 172.18.255.x (incl. the bind9 DNS
+    # at 172.18.255.53) as lo0 aliases, but only at cluster-creation time and they
+    # do NOT survive a reboot. Without them the kind nodes can't reach bind9, so
+    # *.local.gardener.cloud stops resolving and the provider-local extension
+    # crash-loops (Garden RuntimeComponentsHealthy=False). Only run the (sudo)
+    # script when the alias is actually missing, then bounce bind9 so it rebinds
+    # the restored IP.
+    GARDENER_DIR="{{GARDENER_DIR}}"
+    GARDENER_DIR="${GARDENER_DIR/#\~/$HOME}"
+    if ! ( ifconfig lo0 || ip -o addr show lo ) 2>/dev/null | grep -q "172.18.255.53"; then
+        echo "- Restoring local Gardener DNS loopback aliases (may prompt for sudo)..."
+        if ( cd "$GARDENER_DIR" && ./hack/kind-setup-loopback-devices.sh --cluster-name "{{KIND_CLUSTER}}" --ip-family ipv4 ); then
+            docker restart bind9 >/dev/null 2>&1 || true
+            echo "- Restored DNS loopback aliases and restarted bind9"
+        else
+            echo "- WARNING: could not restore loopback aliases; *.local.gardener.cloud DNS may stay broken"
+        fi
     fi
 
     # Connect kind to k3d network
@@ -303,41 +377,20 @@ gardener-secret: gardener-connect
 
     echo "Using virtual garden kubeconfig"
 
-    # Ensure fundament namespace exists
-    kubectl create namespace fundament --dry-run=client -o yaml | kubectl apply -f -
+    # Ensure fundament namespace exists. Pin --context so the secret lands on the
+    # fundament k3d cluster regardless of the active context (Docker can reset it
+    # to docker-desktop on restart).
+    kubectl --context k3d-fundament create namespace fundament --dry-run=client -o yaml | kubectl --context k3d-fundament apply -f -
 
     echo "Creating gardener-kubeconfig secret (server: api.virtual-garden.local.gardener.cloud)..."
-    kubectl create secret generic gardener-kubeconfig \
+    kubectl --context k3d-fundament create secret generic gardener-kubeconfig \
         --from-file=kubeconfig="$VIRTUAL_KC" \
-        -n fundament --dry-run=client -o yaml | kubectl apply -f -
+        -n fundament --dry-run=client -o yaml | kubectl --context k3d-fundament apply -f -
     echo "Secret created: gardener-kubeconfig"
 
 # ============================================================================
 # Testing Helpers
 # ============================================================================
-
-# Create a test cluster with short name (required due to 21-char limit)
-create-test-cluster name:
-    #!/usr/bin/env bash
-    set -e
-    name="{{name}}"
-    if [ ${#name} -gt 10 ]; then
-        echo "Error: Name '$name' is too long. Use ≤10 chars (shoot names have 21-char limit)"
-        exit 1
-    fi
-    result=$(kubectl exec -n fundament fundament-db-1 -c postgres -- psql -U postgres -d fundament -t -c "INSERT INTO tenant.clusters (name, organization_id, region, kubernetes_version, status) SELECT '{{name}}', id, 'local', '1.31.1', 'unspecified' FROM tenant.organizations LIMIT 1 ON CONFLICT (organization_id, name, deleted) DO NOTHING RETURNING id, name;")
-    echo ""
-    if echo "$result" | grep -q '{{name}}'; then
-        echo "Cluster '{{name}}' created. Watch progress:"
-    else
-        echo "Cluster '{{name}}' already exists. Watch progress:"
-    fi
-    echo "  just cluster-worker shoots"
-
-# Delete a test cluster
-delete-test-cluster name:
-    kubectl exec -n fundament fundament-db-1 -c postgres -- psql -U postgres -d fundament -c \
-        "UPDATE tenant.clusters SET deleted = NOW() WHERE name = '{{name}}' AND deleted IS NULL;"
 
 # Watch shoots in Gardener
 shoots:
