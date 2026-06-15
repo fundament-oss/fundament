@@ -6,15 +6,18 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/validate"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
+	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 )
@@ -25,11 +28,6 @@ type fakeAuthz struct {
 	calls int
 }
 
-// Evaluate matches authzEvaluator. The request is taken by value to match
-// the real authz.Client signature; gocritic's hugeParam warning is moot for
-// a test fake bound to that interface.
-//
-//nolint:gocritic // interface match
 func (f *fakeAuthz) Evaluate(_ context.Context, _ authz.EvaluationRequest) (authz.Decision, error) {
 	f.calls++
 	if f.err != nil {
@@ -216,20 +214,9 @@ func TestMintPluginToken_InstallationNotFound(t *testing.T) {
 	assertConnectCode(t, err, connect.CodeNotFound)
 }
 
-func TestMintPluginToken_InstallationTerminating_FailedPrecondition(t *testing.T) {
-	h := newMintHarness(t, true, nil, ErrInstallationTerminating)
-	req := h.request(t, "Bearer "+h.userToken(t))
-
-	_, err := h.server.MintPluginToken(context.Background(), req)
-	assertConnectCode(t, err, connect.CodeFailedPrecondition)
-}
-
-// TestMintedTokenRejectedAsUserToken is the FUN-17 escalation-wall test: a
-// freshly-minted PluginToken — signed with the same HMAC secret and pinned to
-// the same issuer as every UserToken — must be rejected by a UserToken
-// validator on the audience pin, not by signature or expiry coincidence.
-// Without this, a misconfigured validator (e.g. NewValidator without an
-// audience) would silently accept either token type.
+// TestMintedTokenRejectedAsUserToken pins the escalation wall: a freshly
+// minted PluginToken (same HMAC secret, same issuer as every UserToken) must
+// be rejected by a UserToken validator on the audience pin.
 func TestMintedTokenRejectedAsUserToken(t *testing.T) {
 	h := newMintHarness(t, true, activeManifest(), nil)
 	req := h.request(t, "Bearer "+h.userToken(t))
@@ -247,6 +234,79 @@ func TestMintedTokenRejectedAsUserToken(t *testing.T) {
 		t.Fatal("user validator accepted a PluginToken")
 	} else if !strings.Contains(err.Error(), "audience") {
 		t.Errorf("expected audience-mismatch error, got: %v", err)
+	}
+}
+
+// TestMintPluginToken_WrongSecret_Unauthenticated guards the signature gate.
+func TestMintPluginToken_WrongSecret_Unauthenticated(t *testing.T) {
+	h := newMintHarness(t, true, activeManifest(), nil)
+	claims := auth.Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    auth.ConsoleIssuer,
+			Subject:   h.userID.String(),
+			Audience:  jwt.ClaimStrings{string(auth.TokenTypeUser)},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).
+		SignedString([]byte("different-secret"))
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+	req := h.request(t, "Bearer "+signed)
+
+	_, err = h.server.MintPluginToken(context.Background(), req)
+	assertConnectCode(t, err, connect.CodeUnauthenticated)
+}
+
+// TestMintPluginToken_ExpiredToken_Unauthenticated guards the lifetime gate.
+func TestMintPluginToken_ExpiredToken_Unauthenticated(t *testing.T) {
+	h := newMintHarness(t, true, activeManifest(), nil)
+	claims := auth.Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    auth.ConsoleIssuer,
+			Subject:   h.userID.String(),
+			Audience:  jwt.ClaimStrings{string(auth.TokenTypeUser)},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-time.Minute)),
+		},
+	}
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(h.secret)
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+	req := h.request(t, "Bearer "+signed)
+
+	_, err = h.server.MintPluginToken(context.Background(), req)
+	assertConnectCode(t, err, connect.CodeUnauthenticated)
+}
+
+// TestMintPluginToken_MalformedUUID_InvalidArgument locks in the protovalidate
+// gate so the handler's uuid.MustParse never sees a non-UUID input.
+func TestMintPluginToken_MalformedUUID_InvalidArgument(t *testing.T) {
+	h := newMintHarness(t, true, activeManifest(), nil)
+
+	mux := http.NewServeMux()
+	path, handler := authnv1connect.NewTokenServiceHandler(h.server,
+		connect.WithInterceptors(validate.NewInterceptor()))
+	mux.Handle(path, handler)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	client := authnv1connect.NewTokenServiceClient(srv.Client(), srv.URL)
+	req := connect.NewRequest(authnv1.MintPluginTokenRequest_builder{
+		ClusterId:      "not-a-uuid",
+		InstallationId: h.installationID.String(),
+	}.Build())
+	req.Header().Set("Authorization", "Bearer "+h.userToken(t))
+
+	_, err := client.MintPluginToken(context.Background(), req)
+	assertConnectCode(t, err, connect.CodeInvalidArgument)
+
+	if h.authz.calls != 0 {
+		t.Errorf("authz.Evaluate called %d times; expected 0 when proto validation rejects", h.authz.calls)
+	}
+	if h.lookup.calls != 0 {
+		t.Errorf("installation lookup called %d times; expected 0 when proto validation rejects", h.lookup.calls)
 	}
 }
 

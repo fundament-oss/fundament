@@ -2,45 +2,38 @@ edition = "2023";
 
 package plugin_proxy.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/go_features.proto";
 
 option features.field_presence = IMPLICIT;
 option features.(pb.go).api_level = API_OPAQUE;
 option go_package = "github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1;pluginproxyv1";
 
-// PluginInstallationService is an internal service-to-service RPC. It is
-// reachable only inside the control-plane network (NetworkPolicy-restricted
-// to authn-api). There is no public surface in this plan; see FUN-17.
+// PluginInstallationService is an internal service-to-service RPC,
+// NetworkPolicy-restricted to authn-api.
+// TODO: add mTLS or SA-token auth on this RPC.
 service PluginInstallationService {
   // GetInstallationManifest resolves a PluginInstallation's identity by
   // (cluster_id, installation_id). A missing installation is signalled with a
-  // NotFound error; a terminating installation with FailedPrecondition.
+  // NotFound error.
   rpc GetInstallationManifest(GetInstallationManifestRequest)
       returns (GetInstallationManifestResponse);
 }
 
-// GetInstallationManifestRequest identifies the installation to resolve.
 message GetInstallationManifestRequest {
-  // The cluster the plugin installation lives on.
-  string cluster_id = 10;
-  // The PluginInstallation to resolve.
-  string installation_id = 20;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string installation_id = 20 [(buf.validate.field).string = {uuid: true}];
 }
 
-// GetInstallationManifestResponse carries the installation's IDENTITY only.
-// Per FUN-17 it returns no RBAC: the plugin's scope lives in the immutable
-// PluginDefinition and is materialised into a Kubernetes Role by
-// plugin-controller. authn-api signs these fields into the PluginToken.
+// GetInstallationManifestResponse carries the installation's identity only;
+// it never carries RBAC. authn-api signs these fields into the PluginToken.
 message GetInstallationManifestResponse {
-  // The plugin name, from spec.definitionRef.pluginName.
   string plugin_name = 10;
-  // The plugin version, from spec.definitionRef.pluginVersion.
   string plugin_version = 20;
-  // The content hash of the consented PluginDefinition, from
-  // spec.definitionRef.definitionHash. Carried for audit only.
+  // The content hash of the consented PluginDefinition. Audit only.
   string definition_hash = 30;
   // The organization that owns the cluster.
   string organization_id = 40;
-  // The installation lifecycle phase, e.g. "Running" (status.phase).
+  // The installation lifecycle phase (status.phase), e.g. "Running".
   string status = 50;
 }

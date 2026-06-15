@@ -12,9 +12,8 @@ import (
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
 )
 
-// fakeProxyClient is a PluginInstallationServiceClient that returns canned
-// responses, so pluginProxyLookup's error-code mapping can be tested without a
-// real plugin-proxy.
+// fakeProxyClient returns canned responses so pluginProxyLookup's error
+// mapping can be tested without a real plugin-proxy.
 type fakeProxyClient struct {
 	resp *pluginproxyv1.GetInstallationManifestResponse
 	err  error
@@ -69,17 +68,6 @@ func TestPluginProxyLookup_NotFoundMapsToSentinel(t *testing.T) {
 	}
 }
 
-func TestPluginProxyLookup_TerminatingMapsToSentinel(t *testing.T) {
-	lookup := NewPluginProxyLookup(&fakeProxyClient{
-		err: connect.NewError(connect.CodeFailedPrecondition, errors.New("terminating")),
-	})
-
-	_, err := lookup.GetInstallationManifest(context.Background(), uuid.New(), uuid.New())
-	if !errors.Is(err, ErrInstallationTerminating) {
-		t.Errorf("err = %v, want ErrInstallationTerminating", err)
-	}
-}
-
 func TestPluginProxyLookup_OtherErrorIsNotSentinel(t *testing.T) {
 	lookup := NewPluginProxyLookup(&fakeProxyClient{
 		err: connect.NewError(connect.CodeUnavailable, errors.New("plugin-proxy down")),
@@ -89,7 +77,7 @@ func TestPluginProxyLookup_OtherErrorIsNotSentinel(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if errors.Is(err, ErrInstallationNotFound) || errors.Is(err, ErrInstallationTerminating) {
+	if errors.Is(err, ErrInstallationNotFound) {
 		t.Errorf("transport error %v should not map to a sentinel", err)
 	}
 }

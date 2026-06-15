@@ -23,14 +23,14 @@ spec:
           image: {{ $.Values.images.pluginProxy }}
           ports:
             - name: http
-              containerPort: 8082
+              containerPort: 8080
             - name: internal
-              containerPort: 8083
+              containerPort: 8081
           env:
             - name: LISTEN_ADDR
-              value: ":8082"
+              value: ":8080"
             - name: INTERNAL_LISTEN_ADDR
-              value: ":8083"
+              value: ":8081"
             - name: PLUGIN_PROXY_MODE
               value: {{ $.Values.pluginProxy.mode | quote }}
             - name: LOG_LEVEL
@@ -47,10 +47,10 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 8082
+    - port: 8080
       targetPort: http
       name: http
-    - port: 8083
+    - port: 8081
       targetPort: internal
       name: internal
   selector:

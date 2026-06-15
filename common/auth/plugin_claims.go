@@ -9,33 +9,26 @@ import (
 )
 
 // PluginClaims is the parsed shape of a PluginToken (aud=fundament-plugin).
-//
-// Per FUN-17 a PluginToken carries identity and binding ONLY — there is no
-// embedded scope. The plugin half of authorization is a real Kubernetes Role
-// materialised by plugin-controller from the pinned PluginDefinition and
-// enforced by the cluster; the user half is the gateway's per-request
-// SubjectAccessReview. The token is a bound capability, not a scope snapshot.
+// It carries identity (sub) and binding (cluster, installation) only — scope
+// lives on the PluginInstallation CR and is enforced by the cluster.
 type PluginClaims struct {
 	jwt.RegisteredClaims
 	// ClusterID and InstallationID are the hard binding. Proxies reject the
 	// token unless the request URL matches both.
 	ClusterID      string `json:"cluster_id"`
 	InstallationID string `json:"installation_id"`
-	// PluginName and PluginVersion are audit/log fields; InstallationID is
-	// authoritative.
+	// PluginName/PluginVersion are audit fields; InstallationID is authoritative.
 	PluginName    string `json:"plugin_name"`
 	PluginVersion string `json:"plugin_version"`
 	// DefinitionHash is the content hash of the PluginDefinition the user
-	// consented to at mint time. Carried for audit only — the effective scope
-	// is the definition pinned on the CR at request time.
+	// consented to at mint time. Audit only.
 	DefinitionHash string `json:"definition_hash"`
 }
 
 // ParsePluginToken parses and verifies a PluginToken with the given HMAC
-// secret. It checks the signing method, signature, expiry, issuer, that the
+// secret. It checks signing method, signature, expiry, issuer, that the
 // audience contains fundament-plugin, and that the subject is a UUID. It does
-// NOT check the cluster/installation binding — that is the caller's job,
-// against its own request context.
+// NOT check the cluster/installation binding — that is the caller's job.
 func ParsePluginToken(tokenStr string, secret []byte) (*PluginClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &PluginClaims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {

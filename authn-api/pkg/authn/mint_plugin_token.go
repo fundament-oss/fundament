@@ -16,15 +16,14 @@ import (
 )
 
 // PluginTokenExpiry is the TTL of a minted PluginToken. Plugins re-mint
-// rather than refresh; the short window is what bounds the revocation lag.
-// See FUN-17 "Two token types".
+// rather than refresh; the short window bounds the revocation lag.
 const PluginTokenExpiry = 15 * time.Minute
 
 // MintPluginToken issues a short-lived PluginToken (aud=fundament-plugin)
-// for a user-acting-through-installation. Caller authenticates with a
-// UserToken. The minted token carries identity (user) and binding
-// (cluster, installation) but no scope: scope is read live from the
-// PluginInstallation CR by kube-api-proxy. See FUN-17.
+// for a user acting through a plugin installation. The caller authenticates
+// with a UserToken; the minted token carries identity (user) and binding
+// (cluster, installation) but no scope — scope is read live from the
+// PluginInstallation CR by kube-api-proxy.
 func (s *AuthnServer) MintPluginToken(
 	ctx context.Context,
 	req *connect.Request[authnv1.MintPluginTokenRequest],
@@ -37,8 +36,8 @@ func (s *AuthnServer) MintPluginToken(
 
 	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 	installationID := uuid.MustParse(req.Msg.GetInstallationId())
-
 	userID := claims.UserID()
+
 	manifest, err := s.resolveInstallation(ctx, userID, clusterID, installationID)
 	if err != nil {
 		return nil, err
@@ -65,8 +64,9 @@ func (s *AuthnServer) MintPluginToken(
 	}.Build()), nil
 }
 
-// resolveInstallation runs the two-gate authorization check: OpenFGA
-// can_view on the cluster, then a plugin-proxy installation lookup.
+// resolveInstallation runs the two-gate check: OpenFGA can_view on the
+// cluster, then a plugin-proxy installation lookup. Unauthorized and missing
+// collapse to NotFound so the caller cannot probe existence.
 func (s *AuthnServer) resolveInstallation(
 	ctx context.Context,
 	userID, clusterID, installationID uuid.UUID,
@@ -84,8 +84,6 @@ func (s *AuthnServer) resolveInstallation(
 	if !decision.Decision {
 		s.logger.Debug("mint plugin token: cluster view denied",
 			"user_id", userID, "cluster_id", clusterID)
-		// FUN-12: collapse unauthorized + missing to NotFound to avoid
-		// leaking existence of resources the caller cannot see.
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("plugin installation not found"))
 	}
 
@@ -95,10 +93,6 @@ func (s *AuthnServer) resolveInstallation(
 		s.logger.Debug("mint plugin token: installation not found",
 			"cluster_id", clusterID, "installation_id", installationID)
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("plugin installation not found"))
-	case errors.Is(err, ErrInstallationTerminating):
-		s.logger.Debug("mint plugin token: installation terminating",
-			"cluster_id", clusterID, "installation_id", installationID)
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("plugin installation is terminating"))
 	case err != nil:
 		s.logger.Error("mint plugin token: installation lookup failed",
 			"error", err, "cluster_id", clusterID, "installation_id", installationID)
@@ -108,10 +102,6 @@ func (s *AuthnServer) resolveInstallation(
 	return manifest, nil
 }
 
-// signPluginToken produces an HS256-signed PluginToken carrying identity
-// (sub=user), binding (cluster_id, installation_id), and audit fields
-// (plugin_name, plugin_version, definition_hash). No scope is embedded — see
-// FUN-17 "Where the scope comes from".
 func (s *AuthnServer) signPluginToken(
 	userID, clusterID, installationID uuid.UUID,
 	manifest *InstallationManifest,

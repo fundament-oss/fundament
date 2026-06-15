@@ -7,6 +7,7 @@
 package authnv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
@@ -554,7 +555,7 @@ var File_authn_v1_authn_proto protoreflect.FileDescriptor
 
 const file_authn_v1_authn_proto_rawDesc = "" +
 	"\n" +
-	"\x14authn/v1/authn.proto\x12\bauthn.v1\x1a!google/protobuf/go_features.proto\"\x14\n" +
+	"\x14authn/v1/authn.proto\x12\bauthn.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\"\x14\n" +
 	"\x12GetUserInfoRequest\"9\n" +
 	"\x13GetUserInfoResponse\x12\"\n" +
 	"\x04user\x18\n" +
@@ -573,12 +574,12 @@ const file_authn_v1_authn_proto_rawDesc = "" +
 	"\n" +
 	"token_type\x18\x14 \x01(\tR\ttokenType\x12\x1d\n" +
 	"\n" +
-	"expires_in\x18\x1e \x01(\x03R\texpiresIn\"`\n" +
-	"\x16MintPluginTokenRequest\x12\x1d\n" +
+	"expires_in\x18\x1e \x01(\x03R\texpiresIn\"t\n" +
+	"\x16MintPluginTokenRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\x12'\n" +
-	"\x0finstallation_id\x18\x14 \x01(\tR\x0einstallationId\"z\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x121\n" +
+	"\x0finstallation_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0einstallationId\"z\n" +
 	"\x17MintPluginTokenResponse\x12!\n" +
 	"\faccess_token\x18\n" +
 	" \x01(\tR\vaccessToken\x12\x1d\n" +

@@ -5,6 +5,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
 import { file_google_protobuf_go_features } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file authn/v1/authn.proto.
  */
 export const file_authn_v1_authn: GenFile = /*@__PURE__*/
-  fileDesc("ChRhdXRobi92MS9hdXRobi5wcm90bxIIYXV0aG4udjEiFAoSR2V0VXNlckluZm9SZXF1ZXN0IjMKE0dldFVzZXJJbmZvUmVzcG9uc2USHAoEdXNlchgKIAEoCzIOLmF1dGhuLnYxLlVzZXIiYAoEVXNlchIKCgJpZBgKIAEoCRIYChBvcmdhbml6YXRpb25faWRzGBQgAygJEgwKBG5hbWUYHiABKAkSFAoMZXh0ZXJuYWxfcmVmGCggASgJEg4KBmdyb3VwcxgyIAMoCSIWChRFeGNoYW5nZVRva2VuUmVxdWVzdCJVChVFeGNoYW5nZVRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAyJFChZNaW50UGx1Z2luVG9rZW5SZXF1ZXN0EhIKCmNsdXN0ZXJfaWQYCiABKAkSFwoPaW5zdGFsbGF0aW9uX2lkGBQgASgJIlcKF01pbnRQbHVnaW5Ub2tlblJlc3BvbnNlEhQKDGFjY2Vzc190b2tlbhgKIAEoCRISCgp0b2tlbl90eXBlGBQgASgJEhIKCmV4cGlyZXNfaW4YHiABKAMyWgoMQXV0aG5TZXJ2aWNlEkoKC0dldFVzZXJJbmZvEhwuYXV0aG4udjEuR2V0VXNlckluZm9SZXF1ZXN0Gh0uYXV0aG4udjEuR2V0VXNlckluZm9SZXNwb25zZTK4AQoMVG9rZW5TZXJ2aWNlElAKDUV4Y2hhbmdlVG9rZW4SHi5hdXRobi52MS5FeGNoYW5nZVRva2VuUmVxdWVzdBofLmF1dGhuLnYxLkV4Y2hhbmdlVG9rZW5SZXNwb25zZRJWCg9NaW50UGx1Z2luVG9rZW4SIC5hdXRobi52MS5NaW50UGx1Z2luVG9rZW5SZXF1ZXN0GiEuYXV0aG4udjEuTWludFBsdWdpblRva2VuUmVzcG9uc2VCV1pLZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9hdXRobi1hcGkvcGtnL3Byb3RvL2dlbi9hdXRobi92MTthdXRobnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_google_protobuf_go_features]);
+  fileDesc("ChRhdXRobi92MS9hdXRobi5wcm90bxIIYXV0aG4udjEiFAoSR2V0VXNlckluZm9SZXF1ZXN0IjMKE0dldFVzZXJJbmZvUmVzcG9uc2USHAoEdXNlchgKIAEoCzIOLmF1dGhuLnYxLlVzZXIiYAoEVXNlchIKCgJpZBgKIAEoCRIYChBvcmdhbml6YXRpb25faWRzGBQgAygJEgwKBG5hbWUYHiABKAkSFAoMZXh0ZXJuYWxfcmVmGCggASgJEg4KBmdyb3VwcxgyIAMoCSIWChRFeGNoYW5nZVRva2VuUmVxdWVzdCJVChVFeGNoYW5nZVRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAyJZChZNaW50UGx1Z2luVG9rZW5SZXF1ZXN0EhwKCmNsdXN0ZXJfaWQYCiABKAlCCLpIBXIDsAEBEiEKD2luc3RhbGxhdGlvbl9pZBgUIAEoCUIIukgFcgOwAQEiVwoXTWludFBsdWdpblRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAogASgJEhIKCnRva2VuX3R5cGUYFCABKAkSEgoKZXhwaXJlc19pbhgeIAEoAzJaCgxBdXRoblNlcnZpY2USSgoLR2V0VXNlckluZm8SHC5hdXRobi52MS5HZXRVc2VySW5mb1JlcXVlc3QaHS5hdXRobi52MS5HZXRVc2VySW5mb1Jlc3BvbnNlMrgBCgxUb2tlblNlcnZpY2USUAoNRXhjaGFuZ2VUb2tlbhIeLmF1dGhuLnYxLkV4Y2hhbmdlVG9rZW5SZXF1ZXN0Gh8uYXV0aG4udjEuRXhjaGFuZ2VUb2tlblJlc3BvbnNlElYKD01pbnRQbHVnaW5Ub2tlbhIgLmF1dGhuLnYxLk1pbnRQbHVnaW5Ub2tlblJlcXVlc3QaIS5hdXRobi52MS5NaW50UGx1Z2luVG9rZW5SZXNwb25zZUJXWktnaXRodWIuY29tL2Z1bmRhbWVudC1vc3MvZnVuZGFtZW50L2F1dGhuLWFwaS9wa2cvcHJvdG8vZ2VuL2F1dGhuL3YxO2F1dGhudjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_go_features]);
 
 /**
  * @generated from message authn.v1.GetUserInfoRequest
@@ -247,9 +248,8 @@ export const TokenService: GenService<{
   /**
    * MintPluginToken issues a short-lived JWT scoped to a specific plugin
    * installation on a specific cluster. The caller authenticates with a
-   * UserToken (Authorization: Bearer, or auth cookie). The minted token
-   * carries aud=fundament-plugin and is rejected by every API except
-   * kube-api-proxy and plugin-proxy. See FUN-17.
+   * UserToken. The minted token carries aud=fundament-plugin and is rejected
+   * by every API except kube-api-proxy and plugin-proxy.
    *
    * @generated from rpc authn.v1.TokenService.MintPluginToken
    */

@@ -43,9 +43,8 @@ type Config struct {
 	FrontendURL  string
 }
 
-// authzEvaluator is the subset of authz.Client that authn-api depends on.
-// Pulling it behind an interface lets handlers be unit-tested without an
-// OpenFGA SDK in the loop.
+// authzEvaluator is the subset of authz.Client used by handlers — extracted
+// so handler tests do not need an OpenFGA SDK.
 type authzEvaluator interface {
 	Evaluate(ctx context.Context, req authz.EvaluationRequest) (authz.Decision, error)
 }

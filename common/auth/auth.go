@@ -39,9 +39,9 @@ const (
 // Claims represents the JWT claims used across fundament services.
 type Claims struct {
 	jwt.RegisteredClaims
-	OrganizationIDs []uuid.UUID `json:"organization_ids,omitempty"`
-	Groups          []string    `json:"groups,omitempty"`
-	Name            string      `json:"name,omitempty"`
+	OrganizationIDs []uuid.UUID `json:"organization_ids"`
+	Groups          []string    `json:"groups"`
+	Name            string      `json:"name"`
 }
 
 func (c *Claims) UserID() uuid.UUID {
@@ -57,14 +57,10 @@ type Validator struct {
 	logger           *slog.Logger
 }
 
-// NewValidator creates a new Validator with the given JWT secret, cookie name
-// and expected issuer. Tokens whose "iss" claim does not match expectedIssuer
-// are rejected, which prevents tokens minted by another service that shares the
-// same JWT secret from being accepted here. The validator accepts any audience;
-// prefer NewValidatorForAudience so services explicitly declare the token type
-// they accept. The escalation wall described in FUN-17 depends on every
-// UserToken validator rejecting fundament-plugin; an any-audience validator
-// silently accepts both. Logger is optional and can be nil.
+// NewValidator creates a Validator pinned to a cookie name and issuer. Tokens
+// whose `iss` does not match are rejected. The validator accepts any audience
+// — prefer NewValidatorForAudience so a service explicitly declares the token
+// type it accepts. Logger is optional.
 func NewValidator(jwtSecret []byte, cookieName, expectedIssuer string, logger *slog.Logger) *Validator {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))

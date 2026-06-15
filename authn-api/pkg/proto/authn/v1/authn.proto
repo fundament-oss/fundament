@@ -2,6 +2,7 @@ edition = "2023";
 
 package authn.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/go_features.proto";
 
 option features.field_presence = IMPLICIT;
@@ -21,9 +22,8 @@ service TokenService {
   rpc ExchangeToken(ExchangeTokenRequest) returns (ExchangeTokenResponse);
   // MintPluginToken issues a short-lived JWT scoped to a specific plugin
   // installation on a specific cluster. The caller authenticates with a
-  // UserToken (Authorization: Bearer, or auth cookie). The minted token
-  // carries aud=fundament-plugin and is rejected by every API except
-  // kube-api-proxy and plugin-proxy. See FUN-17.
+  // UserToken. The minted token carries aud=fundament-plugin and is rejected
+  // by every API except kube-api-proxy and plugin-proxy.
   rpc MintPluginToken(MintPluginTokenRequest) returns (MintPluginTokenResponse);
 }
 
@@ -65,9 +65,9 @@ message ExchangeTokenResponse {
 // Authorization header or auth cookie.
 message MintPluginTokenRequest {
   // The cluster the plugin installation lives on.
-  string cluster_id = 10;
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
   // The plugin installation to act through (PluginInstallation CR name).
-  string installation_id = 20;
+  string installation_id = 20 [(buf.validate.field).string = {uuid: true}];
 }
 
 // MintPluginToken response

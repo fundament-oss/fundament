@@ -127,9 +127,8 @@ type TokenServiceClient interface {
 	ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error)
 	// MintPluginToken issues a short-lived JWT scoped to a specific plugin
 	// installation on a specific cluster. The caller authenticates with a
-	// UserToken (Authorization: Bearer, or auth cookie). The minted token
-	// carries aud=fundament-plugin and is rejected by every API except
-	// kube-api-proxy and plugin-proxy. See FUN-17.
+	// UserToken. The minted token carries aud=fundament-plugin and is rejected
+	// by every API except kube-api-proxy and plugin-proxy.
 	MintPluginToken(context.Context, *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error)
 }
 
@@ -182,9 +181,8 @@ type TokenServiceHandler interface {
 	ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error)
 	// MintPluginToken issues a short-lived JWT scoped to a specific plugin
 	// installation on a specific cluster. The caller authenticates with a
-	// UserToken (Authorization: Bearer, or auth cookie). The minted token
-	// carries aud=fundament-plugin and is rejected by every API except
-	// kube-api-proxy and plugin-proxy. See FUN-17.
+	// UserToken. The minted token carries aud=fundament-plugin and is rejected
+	// by every API except kube-api-proxy and plugin-proxy.
 	MintPluginToken(context.Context, *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error)
 }
 

@@ -44,7 +44,7 @@ const (
 type PluginInstallationServiceClient interface {
 	// GetInstallationManifest resolves a PluginInstallation's identity by
 	// (cluster_id, installation_id). A missing installation is signalled with a
-	// NotFound error; a terminating installation with FailedPrecondition.
+	// NotFound error.
 	GetInstallationManifest(context.Context, *connect.Request[v1.GetInstallationManifestRequest]) (*connect.Response[v1.GetInstallationManifestResponse], error)
 }
 
@@ -83,7 +83,7 @@ func (c *pluginInstallationServiceClient) GetInstallationManifest(ctx context.Co
 type PluginInstallationServiceHandler interface {
 	// GetInstallationManifest resolves a PluginInstallation's identity by
 	// (cluster_id, installation_id). A missing installation is signalled with a
-	// NotFound error; a terminating installation with FailedPrecondition.
+	// NotFound error.
 	GetInstallationManifest(context.Context, *connect.Request[v1.GetInstallationManifestRequest]) (*connect.Response[v1.GetInstallationManifestResponse], error)
 }
 

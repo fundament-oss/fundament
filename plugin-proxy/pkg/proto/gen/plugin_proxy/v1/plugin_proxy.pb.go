@@ -7,6 +7,7 @@
 package pluginproxyv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/gofeaturespb"
@@ -21,7 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// GetInstallationManifestRequest identifies the installation to resolve.
 type GetInstallationManifestRequest struct {
 	state                     protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_ClusterId      string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId"`
@@ -80,9 +80,7 @@ func (x *GetInstallationManifestRequest) SetInstallationId(v string) {
 type GetInstallationManifestRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	// The cluster the plugin installation lives on.
-	ClusterId string
-	// The PluginInstallation to resolve.
+	ClusterId      string
 	InstallationId string
 }
 
@@ -95,10 +93,8 @@ func (b0 GetInstallationManifestRequest_builder) Build() *GetInstallationManifes
 	return m0
 }
 
-// GetInstallationManifestResponse carries the installation's IDENTITY only.
-// Per FUN-17 it returns no RBAC: the plugin's scope lives in the immutable
-// PluginDefinition and is materialised into a Kubernetes Role by
-// plugin-controller. authn-api signs these fields into the PluginToken.
+// GetInstallationManifestResponse carries the installation's identity only;
+// it never carries RBAC. authn-api signs these fields into the PluginToken.
 type GetInstallationManifestResponse struct {
 	state                     protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_PluginName     string                 `protobuf:"bytes,10,opt,name=plugin_name,json=pluginName"`
@@ -193,16 +189,13 @@ func (x *GetInstallationManifestResponse) SetStatus(v string) {
 type GetInstallationManifestResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	// The plugin name, from spec.definitionRef.pluginName.
-	PluginName string
-	// The plugin version, from spec.definitionRef.pluginVersion.
+	PluginName    string
 	PluginVersion string
-	// The content hash of the consented PluginDefinition, from
-	// spec.definitionRef.definitionHash. Carried for audit only.
+	// The content hash of the consented PluginDefinition. Audit only.
 	DefinitionHash string
 	// The organization that owns the cluster.
 	OrganizationId string
-	// The installation lifecycle phase, e.g. "Running" (status.phase).
+	// The installation lifecycle phase (status.phase), e.g. "Running".
 	Status string
 }
 
@@ -222,12 +215,12 @@ var File_plugin_proxy_v1_plugin_proxy_proto protoreflect.FileDescriptor
 
 const file_plugin_proxy_v1_plugin_proxy_proto_rawDesc = "" +
 	"\n" +
-	"\"plugin_proxy/v1/plugin_proxy.proto\x12\x0fplugin_proxy.v1\x1a!google/protobuf/go_features.proto\"h\n" +
-	"\x1eGetInstallationManifestRequest\x12\x1d\n" +
+	"\"plugin_proxy/v1/plugin_proxy.proto\x12\x0fplugin_proxy.v1\x1a\x1bbuf/validate/validate.proto\x1a!google/protobuf/go_features.proto\"|\n" +
+	"\x1eGetInstallationManifestRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tR\tclusterId\x12'\n" +
-	"\x0finstallation_id\x18\x14 \x01(\tR\x0einstallationId\"\xd3\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x121\n" +
+	"\x0finstallation_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0einstallationId\"\xd3\x01\n" +
 	"\x1fGetInstallationManifestResponse\x12\x1f\n" +
 	"\vplugin_name\x18\n" +
 	" \x01(\tR\n" +

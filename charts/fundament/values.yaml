@@ -155,7 +155,7 @@ pluginProxy:
   enabled: false
   replicas: 1
   logLevel: info
-  mode: mock # "mock" or "real" (real lands in FUN-17 Plan C)
+  mode: mock # "mock" or "real" (real is future work)
 
 # DCIM API
 dcimApi:
