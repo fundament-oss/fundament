@@ -160,7 +160,7 @@ export type MintPluginTokenRequest = Message<"authn.v1.MintPluginTokenRequest"> 
   clusterId: string;
 
   /**
-   * The plugin installation to act through (PluginInstallation CR name).
+   * The plugin installation to act through (PluginInstallation CR UID).
    *
    * @generated from field: string installation_id = 20;
    */

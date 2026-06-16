@@ -7,6 +7,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	pluginproxyv1 "github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
@@ -34,7 +36,7 @@ func (f *fakeProxyClient) GetInstallationManifest(
 func TestPluginProxyLookup_Success(t *testing.T) {
 	lookup := NewPluginProxyLookup(&fakeProxyClient{
 		resp: pluginproxyv1.GetInstallationManifestResponse_builder{
-			PluginName:     "cert-manager",
+			PluginName:     testPluginName,
 			PluginVersion:  "v1.17.2",
 			DefinitionHash: "sha256:1f3c9a",
 			OrganizationId: "00000000-0000-0000-0000-000000000abc",
@@ -43,18 +45,10 @@ func TestPluginProxyLookup_Success(t *testing.T) {
 	})
 
 	manifest, err := lookup.GetInstallationManifest(context.Background(), uuid.New(), uuid.New())
-	if err != nil {
-		t.Fatalf("GetInstallationManifest: %v", err)
-	}
-	if manifest.PluginName != "cert-manager" {
-		t.Errorf("plugin_name = %q", manifest.PluginName)
-	}
-	if manifest.PluginVersion != "v1.17.2" {
-		t.Errorf("plugin_version = %q", manifest.PluginVersion)
-	}
-	if manifest.DefinitionHash != "sha256:1f3c9a" {
-		t.Errorf("definition_hash = %q", manifest.DefinitionHash)
-	}
+	require.NoError(t, err, "GetInstallationManifest")
+	assert.Equal(t, testPluginName, manifest.PluginName)
+	assert.Equal(t, "v1.17.2", manifest.PluginVersion)
+	assert.Equal(t, "sha256:1f3c9a", manifest.DefinitionHash)
 }
 
 func TestPluginProxyLookup_NotFoundMapsToSentinel(t *testing.T) {
@@ -63,9 +57,7 @@ func TestPluginProxyLookup_NotFoundMapsToSentinel(t *testing.T) {
 	})
 
 	_, err := lookup.GetInstallationManifest(context.Background(), uuid.New(), uuid.New())
-	if !errors.Is(err, ErrInstallationNotFound) {
-		t.Errorf("err = %v, want ErrInstallationNotFound", err)
-	}
+	assert.ErrorIs(t, err, ErrInstallationNotFound)
 }
 
 func TestPluginProxyLookup_OtherErrorIsNotSentinel(t *testing.T) {
@@ -74,10 +66,6 @@ func TestPluginProxyLookup_OtherErrorIsNotSentinel(t *testing.T) {
 	})
 
 	_, err := lookup.GetInstallationManifest(context.Background(), uuid.New(), uuid.New())
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if errors.Is(err, ErrInstallationNotFound) {
-		t.Errorf("transport error %v should not map to a sentinel", err)
-	}
+	require.Error(t, err, "expected error")
+	assert.NotErrorIs(t, err, ErrInstallationNotFound, "transport error should not map to a sentinel")
 }

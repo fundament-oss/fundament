@@ -11,55 +11,64 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
+	"github.com/google/uuid"
+)
+
+const (
+	MockPluginName    = "test-plugin"
+	MockPluginVersion = "v1.17.2"
+	MockPluginHash    = "sha256@mock"
 )
 
 // MockClusterID matches the acme-corp cluster seeded in db/testdata so the
 // e2e suite can address the mock cluster by ID.
-const MockClusterID = "019b4000-2000-7000-8000-000000000001"
+var MockClusterID = uuid.MustParse("019b4000-2000-7000-8000-000000000001")
 
-// MockInstallationUID is the UID of the cert-manager installation served by
+// MockInstallationID is the UID of the test-plugin installation served by
 // the mock cluster client.
-const MockInstallationUID = "00000000-0000-0000-0000-000000000001"
+var MockInstallationID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
 // MockOrganizationID is the organization that owns MockClusterID.
-const MockOrganizationID = "019b4000-1000-7000-8000-000000000001"
+var MockOrganizationID = uuid.MustParse("019b4000-1000-7000-8000-000000000001")
 
 // MockClusterAccess implements ClusterAccess in-memory with one cluster
 // hosting one cert-manager PluginInstallation.
 type MockClusterAccess struct {
 	client   client.Client
-	clusters map[string]string
+	clusters map[uuid.UUID]uuid.UUID
 }
 
 // NewMockClusterAccess returns a ClusterAccess serving the seeded mock
 // cluster.
 func NewMockClusterAccess() *MockClusterAccess {
 	scheme := runtime.NewScheme()
-	_ = pluginsv1.AddToScheme(scheme)
+	if err := pluginsv1.AddToScheme(scheme); err != nil {
+		panic(fmt.Errorf("add plugins scheme: %w", err))
+	}
 	cr := &pluginsv1.PluginInstallation{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cert-manager",
-			UID:  types.UID(MockInstallationUID),
+			Name: MockPluginName,
+			UID:  types.UID(MockInstallationID.String()),
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
 			Image: "ghcr.io/example/cert-manager:v1.17.2",
 			DefinitionRef: pluginsv1.DefinitionRef{
-				PluginName:     "cert-manager",
-				PluginVersion:  "v1.17.2",
-				DefinitionHash: "sha256:mock",
+				PluginName:     MockPluginName,
+				PluginVersion:  MockPluginVersion,
+				DefinitionHash: MockPluginHash,
 			},
 		},
 		Status: pluginsv1.PluginInstallationStatus{Phase: pluginsv1.PluginPhaseRunning},
 	}
 	return &MockClusterAccess{
 		client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(cr).Build(),
-		clusters: map[string]string{
+		clusters: map[uuid.UUID]uuid.UUID{
 			MockClusterID: MockOrganizationID,
 		},
 	}
 }
 
-func (m *MockClusterAccess) ForCluster(_ context.Context, clusterID string) (*ClusterTarget, error) {
+func (m *MockClusterAccess) ForCluster(_ context.Context, clusterID uuid.UUID) (*ClusterTarget, error) {
 	orgID, ok := m.clusters[clusterID]
 	if !ok {
 		return nil, fmt.Errorf("cluster %q not known to mock", clusterID)

@@ -220,14 +220,14 @@ const file_plugin_proxy_v1_plugin_proxy_proto_rawDesc = "" +
 	"\n" +
 	"cluster_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x121\n" +
-	"\x0finstallation_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0einstallationId\"\xd3\x01\n" +
+	"\x0finstallation_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0einstallationId\"\xdd\x01\n" +
 	"\x1fGetInstallationManifestResponse\x12\x1f\n" +
 	"\vplugin_name\x18\n" +
 	" \x01(\tR\n" +
 	"pluginName\x12%\n" +
 	"\x0eplugin_version\x18\x14 \x01(\tR\rpluginVersion\x12'\n" +
-	"\x0fdefinition_hash\x18\x1e \x01(\tR\x0edefinitionHash\x12'\n" +
-	"\x0forganization_id\x18( \x01(\tR\x0eorganizationId\x12\x16\n" +
+	"\x0fdefinition_hash\x18\x1e \x01(\tR\x0edefinitionHash\x121\n" +
+	"\x0forganization_id\x18( \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganizationId\x12\x16\n" +
 	"\x06status\x182 \x01(\tR\x06status2\x99\x01\n" +
 	"\x19PluginInstallationService\x12|\n" +
 	"\x17GetInstallationManifest\x12/.plugin_proxy.v1.GetInstallationManifestRequest\x1a0.plugin_proxy.v1.GetInstallationManifestResponseBgZ[github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1;pluginproxyv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"

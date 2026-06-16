@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +14,8 @@ import (
 	"connectrpc.com/validate"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	authnv1 "github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1"
 	"github.com/fundament-oss/fundament/authn-api/pkg/proto/gen/authn/v1/authnv1connect"
@@ -99,9 +100,7 @@ func (h *mintHarness) userToken(t *testing.T) string {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(h.secret)
-	if err != nil {
-		t.Fatalf("sign user token: %v", err)
-	}
+	require.NoError(t, err, "sign user token")
 	return signed
 }
 
@@ -117,9 +116,11 @@ func (h *mintHarness) request(t *testing.T, authHeader string) *connect.Request[
 	return req
 }
 
+const testPluginName = "test-plugin"
+
 func activeManifest() *InstallationManifest {
 	return &InstallationManifest{
-		PluginName:     "cert-manager",
+		PluginName:     testPluginName,
 		PluginVersion:  "1.2.3",
 		DefinitionHash: "sha256:1f3c9a",
 	}
@@ -130,39 +131,20 @@ func TestMintPluginToken_Success(t *testing.T) {
 	req := h.request(t, "Bearer "+h.userToken(t))
 
 	resp, err := h.server.MintPluginToken(context.Background(), req)
-	if err != nil {
-		t.Fatalf("MintPluginToken: %v", err)
-	}
+	require.NoError(t, err, "MintPluginToken")
 
-	if got := resp.Msg.GetTokenType(); got != "Bearer" {
-		t.Errorf("token_type = %q, want Bearer", got)
-	}
-	if got := resp.Msg.GetExpiresIn(); got != int64(PluginTokenExpiry.Seconds()) {
-		t.Errorf("expires_in = %d, want %d", got, int64(PluginTokenExpiry.Seconds()))
-	}
+	assert.Equal(t, "Bearer", resp.Msg.GetTokenType())
+	assert.Equal(t, int64(PluginTokenExpiry.Seconds()), resp.Msg.GetExpiresIn())
 
 	claims, err := auth.ParsePluginToken(resp.Msg.GetAccessToken(), h.secret)
-	if err != nil {
-		t.Fatalf("parse minted token: %v", err)
-	}
-	if claims.Subject != h.userID.String() {
-		t.Errorf("sub = %q, want %q", claims.Subject, h.userID)
-	}
-	if claims.ClusterID != h.clusterID.String() {
-		t.Errorf("cluster_id = %q, want %q", claims.ClusterID, h.clusterID)
-	}
-	if claims.InstallationID != h.installationID.String() {
-		t.Errorf("installation_id = %q, want %q", claims.InstallationID, h.installationID)
-	}
-	if claims.PluginName != "cert-manager" {
-		t.Errorf("plugin_name = %q, want cert-manager", claims.PluginName)
-	}
-	if claims.PluginVersion != "1.2.3" {
-		t.Errorf("plugin_version = %q, want 1.2.3", claims.PluginVersion)
-	}
-	if claims.DefinitionHash != "sha256:1f3c9a" {
-		t.Errorf("definition_hash = %q, want sha256:1f3c9a", claims.DefinitionHash)
-	}
+	require.NoError(t, err, "parse minted token")
+
+	assert.Equal(t, h.userID.String(), claims.Subject)
+	assert.Equal(t, h.clusterID.String(), claims.ClusterID)
+	assert.Equal(t, h.installationID.String(), claims.InstallationID)
+	assert.Equal(t, testPluginName, claims.PluginName)
+	assert.Equal(t, "1.2.3", claims.PluginVersion)
+	assert.Equal(t, "sha256:1f3c9a", claims.DefinitionHash)
 }
 
 func TestMintPluginToken_NoAuthorization_Unauthenticated(t *testing.T) {
@@ -185,9 +167,7 @@ func TestMintPluginToken_PluginAudienceRejected(t *testing.T) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(h.secret)
-	if err != nil {
-		t.Fatalf("sign: %v", err)
-	}
+	require.NoError(t, err, "sign")
 	req := h.request(t, "Bearer "+signed)
 
 	_, err = h.server.MintPluginToken(context.Background(), req)
@@ -201,9 +181,7 @@ func TestMintPluginToken_CanViewDenied_NotFound(t *testing.T) {
 	_, err := h.server.MintPluginToken(context.Background(), req)
 	assertConnectCode(t, err, connect.CodeNotFound)
 
-	if h.lookup.calls != 0 {
-		t.Errorf("installation lookup called %d times; expected 0 when cluster view denied", h.lookup.calls)
-	}
+	assert.Equal(t, 0, h.lookup.calls, "installation lookup should not be called when cluster view denied")
 }
 
 func TestMintPluginToken_InstallationNotFound(t *testing.T) {
@@ -222,19 +200,15 @@ func TestMintedTokenRejectedAsUserToken(t *testing.T) {
 	req := h.request(t, "Bearer "+h.userToken(t))
 
 	resp, err := h.server.MintPluginToken(context.Background(), req)
-	if err != nil {
-		t.Fatalf("MintPluginToken: %v", err)
-	}
+	require.NoError(t, err, "MintPluginToken")
 
 	userValidator := auth.NewValidatorForAudience(h.secret,
 		auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, nil)
 	header := http.Header{}
 	header.Set("Authorization", "Bearer "+resp.Msg.GetAccessToken())
-	if _, err = userValidator.Validate(header); err == nil {
-		t.Fatal("user validator accepted a PluginToken")
-	} else if !strings.Contains(err.Error(), "audience") {
-		t.Errorf("expected audience-mismatch error, got: %v", err)
-	}
+	_, err = userValidator.Validate(header)
+	require.Error(t, err, "user validator accepted a PluginToken")
+	assert.Contains(t, err.Error(), "audience", "expected audience-mismatch error")
 }
 
 // TestMintPluginToken_WrongSecret_Unauthenticated guards the signature gate.
@@ -250,9 +224,7 @@ func TestMintPluginToken_WrongSecret_Unauthenticated(t *testing.T) {
 	}
 	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).
 		SignedString([]byte("different-secret"))
-	if err != nil {
-		t.Fatalf("sign: %v", err)
-	}
+	require.NoError(t, err, "sign")
 	req := h.request(t, "Bearer "+signed)
 
 	_, err = h.server.MintPluginToken(context.Background(), req)
@@ -271,9 +243,7 @@ func TestMintPluginToken_ExpiredToken_Unauthenticated(t *testing.T) {
 		},
 	}
 	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(h.secret)
-	if err != nil {
-		t.Fatalf("sign: %v", err)
-	}
+	require.NoError(t, err, "sign")
 	req := h.request(t, "Bearer "+signed)
 
 	_, err = h.server.MintPluginToken(context.Background(), req)
@@ -302,12 +272,8 @@ func TestMintPluginToken_MalformedUUID_InvalidArgument(t *testing.T) {
 	_, err := client.MintPluginToken(context.Background(), req)
 	assertConnectCode(t, err, connect.CodeInvalidArgument)
 
-	if h.authz.calls != 0 {
-		t.Errorf("authz.Evaluate called %d times; expected 0 when proto validation rejects", h.authz.calls)
-	}
-	if h.lookup.calls != 0 {
-		t.Errorf("installation lookup called %d times; expected 0 when proto validation rejects", h.lookup.calls)
-	}
+	assert.Equal(t, 0, h.authz.calls, "authz.Evaluate should not be called when proto validation rejects")
+	assert.Equal(t, 0, h.lookup.calls, "installation lookup should not be called when proto validation rejects")
 }
 
 func TestMintPluginToken_AuthzError_Internal(t *testing.T) {
@@ -321,14 +287,8 @@ func TestMintPluginToken_AuthzError_Internal(t *testing.T) {
 
 func assertConnectCode(t *testing.T, err error, want connect.Code) {
 	t.Helper()
-	if err == nil {
-		t.Fatalf("expected connect error with code %s, got nil", want)
-	}
+	require.Error(t, err, "expected connect error with code %s", want)
 	var ce *connect.Error
-	if !errors.As(err, &ce) {
-		t.Fatalf("expected *connect.Error, got %T: %v", err, err)
-	}
-	if ce.Code() != want {
-		t.Fatalf("connect code = %s, want %s (err: %v)", ce.Code(), want, err)
-	}
+	require.ErrorAs(t, err, &ce, "expected *connect.Error")
+	require.Equal(t, want, ce.Code(), "connect code mismatch (err: %v)", err)
 }

@@ -448,7 +448,7 @@ type MintPluginTokenRequest_builder struct {
 
 	// The cluster the plugin installation lives on.
 	ClusterId string
-	// The plugin installation to act through (PluginInstallation CR name).
+	// The plugin installation to act through (PluginInstallation CR UID).
 	InstallationId string
 }
 

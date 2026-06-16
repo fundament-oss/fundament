@@ -33,7 +33,7 @@ message GetInstallationManifestResponse {
   // The content hash of the consented PluginDefinition. Audit only.
   string definition_hash = 30;
   // The organization that owns the cluster.
-  string organization_id = 40;
+  string organization_id = 40 [(buf.validate.field).string = {uuid: true}];
   // The installation lifecycle phase (status.phase), e.g. "Running".
   string status = 50;
 }

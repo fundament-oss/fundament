@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,6 +15,7 @@ import (
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	pluginproxyv1 "github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
+	"github.com/google/uuid"
 )
 
 // ClusterAccess resolves a cluster ID to the data plugin-proxy needs to read
@@ -21,13 +23,13 @@ import (
 // and the owning organization. The mock implementation lives in mock.go; a
 // real (Gardener-backed) implementation is future work.
 type ClusterAccess interface {
-	ForCluster(ctx context.Context, clusterID string) (*ClusterTarget, error)
+	ForCluster(ctx context.Context, clusterID uuid.UUID) (*ClusterTarget, error)
 }
 
 // ClusterTarget is what ClusterAccess returns for a known cluster.
 type ClusterTarget struct {
 	Client         client.Client
-	OrganizationID string
+	OrganizationID uuid.UUID
 }
 
 // Service is the PluginInstallationService Connect handler.
@@ -51,8 +53,8 @@ func (s *Service) GetInstallationManifest(
 	ctx context.Context,
 	req *connect.Request[pluginproxyv1.GetInstallationManifestRequest],
 ) (*connect.Response[pluginproxyv1.GetInstallationManifestResponse], error) {
-	clusterID := req.Msg.GetClusterId()
-	installationID := req.Msg.GetInstallationId()
+	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	installationID := uuid.MustParse(req.Msg.GetInstallationId())
 
 	target, err := s.Cluster.ForCluster(ctx, clusterID)
 	if err != nil {
@@ -78,7 +80,7 @@ func (s *Service) GetInstallationManifest(
 		PluginName:     found.Spec.DefinitionRef.PluginName,
 		PluginVersion:  found.Spec.DefinitionRef.PluginVersion,
 		DefinitionHash: found.Spec.DefinitionRef.DefinitionHash,
-		OrganizationId: target.OrganizationID,
+		OrganizationId: target.OrganizationID.String(),
 		Status:         phase,
 	}.Build()
 	return connect.NewResponse(resp), nil
@@ -87,14 +89,14 @@ func (s *Service) GetInstallationManifest(
 // findInstallation locates a PluginInstallation by UID. A missing
 // installation is reported as NotFound.
 func (s *Service) findInstallation(
-	ctx context.Context, c client.Client, installationID string,
+	ctx context.Context, c client.Client, installationID uuid.UUID,
 ) (*pluginsv1.PluginInstallation, error) {
 	var list pluginsv1.PluginInstallationList
 	if err := c.List(ctx, &list); err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("list installations: %w", err))
 	}
 	for i := range list.Items {
-		if string(list.Items[i].UID) == installationID {
+		if strings.Compare(string(list.Items[i].UID), installationID.String()) == 0 {
 			return &list.Items[i], nil
 		}
 	}

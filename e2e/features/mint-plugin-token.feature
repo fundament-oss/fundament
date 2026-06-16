@@ -20,7 +20,7 @@ Feature: Mint Plugin Token
     And the plugin token audience should be "fundament-plugin"
     And the plugin token subject should be the authenticated user
     And the plugin token should bind the cluster and installation
-    And the plugin token should carry the plugin name "cert-manager"
+    And the plugin token should carry the plugin name "test-plugin"
 
   @api @mint @negative
   Scenario: Mint without authentication fails

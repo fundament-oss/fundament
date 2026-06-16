@@ -10,6 +10,9 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/validate"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,41 +27,39 @@ import (
 func newTestScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	s := runtime.NewScheme()
-	if err := pluginsv1.AddToScheme(s); err != nil {
-		t.Fatalf("add plugins scheme: %v", err)
-	}
+	require.NoError(t, pluginsv1.AddToScheme(s), "add plugins scheme")
 	return s
 }
 
 // fakeClusterAccess returns a fixed client for every cluster_id.
 type fakeClusterAccess struct {
 	client client.Client
-	orgID  string
+	orgID  uuid.UUID
 }
 
-func (f *fakeClusterAccess) ForCluster(_ context.Context, _ string) (*ClusterTarget, error) {
+func (f *fakeClusterAccess) ForCluster(_ context.Context, _ uuid.UUID) (*ClusterTarget, error) {
 	return &ClusterTarget{Client: f.client, OrganizationID: f.orgID}, nil
 }
 
 func testService(c client.Client) *Service {
 	return &Service{
 		Logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Cluster: &fakeClusterAccess{client: c, orgID: "org-uuid"},
+		Cluster: &fakeClusterAccess{client: c, orgID: MockOrganizationID},
 	}
 }
 
-func certManagerCR() *pluginsv1.PluginInstallation {
+func testPluginCR() *pluginsv1.PluginInstallation {
 	return &pluginsv1.PluginInstallation{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cert-manager",
-			UID:  types.UID(MockInstallationUID),
+			Name: MockPluginName,
+			UID:  types.UID(MockInstallationID.String()),
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
-			Image: "ghcr.io/example/cert-manager:v1.17.2",
+			Image: "ghcr.io/example/" + MockPluginName + ":" + MockPluginVersion,
 			DefinitionRef: pluginsv1.DefinitionRef{
-				PluginName:     "cert-manager",
-				PluginVersion:  "v1.17.2",
-				DefinitionHash: "sha256:1f3c9a",
+				PluginName:     MockPluginName,
+				PluginVersion:  MockPluginVersion,
+				DefinitionHash: MockPluginHash,
 			},
 		},
 		Status: pluginsv1.PluginInstallationStatus{Phase: pluginsv1.PluginPhaseRunning},
@@ -66,34 +67,22 @@ func certManagerCR() *pluginsv1.PluginInstallation {
 }
 
 func TestGetInstallationManifest_ReturnsIdentity(t *testing.T) {
-	c := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(certManagerCR()).Build()
+	c := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(testPluginCR()).Build()
 	svc := testService(c)
 
 	resp, err := svc.GetInstallationManifest(context.Background(),
 		connect.NewRequest(pluginproxyv1.GetInstallationManifestRequest_builder{
-			ClusterId:      "cluster-uuid",
-			InstallationId: MockInstallationUID,
+			ClusterId:      MockClusterID.String(),
+			InstallationId: MockInstallationID.String(),
 		}.Build()))
-	if err != nil {
-		t.Fatalf("GetInstallationManifest: %v", err)
-	}
+	require.NoError(t, err, "GetInstallationManifest")
 
 	msg := resp.Msg
-	if msg.GetPluginName() != "cert-manager" {
-		t.Errorf("plugin_name = %q", msg.GetPluginName())
-	}
-	if msg.GetPluginVersion() != "v1.17.2" {
-		t.Errorf("plugin_version = %q", msg.GetPluginVersion())
-	}
-	if msg.GetDefinitionHash() != "sha256:1f3c9a" {
-		t.Errorf("definition_hash = %q", msg.GetDefinitionHash())
-	}
-	if msg.GetOrganizationId() != "org-uuid" {
-		t.Errorf("organization_id = %q", msg.GetOrganizationId())
-	}
-	if msg.GetStatus() != "Running" {
-		t.Errorf("status = %q", msg.GetStatus())
-	}
+	assert.Equal(t, MockPluginName, msg.GetPluginName())
+	assert.Equal(t, MockPluginVersion, msg.GetPluginVersion())
+	assert.Equal(t, MockPluginHash, msg.GetDefinitionHash())
+	assert.Equal(t, MockOrganizationID.String(), msg.GetOrganizationId())
+	assert.Equal(t, "Running", msg.GetStatus())
 }
 
 // Mints keep working through teardown so plugin tokens can read state during
@@ -101,7 +90,7 @@ func TestGetInstallationManifest_ReturnsIdentity(t *testing.T) {
 // resolves; the phase is passed through for audit.
 func TestGetInstallationManifest_DeletingReturnsManifest(t *testing.T) {
 	now := metav1.Now()
-	cr := certManagerCR()
+	cr := testPluginCR()
 	cr.DeletionTimestamp = &now
 	cr.Finalizers = []string{"plugins.fundament.io/finalizer"}
 	c := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(cr).Build()
@@ -109,40 +98,32 @@ func TestGetInstallationManifest_DeletingReturnsManifest(t *testing.T) {
 
 	resp, err := svc.GetInstallationManifest(context.Background(),
 		connect.NewRequest(pluginproxyv1.GetInstallationManifestRequest_builder{
-			ClusterId:      "cluster-uuid",
-			InstallationId: MockInstallationUID,
+			ClusterId:      MockClusterID.String(),
+			InstallationId: MockInstallationID.String(),
 		}.Build()))
-	if err != nil {
-		t.Fatalf("GetInstallationManifest: %v", err)
-	}
-	if resp.Msg.GetPluginName() != "cert-manager" {
-		t.Errorf("plugin_name = %q", resp.Msg.GetPluginName())
-	}
+	require.NoError(t, err, "GetInstallationManifest")
+	assert.Equal(t, MockPluginName, resp.Msg.GetPluginName())
 }
 
 func TestGetInstallationManifest_TerminatingPhaseReturnsManifest(t *testing.T) {
-	cr := certManagerCR()
+	cr := testPluginCR()
 	cr.Status.Phase = pluginsv1.PluginPhaseTerminating
 	c := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(cr).Build()
 	svc := testService(c)
 
 	resp, err := svc.GetInstallationManifest(context.Background(),
 		connect.NewRequest(pluginproxyv1.GetInstallationManifestRequest_builder{
-			ClusterId:      "cluster-uuid",
-			InstallationId: MockInstallationUID,
+			ClusterId:      MockClusterID.String(),
+			InstallationId: MockInstallationID.String(),
 		}.Build()))
-	if err != nil {
-		t.Fatalf("GetInstallationManifest: %v", err)
-	}
-	if got := resp.Msg.GetStatus(); got != string(pluginsv1.PluginPhaseTerminating) {
-		t.Errorf("status = %q, want Terminating", got)
-	}
+	require.NoError(t, err, "GetInstallationManifest")
+	assert.Equal(t, string(pluginsv1.PluginPhaseTerminating), resp.Msg.GetStatus())
 }
 
 // Protovalidate rejects non-UUID inputs at the interceptor; without this
 // gate, the handler would forward bad input to the kube client.
 func TestGetInstallationManifest_MalformedUUID_InvalidArgument(t *testing.T) {
-	c := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(certManagerCR()).Build()
+	c := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(testPluginCR()).Build()
 	svc := testService(c)
 
 	mux := http.NewServeMux()
@@ -156,14 +137,10 @@ func TestGetInstallationManifest_MalformedUUID_InvalidArgument(t *testing.T) {
 	_, err := rpcClient.GetInstallationManifest(context.Background(),
 		connect.NewRequest(pluginproxyv1.GetInstallationManifestRequest_builder{
 			ClusterId:      "not-a-uuid",
-			InstallationId: MockInstallationUID,
+			InstallationId: MockInstallationID.String(),
 		}.Build()))
-	if err == nil {
-		t.Fatal("expected error for malformed cluster_id")
-	}
-	if connect.CodeOf(err) != connect.CodeInvalidArgument {
-		t.Errorf("code = %v, want InvalidArgument", connect.CodeOf(err))
-	}
+	require.Error(t, err, "expected error for malformed cluster_id")
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
 
 func TestGetInstallationManifest_NotFound(t *testing.T) {
@@ -172,15 +149,11 @@ func TestGetInstallationManifest_NotFound(t *testing.T) {
 
 	_, err := svc.GetInstallationManifest(context.Background(),
 		connect.NewRequest(pluginproxyv1.GetInstallationManifestRequest_builder{
-			ClusterId:      "cluster-uuid",
+			ClusterId:      MockClusterID.String(),
 			InstallationId: "11111111-0000-0000-0000-000000000000",
 		}.Build()))
-	if err == nil {
-		t.Fatal("expected error for missing CR")
-	}
-	if connect.CodeOf(err) != connect.CodeNotFound {
-		t.Errorf("code = %v, want NotFound", connect.CodeOf(err))
-	}
+	require.Error(t, err, "expected error for missing CR")
+	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }
 
 func TestMockClusterAccess_UnknownClusterUnavailable(t *testing.T) {
@@ -188,14 +161,10 @@ func TestMockClusterAccess_UnknownClusterUnavailable(t *testing.T) {
 	_, err := svc.GetInstallationManifest(context.Background(),
 		connect.NewRequest(pluginproxyv1.GetInstallationManifestRequest_builder{
 			ClusterId:      "00000000-0000-0000-0000-0000000000ff",
-			InstallationId: MockInstallationUID,
+			InstallationId: MockInstallationID.String(),
 		}.Build()))
-	if err == nil {
-		t.Fatal("expected error for unknown cluster")
-	}
-	if connect.CodeOf(err) != connect.CodeUnavailable {
-		t.Errorf("code = %v, want Unavailable", connect.CodeOf(err))
-	}
+	require.Error(t, err, "expected error for unknown cluster")
+	assert.Equal(t, connect.CodeUnavailable, connect.CodeOf(err))
 }
 
 func service(t *testing.T) *Service {
