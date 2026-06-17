@@ -78,7 +78,7 @@ export default class ResourceDetailComponent implements OnInit {
 
   protected resourceId = computed(() => this.routeParams().get('resourceId') ?? '');
 
-  protected resourceNamespace = computed(() => this.routeQuery().get('ns') ?? undefined);
+  protected resourceNamespace = computed(() => this.routeQuery().get('ns') || undefined);
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
@@ -149,15 +149,15 @@ export default class ResourceDetailComponent implements OnInit {
     this.errorMessage.set(null);
 
     try {
-      const { crd, resources } = await this.loader.loadCrdAndResources(
+      const { crd, resource } = await this.loader.loadCrdAndResource(
         this.pluginName(),
         this.resourceKind(),
         clusterId,
+        this.resourceId(),
+        this.resourceNamespace(),
       );
       this.crdDef.set(crd);
-      if (crd) {
-        this.resource.set(resources.find((r) => r.metadata.name === this.resourceId()));
-      }
+      this.resource.set(resource);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[ResourceDetail] Failed to load resource:', err);
@@ -186,6 +186,6 @@ export default class ResourceDetailComponent implements OnInit {
   asRecord = toRecord;
 
   getSpecValue(fieldName: string): unknown {
-    return this.resource()?.spec[fieldName] ?? null;
+    return this.resource()?.spec?.[fieldName] ?? null;
   }
 }

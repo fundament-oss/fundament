@@ -131,27 +131,35 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 	case isResourceList(path, "cert-manager.io", "v1", "certificates"):
 		return 200, r(mockCertificateListJSON), nil
 	case isResourceGet(path, "cert-manager.io", "v1", "certificates"):
-		return resourceGetResponse(mockCertificateListJSON, resourceNameFromPath(path), r)
+		return resourceGetResponse(mockCertificateListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	case isResourceList(path, "cert-manager.io", "v1", "certificaterequests"):
 		return 200, r(mockCertificateRequestListJSON), nil
 	case isResourceGet(path, "cert-manager.io", "v1", "certificaterequests"):
-		return resourceGetResponse(mockCertificateRequestListJSON, resourceNameFromPath(path), r)
+		return resourceGetResponse(mockCertificateRequestListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	case isResourceList(path, "cert-manager.io", "v1", "clusterissuers"):
 		return 200, r(mockClusterIssuerListJSON), nil
 	case isResourceGet(path, "cert-manager.io", "v1", "clusterissuers"):
-		return resourceGetResponse(mockClusterIssuerListJSON, resourceNameFromPath(path), r)
+		return resourceGetResponse(mockClusterIssuerListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	case isResourceList(path, "cert-manager.io", "v1", "issuers"):
 		return 200, r(mockIssuerListJSON), nil
 	case isResourceGet(path, "cert-manager.io", "v1", "issuers"):
-		return resourceGetResponse(mockIssuerListJSON, resourceNameFromPath(path), r)
+		return resourceGetResponse(mockIssuerListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	case isResourceList(path, "postgresql.cnpg.io", "v1", "databases"):
 		return 200, r(mockDatabaseListJSON), nil
+	case isResourceGet(path, "postgresql.cnpg.io", "v1", "databases"):
+		return resourceGetResponse(mockDatabaseListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	case isResourceList(path, "postgresql.cnpg.io", "v1", "backups"):
 		return 200, r(mockBackupListJSON), nil
+	case isResourceGet(path, "postgresql.cnpg.io", "v1", "backups"):
+		return resourceGetResponse(mockBackupListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	case isResourceList(path, "postgresql.cnpg.io", "v1", "subscriptions"):
 		return 200, r(mockSubscriptionListJSON), nil
+	case isResourceGet(path, "postgresql.cnpg.io", "v1", "subscriptions"):
+		return resourceGetResponse(mockSubscriptionListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	case isResourceList(path, "demo.fundament.io", "v1", "demoitems"):
 		return 200, r(mockDemoItemListJSON), nil
+	case isResourceGet(path, "demo.fundament.io", "v1", "demoitems"):
+		return resourceGetResponse(mockDemoItemListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	case isResourceList(path, "openfsc.fundament.io", "v1", "fscinstallations"):
 		return 200, r(mockFSCInstallationListJSON), nil
 	case isResourceGet(path, "openfsc.fundament.io", "v1", "fscinstallations"):
@@ -288,10 +296,25 @@ func resourceNameFromPath(path string) string {
 	return parts[len(parts)-1]
 }
 
-// resourceGetResponse extracts the single item with the given name from a list
-// JSON document and returns it as the body of a 200 response. Returns 404 if
-// no such item exists. The list document must have shape {"items": [...]}.
-func resourceGetResponse(listJSON, name string, r func(string) io.ReadCloser) (int, io.ReadCloser, error) {
+// resourceNamespaceFromPath returns the namespace segment from a namespaced
+// single-object path (.../namespaces/{ns}/{plural}/{name}). Returns "" for
+// cluster-scoped paths.
+func resourceNamespaceFromPath(path string) string {
+	parts := strings.Split(path, "/")
+	for i := 0; i+1 < len(parts); i++ {
+		if parts[i] == "namespaces" {
+			return parts[i+1]
+		}
+	}
+	return ""
+}
+
+// resourceGetResponse extracts the single item matching name (and namespace, when
+// the path is namespaced) from a list JSON document and returns it as the body of
+// a 200 response. Returns 404 if no such item exists. Matching on namespace
+// disambiguates objects that share a name across namespaces. The list document
+// must have shape {"items": [...]}.
+func resourceGetResponse(listJSON, name, namespace string, r func(string) io.ReadCloser) (int, io.ReadCloser, error) {
 	var data struct {
 		Items []map[string]any `json:"items"`
 	}
@@ -300,13 +323,17 @@ func resourceGetResponse(listJSON, name string, r func(string) io.ReadCloser) (i
 	}
 	for _, item := range data.Items {
 		meta, _ := item["metadata"].(map[string]any)
-		if meta != nil && meta["name"] == name {
-			b, err := json.Marshal(item)
-			if err != nil {
-				return 500, r(`{"message":"mock item marshal error"}`), nil
-			}
-			return 200, r(string(b)), nil
+		if meta == nil || meta["name"] != name {
+			continue
 		}
+		if namespace != "" && meta["namespace"] != namespace {
+			continue
+		}
+		b, err := json.Marshal(item)
+		if err != nil {
+			return 500, r(`{"message":"mock item marshal error"}`), nil
+		}
+		return 200, r(string(b)), nil
 	}
 	return 404, r(`{"message":"not found"}`), nil
 }

@@ -47,7 +47,6 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 			Crd:    ptr(entry.CRD),
 			List:   ptr(entry.List),
 			Detail: ptr(entry.Detail),
-			Create: ptr(entry.Create),
 			Icon:   ptr(entry.Icon),
 		}
 	}
@@ -58,7 +57,6 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 			Crd:    ptr(entry.CRD),
 			List:   ptr(entry.List),
 			Detail: ptr(entry.Detail),
-			Create: ptr(entry.Create),
 			Icon:   ptr(entry.Icon),
 		}
 	}

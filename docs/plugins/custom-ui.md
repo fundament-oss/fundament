@@ -4,9 +4,11 @@ sidebar:
   order: 3
 ---
 
-Plugins are responsible for shipping their own UI. For every CRD a plugin
-exposes in the sidebar, the plugin must provide custom list and detail
-views — the console does not generate fallback views from the CRD schema.
+Custom UI is optional. When a plugin omits `customComponents` for a CRD it
+exposes in the sidebar, the console renders a generated, **read-only** list and
+detail view from the CRD's OpenAPI schema (see
+[Console integration](console-integration#generated-fallback-ui)). Ship a custom
+UI when you need write actions or a bespoke layout — this page covers that case.
 
 Plugin UIs run inside sandboxed iframes in the Fundament console. Each
 plugin embeds its own HTML pages alongside the plugin binary and uses the

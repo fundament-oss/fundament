@@ -31,6 +31,10 @@ function buildDetailLink(resource: KubeResource): string[] {
   return ['.', resource.metadata.name];
 }
 
+function buildDetailQueryParams(resource: KubeResource): { ns: string } | null {
+  return resource.metadata.namespace ? { ns: resource.metadata.namespace } : null;
+}
+
 function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): string {
   const fullObj = {
     metadata: resource.metadata,
@@ -146,14 +150,6 @@ export default class ResourceListComponent implements OnInit {
     this.clusterContext.onClusterChange(clusterId);
   }
 
-  async onRefresh(): Promise<void> {
-    const clusterId = this.clusterContext.selectedClusterId();
-    const pluginName = this.pluginName();
-    if (pluginName && this.resourceKind() && clusterId !== null) {
-      await this.loadCrdsAndResources(pluginName, this.resourceKind(), clusterId);
-    }
-  }
-
   private async loadCrdsAndResources(
     pluginName: string,
     resourceKind: string,
@@ -182,6 +178,8 @@ export default class ResourceListComponent implements OnInit {
   }
 
   detailLink = buildDetailLink;
+
+  detailQueryParams = buildDetailQueryParams;
 
   formatCell = buildCellValue;
 }

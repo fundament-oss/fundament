@@ -81,7 +81,7 @@ func TestIsResourceGet(t *testing.T) {
 func TestResourceGetResponse(t *testing.T) {
 	r := func(s string) io.ReadCloser { return io.NopCloser(strings.NewReader(s)) }
 
-	status, body, err := resourceGetResponse(mockCertificateListJSON, "web-tls-cert", r)
+	status, body, err := resourceGetResponse(mockCertificateListJSON, "web-tls-cert", "", r)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -99,11 +99,69 @@ func TestResourceGetResponse(t *testing.T) {
 		t.Fatalf("wrong name: %v", meta["name"])
 	}
 
-	status, body, _ = resourceGetResponse(mockCertificateListJSON, "missing", r)
+	status, body, _ = resourceGetResponse(mockCertificateListJSON, "missing", "", r)
 	if status != 404 {
 		t.Fatalf("expected 404, got %d", status)
 	}
 	body.Close()
+}
+
+func TestResourceGetResponseNamespaceDisambiguation(t *testing.T) {
+	r := func(s string) io.ReadCloser { return io.NopCloser(strings.NewReader(s)) }
+
+	// mockDatabaseListJSON has two "app-db" objects, in "default" and "analytics".
+	// A namespaced get must return the object from the requested namespace.
+	for _, ns := range []string{"default", "analytics"} {
+		status, body, err := resourceGetResponse(mockDatabaseListJSON, "app-db", ns, r)
+		if err != nil {
+			t.Fatalf("ns %q: err: %v", ns, err)
+		}
+		if status != 200 {
+			t.Fatalf("ns %q: status = %d", ns, status)
+		}
+		b, _ := io.ReadAll(body)
+		body.Close()
+		var item map[string]any
+		if err := json.Unmarshal(b, &item); err != nil {
+			t.Fatalf("ns %q: unmarshal: %v", ns, err)
+		}
+		meta, _ := item["metadata"].(map[string]any)
+		if meta["name"] != "app-db" || meta["namespace"] != ns {
+			t.Fatalf("ns %q: got name=%v namespace=%v", ns, meta["name"], meta["namespace"])
+		}
+	}
+}
+
+func TestMockClientDoResourceGet(t *testing.T) {
+	m := &MockClient{}
+	ctx := context.Background()
+
+	// Namespaced single-object get must return the object (with spec) from the
+	// requested namespace — the path the generated detail view now uses.
+	status, body, err := m.Do(ctx, http.MethodGet,
+		"/apis/postgresql.cnpg.io/v1/namespaces/analytics/databases/app-db", nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if status != 200 {
+		t.Fatalf("status = %d", status)
+	}
+	defer body.Close()
+	b, _ := io.ReadAll(body)
+	var obj map[string]any
+	if err := json.Unmarshal(b, &obj); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if obj["kind"] != "Database" {
+		t.Fatalf("expected a single Database object, got kind=%v", obj["kind"])
+	}
+	meta, _ := obj["metadata"].(map[string]any)
+	if meta["namespace"] != "analytics" {
+		t.Fatalf("wrong namespace: %v", meta["namespace"])
+	}
+	if _, ok := obj["spec"].(map[string]any); !ok {
+		t.Fatalf("returned object has no spec: %s", b)
+	}
 }
 
 func TestCertManagerDefinitionShape(t *testing.T) {

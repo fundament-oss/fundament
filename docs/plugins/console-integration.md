@@ -55,9 +55,8 @@ The definition advertises:
 
 - `menu` — which CRDs appear at organization and project level.
 - `customComponents` — a `Kind` → `{ list?, detail? }` map of relative paths
-  (e.g. `Certificate` → `certificates-list.html`). Plugins are expected to
-  provide custom components for every CRD they expose in the menu; the
-  console does not generate fallback views.
+  (e.g. `Certificate` → `certificates-list.html`). Optional: any CRD without an
+  entry falls back to the generated read-only UI described below.
 - `allowedResources` — the Kubernetes resources the plugin's iframe may read,
   with explicit verbs (`get`, `list`). This is the authoritative list the host
   enforces on every K8s broker call.
@@ -74,11 +73,24 @@ The plugin routes live under `/plugin-resources/` (also mirrored under
 | `/plugin-resources/:pluginName/:resourceKind/:resourceId` | `ResourceDetailComponent` |
 
 Each component looks up the matching `customComponents.<Kind>.list` or
-`.detail` entry in the plugin definition, builds the iframe URL, and
-mounts the iframe component pointed at it. A plugin that omits a custom
-component for one of its CRDs will render an empty page — the console
-does not generate a fallback view from the CRD schema, so every CRD
-exposed in the menu needs its own `list` and `detail` HTML.
+`.detail` entry in the plugin definition. If present, it builds the iframe URL
+and mounts the iframe component pointed at it. If absent, it renders the
+generated fallback view instead.
+
+### Generated fallback UI
+
+When a plugin provides no `customComponents` entry for a CRD kind, the console
+renders a generated, **read-only** view from the CRD's OpenAPI v3 schema (loaded
+from `apiextensions.k8s.io/v1/customresourcedefinitions`):
+
+- **List** — a table whose columns come from the CRD's
+  `additionalPrinterColumns` (falling back to Name + Age), with a row per object
+  and a link to the detail view.
+- **Detail** — object metadata, the `spec` fields rendered from the schema, and
+  a `status` section (including a conditions table when present).
+
+The generated UI is read-only: it never creates, edits, or deletes resources.
+Reach for a custom UI (above) when you need write actions or a bespoke layout.
 
 ## The iframe boundary
 
