@@ -7,7 +7,7 @@ metadata:
   description: Federated Service Connectivity (FSC) for teams. Installs the standalone openfsc-operator; each team declares an FSCInstallation in its namespace to run an OpenFSC peer there — joining an existing FSC group, or acting as its own group Directory.
   author: Fundament
   license: AGPL-3.0
-  icon: share-nodes
+  icon: cloud
   urls:
     homepage: https://fsc-standaard.nl
     repository: https://gitlab.com/rinis-oss/fsc/open-fsc
@@ -52,7 +52,7 @@ spec:
         list: true
         detail: true
         create: false
-        icon: share-nodes
+        icon: cloud
 
   customComponents:
     FSCInstallation:

@@ -11,6 +11,7 @@
  *   .plugin-heading    Primary heading
  *   .plugin-text       Body / paragraph text
  *   .plugin-table      Full-width data table with dividers
+ *   .plugin-deflist    Key/value definition list
  */
 
 /* Include theme CSS variables (colors, spacing, etc.) but not the preflight reset */
@@ -51,4 +52,16 @@ body {
 
 .plugin-table td {
   @apply border-b border-gray-100 py-2 dark:border-gray-800;
+}
+
+.plugin-deflist {
+  @apply text-sm;
+}
+
+.plugin-deflist dt {
+  @apply font-medium text-gray-500 dark:text-gray-400;
+}
+
+.plugin-deflist dd {
+  @apply mb-3 ml-0;
 }

@@ -9,7 +9,7 @@
 // and the real Console CSS, and backs that stand-in's k8s.list/get with
 // `kubectl` via /api/list and /api/get, so the views render the same CRs the
 // real Console would.
-import { join, normalize } from 'node:path';
+import { join, normalize, sep } from 'node:path';
 
 const HERE = new URL('.', import.meta.url).pathname;
 const CONSOLE_DIR = normalize(join(HERE, '..', '..', 'console'));
@@ -63,7 +63,8 @@ async function handleGet(q) {
   const name = q.get('name');
   if (!name) return jsonResponse({ error: 'missing name' }, 400);
   const ns = q.get('namespace');
-  return kubectlJson(['get', r.kind, name, ...(r.namespaced && ns ? ['-n', ns] : [])]);
+  // `--` terminates flags so a name like `--all` is read as a resource name.
+  return kubectlJson(['get', r.kind, ...(r.namespaced && ns ? ['-n', ns] : []), '--', name]);
 }
 
 const pages = [...new Bun.Glob('*.html').scanSync(CONSOLE_DIR)].sort();
@@ -96,7 +97,9 @@ const server = Bun.serve({
     // Everything else from the real console/ dir. normalize() + the prefix
     // check keep requests from escaping it via ../.
     const file = normalize(join(CONSOLE_DIR, path));
-    if (!file.startsWith(CONSOLE_DIR)) return new Response('forbidden', { status: 403 });
+    if (file !== CONSOLE_DIR && !file.startsWith(CONSOLE_DIR + sep)) {
+      return new Response('forbidden', { status: 403 });
+    }
     const f = Bun.file(file);
     return (await f.exists()) ? new Response(f) : new Response('not found', { status: 404 });
   },

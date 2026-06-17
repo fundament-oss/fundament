@@ -116,8 +116,6 @@ func (r *FSCInstallationReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		inst.Status.Phase = openfscv1.PhaseError
 		inst.Status.Message = err.Error()
 		r.setCondition(&inst, openfscv1.ConditionReady, metav1.ConditionFalse, "ReconcileError", err.Error())
-	} else {
-		inst.Status.ObservedGeneration = inst.Generation
 	}
 	if !apiequality.Semantic.DeepEqual(before, &inst.Status) {
 		if uerr := r.Client.Status().Update(ctx, &inst); uerr != nil {
@@ -223,6 +221,10 @@ func (r *FSCInstallationReconciler) reconcile(ctx context.Context, inst *openfsc
 	}
 	inst.Status.Inways = inways
 	inst.Status.Outways = outways
+	// Advanced only here, once ensureCore and ensureGateways have applied this
+	// generation's spec; provisionGateway reads the prior value above to detect
+	// an outdated release, so an early return must leave it untouched.
+	inst.Status.ObservedGeneration = inst.Generation
 
 	if !coreReady {
 		return r.pending(inst, coreDetail), nil
@@ -443,7 +445,7 @@ func (r *FSCInstallationReconciler) setCondition(inst *openfscv1.FSCInstallation
 func deploymentAvailable(deploy *appsv1.Deployment) bool {
 	for _, cond := range deploy.Status.Conditions {
 		if cond.Type == appsv1.DeploymentAvailable {
-			return cond.Status == "True"
+			return cond.Status == corev1.ConditionTrue
 		}
 	}
 	return false

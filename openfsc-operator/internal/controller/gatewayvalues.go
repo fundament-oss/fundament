@@ -53,9 +53,10 @@ func gatewayCommonValues(inst *openfscv1.FSCInstallation, release, fscName strin
 	groupSecret := certSecret(release, "group")
 	if ext := inst.Spec.Directory.External; ext != nil {
 		groupTrustName, groupTrustKey = ext.TrustAnchor.Name, ext.TrustAnchor.Key
-		groupSecret = inst.Spec.Certificate.ExistingSecret
 		if cert != nil {
 			groupSecret = cert.ExistingSecret
+		} else {
+			groupSecret = inst.Spec.Certificate.ExistingSecret
 		}
 	}
 	return map[string]string{
