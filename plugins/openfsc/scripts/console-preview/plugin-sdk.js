@@ -57,12 +57,23 @@ window.fundament = {
   },
 };
 
-// The real Console handles plugin:navigate from the iframe. Here we approximate
-// it by routing to the matching detail page so row clicks are clickable too.
+// The real Console handles plugin:navigate / plugin:create / plugin:navigate-back
+// from the iframe. Here we approximate them by routing between the matching
+// list / create / detail pages so navigation works standalone too.
 window.addEventListener('message', (e) => {
-  if (e.data?.type !== 'plugin:navigate') return;
-  const base = (location.pathname.match(/([a-z]+)-list\.html$/) || [])[1];
+  const type = e.data?.type;
+  const base = (location.pathname.match(/([a-z]+)-(?:list|create|detail)\.html$/) || [])[1];
   if (!base) return;
+
+  if (type === 'plugin:create') {
+    location.href = `${base}-create.html`;
+    return;
+  }
+  if (type === 'plugin:navigate-back') {
+    location.href = `${base}-list.html`;
+    return;
+  }
+  if (type !== 'plugin:navigate') return;
   const q = new URLSearchParams();
   if (e.data.name) q.set('name', e.data.name);
   if (e.data.namespace) q.set('namespace', e.data.namespace);

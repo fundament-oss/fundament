@@ -4,12 +4,6 @@
   </div>
 }
 
-<a
-  [routerLink]="listLink"
-  class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 mb-4 inline-flex items-center"
-  ><nldd-icon name="arrow-left" class="mr-1 h-4 w-4"></nldd-icon> Back to list</a
->
-
 @if (customUIUrl()) {
   <app-plugin-iframe
     [src]="customUIUrl()!"

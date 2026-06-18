@@ -37,6 +37,8 @@ function isPluginMessage(data: unknown): data is PluginMessage {
     case 'plugin:k8s:list':
     case 'plugin:k8s:get':
     case 'plugin:k8s:create':
+    case 'plugin:create':
+    case 'plugin:navigate-back':
       return true;
     default:
       return false;
@@ -231,6 +233,15 @@ export default class PluginIframeComponent implements OnInit {
         return;
       case 'plugin:k8s:create':
         this.handleK8sCreate(msg, iframe);
+        return;
+      case 'plugin:create':
+        // Sent from a list view; the create route is the sibling
+        // `:resourceKind/create` of the current `:resourceKind` list route.
+        this.router.navigate(['create'], { relativeTo: this.route });
+        return;
+      case 'plugin:navigate-back':
+        // Sent from a create/detail view; go up to the `:resourceKind` list.
+        this.router.navigate(['..'], { relativeTo: this.route });
         return;
       default: {
         const exhaustive: never = msg;

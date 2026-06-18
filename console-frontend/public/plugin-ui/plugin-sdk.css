@@ -1,6 +1,11 @@
 /*! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com */
 @layer properties;
 @layer theme;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 body {
   margin: calc(var(--spacing, 0.25rem) * 0);
   background-color: var(--color-white, #fff);
@@ -99,6 +104,7 @@ body {
 }
 .plugin-field {
   display: flex;
+  min-width: calc(var(--spacing, 0.25rem) * 0);
   flex-direction: column;
   gap: calc(var(--spacing, 0.25rem) * 1);
 }

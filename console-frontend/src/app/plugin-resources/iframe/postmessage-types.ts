@@ -69,6 +69,8 @@ export type PluginMessage =
   | { type: 'plugin:ready' }
   | { type: 'plugin:resize'; height: number }
   | { type: 'plugin:navigate'; name: string; namespace?: string }
+  | { type: 'plugin:create' }
+  | { type: 'plugin:navigate-back' }
   | K8sListRequest
   | K8sGetRequest
   | K8sCreateRequest;

@@ -39,10 +39,12 @@ async function kubectl(args) {
 const jsonResponse = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
 
-// `kubectl get ... -o json` returns a List ({items:[...]}) for the list form and
-// a single object for the get form -- both match what the SDK callers expect.
+// Runs kubectl and parses stdout as JSON. Callers include `-o json` themselves
+// so it can be placed before any `--` separator (see handleGet). `kubectl get`
+// returns a List ({items:[...]}) for the list form and a single object for the
+// get form -- both match what the SDK callers expect.
 async function kubectlJson(args) {
-  const { code, out, err } = await kubectl([...args, '-o', 'json']);
+  const { code, out, err } = await kubectl(args);
   if (code !== 0) return jsonResponse({ error: (err || out).trim() || `kubectl exited ${code}` }, 502);
   try {
     return jsonResponse(JSON.parse(out));
@@ -54,7 +56,7 @@ async function kubectlJson(args) {
 async function handleList(q) {
   const r = RESOURCES[q.get('resource')];
   if (!r) return jsonResponse({ error: `unknown resource ${q.get('resource')}` }, 400);
-  return kubectlJson(['get', r.kind, ...(r.namespaced ? ['-A'] : [])]);
+  return kubectlJson(['get', r.kind, ...(r.namespaced ? ['-A'] : []), '-o', 'json']);
 }
 
 async function handleGet(q) {
@@ -63,8 +65,9 @@ async function handleGet(q) {
   const name = q.get('name');
   if (!name) return jsonResponse({ error: 'missing name' }, 400);
   const ns = q.get('namespace');
-  // `--` terminates flags so a name like `--all` is read as a resource name.
-  return kubectlJson(['get', r.kind, ...(r.namespaced && ns ? ['-n', ns] : []), '--', name]);
+  // `-o json` must come before `--`, which terminates flag parsing so a name
+  // like `--all` is still read as a resource name (not an option).
+  return kubectlJson(['get', r.kind, ...(r.namespaced && ns ? ['-n', ns] : []), '-o', 'json', '--', name]);
 }
 
 // Backs the stand-in SDK's namespace dropdown: the names of the cluster's

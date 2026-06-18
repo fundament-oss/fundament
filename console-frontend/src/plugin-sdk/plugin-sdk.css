@@ -38,6 +38,15 @@
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 
+/* We import Tailwind's theme but not its preflight, so restore the one reset the
+   layouts rely on: border-box sizing keeps w-full inputs from overflowing their
+   padding/border. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   @apply m-0 bg-white font-sans text-gray-900 transition-colors duration-200 dark:bg-gray-800 dark:text-gray-50;
 }
@@ -87,7 +96,8 @@ body {
 }
 
 .plugin-field {
-  @apply flex flex-col gap-1;
+  /* min-w-0 lets fields shrink inside .plugin-row instead of overflowing. */
+  @apply flex min-w-0 flex-col gap-1;
 }
 
 .plugin-label {

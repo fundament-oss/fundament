@@ -20,7 +20,7 @@
             name="name"
             required
             maxlength="63"
-            pattern="[a-z0-9]([-a-z0-9]*[a-z0-9])?"
+            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
             placeholder="my-installation"
           />
           <span class="plugin-hint">Lowercase letters, digits and dashes.</span>
@@ -54,6 +54,10 @@
 
         <fieldset class="plugin-fieldset" id="external-fieldset" hidden>
           <legend class="plugin-legend">External directory</legend>
+          <span class="plugin-hint"
+            >The secret fields below are <strong>names of Secrets that must already exist</strong> in
+            the target namespace — not the certificate contents.</span
+          >
           <div class="plugin-field">
             <label class="plugin-label" for="ext-address">Directory address</label>
             <input
@@ -71,17 +75,22 @@
           <div class="plugin-row">
             <div class="plugin-field" style="flex: 1 1 16rem">
               <label class="plugin-label" for="ext-ta-name">Trust anchor secret</label>
-              <input class="plugin-input" id="ext-ta-name" data-external-required placeholder="group-ca" />
+              <input class="plugin-input" id="ext-ta-name" data-external-required placeholder="e.g. group-ca" />
+              <span class="plugin-hint">Name of an existing Secret holding the group CA PEM.</span>
             </div>
             <div class="plugin-field" style="flex: 1 1 10rem">
               <label class="plugin-label" for="ext-ta-key">Trust anchor key</label>
               <input class="plugin-input" id="ext-ta-key" placeholder="ca.crt" value="ca.crt" />
+              <span class="plugin-hint">Key within that Secret.</span>
             </div>
           </div>
           <div class="plugin-field" id="certificate-field">
             <label class="plugin-label" for="certificate">Group certificate secret</label>
-            <input class="plugin-input" id="certificate" data-external-required placeholder="kubernetes.io/tls secret name" />
-            <span class="plugin-hint">A kubernetes.io/tls Secret holding this peer's group certificate.</span>
+            <input class="plugin-input" id="certificate" data-external-required placeholder="e.g. my-group-cert" />
+            <span class="plugin-hint"
+              >Name of an existing kubernetes.io/tls Secret in the namespace. Create it with
+              <code>kubectl create secret tls</code> first.</span
+            >
           </div>
         </fieldset>
 
@@ -110,13 +119,22 @@
 
         <fieldset class="plugin-fieldset">
           <legend class="plugin-legend">Auto-sign grants</legend>
+          <span class="plugin-hint">Grant types the Manager signs automatically.</span>
+          <label class="plugin-checkbox">
+            <input type="checkbox" name="autoSignGrants" value="serviceConnection" />
+            Service connection
+          </label>
+          <label class="plugin-checkbox">
+            <input type="checkbox" name="autoSignGrants" value="delegatedServiceConnection" />
+            Delegated service connection
+          </label>
           <label class="plugin-checkbox">
             <input type="checkbox" name="autoSignGrants" value="servicePublication" checked />
-            servicePublication
+            Service publication
           </label>
           <label class="plugin-checkbox">
             <input type="checkbox" name="autoSignGrants" value="delegatedServicePublication" checked />
-            delegatedServicePublication
+            Delegated service publication
           </label>
         </fieldset>
 
@@ -161,18 +179,21 @@
 
         <div class="plugin-actions">
           <button type="submit" class="plugin-button" id="submit">Create installation</button>
+          <button type="button" class="plugin-button-secondary" id="back">Back</button>
         </div>
       </form>
     </div>
 
     <script type="module">
-      import { loadSdk, escapeHtml, navigateToDetail } from './_shared.js';
+      import { loadSdk, escapeHtml, navigateToDetail, navigateBack } from './_shared.js';
 
       const intro = document.getElementById('intro');
       const form = document.getElementById('form');
       const errorBox = document.getElementById('error');
       const externalFieldset = document.getElementById('external-fieldset');
       const certField = document.getElementById('certificate-field');
+
+      document.getElementById('back').addEventListener('click', () => navigateBack());
 
       let ctx;
       try {
@@ -204,7 +225,7 @@
           field.innerHTML =
             label +
             `<input class="plugin-input" id="namespace" name="namespace" required
-               pattern="[a-z0-9]([-a-z0-9]*[a-z0-9])?" placeholder="my-namespace" />`;
+               pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?" placeholder="my-namespace" />`;
         }
       }
 
@@ -235,12 +256,12 @@
           <div class="plugin-field" style="flex: 1 1 10rem">
             <label class="plugin-label">Name</label>
             <input class="plugin-input gw-name" required maxlength="30"
-              pattern="[a-z0-9]([-a-z0-9]*[a-z0-9])?" placeholder="default" />
+              pattern="[a-z0-9]([a-z0-9\\-]*[a-z0-9])?" placeholder="default" />
           </div>
           ${selfAddress}
           <div class="plugin-field gw-cert-field" style="flex: 1 1 14rem">
             <label class="plugin-label">Certificate secret</label>
-            <input class="plugin-input gw-cert" placeholder="tls secret name" />
+            <input class="plugin-input gw-cert" placeholder="existing tls Secret name" />
           </div>
           <button type="button" class="plugin-button-secondary gw-remove">Remove</button>`;
         row.querySelector('.gw-remove').addEventListener('click', () => row.remove());
