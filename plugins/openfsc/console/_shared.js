@@ -78,7 +78,10 @@ export function errorRow(colspan, err) {
 // resource identity (name + namespace). The console origin from ?host= scopes
 // the message; the console-preview server runs unframed, hence the fallback.
 export function navigateToDetail(name, namespace) {
-  window.parent.postMessage({ type: 'plugin:navigate', name, namespace }, hostOrigin() || '*');
+  window.parent.postMessage(
+    { type: 'plugin:navigate', name, namespace },
+    hostOrigin() || window.location.origin,
+  );
 }
 
 // Renders a key/value definition list for the given map. Returns HTML.

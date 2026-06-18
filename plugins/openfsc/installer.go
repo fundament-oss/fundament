@@ -25,10 +25,12 @@ const (
 	operatorRelease   = "openfsc-operator"
 	operatorNamespace = "openfsc-system"
 
-	certManagerRepo  = "https://charts.jetstack.io"
-	certManagerChart = "cert-manager"
-	cnpgRepo         = "https://cloudnative-pg.github.io/charts"
-	cnpgChart        = "cloudnative-pg"
+	certManagerRepo    = "https://charts.jetstack.io"
+	certManagerChart   = "cert-manager"
+	certManagerVersion = "v1.17.2"
+	cnpgRepo           = "https://cloudnative-pg.github.io/charts"
+	cnpgChart          = "cloudnative-pg"
+	cnpgVersion        = "0.24.0" // ships CloudNativePG operator v1.25.1
 )
 
 var crdNames = []string{
@@ -75,13 +77,13 @@ func (i *installer) install(ctx context.Context, host pluginruntime.Host) error 
 // preflights these but never installs them itself, reporting
 // PrerequisitesMet=False on installations while they are missing.
 func (i *installer) ensurePrerequisites(ctx context.Context) error {
-	if err := helm.NewClient("cert-manager").InstallFromRepo(ctx, "cert-manager", certManagerChart, certManagerRepo, "", map[string]string{
+	if err := helm.NewClient("cert-manager").InstallFromRepo(ctx, "cert-manager", certManagerChart, certManagerRepo, certManagerVersion, map[string]string{
 		"crds.enabled": "true",
 	}); err != nil {
 		return fmt.Errorf("install cert-manager: %w", err)
 	}
 
-	if err := helm.NewClient("cnpg-system").InstallFromRepo(ctx, "cnpg", cnpgChart, cnpgRepo, "", nil); err != nil {
+	if err := helm.NewClient("cnpg-system").InstallFromRepo(ctx, "cnpg", cnpgChart, cnpgRepo, cnpgVersion, nil); err != nil {
 		return fmt.Errorf("install cloudnative-pg: %w", err)
 	}
 	return nil
@@ -116,7 +118,10 @@ func waitEstablished(ctx context.Context, c client.Client, names []string) error
 		for _, name := range names {
 			var crd apiextensionsv1.CustomResourceDefinition
 			if err := c.Get(ctx, types.NamespacedName{Name: name}, &crd); err != nil {
-				return false, nil //nolint:nilerr // not yet visible; keep polling
+				if apierrors.IsNotFound(err) || apimeta.IsNoMatchError(err) {
+					return false, nil // not yet visible; keep polling
+				}
+				return false, err
 			}
 			established := false
 			for _, cond := range crd.Status.Conditions {

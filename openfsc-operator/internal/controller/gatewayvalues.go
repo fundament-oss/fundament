@@ -70,7 +70,7 @@ func gatewayCommonValues(inst *openfscv1.FSCInstallation, release, fscName strin
 		"config.name": fscName,
 		"config.controllerRegistrationApiAddress": controllerRegistrationAddr,
 		"config.transactionLogApiAddress":         transactionLogAddr,
-		"config.disableCrlChecks":                 "true",
+		"config.disableCrlChecks":                 "false",
 		"certificates.group.existingSecret":       groupSecret,
 		"certificates.internal.existingSecret":    certSecret(release, "internal"),
 	}

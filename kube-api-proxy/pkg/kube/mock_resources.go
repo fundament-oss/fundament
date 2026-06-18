@@ -61,10 +61,10 @@ const mockOpenfscDefinitionJSON = `{
   "version": "v4.0.0",
   "description": "Federated Service Connectivity (FSC) for teams. Each team declares an FSCInstallation in its namespace to run an OpenFSC peer there.",
   "author": "Fundament",
-  "icon": "share-nodes",
+  "icon": "cloud",
   "menu": {
     "project": [
-      {"crd": "fscinstallations.openfsc.fundament.io", "label": "OpenFSC Installations", "list": true, "detail": true, "create": false, "icon": "share-nodes"}
+      {"crd": "fscinstallations.openfsc.fundament.io", "label": "OpenFSC Installations", "list": true, "detail": true, "create": false, "icon": "cloud"}
     ]
   },
   "crds": ["fscinstallations.openfsc.fundament.io"],
