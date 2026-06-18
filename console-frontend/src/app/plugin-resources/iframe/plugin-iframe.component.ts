@@ -14,6 +14,7 @@ import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import type {
   HostMessage,
+  K8sCreateRequest,
   K8sGetRequest,
   K8sListRequest,
   PluginMessage,
@@ -35,6 +36,7 @@ function isPluginMessage(data: unknown): data is PluginMessage {
     case 'plugin:navigate':
     case 'plugin:k8s:list':
     case 'plugin:k8s:get':
+    case 'plugin:k8s:create':
       return true;
     default:
       return false;
@@ -46,7 +48,7 @@ function isVerbAllowed(
   group: string,
   version: string,
   resource: string,
-  verb: 'list' | 'get',
+  verb: 'list' | 'get' | 'create',
 ): boolean {
   return allowed.some(
     (a) =>
@@ -67,6 +69,19 @@ function replyForbidden(iframe: HTMLIFrameElement, requestId: string): void {
     } satisfies HostMessage,
     '*',
   );
+}
+
+// Kubernetes reports write rejections (409 conflict, 422 validation/CEL) in the
+// Status body's `message`, not in statusText — surface it so the plugin form can
+// show the real reason.
+async function readK8sError(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { message?: unknown };
+    if (typeof body.message === 'string' && body.message) return body.message;
+  } catch {
+    // body was not JSON; fall through to the generic message
+  }
+  return response.statusText || `HTTP ${response.status}`;
 }
 
 @Component({
@@ -208,6 +223,9 @@ export default class PluginIframeComponent implements OnInit {
       case 'plugin:k8s:get':
         this.handleK8sRequest(msg, iframe);
         return;
+      case 'plugin:k8s:create':
+        this.handleK8sCreate(msg, iframe);
+        return;
       default: {
         const exhaustive: never = msg;
         throw new Error(`Unhandled plugin message type: ${(exhaustive as PluginMessage).type}`);
@@ -286,6 +304,67 @@ export default class PluginIframeComponent implements OnInit {
             items: (data as { items?: KubeResource[] }).items ?? [],
           };
       iframe.contentWindow?.postMessage(payload, '*');
+    } catch (err) {
+      iframe.contentWindow?.postMessage(
+        {
+          type: 'fundament:k8s:result',
+          requestId: msg.requestId,
+          ok: false,
+          error: err instanceof Error ? err.message : 'transport error',
+        } satisfies HostMessage,
+        '*',
+      );
+    }
+  }
+
+  private async handleK8sCreate(
+    msg: K8sCreateRequest,
+    iframe: HTMLIFrameElement,
+  ): Promise<void> {
+    if (!isVerbAllowed(this.allowedResources(), msg.group, msg.version, msg.resource, 'create')) {
+      // eslint-disable-next-line no-console
+      console.warn('[PluginIframe] rejected create request not in allowlist', msg);
+      replyForbidden(iframe, msg.requestId);
+      return;
+    }
+
+    const url = buildResourceUrl(this.kubeApiProxyBase(), this.clusterId(), {
+      group: msg.group,
+      version: msg.version,
+      resource: msg.resource,
+      namespace: msg.namespace,
+    });
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg.body),
+      });
+      if (!response.ok) {
+        iframe.contentWindow?.postMessage(
+          {
+            type: 'fundament:k8s:result',
+            requestId: msg.requestId,
+            ok: false,
+            error: await readK8sError(response),
+            status: response.status,
+          } satisfies HostMessage,
+          '*',
+        );
+        return;
+      }
+      const data = await response.json();
+      iframe.contentWindow?.postMessage(
+        {
+          type: 'fundament:k8s:result',
+          requestId: msg.requestId,
+          ok: true,
+          item: data as KubeResource,
+        } satisfies HostMessage,
+        '*',
+      );
     } catch (err) {
       iframe.contentWindow?.postMessage(
         {

@@ -75,6 +75,7 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 		customComponents[k] = &pb.ComponentMapping{
 			List:   ptr(v.List),
 			Detail: ptr(v.Detail),
+			Create: ptr(v.Create),
 		}
 	}
 

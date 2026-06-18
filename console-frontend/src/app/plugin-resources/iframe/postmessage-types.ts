@@ -54,9 +54,20 @@ export interface K8sGetRequest {
   namespace?: string;
 }
 
+export interface K8sCreateRequest {
+  type: 'plugin:k8s:create';
+  requestId: string;
+  group: string;
+  version: string;
+  resource: string;
+  namespace?: string;
+  body: KubeResource;
+}
+
 export type PluginMessage =
   | { type: 'plugin:ready' }
   | { type: 'plugin:resize'; height: number }
   | { type: 'plugin:navigate'; name: string; namespace?: string }
   | K8sListRequest
-  | K8sGetRequest;
+  | K8sGetRequest
+  | K8sCreateRequest;

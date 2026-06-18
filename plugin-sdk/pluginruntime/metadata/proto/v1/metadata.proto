@@ -47,6 +47,7 @@ message MenuDefinition {
 message ComponentMapping {
   string list = 1;
   string detail = 2;
+  string create = 3;
 }
 
 // AllowedResource declares a Kubernetes resource the plugin's UI iframe
