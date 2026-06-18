@@ -31,8 +31,9 @@ interface InitContext {
   theme: Theme;
   pluginName: string;
   crdKind: string;
-  view: 'list' | 'detail';
+  view: 'list' | 'detail' | 'create';
   resource?: ResourceContext;
+  namespaces?: string[];
 }
 
 interface K8sListArgs {
@@ -85,8 +86,9 @@ type HostMessage =
       theme: Theme;
       pluginName: string;
       crdKind: string;
-      view: 'list' | 'detail';
+      view: 'list' | 'detail' | 'create';
       resource?: ResourceContext;
+      namespaces?: string[];
     }
   | { type: 'fundament:theme-changed'; theme: Theme }
   | {
@@ -208,6 +210,7 @@ function handleHostMessage(data: HostMessage): void {
         crdKind: data.crdKind,
         view: data.view,
         resource: data.resource,
+        namespaces: data.namespaces,
       });
     }
     applyTheme(data.theme);

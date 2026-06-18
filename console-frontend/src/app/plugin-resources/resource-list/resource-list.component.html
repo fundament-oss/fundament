@@ -4,6 +4,17 @@
   </div>
 }
 
+@if (canCreate()) {
+  <div class="mb-4 flex justify-end">
+    <nldd-button
+      [routerLink]="createLink"
+      text="Create"
+      start-icon="plus"
+      variant="primary"
+    ></nldd-button>
+  </div>
+}
+
 @if (customUIUrl()) {
   <app-plugin-iframe
     [src]="customUIUrl()!"

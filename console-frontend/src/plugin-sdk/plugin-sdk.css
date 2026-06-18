@@ -12,6 +12,20 @@
  *   .plugin-text       Body / paragraph text
  *   .plugin-table      Full-width data table with dividers
  *   .plugin-deflist    Key/value definition list
+ *   .plugin-form       Vertical form layout
+ *   .plugin-field      Label + control wrapper
+ *   .plugin-label      Field label
+ *   .plugin-hint       Field help text
+ *   .plugin-input      Text / number input and <select>
+ *   .plugin-select     <select> (alias of .plugin-input)
+ *   .plugin-checkbox   Checkbox + label row
+ *   .plugin-fieldset   Bordered group of fields
+ *   .plugin-legend     Group heading
+ *   .plugin-row        Inline row of fields (wraps)
+ *   .plugin-actions    Button row
+ *   .plugin-button     Primary button
+ *   .plugin-button-secondary  Secondary button
+ *   .plugin-error      Inline error banner
  */
 
 /* Include theme CSS variables (colors, spacing, etc.) but not the preflight reset */
@@ -64,4 +78,64 @@ body {
 
 .plugin-deflist dd {
   @apply mb-3 ml-0;
+}
+
+/* ── Forms ────────────────────────────────────────────────────────────────── */
+
+.plugin-form {
+  @apply space-y-4;
+}
+
+.plugin-field {
+  @apply flex flex-col gap-1;
+}
+
+.plugin-label {
+  @apply text-sm font-medium text-gray-700 dark:text-gray-200;
+}
+
+.plugin-hint {
+  @apply text-xs text-gray-500 dark:text-gray-400;
+}
+
+.plugin-input,
+.plugin-select {
+  @apply w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-50;
+}
+
+.plugin-input:focus,
+.plugin-select:focus {
+  @apply border-blue-500 ring-1 ring-blue-500 outline-none;
+}
+
+.plugin-checkbox {
+  @apply flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200;
+}
+
+.plugin-fieldset {
+  @apply space-y-4 rounded-md border border-gray-200 p-4 dark:border-gray-700;
+}
+
+.plugin-legend {
+  @apply text-sm font-semibold text-gray-700 dark:text-gray-200;
+}
+
+.plugin-row {
+  @apply flex flex-wrap items-end gap-3;
+}
+
+.plugin-actions {
+  @apply flex items-center gap-3 pt-2;
+}
+
+.plugin-button {
+  @apply inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.plugin-button-secondary {
+  @apply inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800;
+}
+
+.plugin-error {
+  @apply rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300;
 }

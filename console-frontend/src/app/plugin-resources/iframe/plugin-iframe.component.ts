@@ -120,7 +120,7 @@ export default class PluginIframeComponent implements OnInit {
 
   crdKind = input.required<string>();
 
-  view = input.required<'list' | 'detail'>();
+  view = input.required<'list' | 'detail' | 'create'>();
 
   allowedResources = input.required<AllowedResource[]>();
 
@@ -129,6 +129,8 @@ export default class PluginIframeComponent implements OnInit {
   resourceName = input<string | undefined>(undefined);
 
   resourceNamespace = input<string | undefined>(undefined);
+
+  namespaces = input<string[] | undefined>(undefined);
 
   private sanitizer = inject(DomSanitizer);
 
@@ -210,13 +212,17 @@ export default class PluginIframeComponent implements OnInit {
         }
         return;
       case 'plugin:navigate': {
+        const queryParams = msg.namespace ? { ns: msg.namespace } : undefined;
+        if (this.view() === 'create') {
+          // The create route is `:resourceKind/create`; the created resource's
+          // detail is its sibling `:resourceKind/<name>`.
+          this.router.navigate(['..', msg.name], { relativeTo: this.route, queryParams });
+          return;
+        }
         // The resource-kind list route is the navigation anchor: from `list`
         // it's the current route, from `detail` it's the parent.
         const baseRoute = this.view() === 'list' ? this.route : this.route.parent;
-        this.router.navigate([msg.name], {
-          relativeTo: baseRoute,
-          queryParams: msg.namespace ? { ns: msg.namespace } : undefined,
-        });
+        this.router.navigate([msg.name], { relativeTo: baseRoute, queryParams });
         return;
       }
       case 'plugin:k8s:list':
@@ -241,6 +247,7 @@ export default class PluginIframeComponent implements OnInit {
 
     const name = this.resourceName();
     const namespace = this.resourceNamespace();
+    const namespaces = this.namespaces();
     const msg: HostMessage = {
       type: 'fundament:init',
       theme,
@@ -248,6 +255,7 @@ export default class PluginIframeComponent implements OnInit {
       crdKind: this.crdKind(),
       view: this.view(),
       ...(name ? { resource: { name, namespace } } : {}),
+      ...(namespaces ? { namespaces } : {}),
     };
     iframe.contentWindow.postMessage(msg, '*');
   }

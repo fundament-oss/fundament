@@ -13,8 +13,9 @@ export type HostMessage =
       theme: Theme;
       pluginName: string;
       crdKind: string;
-      view: 'list' | 'detail';
+      view: 'list' | 'detail' | 'create';
       resource?: ResourceContext;
+      namespaces?: string[];
     }
   | {
       type: 'fundament:theme-changed';

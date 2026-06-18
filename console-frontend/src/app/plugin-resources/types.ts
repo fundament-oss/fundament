@@ -29,6 +29,9 @@ export interface PluginMenuItem {
   crd: string;
   label?: string;
   icon?: string;
+  list?: boolean;
+  detail?: boolean;
+  create?: boolean;
 }
 
 // Parsed CRD types
@@ -91,6 +94,7 @@ export interface KubeResource {
 export interface CustomComponentMapping {
   list?: string;
   detail?: string;
+  create?: string;
 }
 
 // Navigation types
@@ -128,6 +132,9 @@ export interface GetDefinitionMenuEntry {
   crd: string;
   label: string;
   icon?: string;
+  list?: boolean;
+  detail?: boolean;
+  create?: boolean;
 }
 
 export interface GetDefinitionResponse {
