@@ -293,6 +293,61 @@ func TestMockFSCInstallations(t *testing.T) {
 	}
 }
 
+func TestMockFSCInstallationCreate(t *testing.T) {
+	mc := &MockClient{}
+	ctx := context.WithValue(context.Background(), ClusterIDContextKey{}, "c1")
+
+	createJSON := `{"apiVersion":"openfsc.fundament.io/v1","kind":"FSCInstallation",` +
+		`"metadata":{"name":"new-peer","namespace":"team-a"},` +
+		`"spec":{"groupID":"g","peerID":"p","directory":{"mode":"Self"},"postgres":{"storageClass":"local-path"}}}`
+
+	status, body, err := mc.Do(ctx, http.MethodPost,
+		"/apis/openfsc.fundament.io/v1/namespaces/team-a/fscinstallations", strings.NewReader(createJSON))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != 201 {
+		t.Fatalf("create status = %d", status)
+	}
+	b, _ := io.ReadAll(body)
+	body.Close()
+	var created map[string]any
+	if err := json.Unmarshal(b, &created); err != nil {
+		t.Fatalf("unmarshal created: %v", err)
+	}
+	meta, _ := created["metadata"].(map[string]any)
+	if meta["name"] != "new-peer" || meta["namespace"] != "team-a" {
+		t.Fatalf("unexpected created metadata: %v", meta)
+	}
+	if meta["uid"] == nil || meta["creationTimestamp"] == nil {
+		t.Errorf("server-set fields missing: %v", meta)
+	}
+
+	// The new installation appears in the list and via a namespaced get.
+	_, body, _ = mc.Do(ctx, http.MethodGet, "/apis/openfsc.fundament.io/v1/fscinstallations", nil)
+	b, _ = io.ReadAll(body)
+	body.Close()
+	if !strings.Contains(string(b), "new-peer") {
+		t.Errorf("created item not in list: %s", string(b))
+	}
+
+	status, body, _ = mc.Do(ctx, http.MethodGet,
+		"/apis/openfsc.fundament.io/v1/namespaces/team-a/fscinstallations/new-peer", nil)
+	if status != 200 {
+		t.Fatalf("get status = %d", status)
+	}
+	body.Close()
+
+	// Creations are scoped per cluster.
+	otherCtx := context.WithValue(context.Background(), ClusterIDContextKey{}, "c2")
+	_, body, _ = mc.Do(otherCtx, http.MethodGet, "/apis/openfsc.fundament.io/v1/fscinstallations", nil)
+	b, _ = io.ReadAll(body)
+	body.Close()
+	if strings.Contains(string(b), "new-peer") {
+		t.Errorf("cluster isolation broken: %s", string(b))
+	}
+}
+
 func TestMockCertificateRequestList(t *testing.T) {
 	mc := &MockClient{}
 	status, body, err := mc.Do(context.Background(), http.MethodGet, "/apis/cert-manager.io/v1/certificaterequests", nil)

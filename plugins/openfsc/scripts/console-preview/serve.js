@@ -67,6 +67,46 @@ async function handleGet(q) {
   return kubectlJson(['get', r.kind, ...(r.namespaced && ns ? ['-n', ns] : []), '--', name]);
 }
 
+// Backs the stand-in SDK's namespace dropdown: the names of the cluster's
+// namespaces. The real Console scopes this to the project; here we list all.
+async function handleNamespaces() {
+  const r = await kubectl(['get', 'namespaces', '-o', 'json']);
+  if (r.code !== 0) return jsonResponse({ namespaces: [] });
+  try {
+    const list = JSON.parse(r.out);
+    const names = (list.items ?? []).map((n) => n.metadata?.name).filter(Boolean);
+    return jsonResponse({ namespaces: names });
+  } catch {
+    return jsonResponse({ namespaces: [] });
+  }
+}
+
+// Backs the stand-in SDK's k8s.create: applies the posted object with
+// `kubectl apply` and returns it, mirroring the host's create broker. k8s
+// validation errors come back on stderr and surface as { message } so the
+// create form shows the real reason.
+async function handleCreate(req) {
+  const text = await req.text();
+  const proc = Bun.spawn(['kubectl', '--context', CTX, 'apply', '-f', '-', '-o', 'json'], {
+    stdin: new TextEncoder().encode(text),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const [out, err] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  const code = await proc.exited;
+  if (code !== 0) {
+    return jsonResponse({ message: (err || out).trim() || `kubectl exited ${code}` }, 422);
+  }
+  try {
+    return jsonResponse(JSON.parse(out));
+  } catch {
+    return jsonResponse({ message: 'kubectl returned invalid JSON' }, 502);
+  }
+}
+
 const pages = [...new Bun.Glob('*.html').scanSync(CONSOLE_DIR)].sort();
 
 const indexHtml = () => `<!doctype html><meta charset="utf-8">
@@ -88,6 +128,8 @@ const server = Bun.serve({
     }
     if (path === '/api/list') return handleList(url.searchParams);
     if (path === '/api/get') return handleGet(url.searchParams);
+    if (path === '/api/namespaces') return handleNamespaces();
+    if (path === '/api/create' && req.method === 'POST') return handleCreate(req);
 
     // SDK paths the templates load from the (stubbed) Console host: the JS is
     // the local stand-in, the CSS is the real Console stylesheet.

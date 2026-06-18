@@ -12,20 +12,40 @@
 async function api(path) {
   const res = await fetch(path);
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error || `${res.status} ${res.statusText}`);
+  if (!res.ok) throw new Error(body.message || body.error || `${res.status} ${res.statusText}`);
   return body;
+}
+
+async function apiPost(path, payload) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.message || body.error || `${res.status} ${res.statusText}`);
+  return body;
+}
+
+async function fetchNamespaces() {
+  try {
+    const body = await api('/api/namespaces');
+    return Array.isArray(body.namespaces) ? body.namespaces : [];
+  } catch {
+    return [];
+  }
 }
 
 const params = new URLSearchParams(location.search);
 
 window.fundament = {
-  // Detail templates read fundament.init -> { resource: { name, namespace } }.
-  // The name comes from ?name=&namespace= (e.g. set by a row click in the list
-  // page). Without it the detail template renders "No <title> selected." -- open
-  // a detail page via the list, or pass ?name= explicitly.
-  init: Promise.resolve({
+  // Templates read fundament.init -> { resource: { name, namespace }, namespaces }.
+  // resource.name comes from ?name=&namespace= (e.g. set by a row click in the
+  // list page). namespaces feeds the create form's dropdown.
+  init: (async () => ({
     resource: { name: params.get('name'), namespace: params.get('namespace') },
-  }),
+    namespaces: await fetchNamespaces(),
+  }))(),
   k8s: {
     list: ({ resource }) => api(`/api/list?resource=${encodeURIComponent(resource)}`),
     get: ({ resource, name, namespace }) =>
@@ -33,6 +53,7 @@ window.fundament = {
         `/api/get?resource=${encodeURIComponent(resource)}&name=${encodeURIComponent(name ?? '')}` +
           `&namespace=${encodeURIComponent(namespace ?? '')}`,
       ),
+    create: (_args, body) => apiPost('/api/create', body),
   },
 };
 
