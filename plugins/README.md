@@ -7,6 +7,7 @@ A self-contained development environment lives in `sandbox/`. It creates an isol
 ```shell
 just cluster-create   # Create K3D cluster + registry (~10s)
 just dev              # Build + deploy plugin-controller with file watching
+just deploy           # One-time build without file watching
 
 # In another terminal:
 just plugin-install cert-manager   # Build plugin, push to registry, apply CR
@@ -21,6 +22,12 @@ just cert-manager test-cleanup     # Remove test resources
 just plugin-install external-dns   # Build plugin, push to registry, apply CR
 just external-dns test             # Creates a DNSEndpoint resource
 just external-dns test-cleanup     # Remove test resources
+
+# Install and verify OpenFSC (see plugins/openfsc/README.md):
+just openfsc operator-push         # Build the openfsc-operator image for the sandbox
+just plugin-install openfsc        # Installs prerequisites + the operator
+just openfsc test                  # Sample FSCInstallation reaches Active
+just openfsc test-cleanup          # Remove the sample installation
 
 # Cleanup:
 just plugin-uninstall cert-manager

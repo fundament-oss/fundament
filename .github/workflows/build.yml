@@ -105,6 +105,9 @@ jobs:
           - image-name: dcim-authn-api
             dockerfile: dcim-authn-api/Dockerfile
             context: "."
+          - image-name: openfsc-operator
+            dockerfile: openfsc-operator/Dockerfile
+            context: "."
     permissions:
       contents: read
       packages: write

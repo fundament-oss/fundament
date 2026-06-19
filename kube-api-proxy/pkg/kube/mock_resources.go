@@ -54,6 +54,92 @@ const mockCnpgDefinitionJSON = `{
   "crds": ["databases.postgresql.cnpg.io", "backups.postgresql.cnpg.io", "subscriptions.postgresql.cnpg.io"]
 }`
 
+const mockOpenfscDefinitionJSON = `{
+  "apiVersion": "plugins.fundament.io/v1",
+  "name": "openfsc",
+  "displayName": "OpenFSC",
+  "version": "v4.0.0",
+  "description": "Federated Service Connectivity (FSC) for teams. Each team declares an FSCInstallation in its namespace to run an OpenFSC peer there.",
+  "author": "Fundament",
+  "icon": "cloud",
+  "menu": {
+    "project": [
+      {"crd": "fscinstallations.openfsc.fundament.io", "label": "OpenFSC Installations", "list": true, "detail": true, "create": false, "icon": "cloud"}
+    ]
+  },
+  "crds": ["fscinstallations.openfsc.fundament.io"],
+  "customComponents": {
+    "FSCInstallation": {"list": "fscinstallations-list.html", "detail": "fscinstallations-detail.html"}
+  },
+  "allowedResources": [
+    {"group": "openfsc.fundament.io", "version": "v1", "resource": "fscinstallations", "verbs": ["list", "get"]}
+  ]
+}`
+
+const mockFSCInstallationListJSON = `{
+  "apiVersion": "openfsc.fundament.io/v1",
+  "kind": "FSCInstallationList",
+  "metadata": {"resourceVersion": "1"},
+  "items": [
+    {
+      "apiVersion": "openfsc.fundament.io/v1",
+      "kind": "FSCInstallation",
+      "metadata": {"name": "demo", "namespace": "fsc-demo", "uid": "fsci-1", "creationTimestamp": "2026-06-10T09:00:00Z"},
+      "spec": {
+        "groupID": "fsc-demo",
+        "peerID": "12345678901234567899",
+        "directory": {"mode": "Self"},
+        "postgres": {"storageClass": "local-path"},
+        "inways": [{"name": "default"}],
+        "outways": [{"name": "default"}]
+      },
+      "status": {
+        "phase": "Active",
+        "message": "All components running; gateways registered",
+        "managerAddress": "https://fsc-open-fsc-manager.fsc-demo.svc:7200",
+        "controllerURL": "https://fsc-controller.fsc-demo.example.com",
+        "observedGeneration": 1,
+        "conditions": [
+          {"type": "Ready", "status": "True", "reason": "Reconciled", "lastTransitionTime": "2026-06-10T09:04:00Z", "message": "Installation is active"}
+        ],
+        "inways": [
+          {"name": "default", "phase": "Active", "url": "https://fsc-inway-default.fsc-demo.svc:8443", "message": "Registered with the Controller", "lastSyncedTime": "2026-06-12T08:00:00Z"}
+        ],
+        "outways": [
+          {"name": "default", "phase": "Active", "url": "https://fsc-outway-default.fsc-demo.svc:8443", "message": "Registered with the Controller", "lastSyncedTime": "2026-06-12T08:00:00Z"}
+        ]
+      }
+    },
+    {
+      "apiVersion": "openfsc.fundament.io/v1",
+      "kind": "FSCInstallation",
+      "metadata": {"name": "broken", "namespace": "fsc-broken", "uid": "fsci-3", "creationTimestamp": "2026-06-14T11:00:00Z"},
+      "spec": {
+        "groupID": "rinis-prod",
+        "peerID": "00000000000000000456",
+        "directory": {
+          "mode": "External",
+          "external": {
+            "address": "https://directory.rinis-prod.example.org",
+            "peerID": "99999999999999999999",
+            "trustAnchor": {"name": "rinis-group-ca", "key": "ca.crt"}
+          }
+        },
+        "certificate": {"existingSecret": "missing-org-cert"},
+        "postgres": {"storageClass": "local-path"}
+      },
+      "status": {
+        "phase": "Error",
+        "message": "Secret \"missing-org-cert\" not found",
+        "observedGeneration": 1,
+        "conditions": [
+          {"type": "Ready", "status": "False", "reason": "CertificateMissing", "lastTransitionTime": "2026-06-14T11:00:30Z", "message": "Organization certificate Secret missing-org-cert not found"}
+        ]
+      }
+    }
+  ]
+}`
+
 const mockCertificateListJSON = `{
   "apiVersion": "cert-manager.io/v1",
   "kind": "CertificateList",

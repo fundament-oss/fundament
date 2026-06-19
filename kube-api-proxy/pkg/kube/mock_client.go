@@ -126,6 +126,8 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 		return 200, r(mockCertManagerDefinitionJSON), nil
 	case isPluginGetDefinition(path, "cnpg"), isPluginGetDefinition(path, "CloudNativePG"):
 		return 200, r(mockCnpgDefinitionJSON), nil
+	case isPluginGetDefinition(path, "openfsc"):
+		return 200, r(mockOpenfscDefinitionJSON), nil
 	case isResourceList(path, "cert-manager.io", "v1", "certificates"):
 		return 200, r(mockCertificateListJSON), nil
 	case isResourceGet(path, "cert-manager.io", "v1", "certificates"):
@@ -150,6 +152,10 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 		return 200, r(mockSubscriptionListJSON), nil
 	case isResourceList(path, "demo.fundament.io", "v1", "demoitems"):
 		return 200, r(mockDemoItemListJSON), nil
+	case isResourceList(path, "openfsc.fundament.io", "v1", "fscinstallations"):
+		return 200, r(mockFSCInstallationListJSON), nil
+	case isResourceGet(path, "openfsc.fundament.io", "v1", "fscinstallations"):
+		return resourceGetResponse(mockFSCInstallationListJSON, resourceNameFromPath(path), r)
 	default:
 		return 200, r(mockEmptyList), nil
 	}

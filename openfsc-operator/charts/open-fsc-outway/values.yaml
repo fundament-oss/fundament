@@ -1,0 +1,209 @@
+## @section Global parameters
+## @param global.imageRegistry Global Docker Image registry
+## @param global.imageTag Global Docker Image tag
+## @param global.groupID Global FSC Group ID
+## @param global.imagePullSecrets Global image pull secrets
+## @param global.certificates.group.caCertificatePEM OpenFSC CA root certificate. If not set the value of 'certificates.group.caCertificatePEM' is used
+## @param global.certificates.group.caCertificatePEMExistingSecret.name Name of the existing secret
+## @param global.certificates.group.caCertificatePEMExistingSecret.key The key in the secret that contains the certificate
+## @param global.certificates.internal.caCertificatePEM Global CA root certificate of your internal PKI. If not set the value of 'certificates.internal.caCertificatePEM' is used
+## @param global.certificates.internal.caCertificatePEMExistingSecret.name Name of the existing secret
+## @param global.certificates.internal.caCertificatePEMExistingSecret.key The key in the secret that contains the certificate
+global:
+  imageRegistry: ""
+  imageTag: ""
+  groupID: ""
+  imagePullSecrets: []
+  certificates:
+    group:
+      caCertificatePEM: ""
+      caCertificatePEMExistingSecret:
+        name: ""
+        key: "tls.crt"
+    internal:
+      caCertificatePEM: ""
+      caCertificatePEMExistingSecret:
+        name: ""
+        key: "tls.crt"
+
+## @section Deployment Parameter
+## @param image.registry Image registry (ignored if 'global.imageRegistry' is set)
+## @param image.repository Image repository of the Outway.
+## @param image.tag Image tag (ignored if 'global.imageTag' is set). When set to null, the AppVersion from the chart is used
+## @param image.pullPolicy Image pull policy
+## @param image.pullSecrets Image pull secrets
+image:
+  registry: docker.io
+  repository: federatedserviceconnectivity/outway
+  tag: ""
+  pullPolicy: Always
+  pullSecrets: []
+
+## @param replicaCount Number of controller replicas
+replicaCount: 1
+
+## @param securityContext.allowPrivilegeEscalation Controls whether a process can gain more privileges than its parent process
+## @param securityContext.runAsNonRoot Run container as a non-root user
+## @param securityContext.runAsUser Run container as specified user
+## @param securityContext.capabilities.drop Drop all capabilities by default
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1001
+  capabilities:
+    drop:
+      - "ALL"
+
+## @param deploymentAnnotations Annotations to add to the deployment
+deploymentAnnotations: {}
+
+## @param podSecurityContext.fsGroup GroupID under which the pod should be started
+podSecurityContext:
+  fsGroup: 1001
+
+## @param resources Pod resource requests & limits
+resources: {}
+
+## @param nodeSelector Node labels for pod assignment
+nodeSelector: {}
+
+## @param affinity Node affinity for pod assignment
+affinity: {}
+
+## @param tolerations Node tolerations for pod assignment
+tolerations: []
+
+## @param extraEnv Extra env items for pod assignment
+extraEnv: []
+
+## @param serviceAccount.create Specifies whether a service account should be created
+## @param serviceAccount.annotations Annotations to add to the service account
+## @param serviceAccount.name The name of the service account to use. If not set and create is true, a name is generated using the fullname template
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+## @param podLabels Extra labels added to the pod
+podLabels: {}
+
+## @section Common Parameters
+## @param nameOverride Override deployment name
+## @param fullnameOverride Override full deployment name
+nameOverride: ""
+fullnameOverride: ""
+
+## @section OpenFSC Outway parameters
+## @param config.logType Possible values 'live', 'local'. Affects the log output. See NewProduction and NewDevelopment at https://godoc.org/go.uber.org/zap#Logger
+## @param config.logLevel Possible values 'debug', 'warn', 'info'. Override the default logLevel set by 'config.logType'
+## @param config.enableGrantHashSuggestion Possible values 'true' and 'false'. Whether the Outway should return valid services and Grant Hashes
+## @param config.groupID FSC Group ID
+## @param config.name Name of the Outway
+## @param config.managerInternalAddress Internal address of the Manager
+## @param config.controllerRegistrationApiAddress The address of the Controller API
+## @param config.transactionLogApiAddress The Address of the Transaction Log API
+## @param config.authorizationService.enabled If 'true', the Outway will use the authorization service
+## @param config.authorizationService.url URL of the authorization service to use
+## @param config.authorizationService.caCertificatePEMExistingSecret.name Name of an existing secret that contains the CA certificate
+## @param config.authorizationService.caCertificatePEMExistingSecret.key Key in the existing secret that contains the CA certificate
+## @param config.authorizationService.withBody When set to true, the HTTP request body (if available) will be send to the Authorization Server in base64 encoded format.
+## @param config.authorizationService.maxBodySize The maximum HTTP request body size in bytes that is allowed for sending to the authorization server. If a body exceeds this limits, the body is not send to the Authorization Server.
+## @param config.authorizationService.bodyChunkSize The chunk size in bytes that is used to process each HTTP request body chunk.
+## @param config.authZenService.enabled If 'true', the Inway will use the AuthZen service
+## @param config.authZenService.url URL of the AuthZen service to use
+## @param config.authZenService.caCertificatePEMExistingSecret.name Name of an existing secret that contains the CA certificate
+## @param config.authZenService.caCertificatePEMExistingSecret.key Key in the existing secret that contains the CA certificate
+## @param config.authZenService.withBody When set to true, the HTTP request body (if available) will be send to the AuthZen Server in base64 encoded format.
+## @param config.authZenService.maxBodySize The maximum HTTP request body size in bytes that is allowed for sending to the AuthZen server. If a body exceeds this limits, the body is not send to the Authorization Server.
+## @param config.authZenService.bodyChunkSize The chunk size in bytes that is used to process each HTTP request body chunk.
+## @param config.disableCrlChecks If 'true', the Outway will not check if the Client Certificate of the Inway or Manager is on the Certificate Revocation List. This means the Outway will accept client certificates that have been revoked.
+## @param config.grantLinksCacheTTL The time to live of the Grant Links cache, format is specified in string, e.g. '1h', '300s' or '5m'
+## @param config.xffAllowedAddresses List of addresses allowed in the 'x-forwarded-for' header
+config:
+  logType: live
+  logLevel: info
+  enableGrantHashSuggestion: false
+  groupID: ""
+  name: ""
+  managerInternalAddress: ""
+  controllerRegistrationApiAddress: ""
+  transactionLogApiAddress: ""
+  disableCrlChecks: false
+  grantLinksCacheTTL: "30s"
+  xffAllowedAddresses: []
+  authorizationService:
+    enabled: false
+    url: ""
+    caCertificatePEMExistingSecret:
+      name: ""
+      key: ca.crt
+    withBody: false
+    maxBodySize: 4096
+    bodyChunkSize: 1024
+  authZenService:
+    enabled: false
+    url: ""
+    caCertificatePEMExistingSecret:
+      name: ""
+      key: ca.crt
+    withBody: false
+    maxBodySize: 4096
+    bodyChunkSize: 1024
+
+## @section TLS certificates used by OpenFSC components for communications
+## @param certificates.group.caCertificatePEM The CA certificate of the Group
+## @param certificates.group.caCertificatePEMExistingSecret.name Name of the existing secret
+## @param certificates.group.caCertificatePEMExistingSecret.key The key in the secret that contains the certificates
+## @param certificates.group.certificatePEM The Group certificate
+## @param certificates.group.keyPEM Private Key of 'certificates.group.certificatePEM'
+## @param certificates.group.existingSecret Use existing secret with your OpenFSC keypair (`certificates.group.certificatePEM` and `certificates.group.keyPEM` will be ignored and picked up from the secret)
+## @param certificates.internal.caCertificatePEM The CA root certificate of your internal PKI
+## @param certificates.internal.caCertificatePEMExistingSecret.name Name of the existing secret
+## @param certificates.internal.caCertificatePEMExistingSecret.key The key in the secret that contains the certificate
+## @param certificates.internal.certificatePEM The certificate signed by your internal PKI
+## @param certificates.internal.keyPEM the private key of 'certificates.internal.certificatePEM'
+## @param certificates.internal.existingSecret Use of existing secret with your OpenFSC keypair ('certificates.internal.certificatePEM' and 'certificates.internal.keyPEM'. will be ingored and picked up from this secret)
+certificates:
+  group:
+    caCertificatePEM: ""
+    caCertificatePEMExistingSecret:
+      name: ""
+      key: ""
+    certificatePEM: ""
+    keyPEM: ""
+    existingSecret: ""
+  internal:
+    caCertificatePEM: ""
+    caCertificatePEMExistingSecret:
+      name: ""
+      key: ""
+    certificatePEM: ""
+    keyPEM: ""
+    existingSecret: ""
+
+## @section Exposure parameters
+## @param service.type Service Type (ClusterIP, NodePort, LoadBalancer)
+## @param service.annotations Annotations to be added to the service
+## @param service.httpPort Port exposed by the service
+## @param service.httpsPort Port exposed by the service if 'https.enabled' is 'true'
+service:
+  type: ClusterIP
+  annotations: {}
+  httpPort: 80
+  httpsPort: 443
+
+
+## @param https.enabled If 'true' HTTPs will be enabled
+## @param https.keyPEM Private Key of the 'https.certificatePEM' as PEM. Required if 'https.enabled' is 'true'
+## @param https.certificatePEM TLS Certificate of PEM. Required if 'https.enabled' is 'true'
+## @param https.existingSecret.name  The name of the secret that contains the certificate and private key
+## @param https.existingSecret.keyCertificate  The key in the secret that contains the certificate
+## @param https.existingSecret.keyPrivateKey  The key in the secret that contains the private key
+https:
+  enabled: false
+  existingSecret:
+    name: ""
+    keyCertificate: "tls.crt"
+    keyPrivateKey: "tls.key"
+  keyPEM: ""
+  certificatePEM: ""
