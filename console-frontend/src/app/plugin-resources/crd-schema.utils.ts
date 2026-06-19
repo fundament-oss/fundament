@@ -182,18 +182,6 @@ export function kindToLabel(kind: string): string {
 }
 
 /**
- * Convert a CRD kind (PascalCase) to a human-readable singular label in all lowercase.
- * Intended for use mid-sentence: "Create cluster issuer", "Delete database".
- * Examples: "Certificate" → "certificate", "ClusterIssuer" → "cluster issuer"
- */
-export function kindToSingularLabel(kind: string): string {
-  return kind
-    .replace(/([A-Z])/g, ' $1')
-    .trim()
-    .toLowerCase();
-}
-
-/**
  * Convert a CRD property name to a human-readable label.
  */
 export function fieldNameToLabel(name: string): string {
@@ -201,11 +189,4 @@ export function fieldNameToLabel(name: string): string {
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
-}
-
-/**
- * Check if a field is required in the schema.
- */
-export function isFieldRequired(fieldName: string, schema: CrdObjectSchema): boolean {
-  return schema.required?.includes(fieldName) ?? false;
 }

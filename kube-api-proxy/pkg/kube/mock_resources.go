@@ -361,6 +361,22 @@ const mockDatabaseListJSON = `{
         "connectionLimit": -1
       },
       "status": {"applied": false, "message": "Cluster pg-cluster-staging not found", "observedGeneration": 1}
+    },
+    {
+      "apiVersion": "postgresql.cnpg.io/v1",
+      "kind": "Database",
+      "metadata": {"name": "app-db", "namespace": "analytics", "uid": "db-4", "creationTimestamp": "2026-02-18T16:45:00Z"},
+      "spec": {
+        "name": "app_database",
+        "cluster": {"name": "pg-cluster-analytics"},
+        "owner": "analytics_app_user",
+        "encoding": "UTF8",
+        "ensure": "present",
+        "databaseReclaimPolicy": "retain",
+        "allowConnections": true,
+        "connectionLimit": 25
+      },
+      "status": {"applied": true, "message": "Database is up to date", "observedGeneration": 1}
     }
   ]
 }`

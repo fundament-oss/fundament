@@ -34,7 +34,8 @@ message MenuEntry {
   string crd = 1;
   bool list = 2;
   bool detail = 3;
-  bool create = 4;
+  reserved 4;
+  reserved create;
   string icon = 5;
 }
 

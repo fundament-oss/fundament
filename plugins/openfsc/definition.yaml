@@ -51,7 +51,6 @@ spec:
       - crd: fscinstallations.openfsc.fundament.io
         list: true
         detail: true
-        create: false
         icon: cloud
 
   customComponents:
