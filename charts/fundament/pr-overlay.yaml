@@ -3,23 +3,14 @@ kind: Namespace
 metadata:
   name: tn-fundament-pr-${PR_NUM}
 ---
-# we have to create this Certificate ourselves as ListenerSet is not supported by cert-manager
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: tn-fundament-pr-${PR_NUM}-wildcard-tls
-  namespace: istio-gateway
-spec:
-  secretName: tn-fundament-pr-${PR_NUM}-wildcard-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - "*.pr${PR_NUM}.${DOMAIN}"
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
 metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: "256"
+    cert-manager.io/private-key-rotation-policy: Always
   name: tn-fundament-pr-${PR_NUM}
   namespace: istio-gateway
 spec:
