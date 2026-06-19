@@ -163,7 +163,7 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 	case isResourceList(path, "openfsc.fundament.io", "v1", "fscinstallations"):
 		return 200, r(mockFSCInstallationListJSON), nil
 	case isResourceGet(path, "openfsc.fundament.io", "v1", "fscinstallations"):
-		return resourceGetResponse(mockFSCInstallationListJSON, resourceNameFromPath(path), r)
+		return resourceGetResponse(mockFSCInstallationListJSON, resourceNameFromPath(path), resourceNamespaceFromPath(path), r)
 	default:
 		return 200, r(mockEmptyList), nil
 	}
