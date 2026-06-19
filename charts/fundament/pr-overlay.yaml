@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   name: tn-fundament-pr-${PR_NUM}
 ---
-# we have to create this Certificate ourselves as XListenerSet is not supported by cert-manager
+# we have to create this Certificate ourselves as ListenerSet is not supported by cert-manager
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -17,8 +17,8 @@ spec:
   dnsNames:
     - "*.pr${PR_NUM}.${DOMAIN}"
 ---
-apiVersion: gateway.networking.x-k8s.io/v1alpha1
-kind: XListenerSet
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
 metadata:
   name: tn-fundament-pr-${PR_NUM}
   namespace: istio-gateway
@@ -113,8 +113,8 @@ spec:
       httproute:
         enabled: true
         parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
             name: tn-fundament-pr-${PR_NUM}
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
@@ -126,8 +126,8 @@ spec:
       httproute:
         enabled: true
         parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
             name: tn-fundament-pr-${PR_NUM}
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
@@ -139,8 +139,8 @@ spec:
       httproute:
         enabled: true
         parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
             name: tn-fundament-pr-${PR_NUM}
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
@@ -152,8 +152,8 @@ spec:
       httproute:
         enabled: true
         parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
             name: tn-fundament-pr-${PR_NUM}
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
@@ -190,8 +190,8 @@ spec:
       httproute:
         enabled: true
         parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
             name: tn-fundament-pr-${PR_NUM}
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
@@ -212,8 +212,8 @@ spec:
       httproute:
         enabled: true
         parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
             name: tn-fundament-pr-${PR_NUM}
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
@@ -233,8 +233,8 @@ spec:
       httproute:
         enabled: true
         parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
             name: tn-fundament-pr-${PR_NUM}
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
@@ -247,8 +247,8 @@ spec:
       httproute:
         enabled: true
         parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
             name: tn-fundament-pr-${PR_NUM}
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
@@ -262,8 +262,8 @@ spec:
       httproute:
         enabled: true
         parentRefs:
-          - group: gateway.networking.x-k8s.io
-            kind: XListenerSet
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
             name: tn-fundament-pr-${PR_NUM}
             namespace: istio-gateway
             sectionName: tn-fundament-pr-${PR_NUM}
