@@ -17,7 +17,7 @@ func TestLoadDefinition(t *testing.T) {
 	assert.Equal(t, "OpenFSC", def.Metadata.DisplayName)
 	assert.Equal(t, "v4.0.0", def.Metadata.Version)
 	assert.Equal(t, "Fundament", def.Metadata.Author)
-	assert.Equal(t, "EUPL-1.2", def.Metadata.License)
+	assert.Equal(t, "AGPL-3.0", def.Metadata.License)
 	assert.NotEmpty(t, def.Spec.Permissions.Capabilities)
 	assert.NotEmpty(t, def.Spec.Permissions.RBAC)
 
