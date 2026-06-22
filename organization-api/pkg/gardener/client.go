@@ -1,8 +1,9 @@
 // Package gardener provides a minimal Gardener client for organization-api.
 //
-// The only call site today is GetCluster, which needs the per-shoot metrics
-// dashboard URL stored in the <shoot>.monitoring secret in the project
-// namespace of the virtual-garden cluster (see ADR-0025).
+// It reads per-shoot observability artifacts from the <shoot>.monitoring secret
+// in the project namespace of the virtual-garden cluster (see ADR-0025): the
+// Plutono metrics dashboard URL (GetCluster) and the Vali log API URL
+// (LogsService), both with the basic-auth credentials Gardener generates.
 package gardener
 
 import (
@@ -34,6 +35,16 @@ const (
 	// plutonoURLAnnotation is the annotation Gardener sets on the monitoring
 	// secret carrying the Plutono dashboard URL.
 	plutonoURLAnnotation = "plutono-url"
+
+	// valiURLAnnotation is the annotation expected to carry the per-shoot Vali
+	// (Loki-compatible) HTTP API base URL on the monitoring secret.
+	//
+	// NOTE: the exact annotation name is UNVERIFIED — it must be confirmed
+	// against a live shoot's "<shoot>.monitoring" secret (plan Step 0). When the
+	// annotation is absent, Logging() returns ErrNotFound and callers fall back
+	// to the Kubernetes pod-log path, so an incorrect name degrades gracefully
+	// rather than breaking.
+	valiURLAnnotation = "vali-url"
 )
 
 // ErrNotFound is returned when no shoot or monitoring secret exists for the
@@ -49,11 +60,25 @@ type MonitoringInfo struct {
 	Password string
 }
 
+// LoggingInfo carries the per-shoot Vali (Loki-compatible) HTTP API base URL
+// and the basic-auth credentials to query it. The credentials are the same
+// ones Gardener generates on the "<shoot>.monitoring" secret.
+type LoggingInfo struct {
+	URL      string
+	Username string
+	Password string
+}
+
 // Client looks up Gardener-side artifacts for a given cluster.
 type Client interface {
 	// Monitoring returns the per-shoot Plutono URL and basic-auth credentials,
 	// or ErrNotFound if the shoot or secret is not yet available.
 	Monitoring(ctx context.Context, clusterID uuid.UUID) (*MonitoringInfo, error)
+
+	// Logging returns the per-shoot Vali base URL and basic-auth credentials,
+	// or ErrNotFound if the shoot, secret, or Vali URL is not available. Callers
+	// should treat ErrNotFound as "use the fallback log backend".
+	Logging(ctx context.Context, clusterID uuid.UUID) (*LoggingInfo, error)
 }
 
 // RealClient talks to the virtual-garden cluster.
@@ -93,9 +118,47 @@ func NewReal(kubeconfigPath string, logger *slog.Logger) (*RealClient, error) {
 }
 
 // Monitoring finds the Shoot for clusterID, reads its monitoring secret, and
-// returns the URL + basic-auth credentials. Returns ErrNotFound when the
-// shoot or secret does not exist yet.
+// returns the Plutono URL + basic-auth credentials. Returns ErrNotFound when
+// the shoot, secret, or URL does not exist yet.
 func (c *RealClient) Monitoring(ctx context.Context, clusterID uuid.UUID) (*MonitoringInfo, error) {
+	secret, err := c.monitoringSecret(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+	url := secret.Annotations[plutonoURLAnnotation]
+	if url == "" {
+		return nil, ErrNotFound
+	}
+	return &MonitoringInfo{
+		URL:      url,
+		Username: string(secret.Data["username"]),
+		Password: string(secret.Data["password"]),
+	}, nil
+}
+
+// Logging finds the Shoot for clusterID, reads its monitoring secret, and
+// returns the Vali base URL + basic-auth credentials. Returns ErrNotFound when
+// the shoot, secret, or Vali URL is not available (e.g. the annotation is
+// absent), so callers transparently fall back to the Kubernetes pod-log path.
+func (c *RealClient) Logging(ctx context.Context, clusterID uuid.UUID) (*LoggingInfo, error) {
+	secret, err := c.monitoringSecret(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+	url := secret.Annotations[valiURLAnnotation]
+	if url == "" {
+		return nil, ErrNotFound
+	}
+	return &LoggingInfo{
+		URL:      url,
+		Username: string(secret.Data["username"]),
+		Password: string(secret.Data["password"]),
+	}, nil
+}
+
+// monitoringSecret resolves the per-shoot "<shoot>.monitoring" secret for
+// clusterID, returning ErrNotFound when the shoot or secret does not exist yet.
+func (c *RealClient) monitoringSecret(ctx context.Context, clusterID uuid.UUID) (*corev1.Secret, error) {
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := c.client.List(ctx, shootList,
 		client.MatchingLabels{labelClusterID: clusterID.String()},
@@ -118,16 +181,7 @@ func (c *RealClient) Monitoring(ctx context.Context, clusterID uuid.UUID) (*Moni
 		}
 		return nil, fmt.Errorf("get monitoring secret %s/%s: %w", key.Namespace, key.Name, err)
 	}
-
-	url := secret.Annotations[plutonoURLAnnotation]
-	if url == "" {
-		return nil, ErrNotFound
-	}
-	return &MonitoringInfo{
-		URL:      url,
-		Username: string(secret.Data["username"]),
-		Password: string(secret.Data["password"]),
-	}, nil
+	return secret, nil
 }
 
 // NoopClient is the zero-config implementation used when no Gardener
@@ -136,5 +190,10 @@ type NoopClient struct{}
 
 // Monitoring always returns ErrNotFound.
 func (NoopClient) Monitoring(context.Context, uuid.UUID) (*MonitoringInfo, error) {
+	return nil, ErrNotFound
+}
+
+// Logging always returns ErrNotFound.
+func (NoopClient) Logging(context.Context, uuid.UUID) (*LoggingInfo, error) {
 	return nil, ErrNotFound
 }
