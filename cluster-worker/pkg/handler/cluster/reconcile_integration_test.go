@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 func TestReconcileDriftDetected(t *testing.T) {
@@ -55,7 +56,7 @@ func TestReconcileOrphanCleanup(t *testing.T) {
 
 	// Create a shoot in Gardener for a cluster ID that doesn't exist in the DB.
 	orphanClusterID := uuid.New()
-	orphanShootName := gardener.GenerateShootName("orphan", orphanClusterID)
+	orphanShootName := kubename.GenerateShootName("orphan", orphanClusterID)
 	err := mock.ApplyShoot(t.Context(), &gardener.ClusterToSync{
 		ID:                orphanClusterID,
 		OrganizationID:    acmeCorpOrgID,

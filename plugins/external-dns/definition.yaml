@@ -45,7 +45,6 @@ spec:
       - crd: dnsendpoints.externaldns.k8s.io
         list: true
         detail: true
-        create: true
         icon: rectangle-stack
   uiHints:
     dnsendpoints.externaldns.k8s.io:

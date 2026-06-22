@@ -50,23 +50,19 @@ spec:
       - crd: clusterissuers.cert-manager.io
         list: true
         detail: true
-        create: true
         icon: rectangle-stack
     project:
       - crd: certificates.cert-manager.io
         list: true
         detail: true
-        create: true
         icon: file-text
       - crd: issuers.cert-manager.io
         list: true
         detail: true
-        create: true
         icon: rectangle-stack
       - crd: certificaterequests.cert-manager.io
         list: true
         detail: true
-        create: false
         icon: magnifier
   crds:
     - certificates.cert-manager.io

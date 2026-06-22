@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
+import DropdownSyncDirective from '../dropdown-sync.directive';
 
 interface RoleBinding {
   id: string;
@@ -27,7 +28,7 @@ const AVAILABLE_ROLES = ['deploy', 'view-pods', 'view-logs', 'manage-services'];
 
 @Component({
   selector: 'app-project-roles',
-  imports: [FormsModule, DialogSyncDirective],
+  imports: [FormsModule, DialogSyncDirective, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-roles.component.html',
@@ -215,7 +216,9 @@ export default class ProjectRolesComponent implements OnInit {
     }
   }
 
-  saveBinding() {
+  saveBinding(event?: Event) {
+    event?.preventDefault();
+
     this.formSubmitted.set(true);
 
     const memberId = this.modalMemberId();

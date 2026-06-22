@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import type { AssetStats } from '../../generated/v1/asset_pb';
@@ -18,8 +19,10 @@ import { RackSlotType } from '../../generated/v1/common_pb';
 import InventoryApiService from './inventory-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import PlacementApiService, { RackOption } from './placement-api.service';
+import { ASSET_STATUS_BADGE_CLASS, ASSET_STATUS_DOT_CLASS } from './asset-status';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 export type AssetStatus =
   | 'needs-repair'
@@ -101,13 +104,19 @@ export interface CatalogEntry {
   specs: Record<string, string>;
 }
 
+/** Catalog port-type enum keys, as used on the wire by the catalog API. */
+export type PortTypeKey = 'network' | 'power_in' | 'power_out' | 'slot' | 'bay' | 'console';
+
+/** Catalog port-direction enum keys. */
+export type PortDirectionKey = 'in' | 'out' | 'bidir';
+
 export interface PortDefinition {
   id: string;
   catalogEntryId: string;
   name: string;
-  /** Port category enum key: network | power_in | power_out | slot | bay | console. */
+  /** Port category enum key ({@link PortTypeKey}), or '' while a draft port is unsaved. */
   portType: string;
-  /** Direction enum key: in | out | bidir. */
+  /** Direction enum key ({@link PortDirectionKey}). */
   direction: string;
   /** Free-text connector/media (e.g. SFP+, QSFP28, IEC C13). */
   mediaType?: string;
@@ -129,10 +138,10 @@ export interface PortCompatibility {
   selector: 'app-inventory',
   templateUrl: './inventory.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
-    class: 'flex flex-col min-h-screen bg-white',
+    class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950',
   },
 })
 export default class InventoryComponent implements OnInit {
@@ -160,6 +169,15 @@ export default class InventoryComponent implements OnInit {
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editAsset = signal<Partial<Asset> | null>(null);
+
+  /** Bound values for the edit form's <select>s (seeded on open, read on save). */
+  readonly assetDeviceId = signal<string>('');
+
+  readonly assetStatus = signal<AssetStatus>('available');
+
+  readonly assetRackId = signal<string>('');
+
+  readonly assetSlotType = signal<string>('');
 
   /** Rack placement of the asset being edited; null when adding or unplaced. */
   editPlacement = signal<{
@@ -191,8 +209,6 @@ export default class InventoryComponent implements OnInit {
     { value: RackSlotType.ZERO_U, label: 'Zero-U' },
   ];
 
-  readonly defaultSlotType = RackSlotType.UNIT;
-
   deleteAsset = signal<Asset | null>(null);
 
   // ── Validation feedback ──────────────────────────────────────────────────────
@@ -204,21 +220,13 @@ export default class InventoryComponent implements OnInit {
 
   private readonly assetModalEl = viewChild<ElementRef>('assetModal');
 
-  private readonly fAssetDevice = viewChild<ElementRef>('fAssetDevice');
-
   private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
-
-  private readonly fAssetStatus = viewChild<ElementRef>('fAssetStatus');
 
   private readonly fAssetSerial = viewChild<ElementRef>('fAssetSerial');
 
   private readonly fAssetWarranty = viewChild<ElementRef>('fAssetWarranty');
 
-  private readonly fAssetRack = viewChild<ElementRef>('fAssetRack');
-
   private readonly fAssetRackUnit = viewChild<ElementRef>('fAssetRackUnit');
-
-  private readonly fAssetSlotType = viewChild<ElementRef>('fAssetSlotType');
 
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
@@ -396,6 +404,10 @@ export default class InventoryComponent implements OnInit {
   openCreateAsset(): void {
     this.clearErrors();
     this.editPlacement.set(null);
+    this.assetDeviceId.set(this.catalog()[0]?.id ?? '');
+    this.assetStatus.set('available');
+    this.assetRackId.set('');
+    this.assetSlotType.set('');
     this.editAsset.set({
       id: '',
       deviceCatalogId: this.catalog()[0]?.id ?? '',
@@ -414,7 +426,7 @@ export default class InventoryComponent implements OnInit {
     firstValueFrom(this.placementApi.getPlacementByAsset(asset.id))
       .then((res) => {
         const p = res.placement;
-        this.editPlacement.set(
+        const placement =
           p && p.location.case === 'rack'
             ? {
                 id: p.id,
@@ -422,15 +434,23 @@ export default class InventoryComponent implements OnInit {
                 unit: p.location.value.rackUnitStart,
                 slotType: p.location.value.rackSlotType,
               }
-            : null,
-        );
+            : null;
+        this.editPlacement.set(placement);
+        this.assetRackId.set(placement?.rackId ?? '');
+        this.assetSlotType.set(placement?.slotType ? String(placement.slotType) : '');
       })
       .catch((err) => {
         this.editPlacement.set(null);
+        this.assetRackId.set('');
+        this.assetSlotType.set('');
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
       })
-      .finally(() => this.editAsset.set({ ...asset }));
+      .finally(() => {
+        this.assetDeviceId.set(asset.deviceCatalogId ?? '');
+        this.assetStatus.set(asset.status);
+        this.editAsset.set({ ...asset });
+      });
   }
 
   closeAssetForm(): void {
@@ -442,10 +462,7 @@ export default class InventoryComponent implements OnInit {
     const form = this.editAsset();
     if (!form) return;
     this.clearErrors();
-    const deviceCatalogId =
-      (this.fAssetDevice()?.nativeElement as HTMLSelectElement)?.value ??
-      form.deviceCatalogId ??
-      '';
+    const deviceCatalogId = this.assetDeviceId() || (form.deviceCatalogId ?? '');
     const entry = this.catalogById.get(deviceCatalogId);
     const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
     const updated: Asset = {
@@ -454,8 +471,7 @@ export default class InventoryComponent implements OnInit {
       model: entry?.model ?? form.model ?? 'Unknown device',
       category: entry?.category ?? form.category ?? 'Other',
       assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? '',
-      status: ((this.fAssetStatus()?.nativeElement as HTMLSelectElement)?.value ??
-        'available') as AssetStatus,
+      status: this.assetStatus(),
       serialNumber: (this.fAssetSerial()?.nativeElement as HTMLInputElement)?.value ?? '',
       warrantyExpiry: warranty || undefined,
       notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? '',
@@ -483,13 +499,10 @@ export default class InventoryComponent implements OnInit {
   }
 
   private reconcilePlacement(assetId: string): Promise<unknown> {
-    const rackId = (this.fAssetRack()?.nativeElement as HTMLSelectElement)?.value ?? '';
+    const rackId = this.assetRackId();
     const unit =
       parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
-    const slotType =
-      (Number(
-        (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
-      ) as RackSlotType) || RackSlotType.UNIT;
+    const slotType = (Number(this.assetSlotType()) as RackSlotType) || RackSlotType.UNIT;
     return this.placementApi.reconcilePlacement({
       assetId,
       rackId,
@@ -526,29 +539,9 @@ export default class InventoryComponent implements OnInit {
     return this.statuses.find((s) => s.value === status)?.label ?? status;
   }
 
-  readonly statusBadgeClass = (status: AssetStatus): string => {
-    const map: Record<AssetStatus, string> = {
-      'needs-repair': 'bg-amber-50 text-amber-700',
-      decommissioned: 'bg-red-50 text-red-600',
-      deployed: 'bg-teal-50 text-teal-700',
-      available: 'bg-green-50 text-green-700',
-      'on-order': 'bg-indigo-50 text-indigo-600',
-      requested: 'bg-slate-100 text-slate-600',
-    };
-    return map[status];
-  };
+  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
 
-  readonly statusDotClass = (status: AssetStatus): string => {
-    const map: Record<AssetStatus, string> = {
-      'needs-repair': 'bg-amber-400',
-      decommissioned: 'bg-red-400',
-      deployed: 'bg-teal-400',
-      available: 'bg-green-400',
-      'on-order': 'bg-indigo-400',
-      requested: 'bg-slate-400',
-    };
-    return map[status];
-  };
+  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
 
   readonly categoryIcon = (category: AssetCategory): string => {
     const map: Partial<Record<AssetCategory, string>> = {
@@ -570,5 +563,4 @@ export default class InventoryComponent implements OnInit {
     };
     return map[category] ?? 'rectangle-stack';
   };
-
 }

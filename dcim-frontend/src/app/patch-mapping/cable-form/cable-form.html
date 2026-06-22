@@ -1,4 +1,44 @@
-<nldd-page sticky-header="" sticky-footer="">
+<div class="flex flex-col h-full" [hidden]="portManagementDevice() === null">
+  <!-- Back header — plain button to avoid bubbling a dismiss event to the sheet -->
+  <div class="flex items-center gap-3 border-b border-slate-200 bg-white px-6 py-3 shrink-0">
+    <button
+      class="inline-flex items-center gap-1.5 rounded text-sm font-medium text-accent-700 transition-colors hover:text-accent-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400"
+      type="button"
+      (click)="closePortManagement()"
+      aria-label="Back to cable form"
+    >
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M19 12H5M12 5l-7 7 7 7" />
+      </svg>
+      Back to cable
+    </button>
+    <span class="text-slate-300">·</span>
+    <span class="truncate text-sm font-semibold text-slate-900">{{
+      portManagementDevice()?.name
+    }}</span>
+  </div>
+  <div class="flex-1 overflow-y-auto p-4">
+    <app-device-ports
+      [deviceId]="portManagementDevice()?.id ?? ''"
+      [deviceName]="portManagementDevice()?.name ?? ''"
+      [ports]="portManagementPorts()"
+      [embedded]="true"
+      (portsChange)="onPortsSaved($event)"
+      (cancelEdit)="closePortManagement()"
+    />
+  </div>
+</div>
+<nldd-page sticky-header="" sticky-footer="" [hidden]="portManagementDevice() !== null">
   <nldd-top-title-bar
     slot="header"
     [attr.text]="isEditMode() ? 'Edit cable' : 'New cable'"
@@ -19,10 +59,10 @@
       <section aria-labelledby="aside-heading">
         <h3
           id="aside-heading"
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"
+          class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"
         >
           <span
-            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-100 text-accent-700 text-[10px] font-bold"
+            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-100 dark:bg-accent-950 text-accent-700 dark:text-accent-300 text-[10px] font-bold"
             aria-hidden="true"
             >A</span
           >
@@ -33,67 +73,124 @@
           <!-- Device + manage ports -->
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
-              <select
-                id="a-device"
-                (change)="onADeviceChange($any($event.target).value)"
-                class="flex-1"
-              >
-                <option value="" [selected]="!aDeviceId()">Select device…</option>
-                @for (dev of dcDevices(); track dev.id) {
-                  <option [value]="dev.id" [selected]="dev.id === aDeviceId()">
-                    {{ dev.name }}
-                  </option>
-                }
-              </select>
+              <nldd-dropdown class="flex-1">
+                <select id="a-device" (change)="onADeviceChange($any($event.target).value)">
+                  <option value="" [selected]="!aDeviceId()">Select device…</option>
+                  @for (dev of dcDevices(); track dev.id) {
+                    <option [value]="dev.id" [selected]="dev.id === aDeviceId()">
+                      {{ dev.name }}
+                    </option>
+                  }
+                </select>
+              </nldd-dropdown>
+              <nldd-icon-button
+                icon="gear"
+                variant="neutral-transparent"
+                size="sm"
+                text="Manage ports for this device"
+                [attr.disabled]="aDeviceId() ? null : true"
+                (click)="openPortManagement(aDeviceId())"
+              ></nldd-icon-button>
             </div>
           </nldd-form-field>
 
           <!-- Port type -->
           <nldd-form-field label="Port type">
-            <select
-              id="a-port-type"
-              (change)="onAPortTypeChange($any($event.target).value)"
-              [disabled]="!aDeviceId()"
-              class="w-full disabled:bg-neutral-50 disabled:text-slate-400"
-            >
-              <option value="" [selected]="!aPortType()">Any type</option>
-              @for (pt of PORT_TYPES; track pt.value) {
-                <option
-                  [value]="pt.value"
-                  [selected]="pt.value === aPortType()"
-                  [disabled]="!aAvailablePortTypes().has(pt.value)"
-                >
-                  {{ pt.label }}
-                </option>
-              }
-            </select>
+            <nldd-dropdown [attr.disabled]="!aDeviceId() ? true : null">
+              <select
+                id="a-port-type"
+                (change)="onAPortTypeChange($any($event.target).value)"
+                [disabled]="!aDeviceId()"
+              >
+                <option value="" [selected]="!aPortType()">Any type</option>
+                @for (pt of PORT_TYPES; track pt.value) {
+                  <option
+                    [value]="pt.value"
+                    [selected]="pt.value === aPortType()"
+                    [disabled]="!aAvailablePortTypes().has(pt.value)"
+                  >
+                    {{ pt.label }}
+                  </option>
+                }
+              </select>
+            </nldd-dropdown>
           </nldd-form-field>
 
           <!-- Port -->
           <nldd-form-field label="Port">
             <div class="flex items-center gap-1.5">
-              <select
-                id="a-port"
-                (change)="aPortId.set($any($event.target).value)"
-                [disabled]="!aDeviceId()"
-                class="flex-1 disabled:bg-neutral-50 disabled:text-slate-400"
-              >
-                <option value="" [selected]="!aPortId()">Select port…</option>
-                @for (port of aFilteredPorts(); track port.id) {
-                  <option
-                    [value]="port.id"
-                    [selected]="port.id === aPortId()"
-                    [disabled]="usedPortIds().has(port.id)"
-                  >
-                    {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
-                      usedPortIds().has(port.id) ? ' [in use]' : ''
-                    }}
-                  </option>
-                }
-              </select>
+              <nldd-dropdown class="flex-1" [attr.disabled]="!aDeviceId() ? true : null">
+                <select
+                  id="a-port"
+                  (change)="aPortId.set($any($event.target).value)"
+                  [disabled]="!aDeviceId()"
+                >
+                  <option value="" [selected]="!aPortId()">Select port…</option>
+                  @for (port of aFilteredPorts(); track port.id) {
+                    <option
+                      [value]="port.id"
+                      [selected]="port.id === aPortId()"
+                      [disabled]="usedPortIds().has(port.id)"
+                    >
+                      {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
+                        usedPortIds().has(port.id) ? ' [in use]' : ''
+                      }}
+                    </option>
+                  }
+                </select>
+              </nldd-dropdown>
+              <nldd-icon-button
+                icon="plus-small"
+                variant="neutral-transparent"
+                size="sm"
+                text="Add a new port to this device"
+                [attr.disabled]="aDeviceId() ? null : true"
+                (click)="startAddPort('a')"
+              ></nldd-icon-button>
             </div>
+            @if (aAddingPort()) {
+              <div
+                class="flex items-center gap-1.5 mt-1 p-2 bg-slate-50 rounded border border-slate-200"
+              >
+                <nldd-text-field
+                  id="a-new-port-name"
+                  [attr.value]="aNewPortName()"
+                  (input)="aNewPortName.set($any($event.target).value)"
+                  placeholder="Port name…"
+                  class="flex-1 font-mono"
+                  (keydown.enter)="confirmAddPort('a')"
+                  (keydown.escape)="cancelAddPort('a')"
+                ></nldd-text-field>
+                <nldd-dropdown size="sm">
+                  <select (change)="aNewPortType.set($any($event.target).value)">
+                    @for (pt of PORT_TYPES; track pt.value) {
+                      <option [value]="pt.value" [selected]="pt.value === aNewPortType()">
+                        {{ pt.label }}
+                      </option>
+                    }
+                  </select>
+                </nldd-dropdown>
+                <nldd-icon-button
+                  icon="check-mark-small"
+                  variant="primary"
+                  size="sm"
+                  text="Confirm new port"
+                  [attr.disabled]="aNewPortName().trim() ? null : true"
+                  (click)="confirmAddPort('a')"
+                ></nldd-icon-button>
+                <nldd-icon-button
+                  icon="dismiss-small"
+                  variant="secondary"
+                  size="sm"
+                  text="Cancel"
+                  (click)="cancelAddPort('a')"
+                ></nldd-icon-button>
+              </div>
+            }
             @if (aDeviceId() && aFilteredPorts().length === 0) {
-              <p class="text-[10px] text-amber-600 mt-0.5">No ports of this type on this device.</p>
+              <p class="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5">
+                No ports of this type on this device.
+              </p>
             }
           </nldd-form-field>
         </div>
@@ -101,7 +198,7 @@
 
       <!-- ── Swap button ──────────────────────────────────────────────────────── -->
       <div class="flex items-center gap-3">
-        <div class="flex-1 border-t border-slate-100"></div>
+        <div class="flex-1 border-t border-slate-100 dark:border-gray-800"></div>
         <nldd-icon-button
           icon="arrow-up-down"
           variant="neutral-transparent"
@@ -110,17 +207,17 @@
           (click)="swapSides()"
           [disabled]="!aDeviceId() && !bDeviceId()"
         ></nldd-icon-button>
-        <div class="flex-1 border-t border-slate-100"></div>
+        <div class="flex-1 border-t border-slate-100 dark:border-gray-800"></div>
       </div>
 
       <!-- ── B Side ──────────────────────────────────────────────────────────── -->
       <section aria-labelledby="bside-heading">
         <h3
           id="bside-heading"
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"
+          class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"
         >
           <span
-            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-200 text-slate-700 text-[10px] font-bold"
+            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-200 dark:bg-gray-800 text-slate-700 dark:text-gray-300 text-[10px] font-bold"
             aria-hidden="true"
             >B</span
           >
@@ -131,77 +228,134 @@
           <!-- Device + manage ports -->
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
-              <select
-                id="b-device"
-                (change)="onBDeviceChange($any($event.target).value)"
-                class="flex-1"
-              >
-                <option value="" [selected]="!bDeviceId()">Select device…</option>
-                @for (dev of dcDevices(); track dev.id) {
-                  <option [value]="dev.id" [selected]="dev.id === bDeviceId()">
-                    {{ dev.name }}
-                  </option>
-                }
-              </select>
+              <nldd-dropdown class="flex-1">
+                <select id="b-device" (change)="onBDeviceChange($any($event.target).value)">
+                  <option value="" [selected]="!bDeviceId()">Select device…</option>
+                  @for (dev of dcDevices(); track dev.id) {
+                    <option [value]="dev.id" [selected]="dev.id === bDeviceId()">
+                      {{ dev.name }}
+                    </option>
+                  }
+                </select>
+              </nldd-dropdown>
+              <nldd-icon-button
+                icon="gear"
+                variant="neutral-transparent"
+                size="sm"
+                text="Manage ports for this device"
+                [attr.disabled]="bDeviceId() ? null : true"
+                (click)="openPortManagement(bDeviceId())"
+              ></nldd-icon-button>
             </div>
           </nldd-form-field>
 
           <!-- Port type -->
           <nldd-form-field label="Port type">
-            <select
-              id="b-port-type"
-              (change)="onBPortTypeChange($any($event.target).value)"
-              [disabled]="!bDeviceId()"
-              class="w-full disabled:bg-neutral-50 disabled:text-slate-400"
-            >
-              <option value="" [selected]="!bPortType()">Any type</option>
-              @for (pt of PORT_TYPES; track pt.value) {
-                <option
-                  [value]="pt.value"
-                  [selected]="pt.value === bPortType()"
-                  [disabled]="
-                    !bAvailablePortTypes().has(pt.value) || !bCompatiblePortTypes().has(pt.value)
-                  "
-                >
-                  {{ pt.label }}
-                </option>
-              }
-            </select>
+            <nldd-dropdown [attr.disabled]="!bDeviceId() ? true : null">
+              <select
+                id="b-port-type"
+                (change)="onBPortTypeChange($any($event.target).value)"
+                [disabled]="!bDeviceId()"
+              >
+                <option value="" [selected]="!bPortType()">Any type</option>
+                @for (pt of PORT_TYPES; track pt.value) {
+                  <option
+                    [value]="pt.value"
+                    [selected]="pt.value === bPortType()"
+                    [disabled]="
+                      !bAvailablePortTypes().has(pt.value) || !bCompatiblePortTypes().has(pt.value)
+                    "
+                  >
+                    {{ pt.label }}
+                  </option>
+                }
+              </select>
+            </nldd-dropdown>
           </nldd-form-field>
 
           <!-- Port -->
           <nldd-form-field label="Port">
             <div class="flex items-center gap-1.5">
-              <select
-                id="b-port"
-                (change)="bPortId.set($any($event.target).value)"
-                [disabled]="!bDeviceId()"
-                class="flex-1 disabled:bg-neutral-50 disabled:text-slate-400"
-              >
-                <option value="" [selected]="!bPortId()">Select port…</option>
-                @for (port of bFilteredPorts(); track port.id) {
-                  <option
-                    [value]="port.id"
-                    [selected]="port.id === bPortId()"
-                    [disabled]="usedPortIds().has(port.id)"
-                  >
-                    {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
-                      usedPortIds().has(port.id) ? ' [in use]' : ''
-                    }}
-                  </option>
-                }
-              </select>
+              <nldd-dropdown class="flex-1" [attr.disabled]="!bDeviceId() ? true : null">
+                <select
+                  id="b-port"
+                  (change)="bPortId.set($any($event.target).value)"
+                  [disabled]="!bDeviceId()"
+                >
+                  <option value="" [selected]="!bPortId()">Select port…</option>
+                  @for (port of bFilteredPorts(); track port.id) {
+                    <option
+                      [value]="port.id"
+                      [selected]="port.id === bPortId()"
+                      [disabled]="usedPortIds().has(port.id)"
+                    >
+                      {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
+                        usedPortIds().has(port.id) ? ' [in use]' : ''
+                      }}
+                    </option>
+                  }
+                </select>
+              </nldd-dropdown>
+              <nldd-icon-button
+                icon="plus-small"
+                variant="neutral-transparent"
+                size="sm"
+                text="Add a new port to this device"
+                [attr.disabled]="bDeviceId() ? null : true"
+                (click)="startAddPort('b')"
+              ></nldd-icon-button>
             </div>
+            @if (bAddingPort()) {
+              <div
+                class="flex items-center gap-1.5 mt-1 p-2 bg-slate-50 rounded border border-slate-200"
+              >
+                <nldd-text-field
+                  id="b-new-port-name"
+                  [attr.value]="bNewPortName()"
+                  (input)="bNewPortName.set($any($event.target).value)"
+                  placeholder="Port name…"
+                  class="flex-1 font-mono"
+                  (keydown.enter)="confirmAddPort('b')"
+                  (keydown.escape)="cancelAddPort('b')"
+                ></nldd-text-field>
+                <nldd-dropdown size="sm">
+                  <select (change)="bNewPortType.set($any($event.target).value)">
+                    @for (pt of PORT_TYPES; track pt.value) {
+                      <option [value]="pt.value" [selected]="pt.value === bNewPortType()">
+                        {{ pt.label }}
+                      </option>
+                    }
+                  </select>
+                </nldd-dropdown>
+                <nldd-icon-button
+                  icon="check-mark-small"
+                  variant="primary"
+                  size="sm"
+                  text="Confirm new port"
+                  [attr.disabled]="bNewPortName().trim() ? null : true"
+                  (click)="confirmAddPort('b')"
+                ></nldd-icon-button>
+                <nldd-icon-button
+                  icon="dismiss-small"
+                  variant="secondary"
+                  size="sm"
+                  text="Cancel"
+                  (click)="cancelAddPort('b')"
+                ></nldd-icon-button>
+              </div>
+            }
             @if (bDeviceId() && bFilteredPorts().length === 0) {
-              <p class="text-[10px] text-amber-600 mt-0.5">No ports of this type on this device.</p>
+              <p class="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5">
+                No ports of this type on this device.
+              </p>
             }
             @if (isSamePort()) {
-              <p class="text-[10px] text-red-600 mt-0.5" role="alert">
+              <p class="text-[10px] text-red-600 dark:text-red-300 mt-0.5" role="alert">
                 A and B sides cannot use the same port.
               </p>
             }
             @if (incompatibleSides()) {
-              <p class="text-[10px] text-amber-600 mt-0.5" role="alert">
+              <p class="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5" role="alert">
                 Power and data ports cannot be combined.
               </p>
             }
@@ -209,13 +363,13 @@
         </div>
       </section>
 
-      <div class="border-t border-slate-100"></div>
+      <div class="border-t border-slate-100 dark:border-gray-800"></div>
 
       <!-- ── Cable properties ────────────────────────────────────────────────── -->
       <section aria-labelledby="cable-props-heading">
         <h3
           id="cable-props-heading"
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3"
+          class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3"
         >
           Cable
         </h3>
@@ -236,24 +390,29 @@
 
           <!-- Type -->
           <nldd-form-field label="Type">
-            <select
-              id="cable-type"
-              [value]="cableType()"
-              (change)="cableType.set($any($event.target).value)"
-              class="w-full"
-            >
-              <option value="" [selected]="cableType() === ''">Unspecified</option>
-              @for (t of CABLE_TYPES; track t) {
-                <option [value]="t" [selected]="t === cableType()">
-                  {{ CABLE_TYPE_LABEL[t] }}
-                </option>
-              }
-            </select>
+            <nldd-dropdown>
+              <select
+                id="cable-type"
+                [value]="cableType()"
+                (change)="onCableTypeChange($any($event.target).value)"
+              >
+                <option value="" [selected]="cableType() === ''">Unspecified</option>
+                @for (t of CABLE_TYPES; track t) {
+                  <option [value]="t" [selected]="t === cableType()">
+                    {{ CABLE_TYPE_LABEL[t] }}
+                  </option>
+                }
+              </select>
+            </nldd-dropdown>
           </nldd-form-field>
 
           <!-- Status -->
           <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium text-slate-700" id="cable-status-label">Status</span>
+            <span
+              class="text-xs font-medium text-slate-700 dark:text-gray-300"
+              id="cable-status-label"
+              >Status</span
+            >
             <nldd-segmented-control
               [value]="cableStatus()"
               size="sm"
@@ -277,23 +436,25 @@
 
           <!-- Color -->
           <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium text-slate-700" id="color-label">Color</span>
+            <span class="text-xs font-medium text-slate-700 dark:text-gray-300" id="color-label"
+              >Color</span
+            >
             <div class="flex flex-wrap gap-1.5" role="group" aria-labelledby="color-label">
               <!-- No color option -->
               <button
                 class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1"
                 [class]="
                   cableColor() === undefined
-                    ? 'border-accent-500 bg-white'
-                    : 'border-slate-200 bg-white hover:border-slate-400'
+                    ? 'border-accent-500 bg-white dark:bg-gray-950'
+                    : 'border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 hover:border-slate-400'
                 "
-                (click)="cableColor.set(undefined)"
+                (click)="onCableColorChange(undefined)"
                 aria-label="No color"
                 [attr.aria-pressed]="cableColor() === undefined"
                 title="No color"
               >
                 <svg
-                  class="w-3 h-3 text-slate-300"
+                  class="w-3 h-3 text-slate-300 dark:text-gray-600"
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
@@ -310,10 +471,10 @@
                   [class]="
                     cableColor() === color
                       ? 'border-accent-500 scale-110'
-                      : 'border-transparent hover:border-slate-300 hover:scale-105'
+                      : 'border-transparent hover:border-slate-300 dark:hover:border-gray-700 hover:scale-105'
                   "
                   [style.background]="CABLE_COLOR_HEX[color]"
-                  (click)="cableColor.set(color)"
+                  (click)="onCableColorChange(color)"
                   [attr.aria-label]="'Color: ' + color"
                   [attr.aria-pressed]="cableColor() === color"
                   [title]="color"
@@ -363,7 +524,7 @@
     </div>
   </nldd-simple-section>
 
-  <div slot="footer" class="border-t border-slate-100 px-6 py-4">
+  <div slot="footer" class="border-t border-slate-100 dark:border-gray-800 px-6 py-4">
     <nldd-button-group orientation="vertical">
       <nldd-button
         variant="primary"

@@ -4,20 +4,24 @@
 <main class="pb-6">
   @if (asset(); as a) {
     <!-- Page title area -->
-    <div class="bg-white border-b border-slate-200">
+    <div class="bg-white dark:bg-gray-950 border-b border-slate-200 dark:border-gray-800">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
         <!-- Breadcrumb -->
         <nav aria-label="Breadcrumb" class="mb-3">
-          <ol class="flex items-center gap-1.5 text-sm text-slate-400">
+          <ol class="flex items-center gap-1.5 text-sm text-slate-400 dark:text-gray-500">
             <li>
-              <a routerLink="/inventory" class="hover:text-slate-600 transition-colors"
+              <a
+                routerLink="/inventory"
+                class="hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
                 >Inventory</a
               >
             </li>
             <li aria-hidden="true">
               <nldd-icon name="chevron-right-small" class="w-3 h-3 inline-block"></nldd-icon>
             </li>
-            <li class="font-mono text-slate-500" aria-current="page">{{ a.assetTag }}</li>
+            <li class="font-mono text-slate-500 dark:text-gray-400" aria-current="page">
+              {{ a.assetTag }}
+            </li>
           </ol>
         </nav>
 
@@ -25,7 +29,7 @@
           <div class="flex items-center gap-3 min-w-0">
             <!-- Category icon -->
             <div
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500"
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400"
               [attr.aria-label]="a.category"
             >
               <nldd-icon
@@ -36,9 +40,13 @@
             </div>
 
             <div class="min-w-0">
-              <h1 class="text-xl font-semibold text-slate-900 leading-tight">{{ a.model }}</h1>
+              <h1 class="text-xl font-semibold text-slate-900 dark:text-white leading-tight">
+                {{ a.model }}
+              </h1>
               <div class="flex items-center gap-2 mt-1 flex-wrap">
-                <span class="font-mono text-xs text-slate-400">{{ a.assetTag }}</span>
+                <span class="font-mono text-xs text-slate-400 dark:text-gray-500">{{
+                  a.assetTag
+                }}</span>
                 <span
                   class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
                   [class]="statusBadgeClass(a.status)"
@@ -84,38 +92,44 @@
           <!-- Asset Details card -->
           <section
             aria-labelledby="details-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 id="details-heading" class="text-sm font-semibold text-slate-900">
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 id="details-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
                 Asset Details
               </h2>
             </div>
-            <dl class="divide-y divide-slate-100">
+            <dl class="divide-y divide-slate-100 dark:divide-gray-800">
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-40"
+                >
                   <nldd-icon
                     name="brackets-ellipsis"
-                    class="w-4 h-4 text-slate-400"
+                    class="w-4 h-4 text-slate-400 dark:text-gray-500"
                     aria-hidden="true"
                   ></nldd-icon>
                   Asset tag
                 </dt>
-                <dd class="text-sm font-mono font-medium text-slate-800">{{ a.assetTag }}</dd>
+                <dd class="text-sm font-mono font-medium text-slate-800 dark:text-gray-100">
+                  {{ a.assetTag }}
+                </dd>
               </div>
 
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-40"
+                >
                   <nldd-icon
                     name="folder"
-                    class="w-4 h-4 text-slate-400"
+                    class="w-4 h-4 text-slate-400 dark:text-gray-500"
                     aria-hidden="true"
                   ></nldd-icon>
                   Category
                 </dt>
                 <dd>
                   <span
-                    class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"
+                    class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-gray-300"
                   >
                     <nldd-icon
                       [name]="categoryIcon(a.category)"
@@ -129,10 +143,12 @@
 
               @if (catalogEntry(); as cat) {
                 <div class="flex items-center justify-between px-5 py-3">
-                  <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
+                  <dt
+                    class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-40"
+                  >
                     <nldd-icon
                       name="file-text"
-                      class="w-4 h-4 text-slate-400"
+                      class="w-4 h-4 text-slate-400 dark:text-gray-500"
                       aria-hidden="true"
                     ></nldd-icon>
                     Catalog Entry
@@ -140,7 +156,7 @@
                   <dd>
                     <a
                       [routerLink]="['/catalog', cat.id]"
-                      class="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                      class="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-200 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
                     >
                       {{ cat.model }}
                       <nldd-icon
@@ -154,46 +170,52 @@
               }
 
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-40"
+                >
                   <nldd-icon
                     name="info-circle"
-                    class="w-4 h-4 text-slate-400"
+                    class="w-4 h-4 text-slate-400 dark:text-gray-500"
                     aria-hidden="true"
                   ></nldd-icon>
                   Serial Number
                 </dt>
-                <dd class="text-sm font-mono text-slate-700">
+                <dd class="text-sm font-mono text-slate-700 dark:text-gray-300">
                   @if (a.serialNumber) {
                     {{ a.serialNumber }}
                   } @else {
-                    <span class="text-slate-300">—</span>
+                    <span class="text-slate-300 dark:text-gray-600">—</span>
                   }
                 </dd>
               </div>
 
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-40"
+                >
                   <nldd-icon
                     name="building"
-                    class="w-4 h-4 text-slate-400"
+                    class="w-4 h-4 text-slate-400 dark:text-gray-500"
                     aria-hidden="true"
                   ></nldd-icon>
                   Manufacturer
                 </dt>
-                <dd class="text-sm text-slate-700">
+                <dd class="text-sm text-slate-700 dark:text-gray-300">
                   @if (catalogEntry()?.manufacturer) {
                     {{ catalogEntry()!.manufacturer }}
                   } @else {
-                    <span class="text-slate-300">—</span>
+                    <span class="text-slate-300 dark:text-gray-600">—</span>
                   }
                 </dd>
               </div>
 
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-40"
+                >
                   <nldd-icon
                     name="apartment-building"
-                    class="w-4 h-4 text-slate-400"
+                    class="w-4 h-4 text-slate-400 dark:text-gray-500"
                     aria-hidden="true"
                   ></nldd-icon>
                   Datacenter
@@ -201,48 +223,52 @@
                 <dd>
                   @if (assetLocation(); as loc) {
                     <span
-                      class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-mono font-medium text-slate-700"
+                      class="inline-flex items-center rounded-md bg-slate-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-mono font-medium text-slate-700 dark:text-gray-300"
                     >
                       {{ loc.datacenter }}
                     </span>
                   } @else {
-                    <span class="text-slate-300">—</span>
+                    <span class="text-slate-300 dark:text-gray-600">—</span>
                   }
                 </dd>
               </div>
 
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-40"
+                >
                   <nldd-icon
                     name="database"
-                    class="w-4 h-4 text-slate-400"
+                    class="w-4 h-4 text-slate-400 dark:text-gray-500"
                     aria-hidden="true"
                   ></nldd-icon>
                   Rack
                 </dt>
-                <dd class="text-sm font-mono font-medium text-slate-700">
+                <dd class="text-sm font-mono font-medium text-slate-700 dark:text-gray-300">
                   @if (assetLocation(); as loc) {
                     {{ loc.rack }}
                   } @else {
-                    <span class="text-slate-300">—</span>
+                    <span class="text-slate-300 dark:text-gray-600">—</span>
                   }
                 </dd>
               </div>
 
               <div class="flex items-center justify-between px-5 py-3">
-                <dt class="flex items-center gap-2 text-sm text-slate-500 shrink-0 w-40">
+                <dt
+                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-40"
+                >
                   <nldd-icon
                     name="shield-check-mark"
-                    class="w-4 h-4 text-slate-400"
+                    class="w-4 h-4 text-slate-400 dark:text-gray-500"
                     aria-hidden="true"
                   ></nldd-icon>
                   Warranty Expires
                 </dt>
-                <dd class="text-sm text-slate-700">
+                <dd class="text-sm text-slate-700 dark:text-gray-300">
                   @if (a.warrantyExpiry) {
                     {{ a.warrantyExpiry }}
                   } @else {
-                    <span class="text-slate-300">—</span>
+                    <span class="text-slate-300 dark:text-gray-600">—</span>
                   }
                 </dd>
               </div>
@@ -253,13 +279,17 @@
           @if (a.notes || notes().length > 0) {
             <section
               aria-labelledby="notes-heading"
-              class="rounded-xl border border-slate-200 bg-white"
+              class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
             >
-              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h2 id="notes-heading" class="text-sm font-semibold text-slate-900">Notes</h2>
+              <div
+                class="px-5 py-4 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between"
+              >
+                <h2 id="notes-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
+                  Notes
+                </h2>
                 @if (notes().length > 0) {
                   <span
-                    class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+                    class="inline-flex items-center rounded-full bg-slate-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-slate-500 dark:text-gray-400"
                   >
                     {{ notes().length }} comment{{ notes().length === 1 ? '' : 's' }}
                   </span>
@@ -268,32 +298,34 @@
 
               @if (a.notes) {
                 <div class="px-5 py-4">
-                  <p class="text-sm text-slate-700 leading-relaxed">{{ a.notes }}</p>
+                  <p class="text-sm text-slate-700 dark:text-gray-300 leading-relaxed">
+                    {{ a.notes }}
+                  </p>
                 </div>
               }
 
               <!-- Comments -->
               @if (notes().length > 0) {
-                <ul class="divide-y divide-slate-100" aria-label="Comments">
+                <ul class="divide-y divide-slate-100 dark:divide-gray-800" aria-label="Comments">
                   @for (comment of notes(); track comment.id) {
                     <li class="px-5 py-4">
                       <div class="flex items-start gap-3">
                         <div
-                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700 select-none"
+                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-xs font-semibold text-indigo-700 dark:text-indigo-300 select-none"
                           aria-hidden="true"
                         >
                           {{ comment.initials }}
                         </div>
                         <div class="flex-1 min-w-0">
                           <div class="flex items-center gap-2 mb-1">
-                            <span class="text-sm font-medium text-slate-800">{{
+                            <span class="text-sm font-medium text-slate-800 dark:text-gray-100">{{
                               comment.author
                             }}</span>
-                            <span class="text-xs text-slate-400">{{
+                            <span class="text-xs text-slate-400 dark:text-gray-500">{{
                               formatDaysAgo(comment.daysAgo)
                             }}</span>
                           </div>
-                          <p class="text-sm text-slate-600 leading-relaxed">
+                          <p class="text-sm text-slate-600 dark:text-gray-300 leading-relaxed">
                             {{ comment.content }}
                           </p>
                         </div>
@@ -309,10 +341,15 @@
           @if (assetHistory().length > 0) {
             <section
               aria-labelledby="history-heading"
-              class="rounded-xl border border-slate-200 bg-white"
+              class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
             >
-              <div class="px-5 py-4 border-b border-slate-100">
-                <h2 id="history-heading" class="text-sm font-semibold text-slate-900">History</h2>
+              <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+                <h2
+                  id="history-heading"
+                  class="text-sm font-semibold text-slate-900 dark:text-white"
+                >
+                  History
+                </h2>
               </div>
               <ol class="px-5 py-4 flex flex-col gap-0" aria-label="Asset history">
                 @for (
@@ -330,12 +367,17 @@
                         <nldd-icon [name]="historyIcon(entry.action)" class="w-4 h-4"></nldd-icon>
                       </div>
                       @if (!last) {
-                        <div class="w-px flex-1 bg-slate-100 my-1 min-h-4" aria-hidden="true"></div>
+                        <div
+                          class="w-px flex-1 bg-slate-100 dark:bg-gray-800 my-1 min-h-4"
+                          aria-hidden="true"
+                        ></div>
                       }
                     </div>
                     <div class="pb-4 min-w-0 flex-1">
-                      <p class="text-sm text-slate-800 leading-snug">{{ entry.description }}</p>
-                      <p class="text-xs text-slate-400 mt-0.5">
+                      <p class="text-sm text-slate-800 dark:text-gray-100 leading-snug">
+                        {{ entry.description }}
+                      </p>
+                      <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
                         {{ entry.user }} · {{ formatDaysAgo(entry.daysAgo) }}
                       </p>
                     </div>
@@ -351,10 +393,12 @@
           <!-- Status card -->
           <section
             aria-labelledby="status-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 id="status-heading" class="text-sm font-semibold text-slate-900">Status</h2>
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 id="status-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
+                Status
+              </h2>
             </div>
             <div class="px-5 py-5 flex flex-col items-center text-center gap-3">
               <div [class]="statusIconBgClass(a.status)">
@@ -366,8 +410,10 @@
                 ></nldd-icon>
               </div>
               <div>
-                <p class="text-base font-semibold text-slate-900">{{ statusLabel(a.status) }}</p>
-                <p class="text-xs text-slate-400 mt-0.5">Current asset status</p>
+                <p class="text-base font-semibold text-slate-900 dark:text-white">
+                  {{ statusLabel(a.status) }}
+                </p>
+                <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">Current asset status</p>
               </div>
             </div>
           </section>
@@ -375,15 +421,20 @@
           <!-- Location card -->
           <section
             aria-labelledby="location-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 id="location-heading" class="text-sm font-semibold text-slate-900">Location</h2>
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2
+                id="location-heading"
+                class="text-sm font-semibold text-slate-900 dark:text-white"
+              >
+                Location
+              </h2>
             </div>
             <div class="px-5 py-5 flex flex-col gap-4">
               <div class="flex items-center gap-3">
                 <div
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500"
                 >
                   <nldd-icon
                     name="apartment-building"
@@ -392,10 +443,12 @@
                   ></nldd-icon>
                 </div>
                 <div>
-                  <p class="text-xs text-slate-400 uppercase tracking-wide font-medium">
+                  <p
+                    class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-wide font-medium"
+                  >
                     Datacenter
                   </p>
-                  <p class="text-sm font-semibold text-slate-800 font-mono">
+                  <p class="text-sm font-semibold text-slate-800 dark:text-gray-100 font-mono">
                     {{ assetLocation()?.datacenter ?? '—' }}
                   </p>
                 </div>
@@ -403,13 +456,17 @@
 
               <div class="flex items-center gap-3">
                 <div
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500"
                 >
                   <nldd-icon name="database" class="w-4 h-4" aria-hidden="true"></nldd-icon>
                 </div>
                 <div>
-                  <p class="text-xs text-slate-400 uppercase tracking-wide font-medium">Rack</p>
-                  <p class="text-sm font-semibold text-slate-800 font-mono">
+                  <p
+                    class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-wide font-medium"
+                  >
+                    Rack
+                  </p>
+                  <p class="text-sm font-semibold text-slate-800 dark:text-gray-100 font-mono">
                     {{ assetLocation()?.rack ?? '—' }}
                   </p>
                 </div>
@@ -417,7 +474,7 @@
 
               <div class="flex items-center gap-3">
                 <div
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500"
                 >
                   <nldd-icon
                     name="brackets-ellipsis"
@@ -426,10 +483,12 @@
                   ></nldd-icon>
                 </div>
                 <div>
-                  <p class="text-xs text-slate-400 uppercase tracking-wide font-medium">
+                  <p
+                    class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-wide font-medium"
+                  >
                     Rack unit
                   </p>
-                  <p class="text-sm font-semibold text-slate-800 font-mono">
+                  <p class="text-sm font-semibold text-slate-800 dark:text-gray-100 font-mono">
                     {{ assetLocation()?.rackUnit ?? '—' }}
                   </p>
                 </div>
@@ -437,15 +496,17 @@
 
               <div class="flex items-center gap-3">
                 <div
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500"
                 >
                   <nldd-icon name="list" class="w-4 h-4" aria-hidden="true"></nldd-icon>
                 </div>
                 <div>
-                  <p class="text-xs text-slate-400 uppercase tracking-wide font-medium">
+                  <p
+                    class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-wide font-medium"
+                  >
                     Slot type
                   </p>
-                  <p class="text-sm font-semibold text-slate-800">
+                  <p class="text-sm font-semibold text-slate-800 dark:text-gray-100">
                     @if (assetLocation(); as loc) {
                       {{ slotTypeLabel(loc.slotType) }}
                     } @else {
@@ -469,10 +530,10 @@
           <!-- Quick actions card -->
           <section
             aria-labelledby="actions-heading"
-            class="rounded-xl border border-slate-200 bg-white"
+            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
           >
-            <div class="px-5 py-4 border-b border-slate-100">
-              <h2 id="actions-heading" class="text-sm font-semibold text-slate-900">
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
+              <h2 id="actions-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
                 Quick actions
               </h2>
             </div>
@@ -515,12 +576,12 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col items-center justify-center py-24 text-center">
         <div
-          class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-4"
+          class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-4"
         >
           <nldd-icon name="slash-circle" class="w-8 h-8" aria-hidden="true"></nldd-icon>
         </div>
-        <h1 class="text-lg font-semibold text-slate-800">Asset not found</h1>
-        <p class="mt-1 text-sm text-slate-400 max-w-xs">
+        <h1 class="text-lg font-semibold text-slate-800 dark:text-gray-100">Asset not found</h1>
+        <p class="mt-1 text-sm text-slate-400 dark:text-gray-500 max-w-xs">
           No asset with ID <span class="font-mono">{{ assetId() }}</span> exists in the system.
         </p>
         <nldd-button
@@ -555,9 +616,11 @@
         </div>
       }
       <nldd-form-field label="Device">
-        <select disabled>
-          <option selected>{{ editAsset()?.model }}</option>
-        </select>
+        <nldd-dropdown disabled>
+          <select disabled>
+            <option selected>{{ editAsset()?.model }}</option>
+          </select>
+        </nldd-dropdown>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
         <nldd-form-field label="Asset tag">
@@ -574,20 +637,17 @@
           }}</nldd-form-field-error-text>
         </nldd-form-field>
         <nldd-form-field label="Status">
-          <select #fAssetStatus>
-            @for (s of statuses; track s.value) {
-              <option
-                [value]="s.value"
-                [attr.selected]="editAsset()?.status === s.value ? true : null"
-              >
-                {{ s.label }}
-              </option>
-            }
-          </select>
+          <nldd-dropdown>
+            <select [ngModel]="assetStatus()" (ngModelChange)="assetStatus.set($event)">
+              @for (s of statuses; track s.value) {
+                <option [value]="s.value">{{ s.label }}</option>
+              }
+            </select>
+          </nldd-dropdown>
         </nldd-form-field>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Serial number" [optional]="true">
+        <nldd-form-field label="Serial number">
           <nldd-text-field
             #fAssetSerial
             [attr.value]="editAsset()?.serialNumber ?? ''"
@@ -600,7 +660,7 @@
             fieldError('serial_number')
           }}</nldd-form-field-error-text>
         </nldd-form-field>
-        <nldd-form-field label="Warranty expiry" [optional]="true">
+        <nldd-form-field label="Warranty expiry">
           <nldd-text-field
             #fAssetWarranty
             type="date"
@@ -609,30 +669,27 @@
           ></nldd-text-field>
         </nldd-form-field>
       </div>
-      <nldd-form-field label="Rack" [optional]="true">
+      <nldd-form-field label="Rack">
         @if (racksByDatacenter().length === 0) {
           <nldd-form-field-help-text>
             No racks available yet. Add a room, rack row, and rack to a datacenter first.
           </nldd-form-field-help-text>
         }
-        <select #fAssetRack>
-          <option value="">— Not placed —</option>
-          @for (group of racksByDatacenter(); track group.datacenter) {
-            <optgroup [attr.label]="group.datacenter">
-              @for (rack of group.racks; track rack.id) {
-                <option
-                  [value]="rack.id"
-                  [attr.selected]="editPlacement()?.rackId === rack.id ? true : null"
-                >
-                  {{ rack.name }}
-                </option>
-              }
-            </optgroup>
-          }
-        </select>
+        <nldd-dropdown>
+          <select [ngModel]="assetRackId()" (ngModelChange)="assetRackId.set($event)">
+            <option value="">— Not placed —</option>
+            @for (group of racksByDatacenter(); track group.datacenter) {
+              <optgroup [attr.label]="group.datacenter">
+                @for (rack of group.racks; track rack.id) {
+                  <option [value]="rack.id">{{ rack.name }}</option>
+                }
+              </optgroup>
+            }
+          </select>
+        </nldd-dropdown>
       </nldd-form-field>
       <div class="grid grid-cols-2 gap-3">
-        <nldd-form-field label="Rack unit" [optional]="true">
+        <nldd-form-field label="Rack unit">
           <nldd-text-field
             #fAssetRackUnit
             type="number"
@@ -646,22 +703,18 @@
             fieldError('rack_unit_start')
           }}</nldd-form-field-error-text>
         </nldd-form-field>
-        <nldd-form-field label="Slot type" [optional]="true">
-          <select #fAssetSlotType>
-            @for (st of slotTypes; track st.value) {
-              <option
-                [value]="st.value"
-                [attr.selected]="
-                  (editPlacement()?.slotType ?? defaultSlotType) === st.value ? true : null
-                "
-              >
-                {{ st.label }}
-              </option>
-            }
-          </select>
+        <nldd-form-field label="Slot type">
+          <nldd-dropdown>
+            <select [ngModel]="assetSlotType()" (ngModelChange)="assetSlotType.set($event)">
+              <option value="">Unknown</option>
+              @for (st of slotTypes; track st.value) {
+                <option [value]="st.value">{{ st.label }}</option>
+              }
+            </select>
+          </nldd-dropdown>
         </nldd-form-field>
       </div>
-      <nldd-form-field label="Notes" [optional]="true">
+      <nldd-form-field label="Notes">
         <nldd-multi-line-text-field
           #fAssetNotes
           [attr.value]="editAsset()?.notes ?? ''"
@@ -669,7 +722,10 @@
         ></nldd-multi-line-text-field>
       </nldd-form-field>
     </nldd-simple-section>
-    <div slot="footer" class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200">
+    <div
+      slot="footer"
+      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
+    >
       <nldd-button variant="secondary" text="Cancel" (click)="closeAssetForm()"></nldd-button>
       <nldd-button variant="primary" text="Save" (click)="saveAsset()"></nldd-button>
     </div>

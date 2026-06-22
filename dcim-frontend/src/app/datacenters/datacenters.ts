@@ -9,6 +9,7 @@ import {
   viewChild,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import DcSelectorComponent from '../shared/dc-selector';
@@ -21,6 +22,7 @@ import parseValidationError from '../../connect/validation';
 import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
 import { DatacenterInfo, DatacenterStatus, RackCell } from './datacenter.model';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -39,9 +41,15 @@ interface DcStats {
   selector: 'app-datacenters',
   templateUrl: './datacenters.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DcSelectorComponent, IsometricCanvasComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    DcSelectorComponent,
+    IsometricCanvasComponent,
+    DropdownSyncDirective,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col bg-white text-slate-900' },
+  host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
 export default class DatacentersComponent implements OnInit {
   private readonly router = inject(Router);
@@ -81,6 +89,10 @@ export default class DatacentersComponent implements OnInit {
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editForm = signal<Partial<DatacenterInfo> | null>(null);
+
+  dcTier = signal<string>('3');
+
+  dcStatus = signal<DatacenterStatus>('operational');
 
   deleteTarget = signal<DatacenterInfo | null>(null);
 
@@ -172,7 +184,10 @@ export default class DatacentersComponent implements OnInit {
           (acc, p) => {
             const catId = catalogByAsset.get(p.assetId);
             const stats = catId ? catalogStats.get(catId) : undefined;
-            return { units: acc.units + (stats?.units ?? 0), powerW: acc.powerW + (stats?.powerW ?? 0) };
+            return {
+              units: acc.units + (stats?.units ?? 0),
+              powerW: acc.powerW + (stats?.powerW ?? 0),
+            };
           },
           { units: 0, powerW: 0 },
         );
@@ -236,18 +251,18 @@ export default class DatacentersComponent implements OnInit {
   // ── Color helpers ──────────────────────────────────────────────────────────
 
   readonly rackCellClass = (): string =>
-    'bg-emerald-50 border-emerald-300 text-emerald-700 hover:border-emerald-500 cursor-pointer';
+    'bg-emerald-50 dark:bg-emerald-950 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:border-emerald-500 cursor-pointer';
 
-  readonly rackFillBarClass = (): string => 'bg-emerald-200';
+  readonly rackFillBarClass = (): string => 'bg-emerald-200 dark:bg-emerald-900';
 
   readonly statusBadgeClass = (status: DatacenterStatus): string => {
     switch (status) {
       case 'operational':
-        return 'bg-teal-50 text-teal-700 ring-1 ring-teal-200';
+        return 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 ring-1 ring-teal-200 dark:ring-teal-800';
       case 'degraded':
-        return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200';
+        return 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800';
       case 'maintenance':
-        return 'bg-slate-100 text-slate-500 ring-1 ring-slate-200';
+        return 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 ring-1 ring-slate-200 dark:ring-gray-700';
       default:
         return '';
     }
@@ -290,10 +305,6 @@ export default class DatacentersComponent implements OnInit {
 
   private readonly fAddress = viewChild<NativeElementRef>('fAddress');
 
-  private readonly fTier = viewChild<NativeElementRef>('fTier');
-
-  private readonly fStatus = viewChild<NativeElementRef>('fStatus');
-
   private readonly fEstablished = viewChild<NativeElementRef>('fEstablished');
 
   private readonly fFloorSqm = viewChild<NativeElementRef>('fFloorSqm');
@@ -333,11 +344,15 @@ export default class DatacentersComponent implements OnInit {
       status: 'operational',
       floorSqm: 0,
     });
+    this.dcTier.set('3');
+    this.dcStatus.set('operational');
   }
 
   openEditDc(dc: DatacenterInfo): void {
     this.clearErrors();
     this.editForm.set({ ...dc });
+    this.dcTier.set(String(dc.tier));
+    this.dcStatus.set(dc.status);
   }
 
   closeEditForm(): void {
@@ -356,8 +371,8 @@ export default class DatacentersComponent implements OnInit {
       city: this.fCity()?.nativeElement.value ?? '',
       country: this.fCountry()?.nativeElement.value ?? '',
       address: this.fAddress()?.nativeElement.value ?? '',
-      tier: (parseInt(this.fTier()?.nativeElement.value ?? '3', 10) || 3) as 1 | 2 | 3 | 4,
-      status: (this.fStatus()?.nativeElement.value ?? 'operational') as DatacenterStatus,
+      tier: (parseInt(this.dcTier(), 10) || 3) as 1 | 2 | 3 | 4,
+      status: this.dcStatus(),
       established: parseFloat(this.fEstablished()?.nativeElement.value ?? '0') || 0,
       floorSqm: parseFloat(this.fFloorSqm()?.nativeElement.value ?? '0') || 0,
       // Not modelled by the API.

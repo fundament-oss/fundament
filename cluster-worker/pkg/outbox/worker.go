@@ -225,13 +225,39 @@ func (w *Worker) process(ctx context.Context, row *db.OutboxGetAndLockRow) (hand
 		"source", source,
 		"retries", row.Retries)
 
-	h, err := w.registry.SyncHandlerFor(entityType, event)
+	handlers, err := w.registry.SyncHandlersFor(entityType, event)
 	if err != nil {
 		return entityType, fmt.Errorf("%w: %w", errNonRetryable, err)
 	}
 
-	if err := h.Sync(ctx, entityID, handler.SyncContext{EntityType: entityType, Event: event, Source: source}); err != nil {
-		return entityType, fmt.Errorf("sync %s %s: %w", entityType, entityID, err)
+	// An event may fan out to multiple handlers (e.g. cluster-ready drives both
+	// usersync and namespace-sync). Run every handler even when an earlier one
+	// fails, so one subscriber's failure can't starve the others; handlers are
+	// idempotent, so re-running the ones that already succeeded on a later retry is
+	// safe.
+	sc := handler.SyncContext{EntityType: entityType, Event: event, Source: source}
+	var hardErrs, precondErrs []error
+	for _, h := range handlers {
+		err := h.Sync(ctx, entityID, sc)
+		if err == nil {
+			continue
+		}
+		if _, isPrecond := errors.AsType[*handler.PreconditionError](err); isPrecond {
+			precondErrs = append(precondErrs, err)
+		} else {
+			hardErrs = append(hardErrs, err)
+		}
+	}
+	// A hard error retries the whole row. A precondition is only surfaced (to defer
+	// the row without burning a retry) when every failure was a precondition —
+	// otherwise the hard error wins and the precondition handler simply re-runs on
+	// the retry. Returning only the hard errors keeps complete() from mistaking the
+	// row for a deferrable one when a real failure is present.
+	if len(hardErrs) > 0 {
+		return entityType, fmt.Errorf("sync %s %s: %w", entityType, entityID, errors.Join(hardErrs...))
+	}
+	if len(precondErrs) > 0 {
+		return entityType, fmt.Errorf("sync %s %s: %w", entityType, entityID, errors.Join(precondErrs...))
 	}
 	return entityType, nil
 }
@@ -351,6 +377,8 @@ func entityFromRow(row *db.OutboxGetAndLockRow) (handler.EntityType, uuid.UUID, 
 		return handler.EntityProjectMember, uuid.UUID(row.ProjectMemberID.Bytes), nil
 	case row.NodePoolID.Valid:
 		return handler.EntityNodePool, uuid.UUID(row.NodePoolID.Bytes), nil
+	case row.NamespaceID.Valid:
+		return handler.EntityNamespace, uuid.UUID(row.NamespaceID.Bytes), nil
 	default:
 		return "", uuid.Nil, fmt.Errorf("no valid entity FK in outbox row %s", row.ID)
 	}

@@ -322,7 +322,6 @@ type MenuEntry struct {
 	Crd           *string                `protobuf:"bytes,1,opt,name=crd" json:"crd,omitempty"`
 	List          *bool                  `protobuf:"varint,2,opt,name=list" json:"list,omitempty"`
 	Detail        *bool                  `protobuf:"varint,3,opt,name=detail" json:"detail,omitempty"`
-	Create        *bool                  `protobuf:"varint,4,opt,name=create" json:"create,omitempty"`
 	Icon          *string                `protobuf:"bytes,5,opt,name=icon" json:"icon,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -375,13 +374,6 @@ func (x *MenuEntry) GetList() bool {
 func (x *MenuEntry) GetDetail() bool {
 	if x != nil && x.Detail != nil {
 		return *x.Detail
-	}
-	return false
-}
-
-func (x *MenuEntry) GetCreate() bool {
-	if x != nil && x.Create != nil {
-		return *x.Create
 	}
 	return false
 }
@@ -1036,13 +1028,12 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\x05verbs\x18\x03 \x03(\tR\x05verbs\"d\n" +
 	"\vPermissions\x12\"\n" +
 	"\fcapabilities\x18\x01 \x03(\tR\fcapabilities\x121\n" +
-	"\x04rbac\x18\x02 \x03(\v2\x1d.pluginmetadata.v1.PolicyRuleR\x04rbac\"u\n" +
+	"\x04rbac\x18\x02 \x03(\v2\x1d.pluginmetadata.v1.PolicyRuleR\x04rbac\"k\n" +
 	"\tMenuEntry\x12\x10\n" +
 	"\x03crd\x18\x01 \x01(\tR\x03crd\x12\x12\n" +
 	"\x04list\x18\x02 \x01(\bR\x04list\x12\x16\n" +
-	"\x06detail\x18\x03 \x01(\bR\x06detail\x12\x16\n" +
-	"\x06create\x18\x04 \x01(\bR\x06create\x12\x12\n" +
-	"\x04icon\x18\x05 \x01(\tR\x04icon\"\x8a\x01\n" +
+	"\x06detail\x18\x03 \x01(\bR\x06detail\x12\x12\n" +
+	"\x04icon\x18\x05 \x01(\tR\x04iconJ\x04\b\x04\x10\x05R\x06create\"\x8a\x01\n" +
 	"\x0eMenuDefinition\x12@\n" +
 	"\forganization\x18\x01 \x03(\v2\x1c.pluginmetadata.v1.MenuEntryR\forganization\x126\n" +
 	"\aproject\x18\x02 \x03(\v2\x1c.pluginmetadata.v1.MenuEntryR\aproject\">\n" +

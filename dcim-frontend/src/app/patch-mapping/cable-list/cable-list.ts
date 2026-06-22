@@ -190,7 +190,7 @@ export default class CableListComponent {
       connected: 'bg-teal-500',
       decommissioned: 'bg-slate-400',
     };
-    return status ? map[status] : 'bg-slate-300';
+    return status ? map[status] : 'bg-slate-300 dark:bg-gray-700';
   };
 
   clearFilters(): void {

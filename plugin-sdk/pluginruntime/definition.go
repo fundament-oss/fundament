@@ -82,7 +82,6 @@ type MenuEntry struct {
 	CRD    string `yaml:"crd"`
 	List   bool   `yaml:"list"`
 	Detail bool   `yaml:"detail"`
-	Create bool   `yaml:"create"`
 	Icon   string `yaml:"icon"`
 }
 

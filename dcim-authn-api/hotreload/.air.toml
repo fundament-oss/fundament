@@ -1,0 +1,13 @@
+root = "/src"
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/dcim-authn-api ./dcim-authn-api/cmd/dcim-authn-api"
+entrypoint = "tmp/dcim-authn-api"
+include_ext = ["go", "mod", "sum"]
+include_dir = ["dcim-authn-api"]
+exclude_dir = ["tmp"]
+delay = 500
+
+[log]
+time = false

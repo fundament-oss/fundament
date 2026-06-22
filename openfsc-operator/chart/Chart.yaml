@@ -1,0 +1,14 @@
+apiVersion: v2
+name: openfsc-operator
+description: >-
+  Kubernetes operator for OpenFSC (Federated Service Connectivity, the Dutch
+  government FSC standard). Owns the namespaced FSCInstallation CRD
+  (openfsc.fundament.io): one resource per team namespace deploys an OpenFSC
+  peer there — Manager, Controller, audit/transaction logs on a CloudNativePG
+  cluster, and one gateway workload per declared inway/outway. The peer either
+  joins an existing FSC group through its Directory, or runs its own Manager as
+  the group Directory. Prerequisites (not installed by this chart):
+  cert-manager and CloudNativePG.
+type: application
+version: 0.2.0
+appVersion: "2.4.0"

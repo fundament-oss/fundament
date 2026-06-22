@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { RackSlotType } from '../../../generated/v1/common_pb';
@@ -21,20 +22,26 @@ import {
   HistoryEntry,
   NoteComment,
 } from '../inventory';
+import {
+  ASSET_STATUS_BADGE_CLASS,
+  ASSET_STATUS_DOT_CLASS,
+  ASSET_STATUS_LABEL,
+} from '../asset-status';
 import InventoryApiService from '../inventory-api.service';
 import CatalogApiService from '../../catalog/catalog-api.service';
 import NoteApiService from '../note-api.service';
 import PlacementApiService, { RackOption } from '../placement-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 @Component({
   selector: 'app-asset-detail',
   templateUrl: './asset-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'block bg-slate-50 min-h-screen' },
+  host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
 export default class AssetDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -69,6 +76,13 @@ export default class AssetDetailComponent implements OnInit {
 
   /** Holds the asset being edited; non-null while the edit sheet is open. */
   readonly editAsset = signal<Partial<Asset> | null>(null);
+
+  /** Bound values for the edit form's <select>s (seeded on open, read on save). */
+  readonly assetStatus = signal<AssetStatus>('available');
+
+  readonly assetRackId = signal<string>('');
+
+  readonly assetSlotType = signal<string>('');
 
   readonly invalidFields = signal<Record<string, string>>({});
 
@@ -113,8 +127,6 @@ export default class AssetDetailComponent implements OnInit {
     { value: RackSlotType.ZERO_U, label: 'Zero-U' },
   ];
 
-  readonly defaultSlotType = RackSlotType.UNIT;
-
   readonly slotTypeLabel = (slotType: RackSlotType): string =>
     this.slotTypes.find((s) => s.value === slotType)?.label ?? '—';
 
@@ -122,17 +134,11 @@ export default class AssetDetailComponent implements OnInit {
 
   private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
 
-  private readonly fAssetStatus = viewChild<ElementRef>('fAssetStatus');
-
   private readonly fAssetSerial = viewChild<ElementRef>('fAssetSerial');
 
   private readonly fAssetWarranty = viewChild<ElementRef>('fAssetWarranty');
 
-  private readonly fAssetRack = viewChild<ElementRef>('fAssetRack');
-
   private readonly fAssetRackUnit = viewChild<ElementRef>('fAssetRackUnit');
-
-  private readonly fAssetSlotType = viewChild<ElementRef>('fAssetSlotType');
 
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
@@ -250,7 +256,7 @@ export default class AssetDetailComponent implements OnInit {
     firstValueFrom(this.placementApi.getPlacementByAsset(current.id))
       .then((res) => {
         const p = res.placement;
-        this.editPlacement.set(
+        const placement =
           p && p.location.case === 'rack'
             ? {
                 id: p.id,
@@ -258,15 +264,22 @@ export default class AssetDetailComponent implements OnInit {
                 unit: p.location.value.rackUnitStart,
                 slotType: p.location.value.rackSlotType,
               }
-            : null,
-        );
+            : null;
+        this.editPlacement.set(placement);
+        this.assetRackId.set(placement?.rackId ?? '');
+        this.assetSlotType.set(placement?.slotType ? String(placement.slotType) : '');
       })
       .catch((err) => {
         this.editPlacement.set(null);
+        this.assetRackId.set('');
+        this.assetSlotType.set('');
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
       })
-      .finally(() => this.editAsset.set({ ...current }));
+      .finally(() => {
+        this.assetStatus.set(current.status);
+        this.editAsset.set({ ...current });
+      });
   }
 
   closeAssetForm(): void {
@@ -282,8 +295,7 @@ export default class AssetDetailComponent implements OnInit {
     const updated: Asset = {
       ...current,
       assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? current.assetTag,
-      status: ((this.fAssetStatus()?.nativeElement as HTMLSelectElement)?.value ??
-        current.status) as AssetStatus,
+      status: this.assetStatus(),
       serialNumber:
         (this.fAssetSerial()?.nativeElement as HTMLInputElement)?.value ??
         current.serialNumber ??
@@ -315,11 +327,8 @@ export default class AssetDetailComponent implements OnInit {
   private readPlacementInput():
     | { rackId: string; unit: number; slotType: RackSlotType; existingPlacementId: string | null }
     | 'invalid' {
-    const rackId = (this.fAssetRack()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const slotType =
-      (Number(
-        (this.fAssetSlotType()?.nativeElement as HTMLSelectElement)?.value,
-      ) as RackSlotType) || RackSlotType.UNIT;
+    const rackId = this.assetRackId();
+    const slotType = (Number(this.assetSlotType()) as RackSlotType) || RackSlotType.UNIT;
     const existingPlacementId = this.editPlacement()?.id ?? null;
 
     if (!rackId) {
@@ -327,7 +336,10 @@ export default class AssetDetailComponent implements OnInit {
       return { rackId: '', unit: 0, slotType, existingPlacementId };
     }
 
-    const unit = parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10);
+    const unit = parseInt(
+      (this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '',
+      10,
+    );
     if (!Number.isInteger(unit) || unit < 1) {
       this.invalidFields.set({ rack_unit_start: 'Enter a rack unit of 1 or higher.' });
       return 'invalid';
@@ -340,41 +352,11 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly newNoteText = signal('');
 
-  readonly statusLabel = (status: AssetStatus): string => {
-    const labels: Record<AssetStatus, string> = {
-      deployed: 'Deployed',
-      available: 'Available',
-      'needs-repair': 'Needs Repair',
-      decommissioned: 'Decommissioned',
-      'on-order': 'On Order',
-      requested: 'Requested',
-    };
-    return labels[status];
-  };
+  readonly statusLabel = (status: AssetStatus): string => ASSET_STATUS_LABEL[status];
 
-  readonly statusBadgeClass = (status: AssetStatus): string => {
-    const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-50 text-teal-700',
-      available: 'bg-green-50 text-green-700',
-      'needs-repair': 'bg-amber-50 text-amber-700',
-      decommissioned: 'bg-slate-100 text-slate-500',
-      'on-order': 'bg-blue-50 text-blue-700',
-      requested: 'bg-purple-50 text-purple-700',
-    };
-    return classes[status];
-  };
+  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
 
-  readonly statusDotClass = (status: AssetStatus): string => {
-    const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-500',
-      available: 'bg-green-500',
-      'needs-repair': 'bg-amber-500',
-      decommissioned: 'bg-slate-400',
-      'on-order': 'bg-blue-500',
-      requested: 'bg-purple-500',
-    };
-    return classes[status];
-  };
+  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
 
   readonly statusIcon = (status: AssetStatus): string => {
     const icons: Record<AssetStatus, string> = {
@@ -390,24 +372,24 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly statusIconColor = (status: AssetStatus): string => {
     const colors: Record<AssetStatus, string> = {
-      deployed: 'text-teal-500',
-      available: 'text-green-500',
-      'needs-repair': 'text-amber-500',
-      decommissioned: 'text-slate-400',
-      'on-order': 'text-blue-500',
-      requested: 'text-purple-500',
+      deployed: 'text-teal-500 dark:text-teal-400',
+      available: 'text-green-500 dark:text-green-400',
+      'needs-repair': 'text-amber-500 dark:text-amber-400',
+      decommissioned: 'text-slate-400 dark:text-gray-500',
+      'on-order': 'text-blue-500 dark:text-blue-400',
+      requested: 'text-purple-500 dark:text-purple-400',
     };
     return colors[status];
   };
 
   readonly statusIconBgClass = (status: AssetStatus): string => {
     const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-50',
-      available: 'bg-green-50',
-      'needs-repair': 'bg-amber-50',
-      decommissioned: 'bg-slate-100',
-      'on-order': 'bg-blue-50',
-      requested: 'bg-purple-50',
+      deployed: 'bg-teal-50 dark:bg-teal-950',
+      available: 'bg-green-50 dark:bg-green-950',
+      'needs-repair': 'bg-amber-50 dark:bg-amber-950',
+      decommissioned: 'bg-slate-100 dark:bg-gray-800',
+      'on-order': 'bg-blue-50 dark:bg-blue-950',
+      requested: 'bg-purple-50 dark:bg-purple-950',
     };
     return `flex h-14 w-14 items-center justify-center rounded-full ${classes[status]}`;
   };
@@ -436,14 +418,14 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly historyIconBg = (action: HistoryEntry['action']): string => {
     const classes: Record<HistoryEntry['action'], string> = {
-      received: 'bg-sky-50 text-sky-500',
-      deployed: 'bg-teal-50 text-teal-500',
-      moved: 'bg-sky-50 text-sky-500',
-      'repair-sent': 'bg-amber-50 text-amber-500',
-      'repair-received': 'bg-amber-50 text-amber-500',
-      decommissioned: 'bg-slate-100 text-slate-500',
-      requested: 'bg-purple-50 text-purple-500',
-      note: 'bg-indigo-50 text-indigo-500',
+      received: 'bg-sky-50 dark:bg-sky-950 text-sky-500 dark:text-sky-400',
+      deployed: 'bg-teal-50 dark:bg-teal-950 text-teal-500 dark:text-teal-400',
+      moved: 'bg-sky-50 dark:bg-sky-950 text-sky-500 dark:text-sky-400',
+      'repair-sent': 'bg-amber-50 dark:bg-amber-950 text-amber-500 dark:text-amber-400',
+      'repair-received': 'bg-amber-50 dark:bg-amber-950 text-amber-500 dark:text-amber-400',
+      decommissioned: 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400',
+      requested: 'bg-purple-50 dark:bg-purple-950 text-purple-500 dark:text-purple-400',
+      note: 'bg-indigo-50 dark:bg-indigo-950 text-indigo-500 dark:text-indigo-400',
     };
     return classes[action];
   };

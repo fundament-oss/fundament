@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import DesignFlowWrapperComponent from '../design-flow-wrapper';
@@ -19,11 +20,15 @@ import {
   LogicalDevice,
   LogicalDeviceLayout,
   LogicalDeviceRole,
-  DEVICE_ROLE_COLORS,
+  LogicalDesignStatus,
+  deviceRoleColors,
+  LOGICAL_DESIGN_STATUS_BADGE_CLASS,
 } from '../design.model';
 import DesignApiService from '../design-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
+import ThemeService from '../../theme.service';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -52,7 +57,7 @@ const ALL_ROLES: LogicalDeviceRole[] = [
   selector: 'app-design-detail',
   templateUrl: './design-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DesignFlowWrapperComponent],
+  imports: [RouterLink, FormsModule, DesignFlowWrapperComponent, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col overflow-hidden', style: 'height: calc(100dvh - 4.25rem)' },
 })
@@ -60,6 +65,8 @@ export default class DesignDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   private readonly designApi = inject(DesignApiService);
+
+  protected readonly theme = inject(ThemeService);
 
   readonly designId = this.route.snapshot.paramMap.get('id') ?? '';
 
@@ -103,6 +110,8 @@ export default class DesignDetailComponent implements OnInit {
   // ── Device CRUD state ──────────────────────────────────────────────────────
   editDevice = signal<Partial<LogicalDevice> | null>(null);
 
+  deviceRole = signal<LogicalDeviceRole>('Compute');
+
   deleteDevice = signal<LogicalDevice | null>(null);
 
   private readonly deviceSheetEl = viewChild<NativeElementRef>('deviceSheet');
@@ -111,10 +120,14 @@ export default class DesignDetailComponent implements OnInit {
 
   private readonly fDeviceName = viewChild<NativeElementRef>('fDeviceName');
 
-  private readonly fDeviceRole = viewChild<NativeElementRef>('fDeviceRole');
-
   // ── Connection CRUD state ──────────────────────────────────────────────────
   editConnection = signal<Partial<LogicalConnection> | null>(null);
+
+  connSrcDeviceId = signal<string>('');
+
+  connTgtDeviceId = signal<string>('');
+
+  connType = signal<LogicalConnectionType>('network');
 
   deleteConnection = signal<LogicalConnection | null>(null);
 
@@ -127,15 +140,9 @@ export default class DesignDetailComponent implements OnInit {
 
   private readonly connModalEl = viewChild<NativeElementRef>('connModal');
 
-  private readonly fConnSrcDevice = viewChild<NativeElementRef>('fConnSrcDevice');
-
   private readonly fConnSrcPort = viewChild<NativeElementRef>('fConnSrcPort');
 
-  private readonly fConnTgtDevice = viewChild<NativeElementRef>('fConnTgtDevice');
-
   private readonly fConnTgtPort = viewChild<NativeElementRef>('fConnTgtPort');
-
-  private readonly fConnType = viewChild<NativeElementRef>('fConnType');
 
   readonly allRoles = ALL_ROLES;
 
@@ -215,11 +222,13 @@ export default class DesignDetailComponent implements OnInit {
   openAddDevice(): void {
     this.clearErrors();
     this.editDevice.set({ id: '', designId: this.designId, name: '', role: 'Compute' });
+    this.deviceRole.set('Compute');
   }
 
   openEditDevice(device: LogicalDevice): void {
     this.clearErrors();
     this.editDevice.set({ ...device });
+    this.deviceRole.set(device.role);
   }
 
   closeDeviceForm(): void {
@@ -232,7 +241,7 @@ export default class DesignDetailComponent implements OnInit {
     if (!form) return;
     this.clearErrors();
     const name = this.fDeviceName()?.nativeElement.value ?? '';
-    const role = (this.fDeviceRole()?.nativeElement.value ?? 'Compute') as LogicalDeviceRole;
+    const role = this.deviceRole();
     if (form.id) {
       firstValueFrom(this.designApi.updateDevice(form.id, name, role))
         .then(() => {
@@ -300,11 +309,17 @@ export default class DesignDetailComponent implements OnInit {
       targetPortRole: '',
       connectionType: 'network',
     });
+    this.connSrcDeviceId.set(this.selectedDeviceId() ?? '');
+    this.connTgtDeviceId.set('');
+    this.connType.set('network');
   }
 
   openEditConnection(conn: LogicalConnection): void {
     this.clearErrors();
     this.editConnection.set({ ...conn });
+    this.connSrcDeviceId.set(conn.sourceDeviceId);
+    this.connTgtDeviceId.set(conn.targetDeviceId);
+    this.connType.set(conn.connectionType);
   }
 
   closeConnForm(): void {
@@ -316,11 +331,11 @@ export default class DesignDetailComponent implements OnInit {
     const form = this.editConnection();
     if (!form) return;
     this.clearErrors();
-    const srcDeviceId = this.fConnSrcDevice()?.nativeElement.value ?? '';
+    const srcDeviceId = this.connSrcDeviceId();
     const srcPort = this.fConnSrcPort()?.nativeElement.value ?? '';
-    const tgtDeviceId = this.fConnTgtDevice()?.nativeElement.value ?? '';
+    const tgtDeviceId = this.connTgtDeviceId();
     const tgtPort = this.fConnTgtPort()?.nativeElement.value ?? '';
-    const connType = (this.fConnType()?.nativeElement.value ?? 'network') as LogicalConnectionType;
+    const connType = this.connType();
     const conn: LogicalConnection = {
       id: form.id || '',
       designId: this.designId,
@@ -401,13 +416,16 @@ export default class DesignDetailComponent implements OnInit {
     return this.mutableDevices().find((d) => d.id === id)?.name ?? id;
   }
 
-  readonly roleColor = (role: LogicalDeviceRole): string =>
-    DEVICE_ROLE_COLORS[role]?.text ?? '#475569';
+  // `isDark` is passed from the template (via theme.isDarkMode()) so the inline
+  // style bindings re-evaluate when the theme is toggled under OnPush.
+  readonly roleColor = (role: LogicalDeviceRole, isDark: boolean): string =>
+    deviceRoleColors(role, isDark).text;
 
-  readonly roleBg = (role: LogicalDeviceRole): string => DEVICE_ROLE_COLORS[role]?.bg ?? '#f8fafc';
+  readonly roleBg = (role: LogicalDeviceRole, isDark: boolean): string =>
+    deviceRoleColors(role, isDark).bg;
 
-  readonly roleBorder = (role: LogicalDeviceRole): string =>
-    DEVICE_ROLE_COLORS[role]?.border ?? '#94a3b8';
+  readonly roleBorder = (role: LogicalDeviceRole, isDark: boolean): string =>
+    deviceRoleColors(role, isDark).border;
 
   readonly connTypeLabel = (type: LogicalConnectionType): string => {
     const connMap: Record<LogicalConnectionType, string> = {
@@ -420,19 +438,14 @@ export default class DesignDetailComponent implements OnInit {
 
   readonly connTypeBadgeClass = (type: LogicalConnectionType): string => {
     const connMap: Record<LogicalConnectionType, string> = {
-      network: 'bg-blue-50 text-blue-700',
-      power: 'bg-amber-50 text-amber-700',
-      console: 'bg-slate-100 text-slate-600',
+      network: 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300',
+      power: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
+      console: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
     };
     return connMap[type];
   };
 
-  readonly statusBadgeClass = (status: string): string => {
-    const statusMap: Record<string, string> = {
-      draft: 'bg-slate-100 text-slate-600',
-      active: 'bg-green-50 text-green-700',
-      archived: 'bg-amber-50 text-amber-700',
-    };
-    return statusMap[status] ?? 'bg-slate-100 text-slate-600';
-  };
+  readonly statusBadgeClass = (status: string): string =>
+    LOGICAL_DESIGN_STATUS_BADGE_CLASS[status as LogicalDesignStatus] ??
+    LOGICAL_DESIGN_STATUS_BADGE_CLASS.draft;
 }

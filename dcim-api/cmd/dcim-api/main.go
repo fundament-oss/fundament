@@ -20,6 +20,7 @@ import (
 
 type config struct {
 	Database           psqldb.Config
+	JWTSecret          string   `env:"JWT_SECRET,required,notEmpty"`
 	ListenAddr         string   `env:"LISTEN_ADDR" envDefault:":8080"`
 	LogLevel           string   `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS"`
@@ -51,7 +52,7 @@ func run() error {
 	}
 	defer database.Close()
 
-	server := dcim.New(logger, database)
+	server := dcim.New(logger, database, []byte(cfg.JWTSecret))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, _ *http.Request) {

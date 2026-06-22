@@ -1,6 +1,7 @@
 package usersync
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/google/uuid"
@@ -112,14 +113,14 @@ func TestBuildReconcilePlan_Duplicates(t *testing.T) {
 	annotations := map[string]string{shoot.AnnotationUserName: "user@example.com"}
 
 	actualSAs := []shoot.ResourceInfo{
-		{Name: shoot.SAName(userID), Labels: shoot.CloneStringMap(labels), Annotations: shoot.CloneStringMap(annotations)},
-		{Name: "fundament-duplicate", Labels: shoot.CloneStringMap(labels), Annotations: shoot.CloneStringMap(annotations)},
+		{Name: shoot.SAName(userID), Labels: maps.Clone(labels), Annotations: maps.Clone(annotations)},
+		{Name: "fundament-duplicate", Labels: maps.Clone(labels), Annotations: maps.Clone(annotations)},
 	}
 	actualCRBs := []shoot.ResourceInfo{
 		{
 			Name:        shoot.CRBName(userID),
-			Labels:      shoot.CloneStringMap(labels),
-			Annotations: shoot.CloneStringMap(annotations),
+			Labels:      maps.Clone(labels),
+			Annotations: maps.Clone(annotations),
 			RoleRef:     rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "cluster-admin"},
 			Subjects:    []rbacv1.Subject{{Kind: "ServiceAccount", Name: shoot.SAName(userID), Namespace: shoot.FundamentNamespace}},
 		},
@@ -148,13 +149,13 @@ func TestBuildReconcilePlan_HealthyStateNoActions(t *testing.T) {
 	annotations := map[string]string{shoot.AnnotationUserName: "user@example.com"}
 
 	actualSAs := []shoot.ResourceInfo{
-		{Name: shoot.SAName(userID), Labels: shoot.CloneStringMap(labels), Annotations: shoot.CloneStringMap(annotations)},
+		{Name: shoot.SAName(userID), Labels: maps.Clone(labels), Annotations: maps.Clone(annotations)},
 	}
 	actualCRBs := []shoot.ResourceInfo{
 		{
 			Name:        shoot.CRBName(userID),
-			Labels:      shoot.CloneStringMap(labels),
-			Annotations: shoot.CloneStringMap(annotations),
+			Labels:      maps.Clone(labels),
+			Annotations: maps.Clone(annotations),
 			RoleRef:     rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "cluster-admin"},
 			Subjects:    []rbacv1.Subject{{Kind: "ServiceAccount", Name: shoot.SAName(userID), Namespace: shoot.FundamentNamespace}},
 		},

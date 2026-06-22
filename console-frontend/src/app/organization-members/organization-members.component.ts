@@ -157,7 +157,9 @@ export default class OrganizationMembersComponent implements OnInit {
     this.isModalOpen.set(false);
   }
 
-  async submitInvitation() {
+  async submitInvitation(event?: Event) {
+    event?.preventDefault();
+
     const email = this.inviteEmail().trim();
 
     if (!email) {

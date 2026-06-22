@@ -14,6 +14,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // ShootSyncer provides the Gardener operations needed by the sync path.
@@ -112,7 +113,7 @@ func New(pool *pgxpool.Pool, syncer ShootSyncer, statusChecker ShootStatusChecke
 				if cluster.Deleted.Valid {
 					return nil // delete path skips EnsureProject
 				}
-				namespace, err := syncer.EnsureProject(ctx, gardener.ProjectName(cluster.OrganizationName), cluster.OrganizationID)
+				namespace, err := syncer.EnsureProject(ctx, kubename.ProjectName(cluster.OrganizationName), cluster.OrganizationID)
 				if err != nil {
 					return fmt.Errorf("ensure project: %w", err)
 				}

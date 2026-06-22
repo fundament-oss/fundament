@@ -15,7 +15,7 @@ func TestAssetService_GetAssetLocation_Rack(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewAssetServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewAssetServiceClient(env.client(), env.server.URL)
 
 	siteID := createSite(t, env, "Loc site")
 	roomID := createRoom(t, env, siteID, "Loc room")
@@ -48,7 +48,7 @@ func TestAssetService_GetAssetLocation_SubComponentResolvesToHostRack(t *testing
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewAssetServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewAssetServiceClient(env.client(), env.server.URL)
 
 	siteID := createSite(t, env, "Nested site")
 	roomID := createRoom(t, env, siteID, "Nested room")
@@ -61,7 +61,7 @@ func TestAssetService_GetAssetLocation_SubComponentResolvesToHostRack(t *testing
 
 	// Define a port on the host so the sub-component placement has a real
 	// parent_port_definition_id to point at.
-	catalogClient := dcimv1connect.NewCatalogServiceClient(env.server.Client(), env.server.URL)
+	catalogClient := dcimv1connect.NewCatalogServiceClient(env.client(), env.server.URL)
 	portResp, err := catalogClient.CreatePortDefinition(context.Background(), connect.NewRequest(
 		(&dcimv1.CreatePortDefinitionRequest_builder{
 			DeviceCatalogId: hostCatalogID,
@@ -92,7 +92,7 @@ func TestAssetService_GetAssetLocation_Unplaced(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewAssetServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewAssetServiceClient(env.client(), env.server.URL)
 
 	catalogID := createCatalogEntry(t, env, "Unplaced model")
 	assetID := createAsset(t, env, catalogID)

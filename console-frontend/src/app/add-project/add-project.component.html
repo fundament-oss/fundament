@@ -21,10 +21,10 @@
   </div>
 
   <!-- Form -->
-  <form
+  <nldd-form
     [formGroup]="projectForm"
-    (ngSubmit)="onSubmit()"
-    (keydown.enter)="onSubmit()"
+    (submit)="onSubmit($event)"
+    (keydown.enter)="onSubmit($event)"
     class="space-y-6 px-6 py-6"
   >
     <nldd-form-field
@@ -46,18 +46,19 @@
           No clusters available. <a routerLink="/clusters/add" class="link">Add a cluster first</a>.
         </p>
       } @else {
-        <select
-          id="clusterId"
-          formControlName="clusterId"
-          class="w-full"
-          [class.invalid]="
-            !!(projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty)
+        <nldd-dropdown
+          [attr.invalid]="
+            projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty
+              ? true
+              : null
           "
         >
-          @for (cluster of clusters(); track cluster.id) {
-            <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
-          }
-        </select>
+          <select id="clusterId" formControlName="clusterId">
+            @for (cluster of clusters(); track cluster.id) {
+              <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
+            }
+          </select>
+        </nldd-dropdown>
         <nldd-form-field-error-text id="add-project-cluster-error">
           @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
             {{ getClusterError() }}
@@ -87,13 +88,11 @@
     <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
       <nldd-button routerLink="/projects" text="Cancel" variant="secondary"></nldd-button>
       <nldd-button
-        type="button"
-        (click)="onSubmit()"
-        text="Create project"
+        type="submit"
         [text]="isSubmitting() ? 'Creating...' : 'Create project'"
         [disabled]="isSubmitting()"
         variant="primary"
       ></nldd-button>
     </div>
-  </form>
+  </nldd-form>
 </div>

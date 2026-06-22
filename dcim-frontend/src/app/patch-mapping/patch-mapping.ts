@@ -16,6 +16,7 @@ import CableListComponent from './cable-list/cable-list';
 import CableFormComponent from './cable-form/cable-form';
 import ShoppingListComponent from './shopping-list/shopping-list';
 import { Cable, CABLE_TYPE_LABEL, CableSide, CableStatus, CableType, Port } from './cable.model';
+import { PortDefinition } from '../inventory/inventory';
 import PatchMappingApiService from './patch-mapping-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
 import PlacementApiService from '../inventory/placement-api.service';
@@ -23,7 +24,8 @@ import CatalogApiService from '../catalog/catalog-api.service';
 import { ASSET_CLIENT } from '../../connect/tokens';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
-import { cablePortFromDefinition } from '../racks/catalog-helpers';
+import { cablePortFromDefinition, cablePortTypeToDefinition } from '../racks/catalog-helpers';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 /** A selectable device (placement) in the active datacenter. */
 interface DeviceOption {
@@ -37,6 +39,19 @@ interface SiteOption {
   name: string;
 }
 
+/** Maps a cabling UI port onto the catalog port-definition shape for writes. */
+function toPortDefinition(port: Port, catalogId: string, ordinal?: number): PortDefinition {
+  const { portType, direction } = cablePortTypeToDefinition(port.type);
+  return {
+    id: port.id,
+    catalogEntryId: catalogId,
+    name: port.name,
+    portType,
+    direction,
+    ...(ordinal != null ? { ordinal } : {}),
+  };
+}
+
 @Component({
   selector: 'app-patch-mapping',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,10 +60,11 @@ interface SiteOption {
     CableListComponent,
     CableFormComponent,
     ShoppingListComponent,
+    DropdownSyncDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
-    class: 'flex flex-col bg-white text-slate-900',
+    class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',
     '[class.min-h-screen]': "activeView() === 'list'",
     '[class.overflow-hidden]': "activeView() === 'topology'",
     '[style.height]': "activeView() === 'topology' ? 'calc(100dvh - 4.25rem)' : null",
@@ -104,6 +120,9 @@ export default class PatchMappingComponent implements OnInit {
   readonly dcDevices = signal<DeviceOption[]>([]);
 
   readonly localDevicePorts = signal<Record<string, Port[]>>({});
+
+  /** Catalog entry id per placement (device); ports are catalog port definitions. */
+  private catalogByPlacement = new Map<string, string>();
 
   readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
 
@@ -234,10 +253,64 @@ export default class PatchMappingComponent implements OnInit {
 
       this.dcDevices.set(devices);
       this.localDevicePorts.set(devicePorts);
+      this.catalogByPlacement = catalogByPlacement;
       this.mutableCables.set(cables);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
+    }
+  }
+
+  /**
+   * Persists port edits made from the cable form. Ports are catalog port
+   * definitions, so a change to one device also affects every device sharing
+   * its catalog entry; the site graph is reloaded afterwards to reconcile
+   * synthetic ids with the server-assigned ones.
+   */
+  async onPortsUpdated(event: { deviceId: string; ports: Port[] }): Promise<void> {
+    const catalogId = this.catalogByPlacement.get(event.deviceId);
+    if (!catalogId) return;
+
+    const oldPorts = this.localDevicePorts()[event.deviceId] ?? [];
+    const newPorts = event.ports;
+    const oldById = new Map(oldPorts.map((p) => [p.id, p]));
+    const newById = new Map(newPorts.map((p) => [p.id, p]));
+
+    const deletions = oldPorts.filter((p) => !newById.has(p.id));
+    const creations = newPorts.filter((p) => !oldById.has(p.id));
+    const updates = newPorts.filter((p) => {
+      const prev = oldById.get(p.id);
+      return prev != null && (prev.name !== p.name || prev.type !== p.type);
+    });
+
+    if (deletions.length === 0 && creations.length === 0 && updates.length === 0) return;
+
+    // Optimistic update so the form reflects the change before the round-trip.
+    this.localDevicePorts.update((map) => ({ ...map, [event.deviceId]: newPorts }));
+
+    try {
+      await Promise.all([
+        ...deletions.map((p) => firstValueFrom(this.catalogApi.deletePortDefinition(p.id))),
+        ...updates.map((p) =>
+          firstValueFrom(this.catalogApi.updatePortDefinition(toPortDefinition(p, catalogId))),
+        ),
+      ]);
+      // New definitions take ordinals after the existing ports.
+      const baseOrdinal = oldPorts.length;
+      await Promise.all(
+        creations.map((p, i) =>
+          firstValueFrom(
+            this.catalogApi.createPortDefinition(toPortDefinition(p, catalogId, baseOrdinal + i)),
+          ),
+        ),
+      );
+      this.cableFormError.set(null);
+    } catch (err) {
+      const { fields, message } = parseValidationError(err);
+      const all = [message, ...Object.values(fields)].filter(Boolean);
+      this.cableFormError.set(all.join('\n') || 'Failed to save port changes.');
+    } finally {
+      await this.loadSiteGraph(this.selectedDcId());
     }
   }
 

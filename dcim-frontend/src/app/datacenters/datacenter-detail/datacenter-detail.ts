@@ -30,7 +30,7 @@ interface NativeElementRef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col bg-white text-slate-900' },
+  host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
 export default class DatacenterDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

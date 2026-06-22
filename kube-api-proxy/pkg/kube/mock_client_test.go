@@ -81,7 +81,7 @@ func TestIsResourceGet(t *testing.T) {
 func TestResourceGetResponse(t *testing.T) {
 	r := func(s string) io.ReadCloser { return io.NopCloser(strings.NewReader(s)) }
 
-	status, body, err := resourceGetResponse(mockCertificateListJSON, "web-tls-cert", r)
+	status, body, err := resourceGetResponse(mockCertificateListJSON, "web-tls-cert", "", r)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -99,11 +99,69 @@ func TestResourceGetResponse(t *testing.T) {
 		t.Fatalf("wrong name: %v", meta["name"])
 	}
 
-	status, body, _ = resourceGetResponse(mockCertificateListJSON, "missing", r)
+	status, body, _ = resourceGetResponse(mockCertificateListJSON, "missing", "", r)
 	if status != 404 {
 		t.Fatalf("expected 404, got %d", status)
 	}
 	body.Close()
+}
+
+func TestResourceGetResponseNamespaceDisambiguation(t *testing.T) {
+	r := func(s string) io.ReadCloser { return io.NopCloser(strings.NewReader(s)) }
+
+	// mockDatabaseListJSON has two "app-db" objects, in "default" and "analytics".
+	// A namespaced get must return the object from the requested namespace.
+	for _, ns := range []string{"default", "analytics"} {
+		status, body, err := resourceGetResponse(mockDatabaseListJSON, "app-db", ns, r)
+		if err != nil {
+			t.Fatalf("ns %q: err: %v", ns, err)
+		}
+		if status != 200 {
+			t.Fatalf("ns %q: status = %d", ns, status)
+		}
+		b, _ := io.ReadAll(body)
+		body.Close()
+		var item map[string]any
+		if err := json.Unmarshal(b, &item); err != nil {
+			t.Fatalf("ns %q: unmarshal: %v", ns, err)
+		}
+		meta, _ := item["metadata"].(map[string]any)
+		if meta["name"] != "app-db" || meta["namespace"] != ns {
+			t.Fatalf("ns %q: got name=%v namespace=%v", ns, meta["name"], meta["namespace"])
+		}
+	}
+}
+
+func TestMockClientDoResourceGet(t *testing.T) {
+	m := &MockClient{}
+	ctx := context.Background()
+
+	// Namespaced single-object get must return the object (with spec) from the
+	// requested namespace — the path the generated detail view now uses.
+	status, body, err := m.Do(ctx, http.MethodGet,
+		"/apis/postgresql.cnpg.io/v1/namespaces/analytics/databases/app-db", nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if status != 200 {
+		t.Fatalf("status = %d", status)
+	}
+	defer body.Close()
+	b, _ := io.ReadAll(body)
+	var obj map[string]any
+	if err := json.Unmarshal(b, &obj); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if obj["kind"] != "Database" {
+		t.Fatalf("expected a single Database object, got kind=%v", obj["kind"])
+	}
+	meta, _ := obj["metadata"].(map[string]any)
+	if meta["namespace"] != "analytics" {
+		t.Fatalf("wrong namespace: %v", meta["namespace"])
+	}
+	if _, ok := obj["spec"].(map[string]any); !ok {
+		t.Fatalf("returned object has no spec: %s", b)
+	}
 }
 
 func TestCertManagerDefinitionShape(t *testing.T) {
@@ -176,6 +234,62 @@ func TestServeConsoleAsset(t *testing.T) {
 	mc.ServeHTTP(w3, req3)
 	if w3.Code != http.StatusNotFound {
 		t.Errorf("expected 404 for missing file, got %d", w3.Code)
+	}
+}
+
+func TestMockFSCInstallations(t *testing.T) {
+	mc := &MockClient{}
+
+	// List.
+	status, body, err := mc.Do(context.Background(), http.MethodGet, "/apis/openfsc.fundament.io/v1/fscinstallations", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != 200 {
+		t.Fatalf("list status = %d", status)
+	}
+	b, _ := io.ReadAll(body)
+	body.Close()
+	if !strings.Contains(string(b), `"kind": "FSCInstallationList"`) {
+		t.Errorf("body did not contain FSCInstallationList: %s", string(b))
+	}
+
+	// Namespaced get of a known item.
+	status, body, err = mc.Do(context.Background(), http.MethodGet, "/apis/openfsc.fundament.io/v1/namespaces/fsc-demo/fscinstallations/demo", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != 200 {
+		t.Fatalf("get status = %d", status)
+	}
+	b, _ = io.ReadAll(body)
+	body.Close()
+	var item map[string]any
+	if err := json.Unmarshal(b, &item); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	meta, _ := item["metadata"].(map[string]any)
+	if meta["name"] != "demo" {
+		t.Fatalf("wrong name: %v", meta["name"])
+	}
+
+	// GetDefinition for the openfsc plugin.
+	status, body, err = mc.Do(context.Background(), http.MethodGet, "/api/v1/namespaces/plugin-openfsc/services/http:plugin-openfsc:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != 200 {
+		t.Fatalf("definition status = %d", status)
+	}
+	b, _ = io.ReadAll(body)
+	body.Close()
+	if !strings.Contains(string(b), `"name": "openfsc"`) {
+		t.Errorf("definition body did not contain openfsc: %s", string(b))
+	}
+
+	// CRD is registered and resolvable by name.
+	if _, ok := mockCRDForName("fscinstallations.openfsc.fundament.io"); !ok {
+		t.Error("fscinstallations CRD not registered in mockCRDForName")
 	}
 }
 

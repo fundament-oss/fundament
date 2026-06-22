@@ -134,7 +134,9 @@ export default class OrganizationLimitsComponent implements OnInit {
     }
   }
 
-  async saveClusterLimits() {
+  async saveClusterLimits(event?: Event) {
+    event?.preventDefault();
+
     const orgId = this.organizationContextService.currentOrganizationId();
     if (!orgId) return;
 
@@ -164,7 +166,9 @@ export default class OrganizationLimitsComponent implements OnInit {
     }
   }
 
-  async saveNamespaceLimits() {
+  async saveNamespaceLimits(event?: Event) {
+    event?.preventDefault();
+
     const orgId = this.organizationContextService.currentOrganizationId();
     if (!orgId) return;
 

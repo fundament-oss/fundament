@@ -11,6 +11,7 @@ externalUrls:
   cookieDomain: fundament.projects.digilab.network
   dcimApi: https://dcim-api.fundament.projects.digilab.network
   dcim: https://dcim.fundament.projects.digilab.network
+  dcimAuthn: https://dcim-authn.fundament.projects.digilab.network
   corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network"
 
 db:
@@ -84,6 +85,61 @@ dex:
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Grace
       userID: "019b4000-1000-7000-8000-000000000007"
+
+dexDcim:
+  enabled: true
+  issuer: https://dex-dcim.fundament.projects.digilab.network
+  discoveryUrl: http://dex-dcim:5556
+  staticClients:
+    - id: dcim
+      name: "DCIM Auth API"
+      redirectURIs:
+        - https://dcim-authn.fundament.projects.digilab.network/callback
+      public: true
+  # DCIM is a separate trust domain from the console/tenant. The same test
+  # credentials work here, but each user gets a DCIM-specific userID (019d0000
+  # prefix) that is intentionally decoupled from the tenant userID in `dex`
+  # above. dcim-authn-api derives the JWT subject from the dex `sub` and never
+  # correlates it with tenant.users, so these IDs must stay distinct.
+  staticPasswords:
+    # acme-corp users
+    - email: alice@acme-corp.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Alice
+      userID: "019d0000-1000-7000-8000-000000000001"
+    - email: bart@acme-corp.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Bart
+      userID: "019d0000-1000-7000-8000-000000000002"
+    - email: cindy@acme-corp.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Cindy
+      userID: "019d0000-1000-7000-8000-000000000003"
+    # globex users
+    - email: david@globex.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: David
+      userID: "019d0000-1000-7000-8000-000000000004"
+    - email: emily@globex.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Emily
+      userID: "019d0000-1000-7000-8000-000000000005"
+    # initech users
+    - email: frank@initech.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Frank
+      userID: "019d0000-1000-7000-8000-000000000006"
+    - email: grace@initech.com
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Grace
+      userID: "019d0000-1000-7000-8000-000000000007"
+
+dcimAuthnApi:
+  enabled: true
+  replicas: 1
+  # ROPC login against dex static passwords. Acceptable for the shared
+  # sandbox/PR test environments; keep disabled in production.
+  passwordLoginEnabled: true
 
 authzWorker:
   enabled: true

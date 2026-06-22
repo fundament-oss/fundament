@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -19,11 +20,17 @@ import {
   PortDefinition,
   PortCompatibility,
 } from '../../inventory/inventory';
+import {
+  ASSET_STATUS_BADGE_CLASS,
+  ASSET_STATUS_DOT_CLASS,
+  ASSET_STATUS_LABEL,
+} from '../../inventory/asset-status';
 import CatalogApiService from '../catalog-api.service';
 import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -33,9 +40,9 @@ interface NativeElementRef {
   selector: 'app-catalog-detail',
   templateUrl: './catalog-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'block bg-slate-50 min-h-screen' },
+  host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
 export default class CatalogDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -93,6 +100,10 @@ export default class CatalogDetailComponent implements OnInit {
   // ── Port definition CRUD state ────────────────────────────────────────────
   editPortDef = signal<Partial<PortDefinition> | null>(null);
 
+  portType = signal<string>('');
+
+  portDirection = signal<string>('bidir');
+
   deletePortDef = signal<PortDefinition | null>(null);
 
   // ── Validation feedback (shared by the port + compatibility forms) ────────────
@@ -127,10 +138,6 @@ export default class CatalogDetailComponent implements OnInit {
 
   private readonly fPortName = viewChild<NativeElementRef>('fPortName');
 
-  private readonly fPortType = viewChild<NativeElementRef>('fPortType');
-
-  private readonly fPortDirection = viewChild<NativeElementRef>('fPortDirection');
-
   private readonly fPortMedia = viewChild<NativeElementRef>('fPortMedia');
 
   private readonly fPortSpeed = viewChild<NativeElementRef>('fPortSpeed');
@@ -163,9 +170,7 @@ export default class CatalogDetailComponent implements OnInit {
         .filter((c) => c.portDefinitionId === pdId)
         .map((c) => c.compatibleCatalogEntryId),
     );
-    return this.allCatalogEntries().filter(
-      (e) => e.id !== this.catalogId() && !taken.has(e.id),
-    );
+    return this.allCatalogEntries().filter((e) => e.id !== this.catalogId() && !taken.has(e.id));
   });
 
   constructor() {
@@ -266,11 +271,15 @@ export default class CatalogDetailComponent implements OnInit {
       portType: '',
       direction: 'bidir',
     });
+    this.portType.set('');
+    this.portDirection.set('bidir');
   }
 
   openEditPortDef(pd: PortDefinition): void {
     this.clearErrors();
     this.editPortDef.set({ ...pd });
+    this.portType.set(pd.portType);
+    this.portDirection.set(pd.direction ?? 'bidir');
   }
 
   closePortDefForm(): void {
@@ -283,8 +292,8 @@ export default class CatalogDetailComponent implements OnInit {
     if (!form) return;
     this.clearErrors();
     const name = this.fPortName()?.nativeElement.value ?? '';
-    const portType = this.fPortType()?.nativeElement.value ?? '';
-    const direction = this.fPortDirection()?.nativeElement.value ?? '';
+    const portType = this.portType();
+    const direction = this.portDirection();
     const mediaType = this.fPortMedia()?.nativeElement.value ?? '';
     const speedRaw = this.fPortSpeed()?.nativeElement.value;
     const powerRaw = this.fPortPower()?.nativeElement.value;
@@ -445,39 +454,9 @@ export default class CatalogDetailComponent implements OnInit {
     return map[category] ?? 'rectangle-stack';
   };
 
-  readonly statusLabel = (status: AssetStatus): string => {
-    const labels: Record<AssetStatus, string> = {
-      deployed: 'Deployed',
-      available: 'Available',
-      'needs-repair': 'Needs Repair',
-      decommissioned: 'Decommissioned',
-      'on-order': 'On Order',
-      requested: 'Requested',
-    };
-    return labels[status];
-  };
+  readonly statusLabel = (status: AssetStatus): string => ASSET_STATUS_LABEL[status];
 
-  readonly statusBadgeClass = (status: AssetStatus): string => {
-    const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-50 text-teal-700',
-      available: 'bg-green-50 text-green-700',
-      'needs-repair': 'bg-amber-50 text-amber-700',
-      decommissioned: 'bg-slate-100 text-slate-500',
-      'on-order': 'bg-blue-50 text-blue-700',
-      requested: 'bg-purple-50 text-purple-700',
-    };
-    return classes[status];
-  };
+  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
 
-  readonly statusDotClass = (status: AssetStatus): string => {
-    const classes: Record<AssetStatus, string> = {
-      deployed: 'bg-teal-400',
-      available: 'bg-green-400',
-      'needs-repair': 'bg-amber-400',
-      decommissioned: 'bg-slate-300',
-      'on-order': 'bg-blue-400',
-      requested: 'bg-purple-400',
-    };
-    return classes[status];
-  };
+  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
 }

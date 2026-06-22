@@ -16,6 +16,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	clusterhandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/cluster"
+	namespacehandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/namespace"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/usersync"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/outbox"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/reconcile"
@@ -88,6 +89,16 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	registry.RegisterSync(handler.EntityProjectMember, ush)
 	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, ush)
 	registry.RegisterReconcile(ush)
+
+	// Namespace sync handler (v1/Namespace lifecycle on shoots). Shares the same
+	// ShootAccess instance as usersync and the outbox worker's MaxRetries so its
+	// reconcile enqueue uses the same exhaustion threshold. Like usersync, it
+	// also subscribes to the cluster-ready event to fan out a sync for every
+	// active namespace on the cluster.
+	nsh := namespacehandler.New(pool, shootAccess, cfg.Outbox.MaxRetries, logger)
+	registry.RegisterSync(handler.EntityNamespace, nsh)
+	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, nsh)
+	registry.RegisterReconcile(nsh)
 
 	// Workers
 	outboxWorker := outbox.New(pool, registry, logger, cfg.Outbox)

@@ -1,0 +1,431 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: fscinstallations.openfsc.fundament.io
+spec:
+  group: openfsc.fundament.io
+  names:
+    kind: FSCInstallation
+    listKind: FSCInstallationList
+    plural: fscinstallations
+    shortNames:
+    - fsci
+    singular: fscinstallation
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.groupID
+      name: Group
+      type: string
+    - jsonPath: .spec.directory.mode
+      name: Directory
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          FSCInstallation makes its namespace a peer in an FSC group. The operator
+          supports one FSCInstallation per namespace; all component and release names
+          are fixed, so every installation's namespace looks the same.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              FSCInstallationSpec declares one OpenFSC installation: the operator installs
+              the OpenFSC core (Manager, Controller, audit/transaction logs, backed by a
+              CloudNativePG cluster) into the resource's namespace and one gateway
+              workload per declared inway/outway.
+            properties:
+              autoSignGrants:
+                default:
+                - servicePublication
+                - delegatedServicePublication
+                description: AutoSignGrants lists the grant types the Manager signs
+                  automatically.
+                items:
+                  type: string
+                type: array
+              certificate:
+                description: |-
+                  Certificate is the group certificate the Manager presents as its peer,
+                  token and signature identity. Required in External mode; in Self mode
+                  the operator mints it from the self-signed group CA.
+                properties:
+                  existingSecret:
+                    minLength: 1
+                    type: string
+                required:
+                - existingSecret
+                type: object
+              controllerURL:
+                description: |-
+                  ControllerURL is the host-reachable URL of the Controller UI, surfaced
+                  in the status so a console can link to it. Empty hides the link.
+                pattern: ^https?://.+
+                type: string
+              directory:
+                description: DirectoryConfig declares the installation's FSC group
+                  Directory.
+                properties:
+                  external:
+                    description: ExternalDirectory points at the existing group Directory
+                      to join.
+                    properties:
+                      address:
+                        description: Address is the https:// address of the Directory
+                          peer's Manager.
+                        pattern: ^https://.+
+                        type: string
+                      peerID:
+                        description: PeerID is the Directory peer's identifier within
+                          the group.
+                        minLength: 1
+                        type: string
+                      trustAnchor:
+                        description: |-
+                          TrustAnchor references the group CA certificate PEM all peers of the
+                          group trust.
+                        properties:
+                          key:
+                            default: ca.crt
+                            type: string
+                          name:
+                            minLength: 1
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    required:
+                    - address
+                    - peerID
+                    - trustAnchor
+                    type: object
+                  mode:
+                    description: DirectoryMode selects where the installation's FSC
+                      group Directory lives.
+                    enum:
+                    - Self
+                    - External
+                    type: string
+                required:
+                - mode
+                type: object
+                x-kubernetes-validations:
+                - message: external is required for mode External and forbidden for
+                    mode Self
+                  rule: (self.mode == 'External') == has(self.external)
+              groupID:
+                description: GroupID is the FSC group this installation belongs to.
+                minLength: 1
+                type: string
+                x-kubernetes-validations:
+                - message: groupID is immutable
+                  rule: self == oldSelf
+              inways:
+                items:
+                  description: |-
+                    InwayConfig declares a provider gateway: services are published to the
+                    group through it.
+                  properties:
+                    certificate:
+                      description: |-
+                        Certificate overrides the group certificate this inway presents
+                        (defaults to spec.certificate). Only valid in External mode; Self mode
+                        mints per-gateway certificates.
+                      properties:
+                        existingSecret:
+                          minLength: 1
+                          type: string
+                      required:
+                      - existingSecret
+                      type: object
+                    name:
+                      description: |-
+                        Name is the FSC name the inway registers under with the Controller, and
+                        the suffix of its Helm release.
+                      maxLength: 30
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    selfAddress:
+                      description: |-
+                        SelfAddress is the https:// address other peers use to reach this inway.
+                        Defaults to the in-cluster service URL, which only peers in the same
+                        cluster can reach; set it when the group has peers elsewhere.
+                      pattern: ^https://.+
+                      type: string
+                  required:
+                  - name
+                  type: object
+                maxItems: 20
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              managerAddress:
+                description: |-
+                  ManagerAddress is the https:// address other peers use to reach this
+                  installation's Manager. Defaults to the in-cluster service URL, which
+                  only peers in the same cluster can reach; set it when the group has
+                  peers elsewhere.
+                pattern: ^https://.+
+                type: string
+              outways:
+                items:
+                  description: |-
+                    OutwayConfig declares a consumer gateway: services of the group are
+                    consumed through it.
+                  properties:
+                    certificate:
+                      description: |-
+                        Certificate overrides the group certificate this outway presents
+                        (defaults to spec.certificate). Only valid in External mode; Self mode
+                        mints per-gateway certificates.
+                      properties:
+                        existingSecret:
+                          minLength: 1
+                          type: string
+                      required:
+                      - existingSecret
+                      type: object
+                    name:
+                      description: |-
+                        Name is the FSC name the outway registers under with the Controller, and
+                        the suffix of its Helm release.
+                      maxLength: 30
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                  required:
+                  - name
+                  type: object
+                maxItems: 20
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              peerID:
+                description: |-
+                  PeerID is this installation's identity within the group, carried as the
+                  subject serialNumber on its group certificates.
+                minLength: 1
+                type: string
+              postgres:
+                description: |-
+                  PostgresConfig sizes the CloudNativePG cluster the operator provisions for
+                  the installation's OpenFSC components.
+                properties:
+                  image:
+                    default: ghcr.io/cloudnative-pg/postgresql:16
+                    description: Image is the PostgreSQL container image.
+                    type: string
+                  instances:
+                    default: 1
+                    description: Instances is the number of PostgreSQL instances.
+                    format: int32
+                    type: integer
+                  storageClass:
+                    description: |-
+                      StorageClass is the StorageClass for the data volumes. There is no
+                      default: it depends on the cluster (e.g. local-path on k3s).
+                    minLength: 1
+                    type: string
+                  storageSize:
+                    default: 1Gi
+                    description: StorageSize is the size of each data volume.
+                    type: string
+                required:
+                - storageClass
+                type: object
+            required:
+            - directory
+            - groupID
+            - peerID
+            - postgres
+            type: object
+            x-kubernetes-validations:
+            - message: certificate is required for directory.mode External and forbidden
+                for Self
+              rule: (self.directory.mode == 'External') == has(self.certificate)
+            - message: inway certificate overrides are only valid for directory.mode
+                External
+              rule: self.directory.mode == 'External' || !has(self.inways) || !self.inways.exists(i,
+                has(i.certificate))
+            - message: outway certificate overrides are only valid for directory.mode
+                External
+              rule: self.directory.mode == 'External' || !has(self.outways) || !self.outways.exists(o,
+                has(o.certificate))
+          status:
+            description: FSCInstallationStatus is the observed state of an FSCInstallation.
+            properties:
+              conditions:
+                description: Conditions follow the standard Kubernetes condition convention.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              controllerURL:
+                description: |-
+                  ControllerURL is the OpenFSC Controller UI address (copied from the spec
+                  once the core is deployed).
+                type: string
+              inways:
+                items:
+                  description: GatewayStatus is the observed state of one declared
+                    inway or outway.
+                  properties:
+                    lastSyncedTime:
+                      description: LastSyncedTime is when the gateway's registration
+                        was last confirmed.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Message is a human-readable status detail.
+                      type: string
+                    name:
+                      type: string
+                    phase:
+                      description: Phase is Active once the gateway has registered
+                        with the Controller.
+                      type: string
+                    url:
+                      description: |-
+                        URL is an address for reaching this gateway (the inway's self address,
+                        the outway's in-cluster consume endpoint). Empty when not applicable.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              managerAddress:
+                description: |-
+                  ManagerAddress is the address other peers use to reach this Manager;
+                  an External-mode installation elsewhere joins this installation's group
+                  by pointing its directory at this address.
+                type: string
+              message:
+                description: Message is a human-readable status detail.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the .metadata.generation last reconciled.
+                format: int64
+                type: integer
+              outways:
+                items:
+                  description: GatewayStatus is the observed state of one declared
+                    inway or outway.
+                  properties:
+                    lastSyncedTime:
+                      description: LastSyncedTime is when the gateway's registration
+                        was last confirmed.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Message is a human-readable status detail.
+                      type: string
+                    name:
+                      type: string
+                    phase:
+                      description: Phase is Active once the gateway has registered
+                        with the Controller.
+                      type: string
+                    url:
+                      description: |-
+                        URL is an address for reaching this gateway (the inway's self address,
+                        the outway's in-cluster consume endpoint). Empty when not applicable.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              phase:
+                description: Phase is the high-level reconciliation state.
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

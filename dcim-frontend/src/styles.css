@@ -3,6 +3,11 @@
 @import 'tailwindcss';
 @import '@nldd/design-system/styles';
 
+/* Drive Tailwind's `dark:` variant from the `.dark` class on <html> (managed by
+   ThemeService) instead of the OS `prefers-color-scheme` media query, so the
+   in-app theme switcher controls dark mode. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Make the CSS color-scheme follow the app's .dark class so that Overheid web
    components using light-dark() respond to our toggle instead of the OS setting.
    html.dark specificity (0,1,1) beats :root (0,1,0) from the storybook tokens. */
@@ -11,6 +16,53 @@ html:not(.dark) {
 }
 html.dark {
   color-scheme: dark;
+}
+
+:root {
+  /* Custom focus ring, since the NLDD default is very dark */
+  --semantics-focus-ring-outline: none;
+  --semantics-focus-ring-box-shadow:
+    var(--semantics-surfaces-background-color) 0 0 0 2px,
+    var(--primitives-color-accent-200) 0 0 0 4px;
+}
+
+/* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
+::view-transition-group(root) {
+  @apply animate-[700ms_ease-out];
+}
+
+::view-transition-new(root) {
+  animation-name: reveal-light;
+  animation-fill-mode: both;
+}
+
+::view-transition-old(root),
+.dark::view-transition-old(root) {
+  @apply -z-10 animate-none;
+  animation-fill-mode: both;
+}
+
+.dark::view-transition-new(root) {
+  animation-name: reveal-dark;
+  animation-fill-mode: both;
+}
+
+@keyframes reveal-light {
+  from {
+    clip-path: polygon(171% 50%, 50% 171%, 50% 171%, 171% 50%);
+  }
+  to {
+    clip-path: polygon(171% 50%, 50% 171%, -50% 71%, 50% -71%);
+  }
+}
+
+@keyframes reveal-dark {
+  from {
+    clip-path: polygon(50% -71%, -50% 71%, -50% 71%, 50% -71%);
+  }
+  to {
+    clip-path: polygon(50% -71%, -50% 71%, 50% 171%, 171% 50%);
+  }
 }
 
 @theme {
@@ -130,19 +182,11 @@ html.dark {
 }
 
 body {
-  @apply text-content font-body;
+  @apply text-content font-body bg-neutral-25 dark:bg-gray-900 dark:text-white;
 }
 
 button {
   @apply cursor-pointer;
-}
-
-/* Custom select styles until nldd-dropdown has been fixed */
-
-select {
-  @apply ring-accent-200 dark:ring-accent-800 appearance-none rounded-[9px] bg-size-[1.5em_1.5em] bg-position-[right_0.625rem_center] bg-no-repeat py-2.5 pr-10 pl-3 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50;
-  background-color: var(--semantics-buttons-neutral-tinted-background-color);
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3e%3cpath fill='currentColor' d='M12 5.828 7.4 10.4 6 9l6-6 6 6-1.4 1.4zm0 12.344L7.4 13.6 6 15l6 6 6-6-1.4-1.4z'%3e%3c/path%3e%3c/svg%3e");
 }
 
 input[type='radio'] {
@@ -186,4 +230,17 @@ input[type='radio']:checked {
   );
   border: 1px dashed #94a3b8;
   color: #94a3b8;
+}
+
+.dark .rack-slot-free {
+  background-color: #111827;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    #374151 4px,
+    #374151 5px
+  );
+  border-color: #475569;
+  color: #64748b;
 }

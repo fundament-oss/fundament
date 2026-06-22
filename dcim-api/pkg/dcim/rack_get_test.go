@@ -15,7 +15,7 @@ func TestRackService_GetRack_HappyFlow(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewRackServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewRackServiceClient(env.client(), env.server.URL)
 
 	rowID := createRackRowFixture(t, env, "Rack Get")
 	rackID := createRack(t, env, rowID, "Rack Get Target", 24)
@@ -37,7 +37,7 @@ func TestRackService_GetRack_Errors(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewRackServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewRackServiceClient(env.client(), env.server.URL)
 
 	tests := []struct {
 		name string

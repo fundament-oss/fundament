@@ -9,6 +9,9 @@ import {
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
+import ThemeToggleComponent from '../shared/theme-toggle';
+import ThemeService from '../theme.service';
+
 interface GatherItem {
   label: string;
   taskFor?: string;
@@ -33,13 +36,39 @@ type Phase = 'gather' | 'task';
 @Component({
   selector: 'app-task-management-technician',
   templateUrl: './task-management-technician.html',
-  imports: [RouterLink],
+  imports: [RouterLink, ThemeToggleComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block bg-neutral-50 font-sans text-neutral-900 antialiased' },
+  host: {
+    class:
+      'block bg-neutral-50 dark:bg-gray-900 font-sans text-neutral-900 dark:text-white antialiased',
+  },
 })
 export default class TaskManagementTechnicianComponent {
   private sanitizer = inject(DomSanitizer);
+
+  protected readonly theme = inject(ThemeService);
+
+  // Light→dark substitutions for the inline step illustrations: paper/background
+  // fills darken, dark line/text colors lighten, vivid status accents stay.
+  private static readonly SVG_DARK_MAP: Record<string, string> = {
+    white: '#0f172a',
+    '#ffffff': '#0f172a',
+    '#f8fafc': '#0f172a',
+    '#f1f5f9': '#1e293b',
+    '#e2e8f0': '#334155',
+    '#eef2ff': '#1e1b4b',
+    '#c7d2fe': '#3730a3',
+    '#a5b4fc': '#818cf8',
+    '#cbd5e1': '#475569',
+    '#94a3b8': '#64748b',
+    '#f0fdf4': '#052e16',
+    '#dcfce7': '#052e16',
+    '#fef2f2': '#450a0a',
+    '#fef3c7': '#451a03',
+    '#334155': '#cbd5e1',
+    '#b45309': '#fbbf24',
+  };
 
   readonly dcName = 'DC Amsterdam-West';
 
@@ -488,8 +517,14 @@ export default class TaskManagementTechnicianComponent {
     this.currentStepIndex.set(stepIdx);
   }
 
-  safeSvg(svg: string): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(svg);
+  safeSvg(svg: string, isDark = false): SafeHtml {
+    const source = isDark
+      ? svg.replace(/(fill|stroke)="([^"]+)"/g, (match, _attr, color) => {
+          const dark = TaskManagementTechnicianComponent.SVG_DARK_MAP[color.toLowerCase()];
+          return dark ? match.replace(`"${color}"`, `"${dark}"`) : match;
+        })
+      : svg;
+    return this.sanitizer.bypassSecurityTrustHtml(source);
   }
 
   toggleGatherItem(index: number): void {
