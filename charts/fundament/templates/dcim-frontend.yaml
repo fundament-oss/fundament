@@ -9,7 +9,8 @@ metadata:
 data:
   config.json: |
     {
-      "apiUrl": "{{ $.Values.externalUrls.dcimApi }}"
+      "apiUrl": "{{ $.Values.externalUrls.dcimApi }}",
+      "authnApiUrl": "{{ $.Values.externalUrls.dcimAuthn }}"
     }
 
 ---
@@ -34,7 +35,7 @@ spec:
           image: {{ $.Values.images.dcimFrontend }}
           env:
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.dcimApi }}"
+              value: "{{ $.Values.externalUrls.dcimApi }} {{ $.Values.externalUrls.dcimAuthn }}"
           ports:
             - name: http
               containerPort: 80

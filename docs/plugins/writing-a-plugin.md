@@ -35,7 +35,6 @@ spec:
       - crd: myresources.my-api.io
         list: true
         detail: true
-        create: true
         icon: pencil-on-square
 
   customComponents:
@@ -62,13 +61,14 @@ spec:
             label: Failed
 ```
 
-`customComponents` maps every CRD kind that appears in the menu to the
-HTML files your plugin ships under `console/`. The console does not
-generate fallback views from the CRD schema, so every menu entry needs
-its own `list` and `detail` page. `allowedResources` is the allowlist the
-console host enforces on every `fundament.k8s.list` / `.get` call the
-plugin makes — see [Custom UI](custom-ui) and
-[Console integration](console-integration) for the full story.
+`customComponents` maps a CRD kind to the HTML files your plugin ships under
+`console/`. It is optional: any menu entry without a custom component renders the
+console's generated read-only list and detail views from the CRD schema, so add
+`customComponents` only for kinds that need write actions or a bespoke layout.
+`allowedResources` is the allowlist the console host enforces on every
+`fundament.k8s.list` / `.get` call the plugin makes — see
+[Custom UI](custom-ui) and [Console integration](console-integration) for the
+full story.
 
 ### 2. Implement the plugin
 

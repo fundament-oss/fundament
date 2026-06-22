@@ -56,7 +56,7 @@ func (p *testPlugin) Definition() pluginruntime.PluginDefinition {
 			},
 			Menu: pluginruntime.MenuDefinition{
 				Organization: []pluginruntime.MenuEntry{
-					{CRD: "TestResource", List: true, Detail: true, Create: true, Icon: "puzzle"},
+					{CRD: "TestResource", List: true, Detail: true, Icon: "puzzle"},
 				},
 			},
 			CustomComponents: map[string]pluginruntime.ComponentMapping{
@@ -152,7 +152,6 @@ func TestRunInProcess(t *testing.T) {
 	require.Len(t, defResp.Msg.GetMenu().GetOrganization(), 1)
 	orgEntry := defResp.Msg.GetMenu().GetOrganization()[0]
 	assert.Equal(t, "TestResource", orgEntry.GetCrd())
-	assert.True(t, orgEntry.GetCreate())
 	assert.Equal(t, "puzzle", orgEntry.GetIcon())
 
 	// Verify custom components

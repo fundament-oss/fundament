@@ -1,0 +1,122 @@
+{{- if $.Values.dexDcim.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex-dcim
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "dex-dcim" "component" "backend") | nindent 4 }}
+data:
+  config.yaml: |
+    issuer: {{ $.Values.dexDcim.issuer }}
+    storage:
+      type: memory
+    web:
+      http: 0.0.0.0:5556
+    oauth2:
+      responseTypes: ["code"]
+      skipApprovalScreen: true
+      passwordConnector: local
+    {{- if $.Values.dexDcim.staticClients }}
+    staticClients:
+      {{- toYaml $.Values.dexDcim.staticClients | nindent 6 }}
+    {{- end }}
+    enablePasswordDB: true
+    {{- if $.Values.dexDcim.staticPasswords }}
+    staticPasswords:
+      {{- toYaml $.Values.dexDcim.staticPasswords | nindent 6 }}
+    {{- end }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex-dcim
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "dex-dcim" "component" "backend") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "dex-dcim") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ $.Values.dexDcim | toYaml | sha256sum }}
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "dex-dcim" "component" "backend") | nindent 8 }}
+    spec:
+      containers:
+        - name: dex-dcim
+          image: ghcr.io/dexidp/dex:v2.41.1
+          command:
+            - /usr/local/bin/dex
+            - serve
+            - /etc/dex/config.yaml
+          ports:
+            - name: http
+              containerPort: 5556
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dex
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: dex-dcim
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex-dcim
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "dex-dcim" "component" "backend") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    # dex listens only on 5556; 8080 is an alias so callers using the common
+    # backend port convention reach the same container port.
+    - port: 5556
+      targetPort: http
+      name: http
+    - port: 8080
+      targetPort: http
+      name: http-alt
+  selector:
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "dex-dcim") | nindent 4 }}
+
+{{- if $.Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dex-dcim
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "dex-dcim" "component" "backend") | nindent 4 }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+  {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - dex-dcim.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      secretName: dex-dcim-tls
+  {{- end }}
+  rules:
+    - host: dex-dcim.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dex-dcim
+                port:
+                  name: http
+{{- end }}
+
+{{- end }}

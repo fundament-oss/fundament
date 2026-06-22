@@ -19,6 +19,7 @@ import type {
   PluginMessage,
 } from './postmessage-types';
 import type { AllowedResource, KubeResource } from '../types';
+import buildResourceUrl from '../kube-url.utils';
 import { ConfigService } from '../../config.service';
 
 function getCurrentTheme(): 'light' | 'dark' {
@@ -54,18 +55,6 @@ function isVerbAllowed(
       a.resource === resource &&
       (a.verbs ?? []).includes(verb),
   );
-}
-
-function buildResourceUrl(
-  base: string,
-  clusterId: string,
-  args: { group: string; version: string; resource: string; namespace?: string; name?: string },
-): string {
-  const groupPart =
-    args.group === '' ? `api/${args.version}` : `apis/${args.group}/${args.version}`;
-  const nsPart = args.namespace ? `/namespaces/${encodeURIComponent(args.namespace)}` : '';
-  const namePart = args.name ? `/${encodeURIComponent(args.name)}` : '';
-  return `${base}/clusters/${encodeURIComponent(clusterId)}/${groupPart}${nsPart}/${encodeURIComponent(args.resource)}${namePart}`;
 }
 
 function replyForbidden(iframe: HTMLIFrameElement, requestId: string): void {

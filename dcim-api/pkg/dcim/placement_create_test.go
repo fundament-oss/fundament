@@ -16,7 +16,7 @@ func TestPlacementService_CreatePlacement_RejectsUnitBelowOne(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
-	client := dcimv1connect.NewPlacementServiceClient(env.server.Client(), env.server.URL)
+	client := dcimv1connect.NewPlacementServiceClient(env.client(), env.server.URL)
 
 	rowID := createRackRowFixture(t, env, "Unit")
 	rackID := createRack(t, env, rowID, "Unit rack", 42)

@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/validate"
+	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/common/psqldb"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
@@ -16,17 +17,19 @@ import (
 )
 
 type Server struct {
-	logger  *slog.Logger
-	db      *psqldb.DB
-	queries *db.Queries
-	handler http.Handler
+	logger        *slog.Logger
+	db            *psqldb.DB
+	queries       *db.Queries
+	authValidator *auth.Validator
+	handler       http.Handler
 }
 
-func New(logger *slog.Logger, database *psqldb.DB) *Server {
+func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
 	s := &Server{
-		logger:  logger,
-		db:      database,
-		queries: db.New(database.Pool),
+		logger:        logger,
+		db:            database,
+		queries:       db.New(database.Pool),
+		authValidator: auth.NewValidator(jwtSecret, auth.DCIMAuthCookieName, auth.DCIMIssuer, logger),
 	}
 
 	mux := http.NewServeMux()
@@ -43,6 +46,7 @@ func New(logger *slog.Logger, database *psqldb.DB) *Server {
 	// so a fundament-plugin token cannot be replayed against this surface.
 	interceptors := connect.WithInterceptors(
 		connectrecovery.NewInterceptor(logger),
+		s.authInterceptor(),
 		loggingInterceptor,
 		validate.NewInterceptor(),
 	)

@@ -31,4 +31,28 @@ export default class KubePluginLoaderService {
     );
     return { crd, resources };
   }
+
+  async loadCrdAndResource(
+    pluginName: string,
+    resourceKind: string,
+    clusterId: string,
+    name: string,
+    namespace: string | undefined,
+  ): Promise<{ crd: ParsedCrd | undefined; resource: KubeResource | undefined }> {
+    const kubeApiProxyUrl = this.configService.getConfig().kubeApiProxyUrl;
+    await this.registry.loadPlugins(clusterId);
+    await this.registry.loadCrdsForPlugin(pluginName, clusterId, kubeApiProxyUrl);
+    const crd = this.registry.getCrd(pluginName, resourceKind, clusterId);
+    if (!crd) return { crd: undefined, resource: undefined };
+
+    const resource = await this.pluginStore.loadResource(
+      crd,
+      clusterId,
+      kubeApiProxyUrl,
+      pluginName,
+      name,
+      namespace,
+    );
+    return { crd, resource };
+  }
 }

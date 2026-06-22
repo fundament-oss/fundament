@@ -11,7 +11,11 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { LogicalDesign, LogicalDesignStatus } from './design.model';
+import {
+  LogicalDesign,
+  LogicalDesignStatus,
+  LOGICAL_DESIGN_STATUS_BADGE_CLASS,
+} from './design.model';
 import DesignApiService from './design-api.service';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
@@ -26,7 +30,7 @@ interface NativeElementRef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col min-h-screen bg-white' },
+  host: { class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950' },
 })
 export default class DesignsComponent implements OnInit {
   private readonly designApi = inject(DesignApiService);
@@ -176,14 +180,8 @@ export default class DesignsComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  readonly statusBadgeClass = (status: LogicalDesignStatus): string => {
-    const statusMap: Record<LogicalDesignStatus, string> = {
-      draft: 'bg-slate-100 text-slate-600',
-      active: 'bg-green-50 text-green-700',
-      archived: 'bg-amber-50 text-amber-700',
-    };
-    return statusMap[status];
-  };
+  readonly statusBadgeClass = (status: LogicalDesignStatus): string =>
+    LOGICAL_DESIGN_STATUS_BADGE_CLASS[status];
 
   readonly statusLabel = (status: LogicalDesignStatus): string => {
     const statusMap: Record<LogicalDesignStatus, string> = {

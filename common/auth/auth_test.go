@@ -23,7 +23,7 @@ func signToken(t *testing.T, claims *Claims) string {
 }
 
 func newValidator() *Validator {
-	return NewValidator(testSecret, nil)
+	return NewValidator(testSecret, ConsoleAuthCookieName, ConsoleIssuer, nil)
 }
 
 func validUserClaims(subject string) *Claims {
@@ -64,6 +64,37 @@ func TestValidateToken_AcceptsValidUUIDSubject(t *testing.T) {
 	}
 	if got.Subject != userID.String() {
 		t.Errorf("subject = %q, want %q", got.Subject, userID.String())
+	}
+}
+
+func TestValidateToken_RejectsForeignIssuer(t *testing.T) {
+	// A token minted by another service that shares the JWT secret (e.g. DCIM)
+	// must not be accepted by a validator pinned to the console issuer, even
+	// though the signature and subject are valid.
+	c := validUserClaims(uuid.New().String())
+	c.Issuer = DCIMIssuer
+	tokenString := signToken(t, c)
+
+	v := newValidator()
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+tokenString)
+
+	if _, err := v.Validate(header); err == nil {
+		t.Fatal("expected error for foreign issuer, got nil")
+	}
+}
+
+func TestValidateToken_RejectsMissingIssuer(t *testing.T) {
+	c := validUserClaims(uuid.New().String())
+	c.Issuer = ""
+	tokenString := signToken(t, c)
+
+	v := newValidator()
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+tokenString)
+
+	if _, err := v.Validate(header); err == nil {
+		t.Fatal("expected error for missing issuer, got nil")
 	}
 }
 
@@ -122,7 +153,7 @@ func TestClaimsUserID(t *testing.T) {
 func TestValidatorForAudience_AcceptsMatchingAudience(t *testing.T) {
 	tokenString := signToken(t, validUserClaims(uuid.New().String()))
 
-	v := NewValidatorForAudience(testSecret, TokenTypeUser, nil)
+	v := NewValidatorForAudience(testSecret, ConsoleAuthCookieName, ConsoleIssuer, TokenTypeUser, nil)
 	header := http.Header{}
 	header.Set("Authorization", "Bearer "+tokenString)
 
@@ -136,7 +167,7 @@ func TestValidatorForAudience_RejectsMismatchedAudience(t *testing.T) {
 	c.Audience = jwt.ClaimStrings{TokenTypePlugin}
 	tokenString := signToken(t, c)
 
-	v := NewValidatorForAudience(testSecret, TokenTypeUser, nil)
+	v := NewValidatorForAudience(testSecret, ConsoleAuthCookieName, ConsoleIssuer, TokenTypeUser, nil)
 	header := http.Header{}
 	header.Set("Authorization", "Bearer "+tokenString)
 
@@ -154,7 +185,7 @@ func TestValidatorForAudience_AcceptsMultiAudienceWhenExpectedPresent(t *testing
 	c.Audience = jwt.ClaimStrings{TokenTypePlugin, TokenTypeUser}
 	tokenString := signToken(t, c)
 
-	v := NewValidatorForAudience(testSecret, TokenTypeUser, nil)
+	v := NewValidatorForAudience(testSecret, ConsoleAuthCookieName, ConsoleIssuer, TokenTypeUser, nil)
 	header := http.Header{}
 	header.Set("Authorization", "Bearer "+tokenString)
 
@@ -168,7 +199,7 @@ func TestValidatorForAudience_RejectsMissingAudience(t *testing.T) {
 	c.Audience = nil
 	tokenString := signToken(t, c)
 
-	v := NewValidatorForAudience(testSecret, TokenTypeUser, nil)
+	v := NewValidatorForAudience(testSecret, ConsoleAuthCookieName, ConsoleIssuer, TokenTypeUser, nil)
 	header := http.Header{}
 	header.Set("Authorization", "Bearer "+tokenString)
 

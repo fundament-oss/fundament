@@ -106,7 +106,9 @@ export default class NamespacesComponent implements OnInit {
     this.showCreateNamespaceModal.set(true);
   }
 
-  async createNamespace() {
+  async createNamespace(event?: Event) {
+    event?.preventDefault();
+
     if (this.namespaceForm.invalid) {
       this.namespaceForm.markAllAsTouched();
       return;

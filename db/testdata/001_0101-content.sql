@@ -259,7 +259,23 @@ Grafana Tempo is an open source, easy-to-use, and high-scale distributed tracing
 - Distributed system debugging
 - Request flow visualization
 - Performance optimization
-- Root cause analysis', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/tempo');
+- Root cause analysis', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/tempo'),
+    ('019b4000-3000-7000-8000-00000000000e', 'openfsc', 'Federated Service Connectivity', '## Overview
+
+OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs the standalone openfsc-operator; each team declares an FSCInstallation in its namespace to run an OpenFSC peer there.
+
+## Key Features
+
+- **Federated Connectivity**: Join an existing FSC group or act as your own group Directory
+- **Per-Namespace Peers**: Each team runs its own OpenFSC peer via a namespaced FSCInstallation
+- **Operator-Managed**: The openfsc-operator reconciles peers, gateways, and certificates
+- **Common Ground**: Built on the FSC standard for trusted data exchange between organizations
+
+## Use Cases
+
+- Inter-organization service connectivity
+- Common Ground / data exchange between government bodies
+- Federated APIs across trust domains', 'Fundament', 'https://fsc-standaard.nl', 'https://gitlab.com/rinis-oss/fsc/open-fsc');
 
 -- Plugin-Category associations
 INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
@@ -288,7 +304,9 @@ INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
     -- Sealed Secrets -> Security
     ('019b4000-3000-7000-8000-00000000000c', '019b4000-4000-7000-8000-000000000002'),
     -- Grafana Tempo -> Observability
-    ('019b4000-3000-7000-8000-00000000000d', '019b4000-4000-7000-8000-000000000001');
+    ('019b4000-3000-7000-8000-00000000000d', '019b4000-4000-7000-8000-000000000001'),
+    -- OpenFSC -> Networking
+    ('019b4000-3000-7000-8000-00000000000e', '019b4000-4000-7000-8000-000000000003');
 
 -- Plugin-Tag associations
 INSERT INTO appstore.plugins_tags (plugin_id, tag_id) VALUES
@@ -326,7 +344,9 @@ INSERT INTO appstore.plugins_tags (plugin_id, tag_id) VALUES
     ('019b4000-3000-7000-8000-00000000000c', '019b4000-5000-7000-8000-000000000009'),
     -- Grafana Tempo: Tracing, Grafana stack
     ('019b4000-3000-7000-8000-00000000000d', '019b4000-5000-7000-8000-000000000003'),
-    ('019b4000-3000-7000-8000-00000000000d', '019b4000-5000-7000-8000-00000000000a');
+    ('019b4000-3000-7000-8000-00000000000d', '019b4000-5000-7000-8000-00000000000a'),
+    -- OpenFSC: Service mesh
+    ('019b4000-3000-7000-8000-00000000000e', '019b4000-5000-7000-8000-000000000005');
 
 -- Test data for presets
 INSERT INTO appstore.presets (id, name, description) VALUES

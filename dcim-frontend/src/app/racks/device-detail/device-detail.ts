@@ -391,10 +391,10 @@ export default class DeviceDetailComponent {
 
   readonly connectionTypeColor = (type: ConnectionType): string => {
     const colors: Record<ConnectionType, string> = {
-      network: 'text-indigo-500 bg-indigo-50',
-      power: 'text-amber-500 bg-amber-50',
-      management: 'text-teal-500 bg-teal-50',
-      storage: 'text-blue-500 bg-blue-50',
+      network: 'text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950',
+      power: 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-950',
+      management: 'text-teal-500 dark:text-teal-400 bg-teal-50 dark:bg-teal-950',
+      storage: 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950',
     };
     return colors[type];
   };
@@ -422,17 +422,19 @@ export default class DeviceDetailComponent {
 
   readonly stateBadgeClass = (state: DeviceState): string => {
     const stateMap: Record<DeviceState, string> = {
-      allocated: 'bg-indigo-100 text-indigo-700',
-      free: 'bg-gray-100 text-gray-600',
-      offline: 'bg-red-100 text-red-700',
-      locked: 'bg-violet-100 text-violet-700',
-      reserved: 'bg-sky-100 text-sky-700',
+      allocated: 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300',
+      free: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300',
+      offline: 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300',
+      locked: 'bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300',
+      reserved: 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300',
     };
     return stateMap[state];
   };
 
   readonly powerBadgeClass = (powerstate: 'ON' | 'OFF'): string =>
-    powerstate === 'ON' ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-600';
+    powerstate === 'ON'
+      ? 'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300'
+      : 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-300';
 
   readonly livelinessClass = (liveliness: 'Alive' | 'Dead' | 'Unknown' | undefined): string => {
     if (liveliness === 'Alive') return 'bg-emerald-500';
@@ -496,28 +498,28 @@ export default class DeviceDetailComponent {
 
   readonly historyIcon = (action: HistoryEntry['action']): string => {
     const icons: Record<HistoryEntry['action'], string> = {
-      received: 'ti-arrow-right text-sky-500',
-      deployed: 'ti-circle-check text-teal-500',
-      moved: 'ti-arrows-up-down text-sky-500',
-      'repair-sent': 'ti-tool text-amber-500',
-      'repair-received': 'ti-tool text-amber-500',
-      decommissioned: 'ti-circle-off text-slate-500',
-      requested: 'ti-clock text-purple-500',
-      note: 'ti-info-circle text-indigo-500',
+      received: 'ti-arrow-right text-sky-500 dark:text-sky-400',
+      deployed: 'ti-circle-check text-teal-500 dark:text-teal-400',
+      moved: 'ti-arrows-up-down text-sky-500 dark:text-sky-400',
+      'repair-sent': 'ti-tool text-amber-500 dark:text-amber-400',
+      'repair-received': 'ti-tool text-amber-500 dark:text-amber-400',
+      decommissioned: 'ti-circle-off text-slate-500 dark:text-gray-400',
+      requested: 'ti-clock text-purple-500 dark:text-purple-400',
+      note: 'ti-info-circle text-indigo-500 dark:text-indigo-400',
     };
     return icons[action];
   };
 
   readonly historyIconBg = (action: HistoryEntry['action']): string => {
     const bg: Record<HistoryEntry['action'], string> = {
-      received: 'bg-sky-50',
-      deployed: 'bg-teal-50',
-      moved: 'bg-sky-50',
-      'repair-sent': 'bg-amber-50',
-      'repair-received': 'bg-amber-50',
-      decommissioned: 'bg-slate-100',
-      requested: 'bg-purple-50',
-      note: 'bg-indigo-50',
+      received: 'bg-sky-50 dark:bg-sky-950',
+      deployed: 'bg-teal-50 dark:bg-teal-950',
+      moved: 'bg-sky-50 dark:bg-sky-950',
+      'repair-sent': 'bg-amber-50 dark:bg-amber-950',
+      'repair-received': 'bg-amber-50 dark:bg-amber-950',
+      decommissioned: 'bg-slate-100 dark:bg-gray-800',
+      requested: 'bg-purple-50 dark:bg-purple-950',
+      note: 'bg-indigo-50 dark:bg-indigo-950',
     };
     return bg[action];
   };

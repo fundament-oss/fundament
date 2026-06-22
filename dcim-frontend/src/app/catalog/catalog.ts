@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import { AssetCategory, CatalogEntry } from '../inventory/inventory';
@@ -19,6 +20,7 @@ import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
 import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
+import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -38,9 +40,9 @@ type InvalidFields = Record<string, string>;
   selector: 'app-catalog',
   templateUrl: './catalog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col min-h-screen bg-white' },
+  host: { class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950' },
 })
 export default class CatalogComponent implements OnInit {
   private readonly catalogApi = inject(CatalogApiService);
@@ -78,6 +80,8 @@ export default class CatalogComponent implements OnInit {
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editEntry = signal<Partial<CatalogEntry> | null>(null);
 
+  entryCategory = signal<AssetCategory>('Server');
+
   entryErrorMessage = signal<string | null>(null);
 
   invalidFields = signal<InvalidFields>({});
@@ -95,8 +99,6 @@ export default class CatalogComponent implements OnInit {
   private readonly fEntryMfr = viewChild<NativeElementRef>('fEntryMfr');
 
   private readonly fEntryPart = viewChild<NativeElementRef>('fEntryPart');
-
-  private readonly fEntryCat = viewChild<NativeElementRef>('fEntryCat');
 
   constructor() {
     toObservable(this.searchQuery)
@@ -201,6 +203,7 @@ export default class CatalogComponent implements OnInit {
       category: 'Server',
       specs: {},
     });
+    this.entryCategory.set('Server');
     this.specRows.set([{ key: '', value: '' }]);
   }
 
@@ -209,6 +212,7 @@ export default class CatalogComponent implements OnInit {
     event.stopPropagation();
     this.clearEntryErrors();
     this.editEntry.set({ ...entry });
+    this.entryCategory.set(entry.category);
     this.specRows.set(Object.entries(entry.specs).map(([key, value]) => ({ key, value })));
   }
 
@@ -243,7 +247,7 @@ export default class CatalogComponent implements OnInit {
     const model = this.fEntryModel()?.nativeElement.value ?? '';
     const manufacturer = this.fEntryMfr()?.nativeElement.value ?? '';
     const partNumber = this.fEntryPart()?.nativeElement.value ?? form.partNumber ?? '';
-    const category = (this.fEntryCat()?.nativeElement.value ?? 'Server') as AssetCategory;
+    const category = this.entryCategory();
     const specs: Record<string, string> = {};
 
     this.specRows().forEach((row) => {
@@ -342,22 +346,22 @@ export default class CatalogComponent implements OnInit {
 
   readonly categoryBadgeClass = (category: AssetCategory): string => {
     const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'bg-indigo-50 text-indigo-700',
-      Switch: 'bg-violet-50 text-violet-700',
-      Storage: 'bg-blue-50 text-blue-700',
-      Power: 'bg-amber-50 text-amber-700',
-      Firewall: 'bg-red-50 text-red-700',
-      Cooling: 'bg-cyan-50 text-cyan-700',
-      KVM: 'bg-slate-100 text-slate-600',
-      Memory: 'bg-emerald-50 text-emerald-700',
-      Disk: 'bg-orange-50 text-orange-700',
-      NIC: 'bg-teal-50 text-teal-700',
-      PSU: 'bg-yellow-50 text-yellow-700',
-      CPU: 'bg-purple-50 text-purple-700',
-      GPU: 'bg-pink-50 text-pink-700',
-      Transceiver: 'bg-sky-50 text-sky-700',
-      Other: 'bg-slate-100 text-slate-600',
+      Server: 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300',
+      Switch: 'bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-300',
+      Storage: 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300',
+      Power: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
+      Firewall: 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300',
+      Cooling: 'bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300',
+      KVM: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
+      Memory: 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300',
+      Disk: 'bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-300',
+      NIC: 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
+      PSU: 'bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300',
+      CPU: 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300',
+      GPU: 'bg-pink-50 dark:bg-pink-950 text-pink-700 dark:text-pink-300',
+      Transceiver: 'bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300',
+      Other: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
     };
-    return map[category] ?? 'bg-slate-100 text-slate-600';
+    return map[category] ?? 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300';
   };
 }

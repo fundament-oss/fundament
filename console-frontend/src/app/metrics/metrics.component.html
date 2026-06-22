@@ -82,35 +82,37 @@
       <!-- Cluster filter — only shown in org-level view -->
       @if (viewMode() === 'org') {
         <nldd-form-field label="Cluster" class="lg:col-span-2">
-          <select
-            id="cluster"
-            [ngModel]="selectedClusterId()"
-            (ngModelChange)="selectedClusterId.set($event)"
-            (change)="onClusterChange()"
-            class="w-full"
-          >
-            <option value="">All clusters</option>
-            @for (cluster of clusters(); track cluster.id) {
-              <option [value]="cluster.id">{{ cluster.name }}</option>
-            }
-          </select>
+          <nldd-dropdown>
+            <select
+              id="cluster"
+              [ngModel]="selectedClusterId()"
+              (ngModelChange)="selectedClusterId.set($event)"
+              (change)="onClusterChange()"
+            >
+              <option value="">All clusters</option>
+              @for (cluster of clusters(); track cluster.id) {
+                <option [value]="cluster.id">{{ cluster.name }}</option>
+              }
+            </select>
+          </nldd-dropdown>
         </nldd-form-field>
       }
 
       <!-- Namespace filter — only shown in project-level view -->
       @if (viewMode() === 'project') {
         <nldd-form-field label="Namespace" class="lg:col-span-2">
-          <select
-            id="namespace"
-            [ngModel]="selectedNamespace()"
-            (ngModelChange)="selectedNamespace.set($event)"
-            class="w-full"
-          >
-            <option value="">All namespaces</option>
-            @for (ns of namespaceUsage(); track ns.name) {
-              <option [value]="ns.name">{{ ns.name }}</option>
-            }
-          </select>
+          <nldd-dropdown>
+            <select
+              id="namespace"
+              [ngModel]="selectedNamespace()"
+              (ngModelChange)="selectedNamespace.set($event)"
+            >
+              <option value="">All namespaces</option>
+              @for (ns of namespaceUsage(); track ns.name) {
+                <option [value]="ns.name">{{ ns.name }}</option>
+              }
+            </select>
+          </nldd-dropdown>
         </nldd-form-field>
       }
     </div>

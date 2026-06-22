@@ -18,12 +18,16 @@ import {
   CABLE_COLOR_HEX,
   CableStatus,
   CableType,
+  CABLE_TYPE_DEFAULT_COLOR,
   CABLE_TYPE_LABEL,
   Port,
   portsAreCompatible,
   PortType,
   PORT_TYPE_LABEL,
+  newLocalPortId,
 } from '../cable.model';
+import DevicePortsComponent from '../device-ports/device-ports';
+import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 
 interface DeviceOption {
   id: string;
@@ -33,7 +37,7 @@ interface DeviceOption {
 @Component({
   selector: 'app-cable-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [],
+  imports: [DevicePortsComponent, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cable-form.html',
 })
@@ -62,6 +66,9 @@ export default class CableFormComponent {
 
   readonly cableDelete = output<Cable>();
 
+  /** Emitted when this form mutates a device's ports, so the parent can persist them. */
+  readonly portsUpdated = output<{ deviceId: string; ports: Port[] }>();
+
   // ── A Side ─────────────────────────────────────────────────────────────────
   readonly aPortType = signal<PortType | ''>('');
 
@@ -85,6 +92,9 @@ export default class CableFormComponent {
 
   readonly cableColor = signal<CableColor | undefined>(undefined);
 
+  /** Whether the user explicitly chose a color; preset auto-fill stops once set. */
+  private readonly colorManuallySet = signal(false);
+
   readonly cableDescription = signal('');
 
   readonly cableComments = signal('');
@@ -92,6 +102,22 @@ export default class CableFormComponent {
   readonly cableLength = signal<number | undefined>(undefined);
 
   readonly localDevicePorts = signal<Record<string, Port[]>>({});
+
+  // ── Port management ────────────────────────────────────────────────────────
+  readonly portManagementDevice = signal<{ id: string; name: string } | null>(null);
+
+  // ── Quick-add port ─────────────────────────────────────────────────────────
+  readonly aAddingPort = signal(false);
+
+  readonly bAddingPort = signal(false);
+
+  readonly aNewPortName = signal('');
+
+  readonly aNewPortType = signal<PortType>('network-interface');
+
+  readonly bNewPortName = signal('');
+
+  readonly bNewPortType = signal<PortType>('network-interface');
 
   // ── Derived: devices in this DC ───────────────────────────────────────────
   readonly dcDevices = computed<DeviceOption[]>(() =>
@@ -179,6 +205,13 @@ export default class CableFormComponent {
       !this.incompatibleSides(),
   );
 
+  // ── Derived: ports of the device being managed ────────────────────────────
+  readonly portManagementPorts = computed<Port[]>(() => {
+    const dev = this.portManagementDevice();
+    if (!dev) return [];
+    return this.localDevicePorts()[dev.id] ?? [];
+  });
+
   constructor() {
     effect(() => {
       const ext = this.externalDevicePorts();
@@ -190,6 +223,7 @@ export default class CableFormComponent {
       if (c.aSide && c.bSide && !c.id) {
         afterNextRender(() => this.focusAndScrollNameField(), { injector: this.injector });
       }
+      this.portManagementDevice.set(null);
       if (c.aSide) {
         this.aPortType.set(c.aSide.portType);
         this.aDeviceId.set(c.aSide.deviceId);
@@ -212,10 +246,23 @@ export default class CableFormComponent {
       // connection so we don't silently rewrite it on the next save. New
       // cables still get sensible defaults.
       const isExisting = !!c.id;
-      this.cableType.set(c.type ?? (isExisting ? '' : this.CABLE_TYPES[0]));
+      const type = c.type ?? (isExisting ? '' : this.CABLE_TYPES[0]);
+      this.cableType.set(type);
       this.cableStatus.set(c.status ?? (isExisting ? '' : 'connected'));
       this.cableLabel.set(c.label ?? '');
-      this.cableColor.set(c.color ?? undefined);
+      if (c.color !== undefined) {
+        // Keep a stored color and treat it as a manual choice so a later type
+        // change won't overwrite it.
+        this.cableColor.set(c.color);
+        this.colorManuallySet.set(true);
+      } else if (!isExisting && type) {
+        // New cable: seed the preset color for the default type.
+        this.cableColor.set(CABLE_TYPE_DEFAULT_COLOR[type]);
+        this.colorManuallySet.set(false);
+      } else {
+        this.cableColor.set(undefined);
+        this.colorManuallySet.set(false);
+      }
       this.cableLength.set(c.length ?? undefined);
       this.cableDescription.set(c.description ?? '');
       this.cableComments.set(c.comments ?? '');
@@ -260,6 +307,95 @@ export default class CableFormComponent {
     this.bPortType.set(aType);
     this.bDeviceId.set(aDevice);
     this.bPortId.set(aPort);
+  }
+
+  // ── Cable field handlers ─────────────────────────────────────────────────
+
+  onCableTypeChange(value: string): void {
+    const type = value as CableType | '';
+    this.cableType.set(type);
+    // Auto-fill the preset color for the type, unless the user picked one.
+    if (!this.colorManuallySet() && type) {
+      this.cableColor.set(CABLE_TYPE_DEFAULT_COLOR[type]);
+    }
+  }
+
+  onCableColorChange(color: CableColor | undefined): void {
+    this.colorManuallySet.set(true);
+    this.cableColor.set(color);
+  }
+
+  // ── Port management ──────────────────────────────────────────────────────────
+
+  openPortManagement(deviceId: string): void {
+    const device = this.dcDevices().find((d) => d.id === deviceId);
+    if (!device) return;
+    this.portManagementDevice.set({ id: device.id, name: device.name });
+  }
+
+  closePortManagement(): void {
+    this.portManagementDevice.set(null);
+  }
+
+  onPortsSaved(ports: Port[]): void {
+    const dev = this.portManagementDevice();
+    if (!dev) return;
+    this.localDevicePorts.update((map) => ({ ...map, [dev.id]: ports }));
+    // Clear a selected port that no longer exists after the edit.
+    if (this.aDeviceId() === dev.id && !ports.find((p) => p.id === this.aPortId())) {
+      this.aPortId.set('');
+    }
+    if (this.bDeviceId() === dev.id && !ports.find((p) => p.id === this.bPortId())) {
+      this.bPortId.set('');
+    }
+    this.portsUpdated.emit({ deviceId: dev.id, ports });
+    this.portManagementDevice.set(null);
+  }
+
+  startAddPort(side: 'a' | 'b'): void {
+    const portType = side === 'a' ? this.aPortType() : this.bPortType();
+    const typeSignal = side === 'a' ? this.aNewPortType : this.bNewPortType;
+    typeSignal.set((portType as PortType) || 'network-interface');
+    if (side === 'a') this.aAddingPort.set(true);
+    else this.bAddingPort.set(true);
+    afterNextRender(() => this.focusAddPortNameField(side), { injector: this.injector });
+  }
+
+  confirmAddPort(side: 'a' | 'b'): void {
+    const nameSignal = side === 'a' ? this.aNewPortName : this.bNewPortName;
+    const typeSignal = side === 'a' ? this.aNewPortType : this.bNewPortType;
+    const name = nameSignal().trim();
+    if (!name) return;
+    const deviceId = side === 'a' ? this.aDeviceId() : this.bDeviceId();
+    if (!deviceId) return;
+    const portType = typeSignal();
+    const id = newLocalPortId(deviceId);
+    const port: Port = { id, deviceId, name, type: portType };
+    this.localDevicePorts.update((map) => ({
+      ...map,
+      [deviceId]: [...(map[deviceId] ?? []), port],
+    }));
+    this.portsUpdated.emit({ deviceId, ports: this.localDevicePorts()[deviceId] });
+    if (side === 'a') {
+      this.aPortType.set(portType);
+      this.aPortId.set(id);
+      this.aAddingPort.set(false);
+    } else {
+      this.bPortType.set(portType);
+      this.bPortId.set(id);
+      this.bAddingPort.set(false);
+    }
+    nameSignal.set('');
+  }
+
+  cancelAddPort(side: 'a' | 'b'): void {
+    if (side === 'a') {
+      this.aAddingPort.set(false);
+      this.aNewPortName.set('');
+    } else {
+      this.bAddingPort.set(false);
+      this.bNewPortName.set('');
+    }
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -327,6 +463,17 @@ export default class CableFormComponent {
       (el.querySelector('input') as HTMLElement | null) ??
       el;
     target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    target.focus();
+  }
+
+  private focusAddPortNameField(side: 'a' | 'b'): void {
+    const id = side === 'a' ? 'a-new-port-name' : 'b-new-port-name';
+    const el: HTMLElement | null = this.elRef.nativeElement.querySelector(`#${id}`);
+    if (!el) return;
+    const target: HTMLElement =
+      (el.shadowRoot?.querySelector('input') as HTMLElement | null) ??
+      (el.querySelector('input') as HTMLElement | null) ??
+      el;
     target.focus();
   }
 

@@ -1,0 +1,21 @@
+# A self-contained installation: the Manager acts as the group's Directory
+# with a self-signed group CA, so nothing outside the namespace is needed.
+# This is the local-development shape; an installation joining an existing
+# group instead uses directory.mode=External with the group's directory
+# address, trust anchor and an organization certificate Secret.
+apiVersion: openfsc.fundament.io/v1
+kind: FSCInstallation
+metadata:
+  name: demo
+  namespace: fsc-demo
+spec:
+  groupID: fsc-demo
+  peerID: "12345678901234567899"
+  directory:
+    mode: Self
+  postgres:
+    storageClass: local-path
+  inways:
+    - name: default
+  outways:
+    - name: default

@@ -218,6 +218,38 @@ $function$;
 ALTER FUNCTION tenant.node_pool_outbox_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: tenant.namespace_outbox_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.namespace_outbox_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.namespace_outbox_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        VALUES (
+            COALESCE(NEW.id, OLD.id),
+            CASE
+                WHEN TG_OP = 'INSERT' THEN 'created'
+                WHEN OLD.deleted IS NULL AND NEW.deleted IS NOT NULL THEN 'deleted'
+                ELSE 'updated'
+            END,
+            'trigger'
+        );
+    END IF;
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.namespace_outbox_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: tenant.cluster_outbox_cluster_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS tenant.cluster_outbox_cluster_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION tenant.cluster_outbox_cluster_trigger ()
@@ -1017,6 +1049,15 @@ CREATE POLICY namespaces_organization_policy ON tenant.namespaces
 	USING (authn.is_project_in_organization(project_id));
 -- ddl-end --
 
+-- object: namespaces_cluster_worker_policy | type: POLICY --
+-- DROP POLICY IF EXISTS namespaces_cluster_worker_policy ON tenant.namespaces CASCADE;
+CREATE POLICY namespaces_cluster_worker_policy ON tenant.namespaces
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
 -- object: organizations_organization_policy | type: POLICY --
 -- DROP POLICY IF EXISTS organizations_organization_policy ON tenant.organizations CASCADE;
 CREATE POLICY organizations_organization_policy ON tenant.organizations
@@ -1140,9 +1181,10 @@ CREATE TABLE tenant.cluster_outbox (
 	organization_user_id uuid,
 	project_member_id uuid,
 	node_pool_id uuid,
+	namespace_id uuid,
 	deferrals integer NOT NULL DEFAULT 0,
 	CONSTRAINT cluster_outbox_pk PRIMARY KEY (id),
-	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id) = 1),
+	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id, namespace_id) = 1),
 	CONSTRAINT cluster_outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed')),
 	CONSTRAINT cluster_outbox_ck_event CHECK (event IN ('created', 'updated', 'deleted', 'reconcile', 'ready')),
 	CONSTRAINT cluster_outbox_ck_source CHECK (source IN ('trigger', 'reconcile', 'manual', 'status'))
@@ -1180,6 +1222,26 @@ USING btree
 	node_pool_id,
 	id DESC NULLS LAST
 );
+-- ddl-end --
+
+-- object: cluster_outbox_idx_namespace_id | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.cluster_outbox_idx_namespace_id CASCADE;
+CREATE INDEX cluster_outbox_idx_namespace_id ON tenant.cluster_outbox
+USING btree
+(
+	namespace_id,
+	id DESC NULLS LAST
+);
+-- ddl-end --
+
+-- object: cluster_outbox_uq_ns_reconcile | type: INDEX --
+-- DROP INDEX IF EXISTS tenant.cluster_outbox_uq_ns_reconcile CASCADE;
+CREATE UNIQUE INDEX cluster_outbox_uq_ns_reconcile ON tenant.cluster_outbox
+USING btree
+(
+	namespace_id
+)
+WHERE (source = 'reconcile' AND status IN ('pending', 'retrying'));
 -- ddl-end --
 
 -- object: node_pools_idx_cluster_id | type: INDEX --
@@ -1474,6 +1536,15 @@ CREATE OR REPLACE TRIGGER node_pool_outbox
 	ON tenant.node_pools
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.node_pool_outbox_trigger();
+-- ddl-end --
+
+-- object: namespace_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS namespace_outbox ON tenant.namespaces CASCADE;
+CREATE OR REPLACE TRIGGER namespace_outbox
+	AFTER INSERT OR UPDATE OF name,deleted
+	ON tenant.namespaces
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.namespace_outbox_trigger();
 -- ddl-end --
 
 -- object: namespaces_idx_project_id | type: INDEX --
@@ -2280,6 +2351,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_node_pool CASCADE;
 ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_node_pool FOREIGN KEY (node_pool_id)
 REFERENCES tenant.node_pools (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: cluster_outbox_fk_namespace | type: CONSTRAINT --
+-- ALTER TABLE tenant.cluster_outbox DROP CONSTRAINT IF EXISTS cluster_outbox_fk_namespace CASCADE;
+ALTER TABLE tenant.cluster_outbox ADD CONSTRAINT cluster_outbox_fk_namespace FOREIGN KEY (namespace_id)
+REFERENCES tenant.namespaces (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

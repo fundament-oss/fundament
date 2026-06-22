@@ -14,6 +14,7 @@ import (
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	"github.com/fundament-oss/fundament/common/dbconst"
+	"github.com/fundament-oss/fundament/common/kubename"
 )
 
 // Sync dispatches an outbox row to the appropriate sync method based on entity type.
@@ -104,7 +105,7 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 
 	// 6. Build ClusterToSync and apply
 	clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
-	clusterToSync.ShootName = gardener.GenerateShootName(cluster.Name, cluster.ID)
+	clusterToSync.ShootName = kubename.GenerateShootName(cluster.Name, cluster.ID)
 	clusterToSync.Deleted = deleted
 	clusterToSync.NodePools = toGardenerNodePools(nodePoolRows)
 

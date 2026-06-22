@@ -22,10 +22,17 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import AutofocusDirective from '../autofocus.directive';
+import DropdownSyncDirective from '../dropdown-sync.directive';
 
 @Component({
   selector: 'app-add-project',
-  imports: [RouterLink, ReactiveFormsModule, LoadingIndicatorComponent, AutofocusDirective],
+  imports: [
+    RouterLink,
+    ReactiveFormsModule,
+    LoadingIndicatorComponent,
+    AutofocusDirective,
+    DropdownSyncDirective,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -96,7 +103,9 @@ export default class AddProjectComponent implements OnInit {
     }
   }
 
-  async onSubmit() {
+  async onSubmit(event?: Event) {
+    event?.preventDefault();
+
     if (this.projectForm.invalid) {
       this.projectForm.markAllAsTouched();
       return;

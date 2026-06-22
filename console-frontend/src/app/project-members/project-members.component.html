@@ -194,15 +194,21 @@
 >
   <nldd-spacer size="24"></nldd-spacer>
 
-  <form [formGroup]="memberForm" (ngSubmit)="saveMember()" (keydown.enter)="saveMember()">
+  <nldd-form
+    [formGroup]="memberForm"
+    (submit)="saveMember($event)"
+    (keydown.enter)="saveMember($event)"
+  >
     @if (!editingMemberView()) {
       <nldd-form-field label="User" class="mb-4">
-        <select id="userId" formControlName="userId" class="w-full">
-          <option value="">Select a user</option>
-          @for (user of availableUsers(); track user.id) {
-            <option [value]="user.id">{{ user.name }}</option>
-          }
-        </select>
+        <nldd-dropdown>
+          <select id="userId" formControlName="userId">
+            <option value="">Select a user</option>
+            @for (user of availableUsers(); track user.id) {
+              <option [value]="user.id">{{ user.name }}</option>
+            }
+          </select>
+        </nldd-dropdown>
         @if (availableUsers().length === 0) {
           <p class="text-gray-600 dark:text-gray-400">No users available to add.</p>
         }
@@ -250,7 +256,7 @@
         </nldd-radio-button-group>
       </nldd-form-field>
     </div>
-  </form>
+  </nldd-form>
 
   <nldd-button
     slot="actions"

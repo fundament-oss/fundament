@@ -78,33 +78,27 @@ spec:
       - crd: gateways.gateway.networking.k8s.io
         list: true
         detail: true
-        create: true
         icon: server
       - crd: httproutes.gateway.networking.k8s.io
         list: true
         detail: true
-        create: true
         icon: globe
       - crd: grpcroutes.gateway.networking.k8s.io
         list: true
         detail: true
-        create: true
         icon: zap
       - crd: tcproutes.gateway.networking.k8s.io
         list: true
         detail: true
-        create: true
         icon: cable
       - crd: tlsroutes.gateway.networking.k8s.io
         list: true
         detail: true
-        create: true
         icon: lock
     organization:
       - crd: gateways.gateway.networking.k8s.io
         list: true
         detail: true
-        create: true
         icon: server
   uiHints:
     gateways.gateway.networking.k8s.io:

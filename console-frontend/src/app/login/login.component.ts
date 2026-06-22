@@ -78,7 +78,10 @@ export default class LoginComponent implements OnInit {
     }
   }
 
-  async onSubmit() {
+  async onSubmit(event?: Event) {
+    // Prevent the native form submission triggered by the submit button.
+    event?.preventDefault();
+
     if (this.isLoading()) return;
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
