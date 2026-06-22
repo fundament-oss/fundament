@@ -152,47 +152,6 @@ func TestLokiClient_Labels(t *testing.T) {
 	}
 }
 
-func TestLokiClient_BasicAuth(t *testing.T) {
-	const respBody = `{"status":"success","data":{"resultType":"streams","result":[]}}`
-
-	t.Run("with credentials", func(t *testing.T) {
-		var gotUser, gotPass string
-		var gotOK bool
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			gotUser, gotPass, gotOK = r.BasicAuth()
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(respBody))
-		}))
-		defer srv.Close()
-
-		c := NewLokiClientWithAuth(srv.URL, "observer", "s3cr3t")
-		if _, err := c.Query(context.Background(), QueryParams{Namespace: "prod"}); err != nil {
-			t.Fatalf("Query: %v", err)
-		}
-		if !gotOK || gotUser != "observer" || gotPass != "s3cr3t" {
-			t.Errorf("basic auth = (%q, %q, ok=%v), want (observer, s3cr3t, ok=true)", gotUser, gotPass, gotOK)
-		}
-	})
-
-	t.Run("without credentials", func(t *testing.T) {
-		var gotOK bool
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, _, gotOK = r.BasicAuth()
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(respBody))
-		}))
-		defer srv.Close()
-
-		c := NewLokiClient(srv.URL)
-		if _, err := c.Query(context.Background(), QueryParams{Namespace: "prod"}); err != nil {
-			t.Fatalf("Query: %v", err)
-		}
-		if gotOK {
-			t.Errorf("expected no Authorization header, but basic auth was present")
-		}
-	})
-}
-
 func TestNormalizeLevel(t *testing.T) {
 	tests := map[string]string{
 		"error":   "ERROR",

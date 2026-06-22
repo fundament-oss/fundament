@@ -12,51 +12,24 @@ import (
 	"time"
 )
 
-// LokiClient queries a Grafana Loki (or Loki-compatible Vali) instance over its
-// HTTP API. https://grafana.com/docs/loki/latest/reference/loki-http-api/
+// LokiClient queries a Grafana Loki instance over its HTTP API.
+// https://grafana.com/docs/loki/latest/reference/loki-http-api/
 //
 // Stream label names are assumed to follow the common Promtail/Alloy Kubernetes
-// convention (namespace, pod, container). Each client targets a single
-// instance; when sourced per-shoot from Gardener that instance holds only one
-// cluster's logs, so the fundament cluster UUID is not used as a label matcher.
-//
-// baseURL may include a path prefix (e.g. a Plutono datasource-proxy route); the
-// Loki API paths are appended to it, so no separate prefix field is needed.
+// convention (namespace, pod, container). A single Loki instance is assumed to
+// be scoped to the relevant clusters; the fundament cluster UUID is not used as
+// a label matcher.
 type LokiClient struct {
 	baseURL    string
-	username   string
-	password   string
 	httpClient *http.Client
 }
 
-// NewLokiClient returns a LokiClient targeting the given base URL with no
-// authentication (used for the LOKI_URL dev override).
+// NewLokiClient returns a LokiClient targeting the given Loki base URL.
 func NewLokiClient(baseURL string) *LokiClient {
-	return NewLokiClientWithAuth(baseURL, "", "")
-}
-
-// NewLokiClientWithAuth returns a LokiClient that sends HTTP basic-auth on every
-// request. Empty credentials disable the auth header. Used for the per-shoot
-// Vali endpoint, whose credentials come from the Gardener monitoring secret.
-func NewLokiClientWithAuth(baseURL, username, password string) *LokiClient {
 	return &LokiClient{
 		baseURL:    strings.TrimRight(baseURL, "/"),
-		username:   username,
-		password:   password,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
-}
-
-// newRequest builds a GET request, applying basic-auth when credentials are set.
-func (c *LokiClient) newRequest(ctx context.Context, rawURL string) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
-	}
-	if c.username != "" || c.password != "" {
-		req.SetBasicAuth(c.username, c.password)
-	}
-	return req, nil
 }
 
 func (*LokiClient) Backend() Backend { return BackendLoki }
@@ -177,9 +150,9 @@ func (c *LokiClient) labelValues(ctx context.Context, name, query string) ([]str
 		q.Set("query", query)
 		u.RawQuery = q.Encode()
 	}
-	req, err := c.newRequest(ctx, u.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build request: %w", err)
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -200,9 +173,9 @@ func (c *LokiClient) labelValues(ctx context.Context, name, query string) ([]str
 }
 
 func (c *LokiClient) fetchStreams(ctx context.Context, rawURL string) ([]lokiStream, error) {
-	req, err := c.newRequest(ctx, rawURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build request: %w", err)
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
