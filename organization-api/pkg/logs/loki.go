@@ -12,24 +12,51 @@ import (
 	"time"
 )
 
-// LokiClient queries a Grafana Loki instance over its HTTP API.
-// https://grafana.com/docs/loki/latest/reference/loki-http-api/
+// LokiClient queries a Grafana Loki (or Loki-compatible Vali) instance over its
+// HTTP API. https://grafana.com/docs/loki/latest/reference/loki-http-api/
 //
-// Stream label names are assumed to follow the common Promtail/Alloy Kubernetes
-// convention (namespace, pod, container). A single Loki instance is assumed to
-// be scoped to the relevant clusters; the fundament cluster UUID is not used as
-// a label matcher.
+// Stream label names follow Gardener's logging-stack convention (see the
+// label* constants below). Each client targets a single instance; when sourced
+// per-shoot from Gardener that instance holds only one cluster's logs, so the
+// fundament cluster UUID is not used as a label matcher.
+//
+// baseURL may include a path prefix (e.g. a Plutono datasource-proxy route); the
+// Loki API paths are appended to it, so no separate prefix field is needed.
 type LokiClient struct {
 	baseURL    string
+	username   string
+	password   string
 	httpClient *http.Client
 }
 
-// NewLokiClient returns a LokiClient targeting the given Loki base URL.
+// NewLokiClient returns a LokiClient targeting the given base URL with no
+// authentication (used for the LOKI_URL dev override).
 func NewLokiClient(baseURL string) *LokiClient {
+	return NewLokiClientWithAuth(baseURL, "", "")
+}
+
+// NewLokiClientWithAuth returns a LokiClient that sends HTTP basic-auth on every
+// request. Empty credentials disable the auth header. Used for the per-shoot
+// Vali endpoint, whose credentials come from the Gardener monitoring secret.
+func NewLokiClientWithAuth(baseURL, username, password string) *LokiClient {
 	return &LokiClient{
 		baseURL:    strings.TrimRight(baseURL, "/"),
+		username:   username,
+		password:   password,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
+}
+
+// newRequest builds a GET request, applying basic-auth when credentials are set.
+func (c *LokiClient) newRequest(ctx context.Context, rawURL string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	if c.username != "" || c.password != "" {
+		req.SetBasicAuth(c.username, c.password)
+	}
+	return req, nil
 }
 
 func (*LokiClient) Backend() Backend { return BackendLoki }
@@ -122,19 +149,19 @@ func (c *LokiClient) Tail(ctx context.Context, p QueryParams) (<-chan Entry, err
 func (c *LokiClient) Labels(ctx context.Context, _ /*clusterID*/, namespace string) (Labels, error) {
 	scope := ""
 	if namespace != "" {
-		scope = fmt.Sprintf(`{namespace=%q}`, namespace)
+		scope = fmt.Sprintf("{%s=%q}", labelNamespace, namespace)
 	}
 	var (
 		labels Labels
 		err    error
 	)
-	if labels.Namespaces, err = c.labelValues(ctx, "namespace", ""); err != nil {
+	if labels.Namespaces, err = c.labelValues(ctx, labelNamespace, ""); err != nil {
 		return Labels{}, err
 	}
-	if labels.Pods, err = c.labelValues(ctx, "pod", scope); err != nil {
+	if labels.Pods, err = c.labelValues(ctx, labelPod, scope); err != nil {
 		return Labels{}, err
 	}
-	if labels.Containers, err = c.labelValues(ctx, "container", scope); err != nil {
+	if labels.Containers, err = c.labelValues(ctx, labelContainer, scope); err != nil {
 		return Labels{}, err
 	}
 	return labels, nil
@@ -150,9 +177,9 @@ func (c *LokiClient) labelValues(ctx context.Context, name, query string) ([]str
 		q.Set("query", query)
 		u.RawQuery = q.Encode()
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	req, err := c.newRequest(ctx, u.String())
 	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
+		return nil, err
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -173,9 +200,9 @@ func (c *LokiClient) labelValues(ctx context.Context, name, query string) ([]str
 }
 
 func (c *LokiClient) fetchStreams(ctx context.Context, rawURL string) ([]lokiStream, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	req, err := c.newRequest(ctx, rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
+		return nil, err
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -195,22 +222,35 @@ func (c *LokiClient) fetchStreams(ctx context.Context, rawURL string) ([]lokiStr
 	return result.Data.Result, nil
 }
 
+// Gardener's logging stack (Fluent-bit + Valitail shipping into Vali) labels
+// streams with the Kubernetes-metadata convention, which differs from the bare
+// Loki/Promtail defaults: "namespace_name", "pod_name", "container_name".
+//
+// NOTE: the exact names depend on the Gardener Fluent-bit/Valitail config and
+// version — verify against a live Vali (plan Step 0). They are isolated here so
+// a correction is a one-line change.
+const (
+	labelNamespace = "namespace_name"
+	labelPod       = "pod_name"
+	labelContainer = "container_name"
+)
+
 // buildLogQL builds a LogQL query from the params. It always emits at least one
 // stream matcher so the query is valid; level filtering is left to the caller
 // (the frontend filters by level over the returned set).
 func buildLogQL(p QueryParams) string {
 	var matchers []string
 	if p.Namespace != "" {
-		matchers = append(matchers, fmt.Sprintf("namespace=%q", p.Namespace))
+		matchers = append(matchers, fmt.Sprintf("%s=%q", labelNamespace, p.Namespace))
 	} else {
 		// Ensure a non-empty selector scoped to Kubernetes streams.
-		matchers = append(matchers, `namespace=~".+"`)
+		matchers = append(matchers, labelNamespace+`=~".+"`)
 	}
 	if p.Pod != "" {
-		matchers = append(matchers, fmt.Sprintf("pod=%q", p.Pod))
+		matchers = append(matchers, fmt.Sprintf("%s=%q", labelPod, p.Pod))
 	}
 	if p.Container != "" {
-		matchers = append(matchers, fmt.Sprintf("container=%q", p.Container))
+		matchers = append(matchers, fmt.Sprintf("%s=%q", labelContainer, p.Container))
 	}
 	query := "{" + strings.Join(matchers, ", ") + "}"
 	if p.Search != "" {
@@ -222,10 +262,10 @@ func buildLogQL(p QueryParams) string {
 func streamsToEntries(streams []lokiStream, clusterID string) []Entry {
 	var entries []Entry
 	for _, s := range streams {
-		namespace := s.Stream["namespace"]
-		pod := s.Stream["pod"]
-		container := s.Stream["container"]
-		streamLevel := firstNonEmpty(s.Stream["level"], s.Stream["detected_level"])
+		namespace := s.Stream[labelNamespace]
+		pod := s.Stream[labelPod]
+		container := s.Stream[labelContainer]
+		streamLevel := firstNonEmpty(s.Stream["severity"], s.Stream["level"], s.Stream["detected_level"])
 		for _, v := range s.Values {
 			if len(v) < 2 {
 				continue

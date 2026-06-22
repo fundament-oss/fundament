@@ -14,23 +14,55 @@ import (
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
+	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
-// logsClient selects a log backend: Loki when LOKI_URL is configured, otherwise
-// the Kubernetes pod-log fallback via the kube-api-proxy, otherwise a no-op
-// stub. authToken is the caller's bearer token, forwarded to the proxy on the
+// logsClient selects a log backend for a cluster, in priority order:
+//  1. the LOKI_URL global override, when set (local dev / a shared Loki);
+//  2. the cluster's per-shoot Vali, reached through its Plutono datasource proxy
+//     (Gardener does not expose Vali directly);
+//  3. the Kubernetes pod-log fallback via the kube-api-proxy;
+//  4. a no-op stub.
+//
+// authToken is the caller's bearer token, forwarded to the proxy on the
 // Kubernetes path so it can authorise the request.
-func (s *Server) logsClient(authToken string) logs.Client {
-	switch {
-	case s.lokiURL != "" && s.lokiURL != "mock":
+func (s *Server) logsClient(ctx context.Context, clusterID uuid.UUID, authToken string) logs.Client {
+	if s.lokiURL != "" && s.lokiURL != "mock" {
 		return logs.NewLokiClient(s.lokiURL)
-	case s.config.KubeAPIProxyURL != "":
-		return logs.NewKubeClient(s.config.KubeAPIProxyURL, authToken)
-	default:
-		return logs.StubClient{}
 	}
+
+	if c := s.perShootValiClient(ctx, clusterID); c != nil {
+		return c
+	}
+
+	if s.config.KubeAPIProxyURL != "" {
+		return logs.NewKubeClient(s.config.KubeAPIProxyURL, authToken)
+	}
+	return logs.StubClient{}
+}
+
+// perShootValiClient resolves the cluster's per-shoot Vali via its Plutono
+// datasource proxy, using the Plutono URL + basic-auth from the Gardener
+// monitoring secret. It returns nil (so the caller falls back) when the shoot's
+// monitoring stack or Vali datasource is not available, logging only genuine
+// errors.
+func (s *Server) perShootValiClient(ctx context.Context, clusterID uuid.UUID) logs.Client {
+	info, err := s.gardener.Monitoring(ctx, clusterID)
+	if err != nil {
+		if !errors.Is(err, gardener.ErrNotFound) {
+			s.logger.WarnContext(ctx, "look up shoot monitoring", "cluster_id", clusterID, "error", err)
+		}
+		return nil
+	}
+
+	base, err := logs.ResolveValiProxyBase(ctx, info.URL, logs.ValiDatasourceName, info.Username, info.Password)
+	if err != nil {
+		s.logger.WarnContext(ctx, "resolve per-shoot Vali via Plutono", "cluster_id", clusterID, "error", err)
+		return nil
+	}
+	return logs.NewLokiClientWithAuth(base, info.Username, info.Password)
 }
 
 // QueryLogs returns a bounded set of log entries for a cluster.
@@ -47,7 +79,7 @@ func (s *Server) QueryLogs(
 		return nil, err
 	}
 
-	client := s.logsClient(bearerToken(req.Header()))
+	client := s.logsClient(ctx, clusterID, bearerToken(req.Header()))
 	params := logs.QueryParams{
 		ClusterID: clusterID.String(),
 		Namespace: req.Msg.GetNamespace(),
@@ -90,7 +122,7 @@ func (s *Server) TailLogs(
 		return err
 	}
 
-	client := s.logsClient(bearerToken(req.Header()))
+	client := s.logsClient(ctx, clusterID, bearerToken(req.Header()))
 	params := logs.QueryParams{
 		ClusterID: clusterID.String(),
 		Namespace: req.Msg.GetNamespace(),
@@ -131,7 +163,7 @@ func (s *Server) GetLogLabels(
 		return nil, err
 	}
 
-	client := s.logsClient(bearerToken(req.Header()))
+	client := s.logsClient(ctx, clusterID, bearerToken(req.Header()))
 	labels, err := client.Labels(ctx, clusterID.String(), req.Msg.GetNamespace())
 	if err != nil {
 		return nil, mapLogError(err)

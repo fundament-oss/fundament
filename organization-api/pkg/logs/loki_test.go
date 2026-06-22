@@ -18,22 +18,22 @@ func TestBuildLogQL(t *testing.T) {
 		{
 			name: "no filters defaults to non-empty selector",
 			p:    QueryParams{},
-			want: `{namespace=~".+"}`,
+			want: `{namespace_name=~".+"}`,
 		},
 		{
 			name: "namespace only",
 			p:    QueryParams{Namespace: "prod"},
-			want: `{namespace="prod"}`,
+			want: `{namespace_name="prod"}`,
 		},
 		{
 			name: "namespace pod container",
 			p:    QueryParams{Namespace: "prod", Pod: "api-1", Container: "app"},
-			want: `{namespace="prod", pod="api-1", container="app"}`,
+			want: `{namespace_name="prod", pod_name="api-1", container_name="app"}`,
 		},
 		{
 			name: "search adds line filter",
 			p:    QueryParams{Namespace: "prod", Search: "timeout"},
-			want: `{namespace="prod"} |= "timeout"`,
+			want: `{namespace_name="prod"} |= "timeout"`,
 		},
 	}
 	for _, tc := range tests {
@@ -52,7 +52,7 @@ func TestLokiClient_Query(t *testing.T) {
 	    "resultType": "streams",
 	    "result": [
 	      {
-	        "stream": {"namespace": "prod", "pod": "api-1", "container": "app"},
+	        "stream": {"namespace_name": "prod", "pod_name": "api-1", "container_name": "app"},
 	        "values": [
 	          ["1700000000000000000", "{\"level\":\"error\",\"msg\":\"boom\",\"code\":500}"],
 	          ["1700000001000000000", "plain info line"]
@@ -79,7 +79,7 @@ func TestLokiClient_Query(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Query: %v", err)
 	}
-	if got := gotQuery.Get("query"); got != `{namespace="prod"} |= "boom"` {
+	if got := gotQuery.Get("query"); got != `{namespace_name="prod"} |= "boom"` {
 		t.Errorf("query param = %q", got)
 	}
 	if gotQuery.Get("direction") != "backward" {
@@ -129,9 +129,9 @@ func TestLokiClient_Labels(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
-		case r.URL.Path == "/loki/api/v1/label/namespace/values":
+		case r.URL.Path == "/loki/api/v1/label/namespace_name/values":
 			_, _ = w.Write([]byte(`{"status":"success","data":["prod","staging"]}`))
-		case r.URL.Path == "/loki/api/v1/label/pod/values":
+		case r.URL.Path == "/loki/api/v1/label/pod_name/values":
 			_, _ = w.Write([]byte(`{"status":"success","data":["api-1"]}`))
 		default:
 			_, _ = w.Write([]byte(`{"status":"success","data":[]}`))
@@ -150,6 +150,47 @@ func TestLokiClient_Labels(t *testing.T) {
 	if len(labels.Pods) != 1 || labels.Pods[0] != "api-1" {
 		t.Errorf("pods = %v", labels.Pods)
 	}
+}
+
+func TestLokiClient_BasicAuth(t *testing.T) {
+	const respBody = `{"status":"success","data":{"resultType":"streams","result":[]}}`
+
+	t.Run("with credentials", func(t *testing.T) {
+		var gotUser, gotPass string
+		var gotOK bool
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotUser, gotPass, gotOK = r.BasicAuth()
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(respBody))
+		}))
+		defer srv.Close()
+
+		c := NewLokiClientWithAuth(srv.URL, "observer", "s3cr3t")
+		if _, err := c.Query(context.Background(), QueryParams{Namespace: "prod"}); err != nil {
+			t.Fatalf("Query: %v", err)
+		}
+		if !gotOK || gotUser != "observer" || gotPass != "s3cr3t" {
+			t.Errorf("basic auth = (%q, %q, ok=%v), want (observer, s3cr3t, ok=true)", gotUser, gotPass, gotOK)
+		}
+	})
+
+	t.Run("without credentials", func(t *testing.T) {
+		var gotOK bool
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _, gotOK = r.BasicAuth()
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(respBody))
+		}))
+		defer srv.Close()
+
+		c := NewLokiClient(srv.URL)
+		if _, err := c.Query(context.Background(), QueryParams{Namespace: "prod"}); err != nil {
+			t.Fatalf("Query: %v", err)
+		}
+		if gotOK {
+			t.Errorf("expected no Authorization header, but basic auth was present")
+		}
+	})
 }
 
 func TestNormalizeLevel(t *testing.T) {
