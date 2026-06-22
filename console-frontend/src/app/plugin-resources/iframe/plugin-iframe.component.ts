@@ -61,16 +61,28 @@ function isVerbAllowed(
   );
 }
 
-function replyForbidden(iframe: HTMLIFrameElement, requestId: string): void {
+function replyK8sResult(
+  iframe: HTMLIFrameElement,
+  requestId: string,
+  result:
+    | { ok: true; items?: KubeResource[]; item?: KubeResource }
+    | { ok: false; error: string; status?: number },
+): void {
   iframe.contentWindow?.postMessage(
-    {
-      type: 'fundament:k8s:result',
-      requestId,
-      ok: false,
-      error: 'forbidden',
-    } satisfies HostMessage,
+    { type: 'fundament:k8s:result', requestId, ...result } satisfies HostMessage,
     '*',
   );
+}
+
+function replyForbidden(iframe: HTMLIFrameElement, requestId: string): void {
+  replyK8sResult(iframe, requestId, { ok: false, error: 'forbidden' });
+}
+
+function replyTransportError(iframe: HTMLIFrameElement, requestId: string, err: unknown): void {
+  replyK8sResult(iframe, requestId, {
+    ok: false,
+    error: err instanceof Error ? err.message : 'transport error',
+  });
 }
 
 // Kubernetes reports write rejections (409 conflict, 422 validation/CEL) in the
@@ -100,15 +112,19 @@ async function readK8sError(response: Response): Promise<string> {
       </div>
     }
     <!--
-      sandbox="allow-scripts" intentionally omits allow-same-origin: the iframe runs with an
-      opaque origin and cannot send cookies. All cluster data flows through the host-mediated
-      broker below (plugin:k8s:list / plugin:k8s:get → fundament:k8s:result), which validates
-      every request against the plugin's declared allowedResources.
+      The sandbox intentionally omits allow-same-origin: the iframe runs with an opaque origin
+      and cannot send cookies. All cluster data flows through the host-mediated broker below
+      (plugin:k8s:list / plugin:k8s:get / plugin:k8s:create → fundament:k8s:result), which
+      validates every request against the plugin's declared allowedResources.
+
+      allow-forms is required for create UIs: without it the browser blocks form submission and
+      the plugin's submit handler never fires. Submits stay in-frame (handlers preventDefault and
+      route writes through the broker), so this does not grant the iframe any navigation power.
     -->
     <iframe
       #pluginFrame
       [src]="trustedSrc()"
-      sandbox="allow-scripts"
+      sandbox="allow-scripts allow-forms"
       [style.height.px]="frameHeight()"
       [class]="status() === 'error' ? 'hidden' : 'block w-full border-none'"
       title="Plugin custom UI"
@@ -235,13 +251,20 @@ export default class PluginIframeComponent implements OnInit {
         this.handleK8sCreate(msg, iframe);
         return;
       case 'plugin:create':
-        // Sent from a list view; the create route is the sibling
-        // `:resourceKind/create` of the current `:resourceKind` list route.
-        this.router.navigate(['create'], { relativeTo: this.route });
+        // Only meaningful from a list view: the create route is the sibling
+        // `:resourceKind/create` of the current `:resourceKind` list route. From
+        // a detail view it would resolve to a non-existent nested route, so ignore.
+        if (this.view() === 'list') {
+          this.router.navigate(['create'], { relativeTo: this.route });
+        }
         return;
       case 'plugin:navigate-back':
-        // Sent from a create/detail view; go up to the `:resourceKind` list.
-        this.router.navigate(['..'], { relativeTo: this.route });
+        // Only meaningful from a create/detail view: go up to the `:resourceKind`
+        // list. From a list view there is no "back", and `..` would overshoot the
+        // resource kind, so ignore it.
+        if (this.view() !== 'list') {
+          this.router.navigate(['..'], { relativeTo: this.route });
+        }
         return;
       default: {
         const exhaustive: never = msg;
@@ -296,50 +319,27 @@ export default class PluginIframeComponent implements OnInit {
     try {
       const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) {
-        iframe.contentWindow?.postMessage(
-          {
-            type: 'fundament:k8s:result',
-            requestId: msg.requestId,
-            ok: false,
-            error: response.statusText || `HTTP ${response.status}`,
-            status: response.status,
-          } satisfies HostMessage,
-          '*',
-        );
+        replyK8sResult(iframe, msg.requestId, {
+          ok: false,
+          error: response.statusText || `HTTP ${response.status}`,
+          status: response.status,
+        });
         return;
       }
       const data = await response.json();
-      const payload: HostMessage = isGet
-        ? {
-            type: 'fundament:k8s:result',
-            requestId: msg.requestId,
-            ok: true,
-            item: data as KubeResource,
-          }
-        : {
-            type: 'fundament:k8s:result',
-            requestId: msg.requestId,
-            ok: true,
-            items: (data as { items?: KubeResource[] }).items ?? [],
-          };
-      iframe.contentWindow?.postMessage(payload, '*');
-    } catch (err) {
-      iframe.contentWindow?.postMessage(
-        {
-          type: 'fundament:k8s:result',
-          requestId: msg.requestId,
-          ok: false,
-          error: err instanceof Error ? err.message : 'transport error',
-        } satisfies HostMessage,
-        '*',
+      replyK8sResult(
+        iframe,
+        msg.requestId,
+        isGet
+          ? { ok: true, item: data as KubeResource }
+          : { ok: true, items: (data as { items?: KubeResource[] }).items ?? [] },
       );
+    } catch (err) {
+      replyTransportError(iframe, msg.requestId, err);
     }
   }
 
-  private async handleK8sCreate(
-    msg: K8sCreateRequest,
-    iframe: HTMLIFrameElement,
-  ): Promise<void> {
+  private async handleK8sCreate(msg: K8sCreateRequest, iframe: HTMLIFrameElement): Promise<void> {
     if (!isVerbAllowed(this.allowedResources(), msg.group, msg.version, msg.resource, 'create')) {
       // eslint-disable-next-line no-console
       console.warn('[PluginIframe] rejected create request not in allowlist', msg);
@@ -362,38 +362,17 @@ export default class PluginIframeComponent implements OnInit {
         body: JSON.stringify(msg.body),
       });
       if (!response.ok) {
-        iframe.contentWindow?.postMessage(
-          {
-            type: 'fundament:k8s:result',
-            requestId: msg.requestId,
-            ok: false,
-            error: await readK8sError(response),
-            status: response.status,
-          } satisfies HostMessage,
-          '*',
-        );
+        replyK8sResult(iframe, msg.requestId, {
+          ok: false,
+          error: await readK8sError(response),
+          status: response.status,
+        });
         return;
       }
       const data = await response.json();
-      iframe.contentWindow?.postMessage(
-        {
-          type: 'fundament:k8s:result',
-          requestId: msg.requestId,
-          ok: true,
-          item: data as KubeResource,
-        } satisfies HostMessage,
-        '*',
-      );
+      replyK8sResult(iframe, msg.requestId, { ok: true, item: data as KubeResource });
     } catch (err) {
-      iframe.contentWindow?.postMessage(
-        {
-          type: 'fundament:k8s:result',
-          requestId: msg.requestId,
-          ok: false,
-          error: err instanceof Error ? err.message : 'transport error',
-        } satisfies HostMessage,
-        '*',
-      );
+      replyTransportError(iframe, msg.requestId, err);
     }
   }
 

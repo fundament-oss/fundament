@@ -25,6 +25,7 @@
  *   .plugin-actions    Button row
  *   .plugin-button     Primary button
  *   .plugin-button-secondary  Secondary button
+ *   .plugin-icon       Inline 20px button icon (uses currentColor)
  *   .plugin-error      Inline error banner
  */
 
@@ -138,8 +139,19 @@ body {
   @apply flex items-center gap-3 pt-2;
 }
 
+/* Matches the host's nldd-button primary (accent-filled, md): the navy accent
+   in light mode, a lighter accent with dark text in dark mode, with md control
+   sizing (44px min height, 8px radius). Values mirror @nldd/design-system's
+   --semantics-buttons-accent-filled-* / lintblauw accent palette so plugin UIs
+   look consistent with the rest of the Console. */
 .plugin-button {
-  @apply inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border-0 bg-[#184576] px-3 py-2.5 text-sm font-medium text-white hover:bg-[#163b63] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#6c9bd2] dark:text-black dark:hover:bg-[#78a7e0];
+}
+
+/* 20px leading/trailing icon for buttons (use currentColor to inherit the
+   button's text color). Matches nldd's md button icon size. */
+.plugin-icon {
+  @apply h-5 w-5 shrink-0;
 }
 
 .plugin-button-secondary {

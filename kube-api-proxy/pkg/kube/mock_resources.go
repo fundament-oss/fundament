@@ -64,7 +64,7 @@ const mockOpenfscDefinitionJSON = `{
   "icon": "cloud",
   "menu": {
     "project": [
-      {"crd": "fscinstallations.openfsc.fundament.io", "label": "OpenFSC Installations", "list": true, "detail": true, "create": true, "icon": "cloud"}
+      {"crd": "fscinstallations.openfsc.fundament.io", "label": "OpenFSC Installations", "list": true, "detail": true, "icon": "cloud"}
     ]
   },
   "crds": ["fscinstallations.openfsc.fundament.io"],

@@ -76,13 +76,27 @@ export default class ResourceCreateComponent implements OnInit {
 
   protected allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
 
-  isLoading = signal(false);
-
   errorMessage = signal<string | null>(null);
 
   crdDef = signal<ParsedCrd | undefined>(undefined);
 
   namespaces = signal<string[]>([]);
+
+  private crdLoaded = signal(false);
+
+  private namespacesReady = signal(false);
+
+  // True until the cluster list, CRD, and (project) namespaces have all settled.
+  // Gating the iframe on this prevents two problems: flashing the "not available"
+  // card before the CRD loads, and mounting the iframe before the namespace list
+  // arrives — the plugin SDK's init is one-shot, so a late namespace update would
+  // be lost and the form would render its free-text namespace fallback for good.
+  protected loading = computed(() => {
+    if (this.clusterContext.isLoadingClusters()) return true;
+    // No cluster selected (none available or load failed): nothing left to wait for.
+    if (this.clusterContext.selectedClusterId() === null) return false;
+    return !this.crdLoaded() || !this.namespacesReady();
+  });
 
   readonly listLink = ['..'];
 
@@ -99,9 +113,15 @@ export default class ResourceCreateComponent implements OnInit {
 
     effect(() => {
       const projectId = this.projectId();
-      if (projectId) {
-        untracked(() => this.loadNamespaces(projectId));
-      }
+      untracked(() => {
+        if (projectId) {
+          this.loadNamespaces(projectId);
+        } else {
+          // Org-level route has no project to scope namespaces to; the form uses
+          // its free-text namespace field. Nothing to load, so mark it settled.
+          this.namespacesReady.set(true);
+        }
+      });
     });
   }
 
@@ -115,22 +135,19 @@ export default class ResourceCreateComponent implements OnInit {
   }
 
   private async loadCrd(clusterId: string): Promise<void> {
-    this.isLoading.set(true);
+    this.crdLoaded.set(false);
     this.errorMessage.set(null);
 
     try {
-      const { crd } = await this.loader.loadCrdAndResources(
-        this.pluginName(),
-        this.resourceKind(),
-        clusterId,
-      );
+      // The create form needs only the CRD schema, not the resource list.
+      const crd = await this.loader.loadCrd(this.pluginName(), this.resourceKind(), clusterId);
       this.crdDef.set(crd);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[ResourceCreate] Failed to load resource definition:', err);
       this.errorMessage.set('Failed to load resource definition. Please try again.');
     } finally {
-      this.isLoading.set(false);
+      this.crdLoaded.set(true);
     }
   }
 
@@ -140,10 +157,12 @@ export default class ResourceCreateComponent implements OnInit {
       const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces.map((n) => n.name));
     } catch (err) {
-      // No project context (org-level) or transient failure: the plugin form
-      // falls back to a free-text namespace field when the list is empty.
+      // Transient failure: the plugin form falls back to a free-text namespace
+      // field when the list is empty.
       // eslint-disable-next-line no-console
       console.error('[ResourceCreate] Failed to load namespaces:', err);
+    } finally {
+      this.namespacesReady.set(true);
     }
   }
 }

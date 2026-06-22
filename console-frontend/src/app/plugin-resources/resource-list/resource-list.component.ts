@@ -101,8 +101,9 @@ export default class ResourceListComponent implements OnInit {
   allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
 
   canCreate = computed(() => {
-    const rk = this.resourceKind();
-    return this.plugin()?.menu.project?.some((i) => i.crd === rk && i.create === true) ?? false;
+    const kind = this.crdDef()?.kind;
+    if (!kind) return false;
+    return Boolean(this.plugin()?.customComponents?.[kind]?.create);
   });
 
   readonly createLink = ['create'];

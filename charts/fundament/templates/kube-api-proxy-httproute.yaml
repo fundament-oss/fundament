@@ -1,0 +1,18 @@
+{{- if $.Values.kubeApiProxy.httproute.enabled }}
+{{- if not $.Values.kubeApiProxy.httproute.parentRefs }}{{ fail "kubeApiProxy.httproute.parentRefs is required when httproute is enabled" }}{{ end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $.Release.Name }}-kube-api-proxy
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "kube-api-proxy" "component" "gateway") | nindent 4 }}
+spec:
+  parentRefs:
+    {{- toYaml $.Values.kubeApiProxy.httproute.parentRefs | nindent 4 }}
+  hostnames:
+    {{- toYaml $.Values.kubeApiProxy.httproute.hostnames | nindent 4 }}
+  rules:
+    - backendRefs:
+        - name: kube-api-proxy
+          port: 8081
+{{- end }}
