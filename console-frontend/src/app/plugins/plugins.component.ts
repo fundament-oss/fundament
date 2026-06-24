@@ -3,6 +3,7 @@ import {
   inject,
   signal,
   OnInit,
+  OnDestroy,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
@@ -13,7 +14,7 @@ import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
-import { PLUGIN } from '../../connect/tokens';
+import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,
@@ -23,6 +24,7 @@ import {
 } from '../../generated/v1/plugin_pb';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
+import { isTransitionalStatus } from '../utils/cluster-status';
 import { ToastService } from '../toast.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 
@@ -66,10 +68,14 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
 })
-export default class PluginsComponent implements OnInit {
+export default class PluginsComponent implements OnInit, OnDestroy {
   private titleService = inject(TitleService);
 
   private pluginClient = inject(PLUGIN);
+
+  private clusterClient = inject(CLUSTER);
+
+  private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -89,7 +95,7 @@ export default class PluginsComponent implements OnInit {
 
   errorMessage = signal<string | null>(null);
 
-  clusters: ClusterSummary[] = [];
+  clusters = signal<ClusterSummary[]>([]);
 
   installs: InstallWithCluster[] = [];
 
@@ -172,14 +178,15 @@ export default class PluginsComponent implements OnInit {
       });
 
       // Use pre-fetched cluster summaries instead of making a duplicate ListClusters call
-      this.clusters = this.organizationDataService.clusterSummaries();
+      this.clusters.set(this.organizationDataService.clusterSummaries());
 
+      const clusters = this.clusters();
       const installResults = await Promise.all(
-        this.clusters.map((cluster) =>
+        clusters.map((cluster) =>
           this.pluginInstallationService.listInstallations(cluster.id).catch(() => []),
         ),
       );
-      this.installs = this.clusters.flatMap((cluster, i) =>
+      this.installs = clusters.flatMap((cluster, i) =>
         installResults[i].map((item) => ({
           clusterId: cluster.id,
           pluginName: item.metadata.name,
@@ -187,11 +194,44 @@ export default class PluginsComponent implements OnInit {
       );
 
       this.isLoading.set(false);
+
+      // Poll for cluster readiness so the install modal reflects status changes
+      // (e.g. a provisioning cluster becoming RUNNING) without a page refresh.
+      if (this.clusters().some((c) => isTransitionalStatus(c.status))) {
+        this.pollingTimer = setInterval(() => this.refreshClusters(), 5000);
+      }
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error ? `Failed to load data: ${error.message}` : 'Failed to load data',
       );
       this.isLoading.set(false);
+    }
+  }
+
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
+  private async refreshClusters() {
+    try {
+      const response = await firstValueFrom(this.clusterClient.listClusters({}));
+      this.clusters.set(response.clusters);
+
+      const needsPolling = response.clusters.some((c) => isTransitionalStatus(c.status));
+      if (needsPolling && !this.pollingTimer) {
+        this.pollingTimer = setInterval(() => this.refreshClusters(), 5000);
+      } else if (!needsPolling) {
+        this.stopPolling();
+      }
+    } catch {
+      // Ignore errors from background polling.
+    }
+  }
+
+  private stopPolling() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
     }
   }
 
@@ -280,7 +320,7 @@ export default class PluginsComponent implements OnInit {
       return [];
     }
 
-    return this.clusters.map((cluster) => ({
+    return this.clusters().map((cluster) => ({
       ...cluster,
       installed: this.installs.some(
         (install) =>
@@ -301,7 +341,7 @@ export default class PluginsComponent implements OnInit {
   }
 
   async onInstallOnCluster(clusterId: string): Promise<void> {
-    const cluster = this.clusters.find((c) => c.id === clusterId);
+    const cluster = this.clusters().find((c) => c.id === clusterId);
     if (!cluster || !this.selectedPlugin) {
       return;
     }
