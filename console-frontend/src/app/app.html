@@ -367,17 +367,6 @@
                   Limits
                 </a>
               </li>
-              <li>
-                <a
-                  [routerLink]="['/projects', selectedProjectId(), 'settings']"
-                  routerLinkActive="active"
-                  class="nav-link"
-                  (click)="closeSidebar()"
-                >
-                  <nldd-icon name="gear" class="mr-3 h-5 w-5"></nldd-icon>
-                  Settings
-                </a>
-              </li>
 
               @for (group of pluginNavService.projectNav(); track group.pluginName) {
                 <li class="mt-2">

@@ -1,8 +1,8 @@
-/*! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com */
+/*! tailwindcss v4.3.1 | MIT License | https://tailwindcss.com */
 @layer properties;
 @layer theme;
 body {
-  margin: calc(var(--spacing, 0.25rem) * 0);
+  margin: 0;
   background-color: var(--color-white, #fff);
   font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
       "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
@@ -88,7 +88,7 @@ body {
 }
 .plugin-deflist dd {
   margin-bottom: calc(var(--spacing, 0.25rem) * 3);
-  margin-left: calc(var(--spacing, 0.25rem) * 0);
+  margin-left: 0;
 }
 @property --tw-duration {
   syntax: "*";

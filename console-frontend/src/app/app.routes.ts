@@ -153,11 +153,8 @@ const routes: Routes = [
       },
       {
         path: 'projects/:id/settings',
-        loadComponent: () =>
-          import('./project-settings/project-settings.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Settings' }],
-        },
+        redirectTo: 'projects/:id',
+        pathMatch: 'full',
       },
       {
         path: 'plugins',
