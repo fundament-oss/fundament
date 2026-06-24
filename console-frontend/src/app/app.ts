@@ -75,6 +75,7 @@ const reloadApp = () => {
     BreadcrumbComponent,
   ],
   host: {
+    class: 'flex h-dvh flex-col',
     '(document:click)': 'onDocumentClick($event)',
   },
   templateUrl: './app.html',
