@@ -197,28 +197,38 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     if (!plugin) return;
 
     const clusters = this.clusters();
-    let results: PluginInstallationItem[][];
+    let results: (PluginInstallationItem[] | null)[];
     try {
       results = await Promise.all(
-        clusters.map((c) => this.pluginInstallationService.listInstallations(c.id).catch(() => [])),
+        clusters.map((c) =>
+          this.pluginInstallationService
+            .listInstallations(c.id)
+            .catch((): PluginInstallationItem[] | null => null),
+        ),
       );
     } catch {
       return;
     }
 
-    const next = clusters.map((c, i) => ({
-      ...c,
-      phase: results[i].find((item) => item.metadata.name === plugin.name)?.status?.phase ?? null,
-      running: c.status === ClusterStatus.RUNNING,
-    }));
+    const next = clusters.map((c, i) => {
+      const items = results[i];
+      // Couldn't read this cluster — keep its current state rather than treating
+      // an unreadable cluster as "plugin removed".
+      if (items === null) return c;
+      const phase = items.find((item) => item.metadata.name === plugin.name)?.status?.phase ?? null;
+      // A 'Pending' row that has vanished is an optimistic install (or in-flight
+      // retry) the backend has not listed yet — keep showing it as pending.
+      const resolved = phase === null && c.phase === 'Pending' ? 'Pending' : phase;
+      return { ...c, phase: resolved, running: c.status === ClusterStatus.RUNNING };
+    });
 
     next.forEach((n, i) => {
       const prevPhase = clusters[i].phase;
-      if (prevPhase === null) return;
+      if (prevPhase === null || n.phase === prevPhase) return;
       if (!isInstallRunning(prevPhase) && n.phase === 'Running') {
-        this.toastService.success(`${plugin.name} installed on ${n.name}`);
+        this.toastService.success(`${plugin.name} installed on cluster ${n.name}`);
       } else if (prevPhase !== 'Failed' && n.phase === 'Failed') {
-        this.toastService.error(`Failed to install ${plugin.name} on ${n.name}`);
+        this.toastService.error(`Failed to install ${plugin.name} on cluster ${n.name}`);
       } else if (n.phase === null) {
         this.toastService.success(`${plugin.name} removed from ${n.name}`);
       }
@@ -292,7 +302,9 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   private async waitForUninstall(
     clusterId: string,
     pluginName: string,
-    attempts = 10,
+    // Wait up to ~30s for finalizers to clear the old CRD before re-creating it;
+    // re-POSTing while it is still terminating would 409.
+    attempts = 30,
   ): Promise<void> {
     if (attempts <= 0) return;
     const items = await this.pluginInstallationService.listInstallations(clusterId).catch(() => []);

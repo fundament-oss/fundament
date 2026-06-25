@@ -36,7 +36,7 @@
     <div class="space-y-2">
       @for (cluster of clusters(); track cluster.id) {
         <div
-          class="flex min-h-(--semantics-controls-md-min-size) items-center justify-between gap-3 rounded-md border border-gray-200 p-3 dark:border-gray-800"
+          class="flex items-center justify-between gap-3 rounded-md border border-gray-200 p-3 dark:border-gray-800"
         >
           @if (cluster.phase !== null) {
             <div class="flex min-w-0 items-center gap-(--primitives-space-8)">
@@ -44,7 +44,7 @@
               <span class="truncate">{{ cluster.name }}</span>
             </div>
             <div class="flex shrink-0 items-center gap-2">
-              <span class="badge {{ statusFor(cluster.phase).badgeClass }}">
+              <span class="badge badge-sm {{ statusFor(cluster.phase).badgeClass }}">
                 @if (isInProgress(cluster.phase)) {
                   <app-loading-indicator
                     class="fill-accent-600 dark:fill-accent-400 mr-1 h-3 w-3 animate-spin text-gray-200 dark:text-gray-800"

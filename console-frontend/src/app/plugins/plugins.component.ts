@@ -236,22 +236,37 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Fetch the current installations across all clusters with their live phase.
-  private async fetchInstalls(): Promise<InstallWithCluster[]> {
+  // Fetch the current installations per cluster with their live phase. A
+  // cluster's `installs` is null when its listInstallations call failed, so the
+  // caller can tell "this cluster has no installs" apart from "we couldn't read
+  // this cluster" and avoid mistaking a failed read for an uninstall.
+  private async fetchInstallsByCluster(): Promise<
+    { clusterId: string; installs: InstallWithCluster[] | null }[]
+  > {
     const clusters = this.clusters();
-    const installResults = await Promise.all(
+    const results = await Promise.all(
       clusters.map((cluster) =>
-        this.pluginInstallationService.listInstallations(cluster.id).catch(() => []),
+        this.pluginInstallationService
+          .listInstallations(cluster.id)
+          .then((items) =>
+            items.map((item) => ({
+              clusterId: cluster.id,
+              pluginName: item.metadata.name,
+              phase: item.status?.phase ?? 'Pending',
+              ready: item.status?.ready ?? false,
+            })),
+          )
+          .catch((): InstallWithCluster[] | null => null),
       ),
     );
-    return clusters.flatMap((cluster, i) =>
-      installResults[i].map((item) => ({
-        clusterId: cluster.id,
-        pluginName: item.metadata.name,
-        phase: item.status?.phase ?? 'Pending',
-        ready: item.status?.ready ?? false,
-      })),
-    );
+    return clusters.map((cluster, i) => ({ clusterId: cluster.id, installs: results[i] }));
+  }
+
+  // Flattened view used for the initial load, where there is no previous state
+  // to reconcile against (a failed cluster simply contributes no installs).
+  private async fetchInstalls(): Promise<InstallWithCluster[]> {
+    const byCluster = await this.fetchInstallsByCluster();
+    return byCluster.flatMap((cluster) => cluster.installs ?? []);
   }
 
   private startInstallPollingIfNeeded() {
@@ -270,14 +285,21 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   // Poll installation status and surface transitions (installed / failed / removed).
   private async refreshInstalls() {
-    let fresh: InstallWithCluster[];
+    let byCluster: { clusterId: string; installs: InstallWithCluster[] | null }[];
     try {
-      fresh = await this.fetchInstalls();
+      byCluster = await this.fetchInstallsByCluster();
     } catch {
       return; // Ignore errors from background polling.
     }
 
     const previous = this.installs();
+
+    // Only reconcile clusters we could actually read this cycle; a failed read
+    // must not be mistaken for an uninstall.
+    const readClusterIds = new Set(
+      byCluster.filter((c) => c.installs !== null).map((c) => c.clusterId),
+    );
+    const fresh = byCluster.flatMap((c) => c.installs ?? []);
 
     // Detect phase transitions for in-flight installs.
     fresh.forEach((next) => {
@@ -287,30 +309,44 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       if (!prev) return;
       if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
         this.toastService.success(
-          `${next.pluginName} installed on ${this.clusterName(next.clusterId)}`,
+          `${next.pluginName} installed on cluster ${this.clusterName(next.clusterId)}`,
         );
       } else if (prev.phase !== 'Failed' && next.phase === 'Failed') {
         this.toastService.error(
-          `Failed to install ${next.pluginName} on ${this.clusterName(next.clusterId)}`,
+          `Failed to install ${next.pluginName} on cluster ${this.clusterName(next.clusterId)}`,
         );
       }
     });
 
-    // Detect installs that disappeared (uninstall completed).
+    // Detect installs that vanished from a cluster we successfully read. A
+    // 'Pending' entry is an optimistic install (or an in-flight retry) the
+    // backend has not listed yet — keep it and stay quiet; anything else that
+    // disappeared is a completed uninstall.
+    const preserved: InstallWithCluster[] = [];
     previous.forEach((prev) => {
+      if (!readClusterIds.has(prev.clusterId)) return;
       const stillThere = fresh.some(
         (f) => f.clusterId === prev.clusterId && f.pluginName === prev.pluginName,
       );
-      if (!stillThere) {
-        this.toastService.success(
-          `${prev.pluginName} removed from ${this.clusterName(prev.clusterId)}`,
-        );
+      if (stillThere) return;
+      if (prev.phase === 'Pending') {
+        preserved.push(prev);
+        return;
       }
+      this.toastService.success(
+        `${prev.pluginName} removed from ${this.clusterName(prev.clusterId)}`,
+      );
     });
 
-    this.installs.set(fresh);
+    const merged = [
+      // Keep rows for clusters we couldn't read this cycle.
+      ...previous.filter((p) => !readClusterIds.has(p.clusterId)),
+      ...fresh,
+      ...preserved,
+    ];
+    this.installs.set(merged);
 
-    if (!fresh.some((install) => isInstallInProgress(install.phase))) {
+    if (!merged.some((install) => isInstallInProgress(install.phase))) {
       this.stopInstallPolling();
     }
   }
@@ -531,7 +567,9 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   private async waitForUninstall(
     clusterId: string,
     pluginName: string,
-    attempts = 10,
+    // Wait up to ~30s for finalizers to clear the old CRD before re-creating it;
+    // re-POSTing while it is still terminating would 409.
+    attempts = 30,
   ): Promise<void> {
     if (attempts <= 0) return;
     const items = await this.pluginInstallationService.listInstallations(clusterId).catch(() => []);
