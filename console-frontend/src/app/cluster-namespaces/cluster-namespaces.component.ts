@@ -2,7 +2,6 @@ import {
   Component,
   inject,
   signal,
-  computed,
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -31,6 +30,7 @@ import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
+import { NamespaceSelection } from '../utils/namespace-selection';
 
 @Component({
   selector: 'app-cluster-namespaces',
@@ -74,17 +74,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   namespaces = signal<Namespace[]>([]);
 
-  selectedNamespaceIds = signal<Set<string>>(new Set());
-
-  selectedCount = computed(() => this.selectedNamespaceIds().size);
-
-  allSelected = computed(() => {
-    const ns = this.namespaces();
-    const selected = this.selectedNamespaceIds();
-    return ns.length > 0 && ns.every((n) => selected.has(n.id));
-  });
-
-  someSelected = computed(() => this.selectedCount() > 0 && !this.allSelected());
+  protected selection = new NamespaceSelection(() => this.namespaces().map((n) => n.id));
 
   showBulkDeleteModal = signal<boolean>(false);
 
@@ -140,9 +130,7 @@ export default class ClusterNamespacesComponent implements OnInit {
       const request = create(ListClusterNamespacesRequestSchema, { clusterId: this.clusterId });
       const response = await firstValueFrom(this.namespaceClient.listClusterNamespaces(request));
       this.namespaces.set(response.namespaces);
-      // Drop any selected ids that no longer exist (e.g. after a delete).
-      const existing = new Set(response.namespaces.map((n) => n.id));
-      this.selectedNamespaceIds.update((set) => new Set([...set].filter((id) => existing.has(id))));
+      this.selection.retainVisible();
     } catch (error) {
       this.toastService.error(
         error instanceof Error
@@ -185,6 +173,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   async createNamespace(event?: Event): Promise<void> {
     event?.preventDefault();
+    this.errorMessage.set(null);
 
     if (this.namespaceForm.invalid) {
       this.namespaceForm.markAllAsTouched();
@@ -233,6 +222,7 @@ export default class ClusterNamespacesComponent implements OnInit {
     const namespaceName = this.pendingNamespaceName();
     if (!namespaceId) return;
 
+    this.errorMessage.set(null);
     this.showDeleteNamespaceModal.set(false);
 
     try {
@@ -255,37 +245,16 @@ export default class ClusterNamespacesComponent implements OnInit {
     }
   }
 
-  isSelected(namespaceId: string): boolean {
-    return this.selectedNamespaceIds().has(namespaceId);
-  }
-
-  setNamespaceSelected(namespaceId: string, checked: boolean): void {
-    this.selectedNamespaceIds.update((set) => {
-      const next = new Set(set);
-      if (checked) {
-        next.add(namespaceId);
-      } else {
-        next.delete(namespaceId);
-      }
-      return next;
-    });
-  }
-
-  toggleSelectAll(checked: boolean): void {
-    this.selectedNamespaceIds.set(
-      checked ? new Set(this.namespaces().map((n) => n.id)) : new Set(),
-    );
-  }
-
   openBulkDeleteModal(): void {
-    if (this.selectedCount() === 0) return;
+    if (this.selection.count() === 0) return;
     this.showBulkDeleteModal.set(true);
   }
 
   async confirmBulkDelete(): Promise<void> {
-    const ids = [...this.selectedNamespaceIds()];
+    const ids = this.selection.ids();
     if (ids.length === 0) return;
 
+    this.errorMessage.set(null);
     this.showBulkDeleteModal.set(false);
     this.isBulkDeleting.set(true);
 
@@ -310,8 +279,11 @@ export default class ClusterNamespacesComponent implements OnInit {
         this.errorMessage.set(`Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`);
       }
 
-      this.selectedNamespaceIds.set(new Set());
-      await Promise.all([this.loadNamespaces(), this.organizationDataService.loadOrganizationData()]);
+      this.selection.clear();
+      await Promise.all([
+        this.loadNamespaces(),
+        this.organizationDataService.loadOrganizationData(),
+      ]);
     } finally {
       this.isBulkDeleting.set(false);
     }

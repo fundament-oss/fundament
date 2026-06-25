@@ -23,7 +23,9 @@ func (s *Server) CreateNamespace(
 ) (*connect.Response[organizationv1.CreateNamespaceResponse], error) {
 	projectID := uuid.MustParse(req.Msg.GetProjectId())
 
-	if err := s.checkPermission(ctx, authz.CanCreateNamespace(), authz.Project(projectID)); err != nil {
+	// Retry: a namespace is often created right after its project, before the
+	// project's authz tuple has synced to OpenFGA (see checkPermissionWithRetry).
+	if err := s.checkPermissionWithRetry(ctx, authz.CanCreateNamespace(), authz.Project(projectID)); err != nil {
 		return nil, err
 	}
 

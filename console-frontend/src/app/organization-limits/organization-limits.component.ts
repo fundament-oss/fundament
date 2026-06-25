@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -17,16 +18,7 @@ import { ORGANIZATION } from '../../connect/tokens';
 import OrganizationContextService from '../organization-context.service';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-
-function toInt(value: unknown): number | undefined {
-  const n = Math.trunc(Number(value));
-  return n > 0 ? n : undefined;
-}
-
-// A proto int32 limit is unset when it is 0 (or absent); treat that as "no value".
-function positive(value: number | undefined): number | undefined {
-  return value && value > 0 ? value : undefined;
-}
+import { positive, toInt } from '../utils/limits';
 
 @Component({
   selector: 'app-organization-limits',
@@ -61,7 +53,7 @@ export default class OrganizationLimitsComponent implements OnInit {
     maxNodesPerNodePool: number | undefined;
   }>({ maxNodesPerCluster: undefined, maxNodePools: undefined, maxNodesPerNodePool: undefined });
 
-  // Platform defaults returned by the API, used to pre-fill empty fields and by "Reset to defaults".
+  // Platform defaults returned by the API, used by the "Reset to defaults" action.
   private clusterDefaults = signal<{
     maxNodesPerCluster: number | undefined;
     maxNodePools: number | undefined;
@@ -102,6 +94,10 @@ export default class OrganizationLimitsComponent implements OnInit {
     defaultCpuRequestM: undefined,
     defaultCpuLimitM: undefined,
   });
+
+  // Any save in flight disables every button so a cluster save and a namespace
+  // save can never run concurrently and clobber each other's snapshot.
+  protected saving = computed(() => this.clusterSaving() || this.namespaceSaving());
 
   protected readonly toInt = toInt;
 
@@ -151,22 +147,16 @@ export default class OrganizationLimitsComponent implements OnInit {
       this.savedCluster.set(savedCluster);
       this.savedNamespace.set(savedNamespace);
 
-      // Show the saved override where present, otherwise the platform default.
-      this.maxNodesPerCluster.set(savedCluster.maxNodesPerCluster ?? clusterDefaults.maxNodesPerCluster);
-      this.maxNodePools.set(savedCluster.maxNodePools ?? clusterDefaults.maxNodePools);
-      this.maxNodesPerNodePool.set(
-        savedCluster.maxNodesPerNodePool ?? clusterDefaults.maxNodesPerNodePool,
-      );
-      this.defaultMemoryRequestMi.set(
-        savedNamespace.defaultMemoryRequestMi ?? namespaceDefaults.defaultMemoryRequestMi,
-      );
-      this.defaultMemoryLimitMi.set(
-        savedNamespace.defaultMemoryLimitMi ?? namespaceDefaults.defaultMemoryLimitMi,
-      );
-      this.defaultCpuRequestM.set(
-        savedNamespace.defaultCpuRequestM ?? namespaceDefaults.defaultCpuRequestM,
-      );
-      this.defaultCpuLimitM.set(savedNamespace.defaultCpuLimitM ?? namespaceDefaults.defaultCpuLimitM);
+      // Show only what the organization has actually saved; an empty field means
+      // "no limit". Platform defaults are offered via "Reset to defaults", never
+      // silently persisted as overrides on save.
+      this.maxNodesPerCluster.set(savedCluster.maxNodesPerCluster);
+      this.maxNodePools.set(savedCluster.maxNodePools);
+      this.maxNodesPerNodePool.set(savedCluster.maxNodesPerNodePool);
+      this.defaultMemoryRequestMi.set(savedNamespace.defaultMemoryRequestMi);
+      this.defaultMemoryLimitMi.set(savedNamespace.defaultMemoryLimitMi);
+      this.defaultCpuRequestM.set(savedNamespace.defaultCpuRequestM);
+      this.defaultCpuLimitM.set(savedNamespace.defaultCpuLimitM);
     } catch {
       this.toastService.error('Failed to load organization limits');
     } finally {
@@ -207,21 +197,22 @@ export default class OrganizationLimitsComponent implements OnInit {
     }
   }
 
-  async resetClusterLimits(): Promise<void> {
+  // Reset only repopulates the form with the platform defaults; the user still
+  // has to click Save to persist them, so a misclick can't silently overwrite
+  // the organization's saved overrides.
+  resetClusterLimits(): void {
     const defaults = this.clusterDefaults();
     this.maxNodesPerCluster.set(defaults.maxNodesPerCluster);
     this.maxNodePools.set(defaults.maxNodePools);
     this.maxNodesPerNodePool.set(defaults.maxNodesPerNodePool);
-    await this.saveClusterLimits();
   }
 
-  async resetNamespaceLimits(): Promise<void> {
+  resetNamespaceLimits(): void {
     const defaults = this.namespaceDefaults();
     this.defaultMemoryRequestMi.set(defaults.defaultMemoryRequestMi);
     this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
     this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
     this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
-    await this.saveNamespaceLimits();
   }
 
   async saveNamespaceLimits(event?: Event) {

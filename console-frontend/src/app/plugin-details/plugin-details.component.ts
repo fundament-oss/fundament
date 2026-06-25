@@ -110,7 +110,9 @@ export default class PluginDetailsComponent implements OnInit {
       this.clusters.set(
         clustersResponse.clusters.map((cluster, i) => ({
           ...cluster,
-          installed: installResults[i].some((item) => item.metadata.name === pluginName),
+          installed: installResults[i].some(
+            (item) => item.spec.definitionRef.pluginName === pluginName,
+          ),
           running: cluster.status === ClusterStatus.RUNNING,
         })),
       );

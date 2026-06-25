@@ -644,12 +644,17 @@
             >
             before you can delete the cluster.
           </p>
+        } @else if (namespacesLoadError()) {
+          <p class="text-danger-700 dark:text-danger-300 mb-4 text-sm">
+            Couldn't load this cluster's namespaces, so deletion is blocked until we can confirm it
+            is empty. Reload the page and try again.
+          </p>
         }
         <nldd-button
           (click)="showDeleteModal.set(true)"
           text="Delete this cluster"
           variant="destructive"
-          [disabled]="namespaces().length > 0"
+          [disabled]="namespaces().length > 0 || namespacesLoadError()"
         ></nldd-button>
       </div>
     </div>

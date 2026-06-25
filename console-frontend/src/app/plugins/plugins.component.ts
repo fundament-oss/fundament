@@ -179,7 +179,7 @@ export default class PluginsComponent implements OnInit {
       this.installs = this.clusters.flatMap((cluster, i) =>
         installResults[i].map((item) => ({
           clusterId: cluster.id,
-          pluginName: item.metadata.name,
+          pluginName: item.spec.definitionRef.pluginName,
         })),
       );
 

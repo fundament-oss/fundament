@@ -45,11 +45,11 @@
           start-icon="plus-small"
           variant="primary"
         ></nldd-button>
-        @if (selectedCount() > 0) {
+        @if (selection.count() > 0) {
           <nldd-button
             type="button"
             (click)="openBulkDeleteModal()"
-            [text]="'Delete selected (' + selectedCount() + ')'"
+            [text]="'Delete selected (' + selection.count() + ')'"
             start-icon="trash"
             variant="destructive"
             [disabled]="isBulkDeleting()"
@@ -59,10 +59,10 @@
 
       <div class="mb-2 flex items-center gap-3 px-3">
         <nldd-checkbox-field
-          [checked]="allSelected()"
-          [indeterminate]="someSelected()"
+          [checked]="selection.allSelected()"
+          [indeterminate]="selection.someSelected()"
           accessible-label="Select all namespaces"
-          (change)="toggleSelectAll($any($event).detail.checked)"
+          (change)="selection.toggleAll($any($event).detail.checked)"
         ></nldd-checkbox-field>
         <span class="text-sm text-gray-500 dark:text-gray-400">Select all</span>
       </div>
@@ -74,10 +74,10 @@
           >
             <div class="flex items-center gap-3">
               <nldd-checkbox-field
-                [checked]="isSelected(namespace.id)"
+                [checked]="selection.has(namespace.id)"
                 [value]="namespace.id"
                 accessible-label="Select namespace {{ namespace.name }}"
-                (change)="setNamespaceSelected(namespace.id, $any($event).detail.checked)"
+                (change)="selection.set(namespace.id, $any($event).detail.checked)"
               ></nldd-checkbox-field>
               <div>
                 <p class="font-mono text-sm">{{ namespace.name }}</p>
@@ -202,8 +202,8 @@
 
   <p>
     Are you sure you want to delete
-    <strong class="font-semibold">{{ selectedCount() }}</strong>
-    namespace{{ selectedCount() === 1 ? '' : 's' }}?
+    <strong class="font-semibold">{{ selection.count() }}</strong>
+    namespace{{ selection.count() === 1 ? '' : 's' }}?
   </p>
   <p class="mt-2">
     This will remove the selected namespaces and all resources running on them. This cannot be

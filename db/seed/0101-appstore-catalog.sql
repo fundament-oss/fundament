@@ -5,6 +5,17 @@
 -- TREK_INSERT_TEST_DATA. This file is the source of truth for the plugin
 -- catalog; the dev-only tenant fixtures (orgs/users/clusters) stay in
 -- testdata/001_0101-content.sql.
+--
+-- Each plugin, category, tag, preset and documentation-link row is an idempotent
+-- upsert keyed on the stable UUIDs below, so the Job can run this unconditionally
+-- on every deploy: a fresh database gets the catalog, and an existing one has
+-- those rows reconciled to whatever this file says (added plugins inserted,
+-- edited descriptions/links refreshed).
+--
+-- The association rows (categories_plugins, plugins_tags, preset_plugins) are
+-- insert-only: new links are added, but removing a link, re-categorizing a
+-- plugin, or dropping one from a preset is NOT reconciled here and needs a
+-- dedicated migration.
 
 -- Categories
 INSERT INTO appstore.categories (id, name) VALUES
@@ -12,7 +23,8 @@ INSERT INTO appstore.categories (id, name) VALUES
     ('019b4000-4000-7000-8000-000000000002', 'Security'),
     ('019b4000-4000-7000-8000-000000000003', 'Networking'),
     ('019b4000-4000-7000-8000-000000000004', 'Database'),
-    ('019b4000-4000-7000-8000-000000000005', 'Identity');
+    ('019b4000-4000-7000-8000-000000000005', 'Identity')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- Tags
 INSERT INTO appstore.tags (id, name) VALUES
@@ -25,10 +37,11 @@ INSERT INTO appstore.tags (id, name) VALUES
     ('019b4000-5000-7000-8000-000000000007', 'Elasticsearch'),
     ('019b4000-5000-7000-8000-000000000008', 'Authentication'),
     ('019b4000-5000-7000-8000-000000000009', 'Secrets'),
-    ('019b4000-5000-7000-8000-00000000000a', 'Grafana stack');
+    ('019b4000-5000-7000-8000-00000000000a', 'Grafana stack')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- Plugins
-INSERT INTO appstore.plugins (id, name, description_short, description, author_name, author_url, repository_url) VALUES
+INSERT INTO appstore.plugins (id, name, description_short, description, author_name, author_url, repository_url, image) VALUES
     ('019b4000-3000-7000-8000-000000000001', 'Grafana Alloy', 'OpenTelemetry Collector distribution', '## Overview
 
 Grafana Alloy is a flexible, high-performance OpenTelemetry Collector distribution with native Prometheus support.
@@ -44,7 +57,7 @@ Grafana Alloy is a flexible, high-performance OpenTelemetry Collector distributi
 
 - Unified telemetry collection for metrics, logs, and traces
 - Prometheus metrics collection and forwarding
-- OpenTelemetry instrumentation aggregation', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/alloy'),
+- OpenTelemetry instrumentation aggregation', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/alloy', 'docker.io/grafana/alloy:v1.8.3'),
     ('019b4000-3000-7000-8000-000000000002', 'cert-manager', 'Automatic TLS certificate management', '## Overview
 
 cert-manager adds certificates and certificate issuers as resource types in Kubernetes clusters, and simplifies the process of obtaining, renewing and using those certificates.
@@ -60,7 +73,7 @@ cert-manager adds certificates and certificate issuers as resource types in Kube
 
 - Automatic HTTPS for web applications
 - Securing internal service-to-service communication
-- Managing certificates for ingress controllers', 'cert-manager maintainers', 'https://cert-manager.io', 'https://github.com/cert-manager/cert-manager'),
+- Managing certificates for ingress controllers', 'cert-manager maintainers', 'https://cert-manager.io', 'https://github.com/cert-manager/cert-manager', 'quay.io/jetstack/cert-manager-controller:v1.17.2'),
     ('019b4000-3000-7000-8000-000000000003', 'CloudNativePG', 'PostgreSQL operator for Kubernetes', '## Overview
 
 CloudNativePG is an open source operator designed to manage PostgreSQL workloads on Kubernetes, covering the full lifecycle of a PostgreSQL cluster.
@@ -76,7 +89,7 @@ CloudNativePG is an open source operator designed to manage PostgreSQL workloads
 
 - Production PostgreSQL databases on Kubernetes
 - Database-as-a-Service platforms
-- Microservices requiring relational databases', 'CloudNativePG Contributors', 'https://cloudnative-pg.io', 'https://github.com/cloudnative-pg/cloudnative-pg'),
+- Microservices requiring relational databases', 'CloudNativePG Contributors', 'https://cloudnative-pg.io', 'https://github.com/cloudnative-pg/cloudnative-pg', 'ghcr.io/cloudnative-pg/cloudnative-pg:v1.25.1'),
     ('019b4000-3000-7000-8000-000000000004', 'ECK operator', 'Elasticsearch and Kibana on Kubernetes', '## Overview
 
 Elastic Cloud on Kubernetes (ECK) automates the deployment, provisioning, management, and orchestration of Elasticsearch, Kibana, and the Elastic Stack on Kubernetes.
@@ -92,7 +105,7 @@ Elastic Cloud on Kubernetes (ECK) automates the deployment, provisioning, manage
 
 - Log aggregation and analysis
 - Application performance monitoring
-- Full-text search infrastructure', 'Elastic', 'https://www.elastic.co', 'https://github.com/elastic/cloud-on-k8s'),
+- Full-text search infrastructure', 'Elastic', 'https://www.elastic.co', 'https://github.com/elastic/cloud-on-k8s', 'docker.elastic.co/eck/eck-operator:2.16.0'),
     ('019b4000-3000-7000-8000-000000000005', 'Grafana', 'Metrics visualization and alerting', '## Overview
 
 Grafana is the open source analytics and monitoring solution for every database. It allows you to query, visualize, alert on and understand your metrics no matter where they are stored.
@@ -109,7 +122,7 @@ Grafana is the open source analytics and monitoring solution for every database.
 - Infrastructure monitoring
 - Application performance monitoring
 - Business analytics
-- IoT data visualization', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/grafana'),
+- IoT data visualization', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/grafana', 'docker.io/grafana/grafana:11.6.0'),
     ('019b4000-3000-7000-8000-000000000006', 'Istio Gateway', 'Ingress gateway for service mesh', '## Overview
 
 Istio Gateway provides a dedicated ingress gateway for managing inbound traffic to your service mesh, offering advanced traffic management and security features.
@@ -125,7 +138,7 @@ Istio Gateway provides a dedicated ingress gateway for managing inbound traffic 
 
 - API gateway for microservices
 - Multi-cluster ingress
-- Canary deployments and A/B testing', 'Istio Authors', 'https://istio.io', 'https://github.com/istio/istio'),
+- Canary deployments and A/B testing', 'Istio Authors', 'https://istio.io', 'https://github.com/istio/istio', 'docker.io/istio/pilot:1.24.3'),
     ('019b4000-3000-7000-8000-000000000007', 'Istio', 'Service mesh for Kubernetes', '## Overview
 
 Istio extends Kubernetes to establish a programmable, application-aware network. Working with both Kubernetes and traditional workloads, Istio brings standard, universal traffic management, telemetry, and security to complex deployments.
@@ -142,7 +155,7 @@ Istio extends Kubernetes to establish a programmable, application-aware network.
 - Microservices communication security
 - Traffic management and load balancing
 - Observability across services
-- Zero-trust networking', 'Istio Authors', 'https://istio.io', 'https://github.com/istio/istio'),
+- Zero-trust networking', 'Istio Authors', 'https://istio.io', 'https://github.com/istio/istio', 'docker.io/istio/pilot:1.24.3'),
     ('019b4000-3000-7000-8000-000000000008', 'Keycloak', 'Identity and access management', '## Overview
 
 Keycloak is an open source Identity and Access Management solution aimed at modern applications and services. It provides single sign-on, identity brokering, and user federation.
@@ -158,7 +171,7 @@ Keycloak is an open source Identity and Access Management solution aimed at mode
 
 - Centralized authentication for applications
 - API security and OAuth 2.0 provider
-- User management and self-service registration', 'Red Hat', 'https://www.keycloak.org', 'https://github.com/keycloak/keycloak'),
+- User management and self-service registration', 'Red Hat', 'https://www.keycloak.org', 'https://github.com/keycloak/keycloak', 'quay.io/keycloak/keycloak:26.2.0'),
     ('019b4000-3000-7000-8000-000000000009', 'Grafana Loki', 'Log aggregation system', '## Overview
 
 Loki is a horizontally scalable, highly available, multi-tenant log aggregation system inspired by Prometheus. It is designed to be cost effective and easy to operate.
@@ -175,7 +188,7 @@ Loki is a horizontally scalable, highly available, multi-tenant log aggregation 
 - Kubernetes log aggregation
 - Application log analysis
 - Debugging and troubleshooting
-- Compliance and audit logging', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/loki'),
+- Compliance and audit logging', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/loki', 'docker.io/grafana/loki:3.4.3'),
     ('019b4000-3000-7000-8000-00000000000a', 'Grafana Mimir', 'Long-term Prometheus storage', '## Overview
 
 Grafana Mimir is an open source, horizontally scalable, highly available, multi-tenant, long-term storage for Prometheus metrics.
@@ -192,7 +205,7 @@ Grafana Mimir is an open source, horizontally scalable, highly available, multi-
 - Long-term metrics storage
 - Multi-cluster Prometheus aggregation
 - Metrics-as-a-Service platforms
-- Historical analysis and capacity planning', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/mimir'),
+- Historical analysis and capacity planning', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/mimir', 'docker.io/grafana/mimir:2.15.0'),
     ('019b4000-3000-7000-8000-00000000000b', 'Pinniped', 'Kubernetes cluster authentication', '## Overview
 
 Pinniped provides identity services for Kubernetes clusters, enabling users to authenticate using external identity providers and providing a consistent login experience across clusters.
@@ -208,7 +221,7 @@ Pinniped provides identity services for Kubernetes clusters, enabling users to a
 
 - Enterprise Kubernetes authentication
 - Multi-cluster identity management
-- Integration with corporate identity providers', 'VMware', 'https://pinniped.dev', 'https://github.com/vmware-tanzu/pinniped'),
+- Integration with corporate identity providers', 'VMware', 'https://pinniped.dev', 'https://github.com/vmware-tanzu/pinniped', 'ghcr.io/vmware-tanzu/pinniped/pinniped-concierge:v0.35.0'),
     ('019b4000-3000-7000-8000-00000000000c', 'Sealed Secrets', 'Encrypted secrets for Git', '## Overview
 
 Sealed Secrets allows you to encrypt your Kubernetes secrets so they can be safely stored in Git repositories. Only the controller running in your cluster can decrypt them.
@@ -224,7 +237,7 @@ Sealed Secrets allows you to encrypt your Kubernetes secrets so they can be safe
 
 - GitOps workflows with sensitive data
 - Secure secret distribution
-- Compliance with secret management policies', 'Bitnami', 'https://bitnami.com', 'https://github.com/bitnami-labs/sealed-secrets'),
+- Compliance with secret management policies', 'Bitnami', 'https://bitnami.com', 'https://github.com/bitnami-labs/sealed-secrets', 'ghcr.io/bitnami-labs/sealed-secrets:v0.28.1'),
     ('019b4000-3000-7000-8000-00000000000d', 'Grafana Tempo', 'Distributed tracing backend', '## Overview
 
 Grafana Tempo is an open source, easy-to-use, and high-scale distributed tracing backend. Tempo requires only object storage to operate and is deeply integrated with Grafana.
@@ -241,7 +254,7 @@ Grafana Tempo is an open source, easy-to-use, and high-scale distributed tracing
 - Distributed system debugging
 - Request flow visualization
 - Performance optimization
-- Root cause analysis', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/tempo'),
+- Root cause analysis', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/tempo', 'docker.io/grafana/tempo:2.7.2'),
     ('019b4000-3000-7000-8000-00000000000e', 'openfsc', 'Federated Service Connectivity', '## Overview
 
 OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs the standalone openfsc-operator; each team declares an FSCInstallation in its namespace to run an OpenFSC peer there.
@@ -257,7 +270,15 @@ OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs t
 
 - Inter-organization service connectivity
 - Common Ground / data exchange between government bodies
-- Federated APIs across trust domains', 'Fundament', 'https://fsc-standaard.nl', 'https://gitlab.com/rinis-oss/fsc/open-fsc');
+- Federated APIs across trust domains', 'Fundament', 'https://fsc-standaard.nl', 'https://gitlab.com/rinis-oss/fsc/open-fsc', '')
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    description_short = EXCLUDED.description_short,
+    description = EXCLUDED.description,
+    author_name = EXCLUDED.author_name,
+    author_url = EXCLUDED.author_url,
+    repository_url = EXCLUDED.repository_url,
+    image = EXCLUDED.image;
 
 -- Plugin-Category associations
 INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
@@ -288,7 +309,8 @@ INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
     -- Grafana Tempo -> Observability
     ('019b4000-3000-7000-8000-00000000000d', '019b4000-4000-7000-8000-000000000001'),
     -- OpenFSC -> Networking
-    ('019b4000-3000-7000-8000-00000000000e', '019b4000-4000-7000-8000-000000000003');
+    ('019b4000-3000-7000-8000-00000000000e', '019b4000-4000-7000-8000-000000000003')
+ON CONFLICT (plugin_id, category_id) DO NOTHING;
 
 -- Plugin-Tag associations
 INSERT INTO appstore.plugins_tags (plugin_id, tag_id) VALUES
@@ -328,12 +350,14 @@ INSERT INTO appstore.plugins_tags (plugin_id, tag_id) VALUES
     ('019b4000-3000-7000-8000-00000000000d', '019b4000-5000-7000-8000-000000000003'),
     ('019b4000-3000-7000-8000-00000000000d', '019b4000-5000-7000-8000-00000000000a'),
     -- OpenFSC: Service mesh
-    ('019b4000-3000-7000-8000-00000000000e', '019b4000-5000-7000-8000-000000000005');
+    ('019b4000-3000-7000-8000-00000000000e', '019b4000-5000-7000-8000-000000000005')
+ON CONFLICT (plugin_id, tag_id) DO NOTHING;
 
 -- Test data for presets
 INSERT INTO appstore.presets (id, name, description) VALUES
     ('019b4000-4000-7000-8000-000000000001', 'Haven+', 'Full Haven+ stack with all plugins enabled'),
-    ('019b4000-4000-7000-8000-000000000002', 'Observability', 'Monitoring and logging stack');
+    ('019b4000-4000-7000-8000-000000000002', 'Observability', 'Monitoring and logging stack')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description;
 
 -- Haven+ preset: all plugins
 INSERT INTO appstore.preset_plugins (preset_id, plugin_id) VALUES
@@ -349,7 +373,8 @@ INSERT INTO appstore.preset_plugins (preset_id, plugin_id) VALUES
     ('019b4000-4000-7000-8000-000000000001', '019b4000-3000-7000-8000-00000000000a'), -- Grafana Mimir
     ('019b4000-4000-7000-8000-000000000001', '019b4000-3000-7000-8000-00000000000b'), -- Pinniped
     ('019b4000-4000-7000-8000-000000000001', '019b4000-3000-7000-8000-00000000000c'), -- Sealed Secrets
-    ('019b4000-4000-7000-8000-000000000001', '019b4000-3000-7000-8000-00000000000d'); -- Grafana Tempo
+    ('019b4000-4000-7000-8000-000000000001', '019b4000-3000-7000-8000-00000000000d') -- Grafana Tempo
+ON CONFLICT (preset_id, plugin_id) DO NOTHING;
 
 -- Observability preset: Grafana, Grafana Loki, Grafana Mimir, Grafana Tempo, Grafana Alloy
 INSERT INTO appstore.preset_plugins (preset_id, plugin_id) VALUES
@@ -357,7 +382,8 @@ INSERT INTO appstore.preset_plugins (preset_id, plugin_id) VALUES
     ('019b4000-4000-7000-8000-000000000002', '019b4000-3000-7000-8000-000000000005'), -- Grafana
     ('019b4000-4000-7000-8000-000000000002', '019b4000-3000-7000-8000-000000000009'), -- Grafana Loki
     ('019b4000-4000-7000-8000-000000000002', '019b4000-3000-7000-8000-00000000000a'), -- Grafana Mimir
-    ('019b4000-4000-7000-8000-000000000002', '019b4000-3000-7000-8000-00000000000d'); -- Grafana Tempo
+    ('019b4000-4000-7000-8000-000000000002', '019b4000-3000-7000-8000-00000000000d') -- Grafana Tempo
+ON CONFLICT (preset_id, plugin_id) DO NOTHING;
 
 -- Documentation links (using 019b4000-6000-7000-8000-* prefix for doc link IDs)
 INSERT INTO appstore.plugin_documentation_links (id, plugin_id, title, url_name, url) VALUES
@@ -421,20 +447,9 @@ INSERT INTO appstore.plugin_documentation_links (id, plugin_id, title, url_name,
     -- Tempo documentation
     ('019b4000-6000-7000-8000-0000000000c0', '019b4000-3000-7000-8000-00000000000d', 'Documentation', 'Official documentation', 'https://grafana.com/docs/tempo/latest/'),
     ('019b4000-6000-7000-8000-0000000000c1', '019b4000-3000-7000-8000-00000000000d', 'Getting Started', 'Get started guide', 'https://grafana.com/docs/tempo/latest/getting-started/'),
-    ('019b4000-6000-7000-8000-0000000000c2', '019b4000-3000-7000-8000-00000000000d', 'TraceQL Reference', 'TraceQL query reference', 'https://grafana.com/docs/tempo/latest/traceql/');
-
-
--- Seed image values for plugins (added by migration 017)
-UPDATE appstore.plugins SET image = 'docker.io/grafana/alloy:v1.8.3'                             WHERE name = 'Grafana Alloy';
-UPDATE appstore.plugins SET image = 'quay.io/jetstack/cert-manager-controller:v1.17.2'           WHERE name = 'cert-manager';
-UPDATE appstore.plugins SET image = 'ghcr.io/cloudnative-pg/cloudnative-pg:v1.25.1'              WHERE name = 'CloudNativePG';
-UPDATE appstore.plugins SET image = 'docker.elastic.co/eck/eck-operator:2.16.0'                  WHERE name = 'ECK operator';
-UPDATE appstore.plugins SET image = 'docker.io/grafana/grafana:11.6.0'                           WHERE name = 'Grafana';
-UPDATE appstore.plugins SET image = 'docker.io/istio/pilot:1.24.3'                               WHERE name = 'Istio Gateway';
-UPDATE appstore.plugins SET image = 'docker.io/istio/pilot:1.24.3'                               WHERE name = 'Istio';
-UPDATE appstore.plugins SET image = 'quay.io/keycloak/keycloak:26.2.0'                           WHERE name = 'Keycloak';
-UPDATE appstore.plugins SET image = 'docker.io/grafana/loki:3.4.3'                               WHERE name = 'Grafana Loki';
-UPDATE appstore.plugins SET image = 'docker.io/grafana/mimir:2.15.0'                             WHERE name = 'Grafana Mimir';
-UPDATE appstore.plugins SET image = 'ghcr.io/vmware-tanzu/pinniped/pinniped-concierge:v0.35.0'   WHERE name = 'Pinniped';
-UPDATE appstore.plugins SET image = 'ghcr.io/bitnami-labs/sealed-secrets:v0.28.1'                WHERE name = 'Sealed Secrets';
-UPDATE appstore.plugins SET image = 'docker.io/grafana/tempo:2.7.2'                              WHERE name = 'Grafana Tempo';
+    ('019b4000-6000-7000-8000-0000000000c2', '019b4000-3000-7000-8000-00000000000d', 'TraceQL Reference', 'TraceQL query reference', 'https://grafana.com/docs/tempo/latest/traceql/')
+ON CONFLICT (id) DO UPDATE SET
+    plugin_id = EXCLUDED.plugin_id,
+    title = EXCLUDED.title,
+    url_name = EXCLUDED.url_name,
+    url = EXCLUDED.url;

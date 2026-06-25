@@ -27,7 +27,8 @@
                 [attr.max]="defaultMemoryLimitMi() ?? null"
                 [value]="defaultMemoryRequestMi()"
                 (input)="
-                  $any($event).detail && defaultMemoryRequestMi.set(toInt($any($event).detail.value))
+                  $any($event).detail &&
+                    defaultMemoryRequestMi.set(toInt($any($event).detail.value))
                 "
               ></nldd-number-field>
             </nldd-form-field>
@@ -90,12 +91,14 @@
         <div class="mt-6 flex flex-wrap items-center gap-3">
           <nldd-button
             type="submit"
-            text="Save namespace defaults"
+            [disabled]="saving()"
+            [text]="saving() ? 'Saving…' : 'Save namespace defaults'"
             variant="primary"
           ></nldd-button>
           <nldd-button
             type="button"
             (click)="resetNamespaceLimits()"
+            [disabled]="saving()"
             text="Reset to defaults"
             variant="secondary"
           ></nldd-button>

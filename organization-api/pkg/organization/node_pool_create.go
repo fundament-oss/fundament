@@ -20,7 +20,9 @@ func (s *Server) CreateNodePool(
 ) (*connect.Response[organizationv1.CreateNodePoolResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.GetClusterId())
 
-	if err := s.checkPermission(ctx, authz.CanCreateNodePool(), authz.Cluster(clusterID)); err != nil {
+	// Retry: the add-cluster wizard adds node pools immediately after creating
+	// the cluster, before its authz tuple has synced (see checkPermissionWithRetry).
+	if err := s.checkPermissionWithRetry(ctx, authz.CanCreateNodePool(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
 	}
 

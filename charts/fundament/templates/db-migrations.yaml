@@ -33,21 +33,20 @@ spec:
           image: {{ $.Values.images.dbMigrations }}
           # Run the schema migrations, then seed the appstore plugin catalog
           # (reference data) in EVERY environment, independently of
-          # TREK_INSERT_TEST_DATA. The seed is applied atomically and only when
-          # the catalog is empty, so re-running the Job is idempotent. The trek
-          # image is Alpine-based and ships psql.
+          # TREK_INSERT_TEST_DATA. The seed is a set of idempotent upserts, so it
+          # runs unconditionally on every Job: a fresh DB gets the catalog and an
+          # existing one is reconciled to the file. It runs in one transaction
+          # with ON_ERROR_STOP, and any psql failure aborts the Job (set -e)
+          # instead of being swallowed. The trek image is Alpine-based and ships
+          # psql.
           command:
             - sh
             - -c
             - |
               set -e
               trek apply
-              if [ "$(psql -tAc 'SELECT COUNT(*) FROM appstore.plugins')" = "0" ]; then
-                echo "Seeding appstore plugin catalog..."
-                psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
-              else
-                echo "Appstore plugin catalog already present; skipping seed."
-              fi
+              echo "Seeding appstore plugin catalog..."
+              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
           env:
             - name: TREK_POSTGRES_HOST
               value: {{ include "fundament.db.host" . }}
