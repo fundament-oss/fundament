@@ -30,22 +30,49 @@
           class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
         >
           <span class="font-medium">{{ cluster.name }}</span>
-          @if (cluster.installed) {
-            <span
-              class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
-            >
-              <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon> Installed
-            </span>
-          } @else if (!cluster.running) {
-            <span class="badge badge-sm badge-gray">Not running</span>
-          } @else {
-            <nldd-button
-              type="button"
-              (click)="onInstall(cluster.id)"
-              text="Install"
-              variant="primary"
-              size="xs"
-            ></nldd-button>
+          @switch (stateFor(cluster)) {
+            @case ('installed') {
+              <span
+                class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200"
+              >
+                <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon> Installed
+              </span>
+            }
+            @case ('installing') {
+              <span
+                class="text-accent-600 dark:text-accent-400 inline-flex items-center gap-2 text-sm font-medium"
+              >
+                <app-loading-indicator
+                  class="fill-accent-600 dark:fill-accent-400 h-4 w-4 animate-spin text-gray-200 dark:text-gray-800"
+                />
+                Installing…
+              </span>
+            }
+            @case ('failed') {
+              <div class="flex items-center gap-2">
+                <span class="badge badge-sm badge-rose">Failed</span>
+                <nldd-button
+                  type="button"
+                  (click)="onInstall(cluster.id)"
+                  text="Retry"
+                  variant="secondary"
+                  size="xs"
+                ></nldd-button>
+              </div>
+            }
+            @default {
+              @if (!cluster.running) {
+                <span class="badge badge-sm badge-gray">Not running</span>
+              } @else {
+                <nldd-button
+                  type="button"
+                  (click)="onInstall(cluster.id)"
+                  text="Install"
+                  variant="primary"
+                  size="xs"
+                ></nldd-button>
+              }
+            }
           }
         </div>
       }

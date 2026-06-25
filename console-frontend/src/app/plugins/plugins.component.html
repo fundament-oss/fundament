@@ -164,8 +164,9 @@
 <!-- Install Modal -->
 <app-install-plugin-modal
   [pluginName]="selectedPlugin?.name || ''"
+  [image]="selectedPlugin?.image || ''"
   [clusters]="clustersForModal"
   [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"
-  (install)="onInstallOnCluster($event)"
+  (installed)="onPluginInstalled($event)"
 ></app-install-plugin-modal>
