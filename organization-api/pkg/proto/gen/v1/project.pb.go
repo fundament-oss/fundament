@@ -1877,10 +1877,11 @@ func (b0 GetProjectLimitsRequest_builder) Build() *GetProjectLimitsRequest {
 
 // GetProjectLimits response
 type GetProjectLimitsResponse struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Limits *ProjectLimits         `protobuf:"bytes,10,opt,name=limits"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Limits   *ProjectLimits         `protobuf:"bytes,10,opt,name=limits"`
+	xxx_hidden_Defaults *ProjectLimits         `protobuf:"bytes,20,opt,name=defaults"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GetProjectLimitsResponse) Reset() {
@@ -1915,8 +1916,19 @@ func (x *GetProjectLimitsResponse) GetLimits() *ProjectLimits {
 	return nil
 }
 
+func (x *GetProjectLimitsResponse) GetDefaults() *ProjectLimits {
+	if x != nil {
+		return x.xxx_hidden_Defaults
+	}
+	return nil
+}
+
 func (x *GetProjectLimitsResponse) SetLimits(v *ProjectLimits) {
 	x.xxx_hidden_Limits = v
+}
+
+func (x *GetProjectLimitsResponse) SetDefaults(v *ProjectLimits) {
+	x.xxx_hidden_Defaults = v
 }
 
 func (x *GetProjectLimitsResponse) HasLimits() bool {
@@ -1926,8 +1938,19 @@ func (x *GetProjectLimitsResponse) HasLimits() bool {
 	return x.xxx_hidden_Limits != nil
 }
 
+func (x *GetProjectLimitsResponse) HasDefaults() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Defaults != nil
+}
+
 func (x *GetProjectLimitsResponse) ClearLimits() {
 	x.xxx_hidden_Limits = nil
+}
+
+func (x *GetProjectLimitsResponse) ClearDefaults() {
+	x.xxx_hidden_Defaults = nil
 }
 
 type GetProjectLimitsResponse_builder struct {
@@ -1935,6 +1958,8 @@ type GetProjectLimitsResponse_builder struct {
 
 	// The current limits for the project (absent fields mean no default is set)
 	Limits *ProjectLimits
+	// The platform default limits, used to pre-fill the form and by "Reset to defaults"
+	Defaults *ProjectLimits
 }
 
 func (b0 GetProjectLimitsResponse_builder) Build() *GetProjectLimitsResponse {
@@ -1942,6 +1967,7 @@ func (b0 GetProjectLimitsResponse_builder) Build() *GetProjectLimitsResponse {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Limits = b.Limits
+	x.xxx_hidden_Defaults = b.Defaults
 	return m0
 }
 
@@ -2276,10 +2302,11 @@ const file_v1_project_proto_rawDesc = "" +
 	"\x17GetProjectLimitsRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"R\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"\x8e\x01\n" +
 	"\x18GetProjectLimitsResponse\x126\n" +
 	"\x06limits\x18\n" +
-	" \x01(\v2\x1e.organization.v1.ProjectLimitsR\x06limits\"\xd1\x02\n" +
+	" \x01(\v2\x1e.organization.v1.ProjectLimitsR\x06limits\x12:\n" +
+	"\bdefaults\x18\x14 \x01(\v2\x1e.organization.v1.ProjectLimitsR\bdefaults\"\xd1\x02\n" +
 	"\x1aUpdateProjectLimitsRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
@@ -2355,37 +2382,38 @@ var file_v1_project_proto_depIdxs = []int32{
 	0,  // 7: organization.v1.AddProjectMemberRequest.role:type_name -> organization.v1.ProjectMemberRole
 	0,  // 8: organization.v1.UpdateProjectMemberRoleRequest.role:type_name -> organization.v1.ProjectMemberRole
 	24, // 9: organization.v1.GetProjectLimitsResponse.limits:type_name -> organization.v1.ProjectLimits
-	1,  // 10: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
-	3,  // 11: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
-	4,  // 12: organization.v1.ProjectService.GetProjectByName:input_type -> organization.v1.GetProjectByNameRequest
-	7,  // 13: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
-	9,  // 14: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
-	11, // 15: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
-	14, // 16: organization.v1.ProjectService.ListProjectMembers:input_type -> organization.v1.ListProjectMembersRequest
-	16, // 17: organization.v1.ProjectService.GetProjectMember:input_type -> organization.v1.GetProjectMemberRequest
-	18, // 18: organization.v1.ProjectService.AddProjectMember:input_type -> organization.v1.AddProjectMemberRequest
-	20, // 19: organization.v1.ProjectService.UpdateProjectMemberRole:input_type -> organization.v1.UpdateProjectMemberRoleRequest
-	22, // 20: organization.v1.ProjectService.RemoveProjectMember:input_type -> organization.v1.RemoveProjectMemberRequest
-	25, // 21: organization.v1.ProjectService.GetProjectLimits:input_type -> organization.v1.GetProjectLimitsRequest
-	27, // 22: organization.v1.ProjectService.UpdateProjectLimits:input_type -> organization.v1.UpdateProjectLimitsRequest
-	2,  // 23: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
-	5,  // 24: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
-	5,  // 25: organization.v1.ProjectService.GetProjectByName:output_type -> organization.v1.GetProjectResponse
-	8,  // 26: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
-	10, // 27: organization.v1.ProjectService.UpdateProject:output_type -> organization.v1.UpdateProjectResponse
-	12, // 28: organization.v1.ProjectService.DeleteProject:output_type -> organization.v1.DeleteProjectResponse
-	15, // 29: organization.v1.ProjectService.ListProjectMembers:output_type -> organization.v1.ListProjectMembersResponse
-	17, // 30: organization.v1.ProjectService.GetProjectMember:output_type -> organization.v1.GetProjectMemberResponse
-	19, // 31: organization.v1.ProjectService.AddProjectMember:output_type -> organization.v1.AddProjectMemberResponse
-	21, // 32: organization.v1.ProjectService.UpdateProjectMemberRole:output_type -> organization.v1.UpdateProjectMemberRoleResponse
-	23, // 33: organization.v1.ProjectService.RemoveProjectMember:output_type -> organization.v1.RemoveProjectMemberResponse
-	26, // 34: organization.v1.ProjectService.GetProjectLimits:output_type -> organization.v1.GetProjectLimitsResponse
-	28, // 35: organization.v1.ProjectService.UpdateProjectLimits:output_type -> organization.v1.UpdateProjectLimitsResponse
-	23, // [23:36] is the sub-list for method output_type
-	10, // [10:23] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	24, // 10: organization.v1.GetProjectLimitsResponse.defaults:type_name -> organization.v1.ProjectLimits
+	1,  // 11: organization.v1.ProjectService.ListProjects:input_type -> organization.v1.ListProjectsRequest
+	3,  // 12: organization.v1.ProjectService.GetProject:input_type -> organization.v1.GetProjectRequest
+	4,  // 13: organization.v1.ProjectService.GetProjectByName:input_type -> organization.v1.GetProjectByNameRequest
+	7,  // 14: organization.v1.ProjectService.CreateProject:input_type -> organization.v1.CreateProjectRequest
+	9,  // 15: organization.v1.ProjectService.UpdateProject:input_type -> organization.v1.UpdateProjectRequest
+	11, // 16: organization.v1.ProjectService.DeleteProject:input_type -> organization.v1.DeleteProjectRequest
+	14, // 17: organization.v1.ProjectService.ListProjectMembers:input_type -> organization.v1.ListProjectMembersRequest
+	16, // 18: organization.v1.ProjectService.GetProjectMember:input_type -> organization.v1.GetProjectMemberRequest
+	18, // 19: organization.v1.ProjectService.AddProjectMember:input_type -> organization.v1.AddProjectMemberRequest
+	20, // 20: organization.v1.ProjectService.UpdateProjectMemberRole:input_type -> organization.v1.UpdateProjectMemberRoleRequest
+	22, // 21: organization.v1.ProjectService.RemoveProjectMember:input_type -> organization.v1.RemoveProjectMemberRequest
+	25, // 22: organization.v1.ProjectService.GetProjectLimits:input_type -> organization.v1.GetProjectLimitsRequest
+	27, // 23: organization.v1.ProjectService.UpdateProjectLimits:input_type -> organization.v1.UpdateProjectLimitsRequest
+	2,  // 24: organization.v1.ProjectService.ListProjects:output_type -> organization.v1.ListProjectsResponse
+	5,  // 25: organization.v1.ProjectService.GetProject:output_type -> organization.v1.GetProjectResponse
+	5,  // 26: organization.v1.ProjectService.GetProjectByName:output_type -> organization.v1.GetProjectResponse
+	8,  // 27: organization.v1.ProjectService.CreateProject:output_type -> organization.v1.CreateProjectResponse
+	10, // 28: organization.v1.ProjectService.UpdateProject:output_type -> organization.v1.UpdateProjectResponse
+	12, // 29: organization.v1.ProjectService.DeleteProject:output_type -> organization.v1.DeleteProjectResponse
+	15, // 30: organization.v1.ProjectService.ListProjectMembers:output_type -> organization.v1.ListProjectMembersResponse
+	17, // 31: organization.v1.ProjectService.GetProjectMember:output_type -> organization.v1.GetProjectMemberResponse
+	19, // 32: organization.v1.ProjectService.AddProjectMember:output_type -> organization.v1.AddProjectMemberResponse
+	21, // 33: organization.v1.ProjectService.UpdateProjectMemberRole:output_type -> organization.v1.UpdateProjectMemberRoleResponse
+	23, // 34: organization.v1.ProjectService.RemoveProjectMember:output_type -> organization.v1.RemoveProjectMemberResponse
+	26, // 35: organization.v1.ProjectService.GetProjectLimits:output_type -> organization.v1.GetProjectLimitsResponse
+	28, // 36: organization.v1.ProjectService.UpdateProjectLimits:output_type -> organization.v1.UpdateProjectLimitsResponse
+	24, // [24:37] is the sub-list for method output_type
+	11, // [11:24] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_v1_project_proto_init() }

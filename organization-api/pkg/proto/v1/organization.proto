@@ -103,6 +103,8 @@ message GetOrganizationLimitsRequest {
 message GetOrganizationLimitsResponse {
   // The current limits for the organization (absent fields mean no limit is set)
   OrganizationLimits limits = 10;
+  // The platform default limits, used to pre-fill the form and by "Reset to defaults"
+  OrganizationLimits defaults = 20;
 }
 
 // UpdateOrganizationLimits request
