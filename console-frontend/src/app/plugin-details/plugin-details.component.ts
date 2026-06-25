@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   OnInit,
+  OnDestroy,
   signal,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -25,12 +26,15 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
+import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
+import { type PluginInstallationItem } from '../plugin-resources/types';
 import { ToastService } from '../toast.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 
-// Extended cluster type for UI state
+// Extended cluster type for UI state. `phase` is null when the plugin is not
+// installed on the cluster, otherwise the PluginInstallation status phase.
 interface ClusterWithState extends ClusterSummary {
-  installed: boolean;
+  phase: string | null;
   running: boolean;
 }
 
@@ -41,8 +45,10 @@ interface ClusterWithState extends ClusterSummary {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
 })
-export default class PluginDetailsComponent implements OnInit {
+export default class PluginDetailsComponent implements OnInit, OnDestroy {
   private titleService = inject(TitleService);
+
+  private installPollingTimer: ReturnType<typeof setInterval> | null = null;
 
   private sanitizer = inject(DomSanitizer);
 
@@ -113,12 +119,15 @@ export default class PluginDetailsComponent implements OnInit {
       this.clusters.set(
         clustersResponse.clusters.map((cluster, i) => ({
           ...cluster,
-          installed: installResults[i].some((item) => item.metadata.name === pluginName),
+          phase:
+            installResults[i].find((item) => item.metadata.name === pluginName)?.status?.phase ??
+            null,
           running: cluster.status === ClusterStatus.RUNNING,
         })),
       );
 
       this.isLoading.set(false);
+      this.startInstallPollingIfNeeded();
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error
@@ -154,33 +163,151 @@ export default class PluginDetailsComponent implements OnInit {
     this.showInstallModal.set(false);
   }
 
-  async onInstallOnCluster(clusterId: string): Promise<void> {
-    const cluster = this.clusters().find((c) => c.id === clusterId);
+  ngOnDestroy() {
+    this.stopInstallPolling();
+  }
+
+  private clusterName(clusterId: string): string {
+    return this.clusters().find((c) => c.id === clusterId)?.name ?? clusterId;
+  }
+
+  private setPhase(clusterId: string, phase: string | null): void {
+    this.clusters.update((clusters) =>
+      clusters.map((c) => (c.id === clusterId ? { ...c, phase } : c)),
+    );
+  }
+
+  private startInstallPollingIfNeeded(): void {
+    if (this.installPollingTimer) return;
+    if (this.clusters().some((c) => c.phase !== null && isInstallInProgress(c.phase))) {
+      this.installPollingTimer = setInterval(() => this.refreshInstallStates(), 5000);
+    }
+  }
+
+  private stopInstallPolling(): void {
+    if (this.installPollingTimer) {
+      clearInterval(this.installPollingTimer);
+      this.installPollingTimer = null;
+    }
+  }
+
+  // Poll installation status and surface transitions (installed / failed / removed).
+  private async refreshInstallStates(): Promise<void> {
     const plugin = this.plugin();
-    if (!cluster || cluster.installed || !plugin) {
+    if (!plugin) return;
+
+    const clusters = this.clusters();
+    let results: PluginInstallationItem[][];
+    try {
+      results = await Promise.all(
+        clusters.map((c) => this.pluginInstallationService.listInstallations(c.id).catch(() => [])),
+      );
+    } catch {
       return;
     }
 
-    try {
-      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, this.pluginImage);
-      this.clusters.update((clusters) =>
-        clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
-      );
-      this.toastService.success(`${plugin.name} installed on ${cluster.name}`);
-    } catch {
-      this.toastService.error(`Failed to install ${plugin.name} on ${cluster.name}`);
+    const next = clusters.map((c, i) => ({
+      ...c,
+      phase: results[i].find((item) => item.metadata.name === plugin.name)?.status?.phase ?? null,
+      running: c.status === ClusterStatus.RUNNING,
+    }));
+
+    next.forEach((n, i) => {
+      const prevPhase = clusters[i].phase;
+      if (prevPhase === null) return;
+      if (!isInstallRunning(prevPhase) && n.phase === 'Running') {
+        this.toastService.success(`${plugin.name} installed on ${n.name}`);
+      } else if (prevPhase !== 'Failed' && n.phase === 'Failed') {
+        this.toastService.error(`Failed to install ${plugin.name} on ${n.name}`);
+      } else if (n.phase === null) {
+        this.toastService.success(`${plugin.name} removed from ${n.name}`);
+      }
+    });
+
+    this.clusters.set(next);
+
+    if (!next.some((c) => c.phase !== null && isInstallInProgress(c.phase))) {
+      this.stopInstallPolling();
     }
   }
 
-  isInstalled(clusterId: string): boolean {
-    return this.clusters().some((c) => c.id === clusterId && c.installed);
+  async onInstallOnClusters(clusterIds: string[]): Promise<void> {
+    const plugin = this.plugin();
+    if (!plugin) return;
+
+    const targets = clusterIds.filter(
+      (id) => this.clusters().find((c) => c.id === id)?.phase === null,
+    );
+    if (targets.length === 0) return;
+
+    targets.forEach((id) => this.setPhase(id, 'Pending'));
+
+    const results = await Promise.allSettled(
+      targets.map((id) =>
+        this.pluginInstallationService.installPlugin(id, plugin.name, this.pluginImage),
+      ),
+    );
+
+    const failed = targets.filter((_, i) => results[i].status === 'rejected');
+    if (failed.length > 0) {
+      failed.forEach((id) => this.setPhase(id, null));
+      this.toastService.error(
+        `Failed to install ${plugin.name} on ${failed.map((id) => this.clusterName(id)).join(', ')}`,
+      );
+    }
+
+    this.startInstallPollingIfNeeded();
+  }
+
+  async onUninstallFromCluster(clusterId: string): Promise<void> {
+    const plugin = this.plugin();
+    if (!plugin) return;
+
+    try {
+      await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name);
+      this.setPhase(clusterId, 'Terminating');
+      this.startInstallPollingIfNeeded();
+    } catch {
+      this.toastService.error(
+        `Failed to remove ${plugin.name} from ${this.clusterName(clusterId)}`,
+      );
+    }
+  }
+
+  async onRetryInstall(clusterId: string): Promise<void> {
+    const plugin = this.plugin();
+    if (!plugin) return;
+
+    this.setPhase(clusterId, 'Pending');
+    try {
+      await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name).catch(() => {});
+      await this.waitForUninstall(clusterId, plugin.name);
+      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, this.pluginImage);
+      this.startInstallPollingIfNeeded();
+    } catch {
+      this.toastService.error(`Failed to install ${plugin.name} on ${this.clusterName(clusterId)}`);
+    }
+  }
+
+  private async waitForUninstall(
+    clusterId: string,
+    pluginName: string,
+    attempts = 10,
+  ): Promise<void> {
+    if (attempts <= 0) return;
+    const items = await this.pluginInstallationService.listInstallations(clusterId).catch(() => []);
+    if (!items.some((item) => item.metadata.name === pluginName)) return;
+    await new Promise((resolve) => {
+      setTimeout(resolve, 1000);
+    });
+    await this.waitForUninstall(clusterId, pluginName, attempts - 1);
   }
 
   hasInstalledClusters(): boolean {
-    return this.clusters().some((c) => c.installed);
+    return this.clusters().some((c) => isInstallRunning(c.phase ?? ''));
   }
 
   getInstalledClusterCount(): number {
-    return this.clusters().filter((c) => c.installed).length;
+    return this.clusters().filter((c) => isInstallRunning(c.phase ?? '')).length;
   }
 }

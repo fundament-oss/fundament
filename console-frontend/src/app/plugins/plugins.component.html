@@ -62,6 +62,14 @@
 
             <!-- Plugin Card Actions -->
             <div class="px-6 pb-6">
+              @if (runningInstallCount(plugin.name) > 0) {
+                <p class="mb-3">
+                  <span class="badge badge-sm badge-emerald">
+                    <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
+                    Installed on {{ runningInstallCount(plugin.name) }}/{{ clusterCount }}
+                  </span>
+                </p>
+              }
               <div class="flex space-x-3">
                 <nldd-button
                   [routerLink]="['/plugins', plugin.id]"
@@ -72,7 +80,7 @@
                 <nldd-button
                   (click)="onInstallPlugin(plugin)"
                   type="button"
-                  text="Install"
+                  [text]="isPluginInstalledAnywhere(plugin.name) ? 'Manage' : 'Install'"
                   variant="primary"
                   size="sm"
                 ></nldd-button>
@@ -167,5 +175,7 @@
   [clusters]="clustersForModal"
   [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"
-  (install)="onInstallOnCluster($event)"
+  (install)="onInstallOnClusters($event)"
+  (uninstall)="onUninstallFromCluster($event)"
+  (retry)="onRetryInstall($event)"
 ></app-install-plugin-modal>

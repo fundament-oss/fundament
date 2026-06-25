@@ -217,5 +217,7 @@
   [clusters]="clusters()"
   [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"
-  (install)="onInstallOnCluster($event)"
+  (install)="onInstallOnClusters($event)"
+  (uninstall)="onUninstallFromCluster($event)"
+  (retry)="onRetryInstall($event)"
 ></app-install-plugin-modal>
