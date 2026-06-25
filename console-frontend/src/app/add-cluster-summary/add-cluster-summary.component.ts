@@ -3,7 +3,6 @@ import {
   inject,
   computed,
   signal,
-  OnDestroy,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
@@ -11,7 +10,6 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
-import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -20,10 +18,7 @@ import { CLUSTER } from '../../connect/tokens';
 import {
   CreateClusterRequestSchema,
   CreateNodePoolRequestSchema,
-  GetClusterRequestSchema,
-  GetNodePoolRequestSchema,
 } from '../../generated/v1/cluster_pb';
-import { NodePoolStatus } from '../../generated/v1/common_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
@@ -52,7 +47,7 @@ interface ProgressItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',
 })
-export default class AddClusterSummaryComponent implements OnDestroy {
+export default class AddClusterSummaryComponent {
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -104,16 +99,10 @@ export default class AddClusterSummaryComponent implements OnDestroy {
 
   private clusterConfig?: { name: string; region: string; kubernetesVersion: string };
 
-  private pollInterval?: ReturnType<typeof setInterval>;
-
   private idempotency = createIdempotencyRef();
 
   constructor() {
     this.titleService.setTitle('Cluster summary');
-  }
-
-  ngOnDestroy() {
-    this.stopPolling();
   }
 
   private updateItem(key: string, updates: Partial<ProgressItem>) {
@@ -192,7 +181,7 @@ export default class AddClusterSummaryComponent implements OnDestroy {
       this.clusterId.set(response.clusterId);
       this.updateItem('cluster', {
         requestStatus: 'succeeded',
-        syncStatus: 'syncing',
+        syncStatus: 'none',
         createdId: response.clusterId,
       });
       this.organizationDataService.addCluster(response.clusterId, this.clusterConfig.name);
@@ -223,8 +212,8 @@ export default class AddClusterSummaryComponent implements OnDestroy {
       ),
     ]);
 
-    // Start polling for sync status
-    this.startPolling();
+    // The create requests have returned (HTTP 200); Gardener provisioning
+    // continues in the background and is tracked on the cluster details page.
     this.isCreating.set(false);
   }
 
@@ -264,87 +253,6 @@ export default class AddClusterSummaryComponent implements OnDestroy {
     }
   }
 
-  private startPolling() {
-    this.stopPolling();
-    // Poll immediately, then every 5 seconds
-    this.pollSyncStatus();
-    this.pollInterval = setInterval(() => this.pollSyncStatus(), 5000);
-  }
-
-  private stopPolling() {
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = undefined;
-    }
-  }
-
-  private async pollSyncStatus() {
-    const cid = this.clusterId();
-    if (!cid) return;
-
-    // Poll cluster sync status
-    const clusterItem = this.progressItems().find((i) => i.key === 'cluster');
-    if (clusterItem && clusterItem.syncStatus === 'syncing') {
-      try {
-        const response = await firstValueFrom(
-          this.client.getCluster(create(GetClusterRequestSchema, { clusterId: cid })),
-        );
-        const syncState = response.cluster?.syncState;
-
-        if (syncState?.shootStatus === 'Ready' || syncState?.shootStatus === 'ready') {
-          this.updateItem('cluster', { syncStatus: 'synced', shootStatus: 'Ready' });
-        } else if (syncState?.outboxError) {
-          this.updateItem('cluster', {
-            syncStatus: 'failed',
-            error: syncState.outboxError,
-            shootStatus: syncState.shootStatus || undefined,
-          });
-        } else {
-          this.updateItem('cluster', {
-            shootStatus: syncState?.shootStatus || 'pending',
-          });
-        }
-      } catch {
-        // Ignore polling errors
-      }
-    }
-
-    // Poll node pool sync status
-    await Promise.all(
-      this.progressItems()
-        .filter(
-          (item) => item.type === 'nodepool' && item.syncStatus === 'syncing' && item.createdId,
-        )
-        .map(async (item) => {
-          try {
-            const response = await firstValueFrom(
-              this.client.getNodePool(
-                create(GetNodePoolRequestSchema, { nodePoolId: item.createdId! }),
-              ),
-            );
-            const status = response.nodePool?.status;
-
-            if (status === NodePoolStatus.HEALTHY) {
-              this.updateItem(item.key, { syncStatus: 'synced' });
-            } else if (status === NodePoolStatus.UNHEALTHY) {
-              this.updateItem(item.key, {
-                syncStatus: 'failed',
-                error: 'Node pool is unhealthy',
-              });
-            }
-          } catch {
-            // Ignore polling errors
-          }
-        }),
-    );
-
-    // Stop polling when all syncing items are done
-    const hasSyncing = this.progressItems().some((item) => item.syncStatus === 'syncing');
-    if (!hasSyncing) {
-      this.stopPolling();
-    }
-  }
-
   protected async retryItem(key: string) {
     const item = this.progressItems().find((i) => i.key === key);
     if (!item) return;
@@ -366,9 +274,6 @@ export default class AddClusterSummaryComponent implements OnDestroy {
       await this.executeCreation();
     } else if (item.type === 'nodepool' && item.nodePoolConfig) {
       await this.createNodePool(key, item.nodePoolConfig, undefined, this.idempotency.reset());
-      if (!this.pollInterval && this.progressItems().some((i) => i.syncStatus === 'syncing')) {
-        this.startPolling();
-      }
     }
   }
 
@@ -377,7 +282,6 @@ export default class AddClusterSummaryComponent implements OnDestroy {
     const hasInProgress = this.progressItems().some((i) => i.requestStatus === 'in_progress');
     if (!hasInProgress) {
       this.showModal.set(false);
-      // Keep polling in the background so the banner stays up to date
     }
   }
 
