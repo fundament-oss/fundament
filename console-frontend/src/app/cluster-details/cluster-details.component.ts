@@ -411,7 +411,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.toastService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
       this.router.navigate(['/']);
     } catch (error) {
-      this.showDeleteModal.set(false);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to delete cluster: ${error.message}`
@@ -494,6 +493,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 
   onDeleteModalOpen(): void {
+    this.errorMessage.set(null);
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }

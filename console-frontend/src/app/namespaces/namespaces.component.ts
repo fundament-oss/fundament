@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -53,6 +54,22 @@ export default class NamespacesComponent implements OnInit {
 
   namespaces = signal<Namespace[]>([]);
 
+  selectedNamespaceIds = signal<Set<string>>(new Set());
+
+  selectedCount = computed(() => this.selectedNamespaceIds().size);
+
+  allSelected = computed(() => {
+    const ns = this.namespaces();
+    const selected = this.selectedNamespaceIds();
+    return ns.length > 0 && ns.every((n) => selected.has(n.id));
+  });
+
+  someSelected = computed(() => this.selectedCount() > 0 && !this.allSelected());
+
+  showBulkDeleteModal = signal<boolean>(false);
+
+  isBulkDeleting = signal<boolean>(false);
+
   errorMessage = signal<string | null>(null);
 
   showCreateNamespaceModal = signal<boolean>(false);
@@ -92,6 +109,8 @@ export default class NamespacesComponent implements OnInit {
       const request = create(ListProjectNamespacesRequestSchema, { projectId });
       const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
+      const existing = new Set(response.namespaces.map((n) => n.id));
+      this.selectedNamespaceIds.update((set) => new Set([...set].filter((id) => existing.has(id))));
     } catch (error) {
       this.toastService.error(
         error instanceof Error
@@ -179,6 +198,78 @@ export default class NamespacesComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
+
+  isSelected(namespaceId: string): boolean {
+    return this.selectedNamespaceIds().has(namespaceId);
+  }
+
+  setNamespaceSelected(namespaceId: string, checked: boolean): void {
+    this.selectedNamespaceIds.update((set) => {
+      const next = new Set(set);
+      if (checked) {
+        next.add(namespaceId);
+      } else {
+        next.delete(namespaceId);
+      }
+      return next;
+    });
+  }
+
+  toggleSelectAll(checked: boolean): void {
+    this.selectedNamespaceIds.set(
+      checked ? new Set(this.namespaces().map((n) => n.id)) : new Set(),
+    );
+  }
+
+  openBulkDeleteModal(): void {
+    if (this.selectedCount() === 0) return;
+    this.showBulkDeleteModal.set(true);
+  }
+
+  async confirmBulkDelete(): Promise<void> {
+    const ids = [...this.selectedNamespaceIds()];
+    if (ids.length === 0) return;
+
+    this.showBulkDeleteModal.set(false);
+    this.isBulkDeleting.set(true);
+
+    try {
+      const results = await Promise.allSettled(
+        ids.map((namespaceId) =>
+          firstValueFrom(
+            this.namespaceClient.deleteNamespace(
+              create(DeleteNamespaceRequestSchema, { namespaceId }),
+            ),
+          ),
+        ),
+      );
+
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      const succeeded = ids.length - failed;
+
+      if (succeeded > 0) {
+        this.toastService.success(`${succeeded} namespace${succeeded === 1 ? '' : 's'} deleted`);
+      }
+      if (failed > 0) {
+        this.errorMessage.set(`Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`);
+      }
+
+      this.selectedNamespaceIds.set(new Set());
+      await Promise.all([
+        this.loadNamespaces(this.projectId()),
+        this.organizationDataService.loadOrganizationData(),
+      ]);
+    } finally {
+      this.isBulkDeleting.set(false);
+    }
+  }
+
+  bulkDeleteDialogRef = viewChild<ElementRef<HTMLElement>>('bulkDeleteDialog');
+
+  onBulkDeleteModalOpen(): void {
+    const el = this.bulkDeleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
 
   onNameInput(event: Event) {
     const value = (event as CustomEvent<{ value: string }>).detail.value;
