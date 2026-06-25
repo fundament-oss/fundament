@@ -22,7 +22,7 @@ func (s *Server) CreateProject(
 	req *connect.Request[organizationv1.CreateProjectRequest],
 ) (*connect.Response[organizationv1.CreateProjectResponse], error) {
 	clusterID := uuid.MustParse(req.Msg.GetClusterId())
-	if err := s.checkPermission(ctx, authz.CanCreateProject(), authz.Cluster(clusterID)); err != nil {
+	if err := s.checkPermissionWithRetry(ctx, authz.CanCreateProject(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
 	}
 
