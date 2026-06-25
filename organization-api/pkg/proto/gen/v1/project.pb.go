@@ -373,14 +373,16 @@ func (b0 GetProjectResponse_builder) Build() *GetProjectResponse {
 
 // Project information
 type Project struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id        string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_ClusterId string                 `protobuf:"bytes,15,opt,name=cluster_id,json=clusterId"`
-	xxx_hidden_Name      string                 `protobuf:"bytes,20,opt,name=name"`
-	xxx_hidden_Alias     string                 `protobuf:"bytes,25,opt,name=alias"`
-	xxx_hidden_Created   *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id             string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_ClusterId      string                 `protobuf:"bytes,15,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_Name           string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_Alias          string                 `protobuf:"bytes,25,opt,name=alias"`
+	xxx_hidden_Created        *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=created"`
+	xxx_hidden_NamespaceCount int32                  `protobuf:"varint,35,opt,name=namespace_count,json=namespaceCount"`
+	xxx_hidden_MemberCount    int32                  `protobuf:"varint,40,opt,name=member_count,json=memberCount"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *Project) Reset() {
@@ -443,6 +445,20 @@ func (x *Project) GetCreated() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Project) GetNamespaceCount() int32 {
+	if x != nil {
+		return x.xxx_hidden_NamespaceCount
+	}
+	return 0
+}
+
+func (x *Project) GetMemberCount() int32 {
+	if x != nil {
+		return x.xxx_hidden_MemberCount
+	}
+	return 0
+}
+
 func (x *Project) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -461,6 +477,14 @@ func (x *Project) SetAlias(v string) {
 
 func (x *Project) SetCreated(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Created = v
+}
+
+func (x *Project) SetNamespaceCount(v int32) {
+	x.xxx_hidden_NamespaceCount = v
+}
+
+func (x *Project) SetMemberCount(v int32) {
+	x.xxx_hidden_MemberCount = v
 }
 
 func (x *Project) HasCreated() bool {
@@ -482,6 +506,10 @@ type Project_builder struct {
 	Name      string
 	Alias     string
 	Created   *timestamppb.Timestamp
+	// Number of (non-deleted) namespaces belonging to this project.
+	NamespaceCount int32
+	// Number of (non-deleted) members directly assigned to this project.
+	MemberCount int32
 }
 
 func (b0 Project_builder) Build() *Project {
@@ -493,6 +521,8 @@ func (b0 Project_builder) Build() *Project {
 	x.xxx_hidden_Name = b.Name
 	x.xxx_hidden_Alias = b.Alias
 	x.xxx_hidden_Created = b.Created
+	x.xxx_hidden_NamespaceCount = b.NamespaceCount
+	x.xxx_hidden_MemberCount = b.MemberCount
 	return m0
 }
 
@@ -2222,7 +2252,7 @@ const file_v1_project_proto_rawDesc = "" +
 	"\fdns1123label\x12\x1emust be a valid DNS-1123 label\x1a1this.matches('^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$')R\x04name\"H\n" +
 	"\x12GetProjectResponse\x122\n" +
 	"\aproject\x18\n" +
-	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"\x98\x01\n" +
+	" \x01(\v2\x18.organization.v1.ProjectR\aproject\"\xe4\x01\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1d\n" +
@@ -2230,7 +2260,9 @@ const file_v1_project_proto_rawDesc = "" +
 	"cluster_id\x18\x0f \x01(\tR\tclusterId\x12\x12\n" +
 	"\x04name\x18\x14 \x01(\tR\x04name\x12\x14\n" +
 	"\x05alias\x18\x19 \x01(\tR\x05alias\x124\n" +
-	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\"\xe3\x01\n" +
+	"\acreated\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12'\n" +
+	"\x0fnamespace_count\x18# \x01(\x05R\x0enamespaceCount\x12!\n" +
+	"\fmember_count\x18( \x01(\x05R\vmemberCount\"\xe3\x01\n" +
 	"\x14CreateProjectRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\x05 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12{\n" +

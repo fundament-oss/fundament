@@ -16,6 +16,8 @@ export interface ProjectData {
   id: string;
   name: string;
   alias: string;
+  namespaceCount: number;
+  memberCount: number;
 }
 
 export interface ClusterData {
@@ -182,6 +184,8 @@ export class OrganizationDataService {
               id: project.id,
               name: project.name,
               alias: project.alias,
+              namespaceCount: project.namespaceCount,
+              memberCount: project.memberCount,
             })),
           };
         }),

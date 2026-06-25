@@ -132,7 +132,13 @@ func (q *Queries) ProjectList(ctx context.Context) ([]TenantProject, error) {
 }
 
 const projectListByClusterID = `-- name: ProjectListByClusterID :many
-SELECT id, cluster_id, name, alias, created, deleted
+SELECT id, cluster_id, name, alias, created, deleted,
+    (SELECT COUNT(*)
+     FROM tenant.namespaces
+     WHERE namespaces.project_id = projects.id AND namespaces.deleted IS NULL) AS namespace_count,
+    (SELECT COUNT(*)
+     FROM tenant.project_members
+     WHERE project_members.project_id = projects.id AND project_members.deleted IS NULL) AS member_count
 FROM tenant.projects
 WHERE cluster_id = $1 AND deleted IS NULL
 ORDER BY created DESC
@@ -142,15 +148,26 @@ type ProjectListByClusterIDParams struct {
 	ClusterID uuid.UUID
 }
 
-func (q *Queries) ProjectListByClusterID(ctx context.Context, arg ProjectListByClusterIDParams) ([]TenantProject, error) {
+type ProjectListByClusterIDRow struct {
+	ID             uuid.UUID
+	ClusterID      uuid.UUID
+	Name           string
+	Alias          string
+	Created        pgtype.Timestamptz
+	Deleted        pgtype.Timestamptz
+	NamespaceCount int64
+	MemberCount    int64
+}
+
+func (q *Queries) ProjectListByClusterID(ctx context.Context, arg ProjectListByClusterIDParams) ([]ProjectListByClusterIDRow, error) {
 	rows, err := q.db.Query(ctx, projectListByClusterID, arg.ClusterID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TenantProject
+	var items []ProjectListByClusterIDRow
 	for rows.Next() {
-		var i TenantProject
+		var i ProjectListByClusterIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ClusterID,
@@ -158,6 +175,8 @@ func (q *Queries) ProjectListByClusterID(ctx context.Context, arg ProjectListByC
 			&i.Alias,
 			&i.Created,
 			&i.Deleted,
+			&i.NamespaceCount,
+			&i.MemberCount,
 		); err != nil {
 			return nil, err
 		}

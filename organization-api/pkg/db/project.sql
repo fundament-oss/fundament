@@ -6,7 +6,13 @@ WHERE deleted IS NULL
 ORDER BY created DESC;
 
 -- name: ProjectListByClusterID :many
-SELECT id, cluster_id, name, alias, created, deleted
+SELECT id, cluster_id, name, alias, created, deleted,
+    (SELECT COUNT(*)
+     FROM tenant.namespaces
+     WHERE namespaces.project_id = projects.id AND namespaces.deleted IS NULL) AS namespace_count,
+    (SELECT COUNT(*)
+     FROM tenant.project_members
+     WHERE project_members.project_id = projects.id AND project_members.deleted IS NULL) AS member_count
 FROM tenant.projects
 WHERE cluster_id = $1 AND deleted IS NULL
 ORDER BY created DESC;

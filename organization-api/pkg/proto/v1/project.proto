@@ -89,6 +89,10 @@ message Project {
   string name = 20;
   string alias = 25;
   google.protobuf.Timestamp created = 30;
+  // Number of (non-deleted) namespaces belonging to this project.
+  int32 namespace_count = 35;
+  // Number of (non-deleted) members directly assigned to this project.
+  int32 member_count = 40;
 }
 
 // Create project request
