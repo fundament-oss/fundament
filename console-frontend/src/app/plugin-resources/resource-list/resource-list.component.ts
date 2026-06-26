@@ -100,6 +100,14 @@ export default class ResourceListComponent implements OnInit {
 
   allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
 
+  canCreate = computed(() => {
+    const kind = this.crdDef()?.kind;
+    if (!kind) return false;
+    return Boolean(this.plugin()?.customComponents?.[kind]?.create);
+  });
+
+  readonly createLink = ['create'];
+
   columns = computed<AdditionalPrinterColumn[]>(() => {
     const crd = this.crdDef();
     if (!crd) return [];

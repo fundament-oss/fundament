@@ -57,12 +57,13 @@ spec:
     FSCInstallation:
       list: fscinstallations-list.html
       detail: fscinstallations-detail.html
+      create: fscinstallations-create.html
 
   allowedResources:
     - group: openfsc.fundament.io
       version: v1
       resource: fscinstallations
-      verbs: [list, get]
+      verbs: [list, get, create]
 
   uiHints:
     fscinstallations.openfsc.fundament.io:

@@ -12,20 +12,40 @@
 async function api(path) {
   const res = await fetch(path);
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error || `${res.status} ${res.statusText}`);
+  if (!res.ok) throw new Error(body.message || body.error || `${res.status} ${res.statusText}`);
   return body;
+}
+
+async function apiPost(path, payload) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.message || body.error || `${res.status} ${res.statusText}`);
+  return body;
+}
+
+async function fetchNamespaces() {
+  try {
+    const body = await api('/api/namespaces');
+    return Array.isArray(body.namespaces) ? body.namespaces : [];
+  } catch {
+    return [];
+  }
 }
 
 const params = new URLSearchParams(location.search);
 
 window.fundament = {
-  // Detail templates read fundament.init -> { resource: { name, namespace } }.
-  // The name comes from ?name=&namespace= (e.g. set by a row click in the list
-  // page). Without it the detail template renders "No <title> selected." -- open
-  // a detail page via the list, or pass ?name= explicitly.
-  init: Promise.resolve({
+  // Templates read fundament.init -> { resource: { name, namespace }, namespaces }.
+  // resource.name comes from ?name=&namespace= (e.g. set by a row click in the
+  // list page). namespaces feeds the create form's dropdown.
+  init: (async () => ({
     resource: { name: params.get('name'), namespace: params.get('namespace') },
-  }),
+    namespaces: await fetchNamespaces(),
+  }))(),
   k8s: {
     list: ({ resource }) => api(`/api/list?resource=${encodeURIComponent(resource)}`),
     get: ({ resource, name, namespace }) =>
@@ -33,15 +53,27 @@ window.fundament = {
         `/api/get?resource=${encodeURIComponent(resource)}&name=${encodeURIComponent(name ?? '')}` +
           `&namespace=${encodeURIComponent(namespace ?? '')}`,
       ),
+    create: (_args, body) => apiPost('/api/create', body),
   },
 };
 
-// The real Console handles plugin:navigate from the iframe. Here we approximate
-// it by routing to the matching detail page so row clicks are clickable too.
+// The real Console handles plugin:navigate / plugin:create / plugin:navigate-back
+// from the iframe. Here we approximate them by routing between the matching
+// list / create / detail pages so navigation works standalone too.
 window.addEventListener('message', (e) => {
-  if (e.data?.type !== 'plugin:navigate') return;
-  const base = (location.pathname.match(/([a-z]+)-list\.html$/) || [])[1];
+  const type = e.data?.type;
+  const base = (location.pathname.match(/([a-z]+)-(?:list|create|detail)\.html$/) || [])[1];
   if (!base) return;
+
+  if (type === 'plugin:create') {
+    location.href = `${base}-create.html`;
+    return;
+  }
+  if (type === 'plugin:navigate-back') {
+    location.href = `${base}-list.html`;
+    return;
+  }
+  if (type !== 'plugin:navigate') return;
   const q = new URLSearchParams();
   if (e.data.name) q.set('name', e.data.name);
   if (e.data.namespace) q.set('namespace', e.data.namespace);

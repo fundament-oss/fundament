@@ -13,8 +13,9 @@ export type HostMessage =
       theme: Theme;
       pluginName: string;
       crdKind: string;
-      view: 'list' | 'detail';
+      view: 'list' | 'detail' | 'create';
       resource?: ResourceContext;
+      namespaces?: string[];
     }
   | {
       type: 'fundament:theme-changed';
@@ -54,9 +55,22 @@ export interface K8sGetRequest {
   namespace?: string;
 }
 
+export interface K8sCreateRequest {
+  type: 'plugin:k8s:create';
+  requestId: string;
+  group: string;
+  version: string;
+  resource: string;
+  namespace?: string;
+  body: KubeResource;
+}
+
 export type PluginMessage =
   | { type: 'plugin:ready' }
   | { type: 'plugin:resize'; height: number }
   | { type: 'plugin:navigate'; name: string; namespace?: string }
+  | { type: 'plugin:create' }
+  | { type: 'plugin:navigate-back' }
   | K8sListRequest
-  | K8sGetRequest;
+  | K8sGetRequest
+  | K8sCreateRequest;

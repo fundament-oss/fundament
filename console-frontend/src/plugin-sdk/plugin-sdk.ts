@@ -17,6 +17,7 @@
  *     - plugin:resize            Reports content height for iframe sizing.
  *     - plugin:k8s:list          Request a Kubernetes list (brokered by host).
  *     - plugin:k8s:get           Request a Kubernetes get (brokered by host).
+ *     - plugin:k8s:create        Request a Kubernetes create (brokered by host).
  */
 
 type Theme = 'light' | 'dark';
@@ -30,8 +31,9 @@ interface InitContext {
   theme: Theme;
   pluginName: string;
   crdKind: string;
-  view: 'list' | 'detail';
+  view: 'list' | 'detail' | 'create';
   resource?: ResourceContext;
+  namespaces?: string[];
 }
 
 interface K8sListArgs {
@@ -44,6 +46,8 @@ interface K8sListArgs {
 interface K8sGetArgs extends K8sListArgs {
   name: string;
 }
+
+type K8sCreateArgs = K8sListArgs;
 
 interface KubeListResult<T = unknown> {
   items: T[];
@@ -65,6 +69,7 @@ interface FundamentSdk {
   k8s: {
     list<T = unknown>(args: K8sListArgs): Promise<KubeListResult<T>>;
     get<T = unknown>(args: K8sGetArgs): Promise<T>;
+    create<T = unknown>(args: K8sCreateArgs, body: unknown): Promise<T>;
   };
   onThemeChange(cb: (theme: Theme) => void): () => void;
 }
@@ -81,8 +86,9 @@ type HostMessage =
       theme: Theme;
       pluginName: string;
       crdKind: string;
-      view: 'list' | 'detail';
+      view: 'list' | 'detail' | 'create';
       resource?: ResourceContext;
+      namespaces?: string[];
     }
   | { type: 'fundament:theme-changed'; theme: Theme }
   | {
@@ -141,7 +147,7 @@ interface Pending {
   resolve: (value: unknown) => void;
   reject: (err: SdkError) => void;
   timer: ReturnType<typeof setTimeout>;
-  kind: 'list' | 'get';
+  kind: 'list' | 'get' | 'create';
 }
 
 const pendingRequests = new Map<string, Pending>();
@@ -160,7 +166,16 @@ function generateRequestId(): string {
   return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function sendK8sRequest<T>(kind: 'list' | 'get', payload: Record<string, unknown>): Promise<T> {
+const messageTypeByKind = {
+  list: 'plugin:k8s:list',
+  get: 'plugin:k8s:get',
+  create: 'plugin:k8s:create',
+} as const;
+
+function sendK8sRequest<T>(
+  kind: 'list' | 'get' | 'create',
+  payload: Record<string, unknown>,
+): Promise<T> {
   const requestId = generateRequestId();
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -176,7 +191,7 @@ function sendK8sRequest<T>(kind: 'list' | 'get', payload: Record<string, unknown
     });
 
     const message = {
-      type: kind === 'list' ? 'plugin:k8s:list' : 'plugin:k8s:get',
+      type: messageTypeByKind[kind],
       requestId,
       ...payload,
     };
@@ -195,6 +210,7 @@ function handleHostMessage(data: HostMessage): void {
         crdKind: data.crdKind,
         view: data.view,
         resource: data.resource,
+        namespaces: data.namespaces,
       });
     }
     applyTheme(data.theme);
@@ -258,6 +274,12 @@ const sdk: FundamentSdk = {
     },
     get<T = unknown>(args: K8sGetArgs): Promise<T> {
       return sendK8sRequest<T>('get', args as unknown as Record<string, unknown>);
+    },
+    create<T = unknown>(args: K8sCreateArgs, body: unknown): Promise<T> {
+      return sendK8sRequest<T>('create', {
+        ...(args as unknown as Record<string, unknown>),
+        body,
+      });
     },
   },
   onThemeChange(cb) {

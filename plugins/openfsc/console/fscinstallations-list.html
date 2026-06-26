@@ -24,6 +24,14 @@
           </tr>
         </tbody>
       </table>
+      <div style="margin-top: 1.5rem">
+        <button type="button" class="plugin-button" id="add">
+          <svg class="plugin-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+          Add installation
+        </button>
+      </div>
     </div>
     <script type="module">
       import {
@@ -34,9 +42,11 @@
         emptyRow,
         errorRow,
         navigateToDetail,
+        navigateToCreate,
       } from './_shared.js';
 
       const tbody = document.getElementById('rows');
+      document.getElementById('add').addEventListener('click', () => navigateToCreate());
 
       try {
         await loadSdk();

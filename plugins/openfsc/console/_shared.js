@@ -84,6 +84,19 @@ export function navigateToDetail(name, namespace) {
   );
 }
 
+// Asks the host to open the create form for this resource kind. The host
+// navigates to its create route; the console-preview stand-in approximates it
+// by loading the matching *-create.html page.
+export function navigateToCreate() {
+  window.parent.postMessage({ type: 'plugin:create' }, hostOrigin() || window.location.origin);
+}
+
+// Asks the host to go back to the list view of this resource kind. The host
+// navigates up one route; the console-preview stand-in loads the *-list.html.
+export function navigateBack() {
+  window.parent.postMessage({ type: 'plugin:navigate-back' }, hostOrigin() || window.location.origin);
+}
+
 // Renders a key/value definition list for the given map. Returns HTML.
 export function renderDefList(obj) {
   if (!obj || typeof obj !== 'object') return '';

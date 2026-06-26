@@ -441,6 +441,7 @@ type ComponentMapping struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	List          *string                `protobuf:"bytes,1,opt,name=list" json:"list,omitempty"`
 	Detail        *string                `protobuf:"bytes,2,opt,name=detail" json:"detail,omitempty"`
+	Create        *string                `protobuf:"bytes,3,opt,name=create" json:"create,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -485,6 +486,13 @@ func (x *ComponentMapping) GetList() string {
 func (x *ComponentMapping) GetDetail() string {
 	if x != nil && x.Detail != nil {
 		return *x.Detail
+	}
+	return ""
+}
+
+func (x *ComponentMapping) GetCreate() string {
+	if x != nil && x.Create != nil {
+		return *x.Create
 	}
 	return ""
 }
@@ -1036,10 +1044,11 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\x04icon\x18\x05 \x01(\tR\x04iconJ\x04\b\x04\x10\x05R\x06create\"\x8a\x01\n" +
 	"\x0eMenuDefinition\x12@\n" +
 	"\forganization\x18\x01 \x03(\v2\x1c.pluginmetadata.v1.MenuEntryR\forganization\x126\n" +
-	"\aproject\x18\x02 \x03(\v2\x1c.pluginmetadata.v1.MenuEntryR\aproject\">\n" +
+	"\aproject\x18\x02 \x03(\v2\x1c.pluginmetadata.v1.MenuEntryR\aproject\"V\n" +
 	"\x10ComponentMapping\x12\x12\n" +
 	"\x04list\x18\x01 \x01(\tR\x04list\x12\x16\n" +
-	"\x06detail\x18\x02 \x01(\tR\x06detail\"s\n" +
+	"\x06detail\x18\x02 \x01(\tR\x06detail\x12\x16\n" +
+	"\x06create\x18\x03 \x01(\tR\x06create\"s\n" +
 	"\x0fAllowedResource\x12\x14\n" +
 	"\x05group\x18\x01 \x01(\tR\x05group\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12\x1a\n" +

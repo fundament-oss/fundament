@@ -1,0 +1,30 @@
+@if (errorMessage()) {
+  <div class="bg-danger-50 dark:bg-danger-900/20 mb-6 flex items-center rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200 font-medium">{{ errorMessage() }}</p>
+  </div>
+} @else if (loading()) {
+  <div class="card">
+    <div class="card-body text-center">
+      <p class="text-gray-600 dark:text-gray-300">Loading…</p>
+    </div>
+  </div>
+} @else if (customUIUrl()) {
+  <app-plugin-iframe
+    [src]="customUIUrl()!"
+    [pluginName]="pluginName()"
+    [crdKind]="crdDef()!.kind"
+    view="create"
+    [allowedResources]="allowedResources()"
+    [clusterId]="clusterContext.selectedClusterId()!"
+    [namespaces]="namespaces()"
+  />
+} @else {
+  <div class="card">
+    <div class="card-body text-center">
+      <p class="mb-4 text-gray-600 dark:text-gray-300">
+        Creating this resource from the console is not available.
+      </p>
+      <nldd-button [routerLink]="listLink" text="Back to list" variant="primary"></nldd-button>
+    </div>
+  </div>
+}

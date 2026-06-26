@@ -161,6 +161,16 @@ spec:
       replicas: 1
       logLevel: debug
       mode: mock
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - k8s-api.pr${PR_NUM}.${DOMAIN}
 
     clusterWorker:
       enabled: true

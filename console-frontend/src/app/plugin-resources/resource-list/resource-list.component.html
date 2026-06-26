@@ -5,6 +5,8 @@
 }
 
 @if (customUIUrl()) {
+  <!-- Custom list UIs (iframe) render their own "Add" affordance and request
+       create navigation via the plugin:create message. -->
   <app-plugin-iframe
     [src]="customUIUrl()!"
     [pluginName]="pluginName()"
@@ -14,6 +16,16 @@
     [clusterId]="clusterContext.selectedClusterId()!"
   />
 } @else {
+  @if (canCreate()) {
+    <div class="mb-4 flex justify-end">
+      <nldd-button
+        [routerLink]="createLink"
+        text="Create"
+        start-icon="plus"
+        variant="primary"
+      ></nldd-button>
+    </div>
+  }
   <div class="card">
     <div class="card-header">
       <h1 class="text-3xl font-semibold">{{ kindLabel() }}</h1>

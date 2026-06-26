@@ -12,6 +12,21 @@
  *   .plugin-text       Body / paragraph text
  *   .plugin-table      Full-width data table with dividers
  *   .plugin-deflist    Key/value definition list
+ *   .plugin-form       Vertical form layout
+ *   .plugin-field      Label + control wrapper
+ *   .plugin-label      Field label
+ *   .plugin-hint       Field help text
+ *   .plugin-input      Text / number input and <select>
+ *   .plugin-select     <select> (alias of .plugin-input)
+ *   .plugin-checkbox   Checkbox + label row
+ *   .plugin-fieldset   Bordered group of fields
+ *   .plugin-legend     Group heading
+ *   .plugin-row        Inline row of fields (wraps)
+ *   .plugin-actions    Button row
+ *   .plugin-button     Primary button
+ *   .plugin-button-secondary  Secondary button
+ *   .plugin-icon       Inline 20px button icon (uses currentColor)
+ *   .plugin-error      Inline error banner
  */
 
 /* Include theme CSS variables (colors, spacing, etc.) but not the preflight reset */
@@ -23,6 +38,15 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
+
+/* We import Tailwind's theme but not its preflight, so restore the one reset the
+   layouts rely on: border-box sizing keeps w-full inputs from overflowing their
+   padding/border. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   @apply m-0 bg-white font-sans text-gray-900 transition-colors duration-200 dark:bg-gray-800 dark:text-gray-50;
@@ -64,4 +88,76 @@ body {
 
 .plugin-deflist dd {
   @apply mb-3 ml-0;
+}
+
+/* ── Forms ────────────────────────────────────────────────────────────────── */
+
+.plugin-form {
+  @apply space-y-4;
+}
+
+.plugin-field {
+  /* min-w-0 lets fields shrink inside .plugin-row instead of overflowing. */
+  @apply flex min-w-0 flex-col gap-1;
+}
+
+.plugin-label {
+  @apply text-sm font-medium text-gray-700 dark:text-gray-200;
+}
+
+.plugin-hint {
+  @apply text-xs text-gray-500 dark:text-gray-400;
+}
+
+.plugin-input,
+.plugin-select {
+  @apply w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-50;
+}
+
+.plugin-input:focus,
+.plugin-select:focus {
+  @apply border-blue-500 ring-1 ring-blue-500 outline-none;
+}
+
+.plugin-checkbox {
+  @apply flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200;
+}
+
+.plugin-fieldset {
+  @apply space-y-4 rounded-md border border-gray-200 p-4 dark:border-gray-700;
+}
+
+.plugin-legend {
+  @apply text-sm font-semibold text-gray-700 dark:text-gray-200;
+}
+
+.plugin-row {
+  @apply flex flex-wrap items-end gap-3;
+}
+
+.plugin-actions {
+  @apply flex items-center gap-3 pt-2;
+}
+
+/* Matches the host's nldd-button primary (accent-filled, md): the navy accent
+   in light mode, a lighter accent with dark text in dark mode, with md control
+   sizing (44px min height, 8px radius). Values mirror @nldd/design-system's
+   --semantics-buttons-accent-filled-* / lintblauw accent palette so plugin UIs
+   look consistent with the rest of the Console. */
+.plugin-button {
+  @apply inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border-0 bg-[#184576] px-3 py-2.5 text-sm font-medium text-white hover:bg-[#163b63] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#6c9bd2] dark:text-black dark:hover:bg-[#78a7e0];
+}
+
+/* 20px leading/trailing icon for buttons (use currentColor to inherit the
+   button's text color). Matches nldd's md button icon size. */
+.plugin-icon {
+  @apply h-5 w-5 shrink-0;
+}
+
+.plugin-button-secondary {
+  @apply inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800;
+}
+
+.plugin-error {
+  @apply rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300;
 }

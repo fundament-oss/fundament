@@ -30,10 +30,11 @@ func TestLoadDefinition(t *testing.T) {
 	assert.Len(t, def.Spec.CustomComponents, 1)
 	assert.Equal(t, "fscinstallations-list.html", def.Spec.CustomComponents["FSCInstallation"].List)
 	assert.Equal(t, "fscinstallations-detail.html", def.Spec.CustomComponents["FSCInstallation"].Detail)
+	assert.Equal(t, "fscinstallations-create.html", def.Spec.CustomComponents["FSCInstallation"].Create)
 
 	require.Len(t, def.Spec.AllowedResources, 1)
 	assert.Equal(t, "fscinstallations", def.Spec.AllowedResources[0].Resource)
-	assert.ElementsMatch(t, []string{"list", "get"}, def.Spec.AllowedResources[0].Verbs)
+	assert.ElementsMatch(t, []string{"list", "get", "create"}, def.Spec.AllowedResources[0].Verbs)
 }
 
 func TestPluginImplementsInterfaces(t *testing.T) {

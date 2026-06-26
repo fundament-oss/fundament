@@ -91,6 +91,7 @@ export interface KubeResource {
 export interface CustomComponentMapping {
   list?: string;
   detail?: string;
+  create?: string;
 }
 
 // Navigation types

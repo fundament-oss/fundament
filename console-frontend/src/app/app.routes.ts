@@ -241,6 +241,24 @@ const routes: Routes = [
             },
           },
           {
+            // Must precede :resourceKind/:resourceId so `create` is not parsed as an id.
+            path: ':resourceKind/create',
+            loadComponent: () =>
+              import('./plugin-resources/resource-create/resource-create.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':pluginAlias' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Create' },
+              ],
+            },
+          },
+          {
             path: ':resourceKind/:resourceId',
             loadComponent: () =>
               import('./plugin-resources/resource-detail/resource-detail.component').then(
@@ -274,6 +292,25 @@ const routes: Routes = [
                 { label: ':projectName', route: '/projects/:id' },
                 { label: ':pluginAlias' },
                 { label: ':resourceKindLabel' },
+              ],
+            },
+          },
+          {
+            // Must precede :resourceKind/:resourceId so `create` is not parsed as an id.
+            path: ':resourceKind/create',
+            loadComponent: () =>
+              import('./plugin-resources/resource-create/resource-create.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: ':pluginAlias' },
+                {
+                  label: ':resourceKindLabel',
+                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
+                },
+                { label: 'Create' },
               ],
             },
           },
