@@ -1,0 +1,70 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 18
+:state: committed
+
+= FUN-18 Plugin UI design system (NLDS)
+
+== Introduction
+
+Plugins provide custom UIs for the CRDs they manage (link:/funs/fun-16[FUN-16]). Those UIs should look and behave like the rest of the Console — same components, same tokens, same fonts, same light/dark behaviour — so a user moving between the Console and a plugin view sees one coherent product. The Console is built with the NLDS design system (`@nldd/design-system`): a set of framework-agnostic Lit web components (`<nldd-button>`, `<nldd-text-field>`, `<nldd-dropdown>`, `<nldd-checkbox-field>`, …) plus design tokens and the Rijkshuisstijl fonts.
+
+This FUN records how plugin UIs get NLDS without trusting plugin code, duplicating the design system, or letting it drift from the host. It builds on the iframe isolation model in link:/funs/fun-16[FUN-16] and the styling conventions in link:/funs/fun-10[FUN-10].
+
+== The constraint: NLDS inside a sandboxed, opaque-origin iframe
+
+Plugin UIs render in an iframe with `sandbox="allow-scripts"` and *no* `allow-same-origin` (link:/funs/fun-16[FUN-16]). The browser therefore gives the iframe document an opaque origin (`Origin: null`). Two naive ways to give a plugin NLDS both fail under that constraint:
+
+* *Bundle NLDS into each plugin.* Every plugin binary would carry its own ~1.6 MB copy of NLDS plus fonts, and — worse — each plugin could pin a different version. The design system would drift across plugins and away from the host Console, which is the opposite of the consistency this FUN exists to guarantee.
+* *Load NLDS from a public CDN.* Air-gapped and government deployments cannot depend on a CDN, and a CDN removes the platform's control over which version is served.
+
+There is also a transport problem. From an opaque origin, a cross-origin `@font-face` fetch runs in CORS mode and fails, and cross-origin module scripts require CORS headers. Whatever delivers NLDS has to survive the null origin.
+
+== Decision: serve NLDS once from the Console origin, opt-in per plugin
+
+NLDS is served *once* from the Console origin through a shared `/plugin-ui/` channel, the same channel that already serves the plugin SDK (link:/funs/fun-16[FUN-16]). `console-frontend` owns a single pinned `@nldd/design-system` version — the *same* version the host Console renders — and builds it into two files served under `/plugin-ui/`:
+
+* `nldd.js` — a classic IIFE that self-registers every `<nldd-*>` custom element as a side effect of loading.
+* `nldd.css` — NLDS global styles and tokens, with the woff2 fonts **inlined as base64 `data:` URIs**.
+
+A plugin opts in by calling `loadNlds()` alongside `loadSdk()`; `loadNlds()` injects the `<link>`/`<script>` for the shared bundle from `${host}/plugin-ui/`. `loadSdk()` stays lean for plugins that don't want NLDS. The plugin's *own* UI code is a separate Vite app served same-origin from `/console/` (link:/funs/fun-16[FUN-16]), and it **externalizes** NLDS — it uses `<nldd-*>` tags and small local structural types, but does not depend on `@nldd/design-system`. The element registrations come at runtime from the shared bundle.
+
+This gives every plugin one host-pinned version, zero duplication, no drift, and modern authoring (TypeScript, HMR) at the same time.
+
+=== Why classic IIFE + inlined fonts
+
+Classic `<script>` and `<link>` subresources load in *no-CORS* mode, so the cross-origin load from the opaque-origin iframe needs no CORS header. Inlining the fonts as `data:` URIs removes the only remaining cross-origin fetch — there is no `@font-face` network request at all — so no nginx CORS change is required and the existing `font-src 'self' data:` CSP covers it. (If a future bundler emits separate font files instead of inlining them, `location /plugin-ui/` would need an `Access-Control-Allow-Origin` header.)
+
+=== Theming
+
+NLDS selects light/dark via `:root[data-scheme]` → `color-scheme` → the CSS `light-dark()` function. The plugin SDK already reports the host theme by toggling `.light`/`.dark` on `<body>` (link:/funs/fun-16[FUN-16]). `loadNlds()` installs a `MutationObserver` that mirrors that body class onto `<html data-scheme>`, so NLDS tokens follow the host theme without each view threading the theme through.
+
+== Authoring a plugin UI with NLDS
+
+=== Finding components
+
+The canonical reference is the NLDS storybook: https://minbzk.github.io/storybook/. It documents every `<nldd-*>` component and the https://minbzk.github.io/storybook/?path=/story/components-content-icon--icon-gallery[icon gallery] (icons are referenced by kebab-case identifiers such as `info-circle`). The visual conventions that govern *how* to compose these — colour, typography, spacing, sentence-case headers, button placement — live in link:/funs/fun-10[FUN-10].
+
+=== Component quirks to plan for
+
+NLDS components are web components, not native form controls, so a few patterns differ from plain HTML. The OpenFSC create form (`plugins/openfsc/console-ui/fscinstallations-create.html`) is the reference implementation; the recurring rules are:
+
+* `nldd-dropdown` wraps a *slotted native `<select>`* — keep the `<select>` and its options; the value lives on the `<select>`.
+* `nldd-checkbox-field` is **not** form-associated — read `.checked` off the elements directly, not via an `input[name]:checked` query.
+* `nldd-button` renders its native `<button>` in shadow DOM, so a `type="submit"` does not submit the light-DOM form. Drive submission from a `click` handler.
+* Validation is manual: `form.reportValidity()` does not see NLDS controls. Surface errors with `nldd-form-field` (`error-message`) rather than native constraint validation.
+
+== Consequences
+
+* *Bundle size.* `nldd.js` (~0.89 MB) + `nldd.css` (~0.70 MB) load per plugin page that calls `loadNlds()`. This is the whole design system, opt-in and cached, so it is acceptable; a view that uses no `<nldd-*>` components (e.g. a pure table view) should not call `loadNlds()` and pays nothing.
+* *One version for everyone.* All plugins and the host share exactly one NLDS version. If a third-party plugin ever needs a different version, the channel can be served under a versioned path (e.g. `/plugin-ui/v1/nldd.js`) so versions coexist without a per-plugin build. Until then, a single path keeps it simple.
+* *Dogfooding.* First-party plugins use the same `loadNlds()` channel third-party authors do — there is no internal shortcut — which keeps the design-system integration honest (link:/funs/fun-16[FUN-16]).
+
+== References
+
+* link:/funs/fun-10[FUN-10 Console frontend styling] — the visual conventions and the storybook icon gallery.
+* link:/funs/fun-11[FUN-11 Plugins and the Marketplace] — the plugin model these UIs plug into.
+* link:/funs/fun-16[FUN-16 Plugin isolation] — the sandboxed-iframe and `/plugin-ui/` channel this builds on.
+* `ARCHITECTURE.md` (repo root) — the implementation-level companion: build wiring, dev workflows, and the generated-artifact policy.

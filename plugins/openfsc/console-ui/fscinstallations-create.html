@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Create FSC installation</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Create FSC installation</h1>
+      <p class="plugin-text" id="intro">Loading…</p>
+
+      <form id="form" class="plugin-form" hidden>
+        <div class="plugin-error" id="error" hidden></div>
+
+        <nldd-form-field label="Name">
+          <nldd-text-field
+            id="name"
+            name="name"
+            required
+            maxlength="63"
+            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
+            data-error="Use lowercase letters, digits and dashes."
+            placeholder="my-installation"
+            error-message="name-error"
+          ></nldd-text-field>
+          <nldd-form-field-help-text>Lowercase letters, digits and dashes.</nldd-form-field-help-text>
+          <nldd-form-field-error-text id="name-error">Enter a valid name.</nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <!-- Replaced at runtime with a dropdown (project namespaces) or a text field. -->
+        <div id="namespace-field"></div>
+
+        <nldd-form-field label="Group ID">
+          <nldd-text-field
+            id="groupID"
+            name="groupID"
+            required
+            placeholder="fsc-demo"
+            error-message="groupID-error"
+          ></nldd-text-field>
+          <nldd-form-field-help-text>The FSC group this installation belongs to. Immutable once set.</nldd-form-field-help-text>
+          <nldd-form-field-error-text id="groupID-error">This field is required.</nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <nldd-form-field label="Peer ID">
+          <nldd-text-field
+            id="peerID"
+            name="peerID"
+            required
+            placeholder="12345678901234567890"
+            error-message="peerID-error"
+          ></nldd-text-field>
+          <nldd-form-field-help-text>This installation's identity within the group.</nldd-form-field-help-text>
+          <nldd-form-field-error-text id="peerID-error">This field is required.</nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <nldd-form-field label="Directory mode">
+          <nldd-dropdown>
+            <select id="mode" name="mode" aria-label="Directory mode">
+              <option value="Self">Self — act as the group's own Directory</option>
+              <option value="External">External — join an existing group Directory</option>
+            </select>
+          </nldd-dropdown>
+        </nldd-form-field>
+
+        <fieldset class="plugin-fieldset" id="external-fieldset" hidden>
+          <legend class="plugin-legend">External directory</legend>
+          <span class="plugin-hint"
+            >The secret fields below are <strong>names of Secrets that must already exist</strong> in
+            the target namespace — not the certificate contents.</span
+          >
+          <nldd-form-field label="Directory address">
+            <nldd-text-field
+              id="ext-address"
+              data-external-required
+              type="url"
+              pattern="https://.+"
+              data-error="Must start with https://"
+              placeholder="https://directory.example.com"
+              error-message="ext-address-error"
+            ></nldd-text-field>
+            <nldd-form-field-error-text id="ext-address-error">Enter a valid https:// address.</nldd-form-field-error-text>
+          </nldd-form-field>
+          <nldd-form-field label="Directory peer ID">
+            <nldd-text-field
+              id="ext-peerID"
+              data-external-required
+              placeholder="09876543210987654321"
+              error-message="ext-peerID-error"
+            ></nldd-text-field>
+            <nldd-form-field-error-text id="ext-peerID-error">This field is required.</nldd-form-field-error-text>
+          </nldd-form-field>
+          <div class="plugin-row">
+            <nldd-form-field label="Trust anchor secret" style="flex: 1 1 16rem">
+              <nldd-text-field
+                id="ext-ta-name"
+                data-external-required
+                placeholder="e.g. group-ca"
+                error-message="ext-ta-name-error"
+              ></nldd-text-field>
+              <nldd-form-field-help-text>Name of an existing Secret holding the group CA PEM.</nldd-form-field-help-text>
+              <nldd-form-field-error-text id="ext-ta-name-error">This field is required.</nldd-form-field-error-text>
+            </nldd-form-field>
+            <nldd-form-field label="Trust anchor key" style="flex: 1 1 10rem">
+              <nldd-text-field id="ext-ta-key" placeholder="ca.crt" value="ca.crt"></nldd-text-field>
+              <nldd-form-field-help-text>Key within that Secret.</nldd-form-field-help-text>
+            </nldd-form-field>
+          </div>
+          <nldd-form-field label="Group certificate secret">
+            <nldd-text-field
+              id="certificate"
+              data-external-required
+              placeholder="e.g. my-group-cert"
+              error-message="certificate-error"
+            ></nldd-text-field>
+            <nldd-form-field-help-text
+              >Name of an existing kubernetes.io/tls Secret in the namespace. Create it with
+              <code>kubectl create secret tls</code> first.</nldd-form-field-help-text
+            >
+            <nldd-form-field-error-text id="certificate-error">This field is required.</nldd-form-field-error-text>
+          </nldd-form-field>
+        </fieldset>
+
+        <nldd-form-field label="Manager address">
+          <nldd-text-field
+            id="managerAddress"
+            name="managerAddress"
+            type="url"
+            pattern="https://.+"
+            data-error="Must start with https://"
+            placeholder="https://manager.example.com (optional)"
+            error-message="managerAddress-error"
+          ></nldd-text-field>
+          <nldd-form-field-help-text>Defaults to the in-cluster service URL. Set it when peers live elsewhere.</nldd-form-field-help-text>
+          <nldd-form-field-error-text id="managerAddress-error">Must start with https://</nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <nldd-form-field label="Controller URL">
+          <nldd-text-field
+            id="controllerURL"
+            name="controllerURL"
+            type="url"
+            pattern="https?://.+"
+            data-error="Must start with http:// or https://"
+            placeholder="https://controller.example.com (optional)"
+            error-message="controllerURL-error"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="controllerURL-error">Must start with http:// or https://</nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <fieldset class="plugin-fieldset">
+          <legend class="plugin-legend">Auto-sign grants</legend>
+          <span class="plugin-hint">Grant types the Manager signs automatically.</span>
+          <nldd-checkbox-field
+            name="autoSignGrants"
+            value="serviceConnection"
+            label="Service connection"
+          ></nldd-checkbox-field>
+          <nldd-checkbox-field
+            name="autoSignGrants"
+            value="delegatedServiceConnection"
+            label="Delegated service connection"
+          ></nldd-checkbox-field>
+          <nldd-checkbox-field
+            name="autoSignGrants"
+            value="servicePublication"
+            label="Service publication"
+            checked
+          ></nldd-checkbox-field>
+          <nldd-checkbox-field
+            name="autoSignGrants"
+            value="delegatedServicePublication"
+            label="Delegated service publication"
+            checked
+          ></nldd-checkbox-field>
+        </fieldset>
+
+        <fieldset class="plugin-fieldset">
+          <legend class="plugin-legend">PostgreSQL</legend>
+          <div class="plugin-row">
+            <nldd-form-field label="Instances" style="flex: 0 0 8rem">
+              <nldd-text-field id="pg-instances" name="pg-instances" type="number" min="1" value="1"></nldd-text-field>
+            </nldd-form-field>
+            <nldd-form-field label="Storage class" style="flex: 1 1 16rem">
+              <nldd-text-field
+                id="pg-storageClass"
+                name="pg-storageClass"
+                required
+                placeholder="local-path"
+                error-message="pg-storageClass-error"
+              ></nldd-text-field>
+              <nldd-form-field-error-text id="pg-storageClass-error">This field is required.</nldd-form-field-error-text>
+            </nldd-form-field>
+            <nldd-form-field label="Storage size" style="flex: 0 0 8rem">
+              <nldd-text-field id="pg-storageSize" name="pg-storageSize" value="1Gi"></nldd-text-field>
+            </nldd-form-field>
+          </div>
+          <nldd-form-field label="Image">
+            <nldd-text-field
+              id="pg-image"
+              name="pg-image"
+              value="ghcr.io/cloudnative-pg/postgresql:16"
+            ></nldd-text-field>
+          </nldd-form-field>
+        </fieldset>
+
+        <fieldset class="plugin-fieldset">
+          <legend class="plugin-legend">Inways (providers)</legend>
+          <div id="inways"></div>
+          <nldd-button id="add-inway" type="button" variant="secondary" text="Add inway"></nldd-button>
+        </fieldset>
+
+        <fieldset class="plugin-fieldset">
+          <legend class="plugin-legend">Outways (consumers)</legend>
+          <div id="outways"></div>
+          <nldd-button id="add-outway" type="button" variant="secondary" text="Add outway"></nldd-button>
+        </fieldset>
+
+        <div class="plugin-actions">
+          <nldd-button id="submit" type="button" variant="primary" text="Create installation"></nldd-button>
+          <nldd-button id="back" type="button" variant="secondary" text="Back"></nldd-button>
+        </div>
+      </form>
+    </div>
+
+    <script type="module" src="/src/create.ts"></script>
+  </body>
+</html>
