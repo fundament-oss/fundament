@@ -15,6 +15,7 @@ import '@nldd/design-system/icon';
 import '@nldd/design-system/icon-button';
 import '@nldd/design-system/box';
 import '@nldd/design-system/button';
+import '@nldd/design-system/checkbox-field';
 import '@nldd/design-system/form';
 import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';

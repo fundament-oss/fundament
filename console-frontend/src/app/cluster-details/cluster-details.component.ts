@@ -179,6 +179,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   // Namespace management
   namespaces = signal<Namespace[]>([]);
 
+  // True when the namespace list failed to load, so the count is unknown and
+  // cluster deletion must not be unlocked on a falsely-empty list.
+  namespacesLoadError = signal<boolean>(false);
+
   // Plugin data
   installedPlugins = signal<PluginSummary[]>([]);
 
@@ -411,7 +415,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.toastService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
       this.router.navigate(['/']);
     } catch (error) {
-      this.showDeleteModal.set(false);
       this.errorMessage.set(
         error instanceof Error
           ? `Failed to delete cluster: ${error.message}`
@@ -426,7 +429,9 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       const request = create(ListClusterNamespacesRequestSchema, { clusterId });
       const response = await firstValueFrom(this.namespaceClient.listClusterNamespaces(request));
       this.namespaces.set(response.namespaces);
+      this.namespacesLoadError.set(false);
     } catch (error) {
+      this.namespacesLoadError.set(true);
       this.toastService.error(
         error instanceof Error
           ? `Failed to load namespaces: ${error.message}`
@@ -494,6 +499,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 
   onDeleteModalOpen(): void {
+    this.errorMessage.set(null);
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }

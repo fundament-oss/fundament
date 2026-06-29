@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/fundament-oss/fundament/common/testdb"
@@ -197,9 +198,38 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 
 	trekApply(projectRoot)
 
+	// trek only loads db/migrations + db/testdata; the appstore catalog now lives
+	// in db/seed (applied in real environments by the db-migrations Job), so seed
+	// it here too to keep the test DB's catalog in sync with production.
+	if err := applyCatalogSeed(projectRoot); err != nil {
+		return err
+	}
+
 	_, err = pool.Exec(context.Background(), "UPDATE pg_database SET datistemplate = true WHERE datname = 'fundament'")
 	if err != nil {
 		return fmt.Errorf("failed to mark fundament as template: %v", err)
+	}
+
+	return nil
+}
+
+func applyCatalogSeed(projectRoot string) error {
+	seedSQL, err := os.ReadFile(filepath.Join(projectRoot, "db", "seed", "0101-appstore-catalog.sql"))
+	if err != nil {
+		return fmt.Errorf("failed to read appstore catalog seed: %v", err)
+	}
+
+	conn, err := pgx.Connect(context.Background(),
+		fmt.Sprintf("postgres://postgres:postgres@localhost:%d/fundament?sslmode=disable", testDBPort))
+	if err != nil {
+		return fmt.Errorf("failed to connect to fundament db for seed: %v", err)
+	}
+	defer conn.Close(context.Background())
+
+	// The simple protocol runs the whole multi-statement file in one implicit
+	// transaction, matching the Job's `psql --single-transaction`.
+	if _, err := conn.PgConn().Exec(context.Background(), string(seedSQL)).ReadAll(); err != nil {
+		return fmt.Errorf("failed to apply appstore catalog seed: %v", err)
 	}
 
 	return nil

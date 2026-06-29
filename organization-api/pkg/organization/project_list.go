@@ -38,12 +38,14 @@ func (s *Server) ListProjects(
 	}.Build()), nil
 }
 
-func projectFromListRow(row *db.TenantProject) *organizationv1.Project {
+func projectFromListRow(row *db.ProjectListByClusterIDRow) *organizationv1.Project {
 	return organizationv1.Project_builder{
-		Id:        row.ID.String(),
-		ClusterId: row.ClusterID.String(),
-		Name:      row.Name,
-		Alias:     row.Alias,
-		Created:   timestamppb.New(row.Created.Time),
+		Id:             row.ID.String(),
+		ClusterId:      row.ClusterID.String(),
+		Name:           row.Name,
+		Alias:          row.Alias,
+		Created:        timestamppb.New(row.Created.Time),
+		NamespaceCount: int32(row.NamespaceCount),
+		MemberCount:    int32(row.MemberCount),
 	}.Build()
 }

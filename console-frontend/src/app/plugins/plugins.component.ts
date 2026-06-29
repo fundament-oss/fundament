@@ -23,7 +23,6 @@ import {
 } from '../../generated/v1/plugin_pb';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { ToastService } from '../toast.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 
 const getPluginIconName = (pluginName: string): string =>
@@ -72,8 +71,6 @@ export default class PluginsComponent implements OnInit {
   private pluginClient = inject(PLUGIN);
 
   private organizationDataService = inject(OrganizationDataService);
-
-  private toastService = inject(ToastService);
 
   private pluginInstallationService = inject(PluginInstallationService);
 
@@ -182,7 +179,7 @@ export default class PluginsComponent implements OnInit {
       this.installs = this.clusters.flatMap((cluster, i) =>
         installResults[i].map((item) => ({
           clusterId: cluster.id,
-          pluginName: item.metadata.name,
+          pluginName: item.spec.definitionRef.pluginName,
         })),
       );
 
@@ -300,28 +297,15 @@ export default class PluginsComponent implements OnInit {
     this.selectedPlugin = null;
   }
 
-  async onInstallOnCluster(clusterId: string): Promise<void> {
-    const cluster = this.clusters.find((c) => c.id === clusterId);
-    if (!cluster || !this.selectedPlugin) {
-      return;
-    }
+  onPluginInstalled(clusterId: string): void {
+    if (!this.selectedPlugin) return;
 
     const alreadyInstalled = this.installs.some(
       (install) =>
         install.clusterId === clusterId && install.pluginName === this.selectedPlugin!.name,
     );
-    if (alreadyInstalled) return;
-
-    try {
-      await this.pluginInstallationService.installPlugin(
-        clusterId,
-        this.selectedPlugin.name,
-        this.selectedPlugin.image,
-      );
+    if (!alreadyInstalled) {
       this.installs = [...this.installs, { clusterId, pluginName: this.selectedPlugin.name }];
-      this.toastService.success(`${this.selectedPlugin.name} installed on ${cluster.name}`);
-    } catch {
-      this.toastService.error(`Failed to install ${this.selectedPlugin.name} on ${cluster.name}`);
     }
   }
 

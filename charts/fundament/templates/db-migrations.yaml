@@ -31,9 +31,22 @@ spec:
       containers:
         - name: migrations
           image: {{ $.Values.images.dbMigrations }}
+          # Run the schema migrations, then seed the appstore plugin catalog
+          # (reference data) in EVERY environment, independently of
+          # TREK_INSERT_TEST_DATA. The seed is a set of idempotent upserts, so it
+          # runs unconditionally on every Job: a fresh DB gets the catalog and an
+          # existing one is reconciled to the file. It runs in one transaction
+          # with ON_ERROR_STOP, and any psql failure aborts the Job (set -e)
+          # instead of being swallowed. The trek image is Alpine-based and ships
+          # psql.
           command:
-            - trek
-            - apply
+            - sh
+            - -c
+            - |
+              set -e
+              trek apply
+              echo "Seeding appstore plugin catalog..."
+              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
           env:
             - name: TREK_POSTGRES_HOST
               value: {{ include "fundament.db.host" . }}
@@ -57,4 +70,23 @@ spec:
               value: {{ $.Values.db.reset | quote }}
             - name: TREK_INSERT_TEST_DATA
               value: {{ $.Values.db.insertTestData | quote }}
+            # psql connection for the catalog seed step (same superuser as trek).
+            - name: PGHOST
+              value: {{ include "fundament.db.host" . }}
+            - name: PGPORT
+              value: "5432"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fundament.db.superuserSecretName" . }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "fundament.db.superuserSecretName" . }}
+                  key: password
+            - name: PGDATABASE
+              value: fundament
+            - name: PGSSLMODE
+              value: disable
 {{- end }}

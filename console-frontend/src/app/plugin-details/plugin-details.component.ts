@@ -25,7 +25,6 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { ToastService } from '../toast.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 
 // Extended cluster type for UI state
@@ -52,13 +51,11 @@ export default class PluginDetailsComponent implements OnInit {
 
   private clusterClient = inject(CLUSTER);
 
-  private toastService = inject(ToastService);
-
   private pluginInstallationService = inject(PluginInstallationService);
 
   private idempotency = createIdempotencyRef();
 
-  private pluginImage = '';
+  protected pluginImage = '';
 
   pluginId = signal<string>('');
 
@@ -113,7 +110,9 @@ export default class PluginDetailsComponent implements OnInit {
       this.clusters.set(
         clustersResponse.clusters.map((cluster, i) => ({
           ...cluster,
-          installed: installResults[i].some((item) => item.metadata.name === pluginName),
+          installed: installResults[i].some(
+            (item) => item.spec.definitionRef.pluginName === pluginName,
+          ),
           running: cluster.status === ClusterStatus.RUNNING,
         })),
       );
@@ -154,22 +153,10 @@ export default class PluginDetailsComponent implements OnInit {
     this.showInstallModal.set(false);
   }
 
-  async onInstallOnCluster(clusterId: string): Promise<void> {
-    const cluster = this.clusters().find((c) => c.id === clusterId);
-    const plugin = this.plugin();
-    if (!cluster || cluster.installed || !plugin) {
-      return;
-    }
-
-    try {
-      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, this.pluginImage);
-      this.clusters.update((clusters) =>
-        clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
-      );
-      this.toastService.success(`${plugin.name} installed on ${cluster.name}`);
-    } catch {
-      this.toastService.error(`Failed to install ${plugin.name} on ${cluster.name}`);
-    }
+  onPluginInstalled(clusterId: string): void {
+    this.clusters.update((clusters) =>
+      clusters.map((c) => (c.id === clusterId ? { ...c, installed: true } : c)),
+    );
   }
 
   isInstalled(clusterId: string): boolean {

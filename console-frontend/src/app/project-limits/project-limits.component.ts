@@ -17,11 +17,7 @@ import {
 import { PROJECT } from '../../connect/tokens';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-
-function toInt(value: unknown): number | undefined {
-  const n = Math.trunc(Number(value));
-  return n > 0 ? n : undefined;
-}
+import { positive, toInt } from '../utils/limits';
 
 @Component({
   selector: 'app-project-limits',
@@ -51,6 +47,19 @@ export default class ProjectLimitsComponent implements OnInit {
 
   saving = signal(false);
 
+  // Platform defaults returned by the API, used by the "Reset to defaults" action.
+  private namespaceDefaults = signal<{
+    defaultMemoryRequestMi: number | undefined;
+    defaultMemoryLimitMi: number | undefined;
+    defaultCpuRequestM: number | undefined;
+    defaultCpuLimitM: number | undefined;
+  }>({
+    defaultMemoryRequestMi: undefined,
+    defaultMemoryLimitMi: undefined,
+    defaultCpuRequestM: undefined,
+    defaultCpuLimitM: undefined,
+  });
+
   protected readonly toInt = toInt;
 
   constructor() {
@@ -65,14 +74,23 @@ export default class ProjectLimitsComponent implements OnInit {
         this.projectClient.getProjectLimits(create(GetProjectLimitsRequestSchema, { projectId })),
       );
       const limits = response.limits;
-      if (limits) {
-        if (limits.defaultMemoryRequestMi > 0)
-          this.defaultMemoryRequestMi.set(limits.defaultMemoryRequestMi);
-        if (limits.defaultMemoryLimitMi > 0)
-          this.defaultMemoryLimitMi.set(limits.defaultMemoryLimitMi);
-        if (limits.defaultCpuRequestM > 0) this.defaultCpuRequestM.set(limits.defaultCpuRequestM);
-        if (limits.defaultCpuLimitM > 0) this.defaultCpuLimitM.set(limits.defaultCpuLimitM);
-      }
+      const defaults = response.defaults;
+
+      const namespaceDefaults = {
+        defaultMemoryRequestMi: positive(defaults?.defaultMemoryRequestMi),
+        defaultMemoryLimitMi: positive(defaults?.defaultMemoryLimitMi),
+        defaultCpuRequestM: positive(defaults?.defaultCpuRequestM),
+        defaultCpuLimitM: positive(defaults?.defaultCpuLimitM),
+      };
+      this.namespaceDefaults.set(namespaceDefaults);
+
+      // Show only what the project has actually saved; an empty field means "no
+      // default set". Platform defaults are offered via "Reset to defaults",
+      // never silently persisted as overrides on save.
+      this.defaultMemoryRequestMi.set(positive(limits?.defaultMemoryRequestMi));
+      this.defaultMemoryLimitMi.set(positive(limits?.defaultMemoryLimitMi));
+      this.defaultCpuRequestM.set(positive(limits?.defaultCpuRequestM));
+      this.defaultCpuLimitM.set(positive(limits?.defaultCpuLimitM));
     } catch {
       this.toastService.error('Failed to load project limits');
     } finally {
@@ -80,8 +98,20 @@ export default class ProjectLimitsComponent implements OnInit {
     }
   }
 
+  // Reset only repopulates the form with the platform defaults; the user still
+  // has to click Save to persist them, so a misclick can't silently overwrite
+  // the project's saved overrides.
+  resetNamespaceLimits(): void {
+    const defaults = this.namespaceDefaults();
+    this.defaultMemoryRequestMi.set(defaults.defaultMemoryRequestMi);
+    this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
+    this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
+    this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
+  }
+
   async save(event?: Event) {
     event?.preventDefault();
+    if (this.saving()) return;
 
     const projectId = this.route.snapshot.params['id'];
 

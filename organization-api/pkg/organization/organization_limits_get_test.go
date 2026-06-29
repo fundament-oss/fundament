@@ -58,6 +58,17 @@ func Test_OrganizationLimits_Get_NoLimitsSet(t *testing.T) {
 	assert.False(t, limits.HasDefaultMemoryLimitMi())
 	assert.False(t, limits.HasDefaultCpuRequestM())
 	assert.False(t, limits.HasDefaultCpuLimitM())
+
+	// Platform defaults are always returned, even when the organization has no limits set.
+	defaults := res.Msg.GetDefaults()
+	require.NotNil(t, defaults)
+	assert.EqualValues(t, 10, defaults.GetMaxNodesPerCluster())
+	assert.EqualValues(t, 5, defaults.GetMaxNodePoolsPerCluster())
+	assert.EqualValues(t, 5, defaults.GetMaxNodesPerNodePool())
+	assert.EqualValues(t, 256, defaults.GetDefaultMemoryRequestMi())
+	assert.EqualValues(t, 512, defaults.GetDefaultMemoryLimitMi())
+	assert.EqualValues(t, 100, defaults.GetDefaultCpuRequestM())
+	assert.EqualValues(t, 500, defaults.GetDefaultCpuLimitM())
 }
 
 func Test_OrganizationLimits_Get(t *testing.T) {

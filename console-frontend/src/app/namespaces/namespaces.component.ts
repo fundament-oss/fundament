@@ -26,6 +26,7 @@ import {
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDate as formatDateUtil } from '../utils/date-format';
+import { NamespaceSelection } from '../utils/namespace-selection';
 
 @Component({
   selector: 'app-namespaces',
@@ -52,6 +53,12 @@ export default class NamespacesComponent implements OnInit {
   projectId = signal<string>('');
 
   namespaces = signal<Namespace[]>([]);
+
+  protected selection = new NamespaceSelection(() => this.namespaces().map((n) => n.id));
+
+  showBulkDeleteModal = signal<boolean>(false);
+
+  isBulkDeleting = signal<boolean>(false);
 
   errorMessage = signal<string | null>(null);
 
@@ -92,6 +99,7 @@ export default class NamespacesComponent implements OnInit {
       const request = create(ListProjectNamespacesRequestSchema, { projectId });
       const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
+      this.selection.retainVisible();
     } catch (error) {
       this.toastService.error(
         error instanceof Error
@@ -108,6 +116,7 @@ export default class NamespacesComponent implements OnInit {
 
   async createNamespace(event?: Event) {
     event?.preventDefault();
+    this.errorMessage.set(null);
 
     if (this.namespaceForm.invalid) {
       this.namespaceForm.markAllAsTouched();
@@ -156,6 +165,7 @@ export default class NamespacesComponent implements OnInit {
     const namespaceName = this.pendingNamespaceName();
     if (!namespaceId) return;
 
+    this.errorMessage.set(null);
     this.showDeleteNamespaceModal.set(false);
 
     try {
@@ -179,6 +189,57 @@ export default class NamespacesComponent implements OnInit {
   }
 
   readonly formatDate = formatDateUtil;
+
+  openBulkDeleteModal(): void {
+    if (this.selection.count() === 0) return;
+    this.showBulkDeleteModal.set(true);
+  }
+
+  async confirmBulkDelete(): Promise<void> {
+    const ids = this.selection.ids();
+    if (ids.length === 0) return;
+
+    this.errorMessage.set(null);
+    this.showBulkDeleteModal.set(false);
+    this.isBulkDeleting.set(true);
+
+    try {
+      const results = await Promise.allSettled(
+        ids.map((namespaceId) =>
+          firstValueFrom(
+            this.namespaceClient.deleteNamespace(
+              create(DeleteNamespaceRequestSchema, { namespaceId }),
+            ),
+          ),
+        ),
+      );
+
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      const succeeded = ids.length - failed;
+
+      if (succeeded > 0) {
+        this.toastService.success(`${succeeded} namespace${succeeded === 1 ? '' : 's'} deleted`);
+      }
+      if (failed > 0) {
+        this.errorMessage.set(`Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`);
+      }
+
+      this.selection.clear();
+      await Promise.all([
+        this.loadNamespaces(this.projectId()),
+        this.organizationDataService.loadOrganizationData(),
+      ]);
+    } finally {
+      this.isBulkDeleting.set(false);
+    }
+  }
+
+  bulkDeleteDialogRef = viewChild<ElementRef<HTMLElement>>('bulkDeleteDialog');
+
+  onBulkDeleteModalOpen(): void {
+    const el = this.bulkDeleteDialogRef()?.nativeElement;
+    if (el) focusFirstModalInput(el);
+  }
 
   onNameInput(event: Event) {
     const value = (event as CustomEvent<{ value: string }>).detail.value;

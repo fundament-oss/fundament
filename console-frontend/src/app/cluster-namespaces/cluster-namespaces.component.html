@@ -48,25 +48,55 @@
           </nldd-inline-dialog>
         </nldd-box>
       } @else {
-        <nldd-button
-          type="button"
-          (click)="openAddNamespaceModal()"
-          text="Add namespace"
-          start-icon="plus-small"
-          variant="primary"
-          class="mb-4"
-        ></nldd-button>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <nldd-button
+            type="button"
+            (click)="openAddNamespaceModal()"
+            text="Add namespace"
+            start-icon="plus-small"
+            variant="primary"
+          ></nldd-button>
+          @if (selection.count() > 0) {
+            <nldd-button
+              type="button"
+              (click)="openBulkDeleteModal()"
+              [text]="'Delete selected (' + selection.count() + ')'"
+              start-icon="trash"
+              variant="destructive"
+              [disabled]="isBulkDeleting()"
+            ></nldd-button>
+          }
+        </div>
+
+        <div class="mb-2 flex items-center gap-3 px-3">
+          <nldd-checkbox-field
+            [checked]="selection.allSelected()"
+            [indeterminate]="selection.someSelected()"
+            accessible-label="Select all namespaces"
+            (change)="selection.toggleAll($any($event).detail.checked)"
+          ></nldd-checkbox-field>
+          <span class="text-sm text-gray-500 dark:text-gray-400">Select all</span>
+        </div>
+
         <div class="space-y-3">
           @for (namespace of namespaces(); track namespace.id) {
             <div
               class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
             >
-              <div>
-                <p class="font-mono text-sm">{{ namespace.name }}</p>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Project: {{ getProjectName(namespace.projectId) }} &bull; Created
-                  {{ formatDate(namespace.created) }}
-                </p>
+              <div class="flex items-center gap-3">
+                <nldd-checkbox-field
+                  [checked]="selection.has(namespace.id)"
+                  [value]="namespace.id"
+                  accessible-label="Select namespace {{ namespace.name }}"
+                  (change)="selection.set(namespace.id, $any($event).detail.checked)"
+                ></nldd-checkbox-field>
+                <div>
+                  <p class="font-mono text-sm">{{ namespace.name }}</p>
+                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Project: {{ getProjectName(namespace.projectId) }} &bull; Created
+                    {{ formatDate(namespace.created) }}
+                  </p>
+                </div>
               </div>
               <nldd-button
                 type="button"
@@ -201,6 +231,46 @@
     slot="actions"
     type="button"
     (click)="showDeleteNamespaceModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- Bulk Delete Namespaces Modal -->
+<nldd-modal-dialog
+  #bulkDeleteDialog
+  appDialogSync
+  [show]="showBulkDeleteModal()"
+  text="Delete namespaces"
+  variant="alert"
+  (open)="onBulkDeleteModalOpen()"
+  (close)="showBulkDeleteModal.set(false)"
+>
+  <nldd-spacer size="24"></nldd-spacer>
+
+  <p>
+    Are you sure you want to delete
+    <strong class="font-semibold">{{ selection.count() }}</strong>
+    namespace{{ selection.count() === 1 ? '' : 's' }}?
+  </p>
+  <p class="mt-2">
+    This will remove the selected namespaces and all resources running on them. This cannot be
+    undone.
+  </p>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmBulkDelete()"
+    [text]="isBulkDeleting() ? 'Deleting...' : 'Yes, delete selected'"
+    [disabled]="isBulkDeleting()"
+    variant="destructive"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showBulkDeleteModal.set(false)"
+    [disabled]="isBulkDeleting()"
     text="Cancel"
     variant="secondary"
   ></nldd-button>

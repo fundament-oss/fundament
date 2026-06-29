@@ -31,6 +31,19 @@ export default class ProjectsComponent implements OnInit {
     return orgs.flatMap((org) => org.clusters);
   });
 
+  /** All projects across every cluster, each tagged with the cluster it lives on. */
+  projects = computed(() =>
+    this.clusters()
+      .flatMap((cluster) =>
+        cluster.projects.map((project) => ({
+          ...project,
+          clusterId: cluster.id,
+          clusterName: cluster.name,
+        })),
+      )
+      .sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name)),
+  );
+
   constructor() {
     this.titleService.setTitle('Projects');
   }

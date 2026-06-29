@@ -28,14 +28,16 @@ func (s *Server) GetProjectLimits(
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return connect.NewResponse(organizationv1.GetProjectLimitsResponse_builder{
-				Limits: organizationv1.ProjectLimits_builder{}.Build(),
+				Limits:   organizationv1.ProjectLimits_builder{}.Build(),
+				Defaults: projectLimitDefaults(),
 			}.Build()), nil
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get project limits: %w", err))
 	}
 
 	return connect.NewResponse(organizationv1.GetProjectLimitsResponse_builder{
-		Limits: projectLimitsFromRow(&row),
+		Limits:   projectLimitsFromRow(&row),
+		Defaults: projectLimitDefaults(),
 	}.Build()), nil
 }
 
