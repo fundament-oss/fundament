@@ -6,6 +6,7 @@ externalUrls:
   authn: https://authn.fundament.localhost:8443
   organization: https://organization.fundament.localhost:8443
   kubeApiProxy: https://k8s-api.fundament.localhost:8443
+  pluginProxy: https://plugin-proxy.fundament.localhost:8443
   console: https://console.fundament.localhost:8443
   docs: https://docs.fundament.localhost:8443
   cookieDomain: fundament.localhost
