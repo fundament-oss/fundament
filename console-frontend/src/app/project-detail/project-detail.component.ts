@@ -175,6 +175,7 @@ export default class ProjectDetailComponent implements OnInit {
       this.showEditModal.set(false);
       this.editingAlias.set('');
     } catch (err) {
+      this.showEditModal.set(false);
       this.errorMessage.set(
         err instanceof Error
           ? `Failed to update project alias: ${err.message}`

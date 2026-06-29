@@ -25,7 +25,7 @@
     </div>
 
     <div class="p-6">
-      @if (isLoading()) {
+      @if (isLoading() || clusterContext.isLoadingClusters()) {
         <div class="py-8 text-center">
           <span
             class="border-accent-500 inline-block h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
@@ -98,14 +98,28 @@
 
         <!-- Empty State -->
         @if (resources().length === 0) {
-          <nldd-box>
-            <nldd-inline-dialog
-              icon="cylinder-split-slash"
-              icon-color="secondary"
-              [text]="'No ' + kindLabel().toLowerCase() + ' found'"
-            >
-            </nldd-inline-dialog>
-          </nldd-box>
+          @if (clusterContext.clusters().length === 0) {
+            <nldd-box>
+              <nldd-inline-dialog icon="ship-wheel" icon-color="secondary" text="No clusters found">
+                <nldd-button
+                  routerLink="/clusters/add"
+                  slot="actions"
+                  text="Add cluster"
+                  start-icon="plus-small"
+                  variant="primary"
+                ></nldd-button>
+              </nldd-inline-dialog>
+            </nldd-box>
+          } @else {
+            <nldd-box>
+              <nldd-inline-dialog
+                icon="cylinder-split-slash"
+                icon-color="secondary"
+                [text]="'No ' + kindLabel().toLowerCase() + ' found'"
+              >
+              </nldd-inline-dialog>
+            </nldd-box>
+          }
         }
       }
     </div>
