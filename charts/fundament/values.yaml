@@ -18,6 +18,7 @@ externalUrls:
   authn: "" # e.g., https://authn.example.com
   organization: "" # e.g., https://organization.example.com
   kubeApiProxy: "" # e.g., https://k8s-api.example.com
+  pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; defaults to console URL if empty)
   console: "" # e.g., https://app.example.com
   docs: "" # e.g., https://docs.example.com
@@ -156,6 +157,13 @@ pluginProxy:
   replicas: 1
   logLevel: info
   mode: mock # "mock" or "real" (real is future work)
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - plugin-proxy.example.com
 
 # DCIM API
 dcimApi:
