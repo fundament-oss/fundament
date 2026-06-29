@@ -40,7 +40,17 @@
     <div class="space-y-6 p-6">
       <!-- Basics Block -->
       <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-        <h3 class="mb-4 text-xl font-medium">Project details</h3>
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-xl font-medium">Project details</h3>
+          <nldd-button
+            type="button"
+            (click)="openEditModal()"
+            text="Edit"
+            start-icon="pencil"
+            variant="secondary"
+            size="sm"
+          ></nldd-button>
+        </div>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <dl>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Project alias</dt>
@@ -73,37 +83,97 @@
         </div>
       </div>
 
-      <!-- Namespaces Block (Read-only) -->
-      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-        <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-xl font-medium">Namespaces</h3>
-          <nldd-button
-            [routerLink]="['/projects', project()?.id, 'namespaces']"
-            text="Edit"
-            start-icon="pencil"
-            variant="secondary"
-            size="sm"
-          ></nldd-button>
-        </div>
-        @if (namespaces().length === 0) {
-          <p class="text-gray-500 dark:text-gray-400">No namespaces belong to this project yet.</p>
-        } @else {
-          <div class="space-y-3">
-            @for (namespace of namespaces(); track namespace.id) {
-              <div
-                class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
-              >
-                <div>
-                  <p class="font-mono text-sm">{{ namespace.name }}</p>
-                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Created {{ formatDate(namespace.created) }}
-                  </p>
-                </div>
-              </div>
-            }
-          </div>
-        }
+      <!-- Danger Zone -->
+      <div
+        class="bg-danger-50 dark:bg-danger-900/20 rounded-md border border-rose-200 p-4 dark:border-rose-900"
+      >
+        <h3 class="text-danger-800 dark:text-danger-200 mb-2 text-lg font-medium">Danger zone</h3>
+        <p class="text-danger-700 dark:text-danger-300 mb-4">
+          Deleting a project is permanent and cannot be undone.
+        </p>
+        <nldd-button
+          (click)="showDeleteModal.set(true)"
+          text="Delete this project"
+          variant="destructive"
+        ></nldd-button>
       </div>
     </div>
   </div>
 }
+
+<!-- Edit Project Modal -->
+<nldd-modal-dialog
+  #editDialog
+  appDialogSync
+  [show]="showEditModal()"
+  text="Edit project"
+  (open)="onEditModalOpen()"
+  (close)="showEditModal.set(false)"
+>
+  <nldd-spacer size="24"></nldd-spacer>
+
+  <nldd-form (submit)="saveEdit()" (keydown.enter)="saveEdit()" novalidate>
+    <nldd-form-field label="Alias">
+      <nldd-text-field
+        appAutofocus
+        [value]="editingAlias()"
+        (input)="editingAlias.set($any($event.target).value)"
+        (keyup.escape)="showEditModal.set(false)"
+      ></nldd-text-field>
+    </nldd-form-field>
+  </nldd-form>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="saveEdit()"
+    [disabled]="saving()"
+    text="Save"
+    start-icon="check-mark"
+    variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showEditModal.set(false)"
+    [disabled]="saving()"
+    text="Cancel"
+    start-icon="dismiss-small"
+    variant="secondary"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- Delete Project Modal -->
+<nldd-modal-dialog
+  #deleteDialog
+  appDialogSync
+  [show]="showDeleteModal()"
+  text="Delete project"
+  variant="alert"
+  (open)="onDeleteModalOpen()"
+  (close)="showDeleteModal.set(false)"
+>
+  <nldd-spacer size="24"></nldd-spacer>
+
+  <p>
+    Are you sure you want to delete project
+    <strong class="font-semibold">{{ project()?.alias || project()?.name }}</strong
+    >?
+  </p>
+  <p class="text-danger-600 dark:text-danger-400 mt-2">This cannot be undone.</p>
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="deleteProject()"
+    text="Yes, delete this project"
+    variant="destructive"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="showDeleteModal.set(false)"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+</nldd-modal-dialog>

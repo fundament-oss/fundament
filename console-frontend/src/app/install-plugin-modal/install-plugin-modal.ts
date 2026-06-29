@@ -2,34 +2,30 @@ import {
   Component,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
-  inject,
+  computed,
   input,
   output,
   signal,
-  effect,
   viewChild,
   ElementRef,
-  OnDestroy,
 } from '@angular/core';
 import DialogSyncDirective from '../dialog-sync.directive';
-import { LoadingIndicatorComponent } from '../icons';
 import focusFirstModalInput from '../modal-focus';
-import { ToastService } from '../toast.service';
-import PluginInstallationService, {
-  pluginResourceName,
-} from '../plugin-installation/plugin-installation.service';
+import { LoadingIndicatorComponent } from '../icons';
+import {
+  getInstallStatusDisplay,
+  isInstallInProgress,
+  isInstallFailed,
+} from '../utils/plugin-install-status';
 
 interface Cluster {
   id: string;
   name: string;
-  installed: boolean;
+  // null when the plugin is not installed on this cluster; otherwise the
+  // PluginInstallation status phase (Pending, Deploying, Running, …).
+  phase: string | null;
   running: boolean;
 }
-
-type InstallState = 'idle' | 'installing' | 'installed' | 'failed';
-
-const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS = 120000;
 
 @Component({
   selector: 'app-install-plugin-modal',
@@ -38,14 +34,8 @@ const POLL_TIMEOUT_MS = 120000;
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class InstallPluginModalComponent implements OnDestroy {
-  private installationService = inject(PluginInstallationService);
-
-  private toastService = inject(ToastService);
-
+export default class InstallPluginModalComponent {
   pluginName = input('');
-
-  image = input('');
 
   clusters = input<Cluster[]>([]);
 
@@ -53,46 +43,61 @@ export default class InstallPluginModalComponent implements OnDestroy {
 
   closeModal = output<void>();
 
-  /** Emitted once an install is confirmed ready, so parents only cache successful installs. */
-  installed = output<string>();
+  // Emits the cluster IDs to install the plugin on (batch).
+  install = output<string[]>();
 
-  /** Per-cluster live install state, keyed by cluster id. Reset whenever the modal closes. */
-  private installStates = signal<Record<string, InstallState>>({});
+  // Emits the cluster ID to uninstall the plugin from.
+  uninstall = output<string>();
 
-  private pollTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-  // Bumped whenever polling is stopped (e.g. the modal closes). A poll tick that
-  // was already in flight captures the generation it started under and bails on
-  // resume if it no longer matches, so it can't resurrect state or fire a toast
-  // for a closed modal.
-  private pollGeneration = 0;
+  // Emits the cluster ID to retry a failed installation on.
+  retry = output<string>();
 
   dialogRef = viewChild<ElementRef<HTMLElement>>('dialog');
 
-  constructor() {
-    // Stop polling and clear transient state whenever the modal closes, so the
-    // next open starts fresh from the clusters' own installed flags.
-    effect(() => {
-      if (!this.show()) {
-        this.stopAllPolling();
-        this.installStates.set({});
+  // Cluster IDs currently selected for batch install.
+  selected = signal<Set<string>>(new Set());
+
+  // Clusters eligible for selection: running and not yet installed.
+  eligibleClusters = computed(() =>
+    this.clusters().filter((cluster) => cluster.running && cluster.phase === null),
+  );
+
+  selectedCount = computed(() => this.selected().size);
+
+  allSelected = computed(() => {
+    const eligible = this.eligibleClusters();
+    return eligible.length > 0 && eligible.every((cluster) => this.selected().has(cluster.id));
+  });
+
+  statusFor = getInstallStatusDisplay;
+
+  isInProgress = isInstallInProgress;
+
+  isFailed = isInstallFailed;
+
+  isSelected(clusterId: string): boolean {
+    return this.selected().has(clusterId);
+  }
+
+  setSelected(clusterId: string, checked: boolean): void {
+    this.selected.update((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(clusterId);
+      } else {
+        next.delete(clusterId);
       }
+      return next;
     });
   }
 
-  ngOnDestroy(): void {
-    this.stopAllPolling();
-  }
-
-  stateFor(cluster: Cluster): InstallState {
-    return this.installStates()[cluster.id] ?? (cluster.installed ? 'installed' : 'idle');
-  }
-
-  private setState(clusterId: string, state: InstallState): void {
-    this.installStates.update((states) => ({ ...states, [clusterId]: state }));
+  setAllSelected(checked: boolean): void {
+    const eligible = this.eligibleClusters();
+    this.selected.set(checked ? new Set(eligible.map((cluster) => cluster.id)) : new Set());
   }
 
   onOpen(): void {
+    this.selected.set(new Set());
     const el = this.dialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }
@@ -101,79 +106,18 @@ export default class InstallPluginModalComponent implements OnDestroy {
     this.closeModal.emit();
   }
 
-  async onInstall(clusterId: string): Promise<void> {
-    const cluster = this.clusters().find((c) => c.id === clusterId);
-    if (!cluster) return;
-
-    const pluginName = this.pluginName();
-    if (!pluginName || this.stateFor(cluster) === 'installing') return;
-
-    const image = this.image();
-    this.setState(clusterId, 'installing');
-
-    try {
-      await this.installationService.installPlugin(clusterId, pluginName, image);
-    } catch {
-      this.setState(clusterId, 'failed');
-      this.toastService.error(`Failed to install ${pluginName} on ${cluster.name}`);
-      return;
-    }
-
-    // Don't start a background poll for a modal the user already closed.
-    if (this.show()) this.pollInstallation(clusterId, cluster.name, pluginName);
+  onInstallSelected(): void {
+    const ids = [...this.selected()];
+    if (ids.length === 0) return;
+    this.install.emit(ids);
+    this.selected.set(new Set());
   }
 
-  private pollInstallation(clusterId: string, clusterName: string, pluginName: string): void {
-    const deadline = Date.now() + POLL_TIMEOUT_MS;
-    const generation = this.pollGeneration;
-
-    const tick = async () => {
-      let ready = false;
-      let failed = false;
-      try {
-        const item = await this.installationService.getInstallation(
-          clusterId,
-          pluginResourceName(pluginName),
-        );
-        if (item) {
-          ready = item.status?.ready === true;
-          failed = item.status?.phase?.toLowerCase() === 'failed';
-        }
-      } catch {
-        // Ignore transient polling errors and try again until the deadline.
-      }
-
-      // The modal closed (or a newer poll session started) while this tick was
-      // in flight — drop it without touching state, toasts, or timers.
-      if (generation !== this.pollGeneration) return;
-
-      if (ready) {
-        this.setState(clusterId, 'installed');
-        this.installed.emit(clusterId);
-        this.toastService.success(`${pluginName} installed on ${clusterName}`);
-        this.pollTimers.delete(clusterId);
-        return;
-      }
-      if (failed) {
-        this.setState(clusterId, 'failed');
-        this.toastService.error(`Failed to install ${pluginName} on ${clusterName}`);
-        this.pollTimers.delete(clusterId);
-        return;
-      }
-      if (Date.now() >= deadline) {
-        // Still provisioning after the timeout — leave the row as "installing".
-        this.pollTimers.delete(clusterId);
-        return;
-      }
-      this.pollTimers.set(clusterId, setTimeout(tick, POLL_INTERVAL_MS));
-    };
-
-    this.pollTimers.set(clusterId, setTimeout(tick, POLL_INTERVAL_MS));
+  onUninstall(clusterId: string): void {
+    this.uninstall.emit(clusterId);
   }
 
-  private stopAllPolling(): void {
-    this.pollGeneration++;
-    this.pollTimers.forEach((timer) => clearTimeout(timer));
-    this.pollTimers.clear();
+  onRetry(clusterId: string): void {
+    this.retry.emit(clusterId);
   }
 }

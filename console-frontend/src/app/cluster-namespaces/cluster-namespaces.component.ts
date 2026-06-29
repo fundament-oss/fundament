@@ -30,7 +30,7 @@ import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
-import { NamespaceSelection } from '../utils/namespace-selection';
+import NamespaceSelection from '../utils/namespace-selection';
 
 @Component({
   selector: 'app-cluster-namespaces',

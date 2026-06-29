@@ -19,7 +19,6 @@ import { TitleService } from '../../title.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
 import buildPluginConsoleUrl from '../plugin-console-url.utils';
-import DropdownSyncDirective from '../../dropdown-sync.directive';
 import {
   resolveJsonPath,
   formatColumnValue,
@@ -47,7 +46,7 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 
 @Component({
   selector: 'app-resource-list',
-  imports: [RouterLink, PluginIframeComponent, DropdownSyncDirective],
+  imports: [RouterLink, PluginIframeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -152,10 +151,6 @@ export default class ResourceListComponent implements OnInit {
     } catch {
       this.errorMessage.set('Failed to load clusters.');
     }
-  }
-
-  onClusterChange(clusterId: string): void {
-    this.clusterContext.onClusterChange(clusterId);
   }
 
   private async loadCrdsAndResources(

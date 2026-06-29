@@ -214,9 +214,10 @@
 <!-- Install Modal -->
 <app-install-plugin-modal
   [pluginName]="plugin()?.name || ''"
-  [image]="pluginImage"
   [clusters]="clusters()"
   [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"
-  (installed)="onPluginInstalled($event)"
+  (install)="onInstallOnClusters($event)"
+  (uninstall)="onUninstallFromCluster($event)"
+  (retry)="onRetryInstall($event)"
 ></app-install-plugin-modal>
