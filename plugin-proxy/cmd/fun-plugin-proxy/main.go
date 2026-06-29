@@ -14,26 +14,17 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/validate"
-	"github.com/caarlos0/env/v11"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
 	"github.com/fundament-oss/fundament/common/connectrecovery"
+	"github.com/fundament-oss/fundament/plugin-proxy/pkg/assets"
+	"github.com/fundament-oss/fundament/plugin-proxy/pkg/config"
+	"github.com/fundament-oss/fundament/plugin-proxy/pkg/httpx"
+	"github.com/fundament-oss/fundament/plugin-proxy/pkg/installproxy"
+	"github.com/fundament-oss/fundament/plugin-proxy/pkg/kube"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/service"
 )
-
-type config struct {
-	// ListenAddr serves health endpoints today; plugin asset/proxy routes
-	// land here in future work.
-	ListenAddr string `env:"LISTEN_ADDR" envDefault:":8080"`
-	// InternalListenAddr carries the service-to-service PluginInstallationService
-	// RPC. Separate listener so a NetworkPolicy can restrict it to authn-api.
-	InternalListenAddr string     `env:"INTERNAL_LISTEN_ADDR" envDefault:":8081"`
-	LogLevel           slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-	// Mode is "mock" or "real" and mirrors kube-api-proxy. Only "mock" is
-	// supported today; real-mode cluster access is future work.
-	Mode string `env:"PLUGIN_PROXY_MODE" envDefault:"mock"`
-}
 
 func main() {
 	if err := run(); err != nil {
@@ -42,9 +33,9 @@ func main() {
 }
 
 func run() error {
-	var cfg config
-	if err := env.Parse(&cfg); err != nil {
-		return fmt.Errorf("env parse: %w", err)
+	cfg, err := config.FromEnv()
+	if err != nil {
+		return err
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -59,15 +50,48 @@ func run() error {
 		"mode", cfg.Mode,
 	)
 
-	if cfg.Mode != "mock" {
-		return fmt.Errorf("PLUGIN_PROXY_MODE=%q: only %q is supported", cfg.Mode, "mock")
-	}
-
 	publicMux := http.NewServeMux()
 	registerHealth(publicMux)
 
 	internalMux := http.NewServeMux()
 	registerHealth(internalMux)
+
+	// Static assets + strict CSP.
+	cfgCsp := &assets.CSPConfig{
+		ConnectSrc:     []string{cfg.KubeAPIProxyOrigin, cfg.PluginProxyOrigin},
+		FormAction:     []string{cfg.KubeAPIProxyOrigin, cfg.PluginProxyOrigin},
+		FrameAncestors: []string{cfg.ConsoleOrigin},
+	}
+
+	var resolver assets.ClusterResolver
+	var fetcher assets.Fetcher
+	var authz installproxy.ClusterAuthorizer
+	var backend installproxy.Backend
+	switch cfg.Mode {
+	case "real":
+		resolver, fetcher, authz, backend = New()
+	case "mock":
+		resolver, fetcher, authz, backend = NewMock(logger)
+	default:
+		// config.FromEnv already validates this; guard against future drift.
+		panic(fmt.Sprintf("unhandled plugin-proxy mode %q", cfg.Mode))
+	}
+
+	// SDK route stub — Plan E supplies the bundle. Register before /plugins/
+	// for readability; ServeMux's longest-match routing already does the right
+	// thing regardless of order.
+	publicMux.HandleFunc("/plugins/sdk/", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "sdk bundle not built (Plan E)", http.StatusNotFound)
+	})
+	publicMux.Handle("/plugins/", assets.NewHandler(resolver, fetcher, cfgCsp, logger))
+
+	// Installation proxy (cross-site → wrap in CORS).
+	installHandler := installproxy.New([]byte(cfg.JWTSecret), authz, backend, logger)
+	publicMux.Handle("/installations/", httpx.WithCORS(
+		cfg.PluginProxyOrigin,
+		[]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete},
+		installHandler,
+	))
 
 	s := service.New(logger, service.NewMockClusterAccess())
 
@@ -149,4 +173,21 @@ func registerHealth(mux *http.ServeMux) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
+}
+
+// New returns the real wiring: a (pluginName, version) → cluster resolver
+// (still stubbed), PodFetcher, OpenFGA authz (still stubbed), and the
+// ClusterProxyBackend.
+func New() (assets.ClusterResolver, assets.Fetcher, installproxy.ClusterAuthorizer, installproxy.Backend) {
+	admin := kube.NewAdminKubeconfigCache()
+	return assets.Resolver{}, &assets.PodFetcher{AdminKubeconfig: admin}, installproxy.Authz{}, &installproxy.ClusterProxyBackend{AdminKubeconfig: admin}
+}
+
+// NewMock returns the dev wiring: every asset lookup pinned to the mock
+// cluster, canned asset bytes, permissive authz, and a mock backend.
+func NewMock(logger *slog.Logger) (assets.ClusterResolver, assets.Fetcher, installproxy.ClusterAuthorizer, installproxy.Backend) {
+	return assets.MockResolver{ClusterID: service.MockClusterID},
+		assets.MockFetcher{Logger: logger},
+		installproxy.MockAuthz{},
+		installproxy.MockBackend{Logger: logger}
 }
