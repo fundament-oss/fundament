@@ -42,7 +42,7 @@ export default class AddClusterComponent implements OnInit {
   // TODO: Fetch from API based on cloud profile
   regions = [{ value: 'local', label: 'Local' }];
 
-  kubernetesVersions = ['1.31.1', '1.32.0', '1.33.0', '1.34.0'];
+  kubernetesVersions = ['1.34.0', '1.33.0', '1.32.0', '1.31.1'];
 
   constructor() {
     this.titleService.setTitle('Add a cluster');
@@ -57,7 +57,7 @@ export default class AddClusterComponent implements OnInit {
         ],
       ],
       region: ['local', Validators.required],
-      kubernetesVersion: ['1.31.1', Validators.required],
+      kubernetesVersion: [this.kubernetesVersions[0], Validators.required],
     });
   }
 

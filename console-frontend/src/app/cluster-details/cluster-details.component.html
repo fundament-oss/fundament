@@ -634,10 +634,27 @@
         <p class="text-danger-700 dark:text-danger-300 mb-4">
           Deleting a cluster is permanent and cannot be undone.
         </p>
+        @if (namespaces().length > 0) {
+          <p class="text-danger-700 dark:text-danger-300 mb-4 text-sm">
+            This cluster still has {{ namespaces().length }} namespace{{
+              namespaces().length === 1 ? '' : 's'
+            }}.
+            <a [routerLink]="['/clusters', clusterData.basics.id, 'namespaces']" class="link"
+              >Delete all namespaces</a
+            >
+            before you can delete the cluster.
+          </p>
+        } @else if (namespacesLoadError()) {
+          <p class="text-danger-700 dark:text-danger-300 mb-4 text-sm">
+            Couldn't load this cluster's namespaces, so deletion is blocked until we can confirm it
+            is empty. Reload the page and try again.
+          </p>
+        }
         <nldd-button
           (click)="showDeleteModal.set(true)"
           text="Delete this cluster"
           variant="destructive"
+          [disabled]="namespaces().length > 0 || namespacesLoadError()"
         ></nldd-button>
       </div>
     </div>
@@ -725,6 +742,18 @@
     >?
   </p>
   <p class="text-danger-600 dark:text-danger-400 mt-2">This cannot be undone.</p>
+
+  @if (errorMessage()) {
+    <div
+      class="bg-danger-50 dark:bg-danger-950/30 mt-4 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
+    >
+      <nldd-icon
+        name="dismiss-circle"
+        class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+      ></nldd-icon>
+      <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
+    </div>
+  }
 
   <nldd-button
     slot="actions"

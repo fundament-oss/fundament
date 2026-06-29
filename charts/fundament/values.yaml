@@ -85,6 +85,13 @@ kubeApiProxy:
   logLevel: info
   mode: mock # "mock" or "real"
   gardenerKubeconfigSecret: "" # Secret name containing a Gardener kubeconfig (only used when mode is "real")
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - k8s-api.example.com
 
 # Cluster Worker
 clusterWorker:

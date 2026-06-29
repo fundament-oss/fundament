@@ -64,15 +64,15 @@ const mockOpenfscDefinitionJSON = `{
   "icon": "cloud",
   "menu": {
     "project": [
-      {"crd": "fscinstallations.openfsc.fundament.io", "label": "OpenFSC Installations", "list": true, "detail": true, "create": false, "icon": "cloud"}
+      {"crd": "fscinstallations.openfsc.fundament.io", "label": "OpenFSC Installations", "list": true, "detail": true, "icon": "cloud"}
     ]
   },
   "crds": ["fscinstallations.openfsc.fundament.io"],
   "customComponents": {
-    "FSCInstallation": {"list": "fscinstallations-list.html", "detail": "fscinstallations-detail.html"}
+    "FSCInstallation": {"list": "fscinstallations-list.html", "detail": "fscinstallations-detail.html", "create": "fscinstallations-create.html"}
   },
   "allowedResources": [
-    {"group": "openfsc.fundament.io", "version": "v1", "resource": "fscinstallations", "verbs": ["list", "get"]}
+    {"group": "openfsc.fundament.io", "version": "v1", "resource": "fscinstallations", "verbs": ["list", "get", "create"]}
   ]
 }`
 

@@ -3,6 +3,17 @@ import { Injectable, inject } from '@angular/core';
 import { ConfigService } from '../config.service';
 import { PluginInstallationItem, PluginInstallationListResponse } from '../plugin-resources/types';
 
+// Kubernetes resource names must be RFC-1123 (lowercase alphanumerics and '-'),
+// but catalog plugins carry display names like "Grafana Alloy" or "ECK operator".
+// Derive a stable slug for the PluginInstallation's metadata.name; the catalog
+// name is still carried verbatim in spec.definitionRef.pluginName.
+export function pluginResourceName(pluginName: string): string {
+  return pluginName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 @Injectable({ providedIn: 'root' })
 export default class PluginInstallationService {
   private configService = inject(ConfigService);
@@ -20,6 +31,16 @@ export default class PluginInstallationService {
     return body.items ?? [];
   }
 
+  // Fetches a single installation by name; null means it does not exist yet
+  // (e.g. still being created). Cheaper than listing the whole collection when
+  // polling for one plugin's status.
+  async getInstallation(clusterId: string, name: string): Promise<PluginInstallationItem | null> {
+    const res = await fetch(this.url(clusterId, name), { credentials: 'include' });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as PluginInstallationItem;
+  }
+
   async installPlugin(clusterId: string, pluginName: string, image: string): Promise<void> {
     // TODO(FUN-11): once the marketplace returns the published pluginVersion
     // and definitionHash for each PluginSummary, surface them here. Until then
@@ -32,7 +53,7 @@ export default class PluginInstallationService {
       body: JSON.stringify({
         apiVersion: 'plugins.fundament.io/v1',
         kind: 'PluginInstallation',
-        metadata: { name: pluginName },
+        metadata: { name: pluginResourceName(pluginName) },
         spec: {
           image,
           definitionRef: {

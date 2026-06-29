@@ -52,18 +52,13 @@
 
   <!-- Kubernetes Version -->
   <nldd-form-field label="Kubernetes version">
-    <nldd-radio-button-group
-      name="kubernetesVersion"
-      (change)="onRadioChange('kubernetesVersion', $event)"
-    >
-      @for (kv of kubernetesVersions; track kv) {
-        <nldd-radio-button-field
-          [value]="kv"
-          [label]="kv"
-          [checked]="clusterForm.get('kubernetesVersion')?.value === kv"
-        ></nldd-radio-button-field>
-      }
-    </nldd-radio-button-group>
+    <nldd-dropdown>
+      <select id="kubernetesVersion" formControlName="kubernetesVersion">
+        @for (kv of kubernetesVersions; track kv) {
+          <option [value]="kv">{{ kv }}</option>
+        }
+      </select>
+    </nldd-dropdown>
   </nldd-form-field>
 
   <!-- Form Actions -->

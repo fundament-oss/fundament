@@ -89,6 +89,7 @@ type MenuEntry struct {
 type ComponentMapping struct {
 	List   string `yaml:"list"`
 	Detail string `yaml:"detail"`
+	Create string `yaml:"create"`
 }
 
 // UIHint provides form layout and status display hints for a CRD.

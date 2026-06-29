@@ -814,10 +814,11 @@ func (b0 GetOrganizationLimitsRequest_builder) Build() *GetOrganizationLimitsReq
 
 // GetOrganizationLimits response
 type GetOrganizationLimitsResponse struct {
-	state             protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Limits *OrganizationLimits    `protobuf:"bytes,10,opt,name=limits"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Limits   *OrganizationLimits    `protobuf:"bytes,10,opt,name=limits"`
+	xxx_hidden_Defaults *OrganizationLimits    `protobuf:"bytes,20,opt,name=defaults"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GetOrganizationLimitsResponse) Reset() {
@@ -852,8 +853,19 @@ func (x *GetOrganizationLimitsResponse) GetLimits() *OrganizationLimits {
 	return nil
 }
 
+func (x *GetOrganizationLimitsResponse) GetDefaults() *OrganizationLimits {
+	if x != nil {
+		return x.xxx_hidden_Defaults
+	}
+	return nil
+}
+
 func (x *GetOrganizationLimitsResponse) SetLimits(v *OrganizationLimits) {
 	x.xxx_hidden_Limits = v
+}
+
+func (x *GetOrganizationLimitsResponse) SetDefaults(v *OrganizationLimits) {
+	x.xxx_hidden_Defaults = v
 }
 
 func (x *GetOrganizationLimitsResponse) HasLimits() bool {
@@ -863,8 +875,19 @@ func (x *GetOrganizationLimitsResponse) HasLimits() bool {
 	return x.xxx_hidden_Limits != nil
 }
 
+func (x *GetOrganizationLimitsResponse) HasDefaults() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Defaults != nil
+}
+
 func (x *GetOrganizationLimitsResponse) ClearLimits() {
 	x.xxx_hidden_Limits = nil
+}
+
+func (x *GetOrganizationLimitsResponse) ClearDefaults() {
+	x.xxx_hidden_Defaults = nil
 }
 
 type GetOrganizationLimitsResponse_builder struct {
@@ -872,6 +895,8 @@ type GetOrganizationLimitsResponse_builder struct {
 
 	// The current limits for the organization (absent fields mean no limit is set)
 	Limits *OrganizationLimits
+	// The platform default limits, used to pre-fill the form and by "Reset to defaults"
+	Defaults *OrganizationLimits
 }
 
 func (b0 GetOrganizationLimitsResponse_builder) Build() *GetOrganizationLimitsResponse {
@@ -879,6 +904,7 @@ func (b0 GetOrganizationLimitsResponse_builder) Build() *GetOrganizationLimitsRe
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Limits = b.Limits
+	x.xxx_hidden_Defaults = b.Defaults
 	return m0
 }
 
@@ -1242,10 +1268,11 @@ const file_v1_organization_proto_rawDesc = "" +
 	"\x13default_cpu_limit_m\x18F \x01(\x05B\x05\xaa\x01\x02\b\x01R\x10defaultCpuLimitM\"8\n" +
 	"\x1cGetOrganizationLimitsRequest\x12\x18\n" +
 	"\x02id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\\\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\x9d\x01\n" +
 	"\x1dGetOrganizationLimitsResponse\x12;\n" +
 	"\x06limits\x18\n" +
-	" \x01(\v2#.organization.v1.OrganizationLimitsR\x06limits\"\x96\x04\n" +
+	" \x01(\v2#.organization.v1.OrganizationLimitsR\x06limits\x12?\n" +
+	"\bdefaults\x18\x14 \x01(\v2#.organization.v1.OrganizationLimitsR\bdefaults\"\x96\x04\n" +
 	"\x1fUpdateOrganizationLimitsRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12?\n" +
@@ -1285,21 +1312,22 @@ var file_v1_organization_proto_depIdxs = []int32{
 	0,  // 1: organization.v1.GetOrganizationResponse.organization:type_name -> organization.v1.Organization
 	0,  // 2: organization.v1.ListOrganizationsResponse.organizations:type_name -> organization.v1.Organization
 	7,  // 3: organization.v1.GetOrganizationLimitsResponse.limits:type_name -> organization.v1.OrganizationLimits
-	5,  // 4: organization.v1.OrganizationService.ListOrganizations:input_type -> organization.v1.ListOrganizationsRequest
-	1,  // 5: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
-	3,  // 6: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
-	8,  // 7: organization.v1.OrganizationService.GetOrganizationLimits:input_type -> organization.v1.GetOrganizationLimitsRequest
-	10, // 8: organization.v1.OrganizationService.UpdateOrganizationLimits:input_type -> organization.v1.UpdateOrganizationLimitsRequest
-	6,  // 9: organization.v1.OrganizationService.ListOrganizations:output_type -> organization.v1.ListOrganizationsResponse
-	2,  // 10: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
-	4,  // 11: organization.v1.OrganizationService.UpdateOrganization:output_type -> organization.v1.UpdateOrganizationResponse
-	9,  // 12: organization.v1.OrganizationService.GetOrganizationLimits:output_type -> organization.v1.GetOrganizationLimitsResponse
-	11, // 13: organization.v1.OrganizationService.UpdateOrganizationLimits:output_type -> organization.v1.UpdateOrganizationLimitsResponse
-	9,  // [9:14] is the sub-list for method output_type
-	4,  // [4:9] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	7,  // 4: organization.v1.GetOrganizationLimitsResponse.defaults:type_name -> organization.v1.OrganizationLimits
+	5,  // 5: organization.v1.OrganizationService.ListOrganizations:input_type -> organization.v1.ListOrganizationsRequest
+	1,  // 6: organization.v1.OrganizationService.GetOrganization:input_type -> organization.v1.GetOrganizationRequest
+	3,  // 7: organization.v1.OrganizationService.UpdateOrganization:input_type -> organization.v1.UpdateOrganizationRequest
+	8,  // 8: organization.v1.OrganizationService.GetOrganizationLimits:input_type -> organization.v1.GetOrganizationLimitsRequest
+	10, // 9: organization.v1.OrganizationService.UpdateOrganizationLimits:input_type -> organization.v1.UpdateOrganizationLimitsRequest
+	6,  // 10: organization.v1.OrganizationService.ListOrganizations:output_type -> organization.v1.ListOrganizationsResponse
+	2,  // 11: organization.v1.OrganizationService.GetOrganization:output_type -> organization.v1.GetOrganizationResponse
+	4,  // 12: organization.v1.OrganizationService.UpdateOrganization:output_type -> organization.v1.UpdateOrganizationResponse
+	9,  // 13: organization.v1.OrganizationService.GetOrganizationLimits:output_type -> organization.v1.GetOrganizationLimitsResponse
+	11, // 14: organization.v1.OrganizationService.UpdateOrganizationLimits:output_type -> organization.v1.UpdateOrganizationLimitsResponse
+	10, // [10:15] is the sub-list for method output_type
+	5,  // [5:10] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_v1_organization_proto_init() }

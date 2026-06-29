@@ -28,14 +28,16 @@ func (s *Server) GetOrganizationLimits(
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return connect.NewResponse(organizationv1.GetOrganizationLimitsResponse_builder{
-				Limits: organizationv1.OrganizationLimits_builder{}.Build(),
+				Limits:   organizationv1.OrganizationLimits_builder{}.Build(),
+				Defaults: organizationLimitDefaults(),
 			}.Build()), nil
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get organization limits: %w", err))
 	}
 
 	return connect.NewResponse(organizationv1.GetOrganizationLimitsResponse_builder{
-		Limits: organizationLimitsFromRow(&row),
+		Limits:   organizationLimitsFromRow(&row),
+		Defaults: organizationLimitDefaults(),
 	}.Build()), nil
 }
 
