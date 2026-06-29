@@ -5,9 +5,13 @@
 
 import { type Client, ConnectError } from '@connectrpc/connect';
 import { createServiceClient, ConnectRpcError } from './client.ts';
-import { TokenService as TokenServiceDesc, type ExchangeTokenResponse } from '../generated/authn/v1/authn_pb.ts';
+import {
+  TokenService as TokenServiceDesc,
+  type ExchangeTokenResponse,
+  type MintPluginTokenResponse,
+} from '../generated/authn/v1/authn_pb.ts';
 
-export type { ExchangeTokenResponse };
+export type { ExchangeTokenResponse, MintPluginTokenResponse };
 
 export class TokenService {
   constructor(private baseUrl: string) {}
@@ -27,6 +31,31 @@ export class TokenService {
 
     try {
       return await client.exchangeToken({});
+    } catch (err) {
+      if (err instanceof ConnectError) {
+        throw ConnectRpcError.fromConnectError(err);
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Mint a short-lived PluginToken (aud=fundament-plugin) bound to a
+   * (cluster, installation) tuple. The caller authenticates with a UserToken.
+   */
+  async mintPluginToken(
+    userToken: string,
+    clusterId: string,
+    installationId: string
+  ): Promise<MintPluginTokenResponse> {
+    const client: Client<typeof TokenServiceDesc> = createServiceClient(
+      TokenServiceDesc,
+      this.baseUrl,
+      userToken
+    );
+
+    try {
+      return await client.mintPluginToken({ clusterId, installationId });
     } catch (err) {
       if (err instanceof ConnectError) {
         throw ConnectRpcError.fromConnectError(err);

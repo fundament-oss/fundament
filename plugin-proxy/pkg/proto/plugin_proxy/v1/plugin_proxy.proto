@@ -1,0 +1,39 @@
+edition = "2023";
+
+package plugin_proxy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/go_features.proto";
+
+option features.field_presence = IMPLICIT;
+option features.(pb.go).api_level = API_OPAQUE;
+option go_package = "github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1;pluginproxyv1";
+
+// PluginInstallationService is an internal service-to-service RPC,
+// NetworkPolicy-restricted to authn-api.
+// TODO: add mTLS or SA-token auth on this RPC.
+service PluginInstallationService {
+  // GetInstallationManifest resolves a PluginInstallation's identity by
+  // (cluster_id, installation_id). A missing installation is signalled with a
+  // NotFound error.
+  rpc GetInstallationManifest(GetInstallationManifestRequest)
+      returns (GetInstallationManifestResponse);
+}
+
+message GetInstallationManifestRequest {
+  string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
+  string installation_id = 20 [(buf.validate.field).string = {uuid: true}];
+}
+
+// GetInstallationManifestResponse carries the installation's identity only;
+// it never carries RBAC. authn-api signs these fields into the PluginToken.
+message GetInstallationManifestResponse {
+  string plugin_name = 10;
+  string plugin_version = 20;
+  // The content hash of the consented PluginDefinition. Audit only.
+  string definition_hash = 30;
+  // The organization that owns the cluster.
+  string organization_id = 40 [(buf.validate.field).string = {uuid: true}];
+  // The installation lifecycle phase (status.phase), e.g. "Running".
+  string status = 50;
+}

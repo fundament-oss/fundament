@@ -3,7 +3,7 @@ RUN go install github.com/air-verse/air@v1.65.0
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
-COPY authn-api/ ./authn-api/
-COPY common/ ./common/
 COPY plugin-proxy/ ./plugin-proxy/
-CMD ["air", "-c", "authn-api/hotreload/.air.toml"]
+COPY plugin-controller/ ./plugin-controller/
+COPY common/ ./common/
+CMD ["air", "-c", "plugin-proxy/hotreload/.air.toml"]

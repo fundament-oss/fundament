@@ -38,6 +38,7 @@ images:
   kubeApiProxy: ghcr.io/fundament-oss/fundament/kube-api-proxy:latest
   openfgaSetup: ghcr.io/fundament-oss/fundament/openfga-setup:latest
   pluginController: ghcr.io/fundament-oss/fundament/plugin-controller:latest
+  pluginProxy: ghcr.io/fundament-oss/fundament/plugin-proxy:latest
   dcimApi: ghcr.io/fundament-oss/fundament/dcim-api:latest
   dcimAuthnApi: ghcr.io/fundament-oss/fundament/dcim-authn-api:latest
   dcimFrontend: ghcr.io/fundament-oss/fundament/dcim-frontend:latest
@@ -147,6 +148,14 @@ openfga:
 pluginController:
   enabled: false
   logLevel: info
+
+# Plugin Proxy. Runs in the main fundament cluster and dials out to plugin
+# clusters; not deployed inside the plugin sandbox.
+pluginProxy:
+  enabled: false
+  replicas: 1
+  logLevel: info
+  mode: mock # "mock" or "real" (real is future work)
 
 # DCIM API
 dcimApi:
