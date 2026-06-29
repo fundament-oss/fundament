@@ -26,7 +26,7 @@ import {
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDate as formatDateUtil } from '../utils/date-format';
-import { NamespaceSelection } from '../utils/namespace-selection';
+import NamespaceSelection from '../utils/namespace-selection';
 
 @Component({
   selector: 'app-namespaces',

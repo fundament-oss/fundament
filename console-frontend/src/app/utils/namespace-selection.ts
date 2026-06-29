@@ -4,7 +4,7 @@ import { computed, signal } from '@angular/core';
 // the cluster and project namespace pages. Construct it with an accessor that
 // returns the ids currently shown, so "select all" and the all/indeterminate
 // header checkbox stay in sync with the list.
-export class NamespaceSelection {
+export default class NamespaceSelection {
   private selected = signal<Set<string>>(new Set());
 
   readonly count = computed(() => this.selected().size);
