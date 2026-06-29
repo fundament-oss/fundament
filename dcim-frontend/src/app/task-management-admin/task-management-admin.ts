@@ -2,39 +2,40 @@ import {
   Component,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  OnInit,
   signal,
   computed,
+  inject,
   viewChild,
   ElementRef,
 } from '@angular/core';
+import { firstValueFrom, Observable } from 'rxjs';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
+import type { Note as ProtoNote } from '../../generated/v1/note_pb';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
+import AuthService from '../auth.service';
+import TaskApiService, {
+  TaskData,
+  TaskInput,
+  TaskCategoryLabel,
+  TaskPriorityLabel,
+  TaskStatusLabel,
+} from '../task-management/task-api.service';
+import UserApiService, { RosterUser } from '../task-management/user-api.service';
+import NoteApiService from '../inventory/note-api.service';
+import connectErrorMessage from '../../connect/error';
 
-interface Technician {
-  id: number;
-  name: string;
-  initials: string;
-  color: string;
-  available: boolean;
-}
+type Technician = RosterUser;
 
 interface Note {
-  author: number | null;
+  author: string;
   text: string;
   time: string;
 }
 
-interface Task {
-  id: number;
-  title: string;
-  description: string;
-  status: string;
-  priority: string;
-  category: string;
-  location: string;
-  assignee: number | null;
-  due: string;
-  created: string;
+interface Task extends TaskData {
   notes: Note[];
+  notesLoaded: boolean;
 }
 
 interface StatusStyle {
@@ -68,176 +69,41 @@ interface NlddSheet extends HTMLElement {
     '(document:keydown.escape)': 'onEscape()',
   },
 })
-export default class TaskManagementAdminComponent {
-  readonly technicians: Technician[] = [
-    { id: 1, name: 'Jan de Vries', initials: 'JV', color: 'bg-blue-600', available: true },
-    { id: 2, name: 'Sara Ahmed', initials: 'SA', color: 'bg-emerald-600', available: true },
-    { id: 3, name: 'Thomas Bakker', initials: 'TB', color: 'bg-amber-600', available: false },
-    { id: 4, name: 'Lisa Chen', initials: 'LC', color: 'bg-violet-600', available: true },
-    { id: 5, name: 'Mark Jansen', initials: 'MJ', color: 'bg-rose-600', available: true },
-  ];
+export default class TaskManagementAdminComponent implements OnInit {
+  private readonly taskApi = inject(TaskApiService);
 
-  tasks = signal<Task[]>([
-    {
-      id: 1,
-      title: 'Replace broken harddisk',
-      description:
-        'Failed disk in Bay 3 of backup-srv-07 at Rack 123. Replace with Seagate Exos X18 (ST16000NM000J, 16 TB). The RAID controller shows the drive as failed since yesterday evening.',
-      status: 'In Progress',
-      priority: 'Critical',
-      category: 'Hardware',
-      location: 'DC Amsterdam-West · Rack 123',
-      assignee: 1,
-      due: '2026-03-20',
-      created: '2026-03-15',
-      notes: [
-        {
-          author: 1,
-          text: 'Arrived at rack. Disk bay 3 LED is solid red. Starting replacement procedure.',
-          time: '2 hours ago',
-        },
-        {
-          author: null,
-          text: 'Spare disk is available in storage room B, shelf 3. Serial: ZLR1N5JY.',
-          time: '5 hours ago',
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: 'Check cooling unit — Row 5',
-      description:
-        'Temperature sensors in Row 5 are reporting 2°C above normal baseline. Inspect the cooling unit for potential blockage or fan failure.',
-      status: 'Ready',
-      priority: 'High',
-      category: 'Cooling',
-      location: 'DC Amsterdam-West · Hall A, Row 5',
-      assignee: null,
-      due: '2026-03-21',
-      created: '2026-03-17',
-      notes: [
-        {
-          author: null,
-          text: 'Monitoring dashboard shows temps rising over the past 48h. Not yet critical but trending up.',
-          time: '1 day ago',
-        },
-      ],
-    },
-    {
-      id: 3,
-      title: 'Inspect PDU — Hall A',
-      description:
-        'Routine quarterly inspection of the PDU in Hall A. Check all breakers, verify load balancing, and ensure no burnt contacts.',
-      status: 'Ready',
-      priority: 'Medium',
-      category: 'Power',
-      location: 'DC Amsterdam-West · Hall A',
-      assignee: 2,
-      due: '2026-03-25',
-      created: '2026-03-16',
-      notes: [],
-    },
-    {
-      id: 4,
-      title: 'Replace network switch — Rack 87',
-      description:
-        'The Cisco Nexus switch in Rack 87 has intermittent port failures on ports 24-28. Replace with the new Arista unit from stock.',
-      status: 'In Progress',
-      priority: 'High',
-      category: 'Network',
-      location: 'DC Amsterdam-West · Rack 87',
-      assignee: 4,
-      due: '2026-03-19',
-      created: '2026-03-14',
-      notes: [
-        {
-          author: 4,
-          text: 'Migration window confirmed with NOC for tonight 22:00–02:00. Pre-staging the replacement switch now.',
-          time: '3 hours ago',
-        },
-        {
-          author: null,
-          text: 'NOC has been notified. Maintenance window approved.',
-          time: '1 day ago',
-        },
-      ],
-    },
-    {
-      id: 5,
-      title: 'Firmware update — UPS units Hall B',
-      description:
-        'Apply firmware v4.2.1 to all three Eaton UPS units in Hall B. Requires sequential update — do not update all at once.',
-      status: 'Review',
-      priority: 'Medium',
-      category: 'Power',
-      location: 'DC Amsterdam-West · Hall B',
-      assignee: 3,
-      due: '2026-03-22',
-      created: '2026-03-13',
-      notes: [
-        {
-          author: 3,
-          text: 'UPS-1 and UPS-2 updated successfully. UPS-3 scheduled for tomorrow morning. All readings normal after update.',
-          time: '6 hours ago',
-        },
-      ],
-    },
-    {
-      id: 6,
-      title: 'Install additional cameras — Entrance B',
-      description:
-        'Mount two new security cameras at Entrance B as per the security audit recommendations. Cabling is already in place.',
-      status: 'Blocked',
-      priority: 'Low',
-      category: 'Security',
-      location: 'DC Amsterdam-West · Entrance B',
-      assignee: 5,
-      due: '2026-03-28',
-      created: '2026-03-10',
-      notes: [
-        {
-          author: 5,
-          text: 'Cameras arrived but mounting brackets are the wrong model. Waiting for replacement brackets from supplier.',
-          time: '2 days ago',
-        },
-        { author: null, text: 'Supplier confirmed new brackets ship Monday.', time: '1 day ago' },
-      ],
-    },
-    {
-      id: 7,
-      title: 'Decommission server DB-14',
-      description:
-        'Server DB-14 in Rack 45 has been migrated to new hardware. Wipe disks, remove from rack, and update asset inventory.',
-      status: 'Done',
-      priority: 'Low',
-      category: 'Hardware',
-      location: 'DC Amsterdam-West · Rack 45',
-      assignee: 1,
-      due: '2026-03-17',
-      created: '2026-03-08',
-      notes: [
-        {
-          author: 1,
-          text: 'Disks wiped with DBAN (3-pass). Server removed from rack and placed in decommission staging. Asset inventory updated.',
-          time: '1 day ago',
-        },
-      ],
-    },
-    {
-      id: 8,
-      title: 'Repair cable management — Rack 92',
-      description:
-        'Cables in Rack 92 are obstructing airflow. Re-route and zip-tie all patch cables. Replace any damaged cables.',
-      status: 'In Progress',
-      priority: 'Medium',
-      category: 'Hardware',
-      location: 'DC Amsterdam-West · Rack 92',
-      assignee: 2,
-      due: '2026-03-23',
-      created: '2026-03-16',
-      notes: [],
-    },
-  ]);
+  private readonly userApi = inject(UserApiService);
+
+  private readonly noteApi = inject(NoteApiService);
+
+  private readonly auth = inject(AuthService);
+
+  readonly technicians = signal<Technician[]>([]);
+
+  tasks = signal<Task[]>([]);
+
+  ngOnInit(): void {
+    this.loadUsers();
+    this.loadTasks();
+  }
+
+  private loadUsers(): void {
+    firstValueFrom(this.userApi.listUsers())
+      .then((res) => this.technicians.set(res.users.map((u) => UserApiService.mapUser(u))))
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private loadTasks(): void {
+    firstValueFrom(this.taskApi.listTasks())
+      .then((res) =>
+        this.tasks.set(
+          res.tasks.map((t) => ({ ...TaskApiService.mapTask(t), notes: [], notesLoaded: false })),
+        ),
+      )
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
 
   readonly statusStyles: Record<string, StatusStyle> = {
     Ready: {
@@ -313,15 +179,20 @@ export default class TaskManagementAdminComponent {
     Other: 'ellipsis',
   };
 
-  readonly kanbanColumns = ['Ready', 'In Progress', 'Review', 'Blocked', 'Done'];
+  readonly kanbanColumns: TaskStatusLabel[] = ['Ready', 'In Progress', 'Review', 'Blocked', 'Done'];
 
-  readonly priorities = ['Critical', 'High', 'Medium', 'Low'];
+  readonly priorities: TaskPriorityLabel[] = ['Critical', 'High', 'Medium', 'Low'];
 
-  readonly taskCategories = ['Hardware', 'Network', 'Cooling', 'Power', 'Security', 'Other'];
+  readonly taskCategories: TaskCategoryLabel[] = [
+    'Hardware',
+    'Network',
+    'Cooling',
+    'Power',
+    'Security',
+    'Other',
+  ];
 
   private readonly dateLocale = 'en-US';
-
-  private readonly taskIdBase = 2890;
 
   currentView = signal<'list' | 'kanban'>('list');
 
@@ -333,27 +204,27 @@ export default class TaskManagementAdminComponent {
 
   categoryFilter = signal('all');
 
-  selectedTasks = signal<Set<number>>(new Set());
+  selectedTasks = signal<Set<string>>(new Set());
 
-  detailTaskId = signal<number | null>(null);
+  detailTaskId = signal<string | null>(null);
 
-  editingTaskId = signal<number | null | undefined>(undefined);
+  editingTaskId = signal<string | null | undefined>(undefined);
 
   editFormTitle = signal('');
 
   editFormDescription = signal('');
 
-  editFormStatus = signal('Ready');
+  editFormStatus = signal<TaskStatusLabel>('Ready');
 
-  editFormPriority = signal('Medium');
+  editFormPriority = signal<TaskPriorityLabel>('Medium');
 
-  editFormCategory = signal('Hardware');
+  editFormCategory = signal<TaskCategoryLabel>('Hardware');
 
   editFormDue = signal('');
 
   editFormLocation = signal('');
 
-  editFormAssignee = signal<number | null>(null);
+  editFormAssignee = signal<string | null>(null);
 
   editTitleTouched = signal(false);
 
@@ -407,14 +278,14 @@ export default class TaskManagementAdminComponent {
     return this.tasks().find((t) => t.id === id) ?? null;
   });
 
-  editModalTitle = computed(() => (this.editingTaskId() !== null ? 'Edit task' : 'New task'));
+  editModalTitle = computed(() => (this.editingTaskId() ? 'Edit task' : 'New task'));
 
   readonly detailSheetEl = viewChild<ElementRef<NlddSheet>>('detailSheetEl');
 
   readonly editModalEl = viewChild<ElementRef<NlddSheet>>('editModalEl');
 
-  getTech(id: number | null): Technician | null {
-    return this.technicians.find((t) => t.id === id) ?? null;
+  getTech(id: string | null): Technician | null {
+    return this.technicians().find((t) => t.id === id) ?? null;
   }
 
   formatDate(str: string | null): string {
@@ -427,11 +298,9 @@ export default class TaskManagementAdminComponent {
     });
   }
 
-  taskDisplayId(task: Task): string {
-    return `T-${this.taskIdBase + task.id}`;
-  }
+  readonly taskDisplayId = (task: Task): string => `T-${task.id.slice(0, 8).toUpperCase()}`;
 
-  isSelected(id: number): boolean {
+  isSelected(id: string): boolean {
     return this.selectedTasks().has(id);
   }
 
@@ -455,7 +324,7 @@ export default class TaskManagementAdminComponent {
     this.currentView.set(view);
   }
 
-  toggleSelection(id: number, checked: boolean): void {
+  toggleSelection(id: string, checked: boolean): void {
     this.selectedTasks.update((set) => {
       const next = new Set(set);
       if (checked) next.add(id);
@@ -472,9 +341,40 @@ export default class TaskManagementAdminComponent {
     }
   }
 
-  openDetail(id: number): void {
+  openDetail(id: string): void {
     this.detailTaskId.set(id);
+    this.loadNotes(id);
     this.detailSheetEl()?.nativeElement.show();
+  }
+
+  private loadNotes(id: string): void {
+    firstValueFrom(this.noteApi.listNotesForTask(id))
+      .then((res) => {
+        const notes = res.notes.map((n) => TaskManagementAdminComponent.mapNote(n));
+        this.tasks.update((tasks) =>
+          tasks.map((t) => (t.id === id ? { ...t, notes, notesLoaded: true } : t)),
+        );
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private static mapNote(n: ProtoNote): Note {
+    return {
+      author: n.createdBy,
+      text: n.body,
+      time: TaskManagementAdminComponent.relativeTime(
+        n.created ? timestampDate(n.created) : new Date(),
+      ),
+    };
+  }
+
+  private static relativeTime(date: Date): string {
+    const diffMs = Date.now() - date.getTime();
+    const days = Math.floor(diffMs / 86_400_000);
+    if (days <= 0) return 'Today';
+    if (days === 1) return '1 day ago';
+    return `${days} days ago`;
   }
 
   closeDetail(): void {
@@ -488,7 +388,7 @@ export default class TaskManagementAdminComponent {
     this.openEditModal(id);
   }
 
-  openEditModal(taskId: number | null): void {
+  openEditModal(taskId: string | null): void {
     this.editingTaskId.set(taskId);
     const task = taskId !== null ? this.tasks().find((t) => t.id === taskId) : null;
     this.editFormTitle.set(task?.title ?? '');
@@ -513,7 +413,7 @@ export default class TaskManagementAdminComponent {
     const title = this.editFormTitle().trim();
     if (!title) return;
 
-    const data = {
+    const input: TaskInput = {
       title,
       description: this.editFormDescription().trim(),
       status: this.editFormStatus(),
@@ -525,22 +425,23 @@ export default class TaskManagementAdminComponent {
     };
 
     const editingId = this.editingTaskId();
-    if (editingId !== null && editingId !== undefined) {
-      this.tasks.update((tasks) => tasks.map((t) => (t.id === editingId ? { ...t, ...data } : t)));
-      this.showToast('Task updated');
-    } else {
-      const newTask: Task = {
-        id: Date.now(),
-        ...data,
-        created: new Date().toISOString().split('T')[0],
-        notes: [],
-      };
-      this.tasks.update((tasks) => [...tasks, newTask]);
-      this.showToast('Task created');
-    }
+    const request: Observable<unknown> =
+      editingId !== null && editingId !== undefined
+        ? this.taskApi.updateTask(editingId, input)
+        : this.taskApi.createTask(input);
 
-    this.editModalEl()?.nativeElement.hide();
-    this.editingTaskId.set(undefined);
+    firstValueFrom(request)
+      .then(() => {
+        this.loadTasks();
+        this.showToast(editingId ? 'Task updated' : 'Task created');
+        this.editModalEl()?.nativeElement.hide();
+        this.editingTaskId.set(undefined);
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.showToast('Could not save task');
+      });
   }
 
   addNote(): void {
@@ -548,13 +449,18 @@ export default class TaskManagementAdminComponent {
     if (!text) return;
     const id = this.detailTaskId();
     if (id === null) return;
-    this.tasks.update((tasks) =>
-      tasks.map((t) =>
-        t.id === id ? { ...t, notes: [{ author: null, text, time: 'Just now' }, ...t.notes] } : t,
-      ),
-    );
-    this.newNoteText.set('');
-    this.showToast('Note added');
+    const author = this.auth.user()?.name ?? 'Admin';
+    firstValueFrom(this.noteApi.createNoteForTask(id, text, author))
+      .then(() => {
+        this.newNoteText.set('');
+        this.loadNotes(id);
+        this.showToast('Note added');
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.showToast('Could not add note');
+      });
   }
 
   showToast(msg: string): void {
@@ -566,8 +472,8 @@ export default class TaskManagementAdminComponent {
   }
 
   noteAuthor(note: Note): { name: string; tech: Technician | null } {
-    const tech = note.author !== null ? this.getTech(note.author) : null;
-    return { name: tech ? tech.name : 'Admin', tech };
+    const tech = this.technicians().find((t) => t.name === note.author) ?? null;
+    return { name: note.author || 'Admin', tech };
   }
 
   onEscape(): void {

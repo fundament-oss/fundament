@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-alpha
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -2189,6 +2189,20 @@ CREATE TABLE dcim.task_steps (
 ALTER TABLE dcim.task_steps OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: dcim.users | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.users CASCADE;
+CREATE TABLE dcim.users (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	name text NOT NULL,
+	email text,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT users_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE dcim.users OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: task_steps_uq_task_ordinal | type: INDEX --
 -- DROP INDEX IF EXISTS dcim.task_steps_uq_task_ordinal CASCADE;
 CREATE UNIQUE INDEX task_steps_uq_task_ordinal ON dcim.task_steps
@@ -3476,6 +3490,14 @@ GRANT SELECT,INSERT,UPDATE
 -- object: grant_raw_55ce0b15d8 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE dcim.task_steps
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_e071340f9f | type: PERMISSION --
+GRANT SELECT
+   ON TABLE dcim.users
    TO fun_dcim_api;
 
 -- ddl-end --

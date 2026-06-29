@@ -40,6 +40,19 @@ export default class NoteApiService {
     return this.client.listNotes({ entityType: NoteEntityType.PLACEMENT, entityId: placementId });
   }
 
+  listNotesForTask(taskId: string) {
+    return this.client.listNotes({ entityType: NoteEntityType.TASK, entityId: taskId });
+  }
+
+  createNoteForTask(taskId: string, body: string, createdBy: string) {
+    return this.client.createNote({
+      entityType: NoteEntityType.TASK,
+      entityId: taskId,
+      body,
+      createdBy,
+    });
+  }
+
   // TODO: replace the placeholder author with the authenticated user once the
   // frontend has an identity source (authnApiUrl is configured but unused).
   private static readonly PLACEHOLDER_AUTHOR = 'You';

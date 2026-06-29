@@ -93,7 +93,7 @@
     @if (phase() === 'gather') {
       <h1 class="text-xl font-semibold text-slate-900 dark:text-white">{{ dcName }}</h1>
       <p class="mt-1.5 text-sm text-slate-400 dark:text-gray-500">
-        {{ tasks.length }} tasks &middot; Work order WO-2241
+        {{ tasks().length }} tasks &middot; Work order WO-2241
       </p>
     } @else {
       <h1 class="text-xl font-semibold text-slate-900 dark:text-white">
@@ -201,7 +201,7 @@
             Collect all items from the supply room before heading to the floor.
           </p>
           <div class="mt-3 space-y-1" role="list" aria-label="Items to gather">
-            @for (item of gatherItems; track $index) {
+            @for (item of gatherItems(); track $index) {
               <div
                 class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-slate-50 dark:hover:bg-gray-900"
                 role="listitem"
@@ -236,7 +236,7 @@
           </div>
           @if (checkedItems().size > 0) {
             <p class="mt-2 text-xs text-slate-400 dark:text-gray-500">
-              {{ checkedItems().size }} of {{ gatherItems.length }} collected
+              {{ checkedItems().size }} of {{ gatherItems().length }} collected
             </p>
           }
         }
@@ -244,7 +244,7 @@
     </div>
 
     <!-- ── Task rows ── -->
-    @for (task of tasks; track $index; let taskIdx = $index) {
+    @for (task of tasks(); track $index; let taskIdx = $index) {
       <div
         class="relative flex gap-4 transition-opacity"
         [class.opacity-100]="isTaskActive(taskIdx)"
@@ -269,7 +269,7 @@
               {{ taskIdx + 2 }}
             }
           </div>
-          @if (taskIdx < tasks.length - 1) {
+          @if (taskIdx < tasks().length - 1) {
             <div
               class="my-1 w-0.5 flex-1"
               [class]="isTaskDone(taskIdx) ? 'bg-accent-300' : 'bg-slate-200 dark:bg-gray-800'"

@@ -212,3 +212,8 @@ INSERT INTO dcim.notes (id, body, created_by, asset_id) VALUES
 INSERT INTO dcim.notes (id, body, created_by, placement_id) VALUES
     ('019dcc00-0000-7000-8000-000000000003', 'Thermal paste reapplied on CPU0 during last check.',        'Tom de Graaf',  '019dca00-0000-7000-8000-000000000003'),
     ('019dcc00-0000-7000-8000-000000000004', 'Moved from team-beta to team-alpha allocation.',            'Alex van Dijk', '019dca00-0000-7000-8000-000000000004');
+
+-- NOTE: task-management seed (dcim.users + dcim.tasks/task_steps + task notes)
+-- lives in 028_0101-content.sql, because dcim.users is created by migration 028
+-- and testdata at the 026 checkpoint runs before that migration.
+
