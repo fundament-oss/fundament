@@ -34,5 +34,5 @@ func (h *Handler) Namespace(ctx context.Context, qtx *db.Queries, namespaceID uu
 		)
 	}
 
-	return h.writeTuples(ctx, tuple(projectObj, authz.ActionParent, namespaceObj))
+	return h.writeTuplesIfNotExist(ctx, tuple(projectObj, authz.ActionParent, namespaceObj))
 }

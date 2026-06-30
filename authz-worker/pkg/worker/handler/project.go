@@ -34,5 +34,5 @@ func (h *Handler) Project(ctx context.Context, qtx *db.Queries, projectID uuid.U
 		)
 	}
 
-	return h.writeTuples(ctx, tuple(clusterObj, authz.ActionParent, projectObj))
+	return h.writeTuplesIfNotExist(ctx, tuple(clusterObj, authz.ActionParent, projectObj))
 }
