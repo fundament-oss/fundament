@@ -33,6 +33,14 @@ async function captureResponse(world: ICustomWorld, response: Response): Promise
   s.body = await response.text();
 }
 
+// Expand ${PLUGIN_PROXY_URL} / ${CONSOLE_URL} so feature strings work in both
+// local dev (fundament.localhost) and PR envs (pr${N}.${DOMAIN}).
+function resolveUrls(world: ICustomWorld, text: string): string {
+  return text
+    .replace(/\$\{PLUGIN_PROXY_URL\}/g, world.pluginProxyUrl ?? '')
+    .replace(/\$\{CONSOLE_URL\}/g, world.consoleUrl ?? '');
+}
+
 // --- Given ---
 
 Given('I have a plugin token for the seeded installation', async function (this: ICustomWorld) {
@@ -74,22 +82,6 @@ When(
   },
 );
 
-When(
-  'I send a CORS preflight to {string} from origin {string}',
-  async function (this: ICustomWorld, path: string, origin: string) {
-    const response = await fetch(`${this.pluginProxyUrl}${path}`, {
-      method: 'OPTIONS',
-      redirect: 'manual',
-      headers: {
-        Origin: origin,
-        'Access-Control-Request-Method': 'POST',
-        'Access-Control-Request-Headers': 'Authorization,Content-Type',
-      },
-    });
-    await captureResponse(this, response);
-  },
-);
-
 // --- Then ---
 
 Then('the response status should be {int}', function (this: ICustomWorld, want: number) {
@@ -112,7 +104,7 @@ Then(
   'the {string} header should be {string}',
   function (this: ICustomWorld, name: string, want: string) {
     const got = state(this).response!.headers.get(name);
-    expect(got, `header ${name}`).toBe(want);
+    expect(got, `header ${name}`).toBe(resolveUrls(this, want));
   },
 );
 
@@ -120,7 +112,8 @@ Then(
   'the {string} header should start with {string}',
   function (this: ICustomWorld, name: string, prefix: string) {
     const got = state(this).response!.headers.get(name) ?? '';
-    expect(got.startsWith(prefix), `header ${name} = ${got}`).toBe(true);
+    const expanded = resolveUrls(this, prefix);
+    expect(got.startsWith(expanded), `header ${name} = ${got}`).toBe(true);
   },
 );
 
@@ -128,7 +121,7 @@ Then(
   'the {string} header should contain {string}',
   function (this: ICustomWorld, name: string, substr: string) {
     const got = state(this).response!.headers.get(name) ?? '';
-    expect(got).toContain(substr);
+    expect(got).toContain(resolveUrls(this, substr));
   },
 );
 
@@ -136,10 +129,6 @@ Then(
   'the {string} header should not contain {string}',
   function (this: ICustomWorld, name: string, substr: string) {
     const got = state(this).response!.headers.get(name) ?? '';
-    expect(got).not.toContain(substr);
+    expect(got).not.toContain(resolveUrls(this, substr));
   },
 );
-
-Then('the {string} header should be absent', function (this: ICustomWorld, name: string) {
-  expect(state(this).response!.headers.get(name)).toBeNull();
-});

@@ -77,6 +77,7 @@ spec:
       authn: https://authn.pr${PR_NUM}.${DOMAIN}
       organization: https://organization.pr${PR_NUM}.${DOMAIN}
       kubeApiProxy: https://k8s-api.pr${PR_NUM}.${DOMAIN}
+      pluginProxy: https://plugin-proxy.pr${PR_NUM}.${DOMAIN}
       console: https://console.pr${PR_NUM}.${DOMAIN}
       docs: https://docs.pr${PR_NUM}.${DOMAIN}
       cookieDomain: pr${PR_NUM}.${DOMAIN}
@@ -94,6 +95,7 @@ spec:
       clusterWorker: ${IMAGE_PREFIX}/cluster-worker:${IMAGE_TAG}
       authzWorker: ${IMAGE_PREFIX}/authz-worker:${IMAGE_TAG}
       kubeApiProxy: ${IMAGE_PREFIX}/kube-api-proxy:${IMAGE_TAG}
+      pluginProxy: ${IMAGE_PREFIX}/plugin-proxy:${IMAGE_TAG}
       openfgaSetup: ${IMAGE_PREFIX}/openfga-setup:${IMAGE_TAG}
       dcimApi: ${IMAGE_PREFIX}/dcim-api:${IMAGE_TAG}
       dcimFrontend: ${IMAGE_PREFIX}/dcim-frontend:${IMAGE_TAG}
@@ -177,6 +179,22 @@ spec:
       replicas: 1
       logLevel: debug
       gardenerMode: mock
+
+    pluginProxy:
+      enabled: true
+      replicas: 1
+      logLevel: debug
+      mode: mock
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - plugin-proxy.pr${PR_NUM}.${DOMAIN}
 
     authzWorker:
       replicas: 1

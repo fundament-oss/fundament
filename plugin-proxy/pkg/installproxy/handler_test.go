@@ -6,12 +6,13 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/common/auth"
 )
@@ -33,9 +34,7 @@ func mintPluginToken(t *testing.T, secret []byte, installID, clusterID string) s
 		PluginVersion:  "v1.17.2",
 	}
 	s, err := jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(secret)
-	if err != nil {
-		t.Fatalf("sign: %v", err)
-	}
+	require.NoError(t, err, "sign")
 	return s
 }
 
@@ -49,65 +48,52 @@ type denyAuthz struct{}
 func (denyAuthz) CanViewCluster(context.Context, string, string) (bool, error) { return false, nil }
 
 func stubBackend() Backend {
-	return BackendFunc(func(r *http.Request, _ Route) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader("pong " + r.URL.Path)),
-			Header:     http.Header{},
-		}, nil
+	return BackendFunc(func(w http.ResponseWriter, r *http.Request, _ Route) {
+		//nolint:gosec // test stub: response body is a fixed string concatenated with the test-controlled URL path.
+		_, _ = w.Write([]byte("pong " + r.URL.Path))
 	})
 }
 
 func TestRuntimeProxy_RejectsMissingToken(t *testing.T) {
 	h := New([]byte("s"), allowAuthz{}, stubBackend(), discardLogger())
-	r := httptest.NewRequest(http.MethodGet, "/installations/abc/runtime/api/ping", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/installations/abc/runtime/api/ping", http.NoBody)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("code = %d", w.Code)
-	}
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestRuntimeProxy_RejectsInstallationIDMismatch(t *testing.T) {
 	secret := []byte("s")
 	tok := mintPluginToken(t, secret, "INSTALL-X", "CLUSTER-X")
 	h := New(secret, allowAuthz{}, stubBackend(), discardLogger())
-	r := httptest.NewRequest(http.MethodGet, "/installations/INSTALL-Y/runtime/api/ping", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/installations/INSTALL-Y/runtime/api/ping", http.NoBody)
 	r.Header.Set("Authorization", "Bearer "+tok)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != http.StatusForbidden {
-		t.Errorf("code = %d, body = %s", w.Code, w.Body.String())
-	}
+	assert.Equal(t, http.StatusForbidden, w.Code, "body = %s", w.Body.String())
 }
 
 func TestRuntimeProxy_RejectsWhenCanViewFalse(t *testing.T) {
 	secret := []byte("s")
 	tok := mintPluginToken(t, secret, "INSTALL-X", "CLUSTER-X")
 	h := New(secret, denyAuthz{}, stubBackend(), discardLogger())
-	r := httptest.NewRequest(http.MethodGet, "/installations/INSTALL-X/runtime/api/ping", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/installations/INSTALL-X/runtime/api/ping", http.NoBody)
 	r.Header.Set("Authorization", "Bearer "+tok)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != http.StatusForbidden {
-		t.Errorf("code = %d", w.Code)
-	}
+	assert.Equal(t, http.StatusForbidden, w.Code)
 }
 
 func TestRuntimeProxy_ForwardsAuthorizedRequest(t *testing.T) {
 	secret := []byte("s")
 	tok := mintPluginToken(t, secret, "INSTALL-X", "CLUSTER-X")
 	h := New(secret, allowAuthz{}, stubBackend(), discardLogger())
-	r := httptest.NewRequest(http.MethodGet, "/installations/INSTALL-X/runtime/api/ping", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/installations/INSTALL-X/runtime/api/ping", http.NoBody)
 	r.Header.Set("Authorization", "Bearer "+tok)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != http.StatusOK {
-		t.Errorf("code = %d", w.Code)
-	}
-	if !strings.Contains(w.Body.String(), "pong") {
-		t.Errorf("body = %q", w.Body.String())
-	}
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "pong")
 }
 
 func TestParseRoute(t *testing.T) {
@@ -128,9 +114,7 @@ func TestParseRoute(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, ok := parseRoute(tc.path)
-			if ok != tc.wantOK {
-				t.Errorf("parseRoute(%q) ok = %v, want %v", tc.path, ok, tc.wantOK)
-			}
+			assert.Equal(t, tc.wantOK, ok, "parseRoute(%q)", tc.path)
 		})
 	}
 }

@@ -90,6 +90,9 @@ jobs:
           - image-name: kube-api-proxy
             dockerfile: kube-api-proxy/Dockerfile
             context: "."
+          - image-name: plugin-proxy
+            dockerfile: plugin-proxy/Dockerfile
+            context: "."
           - image-name: openfga-setup
             dockerfile: openfga/setup/Dockerfile
             context: openfga/setup
@@ -403,7 +406,8 @@ jobs:
           BASE="pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
           wait_for_api "console" "https://console.${BASE}" && \
           wait_for_api "authn-api" "https://authn.${BASE}" && \
-          wait_for_api "organization-api" "https://organization.${BASE}"
+          wait_for_api "organization-api" "https://organization.${BASE}" && \
+          wait_for_api "plugin-proxy" "https://plugin-proxy.${BASE}"
 
       - name: Run E2E tests
         run: |
@@ -411,6 +415,7 @@ jobs:
           BASE_URL="https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           ORGANIZATION_API_URL="https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           AUTHN_API_URL="https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+          PLUGIN_PROXY_URL="https://plugin-proxy.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
           bun run test
 
       - name: Upload test reports

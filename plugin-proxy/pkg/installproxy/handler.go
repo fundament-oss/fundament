@@ -2,7 +2,6 @@ package installproxy
 
 import (
 	"context"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -28,14 +27,16 @@ type Route struct {
 }
 
 // Backend forwards an authorized request to the plugin pod / plugin-controller.
+// Implementations write the upstream response directly to w; the handler does
+// no further header or body copying.
 type Backend interface {
-	Do(r *http.Request, route Route) (*http.Response, error)
+	Serve(w http.ResponseWriter, r *http.Request, route Route)
 }
 
-type BackendFunc func(r *http.Request, route Route) (*http.Response, error)
+type BackendFunc func(w http.ResponseWriter, r *http.Request, route Route)
 
-func (f BackendFunc) Do(r *http.Request, route Route) (*http.Response, error) {
-	return f(r, route)
+func (f BackendFunc) Serve(w http.ResponseWriter, r *http.Request, route Route) {
+	f(w, r, route)
 }
 
 // ClusterAuthorizer is the OpenFGA can_view check on (user, cluster).
@@ -58,16 +59,18 @@ func New(jwtSecret []byte, authz ClusterAuthorizer, backend Backend, logger *slo
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1. aud=fundament-plugin (signature, expiry).
 	const bearerPrefix = "Bearer "
-	authz := r.Header.Get("Authorization")
-	if !strings.HasPrefix(authz, bearerPrefix) {
+	authHeader := r.Header.Get("Authorization")
+	if !strings.HasPrefix(authHeader, bearerPrefix) {
 		http.Error(w, "missing bearer token", http.StatusUnauthorized)
 		return
 	}
-	bearer := authz[len(bearerPrefix):]
+
+	bearer := authHeader[len(bearerPrefix):]
 	if bearer == "" {
 		http.Error(w, "missing bearer token", http.StatusUnauthorized)
 		return
 	}
+
 	claims, err := auth.ParsePluginToken(bearer, h.jwtSecret)
 	if err != nil {
 		h.logger.Debug("plugin token invalid", "err", err)
@@ -88,13 +91,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. OpenFGA can_view on (user, cluster) — re-checked per request.
-	allowed, err := h.authz.CanViewCluster(r.Context(), claims.Subject, claims.ClusterID)
-	if err != nil {
+	if allowed, err := h.authz.CanViewCluster(r.Context(), claims.Subject, claims.ClusterID); err != nil {
 		h.logger.Error("authz check failed", "err", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
-	}
-	if !allowed {
+	} else if !allowed {
 		http.Error(w, "permission denied", http.StatusForbidden)
 		return
 	}
@@ -102,20 +103,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	route.ClusterID = claims.ClusterID
 	route.PluginName = claims.PluginName
 
-	resp, err := h.backend.Do(r, route)
-	if err != nil {
-		h.logger.Warn("backend failed", "err", err, "kind", route.Kind)
-		http.Error(w, "bad gateway", http.StatusBadGateway)
-		return
-	}
-	defer func() { _ = resp.Body.Close() }()
-	for k, vs := range resp.Header {
-		for _, v := range vs {
-			w.Header().Add(k, v)
-		}
-	}
-	w.WriteHeader(resp.StatusCode)
-	_, _ = io.Copy(w, resp.Body)
+	h.backend.Serve(w, r, route)
 }
 
 func parseRoute(p string) (Route, bool) {

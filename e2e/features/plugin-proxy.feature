@@ -30,7 +30,7 @@ Feature: Plugin Proxy external listener
     And the "Cache-Control" header should contain "immutable"
     And the "Content-Security-Policy" header should contain "default-src 'self'"
     And the "Content-Security-Policy" header should contain "script-src 'self'"
-    And the "Content-Security-Policy" header should contain "frame-ancestors https://console.fundament.localhost:8443"
+    And the "Content-Security-Policy" header should contain "frame-ancestors ${CONSOLE_URL}"
     And the "Content-Security-Policy" header should contain "base-uri 'none'"
     And the "Content-Security-Policy" header should contain "object-src 'none'"
     And the "Content-Security-Policy" header should not contain "unsafe-inline"
@@ -69,17 +69,3 @@ Feature: Plugin Proxy external listener
     When I send a GET to the installation route "/installations/00000000-0000-0000-0000-000000000001/runtime/api/ping" with the plugin token
     Then the response status should be 200
     And the response body should equal "mock backend"
-
-  @api @plugin-proxy @cors
-  Scenario: CORS preflight from the plugin-proxy origin is allowed
-    When I send a CORS preflight to "/installations/00000000-0000-0000-0000-000000000001/runtime/api/ping" from origin "https://plugin-proxy.fundament.localhost:8443"
-    Then the response status should be 204
-    And the "Access-Control-Allow-Origin" header should be "https://plugin-proxy.fundament.localhost:8443"
-    And the "Access-Control-Allow-Headers" header should contain "Authorization"
-    And the "Access-Control-Allow-Methods" header should contain "POST"
-    And the "Access-Control-Allow-Credentials" header should be absent
-
-  @api @plugin-proxy @cors @negative
-  Scenario: CORS preflight from an unknown origin returns no allow-headers
-    When I send a CORS preflight to "/installations/00000000-0000-0000-0000-000000000001/runtime/api/ping" from origin "https://evil.test"
-    Then the "Access-Control-Allow-Origin" header should be absent

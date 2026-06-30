@@ -14,12 +14,12 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/validate"
+	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/assets"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/config"
-	"github.com/fundament-oss/fundament/plugin-proxy/pkg/httpx"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/installproxy"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/kube"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
@@ -35,7 +35,7 @@ func main() {
 func run() error {
 	cfg, err := config.FromEnv()
 	if err != nil {
-		return err
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -63,15 +63,24 @@ func run() error {
 		FrameAncestors: []string{cfg.ConsoleOrigin},
 	}
 
-	var resolver assets.ClusterResolver
-	var fetcher assets.Fetcher
-	var authz installproxy.ClusterAuthorizer
-	var backend installproxy.Backend
+	var (
+		resolver assets.ClusterResolver
+		fetcher  assets.Fetcher
+		authz    installproxy.ClusterAuthorizer
+		backend  installproxy.Backend
+	)
 	switch cfg.Mode {
 	case "real":
-		resolver, fetcher, authz, backend = New()
+		admin := kube.NewAdminKubeconfigCache()
+		resolver = assets.Resolver{}
+		fetcher = &assets.PodFetcher{AdminKubeconfig: admin}
+		authz = installproxy.Authz{}
+		backend = &installproxy.ClusterProxyBackend{AdminKubeconfig: admin}
 	case "mock":
-		resolver, fetcher, authz, backend = NewMock(logger)
+		resolver = assets.MockResolver{ClusterID: service.MockClusterID}
+		fetcher = assets.MockFetcher{Logger: logger}
+		authz = installproxy.MockAuthz{}
+		backend = installproxy.MockBackend{Logger: logger}
 	default:
 		// config.FromEnv already validates this; guard against future drift.
 		panic(fmt.Sprintf("unhandled plugin-proxy mode %q", cfg.Mode))
@@ -85,13 +94,16 @@ func run() error {
 	})
 	publicMux.Handle("/plugins/", assets.NewHandler(resolver, fetcher, cfgCsp, logger))
 
-	// Installation proxy (cross-site → wrap in CORS).
+	// Installation proxy (cross-site → wrap in CORS). The PluginToken rides
+	// in Authorization, so credentials mode stays off — do not enable
+	// AllowCredentials.
 	installHandler := installproxy.New([]byte(cfg.JWTSecret), authz, backend, logger)
-	publicMux.Handle("/installations/", httpx.WithCORS(
-		cfg.PluginProxyOrigin,
-		[]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete},
-		installHandler,
-	))
+	installCORS := cors.New(cors.Options{
+		AllowedOrigins: []string{cfg.PluginProxyOrigin},
+		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete},
+		AllowedHeaders: []string{"Authorization", "Content-Type"},
+	})
+	publicMux.Handle("/installations/", installCORS.Handler(installHandler))
 
 	s := service.New(logger, service.NewMockClusterAccess())
 
@@ -173,21 +185,4 @@ func registerHealth(mux *http.ServeMux) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
-}
-
-// New returns the real wiring: a (pluginName, version) → cluster resolver
-// (still stubbed), PodFetcher, OpenFGA authz (still stubbed), and the
-// ClusterProxyBackend.
-func New() (assets.ClusterResolver, assets.Fetcher, installproxy.ClusterAuthorizer, installproxy.Backend) {
-	admin := kube.NewAdminKubeconfigCache()
-	return assets.Resolver{}, &assets.PodFetcher{AdminKubeconfig: admin}, installproxy.Authz{}, &installproxy.ClusterProxyBackend{AdminKubeconfig: admin}
-}
-
-// NewMock returns the dev wiring: every asset lookup pinned to the mock
-// cluster, canned asset bytes, permissive authz, and a mock backend.
-func NewMock(logger *slog.Logger) (assets.ClusterResolver, assets.Fetcher, installproxy.ClusterAuthorizer, installproxy.Backend) {
-	return assets.MockResolver{ClusterID: service.MockClusterID},
-		assets.MockFetcher{Logger: logger},
-		installproxy.MockAuthz{},
-		installproxy.MockBackend{Logger: logger}
 }

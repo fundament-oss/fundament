@@ -1,8 +1,10 @@
 package config
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFromEnv_MockModeDefaultsOrigins(t *testing.T) {
@@ -14,21 +16,11 @@ func TestFromEnv_MockModeDefaultsOrigins(t *testing.T) {
 	t.Setenv("CONSOLE_ORIGIN", "")
 
 	cfg, err := FromEnv()
-	if err != nil {
-		t.Fatalf("FromEnv: %v", err)
-	}
-	if cfg.PluginProxyOrigin != "http://plugin-proxy.fundament.localhost:8080" {
-		t.Errorf("PluginProxyOrigin = %q", cfg.PluginProxyOrigin)
-	}
-	if cfg.KubeAPIProxyOrigin != "http://kube-api-proxy.fundament.localhost:8080" {
-		t.Errorf("KubeAPIProxyOrigin = %q", cfg.KubeAPIProxyOrigin)
-	}
-	if cfg.ConsoleOrigin != "http://console.fundament.localhost:8080" {
-		t.Errorf("ConsoleOrigin = %q", cfg.ConsoleOrigin)
-	}
-	if cfg.JWTSecret != "test-secret" {
-		t.Errorf("JWTSecret = %q", cfg.JWTSecret)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "http://plugin-proxy.fundament.localhost:8080", cfg.PluginProxyOrigin)
+	assert.Equal(t, "http://kube-api-proxy.fundament.localhost:8080", cfg.KubeAPIProxyOrigin)
+	assert.Equal(t, "http://console.fundament.localhost:8080", cfg.ConsoleOrigin)
+	assert.Equal(t, "test-secret", cfg.JWTSecret)
 }
 
 func TestFromEnv_MockModePreservesOrigins(t *testing.T) {
@@ -39,18 +31,10 @@ func TestFromEnv_MockModePreservesOrigins(t *testing.T) {
 	t.Setenv("CONSOLE_ORIGIN", "https://console.example")
 
 	cfg, err := FromEnv()
-	if err != nil {
-		t.Fatalf("FromEnv: %v", err)
-	}
-	if cfg.PluginProxyOrigin != "https://pp.example" {
-		t.Errorf("PluginProxyOrigin = %q", cfg.PluginProxyOrigin)
-	}
-	if cfg.KubeAPIProxyOrigin != "https://kap.example" {
-		t.Errorf("KubeAPIProxyOrigin = %q", cfg.KubeAPIProxyOrigin)
-	}
-	if cfg.ConsoleOrigin != "https://console.example" {
-		t.Errorf("ConsoleOrigin = %q", cfg.ConsoleOrigin)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "https://pp.example", cfg.PluginProxyOrigin)
+	assert.Equal(t, "https://kap.example", cfg.KubeAPIProxyOrigin)
+	assert.Equal(t, "https://console.example", cfg.ConsoleOrigin)
 }
 
 func TestFromEnv_RealModeRequiresAllOrigins(t *testing.T) {
@@ -91,12 +75,8 @@ func TestFromEnv_RealModeRequiresAllOrigins(t *testing.T) {
 			tc.setup(t)
 
 			_, err := FromEnv()
-			if err == nil {
-				t.Fatal("expected error, got nil")
-			}
-			if !strings.Contains(err.Error(), "real mode") {
-				t.Errorf("unexpected error: %v", err)
-			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "real mode")
 		})
 	}
 }
@@ -109,12 +89,8 @@ func TestFromEnv_RealModeWithAllOriginsSucceeds(t *testing.T) {
 	t.Setenv("CONSOLE_ORIGIN", "https://console.example")
 
 	cfg, err := FromEnv()
-	if err != nil {
-		t.Fatalf("FromEnv: %v", err)
-	}
-	if cfg.Mode != "real" {
-		t.Errorf("Mode = %q", cfg.Mode)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "real", cfg.Mode)
 }
 
 func TestFromEnv_UnknownModeErrors(t *testing.T) {
@@ -122,12 +98,8 @@ func TestFromEnv_UnknownModeErrors(t *testing.T) {
 	t.Setenv("PLUGIN_PROXY_MODE", "weird")
 
 	_, err := FromEnv()
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "weird") {
-		t.Errorf("error should mention unknown mode value: %v", err)
-	}
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "weird")
 }
 
 func TestFromEnv_MissingJWTSecretErrors(t *testing.T) {
@@ -135,7 +107,5 @@ func TestFromEnv_MissingJWTSecretErrors(t *testing.T) {
 	t.Setenv("PLUGIN_PROXY_MODE", "mock")
 
 	_, err := FromEnv()
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+	require.Error(t, err)
 }
