@@ -1,8 +1,6 @@
 package installproxy
 
 import (
-	"bytes"
-	"io"
 	"log/slog"
 	"net/http"
 )
@@ -13,7 +11,7 @@ type MockBackend struct {
 	Logger *slog.Logger
 }
 
-func (m MockBackend) Do(r *http.Request, route Route) (*http.Response, error) {
+func (m MockBackend) Serve(w http.ResponseWriter, r *http.Request, route Route) {
 	m.Logger.Debug("mock backend",
 		"method", r.Method,
 		"kind", route.Kind,
@@ -22,16 +20,7 @@ func (m MockBackend) Do(r *http.Request, route Route) (*http.Response, error) {
 		"plugin", route.PluginName,
 		"path", route.RemainingPath,
 	)
-	body := []byte("mock backend")
-	return &http.Response{
-		Status:        "200 OK",
-		StatusCode:    http.StatusOK,
-		Proto:         "HTTP/1.1",
-		ProtoMajor:    1,
-		ProtoMinor:    1,
-		Header:        http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
-		Body:          io.NopCloser(bytes.NewReader(body)),
-		ContentLength: int64(len(body)),
-		Request:       r,
-	}, nil
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("mock backend"))
 }

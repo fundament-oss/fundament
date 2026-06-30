@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func discardLogger() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
@@ -40,24 +42,19 @@ func newTestHandler() http.Handler {
 
 func TestHandler_ServesAssetsWithImmutableCache(t *testing.T) {
 	h := newTestHandler()
-	r := httptest.NewRequest(http.MethodGet, "/plugins/"+testPluginName+"/v1/console/index.html", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/plugins/"+testPluginName+"/v1/console/index.html", http.NoBody)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("code = %d, body = %s", w.Code, w.Body.String())
-	}
-	if got := w.Header().Get("Cache-Control"); !strings.Contains(got, "immutable") {
-		t.Errorf("Cache-Control = %q", got)
-	}
-	if !strings.HasPrefix(w.Header().Get("Content-Type"), "text/html") {
-		t.Errorf("Content-Type = %q", w.Header().Get("Content-Type"))
-	}
+	require.Equal(t, http.StatusOK, w.Code, "body = %s", w.Body.String())
+	assert.Contains(t, w.Header().Get("Cache-Control"), "immutable")
+	assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"),
+		"Content-Type = %q", w.Header().Get("Content-Type"))
 }
 
 func TestHandler_SetsStrictCSP(t *testing.T) {
 	h := newTestHandler()
-	r := httptest.NewRequest(http.MethodGet, "/plugins/"+testPluginName+"/v1/console/index.html", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/plugins/"+testPluginName+"/v1/console/index.html", http.NoBody)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 
@@ -72,17 +69,11 @@ func TestHandler_SetsStrictCSP(t *testing.T) {
 		"base-uri 'none'",
 		"object-src 'none'",
 	} {
-		if !strings.Contains(csp, want) {
-			t.Errorf("CSP missing %q; full: %s", want, csp)
-		}
+		assert.Contains(t, csp, want)
 	}
 	// FUN-17 forbids 'unsafe-inline' on the plugin path.
-	if strings.Contains(csp, "unsafe-inline") {
-		t.Errorf("CSP must not contain 'unsafe-inline'; full: %s", csp)
-	}
-	if w.Header().Get("X-Content-Type-Options") != "nosniff" {
-		t.Errorf("X-Content-Type-Options = %q", w.Header().Get("X-Content-Type-Options"))
-	}
+	assert.NotContains(t, csp, "unsafe-inline")
+	assert.Equal(t, "nosniff", w.Header().Get("X-Content-Type-Options"))
 }
 
 func TestHandler_RejectsBadPath(t *testing.T) {
@@ -93,21 +84,17 @@ func TestHandler_RejectsBadPath(t *testing.T) {
 		"/plugins//v1/console/index.html",                // empty name
 		"/plugins/cert-manager//console/index.html",      // empty version
 	} {
-		r := httptest.NewRequest(http.MethodGet, p, nil)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, p, http.NoBody)
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
-		if w.Code >= 200 && w.Code < 300 {
-			t.Errorf("expected non-2xx for %q, got %d", p, w.Code)
-		}
+		assert.GreaterOrEqual(t, w.Code, 300, "expected non-2xx for %q, got %d", p, w.Code)
 	}
 }
 
 func TestHandler_OnlyGETandHEAD(t *testing.T) {
 	h := newTestHandler()
-	r := httptest.NewRequest(http.MethodPost, "/plugins/x/v/console/i.html", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/plugins/x/v/console/i.html", http.NoBody)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Errorf("code = %d", w.Code)
-	}
+	assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
 }

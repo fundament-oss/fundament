@@ -44,8 +44,13 @@ spec:
             - name: config
               mountPath: /usr/share/nginx/html/assets/config
               readOnly: true
+            # Mount as a single file (subPath) so the Angular dev server (vite)
+            # serves it. A directory mount creates a Kubernetes symlink layer
+            # (config.json -> ..data/config.json) that vite's publicDir
+            # middleware rejects as a dotfile path.
             - name: config
-              mountPath: /app/public/assets/config
+              mountPath: /app/public/assets/config/config.json
+              subPath: config.json
               readOnly: true
       volumes:
         - name: config

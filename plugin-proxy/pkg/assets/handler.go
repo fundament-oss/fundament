@@ -103,6 +103,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodHead {
 		return
 	}
+	//nolint:gosec // intentional asset proxy: Content-Type is set from upstream, X-Content-Type-Options=nosniff and a strict CSP confine execution.
 	_, _ = w.Write(body)
 }
 
