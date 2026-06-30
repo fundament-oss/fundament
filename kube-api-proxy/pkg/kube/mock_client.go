@@ -302,11 +302,7 @@ func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, p
 		contentType = "application/octet-stream"
 	}
 	w.Header().Set("Content-Type", contentType)
-	// Plugin console assets are public. The sandboxed iframe that loads them
-	// runs with an opaque origin (Origin: null), which is not on the proxy's
-	// CORS allowlist — override to "*" so module imports succeed.
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Del("Access-Control-Allow-Credentials")
+	SetPublicAssetCORS(w.Header())
 	// Mock mode serves edits live from disk; disable caching so iframe reloads
 	// always pick up the latest template without manual cache-busting.
 	w.Header().Set("Cache-Control", "no-store")
@@ -421,6 +417,14 @@ func resourceGetResponse(listJSON, name, namespace string, r func(string) io.Rea
 func IsPluginConsoleAssetPath(path string) bool {
 	_, _, ok := pluginConsoleAsset(path)
 	return ok
+}
+
+// SetPublicAssetCORS allows any origin and drops credentials for a plugin console
+// asset: the sandboxed iframe that loads it has an opaque origin (Origin: null)
+// that can't be CORS-allow-listed. Shared by mock mode and the real-mode proxy.
+func SetPublicAssetCORS(h http.Header) {
+	h.Set("Access-Control-Allow-Origin", "*")
+	h.Del("Access-Control-Allow-Credentials")
 }
 
 // pluginConsoleAsset matches `/api/v1/namespaces/plugin-<name>/services/http:plugin-<name>:8080/proxy/console/<asset>`

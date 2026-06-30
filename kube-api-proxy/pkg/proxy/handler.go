@@ -49,11 +49,13 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// Plugin console assets are public static UI files. The sandboxed iframe
 	// that loads them runs with an opaque origin and cannot send credentials,
 	// so the auth/authz check is skipped. The mock handler serves these from
-	// disk; in real mode the apiserver service proxy would forward to the
-	// plugin pod's HTTP handler (which itself does not authenticate them).
+	// disk; in real mode the apiserver service proxy forwards to the plugin
+	// pod's HTTP handler (which itself does not authenticate them). The plugin
+	// pod sets no CORS headers, so wrap the writer to force a public CORS policy
+	// (see pluginAssetCORSWriter).
 	if kube.IsPluginConsoleAssetPath(r.URL.Path) {
 		ctx := context.WithValue(r.Context(), kube.ClusterIDContextKey{}, clusterID.String())
-		s.kubeHandler.ServeHTTP(w, r.WithContext(ctx))
+		s.kubeHandler.ServeHTTP(&pluginAssetCORSWriter{ResponseWriter: w}, r.WithContext(ctx))
 		return
 	}
 
@@ -113,4 +115,39 @@ func isAllowedPath(path string) bool {
 		}
 	}
 	return false
+}
+
+// pluginAssetCORSWriter forces a public cross-origin policy onto plugin console
+// asset responses. The sandboxed iframe that loads them has an opaque origin
+// (Origin: null) the CORS middleware won't allow-list, and the proxied plugin pod
+// sets no CORS headers itself, so apply kube.SetPublicAssetCORS just before the
+// status line — overriding both the middleware and the proxied response.
+type pluginAssetCORSWriter struct {
+	http.ResponseWriter
+	applied bool
+}
+
+func (w *pluginAssetCORSWriter) applyCORS() {
+	if w.applied {
+		return
+	}
+	w.applied = true
+	kube.SetPublicAssetCORS(w.Header())
+}
+
+func (w *pluginAssetCORSWriter) WriteHeader(status int) {
+	w.applyCORS()
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *pluginAssetCORSWriter) Write(b []byte) (int, error) {
+	w.applyCORS()
+	return w.ResponseWriter.Write(b)
+}
+
+// Flush forwards to the wrapped writer so the proxy can stream the response.
+func (w *pluginAssetCORSWriter) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }

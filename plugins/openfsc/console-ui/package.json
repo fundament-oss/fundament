@@ -1,0 +1,16 @@
+{
+  "name": "openfsc-console-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenFSC plugin Console UI. Vite app (vanilla TS) built to ../console, served same-origin from the plugin's /console/. NLDS is loaded at runtime from the shared /plugin-ui/ bundle (not bundled here). See ../../../ARCHITECTURE.md.",
+  "scripts": {
+    "build": "vite build && touch ../console/.gitkeep",
+    "dev": "vite",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.2",
+    "vite": "^7.1.0"
+  }
+}
