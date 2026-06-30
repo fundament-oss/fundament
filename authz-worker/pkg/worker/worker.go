@@ -19,7 +19,16 @@ import (
 	"github.com/fundament-oss/fundament/common/rollback"
 )
 
-const listenChannel = "authz_outbox"
+const (
+	listenChannel = "authz_outbox"
+
+	// finalizeTimeout bounds the post-dispatch DB work (mark processed/retry
+	// + commit) when running on a context that may already have been cancelled
+	// by SIGTERM. The OpenFGA write has already happened at that point; if we
+	// abandon the transaction the same tuple gets replayed on the next pod and
+	// OpenFGA rejects it as a duplicate.
+	finalizeTimeout = 10 * time.Second
+)
 
 // Config holds configuration for the outbox worker.
 type Config struct {
@@ -254,23 +263,32 @@ func (w *Worker) processOneItem(ctx context.Context) (found bool, err error) {
 		return false, fmt.Errorf("get next outbox row: %w", err)
 	}
 
-	if err := w.dispatchItem(ctx, qtx, &item); err != nil {
-		if err := w.handleProcessingError(ctx, qtx, &item, err); err != nil {
+	dispatchErr := w.dispatchItem(ctx, qtx, &item)
+
+	// Past this point the side effect on OpenFGA has already happened (success
+	// or partial), so the outbox row MUST be marked + committed even if the
+	// parent ctx was cancelled mid-flight. Run the remainder on a detached
+	// context with a bounded timeout.
+	finalizeCtx, cancel := context.WithTimeout(context.Background(), finalizeTimeout)
+	defer cancel()
+
+	if dispatchErr != nil {
+		if err := w.handleProcessingError(finalizeCtx, qtx, &item, dispatchErr); err != nil {
 			return true, fmt.Errorf("handle processing error: %w", err)
 		}
 
-		if err := tx.Commit(ctx); err != nil {
+		if err := tx.Commit(finalizeCtx); err != nil {
 			return true, fmt.Errorf("dispatch item commit: %w", err)
 		}
 
-		return true, err
+		return true, dispatchErr
 	}
 
-	if err := qtx.MarkOutboxRowProcessed(ctx, db.MarkOutboxRowProcessedParams{ID: item.ID}); err != nil {
+	if err := qtx.MarkOutboxRowProcessed(finalizeCtx, db.MarkOutboxRowProcessedParams{ID: item.ID}); err != nil {
 		return true, fmt.Errorf("mark as processed: %w", err)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	if err := tx.Commit(finalizeCtx); err != nil {
 		return true, fmt.Errorf("commit: %w", err)
 	}
 

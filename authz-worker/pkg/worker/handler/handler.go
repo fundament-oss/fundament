@@ -22,17 +22,10 @@ func New(fga *client.OpenFgaClient, logger *slog.Logger) *Handler {
 	return &Handler{fga: fga, logger: logger}
 }
 
-func (h *Handler) writeTuples(ctx context.Context, tuples ...openfga.TupleKey) error {
-	if len(tuples) == 0 {
-		return nil
-	}
-	if _, err := h.fga.WriteTuples(ctx).Body(tuples).Execute(); err != nil {
-		return fmt.Errorf("write tuples: %w", err)
-	}
-	return nil
-}
-
-// writeTuplesIfNotExist writes tuples, ignoring errors if the tuples already exist.
+// writeTuplesIfNotExist writes tuples, ignoring errors if the tuples already
+// exist. The outbox is at-least-once in the face of ungraceful pod kills
+// (SIGKILL/OOM/node-loss) — a worker may write the tuple successfully and die
+// before committing the outbox row, so the next attempt must be idempotent.
 func (h *Handler) writeTuplesIfNotExist(ctx context.Context, tuples ...openfga.TupleKey) error {
 	if len(tuples) == 0 {
 		return nil
@@ -48,17 +41,8 @@ func (h *Handler) writeTuplesIfNotExist(ctx context.Context, tuples ...openfga.T
 	return nil
 }
 
-func (h *Handler) deleteTuples(ctx context.Context, tuples ...openfga.TupleKeyWithoutCondition) error {
-	if len(tuples) == 0 {
-		return nil
-	}
-	if _, err := h.fga.DeleteTuples(ctx).Body(tuples).Execute(); err != nil {
-		return fmt.Errorf("delete tuples: %w", err)
-	}
-	return nil
-}
-
-// deleteTuplesIfExist deletes tuples, ignoring errors if the tuples don't exist.
+// deleteTuplesIfExist deletes tuples, ignoring errors if the tuples don't
+// exist. Same at-least-once reasoning as writeTuplesIfNotExist.
 func (h *Handler) deleteTuplesIfExist(ctx context.Context, tuples ...openfga.TupleKeyWithoutCondition) error {
 	if len(tuples) == 0 {
 		return nil
