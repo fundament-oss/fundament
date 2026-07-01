@@ -35,6 +35,19 @@ spec:
               value: {{ $.Values.pluginProxy.mode | quote }}
             - name: LOG_LEVEL
               value: {{ $.Values.pluginProxy.logLevel }}
+            {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
+            {{- if $.Values.externalUrls.pluginProxy }}
+            - name: PLUGIN_PROXY_ORIGIN
+              value: {{ $.Values.externalUrls.pluginProxy }}
+            {{- end }}
+            {{- if $.Values.externalUrls.kubeApiProxy }}
+            - name: KUBE_API_PROXY_ORIGIN
+              value: {{ $.Values.externalUrls.kubeApiProxy }}
+            {{- end }}
+            {{- if $.Values.externalUrls.console }}
+            - name: CONSOLE_ORIGIN
+              value: {{ $.Values.externalUrls.console }}
+            {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
 ---
@@ -55,4 +68,38 @@ spec:
       name: internal
   selector:
     {{- include "fundament.selectorLabels" (dict "root" $ "name" "plugin-proxy") | nindent 4 }}
+
+{{- if $.Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: plugin-proxy
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "plugin-proxy" "component" "backend") | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "false"
+    {{- if $.Values.ingress.tls.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+    {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - plugin-proxy.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      secretName: plugin-proxy-tls
+  {{- end }}
+  rules:
+    - host: plugin-proxy.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: plugin-proxy
+                port:
+                  name: http
+{{- end }}
 {{- end }}
