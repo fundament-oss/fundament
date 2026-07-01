@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
+	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
@@ -46,6 +49,9 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	r.URL.Path = "/" + path
 	r.URL.RawPath = ""
 
+	// TODO(FUN-17): plugin console assets now served by plugin-proxy (Plan C);
+	// this branch is superseded — remove once Plan C/E land.
+	//
 	// Plugin console assets are public static UI files. The sandboxed iframe
 	// that loads them runs with an opaque origin and cannot send credentials,
 	// so the auth/authz check is skipped. The mock handler serves these from
@@ -57,6 +63,20 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Dispatch on token type. UserToken is the browser/user path (unchanged).
+	// PluginToken is the FUN-17 gateway path: per-request SAR against the user,
+	// forward injecting the plugin SA token.
+	switch peekTokenType(r) {
+	case auth.TokenTypePlugin:
+		s.pluginGateway.serve(w, r, clusterID.String())
+	default:
+		// UserToken and cookie-borne requests: unchanged behaviour.
+		s.handleUserClusterProxy(w, r, clusterID)
+	}
+}
+
+// handleUserClusterProxy is the unchanged pre-FUN-17 UserToken path.
+func (s *Server) handleUserClusterProxy(w http.ResponseWriter, r *http.Request, clusterID uuid.UUID) {
 	// --- Authentication ---
 
 	claims, err := s.authValidator.Validate(r.Header)
@@ -102,6 +122,28 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(ctx)
 
 	s.kubeHandler.ServeHTTP(w, r)
+}
+
+// peekTokenType returns the audience-derived token type of the request's
+// bearer token (or user for cookie-borne requests), without verifying the
+// signature. The real validation happens in the branch handler.
+func peekTokenType(r *http.Request) auth.TokenType {
+	tok := bearerToken(r)
+	if tok == "" {
+		// Cookie-borne UserToken: only the browser sends these, never a plugin.
+		if c, err := r.Cookie(auth.ConsoleAuthCookieName); err == nil && c.Value != "" {
+			return auth.TokenTypeUser
+		}
+		return ""
+	}
+	var c auth.Claims
+	if _, _, err := new(jwt.Parser).ParseUnverified(tok, &c); err != nil {
+		return ""
+	}
+	if slices.Contains(c.Audience, auth.TokenTypePlugin) {
+		return auth.TokenTypePlugin
+	}
+	return auth.TokenTypeUser
 }
 
 // isAllowedPath checks whether the path (without leading slash) starts with
