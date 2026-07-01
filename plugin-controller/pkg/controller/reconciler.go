@@ -19,6 +19,7 @@ import (
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
+	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
 	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
 )
@@ -31,6 +32,7 @@ type Reconciler struct {
 	cfg                 config.Config
 	statusPoller        *statusPoller
 	uninstallHTTPClient connect.HTTPClient
+	definitionResolver  definition.Resolver
 }
 
 // ReconcilerOption configures the Reconciler.
@@ -50,6 +52,12 @@ func WithUninstallHTTPClient(c connect.HTTPClient) ReconcilerOption {
 	}
 }
 
+// WithDefinitionResolver sets the PluginDefinition resolver. Defaults to the
+// mock resolver if unset.
+func WithDefinitionResolver(r definition.Resolver) ReconcilerOption {
+	return func(rec *Reconciler) { rec.definitionResolver = r }
+}
+
 func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opts ...ReconcilerOption) *Reconciler {
 	r := &Reconciler{
 		client:              c,
@@ -61,6 +69,9 @@ func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opt
 
 	for _, opt := range opts {
 		opt(r)
+	}
+	if r.definitionResolver == nil {
+		r.definitionResolver = definition.NewMockResolver()
 	}
 	return r
 }
@@ -134,15 +145,17 @@ func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *p
 
 	log.Info("cleaning up plugin resources")
 
-	// Delete ClusterRoleBindings
-	for _, clusterRole := range cr.Spec.ClusterRoles {
-		crbName := clusterRoleBindingName(cr.Name, clusterRole)
-		crb := &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{Name: crbName},
-		}
-		if err := r.client.Delete(ctx, crb); err != nil && !apierrors.IsNotFound(err) {
-			return ctrl.Result{}, fmt.Errorf("delete ClusterRoleBinding %s: %w", crbName, err)
-		}
+	// Delete the plugin-scope ClusterRole/ClusterRoleBinding materialised from
+	// the pinned PluginDefinition. The opaque spec.clusterRoles binding is no
+	// longer written; nothing to clean up for it here.
+	scopeName := pluginScopeClusterRoleName(cr.Name)
+	scopeCRB := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: scopeName}}
+	if err := r.client.Delete(ctx, scopeCRB); err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, fmt.Errorf("delete plugin-scope ClusterRoleBinding %s: %w", scopeName, err)
+	}
+	scopeRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: scopeName}}
+	if err := r.client.Delete(ctx, scopeRole); err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, fmt.Errorf("delete plugin-scope ClusterRole %s: %w", scopeName, err)
 	}
 
 	// Delete the plugin namespace — this cascades to all namespace-scoped resources
@@ -226,43 +239,33 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 		log.Info("reconciled resource", "kind", "RoleBinding", "name", rb.Name, "operation", op)
 	}
 
-	// ClusterRoleBindings (cluster-scoped, cleaned up via finalizer)
-	// TODO: validate spec.clusterRoles against an allowlist to prevent privilege escalation.
-	// Currently any user who can create a PluginInstallation CR can bind arbitrary ClusterRoles
-	// (e.g. cluster-admin) to the plugin's ServiceAccount, which runs a user-specified image.
-	desiredCRBs := make(map[string]struct{}, len(cr.Spec.ClusterRoles))
-	for _, clusterRole := range cr.Spec.ClusterRoles {
-		crbName := clusterRoleBindingName(cr.Name, clusterRole)
-		desiredCRBs[crbName] = struct{}{}
-		crb := &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{Name: crbName},
-		}
-		if op, err := controllerutil.CreateOrUpdate(ctx, r.client, crb, func() error {
-			mutateClusterRoleBinding(crb, cr, clusterRole)
-			return nil
-		}); err != nil {
-			return fmt.Errorf("reconcile ClusterRoleBinding %s: %w", crbName, err)
-		} else if op != controllerutil.OperationResultNone {
-			log.Info("reconciled resource", "kind", "ClusterRoleBinding", "name", crbName, "operation", op)
-		}
+	// Resolve the immutable pinned PluginDefinition and materialise the plugin
+	// SA's scope ClusterRole from it (FUN-17). This replaces binding the opaque
+	// spec.clusterRoles.
+	def, err := r.definitionResolver.Resolve(ctx, cr.Spec.DefinitionRef.DefinitionHash)
+	if err != nil {
+		return fmt.Errorf("resolve pinned definition %q: %w", cr.Spec.DefinitionRef.DefinitionHash, err)
 	}
 
-	// Remove stale ClusterRoleBindings that are no longer in the spec
-	var existingCRBs rbacv1.ClusterRoleBindingList
-	if err := r.client.List(ctx, &existingCRBs, client.MatchingLabels{
-		labelManagedBy: managedByValue,
-		labelPlugin:    cr.Name,
+	scopeRoleName := pluginScopeClusterRoleName(cr.Name)
+	scopeRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
+	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeRole, func() error {
+		mutatePluginScopeClusterRole(scopeRole, cr, def.Permissions.RBAC)
+		return nil
 	}); err != nil {
-		return fmt.Errorf("list ClusterRoleBindings: %w", err)
+		return fmt.Errorf("reconcile plugin-scope ClusterRole: %w", err)
+	} else if op != controllerutil.OperationResultNone {
+		log.Info("reconciled resource", "kind", "ClusterRole", "name", scopeRoleName, "operation", op)
 	}
-	for i := range existingCRBs.Items {
-		crb := &existingCRBs.Items[i]
-		if _, ok := desiredCRBs[crb.Name]; !ok {
-			if err := r.client.Delete(ctx, crb); err != nil && !apierrors.IsNotFound(err) {
-				return fmt.Errorf("delete stale ClusterRoleBinding %s: %w", crb.Name, err)
-			}
-			log.Info("deleted stale ClusterRoleBinding", "name", crb.Name)
-		}
+
+	scopeCRB := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
+	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeCRB, func() error {
+		mutatePluginScopeClusterRoleBinding(scopeCRB, cr)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("reconcile plugin-scope ClusterRoleBinding: %w", err)
+	} else if op != controllerutil.OperationResultNone {
+		log.Info("reconciled resource", "kind", "ClusterRoleBinding", "name", scopeRoleName, "operation", op)
 	}
 
 	// Deployment (in plugin namespace, no owner ref — cleaned up via namespace deletion)

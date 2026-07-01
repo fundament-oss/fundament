@@ -26,3 +26,10 @@ func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 func WithSAToken(ctx context.Context, token string) context.Context {
 	return context.WithValue(ctx, kube.SATokenContextKey{}, token)
 }
+
+// SATokenFrom returns the ServiceAccount bearer token stored in ctx, or the
+// zero string if none is set.
+func SATokenFrom(ctx context.Context) string {
+	tok, _ := ctx.Value(kube.SATokenContextKey{}).(string)
+	return tok
+}
