@@ -10,7 +10,7 @@
 #     builds the closure itself (native x86_64), the container just orchestrates over
 #     SSH. Clean disko install, reusing the flake's hosts/hetzner config — no infect.
 #
-# Runs on macOS or Linux. Usage: ./hetzner.sh {up|down|ssh|status|stack|certs}
+# Runs on macOS or Linux. Usage: ./hetzner.sh {up|down|ssh|status|stack|certs|tunnel|console}
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -133,6 +133,71 @@ cmd_down()   { ensure_hcloud; hc server delete "$HZ_NAME" && log "deleted $HZ_NA
 cmd_status() { ensure_hcloud; hc server list; }
 cmd_ssh()    { ensure_hcloud; exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "thom@$(hc server ip "$HZ_NAME")"; }
 
+# The box's fundament is hardwired to the https://*.fundament.localhost:8443 origin
+# (dex issuer, OIDC callbacks, API CORS allowlists — verified in its configmaps), so
+# the console only works (login, CORS) when reached at EXACTLY that origin. We must
+# therefore forward to local 8443 — which a LOCAL k3d fundament usually owns, and the
+# two can't share that origin. The guard below catches that. One forwarded port
+# serves every *.fundament.localhost host (host-routed nginx). *.localhost -> 127.0.0.1.
+LCONSOLE_PORT=8443
+CONSOLE_URL="https://console.fundament.localhost:${LCONSOLE_PORT}"
+
+# Die if local :8443 is held by something OTHER than our own ssh tunnel.
+require_console_port() {
+  local who
+  # lsof exits non-zero when nothing is listening (port free) — don't let that
+  # trip `set -e`/pipefail; an empty `who` means free.
+  who=$( { lsof -nP -iTCP:"${LCONSOLE_PORT}" -sTCP:LISTEN -F c 2>/dev/null || true; } | sed -n 's/^c//p' | head -1)
+  [ -z "$who" ] && return 0          # free
+  [ "$who" = "ssh" ] && return 0     # our own tunnel — reuse
+  die "local :${LCONSOLE_PORT} is held by '$who' (your LOCAL k3d fundament?). The box's app only
+    works at the :${LCONSOLE_PORT} origin, so free it first:  k3d cluster stop fundament"
+}
+console_tunnel_up() { lsof -nP -iTCP:"${LCONSOLE_PORT}" -sTCP:LISTEN -F c 2>/dev/null | grep -qx cssh; }
+
+# Foreground SSH tunnel: localhost:8443 -> box ingress (all UIs). Ctrl-C to close.
+cmd_tunnel() {
+  ensure_hcloud
+  require_console_port
+  local ip; ip=$(hc server ip "$HZ_NAME") || die "no $HZ_NAME server — run ./hetzner.sh up"
+  log "tunnel open: $CONSOLE_URL  (also docs./dcim./dex.fundament.localhost:${LCONSOLE_PORT})"
+  log "Ctrl-C to close."
+  exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -N -L "${LCONSOLE_PORT}:127.0.0.1:8443" "thom@$ip"
+}
+
+# Open Chrome at the console, IGNORING the (untrusted mkcert) cert — no cert install.
+# --ignore-certificate-errors still works but is "unsupported"; pairing it with
+# --test-type suppresses Chrome's "unsupported command-line flag" banner. A dedicated
+# --user-data-dir is required for the flags to apply and isolates it from your profile.
+cmd_console() {
+  ensure_hcloud
+  require_console_port
+  local ip; ip=$(hc server ip "$HZ_NAME") || die "no $HZ_NAME server — run ./hetzner.sh up"
+  if console_tunnel_up; then
+    log "tunnel on :${LCONSOLE_PORT} already up — reusing"
+  else
+    log "opening background tunnel :${LCONSOLE_PORT} -> $HZ_NAME @ $ip"
+    ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -fNT -L "${LCONSOLE_PORT}:127.0.0.1:8443" "thom@$ip"
+    sleep 2
+  fi
+  # Chrome only applies these flags at startup, and it shares one process per
+  # --user-data-dir; close any prior console window so a fresh one picks up the flags.
+  local profile="${TMPDIR:-/tmp}"; profile="${profile%/}/fundament-console-chrome"
+  pkill -f "fundament-console-chrome" 2>/dev/null && { log "closing previous console Chrome to re-apply flags"; sleep 1; } || true
+  local flags=(--user-data-dir="$profile" --ignore-certificate-errors --test-type --no-first-run --no-default-browser-check "$CONSOLE_URL")
+  log "launching Chrome (cert errors ignored, banner suppressed) at $CONSOLE_URL"
+  case "$(uname -s)" in
+    Darwin) open -na "Google Chrome" --args "${flags[@]}" ;;
+    Linux)
+      local chrome
+      chrome=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser) \
+        || die "no chrome/chromium found on PATH — open $CONSOLE_URL yourself (tunnel is up)"
+      "$chrome" "${flags[@]}" >/dev/null 2>&1 &
+      ;;
+    *) die "unsupported OS for auto-launch — the tunnel is up, open $CONSOLE_URL in your browser" ;;
+  esac
+}
+
 # Copy YOUR machine's mkcert CA onto the box (into mkcert's CAROOT) so the box's
 # setup-certs signs *.fundament.localhost with a CA your OS/browser ALREADY trusts
 # (from local `mkcert -install`). Then browser, functl and kubectl all trust the box
@@ -181,5 +246,7 @@ case "${1:-}" in
   status) cmd_status ;;
   stack) cmd_stack ;;
   certs) cmd_certs ;;
-  *) die "usage: $0 {up|down|ssh|status|stack|certs}" ;;
+  tunnel) cmd_tunnel ;;
+  console) cmd_console ;;
+  *) die "usage: $0 {up|down|ssh|status|stack|certs|tunnel|console}" ;;
 esac

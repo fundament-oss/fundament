@@ -25,6 +25,14 @@ hetzner-stack:
 hetzner-certs:
     ./hetzner.sh certs
 
+# open Chrome/Chromium at the box console (auto-tunnels :8443)
+hetzner-console:
+    ./hetzner.sh console
+
+# foreground SSH tunnel to the box ingress (localhost:8443 -> all *.fundament.localhost UIs)
+hetzner-tunnel:
+    ./hetzner.sh tunnel
+
 # ssh into the box (NixOS, port 2022)
 hetzner-ssh:
     ./hetzner.sh ssh
