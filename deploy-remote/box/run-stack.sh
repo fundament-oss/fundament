@@ -11,6 +11,9 @@ CLUSTER=${CLUSTER:-smoke}
 VKC=.dev/gardener/dev-setup/kubeconfigs/virtual-garden/kubeconfig
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
+# No `set -e`: Stage A/B verify their real success and exit hard (a broken cluster or
+# seed must not masquerade as a benign shoot-watch timeout); Stage C is intentionally
+# tolerant (the organization-api OpenFGA crashloop is non-fatal for the shoot path).
 log "=== STAGE A: cluster-create (k3d + cert-manager) ==="
 mise exec -- just cluster-create || log "cluster-create returned nonzero (likely k3d-exists/setup-certs; will verify issuer)"
 for i in $(seq 1 20); do
@@ -22,10 +25,14 @@ for i in $(seq 1 20); do
   mise exec -- just setup-certs >/dev/null 2>&1 || true
   sleep 10
 done
+mise exec -- kubectl --context k3d-fundament get clusterissuer mkcert-local >/dev/null 2>&1 \
+  || { log "FATAL: ClusterIssuer mkcert-local never came up — cluster-create/cert-manager is broken"; exit 1; }
 
 log "=== STAGE B: gardener-up (clones gardener, brings up seed; ~10-15 min) ==="
 mise exec -- just cluster-worker gardener-up || log "gardener-up returned nonzero"
-log "seed: $(mise exec -- kubectl --kubeconfig "$VKC" get seed local --no-headers 2>/dev/null)"
+seed=$(mise exec -- kubectl --kubeconfig "$VKC" get seed local --no-headers 2>/dev/null)
+log "seed: $seed"
+echo "$seed" | grep -qw Ready || { log "FATAL: Gardener seed is not Ready — gardener-up failed"; exit 1; }
 
 log "=== STAGE C: fundament deploy (skaffold) ==="
 mise exec -- bash -c 'export SKAFFOLD_DEFAULT_REPO=localhost:5111; skaffold run --profile env-local --profile local-gardener' \
@@ -39,7 +46,7 @@ mise exec -- kubectl --context k3d-fundament exec -n fundament db-1 -c postgres 
 
 log "=== STAGE E: watch shoot '$CLUSTER' -> Create Succeeded ==="
 for i in $(seq 1 80); do
-  LINE=$(mise exec -- kubectl --kubeconfig "$VKC" get shoots -A --no-headers 2>/dev/null | grep -i "$CLUSTER")
+  LINE=$(mise exec -- kubectl --kubeconfig "$VKC" get shoots -A --no-headers 2>/dev/null | grep -iF -- "$CLUSTER")
   log "shoot: $LINE"
   echo "$LINE" | grep -qiE "Create Succeeded|100%" && { log "SHOOT SUCCEEDED"; break; }
   sleep 15
@@ -47,5 +54,5 @@ done
 
 log "=== SUMMARY ==="
 mise exec -- kubectl --kubeconfig "$VKC" get seed local 2>/dev/null
-mise exec -- kubectl --kubeconfig "$VKC" get shoots -A 2>/dev/null | grep -iE "$CLUSTER|NAME"
+mise exec -- kubectl --kubeconfig "$VKC" get shoots -A 2>/dev/null | grep -iF -e NAME -e "$CLUSTER"
 log "=== DONE ==="

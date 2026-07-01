@@ -20,18 +20,13 @@ hetzner-up:
 hetzner-stack:
     ./hetzner.sh stack
 
-# copy your machine's mkcert CA onto the box so its certs are trusted (browser/functl/kubectl);
-# `hetzner-stack` does this automatically — use standalone to (re)seed before re-issuing
-hetzner-certs:
-    ./hetzner.sh certs
-
-# open Chrome/Chromium at the box console (auto-tunnels :8443)
-hetzner-console:
-    ./hetzner.sh console
-
-# foreground SSH tunnel to the box ingress (localhost:8443 -> all *.fundament.localhost UIs)
+# foreground SSH tunnel to the box ingress; then open the printed URL in your browser
 hetzner-tunnel:
     ./hetzner.sh tunnel
+
+# re-trust the box's CA locally (stack does this automatically; use if you switched machines)
+hetzner-certs:
+    ./hetzner.sh certs
 
 # ssh into the box (NixOS, port 2022)
 hetzner-ssh:

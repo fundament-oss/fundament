@@ -1,6 +1,10 @@
 # Shared baseline: everything needed for a functional fundament + Gardener box,
-# independent of hardware/cloud and free of secrets. Both hosts import this.
+# independent of hardware/cloud and free of secrets.
 { pkgs, lib, ... }:
+let
+  # The box login user — single source of truth. Keep in sync with BOX_USER in hetzner.sh.
+  user = "thom";
+in
 {
   # --- Access (public key only — not secret) ------------------------------
   services.openssh = {
@@ -11,7 +15,7 @@
     settings.PasswordAuthentication = false;
   };
 
-  users.users.thom = {
+  users.users.${user} = {
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" ];
     # Console fallback so the box is never locked out if Wi-Fi/SSH is down.
@@ -127,7 +131,7 @@
 
   # --- Nix ----------------------------------------------------------------
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  nix.settings.trusted-users = [ "root" "thom" ];
+  nix.settings.trusted-users = [ "root" user ];
 
   time.timeZone = "Europe/Amsterdam";
 

@@ -14,7 +14,7 @@ needed (Docker you already run for k3d).
 deploy-remote/
 ├── flake.nix                     nixosConfigurations.hetzner (built by nixos-anywhere)
 ├── justfile                      thin wrappers around hetzner.sh
-├── hetzner.sh                    lifecycle: up · stack · certs · console · tunnel · ssh · status · down
+├── hetzner.sh                    lifecycle: up · stack · certs · tunnel · ssh · status · down
 ├── box/                          scripts pushed to the box by `hetzner.sh stack`
 │   ├── bootstrap.sh              clone fundament + apply patch + mise install
 │   └── run-stack.sh              cluster-create → gardener-up → skaffold → drive a shoot to 100%
@@ -47,32 +47,33 @@ every boot (`ephemeral-scratch.nix`), so a reboot returns to clean container sta
 cd deploy-remote
 cp secrets/hetzner.env.example secrets/hetzner.env   # paste a Read&Write API token
 just hetzner-up        # create box + install NixOS (nixos-anywhere in docker); waits until ready
-just hetzner-stack     # clone fundament + mise + gardener-up + skaffold + drive a shoot to 100%
-just hetzner-console   # open Chrome/Chromium at the console UI (auto-tunnels :8443)
+just hetzner-stack     # deploy fundament + Gardener, run a shoot, trust the box CA; prints the console URL
+just hetzner-tunnel    # SSH tunnel :8443 — then open the printed URL in your normal browser
 just hetzner-ssh       # log in (port 2022) to poke around
 just hetzner-status    # list project servers — never forget a box is billing
-just hetzner-down      # DESTROY the box — stops billing
+just hetzner-down      # DESTROY the box — stops billing (also untrusts the box CA)
 ```
 
 `hetzner-up` needs `ssh` + `curl` + a running **Docker** daemon. It fetches a pinned
-`hcloud`, registers your admin pubkey (`~/.ssh/id_rsa.pub`, override `ADMIN_PUBKEY=…`),
-creates the box, then installs NixOS (~8–12 min). Override defaults via env, e.g.
-`HZ_TYPE=ccx43 HZ_LOCATION=hel1 just hetzner-up` (try another location on
-`resource_unavailable` — CX capacity varies by DC). Works on macOS and Linux.
+`hcloud`, registers your admin pubkey (prefers `~/.ssh/id_ed25519.pub`, falls back to
+`id_rsa.pub`; override `ADMIN_PUBKEY=…`), creates the box, then installs NixOS
+(~8–12 min). Override defaults via env, e.g. `HZ_TYPE=ccx43 HZ_LOCATION=hel1
+just hetzner-up` (try another location on `resource_unavailable`). Works on macOS/Linux.
 
 `hetzner-stack` pushes `box/*.sh` + `patches/*` and runs bootstrap + the full cycle
-(gardener-up ~10-15 min, shoot ~7). Re-runs cleanly.
+(gardener-up ~10-15 min, shoot ~7), then trusts the box's CA (see below) and prints
+how to reach the UIs. Re-runs cleanly.
 
-## Certificates — trusted TLS
+## Certificates — ephemeral per-box CA
 
 The stack's TLS is mkcert-signed. *Ignoring* the cert only gets you the browser UI;
-`functl` (the shoot kubeconfig's exec auth) and `kubectl` can't skip verification. So
-`hetzner-stack` **copies your machine's mkcert CA onto the box** (also `hetzner.sh
-certs` standalone), so it signs `*.fundament.localhost` with a CA your OS already
-trusts from local `mkcert -install` — no new trust entries, macOS and Linux alike
-(`mkcert -CAROOT` resolves the right path). Then browser, `functl` and `kubectl` all
-work with no `--insecure`. (No local mkcert CA → the box self-signs; `hetzner-console`
-still works via `--ignore-certificate-errors`, but the kubeconfig path won't.)
+`functl` (the shoot kubeconfig's exec auth) and `kubectl` can't skip verification — so
+we need a genuinely trusted cert. Each box generates its **own mkcert CA** on deploy;
+`hetzner-stack` fetches that CA and runs **`mkcert -install`** locally (system + browser
+NSS, macOS/Linux), so browser, `functl` and `kubectl` trust the box with no `--insecure`.
+**Your real mkcert CA never touches the box** — only the box's throwaway CA is fetched,
+and `hetzner-down` runs `mkcert -uninstall` + deletes the local copy, so nothing lingers.
+(`hetzner-certs` re-trusts it, e.g. from a second machine.)
 
 ## Reaching the console / clusters
 
@@ -84,7 +85,8 @@ that origin** — an SSH tunnel on local **8443**. One forwarded port serves eve
 ```sh
 # a LOCAL k3d fundament owns 127.0.0.1:8443 — stop it first so the box can use that origin:
 k3d cluster stop fundament
-just hetzner-console                         # tunnel :8443 + open the console
+just hetzner-tunnel                                 # opens the tunnel + prints the URL
+open https://console.fundament.localhost:8443       # in your normal browser (cert trusted)
 kubectl --kubeconfig <shoot-kubeconfig> get nodes   # works with certs trusted, no --insecure
 ```
 
@@ -92,9 +94,9 @@ kubectl --kubeconfig <shoot-kubeconfig> get nodes   # works with certs trusted, 
 
 | Material | Where at rest | How it reaches the box |
 |---|---|---|
-| Admin pubkey | `~/.ssh/id_rsa.pub` (public) + `modules/baseline.nix` | registered with hcloud for bootstrap |
+| Admin pubkey | `~/.ssh/id_ed25519.pub` (public) + `modules/baseline.nix` | registered with hcloud for bootstrap |
 | Hetzner Cloud API token | gitignored `secrets/hetzner.env` | `hetzner-*` → `HCLOUD_TOKEN` |
-| Your mkcert CA | your OS mkcert CAROOT | `hetzner certs` / `stack` copies it to the box |
+| Box's ephemeral CA | fetched to gitignored `cache/box-ca/` | generated on the box; `mkcert -install`ed locally, `-uninstall`ed on `down` |
 
 No private key material is baked into the flake (flake files land in world-readable
 `/nix/store`). `cache/` holds the fetched hcloud binary + a copy of your mkcert CA —

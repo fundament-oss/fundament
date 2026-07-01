@@ -11,7 +11,11 @@ REPO="$HOME/fundament"
 PATCHES="$HOME/patches"
 
 echo "== 1. clone fundament (public HTTPS) =="
-[ -d "$REPO/.git" ] || git clone https://github.com/fundament-oss/fundament.git "$REPO"
+if [ ! -d "$REPO/.git" ]; then
+  # Self-heal a leftover partial/non-git dir (git clone refuses a non-empty target).
+  [ -e "$REPO" ] && { echo "   removing incomplete $REPO"; rm -rf "$REPO"; }
+  git clone https://github.com/fundament-oss/fundament.git "$REPO"
+fi
 cd "$REPO"
 
 echo "== 2. apply k3d/gardener coexistence patch =="
