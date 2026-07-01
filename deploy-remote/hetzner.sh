@@ -29,7 +29,9 @@ ENVFILE=secrets/hetzner.env
 CACHE=cache/bin
 BOX_CA=cache/box-ca                  # the box's ephemeral CA, fetched here + trusted while the box lives
 
+# print a progress line to stdout
 log() { printf '>> %s\n' "$*"; }
+# print an error to stderr and abort
 die() { printf '!! %s\n' "$*" >&2; exit 1; }
 
 # Admin pubkey registered with hcloud for the install phase; prefer ed25519, else rsa.
@@ -62,6 +64,7 @@ ensure_hcloud() {
     chmod +x "$HC"
   fi
 }
+# run the fetched hcloud binary (token comes from the exported HCLOUD_TOKEN)
 hc() { "$HC" "$@"; }
 
 # public IPv4 of the box, or die (hcloud prints empty + exits 0 for a server with no IPv4).
@@ -78,6 +81,7 @@ resolve_mkcert() {
   else die "mkcert not found (needed to trust the box CA) — install it, or run from the fundament repo"; fi
 }
 
+# poll SSH on host:port as the given user until it answers (tries x 8s); 0 if reachable
 wait_ssh() { # host user tries port
   local i
   for i in $(seq 1 "${3:-60}"); do
@@ -107,6 +111,7 @@ trust_box_ca() { # ip
   CAROOT="$PWD/$BOX_CA" "${MKCERT[@]}" -install
 }
 
+# remove the box's ephemeral CA from local trust and delete the local copy (run on down)
 untrust_box_ca() {
   [ -f "$BOX_CA/rootCA.pem" ] || return 0
   resolve_mkcert
@@ -115,6 +120,7 @@ untrust_box_ca() {
   rm -rf "$BOX_CA"
 }
 
+# tell the operator how to reach the box UIs from their browser (tunnel + URL)
 print_access() {
   log ""
   log "reach the box UIs from your normal browser:"
@@ -153,6 +159,7 @@ deploy_once() { # ip priv
   return 1
 }
 
+# create the box (if absent) and install NixOS onto it; on failure, destroy + recreate (HZ_RETRIES)
 cmd_up() {
   ensure_hcloud
   command -v docker >/dev/null 2>&1 || die "docker is required (used to run nixos-anywhere without local nix)"
@@ -189,12 +196,15 @@ cmd_up() {
   done
 }
 
+# untrust the box's CA locally, then destroy the box (stops billing)
 cmd_down() {
   ensure_hcloud
   untrust_box_ca
   hc server delete "$HZ_NAME" && log "deleted $HZ_NAME — billing stopped."
 }
+# list the project's servers (so a billing box is never forgotten)
 cmd_status() { ensure_hcloud; hc server list; }
+# open an interactive shell on the box (NixOS, port 2022)
 cmd_ssh()    { ensure_hcloud; exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$(box_ip)"; }
 
 # --- reach the box ingress -------------------------------------------------
@@ -206,6 +216,7 @@ cmd_ssh()    { ensure_hcloud; exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USE
 LCONSOLE_PORT=8443
 CONSOLE_URL="https://console.fundament.localhost:${LCONSOLE_PORT}"
 
+# refuse the tunnel if local :8443 is held by something other than our own ssh tunnel
 require_console_port() {
   local who
   # lsof exits non-zero when nothing is listening (port free) — don't let that trip
