@@ -2809,6 +2809,30 @@ END;]]> </definition>
 	</constraint>
 </table>
 
+<table name="users" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
+	<schema name="dcim"/>
+	<role name="fun_owner"/>
+	<position x="7400" y="1200"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="email">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="users_pk" type="pk-constr" table="dcim.users">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
 <index name="task_steps_uq_task_ordinal" table="dcim.task_steps"
 	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
 	 index-type="btree" factor="0">
@@ -4154,5 +4178,10 @@ END;]]> </definition>
 	<object name="dcim.task_steps" type="table"/>
 	<roles names="fun_dcim_api"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.users" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true"/>
 </permission>
 </dbmodel>
