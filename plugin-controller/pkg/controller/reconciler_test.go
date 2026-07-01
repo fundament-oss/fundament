@@ -21,6 +21,7 @@ import (
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
+	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
 	pb "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
 )
@@ -42,6 +43,11 @@ func testCR() *pluginsv1.PluginInstallation {
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
 			Image: "ghcr.io/fundament-oss/fundament/cert-manager-plugin:latest",
+			DefinitionRef: pluginsv1.DefinitionRef{
+				PluginName:     "cert-manager",
+				PluginVersion:  "v1.17.2",
+				DefinitionHash: "sha256:mock",
+			},
 			Config: map[string]string{
 				"LOG_LEVEL": "debug",
 			},
@@ -78,19 +84,6 @@ func TestMutateRoleBinding(t *testing.T) {
 	require.Len(t, rb.Subjects, 1)
 	assert.Equal(t, "plugin-cert-manager", rb.Subjects[0].Name)
 	assert.Equal(t, "plugin-cert-manager", rb.Subjects[0].Namespace)
-}
-
-func TestMutateClusterRoleBinding(t *testing.T) {
-	cr := testCR()
-	crb := &rbacv1.ClusterRoleBinding{}
-	mutateClusterRoleBinding(crb, cr, "cluster-admin")
-
-	assert.Equal(t, managedByValue, crb.Labels[labelManagedBy])
-	assert.Equal(t, "cluster-admin", crb.RoleRef.Name)
-	assert.Equal(t, "ClusterRole", crb.RoleRef.Kind)
-	require.Len(t, crb.Subjects, 1)
-	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Name)
-	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Namespace)
 }
 
 func TestMutateDeployment(t *testing.T) {
@@ -156,6 +149,7 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 			FundamentInstallID: "test-install",
 			FundamentOrgID:     "test-org",
 		},
+		definitionResolver: definition.NewMockResolver(),
 	}
 
 	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
@@ -187,13 +181,6 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "admin", rb.RoleRef.Name)
 
-	// Verify no ClusterRoleBindings created (no clusterRoles requested)
-	var crb rbacv1.ClusterRoleBinding
-	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: "plugin-cert-manager-cluster-admin",
-	}, &crb)
-	assert.Error(t, err, "ClusterRoleBinding should not exist without clusterRoles")
-
 	// Verify Deployment created in plugin namespace
 	var deploy appsv1.Deployment
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
@@ -209,11 +196,13 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestReconcileChildren_CreatesClusterRoleBindings(t *testing.T) {
+// TestReconcileChildren_MaterialisesPluginScopeRBAC verifies FUN-17 Plan D:
+// the reconciler resolves the pinned PluginDefinition and materialises the
+// plugin SA's scope ClusterRole + ClusterRoleBinding from its permissions.rbac.
+func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 	scheme := newTestScheme()
 	cr := testCR()
 	cr.SetUID("test-uid")
-	cr.Spec.ClusterRoles = []string{"cluster-admin"}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -222,27 +211,33 @@ func TestReconcileChildren_CreatesClusterRoleBindings(t *testing.T) {
 		Build()
 
 	r := &Reconciler{
-		client: fakeClient,
-		logger: slog.Default(),
-		cfg: config.Config{
-			FundamentClusterID: "test-cluster",
-			FundamentInstallID: "test-install",
-			FundamentOrgID:     "test-org",
-		},
+		client:             fakeClient,
+		logger:             slog.Default(),
+		definitionResolver: definition.NewMockResolver(),
 	}
 
 	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
 	require.NoError(t, err)
 
-	// Verify ClusterRoleBinding created
+	var role rbacv1.ClusterRole
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: "plugin-cert-manager-scope",
+	}, &role)
+	require.NoError(t, err)
+	require.Len(t, role.Rules, 2)
+	assert.Equal(t, []string{"cert-manager.io"}, role.Rules[0].APIGroups)
+	assert.Equal(t, []string{"certificates", "certificaterequests"}, role.Rules[0].Resources)
+	assert.Equal(t, []string{"cert-manager-webhook-ca"}, role.Rules[1].ResourceNames)
+
 	var crb rbacv1.ClusterRoleBinding
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: "plugin-cert-manager-cluster-admin",
+		Name: "plugin-cert-manager-scope",
 	}, &crb)
 	require.NoError(t, err)
-	assert.Equal(t, "cluster-admin", crb.RoleRef.Name)
+	assert.Equal(t, "plugin-cert-manager-scope", crb.RoleRef.Name)
 	require.Len(t, crb.Subjects, 1)
 	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Name)
+	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Namespace)
 }
 
 func TestMapPhase(t *testing.T) {
@@ -332,11 +327,10 @@ func TestHandleDeletion_CleansUpNamespace(t *testing.T) {
 	assert.NotContains(t, cr.Finalizers, finalizerName)
 }
 
-func TestHandleDeletion_CleansUpClusterRoleBindings(t *testing.T) {
+func TestHandleDeletion_CleansUpPluginScopeRBAC(t *testing.T) {
 	scheme := newTestScheme()
 	cr := testCR()
 	cr.SetUID("test-uid")
-	cr.Spec.ClusterRoles = []string{"cluster-admin"}
 	cr.Finalizers = []string{finalizerName}
 	now := metav1.Now()
 	cr.DeletionTimestamp = &now
@@ -347,16 +341,22 @@ func TestHandleDeletion_CleansUpClusterRoleBindings(t *testing.T) {
 			Labels: childLabels(cr),
 		},
 	}
-	crb := &rbacv1.ClusterRoleBinding{
+	scopeRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   clusterRoleBindingName(cr.Name, "cluster-admin"),
+			Name:   pluginScopeClusterRoleName(cr.Name),
+			Labels: childLabels(cr),
+		},
+	}
+	scopeCRB := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   pluginScopeClusterRoleName(cr.Name),
 			Labels: childLabels(cr),
 		},
 	}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(cr, ns, crb).
+		WithObjects(cr, ns, scopeRole, scopeCRB).
 		WithStatusSubresource(cr).
 		Build()
 
@@ -369,21 +369,24 @@ func TestHandleDeletion_CleansUpClusterRoleBindings(t *testing.T) {
 	_, err := r.handleDeletion(context.Background(), slog.Default(), cr)
 	require.NoError(t, err)
 
-	// Verify ClusterRoleBinding deleted
+	var deletedRole rbacv1.ClusterRole
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: pluginScopeClusterRoleName(cr.Name),
+	}, &deletedRole)
+	assert.Error(t, err)
+
 	var deletedCRB rbacv1.ClusterRoleBinding
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: clusterRoleBindingName(cr.Name, "cluster-admin"),
+		Name: pluginScopeClusterRoleName(cr.Name),
 	}, &deletedCRB)
 	assert.Error(t, err)
 
-	// Verify Namespace deleted
 	var deletedNS corev1.Namespace
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
 		Name: pluginNamespace(cr.Name),
 	}, &deletedNS)
 	assert.Error(t, err)
 
-	// Verify finalizer removed
 	assert.NotContains(t, cr.Finalizers, finalizerName)
 }
 
