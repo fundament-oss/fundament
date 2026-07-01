@@ -16,6 +16,15 @@ _default:
 hetzner-up:
     ./hetzner.sh up
 
+# clone fundament + mise + gardener-up + skaffold + drive a shoot to 100%
+hetzner-stack:
+    ./hetzner.sh stack
+
+# copy your machine's mkcert CA onto the box so its certs are trusted (browser/functl/kubectl);
+# `hetzner-stack` does this automatically — use standalone to (re)seed before re-issuing
+hetzner-certs:
+    ./hetzner.sh certs
+
 # ssh into the box (NixOS, port 2022)
 hetzner-ssh:
     ./hetzner.sh ssh

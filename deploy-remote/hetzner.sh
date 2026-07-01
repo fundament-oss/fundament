@@ -10,7 +10,7 @@
 #     builds the closure itself (native x86_64), the container just orchestrates over
 #     SSH. Clean disko install, reusing the flake's hosts/hetzner config — no infect.
 #
-# Runs on macOS or Linux. Usage: ./hetzner.sh {up|down|ssh|status}
+# Runs on macOS or Linux. Usage: ./hetzner.sh {up|down|ssh|status|stack|certs}
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -133,10 +133,53 @@ cmd_down()   { ensure_hcloud; hc server delete "$HZ_NAME" && log "deleted $HZ_NA
 cmd_status() { ensure_hcloud; hc server list; }
 cmd_ssh()    { ensure_hcloud; exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "thom@$(hc server ip "$HZ_NAME")"; }
 
+# Copy YOUR machine's mkcert CA onto the box (into mkcert's CAROOT) so the box's
+# setup-certs signs *.fundament.localhost with a CA your OS/browser ALREADY trusts
+# (from local `mkcert -install`). Then browser, functl and kubectl all trust the box
+# — no cert install, no --insecure. Works the same on macOS and Linux: `mkcert -CAROOT`
+# resolves the right per-OS path. Must land BEFORE setup-certs runs (stack does this
+# automatically). Returns non-zero (no die) if there's no local mkcert CA to copy.
+# Note: this copies the CA *private key* to a throwaway cloud box — fine for a test box.
+copy_local_mkcert_ca() { # ip
+  local ip=$1 caroot
+  caroot=$(mkcert -CAROOT 2>/dev/null) || caroot=$( (cd .. && mise exec -- mkcert -CAROOT) 2>/dev/null) || caroot=""
+  [ -n "$caroot" ] && [ -f "$caroot/rootCA.pem" ] && [ -f "$caroot/rootCA-key.pem" ] || return 1
+  log "copying local mkcert CA ($caroot) -> box (its certs become trusted on your machine)"
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "thom@$ip" 'mkdir -p ~/.local/share/mkcert' || return 1
+  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" "$caroot/rootCA.pem" "$caroot/rootCA-key.pem" "thom@$ip:.local/share/mkcert/" >/dev/null
+}
+
+# Standalone: copy the CA now. Run BEFORE `stack` (setup-certs picks it up); if the
+# stack already ran with the box's own CA, re-run `stack` afterwards to re-issue.
+cmd_certs() {
+  ensure_hcloud
+  local ip; ip=$(hc server ip "$HZ_NAME") || die "no $HZ_NAME server — run ./hetzner.sh up"
+  copy_local_mkcert_ca "$ip" || die "no local mkcert CA found — run 'mkcert -install' first"
+  log "done. Run BEFORE 'hetzner.sh stack' (or re-run stack to re-issue certs with it)."
+}
+
+# Push the on-box scripts + patches and run the full fundament + Gardener stack
+# (clone -> mise -> cluster-create -> gardener-up -> skaffold -> shoot). Run after `up`.
+cmd_stack() {
+  ensure_hcloud
+  local ip; ip=$(hc server ip "$HZ_NAME") || die "no $HZ_NAME server — run ./hetzner.sh up first"
+  # Seed your machine's trusted mkcert CA first so setup-certs signs ingress certs with it.
+  copy_local_mkcert_ca "$ip" || log "no local mkcert CA — box will self-sign (certs won't be trusted on your machine; see TODO.md)"
+  log "staging box scripts + patches onto $HZ_NAME @ $ip"
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "thom@$ip" 'mkdir -p ~/patches ~/box'
+  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" patches/*.patch "thom@$ip:patches/" >/dev/null
+  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" box/bootstrap.sh box/run-stack.sh "thom@$ip:box/" >/dev/null
+  log "running bootstrap + stack on the box (gardener-up takes ~10-15 min)"
+  exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "thom@$ip" \
+    'chmod +x ~/box/*.sh && ~/box/bootstrap.sh && ~/box/run-stack.sh'
+}
+
 case "${1:-}" in
   up) cmd_up ;;
   down) cmd_down ;;
   ssh) cmd_ssh ;;
   status) cmd_status ;;
-  *) die "usage: $0 {up|down|ssh|status}" ;;
+  stack) cmd_stack ;;
+  certs) cmd_certs ;;
+  *) die "usage: $0 {up|down|ssh|status|stack|certs}" ;;
 esac
