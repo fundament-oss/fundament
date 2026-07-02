@@ -16,13 +16,12 @@ deploy-remote/
 ├── justfile                      thin wrappers around hetzner.sh
 ├── hetzner.sh                    lifecycle: up · stack · certs · tunnel · ssh · status · down
 ├── box/                          scripts pushed to the box by `hetzner.sh stack`
-│   ├── bootstrap.sh              clone fundament + apply patch + mise install
+│   ├── bootstrap.sh              clone fundament + checkout deployed ref + mise install
 │   └── run-stack.sh              cluster-create → gardener-up → skaffold → drive a shoot to 100%
 ├── modules/
 │   ├── baseline.nix             functional system: docker, nix-ld, resolved+gardener DNS, tools
 │   └── ephemeral-scratch.nix    reformat the scratch partition before docker (reboot-to-clean)
 ├── hosts/hetzner/               default.nix · disko.nix (/dev/sda, EF02+ESP+scratch)
-├── patches/                     k3d-network / k3d-port-bind patches (applied on the box)
 ├── secrets/hetzner.env.example  template; real secrets/hetzner.env (API token) is gitignored
 └── cache/                       gitignored — fetched hcloud binary, install key, box CA cert
 ```
@@ -63,9 +62,14 @@ the box, then installs NixOS (~8–12 min). Override defaults via env, e.g. `HZ_
 HZ_LOCATION=hel1 just hetzner-up` (try another location on `resource_unavailable`).
 Works on macOS/Linux.
 
-`hetzner-stack` pushes `box/*.sh` + `patches/*` and runs bootstrap + the full cycle
+`hetzner-stack` pushes `box/*.sh` and runs bootstrap + the full cycle
 (gardener-up ~10-15 min, shoot ~7), then trusts the box's CA (see below) and prints
 how to reach the UIs. Re-runs cleanly.
+
+> **The box runs your branch as PUSHED to origin — not your local working tree.**
+> Bootstrap clones the repo from GitHub and checks out the branch you ran
+> `hetzner-stack` from; uncommitted or unpushed changes are NOT on the box.
+> Push first, then run `hetzner-stack` (re-runs re-fetch the branch).
 
 ## Certificates — ephemeral per-box CA
 

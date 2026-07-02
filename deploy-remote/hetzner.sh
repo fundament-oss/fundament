@@ -304,20 +304,20 @@ cmd_tunnel() {
 cmd_certs() { ensure_hcloud; local ip; ip=$(box_ip); trust_box_ca "$ip"; log "box CA trusted locally."; }
 
 # --- run the full stack on the box -----------------------------------------
-# Push the on-box scripts + patches, run bootstrap + the stack, then trust the box's
+# Push the on-box scripts, run bootstrap + the stack, then trust the box's
 # freshly-generated CA locally and print how to reach the UIs.
 cmd_stack() {
   ensure_hcloud
-  local ip; ip=$(box_ip)
-  log "staging box scripts + patches onto $HZ_NAME @ $ip"
-  # Reset ~/patches so bootstrap only ever sees the CURRENT patch set (a stale patch
-  # from an earlier stack run would trip bootstrap's fatal does-not-apply check).
-  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'rm -rf ~/patches ~/box && mkdir -p ~/patches ~/box'
-  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" patches/*.patch "$BOX_USER@$ip:patches/" >/dev/null
+  local ip ref; ip=$(box_ip)
+  # The box clones the repo from GitHub and checks out THIS branch — i.e. it tests
+  # what you PUSHED, not your local working tree. Push before `stack`.
+  ref=$(git rev-parse --abbrev-ref HEAD)
+  log "staging box scripts onto $HZ_NAME @ $ip (branch: $ref — as pushed to origin)"
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'rm -rf ~/box && mkdir -p ~/box'
   scp -P "$SSH_PORT" "${SSH_OPTS[@]}" box/bootstrap.sh box/run-stack.sh "$BOX_USER@$ip:box/" >/dev/null
   log "running bootstrap + stack on the box (gardener-up takes ~10-15 min)"
   ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "$BOX_USER@$ip" \
-    'chmod +x ~/box/*.sh && ~/box/bootstrap.sh && ~/box/run-stack.sh' \
+    "chmod +x ~/box/*.sh && FUNDAMENT_REF='$ref' ~/box/bootstrap.sh && ~/box/run-stack.sh" \
     || die "stack failed on the box — inspect with ./hetzner.sh ssh"
   trust_box_ca "$ip"
   print_access
