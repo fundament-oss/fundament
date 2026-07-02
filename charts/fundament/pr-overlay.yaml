@@ -94,6 +94,7 @@ spec:
       clusterWorker: ${IMAGE_PREFIX}/cluster-worker:${IMAGE_TAG}
       authzWorker: ${IMAGE_PREFIX}/authz-worker:${IMAGE_TAG}
       kubeApiProxy: ${IMAGE_PREFIX}/kube-api-proxy:${IMAGE_TAG}
+      pluginProxy: ${IMAGE_PREFIX}/plugin-proxy:${IMAGE_TAG}
       openfgaSetup: ${IMAGE_PREFIX}/openfga-setup:${IMAGE_TAG}
       dcimApi: ${IMAGE_PREFIX}/dcim-api:${IMAGE_TAG}
       dcimFrontend: ${IMAGE_PREFIX}/dcim-frontend:${IMAGE_TAG}
@@ -177,6 +178,12 @@ spec:
       replicas: 1
       logLevel: debug
       gardenerMode: mock
+
+    pluginProxy:
+      enabled: true
+      replicas: 1
+      logLevel: debug
+      mode: mock
 
     authzWorker:
       replicas: 1

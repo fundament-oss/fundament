@@ -43,33 +43,41 @@ type Config struct {
 	FrontendURL  string
 }
 
+// authzEvaluator is the subset of authz.Client used by handlers — extracted
+// so handler tests do not need an OpenFGA SDK.
+type authzEvaluator interface {
+	Evaluate(ctx context.Context, req authz.EvaluationRequest) (authz.Decision, error)
+}
+
 // AuthnServer handles authentication operations.
 type AuthnServer struct {
-	config        *Config
-	oauth2Config  *oauth2.Config
-	oidcVerifier  *oidc.IDTokenVerifier
-	db            *psqldb.DB
-	queries       *db.Queries
-	sessionStore  *SessionStore
-	logger        *slog.Logger
-	validator     *auth.Validator
-	cookieBuilder *auth.CookieBuilder
-	authz         *authz.Client
+	config              *Config
+	oauth2Config        *oauth2.Config
+	oidcVerifier        *oidc.IDTokenVerifier
+	db                  *psqldb.DB
+	queries             *db.Queries
+	sessionStore        *SessionStore
+	logger              *slog.Logger
+	validator           *auth.Validator
+	cookieBuilder       *auth.CookieBuilder
+	authz               authzEvaluator
+	pluginInstallations PluginInstallationLookup
 }
 
 // New creates a new AuthnServer.
-func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client) (*AuthnServer, error) {
+func New(logger *slog.Logger, cfg *Config, oauth2Config *oauth2.Config, verifier *oidc.IDTokenVerifier, sessionStore *SessionStore, database *psqldb.DB, authzClient *authz.Client, pluginInstallations PluginInstallationLookup) (*AuthnServer, error) {
 	return &AuthnServer{
-		config:        cfg,
-		logger:        logger,
-		oauth2Config:  oauth2Config,
-		oidcVerifier:  verifier,
-		db:            database,
-		queries:       db.New(database.Pool),
-		sessionStore:  sessionStore,
-		validator:     auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
-		cookieBuilder: auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.ConsoleAuthCookieName),
-		authz:         authzClient,
+		config:              cfg,
+		logger:              logger,
+		oauth2Config:        oauth2Config,
+		oidcVerifier:        verifier,
+		db:                  database,
+		queries:             db.New(database.Pool),
+		sessionStore:        sessionStore,
+		validator:           auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
+		cookieBuilder:       auth.NewCookieBuilder(cfg.CookieDomain, cfg.CookieSecure, auth.ConsoleAuthCookieName),
+		authz:               authzClient,
+		pluginInstallations: pluginInstallations,
 	}, nil
 }
 

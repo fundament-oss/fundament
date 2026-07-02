@@ -1,0 +1,58 @@
+{{- if $.Values.pluginProxy.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plugin-proxy
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "plugin-proxy" "component" "backend") | nindent 4 }}
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  replicas: {{ $.Values.pluginProxy.replicas }}
+  selector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "plugin-proxy") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "plugin-proxy" "component" "backend") | nindent 8 }}
+    spec:
+      containers:
+        - name: plugin-proxy
+          image: {{ $.Values.images.pluginProxy }}
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: internal
+              containerPort: 8081
+          env:
+            - name: LISTEN_ADDR
+              value: ":8080"
+            - name: INTERNAL_LISTEN_ADDR
+              value: ":8081"
+            - name: PLUGIN_PROXY_MODE
+              value: {{ $.Values.pluginProxy.mode | quote }}
+            - name: LOG_LEVEL
+              value: {{ $.Values.pluginProxy.logLevel }}
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plugin-proxy
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "plugin-proxy" "component" "backend") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+    - port: 8081
+      targetPort: internal
+      name: internal
+  selector:
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "plugin-proxy") | nindent 4 }}
+{{- end }}

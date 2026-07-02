@@ -41,6 +41,9 @@ const (
 	// TokenServiceExchangeTokenProcedure is the fully-qualified name of the TokenService's
 	// ExchangeToken RPC.
 	TokenServiceExchangeTokenProcedure = "/authn.v1.TokenService/ExchangeToken"
+	// TokenServiceMintPluginTokenProcedure is the fully-qualified name of the TokenService's
+	// MintPluginToken RPC.
+	TokenServiceMintPluginTokenProcedure = "/authn.v1.TokenService/MintPluginToken"
 )
 
 // AuthnServiceClient is a client for the authn.v1.AuthnService service.
@@ -122,6 +125,11 @@ type TokenServiceClient interface {
 	// ExchangeToken exchanges an API key for a short-lived JWT
 	// The API key should be provided in the Authorization header as Bearer token
 	ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error)
+	// MintPluginToken issues a short-lived JWT scoped to a specific plugin
+	// installation on a specific cluster. The caller authenticates with a
+	// UserToken. The minted token carries aud=fundament-plugin and is rejected
+	// by every API except kube-api-proxy and plugin-proxy.
+	MintPluginToken(context.Context, *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error)
 }
 
 // NewTokenServiceClient constructs a client for the authn.v1.TokenService service. By default, it
@@ -141,12 +149,19 @@ func NewTokenServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(tokenServiceMethods.ByName("ExchangeToken")),
 			connect.WithClientOptions(opts...),
 		),
+		mintPluginToken: connect.NewClient[v1.MintPluginTokenRequest, v1.MintPluginTokenResponse](
+			httpClient,
+			baseURL+TokenServiceMintPluginTokenProcedure,
+			connect.WithSchema(tokenServiceMethods.ByName("MintPluginToken")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // tokenServiceClient implements TokenServiceClient.
 type tokenServiceClient struct {
-	exchangeToken *connect.Client[v1.ExchangeTokenRequest, v1.ExchangeTokenResponse]
+	exchangeToken   *connect.Client[v1.ExchangeTokenRequest, v1.ExchangeTokenResponse]
+	mintPluginToken *connect.Client[v1.MintPluginTokenRequest, v1.MintPluginTokenResponse]
 }
 
 // ExchangeToken calls authn.v1.TokenService.ExchangeToken.
@@ -154,11 +169,21 @@ func (c *tokenServiceClient) ExchangeToken(ctx context.Context, req *connect.Req
 	return c.exchangeToken.CallUnary(ctx, req)
 }
 
+// MintPluginToken calls authn.v1.TokenService.MintPluginToken.
+func (c *tokenServiceClient) MintPluginToken(ctx context.Context, req *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error) {
+	return c.mintPluginToken.CallUnary(ctx, req)
+}
+
 // TokenServiceHandler is an implementation of the authn.v1.TokenService service.
 type TokenServiceHandler interface {
 	// ExchangeToken exchanges an API key for a short-lived JWT
 	// The API key should be provided in the Authorization header as Bearer token
 	ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error)
+	// MintPluginToken issues a short-lived JWT scoped to a specific plugin
+	// installation on a specific cluster. The caller authenticates with a
+	// UserToken. The minted token carries aud=fundament-plugin and is rejected
+	// by every API except kube-api-proxy and plugin-proxy.
+	MintPluginToken(context.Context, *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error)
 }
 
 // NewTokenServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -174,10 +199,18 @@ func NewTokenServiceHandler(svc TokenServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(tokenServiceMethods.ByName("ExchangeToken")),
 		connect.WithHandlerOptions(opts...),
 	)
+	tokenServiceMintPluginTokenHandler := connect.NewUnaryHandler(
+		TokenServiceMintPluginTokenProcedure,
+		svc.MintPluginToken,
+		connect.WithSchema(tokenServiceMethods.ByName("MintPluginToken")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/authn.v1.TokenService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TokenServiceExchangeTokenProcedure:
 			tokenServiceExchangeTokenHandler.ServeHTTP(w, r)
+		case TokenServiceMintPluginTokenProcedure:
+			tokenServiceMintPluginTokenHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -189,4 +222,8 @@ type UnimplementedTokenServiceHandler struct{}
 
 func (UnimplementedTokenServiceHandler) ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("authn.v1.TokenService.ExchangeToken is not implemented"))
+}
+
+func (UnimplementedTokenServiceHandler) MintPluginToken(context.Context, *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("authn.v1.TokenService.MintPluginToken is not implemented"))
 }

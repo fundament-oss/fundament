@@ -2,7 +2,10 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { ICustomWorld } from '../support/world.ts';
 import { APIKeyService, type APIKey } from '../support/api/apikey-service.ts';
-import { type ExchangeTokenResponse } from '../support/api/token-service.ts';
+import {
+  type ExchangeTokenResponse,
+  type MintPluginTokenResponse,
+} from '../support/api/token-service.ts';
 import { ConnectRpcError } from '../support/api/client.ts';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { currentApiKey, extractOrganizationId, API_TOKEN_PREFIX } from './common.steps.ts';
@@ -127,14 +130,21 @@ Then('I should receive a valid JWT', async function (this: ICustomWorld) {
   expect(parts.length).toBe(3);
 });
 
+// Shared across ExchangeToken and MintPluginToken flows: both responses have
+// the same {accessToken, tokenType, expiresIn} shape and are stored on
+// this.lastApiResponse by their respective When steps.
+type TokenLikeResponse = ExchangeTokenResponse | MintPluginTokenResponse;
+
 Then('the JWT should expire in {int} seconds', async function (this: ICustomWorld, seconds: number) {
-  expect(exchangeResponse).toBeDefined();
-  expect(Number(exchangeResponse!.expiresIn)).toBe(seconds);
+  const response = this.lastApiResponse as TokenLikeResponse | undefined;
+  expect(response).toBeDefined();
+  expect(Number(response!.expiresIn)).toBe(seconds);
 });
 
 Then('the token type should be {string}', async function (this: ICustomWorld, tokenType: string) {
-  expect(exchangeResponse).toBeDefined();
-  expect(exchangeResponse!.tokenType).toBe(tokenType);
+  const response = this.lastApiResponse as TokenLikeResponse | undefined;
+  expect(response).toBeDefined();
+  expect(response!.tokenType).toBe(tokenType);
 });
 
 Then('the last used timestamp should be recent', async function (this: ICustomWorld) {

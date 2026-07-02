@@ -54,7 +54,7 @@ func (h *Handler) ProjectMember(ctx context.Context, qtx *db.Queries, memberID u
 		panic(fmt.Sprintf("unknown project member role: %s", member.Role))
 	}
 
-	return h.writeTuples(ctx,
+	return h.writeTuplesIfNotExist(ctx,
 		tuple(user, action, project),
 		tuple(project, authz.ActionParent, projectMember),
 	)

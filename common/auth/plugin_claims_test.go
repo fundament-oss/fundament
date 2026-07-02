@@ -6,16 +6,21 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	testPluginName    = "test-plugin"
+	testPluginVersion = "v1.17.2"
+	testDefHash       = "sha256:1f3c"
 )
 
 func signPluginToken(t *testing.T, secret []byte, c *PluginClaims) string {
 	t.Helper()
 	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
 	s, err := tok.SignedString(secret)
-	if err != nil {
-		t.Fatalf("sign: %v", err)
-	}
+	require.NoError(t, err, "sign")
 	return s
 }
 
@@ -30,9 +35,9 @@ func validPluginClaims() *PluginClaims {
 		},
 		ClusterID:      uuid.New().String(),
 		InstallationID: uuid.New().String(),
-		PluginName:     "cert-manager",
-		PluginVersion:  "v1.17.2",
-		DefinitionHash: "sha256:1f3c",
+		PluginName:     testPluginName,
+		PluginVersion:  testPluginVersion,
+		DefinitionHash: testDefHash,
 	}
 }
 
@@ -42,21 +47,12 @@ func TestParsePluginToken_AcceptsValidToken(t *testing.T) {
 	tokenStr := signPluginToken(t, secret, want)
 
 	got, err := ParsePluginToken(tokenStr, secret)
-	if err != nil {
-		t.Fatalf("ParsePluginToken: %v", err)
-	}
-	if got.ClusterID != want.ClusterID {
-		t.Errorf("ClusterID = %q, want %q", got.ClusterID, want.ClusterID)
-	}
-	if got.InstallationID != want.InstallationID {
-		t.Errorf("InstallationID = %q, want %q", got.InstallationID, want.InstallationID)
-	}
-	if got.PluginName != "cert-manager" || got.PluginVersion != "v1.17.2" {
-		t.Errorf("plugin identity = %q/%q", got.PluginName, got.PluginVersion)
-	}
-	if got.DefinitionHash != "sha256:1f3c" {
-		t.Errorf("DefinitionHash = %q", got.DefinitionHash)
-	}
+	require.NoError(t, err, "ParsePluginToken")
+	assert.Equal(t, want.ClusterID, got.ClusterID)
+	assert.Equal(t, want.InstallationID, got.InstallationID)
+	assert.Equal(t, testPluginName, got.PluginName)
+	assert.Equal(t, testPluginVersion, got.PluginVersion)
+	assert.Equal(t, testDefHash, got.DefinitionHash)
 }
 
 // TestParsePluginToken_AcceptsMultiAudience verifies that audience matching is
@@ -68,9 +64,8 @@ func TestParsePluginToken_AcceptsMultiAudience(t *testing.T) {
 	c.Audience = jwt.ClaimStrings{TokenTypeUser, TokenTypePlugin}
 	tokenStr := signPluginToken(t, secret, c)
 
-	if _, err := ParsePluginToken(tokenStr, secret); err != nil {
-		t.Fatalf("ParsePluginToken: %v", err)
-	}
+	_, err := ParsePluginToken(tokenStr, secret)
+	require.NoError(t, err, "ParsePluginToken")
 }
 
 func TestParsePluginToken_RejectsUserAudience(t *testing.T) {
@@ -79,9 +74,8 @@ func TestParsePluginToken_RejectsUserAudience(t *testing.T) {
 	c.Audience = jwt.ClaimStrings{TokenTypeUser}
 	tokenStr := signPluginToken(t, secret, c)
 
-	if _, err := ParsePluginToken(tokenStr, secret); err == nil {
-		t.Fatal("expected error for fundament-user audience, got nil")
-	}
+	_, err := ParsePluginToken(tokenStr, secret)
+	require.Error(t, err, "expected error for fundament-user audience")
 }
 
 func TestParsePluginToken_RejectsExpiredToken(t *testing.T) {
@@ -90,16 +84,14 @@ func TestParsePluginToken_RejectsExpiredToken(t *testing.T) {
 	c.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-time.Hour))
 	tokenStr := signPluginToken(t, secret, c)
 
-	if _, err := ParsePluginToken(tokenStr, secret); err == nil {
-		t.Fatal("expected error for expired token, got nil")
-	}
+	_, err := ParsePluginToken(tokenStr, secret)
+	require.Error(t, err, "expected error for expired token")
 }
 
 func TestParsePluginToken_RejectsWrongSecret(t *testing.T) {
 	tokenStr := signPluginToken(t, []byte("secret-a"), validPluginClaims())
-	if _, err := ParsePluginToken(tokenStr, []byte("secret-b")); err == nil {
-		t.Fatal("expected error for wrong signing secret, got nil")
-	}
+	_, err := ParsePluginToken(tokenStr, []byte("secret-b"))
+	require.Error(t, err, "expected error for wrong signing secret")
 }
 
 func TestParsePluginToken_RejectsMissingExp(t *testing.T) {

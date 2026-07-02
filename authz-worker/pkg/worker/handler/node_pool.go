@@ -34,5 +34,5 @@ func (h *Handler) NodePool(ctx context.Context, qtx *db.Queries, nodePoolID uuid
 		)
 	}
 
-	return h.writeTuples(ctx, tuple(clusterObj, authz.ActionParent, nodePoolObj))
+	return h.writeTuplesIfNotExist(ctx, tuple(clusterObj, authz.ActionParent, nodePoolObj))
 }
