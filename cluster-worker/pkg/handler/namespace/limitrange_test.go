@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/shoot"
 	db "github.com/fundament-oss/fundament/cluster-worker/pkg/db/gen"
@@ -14,8 +15,6 @@ import (
 )
 
 func i4(v int32) pgtype.Int4 { return pgtype.Int4{Int32: v, Valid: true} }
-
-func i32(v int32) *int32 { return &v }
 
 func TestMergedLimitDefaults(t *testing.T) {
 	t.Parallel()
@@ -40,8 +39,8 @@ func TestMergedLimitDefaults(t *testing.T) {
 				OrgDefaultMemoryRequestMi: i4(128), OrgDefaultMemoryLimitMi: i4(512),
 			},
 			want: shoot.LimitDefaults{
-				CPURequestMilli: i32(100), CPULimitMilli: i32(500),
-				MemoryRequestMi: i32(128), MemoryLimitMi: i32(512),
+				CPURequestMilli: ptr.To[int32](100), CPULimitMilli: ptr.To[int32](500),
+				MemoryRequestMi: ptr.To[int32](128), MemoryLimitMi: ptr.To[int32](512),
 			},
 			wantHasAny: true,
 		},
@@ -50,7 +49,7 @@ func TestMergedLimitDefaults(t *testing.T) {
 			row: db.NamespaceGetForSyncRow{
 				ProjectDefaultCpuLimitM: i4(250),
 			},
-			want:       shoot.LimitDefaults{CPULimitMilli: i32(250)},
+			want:       shoot.LimitDefaults{CPULimitMilli: ptr.To[int32](250)},
 			wantHasAny: true,
 		},
 		{
@@ -61,9 +60,9 @@ func TestMergedLimitDefaults(t *testing.T) {
 				OrgDefaultMemoryLimitMi: i4(512),
 			},
 			want: shoot.LimitDefaults{
-				CPURequestMilli: i32(50),  // project tightened
-				CPULimitMilli:   i32(500), // org wins over higher project value
-				MemoryLimitMi:   i32(512), // only org set
+				CPURequestMilli: ptr.To[int32](50),  // project tightened
+				CPULimitMilli:   ptr.To[int32](500), // org wins over higher project value
+				MemoryLimitMi:   ptr.To[int32](512), // only org set
 			},
 			wantHasAny: true,
 		},
@@ -116,8 +115,8 @@ func TestEnsure_AppliesLimitRange(t *testing.T) {
 	lr := mock.GetLimitRange(row.ClusterID, clusterName(row))
 	require.NotNil(t, lr)
 	require.Equal(t, shoot.LimitDefaults{
-		CPULimitMilli: i32(250),
-		MemoryLimitMi: i32(512),
+		CPULimitMilli: ptr.To[int32](250),
+		MemoryLimitMi: ptr.To[int32](512),
 	}, lr.Defaults)
 	require.Equal(t, ManagedByValue, lr.Labels[LabelManagedBy])
 	require.Equal(t, row.ID.String(), lr.Labels[LabelNamespaceID])
