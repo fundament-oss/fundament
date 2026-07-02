@@ -1,0 +1,17 @@
+# Local secrets + fetched artifacts (hcloud binary, mkcert CA, cloud-config) — NEVER commit.
+cache/*
+!cache/.gitkeep
+
+secrets/*.env
+!secrets/*.env.example
+*.key
+*_key
+
+# Nix build artifacts
+result
+result-*
+
+# flake.lock IS committed once generated (do not ignore it).
+
+# ad-hoc kubeconfigs pulled for testing (may carry creds)
+kubeconfig*.yaml
