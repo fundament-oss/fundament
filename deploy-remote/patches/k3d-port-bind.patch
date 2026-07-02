@@ -1,0 +1,13 @@
+diff --git a/deploy/k3d/config.yaml b/deploy/k3d/config.yaml
+index 0fc580a..e3595a4 100644
+--- a/deploy/k3d/config.yaml
++++ b/deploy/k3d/config.yaml
+@@ -8,7 +8,7 @@ ports:
+   - port: 8080:80
+     nodeFilters:
+       - loadbalancer
+-  - port: 8443:30443
++  - port: 127.0.0.1:8443:30443
+     nodeFilters:
+       - loadbalancer
+   - port: 54328:54328

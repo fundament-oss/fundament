@@ -22,9 +22,9 @@ deploy-remote/
 │   ├── baseline.nix             functional system: docker, nix-ld, resolved+gardener DNS, tools
 │   └── ephemeral-scratch.nix    reformat the scratch partition before docker (reboot-to-clean)
 ├── hosts/hetzner/               default.nix · disko.nix (/dev/sda, EF02+ESP+scratch)
-├── patches/                     k3d-gardener-coexist.patch (applied on the box)
+├── patches/                     k3d-network / k3d-port-bind patches (applied on the box)
 ├── secrets/hetzner.env.example  template; real secrets/hetzner.env (API token) is gitignored
-└── cache/                       gitignored — fetched hcloud binary, mkcert CA, cloud-config
+└── cache/                       gitignored — fetched hcloud binary, install key, box CA cert
 ```
 
 ## Deploy model — `nixos-anywhere` in a container (no local nix)
@@ -55,10 +55,13 @@ just hetzner-down      # DESTROY the box — stops billing (also untrusts the bo
 ```
 
 `hetzner-up` needs `ssh` + `curl` + a running **Docker** daemon. It fetches a pinned
-`hcloud`, registers your admin pubkey (prefers `~/.ssh/id_ed25519.pub`, falls back to
-`id_rsa.pub`; override `ADMIN_PUBKEY=…`), creates the box, then installs NixOS
-(~8–12 min). Override defaults via env, e.g. `HZ_TYPE=ccx43 HZ_LOCATION=hel1
-just hetzner-up` (try another location on `resource_unavailable`). Works on macOS/Linux.
+`hcloud`, generates a **throwaway install key** per deploy (registered with hcloud for
+the root install phase — your own key, which may be passphrase-protected, never enters
+the install container), bakes your admin pubkey in as the box **login** key (prefers
+`~/.ssh/id_ed25519.pub`, falls back to `id_rsa.pub`; override `ADMIN_PUBKEY=…`), creates
+the box, then installs NixOS (~8–12 min). Override defaults via env, e.g. `HZ_TYPE=ccx43
+HZ_LOCATION=hel1 just hetzner-up` (try another location on `resource_unavailable`).
+Works on macOS/Linux.
 
 `hetzner-stack` pushes `box/*.sh` + `patches/*` and runs bootstrap + the full cycle
 (gardener-up ~10-15 min, shoot ~7), then trusts the box's CA (see below) and prints
@@ -94,15 +97,17 @@ kubectl --kubeconfig <shoot-kubeconfig> get nodes   # works with certs trusted, 
 
 | Material | Where at rest | How it reaches the box |
 |---|---|---|
-| Admin pubkey | `~/.ssh/id_ed25519.pub` (or `admin_pubkey` in `secrets/hetzner.env`) | registered with hcloud for bootstrap; materialized per-deploy into gitignored `cache/admin-keys.nix`, imported by `modules/baseline.nix` |
+| Admin pubkey (login) | `~/.ssh/id_ed25519.pub` (or `admin_pubkey` in `secrets/hetzner.env`) | materialized per-deploy into gitignored `cache/admin-keys.nix`, imported by `modules/baseline.nix` |
+| Install key (throwaway) | gitignored `cache/install-key` | generated + registered with hcloud per `up`; the only private key mounted into the nixos-anywhere container |
 | Hetzner Cloud API token | gitignored `secrets/hetzner.env` | `hetzner-*` → `HCLOUD_TOKEN` |
-| Box's ephemeral CA | fetched to gitignored `cache/box-ca/` | generated on the box; `mkcert -install`ed locally, `-uninstall`ed on `down` |
+| Box's ephemeral CA (cert only) | fetched to gitignored `cache/box-ca/` | generated on the box; `mkcert -install`ed locally, `-uninstall`ed on `down` — the CA **private key** stays on the box |
 
 No admin key is hardcoded in the flake — `hetzner.sh up` writes the operator's own
 pubkey to gitignored `cache/admin-keys.nix`, which `baseline.nix` imports (empty if
 absent). No private key material is baked into the flake (flake files land in
-world-readable `/nix/store`). `cache/` holds the fetched hcloud binary, the generated
-admin-keys file, and a copy of your mkcert CA — gitignored; delete it when done.
+world-readable `/nix/store`; the flake source is staged sanitized — no `secrets/`,
+no keys). `cache/` holds the fetched hcloud binary, the generated admin-keys file,
+the throwaway install key, and the box CA cert — gitignored; delete it when done.
 
 ## Sizing & cost
 

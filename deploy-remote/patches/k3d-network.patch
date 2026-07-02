@@ -19,10 +19,10 @@ index aaa798d..ef5d553 100644
  # Install mkcert CA as a cert-manager ClusterIssuer for local HTTPS
  setup-certs:
 diff --git a/deploy/k3d/config.yaml b/deploy/k3d/config.yaml
-index 0fc580a..b9d6946 100644
+index 0fc580a..fa65b7c 100644
 --- a/deploy/k3d/config.yaml
 +++ b/deploy/k3d/config.yaml
-@@ -4,11 +4,14 @@ metadata:
+@@ -4,6 +4,9 @@ metadata:
    name: fundament
  servers: 1
  agents: 0
@@ -32,9 +32,3 @@ index 0fc580a..b9d6946 100644
  ports:
    - port: 8080:80
      nodeFilters:
-       - loadbalancer
--  - port: 8443:30443
-+  - port: 127.0.0.1:8443:30443
-     nodeFilters:
-       - loadbalancer
-   - port: 54328:54328
