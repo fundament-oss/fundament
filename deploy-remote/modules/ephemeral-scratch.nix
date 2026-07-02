@@ -6,7 +6,7 @@
 # Requires a GPT partition labelled "scratch" — see each host's disko.nix.
 { pkgs, ... }:
 let
-  user = "thom";
+  user = "fundament";
   scratchDevice = "/dev/disk/by-partlabel/scratch";
   dockerDir = "/var/lib/docker";
 in

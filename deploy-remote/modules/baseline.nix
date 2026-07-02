@@ -3,7 +3,12 @@
 { pkgs, lib, ... }:
 let
   # The box login user — single source of truth. Keep in sync with BOX_USER in hetzner.sh.
-  user = "thom";
+  user = "fundament";
+  # Admin SSH key(s) are injected at deploy time by hetzner.sh (from admin_pubkey in
+  # secrets/hetzner.env, else your local ~/.ssh/id_*.pub) into cache/admin-keys.nix —
+  # never hardcoded here, so every operator's box trusts their own key. Empty if absent.
+  adminKeysFile = ../cache/admin-keys.nix;
+  adminKeys = if builtins.pathExists adminKeysFile then import adminKeysFile else [ ];
 in
 {
   # --- Access (public key only — not secret) ------------------------------
@@ -21,10 +26,8 @@ in
     # Console fallback so the box is never locked out if Wi-Fi/SSH is down.
     # (SSH stays key-only; this is just for the physical login prompt.) Change as desired.
     initialPassword = "fundament";
-    # Inbound admin key (your MacBook). Public — safe to commit.
-    openssh.authorizedKeys.keys = [
-      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDeBNB2x9gB2rz29FX/QaYyoNU2SZv0iTUQuhs1/ePA4YKeZ169ffxmBF0aohELepVZgvSdrH6JoXNpy2dw/8pNnZ3ZtZ8NKyzsk4a02Hz19dupmTEBa31jl4p4vRNuraxmK08yzKSDxj3/JzEE6QLrFW3fR0WPn1JbGCT0uJvEHmHr34c6v36Y+jWKkr266Ls6sUSMfTaw6cRRkS03kfX7s2O/+7rCAMdUNX3PxGxJWyFSQoGtJsLsjE3dS6vRxNDo/sMvADSPwbMrvi6NXUBqkKezkbllcMeP+agmHXKNf8ec0DHGx2F/c/geR30tuzV9g5HZ+a+/syAz0e7gG4SkgxwQn4d7KmBCPFz3XvyS1qicAwx1B0PzaUSGZdCvMCjB23QA6nASkZ2J84BMoBtF2vUbJrZG3iBzJQifbLqUhmGE7aBm8j55BrZ44z4DeOAbKkVz+WpOscNbCzNC3fFZcf8dz7YvmwEPAuwYr6Tqz0J4cNTBkM6qwdTnxxn05r8= thom@Thoms-MacBook-Pro.local"
-    ];
+    # Inbound admin key(s), injected per-operator at deploy time (see adminKeys above).
+    openssh.authorizedKeys.keys = adminKeys;
   };
   # Dedicated test boxes: passwordless sudo so remote actions are non-interactive.
   security.sudo.wheelNeedsPassword = false;

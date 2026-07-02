@@ -94,13 +94,15 @@ kubectl --kubeconfig <shoot-kubeconfig> get nodes   # works with certs trusted, 
 
 | Material | Where at rest | How it reaches the box |
 |---|---|---|
-| Admin pubkey | `~/.ssh/id_ed25519.pub` (public) + `modules/baseline.nix` | registered with hcloud for bootstrap |
+| Admin pubkey | `~/.ssh/id_ed25519.pub` (or `admin_pubkey` in `secrets/hetzner.env`) | registered with hcloud for bootstrap; materialized per-deploy into gitignored `cache/admin-keys.nix`, imported by `modules/baseline.nix` |
 | Hetzner Cloud API token | gitignored `secrets/hetzner.env` | `hetzner-*` → `HCLOUD_TOKEN` |
 | Box's ephemeral CA | fetched to gitignored `cache/box-ca/` | generated on the box; `mkcert -install`ed locally, `-uninstall`ed on `down` |
 
-No private key material is baked into the flake (flake files land in world-readable
-`/nix/store`). `cache/` holds the fetched hcloud binary + a copy of your mkcert CA —
-gitignored; delete it when done.
+No admin key is hardcoded in the flake — `hetzner.sh up` writes the operator's own
+pubkey to gitignored `cache/admin-keys.nix`, which `baseline.nix` imports (empty if
+absent). No private key material is baked into the flake (flake files land in
+world-readable `/nix/store`). `cache/` holds the fetched hcloud binary, the generated
+admin-keys file, and a copy of your mkcert CA — gitignored; delete it when done.
 
 ## Sizing & cost
 
