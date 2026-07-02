@@ -53,6 +53,11 @@ just hetzner-status    # list project servers — never forget a box is billing
 just hetzner-down      # DESTROY the box — stops billing (also untrusts the box CA)
 ```
 
+**Time to ready:** ~35–45 min end-to-end from `just hetzner-up` to a reachable
+console — `hetzner-up` ~8–10 min (box create + NixOS install), `hetzner-stack`
+~25–35 min (bootstrap + toolchain ~3, gardener-up ~10–15, fundament deploy ~5,
+shoot to `Create Succeeded` ~7).
+
 `hetzner-up` needs `ssh` + `curl` + a running **Docker** daemon. It fetches a pinned
 `hcloud`, generates a **throwaway install key** per deploy (registered with hcloud for
 the root install phase — your own key, which may be passphrase-protected, never enters
