@@ -18,12 +18,18 @@ if [ ! -d "$REPO/.git" ]; then
 fi
 cd "$REPO"
 
-echo "== 2. apply k3d/gardener coexistence patch =="
-f="$PATCHES/k3d-gardener-coexist.patch"
-if [ ! -f "$f" ]; then echo "   MISSING $f"
-elif git apply --reverse --check "$f" 2>/dev/null; then echo "   already applied"
-elif git apply --check "$f" 2>/dev/null; then git apply "$f" && echo "   applied"
-else echo "   WARN: k3d-gardener-coexist does NOT apply cleanly against master"; fi
+echo "== 2. apply k3d/gardener coexistence patches =="
+# Single-concern patches, applied independently: when master gains one of the changes
+# (e.g. the 127.0.0.1 ingress bind), that patch reads "already applied" and the others
+# still land. A patch that fits NEITHER state is upstream drift — fail HERE, not 20 min
+# later when k3d grabs 172.18.0.0/16 (the subnet Gardener's kind cluster reserves).
+for f in "$PATCHES"/*.patch; do
+  [ -f "$f" ] || { echo "   FATAL: no patches found in $PATCHES"; exit 1; }
+  name=$(basename "$f")
+  if git apply --reverse --check "$f" 2>/dev/null; then echo "   $name: already applied"
+  elif git apply --check "$f" 2>/dev/null; then git apply "$f" && echo "   $name: applied"
+  else echo "   FATAL: $name does not apply — upstream drifted; regenerate the patch"; exit 1; fi
+done
 
 echo "== 3. install mise toolchain (baseline ships gcc/make/python so Node builds from source) =="
 # mise ships in baseline.nix; fall back to a per-user install if it ever doesn't.

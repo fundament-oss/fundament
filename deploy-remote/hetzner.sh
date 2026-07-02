@@ -20,22 +20,25 @@ HZ_TYPE=${HZ_TYPE:-cx53}              # 16 vCPU / 32GB / 320GB. cx43 (16GB) OOMs
 HZ_IMAGE=${HZ_IMAGE:-ubuntu-24.04}   # base image nixos-anywhere kexecs away from (any works)
 HZ_LOCATION=${HZ_LOCATION:-nbg1}     # EU (CX is EU-only)
 HZ_NAME=${HZ_NAME:-fundament-test}
-HZ_KEYNAME=${HZ_KEYNAME:-fundament-admin}
-BOX_USER=${BOX_USER:-fundament}      # login user on the box (must match modules/baseline.nix)
-SSH_PORT=${SSH_PORT:-2022}           # NixOS sshd (baseline.nix); install phase is :22
+HZ_KEYNAME=${HZ_KEYNAME:-fundament-install}  # hcloud entry for the per-deploy install key
+# NOT env-overridable: baked into the NixOS image by modules/baseline.nix — an override
+# here would poll SSH as a user/port the box doesn't have and destroy/recreate it in vain.
+BOX_USER=fundament                   # login user on the box (modules/baseline.nix)
+SSH_PORT=2022                        # NixOS sshd (baseline.nix); install phase is :22
 HCLOUD_VERSION=${HCLOUD_VERSION:-1.51.0}
 NIX_IMAGE=${NIX_IMAGE:-nixos/nix:latest}
 ENVFILE=secrets/hetzner.env
 CACHE=cache/bin
 BOX_CA=cache/box-ca                  # the box's ephemeral CA, fetched here + trusted while the box lives
 ADMIN_KEYS_NIX=cache/admin-keys.nix  # generated per-deploy: the box's authorized admin key(s)
+INSTALL_KEY=cache/install-key        # generated per-deploy: throwaway key for the root install phase
 
 # print a progress line to stdout
 log() { printf '>> %s\n' "$*"; }
 # print an error to stderr and abort
 die() { printf '!! %s\n' "$*" >&2; exit 1; }
 
-# Admin pubkey registered with hcloud for the install phase; prefer ed25519, else rsa.
+# Admin pubkey — becomes the box LOGIN key (via cache/admin-keys.nix); prefer ed25519, else rsa.
 if [ -z "${ADMIN_PUBKEY:-}" ]; then
   for k in "$HOME/.ssh/id_ed25519.pub" "$HOME/.ssh/id_rsa.pub"; do
     [ -f "$k" ] && { ADMIN_PUBKEY="$k"; break; }
@@ -52,7 +55,7 @@ write_admin_keys() {
     key=$admin_pubkey                                  # explicit key from secrets/hetzner.env
   else
     [ -f "$ADMIN_PUBKEY" ] || die "admin pubkey not found: $ADMIN_PUBKEY (set admin_pubkey in $ENVFILE, ADMIN_PUBKEY=..., or create an ssh key)"
-    key=$(cat "$ADMIN_PUBKEY")                         # fall back to the local pubkey we register with hcloud
+    key=$(cat "$ADMIN_PUBKEY")                         # fall back to the resolved local pubkey
   fi
   [ -n "$key" ] || die "empty admin pubkey"
   mkdir -p "$(dirname "$ADMIN_KEYS_NIX")"
@@ -98,11 +101,13 @@ resolve_mkcert() {
   else die "mkcert not found (needed to trust the box CA) — install it, or run from the fundament repo"; fi
 }
 
-# poll SSH on host:port as the given user until it answers (tries x 8s); 0 if reachable
-wait_ssh() { # host user tries port
+# poll SSH on host:port as the given user until it answers (tries x 8s); 0 if reachable.
+# Optional 5th arg: identity file, for phases where the operator's own key isn't
+# authorized (the root install phase only trusts the per-deploy install key).
+wait_ssh() { # host user tries port [identity]
   local i
   for i in $(seq 1 "${3:-60}"); do
-    ssh -p "${4:-22}" "${SSH_OPTS[@]}" "${2}@${1}" true 2>/dev/null && return 0
+    ssh -p "${4:-22}" ${5:+-i "$5" -o IdentitiesOnly=yes} "${SSH_OPTS[@]}" "${2}@${1}" true 2>/dev/null && return 0
     sleep 8
   done
   return 1
@@ -121,8 +126,8 @@ trust_box_ca() { # ip
     || die "couldn't reach the box to read its mkcert CA"
   [ -n "$boxroot" ] || die "box has no mkcert CA yet (run ./hetzner.sh stack first)"
   mkdir -p "$BOX_CA"
-  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" \
-    "$BOX_USER@$ip:$boxroot/rootCA.pem" "$BOX_USER@$ip:$boxroot/rootCA-key.pem" "$BOX_CA/" \
+  # Only the CERT — mkcert -install/-uninstall work keyless; the CA private key stays on the box.
+  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip:$boxroot/rootCA.pem" "$BOX_CA/" \
     || die "failed to fetch the box CA from $boxroot"
   log "trusting the box's ephemeral CA locally (mkcert may prompt for sudo)"
   CAROOT="$PWD/$BOX_CA" "${MKCERT[@]}" -install
@@ -156,12 +161,15 @@ print_access() {
 
 # Stage a SANITIZED copy of the flake source into a fresh temp dir and print its path.
 # Only nix-relevant files go in — NOT secrets/ (Hetzner token) or the rest of cache/
-# (private SSH keys, box CA key, machine-id). Critical because /work is mounted as a
-# plain (non-git) path, so nix copies the WHOLE tree into the store and --build-on-remote
-# ships it to the box; .gitignore does not filter a plain-path flake source. Only
+# (install key, fetched box CA). Critical because /work is mounted as a plain (non-git)
+# path, so nix copies the WHOLE tree into the store and --build-on-remote ships it to
+# the box; .gitignore does not filter a plain-path flake source. Only
 # cache/admin-keys.nix is needed (modules/baseline.nix imports ../cache/admin-keys.nix).
+# Staged under ./cache (inside $HOME), NOT $TMPDIR: on macOS $TMPDIR is /var/folders,
+# which VM-based docker runtimes (colima!) don't share — the bind mount would be
+# silently EMPTY in the container.
 stage_flake_src() {
-  local dir; dir=$(mktemp -d "${TMPDIR:-/tmp}/fundament-flake.XXXXXX")
+  local dir; dir=$(mktemp -d "$PWD/cache/flake-src.XXXXXX")
   cp flake.nix flake.lock "$dir/"
   cp -R hosts modules "$dir/"
   mkdir -p "$dir/cache"
@@ -173,17 +181,20 @@ stage_flake_src() {
 # Returns 0 only when the installed NixOS answers SSH on :$SSH_PORT (nixos-anywhere's
 # exit code isn't reliable — it often drops SSH on the post-install reboot). Recovers
 # the "installed but not cleanly rebooted" case with one hard reset.
-deploy_once() { # ip priv
-  local ip=$1 priv=$2
+deploy_once() { # ip
+  local ip=$1
   log "$HZ_NAME @ $ip — waiting for SSH on :22"
-  wait_ssh "$ip" root 60 22 || { log "box never reachable on :22"; return 1; }
+  wait_ssh "$ip" root 60 22 "$PWD/$INSTALL_KEY" || { log "box never reachable on :22"; return 1; }
 
   local src; src=$(stage_flake_src)
   trap 'rm -rf "$src"' RETURN
   log "installing NixOS via nixos-anywhere (throwaway nixos/nix container; build-on-remote)"
+  # Only the per-deploy THROWAWAY install key enters the container (passphrase-less by
+  # construction — a passphrase-protected key can't be unlocked in there: no TTY, no
+  # agent). The operator's own key never leaves the machine.
   docker run --rm \
     -v "$src:/work" -w /work \
-    -v "$priv:/root/.ssh/id_rsa:ro" \
+    -v "$PWD/$INSTALL_KEY:/root/.ssh/id_rsa:ro" \
     -e NIX_CONFIG="experimental-features = nix-command flakes" \
     "$NIX_IMAGE" \
     nix run github:nix-community/nixos-anywhere -- \
@@ -206,13 +217,18 @@ cmd_up() {
   ensure_hcloud
   command -v docker >/dev/null 2>&1 || die "docker is required (used to run nixos-anywhere without local nix)"
   docker info >/dev/null 2>&1 || die "docker daemon is not running"
-  [ -f "$ADMIN_PUBKEY" ] || die "admin pubkey not found: $ADMIN_PUBKEY (set ADMIN_PUBKEY=..., or create an ssh key)"
-  local priv="${ADMIN_PUBKEY%.pub}"
-  [ -f "$priv" ] || die "private key not found: $priv (matching $ADMIN_PUBKEY)"
   # Bake the operator's admin key into the flake (cache/admin-keys.nix) before installing.
+  # (admin_pubkey from secrets/hetzner.env wins; write_admin_keys dies if neither exists.)
   write_admin_keys
-  hc ssh-key describe "$HZ_KEYNAME" >/dev/null 2>&1 \
-    || hc ssh-key create --name "$HZ_KEYNAME" --public-key-from-file "$ADMIN_PUBKEY"
+  # Throwaway INSTALL key, regenerated per `up`: passphrase-less by construction (the
+  # only key the nixos-anywhere container gets), and (re)registered with hcloud so the
+  # key installed for root always matches — a stale entry under the same name (another
+  # operator, a rotated key) would break root SSH during install.
+  rm -f "$INSTALL_KEY" "$INSTALL_KEY.pub"
+  ssh-keygen -q -t ed25519 -N '' -C fundament-install -f "$INSTALL_KEY"
+  hc ssh-key delete "$HZ_KEYNAME" >/dev/null 2>&1 || true
+  hc ssh-key create --name "$HZ_KEYNAME" --public-key-from-file "$INSTALL_KEY.pub" >/dev/null \
+    || die "failed to register the install key with hcloud"
 
   # Cattle: recover cheaply if we can, else start fresh (destroy + recreate). HZ_RETRIES total attempts.
   local tries=${HZ_RETRIES:-2} n=0 ip
@@ -227,7 +243,7 @@ cmd_up() {
       log "$HZ_NAME already exists; reusing"
     fi
     ip=$(box_ip)
-    if deploy_once "$ip" "$priv"; then
+    if deploy_once "$ip"; then
       log "READY:  ssh -p $SSH_PORT $BOX_USER@$ip   (or: ./hetzner.sh ssh)"
       log "next:   just hetzner-stack   # deploy fundament + Gardener and run a shoot"
       log "BILLING IS RUNNING — tear down with: ./hetzner.sh down"
@@ -248,8 +264,10 @@ cmd_down() {
 }
 # list the project's servers (so a billing box is never forgotten)
 cmd_status() { ensure_hcloud; hc server list; }
-# open an interactive shell on the box (NixOS, port 2022)
-cmd_ssh()    { ensure_hcloud; exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$(box_ip)"; }
+# open an interactive shell on the box (NixOS, port 2022).
+# NB: assign box_ip BEFORE using it — inside "$(...)" its die() would only exit the
+# subshell and ssh would still run against an empty host.
+cmd_ssh()    { ensure_hcloud; local ip; ip=$(box_ip); exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip"; }
 
 # --- reach the box ingress -------------------------------------------------
 # The box's fundament is hardwired to the https://*.fundament.localhost:8443 origin
@@ -283,7 +301,7 @@ cmd_tunnel() {
 }
 
 # Re-trust the box CA locally (stack does this automatically; use if you switched machines).
-cmd_certs() { ensure_hcloud; trust_box_ca "$(box_ip)"; log "box CA trusted locally."; }
+cmd_certs() { ensure_hcloud; local ip; ip=$(box_ip); trust_box_ca "$ip"; log "box CA trusted locally."; }
 
 # --- run the full stack on the box -----------------------------------------
 # Push the on-box scripts + patches, run bootstrap + the stack, then trust the box's
@@ -292,7 +310,9 @@ cmd_stack() {
   ensure_hcloud
   local ip; ip=$(box_ip)
   log "staging box scripts + patches onto $HZ_NAME @ $ip"
-  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'mkdir -p ~/patches ~/box'
+  # Reset ~/patches so bootstrap only ever sees the CURRENT patch set (a stale patch
+  # from an earlier stack run would trip bootstrap's fatal does-not-apply check).
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'rm -rf ~/patches ~/box && mkdir -p ~/patches ~/box'
   scp -P "$SSH_PORT" "${SSH_OPTS[@]}" patches/*.patch "$BOX_USER@$ip:patches/" >/dev/null
   scp -P "$SSH_PORT" "${SSH_OPTS[@]}" box/bootstrap.sh box/run-stack.sh "$BOX_USER@$ip:box/" >/dev/null
   log "running bootstrap + stack on the box (gardener-up takes ~10-15 min)"

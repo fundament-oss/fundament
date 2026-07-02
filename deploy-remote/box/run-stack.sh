@@ -49,7 +49,9 @@ shoot_ok=0
 for i in $(seq 1 80); do
   LINE=$(mise exec -- kubectl --kubeconfig "$VKC" get shoots -A --no-headers 2>/dev/null | grep -iF -- "$CLUSTER")
   log "shoot: $LINE"
-  echo "$LINE" | grep -qiE "Create Succeeded|100%" && { log "SHOOT SUCCEEDED"; shoot_ok=1; break; }
+  # Match the LAST OPERATION state exactly — never bare "100%": Gardener renders
+  # "Create Error (100%)"/"Create Failed (100%)" when a late step fails at full progress.
+  echo "$LINE" | grep -qiE "(Create|Reconcile) Succeeded" && { log "SHOOT SUCCEEDED"; shoot_ok=1; break; }
   sleep 15
 done
 
