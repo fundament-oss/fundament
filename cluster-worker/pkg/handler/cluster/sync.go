@@ -103,11 +103,18 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 		return h.syncError(ctx, cluster.ID, syncAction, "load node pools", err)
 	}
 
-	// 6. Build ClusterToSync and apply
+	// 6. Load the owning org's node caps; no active limits row means unlimited
+	limitsRow, err := h.queries.OrganizationLimitsGetByOrgID(ctx, db.OrganizationLimitsGetByOrgIDParams{OrganizationID: cluster.OrganizationID})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return h.syncError(ctx, cluster.ID, syncAction, "load organization limits", err)
+	}
+
+	// 7. Build ClusterToSync and apply
 	clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
 	clusterToSync.ShootName = kubename.GenerateShootName(cluster.Name, cluster.ID)
 	clusterToSync.Deleted = deleted
 	clusterToSync.NodePools = toGardenerNodePools(nodePoolRows)
+	clusterToSync.NodeLimits = toGardenerNodeLimits(limitsRow)
 
 	if err := h.gardener.ApplyShoot(ctx, clusterToSync); err != nil {
 		return h.syncError(ctx, cluster.ID, syncAction, "apply shoot", err)
@@ -131,6 +138,24 @@ func toGardenerNodePools(rows []db.NodePoolListByClusterIDRow) []gardener.NodePo
 		}
 	}
 	return pools
+}
+
+// toGardenerNodeLimits converts the nullable org node caps to gardener.NodeLimits.
+// The zero-value row (no active limits row, pgx.ErrNoRows) maps to all-nil: unlimited.
+func toGardenerNodeLimits(row db.OrganizationLimitsGetByOrgIDRow) gardener.NodeLimits {
+	return gardener.NodeLimits{
+		MaxNodesPerCluster:     int4Ptr(row.MaxNodesPerCluster),
+		MaxNodePoolsPerCluster: int4Ptr(row.MaxNodePoolsPerCluster),
+		MaxNodesPerNodePool:    int4Ptr(row.MaxNodesPerNodePool),
+	}
+}
+
+// int4Ptr converts a nullable pgtype.Int4 to *int32 (NULL -> nil).
+func int4Ptr(v pgtype.Int4) *int32 {
+	if !v.Valid {
+		return nil
+	}
+	return &v.Int32
 }
 
 // syncError logs an error, creates a sync_failed audit event, and returns a wrapped error.
