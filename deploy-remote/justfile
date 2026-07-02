@@ -20,6 +20,10 @@ hetzner-up:
 hetzner-stack:
     ./hetzner.sh stack
 
+# foreground SSH tunnel to the box ingress; then open the printed URL in your browser
+hetzner-tunnel:
+    ./hetzner.sh tunnel
+
 # re-trust the box's CA locally (stack does this automatically; use if you switched machines)
 hetzner-certs:
     ./hetzner.sh certs
