@@ -45,14 +45,18 @@ mise exec -- kubectl --context k3d-fundament exec -n fundament db-1 -c postgres 
   || log "insert failed (check db pod name / schema)"
 
 log "=== STAGE E: watch shoot '$CLUSTER' -> Create Succeeded ==="
+shoot_ok=0
 for i in $(seq 1 80); do
   LINE=$(mise exec -- kubectl --kubeconfig "$VKC" get shoots -A --no-headers 2>/dev/null | grep -iF -- "$CLUSTER")
   log "shoot: $LINE"
-  echo "$LINE" | grep -qiE "Create Succeeded|100%" && { log "SHOOT SUCCEEDED"; break; }
+  echo "$LINE" | grep -qiE "Create Succeeded|100%" && { log "SHOOT SUCCEEDED"; shoot_ok=1; break; }
   sleep 15
 done
 
 log "=== SUMMARY ==="
 mise exec -- kubectl --kubeconfig "$VKC" get seed local 2>/dev/null
 mise exec -- kubectl --kubeconfig "$VKC" get shoots -A 2>/dev/null | grep -iF -e NAME -e "$CLUSTER"
+# Fail the run if the shoot never reached success, so the caller (hetzner.sh stack)
+# does not trust certs + print "access ready" after a failed smoke run.
+[ "$shoot_ok" = 1 ] || { log "FATAL: shoot '$CLUSTER' never reached Create Succeeded within the watch window"; exit 1; }
 log "=== DONE ==="

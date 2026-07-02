@@ -128,10 +128,18 @@ trust_box_ca() { # ip
   CAROOT="$PWD/$BOX_CA" "${MKCERT[@]}" -install
 }
 
-# remove the box's ephemeral CA from local trust and delete the local copy (run on down)
+# remove the box's ephemeral CA from local trust and delete the local copy (run on down).
+# Best-effort: must NEVER abort `down`, or a failed cert cleanup would skip server
+# deletion and keep the paid box billing. If mkcert is missing we drop the local copy
+# and warn (the CA can be untrusted later with `mkcert -uninstall`).
 untrust_box_ca() {
   [ -f "$BOX_CA/rootCA.pem" ] || return 0
-  resolve_mkcert
+  if command -v mkcert >/dev/null 2>&1; then MKCERT=(mkcert)
+  elif mise exec -- mkcert --version >/dev/null 2>&1; then MKCERT=(mise exec -- mkcert)
+  else
+    log "WARN: mkcert not found — leaving the box CA in your trust store; remove later with 'mkcert -uninstall'"
+    rm -rf "$BOX_CA"; return 0
+  fi
   log "removing the box CA from local trust (mkcert -uninstall)"
   CAROOT="$PWD/$BOX_CA" "${MKCERT[@]}" -uninstall || true
   rm -rf "$BOX_CA"
@@ -146,6 +154,21 @@ print_access() {
   log "     (also docs./dcim./dex.fundament.localhost:8443 — the box CA is trusted locally, no cert warning)"
 }
 
+# Stage a SANITIZED copy of the flake source into a fresh temp dir and print its path.
+# Only nix-relevant files go in — NOT secrets/ (Hetzner token) or the rest of cache/
+# (private SSH keys, box CA key, machine-id). Critical because /work is mounted as a
+# plain (non-git) path, so nix copies the WHOLE tree into the store and --build-on-remote
+# ships it to the box; .gitignore does not filter a plain-path flake source. Only
+# cache/admin-keys.nix is needed (modules/baseline.nix imports ../cache/admin-keys.nix).
+stage_flake_src() {
+  local dir; dir=$(mktemp -d "${TMPDIR:-/tmp}/fundament-flake.XXXXXX")
+  cp flake.nix flake.lock "$dir/"
+  cp -R hosts modules "$dir/"
+  mkdir -p "$dir/cache"
+  cp "$ADMIN_KEYS_NIX" "$dir/cache/admin-keys.nix"
+  printf '%s\n' "$dir"
+}
+
 # --- install NixOS onto an already-created box -----------------------------
 # Returns 0 only when the installed NixOS answers SSH on :$SSH_PORT (nixos-anywhere's
 # exit code isn't reliable — it often drops SSH on the post-install reboot). Recovers
@@ -155,9 +178,11 @@ deploy_once() { # ip priv
   log "$HZ_NAME @ $ip — waiting for SSH on :22"
   wait_ssh "$ip" root 60 22 || { log "box never reachable on :22"; return 1; }
 
+  local src; src=$(stage_flake_src)
+  trap 'rm -rf "$src"' RETURN
   log "installing NixOS via nixos-anywhere (throwaway nixos/nix container; build-on-remote)"
   docker run --rm \
-    -v "$PWD:/work" -w /work \
+    -v "$src:/work" -w /work \
     -v "$priv:/root/.ssh/id_rsa:ro" \
     -e NIX_CONFIG="experimental-features = nix-command flakes" \
     "$NIX_IMAGE" \
