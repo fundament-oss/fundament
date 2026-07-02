@@ -10,7 +10,7 @@
 #     --build-on-remote work: the box builds the closure itself (native x86_64), the
 #     container just orchestrates over SSH. Clean disko install — no infect.
 #
-# Runs on macOS or Linux. Usage: ./hetzner.sh {up|down|ssh|status|stack|certs}
+# Runs on macOS or Linux. Usage: ./hetzner.sh {up|down|ssh|status|stack|certs|tunnel}
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -145,6 +145,15 @@ untrust_box_ca() {
   rm -rf "$BOX_CA"
 }
 
+# tell the operator how to reach the box UIs from their browser (tunnel + URL)
+print_access() {
+  log ""
+  log "reach the box UIs from your normal browser:"
+  log "  1) run:   just hetzner-tunnel      # SSH tunnel :8443 (stop a local k3d first if it owns 8443)"
+  log "  2) open:  $CONSOLE_URL"
+  log "     (also docs./dcim./dex.fundament.localhost:8443 — the box CA is trusted locally, no cert warning)"
+}
+
 # Stage a SANITIZED copy of the flake source into a fresh temp dir and print its path.
 # Only nix-relevant files go in — NOT secrets/ (Hetzner token) or the rest of cache/
 # (private SSH keys, box CA key, machine-id). Critical because /work is mounted as a
@@ -242,12 +251,43 @@ cmd_status() { ensure_hcloud; hc server list; }
 # open an interactive shell on the box (NixOS, port 2022)
 cmd_ssh()    { ensure_hcloud; exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$(box_ip)"; }
 
+# --- reach the box ingress -------------------------------------------------
+# The box's fundament is hardwired to the https://*.fundament.localhost:8443 origin
+# (dex issuer, OIDC callbacks, API CORS allowlists), so the UIs only work when reached
+# at EXACTLY that origin — forward local 8443, which a LOCAL k3d fundament usually owns
+# (the guard catches that). One forwarded port serves every *.fundament.localhost host
+# (host-routed nginx). *.localhost -> 127.0.0.1.
+LCONSOLE_PORT=8443
+CONSOLE_URL="https://console.fundament.localhost:${LCONSOLE_PORT}"
+
+# refuse the tunnel if local :8443 is held by something other than our own ssh tunnel
+require_console_port() {
+  local who
+  # lsof exits non-zero when nothing is listening (port free) — don't let that trip
+  # `set -e`/pipefail; an empty `who` means free.
+  who=$( { lsof -nP -iTCP:"${LCONSOLE_PORT}" -sTCP:LISTEN -F c 2>/dev/null || true; } | sed -n 's/^c//p' | head -1)
+  [ -z "$who" ] && return 0          # free
+  [ "$who" = "ssh" ] && return 0     # our own tunnel — reuse
+  die "local :${LCONSOLE_PORT} is held by '$who' (your LOCAL k3d fundament?). The box's app only
+    works at the :${LCONSOLE_PORT} origin, so free it first:  k3d cluster stop fundament"
+}
+
+# Foreground SSH tunnel: localhost:8443 -> box ingress (all UIs). Ctrl-C to close.
+cmd_tunnel() {
+  ensure_hcloud
+  require_console_port
+  local ip; ip=$(box_ip)
+  log "tunnel open: $CONSOLE_URL  (also docs./dcim./dex.fundament.localhost:${LCONSOLE_PORT})"
+  log "open the URL in your browser; Ctrl-C to close the tunnel."
+  exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -N -L "${LCONSOLE_PORT}:127.0.0.1:8443" "$BOX_USER@$ip"
+}
+
 # Re-trust the box CA locally (stack does this automatically; use if you switched machines).
 cmd_certs() { ensure_hcloud; trust_box_ca "$(box_ip)"; log "box CA trusted locally."; }
 
 # --- run the full stack on the box -----------------------------------------
 # Push the on-box scripts + patches, run bootstrap + the stack, then trust the box's
-# freshly-generated CA locally.
+# freshly-generated CA locally and print how to reach the UIs.
 cmd_stack() {
   ensure_hcloud
   local ip; ip=$(box_ip)
@@ -260,6 +300,7 @@ cmd_stack() {
     'chmod +x ~/box/*.sh && ~/box/bootstrap.sh && ~/box/run-stack.sh' \
     || die "stack failed on the box — inspect with ./hetzner.sh ssh"
   trust_box_ca "$ip"
+  print_access
 }
 
 case "${1:-}" in
@@ -269,5 +310,6 @@ case "${1:-}" in
   status) cmd_status ;;
   stack) cmd_stack ;;
   certs) cmd_certs ;;
-  *) die "usage: $0 {up|down|ssh|status|stack|certs}" ;;
+  tunnel) cmd_tunnel ;;
+  *) die "usage: $0 {up|down|ssh|status|stack|certs|tunnel}" ;;
 esac
