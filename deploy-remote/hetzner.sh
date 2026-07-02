@@ -187,7 +187,9 @@ deploy_once() { # ip
   wait_ssh "$ip" root 60 22 "$PWD/$INSTALL_KEY" || { log "box never reachable on :22"; return 1; }
 
   local src; src=$(stage_flake_src)
-  trap 'rm -rf "$src"' RETURN
+  # Self-clearing: a RETURN trap outlives this function and would re-fire on the
+  # caller's return, where the local $src no longer exists (set -u error).
+  trap 'rm -rf "${src:-}"; trap - RETURN' RETURN
   log "installing NixOS via nixos-anywhere (throwaway nixos/nix container; build-on-remote)"
   # Only the per-deploy THROWAWAY install key enters the container (passphrase-less by
   # construction — a passphrase-protected key can't be unlocked in there: no TTY, no
