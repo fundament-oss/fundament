@@ -1,0 +1,40 @@
+diff --git a/Justfile b/Justfile
+index aaa798d..ef5d553 100644
+--- a/Justfile
++++ b/Justfile
+@@ -15,6 +15,7 @@ fmt:
+ 
+ # Create a local k3d cluster for development with local registry
+ cluster-create:
++    docker network create --subnet=172.28.0.0/16 k3d-fundament 2>/dev/null || true
+     k3d cluster create --config=deploy/k3d/config.yaml
+     just setup-certs
+ 
+@@ -30,6 +31,7 @@ cluster-stop:
+ cluster-delete:
+     k3d cluster delete fundament
+     @k3d registry delete registry.localhost 2>/dev/null || true
++    @docker network rm k3d-fundament 2>/dev/null || true
+ 
+ # Install mkcert CA as a cert-manager ClusterIssuer for local HTTPS
+ setup-certs:
+diff --git a/deploy/k3d/config.yaml b/deploy/k3d/config.yaml
+index 0fc580a..b9d6946 100644
+--- a/deploy/k3d/config.yaml
++++ b/deploy/k3d/config.yaml
+@@ -4,11 +4,14 @@ metadata:
+   name: fundament
+ servers: 1
+ agents: 0
++# Use a fixed, pre-created network (see `cluster-create`) so k3d does not
++# auto-grab 172.18.0.0/16, which Gardener's local kind cluster reserves.
++network: k3d-fundament
+ ports:
+   - port: 8080:80
+     nodeFilters:
+       - loadbalancer
+-  - port: 8443:30443
++  - port: 127.0.0.1:8443:30443
+     nodeFilters:
+       - loadbalancer
+   - port: 54328:54328

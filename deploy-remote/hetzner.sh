@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Hetzner Cloud one-time-use box — NO local nix required.
 #
-# Local deps: ssh, curl, and docker (you already run docker for fundament/k3d).
+# Local deps: ssh, curl, docker (you already run docker for fundament/k3d), and
+# mkcert (you already use it for local fundament dev).
 #   - hcloud CLI is fetched as a pinned static binary into cache/ (not brew/nix).
 #   - NixOS is installed with nixos-anywhere run inside a throwaway `nixos/nix`
 #     container, where root is a TRUSTED nix user by default. That is the missing
@@ -9,7 +10,7 @@
 #     --build-on-remote work: the box builds the closure itself (native x86_64), the
 #     container just orchestrates over SSH. Clean disko install — no infect.
 #
-# Runs on macOS or Linux. Usage: ./hetzner.sh {up|down|ssh|status}
+# Runs on macOS or Linux. Usage: ./hetzner.sh {up|down|ssh|status|stack|certs}
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -26,6 +27,7 @@ HCLOUD_VERSION=${HCLOUD_VERSION:-1.51.0}
 NIX_IMAGE=${NIX_IMAGE:-nixos/nix:latest}
 ENVFILE=secrets/hetzner.env
 CACHE=cache/bin
+BOX_CA=cache/box-ca                  # the box's ephemeral CA, fetched here + trusted while the box lives
 ADMIN_KEYS_NIX=cache/admin-keys.nix  # generated per-deploy: the box's authorized admin key(s)
 
 # print a progress line to stdout
@@ -89,6 +91,13 @@ box_ip() {
   printf '%s\n' "$ip"
 }
 
+# the operator's mkcert (global, else via the repo's mise); MKCERT is a bash array.
+resolve_mkcert() {
+  if command -v mkcert >/dev/null 2>&1; then MKCERT=(mkcert)
+  elif mise exec -- mkcert --version >/dev/null 2>&1; then MKCERT=(mise exec -- mkcert)
+  else die "mkcert not found (needed to trust the box CA) — install it, or run from the fundament repo"; fi
+}
+
 # poll SSH on host:port as the given user until it answers (tries x 8s); 0 if reachable
 wait_ssh() { # host user tries port
   local i
@@ -97,6 +106,43 @@ wait_ssh() { # host user tries port
     sleep 8
   done
   return 1
+}
+
+# --- cert trust (ephemeral per-box CA) -------------------------------------
+# The box generates its OWN mkcert CA per deploy (setup-certs runs mkcert on the box).
+# We fetch that CA here and `mkcert -install` it into the local trust stores (system +
+# browser NSS, cross-platform) so browser/functl/kubectl trust the box with no --insecure.
+# YOUR real mkcert CA never touches the box. `down` runs -uninstall + deletes the copy.
+trust_box_ca() { # ip
+  local ip=$1 boxroot
+  resolve_mkcert
+  boxroot=$(ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" \
+    'export PATH=$HOME/.nix-profile/bin:$PATH; cd ~/fundament 2>/dev/null && mise exec -- mkcert -CAROOT 2>/dev/null' </dev/null) \
+    || die "couldn't reach the box to read its mkcert CA"
+  [ -n "$boxroot" ] || die "box has no mkcert CA yet (run ./hetzner.sh stack first)"
+  mkdir -p "$BOX_CA"
+  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" \
+    "$BOX_USER@$ip:$boxroot/rootCA.pem" "$BOX_USER@$ip:$boxroot/rootCA-key.pem" "$BOX_CA/" \
+    || die "failed to fetch the box CA from $boxroot"
+  log "trusting the box's ephemeral CA locally (mkcert may prompt for sudo)"
+  CAROOT="$PWD/$BOX_CA" "${MKCERT[@]}" -install
+}
+
+# remove the box's ephemeral CA from local trust and delete the local copy (run on down).
+# Best-effort: must NEVER abort `down`, or a failed cert cleanup would skip server
+# deletion and keep the paid box billing. If mkcert is missing we drop the local copy
+# and warn (the CA can be untrusted later with `mkcert -uninstall`).
+untrust_box_ca() {
+  [ -f "$BOX_CA/rootCA.pem" ] || return 0
+  if command -v mkcert >/dev/null 2>&1; then MKCERT=(mkcert)
+  elif mise exec -- mkcert --version >/dev/null 2>&1; then MKCERT=(mise exec -- mkcert)
+  else
+    log "WARN: mkcert not found — leaving the box CA in your trust store; remove later with 'mkcert -uninstall'"
+    rm -rf "$BOX_CA"; return 0
+  fi
+  log "removing the box CA from local trust (mkcert -uninstall)"
+  CAROOT="$PWD/$BOX_CA" "${MKCERT[@]}" -uninstall || true
+  rm -rf "$BOX_CA"
 }
 
 # Stage a SANITIZED copy of the flake source into a fresh temp dir and print its path.
@@ -174,6 +220,7 @@ cmd_up() {
     ip=$(box_ip)
     if deploy_once "$ip" "$priv"; then
       log "READY:  ssh -p $SSH_PORT $BOX_USER@$ip   (or: ./hetzner.sh ssh)"
+      log "next:   just hetzner-stack   # deploy fundament + Gardener and run a shoot"
       log "BILLING IS RUNNING — tear down with: ./hetzner.sh down"
       return 0
     fi
@@ -184,9 +231,10 @@ cmd_up() {
   done
 }
 
-# destroy the box (stops billing)
+# untrust the box's CA locally, then destroy the box (stops billing)
 cmd_down() {
   ensure_hcloud
+  untrust_box_ca
   hc server delete "$HZ_NAME" && log "deleted $HZ_NAME — billing stopped."
 }
 # list the project's servers (so a billing box is never forgotten)
@@ -194,10 +242,32 @@ cmd_status() { ensure_hcloud; hc server list; }
 # open an interactive shell on the box (NixOS, port 2022)
 cmd_ssh()    { ensure_hcloud; exec ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$(box_ip)"; }
 
+# Re-trust the box CA locally (stack does this automatically; use if you switched machines).
+cmd_certs() { ensure_hcloud; trust_box_ca "$(box_ip)"; log "box CA trusted locally."; }
+
+# --- run the full stack on the box -----------------------------------------
+# Push the on-box scripts + patches, run bootstrap + the stack, then trust the box's
+# freshly-generated CA locally.
+cmd_stack() {
+  ensure_hcloud
+  local ip; ip=$(box_ip)
+  log "staging box scripts + patches onto $HZ_NAME @ $ip"
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'mkdir -p ~/patches ~/box'
+  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" patches/*.patch "$BOX_USER@$ip:patches/" >/dev/null
+  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" box/bootstrap.sh box/run-stack.sh "$BOX_USER@$ip:box/" >/dev/null
+  log "running bootstrap + stack on the box (gardener-up takes ~10-15 min)"
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "$BOX_USER@$ip" \
+    'chmod +x ~/box/*.sh && ~/box/bootstrap.sh && ~/box/run-stack.sh' \
+    || die "stack failed on the box — inspect with ./hetzner.sh ssh"
+  trust_box_ca "$ip"
+}
+
 case "${1:-}" in
   up) cmd_up ;;
   down) cmd_down ;;
   ssh) cmd_ssh ;;
   status) cmd_status ;;
-  *) die "usage: $0 {up|down|ssh|status}" ;;
+  stack) cmd_stack ;;
+  certs) cmd_certs ;;
+  *) die "usage: $0 {up|down|ssh|status|stack|certs}" ;;
 esac
