@@ -565,23 +565,9 @@ func (m *MockClient) validateClusterSpec(cluster *ClusterToSync) error {
 		}
 	}
 
-	// Mirror the real client's org node-cap enforcement: the per-pool cap clamps
+	// Same org node-cap enforcement as the real client: the per-pool cap clamps
 	// each pool's effective maximum silently, the aggregate caps fail the apply.
-	poolCount := len(cluster.NodePools)
-	var totalMaximum int32
-	if poolCount == 0 {
-		poolCount = 1
-		totalMaximum = clampedNodePoolMaximum(defaultWorkerMaximum, cluster.NodeLimits.MaxNodesPerNodePool)
-	} else {
-		for _, np := range cluster.NodePools {
-			totalMaximum += clampedNodePoolMaximum(np.AutoscaleMax, cluster.NodeLimits.MaxNodesPerNodePool)
-		}
-	}
-	if err := validateAggregateNodeLimitCounts(poolCount, totalMaximum, cluster.NodeLimits); err != nil {
-		return err
-	}
-
-	return nil
+	return validateNodeLimits(cluster.NodePools, cluster.NodeLimits)
 }
 
 // ErrMockApplyFailed is a sentinel error for testing apply failures.
