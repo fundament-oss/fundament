@@ -8,16 +8,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
-
-func int32ptr(v int32) *int32 { return &v }
 
 func TestLimitRangeSpec_AllFieldsFormatted(t *testing.T) {
 	spec := limitRangeSpec(LimitDefaults{
-		CPURequestMilli: int32ptr(250),
-		CPULimitMilli:   int32ptr(500),
-		MemoryRequestMi: int32ptr(256),
-		MemoryLimitMi:   int32ptr(512),
+		CPURequestMilli: ptr.To[int32](250),
+		CPULimitMilli:   ptr.To[int32](500),
+		MemoryRequestMi: ptr.To[int32](256),
+		MemoryLimitMi:   ptr.To[int32](512),
 	})
 
 	require.Len(t, spec.Limits, 1)
@@ -36,7 +35,7 @@ func TestLimitRangeSpec_AllFieldsFormatted(t *testing.T) {
 
 func TestLimitRangeSpec_PartialFieldsOmitted(t *testing.T) {
 	spec := limitRangeSpec(LimitDefaults{
-		CPULimitMilli: int32ptr(1500),
+		CPULimitMilli: ptr.To[int32](1500),
 	})
 
 	require.Len(t, spec.Limits, 1)
@@ -55,7 +54,7 @@ func TestMockLimitRangeRoundTrip(t *testing.T) {
 	labels := map[string]string{"fundament.io/managed-by": "cluster-worker"}
 
 	// Ensure creates.
-	first := LimitDefaults{CPULimitMilli: int32ptr(500)}
+	first := LimitDefaults{CPULimitMilli: ptr.To[int32](500)}
 	require.NoError(t, m.EnsureLimitRange(t.Context(), clusterID, "team-a", first, labels))
 	lr := m.GetLimitRange(clusterID, "team-a")
 	require.NotNil(t, lr)
@@ -63,7 +62,7 @@ func TestMockLimitRangeRoundTrip(t *testing.T) {
 	require.Equal(t, labels, lr.Labels)
 
 	// Ensure updates in place.
-	second := LimitDefaults{CPULimitMilli: int32ptr(250), MemoryLimitMi: int32ptr(512)}
+	second := LimitDefaults{CPULimitMilli: ptr.To[int32](250), MemoryLimitMi: ptr.To[int32](512)}
 	require.NoError(t, m.EnsureLimitRange(t.Context(), clusterID, "team-a", second, labels))
 	lr = m.GetLimitRange(clusterID, "team-a")
 	require.NotNil(t, lr)
