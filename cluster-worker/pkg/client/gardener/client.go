@@ -97,7 +97,7 @@ type ClusterToSync struct {
 // NodeLimits are an organization's node caps from tenant.organization_limits.
 // A nil cap is unlimited. MaxNodesPerNodePool clamps each worker's autoscaler
 // maximum; the other two have no Gardener field and fail the apply when
-// exceeded (see clampWorkerMaxima / validateAggregateNodeLimits).
+// exceeded (see clampWorkerMaxima / validateNodeLimits).
 type NodeLimits struct {
 	MaxNodesPerCluster     *int32
 	MaxNodePoolsPerCluster *int32
