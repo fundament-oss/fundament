@@ -61,6 +61,74 @@ func (r *RealShootAccess) clientForCluster(ctx context.Context, clusterID uuid.U
 	return cs, nil
 }
 
+// resourceClient is the subset of a typed client-go resource interface that
+// the ensure/delete helpers need; every typed client satisfies it.
+type resourceClient[T any] interface {
+	Create(ctx context.Context, obj *T, opts metav1.CreateOptions) (*T, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*T, error)
+	Update(ctx context.Context, obj *T, opts metav1.UpdateOptions) (*T, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+}
+
+// ensureResource creates desired and, when it already exists, reconciles it:
+// merge mutates the fetched object toward the desired state and returns true
+// when the change requires a delete+recreate (immutable field). A nil merge
+// treats any existing object as up to date.
+func ensureResource[T any](ctx context.Context, c resourceClient[T], name, desc string, desired *T, merge func(existing *T) (recreate bool)) error {
+	_, err := c.Create(ctx, desired, metav1.CreateOptions{})
+	if err == nil {
+		return nil
+	}
+	if !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("create %s: %w", desc, err)
+	}
+	if merge == nil {
+		return nil
+	}
+	existing, err := c.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("get existing %s: %w", desc, err)
+	}
+	if merge(existing) {
+		if err := c.Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete existing %s before recreate: %w", desc, err)
+		}
+		if _, err := c.Create(ctx, desired, metav1.CreateOptions{}); err != nil {
+			return fmt.Errorf("recreate %s: %w", desc, err)
+		}
+		return nil
+	}
+	if _, err := c.Update(ctx, existing, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("update %s: %w", desc, err)
+	}
+	return nil
+}
+
+// deleteResource deletes by name, treating NotFound as success.
+func deleteResource[T any](ctx context.Context, c resourceClient[T], name, desc string) error {
+	err := c.Delete(ctx, name, metav1.DeleteOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("delete %s: %w", desc, err)
+	}
+	return nil
+}
+
+// mergeMeta copies labels and annotations onto an existing object's metadata,
+// initializing nil maps; keys not listed are left untouched.
+func mergeMeta(meta *metav1.ObjectMeta, labels, annotations map[string]string) {
+	if meta.Labels == nil {
+		meta.Labels = make(map[string]string)
+	}
+	if meta.Annotations == nil {
+		meta.Annotations = make(map[string]string)
+	}
+	maps.Copy(meta.Labels, labels)
+	maps.Copy(meta.Annotations, annotations)
+}
+
 func (r *RealShootAccess) EnsureNamespace(ctx context.Context, clusterID uuid.UUID, name string) error {
 	cs, err := r.clientForCluster(ctx, clusterID)
 	if err != nil {
@@ -70,11 +138,7 @@ func (r *RealShootAccess) EnsureNamespace(ctx context.Context, clusterID uuid.UU
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
-	_, err = cs.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("create namespace %s: %w", name, err)
-	}
-	return nil
+	return ensureResource(ctx, cs.CoreV1().Namespaces(), name, "namespace "+name, ns, nil)
 }
 
 func (r *RealShootAccess) GetNamespace(ctx context.Context, clusterID uuid.UUID, name string) (*ResourceInfo, error) {
@@ -148,14 +212,7 @@ func (r *RealShootAccess) DeleteNamespace(ctx context.Context, clusterID uuid.UU
 		return err
 	}
 
-	err = cs.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("delete namespace %s: %w", name, err)
-	}
-	return nil
+	return deleteResource(ctx, cs.CoreV1().Namespaces(), name, "namespace "+name)
 }
 
 func (r *RealShootAccess) ListNamespaces(ctx context.Context, clusterID uuid.UUID, labelKey string) ([]ResourceInfo, error) {
@@ -195,30 +252,11 @@ func (r *RealShootAccess) EnsureServiceAccount(ctx context.Context, clusterID uu
 		},
 	}
 
-	_, err = cs.CoreV1().ServiceAccounts(namespace).Create(ctx, sa, metav1.CreateOptions{})
-	if apierrors.IsAlreadyExists(err) {
-		existing, getErr := cs.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
-		if getErr != nil {
-			return fmt.Errorf("get existing SA %s/%s: %w", namespace, name, getErr)
-		}
-		if existing.Labels == nil {
-			existing.Labels = make(map[string]string)
-		}
-		if existing.Annotations == nil {
-			existing.Annotations = make(map[string]string)
-		}
-		maps.Copy(existing.Labels, labels)
-		maps.Copy(existing.Annotations, annotations)
-		_, err = cs.CoreV1().ServiceAccounts(namespace).Update(ctx, existing, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("update SA %s/%s: %w", namespace, name, err)
-		}
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("create SA %s/%s: %w", namespace, name, err)
-	}
-	return nil
+	return ensureResource(ctx, cs.CoreV1().ServiceAccounts(namespace), name, fmt.Sprintf("SA %s/%s", namespace, name), sa,
+		func(existing *corev1.ServiceAccount) bool {
+			mergeMeta(&existing.ObjectMeta, labels, annotations)
+			return false
+		})
 }
 
 func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name, saNamespace, saName string, labels, annotations map[string]string) error {
@@ -247,42 +285,15 @@ func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterI
 		},
 	}
 
-	_, err = cs.RbacV1().ClusterRoleBindings().Create(ctx, crb, metav1.CreateOptions{})
-	if apierrors.IsAlreadyExists(err) {
-		existing, getErr := cs.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
-		if getErr != nil {
-			return fmt.Errorf("get existing CRB %s: %w", name, getErr)
-		}
-
-		if ClusterRoleBindingNeedsRecreate(existing, crb) {
-			if err := cs.RbacV1().ClusterRoleBindings().Delete(ctx, name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-				return fmt.Errorf("delete existing CRB %s before recreate: %w", name, err)
+	return ensureResource(ctx, cs.RbacV1().ClusterRoleBindings(), name, "CRB "+name, crb,
+		func(existing *rbacv1.ClusterRoleBinding) bool {
+			if ClusterRoleBindingNeedsRecreate(existing, crb) {
+				return true
 			}
-			if _, err := cs.RbacV1().ClusterRoleBindings().Create(ctx, crb, metav1.CreateOptions{}); err != nil {
-				return fmt.Errorf("recreate CRB %s: %w", name, err)
-			}
-			return nil
-		}
-
-		if existing.Labels == nil {
-			existing.Labels = make(map[string]string)
-		}
-		if existing.Annotations == nil {
-			existing.Annotations = make(map[string]string)
-		}
-		maps.Copy(existing.Labels, labels)
-		maps.Copy(existing.Annotations, annotations)
-		existing.Subjects = crb.Subjects
-		_, err = cs.RbacV1().ClusterRoleBindings().Update(ctx, existing, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("update CRB %s: %w", name, err)
-		}
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("create CRB %s: %w", name, err)
-	}
-	return nil
+			mergeMeta(&existing.ObjectMeta, labels, annotations)
+			existing.Subjects = crb.Subjects
+			return false
+		})
 }
 
 func (r *RealShootAccess) DeleteServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string) error {
@@ -291,14 +302,7 @@ func (r *RealShootAccess) DeleteServiceAccount(ctx context.Context, clusterID uu
 		return err
 	}
 
-	err = cs.CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("delete SA %s/%s: %w", namespace, name, err)
-	}
-	return nil
+	return deleteResource(ctx, cs.CoreV1().ServiceAccounts(namespace), name, fmt.Sprintf("SA %s/%s", namespace, name))
 }
 
 func (r *RealShootAccess) DeleteClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name string) error {
@@ -307,14 +311,7 @@ func (r *RealShootAccess) DeleteClusterRoleBinding(ctx context.Context, clusterI
 		return err
 	}
 
-	err = cs.RbacV1().ClusterRoleBindings().Delete(ctx, name, metav1.DeleteOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("delete CRB %s: %w", name, err)
-	}
-	return nil
+	return deleteResource(ctx, cs.RbacV1().ClusterRoleBindings(), name, "CRB "+name)
 }
 
 func (r *RealShootAccess) ListServiceAccounts(ctx context.Context, clusterID uuid.UUID, namespace, labelKey string) ([]ResourceInfo, error) {
@@ -378,27 +375,12 @@ func (r *RealShootAccess) EnsureLimitRange(ctx context.Context, clusterID uuid.U
 		Spec: limitRangeSpec(defaults),
 	}
 
-	_, err = cs.CoreV1().LimitRanges(namespace).Create(ctx, lr, metav1.CreateOptions{})
-	if apierrors.IsAlreadyExists(err) {
-		existing, getErr := cs.CoreV1().LimitRanges(namespace).Get(ctx, LimitRangeName, metav1.GetOptions{})
-		if getErr != nil {
-			return fmt.Errorf("get existing LimitRange %s/%s: %w", namespace, LimitRangeName, getErr)
-		}
-		if existing.Labels == nil {
-			existing.Labels = make(map[string]string)
-		}
-		maps.Copy(existing.Labels, labels)
-		existing.Spec = lr.Spec
-		_, err = cs.CoreV1().LimitRanges(namespace).Update(ctx, existing, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("update LimitRange %s/%s: %w", namespace, LimitRangeName, err)
-		}
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("create LimitRange %s/%s: %w", namespace, LimitRangeName, err)
-	}
-	return nil
+	return ensureResource(ctx, cs.CoreV1().LimitRanges(namespace), LimitRangeName, fmt.Sprintf("LimitRange %s/%s", namespace, LimitRangeName), lr,
+		func(existing *corev1.LimitRange) bool {
+			mergeMeta(&existing.ObjectMeta, labels, nil)
+			existing.Spec = lr.Spec
+			return false
+		})
 }
 
 func (r *RealShootAccess) DeleteLimitRange(ctx context.Context, clusterID uuid.UUID, namespace string) error {
@@ -407,14 +389,7 @@ func (r *RealShootAccess) DeleteLimitRange(ctx context.Context, clusterID uuid.U
 		return err
 	}
 
-	err = cs.CoreV1().LimitRanges(namespace).Delete(ctx, LimitRangeName, metav1.DeleteOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("delete LimitRange %s/%s: %w", namespace, LimitRangeName, err)
-	}
-	return nil
+	return deleteResource(ctx, cs.CoreV1().LimitRanges(namespace), LimitRangeName, fmt.Sprintf("LimitRange %s/%s", namespace, LimitRangeName))
 }
 
 // limitRangeSpec converts the defaults to a single-Container LimitRangeSpec.
