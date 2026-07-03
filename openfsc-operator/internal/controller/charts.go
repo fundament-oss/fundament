@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"helm.sh/helm/v3/pkg/chart"
+	chart "helm.sh/helm/v4/pkg/chart/v2"
 
 	"github.com/fundament-oss/fundament/openfsc-operator/charts"
 	"github.com/fundament-oss/fundament/openfsc-operator/internal/helm"
