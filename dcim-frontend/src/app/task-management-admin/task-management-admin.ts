@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { firstValueFrom, Observable } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
+import { CdkDropList, CdkDropListGroup, CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import type { Note as ProtoNote } from '../../generated/v1/note_pb';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import AuthService from '../auth.service';
@@ -63,7 +64,7 @@ interface NlddSheet extends HTMLElement {
   selector: 'app-task-management-admin',
   templateUrl: './task-management-admin.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DropdownSyncDirective],
+  imports: [DropdownSyncDirective, CdkDropListGroup, CdkDropList, CdkDrag],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
     class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',
@@ -325,6 +326,32 @@ export default class TaskManagementAdminComponent implements OnInit {
 
   tasksForColumn(col: string): Task[] {
     return this.filteredTasks().filter((t) => t.status === col);
+  }
+
+  onKanbanDrop(event: CdkDragDrop<Task[]>, targetStatus: TaskStatusLabel): void {
+    const task = event.item.data as Task;
+    if (!task || task.status === targetStatus) return;
+
+    const previousStatus = task.status;
+    this.tasks.update((list) =>
+      list.map((t) => (t.id === task.id ? { ...t, status: targetStatus } : t)),
+    );
+
+    firstValueFrom(
+      this.taskApi.updateTask(
+        task.id,
+        TaskManagementAdminComponent.toInput({ ...task, status: targetStatus }),
+      ),
+    )
+      .then(() => this.loadTasks())
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.toast.show('Could not move task');
+        this.tasks.update((list) =>
+          list.map((t) => (t.id === task.id ? { ...t, status: previousStatus } : t)),
+        );
+      });
   }
 
   setView(view: 'list' | 'kanban'): void {
@@ -592,7 +619,7 @@ export default class TaskManagementAdminComponent implements OnInit {
 
   kanbanCardClass(status: string): string {
     const s = this.statusStyle(status);
-    return `cursor-pointer rounded-xl border ${s.kanbanBorder} bg-white dark:bg-gray-950 p-3.5 hover:shadow-md hover:shadow-slate-200/80 transition-shadow`;
+    return `cursor-grab active:cursor-grabbing rounded-xl border ${s.kanbanBorder} bg-white dark:bg-gray-950 p-3.5 hover:shadow-md hover:shadow-slate-200/80 transition-shadow`;
   }
 
   detailStatusClass(status: string): string {

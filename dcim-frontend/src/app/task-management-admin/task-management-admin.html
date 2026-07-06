@@ -426,7 +426,7 @@
 
     <!-- ── KANBAN VIEW ── -->
     <div class="pt-5" [class.hidden]="currentView() === 'list'">
-      <div class="flex gap-3 overflow-x-auto pb-6 snap-x snap-mandatory sm:snap-none">
+      <div class="flex gap-3 overflow-x-auto pb-6 snap-x snap-mandatory sm:snap-none" cdkDropListGroup>
         @for (col of kanbanColumns; track col) {
           <div class="shrink-0 w-72 snap-center">
             <div class="mb-3 flex items-center gap-2">
@@ -441,10 +441,18 @@
                 >{{ tasksForColumn(col).length }}</span
               >
             </div>
-            <div class="space-y-2">
+            <div
+              class="space-y-2 min-h-8"
+              cdkDropList
+              [id]="'kanban-col-' + col"
+              [cdkDropListData]="tasksForColumn(col)"
+              (cdkDropListDropped)="onKanbanDrop($event, col)"
+            >
               @for (task of tasksForColumn(col); track task.id) {
                 <div
                   [class]="kanbanCardClass(task.status)"
+                  cdkDrag
+                  [cdkDragData]="task"
                   tabindex="0"
                   (click)="openDetail(task.id)"
                   (keydown.enter)="openDetail(task.id)"
@@ -851,13 +859,14 @@
               for="editDue"
               >Due date</label
             >
-            <input
-              id="editDue"
+            <nldd-text-field
               type="date"
-              class="w-full rounded-lg border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+              input-id="editDue"
+              class="w-full"
               [value]="editFormDue()"
-              (change)="editFormDue.set($any($event).target.value)"
-            />
+              (change)="editFormDue.set($any($event).detail?.value ?? '')"
+              (keydown.enter)="saveTask()"
+            ></nldd-text-field>
           </div>
         </div>
         <div>

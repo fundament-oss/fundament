@@ -19,10 +19,12 @@ html.dark {
 }
 
 :root {
+  --primitives-font-size-100: theme('fontSize.base');
+
   /* Custom focus ring, since the NLDD default is very dark */
   --semantics-focus-ring-outline: none;
   --semantics-focus-ring-box-shadow:
-    var(--semantics-surfaces-background-color) 0 0 0 2px,
+    var(--semantics-surfaces-base-background-color) 0 0 0 2px,
     var(--primitives-color-accent-200) 0 0 0 4px;
 }
 
@@ -134,7 +136,7 @@ html.dark {
 
   /* Semantic colors */
   --color-dividers: var(--semantics-dividers-color);
-  --color-surface-bg: var(--semantics-surfaces-background-color);
+  --color-surface-bg: var(--semantics-surfaces-base-background-color);
   --color-surface-tinted: var(--semantics-surfaces-tinted-background-color);
   --color-content: var(--semantics-content-color);
   --color-content-secondary: var(--semantics-content-secondary-color);

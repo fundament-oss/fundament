@@ -608,6 +608,8 @@
     <nldd-multi-line-text-field
       rows="4"
       placeholder="Add your observations…"
+      [value]="noteText()"
+      (change)="noteText.set($any($event).detail?.value ?? '')"
     ></nldd-multi-line-text-field>
     <div class="mt-5 flex justify-end gap-2">
       <nldd-button

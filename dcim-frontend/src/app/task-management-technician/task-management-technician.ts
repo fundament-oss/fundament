@@ -17,6 +17,7 @@ import ThemeService from '../theme.service';
 import AuthService from '../auth.service';
 import TaskApiService, { TaskPriorityLabel } from '../task-management/task-api.service';
 import TaskStepApiService from '../task-management/task-step-api.service';
+import NoteApiService from '../inventory/note-api.service';
 import ToastService from '../shared/toast.service';
 import connectErrorMessage from '../../connect/error';
 
@@ -65,6 +66,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   private readonly taskApi = inject(TaskApiService);
 
   private readonly taskStepApi = inject(TaskStepApiService);
+
+  private readonly noteApi = inject(NoteApiService);
 
   private readonly toast = inject(ToastService);
 
@@ -360,6 +363,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   readonly showNoteModal = signal(false);
 
+  readonly noteText = signal('');
+
   readonly photoPreviewUrl = signal<string | null>(null);
 
   // Guards the auto-save effect from writing an empty/default snapshot over a
@@ -553,17 +558,35 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   closeNoteModal(): void {
     this.showNoteModal.set(false);
+    this.noteText.set('');
   }
 
   saveNote(): void {
-    this.showNoteModal.set(false);
-    this.toast.show('Note saved');
+    const text = this.noteText().trim();
+    if (!text) return;
+    const task = this.currentTask();
+    if (!task) return;
+    const author = this.auth.user()?.name ?? 'Technician';
+    firstValueFrom(this.noteApi.createNoteForTask(task.id, text, author))
+      .then(() => {
+        this.noteText.set('');
+        this.showNoteModal.set(false);
+        this.toast.show('Note saved');
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.toast.show('Could not save note');
+      });
   }
 
   onModalBackdropClick(event: Event, modal: 'photo' | 'note'): void {
     if (event.target === event.currentTarget) {
       if (modal === 'photo') this.showPhotoModal.set(false);
-      else this.showNoteModal.set(false);
+      else {
+        this.showNoteModal.set(false);
+        this.noteText.set('');
+      }
     }
   }
 
