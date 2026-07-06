@@ -28,6 +28,10 @@ type Config struct {
 	// requests are answered in mock mode. Layout: <dir>/<pluginName>/console/<file>.
 	// Ignored in "real" mode.
 	MockPluginTemplatesDir string
+	// PluginSandboxKubeconfig, when set in mock mode, replaces MockClient with
+	// a proxy that forwards every request to a locally-running plugin sandbox
+	// cluster identified by the kubeconfig at this path. Ignored otherwise.
+	PluginSandboxKubeconfig string
 }
 
 type Server struct {
@@ -52,7 +56,17 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		tokenCache = tokenpkg.NewCache(cfg.GardenerClient, logger)
 		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, logger)
 	case "mock":
-		kubeHandler = &kube.MockClient{PluginTemplatesDir: cfg.MockPluginTemplatesDir}
+		if cfg.PluginSandboxKubeconfig != "" {
+			sandbox, err := kube.NewSandboxProxy(cfg.PluginSandboxKubeconfig, logger)
+			if err != nil {
+				return nil, fmt.Errorf("build plugin sandbox proxy: %w", err)
+			}
+			kubeHandler = sandbox
+			logger.Info("mock mode: proxying kube API requests to plugin sandbox cluster",
+				"kubeconfig", cfg.PluginSandboxKubeconfig)
+		} else {
+			kubeHandler = &kube.MockClient{PluginTemplatesDir: cfg.MockPluginTemplatesDir}
+		}
 	default:
 		return nil, fmt.Errorf("invalid Mode %q: must be \"mock\" or \"real\"", cfg.Mode)
 	}

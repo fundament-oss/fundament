@@ -90,14 +90,17 @@ export default class ResourceListComponent implements OnInit {
     const clusterId = this.clusterContext.selectedClusterId();
     if (!plugin || !path || !clusterId) return null;
     return buildPluginConsoleUrl({
-      kubeApiProxyUrl: this.config.getConfig().kubeApiProxyUrl,
+      pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
       clusterId,
       pluginName: plugin.name,
+      pluginVersion: plugin.installationVersion,
       path,
     });
   });
 
-  allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
+  installationId = computed(() => this.plugin()?.installationId ?? '');
+
+  installationVersion = computed(() => this.plugin()?.installationVersion ?? '');
 
   canCreate = computed(() => {
     const kind = this.crdDef()?.kind;

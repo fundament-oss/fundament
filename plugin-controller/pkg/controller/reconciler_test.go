@@ -21,7 +21,6 @@ import (
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
-	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
 	pb "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
 )
@@ -44,9 +43,11 @@ func testCR() *pluginsv1.PluginInstallation {
 		Spec: pluginsv1.PluginInstallationSpec{
 			Image: "ghcr.io/fundament-oss/fundament/cert-manager-plugin:latest",
 			DefinitionRef: pluginsv1.DefinitionRef{
-				PluginName:     "cert-manager",
-				PluginVersion:  "v1.17.2",
-				DefinitionHash: "sha256:mock",
+				PluginName:    "cert-manager",
+				PluginVersion: "v1.17.2",
+				// DefinitionHash intentionally empty in tests — the reconciler
+				// treats an empty pin as "no hash check". The dedicated hash
+				// test sets it explicitly.
 			},
 			Config: map[string]string{
 				"LOG_LEVEL": "debug",
@@ -149,7 +150,10 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 			FundamentInstallID: "test-install",
 			FundamentOrgID:     "test-org",
 		},
-		definitionResolver: definition.NewMockResolver(),
+		// The plugin scope RPC will fail (no server) — that's fine, it's a
+		// best-effort step; this test only asserts the always-created children.
+		uninstallHTTPClient:      http.DefaultClient,
+		pluginServiceURLOverride: "http://127.0.0.1:1", // reject-connect, fast fail
 	}
 
 	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
@@ -196,13 +200,38 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TestReconcileChildren_MaterialisesPluginScopeRBAC verifies FUN-17 Plan D:
-// the reconciler resolves the pinned PluginDefinition and materialises the
-// plugin SA's scope ClusterRole + ClusterRoleBinding from its permissions.rbac.
+// TestReconcileChildren_MaterialisesPluginScopeRBAC verifies FUN-17: the
+// reconciler RPCs the plugin's GetDefinition and materialises the plugin SA's
+// scope ClusterRole + ClusterRoleBinding from its permissions.rbac.
 func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 	scheme := newTestScheme()
 	cr := testCR()
 	cr.SetUID("test-uid")
+
+	name, version := "cert-manager", "v1.17.2"
+	def := &pb.GetDefinitionResponse{
+		Name:    &name,
+		Version: &version,
+		Permissions: &pb.Permissions{
+			Rbac: []*pb.PolicyRule{
+				{
+					ApiGroups: []string{"cert-manager.io"},
+					Resources: []string{"certificates", "certificaterequests"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					ApiGroups: []string{""},
+					Resources: []string{"secrets"},
+					Verbs:     []string{"get"},
+				},
+			},
+		},
+	}
+	httpClient, baseURL := startMockPluginServer(t, mockPluginHandlers{
+		getDefinition: func(_ context.Context, _ *connect.Request[pb.GetDefinitionRequest]) (*connect.Response[pb.GetDefinitionResponse], error) {
+			return connect.NewResponse(def), nil
+		},
+	})
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -211,9 +240,10 @@ func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 		Build()
 
 	r := &Reconciler{
-		client:             fakeClient,
-		logger:             slog.Default(),
-		definitionResolver: definition.NewMockResolver(),
+		client:                   fakeClient,
+		logger:                   slog.Default(),
+		uninstallHTTPClient:      httpClient,
+		pluginServiceURLOverride: baseURL,
 	}
 
 	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
@@ -227,7 +257,7 @@ func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 	require.Len(t, role.Rules, 2)
 	assert.Equal(t, []string{"cert-manager.io"}, role.Rules[0].APIGroups)
 	assert.Equal(t, []string{"certificates", "certificaterequests"}, role.Rules[0].Resources)
-	assert.Equal(t, []string{"cert-manager-webhook-ca"}, role.Rules[1].ResourceNames)
+	assert.Equal(t, []string{"secrets"}, role.Rules[1].Resources)
 
 	var crb rbacv1.ClusterRoleBinding
 	err = fakeClient.Get(context.Background(), types.NamespacedName{
@@ -238,6 +268,54 @@ func TestReconcileChildren_MaterialisesPluginScopeRBAC(t *testing.T) {
 	require.Len(t, crb.Subjects, 1)
 	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Name)
 	assert.Equal(t, "plugin-cert-manager", crb.Subjects[0].Namespace)
+}
+
+// TestReconcilePluginScope_RejectsHashMismatch confirms that when
+// spec.definitionRef.definitionHash is set and doesn't match the plugin's
+// GetDefinition response, the scope ClusterRole is not created.
+func TestReconcilePluginScope_RejectsHashMismatch(t *testing.T) {
+	scheme := newTestScheme()
+	cr := testCR()
+	cr.SetUID("test-uid")
+	cr.Spec.DefinitionRef.DefinitionHash = "sha256:definitely-not-what-the-plugin-serves"
+
+	name2, version2 := "cert-manager", "v1.17.2"
+	def := &pb.GetDefinitionResponse{
+		Name:    &name2,
+		Version: &version2,
+		Permissions: &pb.Permissions{
+			Rbac: []*pb.PolicyRule{{ApiGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"}}},
+		},
+	}
+	httpClient, baseURL := startMockPluginServer(t, mockPluginHandlers{
+		getDefinition: func(_ context.Context, _ *connect.Request[pb.GetDefinitionRequest]) (*connect.Response[pb.GetDefinitionResponse], error) {
+			return connect.NewResponse(def), nil
+		},
+	})
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	r := &Reconciler{
+		client:                   fakeClient,
+		logger:                   slog.Default(),
+		uninstallHTTPClient:      httpClient,
+		pluginServiceURLOverride: baseURL,
+	}
+
+	// reconcileChildren swallows the hash-mismatch error (best-effort scope).
+	// The proof is that no scope ClusterRole was created.
+	err := r.reconcileChildren(context.Background(), slog.Default(), cr)
+	require.NoError(t, err)
+
+	var role rbacv1.ClusterRole
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: "plugin-cert-manager-scope",
+	}, &role)
+	require.Error(t, err, "scope ClusterRole must not be created on hash mismatch")
 }
 
 func TestMapPhase(t *testing.T) {
@@ -400,13 +478,21 @@ func TestPluginServiceURL(t *testing.T) {
 	assert.Equal(t, "http://plugin-cert-manager.plugin-cert-manager.svc.cluster.local:8080", url)
 }
 
-// startMockPluginServer starts an HTTP server that handles RequestUninstall RPC calls.
-// The handler function is called for each request and should return an error or nil.
-func startMockPluginServer(t *testing.T, handler func(context.Context, *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error)) (connect.HTTPClient, string) {
+// mockPluginHandlers lets a test wire specific RPC responses without having to
+// stub every method. Unset handlers fall through to the connect-provided
+// "unimplemented" default.
+type mockPluginHandlers struct {
+	getDefinition    func(context.Context, *connect.Request[pb.GetDefinitionRequest]) (*connect.Response[pb.GetDefinitionResponse], error)
+	requestUninstall func(context.Context, *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error)
+}
+
+// startMockPluginServer boots an HTTP server that speaks the
+// PluginMetadataService protocol and returns whatever the caller wired up.
+func startMockPluginServer(t *testing.T, handlers mockPluginHandlers) (connect.HTTPClient, string) {
 	t.Helper()
 	mux := http.NewServeMux()
 
-	svc := &mockUninstallHandler{handler: handler}
+	svc := &mockPluginHandler{handlers: handlers}
 	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(svc)
 	mux.Handle(path, rpcHandler)
 
@@ -421,13 +507,23 @@ func startMockPluginServer(t *testing.T, handler func(context.Context, *connect.
 	return http.DefaultClient, baseURL
 }
 
-type mockUninstallHandler struct {
+type mockPluginHandler struct {
 	pluginmetadatav1connect.UnimplementedPluginMetadataServiceHandler
-	handler func(context.Context, *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error)
+	handlers mockPluginHandlers
 }
 
-func (m *mockUninstallHandler) RequestUninstall(ctx context.Context, req *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
-	return m.handler(ctx, req)
+func (m *mockPluginHandler) GetDefinition(ctx context.Context, req *connect.Request[pb.GetDefinitionRequest]) (*connect.Response[pb.GetDefinitionResponse], error) {
+	if m.handlers.getDefinition == nil {
+		return m.UnimplementedPluginMetadataServiceHandler.GetDefinition(ctx, req)
+	}
+	return m.handlers.getDefinition(ctx, req)
+}
+
+func (m *mockPluginHandler) RequestUninstall(ctx context.Context, req *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+	if m.handlers.requestUninstall == nil {
+		return m.UnimplementedPluginMetadataServiceHandler.RequestUninstall(ctx, req)
+	}
+	return m.handlers.requestUninstall(ctx, req)
 }
 
 func deletionTestCR(t *testing.T) (*pluginsv1.PluginInstallation, *corev1.Namespace) {
@@ -452,9 +548,11 @@ func TestHandleDeletion_CallsUninstall(t *testing.T) {
 	cr, ns := deletionTestCR(t)
 
 	uninstallCalled := false
-	httpClient, baseURL := startMockPluginServer(t, func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
-		uninstallCalled = true
-		return connect.NewResponse(&pb.RequestUninstallResponse{}), nil
+	httpClient, baseURL := startMockPluginServer(t, mockPluginHandlers{
+		requestUninstall: func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+			uninstallCalled = true
+			return connect.NewResponse(&pb.RequestUninstallResponse{}), nil
+		},
 	})
 
 	fakeClient := fake.NewClientBuilder().
@@ -522,8 +620,10 @@ func TestHandleDeletion_UninstallError_Requeues(t *testing.T) {
 	scheme := newTestScheme()
 	cr, ns := deletionTestCR(t)
 
-	httpClient, baseURL := startMockPluginServer(t, func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("helm uninstall failed"))
+	httpClient, baseURL := startMockPluginServer(t, mockPluginHandlers{
+		requestUninstall: func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+			return nil, connect.NewError(connect.CodeInternal, errors.New("helm uninstall failed"))
+		},
 	})
 
 	// Since pluginServiceURL generates a cluster-internal URL, we use a transport

@@ -92,6 +92,53 @@ dev-debug:
 deploy env:
     skaffold run --profile env-{{ env }}
 
+# Create/update the Secret plugin-proxy uses to reach the k3d-fundament-plugin
+# sandbox cluster. Bridges the two k3d Docker networks (each cluster runs on
+# its own by default) by connecting the plugin cluster's serverlb container to
+# the main cluster's network, then rewrites the kubeconfig's server URL to
+# that in-network IP so plugin-proxy pods can dial it. Idempotent.
+plugin-sandbox-kubeconfig:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    KUBECONFIG_TMP=$(mktemp)
+    trap 'rm -f "$KUBECONFIG_TMP"' EXIT
+    k3d kubeconfig get fundament-plugin > "$KUBECONFIG_TMP"
+
+    # Attach the plugin cluster's serverlb to the main cluster's Docker
+    # network (no-op if already connected) so its container IP is reachable
+    # from plugin-proxy pods.
+    docker network connect k3d-fundament k3d-fundament-plugin-serverlb 2>/dev/null || true
+
+    # Get the IP the plugin serverlb now holds on k3d-fundament. The k3s API
+    # server listens on port 6443 inside the container regardless of any host
+    # port mapping.
+    ip=$(docker inspect k3d-fundament-plugin-serverlb \
+        --format '{{{{ (index .NetworkSettings.Networks "k3d-fundament").IPAddress }}')
+    if [ -z "$ip" ]; then
+        echo "Error: could not resolve k3d-fundament-plugin-serverlb IP on k3d-fundament network"
+        exit 1
+    fi
+    echo "- plugin sandbox reachable at https://${ip}:6443 from k3d-fundament pods"
+
+    # Replace the host-side server URL (https://0.0.0.0:PORT) with the
+    # in-network address (https://IP:6443).
+    sed -i.bak -E "s|server: https://0\\.0\\.0\\.0:[0-9]+|server: https://${ip}:6443|" "$KUBECONFIG_TMP"
+    rm -f "${KUBECONFIG_TMP}.bak"
+
+    # Skip TLS verification — k3d's server cert doesn't cover the in-network
+    # IP. Local-dev shortcut; production uses proper cluster CAs via Gardener.
+    # Delete any certificate-authority-data line and add insecure-skip-tls-verify
+    # right after the server line (a stable anchor regardless of yaml indent).
+    sed -i.bak -E '/^[[:space:]]*certificate-authority-data:/d' "$KUBECONFIG_TMP"
+    sed -i.bak -E 's|^([[:space:]]*)server: (.*)|\1server: \2\n\1insecure-skip-tls-verify: true|' "$KUBECONFIG_TMP"
+    rm -f "${KUBECONFIG_TMP}.bak"
+    kubectl --context k3d-fundament -n fundament create secret generic plugin-sandbox-kubeconfig \
+        --from-file=kubeconfig="$KUBECONFIG_TMP" \
+        --dry-run=client -o yaml | \
+        kubectl --context k3d-fundament apply -f -
+    echo "plugin-sandbox-kubeconfig Secret updated. Restart plugin-proxy:"
+    echo "  kubectl --context k3d-fundament -n fundament rollout restart deployment/plugin-proxy"
+
 # Delete deployment, can also be used to remove the deployment created by `just dev`.
 undeploy env:
     skaffold delete --profile env-{{ env }}

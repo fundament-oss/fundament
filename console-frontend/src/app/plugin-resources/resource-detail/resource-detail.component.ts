@@ -90,14 +90,17 @@ export default class ResourceDetailComponent implements OnInit {
     const clusterId = this.clusterContext.selectedClusterId();
     if (!plugin || !path || !clusterId) return null;
     return buildPluginConsoleUrl({
-      kubeApiProxyUrl: this.config.getConfig().kubeApiProxyUrl,
+      pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
       clusterId,
       pluginName: plugin.name,
+      pluginVersion: plugin.installationVersion,
       path,
     });
   });
 
-  protected allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
+  protected installationId = computed(() => this.plugin()?.installationId ?? '');
+
+  protected installationVersion = computed(() => this.plugin()?.installationVersion ?? '');
 
   isLoading = signal(false);
 

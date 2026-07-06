@@ -25,9 +25,15 @@ func (f *PodFetcher) Fetch(ctx context.Context, clusterID uuid.UUID, pluginName,
 		return nil, "", fmt.Errorf("admin kubeconfig: %w", err)
 	}
 
-	ns := "plugin-" + url.PathEscape(pluginName)
+	// plugin-controller names both the namespace and the Service `plugin-<name>`
+	// (see plugin-controller/pkg/controller/reconciler.go). The service exposes
+	// port 8080; kube-api-proxy's `http:name:port` selector picks the http
+	// scheme regardless of TLS on the API server.
+	escaped := url.PathEscape(pluginName)
+	ns := "plugin-" + escaped
+	svc := "http:plugin-" + escaped + ":8080"
 	asset := (&url.URL{Path: assetPath}).EscapedPath()
-	upstream := fmt.Sprintf("%s/api/v1/namespaces/%s/services/runtime:8080/proxy/console/%s", host, ns, asset)
+	upstream := fmt.Sprintf("%s/api/v1/namespaces/%s/services/%s/proxy/console/%s", host, ns, svc, asset)
 	//nolint:gosec // host comes from the trusted admin kubeconfig cache; pluginName and assetPath are URL-escaped above.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, upstream, http.NoBody)
 	if err != nil {

@@ -78,7 +78,15 @@ rules:
       - get
       - list
       - watch
+      - create
+      - update
+      - patch
+      - delete
       - bind
+      # Plugin-scope ClusterRoles carry rules materialised from the pinned
+      # PluginDefinition (FUN-17). Escalate is required to write rules the
+      # controller SA doesn't itself hold.
+      - escalate
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:

@@ -13,20 +13,21 @@ export function hostOrigin() {
   }
 }
 
-// Loads the Fundament plugin SDK from the host (Console) origin and resolves
-// once `window.fundament` is available. Templates must call this before any
-// other SDK use because the iframe is sandboxed `allow-scripts` and the
-// host origin is not known at parse time.
+// Loads the Fundament plugin SDK v1. Under FUN-17 the iframe runs on the
+// dedicated plugin-proxy origin — the same origin that serves the SDK — so the
+// bare-path URL below resolves on plugin-proxy, matching the plugin CSP
+// (script-src 'self'). The /v1/ segment tracks fundament:init's protocolVersion:
+// a future breaking protocol change ships as /plugins/sdk/v2/ and old plugins
+// keep loading v1 unchanged.
 export function loadSdk() {
-  const host = hostOrigin();
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = `${host}/plugin-ui/plugin-sdk.css`;
+  link.href = '/plugins/sdk/v1/plugin-sdk.css';
   document.head.appendChild(link);
 
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = `${host}/plugin-ui/plugin-sdk.js`;
+    script.src = '/plugins/sdk/v1/plugin-sdk.js';
     script.onload = () => resolve(window.fundament);
     script.onerror = () => reject(new Error('failed to load plugin-sdk.js'));
     document.head.appendChild(script);

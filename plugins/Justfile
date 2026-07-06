@@ -76,7 +76,11 @@ plugin-install plugin:
       definitionRef:
         pluginName: {{ plugin }}
         pluginVersion: ${tag}
-        definitionHash: sha256:dev-${tag}
+        # sha256:mock is the reserved local-dev sentinel — the reconciler
+        # treats it as "skip hash verification" and fetches permissions from
+        # the plugin's own GetDefinition RPC directly. Real deployments pin
+        # the actual SHA-256 over the plugin's canonical definition proto.
+        definitionHash: sha256:mock
       clusterRoles:
         - cluster-admin${config}
     EOF

@@ -59,6 +59,12 @@ type PluginInstallationSpec struct {
 type DefinitionRef struct {
 	PluginName     string `json:"pluginName"`
 	PluginVersion  string `json:"pluginVersion"`
+	// DefinitionHash is the admin's install-time consent record: plugin-controller
+	// enforces that the plugin's own GetDefinition RPC hashes to this value
+	// before materialising the plugin-scope ClusterRole. The literal
+	// "sha256:mock" is a reserved sentinel that bypasses the check — used in
+	// local dev where computing a real hash is friction with no marketplace
+	// integration.
 	DefinitionHash string `json:"definitionHash"`
 }
 

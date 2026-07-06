@@ -30,6 +30,13 @@ type config struct {
 	KubeProxyMode          string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
 	GardenerKubeconfig     string     `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
 	MockPluginTemplatesDir string     `env:"MOCK_PLUGIN_TEMPLATES_DIR" envDefault:"./plugins"`
+
+	// PluginSandboxKubeconfig is a filesystem path to a kubeconfig for a
+	// locally-running plugin sandbox cluster (typically the same secret
+	// plugin-proxy uses). When set in mock mode, kube-api-proxy proxies every
+	// request to that cluster instead of serving MockClient's canned
+	// responses. Ignored in real mode.
+	PluginSandboxKubeconfig string `env:"PLUGIN_SANDBOX_KUBECONFIG"`
 }
 
 func main() {
@@ -73,11 +80,12 @@ func run() error {
 	}
 
 	server, err := proxy.New(logger, &proxy.Config{
-		JWTSecret:              []byte(cfg.JWTSecret),
-		CORSAllowedOrigins:     cfg.CORSAllowedOrigins,
-		Mode:                   cfg.KubeProxyMode,
-		GardenerClient:         gardenerClient,
-		MockPluginTemplatesDir: cfg.MockPluginTemplatesDir,
+		JWTSecret:               []byte(cfg.JWTSecret),
+		CORSAllowedOrigins:      cfg.CORSAllowedOrigins,
+		Mode:                    cfg.KubeProxyMode,
+		GardenerClient:          gardenerClient,
+		MockPluginTemplatesDir:  cfg.MockPluginTemplatesDir,
+		PluginSandboxKubeconfig: cfg.PluginSandboxKubeconfig,
 	}, authzClient)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy server: %w", err)

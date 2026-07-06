@@ -1,37 +1,39 @@
 /**
  * Builds the absolute URL for a plugin's console asset (`/console/<path>`)
- * served via the Kubernetes service proxy through kube-api-proxy.
+ * served by the FUN-17 plugin-proxy on its dedicated origin.
  *
- * Plugins return relative paths from GetDefinition.customComponents (e.g.
- * `certificates-list.html`); the console expands them here so plugins do not
- * need to know about the kube-api-proxy URL structure.
+ * The URL includes the cluster the user is browsing — asset traffic lands on
+ * that cluster's plugin pod, not on some arbitrary cluster the resolver
+ * happened to pick. Otherwise one unlucky cluster ends up serving asset
+ * requests for every plugin installation across the estate.
  *
- * The `?host=...` query param is appended so the iframe can load
- * plugin-sdk.{js,css} from the console origin without hard-coding it in the
- * plugin HTML. The value is `window.location.origin`; plugins validate it
- * via `hostOrigin()` in `_shared.js` (URL parse + http/https-only protocol
- * check). Plugin HTML is publicly served, so a hand-crafted `?host=` only
- * affects the crafter's own session — there is no stored-XSS path.
+ * Under FUN-17 the plugin iframe runs on a dedicated `plugin-proxy` origin —
+ * cross-site with the console — so the browser refuses any parent DOM access
+ * and applies the strict plugin CSP served by plugin-proxy.
+ *
+ * URL shape (matches plugin-proxy/pkg/assets/handler.go):
+ *
+ *   ${pluginProxyUrl}/clusters/${clusterId}/plugins/${pluginName}/${pluginVersion}/console/${path}
  */
 export default function buildPluginConsoleUrl(args: {
-  kubeApiProxyUrl: string;
+  pluginProxyUrl: string;
   clusterId: string;
   pluginName: string;
+  pluginVersion: string;
   path: string;
 }): string {
-  // Pre-built absolute URLs (e.g. /plugin-ui/demo/...) are passed through.
+  // Pre-built absolute URLs (e.g. /plugin-ui/demo/...) are passed through so
+  // the bundled demo plugin still loads. Under FUN-17 the demo will move to
+  // plugin-proxy too; that's a follow-up.
   if (/^https?:\/\//.test(args.path) || args.path.startsWith('/plugin-ui/')) {
     return args.path;
   }
 
-  const base = args.kubeApiProxyUrl.replace(/\/$/, '');
-  const namespace = `plugin-${args.pluginName}`;
-  const service = `http:plugin-${args.pluginName}:8080`;
+  const base = args.pluginProxyUrl.replace(/\/$/, '');
   const consolePath = args.path.startsWith('/') ? args.path.slice(1) : args.path;
-  const url =
+  return (
     `${base}/clusters/${encodeURIComponent(args.clusterId)}` +
-    `/api/v1/namespaces/${encodeURIComponent(namespace)}` +
-    `/services/${encodeURIComponent(service)}/proxy/console/${consolePath}`;
-  const host = encodeURIComponent(window.location.origin);
-  return `${url}?host=${host}`;
+    `/plugins/${encodeURIComponent(args.pluginName)}` +
+    `/${encodeURIComponent(args.pluginVersion)}/console/${consolePath}`
+  );
 }

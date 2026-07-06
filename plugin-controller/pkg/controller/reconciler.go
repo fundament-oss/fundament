@@ -2,6 +2,8 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -19,12 +21,20 @@ import (
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
-	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
 	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
+	"google.golang.org/protobuf/proto"
 )
 
-const finalizerName = "plugins.fundament.io/cleanup"
+const (
+	finalizerName = "plugins.fundament.io/cleanup"
+
+	// devHashSentinel is the reserved DefinitionHash value that bypasses the
+	// reconciler's hash-verification step. Local dev uses this so the CR
+	// stays valid under the CRD's `startsWith("sha256:")` rule without
+	// computing a real content hash.
+	devHashSentinel = "sha256:mock"
+)
 
 type Reconciler struct {
 	client              client.Client
@@ -32,7 +42,10 @@ type Reconciler struct {
 	cfg                 config.Config
 	statusPoller        *statusPoller
 	uninstallHTTPClient connect.HTTPClient
-	definitionResolver  definition.Resolver
+
+	// pluginServiceURLOverride, when set, replaces pluginServiceURL(cr.Name)
+	// in RPC calls. Used by tests to point the reconciler at a local stub.
+	pluginServiceURLOverride string
 }
 
 // ReconcilerOption configures the Reconciler.
@@ -45,17 +58,12 @@ func WithHTTPClient(c connect.HTTPClient) ReconcilerOption {
 	}
 }
 
-// WithUninstallHTTPClient sets the HTTP client used for uninstall RPC calls.
+// WithUninstallHTTPClient sets the HTTP client used for uninstall RPC calls
+// and for the definition-fetch RPC during reconcile.
 func WithUninstallHTTPClient(c connect.HTTPClient) ReconcilerOption {
 	return func(r *Reconciler) {
 		r.uninstallHTTPClient = c
 	}
-}
-
-// WithDefinitionResolver sets the PluginDefinition resolver. Defaults to the
-// mock resolver if unset.
-func WithDefinitionResolver(r definition.Resolver) ReconcilerOption {
-	return func(rec *Reconciler) { rec.definitionResolver = r }
 }
 
 func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opts ...ReconcilerOption) *Reconciler {
@@ -69,9 +77,6 @@ func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opt
 
 	for _, opt := range opts {
 		opt(r)
-	}
-	if r.definitionResolver == nil {
-		r.definitionResolver = definition.NewMockResolver()
 	}
 	return r
 }
@@ -145,9 +150,18 @@ func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *p
 
 	log.Info("cleaning up plugin resources")
 
+	// Delete legacy spec.ClusterRoles bindings.
+	for _, roleName := range cr.Spec.ClusterRoles {
+		crbName := legacyClusterRoleBindingName(cr.Name, roleName)
+		crb := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}}
+		if err := r.client.Delete(ctx, crb); err != nil && !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("delete legacy ClusterRoleBinding %s: %w", crbName, err)
+		}
+	}
+
 	// Delete the plugin-scope ClusterRole/ClusterRoleBinding materialised from
-	// the pinned PluginDefinition. The opaque spec.clusterRoles binding is no
-	// longer written; nothing to clean up for it here.
+	// the plugin's declared definition (may not exist if the plugin never
+	// answered GetDefinition).
 	scopeName := pluginScopeClusterRoleName(cr.Name)
 	scopeCRB := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: scopeName}}
 	if err := r.client.Delete(ctx, scopeCRB); err != nil && !apierrors.IsNotFound(err) {
@@ -239,33 +253,21 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 		log.Info("reconciled resource", "kind", "RoleBinding", "name", rb.Name, "operation", op)
 	}
 
-	// Resolve the immutable pinned PluginDefinition and materialise the plugin
-	// SA's scope ClusterRole from it (FUN-17). This replaces binding the opaque
-	// spec.clusterRoles.
-	def, err := r.definitionResolver.Resolve(ctx, cr.Spec.DefinitionRef.DefinitionHash)
-	if err != nil {
-		return fmt.Errorf("resolve pinned definition %q: %w", cr.Spec.DefinitionRef.DefinitionHash, err)
-	}
-
-	scopeRoleName := pluginScopeClusterRoleName(cr.Name)
-	scopeRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
-	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeRole, func() error {
-		mutatePluginScopeClusterRole(scopeRole, cr, def.Permissions.RBAC)
-		return nil
-	}); err != nil {
-		return fmt.Errorf("reconcile plugin-scope ClusterRole: %w", err)
-	} else if op != controllerutil.OperationResultNone {
-		log.Info("reconciled resource", "kind", "ClusterRole", "name", scopeRoleName, "operation", op)
-	}
-
-	scopeCRB := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
-	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeCRB, func() error {
-		mutatePluginScopeClusterRoleBinding(scopeCRB, cr)
-		return nil
-	}); err != nil {
-		return fmt.Errorf("reconcile plugin-scope ClusterRoleBinding: %w", err)
-	} else if op != controllerutil.OperationResultNone {
-		log.Info("reconciled resource", "kind", "ClusterRoleBinding", "name", scopeRoleName, "operation", op)
+	// Legacy spec.ClusterRoles bindings — restored so plugins whose runtime
+	// needs cluster-wide perms at startup (e.g. helm-installing operators) can
+	// come up before the FUN-17 scope ClusterRole is materialised. Empty list
+	// is fine; the definition-driven scope below still runs.
+	for _, roleName := range cr.Spec.ClusterRoles {
+		crbName := legacyClusterRoleBindingName(cr.Name, roleName)
+		crb := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}}
+		if op, err := controllerutil.CreateOrUpdate(ctx, r.client, crb, func() error {
+			mutateLegacyClusterRoleBinding(crb, cr, roleName)
+			return nil
+		}); err != nil {
+			return fmt.Errorf("reconcile legacy ClusterRoleBinding %s: %w", crbName, err)
+		} else if op != controllerutil.OperationResultNone {
+			log.Info("reconciled resource", "kind", "ClusterRoleBinding", "name", crbName, "operation", op)
+		}
 	}
 
 	// Deployment (in plugin namespace, no owner ref — cleaned up via namespace deletion)
@@ -294,7 +296,81 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 		log.Info("reconciled resource", "kind", "Service", "name", svc.Name, "operation", op)
 	}
 
+	// Materialise the plugin-scope ClusterRole (FUN-17) from the plugin's own
+	// PluginMetadataService/GetDefinition. Best-effort: if the plugin pod
+	// isn't Ready yet, the RPC fails and the next reconcile tick retries.
+	// The plugin itself is the source of truth for its declared permissions;
+	// admins pin cr.Spec.DefinitionRef.DefinitionHash to bind consent to a
+	// specific definition shape.
+	if err := r.reconcilePluginScope(ctx, log, cr); err != nil {
+		log.Warn("plugin-scope ClusterRole not (yet) materialised", "err", err)
+	}
+
 	return nil
+}
+
+// reconcilePluginScope RPCs the plugin's GetDefinition, verifies the pinned
+// hash if set, and materialises the scope ClusterRole + binding.
+func (r *Reconciler) reconcilePluginScope(ctx context.Context, log *slog.Logger, cr *pluginsv1.PluginInstallation) error {
+	url := r.pluginServiceURLOverride
+	if url == "" {
+		url = pluginServiceURL(cr.Name)
+	}
+	rpcClient := pluginmetadatav1connect.NewPluginMetadataServiceClient(r.uninstallHTTPClient, url)
+	resp, err := rpcClient.GetDefinition(ctx, connect.NewRequest(&pluginmetadatav1.GetDefinitionRequest{}))
+	if err != nil {
+		return fmt.Errorf("GetDefinition RPC: %w", err)
+	}
+	def := resp.Msg
+
+	// Hash verification — the admin's install-time consent record. The literal
+	// "sha256:mock" (and empty, when the CRD relaxes to omit it) is a reserved
+	// sentinel that bypasses the check; local dev sets it so the CR stays
+	// valid without computing a real hash.
+	if pinned := cr.Spec.DefinitionRef.DefinitionHash; pinned != "" && pinned != devHashSentinel {
+		got, err := hashDefinition(def)
+		if err != nil {
+			return fmt.Errorf("hash definition: %w", err)
+		}
+		if got != pinned {
+			return fmt.Errorf("definition hash mismatch: pinned=%q, plugin=%q", pinned, got)
+		}
+	}
+
+	scopeRoleName := pluginScopeClusterRoleName(cr.Name)
+	scopeRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
+	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeRole, func() error {
+		mutatePluginScopeClusterRole(scopeRole, cr, def.GetPermissions().GetRbac())
+		return nil
+	}); err != nil {
+		return fmt.Errorf("reconcile plugin-scope ClusterRole: %w", err)
+	} else if op != controllerutil.OperationResultNone {
+		log.Info("reconciled resource", "kind", "ClusterRole", "name", scopeRoleName, "operation", op)
+	}
+
+	scopeCRB := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
+	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeCRB, func() error {
+		mutatePluginScopeClusterRoleBinding(scopeCRB, cr)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("reconcile plugin-scope ClusterRoleBinding: %w", err)
+	} else if op != controllerutil.OperationResultNone {
+		log.Info("reconciled resource", "kind", "ClusterRoleBinding", "name", scopeRoleName, "operation", op)
+	}
+	return nil
+}
+
+// hashDefinition computes SHA-256 over the canonical (deterministic) proto
+// serialization of the plugin's GetDefinitionResponse. Deterministic mode
+// gives the same bytes for the same message every time — the admin can pin a
+// stable hash across restarts and controllers can enforce it.
+func hashDefinition(def *pluginmetadatav1.GetDefinitionResponse) (string, error) {
+	b, err := proto.MarshalOptions{Deterministic: true}.Marshal(def)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(b)
+	return "sha256:" + hex.EncodeToString(sum[:]), nil
 }
 
 func (r *Reconciler) fundamentEnvVars() []corev1.EnvVar {

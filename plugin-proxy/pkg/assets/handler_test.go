@@ -8,10 +8,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/fundament-oss/fundament/common/auth"
 )
 
 func discardLogger() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
@@ -20,29 +24,68 @@ const testPluginName = "cert-manager"
 
 var testClusterID = uuid.MustParse("019b4000-2000-7000-8000-000000000001")
 
-type stubResolver struct{ clusterID uuid.UUID }
-
-func (s stubResolver) ClusterFor(_ context.Context, _, _ string) (uuid.UUID, error) {
-	return s.clusterID, nil
-}
-
 type stubFetcher struct{}
 
 func (stubFetcher) Fetch(_ context.Context, clusterID uuid.UUID, pluginName, assetPath string) ([]byte, string, error) {
 	return []byte("body-" + clusterID.String() + pluginName + assetPath), guessContentType(assetPath), nil
 }
 
+var testJWTSecret = []byte("test-secret-for-handler-tests")
+var testUserID = uuid.MustParse("019b4000-1000-7000-8000-000000000001")
+
+type stubCanView struct{ allow bool }
+
+func (s stubCanView) CanViewCluster(_ context.Context, _, _ uuid.UUID) (bool, error) {
+	return s.allow, nil
+}
+
 func newTestHandler() http.Handler {
-	return NewHandler(stubResolver{clusterID: testClusterID}, stubFetcher{}, &CSPConfig{
+	return newTestHandlerWithAuth(true)
+}
+
+func newTestHandlerWithAuth(allow bool) http.Handler {
+	validator := auth.NewValidatorForAudience(
+		testJWTSecret,
+		auth.ConsoleAuthCookieName,
+		auth.ConsoleIssuer,
+		auth.TokenTypeUser,
+		discardLogger(),
+	)
+	return NewHandler(stubFetcher{}, &CSPConfig{
 		ConnectSrc:     []string{"https://kube-api-proxy.test", "https://plugin-proxy.test"},
 		FormAction:     []string{"https://kube-api-proxy.test", "https://plugin-proxy.test"},
 		FrameAncestors: []string{"https://console.test"},
-	}, discardLogger())
+	}, validator, stubCanView{allow: allow}, discardLogger())
+}
+
+// signTestUserToken mints a UserToken matching the validator's expectations.
+func signTestUserToken(t *testing.T) string {
+	t.Helper()
+	claims := jwt.MapClaims{
+		"iss": auth.ConsoleIssuer,
+		"sub": testUserID.String(),
+		"aud": []string{string(auth.TokenTypeUser)},
+		"exp": time.Now().Add(15 * time.Minute).Unix(),
+		"iat": time.Now().Unix(),
+	}
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(testJWTSecret)
+	require.NoError(t, err)
+	return signed
+}
+
+// withAuthCookie adds the console UserToken cookie to a request.
+func withAuthCookie(t *testing.T, r *http.Request) *http.Request {
+	r.AddCookie(&http.Cookie{Name: auth.ConsoleAuthCookieName, Value: signTestUserToken(t)})
+	return r
+}
+
+func testURL(asset string) string {
+	return "/clusters/" + testClusterID.String() + "/plugins/" + testPluginName + "/v1/console/" + asset
 }
 
 func TestHandler_ServesAssetsWithImmutableCache(t *testing.T) {
 	h := newTestHandler()
-	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/plugins/"+testPluginName+"/v1/console/index.html", http.NoBody)
+	r := withAuthCookie(t, httptest.NewRequestWithContext(t.Context(), http.MethodGet, testURL("index.html"), http.NoBody))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 
@@ -54,7 +97,7 @@ func TestHandler_ServesAssetsWithImmutableCache(t *testing.T) {
 
 func TestHandler_SetsStrictCSP(t *testing.T) {
 	h := newTestHandler()
-	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/plugins/"+testPluginName+"/v1/console/index.html", http.NoBody)
+	r := withAuthCookie(t, httptest.NewRequestWithContext(t.Context(), http.MethodGet, testURL("index.html"), http.NoBody))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 
@@ -78,13 +121,16 @@ func TestHandler_SetsStrictCSP(t *testing.T) {
 
 func TestHandler_RejectsBadPath(t *testing.T) {
 	h := newTestHandler()
+	cid := testClusterID.String()
 	for _, p := range []string{
-		"/plugins/cert-manager/v1/console/",              // empty file
-		"/plugins/cert-manager/v1/console/../etc/passwd", // traversal
-		"/plugins//v1/console/index.html",                // empty name
-		"/plugins/cert-manager//console/index.html",      // empty version
+		"/clusters/" + cid + "/plugins/cert-manager/v1/console/",              // empty file
+		"/clusters/" + cid + "/plugins/cert-manager/v1/console/../etc/passwd", // traversal
+		"/clusters/" + cid + "/plugins//v1/console/index.html",                // empty name
+		"/clusters/" + cid + "/plugins/cert-manager//console/index.html",      // empty version
+		"/clusters/not-a-uuid/plugins/cert-manager/v1/console/index.html",     // bad cluster id
+		"/plugins/cert-manager/v1/console/index.html",                         // legacy shape rejected
 	} {
-		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, p, http.NoBody)
+		r := withAuthCookie(t, httptest.NewRequestWithContext(t.Context(), http.MethodGet, p, http.NoBody))
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
 		assert.GreaterOrEqual(t, w.Code, 300, "expected non-2xx for %q, got %d", p, w.Code)
@@ -93,8 +139,25 @@ func TestHandler_RejectsBadPath(t *testing.T) {
 
 func TestHandler_OnlyGETandHEAD(t *testing.T) {
 	h := newTestHandler()
-	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/plugins/x/v/console/i.html", http.NoBody)
+	r := withAuthCookie(t, httptest.NewRequestWithContext(t.Context(), http.MethodPost, testURL("i.html"), http.NoBody))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
+}
+
+func TestHandler_RejectsMissingCookie(t *testing.T) {
+	h := newTestHandler()
+	// no cookie
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, testURL("index.html"), http.NoBody)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusNotFound, w.Code, "unauth requests collapse to 404 so the endpoint doesn't leak validity of (cluster, plugin, version)")
+}
+
+func TestHandler_RejectsWhenCanViewDenies(t *testing.T) {
+	h := newTestHandlerWithAuth(false)
+	r := withAuthCookie(t, httptest.NewRequestWithContext(t.Context(), http.MethodGet, testURL("index.html"), http.NoBody))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusNotFound, w.Code, "unauthorized collapses to 404 for the same reason")
 }

@@ -38,6 +38,10 @@ spec:
             - name: GARDENER_KUBECONFIG
               value: /etc/gardener/kubeconfig
             {{- end }}
+            {{- if $.Values.kubeApiProxy.sandboxKubeconfigSecret }}
+            - name: PLUGIN_SANDBOX_KUBECONFIG
+              value: /etc/plugin-sandbox/kubeconfig
+            {{- end }}
             - name: OPENFGA_API_URL
               value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
             - name: OPENFGA_STORE_ID
@@ -63,6 +67,11 @@ spec:
               mountPath: /etc/gardener
               readOnly: true
             {{- end }}
+            {{- if $.Values.kubeApiProxy.sandboxKubeconfigSecret }}
+            - name: plugin-sandbox-kubeconfig
+              mountPath: /etc/plugin-sandbox
+              readOnly: true
+            {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
       volumes:
@@ -74,6 +83,14 @@ spec:
         - name: gardener-kubeconfig
           secret:
             secretName: {{ $.Values.kubeApiProxy.gardenerKubeconfigSecret }}
+        {{- end }}
+        {{- if $.Values.kubeApiProxy.sandboxKubeconfigSecret }}
+        - name: plugin-sandbox-kubeconfig
+          secret:
+            secretName: {{ $.Values.kubeApiProxy.sandboxKubeconfigSecret }}
+            items:
+              - key: kubeconfig
+                path: kubeconfig
         {{- end }}
 
 ---

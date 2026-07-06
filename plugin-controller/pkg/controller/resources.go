@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
-	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
+	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 )
 
 const (
@@ -117,21 +117,48 @@ func pluginScopeClusterRoleName(installationName string) string {
 	return fmt.Sprintf("plugin-%s-scope", installationName)
 }
 
-// mutatePluginScopeClusterRole materialises the pinned definition's
-// permissions.rbac into a real ClusterRole. The cluster's own RBAC engine
-// evaluates this when kube-api-proxy injects the plugin SA token — there is no
-// bespoke matcher anywhere.
-func mutatePluginScopeClusterRole(role *rbacv1.ClusterRole, cr *pluginsv1.PluginInstallation, rules []definition.RBACRule) {
+// mutatePluginScopeClusterRole materialises the plugin's declared
+// permissions.rbac (fetched via GetDefinition RPC) into a real ClusterRole.
+// The cluster's own RBAC engine evaluates this when kube-api-proxy injects the
+// plugin SA token — there is no bespoke matcher anywhere.
+func mutatePluginScopeClusterRole(role *rbacv1.ClusterRole, cr *pluginsv1.PluginInstallation, rules []*pluginmetadatav1.PolicyRule) {
 	role.Labels = mergeLabels(role.Labels, childLabels(cr))
 	role.Rules = make([]rbacv1.PolicyRule, 0, len(rules))
 	for _, r := range rules {
+		if r == nil {
+			continue
+		}
 		role.Rules = append(role.Rules, rbacv1.PolicyRule{
-			APIGroups:     r.APIGroups,
-			Resources:     r.Resources,
-			Verbs:         r.Verbs,
-			ResourceNames: r.ResourceNames,
+			APIGroups: r.GetApiGroups(),
+			Resources: r.GetResources(),
+			Verbs:     r.GetVerbs(),
 		})
 	}
+}
+
+// legacyClusterRoleBindingName is the name of the ClusterRoleBinding that
+// binds a spec.ClusterRoles entry (pre-FUN-17 wiring) to the plugin SA.
+// Retained so plugins whose runtime needs cluster-wide perms (e.g. helm-installing
+// operators at startup) can declare them via spec.ClusterRoles until the
+// definition-driven scope story matures.
+func legacyClusterRoleBindingName(installationName, clusterRoleName string) string {
+	return fmt.Sprintf("plugin-%s-legacy-%s", installationName, clusterRoleName)
+}
+
+// mutateLegacyClusterRoleBinding binds one entry from spec.ClusterRoles to
+// the per-installation plugin ServiceAccount.
+func mutateLegacyClusterRoleBinding(crb *rbacv1.ClusterRoleBinding, cr *pluginsv1.PluginInstallation, clusterRoleName string) {
+	crb.Labels = mergeLabels(crb.Labels, childLabels(cr))
+	crb.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRoleName,
+	}
+	crb.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      childName(cr.Name),
+		Namespace: pluginNamespace(cr.Name),
+	}}
 }
 
 // mutatePluginScopeClusterRoleBinding binds the materialised ClusterRole to the

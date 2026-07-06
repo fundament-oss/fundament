@@ -68,6 +68,11 @@ spec:
                       type: string
                     definitionHash:
                       type: string
+                      description: >-
+                        SHA-256 content hash of the plugin's GetDefinition response
+                        (prefixed with "sha256:") — the admin's install-time consent
+                        record. Use the literal string "sha256:mock" in local dev to
+                        bypass the check.
                   x-kubernetes-validations:
                     - rule: self.definitionHash.startsWith('sha256:')
                       message: definitionHash must be a sha256 content hash (prefixed with 'sha256:')

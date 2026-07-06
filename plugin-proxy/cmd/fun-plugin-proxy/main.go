@@ -17,6 +17,8 @@ import (
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
+	"github.com/fundament-oss/fundament/common/auth"
+	openfgaauthz "github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/assets"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/config"
@@ -24,6 +26,7 @@ import (
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/kube"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1/pluginproxyv1connect"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/service"
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -64,35 +67,69 @@ func run() error {
 	}
 
 	var (
-		resolver assets.ClusterResolver
-		fetcher  assets.Fetcher
-		authz    installproxy.ClusterAuthorizer
-		backend  installproxy.Backend
+		fetcher assets.Fetcher
+		authz   installproxy.ClusterAuthorizer
+		backend installproxy.Backend
 	)
 	switch cfg.Mode {
 	case "real":
 		admin := kube.NewAdminKubeconfigCache()
-		resolver = assets.Resolver{}
 		fetcher = &assets.PodFetcher{AdminKubeconfig: admin}
 		authz = installproxy.Authz{}
 		backend = &installproxy.ClusterProxyBackend{AdminKubeconfig: admin}
 	case "mock":
-		resolver = assets.MockResolver{ClusterID: service.MockClusterID}
-		fetcher = assets.MockFetcher{Logger: logger}
 		authz = installproxy.MockAuthz{}
 		backend = installproxy.MockBackend{Logger: logger}
+
+		// If a plugin sandbox kubeconfig is provided, fetch real assets from
+		// the sandbox cluster instead of serving MockFetcher's stub HTML.
+		// The clusterID in the request URL is used verbatim; the local
+		// AdminKubeconfigCache returns the same sandbox kubeconfig regardless.
+		if cfg.PluginSandboxKubeconfig != "" {
+			admin, err := kube.NewAdminKubeconfigCacheFromFile(cfg.PluginSandboxKubeconfig)
+			if err != nil {
+				return fmt.Errorf("load plugin sandbox kubeconfig: %w", err)
+			}
+			fetcher = &assets.PodFetcher{AdminKubeconfig: admin}
+			logger.Info("mock mode: fetching plugin assets from sandbox cluster",
+				"kubeconfig", cfg.PluginSandboxKubeconfig)
+		} else {
+			fetcher = assets.MockFetcher{Logger: logger}
+		}
 	default:
 		// config.FromEnv already validates this; guard against future drift.
 		panic(fmt.Sprintf("unhandled plugin-proxy mode %q", cfg.Mode))
 	}
 
-	// SDK route stub — Plan E supplies the bundle. Register before /plugins/
-	// for readability; ServeMux's longest-match routing already does the right
-	// thing regardless of order.
-	publicMux.HandleFunc("/plugins/sdk/", func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "sdk bundle not built (Plan E)", http.StatusNotFound)
-	})
-	publicMux.Handle("/plugins/", assets.NewHandler(resolver, fetcher, cfgCsp, logger))
+	// SDK bundle at /plugins/sdk/v1/. FUN-17 CSP is script-src 'self', so the
+	// plugin's <script src="/plugins/sdk/v1/sdk.js"> must resolve on this
+	// origin. Register before /plugins/ — ServeMux's longest-match routing
+	// picks this handler for /plugins/sdk/v1/*, and the asset handler for
+	// everything else under /plugins/.
+	if cfg.PluginSDKDir != "" {
+		publicMux.Handle("/plugins/sdk/v1/", http.StripPrefix("/plugins/sdk/v1/", http.FileServer(http.Dir(cfg.PluginSDKDir))))
+		logger.Info("serving plugin-sdk v1 assets", "dir", cfg.PluginSDKDir)
+	}
+
+	// Auth for the asset handler: parse the console's UserToken cookie and
+	// gate on OpenFGA can_view(user, cluster).
+	assetValidator := auth.NewValidatorForAudience(
+		[]byte(cfg.JWTSecret),
+		auth.ConsoleAuthCookieName,
+		auth.ConsoleIssuer,
+		auth.TokenTypeUser,
+		logger,
+	)
+	openfga, err := openfgaauthz.New(cfg.OpenFGA)
+	if err != nil {
+		return fmt.Errorf("openfga client: %w", err)
+	}
+
+	// Plugin assets: /clusters/{clusterID}/plugins/{name}/{version}/console/{path}.
+	// The console picks the cluster the user is browsing, so asset traffic
+	// stays local to that cluster instead of piling onto one arbitrary
+	// asset-source cluster across the whole estate.
+	publicMux.Handle("/clusters/", assets.NewHandler(fetcher, cfgCsp, assetValidator, &canViewAdapter{client: openfga}, logger))
 
 	// Installation proxy (cross-site → wrap in CORS). The PluginToken rides
 	// in Authorization, so credentials mode stays off — do not enable
@@ -105,7 +142,19 @@ func run() error {
 	})
 	publicMux.Handle("/installations/", installCORS.Handler(installHandler))
 
-	s := service.New(logger, service.NewMockClusterAccess())
+	var clusterAccess service.ClusterAccess
+	if cfg.PluginSandboxKubeconfig != "" {
+		sandboxAccess, err := service.NewSandboxClusterAccess(cfg.PluginSandboxKubeconfig)
+		if err != nil {
+			return fmt.Errorf("build sandbox cluster access: %w", err)
+		}
+		clusterAccess = sandboxAccess
+		logger.Info("PluginInstallationService reading from plugin sandbox cluster",
+			"kubeconfig", cfg.PluginSandboxKubeconfig)
+	} else {
+		clusterAccess = service.NewMockClusterAccess()
+	}
+	s := service.New(logger, clusterAccess)
 
 	loggingInterceptor := logging.UnaryServerInterceptor(
 		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {
@@ -185,4 +234,22 @@ func registerHealth(mux *http.ServeMux) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
+}
+
+// canViewAdapter bridges common/authz.Client to assets.ClusterViewChecker.
+type canViewAdapter struct{ client *openfgaauthz.Client }
+
+func (a *canViewAdapter) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID) (bool, error) {
+	if a.client == nil {
+		return false, errors.New("openfga client not configured")
+	}
+	dec, err := a.client.Evaluate(ctx, openfgaauthz.EvaluationRequest{
+		Subject:  openfgaauthz.User(userID),
+		Action:   openfgaauthz.CanView(),
+		Resource: openfgaauthz.Cluster(clusterID),
+	})
+	if err != nil {
+		return false, err
+	}
+	return dec.Decision, nil
 }

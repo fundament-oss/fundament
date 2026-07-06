@@ -48,8 +48,39 @@ spec:
             - name: CONSOLE_ORIGIN
               value: {{ $.Values.externalUrls.console }}
             {{- end }}
+            {{- if $.Values.pluginProxy.sandboxKubeconfigSecret }}
+            - name: PLUGIN_SANDBOX_KUBECONFIG
+              value: /etc/plugin-sandbox/kubeconfig
+            {{- end }}
+            - name: OPENFGA_API_URL
+              value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
+            - name: OPENFGA_STORE_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: openfga-config
+                  key: store-id
+            - name: OPENFGA_AUTHORIZATION_MODEL_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: openfga-config
+                  key: authorization-model-id
+          {{- if $.Values.pluginProxy.sandboxKubeconfigSecret }}
+          volumeMounts:
+            - name: plugin-sandbox-kubeconfig
+              mountPath: /etc/plugin-sandbox
+              readOnly: true
+          {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
+      {{- if $.Values.pluginProxy.sandboxKubeconfigSecret }}
+      volumes:
+        - name: plugin-sandbox-kubeconfig
+          secret:
+            secretName: {{ $.Values.pluginProxy.sandboxKubeconfigSecret }}
+            items:
+              - key: kubeconfig
+                path: kubeconfig
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service
