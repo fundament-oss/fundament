@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 2.0.0-alpha
+-- ** pgModeler version: 1.2.3
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -248,6 +248,126 @@ END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION tenant.namespace_outbox_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.organization_limits_outbox_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.organization_limits_outbox_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.organization_limits_outbox_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- Node-cap branch: re-apply each active cluster's shoot spec. A deleted
+    -- change only matters when the row carries node-cap values in OLD or NEW;
+    -- otherwise the re-apply would be a guaranteed no-op.
+    IF (TG_OP = 'INSERT' AND (NEW.max_nodes_per_cluster IS NOT NULL
+                              OR NEW.max_node_pools_per_cluster IS NOT NULL
+                              OR NEW.max_nodes_per_node_pool IS NOT NULL))
+       OR (TG_OP = 'UPDATE' AND (OLD.max_nodes_per_cluster IS DISTINCT FROM NEW.max_nodes_per_cluster
+                                 OR OLD.max_node_pools_per_cluster IS DISTINCT FROM NEW.max_node_pools_per_cluster
+                                 OR OLD.max_nodes_per_node_pool IS DISTINCT FROM NEW.max_nodes_per_node_pool
+                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
+                                     AND (OLD.max_nodes_per_cluster IS NOT NULL
+                                          OR OLD.max_node_pools_per_cluster IS NOT NULL
+                                          OR OLD.max_nodes_per_node_pool IS NOT NULL
+                                          OR NEW.max_nodes_per_cluster IS NOT NULL
+                                          OR NEW.max_node_pools_per_cluster IS NOT NULL
+                                          OR NEW.max_nodes_per_node_pool IS NOT NULL))))
+    THEN
+        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+        SELECT tenant.clusters.id, 'updated', 'trigger'
+        FROM tenant.clusters
+        WHERE tenant.clusters.organization_id = NEW.organization_id
+          AND tenant.clusters.deleted IS NULL;
+    END IF;
+
+    -- Per-container-default branch: reconcile each active namespace's
+    -- LimitRange. Same deleted-change scoping as above, on the default columns.
+    IF (TG_OP = 'INSERT' AND (NEW.default_memory_request_mi IS NOT NULL
+                              OR NEW.default_memory_limit_mi IS NOT NULL
+                              OR NEW.default_cpu_request_m IS NOT NULL
+                              OR NEW.default_cpu_limit_m IS NOT NULL))
+       OR (TG_OP = 'UPDATE' AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
+                                 OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
+                                 OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
+                                 OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m
+                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
+                                     AND (OLD.default_memory_request_mi IS NOT NULL
+                                          OR OLD.default_memory_limit_mi IS NOT NULL
+                                          OR OLD.default_cpu_request_m IS NOT NULL
+                                          OR OLD.default_cpu_limit_m IS NOT NULL
+                                          OR NEW.default_memory_request_mi IS NOT NULL
+                                          OR NEW.default_memory_limit_mi IS NOT NULL
+                                          OR NEW.default_cpu_request_m IS NOT NULL
+                                          OR NEW.default_cpu_limit_m IS NOT NULL))))
+    THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        SELECT tenant.namespaces.id, 'updated', 'trigger'
+        FROM tenant.namespaces
+        JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
+        JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+        WHERE tenant.clusters.organization_id = NEW.organization_id
+          AND tenant.namespaces.deleted IS NULL;
+    END IF;
+
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.organization_limits_outbox_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.project_limits_outbox_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.project_limits_outbox_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.project_limits_outbox_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- A deleted change only matters when the row carries default values in
+    -- OLD or NEW; otherwise the LimitRange reconcile would be a no-op.
+    IF (TG_OP = 'INSERT' AND (NEW.default_memory_request_mi IS NOT NULL
+                              OR NEW.default_memory_limit_mi IS NOT NULL
+                              OR NEW.default_cpu_request_m IS NOT NULL
+                              OR NEW.default_cpu_limit_m IS NOT NULL))
+       OR (TG_OP = 'UPDATE' AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
+                                 OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
+                                 OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
+                                 OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m
+                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
+                                     AND (OLD.default_memory_request_mi IS NOT NULL
+                                          OR OLD.default_memory_limit_mi IS NOT NULL
+                                          OR OLD.default_cpu_request_m IS NOT NULL
+                                          OR OLD.default_cpu_limit_m IS NOT NULL
+                                          OR NEW.default_memory_request_mi IS NOT NULL
+                                          OR NEW.default_memory_limit_mi IS NOT NULL
+                                          OR NEW.default_cpu_request_m IS NOT NULL
+                                          OR NEW.default_cpu_limit_m IS NOT NULL))))
+    THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        SELECT tenant.namespaces.id, 'updated', 'trigger'
+        FROM tenant.namespaces
+        WHERE tenant.namespaces.project_id = NEW.project_id
+          AND tenant.namespaces.deleted IS NULL;
+    END IF;
+
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.project_limits_outbox_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.cluster_outbox_cluster_trigger | type: FUNCTION --
@@ -1112,6 +1232,24 @@ CREATE POLICY project_limits_project_policy ON tenant.project_limits
 	USING (authn.is_project_in_organization(project_id));
 -- ddl-end --
 
+-- object: organization_limits_cluster_worker_read | type: POLICY --
+-- DROP POLICY IF EXISTS organization_limits_cluster_worker_read ON tenant.organization_limits CASCADE;
+CREATE POLICY organization_limits_cluster_worker_read ON tenant.organization_limits
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
+-- object: project_limits_cluster_worker_read | type: POLICY --
+-- DROP POLICY IF EXISTS project_limits_cluster_worker_read ON tenant.project_limits CASCADE;
+CREATE POLICY project_limits_cluster_worker_read ON tenant.project_limits
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_cluster_worker
+	USING (true);
+-- ddl-end --
+
 -- object: tenant.cluster_events | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.cluster_events CASCADE;
 CREATE TABLE tenant.cluster_events (
@@ -1545,6 +1683,24 @@ CREATE OR REPLACE TRIGGER namespace_outbox
 	ON tenant.namespaces
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.namespace_outbox_trigger();
+-- ddl-end --
+
+-- object: organization_limits_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS organization_limits_outbox ON tenant.organization_limits CASCADE;
+CREATE OR REPLACE TRIGGER organization_limits_outbox
+	AFTER INSERT OR UPDATE
+	ON tenant.organization_limits
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.organization_limits_outbox_trigger();
+-- ddl-end --
+
+-- object: project_limits_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS project_limits_outbox ON tenant.project_limits CASCADE;
+CREATE OR REPLACE TRIGGER project_limits_outbox
+	AFTER INSERT OR UPDATE
+	ON tenant.project_limits
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.project_limits_outbox_trigger();
 -- ddl-end --
 
 -- object: namespaces_idx_project_id | type: INDEX --
@@ -2797,6 +2953,22 @@ GRANT SELECT,INSERT,UPDATE
 GRANT SELECT,INSERT,UPDATE
    ON TABLE tenant.project_limits
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_931c18b720 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.organization_limits
+   TO fun_cluster_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_c195a6ae79 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE tenant.project_limits
+   TO fun_cluster_worker;
 
 -- ddl-end --
 
