@@ -1,4 +1,4 @@
-// Package helm wraps the Helm SDK (helm.sh/helm/v3 as a library) for the
+// Package helm wraps the Helm SDK (helm.sh/helm/v4 as a library) for the
 // operator's chart installs. Releases use the default Secret storage driver,
 // so they are fully interoperable with the helm CLI.
 package helm
@@ -13,11 +13,13 @@ import (
 	"sort"
 	"strings"
 
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/storage/driver"
-	"helm.sh/helm/v3/pkg/strvals"
+	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart/loader/archive"
+	chart "helm.sh/helm/v4/pkg/chart/v2"
+	"helm.sh/helm/v4/pkg/chart/v2/loader"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	"helm.sh/helm/v4/pkg/storage/driver"
+	"helm.sh/helm/v4/pkg/strvals"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"sigs.k8s.io/yaml"
 )
@@ -42,8 +44,8 @@ func (c *Client) config() (*action.Configuration, error) {
 	flags := genericclioptions.NewConfigFlags(false)
 	flags.Namespace = &c.namespace
 	cfg := new(action.Configuration)
-	debug := func(format string, v ...any) { slog.Debug(fmt.Sprintf(format, v...), "helm", true) }
-	if err := cfg.Init(flags, c.namespace, "", debug); err != nil {
+	cfg.SetLogger(slog.Default().Handler().WithAttrs([]slog.Attr{slog.Bool("helm", true)}))
+	if err := cfg.Init(flags, c.namespace, ""); err != nil {
 		return nil, fmt.Errorf("init helm configuration: %w", err)
 	}
 	c.cfg = cfg
@@ -64,10 +66,16 @@ func (c *Client) DeployedChartVersion(release string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("helm get %s: %w", release, err)
 	}
-	if rel.Chart == nil || rel.Chart.Metadata == nil {
+	// The v4 SDK returns releases as `any`; the Secret storage driver always
+	// yields the v1 release schema.
+	relV1, ok := rel.(*releasev1.Release)
+	if !ok {
+		return "", fmt.Errorf("helm get %s: unexpected release type %T", release, rel)
+	}
+	if relV1.Chart == nil || relV1.Chart.Metadata == nil {
 		return "", nil
 	}
-	return rel.Chart.Metadata.Version, nil
+	return relV1.Chart.Metadata.Version, nil
 }
 
 // ReleaseInfo identifies a release and the chart it was installed from.
@@ -91,12 +99,16 @@ func (c *Client) List(prefix string) ([]ReleaseInfo, error) {
 	}
 	var infos []ReleaseInfo
 	for _, rel := range releases {
-		if !strings.HasPrefix(rel.Name, prefix) {
+		relV1, ok := rel.(*releasev1.Release)
+		if !ok {
+			return nil, fmt.Errorf("helm list: unexpected release type %T", rel)
+		}
+		if !strings.HasPrefix(relV1.Name, prefix) {
 			continue
 		}
-		info := ReleaseInfo{Name: rel.Name}
-		if rel.Chart != nil && rel.Chart.Metadata != nil {
-			info.ChartName = rel.Chart.Metadata.Name
+		info := ReleaseInfo{Name: relV1.Name}
+		if relV1.Chart != nil && relV1.Chart.Metadata != nil {
+			info.ChartName = relV1.Chart.Metadata.Name
 		}
 		infos = append(infos, info)
 	}
@@ -159,7 +171,7 @@ func LoadArchive(data []byte) (*chart.Chart, error) {
 }
 
 func LoadDir(fsys fs.FS, dir string) (*chart.Chart, error) {
-	var files []*loader.BufferedFile
+	var files []*archive.BufferedFile
 	err := fs.WalkDir(fsys, dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -168,7 +180,7 @@ func LoadDir(fsys fs.FS, dir string) (*chart.Chart, error) {
 		if err != nil {
 			return fmt.Errorf("read %s: %w", path, err)
 		}
-		files = append(files, &loader.BufferedFile{
+		files = append(files, &archive.BufferedFile{
 			Name: strings.TrimPrefix(path, dir+"/"),
 			Data: data,
 		})

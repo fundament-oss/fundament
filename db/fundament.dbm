@@ -388,6 +388,126 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="organization_limits_outbox_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    -- Node-cap branch: re-apply each active cluster's shoot spec. A deleted
+    -- change only matters when the row carries node-cap values in OLD or NEW;
+    -- otherwise the re-apply would be a guaranteed no-op.
+    IF (TG_OP = 'INSERT' AND (NEW.max_nodes_per_cluster IS NOT NULL
+                              OR NEW.max_node_pools_per_cluster IS NOT NULL
+                              OR NEW.max_nodes_per_node_pool IS NOT NULL))
+       OR (TG_OP = 'UPDATE' AND (OLD.max_nodes_per_cluster IS DISTINCT FROM NEW.max_nodes_per_cluster
+                                 OR OLD.max_node_pools_per_cluster IS DISTINCT FROM NEW.max_node_pools_per_cluster
+                                 OR OLD.max_nodes_per_node_pool IS DISTINCT FROM NEW.max_nodes_per_node_pool
+                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
+                                     AND (OLD.max_nodes_per_cluster IS NOT NULL
+                                          OR OLD.max_node_pools_per_cluster IS NOT NULL
+                                          OR OLD.max_nodes_per_node_pool IS NOT NULL
+                                          OR NEW.max_nodes_per_cluster IS NOT NULL
+                                          OR NEW.max_node_pools_per_cluster IS NOT NULL
+                                          OR NEW.max_nodes_per_node_pool IS NOT NULL))))
+    THEN
+        INSERT INTO tenant.cluster_outbox (cluster_id, event, source)
+        SELECT tenant.clusters.id, 'updated', 'trigger'
+        FROM tenant.clusters
+        WHERE tenant.clusters.organization_id = NEW.organization_id
+          AND tenant.clusters.deleted IS NULL;
+    END IF;
+
+    -- Per-container-default branch: reconcile each active namespace's
+    -- LimitRange. Same deleted-change scoping as above, on the default columns.
+    IF (TG_OP = 'INSERT' AND (NEW.default_memory_request_mi IS NOT NULL
+                              OR NEW.default_memory_limit_mi IS NOT NULL
+                              OR NEW.default_cpu_request_m IS NOT NULL
+                              OR NEW.default_cpu_limit_m IS NOT NULL))
+       OR (TG_OP = 'UPDATE' AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
+                                 OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
+                                 OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
+                                 OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m
+                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
+                                     AND (OLD.default_memory_request_mi IS NOT NULL
+                                          OR OLD.default_memory_limit_mi IS NOT NULL
+                                          OR OLD.default_cpu_request_m IS NOT NULL
+                                          OR OLD.default_cpu_limit_m IS NOT NULL
+                                          OR NEW.default_memory_request_mi IS NOT NULL
+                                          OR NEW.default_memory_limit_mi IS NOT NULL
+                                          OR NEW.default_cpu_request_m IS NOT NULL
+                                          OR NEW.default_cpu_limit_m IS NOT NULL))))
+    THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        SELECT tenant.namespaces.id, 'updated', 'trigger'
+        FROM tenant.namespaces
+        JOIN tenant.projects ON tenant.projects.id = tenant.namespaces.project_id
+        JOIN tenant.clusters ON tenant.clusters.id = tenant.projects.cluster_id
+        WHERE tenant.clusters.organization_id = NEW.organization_id
+          AND tenant.namespaces.deleted IS NULL;
+    END IF;
+
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
+<function name="project_limits_outbox_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    -- A deleted change only matters when the row carries default values in
+    -- OLD or NEW; otherwise the LimitRange reconcile would be a no-op.
+    IF (TG_OP = 'INSERT' AND (NEW.default_memory_request_mi IS NOT NULL
+                              OR NEW.default_memory_limit_mi IS NOT NULL
+                              OR NEW.default_cpu_request_m IS NOT NULL
+                              OR NEW.default_cpu_limit_m IS NOT NULL))
+       OR (TG_OP = 'UPDATE' AND (OLD.default_memory_request_mi IS DISTINCT FROM NEW.default_memory_request_mi
+                                 OR OLD.default_memory_limit_mi IS DISTINCT FROM NEW.default_memory_limit_mi
+                                 OR OLD.default_cpu_request_m IS DISTINCT FROM NEW.default_cpu_request_m
+                                 OR OLD.default_cpu_limit_m IS DISTINCT FROM NEW.default_cpu_limit_m
+                                 OR (OLD.deleted IS DISTINCT FROM NEW.deleted
+                                     AND (OLD.default_memory_request_mi IS NOT NULL
+                                          OR OLD.default_memory_limit_mi IS NOT NULL
+                                          OR OLD.default_cpu_request_m IS NOT NULL
+                                          OR OLD.default_cpu_limit_m IS NOT NULL
+                                          OR NEW.default_memory_request_mi IS NOT NULL
+                                          OR NEW.default_memory_limit_mi IS NOT NULL
+                                          OR NEW.default_cpu_request_m IS NOT NULL
+                                          OR NEW.default_cpu_limit_m IS NOT NULL))))
+    THEN
+        INSERT INTO tenant.cluster_outbox (namespace_id, event, source)
+        SELECT tenant.namespaces.id, 'updated', 'trigger'
+        FROM tenant.namespaces
+        WHERE tenant.namespaces.project_id = NEW.project_id
+          AND tenant.namespaces.deleted IS NULL;
+    END IF;
+
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
 <function name="cluster_outbox_cluster_trigger"
 		window-func="false"
 		returns-setof="false"
@@ -1317,6 +1437,14 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[authn.is_project_in_organization(project_id)]]> </expression>
 </policy>
 
+<policy name="organization_limits_cluster_worker_read" table="tenant.organization_limits" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="project_limits_cluster_worker_read" table="tenant.project_limits" command="SELECT" permissive="true">	<roles names="fun_cluster_worker"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
 <table name="cluster_events" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
@@ -1818,6 +1946,18 @@ END;]]> </definition>
 	 table="tenant.namespaces">
 		<function signature="tenant.namespace_outbox_trigger()"/>
 		<columns names="name,deleted"/>
+</trigger>
+
+<trigger name="organization_limits_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.organization_limits">
+		<function signature="tenant.organization_limits_outbox_trigger()"/>
+</trigger>
+
+<trigger name="project_limits_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.project_limits">
+		<function signature="tenant.project_limits_outbox_trigger()"/>
 </trigger>
 
 <index name="namespaces_idx_project_id" table="tenant.namespaces"
@@ -3753,6 +3893,16 @@ END;]]> </definition>
 	<object name="tenant.project_limits" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="tenant.organization_limits" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="tenant.project_limits" type="table"/>
+	<roles names="fun_cluster_worker"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="tenant.organizations" type="table"/>
