@@ -112,7 +112,7 @@ WHERE deleted IS NULL
   AND ($2::text IS NULL OR priority = $2::text)
   AND ($3::text IS NULL OR category = $3::text)
   AND ($4::text IS NULL OR assignee_id = $4::text)
-ORDER BY created
+ORDER BY created DESC
 `
 
 type TaskListParams struct {

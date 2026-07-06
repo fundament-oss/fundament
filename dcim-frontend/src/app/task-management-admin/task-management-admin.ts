@@ -23,6 +23,7 @@ import TaskApiService, {
 } from '../task-management/task-api.service';
 import UserApiService, { RosterUser } from '../task-management/user-api.service';
 import NoteApiService from '../inventory/note-api.service';
+import ToastService from '../shared/toast.service';
 import connectErrorMessage from '../../connect/error';
 
 type Technician = RosterUser;
@@ -77,6 +78,8 @@ export default class TaskManagementAdminComponent implements OnInit {
   private readonly noteApi = inject(NoteApiService);
 
   private readonly auth = inject(AuthService);
+
+  protected readonly toast = inject(ToastService);
 
   readonly technicians = signal<Technician[]>([]);
 
@@ -232,10 +235,6 @@ export default class TaskManagementAdminComponent implements OnInit {
 
   newNoteText = signal('');
 
-  toastMessage = signal<string | null>(null);
-
-  private toastTimeout: number | undefined;
-
   filteredTasks = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
     const st = this.statusFilter();
@@ -283,6 +282,14 @@ export default class TaskManagementAdminComponent implements OnInit {
   readonly detailSheetEl = viewChild<ElementRef<NlddSheet>>('detailSheetEl');
 
   readonly editModalEl = viewChild<ElementRef<NlddSheet>>('editModalEl');
+
+  readonly deleteDialogEl = viewChild<ElementRef<NlddSheet>>('deleteDialogEl');
+
+  readonly bulkDeleteDialogEl = viewChild<ElementRef<NlddSheet>>('bulkDeleteDialogEl');
+
+  readonly bulkStatusPopoverEl = viewChild<ElementRef<NlddSheet>>('bulkStatusPopoverEl');
+
+  readonly bulkAssignPopoverEl = viewChild<ElementRef<NlddSheet>>('bulkAssignPopoverEl');
 
   getTech(id: string | null): Technician | null {
     return this.technicians().find((t) => t.id === id) ?? null;
@@ -388,6 +395,94 @@ export default class TaskManagementAdminComponent implements OnInit {
     this.openEditModal(id);
   }
 
+  openDeleteDialog(): void {
+    this.deleteDialogEl()?.nativeElement.show();
+  }
+
+  closeDeleteDialog(): void {
+    this.deleteDialogEl()?.nativeElement.hide();
+  }
+
+  confirmDeleteTask(): void {
+    const id = this.detailTaskId();
+    this.closeDeleteDialog();
+    if (id === null) return;
+    firstValueFrom(this.taskApi.deleteTask(id))
+      .then(() => {
+        this.closeDetail();
+        this.loadTasks();
+        this.toast.show('Task deleted');
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.toast.show('Could not delete task');
+      });
+  }
+
+  openBulkDeleteDialog(): void {
+    this.bulkDeleteDialogEl()?.nativeElement.show();
+  }
+
+  closeBulkDeleteDialog(): void {
+    this.bulkDeleteDialogEl()?.nativeElement.hide();
+  }
+
+  confirmBulkDelete(): void {
+    const ids = [...this.selectedTasks()];
+    this.closeBulkDeleteDialog();
+    if (ids.length === 0) return;
+    Promise.allSettled(ids.map((id) => firstValueFrom(this.taskApi.deleteTask(id))))
+      .then(() => {
+        this.selectedTasks.set(new Set());
+        this.loadTasks();
+        this.toast.show(`${ids.length} task(s) deleted`);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  bulkSetStatus(status: TaskStatusLabel): void {
+    this.bulkStatusPopoverEl()?.nativeElement.hide();
+    this.bulkUpdate((input) => ({ ...input, status }), 'Status updated');
+  }
+
+  bulkAssign(assigneeId: string): void {
+    this.bulkAssignPopoverEl()?.nativeElement.hide();
+    this.bulkUpdate((input) => ({ ...input, assignee: assigneeId }), 'Tasks reassigned');
+  }
+
+  private static toInput(t: TaskData): TaskInput {
+    return {
+      title: t.title,
+      description: t.description,
+      status: t.status,
+      priority: t.priority,
+      category: t.category,
+      location: t.location,
+      assignee: t.assignee,
+      due: t.due,
+    };
+  }
+
+  private bulkUpdate(patch: (input: TaskInput) => TaskInput, successMessage: string): void {
+    const ids = [...this.selectedTasks()];
+    const updates = ids
+      .map((id) => this.tasks().find((t) => t.id === id))
+      .filter((t): t is Task => !!t)
+      .map((t) => ({ id: t.id, input: patch(TaskManagementAdminComponent.toInput(t)) }));
+    if (updates.length === 0) return;
+    Promise.allSettled(
+      updates.map((u) => firstValueFrom(this.taskApi.updateTask(u.id, u.input))),
+    )
+      .then(() => {
+        this.loadTasks();
+        this.toast.show(successMessage);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
   openEditModal(taskId: string | null): void {
     this.editingTaskId.set(taskId);
     const task = taskId !== null ? this.tasks().find((t) => t.id === taskId) : null;
@@ -433,14 +528,14 @@ export default class TaskManagementAdminComponent implements OnInit {
     firstValueFrom(request)
       .then(() => {
         this.loadTasks();
-        this.showToast(editingId ? 'Task updated' : 'Task created');
+        this.toast.show(editingId ? 'Task updated' : 'Task created');
         this.editModalEl()?.nativeElement.hide();
         this.editingTaskId.set(undefined);
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
-        this.showToast('Could not save task');
+        this.toast.show('Could not save task');
       });
   }
 
@@ -454,21 +549,13 @@ export default class TaskManagementAdminComponent implements OnInit {
       .then(() => {
         this.newNoteText.set('');
         this.loadNotes(id);
-        this.showToast('Note added');
+        this.toast.show('Note added');
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
-        this.showToast('Could not add note');
+        this.toast.show('Could not add note');
       });
-  }
-
-  showToast(msg: string): void {
-    this.toastMessage.set(msg);
-    clearTimeout(this.toastTimeout);
-    this.toastTimeout = window.setTimeout(() => {
-      this.toastMessage.set(null);
-    }, 2000);
   }
 
   noteAuthor(note: Note): { name: string; tech: Technician | null } {

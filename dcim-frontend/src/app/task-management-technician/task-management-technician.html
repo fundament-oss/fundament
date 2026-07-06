@@ -620,23 +620,3 @@
     </div>
   </div>
 </div>
-
-<!-- Toast -->
-<div
-  class="pointer-events-none fixed bottom-28 left-1/2 z-50 -translate-x-1/2 transition-opacity duration-300"
-  [class.opacity-0]="!toastMessage()"
-  [class.opacity-100]="!!toastMessage()"
-  aria-live="polite"
-  aria-atomic="true"
->
-  <div
-    class="flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-xl ring-1 ring-neutral-700"
-  >
-    <nldd-icon
-      name="check-mark"
-      style="width: 14px; height: 14px; color: #34d399"
-      aria-hidden="true"
-    ></nldd-icon>
-    <span>{{ toastMessage() }}</span>
-  </div>
-</div>

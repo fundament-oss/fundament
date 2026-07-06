@@ -5,6 +5,7 @@ import {
   OnInit,
   signal,
   computed,
+  effect,
   inject,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -16,6 +17,7 @@ import ThemeService from '../theme.service';
 import AuthService from '../auth.service';
 import TaskApiService, { TaskPriorityLabel } from '../task-management/task-api.service';
 import TaskStepApiService from '../task-management/task-step-api.service';
+import ToastService from '../shared/toast.service';
 import connectErrorMessage from '../../connect/error';
 
 interface GatherItem {
@@ -63,6 +65,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   private readonly taskApi = inject(TaskApiService);
 
   private readonly taskStepApi = inject(TaskStepApiService);
+
+  private readonly toast = inject(ToastService);
 
   // Light→dark substitutions for the inline step illustrations: paper/background
   // fills darken, dark line/text colors lighten, vivid status accents stay.
@@ -220,8 +224,65 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     return seg ?? location;
   }
 
+  constructor() {
+    // Auto-save progress on every change, once restoreProgress() has run —
+    // otherwise this would immediately overwrite a saved snapshot with the
+    // signals' initial (empty) values before it's been read back.
+    effect(() => {
+      const snapshot = {
+        phase: this.phase(),
+        currentTaskIndex: this.currentTaskIndex(),
+        currentStepIndex: this.currentStepIndex(),
+        checkedItems: [...this.checkedItems()],
+        gatherCompleted: this.gatherCompleted(),
+      };
+      if (!this.hydrated()) return;
+      const key = this.storageKey();
+      if (key) localStorage.setItem(key, JSON.stringify(snapshot));
+    });
+  }
+
   ngOnInit(): void {
     this.loadTasks();
+  }
+
+  private storageKey(): string | null {
+    const id = this.auth.user()?.id;
+    return id ? `dcim_tech_progress_${id}` : null;
+  }
+
+  private restoreProgress(tasks: Task[]): void {
+    const key = this.storageKey();
+    if (!key || tasks.length === 0) return;
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as {
+        phase?: Phase;
+        currentTaskIndex?: number;
+        currentStepIndex?: number;
+        checkedItems?: number[];
+        gatherCompleted?: boolean;
+      };
+      const ti = Math.min(Math.max(0, saved.currentTaskIndex ?? 0), tasks.length - 1);
+      const si = Math.min(
+        Math.max(0, saved.currentStepIndex ?? 0),
+        Math.max(0, tasks[ti].steps.length - 1),
+      );
+      const maxItems = this.gatherItems().length;
+      this.phase.set(saved.phase === 'task' ? 'task' : 'gather');
+      this.currentTaskIndex.set(ti);
+      this.currentStepIndex.set(si);
+      this.checkedItems.set(new Set((saved.checkedItems ?? []).filter((i) => i < maxItems)));
+      this.gatherCompleted.set(!!saved.gatherCompleted);
+    } catch {
+      // Corrupt/incompatible snapshot — ignore and start fresh.
+    }
+  }
+
+  private clearProgress(): void {
+    const key = this.storageKey();
+    if (key) localStorage.removeItem(key);
   }
 
   private async loadTasks(): Promise<void> {
@@ -261,6 +322,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
         }),
       );
       this.tasks.set(tasks);
+      this.restoreProgress(tasks);
+      this.hydrated.set(true);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
@@ -299,9 +362,9 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   readonly photoPreviewUrl = signal<string | null>(null);
 
-  readonly toastMessage = signal<string | null>(null);
-
-  private toastTimeout: ReturnType<typeof setTimeout> | undefined;
+  // Guards the auto-save effect from writing an empty/default snapshot over a
+  // saved one before restoreProgress() has had a chance to run.
+  private readonly hydrated = signal(false);
 
   private completedTaskSteps = new Map<number, Set<number>>();
 
@@ -412,11 +475,11 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   pressDone(): void {
     if (this.phase() === 'gather') {
       if (this.tasks().length === 0) {
-        this.showToast('No tasks assigned to you');
+        this.toast.show('No tasks assigned to you');
         return;
       }
       if (this.checkedItems().size < this.gatherItems().length) {
-        this.showToast(
+        this.toast.show(
           `${this.checkedItems().size}/${this.gatherItems().length} items checked — proceeding`,
         );
       }
@@ -455,6 +518,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       this.currentStepIndex.set(0);
     } else {
       this.showCompleteScreen.set(true);
+      this.clearProgress();
     }
   }
 
@@ -469,7 +533,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   savePhoto(): void {
     this.showPhotoModal.set(false);
-    this.showToast('Photo saved');
+    this.toast.show('Photo saved');
   }
 
   onPhotoSelected(event: Event): void {
@@ -493,7 +557,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   saveNote(): void {
     this.showNoteModal.set(false);
-    this.showToast('Note saved');
+    this.toast.show('Note saved');
   }
 
   onModalBackdropClick(event: Event, modal: 'photo' | 'note'): void {
@@ -503,11 +567,4 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     }
   }
 
-  private showToast(msg: string): void {
-    this.toastMessage.set(msg);
-    clearTimeout(this.toastTimeout);
-    this.toastTimeout = setTimeout(() => {
-      this.toastMessage.set(null);
-    }, 2500);
-  }
 }

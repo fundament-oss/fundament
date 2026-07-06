@@ -44,32 +44,88 @@
   class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-2.5"
   [class.hidden]="selectedTasks().size === 0"
 >
-  <div class="flex items-center gap-2.5">
-    <!-- Bulk actions -->
+  <div class="flex items-center justify-between gap-2.5">
     <span class="text-xs font-medium text-slate-600 dark:text-gray-300"
       >{{ selectedTasks().size }} selected</span
     >
-    <nldd-button
-      variant="neutral-transparent"
-      text="Status"
-      start-icon="pencil"
-      size="sm"
-    ></nldd-button>
-    <nldd-button
-      variant="neutral-transparent"
-      text="Assign"
-      start-icon="person"
-      size="sm"
-    ></nldd-button>
-    <nldd-button
-      variant="neutral-transparent"
-      start-icon="trash"
-      size="sm"
-      accessible-label="Delete selected"
-      class="text-danger-700 dark:text-danger-300"
-    ></nldd-button>
+    <!-- Bulk actions -->
+    <div class="flex items-center gap-2.5">
+      <nldd-button
+        id="bulkStatusTrigger"
+        variant="neutral-transparent"
+        text="Status"
+        start-icon="pencil"
+        size="sm"
+        expandable
+        popup-type="menu"
+        popovertarget="bulkStatusPopover"
+      ></nldd-button>
+      <nldd-button
+        id="bulkAssignTrigger"
+        variant="neutral-transparent"
+        text="Assign"
+        start-icon="person"
+        size="sm"
+        expandable
+        popup-type="menu"
+        popovertarget="bulkAssignPopover"
+      ></nldd-button>
+      <nldd-button
+        variant="critical-transparent"
+        start-icon="trash"
+        size="sm"
+        accessible-label="Delete selected"
+        (click)="openBulkDeleteDialog()"
+      ></nldd-button>
+    </div>
   </div>
 </div>
+
+<nldd-popover
+  id="bulkStatusPopover"
+  #bulkStatusPopoverEl
+  anchor="bulkStatusTrigger"
+  accessible-label="Set status"
+  role="menu"
+>
+  <div class="flex flex-col gap-0.5 p-1" role="none">
+    @for (s of kanbanColumns; track s) {
+      <button
+        type="button"
+        role="menuitem"
+        class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-gray-200 dark:hover:bg-gray-900"
+        (click)="bulkSetStatus(s)"
+      >
+        <span [class]="statusDotClass(s)" aria-hidden="true"></span>
+        {{ s }}
+      </button>
+    }
+  </div>
+</nldd-popover>
+
+<nldd-popover
+  id="bulkAssignPopover"
+  #bulkAssignPopoverEl
+  anchor="bulkAssignTrigger"
+  accessible-label="Assign to"
+  role="menu"
+>
+  <div class="flex max-h-60 flex-col gap-0.5 overflow-y-auto p-1" role="none">
+    @for (tech of technicians(); track tech.id) {
+      <button
+        type="button"
+        role="menuitem"
+        class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-gray-200 dark:hover:bg-gray-900"
+        (click)="bulkAssign(tech.id)"
+      >
+        <span [class]="techInitialsClass(tech, 'h-6 w-6 text-[10px]')" aria-hidden="true">{{
+          tech.initials
+        }}</span>
+        {{ tech.name }}
+      </button>
+    }
+  </div>
+</nldd-popover>
 
 <!-- ══════════════════════════════════════════════════════════════
      BODY (sidebar + main)
@@ -547,6 +603,14 @@
               start-icon="eye"
               size="sm"
               href="/task-management-technician"
+              target="_blank"
+            ></nldd-button>
+            <nldd-button
+              variant="critical-transparent"
+              text="Delete task"
+              start-icon="trash"
+              size="sm"
+              (click)="openDeleteDialog()"
             ></nldd-button>
           </div>
 
@@ -630,6 +694,60 @@
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DELETE TASK CONFIRMATION
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #deleteDialogEl
+  variant="alert"
+  icon="trash"
+  text="Delete this task?"
+  supporting-text="This cannot be undone."
+  accessible-label="Delete task confirmation"
+>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    size="sm"
+    (click)="closeDeleteDialog()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    size="sm"
+    (click)="confirmDeleteTask()"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════
+     BULK DELETE CONFIRMATION
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #bulkDeleteDialogEl
+  variant="alert"
+  icon="trash"
+  [attr.text]="'Delete ' + selectedTasks().size + ' task(s)?'"
+  supporting-text="This cannot be undone."
+  accessible-label="Delete selected tasks confirmation"
+>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    size="sm"
+    (click)="closeBulkDeleteDialog()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    size="sm"
+    (click)="confirmBulkDelete()"
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- ══════════════════════════════════════════════════════════════
      ADD / EDIT TASK SHEET
@@ -838,25 +956,3 @@
     </div>
   </nldd-page>
 </nldd-sheet>
-
-<!-- ══════════════════════════════════════════════════════════════
-     TOAST
-     ══════════════════════════════════════════════════════════════ -->
-<div
-  class="pointer-events-none fixed bottom-24 left-1/2 z-50 -translate-x-1/2 transition-opacity duration-300"
-  [class.opacity-0]="!toastMessage()"
-  [class.opacity-100]="!!toastMessage()"
-  aria-live="polite"
-  aria-atomic="true"
->
-  <div
-    class="flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-xl ring-1 ring-slate-700"
-  >
-    <nldd-icon
-      name="check-mark"
-      style="width: 14px; height: 14px; color: #34d399"
-      aria-hidden="true"
-    ></nldd-icon>
-    <span>{{ toastMessage() }}</span>
-  </div>
-</div>
