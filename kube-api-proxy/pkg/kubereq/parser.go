@@ -6,6 +6,7 @@ package kubereq
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -59,6 +60,8 @@ func Parse(r *http.Request) (Attributes, error) {
 		out.Name = parts[i]
 		i++
 	}
+	// Any tail segments after the subresource (e.g. /pods/x/proxy/some/path)
+	// are irrelevant to SAR attributes and dropped.
 	if i < len(parts) {
 		out.Subresource = parts[i]
 	}
@@ -70,8 +73,13 @@ func Parse(r *http.Request) (Attributes, error) {
 func inferVerb(r *http.Request, hasName bool) string {
 	switch strings.ToUpper(r.Method) {
 	case http.MethodGet:
-		if r.URL.Query().Get("watch") == "true" {
-			return "watch"
+		// Kubernetes accepts any strconv.ParseBool truthy value here (1, t, T,
+		// true, TRUE, yes, …); match that so the verb we SAR-check aligns with
+		// what the apiserver ultimately performs.
+		if v := r.URL.Query().Get("watch"); v != "" {
+			if b, err := strconv.ParseBool(v); err == nil && b {
+				return "watch"
+			}
 		}
 		if hasName {
 			return "get"

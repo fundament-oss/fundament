@@ -48,13 +48,15 @@ type pluginGateway struct {
 	pluginSA    PluginSAResolver
 	canView     ClusterViewChecker
 	kubeHandler http.Handler
-
-	// lastForwarded is a test hook; nil in production.
-	lastForwarded func() *http.Request
 }
 
 // serve runs the PluginToken gates in order and forwards on success.
-func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, pathClusterID string) {
+//
+// Every gate outcome is audited so the forensic log has a line per
+// PluginToken request. The one exception is a token that fails to parse —
+// without verified claims there is no user to attribute, and the raw bearer
+// must not be logged.
+func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, clusterID uuid.UUID) {
 	bearer := bearerToken(r)
 	claims, err := auth.ParsePluginToken(bearer, g.jwtSecret)
 	if err != nil {
@@ -63,31 +65,32 @@ func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, pathCluste
 		return
 	}
 
-	// 1. Cluster binding.
-	if claims.ClusterID != pathClusterID {
+	// 1. Cluster binding. Parse the claim as a UUID so canonicalisation
+	//    differences (case, formatting) can't produce a spurious 403.
+	claimCluster, err := uuid.Parse(claims.ClusterID)
+	if err != nil || claimCluster != clusterID {
+		g.audit(claims, nil, "", "denied:cluster-mismatch")
 		http.Error(w, "cluster_id mismatch", http.StatusForbidden)
 		return
 	}
 
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
+		g.audit(claims, nil, "", "error:bad-subject")
 		http.Error(w, "bad subject", http.StatusUnauthorized)
-		return
-	}
-	clusterUUID, err := uuid.Parse(pathClusterID)
-	if err != nil {
-		http.Error(w, "bad cluster id", http.StatusBadRequest)
 		return
 	}
 
 	// 2. OpenFGA can_view on (user, cluster).
-	ok, err := g.canView.CanViewCluster(r.Context(), userID, clusterUUID)
+	ok, err := g.canView.CanViewCluster(r.Context(), userID, clusterID)
 	if err != nil {
 		g.logger.Error("can_view check failed", "err", err)
+		g.audit(claims, nil, "", "error:can-view")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	if !ok {
+		g.audit(claims, nil, "", "denied:can-view")
 		http.Error(w, "permission denied", http.StatusForbidden)
 		return
 	}
@@ -95,14 +98,16 @@ func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, pathCluste
 	// 3. Parse the kube request.
 	attrs, err := kubereq.Parse(r)
 	if err != nil {
+		g.audit(claims, nil, "", "error:unparseable-request")
 		http.Error(w, "unparseable kube request", http.StatusBadRequest)
 		return
 	}
 
 	// 4. SubjectAccessReview against the USER (user half).
-	allowed, err := g.userSAR.Check(r.Context(), pathClusterID, &attrs, claims.Subject)
+	allowed, err := g.userSAR.Check(r.Context(), clusterID.String(), &attrs, claims.Subject)
 	if err != nil {
 		g.logger.Error("user SAR failed", "err", err)
+		g.audit(claims, &attrs, "", "error:user-sar")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -113,9 +118,10 @@ func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, pathCluste
 	}
 
 	// 5. Resolve the plugin SA token (plugin half is the cluster's RBAC on it).
-	sa, err := g.pluginSA.Resolve(r.Context(), pathClusterID, claims.InstallationID)
+	sa, err := g.pluginSA.Resolve(r.Context(), clusterID.String(), claims.InstallationID)
 	if err != nil {
 		g.logger.Error("plugin SA resolve failed", "err", err)
+		g.audit(claims, &attrs, "", "error:plugin-sa")
 		http.Error(w, "service unavailable", http.StatusServiceUnavailable)
 		return
 	}
