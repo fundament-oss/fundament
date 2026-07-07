@@ -6,13 +6,14 @@ externalUrls:
   authn: https://authn.fundament.projects.digilab.network
   organization: https://organization.fundament.projects.digilab.network
   kubeApiProxy: https://k8s-api.fundament.projects.digilab.network
+  pluginProxy: https://plugin-proxy.fundament.projects.digilab.network
   console: https://console.fundament.projects.digilab.network
   docs: https://docs.fundament.projects.digilab.network
   cookieDomain: fundament.projects.digilab.network
   dcimApi: https://dcim-api.fundament.projects.digilab.network
   dcim: https://dcim.fundament.projects.digilab.network
   dcimAuthn: https://dcim-authn.fundament.projects.digilab.network
-  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network"
+  corsAllowedOrigins: "https://console.fundament.projects.digilab.network,https://dcim.fundament.projects.digilab.network,https://plugin-proxy.fundament.projects.digilab.network"
 
 db:
   enabled: true
@@ -26,6 +27,12 @@ authnApi:
   replicas: 1
 
 kubeApiProxy:
+  enabled: true
+  replicas: 1
+  logLevel: info
+  mode: mock
+
+pluginProxy:
   enabled: true
   replicas: 1
   logLevel: info

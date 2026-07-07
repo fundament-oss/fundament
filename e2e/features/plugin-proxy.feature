@@ -57,11 +57,10 @@ Feature: Plugin Proxy external listener
     When I send a GET to the installation route "/installations/00000000-0000-0000-0000-000000000099/runtime/api/ping" with the plugin token
     Then the response status should be 403
 
-  @api @plugin-proxy @negative @security
-  Scenario: Path traversal in the install proxy is rejected
-    Given I have a plugin token for the seeded installation
-    When I send a GET to the installation route "/installations/00000000-0000-0000-0000-000000000001/runtime/../../../api/v1/secrets" with the plugin token
-    Then the response status should be 404
+  # Path traversal in the install proxy is covered by the Go unit tests in
+  # plugin-proxy/pkg/installproxy/handler_test.go ("traversal in tail",
+  # "traversal in install id"). An e2e scenario cannot exercise this guard
+  # because Node's fetch normalises `..` per WHATWG before the request is sent.
 
   @api @plugin-proxy @smoke
   Scenario: Authorized runtime call is forwarded to the mock backend

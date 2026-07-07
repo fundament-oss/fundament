@@ -13,7 +13,7 @@ externalUrls:
   dcimApi: https://dcim-api.fundament.localhost:8443
   dcim: https://dcim.fundament.localhost:8443
   dcimAuthn: https://dcim-authn.fundament.localhost:8443
-  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
+  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true

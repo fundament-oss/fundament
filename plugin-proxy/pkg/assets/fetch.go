@@ -2,15 +2,28 @@ package assets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/kube"
 )
+
+// Asset endpoint is unauthenticated and returns the full body to the caller,
+// so cap both wall-clock and buffered size defensively against a hostile or
+// misbehaving upstream pod.
+const (
+	fetchTimeout = 30 * time.Second
+	maxAssetSize = 32 << 20 // 32 MiB
+)
+
+// ErrAssetTooLarge is returned when the upstream body exceeds maxAssetSize.
+var ErrAssetTooLarge = errors.New("asset exceeds max size")
 
 // PodFetcher fetches asset files from a plugin runtime pod via the target
 // cluster's API-server service proxy. The handler resolves clusterID before
@@ -35,7 +48,7 @@ func (f *PodFetcher) Fetch(ctx context.Context, clusterID uuid.UUID, pluginName,
 	}
 
 	//nolint:gosec // same provenance as the request above — host and path are sanitized at construction.
-	resp, err := (&http.Client{Transport: transport}).Do(req)
+	resp, err := (&http.Client{Transport: transport, Timeout: fetchTimeout}).Do(req)
 	if err != nil {
 		return nil, "", fmt.Errorf("fetch asset: %w", err)
 	}
@@ -46,9 +59,13 @@ func (f *PodFetcher) Fetch(ctx context.Context, clusterID uuid.UUID, pluginName,
 		return nil, "", fmt.Errorf("upstream returned %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAssetSize+1))
 	if err != nil {
 		return nil, "", fmt.Errorf("read body: %w", err)
+	}
+
+	if len(body) > maxAssetSize {
+		return nil, "", ErrAssetTooLarge
 	}
 
 	ct := resp.Header.Get("Content-Type")
