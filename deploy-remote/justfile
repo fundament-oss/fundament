@@ -1,6 +1,7 @@
 # Provisioning for a one-time-use Hetzner Cloud fundament/Gardener box.
-# Run from deploy-remote/. All Hetzner lifecycle lives in ./hetzner.sh; these are
-# thin wrappers. NO local nix needed — only ssh + curl + docker.
+# Run from deploy-remote/ (`just up`) or from the repo root (`just deploy-remote up`).
+# All Hetzner lifecycle lives in ./hetzner.sh; these are thin wrappers.
+# NO local nix needed — only ssh + curl + docker.
 
 _default:
     @just --list
@@ -9,33 +10,33 @@ _default:
 # hetzner.sh creates the box (pinned static hcloud binary) and installs NixOS with
 # nixos-anywhere run inside a throwaway nixos/nix container (root is a trusted nix
 # user there; the box builds itself via --build-on-remote). Override size etc. via
-# env, e.g. `HZ_TYPE=ccx43 just hetzner-up`. Default cx53 = 16 vCPU/32GB/320GB
+# env, e.g. `HZ_TYPE=ccx43 just up`. Default cx53 = 16 vCPU/32GB/320GB
 # (~EUR0.036/h); 16GB OOMs the full gardener+fundament stack.
 
 # create box + install NixOS, wait until ready
-hetzner-up:
+up:
     ./hetzner.sh up
 
 # clone fundament + mise + gardener-up + skaffold + drive a shoot to 100%
-hetzner-stack:
+stack:
     ./hetzner.sh stack
 
 # foreground SSH tunnel to the box ingress; then open the printed URL in your browser
-hetzner-tunnel:
+tunnel:
     ./hetzner.sh tunnel
 
 # re-trust the box's CA locally (stack does this automatically; use if you switched machines)
-hetzner-certs:
+certs:
     ./hetzner.sh certs
 
 # ssh into the box (NixOS, port 2022)
-hetzner-ssh:
+ssh:
     ./hetzner.sh ssh
 
 # list project servers (don't forget a billing box!)
-hetzner-status:
+status:
     ./hetzner.sh status
 
 # DESTROY the box (stops billing)
-hetzner-down:
+down:
     ./hetzner.sh down

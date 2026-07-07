@@ -21,7 +21,7 @@
     in
     {
       nixosConfigurations = {
-        # One-time-use cloud box. Installed by `just hetzner-up` (hetzner.sh), which
+        # One-time-use cloud box. Installed by `just up` (hetzner.sh), which
         # runs nixos-anywhere inside a throwaway nix container — so NO local nix is
         # needed even though this is a normal flake target.
         hetzner = mkHost ./hosts/hetzner;

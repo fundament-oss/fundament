@@ -154,7 +154,7 @@ untrust_box_ca() {
 print_access() {
   log ""
   log "reach the box UIs from your normal browser:"
-  log "  1) run:   just hetzner-tunnel      # SSH tunnel :8443 (stop a local k3d first if it owns 8443)"
+  log "  1) run:   just tunnel      # SSH tunnel :8443 (stop a local k3d first if it owns 8443)"
   log "  2) open:  $CONSOLE_URL"
   log "     (also docs./dcim./dex.fundament.localhost:8443 — the box CA is trusted locally, no cert warning)"
 }
@@ -247,7 +247,7 @@ cmd_up() {
     ip=$(box_ip)
     if deploy_once "$ip"; then
       log "READY:  ssh -p $SSH_PORT $BOX_USER@$ip   (or: ./hetzner.sh ssh)"
-      log "next:   just hetzner-stack   # deploy fundament + Gardener and run a shoot"
+      log "next:   just stack   # deploy fundament + Gardener and run a shoot"
       log "BILLING IS RUNNING — tear down with: ./hetzner.sh down"
       return 0
     fi
