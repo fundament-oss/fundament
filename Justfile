@@ -1,6 +1,7 @@
 mod terraform-provider
 mod e2e
 mod cluster-worker
+mod deploy-remote
 
 _default:
     @just --list
@@ -13,13 +14,22 @@ fmt:
 
 # --- Cluster commands ---
 
+# Ensure the k3d docker network exists with a fixed subnet: off 172.18.0.0/16 (which
+# Gardener's local kind cluster reserves — auto-allocation would grab it) and on
+# 172.19.0.0/16 so the ingress-nginx externalIP (172.19.0.2, see
+# deploy/k3d/resources/ingress-nginx.yaml) stays valid. Fails loudly on subnet conflict.
+_ensure-k3d-network:
+    @docker network inspect k3d-fundament > /dev/null 2>&1 || docker network create --subnet=172.19.0.0/16 k3d-fundament > /dev/null
+
 # Create a local k3d cluster for development with local registry
 cluster-create:
+    just _ensure-k3d-network
     k3d cluster create --config=deploy/k3d/config.yaml
     just setup-certs
 
 # Start the cluster (creates if it doesn't exist)
 cluster-start:
+    @just _ensure-k3d-network
     @k3d cluster list fundament > /dev/null 2>&1 && k3d cluster start fundament || just cluster-create
 
 # Stop the cluster without deleting it
@@ -30,6 +40,7 @@ cluster-stop:
 cluster-delete:
     k3d cluster delete fundament
     @k3d registry delete registry.localhost 2>/dev/null || true
+    @docker network rm k3d-fundament 2>/dev/null || true
 
 # Install mkcert CA as a cert-manager ClusterIssuer for local HTTPS
 setup-certs:

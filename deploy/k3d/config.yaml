@@ -4,6 +4,10 @@ metadata:
   name: fundament
 servers: 1
 agents: 0
+# Fixed, pre-created network (see `just _ensure-k3d-network`): keeps k3d off
+# 172.18.0.0/16 (reserved by Gardener's local kind cluster) and pins 172.19.0.0/16
+# so the ingress-nginx externalIP 172.19.0.2 stays valid.
+network: k3d-fundament
 ports:
   - port: 8080:80
     nodeFilters:
