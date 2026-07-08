@@ -24,7 +24,8 @@ type PopoverElement = HTMLElement & { showPopover(): void; hidePopover(): void }
     <div
       #toastEl
       popover="manual"
-      class="pointer-events-none fixed inset-x-0 top-auto bottom-6 z-50 mx-auto w-fit border-0 bg-transparent p-0 transition-opacity duration-300"
+      class="pointer-events-none fixed top-auto bottom-6 z-50 w-fit -translate-x-1/2 border-0 bg-transparent p-0 transition-opacity duration-300"
+      [style.left]="'calc(50% + ' + toast.offsetPx() + 'px)'"
       [class.opacity-0]="!toast.message()"
       [class.opacity-100]="!!toast.message()"
       aria-live="polite"

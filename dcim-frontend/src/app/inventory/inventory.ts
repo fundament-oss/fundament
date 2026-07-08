@@ -25,12 +25,7 @@ import parseValidationError from '../../connect/validation';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 export type AssetStatus =
-  | 'needs-repair'
-  | 'decommissioned'
-  | 'deployed'
-  | 'available'
-  | 'on-order'
-  | 'requested';
+  'needs-repair' | 'decommissioned' | 'deployed' | 'available' | 'on-order' | 'requested';
 
 export type AssetCategory =
   | 'Server'

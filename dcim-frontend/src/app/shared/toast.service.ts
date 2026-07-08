@@ -8,6 +8,12 @@ import { Injectable, signal } from '@angular/core';
 export default class ToastService {
   readonly message = signal<string | null>(null);
 
+  // Horizontal offset (px) from viewport center, added to the toast's
+  // default centering. Pages with a persistent sidebar (which the toast,
+  // rendered at the app root, has no layout knowledge of) can set this so
+  // the toast appears centered over their main content area instead.
+  readonly offsetPx = signal(0);
+
   private timeout: ReturnType<typeof setTimeout> | undefined;
 
   show(msg: string): void {
@@ -15,6 +21,6 @@ export default class ToastService {
     clearTimeout(this.timeout);
     this.timeout = setTimeout(() => {
       this.message.set(null);
-    }, 2000);
+    }, 3000);
   }
 }

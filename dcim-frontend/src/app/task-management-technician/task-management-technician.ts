@@ -589,5 +589,4 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       }
     }
   }
-
 }

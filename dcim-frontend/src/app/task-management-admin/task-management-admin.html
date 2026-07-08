@@ -58,7 +58,6 @@
         size="sm"
         expandable
         popup-type="menu"
-        popovertarget="bulkStatusPopover"
       ></nldd-button>
       <nldd-button
         id="bulkAssignTrigger"
@@ -68,10 +67,9 @@
         size="sm"
         expandable
         popup-type="menu"
-        popovertarget="bulkAssignPopover"
       ></nldd-button>
       <nldd-button
-        variant="critical-transparent"
+        variant="destructive"
         start-icon="trash"
         size="sm"
         accessible-label="Delete selected"
@@ -425,10 +423,13 @@
     </div>
 
     <!-- ── KANBAN VIEW ── -->
-    <div class="pt-5" [class.hidden]="currentView() === 'list'">
-      <div class="flex gap-3 overflow-x-auto pb-6 snap-x snap-mandatory sm:snap-none" cdkDropListGroup>
+    <div class="pt-5 h-full" [class.hidden]="currentView() === 'list'">
+      <div
+        class="flex h-full items-stretch gap-3 overflow-x-auto pb-6 snap-x snap-mandatory sm:snap-none"
+        cdkDropListGroup
+      >
         @for (col of kanbanColumns; track col) {
-          <div class="shrink-0 w-72 snap-center">
+          <div class="shrink-0 w-72 snap-center flex flex-col min-h-0">
             <div class="mb-3 flex items-center gap-2">
               <span
                 class="h-2 w-2 rounded-full"
@@ -441,9 +442,13 @@
                 >{{ tasksForColumn(col).length }}</span
               >
             </div>
+            <!-- Whole lane (including empty space below the last card) is a drop
+                 target. Sorting is disabled: columns have no persisted order, so
+                 dropping only changes status, never position. -->
             <div
-              class="space-y-2 min-h-8"
+              class="flex-1 min-h-0 space-y-2 rounded-xl bg-slate-50/60 dark:bg-gray-900/40 p-2"
               cdkDropList
+              cdkDropListSortingDisabled
               [id]="'kanban-col-' + col"
               [cdkDropListData]="tasksForColumn(col)"
               (cdkDropListDropped)="onKanbanDrop($event, col)"
@@ -458,6 +463,12 @@
                   (keydown.enter)="openDetail(task.id)"
                   (keydown.space)="openDetail(task.id)"
                 >
+                  <!-- Ghost slot shown where the card will land while it is
+                       being dragged (the card itself follows the cursor). -->
+                  <div
+                    *cdkDragPlaceholder
+                    class="rounded-xl border-2 border-dashed border-accent-400 dark:border-accent-600 bg-accent-50/50 dark:bg-accent-950/30 min-h-[96px]"
+                  ></div>
                   <h4 class="text-sm font-medium text-slate-900 dark:text-white leading-snug">
                     {{ task.title }}
                   </h4>
@@ -526,9 +537,7 @@
                 </div>
               }
               @if (tasksForColumn(col).length === 0) {
-                <div
-                  class="rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-800 p-6 text-center text-xs text-slate-400 dark:text-gray-500"
-                >
+                <div class="p-6 text-center text-xs text-slate-400 dark:text-gray-500">
                   No tasks
                 </div>
               }
@@ -614,7 +623,7 @@
               target="_blank"
             ></nldd-button>
             <nldd-button
-              variant="critical-transparent"
+              variant="destructive"
               text="Delete task"
               start-icon="trash"
               size="sm"
@@ -772,6 +781,7 @@
       <div class="space-y-4">
         <nldd-form-field label="Title">
           <nldd-text-field
+            #editTitleInput
             id="editTitle"
             placeholder="E.g. Replace broken harddisk"
             accessible-label="Title"

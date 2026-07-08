@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
   OnInit,
+  OnDestroy,
   signal,
   computed,
   inject,
@@ -11,7 +12,13 @@ import {
 } from '@angular/core';
 import { firstValueFrom, Observable } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { CdkDropList, CdkDropListGroup, CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
+import {
+  CdkDropList,
+  CdkDropListGroup,
+  CdkDrag,
+  CdkDragPlaceholder,
+  CdkDragDrop,
+} from '@angular/cdk/drag-drop';
 import type { Note as ProtoNote } from '../../generated/v1/note_pb';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import AuthService from '../auth.service';
@@ -60,18 +67,22 @@ interface NlddSheet extends HTMLElement {
   hide(): void;
 }
 
+// Half the width of the filters <aside> (w-60 = 240px), so the toast centers
+// over the main content area next to it instead of the full viewport.
+const TOAST_SIDEBAR_OFFSET_PX = 120;
+
 @Component({
   selector: 'app-task-management-admin',
   templateUrl: './task-management-admin.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DropdownSyncDirective, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [DropdownSyncDirective, CdkDropListGroup, CdkDropList, CdkDrag, CdkDragPlaceholder],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
     class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',
     '(document:keydown.escape)': 'onEscape()',
   },
 })
-export default class TaskManagementAdminComponent implements OnInit {
+export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   private readonly taskApi = inject(TaskApiService);
 
   private readonly userApi = inject(UserApiService);
@@ -87,8 +98,13 @@ export default class TaskManagementAdminComponent implements OnInit {
   tasks = signal<Task[]>([]);
 
   ngOnInit(): void {
+    this.toast.offsetPx.set(TOAST_SIDEBAR_OFFSET_PX);
     this.loadUsers();
     this.loadTasks();
+  }
+
+  ngOnDestroy(): void {
+    this.toast.offsetPx.set(0);
   }
 
   private loadUsers(): void {
@@ -283,6 +299,8 @@ export default class TaskManagementAdminComponent implements OnInit {
   readonly detailSheetEl = viewChild<ElementRef<NlddSheet>>('detailSheetEl');
 
   readonly editModalEl = viewChild<ElementRef<NlddSheet>>('editModalEl');
+
+  readonly editTitleInput = viewChild<ElementRef<HTMLElement>>('editTitleInput');
 
   readonly deleteDialogEl = viewChild<ElementRef<NlddSheet>>('deleteDialogEl');
 
@@ -499,9 +517,7 @@ export default class TaskManagementAdminComponent implements OnInit {
       .filter((t): t is Task => !!t)
       .map((t) => ({ id: t.id, input: patch(TaskManagementAdminComponent.toInput(t)) }));
     if (updates.length === 0) return;
-    Promise.allSettled(
-      updates.map((u) => firstValueFrom(this.taskApi.updateTask(u.id, u.input))),
-    )
+    Promise.allSettled(updates.map((u) => firstValueFrom(this.taskApi.updateTask(u.id, u.input))))
       .then(() => {
         this.loadTasks();
         this.toast.show(successMessage);
@@ -523,6 +539,9 @@ export default class TaskManagementAdminComponent implements OnInit {
     this.editFormAssignee.set(task?.assignee ?? null);
     this.editTitleTouched.set(false);
     this.editModalEl()?.nativeElement.show();
+    // setTimeout ensures the sheet and Lit's async shadow DOM render have
+    // completed before calling focus(), since Lit renders on microtasks.
+    setTimeout(() => this.editTitleInput()?.nativeElement.focus());
   }
 
   closeEditModal(): void {

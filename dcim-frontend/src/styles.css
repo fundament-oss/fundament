@@ -205,14 +205,25 @@ input[type='radio']:checked {
 }
 
 /* Angular CDK drag-drop */
+/* The dragged card itself follows the cursor. CDK injects a `@layer cdk-resets`
+   rule that strips background/border/padding from the preview, which overrides
+   the card's Tailwind utilities (they sit in an earlier layer). These rules are
+   unlayered, so they win it back — restoring the card box — and lift it with a
+   stronger shadow so it reads as "picked up". */
 .cdk-drag-preview {
-  opacity: 0.9;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-  border-radius: 4px;
+  padding: 0.875rem; /* p-3.5 */
+  border: 1px solid rgb(226 232 240); /* slate-200 */
+  background: #fff;
+  border-radius: 0.75rem; /* rounded-xl */
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  cursor: grabbing;
 }
-.cdk-drag-placeholder {
-  opacity: 0.5;
+.dark .cdk-drag-preview {
+  border-color: rgb(31 41 55); /* gray-800 */
+  background: rgb(3 7 18); /* gray-950 */
 }
+/* A ghost slot is left where the card will drop; its look is defined by the
+   *cdkDragPlaceholder template, so don't wash it out here. */
 .cdk-drag-animating {
   transition: transform 150ms ease;
 }
