@@ -1,0 +1,165 @@
+@if (isLoading()) {
+  <div class="card">
+    <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugin...</div>
+  </div>
+} @else if (errorMessage(); as error) {
+  <div class="card">
+    <div class="p-6">
+      <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+        <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+      </div>
+      <a routerLink="/plugins/manage" class="link mt-4 inline-block">← Back to my plugins</a>
+    </div>
+  </div>
+} @else if (plugin(); as plugin) {
+  <div class="card">
+    <!-- Header -->
+    <div class="card-header">
+      <a routerLink="/plugins/manage" class="link mb-3 inline-block text-sm">← My plugins</a>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <img
+            class="h-12 w-12 shrink-0 rounded-full bg-gray-100 p-1 dark:bg-gray-800"
+            src="/img/plugins/{{ plugin.icon }}.svg"
+            alt=""
+          />
+          <div>
+            <h1 class="text-3xl font-semibold">{{ plugin.displayName }}</h1>
+            <p class="mt-1 text-gray-600 dark:text-gray-300">
+              <span class="font-mono">v{{ plugin.version }}</span>
+              · {{ plugin.name }}
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span [class]="tierBadgeClass(plugin.tier)">{{ tierLabel(plugin.tier) }}</span>
+          <span [class]="statusBadgeClass(plugin.status)">{{ statusLabel(plugin.status) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status tracker -->
+    <div class="border-b border-gray-100 px-6 pt-6 pb-4 dark:border-gray-900">
+      <h2 class="mb-6 text-lg font-semibold">Publishing status</h2>
+      <app-plugin-status-tracker [status]="plugin.status" />
+
+      <!-- Stage-appropriate actions -->
+      <div class="mt-4 flex flex-wrap gap-2">
+        @switch (plugin.status) {
+          @case ('pushed') {
+            <nldd-button
+              (click)="submitForReview()"
+              text="Submit for review"
+              start-icon="send"
+              variant="primary"
+            ></nldd-button>
+          }
+          @case ('in_review') {
+            <nldd-button text="Awaiting review" variant="primary" [disabled]="true"></nldd-button>
+            <nldd-button
+              (click)="withdraw()"
+              text="Withdraw"
+              variant="secondary"
+            ></nldd-button>
+          }
+          @case ('changes_requested') {
+            <nldd-button
+              (click)="submitForReview()"
+              text="Resubmit for review"
+              start-icon="send"
+              variant="primary"
+            ></nldd-button>
+          }
+          @case ('published') {
+            <nldd-button
+              (click)="viewInCatalog()"
+              text="View in catalog"
+              variant="secondary"
+            ></nldd-button>
+            <nldd-button
+              (click)="unpublish()"
+              text="Unpublish"
+              variant="destructive"
+            ></nldd-button>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="border-b border-gray-100 p-6 dark:border-gray-900">
+      <h2 class="mb-4 text-lg font-semibold">Details</h2>
+      <p class="mb-6 max-w-3xl text-gray-700 dark:text-gray-300">{{ plugin.description }}</p>
+
+      <dl class="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Author</dt>
+          <dd class="mt-1">
+            <a [href]="plugin.author.url" target="_blank" rel="noopener" class="link">
+              {{ plugin.author.name }}
+            </a>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Repository</dt>
+          <dd class="mt-1">
+            <a [href]="plugin.repositoryUrl" target="_blank" rel="noopener" class="link break-all">
+              {{ plugin.repositoryUrl }}
+            </a>
+          </dd>
+        </div>
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Image</dt>
+          <dd class="mt-1 font-mono text-sm break-all text-gray-700 dark:text-gray-300">
+            {{ plugin.image }}
+          </dd>
+        </div>
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Tags</dt>
+          <dd class="mt-1 flex flex-wrap gap-1">
+            @for (tag of plugin.tags; track tag) {
+              <span class="badge badge-gray">{{ tag }}</span>
+            }
+          </dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Version history -->
+    <div class="p-6">
+      <h2 class="mb-4 text-lg font-semibold">Version history</h2>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Version</th>
+              <th scope="col">Pushed</th>
+              <th scope="col">Status</th>
+              <th scope="col">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (version of plugin.versions; track version.version) {
+              <tr>
+                <td class="font-mono text-sm font-medium">{{ version.version }}</td>
+                <td class="text-gray-600 dark:text-gray-400">{{ version.pushedAt }}</td>
+                <td>
+                  <span [class]="statusBadgeClass(version.status)">
+                    {{ statusLabel(version.status) }}
+                  </span>
+                </td>
+                <td class="text-gray-600 dark:text-gray-400">
+                  @if (version.notes) {
+                    <span class="whitespace-normal">{{ version.notes }}</span>
+                  } @else {
+                    <span class="text-gray-400 dark:text-gray-600">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

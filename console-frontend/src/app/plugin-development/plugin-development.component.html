@@ -1,0 +1,98 @@
+<div class="card">
+  <!-- Header -->
+  <div class="card-header flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-semibold">My plugins</h1>
+      <p class="mt-1 text-gray-600 dark:text-gray-300">
+        Manage the plugins you author, track their review status, and sideload builds for testing
+      </p>
+    </div>
+    <nldd-button
+      routerLink="/plugins/manage/sideload"
+      text="Sideload plugin"
+      start-icon="plus-small"
+      variant="primary"
+    ></nldd-button>
+  </div>
+
+  <div class="p-6">
+    <app-plugin-nav-tabs />
+
+    <!-- Loading State -->
+    @if (isLoading()) {
+      <div class="py-8 text-center">
+        <p class="text-gray-600 dark:text-gray-300">Loading plugins...</p>
+      </div>
+    }
+
+    <!-- Plugins Table -->
+    @if (!isLoading() && plugins().length > 0) {
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Plugin</th>
+              <th scope="col">Version</th>
+              <th scope="col">Status</th>
+              <th scope="col">Tier</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (plugin of plugins(); track plugin.name) {
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <img
+                      class="h-9 w-9 shrink-0 rounded-full bg-gray-100 p-1 dark:bg-gray-800"
+                      src="/img/plugins/{{ plugin.icon }}.svg"
+                      alt=""
+                    />
+                    <div>
+                      <p class="font-medium">{{ plugin.displayName }}</p>
+                      <p class="max-w-md text-sm whitespace-normal text-gray-600 dark:text-gray-400">
+                        {{ plugin.descriptionShort }}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+                <td class="font-mono text-sm text-gray-600 dark:text-gray-400">
+                  {{ plugin.version }}
+                </td>
+                <td>
+                  <span [class]="statusBadgeClass(plugin.status)">
+                    {{ statusLabel(plugin.status) }}
+                  </span>
+                </td>
+                <td>
+                  <span [class]="tierBadgeClass(plugin.tier)">{{ tierLabel(plugin.tier) }}</span>
+                </td>
+                <td class="text-right">
+                  <nldd-button
+                    [routerLink]="['/plugins/manage', plugin.name]"
+                    text="Manage"
+                    variant="secondary"
+                    size="sm"
+                  ></nldd-button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (!isLoading() && plugins().length === 0) {
+      <nldd-box>
+        <nldd-inline-dialog
+          icon="puzzle-piece"
+          icon-color="secondary"
+          text="No plugins yet"
+          supporting-text="Push a plugin with functl, or sideload a build to get started."
+        >
+        </nldd-inline-dialog>
+      </nldd-box>
+    }
+  </div>
+</div>

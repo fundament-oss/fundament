@@ -1,0 +1,99 @@
+<div class="card">
+  <!-- Header -->
+  <div class="card-header">
+    <a routerLink="/plugins/manage" class="link mb-3 inline-block text-sm">← My plugins</a>
+    <h1 class="text-3xl font-semibold">Sideload a plugin</h1>
+    <p class="mt-1 text-gray-600 dark:text-gray-300">
+      Install an unpublished plugin build directly onto a cluster you own, bypassing the catalog and
+      central review. Useful for testing before you submit for publication.
+    </p>
+  </div>
+
+  <!-- Form -->
+  <nldd-form
+    [formGroup]="sideloadForm"
+    (submit)="onSubmit($event)"
+    class="space-y-6 px-6 py-6"
+  >
+    <!-- Image reference -->
+    <nldd-form-field label="Image reference">
+      <nldd-text-field
+        id="image"
+        [value]="image?.value"
+        placeholder="E.g. registry.fundament.io/plugins/my-plugin:0.1.0"
+        (input)="onInput('image', $event)"
+        [invalid]="!!image?.invalid && (!!image?.dirty || formSubmitted())"
+        error-message="sideload-image-error"
+      ></nldd-text-field>
+      <nldd-form-field-error-text id="sideload-image-error">
+        An image reference is required.
+      </nldd-form-field-error-text>
+    </nldd-form-field>
+
+    <!-- Version -->
+    <nldd-form-field label="Version">
+      <nldd-text-field
+        id="version"
+        [value]="version?.value"
+        placeholder="E.g. 0.1.0"
+        (input)="onInput('version', $event)"
+        [invalid]="!!version?.invalid && (!!version?.dirty || formSubmitted())"
+        error-message="sideload-version-error"
+      ></nldd-text-field>
+      <nldd-form-field-error-text id="sideload-version-error">
+        A version is required.
+      </nldd-form-field-error-text>
+    </nldd-form-field>
+
+    <!-- Display name (optional) -->
+    <nldd-form-field label="Display name (optional)">
+      <nldd-text-field
+        id="displayName"
+        placeholder="E.g. My Plugin"
+        (input)="onInput('displayName', $event)"
+      ></nldd-text-field>
+    </nldd-form-field>
+
+    <!-- Description (optional) -->
+    <nldd-form-field label="Description (optional)">
+      <nldd-text-field
+        id="description"
+        placeholder="Short description shown while testing"
+        (input)="onInput('description', $event)"
+      ></nldd-text-field>
+    </nldd-form-field>
+
+    <!-- Target cluster -->
+    <nldd-form-field label="Target cluster">
+      <nldd-dropdown>
+        <select id="clusterId" formControlName="clusterId">
+          @for (cluster of clusters(); track cluster.id) {
+            <option [value]="cluster.id">
+              {{ cluster.name }}@if (cluster.isDevelopment) {&nbsp;(development)}
+            </option>
+          }
+        </select>
+      </nldd-dropdown>
+      <nldd-form-field-help-text>
+        Sideloading installs onto a normal cluster you own. A development cluster is a good place to
+        test.
+      </nldd-form-field-help-text>
+    </nldd-form-field>
+
+    <!-- Form Actions -->
+    <div class="flex items-center space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <nldd-button
+        type="button"
+        (click)="onCancel()"
+        text="Cancel"
+        variant="secondary"
+      ></nldd-button>
+      <nldd-button
+        type="submit"
+        [disabled]="submitting()"
+        text="Sideload plugin"
+        variant="primary"
+      ></nldd-button>
+    </div>
+  </nldd-form>
+</div>

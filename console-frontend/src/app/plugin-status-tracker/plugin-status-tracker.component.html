@@ -1,0 +1,57 @@
+<nav class="justify-between sm:flex sm:pb-8" aria-label="Publishing status">
+  @for (step of steps(); track step.name; let i = $index; let isFirst = $first; let isLast = $last) {
+    <div class="group items-center not-last:grow sm:flex" [class.grow]="!isLast">
+      <div class="relative flex items-center">
+        <span
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-3 font-semibold"
+          [class.border-emerald-500]="step.state === 'complete' || step.state === 'active'"
+          [class.text-emerald-500]="step.state === 'complete' || step.state === 'active'"
+          [class.border-amber-500]="step.state === 'error'"
+          [class.text-amber-500]="step.state === 'error'"
+          [class.border-gray-200]="step.state === 'upcoming'"
+          [class.text-gray-400]="step.state === 'upcoming'"
+          [class.dark:border-gray-700]="step.state === 'upcoming'"
+          [class.dark:text-gray-500]="step.state === 'upcoming'"
+        >
+          @switch (step.state) {
+            @case ('complete') {
+              <app-checkmark-icon class="h-4 w-4" />
+            }
+            @case ('active') {
+              <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
+            }
+            @case ('error') {
+              <span aria-hidden="true">!</span>
+            }
+            @default {
+              {{ i + 1 }}
+            }
+          }
+        </span>
+        <span
+          class="top-11 ml-3 font-medium whitespace-nowrap sm:absolute sm:ml-0"
+          [class]="isFirst ? 'left-0' : isLast ? 'right-0' : 'left-1/2 sm:-translate-x-1/2'"
+          >{{ step.name }}</span
+        >
+      </div>
+      @if (!isLast) {
+        <div
+          class="ml-4 min-h-2 w-1 flex-1 bg-gray-200 sm:ml-0 sm:min-h-1 dark:bg-gray-700"
+          [class.bg-emerald-500!]="step.state === 'complete'"
+        ></div>
+      }
+    </div>
+  }
+</nav>
+
+@if (hint(); as hintText) {
+  <p
+    class="mt-2 text-sm sm:mt-8"
+    [class.text-amber-700]="status() === 'changes_requested'"
+    [class.dark:text-amber-400]="status() === 'changes_requested'"
+    [class.text-gray-600]="status() !== 'changes_requested'"
+    [class.dark:text-gray-300]="status() !== 'changes_requested'"
+  >
+    {{ hintText }}
+  </p>
+}

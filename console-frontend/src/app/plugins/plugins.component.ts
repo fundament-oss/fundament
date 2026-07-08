@@ -28,6 +28,7 @@ import { isTransitionalStatus } from '../utils/cluster-status';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
 import { ToastService } from '../toast.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import PluginNavTabsComponent from '../plugin-development/plugin-nav-tabs.component';
 
 const getPluginIconName = (pluginName: string): string =>
   pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
@@ -70,7 +71,7 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
 
 @Component({
   selector: 'app-plugins',
-  imports: [RouterLink, InstallPluginModalComponent, LoadingIndicatorComponent],
+  imports: [RouterLink, InstallPluginModalComponent, LoadingIndicatorComponent, PluginNavTabsComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',

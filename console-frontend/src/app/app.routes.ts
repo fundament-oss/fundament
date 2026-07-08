@@ -170,6 +170,43 @@ const routes: Routes = [
           breadcrumbs: [{ label: 'Profile' }],
         },
       },
+      // Author-facing plugin management (mockup). Registered before `plugins/:id`
+      // so `manage` is not parsed as a plugin id.
+      {
+        path: 'plugins/manage',
+        loadComponent: () =>
+          import('./plugin-development/plugin-development.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [{ label: 'Plugins', route: '/plugins' }, { label: 'My plugins' }],
+        },
+      },
+      {
+        // Must precede `plugins/manage/:name` so `sideload` is not parsed as a name.
+        path: 'plugins/manage/sideload',
+        loadComponent: () =>
+          import('./plugin-sideload/plugin-sideload.component').then((m) => m.default),
+        data: {
+          breadcrumbs: [
+            { label: 'Plugins', route: '/plugins' },
+            { label: 'My plugins', route: '/plugins/manage' },
+            { label: 'Sideload' },
+          ],
+        },
+      },
+      {
+        path: 'plugins/manage/:name',
+        loadComponent: () =>
+          import('./plugin-development-detail/plugin-development-detail.component').then(
+            (m) => m.default,
+          ),
+        data: {
+          breadcrumbs: [
+            { label: 'Plugins', route: '/plugins' },
+            { label: 'My plugins', route: '/plugins/manage' },
+            { label: 'Plugin' },
+          ],
+        },
+      },
       {
         path: 'plugins/:id',
         loadComponent: () =>
