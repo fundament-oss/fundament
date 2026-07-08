@@ -16,11 +16,7 @@ import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
-import {
-  GetPluginDetailRequestSchema,
-  ListPluginsRequestSchema,
-  type PluginDetail,
-} from '../../generated/v1/plugin_pb';
+import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
@@ -70,8 +66,6 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   private idempotency = createIdempotencyRef();
 
-  private pluginImage = '';
-
   pluginId = signal<string>('');
 
   plugin = signal<PluginDetail | null>(null);
@@ -96,12 +90,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     this.pluginId.set(id);
 
     try {
-      const [pluginResponse, clustersResponse, pluginsResponse] = await Promise.all([
+      const [pluginResponse, clustersResponse] = await Promise.all([
         firstValueFrom(
           this.pluginClient.getPluginDetail(create(GetPluginDetailRequestSchema, { pluginId: id })),
         ),
         firstValueFrom(this.clusterClient.listClusters(create(ListClustersRequestSchema, {}))),
-        firstValueFrom(this.pluginClient.listPlugins(create(ListPluginsRequestSchema, {}))),
       ]);
 
       if (!pluginResponse.plugin) {
@@ -114,7 +107,6 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       this.titleService.setTitle(`${displayNameOf(pluginResponse.plugin)} — Plugins`);
 
       const pluginName = pluginResponse.plugin.name;
-      this.pluginImage = pluginsResponse.plugins.find((p) => p.id === id)?.image ?? '';
 
       const installResults = await Promise.all(
         clustersResponse.clusters.map((cluster) =>
@@ -262,7 +254,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
     const results = await Promise.allSettled(
       targets.map((id) =>
-        this.pluginInstallationService.installPlugin(id, plugin.name, this.pluginImage),
+        this.pluginInstallationService.installPlugin(id, plugin.name, 'unknown', 'sha256:unknown'),
       ),
     );
 
@@ -300,7 +292,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     try {
       await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name).catch(() => {});
       await this.waitForUninstall(clusterId, plugin.name);
-      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, this.pluginImage);
+      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, 'unknown', 'sha256:unknown');
       this.startInstallPollingIfNeeded();
     } catch {
       this.toastService.error(

@@ -11,101 +11,10 @@ message GetStatusResponse {
   string message = 2;
 }
 
-message GetDefinitionRequest {}
-
-message PluginURLs {
-  string homepage = 1;
-  string repository = 2;
-  string documentation = 3;
-}
-
-message PolicyRule {
-  repeated string api_groups = 1;
-  repeated string resources = 2;
-  repeated string verbs = 3;
-  // resource_names optionally restricts the rule to named objects (maps to
-  // rbacv1.PolicyRule.ResourceNames). Empty means all objects of the resource.
-  repeated string resource_names = 4;
-}
-
-message Permissions {
-  repeated string capabilities = 1;
-  repeated PolicyRule rbac = 2;
-}
-
-message MenuEntry {
-  string crd = 1;
-  bool list = 2;
-  bool detail = 3;
-  reserved 4;
-  reserved create;
-  string icon = 5;
-}
-
-message MenuDefinition {
-  repeated MenuEntry organization = 1;
-  repeated MenuEntry project = 2;
-}
-
-message ComponentMapping {
-  string list = 1;
-  string detail = 2;
-  string create = 3;
-}
-
-// AllowedResource declares a Kubernetes resource the plugin's UI iframe
-// is permitted to read via the host-mediated SDK broker.
-message AllowedResource {
-  string group = 1;        // "" for the core API group
-  string version = 2;      // e.g. "v1"
-  string resource = 3;     // plural, e.g. "certificates"
-  repeated string verbs = 4; // e.g. ["list", "get"]
-}
-
-message FormGroup {
-  string name = 1;
-  repeated string fields = 2;
-}
-
-message StatusValue {
-  string badge = 1;
-  string label = 2;
-}
-
-message StatusMapping {
-  string json_path = 1;
-  map<string, StatusValue> values = 2;
-}
-
-message UIHint {
-  repeated FormGroup form_groups = 1;
-  StatusMapping status_mapping = 2;
-}
-
-message GetDefinitionResponse {
-  string name = 1;
-  string version = 2;
-  string description = 3;
-  string display_name = 4;
-  string author = 5;
-  string license = 6;
-  string icon = 7;
-  PluginURLs urls = 8;
-  repeated string tags = 9;
-  Permissions permissions = 10;
-  MenuDefinition menu = 11;
-  map<string, ComponentMapping> custom_components = 12;
-  map<string, UIHint> ui_hints = 13;
-  repeated string crds = 14;
-  string api_version = 15;
-  repeated AllowedResource allowed_resources = 16;
-}
-
 message RequestUninstallRequest {}
 message RequestUninstallResponse {}
 
 service PluginMetadataService {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
-  rpc GetDefinition(GetDefinitionRequest) returns (GetDefinitionResponse);
   rpc RequestUninstall(RequestUninstallRequest) returns (RequestUninstallResponse);
 }

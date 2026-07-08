@@ -203,3 +203,18 @@ funops *args:
 functl *args:
     #!/usr/bin/env bash
     exec go run ./functl/cmd/functl "$@"
+
+# Build+push a plugin image, then publish its definition (with the pushed digest)
+# to organization-api. Requires PLUGIN_REGISTRY (e.g. localhost:5112) and
+# FUNDAMENT_ORG_API_URL; FUNDAMENT_TOKEN for the authenticated endpoint.
+plugin-publish name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${PLUGIN_REGISTRY:?PLUGIN_REGISTRY is required (e.g. localhost:5112)}"
+    : "${FUNDAMENT_ORG_API_URL:?FUNDAMENT_ORG_API_URL is required}"
+    tag=$(git describe --always --dirty)
+    repo="${PLUGIN_REGISTRY}/{{ name }}-plugin"
+    docker build -t "${repo}:${tag}" -f "plugins/{{ name }}/Dockerfile" .
+    digest=$(docker push "${repo}:${tag}" | grep -oE 'sha256:[a-f0-9]{64}' | head -1)
+    [ -n "${digest}" ] || { echo "could not resolve pushed digest"; exit 1; }
+    go run ./plugins/cmd/plugin-publish --plugin '{{ name }}' --image "${repo}@${digest}"

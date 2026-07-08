@@ -32,21 +32,15 @@ var certManagerCRDs = []string{
 
 // CertManagerPlugin implements the cert-manager Fundament plugin.
 type CertManagerPlugin struct {
-	def        pluginruntime.PluginDefinition
 	helmClient *helm.Client
 	k8sClient  client.Client
 }
 
-// NewCertManagerPlugin creates a new CertManagerPlugin with the given definition.
-func NewCertManagerPlugin(def *pluginruntime.PluginDefinition) *CertManagerPlugin {
+// NewCertManagerPlugin creates a new CertManagerPlugin.
+func NewCertManagerPlugin() *CertManagerPlugin {
 	return &CertManagerPlugin{
-		def:        *def,
 		helmClient: helm.NewClient(namespace),
 	}
-}
-
-func (p *CertManagerPlugin) Definition() pluginruntime.PluginDefinition {
-	return p.def
 }
 
 func (p *CertManagerPlugin) Start(ctx context.Context, host pluginruntime.Host) error {

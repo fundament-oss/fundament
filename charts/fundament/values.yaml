@@ -180,6 +180,10 @@ pluginController:
   # Skip the plugin definition-hash gate for installs with an empty
   # definitionHash. Local-dev convenience; keep false in production.
   allowUnpinnedHash: false
+  # organizationApiUrl: internal cluster URL for organization-api (gRPC/Connect).
+  # Defaults to http://organization-api:8080, matching the Service name in
+  # charts/fundament/templates/organization-api.yaml.
+  organizationApiUrl: "http://organization-api:8080"
 
 # Plugin Proxy. Runs in the main fundament cluster and dials out to plugin
 # clusters; not deployed inside the plugin sandbox.

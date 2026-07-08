@@ -23,7 +23,6 @@ import (
 // reconciliation lives in the operator, so installations keep running when
 // this plugin pod is down.
 type OpenFSCPlugin struct {
-	def    pluginruntime.PluginDefinition
 	cfg    pluginConfig
 	scheme *runtime.Scheme
 
@@ -31,7 +30,7 @@ type OpenFSCPlugin struct {
 	installer *installer
 }
 
-func NewOpenFSCPlugin(def *pluginruntime.PluginDefinition) (*OpenFSCPlugin, error) {
+func NewOpenFSCPlugin() (*OpenFSCPlugin, error) {
 	var cfg pluginConfig
 	if err := env.Parse(&cfg); err != nil {
 		return nil, fmt.Errorf("parse plugin config: %w", err)
@@ -46,11 +45,7 @@ func NewOpenFSCPlugin(def *pluginruntime.PluginDefinition) (*OpenFSCPlugin, erro
 			return nil, fmt.Errorf("build scheme: %w", err)
 		}
 	}
-	return &OpenFSCPlugin{def: *def, cfg: cfg, scheme: scheme}, nil
-}
-
-func (p *OpenFSCPlugin) Definition() pluginruntime.PluginDefinition {
-	return p.def
+	return &OpenFSCPlugin{cfg: cfg, scheme: scheme}, nil
 }
 
 // init runs lazily because both Start and the Installer lifecycle methods can

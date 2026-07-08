@@ -154,6 +154,8 @@ spec:
               value: {{ $.Release.Name }}
             - name: FUNDAMENT_ORGANIZATION_ID
               value: {{ $.Release.Name }}
+            - name: ORGANIZATION_API_URL
+              value: {{ $.Values.pluginController.organizationApiUrl }}
             - name: LOG_LEVEL
               value: {{ $.Values.pluginController.logLevel }}
             {{- if $.Values.pluginController.allowUnpinnedHash }}

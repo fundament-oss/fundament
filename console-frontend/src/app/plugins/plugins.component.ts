@@ -543,7 +543,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
     const results = await Promise.allSettled(
       targets.map((clusterId) =>
-        this.pluginInstallationService.installPlugin(clusterId, plugin.name, plugin.image),
+        this.pluginInstallationService.installPlugin(clusterId, plugin.name, 'unknown', 'sha256:unknown'),
       ),
     );
 
@@ -588,7 +588,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       // it to be gone before re-creating (a plain re-POST would 409).
       await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name).catch(() => {});
       await this.waitForUninstall(clusterId, plugin.name);
-      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, plugin.image);
+      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, 'unknown', 'sha256:unknown');
       this.startInstallPollingIfNeeded();
     } catch {
       this.toastService.error(

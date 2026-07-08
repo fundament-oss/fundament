@@ -66,6 +66,7 @@ func (s *Server) isPublicEndpoint(procedure string) bool {
 	publicEndpoints := map[string]bool{
 		"/fundament.organization.v1.OrganizationService/HealthCheck": true,
 		// Add more public endpoints as needed
+		"/organization.v1.PluginService/GetPluginDefinition": true,
 	}
 	return publicEndpoints[procedure]
 }
@@ -78,6 +79,7 @@ func (s *Server) isUserScopedEndpoint(procedure string) bool {
 		"/organization.v1.InviteService/ListInvitations":         true,
 		"/organization.v1.InviteService/AcceptInvitation":        true,
 		"/organization.v1.InviteService/DeclineInvitation":       true,
+		"/organization.v1.PluginService/PutPluginDefinition":     true,
 	}
 	return userScopedEndpoints[procedure]
 }

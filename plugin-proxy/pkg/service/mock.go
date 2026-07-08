@@ -51,7 +51,6 @@ func NewMockClusterAccess() *MockClusterAccess {
 			UID:  types.UID(MockInstallationID.String()),
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
-			Image: "ghcr.io/example/cert-manager:v1.17.2",
 			DefinitionRef: pluginsv1.DefinitionRef{
 				PluginName:     MockPluginName,
 				PluginVersion:  MockPluginVersion,

@@ -35,7 +35,6 @@ var certManagerCRDs = []string{
 
 // GatewayAPIPlugin implements the Gateway API Fundament plugin powered by Istio.
 type GatewayAPIPlugin struct {
-	def       pluginruntime.PluginDefinition
 	cfg       pluginConfig
 	istio     *istioInstaller
 	k8sClient client.Client
@@ -43,22 +42,17 @@ type GatewayAPIPlugin struct {
 	certManagerAvailable bool
 }
 
-// NewGatewayAPIPlugin creates a new GatewayAPIPlugin with the given definition.
-func NewGatewayAPIPlugin(def *pluginruntime.PluginDefinition) (*GatewayAPIPlugin, error) {
+// NewGatewayAPIPlugin creates a new GatewayAPIPlugin.
+func NewGatewayAPIPlugin() (*GatewayAPIPlugin, error) {
 	var cfg pluginConfig
 	if err := env.Parse(&cfg); err != nil {
 		return nil, fmt.Errorf("parse plugin config: %w", err)
 	}
 
 	return &GatewayAPIPlugin{
-		def:   *def,
 		cfg:   cfg,
 		istio: newIstioInstaller(cfg),
 	}, nil
-}
-
-func (p *GatewayAPIPlugin) Definition() pluginruntime.PluginDefinition {
-	return p.def
 }
 
 func (p *GatewayAPIPlugin) Start(ctx context.Context, host pluginruntime.Host) error {

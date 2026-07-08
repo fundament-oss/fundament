@@ -1139,6 +1139,1645 @@ func (b0 GetPluginDetailResponse_builder) Build() *GetPluginDetailResponse {
 	return m0
 }
 
+type PutPluginDefinitionRequest struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PluginId      string                 `protobuf:"bytes,10,opt,name=plugin_id,json=pluginId"`
+	xxx_hidden_PluginVersion string                 `protobuf:"bytes,20,opt,name=plugin_version,json=pluginVersion"`
+	xxx_hidden_Manifest      []byte                 `protobuf:"bytes,30,opt,name=manifest"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *PutPluginDefinitionRequest) Reset() {
+	*x = PutPluginDefinitionRequest{}
+	mi := &file_v1_plugin_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PutPluginDefinitionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutPluginDefinitionRequest) ProtoMessage() {}
+
+func (x *PutPluginDefinitionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PutPluginDefinitionRequest) GetPluginId() string {
+	if x != nil {
+		return x.xxx_hidden_PluginId
+	}
+	return ""
+}
+
+func (x *PutPluginDefinitionRequest) GetPluginVersion() string {
+	if x != nil {
+		return x.xxx_hidden_PluginVersion
+	}
+	return ""
+}
+
+func (x *PutPluginDefinitionRequest) GetManifest() []byte {
+	if x != nil {
+		return x.xxx_hidden_Manifest
+	}
+	return nil
+}
+
+func (x *PutPluginDefinitionRequest) SetPluginId(v string) {
+	x.xxx_hidden_PluginId = v
+}
+
+func (x *PutPluginDefinitionRequest) SetPluginVersion(v string) {
+	x.xxx_hidden_PluginVersion = v
+}
+
+func (x *PutPluginDefinitionRequest) SetManifest(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Manifest = v
+}
+
+type PutPluginDefinitionRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	PluginId      string
+	PluginVersion string
+	Manifest      []byte
+}
+
+func (b0 PutPluginDefinitionRequest_builder) Build() *PutPluginDefinitionRequest {
+	m0 := &PutPluginDefinitionRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_PluginId = b.PluginId
+	x.xxx_hidden_PluginVersion = b.PluginVersion
+	x.xxx_hidden_Manifest = b.Manifest
+	return m0
+}
+
+type PutPluginDefinitionResponse struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id            string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_PluginId      string                 `protobuf:"bytes,20,opt,name=plugin_id,json=pluginId"`
+	xxx_hidden_PluginVersion string                 `protobuf:"bytes,30,opt,name=plugin_version,json=pluginVersion"`
+	xxx_hidden_Hash          string                 `protobuf:"bytes,40,opt,name=hash"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *PutPluginDefinitionResponse) Reset() {
+	*x = PutPluginDefinitionResponse{}
+	mi := &file_v1_plugin_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PutPluginDefinitionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutPluginDefinitionResponse) ProtoMessage() {}
+
+func (x *PutPluginDefinitionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PutPluginDefinitionResponse) GetId() string {
+	if x != nil {
+		return x.xxx_hidden_Id
+	}
+	return ""
+}
+
+func (x *PutPluginDefinitionResponse) GetPluginId() string {
+	if x != nil {
+		return x.xxx_hidden_PluginId
+	}
+	return ""
+}
+
+func (x *PutPluginDefinitionResponse) GetPluginVersion() string {
+	if x != nil {
+		return x.xxx_hidden_PluginVersion
+	}
+	return ""
+}
+
+func (x *PutPluginDefinitionResponse) GetHash() string {
+	if x != nil {
+		return x.xxx_hidden_Hash
+	}
+	return ""
+}
+
+func (x *PutPluginDefinitionResponse) SetId(v string) {
+	x.xxx_hidden_Id = v
+}
+
+func (x *PutPluginDefinitionResponse) SetPluginId(v string) {
+	x.xxx_hidden_PluginId = v
+}
+
+func (x *PutPluginDefinitionResponse) SetPluginVersion(v string) {
+	x.xxx_hidden_PluginVersion = v
+}
+
+func (x *PutPluginDefinitionResponse) SetHash(v string) {
+	x.xxx_hidden_Hash = v
+}
+
+type PutPluginDefinitionResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Id            string
+	PluginId      string
+	PluginVersion string
+	Hash          string
+}
+
+func (b0 PutPluginDefinitionResponse_builder) Build() *PutPluginDefinitionResponse {
+	m0 := &PutPluginDefinitionResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Id = b.Id
+	x.xxx_hidden_PluginId = b.PluginId
+	x.xxx_hidden_PluginVersion = b.PluginVersion
+	x.xxx_hidden_Hash = b.Hash
+	return m0
+}
+
+type GetPluginDefinitionRequest struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PluginName    string                 `protobuf:"bytes,10,opt,name=plugin_name,json=pluginName"`
+	xxx_hidden_PluginVersion string                 `protobuf:"bytes,20,opt,name=plugin_version,json=pluginVersion"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *GetPluginDefinitionRequest) Reset() {
+	*x = GetPluginDefinitionRequest{}
+	mi := &file_v1_plugin_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPluginDefinitionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPluginDefinitionRequest) ProtoMessage() {}
+
+func (x *GetPluginDefinitionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetPluginDefinitionRequest) GetPluginName() string {
+	if x != nil {
+		return x.xxx_hidden_PluginName
+	}
+	return ""
+}
+
+func (x *GetPluginDefinitionRequest) GetPluginVersion() string {
+	if x != nil {
+		return x.xxx_hidden_PluginVersion
+	}
+	return ""
+}
+
+func (x *GetPluginDefinitionRequest) SetPluginName(v string) {
+	x.xxx_hidden_PluginName = v
+}
+
+func (x *GetPluginDefinitionRequest) SetPluginVersion(v string) {
+	x.xxx_hidden_PluginVersion = v
+}
+
+type GetPluginDefinitionRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	PluginName    string
+	PluginVersion string
+}
+
+func (b0 GetPluginDefinitionRequest_builder) Build() *GetPluginDefinitionRequest {
+	m0 := &GetPluginDefinitionRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_PluginName = b.PluginName
+	x.xxx_hidden_PluginVersion = b.PluginVersion
+	return m0
+}
+
+type GetPluginDefinitionResponse struct {
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Manifest   []byte                 `protobuf:"bytes,10,opt,name=manifest"`
+	xxx_hidden_Hash       string                 `protobuf:"bytes,20,opt,name=hash"`
+	xxx_hidden_Definition *PluginDefinition      `protobuf:"bytes,30,opt,name=definition"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *GetPluginDefinitionResponse) Reset() {
+	*x = GetPluginDefinitionResponse{}
+	mi := &file_v1_plugin_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPluginDefinitionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPluginDefinitionResponse) ProtoMessage() {}
+
+func (x *GetPluginDefinitionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetPluginDefinitionResponse) GetManifest() []byte {
+	if x != nil {
+		return x.xxx_hidden_Manifest
+	}
+	return nil
+}
+
+func (x *GetPluginDefinitionResponse) GetHash() string {
+	if x != nil {
+		return x.xxx_hidden_Hash
+	}
+	return ""
+}
+
+func (x *GetPluginDefinitionResponse) GetDefinition() *PluginDefinition {
+	if x != nil {
+		return x.xxx_hidden_Definition
+	}
+	return nil
+}
+
+func (x *GetPluginDefinitionResponse) SetManifest(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Manifest = v
+}
+
+func (x *GetPluginDefinitionResponse) SetHash(v string) {
+	x.xxx_hidden_Hash = v
+}
+
+func (x *GetPluginDefinitionResponse) SetDefinition(v *PluginDefinition) {
+	x.xxx_hidden_Definition = v
+}
+
+func (x *GetPluginDefinitionResponse) HasDefinition() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Definition != nil
+}
+
+func (x *GetPluginDefinitionResponse) ClearDefinition() {
+	x.xxx_hidden_Definition = nil
+}
+
+type GetPluginDefinitionResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Manifest   []byte
+	Hash       string
+	Definition *PluginDefinition
+}
+
+func (b0 GetPluginDefinitionResponse_builder) Build() *GetPluginDefinitionResponse {
+	m0 := &GetPluginDefinitionResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Manifest = b.Manifest
+	x.xxx_hidden_Hash = b.Hash
+	x.xxx_hidden_Definition = b.Definition
+	return m0
+}
+
+type PluginDefinition struct {
+	state                       protoimpl.MessageState             `protogen:"opaque.v1"`
+	xxx_hidden_Metadata         *PluginDefinitionMetadata          `protobuf:"bytes,10,opt,name=metadata"`
+	xxx_hidden_Image            string                             `protobuf:"bytes,20,opt,name=image"`
+	xxx_hidden_ImagePullPolicy  string                             `protobuf:"bytes,30,opt,name=image_pull_policy,json=imagePullPolicy"`
+	xxx_hidden_Permissions      *PluginPermissions                 `protobuf:"bytes,40,opt,name=permissions"`
+	xxx_hidden_Menu             *PluginMenu                        `protobuf:"bytes,50,opt,name=menu"`
+	xxx_hidden_Crds             []string                           `protobuf:"bytes,60,rep,name=crds"`
+	xxx_hidden_CustomComponents map[string]*PluginComponentMapping `protobuf:"bytes,70,rep,name=custom_components,json=customComponents" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	xxx_hidden_AllowedResources *[]*PluginAllowedResource          `protobuf:"bytes,80,rep,name=allowed_resources,json=allowedResources"`
+	xxx_hidden_UiHints          map[string]*PluginUIHint           `protobuf:"bytes,90,rep,name=ui_hints,json=uiHints" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
+}
+
+func (x *PluginDefinition) Reset() {
+	*x = PluginDefinition{}
+	mi := &file_v1_plugin_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginDefinition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginDefinition) ProtoMessage() {}
+
+func (x *PluginDefinition) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginDefinition) GetMetadata() *PluginDefinitionMetadata {
+	if x != nil {
+		return x.xxx_hidden_Metadata
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetImage() string {
+	if x != nil {
+		return x.xxx_hidden_Image
+	}
+	return ""
+}
+
+func (x *PluginDefinition) GetImagePullPolicy() string {
+	if x != nil {
+		return x.xxx_hidden_ImagePullPolicy
+	}
+	return ""
+}
+
+func (x *PluginDefinition) GetPermissions() *PluginPermissions {
+	if x != nil {
+		return x.xxx_hidden_Permissions
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetMenu() *PluginMenu {
+	if x != nil {
+		return x.xxx_hidden_Menu
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetCrds() []string {
+	if x != nil {
+		return x.xxx_hidden_Crds
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetCustomComponents() map[string]*PluginComponentMapping {
+	if x != nil {
+		return x.xxx_hidden_CustomComponents
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetAllowedResources() []*PluginAllowedResource {
+	if x != nil {
+		if x.xxx_hidden_AllowedResources != nil {
+			return *x.xxx_hidden_AllowedResources
+		}
+	}
+	return nil
+}
+
+func (x *PluginDefinition) GetUiHints() map[string]*PluginUIHint {
+	if x != nil {
+		return x.xxx_hidden_UiHints
+	}
+	return nil
+}
+
+func (x *PluginDefinition) SetMetadata(v *PluginDefinitionMetadata) {
+	x.xxx_hidden_Metadata = v
+}
+
+func (x *PluginDefinition) SetImage(v string) {
+	x.xxx_hidden_Image = v
+}
+
+func (x *PluginDefinition) SetImagePullPolicy(v string) {
+	x.xxx_hidden_ImagePullPolicy = v
+}
+
+func (x *PluginDefinition) SetPermissions(v *PluginPermissions) {
+	x.xxx_hidden_Permissions = v
+}
+
+func (x *PluginDefinition) SetMenu(v *PluginMenu) {
+	x.xxx_hidden_Menu = v
+}
+
+func (x *PluginDefinition) SetCrds(v []string) {
+	x.xxx_hidden_Crds = v
+}
+
+func (x *PluginDefinition) SetCustomComponents(v map[string]*PluginComponentMapping) {
+	x.xxx_hidden_CustomComponents = v
+}
+
+func (x *PluginDefinition) SetAllowedResources(v []*PluginAllowedResource) {
+	x.xxx_hidden_AllowedResources = &v
+}
+
+func (x *PluginDefinition) SetUiHints(v map[string]*PluginUIHint) {
+	x.xxx_hidden_UiHints = v
+}
+
+func (x *PluginDefinition) HasMetadata() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Metadata != nil
+}
+
+func (x *PluginDefinition) HasPermissions() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Permissions != nil
+}
+
+func (x *PluginDefinition) HasMenu() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Menu != nil
+}
+
+func (x *PluginDefinition) ClearMetadata() {
+	x.xxx_hidden_Metadata = nil
+}
+
+func (x *PluginDefinition) ClearPermissions() {
+	x.xxx_hidden_Permissions = nil
+}
+
+func (x *PluginDefinition) ClearMenu() {
+	x.xxx_hidden_Menu = nil
+}
+
+type PluginDefinition_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Metadata         *PluginDefinitionMetadata
+	Image            string
+	ImagePullPolicy  string
+	Permissions      *PluginPermissions
+	Menu             *PluginMenu
+	Crds             []string
+	CustomComponents map[string]*PluginComponentMapping
+	AllowedResources []*PluginAllowedResource
+	UiHints          map[string]*PluginUIHint
+}
+
+func (b0 PluginDefinition_builder) Build() *PluginDefinition {
+	m0 := &PluginDefinition{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Metadata = b.Metadata
+	x.xxx_hidden_Image = b.Image
+	x.xxx_hidden_ImagePullPolicy = b.ImagePullPolicy
+	x.xxx_hidden_Permissions = b.Permissions
+	x.xxx_hidden_Menu = b.Menu
+	x.xxx_hidden_Crds = b.Crds
+	x.xxx_hidden_CustomComponents = b.CustomComponents
+	x.xxx_hidden_AllowedResources = &b.AllowedResources
+	x.xxx_hidden_UiHints = b.UiHints
+	return m0
+}
+
+type PluginDefinitionMetadata struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_DisplayName string                 `protobuf:"bytes,20,opt,name=display_name,json=displayName"`
+	xxx_hidden_Version     string                 `protobuf:"bytes,30,opt,name=version"`
+	xxx_hidden_Description string                 `protobuf:"bytes,40,opt,name=description"`
+	xxx_hidden_Author      string                 `protobuf:"bytes,50,opt,name=author"`
+	xxx_hidden_License     string                 `protobuf:"bytes,60,opt,name=license"`
+	xxx_hidden_Icon        string                 `protobuf:"bytes,70,opt,name=icon"`
+	xxx_hidden_Urls        *PluginURLs            `protobuf:"bytes,80,opt,name=urls"`
+	xxx_hidden_Tags        []string               `protobuf:"bytes,90,rep,name=tags"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *PluginDefinitionMetadata) Reset() {
+	*x = PluginDefinitionMetadata{}
+	mi := &file_v1_plugin_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginDefinitionMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginDefinitionMetadata) ProtoMessage() {}
+
+func (x *PluginDefinitionMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginDefinitionMetadata) GetName() string {
+	if x != nil {
+		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetDisplayName() string {
+	if x != nil {
+		return x.xxx_hidden_DisplayName
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetVersion() string {
+	if x != nil {
+		return x.xxx_hidden_Version
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetDescription() string {
+	if x != nil {
+		return x.xxx_hidden_Description
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetAuthor() string {
+	if x != nil {
+		return x.xxx_hidden_Author
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetLicense() string {
+	if x != nil {
+		return x.xxx_hidden_License
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetIcon() string {
+	if x != nil {
+		return x.xxx_hidden_Icon
+	}
+	return ""
+}
+
+func (x *PluginDefinitionMetadata) GetUrls() *PluginURLs {
+	if x != nil {
+		return x.xxx_hidden_Urls
+	}
+	return nil
+}
+
+func (x *PluginDefinitionMetadata) GetTags() []string {
+	if x != nil {
+		return x.xxx_hidden_Tags
+	}
+	return nil
+}
+
+func (x *PluginDefinitionMetadata) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *PluginDefinitionMetadata) SetDisplayName(v string) {
+	x.xxx_hidden_DisplayName = v
+}
+
+func (x *PluginDefinitionMetadata) SetVersion(v string) {
+	x.xxx_hidden_Version = v
+}
+
+func (x *PluginDefinitionMetadata) SetDescription(v string) {
+	x.xxx_hidden_Description = v
+}
+
+func (x *PluginDefinitionMetadata) SetAuthor(v string) {
+	x.xxx_hidden_Author = v
+}
+
+func (x *PluginDefinitionMetadata) SetLicense(v string) {
+	x.xxx_hidden_License = v
+}
+
+func (x *PluginDefinitionMetadata) SetIcon(v string) {
+	x.xxx_hidden_Icon = v
+}
+
+func (x *PluginDefinitionMetadata) SetUrls(v *PluginURLs) {
+	x.xxx_hidden_Urls = v
+}
+
+func (x *PluginDefinitionMetadata) SetTags(v []string) {
+	x.xxx_hidden_Tags = v
+}
+
+func (x *PluginDefinitionMetadata) HasUrls() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Urls != nil
+}
+
+func (x *PluginDefinitionMetadata) ClearUrls() {
+	x.xxx_hidden_Urls = nil
+}
+
+type PluginDefinitionMetadata_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name        string
+	DisplayName string
+	Version     string
+	Description string
+	Author      string
+	License     string
+	Icon        string
+	Urls        *PluginURLs
+	Tags        []string
+}
+
+func (b0 PluginDefinitionMetadata_builder) Build() *PluginDefinitionMetadata {
+	m0 := &PluginDefinitionMetadata{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_DisplayName = b.DisplayName
+	x.xxx_hidden_Version = b.Version
+	x.xxx_hidden_Description = b.Description
+	x.xxx_hidden_Author = b.Author
+	x.xxx_hidden_License = b.License
+	x.xxx_hidden_Icon = b.Icon
+	x.xxx_hidden_Urls = b.Urls
+	x.xxx_hidden_Tags = b.Tags
+	return m0
+}
+
+type PluginURLs struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Homepage      string                 `protobuf:"bytes,10,opt,name=homepage"`
+	xxx_hidden_Repository    string                 `protobuf:"bytes,20,opt,name=repository"`
+	xxx_hidden_Documentation string                 `protobuf:"bytes,30,opt,name=documentation"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *PluginURLs) Reset() {
+	*x = PluginURLs{}
+	mi := &file_v1_plugin_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginURLs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginURLs) ProtoMessage() {}
+
+func (x *PluginURLs) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginURLs) GetHomepage() string {
+	if x != nil {
+		return x.xxx_hidden_Homepage
+	}
+	return ""
+}
+
+func (x *PluginURLs) GetRepository() string {
+	if x != nil {
+		return x.xxx_hidden_Repository
+	}
+	return ""
+}
+
+func (x *PluginURLs) GetDocumentation() string {
+	if x != nil {
+		return x.xxx_hidden_Documentation
+	}
+	return ""
+}
+
+func (x *PluginURLs) SetHomepage(v string) {
+	x.xxx_hidden_Homepage = v
+}
+
+func (x *PluginURLs) SetRepository(v string) {
+	x.xxx_hidden_Repository = v
+}
+
+func (x *PluginURLs) SetDocumentation(v string) {
+	x.xxx_hidden_Documentation = v
+}
+
+type PluginURLs_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Homepage      string
+	Repository    string
+	Documentation string
+}
+
+func (b0 PluginURLs_builder) Build() *PluginURLs {
+	m0 := &PluginURLs{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Homepage = b.Homepage
+	x.xxx_hidden_Repository = b.Repository
+	x.xxx_hidden_Documentation = b.Documentation
+	return m0
+}
+
+type PluginPermissions struct {
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Capabilities []string               `protobuf:"bytes,10,rep,name=capabilities"`
+	xxx_hidden_Rbac         *[]*PluginPolicyRule   `protobuf:"bytes,20,rep,name=rbac"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *PluginPermissions) Reset() {
+	*x = PluginPermissions{}
+	mi := &file_v1_plugin_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginPermissions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginPermissions) ProtoMessage() {}
+
+func (x *PluginPermissions) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginPermissions) GetCapabilities() []string {
+	if x != nil {
+		return x.xxx_hidden_Capabilities
+	}
+	return nil
+}
+
+func (x *PluginPermissions) GetRbac() []*PluginPolicyRule {
+	if x != nil {
+		if x.xxx_hidden_Rbac != nil {
+			return *x.xxx_hidden_Rbac
+		}
+	}
+	return nil
+}
+
+func (x *PluginPermissions) SetCapabilities(v []string) {
+	x.xxx_hidden_Capabilities = v
+}
+
+func (x *PluginPermissions) SetRbac(v []*PluginPolicyRule) {
+	x.xxx_hidden_Rbac = &v
+}
+
+type PluginPermissions_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Capabilities []string
+	Rbac         []*PluginPolicyRule
+}
+
+func (b0 PluginPermissions_builder) Build() *PluginPermissions {
+	m0 := &PluginPermissions{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Capabilities = b.Capabilities
+	x.xxx_hidden_Rbac = &b.Rbac
+	return m0
+}
+
+type PluginPolicyRule struct {
+	state                protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ApiGroups []string               `protobuf:"bytes,10,rep,name=api_groups,json=apiGroups"`
+	xxx_hidden_Resources []string               `protobuf:"bytes,20,rep,name=resources"`
+	xxx_hidden_Verbs     []string               `protobuf:"bytes,30,rep,name=verbs"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *PluginPolicyRule) Reset() {
+	*x = PluginPolicyRule{}
+	mi := &file_v1_plugin_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginPolicyRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginPolicyRule) ProtoMessage() {}
+
+func (x *PluginPolicyRule) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginPolicyRule) GetApiGroups() []string {
+	if x != nil {
+		return x.xxx_hidden_ApiGroups
+	}
+	return nil
+}
+
+func (x *PluginPolicyRule) GetResources() []string {
+	if x != nil {
+		return x.xxx_hidden_Resources
+	}
+	return nil
+}
+
+func (x *PluginPolicyRule) GetVerbs() []string {
+	if x != nil {
+		return x.xxx_hidden_Verbs
+	}
+	return nil
+}
+
+func (x *PluginPolicyRule) SetApiGroups(v []string) {
+	x.xxx_hidden_ApiGroups = v
+}
+
+func (x *PluginPolicyRule) SetResources(v []string) {
+	x.xxx_hidden_Resources = v
+}
+
+func (x *PluginPolicyRule) SetVerbs(v []string) {
+	x.xxx_hidden_Verbs = v
+}
+
+type PluginPolicyRule_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	ApiGroups []string
+	Resources []string
+	Verbs     []string
+}
+
+func (b0 PluginPolicyRule_builder) Build() *PluginPolicyRule {
+	m0 := &PluginPolicyRule{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_ApiGroups = b.ApiGroups
+	x.xxx_hidden_Resources = b.Resources
+	x.xxx_hidden_Verbs = b.Verbs
+	return m0
+}
+
+type PluginMenu struct {
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Organization *[]*PluginMenuEntry    `protobuf:"bytes,10,rep,name=organization"`
+	xxx_hidden_Project      *[]*PluginMenuEntry    `protobuf:"bytes,20,rep,name=project"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *PluginMenu) Reset() {
+	*x = PluginMenu{}
+	mi := &file_v1_plugin_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginMenu) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginMenu) ProtoMessage() {}
+
+func (x *PluginMenu) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginMenu) GetOrganization() []*PluginMenuEntry {
+	if x != nil {
+		if x.xxx_hidden_Organization != nil {
+			return *x.xxx_hidden_Organization
+		}
+	}
+	return nil
+}
+
+func (x *PluginMenu) GetProject() []*PluginMenuEntry {
+	if x != nil {
+		if x.xxx_hidden_Project != nil {
+			return *x.xxx_hidden_Project
+		}
+	}
+	return nil
+}
+
+func (x *PluginMenu) SetOrganization(v []*PluginMenuEntry) {
+	x.xxx_hidden_Organization = &v
+}
+
+func (x *PluginMenu) SetProject(v []*PluginMenuEntry) {
+	x.xxx_hidden_Project = &v
+}
+
+type PluginMenu_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Organization []*PluginMenuEntry
+	Project      []*PluginMenuEntry
+}
+
+func (b0 PluginMenu_builder) Build() *PluginMenu {
+	m0 := &PluginMenu{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Organization = &b.Organization
+	x.xxx_hidden_Project = &b.Project
+	return m0
+}
+
+type PluginMenuEntry struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Crd    string                 `protobuf:"bytes,10,opt,name=crd"`
+	xxx_hidden_List   bool                   `protobuf:"varint,20,opt,name=list"`
+	xxx_hidden_Detail bool                   `protobuf:"varint,30,opt,name=detail"`
+	xxx_hidden_Icon   string                 `protobuf:"bytes,40,opt,name=icon"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *PluginMenuEntry) Reset() {
+	*x = PluginMenuEntry{}
+	mi := &file_v1_plugin_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginMenuEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginMenuEntry) ProtoMessage() {}
+
+func (x *PluginMenuEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginMenuEntry) GetCrd() string {
+	if x != nil {
+		return x.xxx_hidden_Crd
+	}
+	return ""
+}
+
+func (x *PluginMenuEntry) GetList() bool {
+	if x != nil {
+		return x.xxx_hidden_List
+	}
+	return false
+}
+
+func (x *PluginMenuEntry) GetDetail() bool {
+	if x != nil {
+		return x.xxx_hidden_Detail
+	}
+	return false
+}
+
+func (x *PluginMenuEntry) GetIcon() string {
+	if x != nil {
+		return x.xxx_hidden_Icon
+	}
+	return ""
+}
+
+func (x *PluginMenuEntry) SetCrd(v string) {
+	x.xxx_hidden_Crd = v
+}
+
+func (x *PluginMenuEntry) SetList(v bool) {
+	x.xxx_hidden_List = v
+}
+
+func (x *PluginMenuEntry) SetDetail(v bool) {
+	x.xxx_hidden_Detail = v
+}
+
+func (x *PluginMenuEntry) SetIcon(v string) {
+	x.xxx_hidden_Icon = v
+}
+
+type PluginMenuEntry_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Crd    string
+	List   bool
+	Detail bool
+	Icon   string
+}
+
+func (b0 PluginMenuEntry_builder) Build() *PluginMenuEntry {
+	m0 := &PluginMenuEntry{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Crd = b.Crd
+	x.xxx_hidden_List = b.List
+	x.xxx_hidden_Detail = b.Detail
+	x.xxx_hidden_Icon = b.Icon
+	return m0
+}
+
+type PluginComponentMapping struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_List   string                 `protobuf:"bytes,10,opt,name=list"`
+	xxx_hidden_Detail string                 `protobuf:"bytes,20,opt,name=detail"`
+	xxx_hidden_Create string                 `protobuf:"bytes,30,opt,name=create"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *PluginComponentMapping) Reset() {
+	*x = PluginComponentMapping{}
+	mi := &file_v1_plugin_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginComponentMapping) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginComponentMapping) ProtoMessage() {}
+
+func (x *PluginComponentMapping) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginComponentMapping) GetList() string {
+	if x != nil {
+		return x.xxx_hidden_List
+	}
+	return ""
+}
+
+func (x *PluginComponentMapping) GetDetail() string {
+	if x != nil {
+		return x.xxx_hidden_Detail
+	}
+	return ""
+}
+
+func (x *PluginComponentMapping) GetCreate() string {
+	if x != nil {
+		return x.xxx_hidden_Create
+	}
+	return ""
+}
+
+func (x *PluginComponentMapping) SetList(v string) {
+	x.xxx_hidden_List = v
+}
+
+func (x *PluginComponentMapping) SetDetail(v string) {
+	x.xxx_hidden_Detail = v
+}
+
+func (x *PluginComponentMapping) SetCreate(v string) {
+	x.xxx_hidden_Create = v
+}
+
+type PluginComponentMapping_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	List   string
+	Detail string
+	Create string
+}
+
+func (b0 PluginComponentMapping_builder) Build() *PluginComponentMapping {
+	m0 := &PluginComponentMapping{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_List = b.List
+	x.xxx_hidden_Detail = b.Detail
+	x.xxx_hidden_Create = b.Create
+	return m0
+}
+
+type PluginAllowedResource struct {
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Group    string                 `protobuf:"bytes,10,opt,name=group"`
+	xxx_hidden_Version  string                 `protobuf:"bytes,20,opt,name=version"`
+	xxx_hidden_Resource string                 `protobuf:"bytes,30,opt,name=resource"`
+	xxx_hidden_Verbs    []string               `protobuf:"bytes,40,rep,name=verbs"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *PluginAllowedResource) Reset() {
+	*x = PluginAllowedResource{}
+	mi := &file_v1_plugin_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginAllowedResource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginAllowedResource) ProtoMessage() {}
+
+func (x *PluginAllowedResource) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginAllowedResource) GetGroup() string {
+	if x != nil {
+		return x.xxx_hidden_Group
+	}
+	return ""
+}
+
+func (x *PluginAllowedResource) GetVersion() string {
+	if x != nil {
+		return x.xxx_hidden_Version
+	}
+	return ""
+}
+
+func (x *PluginAllowedResource) GetResource() string {
+	if x != nil {
+		return x.xxx_hidden_Resource
+	}
+	return ""
+}
+
+func (x *PluginAllowedResource) GetVerbs() []string {
+	if x != nil {
+		return x.xxx_hidden_Verbs
+	}
+	return nil
+}
+
+func (x *PluginAllowedResource) SetGroup(v string) {
+	x.xxx_hidden_Group = v
+}
+
+func (x *PluginAllowedResource) SetVersion(v string) {
+	x.xxx_hidden_Version = v
+}
+
+func (x *PluginAllowedResource) SetResource(v string) {
+	x.xxx_hidden_Resource = v
+}
+
+func (x *PluginAllowedResource) SetVerbs(v []string) {
+	x.xxx_hidden_Verbs = v
+}
+
+type PluginAllowedResource_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Group    string
+	Version  string
+	Resource string
+	Verbs    []string
+}
+
+func (b0 PluginAllowedResource_builder) Build() *PluginAllowedResource {
+	m0 := &PluginAllowedResource{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Group = b.Group
+	x.xxx_hidden_Version = b.Version
+	x.xxx_hidden_Resource = b.Resource
+	x.xxx_hidden_Verbs = b.Verbs
+	return m0
+}
+
+type PluginUIHint struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_FormGroups    *[]*PluginFormGroup    `protobuf:"bytes,10,rep,name=form_groups,json=formGroups"`
+	xxx_hidden_StatusMapping *PluginStatusMapping   `protobuf:"bytes,20,opt,name=status_mapping,json=statusMapping"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *PluginUIHint) Reset() {
+	*x = PluginUIHint{}
+	mi := &file_v1_plugin_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginUIHint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginUIHint) ProtoMessage() {}
+
+func (x *PluginUIHint) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginUIHint) GetFormGroups() []*PluginFormGroup {
+	if x != nil {
+		if x.xxx_hidden_FormGroups != nil {
+			return *x.xxx_hidden_FormGroups
+		}
+	}
+	return nil
+}
+
+func (x *PluginUIHint) GetStatusMapping() *PluginStatusMapping {
+	if x != nil {
+		return x.xxx_hidden_StatusMapping
+	}
+	return nil
+}
+
+func (x *PluginUIHint) SetFormGroups(v []*PluginFormGroup) {
+	x.xxx_hidden_FormGroups = &v
+}
+
+func (x *PluginUIHint) SetStatusMapping(v *PluginStatusMapping) {
+	x.xxx_hidden_StatusMapping = v
+}
+
+func (x *PluginUIHint) HasStatusMapping() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_StatusMapping != nil
+}
+
+func (x *PluginUIHint) ClearStatusMapping() {
+	x.xxx_hidden_StatusMapping = nil
+}
+
+type PluginUIHint_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	FormGroups    []*PluginFormGroup
+	StatusMapping *PluginStatusMapping
+}
+
+func (b0 PluginUIHint_builder) Build() *PluginUIHint {
+	m0 := &PluginUIHint{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_FormGroups = &b.FormGroups
+	x.xxx_hidden_StatusMapping = b.StatusMapping
+	return m0
+}
+
+type PluginFormGroup struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name   string                 `protobuf:"bytes,10,opt,name=name"`
+	xxx_hidden_Fields []string               `protobuf:"bytes,20,rep,name=fields"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *PluginFormGroup) Reset() {
+	*x = PluginFormGroup{}
+	mi := &file_v1_plugin_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginFormGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginFormGroup) ProtoMessage() {}
+
+func (x *PluginFormGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginFormGroup) GetName() string {
+	if x != nil {
+		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *PluginFormGroup) GetFields() []string {
+	if x != nil {
+		return x.xxx_hidden_Fields
+	}
+	return nil
+}
+
+func (x *PluginFormGroup) SetName(v string) {
+	x.xxx_hidden_Name = v
+}
+
+func (x *PluginFormGroup) SetFields(v []string) {
+	x.xxx_hidden_Fields = v
+}
+
+type PluginFormGroup_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name   string
+	Fields []string
+}
+
+func (b0 PluginFormGroup_builder) Build() *PluginFormGroup {
+	m0 := &PluginFormGroup{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_Fields = b.Fields
+	return m0
+}
+
+type PluginStatusMapping struct {
+	state               protoimpl.MessageState        `protogen:"opaque.v1"`
+	xxx_hidden_JsonPath string                        `protobuf:"bytes,10,opt,name=json_path,json=jsonPath"`
+	xxx_hidden_Values   map[string]*PluginStatusValue `protobuf:"bytes,20,rep,name=values" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *PluginStatusMapping) Reset() {
+	*x = PluginStatusMapping{}
+	mi := &file_v1_plugin_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginStatusMapping) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginStatusMapping) ProtoMessage() {}
+
+func (x *PluginStatusMapping) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginStatusMapping) GetJsonPath() string {
+	if x != nil {
+		return x.xxx_hidden_JsonPath
+	}
+	return ""
+}
+
+func (x *PluginStatusMapping) GetValues() map[string]*PluginStatusValue {
+	if x != nil {
+		return x.xxx_hidden_Values
+	}
+	return nil
+}
+
+func (x *PluginStatusMapping) SetJsonPath(v string) {
+	x.xxx_hidden_JsonPath = v
+}
+
+func (x *PluginStatusMapping) SetValues(v map[string]*PluginStatusValue) {
+	x.xxx_hidden_Values = v
+}
+
+type PluginStatusMapping_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	JsonPath string
+	Values   map[string]*PluginStatusValue
+}
+
+func (b0 PluginStatusMapping_builder) Build() *PluginStatusMapping {
+	m0 := &PluginStatusMapping{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_JsonPath = b.JsonPath
+	x.xxx_hidden_Values = b.Values
+	return m0
+}
+
+type PluginStatusValue struct {
+	state            protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Badge string                 `protobuf:"bytes,10,opt,name=badge"`
+	xxx_hidden_Label string                 `protobuf:"bytes,20,opt,name=label"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *PluginStatusValue) Reset() {
+	*x = PluginStatusValue{}
+	mi := &file_v1_plugin_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginStatusValue) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginStatusValue) ProtoMessage() {}
+
+func (x *PluginStatusValue) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_plugin_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *PluginStatusValue) GetBadge() string {
+	if x != nil {
+		return x.xxx_hidden_Badge
+	}
+	return ""
+}
+
+func (x *PluginStatusValue) GetLabel() string {
+	if x != nil {
+		return x.xxx_hidden_Label
+	}
+	return ""
+}
+
+func (x *PluginStatusValue) SetBadge(v string) {
+	x.xxx_hidden_Badge = v
+}
+
+func (x *PluginStatusValue) SetLabel(v string) {
+	x.xxx_hidden_Label = v
+}
+
+type PluginStatusValue_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Badge string
+	Label string
+}
+
+func (b0 PluginStatusValue_builder) Build() *PluginStatusValue {
+	m0 := &PluginStatusValue{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Badge = b.Badge
+	x.xxx_hidden_Label = b.Label
+	return m0
+}
+
 var File_v1_plugin_proto protoreflect.FileDescriptor
 
 const file_v1_plugin_proto_rawDesc = "" +
@@ -1208,27 +2847,160 @@ const file_v1_plugin_proto_rawDesc = "" +
 	" \x01(\tR\bpluginId\"P\n" +
 	"\x17GetPluginDetailResponse\x125\n" +
 	"\x06plugin\x18\n" +
-	" \x01(\v2\x1d.organization.v1.PluginDetailR\x06plugin2\xa9\x02\n" +
+	" \x01(\v2\x1d.organization.v1.PluginDetailR\x06plugin\"|\n" +
+	"\x1aPutPluginDefinitionRequest\x12\x1b\n" +
+	"\tplugin_id\x18\n" +
+	" \x01(\tR\bpluginId\x12%\n" +
+	"\x0eplugin_version\x18\x14 \x01(\tR\rpluginVersion\x12\x1a\n" +
+	"\bmanifest\x18\x1e \x01(\fR\bmanifest\"\x85\x01\n" +
+	"\x1bPutPluginDefinitionResponse\x12\x0e\n" +
+	"\x02id\x18\n" +
+	" \x01(\tR\x02id\x12\x1b\n" +
+	"\tplugin_id\x18\x14 \x01(\tR\bpluginId\x12%\n" +
+	"\x0eplugin_version\x18\x1e \x01(\tR\rpluginVersion\x12\x12\n" +
+	"\x04hash\x18( \x01(\tR\x04hash\"d\n" +
+	"\x1aGetPluginDefinitionRequest\x12\x1f\n" +
+	"\vplugin_name\x18\n" +
+	" \x01(\tR\n" +
+	"pluginName\x12%\n" +
+	"\x0eplugin_version\x18\x14 \x01(\tR\rpluginVersion\"\x90\x01\n" +
+	"\x1bGetPluginDefinitionResponse\x12\x1a\n" +
+	"\bmanifest\x18\n" +
+	" \x01(\fR\bmanifest\x12\x12\n" +
+	"\x04hash\x18\x14 \x01(\tR\x04hash\x12A\n" +
+	"\n" +
+	"definition\x18\x1e \x01(\v2!.organization.v1.PluginDefinitionR\n" +
+	"definition\"\xf5\x05\n" +
+	"\x10PluginDefinition\x12E\n" +
+	"\bmetadata\x18\n" +
+	" \x01(\v2).organization.v1.PluginDefinitionMetadataR\bmetadata\x12\x14\n" +
+	"\x05image\x18\x14 \x01(\tR\x05image\x12*\n" +
+	"\x11image_pull_policy\x18\x1e \x01(\tR\x0fimagePullPolicy\x12D\n" +
+	"\vpermissions\x18( \x01(\v2\".organization.v1.PluginPermissionsR\vpermissions\x12/\n" +
+	"\x04menu\x182 \x01(\v2\x1b.organization.v1.PluginMenuR\x04menu\x12\x12\n" +
+	"\x04crds\x18< \x03(\tR\x04crds\x12d\n" +
+	"\x11custom_components\x18F \x03(\v27.organization.v1.PluginDefinition.CustomComponentsEntryR\x10customComponents\x12S\n" +
+	"\x11allowed_resources\x18P \x03(\v2&.organization.v1.PluginAllowedResourceR\x10allowedResources\x12I\n" +
+	"\bui_hints\x18Z \x03(\v2..organization.v1.PluginDefinition.UiHintsEntryR\auiHints\x1al\n" +
+	"\x15CustomComponentsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12=\n" +
+	"\x05value\x18\x02 \x01(\v2'.organization.v1.PluginComponentMappingR\x05value:\x028\x01\x1aY\n" +
+	"\fUiHintsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x123\n" +
+	"\x05value\x18\x02 \x01(\v2\x1d.organization.v1.PluginUIHintR\x05value:\x028\x01\"\x98\x02\n" +
+	"\x18PluginDefinitionMetadata\x12\x12\n" +
+	"\x04name\x18\n" +
+	" \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x14 \x01(\tR\vdisplayName\x12\x18\n" +
+	"\aversion\x18\x1e \x01(\tR\aversion\x12 \n" +
+	"\vdescription\x18( \x01(\tR\vdescription\x12\x16\n" +
+	"\x06author\x182 \x01(\tR\x06author\x12\x18\n" +
+	"\alicense\x18< \x01(\tR\alicense\x12\x12\n" +
+	"\x04icon\x18F \x01(\tR\x04icon\x12/\n" +
+	"\x04urls\x18P \x01(\v2\x1b.organization.v1.PluginURLsR\x04urls\x12\x12\n" +
+	"\x04tags\x18Z \x03(\tR\x04tags\"n\n" +
+	"\n" +
+	"PluginURLs\x12\x1a\n" +
+	"\bhomepage\x18\n" +
+	" \x01(\tR\bhomepage\x12\x1e\n" +
+	"\n" +
+	"repository\x18\x14 \x01(\tR\n" +
+	"repository\x12$\n" +
+	"\rdocumentation\x18\x1e \x01(\tR\rdocumentation\"n\n" +
+	"\x11PluginPermissions\x12\"\n" +
+	"\fcapabilities\x18\n" +
+	" \x03(\tR\fcapabilities\x125\n" +
+	"\x04rbac\x18\x14 \x03(\v2!.organization.v1.PluginPolicyRuleR\x04rbac\"e\n" +
+	"\x10PluginPolicyRule\x12\x1d\n" +
+	"\n" +
+	"api_groups\x18\n" +
+	" \x03(\tR\tapiGroups\x12\x1c\n" +
+	"\tresources\x18\x14 \x03(\tR\tresources\x12\x14\n" +
+	"\x05verbs\x18\x1e \x03(\tR\x05verbs\"\x8e\x01\n" +
+	"\n" +
+	"PluginMenu\x12D\n" +
+	"\forganization\x18\n" +
+	" \x03(\v2 .organization.v1.PluginMenuEntryR\forganization\x12:\n" +
+	"\aproject\x18\x14 \x03(\v2 .organization.v1.PluginMenuEntryR\aproject\"c\n" +
+	"\x0fPluginMenuEntry\x12\x10\n" +
+	"\x03crd\x18\n" +
+	" \x01(\tR\x03crd\x12\x12\n" +
+	"\x04list\x18\x14 \x01(\bR\x04list\x12\x16\n" +
+	"\x06detail\x18\x1e \x01(\bR\x06detail\x12\x12\n" +
+	"\x04icon\x18( \x01(\tR\x04icon\"\\\n" +
+	"\x16PluginComponentMapping\x12\x12\n" +
+	"\x04list\x18\n" +
+	" \x01(\tR\x04list\x12\x16\n" +
+	"\x06detail\x18\x14 \x01(\tR\x06detail\x12\x16\n" +
+	"\x06create\x18\x1e \x01(\tR\x06create\"y\n" +
+	"\x15PluginAllowedResource\x12\x14\n" +
+	"\x05group\x18\n" +
+	" \x01(\tR\x05group\x12\x18\n" +
+	"\aversion\x18\x14 \x01(\tR\aversion\x12\x1a\n" +
+	"\bresource\x18\x1e \x01(\tR\bresource\x12\x14\n" +
+	"\x05verbs\x18( \x03(\tR\x05verbs\"\x9e\x01\n" +
+	"\fPluginUIHint\x12A\n" +
+	"\vform_groups\x18\n" +
+	" \x03(\v2 .organization.v1.PluginFormGroupR\n" +
+	"formGroups\x12K\n" +
+	"\x0estatus_mapping\x18\x14 \x01(\v2$.organization.v1.PluginStatusMappingR\rstatusMapping\"=\n" +
+	"\x0fPluginFormGroup\x12\x12\n" +
+	"\x04name\x18\n" +
+	" \x01(\tR\x04name\x12\x16\n" +
+	"\x06fields\x18\x14 \x03(\tR\x06fields\"\xdb\x01\n" +
+	"\x13PluginStatusMapping\x12\x1b\n" +
+	"\tjson_path\x18\n" +
+	" \x01(\tR\bjsonPath\x12H\n" +
+	"\x06values\x18\x14 \x03(\v20.organization.v1.PluginStatusMapping.ValuesEntryR\x06values\x1a]\n" +
+	"\vValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x128\n" +
+	"\x05value\x18\x02 \x01(\v2\".organization.v1.PluginStatusValueR\x05value:\x028\x01\"?\n" +
+	"\x11PluginStatusValue\x12\x14\n" +
+	"\x05badge\x18\n" +
+	" \x01(\tR\x05badge\x12\x14\n" +
+	"\x05label\x18\x14 \x01(\tR\x05label2\x8d\x04\n" +
 	"\rPluginService\x12X\n" +
 	"\vListPlugins\x12#.organization.v1.ListPluginsRequest\x1a$.organization.v1.ListPluginsResponse\x12d\n" +
 	"\x0fGetPluginDetail\x12'.organization.v1.GetPluginDetailRequest\x1a(.organization.v1.GetPluginDetailResponse\x12X\n" +
-	"\vListPresets\x12#.organization.v1.ListPresetsRequest\x1a$.organization.v1.ListPresetsResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\vListPresets\x12#.organization.v1.ListPresetsRequest\x1a$.organization.v1.ListPresetsResponse\x12p\n" +
+	"\x13PutPluginDefinition\x12+.organization.v1.PutPluginDefinitionRequest\x1a,.organization.v1.PutPluginDefinitionResponse\x12p\n" +
+	"\x13GetPluginDefinition\x12+.organization.v1.GetPluginDefinitionRequest\x1a,.organization.v1.GetPluginDefinitionResponseB_ZSgithub.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1;organizationv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_v1_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_v1_plugin_proto_goTypes = []any{
-	(*Tag)(nil),                     // 0: organization.v1.Tag
-	(*Category)(nil),                // 1: organization.v1.Category
-	(*PluginSummary)(nil),           // 2: organization.v1.PluginSummary
-	(*ListPluginsRequest)(nil),      // 3: organization.v1.ListPluginsRequest
-	(*ListPluginsResponse)(nil),     // 4: organization.v1.ListPluginsResponse
-	(*Preset)(nil),                  // 5: organization.v1.Preset
-	(*ListPresetsRequest)(nil),      // 6: organization.v1.ListPresetsRequest
-	(*ListPresetsResponse)(nil),     // 7: organization.v1.ListPresetsResponse
-	(*DocumentationLink)(nil),       // 8: organization.v1.DocumentationLink
-	(*Author)(nil),                  // 9: organization.v1.Author
-	(*PluginDetail)(nil),            // 10: organization.v1.PluginDetail
-	(*GetPluginDetailRequest)(nil),  // 11: organization.v1.GetPluginDetailRequest
-	(*GetPluginDetailResponse)(nil), // 12: organization.v1.GetPluginDetailResponse
+	(*Tag)(nil),                         // 0: organization.v1.Tag
+	(*Category)(nil),                    // 1: organization.v1.Category
+	(*PluginSummary)(nil),               // 2: organization.v1.PluginSummary
+	(*ListPluginsRequest)(nil),          // 3: organization.v1.ListPluginsRequest
+	(*ListPluginsResponse)(nil),         // 4: organization.v1.ListPluginsResponse
+	(*Preset)(nil),                      // 5: organization.v1.Preset
+	(*ListPresetsRequest)(nil),          // 6: organization.v1.ListPresetsRequest
+	(*ListPresetsResponse)(nil),         // 7: organization.v1.ListPresetsResponse
+	(*DocumentationLink)(nil),           // 8: organization.v1.DocumentationLink
+	(*Author)(nil),                      // 9: organization.v1.Author
+	(*PluginDetail)(nil),                // 10: organization.v1.PluginDetail
+	(*GetPluginDetailRequest)(nil),      // 11: organization.v1.GetPluginDetailRequest
+	(*GetPluginDetailResponse)(nil),     // 12: organization.v1.GetPluginDetailResponse
+	(*PutPluginDefinitionRequest)(nil),  // 13: organization.v1.PutPluginDefinitionRequest
+	(*PutPluginDefinitionResponse)(nil), // 14: organization.v1.PutPluginDefinitionResponse
+	(*GetPluginDefinitionRequest)(nil),  // 15: organization.v1.GetPluginDefinitionRequest
+	(*GetPluginDefinitionResponse)(nil), // 16: organization.v1.GetPluginDefinitionResponse
+	(*PluginDefinition)(nil),            // 17: organization.v1.PluginDefinition
+	(*PluginDefinitionMetadata)(nil),    // 18: organization.v1.PluginDefinitionMetadata
+	(*PluginURLs)(nil),                  // 19: organization.v1.PluginURLs
+	(*PluginPermissions)(nil),           // 20: organization.v1.PluginPermissions
+	(*PluginPolicyRule)(nil),            // 21: organization.v1.PluginPolicyRule
+	(*PluginMenu)(nil),                  // 22: organization.v1.PluginMenu
+	(*PluginMenuEntry)(nil),             // 23: organization.v1.PluginMenuEntry
+	(*PluginComponentMapping)(nil),      // 24: organization.v1.PluginComponentMapping
+	(*PluginAllowedResource)(nil),       // 25: organization.v1.PluginAllowedResource
+	(*PluginUIHint)(nil),                // 26: organization.v1.PluginUIHint
+	(*PluginFormGroup)(nil),             // 27: organization.v1.PluginFormGroup
+	(*PluginStatusMapping)(nil),         // 28: organization.v1.PluginStatusMapping
+	(*PluginStatusValue)(nil),           // 29: organization.v1.PluginStatusValue
+	nil,                                 // 30: organization.v1.PluginDefinition.CustomComponentsEntry
+	nil,                                 // 31: organization.v1.PluginDefinition.UiHintsEntry
+	nil,                                 // 32: organization.v1.PluginStatusMapping.ValuesEntry
 }
 var file_v1_plugin_proto_depIdxs = []int32{
 	0,  // 0: organization.v1.PluginSummary.tags:type_name -> organization.v1.Tag
@@ -1240,17 +3012,38 @@ var file_v1_plugin_proto_depIdxs = []int32{
 	9,  // 6: organization.v1.PluginDetail.author:type_name -> organization.v1.Author
 	8,  // 7: organization.v1.PluginDetail.documentation_links:type_name -> organization.v1.DocumentationLink
 	10, // 8: organization.v1.GetPluginDetailResponse.plugin:type_name -> organization.v1.PluginDetail
-	3,  // 9: organization.v1.PluginService.ListPlugins:input_type -> organization.v1.ListPluginsRequest
-	11, // 10: organization.v1.PluginService.GetPluginDetail:input_type -> organization.v1.GetPluginDetailRequest
-	6,  // 11: organization.v1.PluginService.ListPresets:input_type -> organization.v1.ListPresetsRequest
-	4,  // 12: organization.v1.PluginService.ListPlugins:output_type -> organization.v1.ListPluginsResponse
-	12, // 13: organization.v1.PluginService.GetPluginDetail:output_type -> organization.v1.GetPluginDetailResponse
-	7,  // 14: organization.v1.PluginService.ListPresets:output_type -> organization.v1.ListPresetsResponse
-	12, // [12:15] is the sub-list for method output_type
-	9,  // [9:12] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	17, // 9: organization.v1.GetPluginDefinitionResponse.definition:type_name -> organization.v1.PluginDefinition
+	18, // 10: organization.v1.PluginDefinition.metadata:type_name -> organization.v1.PluginDefinitionMetadata
+	20, // 11: organization.v1.PluginDefinition.permissions:type_name -> organization.v1.PluginPermissions
+	22, // 12: organization.v1.PluginDefinition.menu:type_name -> organization.v1.PluginMenu
+	30, // 13: organization.v1.PluginDefinition.custom_components:type_name -> organization.v1.PluginDefinition.CustomComponentsEntry
+	25, // 14: organization.v1.PluginDefinition.allowed_resources:type_name -> organization.v1.PluginAllowedResource
+	31, // 15: organization.v1.PluginDefinition.ui_hints:type_name -> organization.v1.PluginDefinition.UiHintsEntry
+	19, // 16: organization.v1.PluginDefinitionMetadata.urls:type_name -> organization.v1.PluginURLs
+	21, // 17: organization.v1.PluginPermissions.rbac:type_name -> organization.v1.PluginPolicyRule
+	23, // 18: organization.v1.PluginMenu.organization:type_name -> organization.v1.PluginMenuEntry
+	23, // 19: organization.v1.PluginMenu.project:type_name -> organization.v1.PluginMenuEntry
+	27, // 20: organization.v1.PluginUIHint.form_groups:type_name -> organization.v1.PluginFormGroup
+	28, // 21: organization.v1.PluginUIHint.status_mapping:type_name -> organization.v1.PluginStatusMapping
+	32, // 22: organization.v1.PluginStatusMapping.values:type_name -> organization.v1.PluginStatusMapping.ValuesEntry
+	24, // 23: organization.v1.PluginDefinition.CustomComponentsEntry.value:type_name -> organization.v1.PluginComponentMapping
+	26, // 24: organization.v1.PluginDefinition.UiHintsEntry.value:type_name -> organization.v1.PluginUIHint
+	29, // 25: organization.v1.PluginStatusMapping.ValuesEntry.value:type_name -> organization.v1.PluginStatusValue
+	3,  // 26: organization.v1.PluginService.ListPlugins:input_type -> organization.v1.ListPluginsRequest
+	11, // 27: organization.v1.PluginService.GetPluginDetail:input_type -> organization.v1.GetPluginDetailRequest
+	6,  // 28: organization.v1.PluginService.ListPresets:input_type -> organization.v1.ListPresetsRequest
+	13, // 29: organization.v1.PluginService.PutPluginDefinition:input_type -> organization.v1.PutPluginDefinitionRequest
+	15, // 30: organization.v1.PluginService.GetPluginDefinition:input_type -> organization.v1.GetPluginDefinitionRequest
+	4,  // 31: organization.v1.PluginService.ListPlugins:output_type -> organization.v1.ListPluginsResponse
+	12, // 32: organization.v1.PluginService.GetPluginDetail:output_type -> organization.v1.GetPluginDetailResponse
+	7,  // 33: organization.v1.PluginService.ListPresets:output_type -> organization.v1.ListPresetsResponse
+	14, // 34: organization.v1.PluginService.PutPluginDefinition:output_type -> organization.v1.PutPluginDefinitionResponse
+	16, // 35: organization.v1.PluginService.GetPluginDefinition:output_type -> organization.v1.GetPluginDefinitionResponse
+	31, // [31:36] is the sub-list for method output_type
+	26, // [26:31] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_v1_plugin_proto_init() }
@@ -1264,7 +3057,7 @@ func file_v1_plugin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_plugin_proto_rawDesc), len(file_v1_plugin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

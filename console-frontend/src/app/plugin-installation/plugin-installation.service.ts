@@ -41,7 +41,12 @@ export default class PluginInstallationService {
     return (await res.json()) as PluginInstallationItem;
   }
 
-  async installPlugin(clusterId: string, pluginName: string, image: string): Promise<void> {
+  async installPlugin(
+    clusterId: string,
+    pluginName: string,
+    pluginVersion: string,
+    definitionHash: string,
+  ): Promise<void> {
     // TODO(FUN-11): once the marketplace returns the published pluginVersion
     // and definitionHash for each PluginSummary, surface them here. Until then
     // we send development placeholders; the consent record only becomes a real
@@ -55,11 +60,10 @@ export default class PluginInstallationService {
         kind: 'PluginInstallation',
         metadata: { name: pluginResourceName(pluginName) },
         spec: {
-          image,
           definitionRef: {
             pluginName,
-            pluginVersion: 'unknown',
-            definitionHash: 'sha256:unknown',
+            pluginVersion,
+            definitionHash,
           },
         },
       }),

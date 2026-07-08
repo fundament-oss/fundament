@@ -1,92 +1,51 @@
 package pluginruntime
 
 import (
-	"context"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	pb "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 )
 
-func writeDef(t *testing.T, body string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "definition.yaml")
-	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
-	return path
-}
-
-func TestLoadDefinition_MissingMetadataName(t *testing.T) {
-	path := writeDef(t, `apiVersion: fundament.io/v1
+func TestParseDefinition_ImageAndRBAC(t *testing.T) {
+	data := []byte(`apiVersion: fundament.io/v1
 kind: PluginDefinition
 metadata:
-  displayName: Example
-spec: {}
-`)
-
-	_, err := LoadDefinition(path)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "metadata.name")
-}
-
-// resourceNames declared in a plugin's definition.yaml must survive the
-// YAML→proto mapping in GetDefinition — otherwise the controller can never
-// scope the materialised ClusterRole to named objects.
-func TestGetDefinition_ThreadsResourceNames(t *testing.T) {
-	path := writeDef(t, `apiVersion: fundament.io/v1
-kind: PluginDefinition
-metadata:
-  name: example
+  name: cert-manager
+  version: v1.17.2
 spec:
+  image: quay.io/jetstack/cert-manager-controller@sha256:deadbeef
+  imagePullPolicy: IfNotPresent
   permissions:
     rbac:
-      - apiGroups: [""]
-        resources: ["secrets"]
-        verbs: ["get"]
-        resourceNames: ["example-ca"]
+      - apiGroups: [cert-manager.io]
+        resources: [certificates]
+        verbs: [get, list]
 `)
-	def, err := LoadDefinition(path)
+	def, err := ParseDefinition(data)
 	require.NoError(t, err)
-
-	h := NewMetadataHandler(
-		func() PluginStatus { return PluginStatus{} },
-		func() PluginDefinition { return def },
-		func(context.Context) error { return nil },
-	)
-	resp, err := h.GetDefinition(context.Background(), connect.NewRequest(&pb.GetDefinitionRequest{}))
-	require.NoError(t, err)
-
-	rbac := resp.Msg.GetPermissions().GetRbac()
-	require.Len(t, rbac, 1)
-	assert.Equal(t, []string{"example-ca"}, rbac[0].GetResourceNames())
+	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeef", def.Spec.Image)
+	assert.Equal(t, "IfNotPresent", def.Spec.ImagePullPolicy)
+	require.Len(t, def.Spec.Permissions.RBAC, 1)
+	assert.Equal(t, []string{"cert-manager.io"}, def.Spec.Permissions.RBAC[0].APIGroups)
 }
 
-func TestLoadDefinition_UnsupportedAPIVersion(t *testing.T) {
-	path := writeDef(t, `apiVersion: other/v1
+func TestParseDefinition_RejectsWrongKind(t *testing.T) {
+	_, err := ParseDefinition([]byte("apiVersion: fundament.io/v1\nkind: Nope\n"))
+	require.Error(t, err)
+}
+
+func TestParseDefinition_RejectsMissingImage(t *testing.T) {
+	// The image-free source template is NOT a valid PluginDefinition.
+	_, err := ParseDefinition([]byte(`apiVersion: fundament.io/v1
 kind: PluginDefinition
 metadata:
-  name: example
-spec: {}
-`)
-
-	_, err := LoadDefinition(path)
+  name: cert-manager
+  version: v1.17.2
+spec:
+  permissions:
+    rbac: []
+`))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported apiVersion")
-}
-
-func TestLoadDefinition_UnsupportedKind(t *testing.T) {
-	path := writeDef(t, `apiVersion: fundament.io/v1
-kind: Other
-metadata:
-  name: example
-spec: {}
-`)
-
-	_, err := LoadDefinition(path)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported kind")
+	assert.Contains(t, err.Error(), "spec.image")
 }

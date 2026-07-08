@@ -108,7 +108,7 @@ export default class ClusterPluginsComponent implements OnInit {
 
       await Promise.all([
         ...toInstall.map((p) =>
-          this.pluginInstallationService.installPlugin(this.clusterId, p.name, p.image),
+          this.pluginInstallationService.installPlugin(this.clusterId, p.name, 'unknown', 'sha256:unknown'),
         ),
         ...toUninstall.map((i) =>
           this.pluginInstallationService.uninstallPlugin(this.clusterId, i.metadata.name),

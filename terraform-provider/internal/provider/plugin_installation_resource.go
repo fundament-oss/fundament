@@ -41,7 +41,6 @@ type PluginInstallationResourceModel struct {
 	PluginName     types.String `tfsdk:"plugin_name"`
 	PluginVersion  types.String `tfsdk:"plugin_version"`
 	DefinitionHash types.String `tfsdk:"definition_hash"`
-	Image          types.String `tfsdk:"image"`
 	Phase          types.String `tfsdk:"phase"`
 }
 
@@ -60,7 +59,6 @@ type pluginDefinitionRef struct {
 }
 
 type pluginInstallationSpec struct {
-	Image         string              `json:"image"`
 	DefinitionRef pluginDefinitionRef `json:"definitionRef"`
 }
 
@@ -151,13 +149,6 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"image": schema.StringAttribute{
-				Description: "The container image reference for the plugin (e.g. ghcr.io/fundament/grafana:v10.2.0). Must be set explicitly. Changing this value forces a replacement.",
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
 			"phase": schema.StringAttribute{
 				Description: "The current phase of the plugin installation as reported by the plugin controller.",
 				Computed:    true,
@@ -208,7 +199,6 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	pluginName := plan.PluginName.ValueString()
 	pluginVersion := plan.PluginVersion.ValueString()
 	definitionHash := plan.DefinitionHash.ValueString()
-	image := plan.Image.ValueString()
 
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
@@ -228,7 +218,6 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		Kind:       "PluginInstallation",
 		Metadata:   pluginInstallationMetadata{Name: pluginName},
 		Spec: pluginInstallationSpec{
-			Image: image,
 			DefinitionRef: pluginDefinitionRef{
 				PluginName:     pluginName,
 				PluginVersion:  pluginVersion,
@@ -266,17 +255,16 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 			resp.Diagnostics.AddError("Unable to Read Existing Plugin Installation on 409", err.Error())
 			return
 		}
-		if existingCRD.Spec.Image != image ||
-			existingCRD.Spec.DefinitionRef.PluginVersion != pluginVersion ||
+		if existingCRD.Spec.DefinitionRef.PluginVersion != pluginVersion ||
 			existingCRD.Spec.DefinitionRef.DefinitionHash != definitionHash {
 			resp.Diagnostics.AddError(
 				"Plugin Installation Already Exists With Different Configuration",
 				fmt.Sprintf("A plugin installation for %q already exists on cluster %q with a different spec "+
-					"(existing: image=%q version=%q hash=%q; planned: image=%q version=%q hash=%q). "+
+					"(existing: version=%q hash=%q; planned: version=%q hash=%q). "+
 					"Import it with `terraform import fundament_plugin_installation.<name> %s/%s` or delete it manually.",
 					pluginName, clusterID,
-					existingCRD.Spec.Image, existingCRD.Spec.DefinitionRef.PluginVersion, existingCRD.Spec.DefinitionRef.DefinitionHash,
-					image, pluginVersion, definitionHash,
+					existingCRD.Spec.DefinitionRef.PluginVersion, existingCRD.Spec.DefinitionRef.DefinitionHash,
+					pluginVersion, definitionHash,
 					clusterID, pluginName),
 			)
 			return
@@ -399,11 +387,6 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	if crd.Spec.Image != "" {
-		state.Image = types.StringValue(crd.Spec.Image)
-	} else {
-		state.Image = types.StringNull()
-	}
 	if crd.Spec.DefinitionRef.PluginVersion != "" {
 		state.PluginVersion = types.StringValue(crd.Spec.DefinitionRef.PluginVersion)
 	} else {

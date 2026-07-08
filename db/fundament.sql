@@ -1078,6 +1078,23 @@ COMMENT ON COLUMN appstore.plugins.display_name IS E'Human-readable name shown i
 ALTER TABLE appstore.plugins OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: appstore.plugin_definitions | type: TABLE --
+-- DROP TABLE IF EXISTS appstore.plugin_definitions CASCADE;
+CREATE TABLE appstore.plugin_definitions (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	plugin_id uuid NOT NULL,
+	plugin_version text NOT NULL,
+	manifest bytea NOT NULL,
+	hash text NOT NULL,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT plugin_definitions_uq_plugin_version UNIQUE NULLS NOT DISTINCT (plugin_id,plugin_version,deleted),
+	CONSTRAINT plugin_definitions_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE appstore.plugin_definitions OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: appstore.presets | type: TABLE --
 -- DROP TABLE IF EXISTS appstore.presets CASCADE;
 CREATE TABLE appstore.presets (
@@ -2599,6 +2616,13 @@ REFERENCES tenant.clusters (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: plugin_definitions_fk_plugin | type: CONSTRAINT --
+-- ALTER TABLE appstore.plugin_definitions DROP CONSTRAINT IF EXISTS plugin_definitions_fk_plugin CASCADE;
+ALTER TABLE appstore.plugin_definitions ADD CONSTRAINT plugin_definitions_fk_plugin FOREIGN KEY (plugin_id)
+REFERENCES appstore.plugins (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
 -- object: plugins_presets_plugin_id | type: CONSTRAINT --
 -- ALTER TABLE appstore.preset_plugins DROP CONSTRAINT IF EXISTS plugins_presets_plugin_id CASCADE;
 ALTER TABLE appstore.preset_plugins ADD CONSTRAINT plugins_presets_plugin_id FOREIGN KEY (plugin_id)
@@ -3353,6 +3377,14 @@ GRANT SELECT,INSERT,UPDATE
 -- object: grant_raw_036b663d7a | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE appstore.plugins
+   TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: grant_raw_799c333c27 | type: PERMISSION --
+GRANT SELECT,INSERT,UPDATE
+   ON TABLE appstore.plugin_definitions
    TO fun_fundament_api;
 
 -- ddl-end --

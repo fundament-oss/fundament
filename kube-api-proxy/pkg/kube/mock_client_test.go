@@ -166,36 +166,6 @@ func TestMockClientDoResourceGet(t *testing.T) {
 	}
 }
 
-func TestCertManagerDefinitionShape(t *testing.T) {
-	var def struct {
-		CustomComponents map[string]struct {
-			List   string `json:"list"`
-			Detail string `json:"detail"`
-		} `json:"customComponents"`
-		AllowedResources []struct {
-			Group    string   `json:"group"`
-			Version  string   `json:"version"`
-			Resource string   `json:"resource"`
-			Verbs    []string `json:"verbs"`
-		} `json:"allowedResources"`
-		CRDs []string `json:"crds"`
-	}
-	if err := json.Unmarshal([]byte(mockCertManagerDefinitionJSON), &def); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	for _, kind := range []string{"Certificate", "CertificateRequest", "Issuer", "ClusterIssuer"} {
-		if def.CustomComponents[kind].List == "" || def.CustomComponents[kind].Detail == "" {
-			t.Errorf("missing customComponents for %s", kind)
-		}
-	}
-	if len(def.AllowedResources) != 4 {
-		t.Errorf("expected 4 allowedResources, got %d", len(def.AllowedResources))
-	}
-	if len(def.CRDs) != 4 {
-		t.Errorf("expected 4 crds, got %d", len(def.CRDs))
-	}
-}
-
 func TestServeConsoleAsset(t *testing.T) {
 	dir := t.TempDir()
 	pluginDir := filepath.Join(dir, "cert-manager", "console")
@@ -263,20 +233,6 @@ func TestMockFSCInstallations(t *testing.T) {
 	meta, _ := item["metadata"].(map[string]any)
 	if meta["name"] != "demo" {
 		t.Fatalf("wrong name: %v", meta["name"])
-	}
-
-	// GetDefinition for the openfsc plugin.
-	status, body, err = mc.Do(context.Background(), http.MethodGet, "/api/v1/namespaces/plugin-openfsc/services/http:plugin-openfsc:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if status != 200 {
-		t.Fatalf("definition status = %d", status)
-	}
-	b, _ = io.ReadAll(body)
-	body.Close()
-	if !strings.Contains(string(b), `"name": "openfsc"`) {
-		t.Errorf("definition body did not contain openfsc: %s", string(b))
 	}
 
 	// CRD is registered and resolvable by name.

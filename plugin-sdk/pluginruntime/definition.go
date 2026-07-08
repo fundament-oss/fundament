@@ -3,7 +3,6 @@ package pluginruntime
 import (
 	"bytes"
 	"fmt"
-	"os"
 
 	"gopkg.in/yaml.v3"
 )
@@ -25,6 +24,13 @@ type PluginSpec struct {
 	UIHints          map[string]UIHint           `yaml:"uiHints"`
 	CRDs             []string                    `yaml:"crds"`
 	AllowedResources []AllowedResource           `yaml:"allowedResources"`
+	// Image is the container image the plugin runs as, injected into the manifest
+	// at publish time (never authored). Declaring it in the manifest — rather than
+	// on the PluginInstallation CR — makes the manifest hash bind the exact code.
+	// Always a digest reference (repo@sha256:...) in a published definition.
+	Image string `yaml:"image"`
+	// ImagePullPolicy mirrors corev1.PullPolicy ("Always"|"IfNotPresent"|"Never").
+	ImagePullPolicy string `yaml:"imagePullPolicy"`
 }
 
 // AllowedResource declares a Kubernetes resource the plugin's UI iframe is
@@ -122,22 +128,18 @@ type StatusValue struct {
 	Label string `yaml:"label"`
 }
 
-// LoadDefinition reads a YAML plugin manifest from path and returns
-// the PluginDefinition. It validates that apiVersion is "fundament.io/v1"
-// and kind is "PluginDefinition".
-func LoadDefinition(path string) (PluginDefinition, error) {
-	data, err := os.ReadFile(path) //nolint:gosec // path is provided by plugin developer, not user input
-	if err != nil {
-		return PluginDefinition{}, fmt.Errorf("read plugin definition: %w", err)
-	}
-
+// ParseDefinition decodes and validates a complete, published PluginDefinition
+// from bytes. It is the shared parser used by organization-api and
+// just plugin-publish. It is strict: a valid PluginDefinition always carries an
+// image (the image-free source definition.yaml is a template, not a valid
+// definition, until publish injects the image).
+func ParseDefinition(data []byte) (PluginDefinition, error) {
 	var def PluginDefinition
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&def); err != nil {
 		return PluginDefinition{}, fmt.Errorf("parse plugin definition: %w", err)
 	}
-
 	if def.APIVersion != "fundament.io/v1" {
 		return PluginDefinition{}, fmt.Errorf("unsupported apiVersion %q, expected \"fundament.io/v1\"", def.APIVersion)
 	}
@@ -147,7 +149,9 @@ func LoadDefinition(path string) (PluginDefinition, error) {
 	if def.Metadata.Name == "" {
 		return PluginDefinition{}, fmt.Errorf("plugin definition is missing required field metadata.name")
 	}
-
+	if def.Spec.Image == "" {
+		return PluginDefinition{}, fmt.Errorf("plugin definition is missing required field spec.image")
+	}
 	return def, nil
 }
 
