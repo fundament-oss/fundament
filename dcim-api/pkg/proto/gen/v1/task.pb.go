@@ -1254,20 +1254,21 @@ func (b0 CreateTaskResponse_builder) Build() *CreateTaskResponse {
 }
 
 type UpdateTaskRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_Title       *string                `protobuf:"bytes,20,opt,name=title"`
-	xxx_hidden_Description *string                `protobuf:"bytes,30,opt,name=description"`
-	xxx_hidden_Status      TaskStatus             `protobuf:"varint,40,opt,name=status,enum=dcim.v1.TaskStatus"`
-	xxx_hidden_Priority    TaskPriority           `protobuf:"varint,50,opt,name=priority,enum=dcim.v1.TaskPriority"`
-	xxx_hidden_Category    TaskCategory           `protobuf:"varint,60,opt,name=category,enum=dcim.v1.TaskCategory"`
-	xxx_hidden_AssigneeId  *string                `protobuf:"bytes,70,opt,name=assignee_id,json=assigneeId"`
-	xxx_hidden_DueDate     *timestamppb.Timestamp `protobuf:"bytes,80,opt,name=due_date,json=dueDate"`
-	xxx_hidden_Location    *string                `protobuf:"bytes,90,opt,name=location"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id            string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_Title         *string                `protobuf:"bytes,20,opt,name=title"`
+	xxx_hidden_Description   *string                `protobuf:"bytes,30,opt,name=description"`
+	xxx_hidden_Status        TaskStatus             `protobuf:"varint,40,opt,name=status,enum=dcim.v1.TaskStatus"`
+	xxx_hidden_Priority      TaskPriority           `protobuf:"varint,50,opt,name=priority,enum=dcim.v1.TaskPriority"`
+	xxx_hidden_Category      TaskCategory           `protobuf:"varint,60,opt,name=category,enum=dcim.v1.TaskCategory"`
+	xxx_hidden_AssigneeId    *string                `protobuf:"bytes,70,opt,name=assignee_id,json=assigneeId"`
+	xxx_hidden_DueDate       *timestamppb.Timestamp `protobuf:"bytes,80,opt,name=due_date,json=dueDate"`
+	xxx_hidden_Location      *string                `protobuf:"bytes,90,opt,name=location"`
+	xxx_hidden_ClearAssignee bool                   `protobuf:"varint,100,opt,name=clear_assignee,json=clearAssignee"`
+	XXX_raceDetectHookData   protoimpl.RaceDetectHookData
+	XXX_presence             [1]uint32
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *UpdateTaskRequest) Reset() {
@@ -1376,38 +1377,45 @@ func (x *UpdateTaskRequest) GetLocation() string {
 	return ""
 }
 
+func (x *UpdateTaskRequest) GetClearAssignee() bool {
+	if x != nil {
+		return x.xxx_hidden_ClearAssignee
+	}
+	return false
+}
+
 func (x *UpdateTaskRequest) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
 
 func (x *UpdateTaskRequest) SetTitle(v string) {
 	x.xxx_hidden_Title = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 10)
 }
 
 func (x *UpdateTaskRequest) SetDescription(v string) {
 	x.xxx_hidden_Description = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 10)
 }
 
 func (x *UpdateTaskRequest) SetStatus(v TaskStatus) {
 	x.xxx_hidden_Status = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 10)
 }
 
 func (x *UpdateTaskRequest) SetPriority(v TaskPriority) {
 	x.xxx_hidden_Priority = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 10)
 }
 
 func (x *UpdateTaskRequest) SetCategory(v TaskCategory) {
 	x.xxx_hidden_Category = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 10)
 }
 
 func (x *UpdateTaskRequest) SetAssigneeId(v string) {
 	x.xxx_hidden_AssigneeId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 10)
 }
 
 func (x *UpdateTaskRequest) SetDueDate(v *timestamppb.Timestamp) {
@@ -1416,7 +1424,11 @@ func (x *UpdateTaskRequest) SetDueDate(v *timestamppb.Timestamp) {
 
 func (x *UpdateTaskRequest) SetLocation(v string) {
 	x.xxx_hidden_Location = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 10)
+}
+
+func (x *UpdateTaskRequest) SetClearAssignee(v bool) {
+	x.xxx_hidden_ClearAssignee = v
 }
 
 func (x *UpdateTaskRequest) HasTitle() bool {
@@ -1526,6 +1538,10 @@ type UpdateTaskRequest_builder struct {
 	AssigneeId  *string
 	DueDate     *timestamppb.Timestamp
 	Location    *string
+	// Set to clear the assignee (unassign). Takes precedence over assignee_id;
+	// needed because a null/absent assignee_id means "leave unchanged" under the
+	// COALESCE update, so there is otherwise no way to express "remove assignee".
+	ClearAssignee bool
 }
 
 func (b0 UpdateTaskRequest_builder) Build() *UpdateTaskRequest {
@@ -1534,34 +1550,35 @@ func (b0 UpdateTaskRequest_builder) Build() *UpdateTaskRequest {
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	if b.Title != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 10)
 		x.xxx_hidden_Title = b.Title
 	}
 	if b.Description != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 10)
 		x.xxx_hidden_Description = b.Description
 	}
 	if b.Status != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 10)
 		x.xxx_hidden_Status = *b.Status
 	}
 	if b.Priority != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 10)
 		x.xxx_hidden_Priority = *b.Priority
 	}
 	if b.Category != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 10)
 		x.xxx_hidden_Category = *b.Category
 	}
 	if b.AssigneeId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 10)
 		x.xxx_hidden_AssigneeId = b.AssigneeId
 	}
 	x.xxx_hidden_DueDate = b.DueDate
 	if b.Location != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 10)
 		x.xxx_hidden_Location = b.Location
 	}
+	x.xxx_hidden_ClearAssignee = b.ClearAssignee
 	return m0
 }
 
@@ -2218,7 +2235,7 @@ const file_v1_task_proto_rawDesc = "" +
 	"\blocation\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\blocation\"-\n" +
 	"\x12CreateTaskResponse\x12\x17\n" +
 	"\atask_id\x18\n" +
-	" \x01(\tR\x06taskId\"\xc2\x03\n" +
+	" \x01(\tR\x06taskId\"\xe9\x03\n" +
 	"\x11UpdateTaskRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1b\n" +
@@ -2230,7 +2247,8 @@ const file_v1_task_proto_rawDesc = "" +
 	"\vassignee_id\x18F \x01(\tB\x05\xaa\x01\x02\b\x01R\n" +
 	"assigneeId\x12<\n" +
 	"\bdue_date\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adueDate\x12!\n" +
-	"\blocation\x18Z \x01(\tB\x05\xaa\x01\x02\b\x01R\blocation\"-\n" +
+	"\blocation\x18Z \x01(\tB\x05\xaa\x01\x02\b\x01R\blocation\x12%\n" +
+	"\x0eclear_assignee\x18d \x01(\bR\rclearAssignee\"-\n" +
 	"\x11DeleteTaskRequest\x12\x18\n" +
 	"\x02id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"9\n" +

@@ -178,22 +178,26 @@ SET title       = COALESCE($2, title),
     status      = COALESCE($4, status),
     priority    = COALESCE($5, priority),
     category    = COALESCE($6, category),
-    assignee_id = COALESCE($7, assignee_id),
-    due_date    = COALESCE($8, due_date),
-    location    = COALESCE($9, location)
+    assignee_id = CASE
+                    WHEN $7::bool THEN NULL
+                    ELSE COALESCE($8, assignee_id)
+                  END,
+    due_date    = COALESCE($9, due_date),
+    location    = COALESCE($10, location)
 WHERE id = $1 AND deleted IS NULL
 `
 
 type TaskUpdateParams struct {
-	ID          uuid.UUID
-	Title       pgtype.Text
-	Description pgtype.Text
-	Status      pgtype.Text
-	Priority    pgtype.Text
-	Category    pgtype.Text
-	AssigneeID  pgtype.Text
-	DueDate     pgtype.Timestamptz
-	Location    pgtype.Text
+	ID            uuid.UUID
+	Title         pgtype.Text
+	Description   pgtype.Text
+	Status        pgtype.Text
+	Priority      pgtype.Text
+	Category      pgtype.Text
+	ClearAssignee bool
+	AssigneeID    pgtype.Text
+	DueDate       pgtype.Timestamptz
+	Location      pgtype.Text
 }
 
 func (q *Queries) TaskUpdate(ctx context.Context, arg TaskUpdateParams) (int64, error) {
@@ -204,6 +208,7 @@ func (q *Queries) TaskUpdate(ctx context.Context, arg TaskUpdateParams) (int64, 
 		arg.Status,
 		arg.Priority,
 		arg.Category,
+		arg.ClearAssignee,
 		arg.AssigneeID,
 		arg.DueDate,
 		arg.Location,

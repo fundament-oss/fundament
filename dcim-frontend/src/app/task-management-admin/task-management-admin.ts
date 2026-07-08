@@ -324,7 +324,11 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  readonly taskDisplayId = (task: Task): string => `T-${task.id.slice(0, 8).toUpperCase()}`;
+  // Uses the trailing (random) hex of the uuid rather than the leading bytes,
+  // which in uuidv7 are a millisecond timestamp and collide across tasks
+  // created close together.
+  readonly taskDisplayId = (task: Task): string =>
+    `T-${task.id.replace(/-/g, '').slice(-8).toUpperCase()}`;
 
   isSelected(id: string): boolean {
     return this.selectedTasks().has(id);
@@ -347,6 +351,10 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   }
 
   onKanbanDrop(event: CdkDragDrop<Task[]>, targetStatus: TaskStatusLabel): void {
+    // Improvement: on success this reloads the whole task list, which also
+    // discards any already-loaded notes and re-fetches everything. A targeted
+    // update of the single moved task (from the update response) would avoid
+    // the extra round-trip and the note churn.
     const task = event.item.data as Task;
     if (!task || task.status === targetStatus) return;
 
@@ -477,14 +485,20 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     const ids = [...this.selectedTasks()];
     this.closeBulkDeleteDialog();
     if (ids.length === 0) return;
-    Promise.allSettled(ids.map((id) => firstValueFrom(this.taskApi.deleteTask(id))))
-      .then(() => {
+    Promise.allSettled(ids.map((id) => firstValueFrom(this.taskApi.deleteTask(id)))).then(
+      (results) => {
         this.selectedTasks.set(new Set());
         this.loadTasks();
-        this.toast.show(`${ids.length} task(s) deleted`);
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+        // allSettled never rejects, so surface partial failures explicitly
+        // rather than reporting blanket success.
+        const failed = TaskManagementAdminComponent.countRejections(results);
+        this.toast.show(
+          failed === 0
+            ? `${ids.length} task(s) deleted`
+            : `${ids.length - failed} of ${ids.length} deleted, ${failed} failed`,
+        );
+      },
+    );
   }
 
   bulkSetStatus(status: TaskStatusLabel): void {
@@ -492,9 +506,13 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     this.bulkUpdate((input) => ({ ...input, status }), 'Status updated');
   }
 
-  bulkAssign(assigneeId: string): void {
+  // assigneeId of null unassigns the selected tasks (the "Unassigned" option).
+  bulkAssign(assigneeId: string | null): void {
     this.bulkAssignPopoverEl()?.nativeElement.hide();
-    this.bulkUpdate((input) => ({ ...input, assignee: assigneeId }), 'Tasks reassigned');
+    this.bulkUpdate(
+      (input) => ({ ...input, assignee: assigneeId }),
+      assigneeId ? 'Tasks reassigned' : 'Tasks unassigned',
+    );
   }
 
   private static toInput(t: TaskData): TaskInput {
@@ -517,13 +535,28 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       .filter((t): t is Task => !!t)
       .map((t) => ({ id: t.id, input: patch(TaskManagementAdminComponent.toInput(t)) }));
     if (updates.length === 0) return;
-    Promise.allSettled(updates.map((u) => firstValueFrom(this.taskApi.updateTask(u.id, u.input))))
-      .then(() => {
-        this.loadTasks();
-        this.toast.show(successMessage);
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    Promise.allSettled(
+      updates.map((u) => firstValueFrom(this.taskApi.updateTask(u.id, u.input))),
+    ).then((results) => {
+      this.loadTasks();
+      // allSettled never rejects, so surface partial failures explicitly
+      // rather than reporting blanket success.
+      const failed = TaskManagementAdminComponent.countRejections(results);
+      this.toast.show(
+        failed === 0
+          ? successMessage
+          : `${updates.length - failed} of ${updates.length} updated, ${failed} failed`,
+      );
+    });
+  }
+
+  // Counts rejected settlements and logs their reasons, for the bulk operations
+  // that use Promise.allSettled (which resolves even when individual calls fail).
+  private static countRejections(results: PromiseSettledResult<unknown>[]): number {
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    // eslint-disable-next-line no-console
+    rejected.forEach((r) => console.error(connectErrorMessage(r.reason)));
+    return rejected.length;
   }
 
   openEditModal(taskId: string | null): void {
@@ -605,6 +638,10 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   }
 
   noteAuthor(note: Note): { name: string; tech: Technician | null } {
+    // Notes only persist the author's display name (created_by), not a user id,
+    // so we can't join to the roster by id — match by name to recover the
+    // avatar colour, accepting that same-named users would collide. Switching
+    // to an id match would require notes to carry the author's user id.
     const tech = this.technicians().find((t) => t.name === note.author) ?? null;
     return { name: note.author || 'Admin', tech };
   }

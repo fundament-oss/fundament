@@ -43,7 +43,10 @@ func (s *Server) UpdateTask(
 		params.Category = pgtype.Text{String: taskCategoryFromProto(req.Msg.GetCategory()), Valid: true}
 	}
 
-	if req.Msg.HasAssigneeId() {
+	// ClearAssignee wins over AssigneeID: a null/absent assignee_id means "leave
+	// unchanged" under the COALESCE update, so clearing needs an explicit flag.
+	params.ClearAssignee = req.Msg.GetClearAssignee()
+	if req.Msg.HasAssigneeId() && !params.ClearAssignee {
 		params.AssigneeID = pgtype.Text{String: req.Msg.GetAssigneeId(), Valid: true}
 	}
 

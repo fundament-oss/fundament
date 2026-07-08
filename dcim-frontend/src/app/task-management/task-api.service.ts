@@ -172,9 +172,11 @@ export default class TaskApiService {
       priority: TaskApiService.toProtoPriority(input.priority),
       category: TaskApiService.toProtoCategory(input.category),
       location: input.location,
-      // assignee_id can only be set, not cleared, by the backend's COALESCE
-      // update; omit it when null so the existing value is preserved.
-      ...(input.assignee ? { assigneeId: input.assignee } : {}),
+      // The update is declarative: a set assignee is written, a null one is
+      // explicitly cleared via clearAssignee. The backend's COALESCE update
+      // treats an absent assignee_id as "leave unchanged", so clearing needs
+      // the dedicated flag.
+      ...(input.assignee ? { assigneeId: input.assignee } : { clearAssignee: true }),
       ...(input.due ? { dueDate: timestampFromDate(new Date(`${input.due}T00:00:00`)) } : {}),
     });
   }

@@ -109,6 +109,15 @@
   role="menu"
 >
   <div class="flex max-h-60 flex-col gap-0.5 overflow-y-auto p-1" role="none">
+    <button
+      type="button"
+      role="menuitem"
+      class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-gray-200 dark:hover:bg-gray-900"
+      (click)="bulkAssign(null)"
+    >
+      <span [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')" aria-hidden="true">—</span>
+      Unassigned
+    </button>
     @for (tech of technicians(); track tech.id) {
       <button
         type="button"

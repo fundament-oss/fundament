@@ -293,6 +293,9 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       const me = this.auth.user()?.id ?? (await this.auth.getUserInfo())?.id;
       if (!me) return;
       const res = await firstValueFrom(this.taskApi.listTasks(me));
+      // Improvement: this fans out one ListTaskSteps call per task (N+1). It runs
+      // them in parallel, but a batched "steps for these task ids" endpoint (or
+      // embedding steps in ListTasks) would collapse it into a single round-trip.
       const tasks = await Promise.all(
         res.tasks.map(async (t, taskIdx) => {
           const stepsRes = await firstValueFrom(this.taskStepApi.listTaskSteps(t.id));

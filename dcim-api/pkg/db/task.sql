@@ -25,7 +25,10 @@ SET title       = COALESCE(sqlc.narg('title'), title),
     status      = COALESCE(sqlc.narg('status'), status),
     priority    = COALESCE(sqlc.narg('priority'), priority),
     category    = COALESCE(sqlc.narg('category'), category),
-    assignee_id = COALESCE(sqlc.narg('assignee_id'), assignee_id),
+    assignee_id = CASE
+                    WHEN sqlc.arg('clear_assignee')::bool THEN NULL
+                    ELSE COALESCE(sqlc.narg('assignee_id'), assignee_id)
+                  END,
     due_date    = COALESCE(sqlc.narg('due_date'), due_date),
     location    = COALESCE(sqlc.narg('location'), location)
 WHERE id = $1 AND deleted IS NULL;

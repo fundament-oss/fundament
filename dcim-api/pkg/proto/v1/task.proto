@@ -123,6 +123,10 @@ message UpdateTaskRequest {
   string                    assignee_id = 70 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp due_date    = 80 [features.field_presence = EXPLICIT];
   string                    location    = 90 [features.field_presence = EXPLICIT];
+  // Set to clear the assignee (unassign). Takes precedence over assignee_id;
+  // needed because a null/absent assignee_id means "leave unchanged" under the
+  // COALESCE update, so there is otherwise no way to express "remove assignee".
+  bool                      clear_assignee = 100;
 }
 
 message DeleteTaskRequest {
