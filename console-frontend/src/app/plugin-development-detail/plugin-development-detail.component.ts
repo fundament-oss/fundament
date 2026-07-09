@@ -14,9 +14,8 @@ import PluginDevelopmentService, {
 } from '../plugin-development/plugin-development.service';
 import {
   statusLabel,
+  statusTagColor,
   statusBadgeClass,
-  tierLabel,
-  tierBadgeClass,
 } from '../plugin-development/status-display';
 import PluginStatusTrackerComponent from '../plugin-status-tracker/plugin-status-tracker.component';
 
@@ -86,9 +85,7 @@ export default class PluginDevelopmentDetailComponent implements OnInit {
 
   statusLabel = statusLabel;
 
+  statusTagColor = statusTagColor;
+
   statusBadgeClass = statusBadgeClass;
-
-  tierLabel = tierLabel;
-
-  tierBadgeClass = tierBadgeClass;
 }

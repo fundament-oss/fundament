@@ -1,5 +1,11 @@
 <nav class="justify-between sm:flex sm:pb-8" aria-label="Publishing status">
-  @for (step of steps(); track step.name; let i = $index; let isFirst = $first; let isLast = $last) {
+  @for (
+    step of steps();
+    track step.name;
+    let i = $index;
+    let isFirst = $first;
+    let isLast = $last
+  ) {
     <div class="group items-center not-last:grow sm:flex" [class.grow]="!isLast">
       <div class="relative flex items-center">
         <span

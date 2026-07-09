@@ -71,7 +71,12 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
 
 @Component({
   selector: 'app-plugins',
-  imports: [RouterLink, InstallPluginModalComponent, LoadingIndicatorComponent, PluginNavTabsComponent],
+  imports: [
+    RouterLink,
+    InstallPluginModalComponent,
+    LoadingIndicatorComponent,
+    PluginNavTabsComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
@@ -96,6 +101,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   selectedCategory = 'all';
 
   selectedPreset = 'all';
+
+  searchQuery = '';
 
   showInstallModal = signal(false);
 
@@ -148,6 +155,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
     return presets;
   }
+
+  // Placeholder text for card fields not yet returned by the backend
+  // (PluginSummary has no vendor/version), purely for visual mockup fidelity.
+  readonly mockPluginVendor = 'Community';
+
+  readonly mockPluginVersion = 'v1.0.0';
 
   plugins: PluginWithPresets[] = [];
 
@@ -403,6 +416,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   }
 
   get filteredPlugins(): PluginWithPresets[] {
+    const query = this.searchQuery.trim().toLowerCase();
+
     return this.plugins.filter((plugin) => {
       // Filter by preset
       const matchesPreset =
@@ -414,8 +429,20 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         this.selectedCategory === 'all' ||
         plugin.categories.some((cat) => cat.id === this.selectedCategory);
 
-      return matchesPreset && matchesCategory;
+      // Filter by search query across name, description and tags
+      const matchesQuery =
+        !query ||
+        [plugin.name, plugin.descriptionShort, ...plugin.tags.map((tag) => tag.name)]
+          .join(' ')
+          .toLowerCase()
+          .includes(query);
+
+      return matchesPreset && matchesCategory && matchesQuery;
     });
+  }
+
+  get summaryText(): string {
+    return `${this.filteredPlugins.length} of ${this.plugins.length} plugins`;
   }
 
   selectCategory(categoryId: string) {
@@ -424,6 +451,15 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   selectPreset(presetId: string) {
     this.selectedPreset = presetId;
+  }
+
+  onSearchInput(event: Event) {
+    // nldd-search-field's internal native <input> 'input' event also bubbles
+    // out through the shadow boundary after the component's own synthetic
+    // 'input' CustomEvent, so `event.detail` isn't reliable here (it can be
+    // the native event's numeric UIEvent.detail). Read the authoritative
+    // value straight off the element instead.
+    this.searchQuery = (event.target as unknown as { value: string }).value;
   }
 
   getSelectedCategoryName(): string {

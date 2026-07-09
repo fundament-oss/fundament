@@ -4,9 +4,6 @@ import { Injectable } from '@angular/core';
 // "Pushed via functl -> Central review -> Publish" pipeline.
 export type PluginStatus = 'pushed' | 'in_review' | 'changes_requested' | 'published';
 
-// Support/quality tier, mirroring the model documented in docs/tools.md.
-export type PluginTier = 'gold' | 'silver' | 'bronze' | 'grey';
-
 export interface PluginAuthor {
   name: string;
   url: string;
@@ -31,7 +28,8 @@ export interface AuthoredPlugin {
   image: string; // OCI image reference
   icon: string; // base name under /img/plugins/<icon>.svg
   tags: string[];
-  tier: PluginTier;
+  category: string;
+  installs: number; // number of clusters this plugin is currently installed on
   status: PluginStatus;
   versions: PluginVersion[];
 }
@@ -68,7 +66,8 @@ const MOCK_PLUGINS: AuthoredPlugin[] = [
     image: 'registry.fundament.io/plugins/postgres-operator:2.3.1',
     icon: 'cloudnativepg',
     tags: ['database', 'storage', 'official'],
-    tier: 'gold',
+    category: 'Database',
+    installs: 38,
     status: 'published',
     versions: [
       { version: '2.3.1', pushedAt: '2026-06-18', status: 'published' },
@@ -88,7 +87,8 @@ const MOCK_PLUGINS: AuthoredPlugin[] = [
     image: 'registry.fundament.io/plugins/keycloak-sso:1.4.0',
     icon: 'keycloak',
     tags: ['security', 'identity'],
-    tier: 'silver',
+    category: 'Security',
+    installs: 12,
     status: 'in_review',
     versions: [
       { version: '1.4.0', pushedAt: '2026-07-01', status: 'in_review' },
@@ -107,7 +107,8 @@ const MOCK_PLUGINS: AuthoredPlugin[] = [
     image: 'registry.fundament.io/plugins/grafana-dashboards:0.9.0',
     icon: 'grafana',
     tags: ['observability', 'monitoring'],
-    tier: 'bronze',
+    category: 'Observability',
+    installs: 5,
     status: 'changes_requested',
     versions: [
       {
@@ -132,7 +133,8 @@ const MOCK_PLUGINS: AuthoredPlugin[] = [
     image: 'registry.fundament.io/plugins/sealed-secrets:0.1.0',
     icon: 'sealed-secrets',
     tags: ['security', 'internal'],
-    tier: 'grey',
+    category: 'Security',
+    installs: 0,
     status: 'pushed',
     versions: [{ version: '0.1.0', pushedAt: '2026-07-06', status: 'pushed' }],
   },

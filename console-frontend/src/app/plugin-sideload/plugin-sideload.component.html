@@ -10,11 +10,7 @@
   </div>
 
   <!-- Form -->
-  <nldd-form
-    [formGroup]="sideloadForm"
-    (submit)="onSubmit($event)"
-    class="space-y-6 px-6 py-6"
-  >
+  <nldd-form [formGroup]="sideloadForm" (submit)="onSubmit($event)" class="space-y-6 px-6 py-6">
     <!-- Image reference -->
     <nldd-form-field label="Image reference">
       <nldd-text-field
@@ -69,7 +65,10 @@
         <select id="clusterId" formControlName="clusterId">
           @for (cluster of clusters(); track cluster.id) {
             <option [value]="cluster.id">
-              {{ cluster.name }}@if (cluster.isDevelopment) {&nbsp;(development)}
+              {{ cluster.name }}
+              @if (cluster.isDevelopment) {
+                &nbsp;(development)
+              }
             </option>
           }
         </select>

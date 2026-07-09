@@ -1,45 +1,49 @@
 @if (isLoading()) {
-  <div class="card">
-    <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugin...</div>
-  </div>
+  <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugin...</div>
 } @else if (errorMessage(); as error) {
-  <div class="card">
-    <div class="p-6">
-      <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
-        <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
-      </div>
-      <a routerLink="/plugins/manage" class="link mt-4 inline-block">← Back to my plugins</a>
-    </div>
+  <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
   </div>
+  <a
+    routerLink="/plugins/manage"
+    class="text-accent-700 dark:text-accent-300 mb-3 inline-flex items-center gap-1.5 font-medium"
+  >
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    Back to my plugins
+  </a>
 } @else if (plugin(); as plugin) {
-  <div class="card">
-    <!-- Header -->
-    <div class="card-header">
-      <a routerLink="/plugins/manage" class="link mb-3 inline-block text-sm">← My plugins</a>
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-          <img
-            class="h-12 w-12 shrink-0 rounded-full bg-gray-100 p-1 dark:bg-gray-800"
-            src="/img/plugins/{{ plugin.icon }}.svg"
-            alt=""
-          />
-          <div>
-            <h1 class="text-3xl font-semibold">{{ plugin.displayName }}</h1>
-            <p class="mt-1 text-gray-600 dark:text-gray-300">
-              <span class="font-mono">v{{ plugin.version }}</span>
-              · {{ plugin.name }}
-            </p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <span [class]="tierBadgeClass(plugin.tier)">{{ tierLabel(plugin.tier) }}</span>
-          <span [class]="statusBadgeClass(plugin.status)">{{ statusLabel(plugin.status) }}</span>
-        </div>
+  <a
+    routerLink="/plugins/manage"
+    class="text-accent-700 dark:text-accent-300 mb-3 inline-flex items-center gap-1.5 font-medium"
+  >
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    My plugins
+  </a>
+
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <img
+        class="h-12 w-12 shrink-0 rounded-full bg-gray-100 p-1 dark:bg-gray-800"
+        src="/img/plugins/{{ plugin.icon }}.svg"
+        alt=""
+      />
+      <div>
+        <h1 class="text-3xl font-semibold">{{ plugin.displayName }}</h1>
+        <p class="mt-1 text-gray-600 dark:text-gray-300">
+          <span class="font-mono">v{{ plugin.version }}</span>
+          · {{ plugin.name }}
+        </p>
       </div>
     </div>
+    <nldd-tag
+      [color]="statusTagColor(plugin.status)"
+      [text]="statusLabel(plugin.status)"
+    ></nldd-tag>
+  </div>
 
-    <!-- Status tracker -->
-    <div class="border-b border-gray-100 px-6 pt-6 pb-4 dark:border-gray-900">
+  <!-- Publishing status -->
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
       <h2 class="mb-6 text-lg font-semibold">Publishing status</h2>
       <app-plugin-status-tracker [status]="plugin.status" />
 
@@ -56,11 +60,7 @@
           }
           @case ('in_review') {
             <nldd-button text="Awaiting review" variant="primary" [disabled]="true"></nldd-button>
-            <nldd-button
-              (click)="withdraw()"
-              text="Withdraw"
-              variant="secondary"
-            ></nldd-button>
+            <nldd-button (click)="withdraw()" text="Withdraw" variant="secondary"></nldd-button>
           }
           @case ('changes_requested') {
             <nldd-button
@@ -76,18 +76,16 @@
               text="View in catalog"
               variant="secondary"
             ></nldd-button>
-            <nldd-button
-              (click)="unpublish()"
-              text="Unpublish"
-              variant="destructive"
-            ></nldd-button>
+            <nldd-button (click)="unpublish()" text="Unpublish" variant="destructive"></nldd-button>
           }
         }
       </div>
     </div>
+  </nldd-card>
 
-    <!-- Metadata -->
-    <div class="border-b border-gray-100 p-6 dark:border-gray-900">
+  <!-- Metadata -->
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
       <h2 class="mb-4 text-lg font-semibold">Details</h2>
       <p class="mb-6 max-w-3xl text-gray-700 dark:text-gray-300">{{ plugin.description }}</p>
 
@@ -108,6 +106,22 @@
             </a>
           </dd>
         </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Category</dt>
+          <dd class="mt-1">{{ plugin.category }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
+          <dd class="mt-1 font-mono text-sm">v{{ plugin.version }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last updated</dt>
+          <dd class="mt-1">{{ plugin.versions[0]?.pushedAt }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Installs</dt>
+          <dd class="mt-1">{{ plugin.installs }} clusters</dd>
+        </div>
         <div class="sm:col-span-2">
           <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Image</dt>
           <dd class="mt-1 font-mono text-sm break-all text-gray-700 dark:text-gray-300">
@@ -118,14 +132,16 @@
           <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Tags</dt>
           <dd class="mt-1 flex flex-wrap gap-1">
             @for (tag of plugin.tags; track tag) {
-              <span class="badge badge-gray">{{ tag }}</span>
+              <nldd-tag size="sm" color="neutral" [text]="tag"></nldd-tag>
             }
           </dd>
         </div>
       </dl>
     </div>
+  </nldd-card>
 
-    <!-- Version history -->
+  <!-- Version history -->
+  <nldd-card class="block">
     <div class="p-6">
       <h2 class="mb-4 text-lg font-semibold">Version history</h2>
       <div class="table-container">
@@ -141,19 +157,17 @@
           <tbody>
             @for (version of plugin.versions; track version.version) {
               <tr>
-                <td class="font-mono text-sm font-medium">{{ version.version }}</td>
-                <td class="text-gray-600 dark:text-gray-400">{{ version.pushedAt }}</td>
-                <td>
-                  <span [class]="statusBadgeClass(version.status)">
-                    {{ statusLabel(version.status) }}
-                  </span>
+                <td class="font-mono text-sm font-medium text-gray-900 dark:text-white">
+                  {{ version.version }}
                 </td>
-                <td class="text-gray-600 dark:text-gray-400">
-                  @if (version.notes) {
-                    <span class="whitespace-normal">{{ version.notes }}</span>
-                  } @else {
-                    <span class="text-gray-400 dark:text-gray-600">—</span>
-                  }
+                <td class="text-sm text-gray-600 dark:text-gray-400">{{ version.pushedAt }}</td>
+                <td>
+                  <span class="badge {{ statusBadgeClass(version.status) }}">{{
+                    statusLabel(version.status)
+                  }}</span>
+                </td>
+                <td class="text-sm whitespace-normal text-gray-600 dark:text-gray-400">
+                  {{ version.notes || '—' }}
                 </td>
               </tr>
             }
@@ -161,5 +175,5 @@
         </table>
       </div>
     </div>
-  </div>
+  </nldd-card>
 }

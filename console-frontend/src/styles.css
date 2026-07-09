@@ -219,6 +219,10 @@ input.validate-on-touch.ng-invalid.ng-touched {
   @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200;
 }
 
+.badge-orange {
+  @apply bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200;
+}
+
 .badge-emerald {
   @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200;
 }

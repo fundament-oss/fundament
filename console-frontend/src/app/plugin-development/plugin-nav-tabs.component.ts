@@ -8,22 +8,32 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   imports: [RouterLink, RouterLinkActive],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nav class="mb-6 flex gap-1 border-b border-gray-200 dark:border-gray-800">
+    <nav class="border-dividers mb-6 flex gap-6 border-b" aria-label="Plugin sections">
       <a
         routerLink="/plugins"
-        routerLinkActive="border-accent-500 text-accent-700 dark:text-accent-300"
+        routerLinkActive
+        #catalogActive="routerLinkActive"
         [routerLinkActiveOptions]="{ exact: true }"
-        class="-mb-px border-b-2 border-transparent px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        [class]="
+          catalogActive.isActive
+            ? 'border-accent-650 text-content'
+            : 'text-content-secondary border-transparent'
+        "
+        class="-mb-px border-b-2 px-1 py-2.5 text-lg font-semibold"
+        >Catalog</a
       >
-        Catalog
-      </a>
       <a
         routerLink="/plugins/manage"
-        routerLinkActive="border-accent-500 text-accent-700 dark:text-accent-300"
-        class="-mb-px border-b-2 border-transparent px-4 py-2 font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        routerLinkActive
+        #mineActive="routerLinkActive"
+        [class]="
+          mineActive.isActive
+            ? 'border-accent-650 text-content'
+            : 'text-content-secondary border-transparent'
+        "
+        class="-mb-px border-b-2 px-1 py-2.5 text-lg font-semibold"
+        >My plugins</a
       >
-        My plugins
-      </a>
     </nav>
   `,
 })
