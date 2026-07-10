@@ -49,9 +49,9 @@ export default class PluginStatusTrackerComponent {
   hint = computed<string | null>(() => {
     switch (this.status()) {
       case 'changes_requested':
-        return 'Changes requested by the review team — push a new version to resubmit.';
+        return 'Changes requested by the review team. Push a new version to resubmit.';
       case 'in_review':
-        return 'Submitted for central review. You will be notified when a reviewer responds.';
+        return 'Submitted for central review. You will be notified when reviewing is finished.';
       case 'pushed':
         return 'Pushed but not yet submitted. Submit for review when you are ready to publish.';
       default:

@@ -27,7 +27,9 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 })
 export default class PluginIconComponent {
   name = input.required<string>();
+
   label = input('');
+
   class = input('');
 
   protected maskStyle = computed(() => {

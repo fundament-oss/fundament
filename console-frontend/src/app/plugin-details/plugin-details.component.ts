@@ -15,7 +15,7 @@ import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent, PluginIconComponent } from '../icons';
-import { getPluginIconName } from '../utils/plugin-icon-name';
+import getPluginIconName from '../utils/plugin-icon-name';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
   GetPluginDetailRequestSchema,

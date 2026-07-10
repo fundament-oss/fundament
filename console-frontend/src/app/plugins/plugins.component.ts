@@ -29,7 +29,7 @@ import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../.
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
-import { getPluginIconName } from '../utils/plugin-icon-name';
+import getPluginIconName from '../utils/plugin-icon-name';
 import { ToastService } from '../toast.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import PluginNavTabsComponent from '../plugin-development/plugin-nav-tabs.component';

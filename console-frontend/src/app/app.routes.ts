@@ -181,19 +181,6 @@ const routes: Routes = [
         },
       },
       {
-        // Must precede `plugins/manage/:name` so `sideload` is not parsed as a name.
-        path: 'plugins/manage/sideload',
-        loadComponent: () =>
-          import('./plugin-sideload/plugin-sideload.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [
-            { label: 'Plugins', route: '/plugins' },
-            { label: 'My plugins', route: '/plugins/manage' },
-            { label: 'Sideload' },
-          ],
-        },
-      },
-      {
         path: 'plugins/manage/:name',
         loadComponent: () =>
           import('./plugin-development-detail/plugin-development-detail.component').then(

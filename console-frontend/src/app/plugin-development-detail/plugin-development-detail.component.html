@@ -59,7 +59,6 @@
           }
           @case ('in_review') {
             <nldd-button text="Awaiting review" variant="primary" [disabled]="true"></nldd-button>
-            <nldd-button (click)="withdraw()" text="Withdraw" variant="secondary"></nldd-button>
           }
           @case ('changes_requested') {
             <nldd-button
@@ -73,10 +72,33 @@
             <nldd-button
               (click)="viewInCatalog()"
               text="View in catalog"
+              start-icon="eye"
               variant="secondary"
             ></nldd-button>
-            <nldd-button (click)="unpublish()" text="Unpublish" variant="destructive"></nldd-button>
           }
+        }
+        @if (plugin.status !== 'published') {
+          <nldd-button
+            (click)="openSideload()"
+            text="Sideload plugin"
+            start-icon="cloud-arrow-up"
+            variant="secondary"
+          ></nldd-button>
+        }
+        @if (plugin.status === 'published') {
+          <nldd-button
+            (click)="unpublish()"
+            text="Unpublish"
+            start-icon="trash"
+            variant="destructive"
+          ></nldd-button>
+        } @else if (plugin.status === 'in_review') {
+          <nldd-button
+            (click)="withdraw()"
+            text="Withdraw"
+            start-icon="trash"
+            variant="destructive"
+          ></nldd-button>
         }
       </div>
     </div>
@@ -175,4 +197,90 @@
       </div>
     </div>
   </nldd-card>
+
+  <!-- Sideload sheet -->
+  <nldd-sheet #sideloadSheet accessible-label="Sideload plugin" placement="right" width="460px">
+    <nldd-page sticky-header="" sticky-footer="">
+      <div slot="header" class="flex items-center justify-between px-6 py-4">
+        <h2 class="text-lg font-semibold">Sideload this plugin</h2>
+        <nldd-icon-button
+          icon="dismiss"
+          text="Close"
+          variant="neutral-transparent"
+          size="sm"
+          (click)="closeSideload()"
+        ></nldd-icon-button>
+      </div>
+
+      <nldd-simple-section class="space-y-6" padding-top="0">
+        <div class="space-y-3 text-gray-600 dark:text-gray-300">
+          <p>
+            Sideloading test-installs this plugin build onto a normal cluster you own, straight from
+            the image you already pushed with <span class="font-mono">functl</span>, no catalog
+            listing and no central review required.
+          </p>
+          <p>
+            It's meant for trying a plugin out before you share it: a development cluster is a good
+            place to test. Once you're happy with it, submit the plugin for review from this page.
+            If it's approved it appears in the plugin catalog for other users to install.
+          </p>
+        </div>
+
+        <nldd-form-field label="Version">
+          <nldd-dropdown>
+            <select id="sideload-version" (change)="onVersionChange($event)">
+              @for (version of plugin.versions; track version.version) {
+                <option
+                  [value]="version.version"
+                  [selected]="version.version === selectedVersion()"
+                >
+                  {{ version.version }}
+                  @if (version.version === plugin.version) {
+                    &nbsp;(latest)
+                  }
+                </option>
+              }
+            </select>
+          </nldd-dropdown>
+        </nldd-form-field>
+
+        <nldd-form-field label="Target cluster">
+          <nldd-dropdown>
+            <select id="sideload-cluster" (change)="onClusterChange($event)">
+              @for (cluster of clusters(); track cluster.id) {
+                <option [value]="cluster.id" [selected]="cluster.id === selectedClusterId()">
+                  {{ cluster.name }}
+                  @if (cluster.isDevelopment) {
+                    &nbsp;(development)
+                  }
+                </option>
+              }
+            </select>
+          </nldd-dropdown>
+          <nldd-form-field-help-text>
+            v{{ selectedVersion() }} will be installed onto this cluster.
+          </nldd-form-field-help-text>
+        </nldd-form-field>
+      </nldd-simple-section>
+
+      <div
+        slot="footer"
+        class="flex items-center gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
+      >
+        <nldd-button
+          (click)="closeSideload()"
+          type="button"
+          text="Cancel"
+          variant="secondary"
+        ></nldd-button>
+        <nldd-button
+          (click)="submitSideload()"
+          type="button"
+          text="Sideload plugin"
+          start-icon="cloud-arrow-up"
+          variant="primary"
+        ></nldd-button>
+      </div>
+    </nldd-page>
+  </nldd-sheet>
 }
