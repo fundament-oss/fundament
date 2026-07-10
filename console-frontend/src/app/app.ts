@@ -38,6 +38,9 @@ import '@nldd/design-system/text-field';
 import '@nldd/design-system/segmented-control';
 import '@nldd/design-system/navigation-split-view';
 import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/page';
+import '@nldd/design-system/simple-section';
 import {
   RouterOutlet,
   RouterLink,

@@ -22,10 +22,9 @@
 
   <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-4">
-      <img
-        class="h-12 w-12 shrink-0 rounded-full bg-gray-100 p-1 dark:bg-gray-800"
-        src="/img/plugins/{{ plugin.icon }}.svg"
-        alt=""
+      <app-plugin-icon
+        [name]="plugin.icon"
+        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 p-1 dark:bg-gray-800"
       />
       <div>
         <h1 class="text-3xl font-semibold">{{ plugin.displayName }}</h1>

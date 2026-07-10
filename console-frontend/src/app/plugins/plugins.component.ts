@@ -2,6 +2,9 @@ import {
   Component,
   inject,
   signal,
+  effect,
+  viewChild,
+  ElementRef,
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
@@ -12,7 +15,7 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
-import { LoadingIndicatorComponent } from '../icons';
+import { LoadingIndicatorComponent, PluginIconComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
@@ -26,12 +29,13 @@ import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../.
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
+import { getPluginIconName } from '../utils/plugin-icon-name';
 import { ToastService } from '../toast.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import PluginNavTabsComponent from '../plugin-development/plugin-nav-tabs.component';
 
-const getPluginIconName = (pluginName: string): string =>
-  pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
+const pluginCategoryLabel = (plugin: Pick<PluginWithPresets, 'categories'>): string =>
+  plugin.categories.map((category) => category.name).join(', ') || '—';
 
 // Extended plugin type with presets array (computed from backend data)
 interface PluginWithPresets extends Pick<
@@ -75,6 +79,7 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
     RouterLink,
     InstallPluginModalComponent,
     LoadingIndicatorComponent,
+    PluginIconComponent,
     PluginNavTabsComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -107,6 +112,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   showInstallModal = signal(false);
 
   selectedPlugin: PluginWithPresets | null = null;
+
+  // Plugin currently shown in the details sheet (right-hand side panel opened
+  // from a card's "Details" button); null while the sheet is closed.
+  sheetPlugin = signal<PluginWithPresets | null>(null);
+
+  private readonly pluginSheetEl = viewChild<ElementRef>('pluginSheet');
 
   isLoading = signal(true);
 
@@ -413,6 +424,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   constructor() {
     this.titleService.setTitle('Plugins');
+
+    effect(() => {
+      const el = this.pluginSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.sheetPlugin() !== null) el?.show?.();
+      else el?.hide?.();
+    });
   }
 
   get filteredPlugins(): PluginWithPresets[] {
@@ -506,6 +523,21 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   onInstallPlugin(plugin: PluginWithPresets) {
     this.selectedPlugin = plugin;
     this.showInstallModal.set(true);
+  }
+
+  openPluginDetails(plugin: PluginWithPresets): void {
+    this.sheetPlugin.set(plugin);
+  }
+
+  closePluginDetails(): void {
+    this.sheetPlugin.set(null);
+  }
+
+  pluginCategoryLabel = pluginCategoryLabel;
+
+  pluginStatusLabel(pluginName: string): string {
+    const count = this.runningInstallCount(pluginName);
+    return count === 0 ? 'Not installed' : `Installed on ${count} cluster${count > 1 ? 's' : ''}`;
   }
 
   closeInstallModal(): void {

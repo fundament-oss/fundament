@@ -14,7 +14,8 @@ import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
-import { LoadingIndicatorComponent } from '../icons';
+import { LoadingIndicatorComponent, PluginIconComponent } from '../icons';
+import { getPluginIconName } from '../utils/plugin-icon-name';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
   GetPluginDetailRequestSchema,
@@ -40,7 +41,7 @@ interface ClusterWithState extends ClusterSummary {
 
 @Component({
   selector: 'app-plugin-details',
-  imports: [InstallPluginModalComponent, LoadingIndicatorComponent],
+  imports: [InstallPluginModalComponent, LoadingIndicatorComponent, PluginIconComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
@@ -65,6 +66,8 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   private idempotency = createIdempotencyRef();
 
   private pluginImage = '';
+
+  pluginIconName = getPluginIconName;
 
   pluginId = signal<string>('');
 

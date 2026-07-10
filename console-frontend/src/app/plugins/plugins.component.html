@@ -26,10 +26,10 @@
           <div class="p-6">
             <div class="mb-3 flex items-start gap-4">
               <!-- Plugin Logo -->
-              <img
-                class="h-12 w-12 shrink-0 rounded-lg bg-gray-100 p-2 dark:bg-gray-800"
-                src="/img/plugins/{{ getPluginIconName(plugin.name) }}.svg"
-                alt="{{ plugin.name }}"
+              <app-plugin-icon
+                [name]="getPluginIconName(plugin.name)"
+                [label]="plugin.name"
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-2 dark:bg-gray-800"
               />
 
               <!-- Plugin Title -->
@@ -87,7 +87,8 @@
                 ></nldd-button>
               } @else {
                 <nldd-button
-                  [routerLink]="['/plugins', plugin.id]"
+                  (click)="openPluginDetails(plugin)"
+                  type="button"
                   text="Details"
                   variant="secondary"
                   size="sm"
@@ -191,3 +192,108 @@
   (uninstall)="onUninstallFromCluster($event)"
   (retry)="onRetryInstall($event)"
 ></app-install-plugin-modal>
+
+<!-- Plugin Details Sheet -->
+<nldd-sheet #pluginSheet accessible-label="Plugin details" placement="right" width="420px">
+  <nldd-page sticky-header="" sticky-footer="">
+    <div slot="header" class="flex justify-end px-4 py-3">
+      <nldd-icon-button
+        icon="dismiss"
+        text="Close"
+        variant="neutral-transparent"
+        size="sm"
+        (click)="closePluginDetails()"
+      ></nldd-icon-button>
+    </div>
+
+    @if (sheetPlugin(); as plugin) {
+      <nldd-simple-section class="space-y-5">
+        <!-- Plugin Logo, Name & Version -->
+        <div class="flex items-start gap-4">
+          <app-plugin-icon
+            [name]="getPluginIconName(plugin.name)"
+            [label]="plugin.name"
+            class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-2.5 dark:bg-gray-800"
+          />
+          <div class="min-w-0">
+            <h2 class="text-xl font-semibold">{{ plugin.name }}</h2>
+            <p class="font-mono text-sm text-gray-600 dark:text-gray-300">
+              {{ mockPluginVendor }} · {{ mockPluginVersion }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        @if (plugin.tags && plugin.tags.length > 0) {
+          <div class="flex flex-wrap gap-1">
+            @for (tag of plugin.tags; track tag.id) {
+              <nldd-tag
+                size="sm"
+                [color]="tag.name.toLowerCase() === 'official' ? 'success' : 'neutral'"
+                [icon]="tag.name.toLowerCase() === 'official' ? 'check-mark' : ''"
+                [text]="tag.name"
+              ></nldd-tag>
+            }
+          </div>
+        }
+
+        <!-- Description -->
+        <p class="text-sm text-gray-600 dark:text-gray-300">{{ plugin.descriptionShort }}</p>
+
+        <!-- Category & Status -->
+        <div class="grid grid-cols-2 gap-4 border-t border-gray-100 pt-5 dark:border-gray-800">
+          <div>
+            <p class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400">
+              Category
+            </p>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">
+              {{ pluginCategoryLabel(plugin) }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400">
+              Status
+            </p>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">
+              {{ pluginStatusLabel(plugin.name) }}
+            </p>
+          </div>
+        </div>
+      </nldd-simple-section>
+    }
+
+    @if (sheetPlugin(); as plugin) {
+      <div
+        slot="footer"
+        class="flex flex-col gap-2 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
+      >
+        @if (isPluginInstalledAnywhere(plugin.name)) {
+          <nldd-button
+            (click)="onInstallPlugin(plugin)"
+            type="button"
+            text="Installed"
+            start-icon="check-mark"
+            variant="secondary"
+            width="full"
+          ></nldd-button>
+        } @else {
+          <nldd-button
+            (click)="onInstallPlugin(plugin)"
+            type="button"
+            text="Install"
+            start-icon="cloud-arrow-down"
+            variant="primary"
+            width="full"
+          ></nldd-button>
+        }
+        <nldd-button
+          [routerLink]="['/plugins', plugin.id]"
+          text="View full details"
+          start-icon="square-arrow-right-top"
+          variant="secondary"
+          width="full"
+        ></nldd-button>
+      </div>
+    }
+  </nldd-page>
+</nldd-sheet>

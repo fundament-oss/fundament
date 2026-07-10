@@ -9,6 +9,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
+import { PluginIconComponent } from '../icons';
 import PluginDevelopmentService, {
   type AuthoredPlugin,
 } from '../plugin-development/plugin-development.service';
@@ -21,7 +22,7 @@ import PluginStatusTrackerComponent from '../plugin-status-tracker/plugin-status
 
 @Component({
   selector: 'app-plugin-development-detail',
-  imports: [RouterLink, PluginStatusTrackerComponent],
+  imports: [RouterLink, PluginStatusTrackerComponent, PluginIconComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-development-detail.component.html',

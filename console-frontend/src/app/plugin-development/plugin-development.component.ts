@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
+import { PluginIconComponent } from '../icons';
 import PluginDevelopmentService, {
   type AuthoredPlugin,
   type PluginStatus,
@@ -32,7 +33,7 @@ const SUMMARY_STATUSES: { status: PluginStatus; dotColorVar: string }[] = [
 
 @Component({
   selector: 'app-plugin-development',
-  imports: [RouterLink, PluginNavTabsComponent],
+  imports: [RouterLink, PluginNavTabsComponent, PluginIconComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-development.component.html',

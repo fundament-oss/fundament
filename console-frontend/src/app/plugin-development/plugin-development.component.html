@@ -67,10 +67,9 @@
             >
               <td>
                 <div class="flex items-center gap-3">
-                  <img
-                    class="h-9 w-9 shrink-0 rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
-                    src="/img/plugins/{{ plugin.icon }}.svg"
-                    alt=""
+                  <app-plugin-icon
+                    [name]="plugin.icon"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
                   />
                   <div>
                     <p class="font-medium text-gray-900 dark:text-white">
