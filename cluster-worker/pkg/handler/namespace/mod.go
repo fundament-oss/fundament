@@ -108,16 +108,26 @@ func (h *Handler) syncNamespace(ctx context.Context, id uuid.UUID) error {
 	return h.ensure(ctx, &row)
 }
 
-// ensure creates or label-reconciles the cluster-side namespace for an active row.
+// ensure creates or label-reconciles the cluster-side namespace for an active
+// row, then reconciles the managed LimitRange inside it from the merged
+// org/project resource defaults.
+func (h *Handler) ensure(ctx context.Context, row *db.NamespaceGetForSyncRow) error {
+	name := kubename.GenerateNamespace(row.ProjectName, row.ProjectID, row.Name)
+	if err := h.ensureNamespace(ctx, row, name); err != nil {
+		return err
+	}
+	return h.reconcileLimitRange(ctx, row, name)
+}
+
+// ensureNamespace creates or label-reconciles the cluster-side namespace.
 // The cluster-side resource name is derived from the project and the namespace
 // name (kubename.GenerateNamespace) so two projects on the same shoot never collide.
 // Ownership is tracked by the LabelNamespaceID label. The name derives only from
 // immutable inputs (project id, project name, and the namespace name — none of
 // which can change), so the expected name is stable for the life of the row and a
 // single lookup by that name is authoritative.
-func (h *Handler) ensure(ctx context.Context, row *db.NamespaceGetForSyncRow) error {
+func (h *Handler) ensureNamespace(ctx context.Context, row *db.NamespaceGetForSyncRow, name string) error {
 	desired := desiredLabels(row)
-	name := kubename.GenerateNamespace(row.ProjectName, row.ProjectID, row.Name)
 
 	existing, err := h.shoot.GetNamespace(ctx, row.ClusterID, name)
 	if err != nil {

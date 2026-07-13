@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v4/pkg/action"
+	chart "helm.sh/helm/v4/pkg/chart/v2"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	openfscv1 "github.com/fundament-oss/fundament/openfsc-operator/api/v1"
@@ -46,13 +47,15 @@ func externalInstallation() *openfscv1.FSCInstallation {
 func renderChart(t *testing.T, chrt *chart.Chart, release string, values map[string]any) string {
 	t.Helper()
 	install := action.NewInstall(new(action.Configuration))
-	install.DryRun = true
-	install.ClientOnly = true
+	// DryRunClient renders without contacting a cluster (v3's DryRun+ClientOnly).
+	install.DryRunStrategy = action.DryRunClient
 	install.ReleaseName = release
 	install.Namespace = "team-a"
 	rel, err := install.Run(chrt, values)
 	require.NoError(t, err)
-	return rel.Manifest
+	relV1, ok := rel.(*releasev1.Release)
+	require.True(t, ok, "unexpected release type %T", rel)
+	return relV1.Manifest
 }
 
 func loadUmbrella(t *testing.T) *chart.Chart {

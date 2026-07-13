@@ -183,7 +183,9 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 	}
 
 	if existing != nil {
-		r.updateShootSpec(existing, cluster)
+		if err := r.updateShootSpec(existing, cluster); err != nil {
+			return err
+		}
 
 		r.logger.Info("updating shoot",
 			"shoot", existing.Name,
@@ -196,7 +198,10 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		return nil
 	}
 
-	shoot := r.buildShootSpec(cluster)
+	shoot, err := r.buildShootSpec(cluster)
+	if err != nil {
+		return err
+	}
 
 	r.logger.Info("creating shoot",
 		"shoot", cluster.ShootName,
@@ -547,7 +552,12 @@ func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
 }
 
 // buildShootSpec creates a new Shoot spec from cluster info using provider config.
-func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.Shoot {
+func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.Shoot, error) {
+	workers, err := r.buildWorkers(cluster)
+	if err != nil {
+		return nil, err
+	}
+
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.ShootName,
@@ -569,7 +579,7 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type:    r.provider.Type,
-				Workers: r.buildWorkers(cluster),
+				Workers: workers,
 			},
 			Networking: &gardencorev1beta1.Networking{
 				Type:  new("calico"), // Default CNI
@@ -583,22 +593,29 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) *gardencorev1beta1.S
 		shoot.Spec.CredentialsBindingName = new(r.provider.CredentialsBindingName)
 	}
 
-	return shoot
+	return shoot, nil
 }
 
-// buildWorkers converts node pools to Gardener worker groups.
+// buildWorkers converts node pools to Gardener worker groups and enforces the
+// organization node caps: per-pool maxima are clamped in place and the
+// aggregate caps fail the build. Every path that constructs workers goes
+// through here, so a valid worker set can never bypass enforcement.
 // If the cluster has no node pools, a default worker group is created.
 // All workers share the same machine image from ProviderConfig.
 // TODO: support per-pool machine image once tenant.node_pools gains an image column.
 // TODO: populate NodePool.Zone from tenant.node_pools once a zone column is added.
-func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Worker {
+func (r *RealClient) buildWorkers(cluster *ClusterToSync) ([]gardencorev1beta1.Worker, error) {
+	if err := validateNodeLimits(cluster.NodePools, cluster.NodeLimits); err != nil {
+		return nil, err
+	}
+
 	if len(cluster.NodePools) == 0 {
 		// Declare separately to avoid taking the address of a local variable that
 		// would be shared if this were a loop (consistent with the loop below).
 		maxSurge := intstr.FromInt32(1)
 		maxUnavailable := intstr.FromInt32(0)
 		imageVersion := r.provider.MachineImageVersion
-		return []gardencorev1beta1.Worker{
+		workers := []gardencorev1beta1.Worker{
 			{
 				Name: "default",
 				Machine: gardencorev1beta1.Machine{
@@ -610,12 +627,14 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 				},
 				// TODO: make these configurable via env vars once different environments need
 				// different defaults (e.g., GARDENER_DEFAULT_MIN_WORKERS / GARDENER_DEFAULT_MAX_WORKERS).
-				Minimum:        1,
-				Maximum:        3,
+				Minimum:        defaultWorkerMinimum,
+				Maximum:        defaultWorkerMaximum,
 				MaxSurge:       &maxSurge,
 				MaxUnavailable: &maxUnavailable,
 			},
 		}
+		clampWorkerMaxima(workers, cluster.NodeLimits.MaxNodesPerNodePool)
+		return workers, nil
 	}
 
 	workers := make([]gardencorev1beta1.Worker, len(cluster.NodePools))
@@ -655,11 +674,17 @@ func (r *RealClient) buildWorkers(cluster *ClusterToSync) []gardencorev1beta1.Wo
 			workers[i].Zones = []string{np.Zone}
 		}
 	}
-	return workers
+	clampWorkerMaxima(workers, cluster.NodeLimits.MaxNodesPerNodePool)
+	return workers, nil
 }
 
 // updateShootSpec updates an existing Shoot's spec and labels.
-func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *ClusterToSync) {
+func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *ClusterToSync) error {
+	workers, err := r.buildWorkers(cluster)
+	if err != nil {
+		return err
+	}
+
 	if shoot.Labels == nil {
 		shoot.Labels = make(map[string]string)
 	}
@@ -673,5 +698,6 @@ func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *Cl
 
 	shoot.Spec.Region = cluster.Region
 	shoot.Spec.Kubernetes.Version = cluster.KubernetesVersion
-	shoot.Spec.Provider.Workers = r.buildWorkers(cluster)
+	shoot.Spec.Provider.Workers = workers
+	return nil
 }

@@ -23,6 +23,8 @@ type MockShootAccess struct {
 	ClusterRoleBindings map[uuid.UUID]map[string]ResourceInfo
 	// Namespaces: clusterID -> namespace name -> resource metadata (with labels)
 	Namespaces map[uuid.UUID]map[string]ResourceInfo
+	// LimitRanges: clusterID -> namespace name -> the managed fundament-defaults LimitRange
+	LimitRanges map[uuid.UUID]map[string]MockLimitRange
 
 	// Configurable errors for testing
 	EnsureNamespaceError          error
@@ -37,6 +39,14 @@ type MockShootAccess struct {
 	UpdateNamespaceLabelsError    error
 	DeleteNamespaceError          error
 	ListNamespacesError           error
+	EnsureLimitRangeError         error
+	DeleteLimitRangeError         error
+}
+
+// MockLimitRange is the in-memory representation of the managed LimitRange.
+type MockLimitRange struct {
+	Defaults LimitDefaults
+	Labels   map[string]string
 }
 
 func NewMockShootAccess(logger *slog.Logger) *MockShootAccess {
@@ -45,6 +55,7 @@ func NewMockShootAccess(logger *slog.Logger) *MockShootAccess {
 		ServiceAccounts:     make(map[uuid.UUID]map[string]map[string]ResourceInfo),
 		ClusterRoleBindings: make(map[uuid.UUID]map[string]ResourceInfo),
 		Namespaces:          make(map[uuid.UUID]map[string]ResourceInfo),
+		LimitRanges:         make(map[uuid.UUID]map[string]MockLimitRange),
 	}
 }
 
@@ -308,6 +319,48 @@ func (m *MockShootAccess) HasCRB(clusterID, userID uuid.UUID) bool {
 	return ok
 }
 
+func (m *MockShootAccess) EnsureLimitRange(_ context.Context, clusterID uuid.UUID, namespace string, defaults LimitDefaults, labels map[string]string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.EnsureLimitRangeError != nil {
+		return m.EnsureLimitRangeError
+	}
+
+	if m.LimitRanges[clusterID] == nil {
+		m.LimitRanges[clusterID] = make(map[string]MockLimitRange)
+	}
+	m.LimitRanges[clusterID][namespace] = MockLimitRange{Defaults: defaults, Labels: maps.Clone(labels)}
+	m.logger.Debug("MOCK: ensured limit range", "cluster_id", clusterID, "namespace", namespace)
+	return nil
+}
+
+func (m *MockShootAccess) DeleteLimitRange(_ context.Context, clusterID uuid.UUID, namespace string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.DeleteLimitRangeError != nil {
+		return m.DeleteLimitRangeError
+	}
+
+	delete(m.LimitRanges[clusterID], namespace)
+	m.logger.Debug("MOCK: deleted limit range", "cluster_id", clusterID, "namespace", namespace)
+	return nil
+}
+
+// GetLimitRange returns the managed LimitRange for a namespace, or nil if absent.
+func (m *MockShootAccess) GetLimitRange(clusterID uuid.UUID, namespace string) *MockLimitRange {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	lr, ok := m.LimitRanges[clusterID][namespace]
+	if !ok {
+		return nil
+	}
+	clone := MockLimitRange{Defaults: lr.Defaults, Labels: maps.Clone(lr.Labels)}
+	return &clone
+}
+
 // Reset clears all state.
 func (m *MockShootAccess) Reset() {
 	m.mu.Lock()
@@ -315,6 +368,7 @@ func (m *MockShootAccess) Reset() {
 	m.ServiceAccounts = make(map[uuid.UUID]map[string]map[string]ResourceInfo)
 	m.ClusterRoleBindings = make(map[uuid.UUID]map[string]ResourceInfo)
 	m.Namespaces = make(map[uuid.UUID]map[string]ResourceInfo)
+	m.LimitRanges = make(map[uuid.UUID]map[string]MockLimitRange)
 }
 
 var _ ShootAccess = (*MockShootAccess)(nil)

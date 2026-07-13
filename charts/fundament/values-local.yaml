@@ -6,13 +6,14 @@ externalUrls:
   authn: https://authn.fundament.localhost:8443
   organization: https://organization.fundament.localhost:8443
   kubeApiProxy: https://k8s-api.fundament.localhost:8443
+  pluginProxy: https://plugin-proxy.fundament.localhost:8443
   console: https://console.fundament.localhost:8443
   docs: https://docs.fundament.localhost:8443
   cookieDomain: fundament.localhost
   dcimApi: https://dcim-api.fundament.localhost:8443
   dcim: https://dcim.fundament.localhost:8443
   dcimAuthn: https://dcim-authn.fundament.localhost:8443
-  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
+  corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
