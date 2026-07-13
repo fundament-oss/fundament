@@ -40,10 +40,10 @@ plugin binary (`go:embed console/*`) and served same-origin from `/console/`:
 The views are built with the **NLDD Design System** (`@nldd/design-system`) — the
 same one the host Console renders — using its `<nldd-*>` Lit web components
 (`<nldd-button>`, `<nldd-text-field>`, `<nldd-dropdown>`, `<nldd-checkbox-field>`,
-…). Its **runtime is not bundled** into the plugin: the views call `loadNldd()`
+…). Its **runtime is not bundled** into the plugin: the views call `loadNlddDesignSystem()`
 (`src/shared.ts`) to pull the shared, host-pinned bundle from the Console origin at
-`/plugin-ui/nldd.{js,css}`, so every plugin uses one version that can't drift from
-the host. `loadNldd()` also mirrors the host light/dark theme onto
+`/plugin-ui/nldd-design-system.{js,css}`, so every plugin uses one version that can't drift from
+the host. `loadNlddDesignSystem()` also mirrors the host light/dark theme onto
 `<html data-scheme>` so the design tokens follow the Console theme.
 
 `@nldd/design-system` *is* a **devDependency** — for types only. `src/nldd-design-system.ts`

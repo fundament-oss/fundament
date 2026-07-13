@@ -25,6 +25,13 @@ describe('kindToLabel', () => {
     expect(kindToLabel('IngressClass')).toBe('Ingress classes');
   });
 
+  it('keeps a trailing acronym intact once pluralized', () => {
+    // Pluralizing first gave "HTTPs", which no longer reads as an acronym, so the
+    // sentence-case pass lowercased it to "Cluster https".
+    expect(kindToLabel('ClusterHTTP')).toBe('Cluster HTTPs');
+    expect(kindToLabel('FSC')).toBe('FSCs');
+  });
+
   it('returns an empty string for an empty kind', () => {
     expect(kindToLabel('')).toBe('');
   });

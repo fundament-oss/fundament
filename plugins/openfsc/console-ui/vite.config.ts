@@ -8,8 +8,8 @@ const entry = (name: string) => fileURLToPath(new URL(`${name}.html`, import.met
 // The plugin serves this app same-origin under /console/, and console.go's
 // `go:embed console/*` compiles the build output into the plugin binary. The NLDD
 // Design System is intentionally NOT bundled: the app uses <nldd-*> tags whose
-// registrations come from the shared /plugin-ui/nldd.js, loaded at runtime via
-// loadNldd(). See docs/funs/FUN-18.adoc.
+// registrations come from the shared /plugin-ui/nldd-design-system.js, loaded at runtime via
+// loadNlddDesignSystem(). See docs/funs/FUN-18.adoc.
 export default defineConfig({
   root,
   // Relative asset URLs so the built HTML resolves ./assets/* under /console/,

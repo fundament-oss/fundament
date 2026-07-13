@@ -1,7 +1,7 @@
 // Tests for the create-form logic.
 //
 // The NLDD Design System itself is not loaded here (it needs a real custom-element
-// registry and the host's /plugin-ui/nldd.js), so the <nldd-*> tags are unknown
+// registry and the host's /plugin-ui/nldd-design-system.js), so the <nldd-*> tags are unknown
 // elements. `upgrade` below stands in for the part of Lit the form code actually
 // depends on: reflecting the declared attributes (value / checked / required) onto
 // properties of the same name. Keeping that reflection explicit is deliberate — the

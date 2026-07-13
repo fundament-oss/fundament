@@ -25,6 +25,14 @@ type Config struct {
 	// requests are answered in mock mode. Layout: <dir>/<pluginName>/console/<file>.
 	// Ignored in "real" mode.
 	MockPluginTemplatesDir string
+	// ConsoleOrigins are the origins the Console is served from. They are the only
+	// origins a plugin console asset may be bootstrapped from, and the only ones its
+	// CSP admits scripts from — see kube.ConsoleAssetPolicy. Empty disables both
+	// checks (bare local dev); every deployed environment sets it.
+	ConsoleOrigins []string
+	// PublicOrigin is this proxy's own public origin, i.e. the origin plugin console
+	// assets are served from. Named in their CSP alongside ConsoleOrigins.
+	PublicOrigin string
 }
 
 type Server struct {
@@ -34,11 +42,22 @@ type Server struct {
 	tokenCache    *tokenpkg.Cache
 	kubeHandler   http.Handler
 	handler       http.Handler
+	consoleAssets kube.ConsoleAssetPolicy
 }
 
 func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, error) {
 	if cfg.Mode == "" {
 		cfg.Mode = "mock"
+	}
+
+	consoleAssets := kube.ConsoleAssetPolicy{
+		AssetOrigin:    kube.NormalizeOrigin(cfg.PublicOrigin),
+		ConsoleOrigins: kube.NormalizeOrigins(cfg.ConsoleOrigins),
+	}
+	if len(consoleAssets.ConsoleOrigins) == 0 {
+		logger.Warn("CONSOLE_ORIGINS is not set: plugin console assets are served without a " +
+			"Content-Security-Policy and with an unchecked ?host= origin. Set it to the origin(s) " +
+			"the Console is served from.")
 	}
 
 	var kubeHandler http.Handler
@@ -48,7 +67,10 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		tokenCache = tokenpkg.NewCache(cfg.GardenerClient, logger)
 		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, logger)
 	case "mock":
-		kubeHandler = &kube.MockClient{PluginTemplatesDir: cfg.MockPluginTemplatesDir}
+		kubeHandler = &kube.MockClient{
+			PluginTemplatesDir: cfg.MockPluginTemplatesDir,
+			ConsoleAssets:      consoleAssets,
+		}
 	default:
 		return nil, fmt.Errorf("invalid Mode %q: must be \"mock\" or \"real\"", cfg.Mode)
 	}
@@ -59,6 +81,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		authz:         authzClient,
 		tokenCache:    tokenCache,
 		kubeHandler:   kubeHandler,
+		consoleAssets: consoleAssets,
 	}
 
 	mux := http.NewServeMux()

@@ -198,10 +198,16 @@ function isAcronym(word: string): boolean {
 export function kindToLabel(kind: string): string {
   const words = splitWords(kind);
   if (words.length === 0) return '';
-  words[words.length - 1] = pluralize(words[words.length - 1]);
   // Sentence case: only the first word is capitalized — but an acronym keeps its
   // case wherever it appears, so "ClusterHTTPRoute" stays "Cluster HTTP routes".
-  return words.map((w, i) => (i === 0 || isAcronym(w) ? w : w.toLowerCase())).join(' ');
+  //
+  // Case is decided on the word as written, before pluralizing: a trailing acronym
+  // becomes "FSCs", which no longer looks like an acronym, and lowercasing it would
+  // give "Cluster fscs".
+  const sentenceCased = words.map((word, i) => (i === 0 || isAcronym(word) ? word : word.toLowerCase()));
+  const last = sentenceCased.length - 1;
+  sentenceCased[last] = pluralize(sentenceCased[last]);
+  return sentenceCased.join(' ');
 }
 
 /**

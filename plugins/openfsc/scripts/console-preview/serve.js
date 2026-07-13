@@ -138,8 +138,12 @@ const server = Bun.serve({
 
     // The opt-in NLDD Design System bundle (real built files; fonts are inlined as data: URIs,
     // so there are no separate font assets to serve). Bun.file sets content-type.
-    if (path === '/plugin-ui/nldd.js') return new Response(Bun.file(join(PLUGIN_UI_DIR, 'nldd.js')));
-    if (path === '/plugin-ui/nldd.css') return new Response(Bun.file(join(PLUGIN_UI_DIR, 'nldd.css')));
+    if (path === '/plugin-ui/nldd-design-system.js') {
+      return new Response(Bun.file(join(PLUGIN_UI_DIR, 'nldd-design-system.js')));
+    }
+    if (path === '/plugin-ui/nldd-design-system.css') {
+      return new Response(Bun.file(join(PLUGIN_UI_DIR, 'nldd-design-system.css')));
+    }
 
     // Everything else from the real console/ dir. normalize() + the prefix
     // check keep requests from escaping it via ../.

@@ -236,7 +236,10 @@ func TestServeConsoleAsset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mc := &MockClient{PluginTemplatesDir: dir}
+	mc := &MockClient{
+		PluginTemplatesDir: dir,
+		ConsoleAssets:      ConsoleAssetPolicy{ConsoleOrigins: []string{"https://console.example"}},
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/list.html", nil)
 	w := httptest.NewRecorder()
@@ -245,8 +248,10 @@ func TestServeConsoleAsset(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code, "body = %s", w.Body.String())
 	require.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"))
 	require.Contains(t, w.Body.String(), "<body>test</body>")
-	// The opaque-origin iframe can only load these with a public CORS policy.
+	// The opaque-origin iframe can only load these with a public CORS policy, and the
+	// CSP is what keeps that openness from being exploitable.
 	require.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
+	require.Contains(t, w.Header().Get("Content-Security-Policy"), "script-src 'self' https://console.example")
 
 	// Path traversal protection: the ".." segment makes this not a console asset,
 	// so it never reaches the file read.

@@ -7,22 +7,45 @@ import (
 	"path"
 )
 
+// Option configures NewFileSystem.
+type Option func(*options)
+
+type options struct {
+	requireHTML bool
+}
+
+// RequireHTML makes NewFileSystem panic when the embedded subtree holds no HTML file.
+//
+// A plugin whose console is a built UI wants this. Such a console/ directory is a
+// build artifact: it is gitignored and seeded with only a .gitkeep, so
+// `go:embed console/*` still compiles on a fresh checkout even when the UI has never
+// been built. The result is a binary that serves an empty console — a blank plugin
+// iframe at runtime, with nothing in the logs. Failing at startup turns that into an
+// obvious error at the point the mistake was made.
+//
+// It is opt-in rather than the runtime's default because "a console is at least one
+// HTML file" is a fact about how a particular plugin builds its UI, not about what
+// this runtime can serve: a third-party plugin is free to embed a console that is
+// nothing but JS.
+func RequireHTML() Option {
+	return func(o *options) { o.requireHTML = true }
+}
+
 // NewFileSystem creates an http.FileSystem from an fs.FS, rooted at the given
 // subdirectory. This is intended for use with embed.FS in ConsoleProvider
-// implementations.
-//
-// It panics if the subtree contains no HTML file. A plugin's console/ directory is
-// a build artifact: it is gitignored and seeded with only a .gitkeep, so
-// `go:embed console/*` still compiles on a fresh checkout even when the UI has
-// never been built. Without this check that produces a binary that serves an empty
-// console — a blank plugin iframe at runtime, with nothing in the logs. Failing at
-// startup turns that into an obvious error at the point the mistake was made.
-func NewFileSystem(fsys fs.FS, root string) http.FileSystem {
+// implementations. Plugins that build their console UI should pass RequireHTML so an
+// unbuilt UI fails at startup rather than serving a blank iframe.
+func NewFileSystem(fsys fs.FS, root string, opts ...Option) http.FileSystem {
+	var cfg options
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	sub, err := fs.Sub(fsys, root)
 	if err != nil {
 		panic(fmt.Sprintf("console: invalid root %q: %v", root, err))
 	}
-	if !containsHTML(sub) {
+	if cfg.requireHTML && !containsHTML(sub) {
 		panic(fmt.Sprintf(
 			"console: no HTML files embedded under %q — the console UI was not built "+
 				"before `go build`. Run the console-ui build (see the plugin's Dockerfile "+

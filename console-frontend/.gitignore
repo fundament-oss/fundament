@@ -12,8 +12,8 @@
 # Docker image build). Regenerated, not source; do not commit.
 /public/plugin-ui/plugin-sdk.js
 /public/plugin-ui/plugin-sdk.css
-/public/plugin-ui/nldd.js
-/public/plugin-ui/nldd.css
+/public/plugin-ui/nldd-design-system.js
+/public/plugin-ui/nldd-design-system.css
 
 # Generated proto version — written by generate-proto-version.js (runs via the
 # prebuild/prestart hooks, and in the Docker image build). Regenerated, not source.

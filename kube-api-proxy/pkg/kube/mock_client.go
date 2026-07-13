@@ -27,6 +27,10 @@ type MockClient struct {
 	// requests are served in mock mode. Layout: <dir>/<pluginName>/console/<file>.
 	// Empty disables the console asset handler (returns 404 for those paths).
 	PluginTemplatesDir string
+
+	// ConsoleAssets is the cross-origin policy stamped on console asset responses
+	// (see plugin_console_assets.go).
+	ConsoleAssets ConsoleAssetPolicy
 }
 
 const crdBasePath = "/apis/apiextensions.k8s.io/v1/customresourcedefinitions"
@@ -305,7 +309,7 @@ func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, p
 		contentType = "application/octet-stream"
 	}
 	w.Header().Set("Content-Type", contentType)
-	SetPublicAssetCORS(w.Header())
+	m.ConsoleAssets.SetHeaders(w.Header())
 	// Mock mode serves edits live from disk; disable caching so iframe reloads
 	// always pick up the latest template without manual cache-busting.
 	w.Header().Set("Cache-Control", "no-store")
@@ -422,21 +426,13 @@ func IsPluginConsoleAssetPath(path string) bool {
 	return ok
 }
 
-// SetPublicAssetCORS allows any origin and drops credentials for a plugin console
-// asset: the sandboxed iframe that loads it has an opaque origin (Origin: null)
-// that can't be CORS-allow-listed. Shared by mock mode and the real-mode proxy.
-func SetPublicAssetCORS(h http.Header) {
-	h.Set("Access-Control-Allow-Origin", "*")
-	h.Del("Access-Control-Allow-Credentials")
-}
-
 // pluginConsoleAsset matches `/api/v1/namespaces/plugin-<name>/services/http:plugin-<name>:8080/proxy/console/<asset>`
 // and returns the plugin name and the trailing asset path, but only for an asset
 // path that is safe to serve.
 //
 // The safety check lives here rather than in each caller because matching this
 // pattern both skips the proxy's auth check and stamps a public CORS policy on the
-// response (see IsPluginConsoleAssetPath and SetPublicAssetCORS). A traversal that
+// response (see IsPluginConsoleAssetPath and ConsoleAssetPolicy). A traversal that
 // escaped the console directory would otherwise be served unauthenticated *and* be
 // readable cross-origin. Rejecting it here means an unsafe path is simply not a
 // console asset: real mode falls through to the normal authenticated proxy path,

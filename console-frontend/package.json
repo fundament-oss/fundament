@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build:plugin-ui": "bun build src/plugin-sdk/plugin-sdk.ts --outfile public/plugin-ui/plugin-sdk.js --target browser --format iife --minify && bun src/plugin-sdk/build-css.ts && bun build src/plugin-sdk/nldd-entry.ts --outfile public/plugin-ui/nldd.js --target browser --format iife --minify && bun src/plugin-sdk/build-nldd-css.ts",
+    "build:plugin-ui": "bun build src/plugin-sdk/plugin-sdk.ts --outfile public/plugin-ui/plugin-sdk.js --target browser --format iife --minify && bun src/plugin-sdk/build-css.ts && bun build src/plugin-sdk/nldd-design-system-entry.ts --outfile public/plugin-ui/nldd-design-system.js --target browser --format iife --minify && bun src/plugin-sdk/build-nldd-design-system-css.ts",
     "prebuild": "node generate-proto-version.js && bun run build:plugin-ui",
     "build": "ng build",
     "prestart": "bun run prebuild",

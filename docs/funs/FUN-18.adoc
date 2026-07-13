@@ -46,10 +46,10 @@ So the decision does not rest on bytes. It rests on *consistency*: one host-pinn
 
 The NLDD Design System is served *once* from the Console origin through a shared `/plugin-ui/` channel, the same channel that already serves the plugin SDK (link:/funs/fun-16[FUN-16]). `console-frontend` owns a single pinned `@nldd/design-system` version — the *same* version the host Console renders — and builds it into two files served under `/plugin-ui/`:
 
-* `nldd.js` — a classic IIFE that self-registers every `<nldd-*>` custom element as a side effect of loading.
-* `nldd.css` — NLDD Design System global styles and tokens *plus the host's token overrides*, with the woff2 fonts **inlined as base64 `data:` URIs**.
+* `nldd-design-system.js` — a classic IIFE that self-registers every `<nldd-*>` custom element as a side effect of loading.
+* `nldd-design-system.css` — NLDD Design System global styles and tokens *plus the host's token overrides*, with the woff2 fonts **inlined as base64 `data:` URIs**.
 
-A plugin opts in by calling `loadNldd()` alongside `loadSdk()`; `loadNldd()` injects the `<link>`/`<script>` for the shared bundle from `${host}/plugin-ui/`. `loadSdk()` stays lean for plugins that don't want the NLDD Design System. The plugin's *own* UI code is a separate Vite app served from `/console/` (link:/funs/fun-16[FUN-16]), and it **externalizes** the design system's *runtime*: it uses `<nldd-*>` tags whose element registrations arrive from the shared bundle, and ships none of the NLDD Design System's code itself. It still depends on `@nldd/design-system` at build time, as a devDependency, purely for its types (see "Types without the runtime").
+A plugin opts in by calling `loadNlddDesignSystem()` alongside `loadSdk()`; `loadNlddDesignSystem()` injects the `<link>`/`<script>` for the shared bundle from `${host}/plugin-ui/`. `loadSdk()` stays lean for plugins that don't want the NLDD Design System. The plugin's *own* UI code is a separate Vite app served from `/console/` (link:/funs/fun-16[FUN-16]), and it **externalizes** the design system's *runtime*: it uses `<nldd-*>` tags whose element registrations arrive from the shared bundle, and ships none of the NLDD Design System's code itself. It still depends on `@nldd/design-system` at build time, as a devDependency, purely for its types (see "Types without the runtime").
 
 This gives every plugin one host-pinned version, zero duplication, no drift, and modern authoring (TypeScript, HMR) at the same time.
 
@@ -59,13 +59,13 @@ Classic `<script>` and `<link>` subresources load in *no-CORS* mode, so the cros
 
 === Theming
 
-The NLDD Design System selects light/dark via `:root[data-scheme]` → `color-scheme` → the CSS `light-dark()` function. The plugin SDK already reports the host theme by toggling `.light`/`.dark` on `<body>` (link:/funs/fun-16[FUN-16]). `loadNldd()` installs a `MutationObserver` that mirrors that body class onto `<html data-scheme>`, so the design tokens follow the host theme without each view threading the theme through.
+The NLDD Design System selects light/dark via `:root[data-scheme]` → `color-scheme` → the CSS `light-dark()` function. The plugin SDK already reports the host theme by toggling `.light`/`.dark` on `<body>` (link:/funs/fun-16[FUN-16]). `loadNlddDesignSystem()` installs a `MutationObserver` that mirrors that body class onto `<html data-scheme>`, so the design tokens follow the host theme without each view threading the theme through.
 
 === Host token overrides
 
 Serving the NLDD Design System's stock `global.css` is not enough: the Console overrides some of its tokens on `:root`, and a plugin that misses them renders subtly unlike the page it is embedded in. The NLDD Design System ships an 18px base font, for example, while the Console pins it to 16px — an unpatched iframe visibly renders larger than the Console around it.
 
-`nldd.css` is therefore built from `console-frontend/src/plugin-sdk/nldd.css`, which imports the NLDD Design System and re-applies those overrides after it. Any `:root` token the Console overrides in `src/styles.css` and that plugins should inherit belongs there too, or the two drift. (The values are duplicated rather than shared, because `styles.css` reaches them through Tailwind's `theme()` and the plugin bundle is plain CSS.)
+`nldd-design-system.css` is therefore built from `console-frontend/src/plugin-sdk/nldd-design-system.css`, which imports the NLDD Design System and re-applies those overrides after it. Any `:root` token the Console overrides in `src/styles.css` and that plugins should inherit belongs there too, or the two drift. (The values are duplicated rather than shared, because `styles.css` reaches them through Tailwind's `theme()` and the plugin bundle is plain CSS.)
 
 == Authoring a plugin UI with the NLDD Design System
 
@@ -126,7 +126,7 @@ Because Vite emits `<script type="module" crossorigin>`, the plugin's *own* asse
 
 Build outputs are gitignored and regenerated, never committed — the source of truth is `package.json` plus the pinned dependency:
 
-* `console-frontend/public/plugin-ui/{plugin-sdk,nldd}.{js,css}`
+* `console-frontend/public/plugin-ui/{plugin-sdk,nldd-design-system}.{js,css}`
 * `console-frontend/src/proto-version.gen.ts`
 * each plugin's built `console/` dist (a committed `.gitkeep` is the only tracked file, so `go build` works on a fresh checkout)
 
@@ -139,10 +139,10 @@ They are produced by the `prebuild` / `prestart` / `prewatch` / `prelint` hooks 
 
 == Consequences
 
-* *Bundle size — we ship the whole design system, untree-shaken.* `nldd.js` (1.0 MB) + `nldd.css` (718 KB) load per plugin page that calls `loadNldd()`, where a bundling plugin would ship ~204 KB of JS for the same five components. We accept that: the assets are opt-in, cached once across all plugins, and a view that uses no `<nldd-*>` components (e.g. a pure table view) should not call `loadNldd()` and pays nothing. If the cost ever bites, the cheapest wins are dropping the JetBrains Mono `@font-face` rules (code-editor only, ~236 KB, unused by these forms) before reopening the bundling question.
-* *One version for everyone — which is both the point and the risk.* All plugins share exactly one NLDD Design System version, so none can drift from the host. The flip side is a hard coupling: bumping the Console's version is a simultaneous, unstageable change for every plugin, including third-party ones the platform does not control, and the version is effectively a public API. Note also that the guarantee is a *convention, not a constraint* — nothing prevents a plugin from bundling its own copy anyway. If a third-party plugin ever needs a different version, serve the channel under a versioned path (e.g. `/plugin-ui/v1/nldd.js`) so versions coexist.
+* *Bundle size — we ship the whole design system, untree-shaken.* `nldd-design-system.js` (1.0 MB) + `nldd-design-system.css` (718 KB) load per plugin page that calls `loadNlddDesignSystem()`, where a bundling plugin would ship ~204 KB of JS for the same five components. We accept that: the assets are opt-in, cached once across all plugins, and a view that uses no `<nldd-*>` components (e.g. a pure table view) should not call `loadNlddDesignSystem()` and pays nothing. If the cost ever bites, the cheapest wins are dropping the JetBrains Mono `@font-face` rules (code-editor only, ~236 KB, unused by these forms) before reopening the bundling question.
+* *One version for everyone — which is both the point and the risk.* All plugins share exactly one NLDD Design System version, so none can drift from the host. The flip side is a hard coupling: bumping the Console's version is a simultaneous, unstageable change for every plugin, including third-party ones the platform does not control, and the version is effectively a public API. Note also that the guarantee is a *convention, not a constraint* — nothing prevents a plugin from bundling its own copy anyway. If a third-party plugin ever needs a different version, serve the channel under a versioned path (e.g. `/plugin-ui/v1/nldd-design-system.js`) so versions coexist.
 * *Bundling remains a legitimate alternative, and the door is left open.* Should the coupling above start to hurt, the sharper split is: let plugins bundle the tree-shaken *components* (independently versioned, properly typed) and keep a shared channel for only the *tokens + fonts* CSS — the 512 KB that actually duplicates. That reintroduces a cross-origin `@font-face` fetch and so would need `Access-Control-Allow-Origin` on nginx's `location /plugin-ui/`.
-* *Dogfooding.* First-party plugins use the same `loadNldd()` channel third-party authors do — there is no internal shortcut — which keeps the design-system integration honest (link:/funs/fun-16[FUN-16]).
+* *Dogfooding.* First-party plugins use the same `loadNlddDesignSystem()` channel third-party authors do — there is no internal shortcut — which keeps the design-system integration honest (link:/funs/fun-16[FUN-16]).
 * *The console-ui build stage is currently per-plugin.* OpenFSC is named explicitly in its own Dockerfile and in the three `kube-api-proxy` Dockerfiles (which need the assets on disk for mock mode). That is tolerable for one plugin, but the second plugin with a Vite UI should turn this into a convention the proxy Dockerfiles iterate over, the way the asset-extraction step already loops over `./plugins/*/console`.
 
 == References

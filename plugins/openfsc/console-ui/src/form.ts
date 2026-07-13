@@ -54,6 +54,19 @@ export function applyMode(root: ParentNode): void {
 // Validate from the element's attributes and surface errors via the linked
 // nldd-form-field-error-text.
 
+// Applies a `pattern` attribute the way a native <input> would: anchored at both
+// ends. A malformed pattern is a bug in the markup, not something the user typed —
+// it must not throw out of the submit handler (which would leave the button stuck
+// disabled), so it is logged and treated as satisfied.
+function matchesPattern(value: string, pattern: string): boolean {
+  try {
+    return new RegExp(`^(?:${pattern})$`).test(value);
+  } catch (err) {
+    console.error(`invalid pattern ${JSON.stringify(pattern)} on a form field`, err);
+    return true;
+  }
+}
+
 function setFieldError(el: NlddTextField, message: string): void {
   el.setAttribute('invalid', '');
   const errId = el.getAttribute('error-message');
@@ -82,7 +95,7 @@ export function validateTextField(el: NlddTextField): boolean {
     return false;
   }
   const pattern = el.getAttribute('pattern');
-  if (pattern && !new RegExp(`^(?:${pattern})$`).test(value)) {
+  if (pattern && !matchesPattern(value, pattern)) {
     setFieldError(el, el.getAttribute('data-error') || 'Enter a valid value.');
     return false;
   }

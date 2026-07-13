@@ -32,6 +32,14 @@ spec:
             - name: CORS_ALLOWED_ORIGINS
               value: "{{ $.Values.externalUrls.corsAllowedOrigins }}"
             {{- end }}
+            {{- with $.Values.externalUrls.consoleOrigins | default $.Values.externalUrls.console }}
+            - name: CONSOLE_ORIGINS
+              value: "{{ . }}"
+            {{- end }}
+            {{- with $.Values.externalUrls.kubeApiProxy }}
+            - name: PUBLIC_ORIGIN
+              value: "{{ . }}"
+            {{- end }}
             - name: KUBE_API_PROXY_MODE
               value: "{{ .Values.kubeApiProxy.mode }}"
             {{- if $.Values.kubeApiProxy.gardenerKubeconfigSecret }}

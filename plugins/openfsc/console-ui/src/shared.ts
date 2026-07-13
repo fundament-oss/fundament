@@ -5,6 +5,10 @@ import type { Condition, FSCInstallation, GatewayStatus } from './types.ts';
 
 // The Console origin, taken from the `?host=` param the host sets on the iframe
 // src. Empty string when unframed (the dev preview), so asset URLs stay relative.
+//
+// Anyone can craft a link with a `?host=` of their choosing, so this value is not
+// evidence of anything — the parse below only rejects non-http(s) schemes. What
+// keeps a foreign origin from being loaded is server-side: see loadPluginAsset.
 export function hostOrigin(): string {
   const raw = new URLSearchParams(location.search).get('host');
   if (!raw) return '';
@@ -17,23 +21,43 @@ export function hostOrigin(): string {
   }
 }
 
+// Resolves once `el` has loaded (or failed to). Both <link> and <script> fire
+// load/error, so one helper covers the pair.
+function whenSettled(el: HTMLLinkElement | HTMLScriptElement, what: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    el.addEventListener('load', () => resolve(), { once: true });
+    el.addEventListener('error', () => reject(new Error(`failed to load ${what}`)), { once: true });
+  });
+}
+
 // Loads the host's `/plugin-ui/<base>.{css,js}` pair. Injected at runtime because
 // the sandboxed iframe only learns the host origin from `?host=`; classic
 // <link>/<script> load cross-origin into the opaque-origin iframe without CORS.
+//
+// The `?host=` origin is attacker-controllable in a hand-crafted link, so it is not
+// trusted to be the Console: kube-api-proxy rejects a console-asset request whose
+// `?host=` is not an allowed Console origin, and serves the assets under a
+// `script-src`/`style-src` CSP naming those origins. This loader would therefore
+// fail (blocked subresource) rather than execute a foreign bundle.
+//
+// Both halves are awaited: resolving on the script alone would let a view render
+// <nldd-*> components before their stylesheet arrived, i.e. a flash of unstyled
+// content inside the iframe.
 function loadPluginAsset(base: string): Promise<void> {
   const host = hostOrigin();
+
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = `${host}/plugin-ui/${base}.css`;
+  const css = whenSettled(link, `${base}.css`);
   document.head.appendChild(link);
 
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `${host}/plugin-ui/${base}.js`;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`failed to load ${base}.js`));
-    document.head.appendChild(script);
-  });
+  const script = document.createElement('script');
+  script.src = `${host}/plugin-ui/${base}.js`;
+  const js = whenSettled(script, `${base}.js`);
+  document.head.appendChild(script);
+
+  return Promise.all([css, js]).then(() => undefined);
 }
 
 export function loadSdk(): Promise<FundamentSdk> {
@@ -42,20 +66,21 @@ export function loadSdk(): Promise<FundamentSdk> {
 
 // The NLDD Design System reads light/dark from `:root[data-scheme]`; mirror the
 // SDK's body `.light`/`.dark` class (set on init and on every theme change) onto it.
-function syncNlddTheme(): void {
+function syncNlddDesignSystemTheme(): void {
   const dark = document.body.classList.contains('dark');
   document.documentElement.setAttribute('data-scheme', dark ? 'dark' : 'light');
 }
 
 // Loads the shared NLDD Design System bundle from the host; every <nldd-*> element
-// is registered once nldd.js has run. Views opt in by calling this alongside loadSdk().
-export function loadNldd(): Promise<void> {
-  syncNlddTheme();
-  new MutationObserver(syncNlddTheme).observe(document.body, {
+// is registered once nldd-design-system.js has run. Views opt in by calling this
+// alongside loadSdk().
+export function loadNlddDesignSystem(): Promise<void> {
+  syncNlddDesignSystemTheme();
+  new MutationObserver(syncNlddDesignSystemTheme).observe(document.body, {
     attributes: true,
     attributeFilter: ['class'],
   });
-  return loadPluginAsset('nldd');
+  return loadPluginAsset('nldd-design-system');
 }
 
 export function escapeHtml(value: unknown): string {

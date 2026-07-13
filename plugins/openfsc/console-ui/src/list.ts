@@ -1,6 +1,6 @@
 import {
   loadSdk,
-  loadNldd,
+  loadNlddDesignSystem,
   escapeHtml,
   formatAge,
   phase,
@@ -19,7 +19,7 @@ document.getElementById('add')!.addEventListener('click', () => navigateToCreate
 // don't let it fail the page. If it never arrives the table still renders and the
 // "Add installation" button degrades to an unstyled unknown element, which beats
 // replacing a good table with an error row.
-loadNldd().catch((err) => {
+loadNlddDesignSystem().catch((err) => {
   console.error('NLDD Design System failed to load; <nldd-*> components will not render.', err);
 });
 
