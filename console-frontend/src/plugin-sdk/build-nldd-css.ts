@@ -19,7 +19,7 @@ const result = await Bun.build({
 });
 
 if (!result.success) {
-  for (const log of result.logs) console.error(log);
+  result.logs.forEach((log) => console.error(log));
   throw new Error('Failed to build nldd.css');
 }
 

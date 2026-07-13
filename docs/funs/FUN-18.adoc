@@ -47,7 +47,7 @@ So the decision does not rest on bytes. It rests on *consistency*: one host-pinn
 NLDS is served *once* from the Console origin through a shared `/plugin-ui/` channel, the same channel that already serves the plugin SDK (link:/funs/fun-16[FUN-16]). `console-frontend` owns a single pinned `@nldd/design-system` version — the *same* version the host Console renders — and builds it into two files served under `/plugin-ui/`:
 
 * `nldd.js` — a classic IIFE that self-registers every `<nldd-*>` custom element as a side effect of loading.
-* `nldd.css` — NLDS global styles and tokens, with the woff2 fonts **inlined as base64 `data:` URIs**.
+* `nldd.css` — NLDS global styles and tokens *plus the host's token overrides*, with the woff2 fonts **inlined as base64 `data:` URIs**.
 
 A plugin opts in by calling `loadNlds()` alongside `loadSdk()`; `loadNlds()` injects the `<link>`/`<script>` for the shared bundle from `${host}/plugin-ui/`. `loadSdk()` stays lean for plugins that don't want NLDS. The plugin's *own* UI code is a separate Vite app served from `/console/` (link:/funs/fun-16[FUN-16]), and it **externalizes** NLDS's *runtime*: it uses `<nldd-*>` tags whose element registrations arrive from the shared bundle, and ships none of NLDS's code itself. It still depends on `@nldd/design-system` at build time, as a devDependency, purely for its types (see "Types without the runtime").
 
@@ -60,6 +60,12 @@ Classic `<script>` and `<link>` subresources load in *no-CORS* mode, so the cros
 === Theming
 
 NLDS selects light/dark via `:root[data-scheme]` → `color-scheme` → the CSS `light-dark()` function. The plugin SDK already reports the host theme by toggling `.light`/`.dark` on `<body>` (link:/funs/fun-16[FUN-16]). `loadNlds()` installs a `MutationObserver` that mirrors that body class onto `<html data-scheme>`, so NLDS tokens follow the host theme without each view threading the theme through.
+
+=== Host token overrides
+
+Serving NLDS's stock `global.css` is not enough: the Console overrides some NLDS tokens on `:root`, and a plugin that misses them renders subtly unlike the page it is embedded in. NLDS ships an 18px base font, for example, while the Console pins it to 16px — an unpatched iframe visibly renders larger than the Console around it.
+
+`nldd.css` is therefore built from `console-frontend/src/plugin-sdk/nldd.css`, which imports NLDS and re-applies those overrides after it. Any `:root` token the Console overrides in `src/styles.css` and that plugins should inherit belongs there too, or the two drift. (The values are duplicated rather than shared, because `styles.css` reaches them through Tailwind's `theme()` and the plugin bundle is plain CSS.)
 
 == Authoring a plugin UI with NLDS
 
