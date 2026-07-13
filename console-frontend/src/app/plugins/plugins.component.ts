@@ -309,11 +309,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       if (!prev) return;
       if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
         this.toastService.success(
-          `${next.pluginName} installed on cluster ${this.clusterName(next.clusterId)}`,
+          `Plugin ${next.pluginName} installed on cluster ${this.clusterName(next.clusterId)}`,
         );
       } else if (prev.phase !== 'Failed' && next.phase === 'Failed') {
         this.toastService.error(
-          `Failed to install ${next.pluginName} on cluster ${this.clusterName(next.clusterId)}`,
+          `Failed to install plugin ${next.pluginName} on cluster ${this.clusterName(next.clusterId)}`,
         );
       }
     });
@@ -334,7 +334,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         return;
       }
       this.toastService.success(
-        `${prev.pluginName} removed from ${this.clusterName(prev.clusterId)}`,
+        `Plugin ${prev.pluginName} removed from ${this.clusterName(prev.clusterId)}`,
       );
     });
 

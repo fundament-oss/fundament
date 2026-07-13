@@ -226,11 +226,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       const prevPhase = clusters[i].phase;
       if (prevPhase === null || n.phase === prevPhase) return;
       if (!isInstallRunning(prevPhase) && n.phase === 'Running') {
-        this.toastService.success(`${plugin.name} installed on cluster ${n.name}`);
+        this.toastService.success(`Plugin ${plugin.name} installed on cluster ${n.name}`);
       } else if (prevPhase !== 'Failed' && n.phase === 'Failed') {
-        this.toastService.error(`Failed to install ${plugin.name} on cluster ${n.name}`);
+        this.toastService.error(`Failed to install plugin ${plugin.name} on cluster ${n.name}`);
       } else if (n.phase === null) {
-        this.toastService.success(`${plugin.name} removed from ${n.name}`);
+        this.toastService.success(`Plugin ${plugin.name} removed from ${n.name}`);
       }
     });
 
