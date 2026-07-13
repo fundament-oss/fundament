@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@nldd/design-system": "0.8.63",
     "happy-dom": "^20.0.0",
     "typescript": "~5.9.2",
     "vite": "^7.1.0",

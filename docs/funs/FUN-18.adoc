@@ -15,12 +15,32 @@ This FUN records how plugin UIs get NLDS without trusting plugin code, duplicati
 
 == The constraint: NLDS inside a sandboxed, opaque-origin iframe
 
-Plugin UIs render in an iframe with `sandbox="allow-scripts"` and *no* `allow-same-origin` (link:/funs/fun-16[FUN-16]). The browser therefore gives the iframe document an opaque origin (`Origin: null`). Two naive ways to give a plugin NLDS both fail under that constraint:
+Plugin UIs render in an iframe with `sandbox="allow-scripts"` and *no* `allow-same-origin` (link:/funs/fun-16[FUN-16]). The browser therefore gives the iframe document an opaque origin (`Origin: null`). Because the document's origin is opaque, *every* subresource fetch it makes is cross-origin — including one aimed back at the very host that served it. Whatever delivers NLDS has to survive the null origin: cross-origin module scripts and `@font-face` both fetch in CORS mode.
 
-* *Bundle NLDS into each plugin.* Every plugin binary would carry its own ~1.6 MB copy of NLDS plus fonts, and — worse — each plugin could pin a different version. The design system would drift across plugins and away from the host Console, which is the opposite of the consistency this FUN exists to guarantee.
-* *Load NLDS from a public CDN.* Air-gapped and government deployments cannot depend on a CDN, and a CDN removes the platform's control over which version is served.
+A public CDN is ruled out immediately: air-gapped and government deployments cannot depend on one, and it removes the platform's control over which version is served. That leaves two credible options, and the choice between them is *not* the slam dunk it might appear.
 
-There is also a transport problem. From an opaque origin, a cross-origin `@font-face` fetch runs in CORS mode and fails, and cross-origin module scripts require CORS headers. Whatever delivers NLDS has to survive the null origin.
+=== Why not simply let each plugin depend on `@nldd/design-system`?
+
+Each plugin's UI is already an npm project with its own `package.json`, so it could just add NLDS as a dependency and bundle it. That option is genuinely attractive, and the size argument against it is *weaker than it looks*. Measured against 0.8.63:
+
+[cols="2,1,1"]
+|===
+| | Whole design system | Only the 5 components the OpenFSC views use
+
+| NLDS JS
+| 1.0 MB raw / 215 KB gzip
+| **204 KB raw / 47 KB gzip**
+
+| NLDS CSS
+| 718 KB
+| 718 KB — *does not tree-shake*
+|===
+
+The package exposes per-component subpath exports (`@nldd/design-system/button`, `/text-field`, …), so the *JavaScript* tree-shakes roughly fivefold. With a single plugin, bundling is therefore **smaller on the wire than the shared channel** (~922 KB vs ~1.7 MB). Any claim that bundling costs "~1.6 MB per plugin" assumes no tree-shaking and is wrong.
+
+What does *not* tree-shake is the CSS, and 512 KB of that 718 KB (71%) is the four Rijkshuisstijl `@font-face` rules inlined as base64. That — the fonts — is the only payload that genuinely duplicates per plugin. The shared channel amortises it across every plugin and pays for itself at roughly two or three plugins, assuming a user visits more than one plugin UI within a cache lifetime.
+
+So the decision does not rest on bytes. It rests on *consistency*: one host-pinned version means a plugin UI cannot drift from the Console, or from other plugins. That is the property this FUN exists to guarantee, and it is worth being honest about its limits (see Consequences).
 
 == Decision: serve NLDS once from the Console origin, opt-in per plugin
 
@@ -29,7 +49,7 @@ NLDS is served *once* from the Console origin through a shared `/plugin-ui/` cha
 * `nldd.js` — a classic IIFE that self-registers every `<nldd-*>` custom element as a side effect of loading.
 * `nldd.css` — NLDS global styles and tokens, with the woff2 fonts **inlined as base64 `data:` URIs**.
 
-A plugin opts in by calling `loadNlds()` alongside `loadSdk()`; `loadNlds()` injects the `<link>`/`<script>` for the shared bundle from `${host}/plugin-ui/`. `loadSdk()` stays lean for plugins that don't want NLDS. The plugin's *own* UI code is a separate Vite app served same-origin from `/console/` (link:/funs/fun-16[FUN-16]), and it **externalizes** NLDS — it uses `<nldd-*>` tags and small local structural types, but does not depend on `@nldd/design-system`. The element registrations come at runtime from the shared bundle.
+A plugin opts in by calling `loadNlds()` alongside `loadSdk()`; `loadNlds()` injects the `<link>`/`<script>` for the shared bundle from `${host}/plugin-ui/`. `loadSdk()` stays lean for plugins that don't want NLDS. The plugin's *own* UI code is a separate Vite app served from `/console/` (link:/funs/fun-16[FUN-16]), and it **externalizes** NLDS's *runtime*: it uses `<nldd-*>` tags whose element registrations arrive from the shared bundle, and ships none of NLDS's code itself. It still depends on `@nldd/design-system` at build time, as a devDependency, purely for its types (see "Types without the runtime").
 
 This gives every plugin one host-pinned version, zero duplication, no drift, and modern authoring (TypeScript, HMR) at the same time.
 
@@ -46,6 +66,19 @@ NLDS selects light/dark via `:root[data-scheme]` → `color-scheme` → the CSS 
 === Finding components
 
 The canonical reference is the NLDS storybook: https://minbzk.github.io/storybook/. It documents every `<nldd-*>` component and the https://minbzk.github.io/storybook/?path=/story/components-content-icon--icon-gallery[icon gallery] (icons are referenced by kebab-case identifiers such as `info-circle`). The visual conventions that govern *how* to compose these — colour, typography, spacing, sentence-case headers, button placement — live in link:/funs/fun-10[FUN-10].
+
+=== Types without the runtime
+
+A plugin depends on `@nldd/design-system` as a *devDependency*, and imports from it with `import type` only:
+
+[source,typescript]
+----
+import type { NLDDCheckboxField } from '@nldd/design-system/checkbox-field';
+----
+
+Type-only imports are erased at build time, so this adds **zero bytes** to the plugin bundle (verified: the OpenFSC bundle is byte-for-byte identical with and without the dependency) while giving real, checked types — including the package's `HTMLElementTagNameMap` declarations, so `querySelector('nldd-checkbox-field')` is typed automatically.
+
+Do *not* hand-roll structural types for the components. An approximation that drifts from the real component does not fail at build time; it fails silently in the iframe. The devDependency must be pinned to exactly the version `console-frontend` serves, because the types describe the bundle the host actually ships — a unit test asserts the two pins match (`src/nlds-version.test.ts`).
 
 === Component quirks to plan for
 
@@ -66,7 +99,7 @@ NLDS components are web components, not native form controls, so a few patterns 
 
 | Plugin HTML + its own JS/TS
 | the plugin runtime (`/console/`, `go:embed` + `http.FileServer`)
-| same-origin
+| cross-origin — the iframe's own origin is opaque, so even its own assets need CORS (the proxy forces a public policy on them; see below)
 
 | Plugin SDK (`plugin-sdk.{js,css}`) and NLDS (`nldd.{js,css}`)
 | the Console, under `/plugin-ui/`
@@ -100,8 +133,9 @@ They are produced by the `prebuild` / `prestart` / `prewatch` / `prelint` hooks 
 
 == Consequences
 
-* *Bundle size.* `nldd.js` (~0.89 MB) + `nldd.css` (~0.70 MB) load per plugin page that calls `loadNlds()`. This is the whole design system, opt-in and cached, so it is acceptable; a view that uses no `<nldd-*>` components (e.g. a pure table view) should not call `loadNlds()` and pays nothing.
-* *One version for everyone.* All plugins and the host share exactly one NLDS version. If a third-party plugin ever needs a different version, the channel can be served under a versioned path (e.g. `/plugin-ui/v1/nldd.js`) so versions coexist without a per-plugin build. Until then, a single path keeps it simple.
+* *Bundle size — we ship the whole design system, untree-shaken.* `nldd.js` (1.0 MB) + `nldd.css` (718 KB) load per plugin page that calls `loadNlds()`, where a bundling plugin would ship ~204 KB of JS for the same five components. We accept that: the assets are opt-in, cached once across all plugins, and a view that uses no `<nldd-*>` components (e.g. a pure table view) should not call `loadNlds()` and pays nothing. If the cost ever bites, the cheapest wins are dropping the JetBrains Mono `@font-face` rules (code-editor only, ~236 KB, unused by these forms) before reopening the bundling question.
+* *One version for everyone — which is both the point and the risk.* All plugins share exactly one NLDS version, so none can drift from the host. The flip side is a hard coupling: bumping the Console's NLDS is a simultaneous, unstageable change for every plugin, including third-party ones the platform does not control, and the version is effectively a public API. Note also that the guarantee is a *convention, not a constraint* — nothing prevents a plugin from bundling its own copy anyway. If a third-party plugin ever needs a different version, serve the channel under a versioned path (e.g. `/plugin-ui/v1/nldd.js`) so versions coexist.
+* *Bundling remains a legitimate alternative, and the door is left open.* Should the coupling above start to hurt, the sharper split is: let plugins bundle the tree-shaken *components* (independently versioned, properly typed) and keep a shared channel for only the *tokens + fonts* CSS — the 512 KB that actually duplicates. That reintroduces a cross-origin `@font-face` fetch and so would need `Access-Control-Allow-Origin` on nginx's `location /plugin-ui/`.
 * *Dogfooding.* First-party plugins use the same `loadNlds()` channel third-party authors do — there is no internal shortcut — which keeps the design-system integration honest (link:/funs/fun-16[FUN-16]).
 * *The console-ui build stage is currently per-plugin.* OpenFSC is named explicitly in its own Dockerfile and in the three `kube-api-proxy` Dockerfiles (which need the assets on disk for mock mode). That is tolerable for one plugin, but the second plugin with a Vite UI should turn this into a convention the proxy Dockerfiles iterate over, the way the asset-extraction step already loops over `./plugins/*/console`.
 

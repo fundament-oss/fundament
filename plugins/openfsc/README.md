@@ -40,11 +40,17 @@ plugin binary (`go:embed console/*`) and served same-origin from `/console/`:
 The views are built with the **NLDS design system** (`@nldd/design-system`) — the
 same one the host Console renders — using its `<nldd-*>` Lit web components
 (`<nldd-button>`, `<nldd-text-field>`, `<nldd-dropdown>`, `<nldd-checkbox-field>`,
-…). NLDS is **not bundled** into the plugin: the views call `loadNlds()`
+…). NLDS's **runtime is not bundled** into the plugin: the views call `loadNlds()`
 (`src/shared.ts`) to pull the shared, host-pinned bundle from the Console origin at
 `/plugin-ui/nldd.{js,css}`, so every plugin uses one version that can't drift from
 the host. `loadNlds()` also mirrors the host light/dark theme onto
 `<html data-scheme>` so NLDS tokens follow the Console theme.
+
+`@nldd/design-system` *is* a **devDependency** — for types only. `src/nlds.ts`
+re-exports the real component types via `import type`, which is erased at build, so
+the bundle stays byte-for-byte free of NLDS code while `tsc` still checks every
+property the views read. The pin must equal console-frontend's (a unit test enforces
+this); bump the two together.
 
 - **Browse components in the storybook:** <https://minbzk.github.io/storybook/> —
   the canonical reference for the `<nldd-*>` components and the

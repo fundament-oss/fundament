@@ -1,8 +1,12 @@
-// Tests for the create-form logic. NLDS is never loaded here, so <nldd-*> tags are
-// unknown elements — exactly what they are before nldd.js runs. The form code only
-// ever touches `.value` / `.checked` / `.required` / attributes, so we can stand
-// them up as plain elements and assign those properties directly, the way the real
-// Lit components expose them.
+// Tests for the create-form logic.
+//
+// NLDS itself is not loaded here (it needs a real custom-element registry and the
+// host's /plugin-ui/nldd.js), so the <nldd-*> tags are unknown elements. `upgrade`
+// below stands in for the part of Lit the form code actually depends on: reflecting
+// the declared attributes (value / checked / required) onto properties of the same
+// name. Keeping that reflection explicit is deliberate — the form reads `.value` and
+// `.checked` as properties, and a harness that quietly diverged from the real
+// components would make these tests attest to the wrong thing.
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -62,14 +66,21 @@ function renderForm(): HTMLFormElement {
       <div id="outways"></div>
     </form>`;
   const form = document.getElementById('form') as HTMLFormElement;
-  // Unknown elements have no `.value` / `.required` of their own; seed the defaults
-  // the real nldd-text-field exposes so the code under test sees a faithful shape.
-  form.querySelectorAll<NlddTextField>('nldd-text-field').forEach((el) => {
-    el.value = '';
-    el.required = el.hasAttribute('required');
-    el.focus = () => {};
-  });
+  upgrade(form);
   return form;
+}
+
+// Stands in for Lit's attribute→property reflection on the NLDS elements in `root`:
+// `value`, `checked` and `required` are declared reactive properties, so the real
+// components expose them whether or not the attribute was present. The form code
+// reads them as properties, so the harness must too.
+function upgrade(root: ParentNode): void {
+  root.querySelectorAll('nldd-text-field, nldd-checkbox-field').forEach((node) => {
+    const el = node as unknown as { value: string; checked: boolean; required: boolean };
+    el.value = node.getAttribute('value') ?? '';
+    el.checked = node.hasAttribute('checked');
+    el.required = node.hasAttribute('required');
+  });
 }
 
 // Sets a control's value the way a user typing into it would.
@@ -95,11 +106,7 @@ function addGatewayRow(form: HTMLFormElement, kind: 'inway' | 'outway', seq = 0)
   const row = document.createElement('div');
   row.className = 'plugin-row gateway-row';
   row.innerHTML = gatewayRowHtml(kind, seq);
-  row.querySelectorAll<NlddTextField>('nldd-text-field').forEach((el) => {
-    el.value = '';
-    el.required = el.hasAttribute('required');
-    el.focus = () => {};
-  });
+  upgrade(row);
   form.querySelector(`#${kind}s`)!.appendChild(row);
   return row;
 }
@@ -147,10 +154,9 @@ describe('applyMode', () => {
 describe('validateTextField', () => {
   const field = (attrs: string, value: string): NlddTextField => {
     document.body.innerHTML = `<div><nldd-text-field ${attrs}></nldd-text-field></div>`;
+    upgrade(document.body);
     const el = document.querySelector('nldd-text-field') as NlddTextField;
     el.value = value;
-    el.required = el.hasAttribute('required');
-    el.focus = () => {};
     return el;
   };
 
@@ -184,10 +190,8 @@ describe('validateTextField', () => {
   it('skips fields inside a hidden ancestor', () => {
     document.body.innerHTML = `
       <fieldset hidden><nldd-text-field id="x" required></nldd-text-field></fieldset>`;
+    upgrade(document.body);
     const el = document.querySelector('#x') as NlddTextField;
-    el.value = '';
-    el.required = true;
-    el.focus = () => {};
 
     // Required but empty — yet hidden, so not part of the submission.
     expect(validateTextField(el)).toBe(true);
@@ -201,10 +205,9 @@ describe('validateTextField', () => {
           error-message="n-error"></nldd-text-field>
         <nldd-form-field-error-text id="n-error">placeholder</nldd-form-field-error-text>
       </div>`;
+    upgrade(document.body);
     const el = document.querySelector('#n') as NlddTextField;
     el.value = 'NOPE';
-    el.required = false;
-    el.focus = () => {};
 
     expect(validateTextField(el)).toBe(false);
     expect(document.getElementById('n-error')!.textContent).toBe('Lowercase only.');

@@ -174,15 +174,13 @@ export function buildBody(root: ParentNode, namespace: string): FSCInstallationB
   setIf(spec, 'controllerURL', trimmedValue(root, 'controllerURL'));
 
   // nldd-checkbox-field is not form-associated, so the grant list is read off the
-  // elements directly. `checked` is a property (the user toggles it), but the grant
-  // name is only ever declared in markup — read it as an attribute rather than rely
-  // on Lit reflecting `value` to a property.
+  // elements directly rather than via an input[name]:checked query. Both `checked`
+  // and `value` are declared reactive properties on NLDDCheckboxField.
   const grants = [
     ...root.querySelectorAll<NlddCheckboxField>('nldd-checkbox-field[name="autoSignGrants"]'),
   ]
     .filter((el) => el.checked)
-    .map((el) => el.getAttribute('value') ?? '')
-    .filter((v) => v !== '');
+    .map((el) => el.value);
   if (grants.length) spec.autoSignGrants = grants;
 
   const inways = gatherGateways(root, 'inway', isExternal);
