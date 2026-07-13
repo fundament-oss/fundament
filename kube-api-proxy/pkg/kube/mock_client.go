@@ -437,6 +437,12 @@ func IsPluginConsoleAssetPath(path string) bool {
 // readable cross-origin. Rejecting it here means an unsafe path is simply not a
 // console asset: real mode falls through to the normal authenticated proxy path,
 // and mock mode rejects it (see pluginConsoleRoute's use in ServeHTTP).
+//
+// Falling through is safe because a traversal never reaches the handler over a real
+// connection in the first place: http.ServeMux cleans the request path and redirects
+// when cleaning changes it, so a ".." segment is resolved before routing. This
+// function is the guarantee that such a path cannot masquerade as a *public* asset;
+// the mux is the guarantee it cannot reach the upstream apiserver un-normalized.
 func pluginConsoleAsset(path string) (pluginName, asset string, ok bool) {
 	pluginName, asset, ok = pluginConsoleRoute(path)
 	if !ok || !isSafeAssetPath(asset) {

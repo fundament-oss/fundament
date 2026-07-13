@@ -63,11 +63,24 @@ func NormalizeOrigins(origins []string) []string {
 	return normalized
 }
 
+// Configured reports whether the policy has everything it needs to protect console
+// assets: the Console origins to allow-list a `?host=` against, and the proxy's own
+// origin to admit the plugin's bundles from. Both halves are required — a CSP naming
+// only the Console would block the plugin's own scripts.
+//
+// An unconfigured policy stands down (no `?host=` check, no CSP) rather than break
+// the iframe, which suits a bare local dev setup. proxy.New rejects it outright in
+// "real" mode, where standing down would mean shipping the hole this policy exists
+// to close.
+func (p ConsoleAssetPolicy) Configured() bool {
+	return len(p.ConsoleOrigins) > 0 && p.AssetOrigin != ""
+}
+
 // AllowsHost reports whether a console asset may be served with the given `?host=`
 // origin. An empty host is the unframed dev preview, which loads its assets
-// relatively; no configured Console origins means the check stands down.
+// relatively; an unconfigured policy stands down.
 func (p ConsoleAssetPolicy) AllowsHost(host string) bool {
-	if host == "" || len(p.ConsoleOrigins) == 0 {
+	if host == "" || !p.Configured() {
 		return true
 	}
 	host = NormalizeOrigin(host)
@@ -93,14 +106,18 @@ func (p ConsoleAssetPolicy) SetHeaders(h http.Header) {
 	}
 }
 
-// contentSecurityPolicy builds the CSP for a console asset, or "" when no Console
-// origins are configured.
+// contentSecurityPolicy builds the CSP for a console asset, or "" when the policy is
+// not fully configured (see Configured).
 //
 // A plugin UI only ever loads its own bundles (from the asset origin) and the shared
 // /plugin-ui/ bundles from the Console, so everything else is 'none':
 //
 //   - script-src names exactly those two sources. This is the header's reason for
-//     existing.
+//     existing. There is deliberately no 'self': the iframe is sandboxed without
+//     allow-same-origin, so its document has an opaque origin and 'self' matches
+//     nothing — AssetOrigin is what actually admits the plugin's own bundles, which
+//     is why an unset one suppresses the header entirely rather than emitting a CSP
+//     that would block them.
 //   - style-src needs 'unsafe-inline' for the style="" attributes the plugin markup
 //     uses; that grants no script execution.
 //   - font-src/img-src allow data: — the design system's fonts are inlined as data:
@@ -108,13 +125,10 @@ func (p ConsoleAssetPolicy) SetHeaders(h http.Header) {
 //   - connect-src 'none': plugin views reach the cluster through postMessage to the
 //     host, never over the network themselves.
 func (p ConsoleAssetPolicy) contentSecurityPolicy() string {
-	if len(p.ConsoleOrigins) == 0 {
+	if !p.Configured() {
 		return ""
 	}
-	sources := append([]string{"'self'"}, p.ConsoleOrigins...)
-	if p.AssetOrigin != "" {
-		sources = append(sources, p.AssetOrigin)
-	}
+	sources := append([]string{p.AssetOrigin}, p.ConsoleOrigins...)
 	origins := strings.Join(sources, " ")
 	return strings.Join([]string{
 		"default-src 'none'",

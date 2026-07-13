@@ -25,6 +25,8 @@ externalUrls:
   # asset when its ?host= names one of these, and its CSP only lets the asset load
   # scripts from them. Comma-separated; defaults to `console` if empty. Add a dev
   # server origin here when running the Console outside the cluster.
+  # This and `kubeApiProxy` are both required when kubeApiProxy.mode is "real" — the
+  # proxy refuses to start without them rather than serve plugin assets unprotected.
   consoleOrigins: "" # e.g., "https://app.example.com,http://localhost:4200"
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com

@@ -74,7 +74,12 @@ cert-manager adds certificates and certificate issuers as resource types in Kube
 - Automatic HTTPS for web applications
 - Securing internal service-to-service communication
 - Managing certificates for ingress controllers', 'cert-manager maintainers', 'https://cert-manager.io', 'https://github.com/cert-manager/cert-manager', 'quay.io/jetstack/cert-manager-controller:v1.17.2'),
-    ('019b4000-3000-7000-8000-000000000003', 'cloudnative-pg', 'CloudNativePG', 'PostgreSQL operator for Kubernetes', '## Overview
+    -- `cloudnativepg`, not `cloudnative-pg`: the Console derives the PluginInstallation's
+    -- metadata.name from this column via pluginResourceName(), which slugified the old
+    -- prose name "CloudNativePG" to "cloudnativepg". Any cluster already running this
+    -- plugin has a CR under that name, so changing it here would orphan the installation
+    -- (the Console would show it as not installed and create a second CR on re-install).
+    ('019b4000-3000-7000-8000-000000000003', 'cloudnativepg', 'CloudNativePG', 'PostgreSQL operator for Kubernetes', '## Overview
 
 CloudNativePG is an open source operator designed to manage PostgreSQL workloads on Kubernetes, covering the full lifecycle of a PostgreSQL cluster.
 

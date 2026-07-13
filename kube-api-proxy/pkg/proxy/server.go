@@ -54,10 +54,19 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		AssetOrigin:    kube.NormalizeOrigin(cfg.PublicOrigin),
 		ConsoleOrigins: kube.NormalizeOrigins(cfg.ConsoleOrigins),
 	}
-	if len(consoleAssets.ConsoleOrigins) == 0 {
-		logger.Warn("CONSOLE_ORIGINS is not set: plugin console assets are served without a " +
-			"Content-Security-Policy and with an unchecked ?host= origin. Set it to the origin(s) " +
-			"the Console is served from.")
+	// An unconfigured policy serves plugin console assets — which are public and
+	// unauthenticated — with no CSP and an unchecked ?host=. That is tolerable on a
+	// developer's laptop and not in a real deployment, so "real" mode refuses to start
+	// rather than come up quietly unprotected.
+	if !consoleAssets.Configured() && cfg.Mode == "real" {
+		return nil, fmt.Errorf("CONSOLE_ORIGINS and PUBLIC_ORIGIN are required in %q mode: "+
+			"without them plugin console assets are served with no Content-Security-Policy and "+
+			"an unchecked ?host= origin", cfg.Mode)
+	}
+	if !consoleAssets.Configured() {
+		logger.Warn("CONSOLE_ORIGINS and/or PUBLIC_ORIGIN are not set: plugin console assets are " +
+			"served without a Content-Security-Policy and with an unchecked ?host= origin. Set " +
+			"them to the Console origin(s) and this proxy's own public origin.")
 	}
 
 	var kubeHandler http.Handler

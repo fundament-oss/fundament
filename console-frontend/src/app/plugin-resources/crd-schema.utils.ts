@@ -204,7 +204,9 @@ export function kindToLabel(kind: string): string {
   // Case is decided on the word as written, before pluralizing: a trailing acronym
   // becomes "FSCs", which no longer looks like an acronym, and lowercasing it would
   // give "Cluster fscs".
-  const sentenceCased = words.map((word, i) => (i === 0 || isAcronym(word) ? word : word.toLowerCase()));
+  const sentenceCased = words.map((word, i) =>
+    i === 0 || isAcronym(word) ? word : word.toLowerCase(),
+  );
   const last = sentenceCased.length - 1;
   sentenceCased[last] = pluralize(sentenceCased[last]);
   return sentenceCased.join(' ');

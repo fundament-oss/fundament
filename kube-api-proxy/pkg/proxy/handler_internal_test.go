@@ -71,7 +71,7 @@ func TestHandleClusterProxy_SetsCSPOnConsoleAssets(t *testing.T) {
 	newAssetServer().ServeHTTP(rec, newAssetRequest("?host=https://console.example"))
 
 	csp := rec.Header().Get("Content-Security-Policy")
-	require.Contains(t, csp, "script-src 'self' https://console.example https://k8s-api.example")
+	require.Contains(t, csp, "script-src https://k8s-api.example https://console.example")
 	require.Contains(t, csp, "default-src 'none'")
 }
 
