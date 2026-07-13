@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPluginConsoleAsset(t *testing.T) {
@@ -32,6 +34,20 @@ func TestPluginConsoleAsset(t *testing.T) {
 			wantOk:    true,
 		},
 		{
+			// Vite emits its bundles under a nested assets/ directory.
+			path:      "/api/v1/namespaces/plugin-openfsc/services/http:plugin-openfsc:8080/proxy/console/assets/app-D4ta.js",
+			wantName:  "openfsc",
+			wantAsset: "assets/app-D4ta.js",
+			wantOk:    true,
+		},
+		{
+			// ".." only inside a segment is a legitimate filename, not a traversal.
+			path:      "/api/v1/namespaces/plugin-demo/services/http:plugin-demo:8080/proxy/console/foo..bar.js",
+			wantName:  "demo",
+			wantAsset: "foo..bar.js",
+			wantOk:    true,
+		},
+		{
 			// Exact GetDefinition path is not a console asset.
 			path:   "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition",
 			wantOk: false,
@@ -41,13 +57,29 @@ func TestPluginConsoleAsset(t *testing.T) {
 			path:   "/apis/cert-manager.io/v1/certificates",
 			wantOk: false,
 		},
+		{
+			// Traversal must not match: matching skips the proxy's auth check and
+			// stamps a public CORS policy on the response.
+			path:   "/api/v1/namespaces/plugin-demo/services/http:plugin-demo:8080/proxy/console/../../../../secrets",
+			wantOk: false,
+		},
+		{
+			// ...including a traversal buried mid-path.
+			path:   "/api/v1/namespaces/plugin-demo/services/http:plugin-demo:8080/proxy/console/assets/../../secrets",
+			wantOk: false,
+		},
+		{
+			// An empty asset is not a file.
+			path:   "/api/v1/namespaces/plugin-demo/services/http:plugin-demo:8080/proxy/console/",
+			wantOk: false,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.path, func(t *testing.T) {
 			name, asset, ok := pluginConsoleAsset(tc.path)
-			if ok != tc.wantOk || name != tc.wantName || asset != tc.wantAsset {
-				t.Fatalf("got (%q, %q, %v); want (%q, %q, %v)", name, asset, ok, tc.wantName, tc.wantAsset, tc.wantOk)
-			}
+			require.Equal(t, tc.wantOk, ok)
+			require.Equal(t, tc.wantName, name)
+			require.Equal(t, tc.wantAsset, asset)
 		})
 	}
 }
@@ -210,31 +242,29 @@ func TestServeConsoleAsset(t *testing.T) {
 	w := httptest.NewRecorder()
 	mc.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
-	}
-	if got := w.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
-		t.Errorf("Content-Type = %q", got)
-	}
-	if !strings.Contains(w.Body.String(), "<body>test</body>") {
-		t.Errorf("unexpected body: %s", w.Body.String())
-	}
+	require.Equal(t, http.StatusOK, w.Code, "body = %s", w.Body.String())
+	require.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"))
+	require.Contains(t, w.Body.String(), "<body>test</body>")
+	// The opaque-origin iframe can only load these with a public CORS policy.
+	require.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
 
-	// Path traversal protection.
+	// Path traversal protection: the ".." segment makes this not a console asset,
+	// so it never reaches the file read.
 	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/../../etc/passwd", nil)
 	w2 := httptest.NewRecorder()
 	mc.ServeHTTP(w2, req2)
-	if w2.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 for traversal, got %d", w2.Code)
-	}
+	require.Equal(t, http.StatusBadRequest, w2.Code)
+	require.NotContains(t, w2.Body.String(), "root:")
+	// Crucially, it must NOT inherit the public-asset CORS policy — that would make
+	// it unauthenticated *and* readable cross-origin.
+	require.Empty(t, w2.Header().Get("Access-Control-Allow-Origin"))
+	require.False(t, IsPluginConsoleAssetPath(req2.URL.Path))
 
 	// Missing file → 404.
 	req3 := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/nope.html", nil)
 	w3 := httptest.NewRecorder()
 	mc.ServeHTTP(w3, req3)
-	if w3.Code != http.StatusNotFound {
-		t.Errorf("expected 404 for missing file, got %d", w3.Code)
-	}
+	require.Equal(t, http.StatusNotFound, w3.Code)
 }
 
 func TestMockFSCInstallations(t *testing.T) {

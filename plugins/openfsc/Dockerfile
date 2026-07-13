@@ -1,6 +1,6 @@
 # Build the console UI (Vite, vanilla TS) → plugins/openfsc/console, which
 # console.go embeds via go:embed. NLDS is NOT bundled here: the app loads it at
-# runtime from the Console's shared /plugin-ui bundle. See ARCHITECTURE.md §2.
+# runtime from the Console's shared /plugin-ui bundle. See docs/funs/FUN-18.adoc.
 FROM oven/bun:1-alpine AS console-ui
 WORKDIR /ui
 COPY plugins/openfsc/console-ui/package.json plugins/openfsc/console-ui/bun.lock ./

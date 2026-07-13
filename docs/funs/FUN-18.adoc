@@ -3,7 +3,7 @@
 :numbered:
 :icons: font
 :sidebar-order: 18
-:state: committed
+:state: discussion
 
 = FUN-18 Plugin UI design system (NLDS)
 
@@ -56,15 +56,58 @@ NLDS components are web components, not native form controls, so a few patterns 
 * `nldd-button` renders its native `<button>` in shadow DOM, so a `type="submit"` does not submit the light-DOM form. Drive submission from a `click` handler.
 * Validation is manual: `form.reportValidity()` does not see NLDS controls. Surface errors with `nldd-form-field` (`error-message`) rather than native constraint validation.
 
+== Implementation
+
+=== Asset delivery: two channels
+
+[cols="1,2,2"]
+|===
+| Asset | Served from | Origin relative to the iframe
+
+| Plugin HTML + its own JS/TS
+| the plugin runtime (`/console/`, `go:embed` + `http.FileServer`)
+| same-origin
+
+| Plugin SDK (`plugin-sdk.{js,css}`) and NLDS (`nldd.{js,css}`)
+| the Console, under `/plugin-ui/`
+| cross-origin (discovered via `?host=`)
+|===
+
+The plugin's own app is a Vite app (vanilla TS) in `plugins/<name>/console-ui/`, built to `plugins/<name>/console/` and compiled into the plugin binary by `go:embed console/*`. It is *multi-page*: one HTML entry point per view, whose filenames must match `definition.yaml`'s `customComponents`. OpenFSC is the reference implementation.
+
+Because Vite emits `<script type="module" crossorigin>`, the plugin's *own* assets are fetched in CORS mode from the opaque-origin iframe. The kube-api-proxy therefore forces `Access-Control-Allow-Origin: *` (and drops `Access-Control-Allow-Credentials`) on plugin console asset responses, in both mock and real mode. These assets are static UI files that expose no user-specific data.
+
+=== Build wiring
+
+* *Console image* — `console-frontend/Dockerfile` runs `bun run build`, whose `prebuild` hook runs `build:plugin-ui`, regenerating the `/plugin-ui/` assets into every image. CI builds this image, so the assets always exist at deploy time.
+* *Plugin image* — `plugins/<name>/Dockerfile` has a `console-ui` (bun) stage that runs the Vite build; the Go stage `COPY --from`s the result in before `go build`, so `go:embed` captures it. `plugins/<name>/console` is `.dockerignore`'d, making that stage the single source of the embedded UI.
+* *Mock mode* — `kube-api-proxy`'s Dockerfiles run the same `console-ui` stage, because mock mode serves the plugin's console assets from disk rather than from the plugin binary.
+
+=== Generated-artifact policy
+
+Build outputs are gitignored and regenerated, never committed — the source of truth is `package.json` plus the pinned dependency:
+
+* `console-frontend/public/plugin-ui/{plugin-sdk,nldd}.{js,css}`
+* `console-frontend/src/proto-version.gen.ts`
+* each plugin's built `console/` dist (a committed `.gitkeep` is the only tracked file, so `go build` works on a fresh checkout)
+
+They are produced by the `prebuild` / `prestart` / `prewatch` / `prelint` hooks and by the Docker image builds, so every deploy path regenerates them. Because an unbuilt `console/` would otherwise yield a silently blank iframe, the plugin runtime fails fast at startup when the embedded console FS contains no HTML.
+
+=== Local development
+
+* `just openfsc console-preview` — builds the shared `/plugin-ui/` bundle and the Vite app, then serves the built `console/` against the live cluster via a kubectl-backed stand-in SDK.
+* `just openfsc console-dev` — the same stand-in backend behind the Vite dev server (which proxies `/api/*` and `/plugin-ui/*` to it), giving HMR against the live cluster.
+
 == Consequences
 
 * *Bundle size.* `nldd.js` (~0.89 MB) + `nldd.css` (~0.70 MB) load per plugin page that calls `loadNlds()`. This is the whole design system, opt-in and cached, so it is acceptable; a view that uses no `<nldd-*>` components (e.g. a pure table view) should not call `loadNlds()` and pays nothing.
 * *One version for everyone.* All plugins and the host share exactly one NLDS version. If a third-party plugin ever needs a different version, the channel can be served under a versioned path (e.g. `/plugin-ui/v1/nldd.js`) so versions coexist without a per-plugin build. Until then, a single path keeps it simple.
 * *Dogfooding.* First-party plugins use the same `loadNlds()` channel third-party authors do — there is no internal shortcut — which keeps the design-system integration honest (link:/funs/fun-16[FUN-16]).
+* *The console-ui build stage is currently per-plugin.* OpenFSC is named explicitly in its own Dockerfile and in the three `kube-api-proxy` Dockerfiles (which need the assets on disk for mock mode). That is tolerable for one plugin, but the second plugin with a Vite UI should turn this into a convention the proxy Dockerfiles iterate over, the way the asset-extraction step already loops over `./plugins/*/console`.
 
 == References
 
 * link:/funs/fun-10[FUN-10 Console frontend styling] — the visual conventions and the storybook icon gallery.
 * link:/funs/fun-11[FUN-11 Plugins and the Marketplace] — the plugin model these UIs plug into.
 * link:/funs/fun-16[FUN-16 Plugin isolation] — the sandboxed-iframe and `/plugin-ui/` channel this builds on.
-* `ARCHITECTURE.md` (repo root) — the implementation-level companion: build wiring, dev workflows, and the generated-artifact policy.
+* `plugins/openfsc/README.md` — the reference implementation, with the day-to-day build and preview commands.

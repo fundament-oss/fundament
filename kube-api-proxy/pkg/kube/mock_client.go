@@ -255,6 +255,13 @@ func (m *MockClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m.serveConsoleAsset(w, r, pluginName, asset)
 		return
 	}
+	// Addressed at the console route but with an asset path we refuse to serve
+	// (empty, absolute, or containing ".."). Reject it outright rather than let it
+	// fall through to the JSON resource handler, which would answer 200.
+	if _, _, ok := pluginConsoleRoute(r.URL.Path); ok {
+		http.Error(w, `{"message":"invalid asset path"}`, http.StatusBadRequest)
+		return
+	}
 
 	path := r.URL.Path
 	if r.URL.RawQuery != "" {
@@ -281,13 +288,9 @@ func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, p
 		http.Error(w, `{"message":"plugin templates directory not configured"}`, http.StatusNotFound)
 		return
 	}
-	if asset == "" || strings.Contains(asset, "..") {
-		http.Error(w, `{"message":"invalid asset path"}`, http.StatusBadRequest)
-		return
-	}
 
 	full := filepath.Join(m.PluginTemplatesDir, pluginName, "console", filepath.FromSlash(asset))
-	data, err := os.ReadFile(full) //nolint:gosec // pluginName + asset are extracted from a fixed pattern; ".." is rejected above.
+	data, err := os.ReadFile(full) //nolint:gosec // pluginName + asset are extracted from a fixed pattern; pluginConsoleAsset rejects "..".
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
@@ -428,8 +431,28 @@ func SetPublicAssetCORS(h http.Header) {
 }
 
 // pluginConsoleAsset matches `/api/v1/namespaces/plugin-<name>/services/http:plugin-<name>:8080/proxy/console/<asset>`
-// and returns the plugin name and the trailing asset path.
+// and returns the plugin name and the trailing asset path, but only for an asset
+// path that is safe to serve.
+//
+// The safety check lives here rather than in each caller because matching this
+// pattern both skips the proxy's auth check and stamps a public CORS policy on the
+// response (see IsPluginConsoleAssetPath and SetPublicAssetCORS). A traversal that
+// escaped the console directory would otherwise be served unauthenticated *and* be
+// readable cross-origin. Rejecting it here means an unsafe path is simply not a
+// console asset: real mode falls through to the normal authenticated proxy path,
+// and mock mode rejects it (see pluginConsoleRoute's use in ServeHTTP).
 func pluginConsoleAsset(path string) (pluginName, asset string, ok bool) {
+	pluginName, asset, ok = pluginConsoleRoute(path)
+	if !ok || !isSafeAssetPath(asset) {
+		return "", "", false
+	}
+	return pluginName, asset, true
+}
+
+// pluginConsoleRoute matches the console-asset URL shape without judging whether
+// the asset path is safe to serve. Callers that need "is this route addressed at
+// the console, even if malformed?" use this; everyone else wants pluginConsoleAsset.
+func pluginConsoleRoute(path string) (pluginName, asset string, ok bool) {
 	const (
 		nsPrefix  = "/api/v1/namespaces/plugin-"
 		svcMid    = "/services/http:plugin-"
@@ -455,4 +478,19 @@ func pluginConsoleAsset(path string) (pluginName, asset string, ok bool) {
 	}
 	asset = rest[len(pluginName)+len(svcSuffix):]
 	return pluginName, asset, true
+}
+
+// isSafeAssetPath reports whether asset is a non-empty relative slash-separated
+// path with no ".." segment. Checked per segment rather than with
+// strings.Contains so a legitimate filename like "foo..bar.js" is not rejected.
+func isSafeAssetPath(asset string) bool {
+	if asset == "" || strings.HasPrefix(asset, "/") {
+		return false
+	}
+	for segment := range strings.SplitSeq(asset, "/") {
+		if segment == ".." {
+			return false
+		}
+	}
+	return true
 }

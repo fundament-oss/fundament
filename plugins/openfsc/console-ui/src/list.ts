@@ -14,10 +14,16 @@ import type { FSCInstallation } from './types.ts';
 const tbody = document.getElementById('rows') as HTMLElement;
 document.getElementById('add')!.addEventListener('click', () => navigateToCreate());
 
+// Only the <nldd-button> needs the heavy NLDS bundle (the rows are plain .plugin-*
+// markup), so start it but don't block the data fetch on it — and don't let it fail
+// the page. If NLDS never arrives the table still renders and the "Add installation"
+// button degrades to an unstyled unknown element, which beats replacing a
+// good table with an error row.
+loadNlds().catch((err) => {
+  console.error('NLDS failed to load; <nldd-*> components will not render.', err);
+});
+
 try {
-  // Only the <nldd-button> needs the heavy NLDS bundle (the rows are plain
-  // .plugin-* markup), so start it but don't block the data fetch on it.
-  const nlds = loadNlds();
   await loadSdk();
   await window.fundament.init;
   const { items } = await window.fundament.k8s.list<FSCInstallation>({
@@ -51,8 +57,6 @@ try {
       });
     });
   }
-  // Surface an NLDS load failure (rows already rendered; the catch shows the error).
-  await nlds;
 } catch (err) {
   tbody.innerHTML = errorRow(6, err);
 }

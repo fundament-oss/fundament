@@ -184,3 +184,23 @@ jobs:
       - name: Run tests
         run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|cluster-worker|common|dcim-api)/')
 
+  openfsc-console-ui:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        working-directory: plugins/openfsc/console-ui
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: plugins/openfsc/console-ui
+        run: bun run typecheck
+
+      - name: Run tests
+        working-directory: plugins/openfsc/console-ui
+        run: bun run test
+

@@ -12,6 +12,7 @@
     "watch": "ng build --watch --configuration development",
     "pretest": "node generate-proto-version.js",
     "test": "ng test",
+    "prelint": "node generate-proto-version.js",
     "lint": "ng lint",
     "format": "prettier --write ."
   },

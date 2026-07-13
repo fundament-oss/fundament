@@ -10,9 +10,10 @@ export type NlddTextField = HTMLElement & {
   focus: () => void;
 };
 
+// `checked` is the only property read: the grant name is taken from the `value`
+// attribute, since it is always declared in markup and never set programmatically.
 export type NlddCheckboxField = HTMLElement & {
   checked: boolean;
-  value: string;
 };
 
 export type NlddButton = HTMLElement & {

@@ -52,10 +52,9 @@ the host. `loadNlds()` also mirrors the host light/dark theme onto
   (icons are kebab-case identifiers, e.g. `info-circle`). Styling conventions live
   in [`FUN-10`](../../docs/funs/FUN-10.adoc).
 - **How the design system reaches the sandboxed iframe** (the shared `/plugin-ui/`
-  channel, why NLDS is externalized, theming, build wiring) is recorded in
-  [`FUN-18`](../../docs/funs/FUN-18.adoc) and, in implementation detail, in
-  [`ARCHITECTURE.md`](../../ARCHITECTURE.md). OpenFSC is the reference
-  implementation — `fscinstallations-create.html` shows the per-component
+  channel, why NLDS is externalized, theming, build wiring, the generated-artifact
+  policy) is recorded in [`FUN-18`](../../docs/funs/FUN-18.adoc). OpenFSC is the
+  reference implementation — `fscinstallations-create.html` shows the per-component
   authoring rules (manual validation, `nldd-dropdown` wrapping a native
   `<select>`, `nldd-checkbox-field` reads, submit via click handler).
 

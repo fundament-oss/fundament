@@ -122,6 +122,12 @@ func isAllowedPath(path string) bool {
 // (Origin: null) the CORS middleware won't allow-list, and the proxied plugin pod
 // sets no CORS headers itself, so apply kube.SetPublicAssetCORS just before the
 // status line — overriding both the middleware and the proxied response.
+//
+// It deliberately forwards only http.Flusher, which is what httputil.ReverseProxy
+// needs to stream a response body. Wrapping drops http.Hijacker and io.ReaderFrom:
+// this path only ever serves static console assets (plain GETs), never a connection
+// upgrade. If it is ever reused for an upgradeable route, those must be forwarded
+// too, or the upgrade will fail.
 type pluginAssetCORSWriter struct {
 	http.ResponseWriter
 	applied bool

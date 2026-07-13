@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+// `vitest/config` re-exports Vite's defineConfig with the `test` block typed.
+import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
@@ -8,7 +9,7 @@ const entry = (name: string) => fileURLToPath(new URL(`${name}.html`, import.met
 // `go:embed console/*` compiles the build output into the plugin binary. NLDS is
 // intentionally NOT bundled: the app uses <nldd-*> tags whose registrations come
 // from the shared /plugin-ui/nldd.js, loaded at runtime via loadNlds(). See
-// ../../../ARCHITECTURE.md §2.
+// docs/funs/FUN-18.adoc.
 export default defineConfig({
   root,
   // Relative asset URLs so the built HTML resolves ./assets/* under /console/,
@@ -38,5 +39,11 @@ export default defineConfig({
       '/api': 'http://localhost:4319',
       '/plugin-ui': 'http://localhost:4319',
     },
+  },
+  test: {
+    // The form logic in src/form.ts is pure DOM work (no NLDS runtime, no network),
+    // so a lightweight DOM is all it needs.
+    environment: 'happy-dom',
+    include: ['src/**/*.test.ts'],
   },
 });
