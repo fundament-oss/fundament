@@ -1,12 +1,12 @@
 // Tests for the create-form logic.
 //
-// NLDS itself is not loaded here (it needs a real custom-element registry and the
-// host's /plugin-ui/nldd.js), so the <nldd-*> tags are unknown elements. `upgrade`
-// below stands in for the part of Lit the form code actually depends on: reflecting
-// the declared attributes (value / checked / required) onto properties of the same
-// name. Keeping that reflection explicit is deliberate — the form reads `.value` and
-// `.checked` as properties, and a harness that quietly diverged from the real
-// components would make these tests attest to the wrong thing.
+// The NLDD Design System itself is not loaded here (it needs a real custom-element
+// registry and the host's /plugin-ui/nldd.js), so the <nldd-*> tags are unknown
+// elements. `upgrade` below stands in for the part of Lit the form code actually
+// depends on: reflecting the declared attributes (value / checked / required) onto
+// properties of the same name. Keeping that reflection explicit is deliberate — the
+// form reads `.value` and `.checked` as properties, and a harness that quietly
+// diverged from the real components would make these tests attest to the wrong thing.
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -19,7 +19,7 @@ import {
   validateForm,
   validateTextField,
 } from './form.ts';
-import type { NlddTextField } from './nlds.ts';
+import type { NlddTextField } from './nldd-design-system.ts';
 
 // A minimal stand-in for the real create form: the ids buildBody reads, plus the
 // External fieldset and the gateway containers.
@@ -70,8 +70,9 @@ function renderForm(): HTMLFormElement {
   return form;
 }
 
-// Stands in for Lit's attribute→property reflection on the NLDS elements in `root`:
-// `value`, `checked` and `required` are declared reactive properties, so the real
+// Stands in for Lit's attribute→property reflection on the NLDD Design System
+// elements in `root`: `value`, `checked` and `required` are declared reactive
+// properties, so the real
 // components expose them whether or not the attribute was present. The form code
 // reads them as properties, so the harness must too.
 function upgrade(root: ParentNode): void {

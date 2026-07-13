@@ -1,8 +1,8 @@
 /**
- * Builds the NLDS plugin-UI stylesheet (public/plugin-ui/nldd.css).
+ * Builds the NLDD Design System plugin-UI stylesheet (public/plugin-ui/nldd.css).
  * Run via: bun src/plugin-sdk/build-nldd-css.ts
  *
- * Bundles nldd.css — NLDS's global.css plus the host's token overrides — into one
+ * Bundles nldd.css — the NLDD Design System's global.css plus the host's token overrides — into one
  * minified file and inlines the woff2 fonts as data: URIs: the plugin iframe has an
  * opaque origin, so a separate cross-origin @font-face fetch would need a CORS
  * header the assets don't set.

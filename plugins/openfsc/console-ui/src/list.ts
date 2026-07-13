@@ -1,6 +1,6 @@
 import {
   loadSdk,
-  loadNlds,
+  loadNldd,
   escapeHtml,
   formatAge,
   phase,
@@ -14,13 +14,13 @@ import type { FSCInstallation } from './types.ts';
 const tbody = document.getElementById('rows') as HTMLElement;
 document.getElementById('add')!.addEventListener('click', () => navigateToCreate());
 
-// Only the <nldd-button> needs the heavy NLDS bundle (the rows are plain .plugin-*
-// markup), so start it but don't block the data fetch on it — and don't let it fail
-// the page. If NLDS never arrives the table still renders and the "Add installation"
-// button degrades to an unstyled unknown element, which beats replacing a
-// good table with an error row.
-loadNlds().catch((err) => {
-  console.error('NLDS failed to load; <nldd-*> components will not render.', err);
+// Only the <nldd-button> needs the heavy NLDD Design System bundle (the rows are
+// plain .plugin-* markup), so start it but don't block the data fetch on it — and
+// don't let it fail the page. If it never arrives the table still renders and the
+// "Add installation" button degrades to an unstyled unknown element, which beats
+// replacing a good table with an error row.
+loadNldd().catch((err) => {
+  console.error('NLDD Design System failed to load; <nldd-*> components will not render.', err);
 });
 
 try {

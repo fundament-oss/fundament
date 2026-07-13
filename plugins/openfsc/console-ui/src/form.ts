@@ -3,7 +3,7 @@
 // than reaching for `document`. create.ts wires these to the real form.
 
 import { escapeHtml } from './shared.ts';
-import type { NlddCheckboxField, NlddTextField } from './nlds.ts';
+import type { NlddCheckboxField, NlddTextField } from './nldd-design-system.ts';
 
 export interface Gateway {
   name: string;

@@ -1,8 +1,9 @@
 /**
- * Entry point for the shared plugin-UI NLDS stylesheet (public/plugin-ui/nldd.css),
- * loaded into plugin iframes by loadNlds(). Built by build-nldd-css.ts.
+ * Entry point for the shared plugin-UI NLDD Design System stylesheet
+ * (public/plugin-ui/nldd.css), loaded into plugin iframes by loadNldd(). Built by
+ * build-nldd-css.ts.
  *
- * This is NLDS's own global.css plus the host Console's token overrides, so a plugin
+ * This is the NLDD Design System's own global.css plus the host Console's token overrides, so a plugin
  * iframe renders at the same scale as the Console around it. Anything the Console
  * overrides on :root in src/styles.css and that plugins should inherit belongs here.
  */
@@ -11,7 +12,7 @@
 
 :root {
   /*
-   * NLDS ships a 1.125rem (18px) base, which reads noticeably larger than the rest
+   * The NLDD Design System ships a 1.125rem (18px) base, which reads noticeably larger than the rest
    * of the Console. src/styles.css pins the host to Tailwind's fontSize.base; keep
    * the two in step or plugin text will not match the page it is embedded in.
    *

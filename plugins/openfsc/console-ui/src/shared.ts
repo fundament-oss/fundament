@@ -40,18 +40,18 @@ export function loadSdk(): Promise<FundamentSdk> {
   return loadPluginAsset('plugin-sdk').then(() => window.fundament);
 }
 
-// NLDS reads light/dark from `:root[data-scheme]`; mirror the SDK's body
-// `.light`/`.dark` class (set on init and on every theme change) onto it.
-function syncNldsTheme(): void {
+// The NLDD Design System reads light/dark from `:root[data-scheme]`; mirror the
+// SDK's body `.light`/`.dark` class (set on init and on every theme change) onto it.
+function syncNlddTheme(): void {
   const dark = document.body.classList.contains('dark');
   document.documentElement.setAttribute('data-scheme', dark ? 'dark' : 'light');
 }
 
-// Loads the shared NLDS bundle from the host; every <nldd-*> element is registered
-// once nldd.js has run. Views opt in by calling this alongside loadSdk().
-export function loadNlds(): Promise<void> {
-  syncNldsTheme();
-  new MutationObserver(syncNldsTheme).observe(document.body, {
+// Loads the shared NLDD Design System bundle from the host; every <nldd-*> element
+// is registered once nldd.js has run. Views opt in by calling this alongside loadSdk().
+export function loadNldd(): Promise<void> {
+  syncNlddTheme();
+  new MutationObserver(syncNlddTheme).observe(document.body, {
     attributes: true,
     attributeFilter: ['class'],
   });

@@ -1,9 +1,9 @@
-// Types for the NLDS web components this app drives.
+// Types for the NLDD Design System web components this app drives.
 //
 // @nldd/design-system is a *devDependency*: these are `import type` only, so they
-// are erased at build time and no NLDS code enters the bundle. The elements are
-// registered at runtime by the shared /plugin-ui/nldd.js (see loadNlds), which the
-// Console serves from its own pinned copy.
+// are erased at build time and no NLDD Design System code enters the bundle. The
+// elements are registered at runtime by the shared /plugin-ui/nldd.js (see
+// loadNldd), which the Console serves from its own pinned copy.
 //
 // The version here must therefore match console-frontend's — it describes the
 // bundle the host actually serves. A mismatch shows up as a type error, which is

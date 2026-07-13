@@ -12,7 +12,7 @@ const content = document.getElementById('content') as HTMLElement;
 const heading = document.getElementById('heading') as HTMLElement;
 
 // This view renders only .plugin-* markup (no <nldd-*> components), so it loads
-// just the SDK — not the NLDS bundle.
+// just the SDK — not the NLDD Design System bundle.
 let ctx: InitContext | null;
 try {
   await loadSdk();

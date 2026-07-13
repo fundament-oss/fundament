@@ -30,27 +30,27 @@ plugin binary (`go:embed console/*`) and served same-origin from `/console/`:
 - `fscinstallations-{list,detail,create}.html` — one entry point per view; the
   filenames must match `definition.yaml`'s `customComponents`.
 - `src/{list,detail,create}.ts` — one module per view; `src/shared.ts` holds the
-  SDK loader + helpers; `src/{sdk,types,nlds}.ts` are types only.
+  SDK loader + helpers; `src/{sdk,types,nldd-design-system}.ts` are types only.
 - The create form writes the FSCInstallation CR through the host SDK k8s broker
   (`window.fundament.k8s.create`, see `src/sdk.ts`), so it runs under the user's
   RBAC — `definition.yaml`'s `allowedResources` grants the `create` verb.
 
-### Design system (NLDS)
+### NLDD Design System
 
-The views are built with the **NLDS design system** (`@nldd/design-system`) — the
+The views are built with the **NLDD Design System** (`@nldd/design-system`) — the
 same one the host Console renders — using its `<nldd-*>` Lit web components
 (`<nldd-button>`, `<nldd-text-field>`, `<nldd-dropdown>`, `<nldd-checkbox-field>`,
-…). NLDS's **runtime is not bundled** into the plugin: the views call `loadNlds()`
+…). Its **runtime is not bundled** into the plugin: the views call `loadNldd()`
 (`src/shared.ts`) to pull the shared, host-pinned bundle from the Console origin at
 `/plugin-ui/nldd.{js,css}`, so every plugin uses one version that can't drift from
-the host. `loadNlds()` also mirrors the host light/dark theme onto
-`<html data-scheme>` so NLDS tokens follow the Console theme.
+the host. `loadNldd()` also mirrors the host light/dark theme onto
+`<html data-scheme>` so the design tokens follow the Console theme.
 
-`@nldd/design-system` *is* a **devDependency** — for types only. `src/nlds.ts`
+`@nldd/design-system` *is* a **devDependency** — for types only. `src/nldd-design-system.ts`
 re-exports the real component types via `import type`, which is erased at build, so
-the bundle stays byte-for-byte free of NLDS code while `tsc` still checks every
-property the views read. The pin must equal console-frontend's (a unit test enforces
-this); bump the two together.
+the bundle stays byte-for-byte free of NLDD Design System code while `tsc` still
+checks every property the views read. The pin must equal console-frontend's (a unit
+test enforces this); bump the two together.
 
 - **Browse components in the storybook:** <https://minbzk.github.io/storybook/> —
   the canonical reference for the `<nldd-*>` components and the
@@ -58,7 +58,7 @@ this); bump the two together.
   (icons are kebab-case identifiers, e.g. `info-circle`). Styling conventions live
   in [`FUN-10`](../../docs/funs/FUN-10.adoc).
 - **How the design system reaches the sandboxed iframe** (the shared `/plugin-ui/`
-  channel, why NLDS is externalized, theming, build wiring, the generated-artifact
+  channel, why the NLDD Design System is externalized, theming, build wiring, the generated-artifact
   policy) is recorded in [`FUN-18`](../../docs/funs/FUN-18.adoc). OpenFSC is the
   reference implementation — `fscinstallations-create.html` shows the per-component
   authoring rules (manual validation, `nldd-dropdown` wrapping a native

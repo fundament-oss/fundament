@@ -1,4 +1,4 @@
-import { loadSdk, loadNlds, navigateToDetail, navigateBack } from './shared.ts';
+import { loadSdk, loadNldd, navigateToDetail, navigateBack } from './shared.ts';
 import {
   applyMode,
   buildBody,
@@ -8,7 +8,7 @@ import {
   validateForm,
   type GatewayKind,
 } from './form.ts';
-import type { NlddButton } from './nlds.ts';
+import type { NlddButton } from './nldd-design-system.ts';
 import type { InitContext } from './sdk.ts';
 
 const intro = document.getElementById('intro') as HTMLElement;
@@ -20,7 +20,7 @@ document.getElementById('back')!.addEventListener('click', () => navigateBack())
 
 let ctx: InitContext | null;
 try {
-  await Promise.all([loadSdk(), loadNlds()]);
+  await Promise.all([loadSdk(), loadNldd()]);
   ctx = await window.fundament.init;
 } catch (err) {
   intro.textContent = `Failed to load the plugin SDK: ${err instanceof Error ? err.message : err}`;

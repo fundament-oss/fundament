@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "OpenFSC plugin Console UI. Vite app (vanilla TS) built to ../console, served same-origin from the plugin's /console/. NLDS is loaded at runtime from the shared /plugin-ui/ bundle (not bundled here). See docs/funs/FUN-18.adoc.",
+  "description": "OpenFSC plugin Console UI. Vite app (vanilla TS) built to ../console, served same-origin from the plugin's /console/. The NLDD Design System is loaded at runtime from the shared /plugin-ui/ bundle (not bundled here). See docs/funs/FUN-18.adoc.",
   "scripts": {
     "build": "vite build && touch ../console/.gitkeep",
     "dev": "vite",

@@ -136,7 +136,7 @@ const server = Bun.serve({
     if (path === '/plugin-ui/plugin-sdk.js') return new Response(Bun.file(join(HERE, 'plugin-sdk.js')));
     if (path === '/plugin-ui/plugin-sdk.css') return new Response(Bun.file(SDK_CSS));
 
-    // The opt-in NLDS bundle (real built files; fonts are inlined as data: URIs,
+    // The opt-in NLDD Design System bundle (real built files; fonts are inlined as data: URIs,
     // so there are no separate font assets to serve). Bun.file sets content-type.
     if (path === '/plugin-ui/nldd.js') return new Response(Bun.file(join(PLUGIN_UI_DIR, 'nldd.js')));
     if (path === '/plugin-ui/nldd.css') return new Response(Bun.file(join(PLUGIN_UI_DIR, 'nldd.css')));
