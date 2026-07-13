@@ -2,7 +2,7 @@
 SELECT id, name, display_name, description_short, description, image
 FROM appstore.plugins
 WHERE deleted IS NULL
-ORDER BY display_name;
+ORDER BY COALESCE(NULLIF(display_name, ''), name);
 
 -- name: PluginTagsList :many
 SELECT pt.plugin_id, t.id, t.name

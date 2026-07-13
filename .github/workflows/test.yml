@@ -204,3 +204,9 @@ jobs:
         working-directory: plugins/openfsc/console-ui
         run: bun run test
 
+      # Catches a Vite/entry-point regression (e.g. an HTML entry renamed out of
+      # step with definition.yaml's customComponents) here rather than at image build.
+      - name: Build
+        working-directory: plugins/openfsc/console-ui
+        run: bun run build
+

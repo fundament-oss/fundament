@@ -58,3 +58,15 @@ func TestPluginAssetCORSWriter_ImplicitWriteHeader(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Equal(t, "*", rec.Header().Get("Access-Control-Allow-Origin"))
 }
+
+// httputil.ReverseProxy reaches the writer through http.ResponseController, which
+// walks Unwrap. Without it the proxy's flush and deadline calls hit the wrapper and
+// fail with http.ErrNotSupported instead of the real writer.
+func TestPluginAssetCORSWriter_ResponseControllerReachesWrappedWriter(t *testing.T) {
+	rec := httptest.NewRecorder()
+	w := &pluginAssetCORSWriter{ResponseWriter: rec}
+
+	require.Same(t, rec, w.Unwrap())
+	require.NoError(t, http.NewResponseController(w).Flush())
+	require.True(t, rec.Flushed)
+}
