@@ -78,7 +78,7 @@ helm-deps:
 # Deploy to local k3d cluster (development mode, keeps resources on exit)
 dev *flags:
     SKAFFOLD_DEFAULT_REPO="localhost:5111" \
-    skaffold dev --profile env-local --cleanup=false {{ flags }}
+    skaffold dev --kube-context k3d-fundament --profile env-local --cleanup=false {{ flags }}
 
 # Deploy to local k3d cluster with hot-reload
 dev-hotreload:
