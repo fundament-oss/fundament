@@ -127,6 +127,7 @@ func pluginDetailFromRow(
 	return organizationv1.PluginDetail_builder{
 		Id:                 plugin.ID.String(),
 		Name:               plugin.Name,
+		DisplayName:        plugin.DisplayName,
 		Description:        plugin.Description,
 		DescriptionShort:   plugin.DescriptionShort,
 		Tags:               protoTags,
