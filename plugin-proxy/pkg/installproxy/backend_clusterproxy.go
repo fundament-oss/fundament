@@ -14,7 +14,7 @@ import (
 // credential is used; no per-user or per-plugin token is injected here, because
 // these routes carry no kube RBAC scope (FUN-17 "Scoping").
 type ClusterProxyBackend struct {
-	AdminKubeconfig *kube.AdminKubeconfigCache
+	AdminKubeconfig kube.KubeconfigSource
 }
 
 func (b *ClusterProxyBackend) Serve(w http.ResponseWriter, r *http.Request, route Route) {
@@ -34,9 +34,11 @@ func (b *ClusterProxyBackend) Serve(w http.ResponseWriter, r *http.Request, rout
 	var pathDecoded, pathEscaped string
 	switch route.Kind {
 	case RouteRuntime:
+		// plugin-controller names the namespace and Service plugin-<name>
+		// (childName in plugin-controller/pkg/controller/resources.go).
 		ns := "plugin-" + route.PluginName
-		pathDecoded = fmt.Sprintf("/api/v1/namespaces/%s/services/runtime:8080/proxy/%s", ns, route.RemainingPath)
-		pathEscaped = fmt.Sprintf("/api/v1/namespaces/%s/services/runtime:8080/proxy/%s", ns, tailEscaped)
+		pathDecoded = fmt.Sprintf("/api/v1/namespaces/%s/services/%s:8080/proxy/%s", ns, ns, route.RemainingPath)
+		pathEscaped = fmt.Sprintf("/api/v1/namespaces/%s/services/%s:8080/proxy/%s", ns, ns, tailEscaped)
 	case RouteController:
 		pathDecoded = fmt.Sprintf("/api/v1/namespaces/fundament-system/services/plugin-controller:8080/proxy/%s", route.RemainingPath)
 		pathEscaped = fmt.Sprintf("/api/v1/namespaces/fundament-system/services/plugin-controller:8080/proxy/%s", tailEscaped)

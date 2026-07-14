@@ -17,7 +17,9 @@ import (
 	"github.com/rs/cors"
 	"github.com/svrana/go-connect-middleware/interceptors/logging"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
+	"github.com/fundament-oss/fundament/common/gardener"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/assets"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/config"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/installproxy"
@@ -64,23 +66,41 @@ func run() error {
 	}
 
 	var (
-		resolver assets.ClusterResolver
-		fetcher  assets.Fetcher
-		authz    installproxy.ClusterAuthorizer
-		backend  installproxy.Backend
+		resolver      assets.ClusterResolver
+		fetcher       assets.Fetcher
+		clusterAuthz  installproxy.ClusterAuthorizer
+		backend       installproxy.Backend
+		clusterAccess service.ClusterAccess
 	)
 	switch cfg.Mode {
 	case "real":
-		admin := kube.NewAdminKubeconfigCache()
+		gardenerClient, err := gardener.New(cfg.GardenerKubeconfig, logger)
+		if err != nil {
+			return fmt.Errorf("create gardener client: %w", err)
+		}
+		adminCache := gardener.NewAdminKubeconfigCache(gardenerClient, logger)
+		admin := kube.NewAdminKubeconfigCache(adminCache)
+
+		authzClient, err := authz.New(cfg.OpenFGA)
+		if err != nil {
+			return fmt.Errorf("create OpenFGA client: %w", err)
+		}
+
+		clusterAccess, err = service.NewGardenerClusterAccess(adminCache)
+		if err != nil {
+			return fmt.Errorf("create cluster access: %w", err)
+		}
+
 		resolver = assets.Resolver{}
 		fetcher = &assets.PodFetcher{AdminKubeconfig: admin}
-		authz = installproxy.Authz{}
+		clusterAuthz = installproxy.Authz{Client: authzClient}
 		backend = &installproxy.ClusterProxyBackend{AdminKubeconfig: admin}
 	case "mock":
 		resolver = assets.MockResolver{ClusterID: service.MockClusterID}
 		fetcher = assets.MockFetcher{Logger: logger}
-		authz = installproxy.MockAuthz{}
+		clusterAuthz = installproxy.MockAuthz{}
 		backend = installproxy.MockBackend{Logger: logger}
+		clusterAccess = service.NewMockClusterAccess()
 	default:
 		// config.FromEnv already validates this; guard against future drift.
 		panic(fmt.Sprintf("unhandled plugin-proxy mode %q", cfg.Mode))
@@ -97,7 +117,7 @@ func run() error {
 	// Installation proxy (cross-site → wrap in CORS). The PluginToken rides
 	// in Authorization, so credentials mode stays off — do not enable
 	// AllowCredentials.
-	installHandler := installproxy.New([]byte(cfg.JWTSecret), authz, backend, logger)
+	installHandler := installproxy.New([]byte(cfg.JWTSecret), clusterAuthz, backend, logger)
 	installCORS := cors.New(cors.Options{
 		AllowedOrigins: []string{cfg.PluginProxyOrigin},
 		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete},
@@ -105,7 +125,7 @@ func run() error {
 	})
 	publicMux.Handle("/installations/", installCORS.Handler(installHandler))
 
-	s := service.New(logger, service.NewMockClusterAccess())
+	s := service.New(logger, clusterAccess)
 
 	loggingInterceptor := logging.UnaryServerInterceptor(
 		logging.LoggerFunc(func(ctx context.Context, level logging.Level, msg string, fields ...any) {

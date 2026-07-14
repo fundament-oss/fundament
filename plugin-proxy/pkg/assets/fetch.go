@@ -29,7 +29,7 @@ var ErrAssetTooLarge = errors.New("asset exceeds max size")
 // cluster's API-server service proxy. The handler resolves clusterID before
 // calling; PodFetcher just builds the URL and forwards the request.
 type PodFetcher struct {
-	AdminKubeconfig *kube.AdminKubeconfigCache
+	AdminKubeconfig kube.KubeconfigSource
 }
 
 func (f *PodFetcher) Fetch(ctx context.Context, clusterID uuid.UUID, pluginName, assetPath string) ([]byte, string, error) {
@@ -38,9 +38,11 @@ func (f *PodFetcher) Fetch(ctx context.Context, clusterID uuid.UUID, pluginName,
 		return nil, "", fmt.Errorf("admin kubeconfig: %w", err)
 	}
 
+	// plugin-controller names the namespace and Service plugin-<name>
+	// (childName in plugin-controller/pkg/controller/resources.go).
 	ns := "plugin-" + url.PathEscape(pluginName)
 	asset := (&url.URL{Path: assetPath}).EscapedPath()
-	upstream := fmt.Sprintf("%s/api/v1/namespaces/%s/services/runtime:8080/proxy/console/%s", host, ns, asset)
+	upstream := fmt.Sprintf("%s/api/v1/namespaces/%s/services/%s:8080/proxy/console/%s", host, ns, ns, asset)
 	//nolint:gosec // host comes from the trusted admin kubeconfig cache; pluginName and assetPath are URL-escaped above.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, upstream, http.NoBody)
 	if err != nil {
