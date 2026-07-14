@@ -6,7 +6,6 @@ package kubereq
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -47,7 +46,13 @@ func Parse(r *http.Request) (Attributes, error) {
 	// /api/v1/namespaces/{name}) and the namespace-scope marker for downstream
 	// resources (/api/v1/namespaces/{ns}/{resource}...). Only treat it as the
 	// scope marker when at least one more segment follows the namespace name.
-	if parts[i] == "namespaces" && i+2 < len(parts) {
+	//
+	// Exception: the apiserver special-cases /api/v1/namespaces/{name}/status
+	// and /finalize as subresources OF the namespace (resource "namespaces",
+	// subresource "status"/"finalize"), not as a namespace-scoped resource.
+	// Mirror that so the SAR checks the same attributes the apiserver enforces.
+	if parts[i] == "namespaces" && i+2 < len(parts) &&
+		!(i+3 == len(parts) && (parts[i+2] == "status" || parts[i+2] == "finalize")) {
 		out.Namespace = parts[i+1]
 		i += 2
 	}
@@ -73,11 +78,15 @@ func Parse(r *http.Request) (Attributes, error) {
 func inferVerb(r *http.Request, hasName bool) string {
 	switch strings.ToUpper(r.Method) {
 	case http.MethodGet:
-		// Kubernetes accepts any strconv.ParseBool truthy value here (1, t, T,
-		// true, TRUE, yes, …); match that so the verb we SAR-check aligns with
-		// what the apiserver ultimately performs.
-		if v := r.URL.Query().Get("watch"); v != "" {
-			if b, err := strconv.ParseBool(v); err == nil && b {
+		// Match the apiserver's query-param bool conversion exactly
+		// (apimachinery Convert_Slice_string_To_bool): the param resolves to
+		// false ONLY when absent, "0", or case-insensitive "false"; every other
+		// present value ("yes", "maybe", even bare "?watch") is a watch. Using
+		// strconv.ParseBool here would SAR-check "list" for e.g. "?watch=yes"
+		// while the apiserver performs a watch — letting a user with list-but-
+		// not-watch access watch.
+		if vs, ok := r.URL.Query()["watch"]; ok && len(vs) > 0 {
+			if v := vs[0]; v != "0" && !strings.EqualFold(v, "false") {
 				return "watch"
 			}
 		}

@@ -36,8 +36,16 @@ func TestParse(t *testing.T) {
 			Attributes{Resource: "pods", Verb: "watch"}},
 		{"watch via query falsy 0", "GET", "/api/v1/pods", "watch=0",
 			Attributes{Resource: "pods", Verb: "list"}},
-		{"watch via query bogus", "GET", "/api/v1/pods", "watch=maybe",
+		{"watch via query non-bool truthy", "GET", "/api/v1/pods", "watch=yes",
+			Attributes{Resource: "pods", Verb: "watch"}},
+		{"watch via query arbitrary value", "GET", "/api/v1/pods", "watch=maybe",
+			Attributes{Resource: "pods", Verb: "watch"}},
+		{"watch via query FALSE", "GET", "/api/v1/pods", "watch=FALSE",
 			Attributes{Resource: "pods", Verb: "list"}},
+		{"namespace status subresource", "GET", "/api/v1/namespaces/default/status", "",
+			Attributes{Resource: "namespaces", Name: "default", Subresource: "status", Verb: "get"}},
+		{"namespace finalize subresource", "PUT", "/api/v1/namespaces/default/finalize", "",
+			Attributes{Resource: "namespaces", Name: "default", Subresource: "finalize", Verb: "update"}},
 		{"create", "POST", "/apis/apps/v1/namespaces/default/deployments", "",
 			Attributes{APIGroup: "apps", Namespace: "default", Resource: "deployments", Verb: "create"}},
 		{"patch", "PATCH", "/apis/apps/v1/namespaces/default/deployments/web", "",
@@ -64,4 +72,39 @@ func TestParse_RejectsMalformed(t *testing.T) {
 		_, err := Parse(r)
 		assert.Error(t, err, "expected error for %q", path)
 	}
+}
+
+// FuzzParse feeds arbitrary methods and paths at Parse. Because the parsed
+// Attributes drive the SubjectAccessReview, a malformed request must never
+// panic and must never yield attributes that would authorize against an empty
+// resource/verb. Parse either returns an error or a fully-populated decision.
+func FuzzParse(f *testing.F) {
+	seeds := []struct{ method, target string }{
+		{"GET", "/api/v1/pods"},
+		{"GET", "/api/v1/namespaces/default/pods/web-1/log"},
+		{"GET", "/apis/cert-manager.io/v1/namespaces/team-a/certificates?watch=true"},
+		{"DELETE", "/apis/apps/v1/namespaces/default/deployments"},
+		{"POST", "/api/v1/namespaces"},
+		{"GET", "/foo"},
+		{"GET", "/apis//v1/x"},
+		{"", ""},
+	}
+	for _, s := range seeds {
+		f.Add(s.method, s.target)
+	}
+
+	f.Fuzz(func(t *testing.T, method, target string) {
+		r, err := http.NewRequestWithContext(context.Background(), method, target, http.NoBody)
+		if err != nil {
+			return // not a request Parse would ever receive
+		}
+		got, err := Parse(r)
+		if err != nil {
+			return
+		}
+		// A nil error means Parse authorized a concrete decision; the SAR would
+		// be meaningless (and dangerously broad) without both fields.
+		assert.NotEmpty(t, got.Resource, "resource empty for %q %q", method, target)
+		assert.NotEmpty(t, got.Verb, "verb empty for %q %q", method, target)
+	})
 }

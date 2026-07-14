@@ -96,6 +96,11 @@ func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, clusterID 
 	}
 
 	// 3. Parse the kube request.
+	// TODO(FUN-17): non-resource discovery endpoints (/api, /apis,
+	// /apis/{g}/{v}, /openapi/...) don't fit the resource grammar and fail here
+	// with 400, so client-go/kubectl-based plugins can't complete discovery.
+	// This is intentionally fail-closed for now; a discovery carve-out would
+	// SAR-check them as nonResourceURLs rather than rejecting outright.
 	attrs, err := kubereq.Parse(r)
 	if err != nil {
 		g.audit(claims, nil, "", "error:unparseable-request")
