@@ -122,7 +122,7 @@ generate:
     cd db && trek generate --stdout
     go generate -x ./...
     cd console-frontend && buf generate
-    cd console-frontend && openapi-ts
+    cd console-frontend && bunx openapi-ts
     cd e2e && buf generate
     cd dcim-frontend && buf generate
     just fmt
