@@ -41,7 +41,7 @@ var ErrInstallationNotFound = errors.New("plugin installation not found")
 // cluster's API-server service proxy. The handler resolves clusterID before
 // calling; PodFetcher just builds the URL and forwards the request.
 type PodFetcher struct {
-	AdminKubeconfig *kube.AdminKubeconfigCache
+	AdminKubeconfig kube.KubeconfigSource
 }
 
 func (f *PodFetcher) Fetch(ctx context.Context, clusterID uuid.UUID, pluginName, pluginVersion, assetPath string) ([]byte, string, error) {

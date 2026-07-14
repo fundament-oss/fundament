@@ -97,10 +97,28 @@ func TestFromEnv_RealModeWithAllOriginsSucceeds(t *testing.T) {
 	t.Setenv("PLUGIN_PROXY_ORIGIN", "https://pp.example")
 	t.Setenv("KUBE_API_PROXY_ORIGIN", "https://kap.example")
 	t.Setenv("CONSOLE_ORIGIN", "https://console.example")
+	t.Setenv("GARDENER_KUBECONFIG", "/etc/gardener/kubeconfig")
 
 	cfg, err := FromEnv()
 	require.NoError(t, err)
 	assert.Equal(t, "real", cfg.Mode)
+	assert.Equal(t, "/etc/gardener/kubeconfig", cfg.GardenerKubeconfig)
+	assert.Equal(t, "http://openfga:8080", cfg.OpenFGA.APIURL)
+}
+
+func TestFromEnv_RealModeRequiresGardenerKubeconfig(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("OPENFGA_API_URL", "http://openfga:8080")
+	t.Setenv("OPENFGA_STORE_ID", "test-store")
+	t.Setenv("PLUGIN_PROXY_MODE", "real")
+	t.Setenv("PLUGIN_PROXY_ORIGIN", "https://pp.example")
+	t.Setenv("KUBE_API_PROXY_ORIGIN", "https://kap.example")
+	t.Setenv("CONSOLE_ORIGIN", "https://console.example")
+	t.Setenv("GARDENER_KUBECONFIG", "")
+
+	_, err := FromEnv()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "GARDENER_KUBECONFIG")
 }
 
 func TestFromEnv_UnknownModeErrors(t *testing.T) {

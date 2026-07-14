@@ -20,6 +20,7 @@ import (
 	"github.com/fundament-oss/fundament/common/auth"
 	openfgaauthz "github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/connectrecovery"
+	"github.com/fundament-oss/fundament/common/gardener"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/assets"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/config"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/installproxy"
@@ -76,16 +77,35 @@ func run() error {
 		FrameAncestors: []string{cfg.ConsoleOrigin},
 	}
 
+	// OpenFGA backs the asset handler's can_view gate in every mode and, in
+	// real mode, doubles as the installation proxy's cluster authorizer.
+	openfga, err := openfgaauthz.New(cfg.OpenFGA)
+	if err != nil {
+		return fmt.Errorf("openfga client: %w", err)
+	}
+
 	var (
-		fetcher assets.Fetcher
-		authz   installproxy.ClusterAuthorizer
-		backend installproxy.Backend
+		fetcher       assets.Fetcher
+		authz         installproxy.ClusterAuthorizer
+		backend       installproxy.Backend
+		clusterAccess service.ClusterAccess
 	)
 	switch cfg.Mode {
 	case "real":
-		admin := kube.NewAdminKubeconfigCache()
+		gardenerClient, err := gardener.New(cfg.GardenerKubeconfig, logger)
+		if err != nil {
+			return fmt.Errorf("create gardener client: %w", err)
+		}
+		adminCache := gardener.NewAdminKubeconfigCache(gardenerClient, logger)
+		admin := kube.NewAdminKubeconfigCacheFromGardener(adminCache)
+
+		clusterAccess, err = service.NewGardenerClusterAccess(adminCache)
+		if err != nil {
+			return fmt.Errorf("create cluster access: %w", err)
+		}
+
 		fetcher = &assets.PodFetcher{AdminKubeconfig: admin}
-		authz = installproxy.Authz{}
+		authz = installproxy.Authz{Client: openfga}
 		backend = &installproxy.ClusterProxyBackend{AdminKubeconfig: admin}
 	case "mock":
 		authz = installproxy.MockAuthz{}
@@ -105,6 +125,19 @@ func run() error {
 				"kubeconfig", cfg.PluginSandboxKubeconfig)
 		} else {
 			fetcher = assets.MockFetcher{Logger: logger}
+		}
+
+		// Same sandbox-else-mock choice for the PluginInstallationService.
+		if cfg.PluginSandboxKubeconfig != "" {
+			sandboxAccess, err := service.NewSandboxClusterAccess(cfg.PluginSandboxKubeconfig)
+			if err != nil {
+				return fmt.Errorf("build sandbox cluster access: %w", err)
+			}
+			clusterAccess = sandboxAccess
+			logger.Info("PluginInstallationService reading from plugin sandbox cluster",
+				"kubeconfig", cfg.PluginSandboxKubeconfig)
+		} else {
+			clusterAccess = service.NewMockClusterAccess()
 		}
 	default:
 		// config.FromEnv already validates this; guard against future drift.
@@ -130,11 +163,6 @@ func run() error {
 		auth.TokenTypeUser,
 		logger,
 	)
-	openfga, err := openfgaauthz.New(cfg.OpenFGA)
-	if err != nil {
-		return fmt.Errorf("openfga client: %w", err)
-	}
-
 	// Plugin assets: /clusters/{clusterID}/plugins/{name}/{version}/console/{path}.
 	// The console picks the cluster the user is browsing, so asset traffic
 	// stays local to that cluster instead of piling onto one arbitrary
@@ -152,18 +180,6 @@ func run() error {
 	})
 	publicMux.Handle("/installations/", installCORS.Handler(installHandler))
 
-	var clusterAccess service.ClusterAccess
-	if cfg.PluginSandboxKubeconfig != "" {
-		sandboxAccess, err := service.NewSandboxClusterAccess(cfg.PluginSandboxKubeconfig)
-		if err != nil {
-			return fmt.Errorf("build sandbox cluster access: %w", err)
-		}
-		clusterAccess = sandboxAccess
-		logger.Info("PluginInstallationService reading from plugin sandbox cluster",
-			"kubeconfig", cfg.PluginSandboxKubeconfig)
-	} else {
-		clusterAccess = service.NewMockClusterAccess()
-	}
 	s := service.New(logger, clusterAccess)
 
 	loggingInterceptor := logging.UnaryServerInterceptor(
