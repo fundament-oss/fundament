@@ -156,7 +156,10 @@ pluginProxy:
   enabled: false
   replicas: 1
   logLevel: info
-  mode: mock # "mock" or "real" (real is future work)
+  mode: mock # "mock" or "real"
+  # Secret with a garden-cluster kubeconfig; required (with real mode) for
+  # shoot access and enables the OpenFGA env. Same secret kube-api-proxy uses.
+  gardenerKubeconfigSecret: ""
   httproute:
     enabled: false
     parentRefs: []
