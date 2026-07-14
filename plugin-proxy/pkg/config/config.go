@@ -25,6 +25,10 @@ type Config struct {
 	// same check authn-api runs before minting a PluginToken.
 	OpenFGA authz.Config
 
+	// GardenerKubeconfig points at the garden-cluster kubeconfig used to
+	// resolve shoots and mint admin kubeconfigs. Required in real mode.
+	GardenerKubeconfig string `env:"GARDENER_KUBECONFIG"`
+
 	// PluginProxyOrigin is this service's own public origin.
 	// Required in real mode; mock-mode default applies otherwise.
 	PluginProxyOrigin string `env:"PLUGIN_PROXY_ORIGIN"`
@@ -86,6 +90,9 @@ func FromEnv() (Config, error) {
 	case "real":
 		if cfg.PluginProxyOrigin == "" || cfg.KubeAPIProxyOrigin == "" || cfg.ConsoleOrigin == "" {
 			return Config{}, fmt.Errorf("PLUGIN_PROXY_ORIGIN, KUBE_API_PROXY_ORIGIN, and CONSOLE_ORIGIN are required in real mode")
+		}
+		if cfg.GardenerKubeconfig == "" {
+			return Config{}, fmt.Errorf("GARDENER_KUBECONFIG is required in real mode")
 		}
 	default:
 		return Config{}, fmt.Errorf("PLUGIN_PROXY_MODE=%q: only %q or %q is supported", cfg.Mode, "mock", "real")
