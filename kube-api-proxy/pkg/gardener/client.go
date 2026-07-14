@@ -1,5 +1,5 @@
-// Package gardener provides a minimal Gardener client for fetching per-cluster
-// admin kubeconfigs and issuing ServiceAccount tokens on shoot clusters.
+// Package gardener issues per-user ServiceAccount tokens on shoot clusters,
+// building on the shared Gardener client in common/gardener.
 package gardener
 
 import (
@@ -11,26 +11,16 @@ import (
 
 	"github.com/google/uuid"
 
-	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/fundament-oss/fundament/common/gardener"
 )
 
-// AdminKubeconfig holds the result of an AdminKubeconfigRequest.
-type AdminKubeconfig struct {
-	Kubeconfig []byte
-	ExpiresAt  time.Time
-}
-
 const (
-	labelClusterID = "fundament.io/cluster-id"
-
 	// fundamentSystemNamespace is the namespace where per-user service accounts live.
 	fundamentSystemNamespace = "fundament-system"
 
@@ -41,67 +31,22 @@ const (
 // ErrSyncPending indicates the service account has not been provisioned yet.
 var ErrSyncPending = errors.New("service account sync pending")
 
-// Client fetches admin kubeconfigs from Gardener for a given cluster ID.
+// AdminKubeconfig holds the result of an AdminKubeconfigRequest.
+type AdminKubeconfig = gardener.AdminKubeconfig
+
+// Client fetches admin kubeconfigs from Gardener and issues per-user SA
+// tokens on shoots.
 type Client struct {
-	client client.Client
-	logger *slog.Logger
+	*gardener.Client
 }
 
 // New creates a Client from the kubeconfig at the given path.
 func New(kubeconfigPath string, logger *slog.Logger) (*Client, error) {
-	loadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath}
-	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, nil)
-	cfg, err := cc.ClientConfig()
+	c, err := gardener.New(kubeconfigPath, logger)
 	if err != nil {
-		return nil, fmt.Errorf("load gardener kubeconfig: %w", err)
+		return nil, err
 	}
-
-	scheme := runtime.NewScheme()
-	if err := gardencorev1beta1.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("add gardener core scheme: %w", err)
-	}
-	if err := authenticationv1alpha1.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("add gardener authentication scheme: %w", err)
-	}
-
-	c, err := client.New(cfg, client.Options{Scheme: scheme})
-	if err != nil {
-		return nil, fmt.Errorf("create gardener client: %w", err)
-	}
-
-	logger.Info("connected to Gardener API", "host", cfg.Host)
-	return &Client{client: c, logger: logger}, nil
-}
-
-// GetAdminKubeconfig finds the Shoot for clusterID and returns a short-lived
-// admin kubeconfig via the Gardener adminkubeconfig subresource.
-// Pass expirationSeconds=0 to use the Gardener default (typically 1 hour).
-func (c *Client) GetAdminKubeconfig(ctx context.Context, clusterID string, expirationSeconds int64) (*AdminKubeconfig, error) {
-	shootList := &gardencorev1beta1.ShootList{}
-	if err := c.client.List(ctx, shootList,
-		client.MatchingLabels{labelClusterID: clusterID},
-	); err != nil {
-		return nil, fmt.Errorf("list shoots for cluster %s: %w", clusterID, err)
-	}
-
-	if len(shootList.Items) == 0 {
-		return nil, fmt.Errorf("no shoot found for cluster %s", clusterID)
-	}
-
-	shoot := &shootList.Items[0]
-	req := &authenticationv1alpha1.AdminKubeconfigRequest{}
-	if expirationSeconds > 0 {
-		req.Spec.ExpirationSeconds = &expirationSeconds
-	}
-
-	if err := c.client.SubResource("adminkubeconfig").Create(ctx, shoot, req); err != nil {
-		return nil, fmt.Errorf("request admin kubeconfig for cluster %s: %w", clusterID, err)
-	}
-
-	return &AdminKubeconfig{
-		Kubeconfig: req.Status.Kubeconfig,
-		ExpiresAt:  req.Status.ExpirationTimestamp.Time,
-	}, nil
+	return &Client{Client: c}, nil
 }
 
 // SAToken holds a service account token and its expiration.
