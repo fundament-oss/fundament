@@ -42,12 +42,8 @@ type PluginInstallationSpec struct {
 	// convention — no spec.pluginName echo of it). The controller uses
 	// metadata.name to derive child resource names (namespace, SA, etc.);
 	// DefinitionRef.PluginName names the pinned definition and may differ.
-	DefinitionRef DefinitionRef `json:"definitionRef"`
-	// ClusterRoles is legacy: once the controller materialises the SA Role
-	// from DefinitionRef it is no longer bound. Retained for backward
-	// compatibility; removal is a follow-up.
-	ClusterRoles []string          `json:"clusterRoles,omitempty"`
-	Config       map[string]string `json:"config,omitempty"`
+	DefinitionRef DefinitionRef     `json:"definitionRef"`
+	Config        map[string]string `json:"config,omitempty"`
 }
 
 // DefinitionRef pins an immutable, content-addressed PluginDefinition.
