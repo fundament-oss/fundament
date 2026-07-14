@@ -108,9 +108,17 @@ export default class PluginRegistryService {
         // Child resource names (namespace, service) derive from metadata.name —
         // see plugin-controller resources.go childName/pluginNamespace.
         const installationName = item.metadata.name;
+        // GetDefinition is a Connect unary RPC — a real plugin pod only accepts
+        // POST (the kube-api-proxy mock now enforces this too). A bodyless GET
+        // 405s against a real shoot (#967).
         const defRes = await fetch(
           `${kubeApiProxyUrl}/clusters/${clusterId}/api/v1/namespaces/plugin-${installationName}/services/http:plugin-${installationName}:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
-          { credentials: 'include' },
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+            credentials: 'include',
+          },
         );
         if (!defRes.ok) {
           throw new Error(`Failed to fetch definition for ${installationName}: ${defRes.status}`);
