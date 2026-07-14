@@ -8,7 +8,8 @@ build:
   # Local build settings - load directly into k3d (no registry needed)
   local:
     useBuildkit: true
-    concurrency: 0
+    # Cap parallel image builds to spare low-end machines.
+    concurrency: 4
     push: true
 
   artifacts:
