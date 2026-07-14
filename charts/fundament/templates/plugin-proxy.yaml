@@ -48,6 +48,10 @@ spec:
             - name: CONSOLE_ORIGIN
               value: {{ $.Values.externalUrls.console }}
             {{- end }}
+            {{- if $.Values.pluginProxy.gardenerKubeconfigSecret }}
+            - name: GARDENER_KUBECONFIG
+              value: /etc/gardener/kubeconfig
+            {{- end }}
             {{- if $.Values.pluginProxy.sandboxKubeconfigSecret }}
             - name: PLUGIN_SANDBOX_KUBECONFIG
               value: /etc/plugin-sandbox/kubeconfig
@@ -64,16 +68,29 @@ spec:
                 configMapKeyRef:
                   name: openfga-config
                   key: authorization-model-id
-          {{- if $.Values.pluginProxy.sandboxKubeconfigSecret }}
+          {{- if or $.Values.pluginProxy.gardenerKubeconfigSecret $.Values.pluginProxy.sandboxKubeconfigSecret }}
           volumeMounts:
+            {{- if $.Values.pluginProxy.gardenerKubeconfigSecret }}
+            - name: gardener-kubeconfig
+              mountPath: /etc/gardener
+              readOnly: true
+            {{- end }}
+            {{- if $.Values.pluginProxy.sandboxKubeconfigSecret }}
             - name: plugin-sandbox-kubeconfig
               mountPath: /etc/plugin-sandbox
               readOnly: true
+            {{- end }}
           {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "internal") | nindent 10 }}
-      {{- if $.Values.pluginProxy.sandboxKubeconfigSecret }}
+      {{- if or $.Values.pluginProxy.gardenerKubeconfigSecret $.Values.pluginProxy.sandboxKubeconfigSecret }}
       volumes:
+        {{- if $.Values.pluginProxy.gardenerKubeconfigSecret }}
+        - name: gardener-kubeconfig
+          secret:
+            secretName: {{ $.Values.pluginProxy.gardenerKubeconfigSecret }}
+        {{- end }}
+        {{- if $.Values.pluginProxy.sandboxKubeconfigSecret }}
         - name: plugin-sandbox-kubeconfig
           secret:
             secretName: {{ $.Values.pluginProxy.sandboxKubeconfigSecret }}
@@ -81,6 +98,7 @@ spec:
             items:
               - key: kubeconfig
                 path: kubeconfig
+        {{- end }}
       {{- end }}
 ---
 apiVersion: v1
