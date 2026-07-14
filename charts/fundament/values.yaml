@@ -87,6 +87,10 @@ kubeApiProxy:
   logLevel: info
   mode: mock # "mock" or "real"
   gardenerKubeconfigSecret: "" # Secret name containing a Gardener kubeconfig (only used when mode is "real")
+  # sandboxKubeconfigSecret: Secret whose "kubeconfig" key targets a local
+  # plugin sandbox cluster. In mock mode, kube-api-proxy proxies every request
+  # there instead of using MockClient's canned responses. Local dev only.
+  sandboxKubeconfigSecret: ""
   httproute:
     enabled: false
     parentRefs: []
@@ -149,6 +153,9 @@ openfga:
 pluginController:
   enabled: false
   logLevel: info
+  # Skip the plugin definition-hash gate for installs with an empty
+  # definitionHash. Local-dev convenience; keep false in production.
+  allowUnpinnedHash: false
 
 # Plugin Proxy. Runs in the main fundament cluster and dials out to plugin
 # clusters; not deployed inside the plugin sandbox.
@@ -157,6 +164,11 @@ pluginProxy:
   replicas: 1
   logLevel: info
   mode: mock # "mock" or "real" (real is future work)
+  # sandboxKubeconfigSecret: name of a Secret whose "kubeconfig" key is a
+  # kubeconfig granting admin access to a local plugin sandbox cluster (e.g.
+  # k3d-fundament-plugin). When set, plugin-proxy fetches plugin assets from
+  # that cluster via PodFetcher instead of using MockFetcher. Local dev only.
+  sandboxKubeconfigSecret: ""
   httproute:
     enabled: false
     parentRefs: []

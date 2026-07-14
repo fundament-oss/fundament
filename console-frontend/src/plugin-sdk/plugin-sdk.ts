@@ -1,26 +1,37 @@
 /**
  * Fundament Plugin SDK
  *
- * Compiled to public/plugin-ui/plugin-sdk.js. Plugin templates load this
- * script and use the `window.fundament` API to read host context, broker
- * Kubernetes API calls through the host, and react to theme changes.
+ * Compiled to public/plugin-ui/plugin-sdk.js. Plugin HTML templates load this
+ * script via <script src> and use the `window.fundament` API to read host
+ * context, call the Kubernetes API through kube-api-proxy with an auto-attached
+ * PluginToken, and react to theme / token / auth-failure events.
  *
  * Host ↔ plugin postMessage protocol:
  *
  *   Host → plugin:
- *     - fundament:init           Initial context (theme, plugin, view, optional resource).
- *     - fundament:theme-changed  Theme switched by the user.
- *     - fundament:k8s:result     Reply for a previous plugin:k8s:* request.
+ *     - fundament:init            Initial context + first PluginToken (protocolVersion 1).
+ *     - fundament:theme-changed   Theme switched by the user.
+ *     - fundament:token-refreshed New PluginToken (mint refresh).
+ *     - fundament:auth-failed     Persistent mint failure; reject pending getToken() calls.
  *
- *   Plugin → host (most sent automatically by this SDK):
- *     - plugin:ready             Plugin loaded.
- *     - plugin:resize            Reports content height for iframe sizing.
- *     - plugin:k8s:list          Request a Kubernetes list (brokered by host).
- *     - plugin:k8s:get           Request a Kubernetes get (brokered by host).
- *     - plugin:k8s:create        Request a Kubernetes create (brokered by host).
+ *   Plugin → host (mostly sent automatically by this SDK):
+ *     - plugin:ready              Plugin loaded.
+ *     - plugin:resize             Reports content height for iframe sizing.
+ *     - plugin:navigate           Router hop to a sibling resource.
+ *     - plugin:create             Router hop to the create route.
+ *     - plugin:navigate-back      Router hop to the parent list.
+ *     - plugin:request-token-refresh  Ask the host to mint a fresh token
+ *                                     (sent when a plugin fetch returns 401).
  */
 
+// GET_TOKEN_TIMEOUT_MS bounds any getToken() waiter — no plugin fetch should
+// hang forever if the host never signals a refresh. Chosen to cover the
+// host's exponential-backoff retry window (2s+4s+8s ≈ 14s) plus slack.
+const GET_TOKEN_TIMEOUT_MS = 20_000;
+
 type Theme = 'light' | 'dark';
+
+type AuthFailReason = 'mint_failed' | 'unauthorized' | 'revoked';
 
 interface ResourceContext {
   name: string;
@@ -34,6 +45,10 @@ interface InitContext {
   view: 'list' | 'detail' | 'create';
   resource?: ResourceContext;
   namespaces?: string[];
+  // FUN-17: plugin JS builds fetch URLs against kube-api-proxy from these.
+  // fundament.fetch() automatically attaches the bearer PluginToken.
+  kubeApiProxyUrl: string;
+  clusterId: string;
 }
 
 interface K8sListArgs {
@@ -55,7 +70,7 @@ interface KubeListResult<T = unknown> {
 
 class SdkError extends Error {
   constructor(
-    public readonly code: 'forbidden' | 'http' | 'timeout' | 'transport',
+    public readonly code: 'forbidden' | 'http' | 'transport',
     message: string,
     public readonly status?: number,
   ) {
@@ -66,6 +81,15 @@ class SdkError extends Error {
 
 interface FundamentSdk {
   init: Promise<InitContext>;
+  /**
+   * The pinned console (parent frame) origin, captured from fundament:init's
+   * event.origin. `null` before init has arrived. Use it as the targetOrigin
+   * on any raw `window.parent.postMessage` calls the plugin makes — falling
+   * back to `'*'` only for messages that carry no secrets.
+   */
+  readonly parentOrigin: string | null;
+  getToken(): Promise<string>;
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
   k8s: {
     list<T = unknown>(args: K8sListArgs): Promise<KubeListResult<T>>;
     get<T = unknown>(args: K8sGetArgs): Promise<T>;
@@ -83,34 +107,46 @@ declare global {
 type HostMessage =
   | {
       type: 'fundament:init';
+      protocolVersion: 1;
       theme: Theme;
       pluginName: string;
       crdKind: string;
       view: 'list' | 'detail' | 'create';
       resource?: ResourceContext;
       namespaces?: string[];
+      kubeApiProxyUrl: string;
+      clusterId: string;
+      token: string;
+      tokenExpiresAt: number;
     }
   | { type: 'fundament:theme-changed'; theme: Theme }
-  | {
-      type: 'fundament:k8s:result';
-      requestId: string;
-      ok: true;
-      items?: unknown[];
-      item?: unknown;
-    }
-  | {
-      type: 'fundament:k8s:result';
-      requestId: string;
-      ok: false;
-      error: string;
-      status?: number;
-    };
-
-const REQUEST_TIMEOUT_MS = 10_000;
+  | { type: 'fundament:token-refreshed'; token: string; tokenExpiresAt: number }
+  | { type: 'fundament:auth-failed'; reason: AuthFailReason };
 
 let parentOrigin: string | null = null;
 
 const themeListeners = new Set<(theme: Theme) => void>();
+
+interface AuthState {
+  token: string | null;
+  expiresAt: number;
+  waiters: Array<{ resolve: (t: string) => void; reject: (e: Error) => void }>;
+  failed: { reason: AuthFailReason } | null;
+}
+
+const auth: AuthState = { token: null, expiresAt: 0, waiters: [], failed: null };
+
+function deliverTokenToWaiters(): void {
+  if (auth.token === null) return;
+  const t = auth.token;
+  const pending = auth.waiters.splice(0);
+  for (const w of pending) w.resolve(t);
+}
+
+function failAllWaiters(reason: AuthFailReason): void {
+  const pending = auth.waiters.splice(0);
+  for (const w of pending) w.reject(new Error(`plugin auth failed: ${reason}`));
+}
 
 function applyTheme(theme: Theme): void {
   document.body.classList.remove('light', 'dark');
@@ -143,15 +179,6 @@ async function waitForStylesheets(): Promise<void> {
   );
 }
 
-interface Pending {
-  resolve: (value: unknown) => void;
-  reject: (err: SdkError) => void;
-  timer: ReturnType<typeof setTimeout>;
-  kind: 'list' | 'get' | 'create';
-}
-
-const pendingRequests = new Map<string, Pending>();
-
 let resolveInit!: (ctx: InitContext) => void;
 const initPromise = new Promise<InitContext>((resolve) => {
   resolveInit = resolve;
@@ -159,49 +186,9 @@ const initPromise = new Promise<InitContext>((resolve) => {
 
 let initResolved = false;
 
-function generateRequestId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-const messageTypeByKind = {
-  list: 'plugin:k8s:list',
-  get: 'plugin:k8s:get',
-  create: 'plugin:k8s:create',
-} as const;
-
-function sendK8sRequest<T>(
-  kind: 'list' | 'get' | 'create',
-  payload: Record<string, unknown>,
-): Promise<T> {
-  const requestId = generateRequestId();
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      pendingRequests.delete(requestId);
-      reject(new SdkError('timeout', `request timed out after ${REQUEST_TIMEOUT_MS}ms`));
-    }, REQUEST_TIMEOUT_MS);
-
-    pendingRequests.set(requestId, {
-      resolve: resolve as (v: unknown) => void,
-      reject,
-      timer,
-      kind,
-    });
-
-    const message = {
-      type: messageTypeByKind[kind],
-      requestId,
-      ...payload,
-    };
-
-    window.parent.postMessage(message, parentOrigin ?? '*');
-  });
-}
-
 function handleHostMessage(data: HostMessage): void {
   if (data.type === 'fundament:init') {
+    if (data.protocolVersion !== 1) return; // unknown protocol — ignore
     if (!initResolved) {
       initResolved = true;
       resolveInit({
@@ -211,9 +198,15 @@ function handleHostMessage(data: HostMessage): void {
         view: data.view,
         resource: data.resource,
         namespaces: data.namespaces,
+        kubeApiProxyUrl: data.kubeApiProxyUrl,
+        clusterId: data.clusterId,
       });
     }
     applyTheme(data.theme);
+    auth.token = data.token;
+    auth.expiresAt = data.tokenExpiresAt;
+    auth.failed = null;
+    deliverTokenToWaiters();
     return;
   }
 
@@ -229,33 +222,42 @@ function handleHostMessage(data: HostMessage): void {
     return;
   }
 
-  if (data.type === 'fundament:k8s:result') {
-    const pending = pendingRequests.get(data.requestId);
-    if (!pending) return;
-    pendingRequests.delete(data.requestId);
-    clearTimeout(pending.timer);
+  if (data.type === 'fundament:token-refreshed') {
+    auth.token = data.token;
+    auth.expiresAt = data.tokenExpiresAt;
+    auth.failed = null;
+    deliverTokenToWaiters();
+    return;
+  }
 
-    if (!data.ok) {
-      const code = data.error === 'forbidden' ? 'forbidden' : 'http';
-      pending.reject(new SdkError(code, data.error, data.status));
-      return;
-    }
-
-    if (pending.kind === 'list') {
-      pending.resolve({ items: data.items ?? [] });
-    } else {
-      pending.resolve(data.item);
-    }
+  if (data.type === 'fundament:auth-failed') {
+    auth.token = null;
+    auth.failed = { reason: data.reason };
+    failAllWaiters(data.reason);
   }
 }
 
 window.addEventListener('message', (event: MessageEvent) => {
+  // Only accept messages that came from the direct parent window. Without
+  // this, a popup opened by the plugin, an ancestor other than the console,
+  // or another same-origin plugin iframe on plugin-proxy could postMessage
+  // us. Combined with the origin check below, this pins the sender to the
+  // one window we trust to deliver init.
+  if (event.source !== window.parent) return;
+
+  // Once init has arrived, pin origin. Before init we still enforce that
+  // the sender is window.parent — the console iframe was navigated to a
+  // known origin by the host, and if that origin ever mismatches the one
+  // that eventually delivers init we drop everything.
   if (parentOrigin !== null && event.origin !== parentOrigin) return;
 
   const data = event.data as HostMessage;
   if (!data || typeof data.type !== 'string') return;
 
-  if (parentOrigin === null && data.type === 'fundament:init') {
+  if (parentOrigin === null) {
+    // Only the init message is allowed to pin parentOrigin. Any other
+    // message before init is out-of-order — drop it.
+    if (data.type !== 'fundament:init') return;
     parentOrigin = event.origin;
   }
 
@@ -266,20 +268,147 @@ const observer = new ResizeObserver(reportHeight);
 
 waitForStylesheets().then(() => observer.observe(document.body));
 
+function getTokenImpl(): Promise<string> {
+  if (auth.failed) {
+    return Promise.reject(new Error(`plugin auth failed: ${auth.failed.reason}`));
+  }
+  if (auth.token !== null) return Promise.resolve(auth.token);
+  return new Promise<string>((resolve, reject) => {
+    // Timer bounds the wait so a lost refresh signal surfaces as an error
+    // instead of an indefinite spinner. Waiter identity is preserved so
+    // handleHostMessage's fan-out can still resolve us if the host does mint.
+    let settled = false;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+    const waiter = {
+      resolve: (t: string): void => {
+        if (settled) return;
+        settled = true;
+        if (timerId !== undefined) clearTimeout(timerId);
+        const idx = auth.waiters.indexOf(waiter);
+        if (idx >= 0) auth.waiters.splice(idx, 1);
+        resolve(t);
+      },
+      reject: (e: Error): void => {
+        if (settled) return;
+        settled = true;
+        if (timerId !== undefined) clearTimeout(timerId);
+        const idx = auth.waiters.indexOf(waiter);
+        if (idx >= 0) auth.waiters.splice(idx, 1);
+        reject(e);
+      },
+    };
+    auth.waiters.push(waiter);
+    timerId = setTimeout(() => {
+      waiter.reject(new Error('plugin auth: getToken timed out waiting for host mint'));
+    }, GET_TOKEN_TIMEOUT_MS);
+  });
+}
+
+// requestHostRefresh asks the host to mint a fresh token. The response
+// arrives asynchronously via fundament:token-refreshed (or
+// fundament:auth-failed if the host gives up). Guarded by parentOrigin so we
+// never post to '*' — the token in play is sensitive.
+function requestHostRefresh(): void {
+  if (parentOrigin === null) return;
+  window.parent.postMessage({ type: 'plugin:request-token-refresh' }, parentOrigin);
+}
+
+async function fetchImpl(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const call = async (): Promise<Response> => {
+    const token = await getTokenImpl();
+    const headers = new Headers(init?.headers);
+    headers.set('Authorization', `Bearer ${token}`);
+    return fetch(input, { ...init, headers });
+  };
+
+  const res = await call();
+  if (res.status !== 401) return res;
+
+  // Token was rejected upstream. Clear the cached token AND ask the host to
+  // mint a new one — without the explicit request, the host's next refresh
+  // wouldn't fire until the timer scheduled off the old (now-invalid) token
+  // expires, which could be several minutes away or never if the token was
+  // revoked. The getToken() waiter is bounded by GET_TOKEN_TIMEOUT_MS so we
+  // still surface an error if the host never signals back.
+  auth.token = null;
+  requestHostRefresh();
+  return call();
+}
+
+// Builds a URL against kube-api-proxy from the init context. Mirrors the shape
+// the previous host-brokered path used:
+//   ${kubeApiProxyUrl}/clusters/${clusterId}/apis/${group}/${version}/[namespaces/${ns}/]${resource}[/${name}]
+// Empty (core) group swaps /apis/${group}/${version} for /api/${version}.
+function buildKubeUrl(
+  ctx: InitContext,
+  args: K8sListArgs & { name?: string },
+): string {
+  const base = ctx.kubeApiProxyUrl.replace(/\/$/, '');
+  const cluster = `/clusters/${encodeURIComponent(ctx.clusterId)}`;
+  const groupPart = args.group
+    ? `/apis/${args.group}/${args.version}`
+    : `/api/${args.version}`;
+  const scope = args.namespace ? `/namespaces/${encodeURIComponent(args.namespace)}` : '';
+  const nameSuffix = args.name ? `/${encodeURIComponent(args.name)}` : '';
+  return `${base}${cluster}${groupPart}${scope}/${args.resource}${nameSuffix}`;
+}
+
+// Kubernetes reports write rejections (409 conflict, 422 validation/CEL) in the
+// Status body's `message` — surface it so the plugin form can show the real reason.
+async function readK8sError(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { message?: unknown };
+    if (typeof body.message === 'string' && body.message) return body.message;
+  } catch {
+    // body wasn't JSON — fall through
+  }
+  return response.statusText || `HTTP ${response.status}`;
+}
+
+async function k8sRequest<T>(
+  method: 'GET' | 'POST',
+  args: K8sListArgs & { name?: string },
+  body?: unknown,
+): Promise<T> {
+  const ctx = await initPromise;
+  const url = buildKubeUrl(ctx, args);
+  let res: Response;
+  try {
+    res = await fetchImpl(url, {
+      method,
+      ...(body !== undefined
+        ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+        : {}),
+    });
+  } catch (err) {
+    throw new SdkError('transport', err instanceof Error ? err.message : 'transport error');
+  }
+
+  if (!res.ok) {
+    const message = await readK8sError(res);
+    const code = res.status === 403 ? 'forbidden' : 'http';
+    throw new SdkError(code, message, res.status);
+  }
+  return (await res.json()) as T;
+}
+
 const sdk: FundamentSdk = {
   init: initPromise,
+  get parentOrigin(): string | null {
+    return parentOrigin;
+  },
+  getToken: getTokenImpl,
+  fetch: fetchImpl,
   k8s: {
-    list<T = unknown>(args: K8sListArgs): Promise<KubeListResult<T>> {
-      return sendK8sRequest<KubeListResult<T>>('list', args as unknown as Record<string, unknown>);
+    async list<T = unknown>(args: K8sListArgs): Promise<KubeListResult<T>> {
+      const data = await k8sRequest<{ items?: T[] }>('GET', args);
+      return { items: data.items ?? [] };
     },
     get<T = unknown>(args: K8sGetArgs): Promise<T> {
-      return sendK8sRequest<T>('get', args as unknown as Record<string, unknown>);
+      return k8sRequest<T>('GET', args);
     },
     create<T = unknown>(args: K8sCreateArgs, body: unknown): Promise<T> {
-      return sendK8sRequest<T>('create', {
-        ...(args as unknown as Record<string, unknown>),
-        body,
-      });
+      return k8sRequest<T>('POST', args, body);
     },
   },
   onThemeChange(cb) {

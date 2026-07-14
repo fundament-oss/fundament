@@ -1,9 +1,11 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  Injector,
   input,
   signal,
   computed,
+  effect,
   inject,
   viewChild,
   ElementRef,
@@ -12,16 +14,9 @@ import {
 } from '@angular/core';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import type {
-  HostMessage,
-  K8sCreateRequest,
-  K8sGetRequest,
-  K8sListRequest,
-  PluginMessage,
-} from './postmessage-types';
-import type { AllowedResource, KubeResource } from '../types';
-import buildResourceUrl from '../kube-url.utils';
+import type { HostMessage, PluginMessage } from './postmessage-types';
 import { ConfigService } from '../../config.service';
+import { PluginAuthService } from '../../plugin-auth/plugin-auth.service';
 
 function getCurrentTheme(): 'light' | 'dark' {
   return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -34,68 +29,13 @@ function isPluginMessage(data: unknown): data is PluginMessage {
     case 'plugin:ready':
     case 'plugin:resize':
     case 'plugin:navigate':
-    case 'plugin:k8s:list':
-    case 'plugin:k8s:get':
-    case 'plugin:k8s:create':
     case 'plugin:create':
     case 'plugin:navigate-back':
+    case 'plugin:request-token-refresh':
       return true;
     default:
       return false;
   }
-}
-
-function isVerbAllowed(
-  allowed: AllowedResource[],
-  group: string,
-  version: string,
-  resource: string,
-  verb: 'list' | 'get' | 'create',
-): boolean {
-  return allowed.some(
-    (a) =>
-      a.group === group &&
-      a.version === version &&
-      a.resource === resource &&
-      (a.verbs ?? []).includes(verb),
-  );
-}
-
-function replyK8sResult(
-  iframe: HTMLIFrameElement,
-  requestId: string,
-  result:
-    | { ok: true; items?: KubeResource[]; item?: KubeResource }
-    | { ok: false; error: string; status?: number },
-): void {
-  iframe.contentWindow?.postMessage(
-    { type: 'fundament:k8s:result', requestId, ...result } satisfies HostMessage,
-    '*',
-  );
-}
-
-function replyForbidden(iframe: HTMLIFrameElement, requestId: string): void {
-  replyK8sResult(iframe, requestId, { ok: false, error: 'forbidden' });
-}
-
-function replyTransportError(iframe: HTMLIFrameElement, requestId: string, err: unknown): void {
-  replyK8sResult(iframe, requestId, {
-    ok: false,
-    error: err instanceof Error ? err.message : 'transport error',
-  });
-}
-
-// Kubernetes reports write rejections (409 conflict, 422 validation/CEL) in the
-// Status body's `message`, not in statusText — surface it so the plugin form can
-// show the real reason.
-async function readK8sError(response: Response): Promise<string> {
-  try {
-    const body = (await response.json()) as { message?: unknown };
-    if (typeof body.message === 'string' && body.message) return body.message;
-  } catch {
-    // body was not JSON; fall through to the generic message
-  }
-  return response.statusText || `HTTP ${response.status}`;
 }
 
 @Component({
@@ -112,19 +52,20 @@ async function readK8sError(response: Response): Promise<string> {
       </div>
     }
     <!--
-      The sandbox intentionally omits allow-same-origin: the iframe runs with an opaque origin
-      and cannot send cookies. All cluster data flows through the host-mediated broker below
-      (plugin:k8s:list / plugin:k8s:get / plugin:k8s:create → fundament:k8s:result), which
-      validates every request against the plugin's declared allowedResources.
+      FUN-17 sandbox: allow-same-origin is REQUIRED because the iframe runs on the
+      dedicated plugin-proxy origin (a real, cross-site origin from the console).
+      script-src 'self' in the plugin CSP needs a real origin to resolve, and
+      targetOrigin pinning on postMessage needs a checkable origin at both ends.
+      Cross-site SOP still blocks any parent.document access; the HttpOnly user
+      cookie is unreachable.
 
-      allow-forms is required for create UIs: without it the browser blocks form submission and
-      the plugin's submit handler never fires. Submits stay in-frame (handlers preventDefault and
-      route writes through the broker), so this does not grant the iframe any navigation power.
+      allow-forms remains for plugin create UIs whose submits stay in-frame.
+      allow-top-navigation and allow-popups stay ungranted.
     -->
     <iframe
       #pluginFrame
       [src]="trustedSrc()"
-      sandbox="allow-scripts allow-forms"
+      sandbox="allow-scripts allow-same-origin allow-forms"
       [style.height.px]="frameHeight()"
       [class]="status() === 'error' ? 'hidden' : 'block w-full border-none'"
       title="Plugin custom UI"
@@ -136,11 +77,13 @@ export default class PluginIframeComponent implements OnInit {
 
   pluginName = input.required<string>();
 
+  pluginVersion = input.required<string>();
+
+  installationId = input.required<string>();
+
   crdKind = input.required<string>();
 
   view = input.required<'list' | 'detail' | 'create'>();
-
-  allowedResources = input.required<AllowedResource[]>();
 
   clusterId = input.required<string>();
 
@@ -158,9 +101,37 @@ export default class PluginIframeComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
 
+  private injector = inject(Injector);
+
   private configService = inject(ConfigService);
 
+  private auth = inject(PluginAuthService);
+
   private iframeRef = viewChild<ElementRef<HTMLIFrameElement>>('pluginFrame');
+
+  private pluginProxyOrigin = computed(() => {
+    // Normalize to a bare origin (`scheme://host[:port]`, no trailing slash,
+    // no path) — MessageEvent.origin is bare per the HTML spec, and
+    // postMessage rejects any targetOrigin that isn't a valid origin. A
+    // trailing slash in the runtime config would otherwise silently break
+    // every plugin (inbound messages dropped by origin check, outbound
+    // postMessage throws SyntaxError).
+    //
+    // Empty pluginProxyUrl falls back to window.location.origin for the
+    // bundled demo plugin (same-origin `/plugin-ui/...`); the effect below
+    // still guards against dispatching before the origin resolves.
+    const raw = this.configService.getConfig().pluginProxyUrl;
+    if (!raw) return window.location.origin;
+    try {
+      return new URL(raw).origin;
+    } catch {
+      // Invalid config value — fall back to same-origin so postMessage
+      // remains functional, but log so ops sees the misconfiguration.
+      // eslint-disable-next-line no-console
+      console.error(`[plugin-iframe] pluginProxyUrl is not a valid URL: ${raw}`);
+      return window.location.origin;
+    }
+  });
 
   frameHeight = signal(150);
 
@@ -181,9 +152,54 @@ export default class PluginIframeComponent implements OnInit {
 
     this.destroyRef.onDestroy(() => clearTimeout(readyTimeout));
 
+    // Kick off the first mint in parallel with the iframe load. The signal
+    // effect below pushes token-refreshed / auth-failed to the iframe once
+    // it's ready.
+    void this.auth.acquire(this.clusterId(), this.installationId()).catch(() => {
+      // Persistent failure sets the signal to null; the effect below sends
+      // fundament:auth-failed.
+    });
+
+    // Push refreshed tokens (or auth-failed on persistent failure) to the
+    // iframe every time the token signal changes AFTER the plugin is ready.
+    // effect() must run in an injection context; ngOnInit isn't one, so pass
+    // the component's Injector explicitly.
+    //
+    // The (snap === null && failed === false) case is the initial state
+    // before the first mint resolves — we MUST NOT dispatch auth-failed
+    // there or the plugin-sdk rejects every getToken() waiter (including
+    // the fetches queued while init is in flight) with 'mint_failed'.
+    effect(
+      () => {
+        const snap = this.auth.tokenSignal(this.clusterId(), this.installationId())();
+        const failed = this.auth.failedSignal(this.clusterId(), this.installationId())();
+        const iframe = this.iframeRef()?.nativeElement;
+        if (!iframe?.contentWindow || this.status() !== 'ready') return;
+
+        if (snap) {
+          this.postToIframe(iframe, {
+            type: 'fundament:token-refreshed',
+            token: snap.token,
+            tokenExpiresAt: snap.expiresAt,
+          });
+          return;
+        }
+        if (failed) {
+          this.postToIframe(iframe, { type: 'fundament:auth-failed', reason: 'mint_failed' });
+        }
+        // Otherwise snap is null but failed is false: initial in-flight
+        // state — do nothing, wait for sendInit's own dispatch.
+      },
+      { injector: this.injector },
+    );
+
     const onMessage = (event: MessageEvent): void => {
       const iframe = this.iframeRef()?.nativeElement;
       if (!iframe || event.source !== iframe.contentWindow) return;
+      // FUN-17: pin the inbound origin to the plugin-proxy site the iframe
+      // was navigated to. If the iframe was redirected off that origin, drop
+      // the message.
+      if (event.origin !== this.pluginProxyOrigin()) return;
       if (!isPluginMessage(event.data)) return;
 
       this.handleMessage(event.data, iframe);
@@ -200,11 +216,10 @@ export default class PluginIframeComponent implements OnInit {
       if (theme === this.lastSentTheme) return;
       this.lastSentTheme = theme;
 
-      const msg: HostMessage = {
+      this.postToIframe(iframe, {
         type: 'fundament:theme-changed',
         theme,
-      };
-      iframe.contentWindow.postMessage(msg, '*');
+      });
     });
 
     observer.observe(document.documentElement, {
@@ -215,14 +230,22 @@ export default class PluginIframeComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       window.removeEventListener('message', onMessage);
       observer.disconnect();
+      this.auth.release(this.clusterId(), this.installationId());
     });
+  }
+
+  private postToIframe(iframe: HTMLIFrameElement, msg: HostMessage): void {
+    // FUN-17: pin the target origin to plugin-proxy. Because the iframe runs
+    // with allow-same-origin on the real plugin-proxy site, the browser
+    // refuses delivery if the iframe was navigated off that origin.
+    iframe.contentWindow?.postMessage(msg, this.pluginProxyOrigin());
   }
 
   private handleMessage(msg: PluginMessage, iframe: HTMLIFrameElement): void {
     switch (msg.type) {
       case 'plugin:ready':
         this.status.set('ready');
-        this.sendInit(iframe);
+        void this.sendInit(iframe);
         return;
       case 'plugin:resize':
         if (typeof msg.height === 'number' && msg.height > 0) {
@@ -243,13 +266,6 @@ export default class PluginIframeComponent implements OnInit {
         this.router.navigate([msg.name], { relativeTo: baseRoute, queryParams });
         return;
       }
-      case 'plugin:k8s:list':
-      case 'plugin:k8s:get':
-        this.handleK8sRequest(msg, iframe);
-        return;
-      case 'plugin:k8s:create':
-        this.handleK8sCreate(msg, iframe);
-        return;
       case 'plugin:create':
         // Only meaningful from a list view: the create route is the sibling
         // `:resourceKind/create` of the current `:resourceKind` list route. From
@@ -266,6 +282,15 @@ export default class PluginIframeComponent implements OnInit {
           this.router.navigate(['..'], { relativeTo: this.route });
         }
         return;
+      case 'plugin:request-token-refresh':
+        // Plugin saw a 401 upstream. Force a mint out-of-band; the resulting
+        // token-refreshed dispatch from the effect above unblocks the plugin's
+        // pending getToken() waiter. requestRefresh's rejection is already
+        // reflected in failedSignal so we don't need to act on it here.
+        this.auth
+          .requestRefresh(this.clusterId(), this.installationId())
+          .catch(() => undefined);
+        return;
       default: {
         const exhaustive: never = msg;
         throw new Error(`Unhandled plugin message type: ${(exhaustive as PluginMessage).type}`);
@@ -273,8 +298,17 @@ export default class PluginIframeComponent implements OnInit {
     }
   }
 
-  private sendInit(iframe: HTMLIFrameElement): void {
+  private async sendInit(iframe: HTMLIFrameElement): Promise<void> {
     if (!iframe.contentWindow) return;
+
+    const snap = await this.auth
+      .acquire(this.clusterId(), this.installationId())
+      .catch(() => null);
+
+    if (!snap) {
+      this.postToIframe(iframe, { type: 'fundament:auth-failed', reason: 'mint_failed' });
+      return;
+    }
 
     const theme = getCurrentTheme();
     this.lastSentTheme = theme;
@@ -282,101 +316,20 @@ export default class PluginIframeComponent implements OnInit {
     const name = this.resourceName();
     const namespace = this.resourceNamespace();
     const namespaces = this.namespaces();
-    const msg: HostMessage = {
+    this.postToIframe(iframe, {
       type: 'fundament:init',
+      protocolVersion: 1,
       theme,
       pluginName: this.pluginName(),
       crdKind: this.crdKind(),
       view: this.view(),
       ...(name ? { resource: { name, namespace } } : {}),
       ...(namespaces ? { namespaces } : {}),
-    };
-    iframe.contentWindow.postMessage(msg, '*');
-  }
-
-  private async handleK8sRequest(
-    msg: K8sListRequest | K8sGetRequest,
-    iframe: HTMLIFrameElement,
-  ): Promise<void> {
-    const isGet = msg.type === 'plugin:k8s:get';
-    const verb = isGet ? 'get' : 'list';
-
-    if (!isVerbAllowed(this.allowedResources(), msg.group, msg.version, msg.resource, verb)) {
-      // eslint-disable-next-line no-console
-      console.warn(`[PluginIframe] rejected ${verb} request not in allowlist`, msg);
-      replyForbidden(iframe, msg.requestId);
-      return;
-    }
-
-    const url = buildResourceUrl(this.kubeApiProxyBase(), this.clusterId(), {
-      group: msg.group,
-      version: msg.version,
-      resource: msg.resource,
-      namespace: msg.namespace,
-      name: isGet ? msg.name : undefined,
+      kubeApiProxyUrl: this.configService.getConfig().kubeApiProxyUrl,
+      clusterId: this.clusterId(),
+      token: snap.token,
+      tokenExpiresAt: snap.expiresAt,
     });
-
-    try {
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) {
-        replyK8sResult(iframe, msg.requestId, {
-          ok: false,
-          error: response.statusText || `HTTP ${response.status}`,
-          status: response.status,
-        });
-        return;
-      }
-      const data = await response.json();
-      replyK8sResult(
-        iframe,
-        msg.requestId,
-        isGet
-          ? { ok: true, item: data as KubeResource }
-          : { ok: true, items: (data as { items?: KubeResource[] }).items ?? [] },
-      );
-    } catch (err) {
-      replyTransportError(iframe, msg.requestId, err);
-    }
   }
 
-  private async handleK8sCreate(msg: K8sCreateRequest, iframe: HTMLIFrameElement): Promise<void> {
-    if (!isVerbAllowed(this.allowedResources(), msg.group, msg.version, msg.resource, 'create')) {
-      // eslint-disable-next-line no-console
-      console.warn('[PluginIframe] rejected create request not in allowlist', msg);
-      replyForbidden(iframe, msg.requestId);
-      return;
-    }
-
-    const url = buildResourceUrl(this.kubeApiProxyBase(), this.clusterId(), {
-      group: msg.group,
-      version: msg.version,
-      resource: msg.resource,
-      namespace: msg.namespace,
-    });
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(msg.body),
-      });
-      if (!response.ok) {
-        replyK8sResult(iframe, msg.requestId, {
-          ok: false,
-          error: await readK8sError(response),
-          status: response.status,
-        });
-        return;
-      }
-      const data = await response.json();
-      replyK8sResult(iframe, msg.requestId, { ok: true, item: data as KubeResource });
-    } catch (err) {
-      replyTransportError(iframe, msg.requestId, err);
-    }
-  }
-
-  private kubeApiProxyBase(): string {
-    return this.configService.getConfig().kubeApiProxyUrl.replace(/\/$/, '');
-  }
 }

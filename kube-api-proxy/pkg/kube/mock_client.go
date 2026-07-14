@@ -150,8 +150,30 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 		if err := json.NewDecoder(body).Decode(&obj); err != nil {
 			return 400, r(`{"message":"invalid body"}`), nil
 		}
+		// Stamp server-set metadata that a real apiserver would fill in.
+		// installationId is derived from metadata.uid downstream; without a
+		// non-empty uid, PluginAuthService.acquire mints an invalid token
+		// (empty installationId) and every plugin iframe fails to load.
+		meta, _ := obj["metadata"].(map[string]any)
+		if meta == nil {
+			meta = map[string]any{}
+			obj["metadata"] = meta
+		}
+
 		obj["status"] = map[string]any{"phase": "Running", "ready": true}
 		m.mu.Lock()
+		m.seq++
+
+		if _, ok := meta["uid"]; !ok {
+			// Deterministic UUID v4 shape so console-frontend can round-trip it
+			// through protovalidate's UUID rules.
+			meta["uid"] = fmt.Sprintf("00000000-0000-4000-8000-%012d", m.seq)
+		}
+
+		if _, ok := meta["creationTimestamp"]; !ok {
+			meta["creationTimestamp"] = time.Now().UTC().Format(time.RFC3339)
+		}
+
 		items := m.installItemsForCluster(clusterID)
 		m.installByCluster[clusterID] = append(items, obj)
 		m.mu.Unlock()

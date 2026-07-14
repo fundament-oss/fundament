@@ -12,6 +12,12 @@ export interface PluginDefinition {
   crds: string[];
   customComponents?: Record<string, CustomComponentMapping>;
   allowedResources: AllowedResource[];
+  // The PluginInstallation CR UID this definition was loaded from.
+  // Used as installation_id in MintPluginToken and pinned into every JWT.
+  installationId: string;
+  // The pluginVersion pinned in PluginInstallation.spec.definitionRef.
+  // Drives the plugin-proxy iframe URL and appears in the minted token.
+  installationVersion: string;
 }
 
 export interface AllowedResource {
@@ -109,7 +115,7 @@ export interface PluginNavItem {
 }
 
 export interface PluginInstallationItem {
-  metadata: { name: string };
+  metadata: { name: string; uid: string };
   spec: {
     image: string;
     definitionRef: {

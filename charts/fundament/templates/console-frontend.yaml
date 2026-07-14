@@ -11,7 +11,8 @@ data:
     {
       "authnApiUrl": "{{ $.Values.externalUrls.authn }}",
       "organizationApiUrl": "{{ $.Values.externalUrls.organization }}",
-      "kubeApiProxyUrl": "{{ $.Values.externalUrls.kubeApiProxy }}"
+      "kubeApiProxyUrl": "{{ $.Values.externalUrls.kubeApiProxy }}",
+      "pluginProxyUrl": "{{ $.Values.externalUrls.pluginProxy }}"
     }
 
 ---

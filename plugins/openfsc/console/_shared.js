@@ -13,20 +13,21 @@ export function hostOrigin() {
   }
 }
 
-// Loads the Fundament plugin SDK from the host (Console) origin and resolves
-// once `window.fundament` is available. Templates must call this before any
-// other SDK use because the iframe is sandboxed `allow-scripts` and the host
-// origin is not known at parse time.
+// Loads the Fundament plugin SDK v1. Under FUN-17 the iframe runs on the
+// dedicated plugin-proxy origin — the same origin that serves the SDK — so the
+// bare-path URL below resolves on plugin-proxy, matching the plugin CSP
+// (script-src 'self'). The /v1/ segment tracks fundament:init's protocolVersion:
+// a future breaking protocol change ships as /plugins/sdk/v2/ and old plugins
+// keep loading v1 unchanged.
 export function loadSdk() {
-  const host = hostOrigin();
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = `${host}/plugin-ui/plugin-sdk.css`;
+  link.href = '/plugins/sdk/v1/plugin-sdk.css';
   document.head.appendChild(link);
 
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = `${host}/plugin-ui/plugin-sdk.js`;
+    script.src = '/plugins/sdk/v1/plugin-sdk.js';
     script.onload = () => resolve(window.fundament);
     script.onerror = () => reject(new Error('failed to load plugin-sdk.js'));
     document.head.appendChild(script);
@@ -75,12 +76,13 @@ export function errorRow(colspan, err) {
 
 // Posts a navigate message to the parent. The host resolves the destination
 // relative to the iframe's current route, so the plugin only sends the
-// resource identity (name + namespace). The console origin from ?host= scopes
-// the message; the console-preview server runs unframed, hence the fallback.
+// resource identity (name + namespace). The SDK's pinned parentOrigin scopes
+// the message under FUN-17; falls back to '*' before init (or in the
+// console-preview server which runs unframed).
 export function navigateToDetail(name, namespace) {
   window.parent.postMessage(
     { type: 'plugin:navigate', name, namespace },
-    hostOrigin() || window.location.origin,
+    window.fundament?.parentOrigin ?? '*',
   );
 }
 
@@ -88,13 +90,13 @@ export function navigateToDetail(name, namespace) {
 // navigates to its create route; the console-preview stand-in approximates it
 // by loading the matching *-create.html page.
 export function navigateToCreate() {
-  window.parent.postMessage({ type: 'plugin:create' }, hostOrigin() || window.location.origin);
+  window.parent.postMessage({ type: 'plugin:create' }, window.fundament?.parentOrigin ?? '*');
 }
 
 // Asks the host to go back to the list view of this resource kind. The host
 // navigates up one route; the console-preview stand-in loads the *-list.html.
 export function navigateBack() {
-  window.parent.postMessage({ type: 'plugin:navigate-back' }, hostOrigin() || window.location.origin);
+  window.parent.postMessage({ type: 'plugin:navigate-back' }, window.fundament?.parentOrigin ?? '*');
 }
 
 // Renders a key/value definition list for the given map. Returns HTML.

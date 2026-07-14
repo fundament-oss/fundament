@@ -18,7 +18,7 @@ import PluginRegistryService from '../plugin-registry.service';
 import { TitleService } from '../../title.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
-import buildPluginConsoleUrl from '../plugin-console-url.utils';
+import { buildCustomUIUrl } from '../plugin-console-url.utils';
 import {
   resolveJsonPath,
   formatColumnValue,
@@ -82,22 +82,19 @@ export default class ResourceListComponent implements OnInit {
 
   resources = signal<KubeResource[]>([]);
 
-  customUIUrl = computed(() => {
-    const kind = this.crdDef()?.kind;
-    if (!kind) return null;
-    const plugin = this.plugin();
-    const path = plugin?.customComponents?.[kind]?.list;
-    const clusterId = this.clusterContext.selectedClusterId();
-    if (!plugin || !path || !clusterId) return null;
-    return buildPluginConsoleUrl({
-      kubeApiProxyUrl: this.config.getConfig().kubeApiProxyUrl,
-      clusterId,
-      pluginName: plugin.name,
-      path,
-    });
-  });
+  customUIUrl = computed(() =>
+    buildCustomUIUrl({
+      plugin: this.plugin(),
+      kind: this.crdDef()?.kind,
+      view: 'list',
+      clusterId: this.clusterContext.selectedClusterId(),
+      pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
+    }),
+  );
 
-  allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
+  installationId = computed(() => this.plugin()?.installationId ?? '');
+
+  installationVersion = computed(() => this.plugin()?.installationVersion ?? '');
 
   canCreate = computed(() => {
     const kind = this.crdDef()?.kind;

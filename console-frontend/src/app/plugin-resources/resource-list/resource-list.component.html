@@ -10,9 +10,10 @@
   <app-plugin-iframe
     [src]="customUIUrl()!"
     [pluginName]="pluginName()"
+    [pluginVersion]="installationVersion()"
+    [installationId]="installationId()"
     [crdKind]="crdDef()!.kind"
     view="list"
-    [allowedResources]="allowedResources()"
     [clusterId]="clusterContext.selectedClusterId()!"
   />
 } @else {

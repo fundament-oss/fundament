@@ -53,16 +53,23 @@ type PluginInstallationSpec struct {
 //
 // +k8s:deepcopy-gen=true
 type DefinitionRef struct {
-	PluginName     string `json:"pluginName"`
-	PluginVersion  string `json:"pluginVersion"`
+	PluginName    string `json:"pluginName"`
+	PluginVersion string `json:"pluginVersion"`
+	// DefinitionHash is the admin's install-time consent record: plugin-controller
+	// enforces that the plugin's own GetDefinition RPC hashes to this value
+	// before materialising the plugin-scope ClusterRole. May be omitted only
+	// when the controller Deployment sets
+	// PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true — for local development.
 	DefinitionHash string `json:"definitionHash"`
 }
 
+// +k8s:deepcopy-gen=true
 type PluginInstallationStatus struct {
-	Phase              PluginPhase `json:"phase,omitempty"`
-	Message            string      `json:"message,omitempty"`
-	Ready              bool        `json:"ready,omitempty"`
-	ObservedGeneration int64       `json:"observedGeneration,omitempty"`
+	Phase              PluginPhase        `json:"phase,omitempty"`
+	Message            string             `json:"message,omitempty"`
+	Ready              bool               `json:"ready,omitempty"`
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitzero" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // PluginInstallationList is a list of PluginInstallation resources.

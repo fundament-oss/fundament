@@ -34,3 +34,5 @@ ingress:
 pluginController:
   enabled: true
   logLevel: debug
+  # `just plugin-install` sets an empty definitionHash; allow it in the sandbox.
+  allowUnpinnedHash: true

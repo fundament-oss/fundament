@@ -68,7 +68,7 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// forward injecting the plugin SA token.
 	switch peekTokenType(r) {
 	case auth.TokenTypePlugin:
-		s.pluginGateway.serve(w, r, clusterID)
+		s.pluginGateway.serve(w, r, clusterID.String())
 	default:
 		// UserToken and cookie-borne requests: unchanged behaviour.
 		s.handleUserClusterProxy(w, r, clusterID)

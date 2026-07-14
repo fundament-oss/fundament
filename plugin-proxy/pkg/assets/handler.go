@@ -10,20 +10,17 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+
+	"github.com/fundament-oss/fundament/common/auth"
 )
 
 // Fetcher loads one asset file (body, content-type) from a backing source.
-// The handler pre-resolves clusterID so the implementation can stay thin
-// (PodFetcher just builds a service-proxy URL).
+// The clusterID names the target cluster (from the request URL); PodFetcher
+// resolves it to a kubeconfig and builds a service-proxy URL against that
+// cluster's API. `pluginVersion` comes from the URL segment and MAY be used
+// by implementations to disambiguate concurrently-installed versions.
 type Fetcher interface {
-	Fetch(ctx context.Context, clusterID uuid.UUID, pluginName, assetPath string) ([]byte, string, error)
-}
-
-// ClusterResolver maps (pluginName, version) to the cluster currently running
-// that version. Asset bundles are content-addressed by (pluginName, version),
-// so any cluster running the pair serves the same bytes.
-type ClusterResolver interface {
-	ClusterFor(ctx context.Context, pluginName, version string) (uuid.UUID, error)
+	Fetch(ctx context.Context, clusterID uuid.UUID, pluginName, pluginVersion, assetPath string) ([]byte, string, error)
 }
 
 // CSPConfig holds the dynamic origins of the FUN-17 plugin CSP.
@@ -35,15 +32,31 @@ type CSPConfig struct {
 	FrameAncestors []string
 }
 
+// ClusterViewChecker gates asset requests on the caller's OpenFGA
+// can_view(user, cluster) — same check authn-api runs before minting a
+// PluginToken. Cookie-based auth (browser navigation can't attach a Bearer
+// token to an iframe src or <script>/<link> subresources).
+type ClusterViewChecker func(ctx context.Context, userID, clusterID uuid.UUID) (bool, error)
+
 type handler struct {
-	resolver ClusterResolver
-	fetcher  Fetcher
-	csp      string
-	logger   *slog.Logger
+	fetcher   Fetcher
+	csp       string
+	logger    *slog.Logger
+	validator *auth.Validator
+	canView   ClusterViewChecker
 }
 
-func NewHandler(resolver ClusterResolver, fetcher Fetcher, csp *CSPConfig, logger *slog.Logger) http.Handler {
-	return &handler{resolver: resolver, fetcher: fetcher, csp: buildCSP(csp), logger: logger}
+// NewHandler wires the asset handler. `validator` parses the UserToken cookie
+// (`fundament_auth`); `canView` calls OpenFGA to authorize the user on the
+// requested cluster.
+func NewHandler(fetcher Fetcher, csp *CSPConfig, validator *auth.Validator, canView ClusterViewChecker, logger *slog.Logger) http.Handler {
+	return &handler{
+		fetcher:   fetcher,
+		csp:       buildCSP(csp),
+		validator: validator,
+		canView:   canView,
+		logger:    logger,
+	}
 }
 
 // buildCSP produces exactly the FUN-17 plugin Content-Security-Policy.
@@ -67,35 +80,69 @@ func buildCSP(c *CSPConfig) string {
 	}, "; ")
 }
 
-// ServeHTTP serves /plugins/{name}/{version}/console/{path...}.
+// ServeHTTP serves /clusters/{clusterID}/plugins/{name}/{version}/console/{path...}.
+//
+// The cluster is chosen by the caller (the console picks the cluster the user
+// is browsing) so asset traffic lands on the same cluster the plugin will
+// actually operate against. This keeps load local to the user's cluster and
+// avoids one cluster becoming the asset proxy for every plugin installation
+// across the estate.
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	name, version, asset, ok := parsePath(r.URL.Path)
+	clusterID, name, version, asset, ok := parsePath(r.URL.Path)
 	if !ok {
 		http.NotFound(w, r)
 		return
 	}
 
-	clusterID, err := h.resolver.ClusterFor(r.Context(), name, version)
+	// Auth: parse the console's UserToken cookie, then OpenFGA-check that the
+	// user can view this cluster. Unauthenticated and unauthorized collapse to
+	// 404 so the endpoint doesn't leak which (cluster, plugin, version) tuples
+	// are valid.
+	claims, err := h.validator.Validate(r.Header)
 	if err != nil {
-		h.logger.Warn("cluster resolve failed", "plugin", name, "version", version, "err", err)
-		http.Error(w, "asset unavailable", http.StatusBadGateway)
+		http.NotFound(w, r)
 		return
 	}
 
-	body, ct, err := h.fetcher.Fetch(r.Context(), clusterID, name, asset)
+	userID := claims.UserID()
+	if userID == uuid.Nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	allowed, err := h.canView(r.Context(), userID, clusterID)
 	if err != nil {
-		h.logger.Warn("asset fetch failed", "cluster", clusterID, "plugin", name, "path", asset, "err", err)
+		h.logger.ErrorContext(r.Context(), "can_view check failed", "user", userID, "cluster", clusterID, "err", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if !allowed {
+		http.NotFound(w, r)
+		return
+	}
+
+	body, ct, err := h.fetcher.Fetch(r.Context(), clusterID, name, version, asset)
+	if err != nil {
+		h.logger.Warn("asset fetch failed", "cluster", clusterID, "plugin", name, "version", version, "path", asset, "err", err)
 		http.Error(w, "asset unavailable", http.StatusBadGateway)
 		return
 	}
 
 	w.Header().Set("Content-Type", ct)
-	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	// Cache-Control is private + short-lived. Private because access is gated
+	// by a per-user cookie + OpenFGA can_view — a shared proxy must not serve
+	// one user's response to another. Short-lived (5m) rather than the
+	// year-long immutable one might expect from the {version}-scoped URL:
+	// plugin-proxy does not currently verify the URL's {version} against the
+	// installed PluginInstallation, so a rollback under the same name would
+	// otherwise cache stale bytes indefinitely.
+	w.Header().Set("Cache-Control", "private, max-age=300")
 	w.Header().Set("Content-Security-Policy", h.csp)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "no-referrer")
@@ -103,37 +150,50 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodHead {
 		return
 	}
+
 	//nolint:gosec // intentional asset proxy: Content-Type is set from upstream, X-Content-Type-Options=nosniff and a strict CSP confine execution.
 	_, _ = w.Write(body)
 }
 
-func parsePath(p string) (name, version, asset string, ok bool) {
-	const prefix = "/plugins/"
+func parsePath(p string) (clusterID uuid.UUID, name, version, asset string, ok bool) {
+	const prefix = "/clusters/"
 	if !strings.HasPrefix(p, prefix) {
-		return "", "", "", false
+		return uuid.Nil, "", "", "", false
 	}
-	parts := strings.SplitN(strings.TrimPrefix(p, prefix), "/", 4) // name, version, "console", path
-	if len(parts) < 4 || parts[2] != "console" {
-		return "", "", "", false
+
+	// clusters/{id}/plugins/{name}/{version}/console/{path...}
+	parts := strings.SplitN(strings.TrimPrefix(p, prefix), "/", 6)
+	if len(parts) < 6 || parts[1] != "plugins" || parts[4] != "console" {
+		return uuid.Nil, "", "", "", false
 	}
-	name, version, asset = parts[0], parts[1], parts[3]
-	if name == "" || version == "" || asset == "" {
-		return "", "", "", false
+
+	rawCluster, name, version, asset := parts[0], parts[2], parts[3], parts[5]
+	if rawCluster == "" || name == "" || version == "" || asset == "" {
+		return uuid.Nil, "", "", "", false
 	}
+
+	clusterID, err := uuid.Parse(rawCluster)
+	if err != nil {
+		return uuid.Nil, "", "", "", false
+	}
+
 	// Check the raw asset for traversal before path.Clean normalises it away.
 	if strings.Contains(asset, "..") {
-		return "", "", "", false
+		return uuid.Nil, "", "", "", false
 	}
+
 	cleaned := path.Clean("/" + asset)
 	if cleaned == "/" {
-		return "", "", "", false
+		return uuid.Nil, "", "", "", false
 	}
-	return name, version, strings.TrimPrefix(cleaned, "/"), true
+
+	return clusterID, name, version, strings.TrimPrefix(cleaned, "/"), true
 }
 
 func guessContentType(assetPath string) string {
 	if ct := mime.TypeByExtension(strings.ToLower(path.Ext(assetPath))); ct != "" {
 		return ct
 	}
+
 	return "application/octet-stream"
 }
