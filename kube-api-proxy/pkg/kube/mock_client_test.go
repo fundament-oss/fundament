@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPluginConsoleAsset(t *testing.T) {
@@ -273,8 +275,9 @@ func TestMockFSCInstallations(t *testing.T) {
 		t.Fatalf("wrong name: %v", meta["name"])
 	}
 
-	// GetDefinition for the openfsc plugin.
-	status, body, err = mc.Do(context.Background(), http.MethodGet, "/api/v1/namespaces/plugin-openfsc/services/http:plugin-openfsc:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition", nil)
+	// GetDefinition for the openfsc plugin — Connect unary RPC, POST only.
+	const openfscDefPath = "/api/v1/namespaces/plugin-openfsc/services/http:plugin-openfsc:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition"
+	status, body, err = mc.Do(context.Background(), http.MethodPost, openfscDefPath, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,6 +289,14 @@ func TestMockFSCInstallations(t *testing.T) {
 	if !strings.Contains(string(b), `"name": "openfsc"`) {
 		t.Errorf("definition body did not contain openfsc: %s", string(b))
 	}
+
+	// A bodyless GET must 405 like a real plugin pod (#967): the console sent
+	// GET and the real shoot returned 405, but the mock used to answer 200 and
+	// hide the bug.
+	status, body, err = mc.Do(context.Background(), http.MethodGet, openfscDefPath, nil)
+	require.NoError(t, err)
+	body.Close()
+	require.Equal(t, 405, status, "GET GetDefinition must be method-not-allowed")
 
 	// CRD is registered and resolvable by name.
 	if _, ok := mockCRDForName("fscinstallations.openfsc.fundament.io"); !ok {

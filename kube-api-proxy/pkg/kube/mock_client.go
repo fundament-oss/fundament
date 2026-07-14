@@ -197,12 +197,19 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 		return 404, r(`{"message":"not found"}`), nil
 	case path == crdBasePath:
 		return 200, r(mockCRDListJSON), nil
-	case isPluginGetDefinition(path, "cert-manager"):
+	// GetDefinition is a Connect unary RPC: a real plugin pod's handler only
+	// accepts POST (405 with Allow: POST otherwise). Guard on method here so
+	// the mock cannot mask a client that sends the wrong verb (see #967).
+	case isPluginGetDefinition(path, "cert-manager") && method == http.MethodPost:
 		return 200, r(mockCertManagerDefinitionJSON), nil
-	case isPluginGetDefinition(path, "cnpg"), isPluginGetDefinition(path, "CloudNativePG"):
+	case (isPluginGetDefinition(path, "cnpg") || isPluginGetDefinition(path, "CloudNativePG")) && method == http.MethodPost:
 		return 200, r(mockCnpgDefinitionJSON), nil
-	case isPluginGetDefinition(path, "openfsc"):
+	case isPluginGetDefinition(path, "openfsc") && method == http.MethodPost:
 		return 200, r(mockOpenfscDefinitionJSON), nil
+	case isPluginGetDefinition(path, "cert-manager"),
+		isPluginGetDefinition(path, "cnpg"), isPluginGetDefinition(path, "CloudNativePG"),
+		isPluginGetDefinition(path, "openfsc"):
+		return 405, r(`{"message":"method not allowed"}`), nil
 	case isResourceList(path, "cert-manager.io", "v1", "certificates"):
 		return 200, r(mockCertificateListJSON), nil
 	case isResourceGet(path, "cert-manager.io", "v1", "certificates"):
@@ -302,11 +309,7 @@ func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, p
 		contentType = "application/octet-stream"
 	}
 	w.Header().Set("Content-Type", contentType)
-	// Plugin console assets are public. The sandboxed iframe that loads them
-	// runs with an opaque origin (Origin: null), which is not on the proxy's
-	// CORS allowlist — override to "*" so module imports succeed.
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Del("Access-Control-Allow-Credentials")
+	SetPluginConsoleAssetCORS(w.Header())
 	// Mock mode serves edits live from disk; disable caching so iframe reloads
 	// always pick up the latest template without manual cache-busting.
 	w.Header().Set("Cache-Control", "no-store")

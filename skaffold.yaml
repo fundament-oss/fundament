@@ -143,6 +143,8 @@ profiles:
           shootProxy.enabled: true
           kubeApiProxy.mode: real
           kubeApiProxy.gardenerKubeconfigSecret: gardener-kubeconfig
+          pluginProxy.mode: real
+          pluginProxy.gardenerKubeconfigSecret: gardener-kubeconfig
           organizationApi.kubeApiProxyInsecure: "true"
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-

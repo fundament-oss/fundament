@@ -58,6 +58,12 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// disk; in real mode the apiserver service proxy would forward to the
 	// plugin pod's HTTP handler (which itself does not authenticate them).
 	if kube.IsPluginConsoleAssetPath(r.URL.Path) {
+		// The console HTML loads sibling assets (e.g. `_shared.js`) as ES
+		// modules, which fetch in CORS mode from the iframe's opaque `null`
+		// origin. These assets are public and credential-less, so allow any
+		// origin — without this the module import is blocked and the plugin
+		// UI fails to render.
+		w = &corsAssetWriter{ResponseWriter: w}
 		ctx := context.WithValue(r.Context(), kube.ClusterIDContextKey{}, clusterID.String())
 		s.kubeHandler.ServeHTTP(w, r.WithContext(ctx))
 		return
@@ -144,6 +150,40 @@ func peekTokenType(r *http.Request) auth.TokenType {
 		return auth.TokenTypePlugin
 	}
 	return auth.TokenTypeUser
+}
+
+// corsAssetWriter applies the plugin console-asset CORS headers before the
+// status/body is written so they win over the headers the outer rs/cors
+// middleware and the reverse proxy set on the same response (in particular it
+// clears Access-Control-Allow-Credentials, which the middleware sets and which
+// is invalid alongside Access-Control-Allow-Origin: *).
+type corsAssetWriter struct {
+	http.ResponseWriter
+	wrote bool
+}
+
+func (w *corsAssetWriter) setCORS() {
+	if !w.wrote {
+		kube.SetPluginConsoleAssetCORS(w.Header())
+		w.wrote = true
+	}
+}
+
+func (w *corsAssetWriter) WriteHeader(status int) {
+	w.setCORS()
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *corsAssetWriter) Write(b []byte) (int, error) {
+	w.setCORS()
+	//nolint:wrapcheck // passthrough http.ResponseWriter: callers expect the raw Write error.
+	return w.ResponseWriter.Write(b)
+}
+
+// Unwrap lets http.ResponseController reach the underlying writer's Flush /
+// Hijack (the reverse proxy streams with FlushInterval: -1).
+func (w *corsAssetWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
 }
 
 // isAllowedPath checks whether the path (without leading slash) starts with
