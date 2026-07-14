@@ -318,11 +318,7 @@ func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, p
 		contentType = "application/octet-stream"
 	}
 	w.Header().Set("Content-Type", contentType)
-	// Plugin console assets are public. The sandboxed iframe that loads them
-	// runs with an opaque origin (Origin: null), which is not on the proxy's
-	// CORS allowlist — override to "*" so module imports succeed.
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Del("Access-Control-Allow-Credentials")
+	SetPluginConsoleAssetCORS(w.Header())
 	// Mock mode serves edits live from disk; disable caching so iframe reloads
 	// always pick up the latest template without manual cache-busting.
 	w.Header().Set("Cache-Control", "no-store")
