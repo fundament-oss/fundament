@@ -1,0 +1,174 @@
+@if (isLoading()) {
+  <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugin...</div>
+} @else if (errorMessage(); as error) {
+  <a
+    routerLink="/"
+    class="text-accent-700 dark:text-accent-300 mb-3 inline-flex items-center gap-1.5 font-medium"
+  >
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    Back to marketplace
+  </a>
+  <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+  </div>
+} @else if (plugin(); as plugin) {
+  <a
+    routerLink="/"
+    class="text-accent-700 dark:text-accent-300 mb-4 inline-flex items-center gap-1.5 font-medium"
+  >
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    Marketplace
+  </a>
+
+  <!-- Header -->
+  <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
+    <div class="flex items-start gap-4">
+      <app-plugin-icon
+        [name]="plugin.icon"
+        [label]="plugin.displayName"
+        class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gray-100 p-2.5 dark:bg-gray-800"
+      />
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-3xl font-semibold">{{ plugin.displayName }}</h1>
+          @if (plugin.official) {
+            <nldd-tag size="sm" color="success" icon="check-mark" text="Official"></nldd-tag>
+          }
+        </div>
+        <p class="mt-1 text-gray-600 dark:text-gray-300">{{ plugin.tagline }}</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          By {{ plugin.vendor }} · <span class="font-mono">{{ plugin.version }}</span>
+        </p>
+      </div>
+    </div>
+    <nldd-button
+      (click)="install()"
+      text="Install plugin"
+      start-icon="cloud-arrow-down"
+      variant="primary"
+    ></nldd-button>
+  </div>
+
+  <div class="flex flex-col gap-8 lg:flex-row">
+    <!-- Main content -->
+    <div class="min-w-0 flex-1 space-y-8">
+      <section>
+        <h2 class="mb-2 text-xl font-semibold">About</h2>
+        <p class="max-w-3xl text-gray-700 dark:text-gray-300">{{ plugin.description }}</p>
+      </section>
+
+      @if (plugin.features.length > 0) {
+        <section class="space-y-4">
+          <h2 class="text-xl font-semibold">Features</h2>
+          @for (feature of plugin.features; track feature.title) {
+            <nldd-card class="block">
+              <div class="p-6">
+                <h3 class="font-semibold">{{ feature.title }}</h3>
+                <p class="mt-2 text-gray-600 dark:text-gray-300">{{ feature.body }}</p>
+              </div>
+            </nldd-card>
+          }
+        </section>
+      }
+
+      <!-- Permissions -->
+      <section>
+        <h2 class="mb-1 text-xl font-semibold">Permissions</h2>
+        <p class="mb-4 text-gray-600 dark:text-gray-300">
+          Once installed, {{ plugin.displayName }} is granted the following access to your cluster.
+        </p>
+        <nldd-card class="block">
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (permission of plugin.permissions; track permission.resource) {
+              <li class="flex items-center justify-between px-6 py-3">
+                <span class="font-medium text-gray-900 dark:text-white">
+                  {{ permission.resource }}
+                </span>
+                <span class="text-sm text-gray-500 dark:text-gray-400">{{
+                  permission.access
+                }}</span>
+              </li>
+            }
+          </ul>
+        </nldd-card>
+      </section>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="shrink-0 space-y-6 lg:w-72">
+      <nldd-card class="block">
+        <dl class="space-y-4 p-6">
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Built by</dt>
+            <dd class="mt-1 text-gray-900 dark:text-white">{{ plugin.vendor }}</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Category</dt>
+            <dd class="mt-1 text-gray-900 dark:text-white">{{ plugin.category }}</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
+            <dd class="mt-1 font-mono text-sm text-gray-900 dark:text-white">
+              {{ plugin.version }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Installs</dt>
+            <dd class="mt-1 text-gray-900 dark:text-white">{{ plugin.installs }} clusters</dd>
+          </div>
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Requirements</dt>
+            <dd class="mt-1 text-gray-900 dark:text-white">
+              @if (plugin.capabilities.length > 0) {
+                <ul class="space-y-1">
+                  @for (capability of plugin.capabilities; track capability) {
+                    <li class="flex items-center gap-1.5 text-sm">
+                      <nldd-icon name="info-circle" class="h-3.5 w-3.5 text-gray-400"></nldd-icon>
+                      {{ capability }}
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <span class="text-sm text-gray-500 dark:text-gray-400">None</span>
+              }
+            </dd>
+          </div>
+        </dl>
+      </nldd-card>
+
+      <!-- Tags -->
+      @if (plugin.tags.length > 0) {
+        <div>
+          <h3 class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Tags</h3>
+          <div class="flex flex-wrap gap-1">
+            @for (tag of plugin.tags; track tag) {
+              <nldd-tag size="sm" color="neutral" [text]="tag"></nldd-tag>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Resources -->
+      @if (plugin.documentationLinks.length > 0) {
+        <div>
+          <h3 class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Resources</h3>
+          <ul class="space-y-1.5">
+            @for (docLink of plugin.documentationLinks; track docLink.url) {
+              <li>
+                <a
+                  [href]="docLink.url"
+                  target="_blank"
+                  rel="noopener"
+                  class="link inline-flex items-center gap-1.5"
+                >
+                  <nldd-icon name="square-arrow-right-top" class="h-3.5 w-3.5"></nldd-icon>
+                  {{ docLink.label }}
+                </a>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </aside>
+  </div>
+}

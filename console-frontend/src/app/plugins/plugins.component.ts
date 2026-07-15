@@ -32,7 +32,6 @@ import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-s
 import getPluginIconName from '../utils/plugin-icon-name';
 import { ToastService } from '../toast.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
-import PluginNavTabsComponent from '../plugin-development/plugin-nav-tabs.component';
 
 const pluginCategoryLabel = (plugin: Pick<PluginWithPresets, 'categories'>): string =>
   plugin.categories.map((category) => category.name).join(', ') || '—';
@@ -80,7 +79,6 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
     InstallPluginModalComponent,
     LoadingIndicatorComponent,
     PluginIconComponent,
-    PluginNavTabsComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,

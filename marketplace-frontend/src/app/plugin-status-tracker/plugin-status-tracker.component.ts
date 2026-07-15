@@ -10,8 +10,7 @@ interface TrackerStep {
 }
 
 // Read-only status indicator for the plugin publishing pipeline:
-// Pushed via functl -> Central review -> Publish. Non-navigable; the visual
-// style is adapted from the add-cluster wizard's progress bar.
+// Pushed via functl -> Central review -> Publish. Non-navigable.
 @Component({
   selector: 'app-plugin-status-tracker',
   imports: [CheckmarkIconComponent],

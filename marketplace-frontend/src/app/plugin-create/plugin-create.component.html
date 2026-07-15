@@ -1,0 +1,95 @@
+<a
+  routerLink="/manage"
+  class="text-accent-700 dark:text-accent-300 mb-3 inline-flex items-center gap-1.5 font-medium"
+>
+  <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+  My plugins
+</a>
+
+<div class="max-w-3xl">
+  <h1 class="text-3xl font-semibold">Build a plugin</h1>
+  <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">
+    Plugins package platform and application functionality that anyone can install into their
+    clusters. You build one with the <span class="font-mono">functl</span> command-line tool and
+    publish it to the marketplace after a central review.
+  </p>
+
+  <!-- Prerequisites -->
+  <nldd-card class="mt-8 block">
+    <div class="p-6">
+      <h2 class="text-lg font-semibold">Before you start</h2>
+      <ul class="mt-3 space-y-2 text-gray-700 dark:text-gray-300">
+        <li class="flex gap-2">
+          <nldd-icon
+            name="check-mark"
+            class="text-accent-600 dark:text-accent-400 mt-1 h-4 w-4 shrink-0"
+          ></nldd-icon>
+          <span
+            >Install the <span class="font-mono">functl</span> CLI and make sure it is on your
+            PATH.</span
+          >
+        </li>
+        <li class="flex gap-2">
+          <nldd-icon
+            name="check-mark"
+            class="text-accent-600 dark:text-accent-400 mt-1 h-4 w-4 shrink-0"
+          ></nldd-icon>
+          <span>Have access to a cluster you can sideload onto for testing.</span>
+        </li>
+        <li class="flex gap-2">
+          <nldd-icon
+            name="check-mark"
+            class="text-accent-600 dark:text-accent-400 mt-1 h-4 w-4 shrink-0"
+          ></nldd-icon>
+          <span
+            >A container registry account is not needed —
+            <span class="font-mono">functl</span> pushes to the Fundament registry.</span
+          >
+        </li>
+      </ul>
+    </div>
+  </nldd-card>
+
+  <!-- Steps -->
+  <h2 class="mt-10 text-xl font-semibold">Create and publish</h2>
+  <ol class="mt-4 space-y-4">
+    @for (step of steps; track step.command; let i = $index) {
+      <li>
+        <nldd-card class="block">
+          <div class="flex gap-4 p-6">
+            <span
+              class="bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-semibold"
+              aria-hidden="true"
+            >
+              {{ i + 1 }}
+            </span>
+            <div class="min-w-0 flex-1">
+              <h3 class="font-semibold">{{ step.title }}</h3>
+              <pre
+                class="mt-2 overflow-x-auto rounded-md bg-gray-900 px-4 py-3 font-mono text-sm text-gray-100 dark:bg-black"
+              ><code>$ {{ step.command }}</code></pre>
+              <p class="mt-3 text-gray-600 dark:text-gray-300">{{ step.body }}</p>
+            </div>
+          </div>
+        </nldd-card>
+      </li>
+    }
+  </ol>
+
+  <!-- What happens next -->
+  <nldd-card class="mt-10 block">
+    <div class="p-6">
+      <h2 class="text-lg font-semibold">What happens after you push</h2>
+      <p class="mt-3 text-gray-700 dark:text-gray-300">
+        Your pushed build shows up under
+        <a routerLink="/manage" class="link">My plugins</a>. From there you can sideload it onto a
+        cluster to try it out, then submit it for central review. Once the review team approves it,
+        the plugin is published to the marketplace catalog for everyone to install.
+      </p>
+      <div class="mt-5 flex flex-wrap gap-3">
+        <nldd-button routerLink="/manage" text="Go to my plugins" variant="primary"></nldd-button>
+        <nldd-button routerLink="/" text="Browse the marketplace" variant="secondary"></nldd-button>
+      </div>
+    </div>
+  </nldd-card>
+</div>

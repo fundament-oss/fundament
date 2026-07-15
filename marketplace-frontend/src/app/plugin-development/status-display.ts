@@ -1,6 +1,6 @@
 import { type PluginStatus } from './plugin-development.service';
 
-// Shared label + tag-color helpers so the hub, detail and version-history
+// Shared label + tag-color helpers so the list, detail and version-history
 // views render lifecycle status consistently via <nldd-tag>.
 
 export const statusLabel = (status: PluginStatus): string => {

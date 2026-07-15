@@ -1,0 +1,122 @@
+<!-- Hero -->
+<section
+  class="from-accent-50 to-accent-100 dark:from-accent-950 dark:to-accent-900 mb-10 overflow-hidden rounded-2xl bg-gradient-to-br p-8 sm:p-12"
+>
+  <div class="max-w-2xl">
+    <h1 class="text-3xl font-semibold sm:text-4xl">Plugins that extend your Fundament clusters</h1>
+    <p class="mt-3 text-lg text-gray-700 dark:text-gray-200">
+      Add databases, networking, observability and security to your clusters with a single click.
+      Browse plugins built by the platform team and the community.
+    </p>
+    <div class="mt-6 flex flex-wrap gap-3">
+      <nldd-button
+        routerLink="/manage/create"
+        text="Build a plugin"
+        variant="primary"
+      ></nldd-button>
+      <nldd-button routerLink="/manage" text="My plugins" variant="secondary"></nldd-button>
+    </div>
+  </div>
+</section>
+
+@if (isLoading()) {
+  <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugins...</div>
+} @else {
+  <div class="flex flex-col gap-8 lg:flex-row">
+    <!-- Category sidebar -->
+    <aside class="shrink-0 lg:w-56">
+      <h2 class="mb-3 px-3 text-lg font-semibold">Categories</h2>
+      <nav class="space-y-1" aria-label="Plugin categories">
+        <button
+          type="button"
+          (click)="selectCategory('all')"
+          [class]="
+            selectedCategory() === 'all'
+              ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
+              : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+          "
+          class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors"
+        >
+          <span>All plugins</span>
+          <span class="text-gray-500 dark:text-gray-400">{{ plugins().length }}</span>
+        </button>
+        @for (category of categories(); track category.id) {
+          <button
+            type="button"
+            (click)="selectCategory(category.id)"
+            [class]="
+              selectedCategory() === category.id
+                ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
+                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+            "
+            class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors"
+          >
+            <span>{{ category.name }}</span>
+            <span class="text-gray-500 dark:text-gray-400">{{ categoryCount(category.id) }}</span>
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <div class="min-w-0 flex-1">
+      @if (isFiltering()) {
+        <!-- Flat results grid when filtering/searching -->
+        <div class="mb-4 flex items-baseline justify-between">
+          <h2 class="text-xl font-semibold">
+            @if (searchQuery().trim()) {
+              Results for “{{ searchQuery().trim() }}”
+            } @else {
+              {{ selectedCategory() }}
+            }
+          </h2>
+          <span class="text-sm text-gray-500 dark:text-gray-400">
+            {{ filteredPlugins().length }} plugin{{ filteredPlugins().length === 1 ? '' : 's' }}
+          </span>
+        </div>
+
+        @if (filteredPlugins().length === 0) {
+          <nldd-box>
+            <nldd-inline-dialog
+              icon="puzzle-piece"
+              icon-color="secondary"
+              text="No plugins found"
+              supporting-text="Try a different search term or category."
+            ></nldd-inline-dialog>
+          </nldd-box>
+        } @else {
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            @for (plugin of filteredPlugins(); track plugin.name) {
+              <app-plugin-card [plugin]="plugin" />
+            }
+          </div>
+        }
+      } @else {
+        <!-- Curated home sections -->
+        <section class="mb-10">
+          <h2 class="text-xl font-semibold">Featured plugins</h2>
+          <p class="mt-1 mb-4 text-gray-600 dark:text-gray-300">
+            Hand-picked plugins to get your clusters production-ready.
+          </p>
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            @for (plugin of featuredPlugins(); track plugin.name) {
+              <app-plugin-card [plugin]="plugin" />
+            }
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold">Recently added</h2>
+          <p class="mt-1 mb-4 text-gray-600 dark:text-gray-300">
+            The newest plugins in the marketplace.
+          </p>
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            @for (plugin of recentlyAdded(); track plugin.name) {
+              <app-plugin-card [plugin]="plugin" />
+            }
+          </div>
+        </section>
+      }
+    </div>
+  </div>
+}

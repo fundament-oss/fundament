@@ -1,0 +1,105 @@
+<!-- Top navigation bar -->
+<header
+  class="border-dividers sticky top-0 z-40 border-b bg-white/90 backdrop-blur dark:bg-gray-950/90"
+>
+  <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+    <a routerLink="/" class="flex shrink-0 items-center gap-2">
+      <app-fundament-logo-icon class="text-accent-600 dark:text-accent-400 h-6 w-6" />
+      <span class="text-lg font-semibold">
+        Fundament <span class="text-accent-600 dark:text-accent-400">Marketplace</span>
+      </span>
+    </a>
+
+    <!-- Search -->
+    <form
+      class="ml-2 hidden max-w-md flex-1 sm:block"
+      (submit)="submitSearch(); $event.preventDefault()"
+    >
+      <nldd-search-field
+        placeholder="Search plugins"
+        [value]="searchQuery()"
+        (input)="onSearchInput($event)"
+      ></nldd-search-field>
+    </form>
+
+    <nav class="ml-auto flex items-center gap-1" aria-label="Primary">
+      <a
+        routerLink="/"
+        routerLinkActive="bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="rounded-md px-3 py-2 font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+      >
+        Marketplace
+      </a>
+      <a
+        routerLink="/manage"
+        routerLinkActive="bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100"
+        class="rounded-md px-3 py-2 font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+      >
+        My plugins
+      </a>
+      <nldd-icon-button
+        [icon]="isDarkMode() ? 'sun' : 'moon'"
+        [text]="isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'"
+        variant="neutral-transparent"
+        size="sm"
+        (click)="toggleTheme()"
+      ></nldd-icon-button>
+    </nav>
+  </div>
+</header>
+
+<!-- Page content -->
+<main class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+  <router-outlet />
+</main>
+
+<!-- Footer -->
+<footer class="border-dividers border-t">
+  <div
+    class="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8 dark:text-gray-400"
+  >
+    <p>Fundament Marketplace — install and share plugins for your clusters.</p>
+    <a routerLink="/manage/create" class="link">Build a plugin</a>
+  </div>
+</footer>
+
+<!-- Toast notifications -->
+@if (toastService.toast()) {
+  <div
+    class="fixed right-4 bottom-4 z-100 flex w-sm items-center gap-3 rounded-md bg-gray-800/90 px-4 py-3 text-white shadow-lg dark:bg-gray-200/90 dark:text-gray-800"
+    role="alert"
+  >
+    <div
+      class="rounded-full p-1"
+      [class]="
+        toastService.toast()?.type === 'success'
+          ? 'bg-emerald-400/20 text-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-500'
+          : toastService.toast()?.type === 'error'
+            ? 'bg-danger-400/20 text-danger-400 dark:bg-danger-500/20 dark:text-danger-500'
+            : toastService.toast()?.type === 'warning'
+              ? 'bg-amber-400/20 text-amber-400 dark:bg-amber-500/20 dark:text-amber-500'
+              : 'bg-accent-400/20 text-accent-400 dark:bg-accent-500/20 dark:text-accent-500'
+      "
+    >
+      @if (toastService.toast()?.type === 'success') {
+        <nldd-icon name="check-mark-circle" class="block! h-5 w-5"></nldd-icon>
+      } @else if (toastService.toast()?.type === 'error') {
+        <nldd-icon name="exclamation-circle" class="block! h-5 w-5"></nldd-icon>
+      } @else if (toastService.toast()?.type === 'warning') {
+        <nldd-icon name="exclamation-triangle" class="block! h-5 w-5"></nldd-icon>
+      } @else {
+        <nldd-icon name="info-circle" class="block! h-5 w-5"></nldd-icon>
+      }
+    </div>
+    <span class="min-w-0 flex-1 wrap-break-word">{{ toastService.toast()?.message }}</span>
+    <button
+      (click)="toastService.dismiss()"
+      type="button"
+      aria-label="Dismiss notification"
+      class="ml-auto cursor-pointer text-gray-300 hover:text-white dark:text-gray-600 dark:hover:text-gray-800"
+    >
+      <nldd-icon name="dismiss-small" class="block! h-4 w-4"></nldd-icon>
+    </button>
+  </div>
+}

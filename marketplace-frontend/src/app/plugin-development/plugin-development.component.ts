@@ -15,7 +15,6 @@ import PluginDevelopmentService, {
   type PluginStatus,
 } from './plugin-development.service';
 import { statusLabel, statusTagColor, statusBadgeClass } from './status-display';
-import PluginNavTabsComponent from './plugin-nav-tabs.component';
 
 interface StatusSummary {
   status: PluginStatus;
@@ -25,15 +24,15 @@ interface StatusSummary {
 }
 
 const SUMMARY_STATUSES: { status: PluginStatus; dotColorVar: string }[] = [
-  { status: 'published', dotColorVar: 'var(--primitives-color-success-600)' },
+  { status: 'pushed', dotColorVar: 'var(--primitives-color-neutral-500)' },
   { status: 'in_review', dotColorVar: 'var(--primitives-color-accent-650)' },
   { status: 'changes_requested', dotColorVar: 'var(--primitives-color-warning-600)' },
-  { status: 'pushed', dotColorVar: 'var(--primitives-color-neutral-500)' },
+  { status: 'published', dotColorVar: 'var(--primitives-color-success-600)' },
 ];
 
 @Component({
   selector: 'app-plugin-development',
-  imports: [RouterLink, PluginNavTabsComponent, PluginIconComponent],
+  imports: [RouterLink, PluginIconComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-development.component.html',
@@ -75,6 +74,6 @@ export default class PluginDevelopmentComponent implements OnInit {
   statusBadgeClass = statusBadgeClass;
 
   goToManage(name: string) {
-    this.router.navigate(['/plugins/manage', name]);
+    this.router.navigate(['/manage', name]);
   }
 }
