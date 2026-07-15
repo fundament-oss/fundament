@@ -51,10 +51,6 @@ spec:
                     - Always
                     - IfNotPresent
                     - Never
-                clusterRoles:
-                  type: array
-                  items:
-                    type: string
                 definitionRef:
                   type: object
                   required:
