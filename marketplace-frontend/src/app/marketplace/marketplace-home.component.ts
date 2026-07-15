@@ -7,7 +7,7 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TitleService } from '../title.service';
 import MarketplaceService, { type MarketplacePlugin, type Category } from './marketplace.service';
@@ -15,7 +15,7 @@ import PluginCardComponent from './plugin-card.component';
 
 @Component({
   selector: 'app-marketplace-home',
-  imports: [RouterLink, PluginCardComponent],
+  imports: [PluginCardComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './marketplace-home.component.html',

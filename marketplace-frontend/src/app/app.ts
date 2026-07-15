@@ -49,7 +49,15 @@ export default class App implements OnInit {
   }
 
   onSearchInput(event: Event) {
-    this.searchQuery.set((event.target as HTMLInputElement).value);
+    const value = (event.target as HTMLInputElement).value;
+    this.searchQuery.set(value);
+    // Filter in real time: reflect the query into the URL as the user types so
+    // the marketplace home updates immediately. replaceUrl keeps keystrokes out
+    // of the browser history.
+    this.router.navigate(['/'], {
+      queryParams: { q: value || null },
+      replaceUrl: true,
+    });
   }
 
   submitSearch() {

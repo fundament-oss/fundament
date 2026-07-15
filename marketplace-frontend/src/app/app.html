@@ -24,19 +24,18 @@
 
     <nav class="ml-auto flex items-center gap-1" aria-label="Primary">
       <a
-        routerLink="/"
+        routerLink="/manage/create"
         routerLinkActive="bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100"
-        [routerLinkActiveOptions]="{ exact: true }"
         class="rounded-md px-3 py-2 font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
       >
-        Marketplace
+        Build a plugin
       </a>
       <a
         routerLink="/manage"
         routerLinkActive="bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100"
         class="rounded-md px-3 py-2 font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
       >
-        My plugins
+        Sign in
       </a>
       <nldd-icon-button
         [icon]="isDarkMode() ? 'sun' : 'moon'"
