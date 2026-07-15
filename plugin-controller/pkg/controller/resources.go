@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
+	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
 )
 
 const (
@@ -108,27 +109,45 @@ func mutateRoleBinding(rb *rbacv1.RoleBinding, cr *pluginsv1.PluginInstallation)
 	}
 }
 
-// mutateClusterRoleBinding binds the plugin's ServiceAccount to a ClusterRole
-// at cluster scope, for plugins that need cross-namespace or cluster-wide access.
-func mutateClusterRoleBinding(crb *rbacv1.ClusterRoleBinding, cr *pluginsv1.PluginInstallation, clusterRoleName string) {
-	crb.Labels = childLabels(cr)
-	crb.RoleRef = rbacv1.RoleRef{
-		APIGroup: rbacv1.GroupName,
-		Kind:     "ClusterRole",
-		Name:     clusterRoleName,
-	}
-	crb.Subjects = []rbacv1.Subject{
-		{
-			Kind:      rbacv1.ServiceAccountKind,
-			Name:      childName(cr.Name),
-			Namespace: pluginNamespace(cr.Name),
-		},
+// pluginScopeClusterRoleName is the name of the ClusterRole materialised from
+// the pinned PluginDefinition. It is bound to the per-installation plugin SA;
+// the cluster's RBAC on that SA is the plugin-scope half of FUN-17's user ∩
+// plugin enforcement.
+func pluginScopeClusterRoleName(installationName string) string {
+	return fmt.Sprintf("plugin-%s-scope", installationName)
+}
+
+// mutatePluginScopeClusterRole materialises the pinned definition's
+// permissions.rbac into a real ClusterRole. The cluster's own RBAC engine
+// evaluates this when kube-api-proxy injects the plugin SA token — there is no
+// bespoke matcher anywhere.
+func mutatePluginScopeClusterRole(role *rbacv1.ClusterRole, cr *pluginsv1.PluginInstallation, rules []definition.RBACRule) {
+	role.Labels = mergeLabels(role.Labels, childLabels(cr))
+	role.Rules = make([]rbacv1.PolicyRule, 0, len(rules))
+	for _, r := range rules {
+		role.Rules = append(role.Rules, rbacv1.PolicyRule{
+			APIGroups:     r.APIGroups,
+			Resources:     r.Resources,
+			Verbs:         r.Verbs,
+			ResourceNames: r.ResourceNames,
+		})
 	}
 }
 
-// clusterRoleBindingName returns a unique name for a plugin's ClusterRoleBinding.
-func clusterRoleBindingName(installationName, clusterRoleName string) string {
-	return fmt.Sprintf("plugin-%s-%s", installationName, clusterRoleName)
+// mutatePluginScopeClusterRoleBinding binds the materialised ClusterRole to the
+// per-installation plugin ServiceAccount.
+func mutatePluginScopeClusterRoleBinding(crb *rbacv1.ClusterRoleBinding, cr *pluginsv1.PluginInstallation) {
+	crb.Labels = mergeLabels(crb.Labels, childLabels(cr))
+	crb.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     pluginScopeClusterRoleName(cr.Name),
+	}
+	crb.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      childName(cr.Name),
+		Namespace: pluginNamespace(cr.Name),
+	}}
 }
 
 // mutateDeployment applies the desired state to an existing or empty Deployment.

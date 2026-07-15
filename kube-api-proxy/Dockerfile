@@ -9,7 +9,7 @@ RUN bun install --frozen-lockfile
 COPY plugins/openfsc/console-ui/ ./
 RUN bun run build
 
-FROM golang:1.26.4-alpine AS builder
+FROM golang:1.26.5-alpine AS builder
 WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download

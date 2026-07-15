@@ -9,7 +9,7 @@ RUN bun install --frozen-lockfile
 COPY plugins/openfsc/console-ui/ ./
 RUN bun run build
 
-FROM golang:1.26.4-alpine
+FROM golang:1.26.5-alpine
 RUN go install github.com/air-verse/air@v1.65.0
 WORKDIR /src
 COPY go.mod go.sum ./

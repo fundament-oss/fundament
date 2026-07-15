@@ -86,11 +86,6 @@ func (in *PluginInstallationList) DeepCopyObject() runtime.Object {
 func (in *PluginInstallationSpec) DeepCopyInto(out *PluginInstallationSpec) {
 	*out = *in
 	out.DefinitionRef = in.DefinitionRef
-	if in.ClusterRoles != nil {
-		in, out := &in.ClusterRoles, &out.ClusterRoles
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
 		*out = make(map[string]string, len(*in))

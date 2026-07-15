@@ -10,7 +10,7 @@ COPY plugins/openfsc/console-ui/ ./
 # vite build writes to ../console → /console (outDir is outside the Vite root).
 RUN bun run build
 
-FROM golang:1.26.4 AS build
+FROM golang:1.26.5 AS build
 
 WORKDIR /src
 COPY go.mod go.sum ./
