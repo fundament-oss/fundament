@@ -20,7 +20,7 @@ func (s *Server) ListUsers(
 
 	users := make([]*dcimv1.User, 0, len(rows))
 	for _, row := range rows {
-		users = append(users, userFromRow(&row))
+		users = append(users, userToProto(row.ID, row.Name, row.Email))
 	}
 
 	return connect.NewResponse(dcimv1.ListUsersResponse_builder{

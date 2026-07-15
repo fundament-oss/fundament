@@ -15,13 +15,21 @@ import { firstValueFrom } from 'rxjs';
 import ThemeToggleComponent from '../shared/theme-toggle';
 import ThemeService from '../theme.service';
 import AuthService from '../auth.service';
-import TaskApiService, { TaskPriorityLabel } from '../task-management/task-api.service';
+import TaskApiService, {
+  TaskPriorityLabel,
+  TaskStatusLabel,
+} from '../task-management/task-api.service';
 import TaskStepApiService from '../task-management/task-step-api.service';
+import UserApiService from '../task-management/user-api.service';
 import NoteApiService from '../inventory/note-api.service';
 import ToastService from '../shared/toast.service';
 import connectErrorMessage from '../../connect/error';
 
 interface GatherItem {
+  // Stable across reloads and re-orderings, unlike the list position: the
+  // checklist is rebuilt from the assigned tasks, whose order and membership
+  // change between sessions.
+  key: string;
   label: string;
   taskFor?: string;
 }
@@ -45,6 +53,23 @@ interface Task {
 
 type Phase = 'gather' | 'task';
 
+/** What the technician walks through: the statuses that still need work done. */
+const WALKTHROUGH_STATUSES: TaskStatusLabel[] = ['Ready', 'In Progress'];
+
+/**
+ * Progress is persisted by id, not by list position. The task list is ordered
+ * by creation date and only holds the technician's open tasks, so a task being
+ * assigned, finished, or reassigned between sessions shifts every index — and a
+ * positional snapshot would resume them inside the wrong task.
+ */
+interface ProgressSnapshot {
+  phase: Phase;
+  taskId: string | null;
+  stepId: string | null;
+  checkedItems: string[];
+  gatherCompleted: boolean;
+}
+
 @Component({
   selector: 'app-task-management-technician',
   templateUrl: './task-management-technician.html',
@@ -66,6 +91,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   private readonly taskApi = inject(TaskApiService);
 
   private readonly taskStepApi = inject(TaskStepApiService);
+
+  private readonly userApi = inject(UserApiService);
 
   private readonly noteApi = inject(NoteApiService);
 
@@ -211,11 +238,12 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   // Static generic tools plus per-task parts derived from the fetched tasks.
   readonly gatherItems = computed<GatherItem[]>(() => {
     const tools: GatherItem[] = [
-      { label: 'Anti-static wrist strap' },
-      { label: 'Phillips-head screwdriver' },
-      { label: 'Multimeter' },
+      { key: 'tool:wrist-strap', label: 'Anti-static wrist strap' },
+      { key: 'tool:screwdriver', label: 'Phillips-head screwdriver' },
+      { key: 'tool:multimeter', label: 'Multimeter' },
     ];
     const parts = this.tasks().map((t) => ({
+      key: `part:${t.id}`,
       label: TaskManagementTechnicianComponent.CATEGORY_PARTS[t.category] ?? 'Task-specific parts',
       taskFor: `${t.title} — ${TaskManagementTechnicianComponent.lastLocationSegment(t.location)}`,
     }));
@@ -232,10 +260,10 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     // otherwise this would immediately overwrite a saved snapshot with the
     // signals' initial (empty) values before it's been read back.
     effect(() => {
-      const snapshot = {
+      const snapshot: ProgressSnapshot = {
         phase: this.phase(),
-        currentTaskIndex: this.currentTaskIndex(),
-        currentStepIndex: this.currentStepIndex(),
+        taskId: this.currentTask()?.id ?? null,
+        stepId: this.currentTask()?.steps[this.currentStepIndex()]?.id ?? null,
         checkedItems: [...this.checkedItems()],
         gatherCompleted: this.gatherCompleted(),
       };
@@ -254,29 +282,26 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     return id ? `dcim_tech_progress_${id}` : null;
   }
 
+  // Resolves the saved ids back onto positions in the freshly loaded list. A
+  // task or step that is gone (finished, reassigned) simply falls back to the
+  // start rather than resuming at whatever now sits at that index.
   private restoreProgress(tasks: Task[]): void {
     const key = this.storageKey();
     if (!key || tasks.length === 0) return;
     const raw = localStorage.getItem(key);
     if (!raw) return;
     try {
-      const saved = JSON.parse(raw) as {
-        phase?: Phase;
-        currentTaskIndex?: number;
-        currentStepIndex?: number;
-        checkedItems?: number[];
-        gatherCompleted?: boolean;
-      };
-      const ti = Math.min(Math.max(0, saved.currentTaskIndex ?? 0), tasks.length - 1);
-      const si = Math.min(
-        Math.max(0, saved.currentStepIndex ?? 0),
-        Math.max(0, tasks[ti].steps.length - 1),
-      );
-      const maxItems = this.gatherItems().length;
-      this.phase.set(saved.phase === 'task' ? 'task' : 'gather');
-      this.currentTaskIndex.set(ti);
-      this.currentStepIndex.set(si);
-      this.checkedItems.set(new Set((saved.checkedItems ?? []).filter((i) => i < maxItems)));
+      const saved = JSON.parse(raw) as Partial<ProgressSnapshot>;
+      const ti = tasks.findIndex((t) => t.id === saved.taskId);
+      const taskIdx = ti >= 0 ? ti : 0;
+      const si = tasks[taskIdx].steps.findIndex((s) => s.id === saved.stepId);
+      const stepIdx = si >= 0 ? si : 0;
+      const keys = new Set(this.gatherItems().map((i) => i.key));
+
+      this.phase.set(saved.phase === 'task' && ti >= 0 ? 'task' : 'gather');
+      this.currentTaskIndex.set(taskIdx);
+      this.currentStepIndex.set(stepIdx);
+      this.checkedItems.set(new Set((saved.checkedItems ?? []).filter((k) => keys.has(k))));
       this.gatherCompleted.set(!!saved.gatherCompleted);
     } catch {
       // Corrupt/incompatible snapshot — ignore and start fresh.
@@ -290,17 +315,33 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   private async loadTasks(): Promise<void> {
     try {
-      const me = this.auth.user()?.id ?? (await this.auth.getUserInfo())?.id;
-      if (!me) return;
-      const res = await firstValueFrom(this.taskApi.listTasks(me));
+      // The auth session carries the identity-provider subject; the task's
+      // assignee is a DCIM user id, so resolve one onto the other first.
+      const me = await firstValueFrom(this.userApi.getCurrentUser());
+      const meId = me.user?.id;
+      if (!meId) {
+        this.loadError.set('Your account is not in the technician directory');
+        return;
+      }
+
+      const res = await firstValueFrom(this.taskApi.listTasks(meId));
+      // Only tasks that still need doing. Without this, tasks the technician
+      // already finished (or that are blocked/awaiting review) pad the gather
+      // checklist and the linear flow walks them back through completed work.
+      const open = res.tasks.filter((t) =>
+        WALKTHROUGH_STATUSES.includes(TaskApiService.fromProtoStatus(t.status)),
+      );
+
       // Improvement: this fans out one ListTaskSteps call per task (N+1). It runs
       // them in parallel, but a batched "steps for these task ids" endpoint (or
       // embedding steps in ListTasks) would collapse it into a single round-trip.
+      const completed = new Set<string>();
       const tasks = await Promise.all(
-        res.tasks.map(async (t, taskIdx) => {
+        open.map(async (t) => {
           const stepsRes = await firstValueFrom(this.taskStepApi.listTaskSteps(t.id));
           const steps: Step[] = stepsRes.steps.map((s, si) => {
             const art = TaskManagementTechnicianComponent.illustrationFor(si);
+            if (s.completed) completed.add(s.id);
             return {
               id: s.id,
               title: s.title,
@@ -309,12 +350,6 @@ export default class TaskManagementTechnicianComponent implements OnInit {
               svg: art.svg,
             };
           });
-          // Seed optimistic completion state from the persisted flags.
-          const done = new Set<number>();
-          stepsRes.steps.forEach((s, si) => {
-            if (s.completed) done.add(si);
-          });
-          this.completedTaskSteps.set(taskIdx, done);
           return {
             id: t.id,
             title: t.title,
@@ -327,13 +362,27 @@ export default class TaskManagementTechnicianComponent implements OnInit {
           };
         }),
       );
+
+      this.completedSteps.set(completed);
       this.tasks.set(tasks);
       this.restoreProgress(tasks);
+      this.loadError.set(null);
       this.hydrated.set(true);
     } catch (err) {
+      const message = connectErrorMessage(err);
       // eslint-disable-next-line no-console
-      console.error(connectErrorMessage(err));
+      console.error(message);
+      // Surfaced rather than swallowed: with no tasks and no error the page is
+      // indistinguishable from "you have nothing to do". hydrated stays false so
+      // the auto-save effect cannot overwrite the saved snapshot with an empty one.
+      this.loadError.set(message);
+      this.toast.show('Could not load your tasks');
     }
+  }
+
+  retryLoad(): void {
+    this.loadError.set(null);
+    this.loadTasks();
   }
 
   private static mapPriority(p: TaskPriorityLabel): 'critical' | 'high' | 'normal' {
@@ -354,7 +403,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   readonly currentStepIndex = signal(0);
 
-  readonly checkedItems = signal(new Set<number>());
+  readonly checkedItems = signal(new Set<string>());
 
   readonly gatherCompleted = signal(false);
 
@@ -370,24 +419,30 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   readonly photoPreviewUrl = signal<string | null>(null);
 
+  readonly loadError = signal<string | null>(null);
+
   // Guards the auto-save effect from writing an empty/default snapshot over a
   // saved one before restoreProgress() has had a chance to run.
   private readonly hydrated = signal(false);
 
-  private completedTaskSteps = new Map<number, Set<number>>();
+  // Ids of the steps completed so far. A signal (rather than a plain Map) so the
+  // header progress bar recomputes as steps are ticked off — the app is zoneless,
+  // so mutating a non-reactive collection would never repaint it. Keyed by step
+  // id so it survives the list being re-ordered or re-fetched.
+  private readonly completedSteps = signal(new Set<string>());
+
+  // Set while a step completion is in flight, to keep a double-press from
+  // skipping a step.
+  readonly savingStep = signal(false);
 
   // ── Computed ──
   readonly currentTask = computed(() => this.tasks()[this.currentTaskIndex()]);
 
   readonly totalSteps = computed(() => 1 + this.tasks().reduce((s, t) => s + t.steps.length, 0));
 
-  readonly completedCount = computed(() => {
-    let n = this.gatherCompleted() ? 1 : 0;
-    this.completedTaskSteps.forEach((s) => {
-      n += s.size;
-    });
-    return n;
-  });
+  readonly completedCount = computed(
+    () => (this.gatherCompleted() ? 1 : 0) + this.completedSteps().size,
+  );
 
   readonly progressPct = computed(() => (this.completedCount() / this.totalSteps()) * 100);
 
@@ -421,9 +476,9 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   isTaskDone(taskIdx: number): boolean {
     const task = this.tasks()[taskIdx];
-    if (!task) return false;
-    const completedSet = this.completedTaskSteps.get(taskIdx);
-    return (completedSet?.size ?? 0) === task.steps.length && task.steps.length > 0;
+    if (!task || task.steps.length === 0) return false;
+    const done = this.completedSteps();
+    return task.steps.every((s) => done.has(s.id));
   }
 
   isStepActive(taskIdx: number, stepIdx: number): boolean {
@@ -431,7 +486,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   }
 
   isStepDone(taskIdx: number, stepIdx: number): boolean {
-    return this.completedTaskSteps.get(taskIdx)?.has(stepIdx) ?? false;
+    const step = this.tasks()[taskIdx]?.steps[stepIdx];
+    return step ? this.completedSteps().has(step.id) : false;
   }
 
   jumpToStep(taskIdx: number, stepIdx: number): void {
@@ -450,20 +506,20 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     return this.sanitizer.bypassSecurityTrustHtml(source);
   }
 
-  toggleGatherItem(index: number): void {
+  toggleGatherItem(key: string): void {
     this.checkedItems.update((set) => {
       const next = new Set(set);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
 
-  onGatherCheckbox(index: number, checked: boolean): void {
+  onGatherCheckbox(key: string, checked: boolean): void {
     this.checkedItems.update((set) => {
       const next = new Set(set);
-      if (checked) next.add(index);
-      else next.delete(index);
+      if (checked) next.add(key);
+      else next.delete(key);
       return next;
     });
   }
@@ -480,7 +536,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     }
   }
 
-  pressDone(): void {
+  async pressDone(): Promise<void> {
     if (this.phase() === 'gather') {
       if (this.tasks().length === 0) {
         this.toast.show('No tasks assigned to you');
@@ -498,27 +554,35 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       return;
     }
 
+    if (this.savingStep()) return;
+
     const ti = this.currentTaskIndex();
     const si = this.currentStepIndex();
-    const step = this.tasks()[ti]?.steps[si];
-
-    if (!this.completedTaskSteps.has(ti)) {
-      this.completedTaskSteps.set(ti, new Set());
-    }
-    this.completedTaskSteps.get(ti)!.add(si);
-
-    // Persist the completion; optimistic UI already reflects it.
-    if (step) {
-      firstValueFrom(this.taskStepApi.updateTaskStep(step.id, true)).catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-      });
-    }
-
-    // Force reactivity on completedCount
-    this.gatherCompleted.update((v) => v);
-
     const task = this.tasks()[ti];
+    const step = task?.steps[si];
+    if (!task || !step) return;
+
+    // Mark it done optimistically, but roll back and stay on the step if the
+    // write fails — advancing (or showing the completion screen) on a failed
+    // call would lose the technician's work with nothing to show for it.
+    this.savingStep.set(true);
+    this.completedSteps.update((set) => new Set(set).add(step.id));
+    try {
+      await firstValueFrom(this.taskStepApi.updateTaskStep(step.id, true));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+      this.completedSteps.update((set) => {
+        const next = new Set(set);
+        next.delete(step.id);
+        return next;
+      });
+      this.toast.show('Could not save this step — try again');
+      return;
+    } finally {
+      this.savingStep.set(false);
+    }
+
     if (si < task.steps.length - 1) {
       this.currentStepIndex.update((v) => v + 1);
     } else if (ti < this.tasks().length - 1) {

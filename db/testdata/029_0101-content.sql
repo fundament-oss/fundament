@@ -1,29 +1,28 @@
 -- DCIM task-management seed for local development.
--- Split from 026_0101-content.sql because dcim.users is created by migration
--- 029; testdata at the 026 checkpoint runs before that migration exists.
 --
 -- ID convention (continues 026_0101-content.sql): 019dc<TT>0-0000-7000-8000-
--- 0000000000NN, with TT=e1 for tasks and TT=e2 for task_steps; task notes
--- continue the c0 (note) sequence. dcim.users rows are the exception — see below.
+-- 0000000000NN, with TT=e1 for tasks, e2 for task_steps and e3 for users; task
+-- notes continue the c0 (note) sequence.
 
 -- ── Users (task-management roster) ──────────────────────────────────────────
--- The assignee dropdown source for task-management. Most rows would normally
--- follow the 019dc<TT>0 ID convention, but the task-management technician page
--- filters ListTasks by assignee_id = the *logged-in* user's id, and that id is
--- NOT a free uuid — it is the deterministic JWT subject minted by dcim-authn-api:
---   sub      = base64url(proto{user_id=<dex userID>, conn_id="local"})  (dex)
---   users.id = uuid.NewSHA1(6ba7b810-9dad-11d1-80b4-00c04fd430c8, sub)  (dcim-authn-api subjectUUID)
--- So every row here uses the DERIVED subject UUID of a dex-dcim dev account
--- (charts/fundament/values-local.yaml → dexDcim.staticPasswords), letting any of
--- those accounts log in and land on a populated technician page with no manual
--- DB edits. If the dev accounts change, recompute these ids (see derivation
--- above) — verify at runtime by logging what /userinfo returns for `id`.
-INSERT INTO dcim.users (id, name, email) VALUES
-    ('6b06ad37-5db1-5b84-8bea-57b287be639d', 'Alice', 'alice@acme-corp.com'),
-    ('8c33fc91-9eae-5467-a3c0-d9a1b29acdf4', 'Bart',  'bart@acme-corp.com'),
-    ('c1cbb965-2a8b-5794-bebc-b1827c4bc0dd', 'Cindy', 'cindy@acme-corp.com'),
-    ('d6a18af6-af2b-5272-83aa-e9990309a99d', 'David', 'david@globex.com'),
-    ('fe571fce-3faa-5d6f-82dc-218e710071f6', 'Emily', 'emily@globex.com');
+-- The assignee dropdown source for task-management, and the identities the
+-- technician page resolves the logged-in user against.
+--
+-- external_ref is the DCIM JWT subject, i.e. how the identity provider names
+-- this person; GetCurrentUser matches on it and hands back the internal id that
+-- tasks are actually assigned to. dcim-authn-api derives that subject from dex:
+--   sub          = base64url(proto{user_id=<dex userID>, conn_id="local"})  (dex)
+--   external_ref = uuid.NewSHA1(6ba7b810-9dad-11d1-80b4-00c04fd430c8, sub)  (dcim-authn-api subjectUUID)
+-- The refs below are those of the dex-dcim dev accounts (charts/fundament/
+-- values-local.yaml → dexDcim.staticPasswords), so any of them can log in and
+-- land on a populated technician page with no manual DB edits. If the dev
+-- accounts change, recompute these refs — verify against what /userinfo returns.
+INSERT INTO dcim.users (id, external_ref, name, email) VALUES
+    ('019dce30-0000-7000-8000-000000000001', '6b06ad37-5db1-5b84-8bea-57b287be639d', 'Alice', 'alice@acme-corp.com'),
+    ('019dce30-0000-7000-8000-000000000002', '8c33fc91-9eae-5467-a3c0-d9a1b29acdf4', 'Bart',  'bart@acme-corp.com'),
+    ('019dce30-0000-7000-8000-000000000003', 'c1cbb965-2a8b-5794-bebc-b1827c4bc0dd', 'Cindy', 'cindy@acme-corp.com'),
+    ('019dce30-0000-7000-8000-000000000004', 'd6a18af6-af2b-5272-83aa-e9990309a99d', 'David', 'david@globex.com'),
+    ('019dce30-0000-7000-8000-000000000005', 'fe571fce-3faa-5d6f-82dc-218e710071f6', 'Emily', 'emily@globex.com');
 
 -- ── Tasks (work orders) ─────────────────────────────────────────────────────
 -- TT=e1. The three technician-flow tasks (01-03) are assigned to Alice so her
@@ -32,28 +31,28 @@ INSERT INTO dcim.users (id, name, email) VALUES
 INSERT INTO dcim.tasks (id, title, description, status, priority, category, assignee_id, due_date, location, created) VALUES
     ('019dce10-0000-7000-8000-000000000001', 'Replace broken harddisk',
         'Failed disk in Bay 3 of backup-srv-07 at Rack 123. Replace with Seagate Exos X18 (ST16000NM000J, 16 TB). The RAID controller shows the drive as failed since yesterday evening.',
-        'in_progress', 'critical', 'hardware', '6b06ad37-5db1-5b84-8bea-57b287be639d', '2026-03-20 00:00:00+00', 'DC Amsterdam-West · Rack 123', '2026-03-15 09:00:00+00'),
+        'in_progress', 'critical', 'hardware', '019dce30-0000-7000-8000-000000000001', '2026-03-20 00:00:00+00', 'DC Amsterdam-West · Rack 123', '2026-03-15 09:00:00+00'),
     ('019dce10-0000-7000-8000-000000000002', 'Replace network switch — Rack 87',
         'The Cisco Nexus switch in Rack 87 has intermittent port failures on ports 24-28. Replace with the new Arista unit from stock.',
-        'in_progress', 'high', 'network', '6b06ad37-5db1-5b84-8bea-57b287be639d', '2026-03-19 00:00:00+00', 'DC Amsterdam-West · Rack 87', '2026-03-14 09:00:00+00'),
+        'in_progress', 'high', 'network', '019dce30-0000-7000-8000-000000000001', '2026-03-19 00:00:00+00', 'DC Amsterdam-West · Rack 87', '2026-03-14 09:00:00+00'),
     ('019dce10-0000-7000-8000-000000000003', 'Inspect PDU — Hall A',
         'Routine quarterly inspection of the PDU in Hall A. Check all breakers, verify load balancing, and ensure no burnt contacts.',
-        'ready', 'medium', 'power', '6b06ad37-5db1-5b84-8bea-57b287be639d', '2026-03-25 00:00:00+00', 'DC Amsterdam-West · Hall A', '2026-03-16 09:00:00+00'),
+        'ready', 'medium', 'power', '019dce30-0000-7000-8000-000000000001', '2026-03-25 00:00:00+00', 'DC Amsterdam-West · Hall A', '2026-03-16 09:00:00+00'),
     ('019dce10-0000-7000-8000-000000000004', 'Check cooling unit — Row 5',
         'Temperature sensors in Row 5 are reporting 2°C above normal baseline. Inspect the cooling unit for potential blockage or fan failure.',
         'ready', 'high', 'cooling', NULL, '2026-03-21 00:00:00+00', 'DC Amsterdam-West · Hall A, Row 5', '2026-03-17 09:00:00+00'),
     ('019dce10-0000-7000-8000-000000000005', 'Firmware update — UPS units Hall B',
         'Apply firmware v4.2.1 to all three Eaton UPS units in Hall B. Requires sequential update — do not update all at once.',
-        'review', 'medium', 'power', '8c33fc91-9eae-5467-a3c0-d9a1b29acdf4', '2026-03-22 00:00:00+00', 'DC Amsterdam-West · Hall B', '2026-03-13 09:00:00+00'),
+        'review', 'medium', 'power', '019dce30-0000-7000-8000-000000000002', '2026-03-22 00:00:00+00', 'DC Amsterdam-West · Hall B', '2026-03-13 09:00:00+00'),
     ('019dce10-0000-7000-8000-000000000006', 'Install additional cameras — Entrance B',
         'Mount two new security cameras at Entrance B as per the security audit recommendations. Cabling is already in place.',
-        'blocked', 'low', 'security', 'c1cbb965-2a8b-5794-bebc-b1827c4bc0dd', '2026-03-28 00:00:00+00', 'DC Amsterdam-West · Entrance B', '2026-03-10 09:00:00+00'),
+        'blocked', 'low', 'security', '019dce30-0000-7000-8000-000000000003', '2026-03-28 00:00:00+00', 'DC Amsterdam-West · Entrance B', '2026-03-10 09:00:00+00'),
     ('019dce10-0000-7000-8000-000000000007', 'Decommission server DB-14',
         'Server DB-14 in Rack 45 has been migrated to new hardware. Wipe disks, remove from rack, and update asset inventory.',
-        'done', 'low', 'hardware', 'd6a18af6-af2b-5272-83aa-e9990309a99d', '2026-03-17 00:00:00+00', 'DC Amsterdam-West · Rack 45', '2026-03-08 09:00:00+00'),
+        'done', 'low', 'hardware', '019dce30-0000-7000-8000-000000000004', '2026-03-17 00:00:00+00', 'DC Amsterdam-West · Rack 45', '2026-03-08 09:00:00+00'),
     ('019dce10-0000-7000-8000-000000000008', 'Repair cable management — Rack 92',
         'Cables in Rack 92 are obstructing airflow. Re-route and zip-tie all patch cables. Replace any damaged cables.',
-        'in_progress', 'medium', 'hardware', 'fe571fce-3faa-5d6f-82dc-218e710071f6', '2026-03-23 00:00:00+00', 'DC Amsterdam-West · Rack 92', '2026-03-16 09:00:00+00');
+        'in_progress', 'medium', 'hardware', '019dce30-0000-7000-8000-000000000005', '2026-03-23 00:00:00+00', 'DC Amsterdam-West · Rack 92', '2026-03-16 09:00:00+00');
 
 -- ── Task steps (technician-flow checklists) ─────────────────────────────────
 -- TT=e2. Steps for the three tasks assigned to Alice (01-03).

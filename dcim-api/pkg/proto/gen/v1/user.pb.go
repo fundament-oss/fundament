@@ -230,6 +230,117 @@ func (b0 ListUsersResponse_builder) Build() *ListUsersResponse {
 	return m0
 }
 
+type GetCurrentUserRequest struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCurrentUserRequest) Reset() {
+	*x = GetCurrentUserRequest{}
+	mi := &file_v1_user_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentUserRequest) ProtoMessage() {}
+
+func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_user_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type GetCurrentUserRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 GetCurrentUserRequest_builder) Build() *GetCurrentUserRequest {
+	m0 := &GetCurrentUserRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
+type GetCurrentUserResponse struct {
+	state           protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_User *User                  `protobuf:"bytes,10,opt,name=user"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetCurrentUserResponse) Reset() {
+	*x = GetCurrentUserResponse{}
+	mi := &file_v1_user_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentUserResponse) ProtoMessage() {}
+
+func (x *GetCurrentUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_user_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetCurrentUserResponse) GetUser() *User {
+	if x != nil {
+		return x.xxx_hidden_User
+	}
+	return nil
+}
+
+func (x *GetCurrentUserResponse) SetUser(v *User) {
+	x.xxx_hidden_User = v
+}
+
+func (x *GetCurrentUserResponse) HasUser() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_User != nil
+}
+
+func (x *GetCurrentUserResponse) ClearUser() {
+	x.xxx_hidden_User = nil
+}
+
+type GetCurrentUserResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	User *User
+}
+
+func (b0 GetCurrentUserResponse_builder) Build() *GetCurrentUserResponse {
+	m0 := &GetCurrentUserResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_User = b.User
+	return m0
+}
+
 var File_v1_user_proto protoreflect.FileDescriptor
 
 const file_v1_user_proto_rawDesc = "" +
@@ -243,25 +354,35 @@ const file_v1_user_proto_rawDesc = "" +
 	"\x10ListUsersRequest\"8\n" +
 	"\x11ListUsersResponse\x12#\n" +
 	"\x05users\x18\n" +
-	" \x03(\v2\r.dcim.v1.UserR\x05users2Q\n" +
+	" \x03(\v2\r.dcim.v1.UserR\x05users\"\x17\n" +
+	"\x15GetCurrentUserRequest\";\n" +
+	"\x16GetCurrentUserResponse\x12!\n" +
+	"\x04user\x18\n" +
+	" \x01(\v2\r.dcim.v1.UserR\x04user2\xa4\x01\n" +
 	"\vUserService\x12B\n" +
-	"\tListUsers\x12\x19.dcim.v1.ListUsersRequest\x1a\x1a.dcim.v1.ListUsersResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
+	"\tListUsers\x12\x19.dcim.v1.ListUsersRequest\x1a\x1a.dcim.v1.ListUsersResponse\x12Q\n" +
+	"\x0eGetCurrentUser\x12\x1e.dcim.v1.GetCurrentUserRequest\x1a\x1f.dcim.v1.GetCurrentUserResponseBOZCgithub.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 
-var file_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_v1_user_proto_goTypes = []any{
-	(*User)(nil),              // 0: dcim.v1.User
-	(*ListUsersRequest)(nil),  // 1: dcim.v1.ListUsersRequest
-	(*ListUsersResponse)(nil), // 2: dcim.v1.ListUsersResponse
+	(*User)(nil),                   // 0: dcim.v1.User
+	(*ListUsersRequest)(nil),       // 1: dcim.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),      // 2: dcim.v1.ListUsersResponse
+	(*GetCurrentUserRequest)(nil),  // 3: dcim.v1.GetCurrentUserRequest
+	(*GetCurrentUserResponse)(nil), // 4: dcim.v1.GetCurrentUserResponse
 }
 var file_v1_user_proto_depIdxs = []int32{
 	0, // 0: dcim.v1.ListUsersResponse.users:type_name -> dcim.v1.User
-	1, // 1: dcim.v1.UserService.ListUsers:input_type -> dcim.v1.ListUsersRequest
-	2, // 2: dcim.v1.UserService.ListUsers:output_type -> dcim.v1.ListUsersResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // 1: dcim.v1.GetCurrentUserResponse.user:type_name -> dcim.v1.User
+	1, // 2: dcim.v1.UserService.ListUsers:input_type -> dcim.v1.ListUsersRequest
+	3, // 3: dcim.v1.UserService.GetCurrentUser:input_type -> dcim.v1.GetCurrentUserRequest
+	2, // 4: dcim.v1.UserService.ListUsers:output_type -> dcim.v1.ListUsersResponse
+	4, // 5: dcim.v1.UserService.GetCurrentUser:output_type -> dcim.v1.GetCurrentUserResponse
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_v1_user_proto_init() }
@@ -275,7 +396,7 @@ func file_v1_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_user_proto_rawDesc), len(file_v1_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

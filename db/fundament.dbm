@@ -2956,6 +2956,10 @@ END;]]> </definition>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="external_ref">
+		<type name="text" length="0"/>
+		<comment> <![CDATA[Subject of the identity provider this user maps onto (the DCIM JWT `sub`). Null for users that exist only in DCIM and cannot sign in.]]> </comment>
+	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
 	</column>
@@ -2972,6 +2976,15 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
+
+<index name="users_uq_external_ref" table="dcim.users"
+	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="external_ref"/>
+		</idxelement>
+	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
+</index>
 
 <index name="task_steps_uq_task_ordinal" table="dcim.task_steps"
 	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"

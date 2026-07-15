@@ -12,6 +12,35 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const userGetByExternalRef = `-- name: UserGetByExternalRef :one
+SELECT id, name, email, created
+FROM dcim.users
+WHERE external_ref = $1 AND deleted IS NULL
+`
+
+type UserGetByExternalRefParams struct {
+	ExternalRef pgtype.Text
+}
+
+type UserGetByExternalRefRow struct {
+	ID      uuid.UUID
+	Name    string
+	Email   pgtype.Text
+	Created pgtype.Timestamptz
+}
+
+func (q *Queries) UserGetByExternalRef(ctx context.Context, arg UserGetByExternalRefParams) (UserGetByExternalRefRow, error) {
+	row := q.db.QueryRow(ctx, userGetByExternalRef, arg.ExternalRef)
+	var i UserGetByExternalRefRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Created,
+	)
+	return i, err
+}
+
 const userList = `-- name: UserList :many
 SELECT id, name, email, created
 FROM dcim.users

@@ -113,6 +113,10 @@ message CreateTaskResponse {
   string task_id = 10;
 }
 
+// UpdateTaskRequest patches the fields it explicitly sets and leaves the rest
+// untouched. For the nullable columns (assignee_id, due_date, location) an
+// explicitly-set field carrying the "empty" sentinel — an empty string, or the
+// epoch timestamp — clears the column, matching UpdatePhysicalConnectionRequest.
 message UpdateTaskRequest {
   string                    id          = 10 [(buf.validate.field).string = {uuid: true}];
   string                    title       = 20 [features.field_presence = EXPLICIT];
@@ -123,10 +127,6 @@ message UpdateTaskRequest {
   string                    assignee_id = 70 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp due_date    = 80 [features.field_presence = EXPLICIT];
   string                    location    = 90 [features.field_presence = EXPLICIT];
-  // Set to clear the assignee (unassign). Takes precedence over assignee_id;
-  // needed because a null/absent assignee_id means "leave unchanged" under the
-  // COALESCE update, so there is otherwise no way to express "remove assignee".
-  bool                      clear_assignee = 100;
 }
 
 message DeleteTaskRequest {

@@ -25,6 +25,7 @@ import AuthService from '../auth.service';
 import TaskApiService, {
   TaskData,
   TaskInput,
+  TaskPatch,
   TaskCategoryLabel,
   TaskPriorityLabel,
   TaskStatusLabel,
@@ -97,6 +98,10 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   tasks = signal<Task[]>([]);
 
+  // Set when the board could not be loaded, so an API failure reads as an error
+  // rather than as a legitimately empty board.
+  readonly loadError = signal<string | null>(null);
+
   ngOnInit(): void {
     this.toast.offsetPx.set(TOAST_SIDEBAR_OFFSET_PX);
     this.loadUsers();
@@ -110,19 +115,33 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   private loadUsers(): void {
     firstValueFrom(this.userApi.listUsers())
       .then((res) => this.technicians.set(res.users.map((u) => UserApiService.mapUser(u))))
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.toast.show('Could not load the technician roster');
+      });
+  }
+
+  retryLoad(): void {
+    this.loadUsers();
+    this.loadTasks();
   }
 
   private loadTasks(): void {
     firstValueFrom(this.taskApi.listTasks())
-      .then((res) =>
+      .then((res) => {
         this.tasks.set(
           res.tasks.map((t) => ({ ...TaskApiService.mapTask(t), notes: [], notesLoaded: false })),
-        ),
-      )
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+        );
+        this.loadError.set(null);
+      })
+      .catch((err) => {
+        const message = connectErrorMessage(err);
+        // eslint-disable-next-line no-console
+        console.error(message);
+        this.loadError.set(message);
+        this.toast.show('Could not load tasks');
+      });
   }
 
   readonly statusStyles: Record<string, StatusStyle> = {
@@ -363,12 +382,10 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       list.map((t) => (t.id === task.id ? { ...t, status: targetStatus } : t)),
     );
 
-    firstValueFrom(
-      this.taskApi.updateTask(
-        task.id,
-        TaskManagementAdminComponent.toInput({ ...task, status: targetStatus }),
-      ),
-    )
+    // Only the status is sent. Sending the dragged card's whole snapshot would
+    // write back every field as this board last saw it, silently reverting any
+    // edit another admin made since the board loaded.
+    firstValueFrom(this.taskApi.updateTask(task.id, { status: targetStatus }))
       .then(() => this.loadTasks())
       .catch((err) => {
         // eslint-disable-next-line no-console
@@ -503,51 +520,33 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   bulkSetStatus(status: TaskStatusLabel): void {
     this.bulkStatusPopoverEl()?.nativeElement.hide();
-    this.bulkUpdate((input) => ({ ...input, status }), 'Status updated');
+    this.bulkUpdate({ status }, 'Status updated');
   }
 
-  // assigneeId of null unassigns the selected tasks (the "Unassigned" option).
+  // assignee of null unassigns the selected tasks (the "Unassigned" option).
   bulkAssign(assigneeId: string | null): void {
     this.bulkAssignPopoverEl()?.nativeElement.hide();
-    this.bulkUpdate(
-      (input) => ({ ...input, assignee: assigneeId }),
-      assigneeId ? 'Tasks reassigned' : 'Tasks unassigned',
+    this.bulkUpdate({ assignee: assigneeId }, assigneeId ? 'Tasks reassigned' : 'Tasks unassigned');
+  }
+
+  // Applies `patch` to every selected task. Like the kanban drop, this sends
+  // only the changed fields — never the board's snapshot of the other ones.
+  private bulkUpdate(patch: TaskPatch, successMessage: string): void {
+    const ids = [...this.selectedTasks()].filter((id) => this.tasks().some((t) => t.id === id));
+    if (ids.length === 0) return;
+    Promise.allSettled(ids.map((id) => firstValueFrom(this.taskApi.updateTask(id, patch)))).then(
+      (results) => {
+        this.loadTasks();
+        // allSettled never rejects, so surface partial failures explicitly
+        // rather than reporting blanket success.
+        const failed = TaskManagementAdminComponent.countRejections(results);
+        this.toast.show(
+          failed === 0
+            ? successMessage
+            : `${ids.length - failed} of ${ids.length} updated, ${failed} failed`,
+        );
+      },
     );
-  }
-
-  private static toInput(t: TaskData): TaskInput {
-    return {
-      title: t.title,
-      description: t.description,
-      status: t.status,
-      priority: t.priority,
-      category: t.category,
-      location: t.location,
-      assignee: t.assignee,
-      due: t.due,
-    };
-  }
-
-  private bulkUpdate(patch: (input: TaskInput) => TaskInput, successMessage: string): void {
-    const ids = [...this.selectedTasks()];
-    const updates = ids
-      .map((id) => this.tasks().find((t) => t.id === id))
-      .filter((t): t is Task => !!t)
-      .map((t) => ({ id: t.id, input: patch(TaskManagementAdminComponent.toInput(t)) }));
-    if (updates.length === 0) return;
-    Promise.allSettled(
-      updates.map((u) => firstValueFrom(this.taskApi.updateTask(u.id, u.input))),
-    ).then((results) => {
-      this.loadTasks();
-      // allSettled never rejects, so surface partial failures explicitly
-      // rather than reporting blanket success.
-      const failed = TaskManagementAdminComponent.countRejections(results);
-      this.toast.show(
-        failed === 0
-          ? successMessage
-          : `${updates.length - failed} of ${updates.length} updated, ${failed} failed`,
-      );
-    });
   }
 
   // Counts rejected settlements and logs their reasons, for the bulk operations

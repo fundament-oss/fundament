@@ -2349,6 +2349,7 @@ ALTER TABLE dcim.task_steps OWNER TO fun_owner;
 -- DROP TABLE IF EXISTS dcim.users CASCADE;
 CREATE TABLE dcim.users (
 	id uuid NOT NULL DEFAULT uuidv7(),
+	external_ref text,
 	name text NOT NULL,
 	email text,
 	created timestamptz NOT NULL DEFAULT now(),
@@ -2356,7 +2357,19 @@ CREATE TABLE dcim.users (
 	CONSTRAINT users_pk PRIMARY KEY (id)
 );
 -- ddl-end --
+COMMENT ON COLUMN dcim.users.external_ref IS E'Subject of the identity provider this user maps onto (the DCIM JWT `sub`). Null for users that exist only in DCIM and cannot sign in.';
+-- ddl-end --
 ALTER TABLE dcim.users OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: users_uq_external_ref | type: INDEX --
+-- DROP INDEX IF EXISTS dcim.users_uq_external_ref CASCADE;
+CREATE UNIQUE INDEX users_uq_external_ref ON dcim.users
+USING btree
+(
+	external_ref
+)
+WHERE (deleted IS NULL);
 -- ddl-end --
 
 -- object: task_steps_uq_task_ordinal | type: INDEX --

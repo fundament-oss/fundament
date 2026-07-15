@@ -29,8 +29,14 @@ SET title       = COALESCE(sqlc.narg('title'), title),
                     WHEN sqlc.arg('clear_assignee')::bool THEN NULL
                     ELSE COALESCE(sqlc.narg('assignee_id'), assignee_id)
                   END,
-    due_date    = COALESCE(sqlc.narg('due_date'), due_date),
-    location    = COALESCE(sqlc.narg('location'), location)
+    due_date    = CASE
+                    WHEN sqlc.arg('clear_due_date')::bool THEN NULL
+                    ELSE COALESCE(sqlc.narg('due_date'), due_date)
+                  END,
+    location    = CASE
+                    WHEN sqlc.arg('clear_location')::bool THEN NULL
+                    ELSE COALESCE(sqlc.narg('location'), location)
+                  END
 WHERE id = $1 AND deleted IS NULL;
 
 -- name: TaskDelete :execrows

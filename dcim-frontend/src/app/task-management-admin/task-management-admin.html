@@ -288,6 +288,23 @@
 
   <!-- ── MAIN ───────────────────────────────────────────────────── -->
   <main class="flex-1 min-w-0 overflow-y-auto px-6 pb-6">
+    @if (loadError()) {
+      <div
+        class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950"
+        role="alert"
+      >
+        <p class="text-sm font-semibold text-red-800 dark:text-red-200">Could not load tasks</p>
+        <p class="mt-1 text-sm text-red-700 dark:text-red-300">{{ loadError() }}</p>
+        <button
+          type="button"
+          class="mt-2 text-sm font-medium text-red-800 underline dark:text-red-200"
+          (click)="retryLoad()"
+        >
+          Try again
+        </button>
+      </div>
+    }
+
     <!-- ── LIST VIEW ── -->
     <div [class.hidden]="currentView() === 'kanban'">
       <table class="w-full border-collapse">

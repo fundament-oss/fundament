@@ -3,6 +3,7 @@ package dcim
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -43,19 +44,31 @@ func (s *Server) UpdateTask(
 		params.Category = pgtype.Text{String: taskCategoryFromProto(req.Msg.GetCategory()), Valid: true}
 	}
 
-	// ClearAssignee wins over AssigneeID: a null/absent assignee_id means "leave
-	// unchanged" under the COALESCE update, so clearing needs an explicit flag.
-	params.ClearAssignee = req.Msg.GetClearAssignee()
-	if req.Msg.HasAssigneeId() && !params.ClearAssignee {
-		params.AssigneeID = pgtype.Text{String: req.Msg.GetAssigneeId(), Valid: true}
+	// For the nullable columns, an explicitly-set field clears the column when it
+	// carries the "empty" sentinel (empty string / epoch timestamp) and otherwise
+	// overwrites it. Leaving the field unset keeps the current value.
+	if req.Msg.HasAssigneeId() {
+		if v := req.Msg.GetAssigneeId(); v == "" {
+			params.ClearAssignee = true
+		} else {
+			params.AssigneeID = pgtype.Text{String: v, Valid: true}
+		}
 	}
 
 	if req.Msg.HasDueDate() {
-		params.DueDate = pgtype.Timestamptz{Time: req.Msg.GetDueDate().AsTime(), Valid: true}
+		if t := req.Msg.GetDueDate().AsTime(); t.Equal(time.Unix(0, 0).UTC()) {
+			params.ClearDueDate = true
+		} else {
+			params.DueDate = pgtype.Timestamptz{Time: t, Valid: true}
+		}
 	}
 
 	if req.Msg.HasLocation() {
-		params.Location = pgtype.Text{String: req.Msg.GetLocation(), Valid: true}
+		if v := req.Msg.GetLocation(); v == "" {
+			params.ClearLocation = true
+		} else {
+			params.Location = pgtype.Text{String: v, Valid: true}
+		}
 	}
 
 	rowsAffected, err := s.queries.TaskUpdate(ctx, params)

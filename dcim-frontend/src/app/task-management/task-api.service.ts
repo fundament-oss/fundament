@@ -26,7 +26,7 @@ export interface TaskData {
   created: string;
 }
 
-/** Fields needed to create or update a task. */
+/** Fields needed to create a task. */
 export interface TaskInput {
   title: string;
   description: string;
@@ -37,6 +37,25 @@ export interface TaskInput {
   assignee: string | null;
   due: string;
 }
+
+/**
+ * The fields an update actually touches. Only the keys present are sent, so a
+ * status-only change (kanban drag, bulk action) cannot overwrite a field another
+ * admin edited in the meantime. Within a present key, an empty value clears the
+ * column: `assignee: null`, `due: ''` and `location: ''` all mean "remove".
+ */
+export type TaskPatch = Partial<TaskInput>;
+
+/**
+ * A due date is a calendar date, but the column is timestamptz. Both directions
+ * therefore go through UTC midnight — parsing as local midnight instead would
+ * shift the stored instant into the previous day for every UTC+ timezone, and
+ * each subsequent save would shift it again.
+ */
+const dueToDate = (due: string): Date => new Date(`${due}T00:00:00Z`);
+
+/** The epoch is the "empty" sentinel that clears due_date server-side. */
+const CLEAR_DUE_DATE = new Date(0);
 
 @Injectable({ providedIn: 'root' })
 export default class TaskApiService {
@@ -159,25 +178,30 @@ export default class TaskApiService {
       category: TaskApiService.toProtoCategory(input.category),
       location: input.location,
       ...(input.assignee ? { assigneeId: input.assignee } : {}),
-      ...(input.due ? { dueDate: timestampFromDate(new Date(`${input.due}T00:00:00`)) } : {}),
+      ...(input.due ? { dueDate: timestampFromDate(dueToDate(input.due)) } : {}),
     });
   }
 
-  updateTask(id: string, input: TaskInput) {
+  /**
+   * Sends only the fields the caller put in `patch`; anything absent is left
+   * untouched server-side. Pass the full form for an edit, or a single key for
+   * a drag or bulk action.
+   */
+  updateTask(id: string, patch: TaskPatch) {
     return this.client.updateTask({
       id,
-      title: input.title,
-      description: input.description,
-      status: TaskApiService.toProtoStatus(input.status),
-      priority: TaskApiService.toProtoPriority(input.priority),
-      category: TaskApiService.toProtoCategory(input.category),
-      location: input.location,
-      // The update is declarative: a set assignee is written, a null one is
-      // explicitly cleared via clearAssignee. The backend's COALESCE update
-      // treats an absent assignee_id as "leave unchanged", so clearing needs
-      // the dedicated flag.
-      ...(input.assignee ? { assigneeId: input.assignee } : { clearAssignee: true }),
-      ...(input.due ? { dueDate: timestampFromDate(new Date(`${input.due}T00:00:00`)) } : {}),
+      ...('title' in patch ? { title: patch.title } : {}),
+      ...('description' in patch ? { description: patch.description } : {}),
+      ...('status' in patch ? { status: TaskApiService.toProtoStatus(patch.status!) } : {}),
+      ...('priority' in patch ? { priority: TaskApiService.toProtoPriority(patch.priority!) } : {}),
+      ...('category' in patch ? { category: TaskApiService.toProtoCategory(patch.category!) } : {}),
+      // The empty value of a present field clears the column: the backend maps
+      // an empty string / the epoch onto a NULL write.
+      ...('assignee' in patch ? { assigneeId: patch.assignee ?? '' } : {}),
+      ...('location' in patch ? { location: patch.location ?? '' } : {}),
+      ...('due' in patch
+        ? { dueDate: timestampFromDate(patch.due ? dueToDate(patch.due) : CLEAR_DUE_DATE) }
+        : {}),
     });
   }
 

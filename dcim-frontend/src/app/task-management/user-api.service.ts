@@ -63,4 +63,14 @@ export default class UserApiService {
   listUsers() {
     return this.client.listUsers({});
   }
+
+  /**
+   * Resolves the logged-in user onto their directory entry. The id on the auth
+   * session is the identity-provider subject, not a DCIM user id — the backend
+   * matches it against users.external_ref and returns the internal id that tasks
+   * are assigned to.
+   */
+  getCurrentUser() {
+    return this.client.getCurrentUser({});
+  }
 }

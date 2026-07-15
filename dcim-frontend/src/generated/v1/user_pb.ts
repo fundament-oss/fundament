@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/user.proto.
  */
 export const file_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("Cg12MS91c2VyLnByb3RvEgdkY2ltLnYxIjYKBFVzZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgVlbWFpbBgeIAEoCUIFqgECCAEiEgoQTGlzdFVzZXJzUmVxdWVzdCIxChFMaXN0VXNlcnNSZXNwb25zZRIcCgV1c2VycxgKIAMoCzINLmRjaW0udjEuVXNlcjJRCgtVc2VyU2VydmljZRJCCglMaXN0VXNlcnMSGS5kY2ltLnYxLkxpc3RVc2Vyc1JlcXVlc3QaGi5kY2ltLnYxLkxpc3RVc2Vyc1Jlc3BvbnNlQk9aQ2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvZGNpbS1hcGkvcGtnL3Byb3RvL2dlbi92MTtkY2ltdjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_google_protobuf_go_features]);
+  fileDesc("Cg12MS91c2VyLnByb3RvEgdkY2ltLnYxIjYKBFVzZXISCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRIUCgVlbWFpbBgeIAEoCUIFqgECCAEiEgoQTGlzdFVzZXJzUmVxdWVzdCIxChFMaXN0VXNlcnNSZXNwb25zZRIcCgV1c2VycxgKIAMoCzINLmRjaW0udjEuVXNlciIXChVHZXRDdXJyZW50VXNlclJlcXVlc3QiNQoWR2V0Q3VycmVudFVzZXJSZXNwb25zZRIbCgR1c2VyGAogASgLMg0uZGNpbS52MS5Vc2VyMqQBCgtVc2VyU2VydmljZRJCCglMaXN0VXNlcnMSGS5kY2ltLnYxLkxpc3RVc2Vyc1JlcXVlc3QaGi5kY2ltLnYxLkxpc3RVc2Vyc1Jlc3BvbnNlElEKDkdldEN1cnJlbnRVc2VyEh4uZGNpbS52MS5HZXRDdXJyZW50VXNlclJlcXVlc3QaHy5kY2ltLnYxLkdldEN1cnJlbnRVc2VyUmVzcG9uc2VCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_google_protobuf_go_features]);
 
 /**
  * User is a member of the DCIM staff directory that tasks can be assigned to.
@@ -74,6 +74,36 @@ export const ListUsersResponseSchema: GenMessage<ListUsersResponse> = /*@__PURE_
   messageDesc(file_v1_user, 2);
 
 /**
+ * @generated from message dcim.v1.GetCurrentUserRequest
+ */
+export type GetCurrentUserRequest = Message<"dcim.v1.GetCurrentUserRequest"> & {
+};
+
+/**
+ * Describes the message dcim.v1.GetCurrentUserRequest.
+ * Use `create(GetCurrentUserRequestSchema)` to create a new message.
+ */
+export const GetCurrentUserRequestSchema: GenMessage<GetCurrentUserRequest> = /*@__PURE__*/
+  messageDesc(file_v1_user, 3);
+
+/**
+ * @generated from message dcim.v1.GetCurrentUserResponse
+ */
+export type GetCurrentUserResponse = Message<"dcim.v1.GetCurrentUserResponse"> & {
+  /**
+   * @generated from field: dcim.v1.User user = 10;
+   */
+  user?: User;
+};
+
+/**
+ * Describes the message dcim.v1.GetCurrentUserResponse.
+ * Use `create(GetCurrentUserResponseSchema)` to create a new message.
+ */
+export const GetCurrentUserResponseSchema: GenMessage<GetCurrentUserResponse> = /*@__PURE__*/
+  messageDesc(file_v1_user, 4);
+
+/**
  * UserService exposes the read-only DCIM staff directory.
  *
  * @generated from service dcim.v1.UserService
@@ -86,6 +116,19 @@ export const UserService: GenService<{
     methodKind: "unary";
     input: typeof ListUsersRequestSchema;
     output: typeof ListUsersResponseSchema;
+  },
+  /**
+   * GetCurrentUser resolves the authenticated caller onto their directory entry.
+   * The caller is identified by the JWT subject, which is matched against
+   * dcim.users.external_ref; the returned id is the internal user id that
+   * tasks are assigned to.
+   *
+   * @generated from rpc dcim.v1.UserService.GetCurrentUser
+   */
+  getCurrentUser: {
+    methodKind: "unary";
+    input: typeof GetCurrentUserRequestSchema;
+    output: typeof GetCurrentUserResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_v1_user, 0);

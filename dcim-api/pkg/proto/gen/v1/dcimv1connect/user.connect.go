@@ -35,11 +35,19 @@ const (
 const (
 	// UserServiceListUsersProcedure is the fully-qualified name of the UserService's ListUsers RPC.
 	UserServiceListUsersProcedure = "/dcim.v1.UserService/ListUsers"
+	// UserServiceGetCurrentUserProcedure is the fully-qualified name of the UserService's
+	// GetCurrentUser RPC.
+	UserServiceGetCurrentUserProcedure = "/dcim.v1.UserService/GetCurrentUser"
 )
 
 // UserServiceClient is a client for the dcim.v1.UserService service.
 type UserServiceClient interface {
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
+	// GetCurrentUser resolves the authenticated caller onto their directory entry.
+	// The caller is identified by the JWT subject, which is matched against
+	// dcim.users.external_ref; the returned id is the internal user id that
+	// tasks are assigned to.
+	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
 }
 
 // NewUserServiceClient constructs a client for the dcim.v1.UserService service. By default, it uses
@@ -59,12 +67,19 @@ func NewUserServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(userServiceMethods.ByName("ListUsers")),
 			connect.WithClientOptions(opts...),
 		),
+		getCurrentUser: connect.NewClient[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse](
+			httpClient,
+			baseURL+UserServiceGetCurrentUserProcedure,
+			connect.WithSchema(userServiceMethods.ByName("GetCurrentUser")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // userServiceClient implements UserServiceClient.
 type userServiceClient struct {
-	listUsers *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
+	listUsers      *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
+	getCurrentUser *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
 }
 
 // ListUsers calls dcim.v1.UserService.ListUsers.
@@ -72,9 +87,19 @@ func (c *userServiceClient) ListUsers(ctx context.Context, req *connect.Request[
 	return c.listUsers.CallUnary(ctx, req)
 }
 
+// GetCurrentUser calls dcim.v1.UserService.GetCurrentUser.
+func (c *userServiceClient) GetCurrentUser(ctx context.Context, req *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error) {
+	return c.getCurrentUser.CallUnary(ctx, req)
+}
+
 // UserServiceHandler is an implementation of the dcim.v1.UserService service.
 type UserServiceHandler interface {
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
+	// GetCurrentUser resolves the authenticated caller onto their directory entry.
+	// The caller is identified by the JWT subject, which is matched against
+	// dcim.users.external_ref; the returned id is the internal user id that
+	// tasks are assigned to.
+	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
 }
 
 // NewUserServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -90,10 +115,18 @@ func NewUserServiceHandler(svc UserServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(userServiceMethods.ByName("ListUsers")),
 		connect.WithHandlerOptions(opts...),
 	)
+	userServiceGetCurrentUserHandler := connect.NewUnaryHandler(
+		UserServiceGetCurrentUserProcedure,
+		svc.GetCurrentUser,
+		connect.WithSchema(userServiceMethods.ByName("GetCurrentUser")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/dcim.v1.UserService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UserServiceListUsersProcedure:
 			userServiceListUsersHandler.ServeHTTP(w, r)
+		case UserServiceGetCurrentUserProcedure:
+			userServiceGetCurrentUserHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -105,4 +138,8 @@ type UnimplementedUserServiceHandler struct{}
 
 func (UnimplementedUserServiceHandler) ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.UserService.ListUsers is not implemented"))
+}
+
+func (UnimplementedUserServiceHandler) GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.UserService.GetCurrentUser is not implemented"))
 }
