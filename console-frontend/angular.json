@@ -56,6 +56,12 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "demo": {
+              "browser": "src/main.demo.ts",
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
             }
           },
           "defaultConfiguration": "production"
@@ -71,6 +77,9 @@
             },
             "development": {
               "buildTarget": "fundament-console:build:development"
+            },
+            "demo": {
+              "buildTarget": "fundament-console:build:demo"
             }
           },
           "defaultConfiguration": "development"

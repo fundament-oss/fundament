@@ -336,3 +336,14 @@ nldd-navigation-split-view {
 app-date-range-picker input {
   @apply border-neutral-550 ring-accent-200 dark:border-neutral-650 dark:ring-accent-800 w-full appearance-none rounded-[9px] border-2 px-2.5 py-2 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
 }
+
+/* Presentation/walkthrough mode (demo build). Inert unless <html> carries the
+   `presenting` class, so this has no effect on the production app. The narration
+   panel is fixed on the left; the app body is pushed aside to occupy the right. */
+html.presenting body {
+  padding-left: 40vw;
+  transition: padding-left 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.presenting-full body {
+  padding-left: 0;
+}

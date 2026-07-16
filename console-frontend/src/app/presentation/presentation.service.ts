@@ -1,0 +1,192 @@
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
+import { Slide, Tour } from './presentation.model';
+import { DEFAULT_TOUR_ID, TOURS } from './tours';
+import { runDrive } from './drive-runner';
+
+/**
+ * Drives the walkthrough overlay: slide state, URL sync (present/tour/slide query
+ * params), navigation of the app pane, the `presenting` html classes, and auto-drive.
+ * Provided in root but only ever activated in the demo build.
+ */
+@Injectable({ providedIn: 'root' })
+export class PresentationService {
+  private readonly router = inject(Router);
+
+  private readonly title = inject(Title);
+
+  readonly active = signal(false);
+
+  private readonly tourId = signal<string>(DEFAULT_TOUR_ID);
+
+  readonly index = signal(0);
+
+  readonly autoplay = signal(false);
+
+  readonly skipOptional = signal(false);
+
+  /** Whether the browser is in native fullscreen (toggled with `f`). */
+  readonly browserFullscreen = signal(false);
+
+  readonly tour = computed<Tour>(() => TOURS[this.tourId()] ?? TOURS[DEFAULT_TOUR_ID]);
+
+  readonly total = computed(() => this.tour().slides.length);
+
+  readonly currentSlide = computed<Slide | undefined>(() => this.tour().slides[this.index()]);
+
+  /** Full-bleed slide (opening/closing) — hides the app; unrelated to browser fullscreen. */
+  readonly isFull = computed(() => !!this.currentSlide()?.full);
+
+  readonly progress = computed(() => ((this.index() + 1) / this.total()) * 100);
+
+  /** Current slide number, zero-padded to the width of the total (e.g. "05"). */
+  readonly currentLabel = computed(() =>
+    String(this.index() + 1).padStart(String(this.total()).length, '0'),
+  );
+
+  private driveController: AbortController | null = null;
+
+  private autoplayTimer: ReturnType<typeof setInterval> | null = null;
+
+  private static readonly AUTOPLAY_MS = 6000;
+
+  constructor() {
+    document.addEventListener('fullscreenchange', () => {
+      this.browserFullscreen.set(!!document.fullscreenElement);
+    });
+  }
+
+  /**
+   * Reads present/tour/slide from the current URL and starts the walkthrough.
+   * The demo build presents by default; pass `?present=0` to open the plain console.
+   */
+  initFromUrl(): void {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('present') === '0') return;
+    const tourId = params.get('tour') || DEFAULT_TOUR_ID;
+    const slide = Math.max(1, parseInt(params.get('slide') || '1', 10)) - 1;
+    this.startTour(tourId, slide);
+  }
+
+  startTour(tourId: string, index = 0): void {
+    this.tourId.set(TOURS[tourId] ? tourId : DEFAULT_TOUR_ID);
+    this.active.set(true);
+    this.goto(index);
+  }
+
+  goto(index: number): void {
+    const clamped = Math.min(Math.max(0, index), this.total() - 1);
+    this.index.set(clamped);
+    this.applyClasses();
+    this.applyTitle();
+    this.syncUrlAndNavigate();
+  }
+
+  /**
+   * While presenting, the document title is the slide title. Route components still
+   * call TitleService.setTitle() on init, but the demo build's DemoTitleService
+   * ignores those calls while active, so this value sticks.
+   */
+  private applyTitle(): void {
+    const slide = this.currentSlide();
+    if (slide) this.title.setTitle(slide.title);
+  }
+
+  next(): void {
+    const target = this.nextIndex(this.index(), 1);
+    if (target !== this.index()) this.goto(target);
+  }
+
+  prev(): void {
+    const target = this.nextIndex(this.index(), -1);
+    if (target !== this.index()) this.goto(target);
+  }
+
+  /** Next index in `dir`, skipping `skippable` slides when skipOptional is on. */
+  private nextIndex(from: number, dir: 1 | -1): number {
+    let i = from + dir;
+    while (i > 0 && i < this.total() - 1 && this.skipOptional() && this.tour().slides[i].skippable) {
+      i += dir;
+    }
+    return Math.min(Math.max(0, i), this.total() - 1);
+  }
+
+  /** Toggle the browser's native fullscreen (the `f` shortcut). */
+  toggleFull(): void {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => undefined);
+    }
+  }
+
+  toggleSkipOptional(): void {
+    this.skipOptional.update((v) => !v);
+  }
+
+  toggleAutoplay(): void {
+    if (this.autoplayTimer) {
+      this.stopAutoplay();
+      return;
+    }
+    this.autoplay.set(true);
+    this.autoplayTimer = setInterval(() => {
+      if (this.index() >= this.total() - 1) {
+        this.stopAutoplay();
+        return;
+      }
+      this.next();
+    }, PresentationService.AUTOPLAY_MS);
+  }
+
+  private stopAutoplay(): void {
+    if (this.autoplayTimer) clearInterval(this.autoplayTimer);
+    this.autoplayTimer = null;
+    this.autoplay.set(false);
+  }
+
+  stop(): void {
+    this.cancelDrive();
+    this.stopAutoplay();
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    this.active.set(false);
+    document.documentElement.classList.remove('presenting', 'presenting-full');
+    // Hand the title back to the console; the next route change re-sets it.
+    this.title.setTitle('Fundament Console');
+    this.router.navigate([this.currentPath()], { queryParams: {} });
+  }
+
+  private applyClasses(): void {
+    const root = document.documentElement.classList;
+    root.toggle('presenting', this.active());
+    root.toggle('presenting-full', this.active() && this.isFull());
+  }
+
+  private currentPath(): string {
+    return this.router.url.split('?')[0] || '/';
+  }
+
+  private syncUrlAndNavigate(): void {
+    this.cancelDrive();
+    const slide = this.currentSlide();
+    const queryParams = { present: 1, tour: this.tourId(), slide: this.index() + 1 };
+    const path = slide?.route ?? this.currentPath();
+    this.router.navigate([path], { queryParams }).then(() => {
+      if (slide?.drive?.length) this.startDrive(slide);
+    });
+  }
+
+  private startDrive(slide: Slide): void {
+    this.cancelDrive();
+    const controller = new AbortController();
+    this.driveController = controller;
+    void runDrive(slide.drive ?? [], controller.signal);
+  }
+
+  private cancelDrive(): void {
+    this.driveController?.abort();
+    this.driveController = null;
+  }
+}
+
