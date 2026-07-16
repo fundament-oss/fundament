@@ -1,8 +1,8 @@
 -- name: PluginList :many
-SELECT id, name, description_short, description, image
+SELECT id, name, display_name, description_short, description, image
 FROM appstore.plugins
 WHERE deleted IS NULL
-ORDER BY name;
+ORDER BY COALESCE(NULLIF(display_name, ''), name);
 
 -- name: PluginTagsList :many
 SELECT pt.plugin_id, t.id, t.name
@@ -19,7 +19,7 @@ WHERE c.deleted IS NULL
 ORDER BY c.name;
 
 -- name: PluginGetByID :one
-SELECT id, name, description_short, description, image, author_name, author_url, repository_url
+SELECT id, name, display_name, description_short, description, image, author_name, author_url, repository_url
 FROM appstore.plugins
 WHERE id = $1 AND deleted IS NULL;
 

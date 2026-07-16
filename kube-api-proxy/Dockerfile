@@ -1,3 +1,14 @@
+# Build the OpenFSC console UI (Vite, vanilla TS) → /console. mock mode serves
+# these assets from disk for the plugin iframe. The build context excludes
+# plugins/openfsc/console (.dockerignore), so this stage is the image's only
+# source of them — mirrors plugins/openfsc/Dockerfile.
+FROM oven/bun:1-alpine AS console-ui
+WORKDIR /ui
+COPY plugins/openfsc/console-ui/package.json plugins/openfsc/console-ui/bun.lock ./
+RUN bun install --frozen-lockfile
+COPY plugins/openfsc/console-ui/ ./
+RUN bun run build
+
 FROM golang:1.26.5-alpine AS builder
 WORKDIR /build
 COPY go.mod go.sum ./
@@ -7,6 +18,7 @@ COPY common/ ./common/
 RUN CGO_ENABLED=0 go build -o /bin/fun-kube-api-proxy ./kube-api-proxy/cmd/fun-kube-api-proxy
 
 COPY plugins/ ./plugins/
+COPY --from=console-ui /console ./plugins/openfsc/console
 RUN mkdir -p /assets/plugins && \
     for dir in ./plugins/*/console; do \
       [ -d "$dir" ] || continue; \

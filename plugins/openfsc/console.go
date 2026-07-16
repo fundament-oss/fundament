@@ -10,6 +10,8 @@ import (
 //go:embed console/*
 var consoleFiles embed.FS
 
+// RequireHTML: console/ holds the Vite build output, which is gitignored — a binary
+// built without it would serve a blank iframe instead of failing.
 func (p *OpenFSCPlugin) ConsoleAssets() http.FileSystem {
-	return console.NewFileSystem(consoleFiles, "console")
+	return console.NewFileSystem(consoleFiles, "console", console.RequireHTML())
 }

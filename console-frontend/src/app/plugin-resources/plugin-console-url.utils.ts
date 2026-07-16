@@ -6,12 +6,17 @@
  * `certificates-list.html`); the console expands them here so plugins do not
  * need to know about the kube-api-proxy URL structure.
  *
- * The `?host=...` query param is appended so the iframe can load
- * plugin-sdk.{js,css} from the console origin without hard-coding it in the
- * plugin HTML. The value is `window.location.origin`; plugins validate it
- * via `hostOrigin()` in `_shared.js` (URL parse + http/https-only protocol
- * check). Plugin HTML is publicly served, so a hand-crafted `?host=` only
- * affects the crafter's own session — there is no stored-XSS path.
+ * The `?host=...` query param is appended so the iframe can load the shared
+ * /plugin-ui/ bundles (plugin SDK, NLDD Design System) from the Console origin
+ * without hard-coding it in the plugin HTML. The value is `window.location.origin`.
+ *
+ * Console assets are served unauthenticated, so anyone can hand a victim a link with
+ * a `?host=` of their choosing — which the plugin HTML would otherwise turn into a
+ * `<script src>` on the asset-serving origin. kube-api-proxy is what prevents that:
+ * it refuses a console asset whose `?host=` is not a configured Console origin, and
+ * serves the assets under a CSP whose script-src names only those origins (see
+ * kube-api-proxy/pkg/kube/plugin_console_assets.go). This builder always passes the
+ * real origin, so it is unaffected.
  */
 export default function buildPluginConsoleUrl(args: {
   kubeApiProxyUrl: string;

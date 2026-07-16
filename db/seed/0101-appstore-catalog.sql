@@ -41,8 +41,8 @@ INSERT INTO appstore.tags (id, name) VALUES
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- Plugins
-INSERT INTO appstore.plugins (id, name, description_short, description, author_name, author_url, repository_url, image) VALUES
-    ('019b4000-3000-7000-8000-000000000001', 'Grafana Alloy', 'OpenTelemetry Collector distribution', '## Overview
+INSERT INTO appstore.plugins (id, name, display_name, description_short, description, author_name, author_url, repository_url, image) VALUES
+    ('019b4000-3000-7000-8000-000000000001', 'grafana-alloy', 'Grafana Alloy', 'OpenTelemetry Collector distribution', '## Overview
 
 Grafana Alloy is a flexible, high-performance OpenTelemetry Collector distribution with native Prometheus support.
 
@@ -58,7 +58,7 @@ Grafana Alloy is a flexible, high-performance OpenTelemetry Collector distributi
 - Unified telemetry collection for metrics, logs, and traces
 - Prometheus metrics collection and forwarding
 - OpenTelemetry instrumentation aggregation', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/alloy', 'docker.io/grafana/alloy:v1.8.3'),
-    ('019b4000-3000-7000-8000-000000000002', 'cert-manager', 'Automatic TLS certificate management', '## Overview
+    ('019b4000-3000-7000-8000-000000000002', 'cert-manager', 'cert-manager', 'Automatic TLS certificate management', '## Overview
 
 cert-manager adds certificates and certificate issuers as resource types in Kubernetes clusters, and simplifies the process of obtaining, renewing and using those certificates.
 
@@ -74,7 +74,12 @@ cert-manager adds certificates and certificate issuers as resource types in Kube
 - Automatic HTTPS for web applications
 - Securing internal service-to-service communication
 - Managing certificates for ingress controllers', 'cert-manager maintainers', 'https://cert-manager.io', 'https://github.com/cert-manager/cert-manager', 'quay.io/jetstack/cert-manager-controller:v1.17.2'),
-    ('019b4000-3000-7000-8000-000000000003', 'CloudNativePG', 'PostgreSQL operator for Kubernetes', '## Overview
+    -- `cloudnativepg`, not `cloudnative-pg`: the Console derives the PluginInstallation's
+    -- metadata.name from this column via pluginResourceName(), which slugified the old
+    -- prose name "CloudNativePG" to "cloudnativepg". Any cluster already running this
+    -- plugin has a CR under that name, so changing it here would orphan the installation
+    -- (the Console would show it as not installed and create a second CR on re-install).
+    ('019b4000-3000-7000-8000-000000000003', 'cloudnativepg', 'CloudNativePG', 'PostgreSQL operator for Kubernetes', '## Overview
 
 CloudNativePG is an open source operator designed to manage PostgreSQL workloads on Kubernetes, covering the full lifecycle of a PostgreSQL cluster.
 
@@ -90,7 +95,7 @@ CloudNativePG is an open source operator designed to manage PostgreSQL workloads
 - Production PostgreSQL databases on Kubernetes
 - Database-as-a-Service platforms
 - Microservices requiring relational databases', 'CloudNativePG Contributors', 'https://cloudnative-pg.io', 'https://github.com/cloudnative-pg/cloudnative-pg', 'ghcr.io/cloudnative-pg/cloudnative-pg:v1.25.1'),
-    ('019b4000-3000-7000-8000-000000000004', 'ECK operator', 'Elasticsearch and Kibana on Kubernetes', '## Overview
+    ('019b4000-3000-7000-8000-000000000004', 'eck-operator', 'ECK operator', 'Elasticsearch and Kibana on Kubernetes', '## Overview
 
 Elastic Cloud on Kubernetes (ECK) automates the deployment, provisioning, management, and orchestration of Elasticsearch, Kibana, and the Elastic Stack on Kubernetes.
 
@@ -106,7 +111,7 @@ Elastic Cloud on Kubernetes (ECK) automates the deployment, provisioning, manage
 - Log aggregation and analysis
 - Application performance monitoring
 - Full-text search infrastructure', 'Elastic', 'https://www.elastic.co', 'https://github.com/elastic/cloud-on-k8s', 'docker.elastic.co/eck/eck-operator:2.16.0'),
-    ('019b4000-3000-7000-8000-000000000005', 'Grafana', 'Metrics visualization and alerting', '## Overview
+    ('019b4000-3000-7000-8000-000000000005', 'grafana', 'Grafana', 'Metrics visualization and alerting', '## Overview
 
 Grafana is the open source analytics and monitoring solution for every database. It allows you to query, visualize, alert on and understand your metrics no matter where they are stored.
 
@@ -123,7 +128,7 @@ Grafana is the open source analytics and monitoring solution for every database.
 - Application performance monitoring
 - Business analytics
 - IoT data visualization', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/grafana', 'docker.io/grafana/grafana:11.6.0'),
-    ('019b4000-3000-7000-8000-000000000006', 'Istio Gateway', 'Ingress gateway for service mesh', '## Overview
+    ('019b4000-3000-7000-8000-000000000006', 'istio-gateway', 'Istio Gateway', 'Ingress gateway for service mesh', '## Overview
 
 Istio Gateway provides a dedicated ingress gateway for managing inbound traffic to your service mesh, offering advanced traffic management and security features.
 
@@ -139,7 +144,7 @@ Istio Gateway provides a dedicated ingress gateway for managing inbound traffic 
 - API gateway for microservices
 - Multi-cluster ingress
 - Canary deployments and A/B testing', 'Istio Authors', 'https://istio.io', 'https://github.com/istio/istio', 'docker.io/istio/pilot:1.24.3'),
-    ('019b4000-3000-7000-8000-000000000007', 'Istio', 'Service mesh for Kubernetes', '## Overview
+    ('019b4000-3000-7000-8000-000000000007', 'istio', 'Istio', 'Service mesh for Kubernetes', '## Overview
 
 Istio extends Kubernetes to establish a programmable, application-aware network. Working with both Kubernetes and traditional workloads, Istio brings standard, universal traffic management, telemetry, and security to complex deployments.
 
@@ -156,7 +161,7 @@ Istio extends Kubernetes to establish a programmable, application-aware network.
 - Traffic management and load balancing
 - Observability across services
 - Zero-trust networking', 'Istio Authors', 'https://istio.io', 'https://github.com/istio/istio', 'docker.io/istio/pilot:1.24.3'),
-    ('019b4000-3000-7000-8000-000000000008', 'Keycloak', 'Identity and access management', '## Overview
+    ('019b4000-3000-7000-8000-000000000008', 'keycloak', 'Keycloak', 'Identity and access management', '## Overview
 
 Keycloak is an open source Identity and Access Management solution aimed at modern applications and services. It provides single sign-on, identity brokering, and user federation.
 
@@ -172,7 +177,7 @@ Keycloak is an open source Identity and Access Management solution aimed at mode
 - Centralized authentication for applications
 - API security and OAuth 2.0 provider
 - User management and self-service registration', 'Red Hat', 'https://www.keycloak.org', 'https://github.com/keycloak/keycloak', 'quay.io/keycloak/keycloak:26.2.0'),
-    ('019b4000-3000-7000-8000-000000000009', 'Grafana Loki', 'Log aggregation system', '## Overview
+    ('019b4000-3000-7000-8000-000000000009', 'grafana-loki', 'Grafana Loki', 'Log aggregation system', '## Overview
 
 Loki is a horizontally scalable, highly available, multi-tenant log aggregation system inspired by Prometheus. It is designed to be cost effective and easy to operate.
 
@@ -189,7 +194,7 @@ Loki is a horizontally scalable, highly available, multi-tenant log aggregation 
 - Application log analysis
 - Debugging and troubleshooting
 - Compliance and audit logging', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/loki', 'docker.io/grafana/loki:3.4.3'),
-    ('019b4000-3000-7000-8000-00000000000a', 'Grafana Mimir', 'Long-term Prometheus storage', '## Overview
+    ('019b4000-3000-7000-8000-00000000000a', 'grafana-mimir', 'Grafana Mimir', 'Long-term Prometheus storage', '## Overview
 
 Grafana Mimir is an open source, horizontally scalable, highly available, multi-tenant, long-term storage for Prometheus metrics.
 
@@ -206,7 +211,7 @@ Grafana Mimir is an open source, horizontally scalable, highly available, multi-
 - Multi-cluster Prometheus aggregation
 - Metrics-as-a-Service platforms
 - Historical analysis and capacity planning', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/mimir', 'docker.io/grafana/mimir:2.15.0'),
-    ('019b4000-3000-7000-8000-00000000000b', 'Pinniped', 'Kubernetes cluster authentication', '## Overview
+    ('019b4000-3000-7000-8000-00000000000b', 'pinniped', 'Pinniped', 'Kubernetes cluster authentication', '## Overview
 
 Pinniped provides identity services for Kubernetes clusters, enabling users to authenticate using external identity providers and providing a consistent login experience across clusters.
 
@@ -222,7 +227,7 @@ Pinniped provides identity services for Kubernetes clusters, enabling users to a
 - Enterprise Kubernetes authentication
 - Multi-cluster identity management
 - Integration with corporate identity providers', 'VMware', 'https://pinniped.dev', 'https://github.com/vmware-tanzu/pinniped', 'ghcr.io/vmware-tanzu/pinniped/pinniped-concierge:v0.35.0'),
-    ('019b4000-3000-7000-8000-00000000000c', 'Sealed Secrets', 'Encrypted secrets for Git', '## Overview
+    ('019b4000-3000-7000-8000-00000000000c', 'sealed-secrets', 'Sealed Secrets', 'Encrypted secrets for Git', '## Overview
 
 Sealed Secrets allows you to encrypt your Kubernetes secrets so they can be safely stored in Git repositories. Only the controller running in your cluster can decrypt them.
 
@@ -238,7 +243,7 @@ Sealed Secrets allows you to encrypt your Kubernetes secrets so they can be safe
 - GitOps workflows with sensitive data
 - Secure secret distribution
 - Compliance with secret management policies', 'Bitnami', 'https://bitnami.com', 'https://github.com/bitnami-labs/sealed-secrets', 'ghcr.io/bitnami-labs/sealed-secrets:v0.28.1'),
-    ('019b4000-3000-7000-8000-00000000000d', 'Grafana Tempo', 'Distributed tracing backend', '## Overview
+    ('019b4000-3000-7000-8000-00000000000d', 'grafana-tempo', 'Grafana Tempo', 'Distributed tracing backend', '## Overview
 
 Grafana Tempo is an open source, easy-to-use, and high-scale distributed tracing backend. Tempo requires only object storage to operate and is deeply integrated with Grafana.
 
@@ -255,7 +260,7 @@ Grafana Tempo is an open source, easy-to-use, and high-scale distributed tracing
 - Request flow visualization
 - Performance optimization
 - Root cause analysis', 'Grafana Labs', 'https://grafana.com', 'https://github.com/grafana/tempo', 'docker.io/grafana/tempo:2.7.2'),
-    ('019b4000-3000-7000-8000-00000000000e', 'openfsc', 'Federated Service Connectivity', '## Overview
+    ('019b4000-3000-7000-8000-00000000000e', 'openfsc', 'OpenFSC', 'Federated Service Connectivity', '## Overview
 
 OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs the standalone openfsc-operator; each team declares an FSCInstallation in its namespace to run an OpenFSC peer there.
 
@@ -273,6 +278,7 @@ OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs t
 - Federated APIs across trust domains', 'Fundament', 'https://fsc-standaard.nl', 'https://gitlab.com/rinis-oss/fsc/open-fsc', '')
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
+    display_name = EXCLUDED.display_name,
     description_short = EXCLUDED.description_short,
     description = EXCLUDED.description,
     author_name = EXCLUDED.author_name,

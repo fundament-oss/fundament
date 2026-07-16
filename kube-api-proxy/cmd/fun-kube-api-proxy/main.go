@@ -27,6 +27,8 @@ type config struct {
 	ListenAddr             string     `env:"LISTEN_ADDR" envDefault:":8081"`
 	LogLevel               slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	CORSAllowedOrigins     []string   `env:"CORS_ALLOWED_ORIGINS"`
+	ConsoleOrigins         []string   `env:"CONSOLE_ORIGINS"` // origins the Console is served from; scopes the plugin console asset CSP
+	PublicOrigin           string     `env:"PUBLIC_ORIGIN"`   // this proxy's own public origin; console assets are served from it
 	KubeProxyMode          string     `env:"KUBE_API_PROXY_MODE" envDefault:"mock"`
 	GardenerKubeconfig     string     `env:"GARDENER_KUBECONFIG"` // required when Mode == "real"
 	MockPluginTemplatesDir string     `env:"MOCK_PLUGIN_TEMPLATES_DIR" envDefault:"./plugins"`
@@ -75,6 +77,8 @@ func run() error {
 	server, err := proxy.New(logger, &proxy.Config{
 		JWTSecret:              []byte(cfg.JWTSecret),
 		CORSAllowedOrigins:     cfg.CORSAllowedOrigins,
+		ConsoleOrigins:         cfg.ConsoleOrigins,
+		PublicOrigin:           cfg.PublicOrigin,
 		Mode:                   cfg.KubeProxyMode,
 		GardenerClient:         gardenerClient,
 		MockPluginTemplatesDir: cfg.MockPluginTemplatesDir,

@@ -28,6 +28,14 @@ type Config struct {
 	// requests are answered in mock mode. Layout: <dir>/<pluginName>/console/<file>.
 	// Ignored in "real" mode.
 	MockPluginTemplatesDir string
+	// ConsoleOrigins are the origins the Console is served from. They are the only
+	// origins a plugin console asset may be bootstrapped from, and the only ones its
+	// CSP admits scripts from — see kube.ConsoleAssetPolicy. Empty disables both
+	// checks (bare local dev); every deployed environment sets it.
+	ConsoleOrigins []string
+	// PublicOrigin is this proxy's own public origin, i.e. the origin plugin console
+	// assets are served from. Named in their CSP alongside ConsoleOrigins.
+	PublicOrigin string
 }
 
 type Server struct {
@@ -37,12 +45,32 @@ type Server struct {
 	tokenCache    *tokenpkg.Cache
 	kubeHandler   http.Handler
 	handler       http.Handler
+	consoleAssets kube.ConsoleAssetPolicy
 	pluginGateway *pluginGateway
 }
 
 func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, error) {
 	if cfg.Mode == "" {
 		cfg.Mode = "mock"
+	}
+
+	consoleAssets := kube.ConsoleAssetPolicy{
+		AssetOrigin:    kube.NormalizeOrigin(cfg.PublicOrigin),
+		ConsoleOrigins: kube.NormalizeOrigins(cfg.ConsoleOrigins),
+	}
+	// An unconfigured policy serves plugin console assets — which are public and
+	// unauthenticated — with no CSP and an unchecked ?host=. That is tolerable on a
+	// developer's laptop and not in a real deployment, so "real" mode refuses to start
+	// rather than come up quietly unprotected.
+	if !consoleAssets.Configured() && cfg.Mode == "real" {
+		return nil, fmt.Errorf("CONSOLE_ORIGINS and PUBLIC_ORIGIN are required in %q mode: "+
+			"without them plugin console assets are served with no Content-Security-Policy and "+
+			"an unchecked ?host= origin", cfg.Mode)
+	}
+	if !consoleAssets.Configured() {
+		logger.Warn("CONSOLE_ORIGINS and/or PUBLIC_ORIGIN are not set: plugin console assets are " +
+			"served without a Content-Security-Policy and with an unchecked ?host= origin. Set " +
+			"them to the Console origin(s) and this proxy's own public origin.")
 	}
 
 	var kubeHandler http.Handler
@@ -52,7 +80,10 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		tokenCache = tokenpkg.NewCache(cfg.GardenerClient, logger)
 		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, logger)
 	case "mock":
-		kubeHandler = &kube.MockClient{PluginTemplatesDir: cfg.MockPluginTemplatesDir}
+		kubeHandler = &kube.MockClient{
+			PluginTemplatesDir: cfg.MockPluginTemplatesDir,
+			ConsoleAssets:      consoleAssets,
+		}
 	default:
 		return nil, fmt.Errorf("invalid Mode %q: must be \"mock\" or \"real\"", cfg.Mode)
 	}
@@ -63,6 +94,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		authz:         authzClient,
 		tokenCache:    tokenCache,
 		kubeHandler:   kubeHandler,
+		consoleAssets: consoleAssets,
 	}
 
 	s.pluginGateway = &pluginGateway{

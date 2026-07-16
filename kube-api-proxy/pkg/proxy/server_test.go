@@ -16,6 +16,45 @@ import (
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/proxy"
 )
 
+// Plugin console assets are public and unauthenticated; without CONSOLE_ORIGINS and
+// PUBLIC_ORIGIN they are served with no CSP and an unchecked ?host=, which is script
+// execution on this origin for anyone who can get a victim to open a crafted link.
+// A real deployment must not be able to come up in that state by omission.
+func TestNew_RealModeRequiresConsoleAssetOrigins(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	for _, tc := range []struct {
+		name           string
+		consoleOrigins []string
+		publicOrigin   string
+	}{
+		{name: "neither"},
+		{name: "no public origin", consoleOrigins: []string{"https://console.example"}},
+		{name: "no console origins", publicOrigin: "https://k8s-api.example"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := proxy.New(logger, &proxy.Config{
+				JWTSecret:      []byte("test-secret"),
+				Mode:           "real",
+				ConsoleOrigins: tc.consoleOrigins,
+				PublicOrigin:   tc.publicOrigin,
+			}, nil)
+
+			require.ErrorContains(t, err, "CONSOLE_ORIGINS and PUBLIC_ORIGIN are required")
+		})
+	}
+}
+
+// Mock mode is a developer's laptop: a half-configured policy stands down (with a
+// warning) rather than refusing to start.
+func TestNew_MockModeToleratesMissingConsoleAssetOrigins(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	_, err := proxy.New(logger, &proxy.Config{JWTSecret: []byte("test-secret"), Mode: "mock"}, nil)
+
+	require.NoError(t, err)
+}
+
 // TestClusterProxy_RejectsPluginToken verifies that a PluginToken presented to
 // the cluster proxy is rejected at authentication with 401. This exercises the
 // full HTTP path through the audience-aware validator wired in proxy.New.

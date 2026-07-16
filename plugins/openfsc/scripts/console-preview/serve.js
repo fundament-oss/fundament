@@ -1,22 +1,19 @@
 #!/usr/bin/env bun
-// Dev-only static server for previewing the OpenFSC console templates in a
-// browser against the RUNNING cluster (no Console host needed).
+// Dev-only static server for previewing the OpenFSC console UI against the running
+// cluster (no Console host needed). Serves console/ as the web root, the stand-in
+// SDK at /plugin-ui/*, and backs k8s.list/get with `kubectl` via /api/*.
 //
-//   just openfsc console-preview   (or: bun plugins/openfsc/scripts/console-preview/serve.js)
-//
-// It serves plugins/openfsc/console/ as the web root, maps the SDK paths the
-// templates request (/plugin-ui/plugin-sdk.{js,css}) to the local stand-in JS
-// and the real Console CSS, and backs that stand-in's k8s.list/get with
-// `kubectl` via /api/list and /api/get, so the views render the same CRs the
-// real Console would.
+//   just openfsc console-preview
 import { join, normalize, sep } from 'node:path';
 
 const HERE = new URL('.', import.meta.url).pathname;
 const CONSOLE_DIR = normalize(join(HERE, '..', '..', 'console'));
-// Real plugin SDK CSS lives in console-frontend; reuse it (no copy = no drift).
-const SDK_CSS = normalize(
-  join(HERE, '..', '..', '..', '..', 'console-frontend', 'public', 'plugin-ui', 'plugin-sdk.css'),
+// Real plugin-ui assets live in console-frontend/public; reuse them so the
+// preview serves the exact built files the Console serves (no copy = no drift).
+const PLUGIN_UI_DIR = normalize(
+  join(HERE, '..', '..', '..', '..', 'console-frontend', 'public', 'plugin-ui'),
 );
+const SDK_CSS = join(PLUGIN_UI_DIR, 'plugin-sdk.css');
 const PORT = Number(process.env.PORT ?? Bun.argv[2] ?? 4319);
 const CTX = process.env.kube_context ?? 'k3d-fundament-plugin';
 
@@ -138,6 +135,15 @@ const server = Bun.serve({
     // the local stand-in, the CSS is the real Console stylesheet.
     if (path === '/plugin-ui/plugin-sdk.js') return new Response(Bun.file(join(HERE, 'plugin-sdk.js')));
     if (path === '/plugin-ui/plugin-sdk.css') return new Response(Bun.file(SDK_CSS));
+
+    // The opt-in NLDD Design System bundle (real built files; fonts are inlined as data: URIs,
+    // so there are no separate font assets to serve). Bun.file sets content-type.
+    if (path === '/plugin-ui/nldd-design-system.js') {
+      return new Response(Bun.file(join(PLUGIN_UI_DIR, 'nldd-design-system.js')));
+    }
+    if (path === '/plugin-ui/nldd-design-system.css') {
+      return new Response(Bun.file(join(PLUGIN_UI_DIR, 'nldd-design-system.css')));
+    }
 
     // Everything else from the real console/ dir. normalize() + the prefix
     // check keep requests from escaping it via ../.

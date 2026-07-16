@@ -1,0 +1,27 @@
+/**
+ * Entry point for the shared plugin-UI NLDD Design System stylesheet
+ * (public/plugin-ui/nldd-design-system.css), loaded into plugin iframes by
+ * loadNlddDesignSystem(). Built by build-nldd-design-system-css.ts.
+ *
+ * This is the NLDD Design System's own global.css plus the host Console's token
+ * overrides, so a plugin iframe renders at the same scale as the Console around it.
+ * Anything the Console overrides on :root in src/styles.css and that plugins should
+ * inherit belongs here.
+ */
+
+@import '@nldd/design-system/styles';
+
+:root {
+  /*
+   * The NLDD Design System ships a 1.125rem (18px) base, which reads noticeably larger than the rest
+   * of the Console. src/styles.css pins the host to Tailwind's fontSize.base; keep
+   * the two in step or plugin text will not match the page it is embedded in.
+   *
+   * Hard-coded here rather than shared with src/styles.css because that file's
+   * theme() call needs Tailwind, and this bundle is plain CSS (see
+   * build-nldd-design-system-css.ts). 1rem, not 16px: it is the same 16px by default
+   * but still scales with the reader's browser font-size setting, which a px value
+   * would override.
+   */
+  --primitives-font-size-100: 1rem;
+}
