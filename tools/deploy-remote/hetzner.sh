@@ -367,6 +367,11 @@ run_dev_stack() { # ip mode
 # already-installed box takes, so a second 'up' is a cheap no-op refresh.
 finish_devbox_up() { # ip stack_mode
   local ip=$1 stack_mode=${2:-}
+  # The volume was hot-attached after install/boot (see cmd_up) — re-run the
+  # idempotent adopt/mount oneshot so /home/fundament is the volume BEFORE
+  # anything (scripts, repo, CA) is written into the home directory.
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'sudo systemctl restart devbox-home-setup' </dev/null \
+    || die "devbox-home-setup failed on the box — inspect with: just devbox ssh"
   push_dev_scripts "$ip"
   run_dev_bootstrap "$ip"
   trust_box_ca "$ip"       # trust cycles with the box: ON here, OFF at 'down'
@@ -491,11 +496,14 @@ cmd_up() {
       fi
       return 0
     fi
-    # Attach BEFORE the install so the first boot's devbox-home-setup sees the disk.
-    # (disko only ever touches /dev/sda; the volume is a separate scsi device.)
-    [ "$HZ_ROLE" = devbox ] && attach_volume
+    # The volume is deliberately NOT attached during the install: disko formats
+    # the literal /dev/sda, and scsi enumeration does not guarantee the local
+    # disk gets that name while a volume is attached (observed: a later boot
+    # enumerated the volume as sda) — an unlucky installer boot would WIPE the
+    # volume. Hot-attach after the box is installed and booted instead.
     if deploy_once "$ip"; then
       if [ "$HZ_ROLE" = devbox ]; then
+        attach_volume
         finish_devbox_up "$ip" "$stack_mode"
       else
         log "READY:  ssh -p $SSH_PORT $BOX_USER@$ip   (or: ./hetzner.sh ssh)"
