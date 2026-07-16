@@ -98,6 +98,7 @@ func pluginSummaryFromRow(
 	return organizationv1.PluginSummary_builder{
 		Id:               row.ID.String(),
 		Name:             row.Name,
+		DisplayName:      row.DisplayName,
 		Description:      row.Description,
 		DescriptionShort: row.DescriptionShort,
 		Tags:             tagsByPlugin[row.ID],

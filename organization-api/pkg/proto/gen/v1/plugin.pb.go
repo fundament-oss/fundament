@@ -170,6 +170,7 @@ type PluginSummary struct {
 	state                       protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id               string                 `protobuf:"bytes,10,opt,name=id"`
 	xxx_hidden_Name             string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_DisplayName      string                 `protobuf:"bytes,25,opt,name=display_name,json=displayName"`
 	xxx_hidden_Description      string                 `protobuf:"bytes,30,opt,name=description"`
 	xxx_hidden_DescriptionShort string                 `protobuf:"bytes,35,opt,name=description_short,json=descriptionShort"`
 	xxx_hidden_Tags             *[]*Tag                `protobuf:"bytes,40,rep,name=tags"`
@@ -214,6 +215,13 @@ func (x *PluginSummary) GetId() string {
 func (x *PluginSummary) GetName() string {
 	if x != nil {
 		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *PluginSummary) GetDisplayName() string {
+	if x != nil {
+		return x.xxx_hidden_DisplayName
 	}
 	return ""
 }
@@ -265,6 +273,10 @@ func (x *PluginSummary) SetName(v string) {
 	x.xxx_hidden_Name = v
 }
 
+func (x *PluginSummary) SetDisplayName(v string) {
+	x.xxx_hidden_DisplayName = v
+}
+
 func (x *PluginSummary) SetDescription(v string) {
 	x.xxx_hidden_Description = v
 }
@@ -288,8 +300,13 @@ func (x *PluginSummary) SetImage(v string) {
 type PluginSummary_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id               string
-	Name             string
+	Id string
+	// Stable identifier (e.g. "openfsc"), matching the plugin's definition.yaml
+	// metadata.name. This is the PluginInstallation resource name in the cluster —
+	// use display_name to show the plugin to a user.
+	Name string
+	// Human-readable name (e.g. "OpenFSC"), from definition.yaml metadata.displayName.
+	DisplayName      string
 	Description      string
 	DescriptionShort string
 	Tags             []*Tag
@@ -303,6 +320,7 @@ func (b0 PluginSummary_builder) Build() *PluginSummary {
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_DisplayName = b.DisplayName
 	x.xxx_hidden_Description = b.Description
 	x.xxx_hidden_DescriptionShort = b.DescriptionShort
 	x.xxx_hidden_Tags = &b.Tags
@@ -796,6 +814,7 @@ type PluginDetail struct {
 	state                         protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id                 string                 `protobuf:"bytes,10,opt,name=id"`
 	xxx_hidden_Name               string                 `protobuf:"bytes,20,opt,name=name"`
+	xxx_hidden_DisplayName        string                 `protobuf:"bytes,25,opt,name=display_name,json=displayName"`
 	xxx_hidden_Description        string                 `protobuf:"bytes,30,opt,name=description"`
 	xxx_hidden_DescriptionShort   string                 `protobuf:"bytes,35,opt,name=description_short,json=descriptionShort"`
 	xxx_hidden_Tags               *[]*Tag                `protobuf:"bytes,40,rep,name=tags"`
@@ -842,6 +861,13 @@ func (x *PluginDetail) GetId() string {
 func (x *PluginDetail) GetName() string {
 	if x != nil {
 		return x.xxx_hidden_Name
+	}
+	return ""
+}
+
+func (x *PluginDetail) GetDisplayName() string {
+	if x != nil {
+		return x.xxx_hidden_DisplayName
 	}
 	return ""
 }
@@ -909,6 +935,10 @@ func (x *PluginDetail) SetName(v string) {
 	x.xxx_hidden_Name = v
 }
 
+func (x *PluginDetail) SetDisplayName(v string) {
+	x.xxx_hidden_DisplayName = v
+}
+
 func (x *PluginDetail) SetDescription(v string) {
 	x.xxx_hidden_Description = v
 }
@@ -951,8 +981,11 @@ func (x *PluginDetail) ClearAuthor() {
 type PluginDetail_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id                 string
-	Name               string
+	Id string
+	// Stable identifier (e.g. "openfsc"); see PluginSummary.name.
+	Name string
+	// Human-readable name (e.g. "OpenFSC"), from definition.yaml metadata.displayName.
+	DisplayName        string
 	Description        string
 	DescriptionShort   string
 	Tags               []*Tag
@@ -968,6 +1001,7 @@ func (b0 PluginDetail_builder) Build() *PluginDetail {
 	_, _ = b, x
 	x.xxx_hidden_Id = b.Id
 	x.xxx_hidden_Name = b.Name
+	x.xxx_hidden_DisplayName = b.DisplayName
 	x.xxx_hidden_Description = b.Description
 	x.xxx_hidden_DescriptionShort = b.DescriptionShort
 	x.xxx_hidden_Tags = &b.Tags
@@ -1117,11 +1151,12 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\"\xfd\x01\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"\xa0\x02\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12 \n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x19 \x01(\tR\vdisplayName\x12 \n" +
 	"\vdescription\x18\x1e \x01(\tR\vdescription\x12+\n" +
 	"\x11description_short\x18# \x01(\tR\x10descriptionShort\x12(\n" +
 	"\x04tags\x18( \x03(\v2\x14.organization.v1.TagR\x04tags\x129\n" +
@@ -1153,11 +1188,12 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x06Author\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\x12\x10\n" +
-	"\x03url\x18\x14 \x01(\tR\x03url\"\x93\x03\n" +
+	"\x03url\x18\x14 \x01(\tR\x03url\"\xb6\x03\n" +
 	"\fPluginDetail\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\x12 \n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x19 \x01(\tR\vdisplayName\x12 \n" +
 	"\vdescription\x18\x1e \x01(\tR\vdescription\x12+\n" +
 	"\x11description_short\x18# \x01(\tR\x10descriptionShort\x12(\n" +
 	"\x04tags\x18( \x03(\v2\x14.organization.v1.TagR\x04tags\x129\n" +

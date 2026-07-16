@@ -169,24 +169,56 @@ function pluralize(word: string): string {
 }
 
 /**
+ * Split a camelCase / PascalCase identifier into words, keeping runs of capitals
+ * (acronyms) intact. Splitting on every capital instead would shatter them:
+ * "FSCInstallation" → "F S C Installation", "peerID" → "peer I D".
+ *
+ * Examples: "ClusterIssuer" → ["Cluster", "Issuer"], "FSCInstallation" → ["FSC",
+ * "Installation"], "peerID" → ["peer", "ID"], "HTTPRoute" → ["HTTP", "Route"]
+ */
+function splitWords(name: string): string[] {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2') // end of a word → start of the next
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2') // end of an acronym → start of a word
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/** A run of capitals is an acronym and keeps its case in sentence case. */
+function isAcronym(word: string): boolean {
+  return /^[A-Z0-9]{2,}$/.test(word);
+}
+
+/**
  * Convert a CRD kind (PascalCase) to a human-readable plural label in sentence case.
- * Examples: "Certificate" → "Certificates", "ClusterIssuer" → "Cluster issuers"
+ * Examples: "Certificate" → "Certificates", "ClusterIssuer" → "Cluster issuers",
+ * "FSCInstallation" → "FSC installations"
  */
 export function kindToLabel(kind: string): string {
-  const words = kind
-    .replace(/([A-Z])/g, ' $1')
-    .trim()
-    .split(' ');
-  words[words.length - 1] = pluralize(words[words.length - 1]);
-  return words.map((w, i) => (i === 0 ? w : w.toLowerCase())).join(' ');
+  const words = splitWords(kind);
+  if (words.length === 0) return '';
+  // Sentence case: only the first word is capitalized — but an acronym keeps its
+  // case wherever it appears, so "ClusterHTTPRoute" stays "Cluster HTTP routes".
+  //
+  // Case is decided on the word as written, before pluralizing: a trailing acronym
+  // becomes "FSCs", which no longer looks like an acronym, and lowercasing it would
+  // give "Cluster fscs".
+  const sentenceCased = words.map((word, i) =>
+    i === 0 || isAcronym(word) ? word : word.toLowerCase(),
+  );
+  const last = sentenceCased.length - 1;
+  sentenceCased[last] = pluralize(sentenceCased[last]);
+  return sentenceCased.join(' ');
 }
 
 /**
  * Convert a CRD property name to a human-readable label.
+ * Examples: "selfAddress" → "Self Address", "peerID" → "Peer ID",
+ * "controllerURL" → "Controller URL"
  */
 export function fieldNameToLabel(name: string): string {
-  return name
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (s) => s.toUpperCase())
-    .trim();
+  const words = splitWords(name);
+  if (words.length === 0) return '';
+  return [words[0].charAt(0).toUpperCase() + words[0].slice(1), ...words.slice(1)].join(' ');
 }

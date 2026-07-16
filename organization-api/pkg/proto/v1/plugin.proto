@@ -33,7 +33,12 @@ message Category {
 // PluginSummary information
 message PluginSummary {
   string id = 10;
+  // Stable identifier (e.g. "openfsc"), matching the plugin's definition.yaml
+  // metadata.name. This is the PluginInstallation resource name in the cluster —
+  // use display_name to show the plugin to a user.
   string name = 20;
+  // Human-readable name (e.g. "OpenFSC"), from definition.yaml metadata.displayName.
+  string display_name = 25;
   string description = 30;
   string description_short = 35;
   repeated Tag tags = 40;
@@ -82,7 +87,10 @@ message Author {
 // Detailed plugin information
 message PluginDetail {
   string id = 10;
+  // Stable identifier (e.g. "openfsc"); see PluginSummary.name.
   string name = 20;
+  // Human-readable name (e.g. "OpenFSC"), from definition.yaml metadata.displayName.
+  string display_name = 25;
   string description = 30;
   string description_short = 35;
   repeated Tag tags = 40;

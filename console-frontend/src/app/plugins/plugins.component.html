@@ -26,7 +26,7 @@
               <!-- Plugin Logo -->
               <app-plugin-icon
                 [name]="getPluginIconName(plugin.name)"
-                [label]="plugin.name"
+                [label]="plugin.displayName || plugin.name"
                 class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-2 dark:bg-gray-800"
               />
 
@@ -34,7 +34,7 @@
               <div class="min-w-0 flex-1">
                 <h3 class="text-lg font-semibold">
                   <a [routerLink]="['/plugins', plugin.id]" class="hover:underline">{{
-                    plugin.name
+                    plugin.displayName || plugin.name
                   }}</a>
                 </h3>
                 <p class="text-sm text-gray-600 dark:text-gray-300">{{ mockPluginVendor }}</p>
@@ -182,7 +182,7 @@
 
 <!-- Install Modal -->
 <app-install-plugin-modal
-  [pluginName]="selectedPlugin?.name || ''"
+  [pluginDisplayName]="selectedPlugin?.displayName || selectedPlugin?.name || ''"
   [clusters]="clustersForModal"
   [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"

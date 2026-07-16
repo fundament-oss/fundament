@@ -35,7 +35,9 @@ interface Cluster {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class InstallPluginModalComponent {
-  pluginName = input('');
+  /** Human-readable plugin name (e.g. "OpenFSC"), shown to the user. Never the
+   * install identifier — the caller keeps that to itself. */
+  pluginDisplayName = input('');
 
   clusters = input<Cluster[]>([]);
 

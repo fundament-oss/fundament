@@ -4,6 +4,10 @@ docs-frontend/node_modules/
 docs-frontend/dist/
 dcim-frontend/node_modules/
 dcim-frontend/dist/
+plugins/openfsc/console-ui/node_modules/
+# Built console UI is produced by the console-ui build stage and COPY'd in, so
+# keep any local build out of the context.
+plugins/openfsc/console/
 
 .git
 **/.gitignore

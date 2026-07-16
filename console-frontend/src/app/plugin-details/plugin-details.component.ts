@@ -39,6 +39,12 @@ interface ClusterWithState extends ClusterSummary {
   running: boolean;
 }
 
+// The name to show a user (e.g. "OpenFSC"). `plugin.name` is the install
+// identifier (e.g. "openfsc") — it names the PluginInstallation resource in the
+// cluster — so it is never shown. Falls back to it when no display name is set.
+const displayNameOf = (plugin: { name: string; displayName: string }): string =>
+  plugin.displayName || plugin.name;
+
 @Component({
   selector: 'app-plugin-details',
   imports: [InstallPluginModalComponent, LoadingIndicatorComponent, PluginIconComponent],
@@ -108,7 +114,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       }
 
       this.plugin.set(pluginResponse.plugin);
-      this.titleService.setTitle(`${pluginResponse.plugin.name} — Plugins`);
+      this.titleService.setTitle(`${displayNameOf(pluginResponse.plugin)} — Plugins`);
 
       const pluginName = pluginResponse.plugin.name;
       this.pluginImage = pluginsResponse.plugins.find((p) => p.id === id)?.image ?? '';
@@ -229,11 +235,13 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       const prevPhase = clusters[i].phase;
       if (prevPhase === null || n.phase === prevPhase) return;
       if (!isInstallRunning(prevPhase) && n.phase === 'Running') {
-        this.toastService.success(`${plugin.name} installed on cluster ${n.name}`);
+        this.toastService.success(`Plugin ${displayNameOf(plugin)} installed on cluster ${n.name}`);
       } else if (prevPhase !== 'Failed' && n.phase === 'Failed') {
-        this.toastService.error(`Failed to install ${plugin.name} on cluster ${n.name}`);
+        this.toastService.error(
+          `Failed to install plugin ${displayNameOf(plugin)} on cluster ${n.name}`,
+        );
       } else if (n.phase === null) {
-        this.toastService.success(`${plugin.name} removed from ${n.name}`);
+        this.toastService.success(`Plugin ${displayNameOf(plugin)} removed from ${n.name}`);
       }
     });
 
@@ -265,7 +273,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     if (failed.length > 0) {
       failed.forEach((id) => this.setPhase(id, null));
       this.toastService.error(
-        `Failed to install ${plugin.name} on ${failed.map((id) => this.clusterName(id)).join(', ')}`,
+        `Failed to install ${displayNameOf(plugin)} on ${failed.map((id) => this.clusterName(id)).join(', ')}`,
       );
     }
 
@@ -282,7 +290,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       this.startInstallPollingIfNeeded();
     } catch {
       this.toastService.error(
-        `Failed to remove ${plugin.name} from ${this.clusterName(clusterId)}`,
+        `Failed to remove ${displayNameOf(plugin)} from ${this.clusterName(clusterId)}`,
       );
     }
   }
@@ -298,7 +306,9 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       await this.pluginInstallationService.installPlugin(clusterId, plugin.name, this.pluginImage);
       this.startInstallPollingIfNeeded();
     } catch {
-      this.toastService.error(`Failed to install ${plugin.name} on ${this.clusterName(clusterId)}`);
+      this.toastService.error(
+        `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
+      );
     }
   }
 
