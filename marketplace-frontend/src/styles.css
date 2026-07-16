@@ -3,6 +3,13 @@
 @import 'tailwindcss';
 @import '@nldd/design-system/styles';
 
+/* The NLDD palettes are built on `light-dark()`, so every shade below already
+   flips with `color-scheme` (which `html.dark` drives): a shade number means
+   "this much contrast against the current surface", not a fixed lightness.
+   So `text-accent-700` is dark blue in light mode and light blue in dark mode
+   on its own — adding a `dark:text-accent-300` override double-inverts it and
+   lands back on the low-contrast end. Only reach for a `dark:` shade override
+   on a surface that does *not* follow the theme (e.g. an always-dark panel). */
 @theme {
   --color-accent-25: var(--primitives-color-accent-25);
   --color-accent-50: var(--primitives-color-accent-50);
