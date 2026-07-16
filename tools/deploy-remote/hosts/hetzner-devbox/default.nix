@@ -11,6 +11,7 @@
   imports = [
     ./../hetzner/common.nix
     ../../modules/dev.nix
+    ../../modules/dev-registry-mirror.nix
   ];
 
   networking.hostName = "fundament-devbox";

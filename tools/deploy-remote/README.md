@@ -1,141 +1,155 @@
-# deploy-remote — one-time-use fundament/Gardener box on Hetzner Cloud
+# deploy-remote — fundament boxes on Hetzner Cloud
 
-Spin up a throwaway cloud box that runs the full fundament + Gardener local stack
-(k3d, kind, MetalLB, Calico, local DNS) and drives a shoot to completion — then
-destroy it. Deployed with **no local nix**: only `ssh`, `curl` and Docker are
-needed (Docker you already run for k3d).
+Two roles from one shared NixOS baseline, deployed with **no local nix**
+(only `ssh`, `curl`, and Docker):
 
-> Reset = **destroy + recreate** (`down` then `up`); a fresh box is
-> already clean state.
-
-## Layout
+- **devbox** *(primary)* — your daily-cattle personal dev machine: box created in
+  the morning, destroyed at night, your state (repos, WIP, `~/.claude`, caches) on
+  a **persistent per-dev volume**. Full edit-compile-run loop on the box.
+- **test** — the original one-time-use smoke box: clone the *pushed* branch, run
+  the full fundament + Gardener stack, drive a shoot to 100%, destroy.
 
 ```
 tools/deploy-remote/
-├── flake.nix                     nixosConfigurations.hetzner (built by nixos-anywhere)
-├── justfile                      thin wrappers around hetzner.sh
-├── hetzner.sh                    lifecycle: up · stack · certs · tunnel · ssh · status · down
-├── box/                          scripts pushed to the box by `hetzner.sh stack`
-│   ├── bootstrap.sh              clone fundament + checkout deployed ref + mise install
-│   └── run-stack.sh              cluster-create → gardener-up → skaffold → drive a shoot to 100%
-├── modules/
-│   ├── baseline.nix             functional system: docker, nix-ld, resolved+gardener DNS, tools
-│   └── ephemeral-scratch.nix    reformat the scratch partition before docker (reboot-to-clean)
-├── hosts/hetzner/               default.nix · disko.nix (/dev/sda, EF02+ESP+scratch)
-├── secrets/hetzner.env.example  template; real secrets/hetzner.env (API token) is gitignored
-└── cache/                       gitignored — fetched hcloud binary, install key, box CA cert
+├── flake.nix                 nixosConfigurations: hetzner (test) · hetzner-devbox
+├── justfile                  test-box recipes  (also at repo root: just deploy-remote …)
+├── devbox.just               devbox recipes    (also at repo root: just devbox …)
+├── hetzner.sh                one lifecycle script; HZ_ROLE=test|devbox
+├── box/                      scripts pushed to the box
+│   ├── bootstrap.sh          test: clone PUSHED ref + mise
+│   ├── run-stack.sh          test: full stack + shoot smoke
+│   ├── bootstrap-dev.sh      devbox: user layer — repo, mise, Claude Code, CA
+│   └── run-stack-dev.sh      devbox: stack up/switch (mock | gardener)
+├── modules/                  baseline.nix · ephemeral-scratch.nix (test)
+│                             dev.nix · dev-registry-mirror.nix (devbox)
+├── hosts/hetzner*/           shared common.nix + disko; per-role default.nix
+├── secrets/hetzner.env       your Hetzner API token (gitignored; see .example)
+└── cache/                    gitignored: hcloud binary, fetched CA, ssh config
 ```
 
-## Deploy model — `nixos-anywhere` in a container (no local nix)
-
-`hetzner.sh` creates the box with a pinned static `hcloud` binary, then runs
-`nixos-anywhere` inside a throwaway `nixos/nix` **Docker container**, doing a clean
-disko install. Why the container: `nixos-anywhere` needs to run as a *trusted* nix
-user for `--build-on-remote` (the box builds its own x86_64 closure — your machine
-never cross-builds). On a stock nix install the login user often isn't in
-`trusted-users`, which silently breaks that; **in a container root is trusted by
-default**, so it just works. (`nixos-infect` was tried and rejected — it left a
-broken hybrid `/etc` with no network.)
-
-The box's `/var/lib/docker` is a dedicated ext4 **scratch** partition reformatted on
-every boot (`ephemeral-scratch.nix`), so a reboot returns to clean container state.
-
-## Workflow
+## Devbox — daily workflow
 
 ```sh
-cd tools/deploy-remote
-cp secrets/hetzner.env.example secrets/hetzner.env   # paste a Read&Write API token
-just up        # create box + install NixOS (nixos-anywhere in docker); waits until ready
-just stack     # deploy fundament + Gardener, run a shoot, trust the box CA; prints the console URL
-just tunnel    # SSH tunnel :8443 — then open the printed URL in your normal browser
-just ssh       # log in (port 2022) to poke around
-just status    # list project servers — never forget a box is billing
-just down      # DESTROY the box — stops billing (also untrusts the box CA)
+just devbox up --stack mock   # morning: box + volume + toolchain + fundament (no Gardener)
+ssh devbox-<you>              # code (VS Code Remote-SSH uses the same alias)
+just devbox down              # evening: destroys ONLY the box; your volume survives
 ```
 
-Every recipe is also exposed at the repo root: `just deploy-remote up`, etc.
+- `up` (bare) gives a box + toolchain in ~10 min on a warm volume; `--stack mock`
+  adds fundament with mock providers (minutes); `--stack gardener` runs the full
+  local-gardener path (gardener-up ~10–15 min).
+- `just devbox stack mock|gardener` brings up **or switches** the stack on the
+  running box — modes are deploy profiles, not different boxes. Fixture data
+  (orgs, API keys, fixture clusters) ships with the migrations in both modes.
+- The box is cattle, the volume is a pet: `/home/fundament` is a Hetzner Volume
+  (default 100 GB, `HZ_VOLUME_SIZE` to change) that survives `down`. Repos, mise
+  installs, Go/bun caches, vscode-server, Claude Code login, and the CA all live
+  there — second mornings skip the cold work. Deleting it is a separate, confirmed
+  command: `just devbox destroy-volume`.
+- `down` warns when repos on the volume have uncommitted/unpushed work (the volume
+  keeps it either way; origin is the durable copy if the volume is ever lost).
+- Docker state (`/var/lib/docker`) stays on the box-local scratch partition on
+  purpose: persisted cluster containers come back with wrong IPs (kubelet cert
+  breakage). Clusters are rebuilt each morning; a Docker-Hub pull-through mirror
+  with storage on the volume takes the sting out of image pulls.
 
-**Time to ready:** ~35–45 min end-to-end from `just up` to a reachable
-console — `up` ~8–10 min (box create + NixOS install), `stack`
-~25–35 min (bootstrap + toolchain ~3, gardener-up ~10–15, fundament deploy ~5,
-shoot to `Create Succeeded` ~7).
+### Editors
 
-`up` needs `ssh` + `curl` + a running **Docker** daemon. It fetches a pinned
-`hcloud`, generates a **throwaway install key** per deploy (registered with hcloud for
-the root install phase — your own key, which may be passphrase-protected, never enters
-the install container), bakes your admin pubkey in as the box **login** key (prefers
-`~/.ssh/id_ed25519.pub`, falls back to `id_rsa.pub`; override `ADMIN_PUBKEY=…`), creates
-the box, then installs NixOS (~8–12 min). Override defaults via env, e.g. `HZ_TYPE=ccx43
-HZ_LOCATION=hel1 just up` (try another location on `resource_unavailable`).
-Works on macOS/Linux.
+- **VS Code / Cursor Remote-SSH**: open host `devbox-<you>` — vscode-server runs
+  via nix-ld (in the baseline) and lands on the volume. No further setup.
+- **Terminal**: helix/neovim ship on the box; plain multiple SSH sessions are the
+  expected workflow (connection multiplexing makes them instant). tmux is
+  configured (passthrough + extended keys) but never assumed — you need it (or
+  an equivalent) only to keep something like a Claude Code session alive after
+  you disconnect.
+- **JetBrains**: use the Toolbox App ≥ 2.6 remote development over the same SSH
+  alias (Gateway is deprecated, Fleet discontinued). Works via nix-ld.
 
-`stack` pushes `box/*.sh` and runs bootstrap + the full cycle
-(gardener-up ~10-15 min, shoot ~7), then trusts the box's CA (see below) and prints
-how to reach the UIs. Re-runs cleanly.
+### Claude Code
 
-> **The box runs your branch as PUSHED to origin — not your local working tree.**
-> Bootstrap clones the repo from GitHub and checks out the branch you ran
-> `stack` from; uncommitted or unpushed changes are NOT on the box.
-> Push first, then run `stack` (re-runs re-fetch the branch).
+`bootstrap-dev.sh` installs Claude Code (native installer) into `~/.local` on the
+volume. Run `claude` once in an SSH session and complete the OAuth URL flow in
+your laptop browser — credentials persist on the volume, so every future box is
+already logged in. bubblewrap + socat are on the box for Claude's sandbox mode.
 
-## Certificates — ephemeral per-box CA
+### SSH access & the app origin
 
-The stack's TLS is mkcert-signed. *Ignoring* the cert only gets you the browser UI;
-`functl` (the shoot kubeconfig's exec auth) and `kubectl` can't skip verification — so
-we need a genuinely trusted cert. Each box generates its **own mkcert CA** on deploy;
-`stack` fetches that CA and runs **`mkcert -install`** locally (system + browser
-NSS, macOS/Linux), so browser, `functl` and `kubectl` trust the box with no `--insecure`.
-**Your real mkcert CA never touches the box** — only the box's throwaway CA is fetched,
-and `down` runs `mkcert -uninstall` + deletes the local copy, so nothing lingers.
-(`certs` re-trusts it, e.g. from a second machine.)
+`up` writes `cache/devbox-ssh.config` — a managed block with multiplexing
+(ControlMaster) and the one `LocalForward 8443` that serves every
+`https://*.fundament.localhost:8443` UI (name-routed single-port ingress; the
+origin is hardwired app-side, so it must be reached at the laptop's loopback).
+Add once to `~/.ssh/config`:
 
-## Reaching the console / clusters
+```
+Include <path-to-repo>/tools/deploy-remote/cache/devbox-ssh.config
+```
 
-The box's fundament is hardwired to the `https://*.fundament.localhost:8443` origin
-(dex issuer, OIDC callbacks, API CORS), so it only works when reached at **exactly
-that origin** — an SSH tunnel on local **8443**. One forwarded port serves every
-`*.fundament.localhost` host (host-routed nginx; `*.localhost` → 127.0.0.1).
+`up` regenerates the file with the fresh IP each morning — no manual step.
+Agent forwarding is scoped to this alias only; use `ssh-add -c` if you want
+per-use confirmation. Free local 8443 first if a local k3d owns it
+(`k3d cluster stop fundament`).
+
+### Certificates — name-constrained per-dev CA, trust cycled
+
+The devbox CA (generated by `bootstrap-dev.sh`, reused by mkcert/setup-certs from
+its CAROOT on the volume) carries a **critical X.509 Name Constraints extension**:
+it can only sign inside `fundament.localhost` (all IP SANs excluded). Browsers,
+Go clients (`functl`, `kubectl`), and curl reject anything else it signs — even a
+stolen key can't mint trusted certs for other domains. On top, laptop **trust is
+cycled with the box**: `up` installs the CA into your trust stores (one sudo
+prompt), `down`/`destroy-volume` remove it. The CA private key never leaves the
+box/volume; certs stay valid across recreations because the CA is stable.
+
+### Team onboarding (per-dev Hetzner project)
+
+1. Create your own Hetzner Cloud project; make a Read & Write API token.
+2. `cp secrets/hetzner.env.example secrets/hetzner.env`, paste the token.
+   Optional: `devbox_name=<name>` (defaults to your local username),
+   `devbox_dotfiles=<git-url>` for your dotfiles.
+3. `just devbox up --stack mock` (first run: volume created, everything cold,
+   ~30 min; every later morning is much faster).
+4. Add the `Include` line above to `~/.ssh/config`; open `devbox-<you>` in your
+   editor of choice.
+5. `claude` once on the box for the OAuth login.
+
+Nothing in the repo needs modifying; boxes/volumes are named after you
+(`devbox-<name>`, `devbox-<name>-home`). `just devbox status` lists **servers and
+volumes** — both bill (volume ~€0.05/GB/mo, deliberately, until `destroy-volume`).
+
+### Future: dedicated / home dev machines (design, not yet built)
+
+The dev environment is layered exactly so persistent machines need **no
+reprovisioning**: the *system layer* (baseline + dev.nix — docker, nix-ld,
+resolved/DNS, sysctls, editors) is applied once when a machine is first
+provisioned; everything else is `box/bootstrap-dev.sh`, which is user-level,
+idempotent, and `$HOME`-only — re-run it any time, no `nixos-rebuild` involved.
+
+For machines behind NAT (home boxes), the access design is a **plain WireGuard
+hub** — no Tailscale/headscale: one small always-reachable peer (cheapest cloud
+VPS or existing infra) running `networking.wireguard`; dev machines peer with
+`PersistentKeepalive`, laptops peer through the hub, and SSH plus the same 8443
+LocalForward ride over the WG IPs. Per-dev static keys live in each dev's own
+secrets file. Implementation waits until such machines exist.
+
+## Test box — unchanged
+
+The original smoke-test flow is preserved verbatim under the `deploy-remote`
+just module:
 
 ```sh
-# a LOCAL k3d fundament owns 127.0.0.1:8443 — stop it first so the box can use that origin:
-k3d cluster stop fundament
-just tunnel                                 # opens the tunnel + prints the URL
-open https://console.fundament.localhost:8443       # in your normal browser (cert trusted)
-kubectl --kubeconfig <shoot-kubeconfig> get nodes   # works with certs trusted, no --insecure
+just deploy-remote up      # create box + install NixOS (~8-10 min)
+just deploy-remote stack   # PUSHED branch → full stack → shoot to 100% (~25-35 min)
+just deploy-remote tunnel  # reach the console at https://console.fundament.localhost:8443
+just deploy-remote down    # destroy (also untrusts the box CA)
 ```
 
-## Secrets & keys
-
-| Material | Where at rest | How it reaches the box |
-|---|---|---|
-| Admin pubkey (login) | `~/.ssh/id_ed25519.pub` (or `admin_pubkey` in `secrets/hetzner.env`) | materialized per-deploy into gitignored `cache/admin-keys.nix`, imported by `modules/baseline.nix` |
-| Install key (throwaway) | gitignored `cache/install-key` | generated + registered with hcloud per `up`; the only private key mounted into the nixos-anywhere container |
-| Hetzner Cloud API token | gitignored `secrets/hetzner.env` | `hetzner.sh` → `HCLOUD_TOKEN` |
-| Box's ephemeral CA (cert only) | fetched to gitignored `cache/box-ca/` | generated on the box; `mkcert -install`ed locally, `-uninstall`ed on `down` — the CA **private key** stays on the box |
-
-No admin key is hardcoded in the flake — `hetzner.sh up` writes the operator's own
-pubkey to gitignored `cache/admin-keys.nix`, which `baseline.nix` imports (empty if
-absent). No private key material is baked into the flake (flake files land in
-world-readable `/nix/store`; the flake source is staged sanitized — no `secrets/`,
-no keys). `cache/` holds the fetched hcloud binary, the generated admin-keys file,
-the throwaway install key, and the box CA cert — gitignored; delete it when done.
-
-## Sizing & cost
-
-Gardener-local needs **≥8 vCPU / 8Gi RAM / 120Gi Docker disk**
-([docs](https://gardener.cloud/docs/gardener/deployment/getting_started_locally/)), and
-fundament runs on top — but in practice **16 GB OOMs** (gardener runs several
-apiservers — virtual garden + seed + shoot control plane — and the kernel oom-killed
-`kube-apiserver` on a cx43). Default is **`HZ_TYPE=cx53`** (16 vCPU / 32 GB / 320 GB,
-shared Intel, EU-only, ~**€0.036/h**), the cost-optimal CX line; `ccx43` (64 GB) only
-if 32 GB isn't enough. Billing is hourly — tear down promptly. (ARM CAX excluded: the
-flake is x86_64.)
-
-## Caveats
-
-- **Docker** — `up` needs a running daemon (Docker Desktop, OrbStack, colima…).
-  Select a non-default context: `DOCKER_CONTEXT=orbstack just up`.
-- **Legacy BIOS** — Hetzner Cloud x86_64 boots legacy BIOS; `hosts/hetzner` uses GRUB
-  with a dual EF02 (BIOS) + ESP (UEFI-fallback) layout. Handled.
-- **Reproducibility** — `nixpkgs` pinned via `flake.lock`; the on-box mise toolchain
-  and Gardener (`v1.138.0`, cloned by gardener-up) are version-pinned.
+The test box reboot-wipes `/var/lib/docker` (ephemeral-scratch) and tests **what
+you pushed, not your working tree**. Its per-box mkcert CA is fetched and trusted
+on `stack`, untrusted on `down`. Details that apply to both roles: deploy is
+nixos-anywhere in a throwaway `nixos/nix` container (root is a trusted nix user
+there; `--build-on-remote` — the box builds its own closure); Hetzner x86_64
+boots legacy BIOS (GRUB + EF02/ESP dual layout); `HZ_TYPE=cx53` default
+(16 vCPU/32 GB — 16 GB OOMs the full Gardener stack; mock-only days run fine on
+smaller `HZ_TYPE=cx43`); management SSH on **2022** (Gardener's kind bastion
+publishes :22); secrets never enter the flake (`cache/admin-keys.nix` is
+generated per-deploy from your pubkey, install keys are throwaway per-`up`).
