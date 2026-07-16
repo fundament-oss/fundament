@@ -19,7 +19,7 @@ HZ_TYPE=${HZ_TYPE:-cx53}              # 16 vCPU / 32GB / 320GB. cx43 (16GB) OOMs
                                      # (gardener runs several apiservers + fundament). ccx43=64GB if needed.
 HZ_IMAGE=${HZ_IMAGE:-ubuntu-24.04}   # base image nixos-anywhere kexecs away from (any works)
 HZ_LOCATION=${HZ_LOCATION:-nbg1}     # EU (CX is EU-only)
-HZ_NAME=${HZ_NAME:-fundament-test}
+HZ_NAME=${HZ_NAME:-}                 # defaulted per role below (test: fundament-test)
 HZ_KEYNAME=${HZ_KEYNAME:-fundament-install}  # hcloud entry for the per-deploy install key
 # NOT env-overridable: baked into the NixOS image by modules/baseline.nix — an override
 # here would poll SSH as a user/port the box doesn't have and destroy/recreate it in vain.
@@ -69,6 +69,29 @@ SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLeve
 [ -f "$ENVFILE" ] || die "missing $ENVFILE (api_key=...); cp $ENVFILE.example $ENVFILE"
 set -a; . "$ENVFILE"; set +a
 export HCLOUD_TOKEN="${api_key:?api_key not set in $ENVFILE}"
+
+# --- role: test (default, unchanged behavior) vs devbox ---------------------
+# devbox = daily-cattle personal dev machine: per-dev names, a persistent home
+# volume that survives `down`, dev-role NixOS config, flag-controlled stack.
+HZ_ROLE=${HZ_ROLE:-test}
+case "$HZ_ROLE" in
+  test)
+    HZ_NAME=${HZ_NAME:-fundament-test}
+    FLAKE_TARGET=hetzner
+    ;;
+  devbox)
+    # Per-dev naming: devbox_name from secrets/hetzner.env, else the local user.
+    DEVBOX_NAME=${devbox_name:-$(id -un)}
+    HZ_NAME=${HZ_NAME:-devbox-$DEVBOX_NAME}
+    VOL_NAME=$HZ_NAME-home
+    VOL_SIZE=${HZ_VOLUME_SIZE:-100}      # GB; ~EUR 0.05/GB/mo, resizable online
+    FLAKE_TARGET=hetzner-devbox
+    BOX_CA=cache/devbox-ca               # per-dev CA (name-constrained), fetched here
+    SSHCONF=cache/devbox-ssh.config      # generated managed ssh config block
+    ;;
+  *) die "unknown HZ_ROLE '$HZ_ROLE' (test|devbox)" ;;
+esac
+require_devbox() { [ "$HZ_ROLE" = devbox ] || die "'$1' is a devbox command — run via 'just devbox $1' (or HZ_ROLE=devbox)"; }
 
 # --- helpers ---------------------------------------------------------------
 # pinned static hcloud (no nix/brew)
@@ -177,6 +200,123 @@ stage_flake_src() {
   printf '%s\n' "$dir"
 }
 
+# --- devbox: persistent volume + dev workflow helpers -----------------------
+# Ensure the per-dev volume exists (create pre-formatted ext4 if missing) and pin
+# HZ_LOCATION to it — Hetzner volumes are location-bound, the box must follow.
+ensure_volume() {
+  local loc
+  if hc volume describe "$VOL_NAME" >/dev/null 2>&1; then
+    loc=$(hc volume describe "$VOL_NAME" -o format='{{.Location.Name}}' 2>/dev/null || true)
+    [ -n "$loc" ] && HZ_LOCATION=$loc
+    log "volume $VOL_NAME exists @ $HZ_LOCATION — yesterday's state carries over"
+  else
+    log "creating volume $VOL_NAME (${VOL_SIZE}GB ext4 @ $HZ_LOCATION) — bills (~EUR 0.05/GB/mo) until 'devbox destroy-volume'"
+    hc volume create --name "$VOL_NAME" --size "$VOL_SIZE" --location "$HZ_LOCATION" --format ext4 >/dev/null \
+      || die "volume create failed"
+  fi
+}
+
+# Attach the volume to this role's box (idempotent; refuses a volume that is
+# attached to some other server — that means another box of yours is still up).
+attach_volume() {
+  local server_id attached_id
+  server_id=$(hc server describe "$HZ_NAME" -o format='{{.ID}}') || die "no $HZ_NAME server"
+  attached_id=$(hc volume describe "$VOL_NAME" -o format='{{if .Server}}{{.Server.ID}}{{end}}' 2>/dev/null || true)
+  if [ -z "$attached_id" ]; then
+    log "attaching $VOL_NAME to $HZ_NAME"
+    hc volume attach "$VOL_NAME" --server "$HZ_NAME" >/dev/null || die "volume attach failed"
+  elif [ "$attached_id" != "$server_id" ]; then
+    die "$VOL_NAME is attached to another server (id $attached_id) — down that box first"
+  fi
+}
+
+detach_volume() {
+  local attached_id
+  attached_id=$(hc volume describe "$VOL_NAME" -o format='{{if .Server}}{{.Server.ID}}{{end}}' 2>/dev/null || true)
+  [ -n "$attached_id" ] && { log "detaching $VOL_NAME (kept — state survives)"; hc volume detach "$VOL_NAME" >/dev/null || true; }
+  return 0
+}
+
+# Best-effort scan for uncommitted/unpushed work in the repos on the volume.
+# The volume preserves everything either way; origin is the durable copy if the
+# volume is ever lost, hence the nudge. Never blocks non-interactive runs.
+warn_dirty_repos() { # ip
+  local ip=$1 findings
+  findings=$(ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" '
+    export PATH=$HOME/.nix-profile/bin:/run/current-system/sw/bin:$PATH
+    for g in $HOME/*/.git; do
+      [ -d "$g" ] || continue
+      r=${g%/.git}
+      ( cd "$r" || exit 0
+        [ -n "$(git status --porcelain 2>/dev/null | head -1)" ] && echo "  uncommitted: $r"
+        [ -n "$(git log --branches --not --remotes --oneline 2>/dev/null | head -1)" ] && echo "  unpushed:    $r"
+      )
+    done' </dev/null 2>/dev/null) || return 0
+  [ -z "$findings" ] && return 0
+  log "WARNING: work on the box is not on origin (the volume keeps it, but origin is the durable copy):"
+  printf '%s\n' "$findings"
+  if [ -t 0 ] && [ -z "${HZ_FORCE:-}" ]; then
+    printf 'destroy the box anyway? The volume (and this work) survives. [y/N] '
+    local answer; read -r answer
+    case "$answer" in y|Y|yes) ;; *) die "aborted — push your work or re-run with HZ_FORCE=1" ;; esac
+  fi
+}
+
+# Write the managed SSH config block (multiplexing + the single 8443 origin
+# forward). Include it once from ~/.ssh/config; `up` regenerates it with the
+# fresh IP, so mornings need no manual step.
+write_ssh_config() { # ip
+  local ip=$1
+  mkdir -p cache
+  cat > "$SSHCONF" <<EOF
+# GENERATED by 'devbox up' — do not edit; include from ~/.ssh/config:
+#   Include $PWD/$SSHCONF
+Host $HZ_NAME
+  HostName $ip
+  Port $SSH_PORT
+  User $BOX_USER
+  # Cattle: IPs get reused across recreations — never record host keys.
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  LogLevel ERROR
+  # Multiplexing: instant extra sessions + snappy VS Code Remote-SSH.
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%r@%h-%p
+  ControlPersist 600
+  # One forward serves every *.fundament.localhost UI (name-routed ingress).
+  LocalForward 8443 127.0.0.1:8443
+  # Agent forwarding scoped to this host only (use 'ssh-add -c' for confirm-per-use).
+  ForwardAgent yes
+EOF
+  log "ssh config written: $SSHCONF   (once: add 'Include $PWD/$SSHCONF' to ~/.ssh/config)"
+  log "then:  ssh $HZ_NAME   # brings the 8443 tunnel with it"
+}
+
+cmd_ssh_config() { require_devbox ssh-config; local ip; ip=$(box_ip); write_ssh_config "$ip"; }
+
+# Post-install devbox finishing: ssh config with the fresh IP + operator guidance.
+# (The dev bootstrap + cert trust + --stack land here via cmd_stack wiring.)
+finish_devbox_up() { # ip stack_mode
+  local ip=$1
+  write_ssh_config "$ip"
+  log "READY:  ssh $HZ_NAME   (home = $VOL_NAME, mounted at /home/$BOX_USER)"
+  log "SERVER BILLING IS RUNNING — evening: 'just devbox down' (the volume survives)"
+}
+
+# DELETE the per-dev volume (explicit, confirmed) and untrust its CA.
+cmd_destroy_volume() {
+  require_devbox destroy-volume
+  ensure_hcloud
+  hc volume describe "$VOL_NAME" >/dev/null 2>&1 || die "no volume $VOL_NAME"
+  log "this DELETES $VOL_NAME — repos/WIP/logins on it are gone (rebuildable, but gone)."
+  printf 'type the volume name (%s) to confirm: ' "$VOL_NAME"
+  local answer; read -r answer
+  [ "$answer" = "$VOL_NAME" ] || die "aborted"
+  untrust_box_ca
+  detach_volume
+  hc volume delete "$VOL_NAME" && log "deleted $VOL_NAME — volume billing stopped."
+}
+
 # --- install NixOS onto an already-created box -----------------------------
 # Returns 0 only when the installed NixOS answers SSH on :$SSH_PORT (nixos-anywhere's
 # exit code isn't reliable — it often drops SSH on the post-install reboot). Recovers
@@ -200,7 +340,7 @@ deploy_once() { # ip
     -e NIX_CONFIG="experimental-features = nix-command flakes" \
     "$NIX_IMAGE" \
     nix run github:nix-community/nixos-anywhere -- \
-      --flake /work#hetzner --build-on-remote \
+      --flake "/work#$FLAKE_TARGET" --build-on-remote \
       -i /root/.ssh/id_rsa \
       --ssh-option StrictHostKeyChecking=no --ssh-option UserKnownHostsFile=/dev/null \
       "root@$ip" \
@@ -215,10 +355,22 @@ deploy_once() { # ip
 }
 
 # create the box (if absent) and install NixOS onto it; on failure, destroy + recreate (HZ_RETRIES)
+# devbox: also ensures + attaches the persistent volume (never deleted here), and
+# accepts `--stack mock|gardener` to bring the stack up unattended after the box.
 cmd_up() {
+  local stack_mode=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --stack) shift; stack_mode=${1:-}; case "$stack_mode" in mock|gardener) ;; *) die "--stack takes mock|gardener";; esac ;;
+      *) die "unknown 'up' argument: $1" ;;
+    esac
+    shift
+  done
+  [ -n "$stack_mode" ] && require_devbox "up --stack"
   ensure_hcloud
   command -v docker >/dev/null 2>&1 || die "docker is required (used to run nixos-anywhere without local nix)"
   docker info >/dev/null 2>&1 || die "docker daemon is not running"
+  [ "$HZ_ROLE" = devbox ] && ensure_volume   # pins HZ_LOCATION to the volume
   # Bake the operator's admin key into the flake (cache/admin-keys.nix) before installing.
   # (admin_pubkey from secrets/hetzner.env wins; write_admin_keys dies if neither exists.)
   write_admin_keys
@@ -245,10 +397,17 @@ cmd_up() {
       log "$HZ_NAME already exists; reusing"
     fi
     ip=$(box_ip)
+    # Attach BEFORE the install so the first boot's devbox-home-setup sees the disk.
+    # (disko only ever touches /dev/sda; the volume is a separate scsi device.)
+    [ "$HZ_ROLE" = devbox ] && attach_volume
     if deploy_once "$ip"; then
-      log "READY:  ssh -p $SSH_PORT $BOX_USER@$ip   (or: ./hetzner.sh ssh)"
-      log "next:   just stack   # deploy fundament + Gardener and run a shoot"
-      log "BILLING IS RUNNING — tear down with: ./hetzner.sh down"
+      if [ "$HZ_ROLE" = devbox ]; then
+        finish_devbox_up "$ip" "$stack_mode"
+      else
+        log "READY:  ssh -p $SSH_PORT $BOX_USER@$ip   (or: ./hetzner.sh ssh)"
+        log "next:   just stack   # deploy fundament + Gardener and run a shoot"
+        log "BILLING IS RUNNING — tear down with: ./hetzner.sh down"
+      fi
       return 0
     fi
     [ "$n" -ge "$tries" ] && die "deploy failed after $n attempt(s). Inspect with ./hetzner.sh ssh, or ./hetzner.sh down."
@@ -258,14 +417,30 @@ cmd_up() {
   done
 }
 
-# untrust the box's CA locally, then destroy the box (stops billing)
+# untrust the box's CA locally, then destroy the box (stops billing).
+# devbox: warn about un-origin'd work, detach (keep!) the volume, cycle trust off.
 cmd_down() {
   ensure_hcloud
+  if [ "$HZ_ROLE" = devbox ]; then
+    local ip
+    if ip=$(hc server ip "$HZ_NAME" 2>/dev/null) && [ -n "$ip" ]; then
+      warn_dirty_repos "$ip"
+    fi
+    untrust_box_ca          # trust cycles with the box; the CA itself stays on the volume
+    detach_volume
+    hc server delete "$HZ_NAME" && log "deleted $HZ_NAME — server billing stopped ($VOL_NAME kept; 'devbox up' tomorrow resumes from it)."
+    return
+  fi
   untrust_box_ca
   hc server delete "$HZ_NAME" && log "deleted $HZ_NAME — billing stopped."
 }
-# list the project's servers (so a billing box is never forgotten)
-cmd_status() { ensure_hcloud; hc server list; }
+# list the project's servers (so a billing box is never forgotten);
+# devbox also lists volumes — they bill too, deliberately, until destroy-volume.
+cmd_status() {
+  ensure_hcloud
+  hc server list
+  if [ "$HZ_ROLE" = devbox ]; then echo; hc volume list; fi
+}
 # open an interactive shell on the box (NixOS, port 2022).
 # NB: assign box_ip BEFORE using it — inside "$(...)" its die() would only exit the
 # subshell and ssh would still run against an empty host.
@@ -309,6 +484,8 @@ cmd_certs() { ensure_hcloud; local ip; ip=$(box_ip); trust_box_ca "$ip"; log "bo
 # Push the on-box scripts, run bootstrap + the stack, then trust the box's
 # freshly-generated CA locally and print how to reach the UIs.
 cmd_stack() {
+  # devbox stack (mock|gardener) is wired with the dev bootstrap layer.
+  [ "$HZ_ROLE" = devbox ] && die "devbox stack is not wired yet (next layer in this stack)"
   ensure_hcloud
   local ip ref; ip=$(box_ip)
   # The box clones the repo from GitHub and checks out THIS branch — i.e. it tests
@@ -325,13 +502,17 @@ cmd_stack() {
   print_access
 }
 
-case "${1:-}" in
-  up) cmd_up ;;
+cmd=${1:-}
+if [ $# -gt 0 ]; then shift; fi
+case "$cmd" in
+  up) cmd_up "$@" ;;
   down) cmd_down ;;
   ssh) cmd_ssh ;;
   status) cmd_status ;;
-  stack) cmd_stack ;;
+  stack) cmd_stack "$@" ;;
   certs) cmd_certs ;;
   tunnel) cmd_tunnel ;;
-  *) die "usage: $0 {up|down|ssh|status|stack|certs|tunnel}" ;;
+  ssh-config) cmd_ssh_config ;;
+  destroy-volume) cmd_destroy_volume ;;
+  *) die "usage: $0 {up|down|ssh|status|stack|certs|tunnel}   (devbox role adds: up --stack mock|gardener, stack <mode>, ssh-config, destroy-volume)" ;;
 esac
