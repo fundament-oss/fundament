@@ -15,13 +15,13 @@ import PluginCardComponent from './plugin-card.component';
 import { FundamentLogoIconComponent, PluginIconComponent } from '../icons';
 
 @Component({
-  selector: 'app-marketplace-home',
-  imports: [PluginCardComponent, PluginIconComponent, FundamentLogoIconComponent, RouterLink],
+  selector: 'app-marketplace-index',
+  imports: [PluginCardComponent, PluginIconComponent, RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './marketplace-home.component.html',
+  templateUrl: './index.component.html',
 })
-export default class MarketplaceHomeComponent implements OnInit {
+export default class MarketplaceIndexComponent implements OnInit {
   private titleService = inject(TitleService);
 
   private service = inject(MarketplaceService);
@@ -75,8 +75,8 @@ export default class MarketplaceHomeComponent implements OnInit {
 
   gridFeatured = computed(() => this.featuredPlugins().slice(1));
 
-  // Up to four featured logos wired to the central hub in the hero panel.
-  heroPlugins = computed(() => this.featuredPlugins().slice(0, 4));
+  // Three featured plugins shown as floating preview cards in the hero panel.
+  heroPlugins = computed(() => this.featuredPlugins().slice(0, 3));
 
   recentlyAdded = computed(() =>
     [...this.plugins()].sort((a, b) => b.addedAt.localeCompare(a.addedAt)).slice(0, 6),

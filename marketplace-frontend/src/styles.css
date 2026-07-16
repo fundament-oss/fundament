@@ -145,6 +145,14 @@ html.dark {
   }
 }
 
+/* Full-bleed sections (e.g. the marketplace hero) are 100vw wide, which
+   includes the scrollbar and would otherwise let the root scroll horizontally.
+   `clip` rather than `hidden`: it does not create a scroll container, so
+   `position: sticky` keeps working for the top nav and category sidebar. */
+html {
+  @apply overflow-x-clip;
+}
+
 body {
   @apply font-body bg-neutral-25 min-h-screen text-gray-800 dark:bg-gray-900 dark:text-white;
 }

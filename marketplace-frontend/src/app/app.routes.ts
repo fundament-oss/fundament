@@ -4,7 +4,7 @@ const routes: Routes = [
   // Public storefront
   {
     path: '',
-    loadComponent: () => import('./marketplace/marketplace-home.component').then((m) => m.default),
+    loadComponent: () => import('./marketplace/index.component').then((m) => m.default),
   },
   {
     path: 'plugins/:name',

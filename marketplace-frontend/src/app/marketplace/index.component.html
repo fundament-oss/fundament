@@ -1,17 +1,25 @@
-<!-- Hero -->
-<nldd-card class="relative mb-12 block">
+<!-- Hero: a full-bleed band, so it breaks out of the page container and sits
+     flush under the top nav (which cancels the surrounding `main` top padding). -->
+<section
+  class="border-dividers relative left-1/2 -mt-8 mb-12 w-screen -translate-x-1/2 overflow-hidden border-b bg-white dark:bg-gray-950"
+>
   <!-- Cluster canvas: faint node grid + soft accent glow -->
   <div
     class="pointer-events-none absolute inset-0 text-gray-900/5 dark:text-white/6"
-    style="background-image: radial-gradient(currentColor 1px, transparent 1px); background-size: 22px 22px;"
+    style="
+      background-image: radial-gradient(currentColor 1px, transparent 1px);
+      background-size: 22px 22px;
+    "
     aria-hidden="true"
   ></div>
   <div
-    class="bg-accent-300/30 dark:bg-accent-500/20 pointer-events-none absolute -top-24 -right-16 h-72 w-72 rounded-full blur-3xl"
+    class="bg-accent-300/30 dark:bg-accent-500/20 pointer-events-none absolute -top-24 right-[8%] h-72 w-72 rounded-full blur-3xl"
     aria-hidden="true"
   ></div>
 
-  <div class="relative grid items-center gap-10 p-8 sm:p-12 lg:grid-cols-2">
+  <div
+    class="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-20"
+  >
     <!-- Pitch -->
     <div class="max-w-xl">
       <p
@@ -31,22 +39,28 @@
       @if (!isLoading()) {
         <dl class="mt-8 flex flex-wrap gap-x-10 gap-y-4">
           <div>
-            <dd class="font-display text-2xl font-semibold tabular-nums">{{ plugins().length }}</dd>
-            <dt class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
+            <dd class="font-display text-3xl font-semibold tabular-nums">{{ plugins().length }}</dd>
+            <dt
+              class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+            >
               Plugins
             </dt>
           </div>
           <div>
-            <dd class="font-display text-2xl font-semibold tabular-nums">
+            <dd class="font-display text-3xl font-semibold tabular-nums">
               {{ categories().length }}
             </dd>
-            <dt class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
+            <dt
+              class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+            >
               Categories
             </dt>
           </div>
           <div>
-            <dd class="font-display text-2xl font-semibold tabular-nums">{{ officialCount() }}</dd>
-            <dt class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
+            <dd class="font-display text-3xl font-semibold tabular-nums">{{ officialCount() }}</dd>
+            <dt
+              class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
+            >
               Official
             </dt>
           </div>
@@ -54,134 +68,36 @@
       }
     </div>
 
-    <!-- Signature: featured plugins wired into your cluster -->
+    <!-- Signature: featured plugins floating above the cluster -->
     <div class="relative hidden lg:block" aria-hidden="true">
-      <div class="relative mx-auto aspect-square w-full max-w-md">
-        <!-- Cluster boundary -->
-        <div
-          class="border-accent-300/70 dark:border-accent-700/60 absolute inset-x-0 top-[26%] bottom-[4%] rounded-2xl border-2 border-dashed"
-        ></div>
-
-        <!-- Connectors: hub to plugins, and hub out to the cloud -->
-        <svg
-          class="text-accent-400/70 dark:text-accent-500/50 absolute inset-0 z-10 h-full w-full"
-          viewBox="0 0 100 100"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="0.5"
-        >
-          <defs>
-            <marker
-              id="hero-arrow"
-              markerUnits="userSpaceOnUse"
-              markerWidth="5"
-              markerHeight="5"
-              refX="3.5"
-              refY="2.5"
-              orient="auto"
-            >
-              <path d="M0 0 L5 2.5 L0 5 z" fill="currentColor" />
-            </marker>
-          </defs>
-          <line x1="40" y1="60" x2="16" y2="40" />
-          <line x1="40" y1="60" x2="16" y2="84" />
-          <line x1="40" y1="60" x2="64" y2="84" />
-          <line x1="44" y1="55" x2="76" y2="18" marker-end="url(#hero-arrow)" />
-        </svg>
-
-        <!-- Cloud, sitting outside the cluster -->
-        <div
-          class="absolute top-[12%] left-[82%] z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
-        >
-          <svg viewBox="0 0 80 50" class="text-accent-500 dark:text-accent-400 h-9 w-16">
-            <g fill="currentColor">
-              <circle cx="26" cy="30" r="14" />
-              <circle cx="46" cy="22" r="16" />
-              <circle cx="60" cy="31" r="12" />
-              <rect x="20" y="30" width="46" height="15" rx="7.5" />
-            </g>
-          </svg>
-          <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Cloud</span>
-        </div>
-
-        <!-- Central hub: your cluster -->
-        <div
-          class="absolute top-[60%] left-[40%] z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
-        >
+      <div class="relative mx-auto h-85 w-full max-w-md">
+        @for (p of heroPlugins(); track p.name; let i = $index) {
           <div
-            class="bg-accent-700 flex h-16 w-16 items-center justify-center text-white shadow-md"
-            style="clip-path: polygon(50% 0%, 90% 19%, 99% 61%, 72% 95%, 28% 95%, 1% 61%, 10% 19%)"
+            class="absolute w-72"
+            [style.top.px]="i * 112"
+            [class]="i % 2 === 0 ? (i === 0 ? 'left-0' : 'left-10') : 'right-0'"
           >
-            <app-fundament-logo-icon class="h-8 w-8" />
-          </div>
-          <span class="text-[11px] font-semibold text-gray-700 dark:text-gray-200">Your cluster</span>
-        </div>
-
-        <!-- Plugin nodes wired into the cluster -->
-        @if (heroPlugins()[0]; as p) {
-          <div
-            class="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
-            style="left: 16%; top: 40%"
-          >
-            <div
-              class="bg-accent-600 flex h-12 w-12 items-center justify-center shadow-sm"
-              style="clip-path: polygon(50% 0%, 90% 19%, 99% 61%, 72% 95%, 28% 95%, 1% 61%, 10% 19%)"
-            >
-              <app-plugin-icon
-                [name]="p.icon"
-                iconColor="text-white"
-                class="flex h-6 w-6 items-center justify-center"
-              />
-            </div>
-            <span class="max-w-26 truncate text-[11px] font-medium text-gray-600 dark:text-gray-300">
-              {{ p.displayName }}
-            </span>
-          </div>
-        }
-        @if (heroPlugins()[1]; as p) {
-          <div
-            class="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
-            style="left: 16%; top: 84%"
-          >
-            <div
-              class="bg-accent-600 flex h-12 w-12 items-center justify-center shadow-sm"
-              style="clip-path: polygon(50% 0%, 90% 19%, 99% 61%, 72% 95%, 28% 95%, 1% 61%, 10% 19%)"
-            >
-              <app-plugin-icon
-                [name]="p.icon"
-                iconColor="text-white"
-                class="flex h-6 w-6 items-center justify-center"
-              />
-            </div>
-            <span class="max-w-26 truncate text-[11px] font-medium text-gray-600 dark:text-gray-300">
-              {{ p.displayName }}
-            </span>
-          </div>
-        }
-        @if (heroPlugins()[2]; as p) {
-          <div
-            class="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
-            style="left: 64%; top: 84%"
-          >
-            <div
-              class="bg-accent-600 flex h-12 w-12 items-center justify-center shadow-sm"
-              style="clip-path: polygon(50% 0%, 90% 19%, 99% 61%, 72% 95%, 28% 95%, 1% 61%, 10% 19%)"
-            >
-              <app-plugin-icon
-                [name]="p.icon"
-                iconColor="text-white"
-                class="flex h-6 w-6 items-center justify-center"
-              />
-            </div>
-            <span class="max-w-26 truncate text-[11px] font-medium text-gray-600 dark:text-gray-300">
-              {{ p.displayName }}
-            </span>
+            <nldd-card class="block shadow-lg">
+              <div class="flex items-start gap-3 p-4">
+                <app-plugin-icon
+                  [name]="p.icon"
+                  [label]="p.displayName"
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-1.5 dark:bg-gray-800"
+                />
+                <div class="min-w-0">
+                  <div class="truncate text-sm font-semibold">{{ p.displayName }}</div>
+                  <div class="truncate text-xs text-gray-500 dark:text-gray-400">
+                    {{ p.tagline }}
+                  </div>
+                </div>
+              </div>
+            </nldd-card>
           </div>
         }
       </div>
     </div>
   </div>
-</nldd-card>
+</section>
 
 @if (isLoading()) {
   <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugins...</div>
@@ -209,7 +125,7 @@
             <nldd-icon name="puzzle-piece" class="block! h-4 w-4 shrink-0"></nldd-icon>
             All plugins
           </span>
-          <span class="text-sm tabular-nums text-gray-400 dark:text-gray-500">
+          <span class="text-sm text-gray-400 tabular-nums dark:text-gray-500">
             {{ plugins().length }}
           </span>
         </button>
@@ -225,10 +141,13 @@
             class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left transition-colors"
           >
             <span class="flex items-center gap-2.5">
-              <nldd-icon [name]="categoryIcon(category.id)" class="block! h-4 w-4 shrink-0"></nldd-icon>
+              <nldd-icon
+                [name]="categoryIcon(category.id)"
+                class="block! h-4 w-4 shrink-0"
+              ></nldd-icon>
               {{ category.name }}
             </span>
-            <span class="text-sm tabular-nums text-gray-400 dark:text-gray-500">
+            <span class="text-sm text-gray-400 tabular-nums dark:text-gray-500">
               {{ categoryCount(category.id) }}
             </span>
           </button>
@@ -287,7 +206,9 @@
           <!-- Spotlight: the top featured pick -->
           @if (spotlightPlugin(); as p) {
             <a [routerLink]="['/plugins', p.name]" class="group mb-5 block">
-              <nldd-card class="block">
+              <nldd-card
+                class="hover:ring-accent-200 dark:hover:ring-accent-800 block transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-1"
+              >
                 <div class="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
                   <app-plugin-icon
                     [name]="p.icon"
@@ -342,7 +263,7 @@
           }
 
           @if (gridFeatured().length > 0) {
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
               @for (plugin of gridFeatured(); track plugin.name) {
                 <app-plugin-card [plugin]="plugin" />
               }
@@ -362,53 +283,54 @@
               The newest plugins in the marketplace.
             </p>
           </div>
-          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
             @for (plugin of recentlyAdded(); track plugin.name) {
               <app-plugin-card [plugin]="plugin" />
             }
           </div>
         </section>
+
+        <!-- Build-a-plugin call to action -->
+        <section
+          class="relative mt-14 overflow-hidden rounded-3xl bg-gray-950 p-8 text-white sm:p-12 dark:bg-black dark:ring-1 dark:ring-gray-800"
+        >
+          <div
+            class="pointer-events-none absolute inset-0 text-white/6"
+            style="
+              background-image: radial-gradient(currentColor 1px, transparent 1px);
+              background-size: 22px 22px;
+            "
+            aria-hidden="true"
+          ></div>
+          <div
+            class="bg-accent-500/20 pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full blur-3xl"
+            aria-hidden="true"
+          ></div>
+          <div
+            class="relative flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div class="max-w-xl">
+              <p class="text-accent-300 text-xs font-semibold tracking-[0.14em] uppercase">
+                For platform teams
+              </p>
+              <h2 class="font-display mt-2 text-2xl font-semibold sm:text-3xl">
+                Build a plugin for every Fundament cluster
+              </h2>
+              <p class="mt-3 text-gray-300">
+                Package your operator once and publish it to the marketplace, so any team can
+                install it in a single click.
+              </p>
+            </div>
+            <a routerLink="/manage/create" class="shrink-0">
+              <nldd-button
+                text="Build a plugin"
+                end-icon="arrow-right"
+                variant="primary"
+              ></nldd-button>
+            </a>
+          </div>
+        </section>
       }
     </div>
   </div>
-
-  <!-- Build-a-plugin call to action -->
-  @if (!isFiltering()) {
-    <section
-      class="relative mt-14 overflow-hidden rounded-3xl bg-gray-950 p-8 text-white sm:p-12 dark:bg-black dark:ring-1 dark:ring-gray-800"
-    >
-      <div
-        class="pointer-events-none absolute inset-0 text-white/6"
-        style="background-image: radial-gradient(currentColor 1px, transparent 1px); background-size: 22px 22px;"
-        aria-hidden="true"
-      ></div>
-      <div
-        class="bg-accent-500/20 pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full blur-3xl"
-        aria-hidden="true"
-      ></div>
-      <div
-        class="relative flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div class="max-w-xl">
-          <p class="text-accent-300 text-xs font-semibold tracking-[0.14em] uppercase">
-            For platform teams
-          </p>
-          <h2 class="font-display mt-2 text-2xl font-semibold sm:text-3xl">
-            Build a plugin for every Fundament cluster
-          </h2>
-          <p class="mt-3 text-gray-300">
-            Package your operator once and publish it to the marketplace, so any team can install it
-            in a single click.
-          </p>
-        </div>
-        <a routerLink="/manage/create" class="shrink-0">
-          <nldd-button
-            text="Build a plugin"
-            end-icon="arrow-right"
-            variant="primary"
-          ></nldd-button>
-        </a>
-      </div>
-    </section>
-  }
 }
