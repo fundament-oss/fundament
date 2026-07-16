@@ -1,7 +1,7 @@
 <!-- Hero: a full-bleed band, so it breaks out of the page container and sits
      flush under the top nav (which cancels the surrounding `main` top padding). -->
 <section
-  class="border-dividers relative left-1/2 -mt-8 mb-12 w-screen -translate-x-1/2 overflow-hidden border-b bg-white dark:bg-gray-950"
+  class="border-dividers bg-surface-base relative left-1/2 -mt-8 mb-12 w-screen -translate-x-1/2 overflow-hidden border-b"
 >
   <!-- Cluster canvas: faint node grid + soft accent glow -->
   <div
@@ -116,7 +116,7 @@
           (click)="selectCategory('all')"
           [class]="
             selectedCategory() === 'all'
-              ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
+              ? 'bg-accent-75 text-accent-800 font-semibold'
               : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
           "
           class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left transition-colors"
@@ -135,7 +135,7 @@
             (click)="selectCategory(category.id)"
             [class]="
               selectedCategory() === category.id
-                ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
+                ? 'bg-accent-75 text-accent-800 font-semibold'
                 : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
             "
             class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left transition-colors"

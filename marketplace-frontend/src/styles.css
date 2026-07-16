@@ -71,6 +71,7 @@
   /* Semantic colors */
   --color-dividers: var(--semantics-dividers-color);
   --color-surface-bg: var(--semantics-surfaces-background-color);
+  --color-surface-base: var(--semantics-surfaces-base-background-color);
   --color-surface-tinted: var(--semantics-surfaces-tinted-background-color);
   --color-content: var(--semantics-content-color);
   --color-content-secondary: var(--semantics-content-secondary-color);
@@ -145,16 +146,22 @@ html.dark {
   }
 }
 
-/* Full-bleed sections (e.g. the marketplace hero) are 100vw wide, which
-   includes the scrollbar and would otherwise let the root scroll horizontally.
-   `clip` rather than `hidden`: it does not create a scroll container, so
+/* Full-bleed sections (e.g. the marketplace hero) are 100vw wide, which includes
+   the scrollbar and would otherwise let the page scroll horizontally. Clip on the
+   app root rather than <html>: `overflow` on the root element is not propagated to
+   the viewport for `clip`, so it must sit on a full-width wrapper that is not the
+   scroll container. `clip` (not `hidden`) avoids creating a scroll container, so
    `position: sticky` keeps working for the top nav and category sidebar. */
-html {
+app-root {
+  display: block;
   @apply overflow-x-clip;
 }
 
 body {
-  @apply font-body bg-neutral-25 min-h-screen text-gray-800 dark:bg-gray-900 dark:text-white;
+  /* Use the NLDD slate surface tokens (they auto-switch on color-scheme) rather
+     than hardcoded grays, so dark mode is a lifted slate-blue like the design
+     instead of a flat near-black. */
+  @apply font-body bg-surface-tinted text-content min-h-screen;
 }
 
 /* Card styles */
