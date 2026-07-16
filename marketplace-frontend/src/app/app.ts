@@ -19,13 +19,13 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/form-field';
 import '@nldd/design-system/dropdown';
 import '@nldd/design-system/inline-dialog';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { FundamentLogoIconComponent } from './icons';
 import { ToastService } from './toast.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FundamentLogoIconComponent],
+  imports: [RouterOutlet, RouterLink, FundamentLogoIconComponent],
   host: {
     class: 'flex min-h-dvh flex-col',
   },

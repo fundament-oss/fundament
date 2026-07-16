@@ -77,7 +77,7 @@
             [style.top.px]="i * 112"
             [class]="i % 2 === 0 ? (i === 0 ? 'left-0' : 'left-10') : 'right-0'"
           >
-            <nldd-card class="block shadow-lg">
+            <nldd-card class="block shadow">
               <div class="flex items-start gap-3 p-4">
                 <app-plugin-icon
                   [name]="p.icon"
@@ -85,8 +85,8 @@
                   class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-1.5 dark:bg-gray-800"
                 />
                 <div class="min-w-0">
-                  <div class="truncate text-sm font-semibold">{{ p.displayName }}</div>
-                  <div class="truncate text-xs text-gray-500 dark:text-gray-400">
+                  <div class="truncate text-base font-semibold">{{ p.displayName }}</div>
+                  <div class="truncate text-sm text-gray-500 dark:text-gray-400">
                     {{ p.tagline }}
                   </div>
                 </div>
@@ -254,7 +254,7 @@
                     View plugin
                     <nldd-icon
                       name="arrow-right"
-                      class="block! h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                      class="block! h-4 w-4 transition-transform group-hover:translate-x-px"
                     ></nldd-icon>
                   </span>
                 </div>
