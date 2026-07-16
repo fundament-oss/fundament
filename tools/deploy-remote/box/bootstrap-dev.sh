@@ -7,7 +7,7 @@
 # This is also the whole "persistent machine adoption" story: any box with the
 # system layer (docker, nix-ld, dev packages) + this script = a dev environment.
 set -euo pipefail
-export PATH="$HOME/.nix-profile/bin:/run/current-system/sw/bin:$PATH"
+export PATH="/run/wrappers/bin:$HOME/.nix-profile/bin:/run/current-system/sw/bin:$PATH"
 # Prebuilt node via nix-ld — never compile V8 from source (~50 min).
 export MISE_NODE_COMPILE=0
 REPO="$HOME/fundament"

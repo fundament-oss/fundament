@@ -10,7 +10,7 @@
 # No `set -e`: stage A/B verify their real success and exit hard themselves
 # (mirrors run-stack.sh); the shoot-smoke stages of the TEST role are absent here.
 set -uo pipefail
-export PATH="$HOME/.nix-profile/bin:/run/current-system/sw/bin:$PATH"
+export PATH="/run/wrappers/bin:$HOME/.nix-profile/bin:/run/current-system/sw/bin:$PATH"
 export MISE_NODE_COMPILE=0
 cd "$HOME/fundament" \
   || { echo "FATAL: ~/fundament missing — bootstrap didn't run (just devbox up)"; exit 1; }
