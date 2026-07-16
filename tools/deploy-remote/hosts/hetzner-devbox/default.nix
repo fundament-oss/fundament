@@ -44,25 +44,50 @@
     wantedBy = [ "multi-user.target" ];
     after = [ "local-fs.target" ];
     path = [ pkgs.e2fsprogs pkgs.util-linux pkgs.systemd pkgs.coreutils pkgs.gnugrep ];
-    serviceConfig = { Type = "oneshot"; RemainAfterExit = true; };
+    # Bounded: sshd orders After= this unit — a hang here (udev settle, faulty
+    # device) must never keep the box's only access path from starting.
+    serviceConfig = { Type = "oneshot"; RemainAfterExit = true; TimeoutStartSec = "5min"; };
     script = ''
       set -euo pipefail
-      dev=$(ls /dev/disk/by-id/scsi-0HC_Volume_* 2>/dev/null | head -1) || true
-      if [ -z "''${dev:-}" ]; then
-        echo "devbox-home-setup: no Hetzner volume attached; home stays on the root disk"
-        exit 0
+      # Already-labeled volume attached? Nothing to adopt — just mount it.
+      if blkid -L devbox-home >/dev/null 2>&1; then
+        systemctl start home-fundament.mount || true
+      else
+        vols=$(ls /dev/disk/by-id/scsi-0HC_Volume_* 2>/dev/null || true)
+        count=$(printf '%s\n' "$vols" | grep -c . || true)
+        if [ "$count" -eq 0 ]; then
+          echo "devbox-home-setup: no Hetzner volume attached; home stays on the root disk"
+          exit 0
+        fi
+        # NEVER guess between multiple unlabeled volumes: labeling (or worse,
+        # formatting) the wrong one destroys foreign data. Adopt only when the
+        # candidate is unambiguous.
+        if [ "$count" -gt 1 ]; then
+          echo "devbox-home-setup: $count volumes attached and none labeled devbox-home — refusing to adopt; label one manually (e2label <dev> devbox-home)"
+          exit 0
+        fi
+        dev=$vols
+        fstype=$(blkid -o value -s TYPE "$dev" 2>/dev/null || true)
+        if [ -z "$fstype" ]; then
+          echo "devbox-home-setup: blank volume — formatting ext4 with label devbox-home"
+          mkfs.ext4 -q -L devbox-home "$dev"
+        elif [ "$fstype" = "ext4" ]; then
+          echo "devbox-home-setup: labeling existing ext4 volume"
+          e2label "$dev" devbox-home
+        else
+          echo "devbox-home-setup: volume has fstype '$fstype' — refusing to touch it"
+          exit 0
+        fi
+        udevadm trigger --settle "$dev" 2>/dev/null || udevadm trigger "$dev" || true
+        systemctl start home-fundament.mount || true
       fi
-      fstype=$(blkid -o value -s TYPE "$dev" 2>/dev/null || true)
-      label=$(blkid -o value -s LABEL "$dev" 2>/dev/null || true)
-      if [ -z "$fstype" ]; then
-        echo "devbox-home-setup: blank volume — formatting ext4 with label devbox-home"
-        mkfs.ext4 -q -L devbox-home "$dev"
-      elif [ "$fstype" = "ext4" ] && [ "$label" != "devbox-home" ]; then
-        echo "devbox-home-setup: labeling existing ext4 volume"
-        e2label "$dev" devbox-home
+      # First-use ownership: the volume arrives Hetzner-pre-formatted with a
+      # root-owned filesystem root; nothing else re-chowns a home that is a
+      # mount point (activation only handles the root-disk dir it created).
+      if mountpoint -q /home/fundament && [ "$(stat -c %U /home/fundament)" = root ]; then
+        chown fundament:users /home/fundament
+        chmod 700 /home/fundament
       fi
-      udevadm trigger --settle "$dev" 2>/dev/null || udevadm trigger "$dev" || true
-      systemctl start home-fundament.mount || true
     '';
   };
 

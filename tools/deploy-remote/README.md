@@ -153,3 +153,11 @@ boots legacy BIOS (GRUB + EF02/ESP dual layout); `HZ_TYPE=cx53` default
 smaller `HZ_TYPE=cx43`); management SSH on **2022** (Gardener's kind bastion
 publishes :22); secrets never enter the flake (`cache/admin-keys.nix` is
 generated per-deploy from your pubkey, install keys are throwaway per-`up`).
+
+More caveats (both roles): `up` needs a running **Docker daemon** — select a
+non-default context with `DOCKER_CONTEXT=orbstack just … up` (a wrong context on
+colima/OrbStack means a silently EMPTY bind mount in the install container);
+the login pubkey defaults to `~/.ssh/id_ed25519.pub` (else `id_rsa.pub`) —
+override with `ADMIN_PUBKEY=…` or `admin_pubkey` in `secrets/hetzner.env`;
+gitignored `cache/` holds fetched binaries, the fetched CA cert, ssh config +
+host-key pin — delete it when you're done with a box family.

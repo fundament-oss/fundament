@@ -12,6 +12,19 @@ export PATH="$HOME/.nix-profile/bin:/run/current-system/sw/bin:$PATH"
 export MISE_NODE_COMPILE=0
 REPO="$HOME/fundament"
 
+# Refuse to build "persistent" state on the wrong disk: on a cattle devbox
+# (DEVBOX_EXPECT_VOLUME=1, set by hetzner.sh) $HOME must be the labeled volume —
+# its mount is nofail, so a silent mount failure would otherwise send repos,
+# Claude login, and the CA to the root disk that dies with the box tonight.
+# Persistent dedicated machines run this script without the flag.
+if [ "${DEVBOX_EXPECT_VOLUME:-0}" = 1 ]; then
+  if [ "$(findmnt -n -o TARGET -S LABEL=devbox-home 2>/dev/null)" != "$HOME" ]; then
+    echo "FATAL: $HOME is not the devbox-home volume — nothing durable would survive 'down'."
+    echo "       Inspect on the box: systemctl status devbox-home-setup home-fundament.mount"
+    exit 1
+  fi
+fi
+
 echo "== 1. repo on the volume (clone once; existing checkout/WIP untouched) =="
 if [ ! -d "$REPO/.git" ]; then
   [ -e "$REPO" ] && { echo "   removing incomplete $REPO"; rm -rf "$REPO"; }
@@ -78,6 +91,23 @@ EOF
   echo "   $(openssl x509 -in "$CAROOT/rootCA.pem" -noout -subject)"
 else
   echo "   CA present in $CAROOT (stable across box recreations)"
+fi
+
+echo "== 4b. on-box trust for the CA (mkcert -install can't write NixOS's system store) =="
+# Working ON the box (curl/functl/e2e against *.fundament.localhost) needs the
+# CA trusted box-side too. mkcert's Linux system-store install probes FHS paths
+# NixOS doesn't have (silent no-op), so export env instead: Go + OpenSSL-curl
+# honor SSL_CERT_FILE (a full bundle), node wants NODE_EXTRA_CA_CERTS.
+BUNDLE="$HOME/.local/share/devbox-ca-bundle.pem"
+mkdir -p "$(dirname "$BUNDLE")"
+SYS_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+[ -f "$SYS_BUNDLE" ] || SYS_BUNDLE=/etc/ssl/certs/ca-bundle.crt
+cat "$SYS_BUNDLE" "$CAROOT/rootCA.pem" > "$BUNDLE"
+if ! grep -qs 'devbox-ca-bundle' "$HOME/.bashrc" 2>/dev/null; then
+  {
+    echo "export SSL_CERT_FILE=\"$BUNDLE\""
+    echo "export NODE_EXTRA_CA_CERTS=\"$CAROOT/rootCA.pem\""
+  } >> "$HOME/.bashrc"
 fi
 
 echo "== 5. optional personal dotfiles (set DEVBOX_DOTFILES=<git-url> to enable) =="

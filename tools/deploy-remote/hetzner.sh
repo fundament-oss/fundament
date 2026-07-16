@@ -10,7 +10,9 @@
 #     --build-on-remote work: the box builds the closure itself (native x86_64), the
 #     container just orchestrates over SSH. Clean disko install — no infect.
 #
-# Runs on macOS or Linux. Usage: ./hetzner.sh {up|down|ssh|status|stack|certs|tunnel}
+# Runs on macOS or Linux. Usage: see the dispatch at the bottom of this file
+# (test role: up|down|ssh|status|stack|certs|tunnel; the devbox role adds
+# up --stack, stack <mode>, ssh-config, destroy-volume).
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -80,9 +82,12 @@ case "$HZ_ROLE" in
     FLAKE_TARGET=hetzner
     ;;
   devbox)
+    # HZ_NAME would silently re-key the volume/CA/ssh-config identity too —
+    # refuse it; devbox_name is the one supported name knob.
+    [ -n "$HZ_NAME" ] && die "HZ_NAME is not supported for the devbox role — set devbox_name in $ENVFILE instead (the name also keys your volume and CA)"
     # Per-dev naming: devbox_name from secrets/hetzner.env, else the local user.
     DEVBOX_NAME=${devbox_name:-$(id -un)}
-    HZ_NAME=${HZ_NAME:-devbox-$DEVBOX_NAME}
+    HZ_NAME=devbox-$DEVBOX_NAME
     VOL_NAME=$HZ_NAME-home
     VOL_SIZE=${HZ_VOLUME_SIZE:-100}      # GB; ~EUR 0.05/GB/mo, resizable online
     FLAKE_TARGET=hetzner-devbox
@@ -147,7 +152,10 @@ trust_box_ca() { # ip
   boxroot=$(ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" \
     'export PATH=$HOME/.nix-profile/bin:$PATH; cd ~/fundament 2>/dev/null && mise exec -- mkcert -CAROOT 2>/dev/null' </dev/null) \
     || die "couldn't reach the box to read its mkcert CA"
-  [ -n "$boxroot" ] || die "box has no mkcert CA yet (run ./hetzner.sh stack first)"
+  if [ -z "$boxroot" ]; then
+    [ "$HZ_ROLE" = devbox ] && die "box has no CA yet — bootstrap didn't finish; run: just devbox up (or: just devbox stack mock)"
+    die "box has no mkcert CA yet (run ./hetzner.sh stack first)"
+  fi
   mkdir -p "$BOX_CA"
   # Only the CERT — mkcert -install/-uninstall work keyless; the CA private key stays on the box.
   scp -P "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip:$boxroot/rootCA.pem" "$BOX_CA/" \
@@ -210,9 +218,9 @@ stage_flake_src() {
 # HZ_LOCATION to it — Hetzner volumes are location-bound, the box must follow.
 ensure_volume() {
   local loc
-  if hc volume describe "$VOL_NAME" >/dev/null 2>&1; then
-    loc=$(hc volume describe "$VOL_NAME" -o format='{{.Location.Name}}' 2>/dev/null || true)
-    [ -n "$loc" ] && HZ_LOCATION=$loc
+  loc=$(hc volume describe "$VOL_NAME" -o format='{{.Location.Name}}' 2>/dev/null || true)
+  if [ -n "$loc" ]; then
+    HZ_LOCATION=$loc
     log "volume $VOL_NAME exists @ $HZ_LOCATION — yesterday's state carries over"
   else
     log "creating volume $VOL_NAME (${VOL_SIZE}GB ext4 @ $HZ_LOCATION) — bills (~EUR 0.05/GB/mo) until 'devbox destroy-volume'"
@@ -224,14 +232,26 @@ ensure_volume() {
 # Attach the volume to this role's box (idempotent; refuses a volume that is
 # attached to some other server — that means another box of yours is still up).
 attach_volume() {
-  local server_id attached_id
+  local server_id attached_id i
   server_id=$(hc server describe "$HZ_NAME" -o format='{{.ID}}') || die "no $HZ_NAME server"
   attached_id=$(hc volume describe "$VOL_NAME" -o format='{{if .Server}}{{.Server.ID}}{{end}}' 2>/dev/null || true)
+  if [ -n "$attached_id" ] && [ "$attached_id" != "$server_id" ]; then
+    # A LIVE foreign server is a real conflict; a attachment to a just-deleted
+    # server is Hetzner's asynchronous auto-detach still propagating — wait it out.
+    hc server describe "$attached_id" >/dev/null 2>&1 \
+      && die "$VOL_NAME is attached to another server (id $attached_id) — down that box first"
+    log "waiting for $VOL_NAME to detach from the deleted server"
+    for i in $(seq 1 12); do
+      sleep 5
+      attached_id=$(hc volume describe "$VOL_NAME" -o format='{{if .Server}}{{.Server.ID}}{{end}}' 2>/dev/null || true)
+      if [ -z "$attached_id" ] || [ "$attached_id" = "$server_id" ]; then break; fi
+    done
+  fi
   if [ -z "$attached_id" ]; then
     log "attaching $VOL_NAME to $HZ_NAME"
     hc volume attach "$VOL_NAME" --server "$HZ_NAME" >/dev/null || die "volume attach failed"
   elif [ "$attached_id" != "$server_id" ]; then
-    die "$VOL_NAME is attached to another server (id $attached_id) — down that box first"
+    die "$VOL_NAME never detached (still on id $attached_id) — check 'just devbox status'"
   fi
 }
 
@@ -271,8 +291,17 @@ warn_dirty_repos() { # ip
 # forward). Include it once from ~/.ssh/config; `up` regenerates it with the
 # fresh IP, so mornings need no manual step.
 write_ssh_config() { # ip
-  local ip=$1
+  local ip=$1 kh=cache/devbox-known_hosts
   mkdir -p cache
+  # PIN the box host key: this block forwards the ssh agent, so host identity
+  # must be verified — a Hetzner-recycled IP (e.g. ssh'ing after 'down' out of
+  # muscle memory) must never see the agent. The key is scanned fresh per 'up'
+  # (new box = new key) and 'down' deletes the block + pin entirely.
+  if ! ssh-keyscan -p "$SSH_PORT" -T 10 "$ip" > "$kh" 2>/dev/null || [ ! -s "$kh" ]; then
+    rm -f "$kh"
+    log "WARN: could not scan the box host key — managed ssh config NOT written (use ./hetzner.sh ssh)"
+    return 0
+  fi
   cat > "$SSHCONF" <<EOF
 # GENERATED by 'devbox up' — do not edit; include from ~/.ssh/config:
 #   Include $PWD/$SSHCONF
@@ -280,17 +309,20 @@ Host $HZ_NAME
   HostName $ip
   Port $SSH_PORT
   User $BOX_USER
-  # Cattle: IPs get reused across recreations — never record host keys.
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
+  # Host key pinned per-'up' (agent forwarding demands host authentication).
+  StrictHostKeyChecking yes
+  UserKnownHostsFile $PWD/$kh
   LogLevel ERROR
   # Multiplexing: instant extra sessions + snappy VS Code Remote-SSH.
   ControlMaster auto
   ControlPath ~/.ssh/cm-%r@%h-%p
   ControlPersist 600
   # One forward serves every *.fundament.localhost UI (name-routed ingress).
+  # Fail LOUDLY if local 8443 is taken (a local k3d) — a silent bind failure
+  # would serve the LOCAL stack at the identical origin.
   LocalForward 8443 127.0.0.1:8443
-  # Agent forwarding scoped to this host only (use 'ssh-add -c' for confirm-per-use).
+  ExitOnForwardFailure yes
+  # Agent forwarding scoped to this pinned host only ('ssh-add -c' to confirm per use).
   ForwardAgent yes
 EOF
   log "ssh config written: $SSHCONF   (once: add 'Include $PWD/$SSHCONF' to ~/.ssh/config)"
@@ -300,27 +332,48 @@ EOF
 cmd_ssh_config() { require_devbox ssh-config; local ip; ip=$(box_ip); write_ssh_config "$ip"; }
 
 # Push the devbox on-box scripts (user-layer bootstrap + mode-aware stack).
+# rm -rf first: ~/box is on the persistent VOLUME here, so stale scripts from
+# yesterday (or another role) would otherwise survive box recreations forever.
 push_dev_scripts() { # ip
   local ip=$1
-  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'mkdir -p ~/box' </dev/null
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'rm -rf ~/box && mkdir -p ~/box' </dev/null
   scp -P "$SSH_PORT" "${SSH_OPTS[@]}" box/bootstrap-dev.sh box/run-stack-dev.sh "$BOX_USER@$ip:box/" >/dev/null
   ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'chmod +x ~/box/*.sh' </dev/null
 }
 
+# Run the user-layer bootstrap on the box (scripts already pushed). Idempotent.
+# DEVBOX_EXPECT_VOLUME=1 makes it refuse to build "persistent" state on the
+# root disk if the home volume silently failed to mount (nofail).
+run_dev_bootstrap() { # ip
+  local ip=$1
+  log "bootstrapping the dev user layer (repo, mise, Claude Code, constrained CA)"
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "$BOX_USER@$ip" \
+    "DEVBOX_EXPECT_VOLUME=1 DEVBOX_DOTFILES='${DEVBOX_DOTFILES:-${devbox_dotfiles:-}}' ~/box/bootstrap-dev.sh" </dev/null \
+    || die "bootstrap-dev failed on the box — inspect with: just devbox ssh"
+}
+
+# Run/switch the stack on the box (scripts already pushed, bootstrap done).
+run_dev_stack() { # ip mode
+  local ip=$1 mode=$2
+  log "running the $mode stack on $HZ_NAME (gardener adds ~10-15 min for the seed)"
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "$BOX_USER@$ip" \
+    "STACK_MODE=$mode ~/box/run-stack-dev.sh" </dev/null \
+    || die "stack failed on the box — inspect with: just devbox ssh"
+}
+
 # Post-install devbox finishing: user-layer bootstrap (repo/mise/Claude/CA on the
 # volume — fast when the volume is warm), cycle the CA trust ON, fresh ssh config,
-# then optionally the stack. Idempotent end to end.
+# then optionally the stack. Idempotent end to end — also the path a reused
+# already-installed box takes, so a second 'up' is a cheap no-op refresh.
 finish_devbox_up() { # ip stack_mode
   local ip=$1 stack_mode=${2:-}
   push_dev_scripts "$ip"
-  log "bootstrapping the dev user layer (repo, mise, Claude Code, constrained CA)"
-  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "$BOX_USER@$ip" \
-    "DEVBOX_DOTFILES='${DEVBOX_DOTFILES:-${devbox_dotfiles:-}}' ~/box/bootstrap-dev.sh" </dev/null \
-    || die "bootstrap-dev failed on the box — inspect with: just devbox ssh"
+  run_dev_bootstrap "$ip"
   trust_box_ca "$ip"       # trust cycles with the box: ON here, OFF at 'down'
   write_ssh_config "$ip"
   if [ -n "$stack_mode" ]; then
-    cmd_stack "$stack_mode"
+    run_dev_stack "$ip" "$stack_mode"
+    print_access
   fi
   log "READY:  ssh $HZ_NAME   (home = $VOL_NAME, mounted at /home/$BOX_USER)"
   [ -z "$stack_mode" ] && log "stack:  just devbox stack mock   # or: gardener (also switches a live box)"
@@ -410,18 +463,34 @@ cmd_up() {
     || die "failed to register the install key with hcloud"
 
   # Cattle: recover cheaply if we can, else start fresh (destroy + recreate). HZ_RETRIES total attempts.
-  local tries=${HZ_RETRIES:-2} n=0 ip
+  local tries=${HZ_RETRIES:-2} n=0 ip existed
   while :; do
     n=$((n + 1))
+    existed=0
     if ! hc server describe "$HZ_NAME" >/dev/null 2>&1; then
       log "creating $HZ_NAME ($HZ_TYPE @ $HZ_LOCATION) — BILLING STARTS"
       hc server create --name "$HZ_NAME" --type "$HZ_TYPE" --image "$HZ_IMAGE" \
         --location "$HZ_LOCATION" --ssh-key "$HZ_KEYNAME" \
         || die "server create failed (on resource_unavailable try another HZ_LOCATION, e.g. hel1/fsn1)"
     else
+      existed=1
       log "$HZ_NAME already exists; reusing"
     fi
     ip=$(box_ip)
+    # An already-INSTALLED box answers on :$SSH_PORT and can never be reached on
+    # :22 with this run's fresh install key — the install path would stall ~8 min
+    # and then destroy a LIVE box. Detect it and finish idempotently instead.
+    if [ "$existed" = 1 ] && wait_ssh "$ip" "$BOX_USER" 3 "$SSH_PORT"; then
+      log "$HZ_NAME is already installed and reachable — refreshing instead of reinstalling"
+      if [ "$HZ_ROLE" = devbox ]; then
+        attach_volume
+        finish_devbox_up "$ip" "$stack_mode"
+      else
+        log "READY:  ssh -p $SSH_PORT $BOX_USER@$ip   (or: ./hetzner.sh ssh)"
+        log "BILLING IS RUNNING — tear down with: ./hetzner.sh down"
+      fi
+      return 0
+    fi
     # Attach BEFORE the install so the first boot's devbox-home-setup sees the disk.
     # (disko only ever touches /dev/sda; the volume is a separate scsi device.)
     [ "$HZ_ROLE" = devbox ] && attach_volume
@@ -437,6 +506,9 @@ cmd_up() {
     fi
     [ "$n" -ge "$tries" ] && die "deploy failed after $n attempt(s). Inspect with ./hetzner.sh ssh, or ./hetzner.sh down."
     log "attempt $n failed — starting fresh (destroying $HZ_NAME and recreating)"
+    # Detach first (like cmd_down): a delete with the volume attached leaves an
+    # async stale attachment that the next attempt's attach_volume must wait out.
+    [ "$HZ_ROLE" = devbox ] && detach_volume
     hc server delete "$HZ_NAME" >/dev/null 2>&1 || true
     sleep 5
   done
@@ -453,11 +525,23 @@ cmd_down() {
     fi
     untrust_box_ca          # trust cycles with the box; the CA itself stays on the volume
     detach_volume
-    hc server delete "$HZ_NAME" && log "deleted $HZ_NAME — server billing stopped ($VOL_NAME kept; 'devbox up' tomorrow resumes from it)."
+    if hc server describe "$HZ_NAME" >/dev/null 2>&1; then
+      hc server delete "$HZ_NAME" || log "WARN: server delete failed — check 'just devbox status' (billing!)"
+    else
+      log "no $HZ_NAME server — already down"
+    fi
+    # The managed ssh block must not outlive the box: a recycled IP behind a
+    # stale alias (with agent forwarding) is exactly what the pin protects against.
+    rm -f "$SSHCONF" cache/devbox-known_hosts
+    log "$HZ_NAME down — server billing stopped ($VOL_NAME kept; 'devbox up' tomorrow resumes from it)."
     return
   fi
   untrust_box_ca
-  hc server delete "$HZ_NAME" && log "deleted $HZ_NAME — billing stopped."
+  if hc server describe "$HZ_NAME" >/dev/null 2>&1; then
+    hc server delete "$HZ_NAME" && log "deleted $HZ_NAME — billing stopped."
+  else
+    log "no $HZ_NAME server — already down."
+  fi
 }
 # list the project's servers (so a billing box is never forgotten);
 # devbox also lists volumes — they bill too, deliberately, until destroy-volume.
@@ -518,10 +602,13 @@ cmd_stack() {
     ensure_hcloud
     local ip; ip=$(box_ip)
     push_dev_scripts "$ip"
-    log "running the $mode stack on $HZ_NAME (gardener adds ~10-15 min for the seed)"
-    ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "$BOX_USER@$ip" \
-      "STACK_MODE=$mode ~/box/run-stack-dev.sh" </dev/null \
-      || die "stack failed on the box — inspect with: just devbox ssh"
+    # Chain the (idempotent, fast-when-warm) bootstrap like the test role does:
+    # covers a box whose 'up' died mid-bootstrap, and a repo/CA that never landed.
+    run_dev_bootstrap "$ip"
+    run_dev_stack "$ip" "$mode"
+    # Re-assert local trust (mkcert -install skips silently when already trusted)
+    # so 'stack' from a second machine works without a separate 'certs' step.
+    trust_box_ca "$ip"
     print_access
     return
   fi

@@ -12,7 +12,8 @@
 set -uo pipefail
 export PATH="$HOME/.nix-profile/bin:/run/current-system/sw/bin:$PATH"
 export MISE_NODE_COMPILE=0
-cd "$HOME/fundament"
+cd "$HOME/fundament" \
+  || { echo "FATAL: ~/fundament missing — bootstrap didn't run (just devbox up)"; exit 1; }
 MODE=${STACK_MODE:?STACK_MODE=mock|gardener required}
 case "$MODE" in mock|gardener) ;; *) echo "STACK_MODE must be mock|gardener"; exit 1 ;; esac
 VKC=.dev/gardener/dev-setup/kubeconfigs/virtual-garden/kubeconfig
@@ -41,15 +42,18 @@ if [ "$MODE" = gardener ]; then
 fi
 
 log "=== STAGE C: fundament deploy (skaffold, $MODE profile set) ==="
+rc=0
 if [ "$MODE" = gardener ]; then
-  mise exec -- bash -c 'export SKAFFOLD_DEFAULT_REPO=localhost:5111; skaffold run --profile env-local --profile local-gardener' \
-    || log "skaffold returned nonzero (check pods; often app-level readiness, not the deploy)"
+  mise exec -- bash -c 'export SKAFFOLD_DEFAULT_REPO=localhost:5111; skaffold run --profile env-local --profile local-gardener' || rc=$?
 else
-  mise exec -- bash -c 'export SKAFFOLD_DEFAULT_REPO=localhost:5111; skaffold run --profile env-local' \
-    || log "skaffold returned nonzero (check pods; often app-level readiness, not the deploy)"
+  mise exec -- bash -c 'export SKAFFOLD_DEFAULT_REPO=localhost:5111; skaffold run --profile env-local' || rc=$?
 fi
 
-log "=== DONE ($MODE) ==="
+log "=== SUMMARY ($MODE) ==="
 mise exec -- kubectl --context k3d-fundament get pods -n fundament 2>/dev/null | head -20
-[ "$MODE" = gardener ] && mise exec -- kubectl --kubeconfig "$VKC" get seed local 2>/dev/null
-exit 0
+if [ "$MODE" = gardener ]; then mise exec -- kubectl --kubeconfig "$VKC" get seed local 2>/dev/null; fi
+# Propagate the deploy result — a failed skaffold must NOT read as READY back on
+# the laptop. (Known flake: organization-api readiness can trip the status check;
+# if the pods above look healthy, re-run 'just devbox stack '"$MODE"'.)
+[ "$rc" -ne 0 ] && log "FATAL: skaffold exited $rc — the stack is NOT fully deployed"
+exit "$rc"
