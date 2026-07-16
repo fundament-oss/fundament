@@ -110,7 +110,7 @@
       >
         Browse
       </h2>
-      <nav class="space-y-1" aria-label="Plugin categories">
+      <nav class="space-y-1.5" aria-label="Plugin categories">
         <button
           type="button"
           (click)="selectCategory('all')"
@@ -126,7 +126,7 @@
             All plugins
           </span>
           <span class="text-sm text-gray-400 tabular-nums dark:text-gray-500">
-            {{ plugins().length }}
+            {{ searchMatches().length }}
           </span>
         </button>
         @for (category of categories(); track category.id) {
@@ -163,6 +163,11 @@
           <h2 class="font-display text-2xl font-semibold">
             @if (searchQuery().trim()) {
               Results for “{{ searchQuery().trim() }}”
+              @if (selectedCategory() !== 'all') {
+                <span class="font-normal text-gray-500 dark:text-gray-400">
+                  in {{ selectedCategory() }}
+                </span>
+              }
             } @else {
               {{ selectedCategory() }}
             }
@@ -178,8 +183,17 @@
               icon="puzzle-piece"
               icon-color="secondary"
               text="No plugins found"
-              supporting-text="Try a different search term or category."
-            ></nldd-inline-dialog>
+              [supportingText]="emptyStateMessage()"
+            >
+              @if (widenableMatchCount() > 0) {
+                <nldd-button
+                  slot="actions"
+                  (click)="selectCategory('all')"
+                  [text]="'Search all categories (' + widenableMatchCount() + ')'"
+                  variant="secondary"
+                ></nldd-button>
+              }
+            </nldd-inline-dialog>
           </nldd-box>
         } @else {
           <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">

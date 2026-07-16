@@ -12,7 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TitleService } from '../title.service';
 import MarketplaceService, { type MarketplacePlugin, type Category } from './marketplace.service';
 import PluginCardComponent from './plugin-card.component';
-import { FundamentLogoIconComponent, PluginIconComponent } from '../icons';
+import { PluginIconComponent } from '../icons';
 
 @Component({
   selector: 'app-marketplace-index',
@@ -52,10 +52,7 @@ export default class MarketplaceIndexComponent implements OnInit {
     () => this.selectedCategory() !== 'all' || this.searchQuery().trim().length > 0,
   );
 
-  private matchesFilters = (plugin: MarketplacePlugin): boolean => {
-    if (this.selectedCategory() !== 'all' && plugin.category !== this.selectedCategory()) {
-      return false;
-    }
+  private matchesSearch = (plugin: MarketplacePlugin): boolean => {
     const q = this.searchQuery().trim().toLowerCase();
     if (!q) return true;
     return (
@@ -66,7 +63,21 @@ export default class MarketplaceIndexComponent implements OnInit {
     );
   };
 
+  // The search is scoped to the selected category: category and query narrow
+  // the list together rather than one replacing the other.
+  private matchesFilters = (plugin: MarketplacePlugin): boolean => {
+    if (this.selectedCategory() !== 'all' && plugin.category !== this.selectedCategory()) {
+      return false;
+    }
+    return this.matchesSearch(plugin);
+  };
+
   filteredPlugins = computed(() => this.plugins().filter(this.matchesFilters));
+
+  // Search hits across every category, ignoring the sidebar selection. Drives
+  // the browse counts and the "search all categories" escape hatch, so a scoped
+  // search that comes up empty can still point at where the matches live.
+  searchMatches = computed(() => this.plugins().filter(this.matchesSearch));
 
   featuredPlugins = computed(() => this.plugins().filter((plugin) => plugin.featured));
 
@@ -84,9 +95,30 @@ export default class MarketplaceIndexComponent implements OnInit {
 
   officialCount = computed(() => this.plugins().filter((plugin) => plugin.official).length);
 
+  // Counts track the active search, so the sidebar shows where the hits are
+  // rather than a static catalogue total that contradicts the visible results.
   categoryCount(categoryId: string): number {
-    return this.plugins().filter((plugin) => plugin.category === categoryId).length;
+    return this.searchMatches().filter((plugin) => plugin.category === categoryId).length;
   }
+
+  // Hits for the current query outside the selected category. Only meaningful
+  // when the scoped result set is empty, which is where it is offered.
+  widenableMatchCount = computed(() =>
+    this.selectedCategory() === 'all' || !this.searchQuery().trim()
+      ? 0
+      : this.searchMatches().length,
+  );
+
+  emptyStateMessage = computed(() => {
+    const query = this.searchQuery().trim();
+    const category = this.selectedCategory();
+    if (!query) return `No plugins in ${category} yet.`;
+    const outside = this.widenableMatchCount();
+    if (outside > 0) {
+      return `No plugins in ${category} match “${query}”, but ${outside} elsewhere ${outside === 1 ? 'does' : 'do'}.`;
+    }
+    return `No plugins match “${query}”. Try a different search term.`;
+  });
 
   // Infra-flavoured icon per category, shown in the browse sidebar.
   private readonly categoryIcons: Record<string, string> = {

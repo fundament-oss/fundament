@@ -53,16 +53,19 @@ export default class App implements OnInit {
     this.searchQuery.set(value);
     // Filter in real time: reflect the query into the URL as the user types so
     // the marketplace home updates immediately. replaceUrl keeps keystrokes out
-    // of the browser history.
+    // of the browser history, and scroll: 'manual' opts this navigation out of
+    // the router's scroll-to-top so the results stay put under the reader.
     this.router.navigate(['/'], {
       queryParams: { q: value || null },
       replaceUrl: true,
+      scroll: 'manual',
     });
   }
 
   submitSearch() {
     this.router.navigate(['/'], {
       queryParams: { q: this.searchQuery() || null },
+      scroll: 'manual',
     });
   }
 
