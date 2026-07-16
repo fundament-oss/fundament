@@ -11,7 +11,9 @@ import { type MarketplacePlugin } from './marketplace.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a [routerLink]="['/plugins', plugin().name]" class="group block h-full">
-      <nldd-card class="block h-full">
+      <nldd-card
+        class="hover:ring-accent-200 dark:hover:ring-accent-800 block h-full transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-1"
+      >
         <div class="flex h-full flex-col gap-3 p-5">
           <div class="flex items-start gap-3">
             <app-plugin-icon
@@ -34,8 +36,12 @@ import { type MarketplacePlugin } from './marketplace.service';
           <p class="line-clamp-2 flex-1 text-sm text-gray-600 dark:text-gray-300">
             {{ plugin().tagline }}
           </p>
-          <div>
+          <div class="flex items-center justify-between">
             <nldd-tag size="sm" color="neutral" [text]="plugin().category"></nldd-tag>
+            <span class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+              <nldd-icon name="cloud-arrow-down" class="block! h-3.5 w-3.5"></nldd-icon>
+              {{ plugin().installs }}
+            </span>
           </div>
         </div>
       </nldd-card>

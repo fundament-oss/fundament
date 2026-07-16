@@ -7,15 +7,16 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TitleService } from '../title.service';
 import MarketplaceService, { type MarketplacePlugin, type Category } from './marketplace.service';
 import PluginCardComponent from './plugin-card.component';
+import { FundamentLogoIconComponent, PluginIconComponent } from '../icons';
 
 @Component({
   selector: 'app-marketplace-home',
-  imports: [PluginCardComponent],
+  imports: [PluginCardComponent, PluginIconComponent, FundamentLogoIconComponent, RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './marketplace-home.component.html',
@@ -69,12 +70,34 @@ export default class MarketplaceHomeComponent implements OnInit {
 
   featuredPlugins = computed(() => this.plugins().filter((plugin) => plugin.featured));
 
+  // The single featured pick gets a larger spotlight treatment; the rest fill the grid.
+  spotlightPlugin = computed(() => this.featuredPlugins()[0] ?? null);
+
+  gridFeatured = computed(() => this.featuredPlugins().slice(1));
+
+  // Up to four featured logos wired to the central hub in the hero panel.
+  heroPlugins = computed(() => this.featuredPlugins().slice(0, 4));
+
   recentlyAdded = computed(() =>
     [...this.plugins()].sort((a, b) => b.addedAt.localeCompare(a.addedAt)).slice(0, 6),
   );
 
+  officialCount = computed(() => this.plugins().filter((plugin) => plugin.official).length);
+
   categoryCount(categoryId: string): number {
     return this.plugins().filter((plugin) => plugin.category === categoryId).length;
+  }
+
+  // Infra-flavoured icon per category, shown in the browse sidebar.
+  private readonly categoryIcons: Record<string, string> = {
+    Database: 'cylinder-split',
+    Networking: 'centralized-network',
+    Observability: 'chart-x-y-axis-line',
+    Security: 'shield-check-mark',
+  };
+
+  categoryIcon(categoryId: string): string {
+    return this.categoryIcons[categoryId] ?? 'puzzle-piece';
   }
 
   async ngOnInit() {

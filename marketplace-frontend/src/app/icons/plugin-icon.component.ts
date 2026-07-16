@@ -18,10 +18,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
       [attr.aria-label]="label() || null"
       [attr.aria-hidden]="label() ? null : 'true'"
     >
-      <span
-        class="text-accent-500 dark:text-accent-400 block h-full w-full bg-current"
-        [style]="maskStyle()"
-      ></span>
+      <span [class]="innerClass()" [style]="maskStyle()"></span>
     </span>
   `,
 })
@@ -31,6 +28,12 @@ export default class PluginIconComponent {
   label = input('');
 
   class = input('');
+
+  // Tailwind text-color classes for the glyph; the mask is painted with the
+  // element's current color, so callers can tint it (e.g. white on a badge).
+  iconColor = input('text-accent-500 dark:text-accent-400');
+
+  protected innerClass = computed(() => `${this.iconColor()} block h-full w-full bg-current`);
 
   protected maskStyle = computed(() => {
     const url = `url(/img/plugins/${this.name()}.svg)`;

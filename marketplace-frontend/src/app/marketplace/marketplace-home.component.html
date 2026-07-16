@@ -1,25 +1,199 @@
 <!-- Hero -->
-<section
-  class="from-accent-50 to-accent-100 dark:from-accent-950 dark:to-accent-900 mb-10 overflow-hidden rounded-2xl bg-gradient-to-br p-8 sm:p-12"
->
-  <div class="max-w-2xl">
-    <h1 class="text-3xl font-semibold sm:text-4xl">
-      Plugins that integrate with your Fundament clusters
-    </h1>
-    <p class="mt-3 text-lg text-gray-700 dark:text-gray-200">
-      Add databases, networking, observability and security to your clusters with a single click.
-      Browse plugins built by the platform team and the community.
-    </p>
+<nldd-card class="relative mb-12 block">
+  <!-- Cluster canvas: faint node grid + soft accent glow -->
+  <div
+    class="pointer-events-none absolute inset-0 text-gray-900/5 dark:text-white/6"
+    style="background-image: radial-gradient(currentColor 1px, transparent 1px); background-size: 22px 22px;"
+    aria-hidden="true"
+  ></div>
+  <div
+    class="bg-accent-300/30 dark:bg-accent-500/20 pointer-events-none absolute -top-24 -right-16 h-72 w-72 rounded-full blur-3xl"
+    aria-hidden="true"
+  ></div>
+
+  <div class="relative grid items-center gap-10 p-8 sm:p-12 lg:grid-cols-2">
+    <!-- Pitch -->
+    <div class="max-w-xl">
+      <p
+        class="text-accent-700 dark:text-accent-300 flex items-center gap-2 text-xs font-semibold tracking-[0.14em] uppercase"
+      >
+        <nldd-icon name="puzzle-piece" class="block! h-4 w-4"></nldd-icon>
+        Fundament Marketplace
+      </p>
+      <h1 class="font-display mt-4 text-4xl font-semibold text-balance sm:text-5xl">
+        Plugins that integrate with your clusters
+      </h1>
+      <p class="mt-4 text-lg text-gray-600 dark:text-gray-300">
+        Add databases, networking, observability and security to any Fundament cluster with a single
+        click — built by the platform team and the community.
+      </p>
+
+      @if (!isLoading()) {
+        <dl class="mt-8 flex flex-wrap gap-x-10 gap-y-4">
+          <div>
+            <dd class="font-display text-2xl font-semibold tabular-nums">{{ plugins().length }}</dd>
+            <dt class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
+              Plugins
+            </dt>
+          </div>
+          <div>
+            <dd class="font-display text-2xl font-semibold tabular-nums">
+              {{ categories().length }}
+            </dd>
+            <dt class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
+              Categories
+            </dt>
+          </div>
+          <div>
+            <dd class="font-display text-2xl font-semibold tabular-nums">{{ officialCount() }}</dd>
+            <dt class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">
+              Official
+            </dt>
+          </div>
+        </dl>
+      }
+    </div>
+
+    <!-- Signature: featured plugins wired into your cluster -->
+    <div class="relative hidden lg:block" aria-hidden="true">
+      <div class="relative mx-auto aspect-square w-full max-w-md">
+        <!-- Cluster boundary -->
+        <div
+          class="border-accent-300/70 dark:border-accent-700/60 absolute inset-x-0 top-[26%] bottom-[4%] rounded-2xl border-2 border-dashed"
+        ></div>
+
+        <!-- Connectors: hub to plugins, and hub out to the cloud -->
+        <svg
+          class="text-accent-400/70 dark:text-accent-500/50 absolute inset-0 z-10 h-full w-full"
+          viewBox="0 0 100 100"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="0.5"
+        >
+          <defs>
+            <marker
+              id="hero-arrow"
+              markerUnits="userSpaceOnUse"
+              markerWidth="5"
+              markerHeight="5"
+              refX="3.5"
+              refY="2.5"
+              orient="auto"
+            >
+              <path d="M0 0 L5 2.5 L0 5 z" fill="currentColor" />
+            </marker>
+          </defs>
+          <line x1="40" y1="60" x2="16" y2="40" />
+          <line x1="40" y1="60" x2="16" y2="84" />
+          <line x1="40" y1="60" x2="64" y2="84" />
+          <line x1="44" y1="55" x2="76" y2="18" marker-end="url(#hero-arrow)" />
+        </svg>
+
+        <!-- Cloud, sitting outside the cluster -->
+        <div
+          class="absolute top-[12%] left-[82%] z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+        >
+          <svg viewBox="0 0 80 50" class="text-accent-500 dark:text-accent-400 h-9 w-16">
+            <g fill="currentColor">
+              <circle cx="26" cy="30" r="14" />
+              <circle cx="46" cy="22" r="16" />
+              <circle cx="60" cy="31" r="12" />
+              <rect x="20" y="30" width="46" height="15" rx="7.5" />
+            </g>
+          </svg>
+          <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Cloud</span>
+        </div>
+
+        <!-- Central hub: your cluster -->
+        <div
+          class="absolute top-[60%] left-[40%] z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+        >
+          <div
+            class="bg-accent-700 flex h-16 w-16 items-center justify-center text-white shadow-md"
+            style="clip-path: polygon(50% 0%, 90% 19%, 99% 61%, 72% 95%, 28% 95%, 1% 61%, 10% 19%)"
+          >
+            <app-fundament-logo-icon class="h-8 w-8" />
+          </div>
+          <span class="text-[11px] font-semibold text-gray-700 dark:text-gray-200">Your cluster</span>
+        </div>
+
+        <!-- Plugin nodes wired into the cluster -->
+        @if (heroPlugins()[0]; as p) {
+          <div
+            class="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+            style="left: 16%; top: 40%"
+          >
+            <div
+              class="bg-accent-600 flex h-12 w-12 items-center justify-center shadow-sm"
+              style="clip-path: polygon(50% 0%, 90% 19%, 99% 61%, 72% 95%, 28% 95%, 1% 61%, 10% 19%)"
+            >
+              <app-plugin-icon
+                [name]="p.icon"
+                iconColor="text-white"
+                class="flex h-6 w-6 items-center justify-center"
+              />
+            </div>
+            <span class="max-w-26 truncate text-[11px] font-medium text-gray-600 dark:text-gray-300">
+              {{ p.displayName }}
+            </span>
+          </div>
+        }
+        @if (heroPlugins()[1]; as p) {
+          <div
+            class="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+            style="left: 16%; top: 84%"
+          >
+            <div
+              class="bg-accent-600 flex h-12 w-12 items-center justify-center shadow-sm"
+              style="clip-path: polygon(50% 0%, 90% 19%, 99% 61%, 72% 95%, 28% 95%, 1% 61%, 10% 19%)"
+            >
+              <app-plugin-icon
+                [name]="p.icon"
+                iconColor="text-white"
+                class="flex h-6 w-6 items-center justify-center"
+              />
+            </div>
+            <span class="max-w-26 truncate text-[11px] font-medium text-gray-600 dark:text-gray-300">
+              {{ p.displayName }}
+            </span>
+          </div>
+        }
+        @if (heroPlugins()[2]; as p) {
+          <div
+            class="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+            style="left: 64%; top: 84%"
+          >
+            <div
+              class="bg-accent-600 flex h-12 w-12 items-center justify-center shadow-sm"
+              style="clip-path: polygon(50% 0%, 90% 19%, 99% 61%, 72% 95%, 28% 95%, 1% 61%, 10% 19%)"
+            >
+              <app-plugin-icon
+                [name]="p.icon"
+                iconColor="text-white"
+                class="flex h-6 w-6 items-center justify-center"
+              />
+            </div>
+            <span class="max-w-26 truncate text-[11px] font-medium text-gray-600 dark:text-gray-300">
+              {{ p.displayName }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
   </div>
-</section>
+</nldd-card>
 
 @if (isLoading()) {
   <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugins...</div>
 } @else {
   <div class="flex flex-col gap-8 lg:flex-row">
     <!-- Category sidebar -->
-    <aside class="shrink-0 lg:w-56">
-      <h2 class="mb-3 px-3 text-lg font-semibold">Categories</h2>
+    <aside class="shrink-0 self-start lg:sticky lg:top-24 lg:w-56">
+      <h2
+        class="mb-3 px-3 text-xs font-semibold tracking-[0.14em] text-gray-500 uppercase dark:text-gray-400"
+      >
+        Browse
+      </h2>
       <nav class="space-y-1" aria-label="Plugin categories">
         <button
           type="button"
@@ -29,10 +203,15 @@
               ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
               : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
           "
-          class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors"
+          class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left transition-colors"
         >
-          <span>All plugins</span>
-          <span class="text-gray-500 dark:text-gray-400">{{ plugins().length }}</span>
+          <span class="flex items-center gap-2.5">
+            <nldd-icon name="puzzle-piece" class="block! h-4 w-4 shrink-0"></nldd-icon>
+            All plugins
+          </span>
+          <span class="text-sm tabular-nums text-gray-400 dark:text-gray-500">
+            {{ plugins().length }}
+          </span>
         </button>
         @for (category of categories(); track category.id) {
           <button
@@ -43,10 +222,15 @@
                 ? 'bg-accent-25 text-accent-800 dark:bg-accent-950 dark:text-accent-100 font-semibold'
                 : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
             "
-            class="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-left transition-colors"
+            class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left transition-colors"
           >
-            <span>{{ category.name }}</span>
-            <span class="text-gray-500 dark:text-gray-400">{{ categoryCount(category.id) }}</span>
+            <span class="flex items-center gap-2.5">
+              <nldd-icon [name]="categoryIcon(category.id)" class="block! h-4 w-4 shrink-0"></nldd-icon>
+              {{ category.name }}
+            </span>
+            <span class="text-sm tabular-nums text-gray-400 dark:text-gray-500">
+              {{ categoryCount(category.id) }}
+            </span>
           </button>
         }
       </nav>
@@ -56,15 +240,15 @@
     <div class="min-w-0 flex-1">
       @if (isFiltering()) {
         <!-- Flat results grid when filtering/searching -->
-        <div class="mb-4 flex items-baseline justify-between">
-          <h2 class="text-xl font-semibold">
+        <div class="mb-5 flex items-baseline justify-between gap-4">
+          <h2 class="font-display text-2xl font-semibold">
             @if (searchQuery().trim()) {
               Results for “{{ searchQuery().trim() }}”
             } @else {
               {{ selectedCategory() }}
             }
           </h2>
-          <span class="text-sm text-gray-500 dark:text-gray-400">
+          <span class="shrink-0 text-sm text-gray-500 dark:text-gray-400">
             {{ filteredPlugins().length }} plugin{{ filteredPlugins().length === 1 ? '' : 's' }}
           </span>
         </div>
@@ -87,23 +271,97 @@
         }
       } @else {
         <!-- Curated home sections -->
-        <section class="mb-10">
-          <h2 class="text-xl font-semibold">Featured plugins</h2>
-          <p class="mt-1 mb-4 text-gray-600 dark:text-gray-300">
-            Hand-picked plugins to get your clusters production-ready.
-          </p>
-          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            @for (plugin of featuredPlugins(); track plugin.name) {
-              <app-plugin-card [plugin]="plugin" />
-            }
+        <section class="mb-12">
+          <div class="mb-5">
+            <p
+              class="text-accent-700 dark:text-accent-300 text-xs font-semibold tracking-[0.14em] uppercase"
+            >
+              Featured
+            </p>
+            <h2 class="font-display mt-1 text-2xl font-semibold">Production-ready picks</h2>
+            <p class="mt-1 text-gray-600 dark:text-gray-300">
+              Hand-picked plugins to get your clusters production-ready.
+            </p>
           </div>
+
+          <!-- Spotlight: the top featured pick -->
+          @if (spotlightPlugin(); as p) {
+            <a [routerLink]="['/plugins', p.name]" class="group mb-5 block">
+              <nldd-card class="block">
+                <div class="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
+                  <app-plugin-icon
+                    [name]="p.icon"
+                    [label]="p.displayName"
+                    class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gray-100 p-3 dark:bg-gray-800"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span
+                        class="text-accent-700 dark:text-accent-300 text-xs font-semibold tracking-[0.14em] uppercase"
+                      >
+                        Editors’ pick
+                      </span>
+                      @if (p.official) {
+                        <nldd-tag
+                          size="sm"
+                          color="success"
+                          icon="check-mark"
+                          text="Official"
+                        ></nldd-tag>
+                      }
+                    </div>
+                    <h3 class="mt-1 text-xl font-semibold group-hover:underline">
+                      {{ p.displayName }}
+                    </h3>
+                    <p class="mt-1 text-gray-700 dark:text-gray-200">{{ p.tagline }}</p>
+                    <div
+                      class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      <span>By {{ p.vendor }}</span>
+                      <span aria-hidden="true">·</span>
+                      <span class="flex items-center gap-1">
+                        <nldd-icon name="cloud-arrow-down" class="block! h-4 w-4"></nldd-icon>
+                        {{ p.installs }} installs
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <span class="font-mono">{{ p.version }}</span>
+                    </div>
+                  </div>
+                  <span
+                    class="text-accent-700 dark:text-accent-300 hidden shrink-0 items-center gap-1 self-end font-medium sm:flex sm:self-center"
+                  >
+                    View plugin
+                    <nldd-icon
+                      name="arrow-right"
+                      class="block! h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                    ></nldd-icon>
+                  </span>
+                </div>
+              </nldd-card>
+            </a>
+          }
+
+          @if (gridFeatured().length > 0) {
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              @for (plugin of gridFeatured(); track plugin.name) {
+                <app-plugin-card [plugin]="plugin" />
+              }
+            </div>
+          }
         </section>
 
         <section>
-          <h2 class="text-xl font-semibold">Recently added</h2>
-          <p class="mt-1 mb-4 text-gray-600 dark:text-gray-300">
-            The newest plugins in the marketplace.
-          </p>
+          <div class="mb-5">
+            <p
+              class="text-accent-700 dark:text-accent-300 text-xs font-semibold tracking-[0.14em] uppercase"
+            >
+              Recently added
+            </p>
+            <h2 class="font-display mt-1 text-2xl font-semibold">Fresh from the registry</h2>
+            <p class="mt-1 text-gray-600 dark:text-gray-300">
+              The newest plugins in the marketplace.
+            </p>
+          </div>
           <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
             @for (plugin of recentlyAdded(); track plugin.name) {
               <app-plugin-card [plugin]="plugin" />
@@ -113,4 +371,44 @@
       }
     </div>
   </div>
+
+  <!-- Build-a-plugin call to action -->
+  @if (!isFiltering()) {
+    <section
+      class="relative mt-14 overflow-hidden rounded-3xl bg-gray-950 p-8 text-white sm:p-12 dark:bg-black dark:ring-1 dark:ring-gray-800"
+    >
+      <div
+        class="pointer-events-none absolute inset-0 text-white/6"
+        style="background-image: radial-gradient(currentColor 1px, transparent 1px); background-size: 22px 22px;"
+        aria-hidden="true"
+      ></div>
+      <div
+        class="bg-accent-500/20 pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full blur-3xl"
+        aria-hidden="true"
+      ></div>
+      <div
+        class="relative flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div class="max-w-xl">
+          <p class="text-accent-300 text-xs font-semibold tracking-[0.14em] uppercase">
+            For platform teams
+          </p>
+          <h2 class="font-display mt-2 text-2xl font-semibold sm:text-3xl">
+            Build a plugin for every Fundament cluster
+          </h2>
+          <p class="mt-3 text-gray-300">
+            Package your operator once and publish it to the marketplace, so any team can install it
+            in a single click.
+          </p>
+        </div>
+        <a routerLink="/manage/create" class="shrink-0">
+          <nldd-button
+            text="Build a plugin"
+            end-icon="arrow-right"
+            variant="primary"
+          ></nldd-button>
+        </a>
+      </div>
+    </section>
+  }
 }
