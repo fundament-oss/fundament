@@ -1,17 +1,15 @@
-<div class="flex flex-wrap items-start justify-between gap-4">
-  <div>
-    <h1 class="text-3xl font-semibold">My plugins</h1>
-    <p class="mt-1 max-w-2xl text-lg text-gray-600 dark:text-gray-300">
-      Manage the plugins you author, track their review status, and sideload builds for testing
-    </p>
-  </div>
-  <nldd-button
-    routerLink="/manage/create"
-    text="Create a plugin"
-    start-icon="plus"
-    variant="primary"
-  ></nldd-button>
-</div>
+<a
+  routerLink="/"
+  class="text-accent-700 dark:text-accent-300 mb-3 inline-flex items-center gap-1.5 font-medium"
+>
+  <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+  All plugins
+</a>
+
+<h1 class="text-3xl font-semibold">My plugins</h1>
+<p class="mt-1 max-w-2xl text-lg text-gray-600 dark:text-gray-300">
+  Manage the plugins you author, track their review status, and sideload builds for testing
+</p>
 
 <!-- Loading State -->
 @if (isLoading()) {
@@ -20,7 +18,7 @@
   </div>
 } @else {
   <!-- Status summary -->
-  <div class="mt-6 mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+  <div class="mt-6 mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
     @for (summary of statusCounts(); track summary.status) {
       <nldd-card class="block">
         <div class="flex items-center gap-2.5 p-4">
@@ -33,6 +31,15 @@
         </div>
       </nldd-card>
     }
+  </div>
+
+  <div class="mb-6 flex">
+    <nldd-button
+      routerLink="/manage/create"
+      text="Add a new plugin"
+      start-icon="plus"
+      variant="primary"
+    ></nldd-button>
   </div>
 
   <!-- Plugins Table -->
