@@ -11,7 +11,7 @@ needed (Docker you already run for k3d).
 ## Layout
 
 ```
-deploy-remote/
+tools/deploy-remote/
 ├── flake.nix                     nixosConfigurations.hetzner (built by nixos-anywhere)
 ├── justfile                      thin wrappers around hetzner.sh
 ├── hetzner.sh                    lifecycle: up · stack · certs · tunnel · ssh · status · down
@@ -43,7 +43,7 @@ every boot (`ephemeral-scratch.nix`), so a reboot returns to clean container sta
 ## Workflow
 
 ```sh
-cd deploy-remote
+cd tools/deploy-remote
 cp secrets/hetzner.env.example secrets/hetzner.env   # paste a Read&Write API token
 just up        # create box + install NixOS (nixos-anywhere in docker); waits until ready
 just stack     # deploy fundament + Gardener, run a shoot, trust the box CA; prints the console URL
