@@ -47,7 +47,7 @@
       <app-plugin-status-tracker [status]="plugin.status" />
 
       <!-- Stage-appropriate actions -->
-      <div class="mt-4 flex flex-wrap gap-2">
+      <div class="mt-5 flex flex-wrap gap-2">
         @switch (plugin.status) {
           @case ('pushed') {
             <nldd-button
@@ -108,52 +108,70 @@
   <nldd-card class="mb-6 block">
     <div class="p-6">
       <h2 class="mb-4 text-lg font-semibold">Details</h2>
-      <p class="mb-6 max-w-3xl text-gray-700 dark:text-gray-300">{{ plugin.description }}</p>
+      <p class="mb-8 max-w-3xl leading-relaxed text-gray-600 dark:text-gray-300">
+        {{ plugin.description }}
+      </p>
 
-      <dl class="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+      <dl class="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
         <div>
-          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Author</dt>
-          <dd class="mt-1">
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Author
+          </dt>
+          <dd class="mt-2">
             <a [href]="plugin.author.url" target="_blank" rel="noopener" class="link">
               {{ plugin.author.name }}
             </a>
           </dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Repository</dt>
-          <dd class="mt-1">
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Repository
+          </dt>
+          <dd class="mt-2">
             <a [href]="plugin.repositoryUrl" target="_blank" rel="noopener" class="link break-all">
               {{ plugin.repositoryUrl }}
             </a>
           </dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Category</dt>
-          <dd class="mt-1">{{ plugin.category }}</dd>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Category
+          </dt>
+          <dd class="mt-2">{{ plugin.category }}</dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
-          <dd class="mt-1 font-mono text-sm">v{{ plugin.version }}</dd>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Version
+          </dt>
+          <dd class="mt-2 font-mono text-sm">v{{ plugin.version }}</dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last updated</dt>
-          <dd class="mt-1">{{ plugin.versions[0]?.pushedAt }}</dd>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Last updated
+          </dt>
+          <dd class="mt-2 font-mono text-sm">{{ plugin.versions[0]?.pushedAt }}</dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Installs</dt>
-          <dd class="mt-1">{{ plugin.installs }} clusters</dd>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Installs
+          </dt>
+          <dd class="mt-2">{{ plugin.installs }} clusters</dd>
         </div>
-        <div class="sm:col-span-2">
-          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Image</dt>
-          <dd class="mt-1 font-mono text-sm break-all text-gray-700 dark:text-gray-300">
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Image
+          </dt>
+          <dd class="mt-2 font-mono text-xs break-all text-gray-600 dark:text-gray-300">
             {{ plugin.image }}
           </dd>
         </div>
-        <div class="sm:col-span-2">
-          <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Tags</dt>
-          <dd class="mt-1 flex flex-wrap gap-1">
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Tags
+          </dt>
+          <dd class="mt-2 flex flex-wrap gap-2">
             @for (tag of plugin.tags; track tag) {
-              <nldd-tag size="sm" color="neutral" [text]="tag"></nldd-tag>
+              <nldd-tag color="neutral" [text]="tag"></nldd-tag>
             }
           </dd>
         </div>
@@ -164,30 +182,52 @@
   <!-- Version history -->
   <nldd-card class="block">
     <div class="p-6">
-      <h2 class="mb-4 text-lg font-semibold">Version history</h2>
-      <div class="table-container">
-        <table class="table">
+      <h2 class="mb-6 text-lg font-semibold">Version history</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left">
           <thead>
-            <tr>
-              <th scope="col">Version</th>
-              <th scope="col">Pushed</th>
-              <th scope="col">Status</th>
-              <th scope="col">Notes</th>
+            <tr class="border-b border-gray-200 dark:border-gray-800">
+              <th
+                scope="col"
+                class="pr-8 pb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Version
+              </th>
+              <th
+                scope="col"
+                class="pr-8 pb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Pushed
+              </th>
+              <th
+                scope="col"
+                class="pr-8 pb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Status
+              </th>
+              <th
+                scope="col"
+                class="pb-3 text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Notes
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             @for (version of plugin.versions; track version.version) {
               <tr>
-                <td class="font-mono text-sm font-medium text-gray-900 dark:text-white">
-                  {{ version.version }}
+                <td class="py-4 pr-8 font-mono text-sm whitespace-nowrap">{{ version.version }}</td>
+                <td
+                  class="py-4 pr-8 font-mono text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                >
+                  {{ version.pushedAt }}
                 </td>
-                <td class="text-sm text-gray-600 dark:text-gray-400">{{ version.pushedAt }}</td>
-                <td>
+                <td class="py-4 pr-8">
                   <span class="badge {{ statusBadgeClass(version.status) }}">{{
                     statusLabel(version.status)
                   }}</span>
                 </td>
-                <td class="text-sm whitespace-normal text-gray-600 dark:text-gray-400">
+                <td class="py-4 text-sm text-gray-600 dark:text-gray-400">
                   {{ version.notes || '—' }}
                 </td>
               </tr>
