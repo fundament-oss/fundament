@@ -31,7 +31,7 @@ tools/deploy-remote/
 
 ```sh
 just devbox up --stack mock   # morning: box + volume + toolchain + fundament (no Gardener)
-ssh devbox-<you>              # code (VS Code Remote-SSH uses the same alias)
+just devbox code             # VS Code on the box (or: ssh devbox-<you> for terminal + 8443)
 just devbox down              # evening: destroys ONLY the box; your volume survives
 ```
 

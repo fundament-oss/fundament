@@ -28,6 +28,10 @@ ssh:
 tunnel:
     ./hetzner.sh tunnel
 
+# open VS Code on ~/fundament on the box (resolves the fresh IP; no ssh config needed)
+code:
+    ./hetzner.sh code
+
 # regenerate the managed ssh config block (up does this automatically)
 ssh-config:
     ./hetzner.sh ssh-config

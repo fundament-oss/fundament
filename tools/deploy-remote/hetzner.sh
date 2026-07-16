@@ -331,6 +331,20 @@ EOF
 
 cmd_ssh_config() { require_devbox ssh-config; local ip; ip=$(box_ip); write_ssh_config "$ip"; }
 
+# Open VS Code on the repo on the box via the direct remote authority — no ssh
+# config/Include needed (the IP changes per morning; this resolves it fresh).
+# NB: this path skips the managed block: no 8443 forward, no host-key pin, no
+# multiplexing — keep an 'ssh <alias>' session open for the browser origin.
+cmd_code() {
+  require_devbox code
+  ensure_hcloud
+  command -v code >/dev/null 2>&1 \
+    || die "'code' CLI not found — VS Code: Cmd+Shift+P -> Shell Command: Install 'code' command in PATH"
+  local ip; ip=$(box_ip)
+  log "opening VS Code on $BOX_USER@$ip:$SSH_PORT — browser origin still needs: ssh $HZ_NAME"
+  exec code --remote "ssh-remote+$BOX_USER@$ip:$SSH_PORT" "/home/$BOX_USER/fundament"
+}
+
 # Push the devbox on-box scripts (user-layer bootstrap + mode-aware stack).
 # rm -rf first: ~/box is on the persistent VOLUME here, so stale scripts from
 # yesterday (or another role) would otherwise survive box recreations forever.
@@ -647,6 +661,7 @@ case "$cmd" in
   certs) cmd_certs ;;
   tunnel) cmd_tunnel ;;
   ssh-config) cmd_ssh_config ;;
+  code) cmd_code ;;
   destroy-volume) cmd_destroy_volume ;;
   *) die "usage: $0 {up|down|ssh|status|stack|certs|tunnel}   (devbox role adds: up --stack mock|gardener, stack <mode>, ssh-config, destroy-volume)" ;;
 esac
