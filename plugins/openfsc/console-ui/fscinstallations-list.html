@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>FSC installations</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">FSC installations</h1>
+      <table class="plugin-table">
+        <thead>
+          <tr>
+            <th>Namespace</th>
+            <th>Name</th>
+            <th>Group</th>
+            <th>Directory</th>
+            <th>Phase</th>
+            <th>Age</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr>
+            <td colspan="6" class="plugin-text">Loading…</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top: 1.5rem">
+        <nldd-button id="add" variant="primary" start-icon="plus-small" text="Add installation"></nldd-button>
+      </div>
+    </div>
+    <script type="module" src="/src/list.ts"></script>
+  </body>
+</html>

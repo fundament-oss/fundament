@@ -32,10 +32,25 @@ import PluginInstallationService from '../plugin-installation/plugin-installatio
 const getPluginIconName = (pluginName: string): string =>
   pluginName.toLowerCase().replace(/[^a-z]+/g, '-');
 
-// Extended plugin type with presets array (computed from backend data)
+// The name to show a user (e.g. "OpenFSC"). `plugin.name` is the install identifier
+// (e.g. "openfsc") — it names the PluginInstallation resource in the cluster — so it
+// is never shown. Falls back to it when no display name is set.
+const displayNameOf = (plugin: { name: string; displayName: string }): string =>
+  plugin.displayName || plugin.name;
+
+// Extended plugin type with presets array (computed from backend data).
+// `name` is the stable identifier (e.g. "openfsc") used as the PluginInstallation
+// resource name in the cluster; `displayName` (e.g. "OpenFSC") is what a user sees.
 interface PluginWithPresets extends Pick<
   PluginSummary,
-  'id' | 'name' | 'descriptionShort' | 'description' | 'categories' | 'tags' | 'image'
+  | 'id'
+  | 'name'
+  | 'displayName'
+  | 'descriptionShort'
+  | 'description'
+  | 'categories'
+  | 'tags'
+  | 'image'
 > {
   presets?: string[]; // Array of preset IDs this plugin belongs to
 }
@@ -177,6 +192,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         return {
           id: backendPlugin.id,
           name: backendPlugin.name,
+          displayName: backendPlugin.displayName,
           description: backendPlugin.description,
           descriptionShort: backendPlugin.descriptionShort,
           categories: backendPlugin.categories,
@@ -309,11 +325,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       if (!prev) return;
       if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
         this.toastService.success(
-          `${next.pluginName} installed on cluster ${this.clusterName(next.clusterId)}`,
+          `Plugin ${this.pluginDisplayName(next.pluginName)} installed on cluster ${this.clusterName(next.clusterId)}`,
         );
       } else if (prev.phase !== 'Failed' && next.phase === 'Failed') {
         this.toastService.error(
-          `Failed to install ${next.pluginName} on cluster ${this.clusterName(next.clusterId)}`,
+          `Failed to install plugin ${this.pluginDisplayName(next.pluginName)} on cluster ${this.clusterName(next.clusterId)}`,
         );
       }
     });
@@ -334,7 +350,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         return;
       }
       this.toastService.success(
-        `${prev.pluginName} removed from ${this.clusterName(prev.clusterId)}`,
+        `Plugin ${this.pluginDisplayName(prev.pluginName)} removed from ${this.clusterName(prev.clusterId)}`,
       );
     });
 
@@ -480,6 +496,21 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     return this.clusters().find((c) => c.id === clusterId)?.name ?? clusterId;
   }
 
+  /**
+   * Look up a display name from an install identifier (e.g. "openfsc" → "OpenFSC").
+   *
+   * Only the polling loop needs this: it reconciles `InstallWithCluster` rows, which
+   * carry just the identifier the PluginInstallation resource is named after. Code
+   * that already holds a plugin reads `displayNameOf(plugin)` instead of paying for
+   * this scan.
+   *
+   * Falls back to the identifier when the plugin is not in the catalog (it may have
+   * been removed while still installed on a cluster) or has no display name set.
+   */
+  private pluginDisplayName(pluginName: string): string {
+    return this.plugins.find((p) => p.name === pluginName)?.displayName || pluginName;
+  }
+
   private setInstallPhase(clusterId: string, pluginName: string, phase: string): void {
     this.installs.update((current) =>
       current.map((install) =>
@@ -525,7 +556,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         ),
       );
       const names = failed.map((id) => this.clusterName(id)).join(', ');
-      this.toastService.error(`Failed to install ${plugin.name} on ${names}`);
+      this.toastService.error(`Failed to install ${displayNameOf(plugin)} on ${names}`);
     }
 
     this.startInstallPollingIfNeeded();
@@ -542,7 +573,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       this.startInstallPollingIfNeeded();
     } catch {
       this.toastService.error(
-        `Failed to remove ${plugin.name} from ${this.clusterName(clusterId)}`,
+        `Failed to remove ${displayNameOf(plugin)} from ${this.clusterName(clusterId)}`,
       );
     }
   }
@@ -560,7 +591,9 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       await this.pluginInstallationService.installPlugin(clusterId, plugin.name, plugin.image);
       this.startInstallPollingIfNeeded();
     } catch {
-      this.toastService.error(`Failed to install ${plugin.name} on ${this.clusterName(clusterId)}`);
+      this.toastService.error(
+        `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
+      );
     }
   }
 

@@ -1154,6 +1154,11 @@ END;]]> </definition>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
+		<comment><![CDATA[Stable identifier, matching the plugin's definition.yaml metadata.name (e.g. "openfsc"). Used as the PluginInstallation resource name in the cluster — not for display.]]></comment>
+	</column>
+	<column name="display_name" not-null="true" default-value="''">
+		<type name="text" length="0"/>
+		<comment><![CDATA[Human-readable name shown in the Console, matching the plugin's definition.yaml metadata.displayName (e.g. "OpenFSC").]]></comment>
 	</column>
 	<column name="description_short" not-null="true" default-value="''">
 		<type name="text" length="0"/>

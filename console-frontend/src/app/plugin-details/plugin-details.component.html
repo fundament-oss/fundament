@@ -44,12 +44,12 @@
                     .name.toLowerCase()
                     .replace(/[^a-z]+/g, '-')
                 }}.svg"
-                [alt]="plugin()!.name"
+                [alt]="plugin()!.displayName || plugin()!.name"
               />
 
               <!-- Title and Tags -->
               <div class="flex-1">
-                <h1 class="text-3xl font-bold">{{ plugin()!.name }}</h1>
+                <h1 class="text-3xl font-bold">{{ plugin()!.displayName || plugin()!.name }}</h1>
                 @if (plugin()!.author?.name) {
                   <p class="mt-1 text-gray-600 dark:text-gray-400">
                     by {{ plugin()!.author!.name }}
@@ -213,7 +213,7 @@
 
 <!-- Install Modal -->
 <app-install-plugin-modal
-  [pluginName]="plugin()?.name || ''"
+  [pluginDisplayName]="plugin()?.displayName || plugin()?.name || ''"
   [clusters]="clusters()"
   [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"

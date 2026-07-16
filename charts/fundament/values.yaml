@@ -18,8 +18,16 @@ externalUrls:
   authn: "" # e.g., https://authn.example.com
   organization: "" # e.g., https://organization.example.com
   kubeApiProxy: "" # e.g., https://k8s-api.example.com
+  pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; defaults to console URL if empty)
   console: "" # e.g., https://app.example.com
+  # Origins the Console is served from. kube-api-proxy only serves a plugin console
+  # asset when its ?host= names one of these, and its CSP only lets the asset load
+  # scripts from them. Comma-separated; defaults to `console` if empty. Add a dev
+  # server origin here when running the Console outside the cluster.
+  # This and `kubeApiProxy` are both required when kubeApiProxy.mode is "real" — the
+  # proxy refuses to start without them rather than serve plugin assets unprotected.
+  consoleOrigins: "" # e.g., "https://app.example.com,http://localhost:4200"
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
@@ -156,6 +164,13 @@ pluginProxy:
   replicas: 1
   logLevel: info
   mode: mock # "mock" or "real" (real is future work)
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - plugin-proxy.example.com
 
 # DCIM API
 dcimApi:

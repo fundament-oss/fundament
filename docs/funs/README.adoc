@@ -60,4 +60,7 @@ FUNs (Fundament Update Notes) document technical decisions, architecture, and pr
 
 | link:/funs/fun-17[FUN-17 Plugin Authorization]
 | prediscussion
+
+| link:/funs/fun-18[FUN-18 NLDD Design System in plugin UIs]
+| committed
 |===

@@ -60,7 +60,26 @@ test-cleanup:
     kubectl --context {{ kube_context }} delete fscinstallation/demo -n fsc-demo --ignore-not-found
     kubectl --context {{ kube_context }} delete namespace fsc-demo --ignore-not-found
 
-# Preview the console templates against the running cluster (live CR data via
+# Preview the BUILT console UI against the running cluster (live CR data via
 # kubectl, no Console host needed); prereq: an FSCInstallation exists
 console-preview port="4319":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Shared /plugin-ui/{plugin-sdk,nldd}.{js,css} bundle (preview == prod):
+    (cd ../../console-frontend && bun install && bun run build:plugin-ui)
+    # The plugin's own console UI (Vite) → console/, served same-origin:
+    (cd console-ui && bun install && bun run build)
     PORT={{ port }} kube_context={{ kube_context }} bun scripts/console-preview/serve.js
+
+# Develop the console UI with Vite HMR. Runs the console-preview backend (stand-in
+# SDK + /api/* + the shared /plugin-ui bundle) and the Vite dev server, which
+# proxies to it (see console-ui/vite.config.ts). Open the printed Vite URL +
+# /fscinstallations-list.html. prereq: an FSCInstallation exists
+console-dev port="4319" vite_port="5173":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd ../../console-frontend && bun install && bun run build:plugin-ui)
+    PORT={{ port }} kube_context={{ kube_context }} bun scripts/console-preview/serve.js &
+    backend=$!
+    trap "kill $backend 2>/dev/null || true" EXIT
+    cd console-ui && bun install && bun run dev -- --port {{ vite_port }}

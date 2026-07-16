@@ -2,17 +2,20 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/cors"
 
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kubereq"
 	tokenpkg "github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
 )
 
@@ -25,6 +28,14 @@ type Config struct {
 	// requests are answered in mock mode. Layout: <dir>/<pluginName>/console/<file>.
 	// Ignored in "real" mode.
 	MockPluginTemplatesDir string
+	// ConsoleOrigins are the origins the Console is served from. They are the only
+	// origins a plugin console asset may be bootstrapped from, and the only ones its
+	// CSP admits scripts from — see kube.ConsoleAssetPolicy. Empty disables both
+	// checks (bare local dev); every deployed environment sets it.
+	ConsoleOrigins []string
+	// PublicOrigin is this proxy's own public origin, i.e. the origin plugin console
+	// assets are served from. Named in their CSP alongside ConsoleOrigins.
+	PublicOrigin string
 }
 
 type Server struct {
@@ -34,11 +45,32 @@ type Server struct {
 	tokenCache    *tokenpkg.Cache
 	kubeHandler   http.Handler
 	handler       http.Handler
+	consoleAssets kube.ConsoleAssetPolicy
+	pluginGateway *pluginGateway
 }
 
 func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, error) {
 	if cfg.Mode == "" {
 		cfg.Mode = "mock"
+	}
+
+	consoleAssets := kube.ConsoleAssetPolicy{
+		AssetOrigin:    kube.NormalizeOrigin(cfg.PublicOrigin),
+		ConsoleOrigins: kube.NormalizeOrigins(cfg.ConsoleOrigins),
+	}
+	// An unconfigured policy serves plugin console assets — which are public and
+	// unauthenticated — with no CSP and an unchecked ?host=. That is tolerable on a
+	// developer's laptop and not in a real deployment, so "real" mode refuses to start
+	// rather than come up quietly unprotected.
+	if !consoleAssets.Configured() && cfg.Mode == "real" {
+		return nil, fmt.Errorf("CONSOLE_ORIGINS and PUBLIC_ORIGIN are required in %q mode: "+
+			"without them plugin console assets are served with no Content-Security-Policy and "+
+			"an unchecked ?host= origin", cfg.Mode)
+	}
+	if !consoleAssets.Configured() {
+		logger.Warn("CONSOLE_ORIGINS and/or PUBLIC_ORIGIN are not set: plugin console assets are " +
+			"served without a Content-Security-Policy and with an unchecked ?host= origin. Set " +
+			"them to the Console origin(s) and this proxy's own public origin.")
 	}
 
 	var kubeHandler http.Handler
@@ -48,7 +80,10 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		tokenCache = tokenpkg.NewCache(cfg.GardenerClient, logger)
 		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, logger)
 	case "mock":
-		kubeHandler = &kube.MockClient{PluginTemplatesDir: cfg.MockPluginTemplatesDir}
+		kubeHandler = &kube.MockClient{
+			PluginTemplatesDir: cfg.MockPluginTemplatesDir,
+			ConsoleAssets:      consoleAssets,
+		}
 	default:
 		return nil, fmt.Errorf("invalid Mode %q: must be \"mock\" or \"real\"", cfg.Mode)
 	}
@@ -59,6 +94,19 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		authz:         authzClient,
 		tokenCache:    tokenCache,
 		kubeHandler:   kubeHandler,
+		consoleAssets: consoleAssets,
+	}
+
+	s.pluginGateway = &pluginGateway{
+		logger:      logger,
+		jwtSecret:   cfg.JWTSecret,
+		userSAR:     newUserAccessChecker(cfg),
+		pluginSA:    newPluginSAResolver(cfg),
+		canView:     &canViewAdapter{client: authzClient},
+		kubeHandler: kubeHandler,
+	}
+	if cfg.Mode == "real" {
+		logger.Warn("plugin gateway installed with unwired real-mode stubs; PluginToken requests will fail-closed until FUN-17 SAR and plugin-SA resolver wiring lands")
 	}
 
 	mux := http.NewServeMux()
@@ -113,6 +161,83 @@ type statusRecorder struct {
 func (r *statusRecorder) WriteHeader(code int) {
 	r.status = code
 	r.ResponseWriter.WriteHeader(code)
+}
+
+// canViewAdapter adapts common/authz.Client to the ClusterViewChecker
+// interface the plugin gateway needs.
+type canViewAdapter struct{ client *authz.Client }
+
+func (a *canViewAdapter) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID) (bool, error) {
+	if a.client == nil {
+		return false, errors.New("openfga client not configured")
+	}
+	dec, err := a.client.Evaluate(ctx, authz.EvaluationRequest{
+		Subject:  authz.User(userID),
+		Action:   authz.CanView(),
+		Resource: authz.Cluster(clusterID),
+	})
+	if err != nil {
+		return false, fmt.Errorf("openfga can_view: %w", err)
+	}
+	return dec.Decision, nil
+}
+
+// stubUserAccessChecker is the mock-mode UserAccessChecker: allow-all. The real
+// implementation issues an authorization.k8s.io/v1 SubjectAccessReview against
+// the target cluster with the per-user SA username as Spec.User — a follow-up
+// coordinated with the Gardener wiring in real mode.
+type stubUserAccessChecker struct{}
+
+func (stubUserAccessChecker) Check(_ context.Context, _ string, _ *kubereq.Attributes, _ string) (bool, error) {
+	return true, nil
+}
+
+// unwiredUserAccessChecker is the real-mode placeholder until the SAR wiring
+// lands. It fail-closes every request so a running proxy cannot silently
+// allow-all on the plugin path.
+type unwiredUserAccessChecker struct{}
+
+func (unwiredUserAccessChecker) Check(_ context.Context, _ string, _ *kubereq.Attributes, _ string) (bool, error) {
+	return false, errors.New("user SAR checker not wired for real mode")
+}
+
+// stubPluginSAResolver is the mock-mode PluginSAResolver: returns a canned
+// token so plugin-token requests can be exercised without a real cluster or
+// PluginInstallation informer.
+type stubPluginSAResolver struct{}
+
+func (stubPluginSAResolver) Resolve(_ context.Context, _, _ string) (PluginSA, error) {
+	return PluginSA{Token: "mock-plugin-sa-token", PinnedDefinitionHash: "sha256:mock"}, nil //nolint:gosec // mock token for tests; real resolver uses TokenRequest against the target cluster
+}
+
+// unwiredPluginSAResolver is the real-mode placeholder until the informer +
+// TokenRequest wiring lands. Fail-closed so no request forwards without a real
+// plugin SA token.
+type unwiredPluginSAResolver struct{}
+
+func (unwiredPluginSAResolver) Resolve(_ context.Context, _, _ string) (PluginSA, error) {
+	return PluginSA{}, errors.New("plugin SA resolver not wired for real mode")
+}
+
+func newUserAccessChecker(cfg *Config) UserAccessChecker {
+	if cfg.Mode == "mock" {
+		return stubUserAccessChecker{}
+	}
+	// FUN-17: real-mode wiring issues a SubjectAccessReview against the target
+	// cluster with Spec.User = "system:serviceaccount:{ns}/fundament-{userID}".
+	// Until that lands, deny.
+	return unwiredUserAccessChecker{}
+}
+
+func newPluginSAResolver(cfg *Config) PluginSAResolver {
+	if cfg.Mode == "mock" {
+		return stubPluginSAResolver{}
+	}
+	// FUN-17: real-mode wiring reads PluginInstallation from a local informer
+	// for the pinned definition hash, and obtains the plugin SA token via a
+	// short-lived TokenRequest against the target cluster. Until that lands,
+	// deny.
+	return unwiredPluginSAResolver{}
 }
 
 func (s *Server) requestLogger(next http.Handler) http.Handler {

@@ -955,6 +955,7 @@ CREATE POLICY node_pools_cluster_worker_read ON tenant.node_pools
 CREATE TABLE appstore.plugins (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	name text NOT NULL,
+	display_name text NOT NULL DEFAULT '',
 	description_short text NOT NULL DEFAULT '',
 	description text NOT NULL,
 	author_name text,
@@ -966,6 +967,10 @@ CREATE TABLE appstore.plugins (
 	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
 	CONSTRAINT plugins_pk PRIMARY KEY (id)
 );
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugins.name IS E'Stable identifier, matching the plugin''s definition.yaml metadata.name (e.g. "openfsc"). Used as the PluginInstallation resource name in the cluster — not for display.';
+-- ddl-end --
+COMMENT ON COLUMN appstore.plugins.display_name IS E'Human-readable name shown in the Console, matching the plugin''s definition.yaml metadata.displayName (e.g. "OpenFSC").';
 -- ddl-end --
 ALTER TABLE appstore.plugins OWNER TO fun_owner;
 -- ddl-end --

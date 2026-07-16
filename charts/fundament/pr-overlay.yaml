@@ -77,13 +77,14 @@ spec:
       authn: https://authn.pr${PR_NUM}.${DOMAIN}
       organization: https://organization.pr${PR_NUM}.${DOMAIN}
       kubeApiProxy: https://k8s-api.pr${PR_NUM}.${DOMAIN}
+      pluginProxy: https://plugin-proxy.pr${PR_NUM}.${DOMAIN}
       console: https://console.pr${PR_NUM}.${DOMAIN}
       docs: https://docs.pr${PR_NUM}.${DOMAIN}
       cookieDomain: pr${PR_NUM}.${DOMAIN}
       dcimApi: https://dcim-api.pr${PR_NUM}.${DOMAIN}
       dcim: https://dcim.pr${PR_NUM}.${DOMAIN}
       dcimAuthn: https://dcim-authn.pr${PR_NUM}.${DOMAIN}
-      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN}"
+      corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
 
     images:
       dbMigrations: ${IMAGE_PREFIX}/db-migrations:${IMAGE_TAG}
@@ -184,6 +185,16 @@ spec:
       replicas: 1
       logLevel: debug
       mode: mock
+      httproute:
+        enabled: true
+        parentRefs:
+          - group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: tn-fundament-pr-${PR_NUM}
+            namespace: istio-gateway
+            sectionName: tn-fundament-pr-${PR_NUM}
+        hostnames:
+          - plugin-proxy.pr${PR_NUM}.${DOMAIN}
 
     authzWorker:
       replicas: 1

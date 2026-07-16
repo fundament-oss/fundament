@@ -63,6 +63,8 @@ After(async function (this: ICustomWorld, { result }) {
 Before({ tags: '@api' }, async function (this: ICustomWorld) {
   this.organizationApiUrl = process.env.ORGANIZATION_API_URL || 'https://organization.fundament.localhost:8443';
   this.authnApiUrl = process.env.AUTHN_API_URL || 'https://authn.fundament.localhost:8443';
+  this.pluginProxyUrl = process.env.PLUGIN_PROXY_URL || 'https://plugin-proxy.fundament.localhost:8443';
+  this.consoleUrl = process.env.BASE_URL || 'https://console.fundament.localhost:8443';
   this.tokenService = new TokenService(this.authnApiUrl);
   this.createdApiKeys = new Map();
   this.createdApiKeysByUser = new Map();
