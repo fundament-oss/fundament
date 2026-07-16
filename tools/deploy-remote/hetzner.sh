@@ -177,7 +177,12 @@ untrust_box_ca() {
 print_access() {
   log ""
   log "reach the box UIs from your normal browser:"
-  log "  1) run:   just tunnel      # SSH tunnel :8443 (stop a local k3d first if it owns 8443)"
+  if [ "$HZ_ROLE" = devbox ]; then
+    log "  1) run:   ssh $HZ_NAME    # the managed ssh config carries the :8443 forward"
+    log "            (or: just devbox tunnel — stop a local k3d first if it owns 8443)"
+  else
+    log "  1) run:   just tunnel      # SSH tunnel :8443 (stop a local k3d first if it owns 8443)"
+  fi
   log "  2) open:  $CONSOLE_URL"
   log "     (also docs./dcim./dex.fundament.localhost:8443 — the box CA is trusted locally, no cert warning)"
 }
@@ -294,12 +299,32 @@ EOF
 
 cmd_ssh_config() { require_devbox ssh-config; local ip; ip=$(box_ip); write_ssh_config "$ip"; }
 
-# Post-install devbox finishing: ssh config with the fresh IP + operator guidance.
-# (The dev bootstrap + cert trust + --stack land here via cmd_stack wiring.)
-finish_devbox_up() { # ip stack_mode
+# Push the devbox on-box scripts (user-layer bootstrap + mode-aware stack).
+push_dev_scripts() { # ip
   local ip=$1
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'mkdir -p ~/box' </dev/null
+  scp -P "$SSH_PORT" "${SSH_OPTS[@]}" box/bootstrap-dev.sh box/run-stack-dev.sh "$BOX_USER@$ip:box/" >/dev/null
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" "$BOX_USER@$ip" 'chmod +x ~/box/*.sh' </dev/null
+}
+
+# Post-install devbox finishing: user-layer bootstrap (repo/mise/Claude/CA on the
+# volume — fast when the volume is warm), cycle the CA trust ON, fresh ssh config,
+# then optionally the stack. Idempotent end to end.
+finish_devbox_up() { # ip stack_mode
+  local ip=$1 stack_mode=${2:-}
+  push_dev_scripts "$ip"
+  log "bootstrapping the dev user layer (repo, mise, Claude Code, constrained CA)"
+  ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "$BOX_USER@$ip" \
+    "DEVBOX_DOTFILES='${DEVBOX_DOTFILES:-${devbox_dotfiles:-}}' ~/box/bootstrap-dev.sh" </dev/null \
+    || die "bootstrap-dev failed on the box — inspect with: just devbox ssh"
+  trust_box_ca "$ip"       # trust cycles with the box: ON here, OFF at 'down'
   write_ssh_config "$ip"
+  if [ -n "$stack_mode" ]; then
+    cmd_stack "$stack_mode"
+  fi
   log "READY:  ssh $HZ_NAME   (home = $VOL_NAME, mounted at /home/$BOX_USER)"
+  [ -z "$stack_mode" ] && log "stack:  just devbox stack mock   # or: gardener (also switches a live box)"
+  log "claude: run 'claude' on the box once for the OAuth login (persists on the volume)"
   log "SERVER BILLING IS RUNNING — evening: 'just devbox down' (the volume survives)"
 }
 
@@ -484,8 +509,22 @@ cmd_certs() { ensure_hcloud; local ip; ip=$(box_ip); trust_box_ca "$ip"; log "bo
 # Push the on-box scripts, run bootstrap + the stack, then trust the box's
 # freshly-generated CA locally and print how to reach the UIs.
 cmd_stack() {
-  # devbox stack (mock|gardener) is wired with the dev bootstrap layer.
-  [ "$HZ_ROLE" = devbox ] && die "devbox stack is not wired yet (next layer in this stack)"
+  # devbox: bring up OR switch the stack mode on the RUNNING box (redeploy, not
+  # recreate — mock/gardener are profiles on the same cluster; the volume is
+  # untouched). Fixtures ship with the migrations, identical in both modes.
+  if [ "$HZ_ROLE" = devbox ]; then
+    local mode=${1:-}
+    case "$mode" in mock|gardener) ;; *) die "usage: just devbox stack {mock|gardener}" ;; esac
+    ensure_hcloud
+    local ip; ip=$(box_ip)
+    push_dev_scripts "$ip"
+    log "running the $mode stack on $HZ_NAME (gardener adds ~10-15 min for the seed)"
+    ssh -p "$SSH_PORT" "${SSH_OPTS[@]}" -o ServerAliveInterval=30 "$BOX_USER@$ip" \
+      "STACK_MODE=$mode ~/box/run-stack-dev.sh" </dev/null \
+      || die "stack failed on the box — inspect with: just devbox ssh"
+    print_access
+    return
+  fi
   ensure_hcloud
   local ip ref; ip=$(box_ip)
   # The box clones the repo from GitHub and checks out THIS branch — i.e. it tests
