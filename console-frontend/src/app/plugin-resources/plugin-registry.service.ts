@@ -47,7 +47,10 @@ function parseCrd(raw: RawCrdYaml): ParsedCrd {
   };
 }
 
-function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
+function mapDefinition(
+  def: GetDefinitionResponse,
+  installation: { installationId: string; installationName: string; installationVersion: string },
+): PluginDefinition {
   return {
     apiVersion: def.apiVersion,
     kind: 'PluginDefinition',
@@ -66,6 +69,9 @@ function mapDefinition(def: GetDefinitionResponse): PluginDefinition {
     crds: def.crds ?? [],
     customComponents: def.customComponents,
     allowedResources: def.allowedResources ?? [],
+    installationId: installation.installationId,
+    installationName: installation.installationName,
+    installationVersion: installation.installationVersion,
   };
 }
 
@@ -108,21 +114,50 @@ export default class PluginRegistryService {
         // Child resource names (namespace, service) derive from metadata.name —
         // see plugin-controller resources.go childName/pluginNamespace.
         const installationName = item.metadata.name;
+        // GetDefinition is a Connect RPC: POST + JSON body (even if empty).
+        // A GET would work against MockClient's canned responder but not
+        // against the plugin's real handler.
         const defRes = await fetch(
           `${kubeApiProxyUrl}/clusters/${clusterId}/api/v1/namespaces/plugin-${installationName}/services/http:plugin-${installationName}:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition`,
-          { credentials: 'include' },
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+          },
         );
         if (!defRes.ok) {
           throw new Error(`Failed to fetch definition for ${installationName}: ${defRes.status}`);
         }
 
-        return defRes.json() as Promise<GetDefinitionResponse>;
+        const def = (await defRes.json()) as GetDefinitionResponse;
+        return {
+          def,
+          installationId: item.metadata.uid,
+          installationName,
+          installationVersion: item.spec.definitionRef.pluginVersion,
+        };
       }),
     );
 
     const definitions: PluginDefinition[] = results
-      .filter((r): r is PromiseFulfilledResult<GetDefinitionResponse> => r.status === 'fulfilled')
-      .map((r) => mapDefinition(r.value));
+      .filter(
+        (
+          r,
+        ): r is PromiseFulfilledResult<{
+          def: GetDefinitionResponse;
+          installationId: string;
+          installationName: string;
+          installationVersion: string;
+        }> => r.status === 'fulfilled',
+      )
+      .map((r) =>
+        mapDefinition(r.value.def, {
+          installationId: r.value.installationId,
+          installationName: r.value.installationName,
+          installationVersion: r.value.installationVersion,
+        }),
+      );
 
     this.plugins.set(definitions);
 

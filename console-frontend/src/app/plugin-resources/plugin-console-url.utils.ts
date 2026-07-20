@@ -1,42 +1,91 @@
 /**
  * Builds the absolute URL for a plugin's console asset (`/console/<path>`)
- * served via the Kubernetes service proxy through kube-api-proxy.
+ * served by the FUN-17 plugin-proxy on its dedicated origin.
  *
- * Plugins return relative paths from GetDefinition.customComponents (e.g.
- * `certificates-list.html`); the console expands them here so plugins do not
- * need to know about the kube-api-proxy URL structure.
+ * The URL includes the cluster the user is browsing — asset traffic lands on
+ * that cluster's plugin pod, not on some arbitrary cluster the resolver
+ * happened to pick. Otherwise one unlucky cluster ends up serving asset
+ * requests for every plugin installation across the estate.
  *
- * The `?host=...` query param is appended so the iframe can load the shared
- * /plugin-ui/ bundles (plugin SDK, NLDD Design System) from the Console origin
- * without hard-coding it in the plugin HTML. The value is `window.location.origin`.
+ * Under FUN-17 the plugin iframe runs on a dedicated `plugin-proxy` origin —
+ * cross-site with the console — so the browser refuses any parent DOM access
+ * and applies the strict plugin CSP served by plugin-proxy.
  *
- * Console assets are served unauthenticated, so anyone can hand a victim a link with
- * a `?host=` of their choosing — which the plugin HTML would otherwise turn into a
- * `<script src>` on the asset-serving origin. kube-api-proxy is what prevents that:
- * it refuses a console asset whose `?host=` is not a configured Console origin, and
- * serves the assets under a CSP whose script-src names only those origins (see
- * kube-api-proxy/pkg/kube/plugin_console_assets.go). This builder always passes the
- * real origin, so it is unaffected.
+ * URL shape (matches plugin-proxy/pkg/assets/handler.go):
+ *
+ *   ${pluginProxyUrl}/clusters/${clusterId}/plugins/${pluginName}/${pluginVersion}/console/${path}
  */
 export default function buildPluginConsoleUrl(args: {
-  kubeApiProxyUrl: string;
+  pluginProxyUrl: string;
   clusterId: string;
   pluginName: string;
+  pluginVersion: string;
   path: string;
 }): string {
-  // Pre-built absolute URLs (e.g. /plugin-ui/demo/...) are passed through.
+  // Pre-built absolute URLs (e.g. /plugin-ui/demo/...) are passed through so
+  // the bundled demo plugin still loads. Under FUN-17 the demo will move to
+  // plugin-proxy too; that's a follow-up.
   if (/^https?:\/\//.test(args.path) || args.path.startsWith('/plugin-ui/')) {
     return args.path;
   }
 
-  const base = args.kubeApiProxyUrl.replace(/\/$/, '');
-  const namespace = `plugin-${args.pluginName}`;
-  const service = `http:plugin-${args.pluginName}:8080`;
+  const base = args.pluginProxyUrl.replace(/\/$/, '');
   const consolePath = args.path.startsWith('/') ? args.path.slice(1) : args.path;
-  const url =
+  return (
     `${base}/clusters/${encodeURIComponent(args.clusterId)}` +
-    `/api/v1/namespaces/${encodeURIComponent(namespace)}` +
-    `/services/${encodeURIComponent(service)}/proxy/console/${consolePath}`;
-  const host = encodeURIComponent(window.location.origin);
-  return `${url}?host=${host}`;
+    `/plugins/${encodeURIComponent(args.pluginName)}` +
+    `/${encodeURIComponent(args.pluginVersion)}/console/${consolePath}`
+  );
+}
+
+/**
+ * PluginLike is the minimum plugin shape buildCustomUIUrl needs. Kept narrow
+ * so callers with any registry-entry variant (list/detail/create) can pass
+ * through without an adapter.
+ */
+export interface PluginLike {
+  // The PluginInstallation CR name (metadata.name). plugin-proxy derives the
+  // plugin's namespace/Service as `plugin-<installationName>`, so this — not
+  // the definition's own display `name` — drives the asset URL.
+  installationName: string;
+  installationVersion: string;
+  customComponents?: Record<
+    string,
+    { list?: string; detail?: string; create?: string } | undefined
+  >;
+}
+
+export type CustomUIView = 'list' | 'detail' | 'create';
+
+/**
+ * buildCustomUIUrl returns the plugin-proxy URL for a resource kind's custom
+ * component slot (list/detail/create), or `null` if the plugin doesn't
+ * declare one. Extracts the null-guard + config-lookup + URL-build sequence
+ * that was previously duplicated across resource-list / resource-detail /
+ * resource-create components.
+ */
+export function buildCustomUIUrl(args: {
+  plugin: PluginLike | null | undefined;
+  kind: string | undefined;
+  view: CustomUIView;
+  clusterId: string | null | undefined;
+  pluginProxyUrl: string;
+}): string | null {
+  const { plugin, kind, view, clusterId, pluginProxyUrl } = args;
+  if (!plugin || !kind || !clusterId) return null;
+  const path = plugin.customComponents?.[kind]?.[view];
+  if (!path) return null;
+  // A `/plugin-ui/...` (or absolute) path is passed through verbatim and needs
+  // no installation name/version. For a plugin-proxy-served asset both are
+  // required; an empty version would build `/plugins/<name>//console/...`,
+  // which the handler's parsePath rejects.
+  const passthrough = /^https?:\/\//.test(path) || path.startsWith('/plugin-ui/');
+  if (!passthrough && (!plugin.installationName || !plugin.installationVersion)) return null;
+  return buildPluginConsoleUrl({
+    pluginProxyUrl,
+    clusterId,
+    pluginName: plugin.installationName,
+    pluginVersion: plugin.installationVersion,
+    path,
+  });
 }

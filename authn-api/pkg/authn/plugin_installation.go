@@ -15,9 +15,13 @@ import (
 // InstallationManifest is the identity slice plugin-proxy returns at mint
 // time. authn-api signs these fields into the PluginToken.
 type InstallationManifest struct {
-	PluginName     string
-	PluginVersion  string
-	DefinitionHash string
+	// InstallationName is the CR's metadata.name — signed into the token so
+	// kube-api-proxy can address the plugin SA (plugin-{name}) without a
+	// UID-keyed lookup.
+	InstallationName string
+	PluginName       string
+	PluginVersion    string
+	DefinitionHash   string
 }
 
 // ErrInstallationNotFound is returned by PluginInstallationLookup when no
@@ -58,8 +62,9 @@ func (l *pluginProxyLookup) GetInstallationManifest(
 
 	msg := resp.Msg
 	return &InstallationManifest{
-		PluginName:     msg.GetPluginName(),
-		PluginVersion:  msg.GetPluginVersion(),
-		DefinitionHash: msg.GetDefinitionHash(),
+		InstallationName: msg.GetInstallationName(),
+		PluginName:       msg.GetPluginName(),
+		PluginVersion:    msg.GetPluginVersion(),
+		DefinitionHash:   msg.GetDefinitionHash(),
 	}, nil
 }

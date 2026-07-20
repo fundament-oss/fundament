@@ -78,7 +78,23 @@ rules:
       - get
       - list
       - watch
+      - create
+      - update
+      - patch
+      - delete
       - bind
+      # Plugin-scope ClusterRoles carry rules materialised from the pinned
+      # PluginDefinition (FUN-17). Escalate is required to write rules the
+      # controller SA doesn't itself hold.
+      #
+      # Escalation is bounded by the definition-hash gate:
+      # `spec.definitionRef.definitionHash` MUST match the plugin's actual
+      # GetDefinition (see hashDefinition in reconciler.go). The only way to
+      # skip that check is the operator-set `PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH`
+      # env var on the controller Deployment — no CR field can bypass it.
+      # Combine this with a Kyverno/OPA policy that restricts the RBAC rules
+      # allowed inside plugin-scope ClusterRoles for defence-in-depth.
+      - escalate
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
@@ -140,6 +156,13 @@ spec:
               value: {{ $.Release.Name }}
             - name: LOG_LEVEL
               value: {{ $.Values.pluginController.logLevel }}
+            {{- if $.Values.pluginController.allowUnpinnedHash }}
+            # Local dev only: lets PluginInstallations with an empty
+            # definitionHash materialise their scope from the plugin's live
+            # GetDefinition without hash verification. Never set in production.
+            - name: PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH
+              value: "true"
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /livez

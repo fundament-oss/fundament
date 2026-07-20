@@ -32,19 +32,15 @@ spec:
             - name: CORS_ALLOWED_ORIGINS
               value: "{{ $.Values.externalUrls.corsAllowedOrigins }}"
             {{- end }}
-            {{- with $.Values.externalUrls.consoleOrigins | default $.Values.externalUrls.console }}
-            - name: CONSOLE_ORIGINS
-              value: "{{ . }}"
-            {{- end }}
-            {{- with $.Values.externalUrls.kubeApiProxy }}
-            - name: PUBLIC_ORIGIN
-              value: "{{ . }}"
-            {{- end }}
             - name: KUBE_API_PROXY_MODE
               value: "{{ .Values.kubeApiProxy.mode }}"
             {{- if $.Values.kubeApiProxy.gardenerKubeconfigSecret }}
             - name: GARDENER_KUBECONFIG
               value: /etc/gardener/kubeconfig
+            {{- end }}
+            {{- if $.Values.kubeApiProxy.sandboxKubeconfigSecret }}
+            - name: PLUGIN_SANDBOX_KUBECONFIG
+              value: /etc/plugin-sandbox/kubeconfig
             {{- end }}
             - name: OPENFGA_API_URL
               value: http://openfga:{{ $.Values.openfga.apiPort | default 8080 }}
@@ -71,6 +67,11 @@ spec:
               mountPath: /etc/gardener
               readOnly: true
             {{- end }}
+            {{- if $.Values.kubeApiProxy.sandboxKubeconfigSecret }}
+            - name: plugin-sandbox-kubeconfig
+              mountPath: /etc/plugin-sandbox
+              readOnly: true
+            {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
       volumes:
@@ -82,6 +83,15 @@ spec:
         - name: gardener-kubeconfig
           secret:
             secretName: {{ $.Values.kubeApiProxy.gardenerKubeconfigSecret }}
+        {{- end }}
+        {{- if $.Values.kubeApiProxy.sandboxKubeconfigSecret }}
+        - name: plugin-sandbox-kubeconfig
+          secret:
+            secretName: {{ $.Values.kubeApiProxy.sandboxKubeconfigSecret }}
+            optional: true
+            items:
+              - key: kubeconfig
+                path: kubeconfig
         {{- end }}
 
 ---

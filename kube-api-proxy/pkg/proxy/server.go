@@ -2,21 +2,20 @@ package proxy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/rs/cors"
 
 	"github.com/fundament-oss/fundament/common/auth"
 	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/gardener"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
-	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kubereq"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/pluginsa"
 	tokenpkg "github.com/fundament-oss/fundament/kube-api-proxy/pkg/token"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/useraccess"
 )
 
 type Config struct {
@@ -28,14 +27,10 @@ type Config struct {
 	// requests are answered in mock mode. Layout: <dir>/<pluginName>/console/<file>.
 	// Ignored in "real" mode.
 	MockPluginTemplatesDir string
-	// ConsoleOrigins are the origins the Console is served from. They are the only
-	// origins a plugin console asset may be bootstrapped from, and the only ones its
-	// CSP admits scripts from — see kube.ConsoleAssetPolicy. Empty disables both
-	// checks (bare local dev); every deployed environment sets it.
-	ConsoleOrigins []string
-	// PublicOrigin is this proxy's own public origin, i.e. the origin plugin console
-	// assets are served from. Named in their CSP alongside ConsoleOrigins.
-	PublicOrigin string
+	// PluginSandboxKubeconfig, when set in mock mode, replaces MockClient with
+	// a proxy that forwards every request to a locally-running plugin sandbox
+	// cluster identified by the kubeconfig at this path. Ignored otherwise.
+	PluginSandboxKubeconfig string
 }
 
 type Server struct {
@@ -45,32 +40,12 @@ type Server struct {
 	tokenCache    *tokenpkg.Cache
 	kubeHandler   http.Handler
 	handler       http.Handler
-	consoleAssets kube.ConsoleAssetPolicy
 	pluginGateway *pluginGateway
 }
 
 func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, error) {
 	if cfg.Mode == "" {
 		cfg.Mode = "mock"
-	}
-
-	consoleAssets := kube.ConsoleAssetPolicy{
-		AssetOrigin:    kube.NormalizeOrigin(cfg.PublicOrigin),
-		ConsoleOrigins: kube.NormalizeOrigins(cfg.ConsoleOrigins),
-	}
-	// An unconfigured policy serves plugin console assets — which are public and
-	// unauthenticated — with no CSP and an unchecked ?host=. That is tolerable on a
-	// developer's laptop and not in a real deployment, so "real" mode refuses to start
-	// rather than come up quietly unprotected.
-	if !consoleAssets.Configured() && cfg.Mode == "real" {
-		return nil, fmt.Errorf("CONSOLE_ORIGINS and PUBLIC_ORIGIN are required in %q mode: "+
-			"without them plugin console assets are served with no Content-Security-Policy and "+
-			"an unchecked ?host= origin", cfg.Mode)
-	}
-	if !consoleAssets.Configured() {
-		logger.Warn("CONSOLE_ORIGINS and/or PUBLIC_ORIGIN are not set: plugin console assets are " +
-			"served without a Content-Security-Policy and with an unchecked ?host= origin. Set " +
-			"them to the Console origin(s) and this proxy's own public origin.")
 	}
 
 	var kubeHandler http.Handler
@@ -80,9 +55,16 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		tokenCache = tokenpkg.NewCache(cfg.GardenerClient, logger)
 		kubeHandler = kube.NewMultiClusterProxy(cfg.GardenerClient, logger)
 	case "mock":
-		kubeHandler = &kube.MockClient{
-			PluginTemplatesDir: cfg.MockPluginTemplatesDir,
-			ConsoleAssets:      consoleAssets,
+		if cfg.PluginSandboxKubeconfig != "" {
+			sandbox, err := kube.NewSandboxProxy(cfg.PluginSandboxKubeconfig, logger)
+			if err != nil {
+				return nil, fmt.Errorf("build plugin sandbox proxy: %w", err)
+			}
+			kubeHandler = sandbox
+			logger.Info("mock mode: proxying kube API requests to plugin sandbox cluster",
+				"kubeconfig", cfg.PluginSandboxKubeconfig)
+		} else {
+			kubeHandler = &kube.MockClient{PluginTemplatesDir: cfg.MockPluginTemplatesDir}
 		}
 	default:
 		return nil, fmt.Errorf("invalid Mode %q: must be \"mock\" or \"real\"", cfg.Mode)
@@ -94,19 +76,25 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 		authz:         authzClient,
 		tokenCache:    tokenCache,
 		kubeHandler:   kubeHandler,
-		consoleAssets: consoleAssets,
+	}
+
+	pluginSA, err := newPluginSAResolver(cfg, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	userSAR, err := newUserAccessChecker(cfg, logger)
+	if err != nil {
+		return nil, err
 	}
 
 	s.pluginGateway = &pluginGateway{
 		logger:      logger,
 		jwtSecret:   cfg.JWTSecret,
-		userSAR:     newUserAccessChecker(cfg),
-		pluginSA:    newPluginSAResolver(cfg),
-		canView:     &canViewAdapter{client: authzClient},
+		userSAR:     userSAR,
+		pluginSA:    pluginSA,
+		canView:     authzClient.CanViewCluster,
 		kubeHandler: kubeHandler,
-	}
-	if cfg.Mode == "real" {
-		logger.Warn("plugin gateway installed with unwired real-mode stubs; PluginToken requests will fail-closed until FUN-17 SAR and plugin-SA resolver wiring lands")
 	}
 
 	mux := http.NewServeMux()
@@ -163,81 +151,45 @@ func (r *statusRecorder) WriteHeader(code int) {
 	r.ResponseWriter.WriteHeader(code)
 }
 
-// canViewAdapter adapts common/authz.Client to the ClusterViewChecker
-// interface the plugin gateway needs.
-type canViewAdapter struct{ client *authz.Client }
-
-func (a *canViewAdapter) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID) (bool, error) {
-	if a.client == nil {
-		return false, errors.New("openfga client not configured")
-	}
-	dec, err := a.client.Evaluate(ctx, authz.EvaluationRequest{
-		Subject:  authz.User(userID),
-		Action:   authz.CanView(),
-		Resource: authz.Cluster(clusterID),
-	})
-	if err != nil {
-		return false, fmt.Errorf("openfga can_view: %w", err)
-	}
-	return dec.Decision, nil
-}
-
-// stubUserAccessChecker is the mock-mode UserAccessChecker: allow-all. The real
-// implementation issues an authorization.k8s.io/v1 SubjectAccessReview against
-// the target cluster with the per-user SA username as Spec.User — a follow-up
-// coordinated with the Gardener wiring in real mode.
-type stubUserAccessChecker struct{}
-
-func (stubUserAccessChecker) Check(_ context.Context, _ string, _ *kubereq.Attributes, _ string) (bool, error) {
-	return true, nil
-}
-
-// unwiredUserAccessChecker is the real-mode placeholder until the SAR wiring
-// lands. It fail-closes every request so a running proxy cannot silently
-// allow-all on the plugin path.
-type unwiredUserAccessChecker struct{}
-
-func (unwiredUserAccessChecker) Check(_ context.Context, _ string, _ *kubereq.Attributes, _ string) (bool, error) {
-	return false, errors.New("user SAR checker not wired for real mode")
-}
-
-// stubPluginSAResolver is the mock-mode PluginSAResolver: returns a canned
-// token so plugin-token requests can be exercised without a real cluster or
-// PluginInstallation informer.
-type stubPluginSAResolver struct{}
-
-func (stubPluginSAResolver) Resolve(_ context.Context, _, _ string) (PluginSA, error) {
-	return PluginSA{Token: "mock-plugin-sa-token", PinnedDefinitionHash: "sha256:mock"}, nil //nolint:gosec // mock token for tests; real resolver uses TokenRequest against the target cluster
-}
-
-// unwiredPluginSAResolver is the real-mode placeholder until the informer +
-// TokenRequest wiring lands. Fail-closed so no request forwards without a real
-// plugin SA token.
-type unwiredPluginSAResolver struct{}
-
-func (unwiredPluginSAResolver) Resolve(_ context.Context, _, _ string) (PluginSA, error) {
-	return PluginSA{}, errors.New("plugin SA resolver not wired for real mode")
-}
-
-func newUserAccessChecker(cfg *Config) UserAccessChecker {
+func newUserAccessChecker(cfg *Config, logger *slog.Logger) (useraccess.Checker, error) {
 	if cfg.Mode == "mock" {
-		return stubUserAccessChecker{}
+		if cfg.PluginSandboxKubeconfig == "" {
+			// Pure mock: no real cluster to review against, so allow all.
+			return useraccess.Stub{}, nil
+		}
+
+		// Sandbox: run the user half against the same sandbox apiserver the
+		// plugin half mints tokens on, so the FUN-17 user∩plugin intersection
+		// is actually enforced (and exercised) locally instead of silently
+		// skipped by the allow-all Stub.
+		client, err := useraccess.NewSandboxClient(cfg.PluginSandboxKubeconfig)
+		if err != nil {
+			return nil, fmt.Errorf("build sandbox useraccess client: %w", err)
+		}
+		return useraccess.New(client, logger), nil
 	}
-	// FUN-17: real-mode wiring issues a SubjectAccessReview against the target
-	// cluster with Spec.User = "system:serviceaccount:{ns}/fundament-{userID}".
-	// Until that lands, deny.
-	return unwiredUserAccessChecker{}
+	return useraccess.New(cfg.GardenerClient, logger), nil
 }
 
-func newPluginSAResolver(cfg *Config) PluginSAResolver {
+func newPluginSAResolver(cfg *Config, logger *slog.Logger) (pluginsa.Resolver, error) {
 	if cfg.Mode == "mock" {
-		return stubPluginSAResolver{}
+		if cfg.PluginSandboxKubeconfig == "" {
+			// Pure mock: MockClient doesn't check the bearer, so a stub token is fine.
+			return pluginsa.Stub{}, nil
+		}
+
+		// Sandbox: forward to a real apiserver, so mint real TokenRequests
+		// against the sandbox kubeconfig — the same code path prod uses,
+		// enforced by the sandbox cluster's RBAC on the plugin SA.
+		client, err := pluginsa.NewSandboxClient(cfg.PluginSandboxKubeconfig)
+		if err != nil {
+			return nil, fmt.Errorf("build sandbox pluginsa client: %w", err)
+		}
+
+		return pluginsa.New(client, logger), nil
 	}
-	// FUN-17: real-mode wiring reads PluginInstallation from a local informer
-	// for the pinned definition hash, and obtains the plugin SA token via a
-	// short-lived TokenRequest against the target cluster. Until that lands,
-	// deny.
-	return unwiredPluginSAResolver{}
+
+	return pluginsa.New(cfg.GardenerClient, logger), nil
 }
 
 func (s *Server) requestLogger(next http.Handler) http.Handler {

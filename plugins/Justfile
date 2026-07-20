@@ -73,12 +73,11 @@ plugin-install plugin:
       name: {{ plugin }}
     spec:
       image: ${image}
+      imagePullPolicy: Always
       definitionRef:
         pluginName: {{ plugin }}
         pluginVersion: ${tag}
-        definitionHash: sha256:dev-${tag}
-      clusterRoles:
-        - cluster-admin${config}
+        definitionHash: ""${config}
     EOF
 
 # Delete a PluginInstallation CR

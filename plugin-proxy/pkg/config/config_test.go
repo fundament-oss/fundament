@@ -9,7 +9,10 @@ import (
 
 func TestFromEnv_MockModeDefaultsOrigins(t *testing.T) {
 	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("OPENFGA_API_URL", "http://openfga:8080")
+	t.Setenv("OPENFGA_STORE_ID", "test-store")
 	t.Setenv("PLUGIN_PROXY_MODE", "mock")
+	t.Setenv("PLUGIN_SDK_DIR", t.TempDir())
 	// Explicitly clear origin envs so we test the default behavior.
 	t.Setenv("PLUGIN_PROXY_ORIGIN", "")
 	t.Setenv("KUBE_API_PROXY_ORIGIN", "")
@@ -25,7 +28,10 @@ func TestFromEnv_MockModeDefaultsOrigins(t *testing.T) {
 
 func TestFromEnv_MockModePreservesOrigins(t *testing.T) {
 	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("OPENFGA_API_URL", "http://openfga:8080")
+	t.Setenv("OPENFGA_STORE_ID", "test-store")
 	t.Setenv("PLUGIN_PROXY_MODE", "mock")
+	t.Setenv("PLUGIN_SDK_DIR", t.TempDir())
 	t.Setenv("PLUGIN_PROXY_ORIGIN", "https://pp.example")
 	t.Setenv("KUBE_API_PROXY_ORIGIN", "https://kap.example")
 	t.Setenv("CONSOLE_ORIGIN", "https://console.example")
@@ -71,6 +77,8 @@ func TestFromEnv_RealModeRequiresAllOrigins(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("JWT_SECRET", "test-secret")
+			t.Setenv("OPENFGA_API_URL", "http://openfga:8080")
+			t.Setenv("OPENFGA_STORE_ID", "test-store")
 			t.Setenv("PLUGIN_PROXY_MODE", "real")
 			tc.setup(t)
 
@@ -83,6 +91,8 @@ func TestFromEnv_RealModeRequiresAllOrigins(t *testing.T) {
 
 func TestFromEnv_RealModeWithAllOriginsSucceeds(t *testing.T) {
 	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("OPENFGA_API_URL", "http://openfga:8080")
+	t.Setenv("OPENFGA_STORE_ID", "test-store")
 	t.Setenv("PLUGIN_PROXY_MODE", "real")
 	t.Setenv("PLUGIN_PROXY_ORIGIN", "https://pp.example")
 	t.Setenv("KUBE_API_PROXY_ORIGIN", "https://kap.example")
@@ -95,6 +105,8 @@ func TestFromEnv_RealModeWithAllOriginsSucceeds(t *testing.T) {
 
 func TestFromEnv_UnknownModeErrors(t *testing.T) {
 	t.Setenv("JWT_SECRET", "test-secret")
+	t.Setenv("OPENFGA_API_URL", "http://openfga:8080")
+	t.Setenv("OPENFGA_STORE_ID", "test-store")
 	t.Setenv("PLUGIN_PROXY_MODE", "weird")
 
 	_, err := FromEnv()
@@ -104,6 +116,8 @@ func TestFromEnv_UnknownModeErrors(t *testing.T) {
 
 func TestFromEnv_MissingJWTSecretErrors(t *testing.T) {
 	t.Setenv("JWT_SECRET", "")
+	t.Setenv("OPENFGA_API_URL", "http://openfga:8080")
+	t.Setenv("OPENFGA_STORE_ID", "test-store")
 	t.Setenv("PLUGIN_PROXY_MODE", "mock")
 
 	_, err := FromEnv()

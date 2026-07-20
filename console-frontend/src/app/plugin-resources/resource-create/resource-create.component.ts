@@ -22,7 +22,7 @@ import { ConfigService } from '../../config.service';
 import { NAMESPACE } from '../../../connect/tokens';
 import { ListProjectNamespacesRequestSchema } from '../../../generated/v1/namespace_pb';
 import type { ParsedCrd } from '../types';
-import buildPluginConsoleUrl from '../plugin-console-url.utils';
+import { buildCustomUIUrl } from '../plugin-console-url.utils';
 
 @Component({
   selector: 'app-resource-create',
@@ -59,22 +59,19 @@ export default class ResourceCreateComponent implements OnInit {
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
-  customUIUrl = computed(() => {
-    const kind = this.crdDef()?.kind;
-    if (!kind) return null;
-    const plugin = this.plugin();
-    const path = plugin?.customComponents?.[kind]?.create;
-    const clusterId = this.clusterContext.selectedClusterId();
-    if (!plugin || !path || !clusterId) return null;
-    return buildPluginConsoleUrl({
-      kubeApiProxyUrl: this.config.getConfig().kubeApiProxyUrl,
-      clusterId,
-      pluginName: plugin.name,
-      path,
-    });
-  });
+  customUIUrl = computed(() =>
+    buildCustomUIUrl({
+      plugin: this.plugin(),
+      kind: this.crdDef()?.kind,
+      view: 'create',
+      clusterId: this.clusterContext.selectedClusterId(),
+      pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
+    }),
+  );
 
-  protected allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
+  protected installationId = computed(() => this.plugin()?.installationId ?? '');
+
+  protected installationVersion = computed(() => this.plugin()?.installationVersion ?? '');
 
   errorMessage = signal<string | null>(null);
 

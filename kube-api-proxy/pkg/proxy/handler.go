@@ -55,21 +55,11 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// Plugin console assets are public static UI files. The sandboxed iframe
 	// that loads them runs with an opaque origin and cannot send credentials,
 	// so the auth/authz check is skipped. The mock handler serves these from
-	// disk; in real mode the apiserver service proxy forwards to the plugin
-	// pod's HTTP handler (which itself does not authenticate them). The plugin
-	// pod sets no CORS/CSP headers, so wrap the writer to stamp them on
-	// (see pluginAssetHeaderWriter and kube's plugin_console_assets.go).
+	// disk; in real mode the apiserver service proxy would forward to the
+	// plugin pod's HTTP handler (which itself does not authenticate them).
 	if kube.IsPluginConsoleAssetPath(r.URL.Path) {
-		// The asset HTML bootstraps its scripts from the `?host=` origin, so an
-		// unrecognized one is refused rather than served: a hand-crafted link must
-		// not be able to point a console asset at an attacker's bundle.
-		if !s.consoleAssets.AllowsHost(r.URL.Query().Get("host")) {
-			http.Error(w, "invalid host origin", http.StatusBadRequest)
-			return
-		}
 		ctx := context.WithValue(r.Context(), kube.ClusterIDContextKey{}, clusterID.String())
-		writer := &pluginAssetHeaderWriter{ResponseWriter: w, policy: s.consoleAssets}
-		s.kubeHandler.ServeHTTP(writer, r.WithContext(ctx))
+		s.kubeHandler.ServeHTTP(w, r.WithContext(ctx))
 		return
 	}
 
@@ -78,7 +68,7 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// forward injecting the plugin SA token.
 	switch peekTokenType(r) {
 	case auth.TokenTypePlugin:
-		s.pluginGateway.serve(w, r, clusterID)
+		s.pluginGateway.serve(w, r, clusterID.String())
 	default:
 		// UserToken and cookie-borne requests: unchanged behaviour.
 		s.handleUserClusterProxy(w, r, clusterID)
@@ -165,52 +155,4 @@ func isAllowedPath(path string) bool {
 		}
 	}
 	return false
-}
-
-// pluginAssetHeaderWriter stamps the plugin console asset policy (public CORS + a
-// script-src CSP) onto the response. The sandboxed iframe that loads these has an
-// opaque origin (Origin: null) the CORS middleware won't allow-list, and the proxied
-// plugin pod sets no CORS or CSP headers itself, so the policy is applied just
-// before the status line — overriding both the middleware and the proxied response.
-//
-// Unwrap exposes the underlying writer, so http.ResponseController (which
-// httputil.ReverseProxy uses to flush and to set read/write deadlines) reaches the
-// real writer's Flusher/Hijacker/deadline support rather than silently getting
-// http.ErrNotSupported from the wrapper.
-type pluginAssetHeaderWriter struct {
-	http.ResponseWriter
-	policy  kube.ConsoleAssetPolicy
-	applied bool
-}
-
-func (w *pluginAssetHeaderWriter) applyHeaders() {
-	if w.applied {
-		return
-	}
-	w.applied = true
-	w.policy.SetHeaders(w.Header())
-}
-
-func (w *pluginAssetHeaderWriter) WriteHeader(status int) {
-	w.applyHeaders()
-	w.ResponseWriter.WriteHeader(status)
-}
-
-func (w *pluginAssetHeaderWriter) Write(b []byte) (int, error) {
-	w.applyHeaders()
-	return w.ResponseWriter.Write(b)
-}
-
-func (w *pluginAssetHeaderWriter) Unwrap() http.ResponseWriter {
-	return w.ResponseWriter
-}
-
-// Flush forwards to the wrapped writer so the proxy can stream the response. It
-// applies the headers first: flushing an uncommitted response makes net/http send
-// the header block as it stands, which would otherwise escape without the policy.
-func (w *pluginAssetHeaderWriter) Flush() {
-	w.applyHeaders()
-	if f, ok := w.ResponseWriter.(http.Flusher); ok {
-		f.Flush()
-	}
 }
