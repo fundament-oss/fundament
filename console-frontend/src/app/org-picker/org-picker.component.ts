@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import type { Organization } from '../../generated/v1/organization_pb';
 import type { Invitation } from '../../generated/v1/invite_pb';
+import { isPresenting } from '../presentation/presenting';
 
 @Component({
   selector: 'app-org-picker',
@@ -43,6 +44,7 @@ export default class OrgPickerComponent {
 
   constructor() {
     afterNextRender(() => {
+      if (isPresenting()) return;
       this.el.nativeElement.querySelector('button')?.focus();
     });
   }

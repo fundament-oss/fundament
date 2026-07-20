@@ -32,11 +32,12 @@ import { PresentationService } from './presentation.service';
                 {{ slide.link.label || slide.link.url }}
               </a>
             }
-            @if (slide.aside) {
-              <p class="deck-aside">{{ slide.aside }}</p>
-            }
           }
         </div>
+
+        @if (presentation.currentSlide()?.aside; as aside) {
+          <p class="deck-aside">{{ aside }}</p>
+        }
 
         <div class="footer">
           <div class="footer-row">
@@ -177,13 +178,18 @@ import { PresentationService } from './presentation.service';
         align-self: center;
       }
       .deck-aside {
-        margin: 0.5rem 0 0;
+        flex: 0 0 auto;
+        margin: 0;
         padding: 0.85rem 1rem;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.08);
         font-size: 0.9rem;
         line-height: 1.4;
         opacity: 0.85;
+      }
+      .deck.full .deck-aside {
+        width: 100%;
+        max-width: 46rem;
       }
       .footer {
         flex: 0 0 auto;
@@ -229,6 +235,11 @@ import { PresentationService } from './presentation.service';
       }
       .text-link:hover {
         color: #fff;
+      }
+      .text-link:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 3px;
+        border-radius: 4px;
       }
       .nav {
         display: inline-flex;
@@ -312,6 +323,10 @@ import { PresentationService } from './presentation.service';
         background: rgba(255, 255, 255, 0.2);
         border-color: #fff;
       }
+      .ghost-btn:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+      }
       /* Small-screen fallback: hide the slide content, show the notice. */
       .too-small {
         display: none;
@@ -326,6 +341,7 @@ import { PresentationService } from './presentation.service';
           width: 100vw;
         }
         .deck .deck-body,
+        .deck .deck-aside,
         .deck .footer,
         .deck .progress {
           display: none;

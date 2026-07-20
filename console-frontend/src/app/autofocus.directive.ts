@@ -1,4 +1,5 @@
 import { afterNextRender, Directive, ElementRef, inject, input } from '@angular/core';
+import { isPresenting } from './presentation/presenting';
 
 @Directive({
   selector: '[appAutofocus]',
@@ -10,7 +11,8 @@ export default class AutofocusDirective {
   constructor() {
     const el = inject<ElementRef<HTMLElement>>(ElementRef);
     afterNextRender(() => {
-      if (this.appAutofocus() !== false) {
+      // Focusing an input while presenting swallows the overlay's arrow keys.
+      if (this.appAutofocus() !== false && !isPresenting()) {
         // setTimeout ensures Lit's async shadow DOM render has completed
         // before calling focus(), since Lit renders on microtasks and
         // afterNextRender fires before those microtasks settle.

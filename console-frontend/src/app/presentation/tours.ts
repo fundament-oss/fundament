@@ -11,7 +11,7 @@ const clustersProjects: Tour = {
       id: 'intro',
       kind: 'opening',
       full: true,
-      title: 'Fundament Console',
+      title: 'Fundament',
       lead: 'Het platform waarmee teams zelf Kubernetes-clusters en projecten beheren.',
       bullets: [
         'Geen tickets, geen wachttijd: teams regelen hun eigen infrastructuur.',
