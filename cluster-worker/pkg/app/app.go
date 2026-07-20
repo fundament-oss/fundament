@@ -234,9 +234,15 @@ func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, er
 			providerCfg.ServicesCIDR = g.ServicesCIDR
 		}
 		if g.InfrastructureConfig != "" {
+			if !json.Valid([]byte(g.InfrastructureConfig)) {
+				return nil, fmt.Errorf("GARDENER_INFRASTRUCTURE_CONFIG is not valid JSON")
+			}
 			providerCfg.InfrastructureConfig = g.InfrastructureConfig
 		}
 		if g.ControlPlaneConfig != "" {
+			if !json.Valid([]byte(g.ControlPlaneConfig)) {
+				return nil, fmt.Errorf("GARDENER_CONTROL_PLANE_CONFIG is not valid JSON")
+			}
 			providerCfg.ControlPlaneConfig = g.ControlPlaneConfig
 		}
 		if g.ShootAnnotations != "" {
