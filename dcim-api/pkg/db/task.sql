@@ -5,7 +5,7 @@ WHERE deleted IS NULL
   AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status')::text)
   AND (sqlc.narg('priority')::text IS NULL OR priority = sqlc.narg('priority')::text)
   AND (sqlc.narg('category')::text IS NULL OR category = sqlc.narg('category')::text)
-  AND (sqlc.narg('assignee_id')::text IS NULL OR assignee_id = sqlc.narg('assignee_id')::text)
+  AND (sqlc.narg('assignee_id')::uuid IS NULL OR assignee_id = sqlc.narg('assignee_id')::uuid)
 ORDER BY created DESC;
 
 -- name: TaskGetByID :one

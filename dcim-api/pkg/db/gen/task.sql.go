@@ -24,7 +24,7 @@ type TaskCreateParams struct {
 	Status      string
 	Priority    string
 	Category    string
-	AssigneeID  pgtype.Text
+	AssigneeID  pgtype.UUID
 	DueDate     pgtype.Timestamptz
 	Location    pgtype.Text
 }
@@ -80,7 +80,7 @@ type TaskGetByIDRow struct {
 	Status      string
 	Priority    string
 	Category    string
-	AssigneeID  pgtype.Text
+	AssigneeID  pgtype.UUID
 	DueDate     pgtype.Timestamptz
 	Location    pgtype.Text
 	Created     pgtype.Timestamptz
@@ -111,7 +111,7 @@ WHERE deleted IS NULL
   AND ($1::text IS NULL OR status = $1::text)
   AND ($2::text IS NULL OR priority = $2::text)
   AND ($3::text IS NULL OR category = $3::text)
-  AND ($4::text IS NULL OR assignee_id = $4::text)
+  AND ($4::uuid IS NULL OR assignee_id = $4::uuid)
 ORDER BY created DESC
 `
 
@@ -119,7 +119,7 @@ type TaskListParams struct {
 	Status     pgtype.Text
 	Priority   pgtype.Text
 	Category   pgtype.Text
-	AssigneeID pgtype.Text
+	AssigneeID pgtype.UUID
 }
 
 type TaskListRow struct {
@@ -129,7 +129,7 @@ type TaskListRow struct {
 	Status      string
 	Priority    string
 	Category    string
-	AssigneeID  pgtype.Text
+	AssigneeID  pgtype.UUID
 	DueDate     pgtype.Timestamptz
 	Location    pgtype.Text
 	Created     pgtype.Timestamptz
@@ -201,7 +201,7 @@ type TaskUpdateParams struct {
 	Priority      pgtype.Text
 	Category      pgtype.Text
 	ClearAssignee bool
-	AssigneeID    pgtype.Text
+	AssigneeID    pgtype.UUID
 	ClearDueDate  bool
 	DueDate       pgtype.Timestamptz
 	ClearLocation bool

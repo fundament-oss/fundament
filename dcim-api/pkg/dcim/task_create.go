@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
@@ -27,7 +28,12 @@ func (s *Server) CreateTask(
 	}
 
 	if req.Msg.HasAssigneeId() {
-		params.AssigneeID = pgtype.Text{String: req.Msg.GetAssigneeId(), Valid: true}
+		assigneeID, err := uuid.Parse(req.Msg.GetAssigneeId())
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid assignee_id: %w", err))
+		}
+
+		params.AssigneeID = pgtype.UUID{Bytes: assigneeID, Valid: true}
 	}
 
 	if req.Msg.HasDueDate() {

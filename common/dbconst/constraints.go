@@ -129,6 +129,8 @@ const (
 	ConstraintDcimRoomsFkSite = "dcim_rooms_fk_site"
 	// ConstraintDcimTaskStepsFkTask is defined on dcim.task_steps.
 	ConstraintDcimTaskStepsFkTask = "dcim_task_steps_fk_task"
+	// ConstraintDcimTasksFkAssignee is defined on dcim.tasks.
+	ConstraintDcimTasksFkAssignee = "dcim_tasks_fk_assignee"
 	// ConstraintDeviceCatalogsCkCategory is defined on dcim.device_catalogs.
 	ConstraintDeviceCatalogsCkCategory = "device_catalogs_ck_category"
 	// ConstraintDeviceCatalogsUqManufacturerModel is defined on dcim.device_catalogs.

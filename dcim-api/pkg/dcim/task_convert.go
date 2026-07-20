@@ -3,6 +3,8 @@ package dcim
 import (
 	"fmt"
 
+	"github.com/google/uuid"
+
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -125,7 +127,7 @@ func taskFromRow(row *db.TaskGetByIDRow) *dcimv1.Task {
 	}
 
 	if row.AssigneeID.Valid {
-		task.SetAssigneeId(row.AssigneeID.String)
+		task.SetAssigneeId(uuid.UUID(row.AssigneeID.Bytes).String())
 	}
 
 	if row.DueDate.Valid {
@@ -154,7 +156,7 @@ func taskFromListRow(row *db.TaskListRow) *dcimv1.Task {
 	}
 
 	if row.AssigneeID.Valid {
-		task.SetAssigneeId(row.AssigneeID.String)
+		task.SetAssigneeId(uuid.UUID(row.AssigneeID.Bytes).String())
 	}
 
 	if row.DueDate.Valid {

@@ -51,7 +51,12 @@ func (s *Server) UpdateTask(
 		if v := req.Msg.GetAssigneeId(); v == "" {
 			params.ClearAssignee = true
 		} else {
-			params.AssigneeID = pgtype.Text{String: v, Valid: true}
+			assigneeID, err := uuid.Parse(v)
+			if err != nil {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid assignee_id: %w", err))
+			}
+
+			params.AssigneeID = pgtype.UUID{Bytes: assigneeID, Valid: true}
 		}
 	}
 

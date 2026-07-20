@@ -2893,7 +2893,7 @@ END;]]> </definition>
 		<type name="text" length="0"/>
 	</column>
 	<column name="assignee_id">
-		<type name="text" length="0"/>
+		<type name="uuid" length="0"/>
 	</column>
 	<column name="due_date">
 		<type name="timestamptz" length="0"/>
@@ -3477,6 +3477,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="dcim_tasks_fk_assignee" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="dcim.users" table="dcim.tasks">
+	<columns names="assignee_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <relationship name="rel_projects_clusters" type="relfk" layers="0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.clusters" reference-fk="projects_fk_cluster"
@@ -3841,6 +3847,11 @@ END;]]> </definition>
 	 src-table="dcim.task_steps"
 	 dst-table="dcim.tasks" reference-fk="dcim_task_steps_fk_task"
 	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_dcim_tasks_users" type="relfk" layers="0"
+	 src-table="dcim.tasks"
+	 dst-table="dcim.users" reference-fk="dcim_tasks_fk_assignee"
+	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_idempotency_keys_projects" type="relfk" layers="0"
 	 src-table="tenant.idempotency_keys"

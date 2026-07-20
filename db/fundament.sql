@@ -2319,7 +2319,7 @@ CREATE TABLE dcim.tasks (
 	status text NOT NULL DEFAULT 'ready',
 	priority text NOT NULL DEFAULT 'medium',
 	category text NOT NULL DEFAULT 'other',
-	assignee_id text,
+	assignee_id uuid,
 	due_date timestamptz,
 	location text,
 	created timestamptz NOT NULL DEFAULT now(),
@@ -2931,6 +2931,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_task CASCADE;
 ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_task FOREIGN KEY (task_id)
 REFERENCES dcim.tasks (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_tasks_fk_assignee | type: CONSTRAINT --
+-- ALTER TABLE dcim.tasks DROP CONSTRAINT IF EXISTS dcim_tasks_fk_assignee CASCADE;
+ALTER TABLE dcim.tasks ADD CONSTRAINT dcim_tasks_fk_assignee FOREIGN KEY (assignee_id)
+REFERENCES dcim.users (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
