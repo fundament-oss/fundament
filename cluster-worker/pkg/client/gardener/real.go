@@ -24,6 +24,7 @@ import (
 type ProviderConfig struct {
 	Type                   string // e.g., "local", "metal", "aws"
 	CloudProfile           string // e.g., "local", "metal", "aws"
+	Region                 string // default shoot region when the cluster specifies none (e.g., "local")
 	CredentialsBindingName string // e.g., "local", "metal-credentials" (required for all providers)
 
 	// CredentialsRef is the reference to the shared credentials resource.
@@ -41,6 +42,24 @@ type ProviderConfig struct {
 	MachineImageName    string // e.g., "local", "gardenlinux"
 	MachineImageVersion string // e.g., "1.0.0", "1592.2.0"
 	DefaultMachineType  string // e.g., "local", "n1-standard-4" (fallback when no node pools configured)
+
+	// Networking CIDRs. NodesCIDR empty leaves spec.networking.nodes unset so the
+	// provider's IPAM allocates the node range (metal hands out a partition /24);
+	// the local provider falls back to 10.0.0.0/16. Pods/Services are set only when
+	// configured (metal needs CIDRs inside the tenant super's additionalAnnouncableCIDRs).
+	NodesCIDR    string
+	PodsCIDR     string
+	ServicesCIDR string
+
+	// InfrastructureConfig and ControlPlaneConfig are raw JSON stamped verbatim
+	// onto spec.provider.* . Required by metal (partition/project/firewall +
+	// control plane); the local provider sets neither.
+	InfrastructureConfig string
+	ControlPlaneConfig   string
+
+	// ShootAnnotations are extra annotations merged onto every Shoot, e.g. metal's
+	// cluster.metal-stack.io/tenant (required by the provider-metal admission validator).
+	ShootAnnotations map[string]string
 }
 
 // NewProviderConfig creates a ProviderConfig with defaults for the local provider.
@@ -49,6 +68,7 @@ func NewProviderConfig() ProviderConfig {
 	return ProviderConfig{
 		Type:                     "local",
 		CloudProfile:             "local",
+		Region:                   "local",
 		CredentialsBindingName:   "local",                            // Name of CredentialsBinding to create/reference
 		CredentialsRef:           "garden-local/local",               // Shared WorkloadIdentity for local provider
 		CredentialsRefKind:       "WorkloadIdentity",                 // Local provider uses WorkloadIdentity
@@ -543,6 +563,11 @@ func (r *RealClient) shootAnnotations(clusterName string) map[string]string {
 	annotations := map[string]string{
 		AnnotationClusterName: clusterName,
 	}
+	// Operator-supplied annotations (e.g. metal's cluster.metal-stack.io/tenant,
+	// required by the provider-metal admission validator).
+	for k, v := range r.provider.ShootAnnotations {
+		annotations[k] = v
+	}
 	if r.provider.Type == "local" {
 		annotations["shoot.gardener.cloud/cleanup-webhooks-finalize-grace-period-seconds"] = "15"
 		annotations["shoot.gardener.cloud/cleanup-extended-apis-finalize-grace-period-seconds"] = "15"
@@ -556,6 +581,19 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.
 	workers, err := r.buildWorkers(cluster)
 	if err != nil {
 		return nil, err
+	}
+
+	provider := gardencorev1beta1.Provider{
+		Type:    r.provider.Type,
+		Workers: workers,
+	}
+	// Provider-specific extension configs, stamped verbatim. Required by metal
+	// (partition/project/firewall + control plane); the local provider sets neither.
+	if r.provider.InfrastructureConfig != "" {
+		provider.InfrastructureConfig = &runtime.RawExtension{Raw: []byte(r.provider.InfrastructureConfig)}
+	}
+	if r.provider.ControlPlaneConfig != "" {
+		provider.ControlPlaneConfig = &runtime.RawExtension{Raw: []byte(r.provider.ControlPlaneConfig)}
 	}
 
 	shoot := &gardencorev1beta1.Shoot{
@@ -573,18 +611,12 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.
 				Kind: "CloudProfile",
 				Name: r.provider.CloudProfile,
 			},
-			Region: cluster.Region,
+			Region: r.region(cluster),
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version: cluster.KubernetesVersion,
 			},
-			Provider: gardencorev1beta1.Provider{
-				Type:    r.provider.Type,
-				Workers: workers,
-			},
-			Networking: &gardencorev1beta1.Networking{
-				Type:  new("calico"), // Default CNI
-				Nodes: new("10.0.0.0/16"),
-			},
+			Provider:   provider,
+			Networking: r.buildNetworking(),
 		},
 	}
 
@@ -594,6 +626,38 @@ func (r *RealClient) buildShootSpec(cluster *ClusterToSync) (*gardencorev1beta1.
 	}
 
 	return shoot, nil
+}
+
+// region returns the cluster's region, falling back to the provider default when
+// unset (single-region providers such as metal expose one region, e.g. "local").
+func (r *RealClient) region(cluster *ClusterToSync) string {
+	if cluster.Region != "" {
+		return cluster.Region
+	}
+	return r.provider.Region
+}
+
+// buildNetworking builds the Shoot networking from provider config. The node CIDR
+// is left unset when not configured so the provider's IPAM allocates it (metal
+// hands out a partition range); the local provider falls back to 10.0.0.0/16.
+// Pods/Services are set only when configured.
+func (r *RealClient) buildNetworking() *gardencorev1beta1.Networking {
+	n := &gardencorev1beta1.Networking{Type: new("calico")}
+
+	nodesCIDR := r.provider.NodesCIDR
+	if nodesCIDR == "" && r.provider.Type == "local" {
+		nodesCIDR = "10.0.0.0/16"
+	}
+	if nodesCIDR != "" {
+		n.Nodes = new(nodesCIDR)
+	}
+	if r.provider.PodsCIDR != "" {
+		n.Pods = new(r.provider.PodsCIDR)
+	}
+	if r.provider.ServicesCIDR != "" {
+		n.Services = new(r.provider.ServicesCIDR)
+	}
+	return n
 }
 
 // buildWorkers converts node pools to Gardener worker groups and enforces the
@@ -696,7 +760,7 @@ func (r *RealClient) updateShootSpec(shoot *gardencorev1beta1.Shoot, cluster *Cl
 	}
 	shoot.Annotations[AnnotationClusterName] = cluster.Name
 
-	shoot.Spec.Region = cluster.Region
+	shoot.Spec.Region = r.region(cluster)
 	shoot.Spec.Kubernetes.Version = cluster.KubernetesVersion
 	shoot.Spec.Provider.Workers = workers
 	return nil
