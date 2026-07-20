@@ -9,6 +9,8 @@ import { createDemoTransport } from './mock-transport';
 import { FakeAuthnApiService } from './fake-authn-api.service';
 import { DemoConfigService } from './demo-config.service';
 import { DemoTitleService } from './demo-title.service';
+import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import FakePluginInstallationService from './fake-plugin-installation.service';
 
 // Dummy URLs — the demo transports are in-memory and ignore baseUrl.
 const demoConfig: AppConfiguration = {
@@ -35,6 +37,12 @@ export const demoAppConfig: ApplicationConfig = {
     {
       provide: TitleService,
       useFactory: () => new DemoTitleService() as unknown as TitleService,
+    },
+    // Installs are in-memory, so the walkthrough can install a plugin for real.
+    {
+      provide: PluginInstallationService,
+      useFactory: () =>
+        new FakePluginInstallationService() as unknown as PluginInstallationService,
     },
     { provide: AUTHN_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: ORGANIZATION_TRANSPORT, useFactory: () => createDemoTransport() },

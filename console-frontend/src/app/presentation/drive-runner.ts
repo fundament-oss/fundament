@@ -77,6 +77,13 @@ async function runStep(step: DriveStep, signal: AbortSignal): Promise<void> {
     }
     return;
   }
+  if (step.set && step.check !== undefined) {
+    const el = await waitForElement(step.set, signal);
+    el?.dispatchEvent(
+      new CustomEvent('change', { detail: { checked: step.check }, bubbles: true }),
+    );
+    return;
+  }
   if (step.set) {
     const el = await waitForElement(step.set, signal);
     el?.dispatchEvent(new CustomEvent('change', { detail: { value: step.value }, bubbles: true }));

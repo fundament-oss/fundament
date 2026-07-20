@@ -1,49 +1,35 @@
 // Demo-only in-memory ConnectRPC transport for the static walkthrough build.
 // Redirects every RPC to handwritten fixtures — no network, no backend.
 import { create } from '@bufbuild/protobuf';
-import { Transport } from '@connectrpc/connect';
-import { createRouterTransport } from '@connectrpc/connect';
-import { OrganizationService } from '../../generated/v1/organization_pb';
-import { ClusterService } from '../../generated/v1/cluster_pb';
-import { NamespaceService } from '../../generated/v1/namespace_pb';
-import { ProjectService } from '../../generated/v1/project_pb';
-import { MemberService } from '../../generated/v1/member_pb';
-import { InviteService } from '../../generated/v1/invite_pb';
-import { PluginService } from '../../generated/v1/plugin_pb';
-import { APIKeyService } from '../../generated/v1/apikey_pb';
-import { AuthnService } from '../../generated/authn/v1/authn_pb';
-import { GetUserInfoResponseSchema } from '../../generated/authn/v1/authn_pb';
-import {
+import { Transport, createRouterTransport  } from '@connectrpc/connect';
+import { OrganizationService,
   ListOrganizationsResponseSchema,
   GetOrganizationResponseSchema,
-  GetOrganizationLimitsResponseSchema,
-} from '../../generated/v1/organization_pb';
-import {
+  GetOrganizationLimitsResponseSchema } from '../../generated/v1/organization_pb';
+import { ClusterService,
   ListClustersResponseSchema,
   GetClusterResponseSchema,
   ListNodePoolsResponseSchema,
   GetClusterActivityResponseSchema,
   CreateClusterResponseSchema,
   ListClustersResponse_ClusterSummarySchema,
-  ClusterDetailsSchema,
-} from '../../generated/v1/cluster_pb';
-import {
+  ClusterDetailsSchema } from '../../generated/v1/cluster_pb';
+import { NamespaceService,
   ListClusterNamespacesResponseSchema,
-  ListProjectNamespacesResponseSchema,
-} from '../../generated/v1/namespace_pb';
-import {
+  ListProjectNamespacesResponseSchema } from '../../generated/v1/namespace_pb';
+import { ProjectService,
   ListProjectsResponseSchema,
   GetProjectResponseSchema,
   ListProjectMembersResponseSchema,
-  GetProjectLimitsResponseSchema,
-} from '../../generated/v1/project_pb';
-import { ListMembersResponseSchema } from '../../generated/v1/member_pb';
-import { ListInvitationsResponseSchema } from '../../generated/v1/invite_pb';
-import {
+  GetProjectLimitsResponseSchema } from '../../generated/v1/project_pb';
+import { MemberService, ListMembersResponseSchema  } from '../../generated/v1/member_pb';
+import { InviteService, ListInvitationsResponseSchema  } from '../../generated/v1/invite_pb';
+import { PluginService,
   ListPluginsResponseSchema,
   ListPresetsResponseSchema,
-} from '../../generated/v1/plugin_pb';
-import { ListAPIKeysResponseSchema } from '../../generated/v1/apikey_pb';
+  GetPluginDetailResponseSchema } from '../../generated/v1/plugin_pb';
+import { APIKeyService, ListAPIKeysResponseSchema  } from '../../generated/v1/apikey_pb';
+import { AuthnService, GetUserInfoResponseSchema  } from '../../generated/authn/v1/authn_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import * as fx from './fixtures';
 
@@ -197,16 +183,18 @@ export function createDemoTransport(): Transport {
       },
     });
 
-    // Plugins are out of the tour's scope; return empty so plugin-aware pages
-    // (e.g. cluster detail) render cleanly instead of erroring on "unimplemented".
     router.service(PluginService, {
       listPlugins: async () => {
-        await delay(80);
-        return create(ListPluginsResponseSchema, { plugins: [] });
+        await delay();
+        return create(ListPluginsResponseSchema, { plugins: fx.plugins });
       },
       listPresets: async () => {
         await delay(80);
-        return create(ListPresetsResponseSchema, { presets: [] });
+        return create(ListPresetsResponseSchema, { presets: fx.presets });
+      },
+      getPluginDetail: async (req) => {
+        await delay();
+        return create(GetPluginDetailResponseSchema, { plugin: fx.pluginDetail(req.pluginId) });
       },
     });
 

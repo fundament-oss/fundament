@@ -7,11 +7,59 @@ import { PresentationService } from './presentation.service';
   host: { '(document:keydown)': 'onKeydown($event)' },
   template: `
     @if (presentation.active()) {
-      <aside class="deck" [class.full]="presentation.isFull()" aria-label="Presentation narration">
+      <aside class="deck" [class.full]="presentation.deckFull()" aria-label="Presentation narration">
         <div class="too-small">
           <p>De presentatiemodus werkt het beste op een groot scherm of projector.</p>
           <button type="button" class="ghost-btn" (click)="presentation.stop()">Sluiten</button>
         </div>
+
+        @if (presentation.mode() === 'chooser') {
+          <div class="chooser">
+            <header class="chooser-head">
+              <h1 class="deck-title">Fundament</h1>
+              <p class="deck-lead">
+                Kies een rondleiding, of bekijk het platform door de ogen van een rol.
+              </p>
+            </header>
+
+            <section>
+              <h2 class="section-label">Verhalen</h2>
+              <ul class="cards">
+                @for (tour of presentation.storyTours; track tour.id) {
+                  <li>
+                    <button type="button" class="card story" (click)="presentation.startTour(tour.id)">
+                      <svg class="card-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path [attr.d]="tour.icon" />
+                      </svg>
+                      <span class="card-name">{{ tour.title }}</span>
+                      <span class="card-blurb">{{ tour.lead }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
+
+            <section>
+              <h2 class="section-label">Of word een rol</h2>
+              <ul class="cards">
+                @for (tour of presentation.personaTours; track tour.id) {
+                  <li>
+                    <button type="button" class="card" (click)="presentation.startTour(tour.id)">
+                      <svg class="card-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path [attr.d]="tour.icon" />
+                      </svg>
+                      <span class="card-name">{{ tour.persona?.name }}</span>
+                      <span class="card-role">{{ tour.persona?.role }}</span>
+                      <span class="card-blurb">{{ tour.persona?.blurb }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
+
+            <p class="chooser-aside"><span class="k">Esc</span> sluit de presentatie.</p>
+          </div>
+        } @else {
 
         <div class="deck-body">
           @if (presentation.currentSlide(); as slide) {
@@ -45,6 +93,9 @@ import { PresentationService } from './presentation.service';
               <span class="counter">
                 {{ presentation.currentLabel() }} <span class="sep">/</span> {{ presentation.total() }}
               </span>
+              <button type="button" class="text-link" (click)="presentation.backToChooser()">
+                ← Naar de keuze
+              </button>
               <button type="button" class="text-link" (click)="presentation.goto(0)">↺ Opnieuw</button>
             </div>
             <div class="nav">
@@ -70,7 +121,7 @@ import { PresentationService } from './presentation.service';
           </div>
 
           <div class="hints">
-            <span><span class="k">Esc</span> sluit</span>
+            <span><span class="k">Esc</span> terug naar de keuze</span>
             <span [class.active]="presentation.browserFullscreen()"><span class="k">f</span> volledig scherm</span>
             <span [class.active]="presentation.autoplay()"><span class="k">a</span> autoplay</span>
             <span [class.active]="presentation.skipOptional()"><span class="k">o</span> sla optionele over</span>
@@ -78,6 +129,7 @@ import { PresentationService } from './presentation.service';
         </div>
 
         <div class="progress"><div class="progress-fill" [style.width.%]="presentation.progress()"></div></div>
+        }
       </aside>
     }
   `,
@@ -176,6 +228,109 @@ import { PresentationService } from './presentation.service';
       }
       .deck.full .slide-link {
         align-self: center;
+      }
+      /* --- Chooser ------------------------------------------------------- */
+      .chooser {
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: 68rem;
+        min-height: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2.25rem;
+        text-align: left;
+      }
+      .chooser-head {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+      .section-label {
+        margin: 0 0 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.55);
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+        gap: 1rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .card {
+        appearance: none;
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding: 1.25rem;
+        text-align: left;
+        font: inherit;
+        color: #fff;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 14px;
+        transition: background 0.15s, border-color 0.15s, transform 0.15s;
+      }
+      .card:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: #fff;
+        transform: translateY(-2px);
+      }
+      .card:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 3px;
+      }
+      .card.story {
+        border-color: rgba(255, 182, 18, 0.6);
+      }
+      .card-icon {
+        width: 1.6rem;
+        height: 1.6rem;
+        margin-bottom: 0.9rem;
+        fill: none;
+        stroke: #a8c0dd;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .card.story .card-icon {
+        stroke: #ffb612;
+      }
+      .card-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+      .card-role {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #a8c0dd;
+      }
+      .card.story .card-role {
+        color: #ffb612;
+      }
+      .card-blurb {
+        margin-top: 0.15rem;
+        font-size: 0.92rem;
+        line-height: 1.45;
+        color: rgba(255, 255, 255, 0.82);
+      }
+      .chooser-aside {
+        margin: 0;
+        font-size: 0.78rem;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      .chooser-aside .k {
+        color: #fff;
+        font-weight: 600;
       }
       .deck-aside {
         flex: 0 0 auto;
@@ -341,6 +496,7 @@ import { PresentationService } from './presentation.service';
           width: 100vw;
         }
         .deck .deck-body,
+        .deck .chooser,
         .deck .deck-aside,
         .deck .footer,
         .deck .progress {
@@ -373,10 +529,18 @@ export class PresentationOverlayComponent {
       // also close the presentation. A second Esc (no longer fullscreen) closes it.
       if (document.fullscreenElement) return;
       event.preventDefault();
-      this.presentation.stop();
+      // From a tour, Esc steps back to the chooser; from the chooser it closes.
+      if (this.presentation.mode() === 'tour') {
+        this.presentation.backToChooser();
+      } else {
+        this.presentation.stop();
+      }
       return;
     }
     if (inField) return;
+
+    // The chooser is navigated by tabbing between cards, not by the slide keys.
+    if (this.presentation.mode() === 'chooser') return;
 
     switch (event.key) {
       case 'ArrowRight':

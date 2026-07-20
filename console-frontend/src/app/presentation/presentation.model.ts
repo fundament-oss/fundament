@@ -11,6 +11,8 @@ export interface DriveStep {
   type?: boolean;
   /** Treat `set` as a native <select>: assign value and dispatch `change`. */
   select?: boolean;
+  /** Treat `set` as an nldd checkbox: dispatch `change` with `detail.checked`. */
+  check?: boolean;
   /** CSS selector of an element to click. */
   click?: string;
   /** CSS selector of a form to submit (dispatches a native `submit` event). */
@@ -36,9 +38,21 @@ export interface Slide {
   drive?: DriveStep[];
 }
 
+/** A named character whose tour walks the console from one role's point of view. */
+export interface Persona {
+  name: string;
+  role: string;
+  /** One line on the chooser card, addressing the viewer as "je". */
+  blurb: string;
+}
+
 export interface Tour {
   id: string;
   title: string;
   lead?: string;
+  /** Icon on the chooser card: an SVG path `d`, stroked in a 24×24 viewBox. */
+  icon?: string;
+  /** Set when the tour is told through a character; groups it under "word een rol". */
+  persona?: Persona;
   slides: Slide[];
 }

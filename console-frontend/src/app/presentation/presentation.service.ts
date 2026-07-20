@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { Slide, Tour } from './presentation.model';
-import { DEFAULT_TOUR_ID, TOURS } from './tours';
+import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
 import { runDrive } from './drive-runner';
 
 /**
@@ -17,6 +17,13 @@ export class PresentationService {
   private readonly title = inject(Title);
 
   readonly active = signal(false);
+
+  /** `chooser` shows the tour/persona picker; `tour` shows the narration panel. */
+  readonly mode = signal<'chooser' | 'tour'>('chooser');
+
+  readonly storyTours = STORY_TOURS;
+
+  readonly personaTours = PERSONA_TOURS;
 
   private readonly tourId = signal<string>(DEFAULT_TOUR_ID);
 
@@ -37,6 +44,9 @@ export class PresentationService {
 
   /** Full-bleed slide (opening/closing) — hides the app; unrelated to browser fullscreen. */
   readonly isFull = computed(() => !!this.currentSlide()?.full);
+
+  /** Whether the panel fills the viewport: full-bleed slides and the chooser. */
+  readonly deckFull = computed(() => this.mode() === 'chooser' || this.isFull());
 
   readonly progress = computed(() => ((this.index() + 1) / this.total()) * 100);
 
@@ -60,11 +70,16 @@ export class PresentationService {
   /**
    * Reads present/tour/slide from the current URL and starts the walkthrough.
    * The demo build presents by default; pass `?present=0` to open the plain console.
+   * Without a `tour` param it opens the chooser; `?tour=<id>` deep-links into a tour.
    */
   initFromUrl(): void {
     const params = new URLSearchParams(window.location.search);
     if (params.get('present') === '0') return;
-    const tourId = params.get('tour') || DEFAULT_TOUR_ID;
+    const tourId = params.get('tour');
+    if (!tourId) {
+      this.showChooser();
+      return;
+    }
     const slide = Math.max(1, parseInt(params.get('slide') || '1', 10)) - 1;
     this.startTour(tourId, slide);
   }
@@ -72,7 +87,24 @@ export class PresentationService {
   startTour(tourId: string, index = 0): void {
     this.tourId.set(TOURS[tourId] ? tourId : DEFAULT_TOUR_ID);
     this.active.set(true);
+    this.mode.set('tour');
     this.goto(index);
+  }
+
+  /** Leave the current tour for the picker, keeping the presentation open. */
+  backToChooser(): void {
+    this.cancelDrive();
+    this.stopAutoplay();
+    this.showChooser();
+  }
+
+  private showChooser(): void {
+    this.active.set(true);
+    this.mode.set('chooser');
+    this.applyClasses();
+    this.applyTitle();
+    // Drop tour/slide so a reload lands on the chooser again.
+    this.router.navigate([this.currentPath()], { queryParams: { present: 1 } });
   }
 
   goto(index: number): void {
@@ -89,6 +121,10 @@ export class PresentationService {
    * ignores those calls while active, so this value sticks.
    */
   private applyTitle(): void {
+    if (this.mode() === 'chooser') {
+      this.title.setTitle('Fundament — kies je rondleiding');
+      return;
+    }
     const slide = this.currentSlide();
     if (slide) this.title.setTitle(slide.title);
   }
@@ -151,16 +187,18 @@ export class PresentationService {
     this.stopAutoplay();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
     this.active.set(false);
+    this.mode.set('chooser');
     document.documentElement.classList.remove('presenting', 'presenting-full');
     // Hand the title back to the console; the next route change re-sets it.
     this.title.setTitle('Fundament Console');
     this.router.navigate([this.currentPath()], { queryParams: {} });
   }
 
+  /** The chooser covers the whole viewport, like a full-bleed slide. */
   private applyClasses(): void {
     const root = document.documentElement.classList;
     root.toggle('presenting', this.active());
-    root.toggle('presenting-full', this.active() && this.isFull());
+    root.toggle('presenting-full', this.active() && (this.isFull() || this.mode() === 'chooser'));
   }
 
   private currentPath(): string {
