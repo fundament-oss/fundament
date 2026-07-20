@@ -59,9 +59,15 @@
             },
             "demo": {
               "browser": "src/main.demo.ts",
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              }
             }
           },
           "defaultConfiguration": "production"

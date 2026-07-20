@@ -24,6 +24,27 @@ function findProtoFiles(dir) {
   return results;
 }
 
+const outputPath = path.join(__dirname, 'src', 'proto-version.gen.ts');
+
+function write(version) {
+  fs.writeFileSync(
+    outputPath,
+    `// Auto-generated file - do not edit
+export default '${version}';
+`,
+  );
+}
+
+// Standalone checkouts (e.g. the Vercel demo deploy) only contain this directory,
+// so the sibling organization-api is absent. The version is solely used for the
+// live server/client handshake in app.config.ts, which the mock-backed demo never
+// performs — so a placeholder is correct rather than a build failure.
+if (!fs.existsSync(protoDir)) {
+  write('unknown');
+  console.log(`No proto directory at ${protoDir}; wrote placeholder proto version`);
+  process.exit(0);
+}
+
 try {
   const protoFiles = findProtoFiles(protoDir);
 
@@ -46,13 +67,7 @@ try {
   // Get first 12 characters of the hash
   const version = hash.digest('hex').substring(0, 12);
 
-  // Write version to a TypeScript file
-  const outputPath = path.join(__dirname, 'src', 'proto-version.gen.ts');
-  const content = `// Auto-generated file - do not edit
-export default '${version}';
-`;
-
-  fs.writeFileSync(outputPath, content);
+  write(version);
 
   console.log(`Generated proto version: ${version}`);
 } catch (error) {
