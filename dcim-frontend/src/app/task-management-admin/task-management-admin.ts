@@ -21,7 +21,6 @@ import {
 } from '@angular/cdk/drag-drop';
 import type { Note as ProtoNote } from '../../generated/v1/note_pb';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
-import AuthService from '../auth.service';
 import TaskApiService, {
   TaskData,
   TaskInput,
@@ -89,8 +88,6 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   private readonly userApi = inject(UserApiService);
 
   private readonly noteApi = inject(NoteApiService);
-
-  private readonly auth = inject(AuthService);
 
   protected readonly toast = inject(ToastService);
 
@@ -622,8 +619,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     if (!text) return;
     const id = this.detailTaskId();
     if (id === null) return;
-    const author = this.auth.user()?.name ?? 'Admin';
-    firstValueFrom(this.noteApi.createNoteForTask(id, text, author))
+    firstValueFrom(this.noteApi.createNoteForTask(id, text))
       .then(() => {
         this.newNoteText.set('');
         this.loadNotes(id);
@@ -637,10 +633,9 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   }
 
   noteAuthor(note: Note): { name: string; tech: Technician | null } {
-    // Notes only persist the author's display name (created_by), not a user id,
-    // so we can't join to the roster by id — match by name to recover the
-    // avatar colour, accepting that same-named users would collide. Switching
-    // to an id match would require notes to carry the author's user id.
+    // The API exposes the author only as a display name (created_by), not a
+    // user id, so we can't join to the roster by id — match by name to recover
+    // the avatar colour, accepting that same-named users would collide.
     const tech = this.technicians().find((t) => t.name === note.author) ?? null;
     return { name: note.author || 'Admin', tech };
   }

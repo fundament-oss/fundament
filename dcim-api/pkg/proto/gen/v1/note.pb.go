@@ -170,9 +170,10 @@ type Note_builder struct {
 	EntityType NoteEntityType
 	EntityId   string
 	Body       string
-	CreatedBy  string
-	Created    *timestamppb.Timestamp
-	Deleted    *timestamppb.Timestamp
+	// Display name of the author, resolved from the note's created_by user.
+	CreatedBy string
+	Created   *timestamppb.Timestamp
+	Deleted   *timestamppb.Timestamp
 }
 
 func (b0 Note_builder) Build() *Note {
@@ -324,7 +325,6 @@ type CreateNoteRequest struct {
 	xxx_hidden_EntityType NoteEntityType         `protobuf:"varint,10,opt,name=entity_type,json=entityType,enum=dcim.v1.NoteEntityType"`
 	xxx_hidden_EntityId   string                 `protobuf:"bytes,20,opt,name=entity_id,json=entityId"`
 	xxx_hidden_Body       string                 `protobuf:"bytes,30,opt,name=body"`
-	xxx_hidden_CreatedBy  string                 `protobuf:"bytes,40,opt,name=created_by,json=createdBy"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -375,13 +375,6 @@ func (x *CreateNoteRequest) GetBody() string {
 	return ""
 }
 
-func (x *CreateNoteRequest) GetCreatedBy() string {
-	if x != nil {
-		return x.xxx_hidden_CreatedBy
-	}
-	return ""
-}
-
 func (x *CreateNoteRequest) SetEntityType(v NoteEntityType) {
 	x.xxx_hidden_EntityType = v
 }
@@ -394,17 +387,12 @@ func (x *CreateNoteRequest) SetBody(v string) {
 	x.xxx_hidden_Body = v
 }
 
-func (x *CreateNoteRequest) SetCreatedBy(v string) {
-	x.xxx_hidden_CreatedBy = v
-}
-
 type CreateNoteRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	EntityType NoteEntityType
 	EntityId   string
 	Body       string
-	CreatedBy  string
 }
 
 func (b0 CreateNoteRequest_builder) Build() *CreateNoteRequest {
@@ -414,7 +402,6 @@ func (b0 CreateNoteRequest_builder) Build() *CreateNoteRequest {
 	x.xxx_hidden_EntityType = b.EntityType
 	x.xxx_hidden_EntityId = b.EntityId
 	x.xxx_hidden_Body = b.Body
-	x.xxx_hidden_CreatedBy = b.CreatedBy
 	return m0
 }
 
@@ -557,16 +544,14 @@ const file_v1_note_proto_rawDesc = "" +
 	"\tentity_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bentityId\"8\n" +
 	"\x11ListNotesResponse\x12#\n" +
 	"\x05notes\x18\n" +
-	" \x03(\v2\r.dcim.v1.NoteR\x05notes\"\xc5\x01\n" +
+	" \x03(\v2\r.dcim.v1.NoteR\x05notes\"\x9d\x01\n" +
 	"\x11CreateNoteRequest\x12D\n" +
 	"\ventity_type\x18\n" +
 	" \x01(\x0e2\x17.dcim.v1.NoteEntityTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\n" +
 	"entityType\x12%\n" +
 	"\tentity_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bentityId\x12\x1b\n" +
-	"\x04body\x18\x1e \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04body\x12&\n" +
-	"\n" +
-	"created_by\x18( \x01(\tB\a\xbaH\x04r\x02\x10\x01R\tcreatedBy\"-\n" +
+	"\x04body\x18\x1e \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04body\"-\n" +
 	"\x12CreateNoteResponse\x12\x17\n" +
 	"\anote_id\x18\n" +
 	" \x01(\tR\x06noteId\"-\n" +

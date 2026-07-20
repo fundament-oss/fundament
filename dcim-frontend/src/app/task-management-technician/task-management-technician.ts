@@ -633,8 +633,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     if (!text) return;
     const task = this.currentTask();
     if (!task) return;
-    const author = this.auth.user()?.name ?? 'Technician';
-    firstValueFrom(this.noteApi.createNoteForTask(task.id, text, author))
+    firstValueFrom(this.noteApi.createNoteForTask(task.id, text))
       .then(() => {
         this.noteText.set('');
         this.showNoteModal.set(false);

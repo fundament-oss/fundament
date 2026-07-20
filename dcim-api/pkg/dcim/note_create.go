@@ -21,8 +21,15 @@ func (s *Server) CreateNote(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
+	// Attribute the note to the authenticated caller, never to a client-supplied
+	// value, so the author cannot be spoofed.
+	author, err := s.currentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	params.Body = req.Msg.GetBody()
-	params.CreatedBy = pgtype.Text{String: req.Msg.GetCreatedBy(), Valid: true}
+	params.CreatedByID = pgtype.UUID{Bytes: author.ID, Valid: true}
 
 	id, err := s.queries.NoteCreate(ctx, params)
 	if err != nil {

@@ -2287,7 +2287,7 @@ ALTER TABLE dcim.physical_connections OWNER TO fun_owner;
 CREATE TABLE dcim.notes (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	body text NOT NULL,
-	created_by text,
+	created_by_id uuid,
 	device_catalog_id uuid,
 	port_definition_id uuid,
 	asset_id uuid,
@@ -2931,6 +2931,13 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_task CASCADE;
 ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_task FOREIGN KEY (task_id)
 REFERENCES dcim.tasks (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_created_by | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_created_by CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_created_by FOREIGN KEY (created_by_id)
+REFERENCES dcim.users (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 

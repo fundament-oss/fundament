@@ -14,17 +14,14 @@ import (
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 )
 
-// GetCurrentUser resolves the authenticated caller onto their directory entry.
+// currentUser resolves the authenticated caller onto their directory entry.
 // The JWT subject is an identity-provider reference, not a DCIM user id, so it
 // is matched against dcim.users.external_ref; everything else (task assignment,
-// filtering) uses the internal id this returns.
-func (s *Server) GetCurrentUser(
-	ctx context.Context,
-	_ *connect.Request[dcimv1.GetCurrentUserRequest],
-) (*connect.Response[dcimv1.GetCurrentUserResponse], error) {
+// note authorship, filtering) uses the internal id this returns.
+func (s *Server) currentUser(ctx context.Context) (db.UserGetByExternalRefRow, error) {
 	subject, ok := auth.UserIDFromContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("no authenticated user"))
+		return db.UserGetByExternalRefRow{}, connect.NewError(connect.CodeUnauthenticated, errors.New("no authenticated user"))
 	}
 
 	row, err := s.queries.UserGetByExternalRef(ctx, db.UserGetByExternalRefParams{
@@ -32,9 +29,20 @@ func (s *Server) GetCurrentUser(
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("no directory entry for the authenticated user"))
+			return db.UserGetByExternalRefRow{}, connect.NewError(connect.CodeNotFound, errors.New("no directory entry for the authenticated user"))
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get current user: %w", err))
+		return db.UserGetByExternalRefRow{}, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get current user: %w", err))
+	}
+	return row, nil
+}
+
+func (s *Server) GetCurrentUser(
+	ctx context.Context,
+	_ *connect.Request[dcimv1.GetCurrentUserRequest],
+) (*connect.Response[dcimv1.GetCurrentUserResponse], error) {
+	row, err := s.currentUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	return connect.NewResponse(dcimv1.GetCurrentUserResponse_builder{

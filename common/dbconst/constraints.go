@@ -69,6 +69,8 @@ const (
 	ConstraintDcimLogicalDevicesFkDesign = "dcim_logical_devices_fk_design"
 	// ConstraintDcimNotesFkAsset is defined on dcim.notes.
 	ConstraintDcimNotesFkAsset = "dcim_notes_fk_asset"
+	// ConstraintDcimNotesFkCreatedBy is defined on dcim.notes.
+	ConstraintDcimNotesFkCreatedBy = "dcim_notes_fk_created_by"
 	// ConstraintDcimNotesFkDeviceCatalog is defined on dcim.notes.
 	ConstraintDcimNotesFkDeviceCatalog = "dcim_notes_fk_device_catalog"
 	// ConstraintDcimNotesFkLogicalConnection is defined on dcim.notes.

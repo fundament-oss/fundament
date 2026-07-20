@@ -36,8 +36,8 @@ func noteFromListRow(row *db.NoteListRow) *dcimv1.Note {
 		Created:    timestamppb.New(row.Created.Time),
 	}.Build()
 
-	if row.CreatedBy.Valid {
-		note.SetCreatedBy(row.CreatedBy.String)
+	if row.Name.Valid {
+		note.SetCreatedBy(row.Name.String)
 	}
 
 	return note

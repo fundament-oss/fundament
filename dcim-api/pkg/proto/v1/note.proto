@@ -19,6 +19,7 @@ message Note {
   NoteEntityType            entity_type = 20;
   string                    entity_id   = 30;
   string                    body        = 40;
+  // Display name of the author, resolved from the note's created_by user.
   string                    created_by  = 50;
   google.protobuf.Timestamp created     = 60;
   google.protobuf.Timestamp deleted     = 70 [features.field_presence = EXPLICIT];
@@ -43,7 +44,8 @@ message CreateNoteRequest {
   NoteEntityType entity_type = 10 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string         entity_id   = 20 [(buf.validate.field).string = {uuid: true}];
   string         body        = 30 [(buf.validate.field).string.min_len = 1];
-  string         created_by  = 40 [(buf.validate.field).string.min_len = 1];
+  // The author is resolved from the authenticated caller server-side, never
+  // supplied by the client, so a note cannot be attributed to someone else.
 }
 
 message CreateNoteResponse {

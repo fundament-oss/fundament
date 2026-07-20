@@ -2814,8 +2814,8 @@ END;]]> </definition>
 	<column name="body" not-null="true">
 		<type name="text" length="0"/>
 	</column>
-	<column name="created_by">
-		<type name="text" length="0"/>
+	<column name="created_by_id">
+		<type name="uuid" length="0"/>
 	</column>
 	<column name="device_catalog_id">
 		<type name="uuid" length="0"/>
@@ -3471,6 +3471,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="dcim_notes_fk_created_by" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="dcim.users" table="dcim.notes">
+	<columns names="created_by_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="dcim_task_steps_fk_task" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="dcim.tasks" table="dcim.task_steps">
 	<columns names="task_id" ref-type="src-columns"/>
@@ -3841,6 +3847,11 @@ END;]]> </definition>
 <relationship name="rel_dcim_notes_tasks" type="relfk" layers="0"
 	 src-table="dcim.notes"
 	 dst-table="dcim.tasks" reference-fk="dcim_notes_fk_task"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="rel_dcim_notes_users" type="relfk" layers="0"
+	 src-table="dcim.notes"
+	 dst-table="dcim.users" reference-fk="dcim_notes_fk_created_by"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_task_steps_tasks" type="relfk" layers="0"
