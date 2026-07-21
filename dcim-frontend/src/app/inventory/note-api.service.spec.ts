@@ -22,7 +22,7 @@ describe('NoteApiService.mapNote', () => {
 
   // The author is resolved server-side from created_by_id, so it is empty for a
   // note whose writer has no directory entry — and for every note predating the
-  // FK, since migration 032 dropped the free-text column without a backfill. A
+  // FK, since migration 030 dropped the free-text column without a backfill. A
   // blank byline reads as a rendering fault rather than as missing authorship.
   it('names an unattributed note Unknown instead of rendering a blank byline', () => {
     const comment = NoteApiService.mapNote(

@@ -14,7 +14,7 @@ export default class NoteApiService {
    *
    * The author is resolved server-side from the note's created_by_id, so it is
    * empty for a note whose writer has no directory entry — and for every note
-   * written before authorship became an FK, since migration 032 dropped the old
+   * written before authorship became an FK, since migration 030 dropped the old
    * free-text column without a backfill. Name that state "Unknown" rather than
    * rendering a nameless comment: the initials already fall back to "?", and a
    * blank byline reads as a rendering fault instead of as missing authorship.

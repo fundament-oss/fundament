@@ -79,8 +79,12 @@ INSERT INTO dcim.task_steps (id, task_id, title, description, ordinal) VALUES
     ('019dce20-0000-7000-8000-000000000011', '019dce10-0000-7000-8000-000000000003', 'Document findings & close',                'Record all readings and observations. If any circuit is above 80% load or anomalies were found, flag the issue in the system.', 4);
 
 -- ── Task-scoped notes ───────────────────────────────────────────────────────
-INSERT INTO dcim.notes (id, body, created_by, task_id) VALUES
-    ('019dcc00-0000-7000-8000-000000000005', 'Arrived at rack. Disk bay 3 LED is solid red. Starting replacement procedure.',     'Alice', '019dce10-0000-7000-8000-000000000001'),
-    ('019dcc00-0000-7000-8000-000000000006', 'Spare disk is available in storage room B, shelf 3. Serial: ZLR1N5JY.',            'Admin', '019dce10-0000-7000-8000-000000000001'),
-    ('019dcc00-0000-7000-8000-000000000007', 'Migration window confirmed with NOC for tonight 22:00-02:00. Pre-staging the replacement switch now.', 'Alice', '019dce10-0000-7000-8000-000000000002'),
-    ('019dcc00-0000-7000-8000-000000000008', 'Cameras arrived but mounting brackets are the wrong model. Waiting for replacement brackets from supplier.', 'Cindy', '019dce10-0000-7000-8000-000000000006');
+-- Authors are roster users: created_by (free text) became created_by_id (an FK
+-- to dcim.users) in migration 030. The note that used to read "Admin" has no
+-- roster entry, and the asset/placement notes from 026_0101-content.sql predate
+-- the user directory, so both keep a null author.
+INSERT INTO dcim.notes (id, body, created_by_id, task_id) VALUES
+    ('019dcc00-0000-7000-8000-000000000005', 'Arrived at rack. Disk bay 3 LED is solid red. Starting replacement procedure.',     '019dce30-0000-7000-8000-000000000001', '019dce10-0000-7000-8000-000000000001'),
+    ('019dcc00-0000-7000-8000-000000000006', 'Spare disk is available in storage room B, shelf 3. Serial: ZLR1N5JY.',            NULL,                                   '019dce10-0000-7000-8000-000000000001'),
+    ('019dcc00-0000-7000-8000-000000000007', 'Migration window confirmed with NOC for tonight 22:00-02:00. Pre-staging the replacement switch now.', '019dce30-0000-7000-8000-000000000001', '019dce10-0000-7000-8000-000000000002'),
+    ('019dcc00-0000-7000-8000-000000000008', 'Cameras arrived but mounting brackets are the wrong model. Waiting for replacement brackets from supplier.', '019dce30-0000-7000-8000-000000000003', '019dce10-0000-7000-8000-000000000006');
