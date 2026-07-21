@@ -1,0 +1,42 @@
+edition = "2023";
+
+package dcim.v1;
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1;dcimv1";
+
+import "google/protobuf/go_features.proto";
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+// User is a member of the DCIM staff directory that tasks can be assigned to.
+message User {
+  string id    = 10;
+  string name  = 20;
+  string email = 30 [features.field_presence = EXPLICIT];
+}
+
+// ── UserService ───────────────────────────────────────────────────────────────
+
+// UserService exposes the read-only DCIM staff directory.
+service UserService {
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  // GetCurrentUser resolves the authenticated caller onto their directory entry.
+  // The caller is identified by the JWT subject, which is matched against
+  // dcim.users.external_ref; the returned id is the internal user id that
+  // tasks are assigned to.
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse);
+}
+
+message ListUsersRequest {}
+
+message ListUsersResponse {
+  repeated User users = 10;
+}
+
+message GetCurrentUserRequest {}
+
+message GetCurrentUserResponse {
+  User user = 10;
+}

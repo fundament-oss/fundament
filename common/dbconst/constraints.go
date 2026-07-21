@@ -69,6 +69,8 @@ const (
 	ConstraintDcimLogicalDevicesFkDesign = "dcim_logical_devices_fk_design"
 	// ConstraintDcimNotesFkAsset is defined on dcim.notes.
 	ConstraintDcimNotesFkAsset = "dcim_notes_fk_asset"
+	// ConstraintDcimNotesFkCreatedBy is defined on dcim.notes.
+	ConstraintDcimNotesFkCreatedBy = "dcim_notes_fk_created_by"
 	// ConstraintDcimNotesFkDeviceCatalog is defined on dcim.notes.
 	ConstraintDcimNotesFkDeviceCatalog = "dcim_notes_fk_device_catalog"
 	// ConstraintDcimNotesFkLogicalConnection is defined on dcim.notes.
@@ -129,6 +131,10 @@ const (
 	ConstraintDcimRoomsFkSite = "dcim_rooms_fk_site"
 	// ConstraintDcimTaskStepsFkTask is defined on dcim.task_steps.
 	ConstraintDcimTaskStepsFkTask = "dcim_task_steps_fk_task"
+	// ConstraintDcimTasksFkAssignee is defined on dcim.tasks.
+	ConstraintDcimTasksFkAssignee = "dcim_tasks_fk_assignee"
+	// ConstraintDcimUsersUqExternalRef is defined on dcim.users.
+	ConstraintDcimUsersUqExternalRef = "dcim_users_uq_external_ref"
 	// ConstraintDeviceCatalogsCkCategory is defined on dcim.device_catalogs.
 	ConstraintDeviceCatalogsCkCategory = "device_catalogs_ck_category"
 	// ConstraintDeviceCatalogsUqManufacturerModel is defined on dcim.device_catalogs.

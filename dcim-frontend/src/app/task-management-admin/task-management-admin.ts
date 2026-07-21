@@ -2,38 +2,52 @@ import {
   Component,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  OnInit,
+  OnDestroy,
   signal,
   computed,
+  inject,
   viewChild,
   ElementRef,
 } from '@angular/core';
+import { firstValueFrom, Observable } from 'rxjs';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
+import {
+  CdkDropList,
+  CdkDropListGroup,
+  CdkDrag,
+  CdkDragPlaceholder,
+  CdkDragDrop,
+} from '@angular/cdk/drag-drop';
+import type { Note as ProtoNote } from '../../generated/v1/note_pb';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
+import TaskApiService, {
+  TaskData,
+  TaskInput,
+  TaskPatch,
+  TaskCategoryLabel,
+  TaskPriorityLabel,
+  TaskStatusLabel,
+} from '../task-management/task-api.service';
+import UserApiService, { RosterUser } from '../task-management/user-api.service';
+import NoteApiService from '../inventory/note-api.service';
+import settledPool from '../shared/settled-pool';
+import ToastService from '../shared/toast.service';
+import connectErrorMessage from '../../connect/error';
 
-interface Technician {
-  id: number;
-  name: string;
-  initials: string;
-  color: string;
-  available: boolean;
-}
+type Technician = RosterUser;
 
 interface Note {
-  author: number | null;
+  author: string;
+  // The author's roster id, or null for an unattributed note (written by someone
+  // outside the directory). Kept alongside the display name so the avatar can be
+  // resolved by id rather than by matching names.
+  authorId: string | null;
   text: string;
   time: string;
 }
 
-interface Task {
-  id: number;
-  title: string;
-  description: string;
-  status: string;
-  priority: string;
-  category: string;
-  location: string;
-  assignee: number | null;
-  due: string;
-  created: string;
+interface Task extends TaskData {
   notes: Note[];
 }
 
@@ -57,187 +71,130 @@ interface NlddSheet extends HTMLElement {
   hide(): void;
 }
 
+// Half the width of the filters <aside> (w-60 = 240px), so the toast centers
+// over the main content area next to it instead of the full viewport.
+const TOAST_SIDEBAR_OFFSET_PX = 120;
+
+// Ceiling on in-flight requests for the bulk actions. Select-all over a large
+// board would otherwise put one request per task on the wire at once.
+const BULK_CONCURRENCY = 6;
+
 @Component({
   selector: 'app-task-management-admin',
   templateUrl: './task-management-admin.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DropdownSyncDirective],
+  imports: [DropdownSyncDirective, CdkDropListGroup, CdkDropList, CdkDrag, CdkDragPlaceholder],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
     class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',
     '(document:keydown.escape)': 'onEscape()',
   },
 })
-export default class TaskManagementAdminComponent {
-  readonly technicians: Technician[] = [
-    { id: 1, name: 'Jan de Vries', initials: 'JV', color: 'bg-blue-600', available: true },
-    { id: 2, name: 'Sara Ahmed', initials: 'SA', color: 'bg-emerald-600', available: true },
-    { id: 3, name: 'Thomas Bakker', initials: 'TB', color: 'bg-amber-600', available: false },
-    { id: 4, name: 'Lisa Chen', initials: 'LC', color: 'bg-violet-600', available: true },
-    { id: 5, name: 'Mark Jansen', initials: 'MJ', color: 'bg-rose-600', available: true },
-  ];
+export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
+  private readonly taskApi = inject(TaskApiService);
 
-  tasks = signal<Task[]>([
-    {
-      id: 1,
-      title: 'Replace broken harddisk',
-      description:
-        'Failed disk in Bay 3 of backup-srv-07 at Rack 123. Replace with Seagate Exos X18 (ST16000NM000J, 16 TB). The RAID controller shows the drive as failed since yesterday evening.',
-      status: 'In Progress',
-      priority: 'Critical',
-      category: 'Hardware',
-      location: 'DC Amsterdam-West · Rack 123',
-      assignee: 1,
-      due: '2026-03-20',
-      created: '2026-03-15',
-      notes: [
-        {
-          author: 1,
-          text: 'Arrived at rack. Disk bay 3 LED is solid red. Starting replacement procedure.',
-          time: '2 hours ago',
-        },
-        {
-          author: null,
-          text: 'Spare disk is available in storage room B, shelf 3. Serial: ZLR1N5JY.',
-          time: '5 hours ago',
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: 'Check cooling unit — Row 5',
-      description:
-        'Temperature sensors in Row 5 are reporting 2°C above normal baseline. Inspect the cooling unit for potential blockage or fan failure.',
-      status: 'Ready',
-      priority: 'High',
-      category: 'Cooling',
-      location: 'DC Amsterdam-West · Hall A, Row 5',
-      assignee: null,
-      due: '2026-03-21',
-      created: '2026-03-17',
-      notes: [
-        {
-          author: null,
-          text: 'Monitoring dashboard shows temps rising over the past 48h. Not yet critical but trending up.',
-          time: '1 day ago',
-        },
-      ],
-    },
-    {
-      id: 3,
-      title: 'Inspect PDU — Hall A',
-      description:
-        'Routine quarterly inspection of the PDU in Hall A. Check all breakers, verify load balancing, and ensure no burnt contacts.',
-      status: 'Ready',
-      priority: 'Medium',
-      category: 'Power',
-      location: 'DC Amsterdam-West · Hall A',
-      assignee: 2,
-      due: '2026-03-25',
-      created: '2026-03-16',
-      notes: [],
-    },
-    {
-      id: 4,
-      title: 'Replace network switch — Rack 87',
-      description:
-        'The Cisco Nexus switch in Rack 87 has intermittent port failures on ports 24-28. Replace with the new Arista unit from stock.',
-      status: 'In Progress',
-      priority: 'High',
-      category: 'Network',
-      location: 'DC Amsterdam-West · Rack 87',
-      assignee: 4,
-      due: '2026-03-19',
-      created: '2026-03-14',
-      notes: [
-        {
-          author: 4,
-          text: 'Migration window confirmed with NOC for tonight 22:00–02:00. Pre-staging the replacement switch now.',
-          time: '3 hours ago',
-        },
-        {
-          author: null,
-          text: 'NOC has been notified. Maintenance window approved.',
-          time: '1 day ago',
-        },
-      ],
-    },
-    {
-      id: 5,
-      title: 'Firmware update — UPS units Hall B',
-      description:
-        'Apply firmware v4.2.1 to all three Eaton UPS units in Hall B. Requires sequential update — do not update all at once.',
-      status: 'Review',
-      priority: 'Medium',
-      category: 'Power',
-      location: 'DC Amsterdam-West · Hall B',
-      assignee: 3,
-      due: '2026-03-22',
-      created: '2026-03-13',
-      notes: [
-        {
-          author: 3,
-          text: 'UPS-1 and UPS-2 updated successfully. UPS-3 scheduled for tomorrow morning. All readings normal after update.',
-          time: '6 hours ago',
-        },
-      ],
-    },
-    {
-      id: 6,
-      title: 'Install additional cameras — Entrance B',
-      description:
-        'Mount two new security cameras at Entrance B as per the security audit recommendations. Cabling is already in place.',
-      status: 'Blocked',
-      priority: 'Low',
-      category: 'Security',
-      location: 'DC Amsterdam-West · Entrance B',
-      assignee: 5,
-      due: '2026-03-28',
-      created: '2026-03-10',
-      notes: [
-        {
-          author: 5,
-          text: 'Cameras arrived but mounting brackets are the wrong model. Waiting for replacement brackets from supplier.',
-          time: '2 days ago',
-        },
-        { author: null, text: 'Supplier confirmed new brackets ship Monday.', time: '1 day ago' },
-      ],
-    },
-    {
-      id: 7,
-      title: 'Decommission server DB-14',
-      description:
-        'Server DB-14 in Rack 45 has been migrated to new hardware. Wipe disks, remove from rack, and update asset inventory.',
-      status: 'Done',
-      priority: 'Low',
-      category: 'Hardware',
-      location: 'DC Amsterdam-West · Rack 45',
-      assignee: 1,
-      due: '2026-03-17',
-      created: '2026-03-08',
-      notes: [
-        {
-          author: 1,
-          text: 'Disks wiped with DBAN (3-pass). Server removed from rack and placed in decommission staging. Asset inventory updated.',
-          time: '1 day ago',
-        },
-      ],
-    },
-    {
-      id: 8,
-      title: 'Repair cable management — Rack 92',
-      description:
-        'Cables in Rack 92 are obstructing airflow. Re-route and zip-tie all patch cables. Replace any damaged cables.',
-      status: 'In Progress',
-      priority: 'Medium',
-      category: 'Hardware',
-      location: 'DC Amsterdam-West · Rack 92',
-      assignee: 2,
-      due: '2026-03-23',
-      created: '2026-03-16',
-      notes: [],
-    },
-  ]);
+  private readonly userApi = inject(UserApiService);
+
+  private readonly noteApi = inject(NoteApiService);
+
+  protected readonly toast = inject(ToastService);
+
+  readonly technicians = signal<Technician[]>([]);
+
+  // False until ListUsers has actually answered. An empty roster because the
+  // response has not landed (or failed) is not the same fact as an assignee
+  // having left the directory, and assigneeMissing() must not report the first
+  // as the second — see assigneeUnresolved().
+  readonly rosterLoaded = signal(false);
+
+  tasks = signal<Task[]>([]);
+
+  // Set when the board could not be loaded, so an API failure reads as an error
+  // rather than as a legitimately empty board.
+  readonly loadError = signal<string | null>(null);
+
+  // The same, for the detail sheet's note list.
+  readonly notesError = signal<string | null>(null);
+
+  // The signed-in user's roster entry, for the note composer's avatar. Null when
+  // the caller has no directory entry — GetCurrentUser answers NotFound then,
+  // which is an ordinary provisioning state and not worth a toast here: the
+  // board still works, and any note they write comes out unattributed.
+  readonly currentUser = signal<Technician | null>(null);
+
+  ngOnInit(): void {
+    this.toast.offsetPx.set(TOAST_SIDEBAR_OFFSET_PX);
+    this.loadCurrentUser();
+    this.loadUsers();
+    this.loadTasks();
+  }
+
+  ngOnDestroy(): void {
+    this.toast.offsetPx.set(0);
+  }
+
+  private loadCurrentUser(): void {
+    firstValueFrom(this.userApi.getCurrentUser())
+      .then((res) => this.currentUser.set(res.user ? UserApiService.mapUser(res.user) : null))
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.currentUser.set(null);
+      });
+  }
+
+  private loadUsers(): void {
+    firstValueFrom(this.userApi.listUsers())
+      .then((res) => {
+        this.technicians.set(res.users.map((u) => UserApiService.mapUser(u)));
+        this.rosterLoaded.set(true);
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        // Left false deliberately: without a roster the board cannot tell a
+        // departed assignee from one it merely failed to look up, so it says
+        // neither rather than picking the alarming reading.
+        this.rosterLoaded.set(false);
+        this.toast.show('Could not load the technician roster');
+      });
+  }
+
+  // Retries everything the board loads on entry, the current user included —
+  // otherwise a transient GetCurrentUser failure would leave the note
+  // composer's avatar unresolved until a full page reload.
+  retryLoad(): void {
+    this.loadCurrentUser();
+    this.loadUsers();
+    this.loadTasks();
+  }
+
+  // Called after every mutation (each save, each kanban drop, each bulk action).
+  // It rebuilds the whole board, so already-fetched notes are carried over by id
+  // rather than reset: a mutation landing while the detail sheet is open would
+  // otherwise empty its note list, even though no note changed. ListTasks does
+  // not carry notes, so a task the sheet has never been opened for keeps an
+  // empty list until openDetail() fetches them.
+  private loadTasks(): void {
+    firstValueFrom(this.taskApi.listTasks())
+      .then((res) => {
+        this.tasks.update((previous) => {
+          const notesById = new Map(previous.map((t) => [t.id, t.notes]));
+          return res.tasks.map((t) => ({
+            ...TaskApiService.mapTask(t),
+            notes: notesById.get(t.id) ?? [],
+          }));
+        });
+        this.loadError.set(null);
+      })
+      .catch((err) => {
+        const message = connectErrorMessage(err);
+        // eslint-disable-next-line no-console
+        console.error(message);
+        this.loadError.set(message);
+        this.toast.show('Could not load tasks');
+      });
+  }
 
   readonly statusStyles: Record<string, StatusStyle> = {
     Ready: {
@@ -313,15 +270,20 @@ export default class TaskManagementAdminComponent {
     Other: 'ellipsis',
   };
 
-  readonly kanbanColumns = ['Ready', 'In Progress', 'Review', 'Blocked', 'Done'];
+  readonly kanbanColumns: TaskStatusLabel[] = ['Ready', 'In Progress', 'Review', 'Blocked', 'Done'];
 
-  readonly priorities = ['Critical', 'High', 'Medium', 'Low'];
+  readonly priorities: TaskPriorityLabel[] = ['Critical', 'High', 'Medium', 'Low'];
 
-  readonly taskCategories = ['Hardware', 'Network', 'Cooling', 'Power', 'Security', 'Other'];
+  readonly taskCategories: TaskCategoryLabel[] = [
+    'Hardware',
+    'Network',
+    'Cooling',
+    'Power',
+    'Security',
+    'Other',
+  ];
 
   private readonly dateLocale = 'en-US';
-
-  private readonly taskIdBase = 2890;
 
   currentView = signal<'list' | 'kanban'>('list');
 
@@ -333,37 +295,34 @@ export default class TaskManagementAdminComponent {
 
   categoryFilter = signal('all');
 
-  selectedTasks = signal<Set<number>>(new Set());
+  selectedTasks = signal<Set<string>>(new Set());
 
-  detailTaskId = signal<number | null>(null);
+  detailTaskId = signal<string | null>(null);
 
-  editingTaskId = signal<number | null | undefined>(undefined);
+  // null means "creating a new task"; a string is the id being edited.
+  editingTaskId = signal<string | null>(null);
 
   editFormTitle = signal('');
 
   editFormDescription = signal('');
 
-  editFormStatus = signal('Ready');
+  editFormStatus = signal<TaskStatusLabel>('Ready');
 
-  editFormPriority = signal('Medium');
+  editFormPriority = signal<TaskPriorityLabel>('Medium');
 
-  editFormCategory = signal('Hardware');
+  editFormCategory = signal<TaskCategoryLabel>('Hardware');
 
   editFormDue = signal('');
 
   editFormLocation = signal('');
 
-  editFormAssignee = signal<number | null>(null);
+  editFormAssignee = signal<string | null>(null);
 
   editTitleTouched = signal(false);
 
   editTitleInvalid = computed(() => this.editTitleTouched() && !this.editFormTitle().trim());
 
   newNoteText = signal('');
-
-  toastMessage = signal<string | null>(null);
-
-  private toastTimeout: number | undefined;
 
   filteredTasks = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
@@ -401,20 +360,39 @@ export default class TaskManagementAdminComponent {
     ),
   );
 
+  // Drives the header checkbox. Mirrors toggleSelectAll's scope (the filtered
+  // rows) so the control reflects what it actually selects.
+  allFilteredSelected = computed(() => {
+    const filtered = this.filteredTasks();
+    if (filtered.length === 0) return false;
+    const selected = this.selectedTasks();
+    return filtered.every((t) => selected.has(t.id));
+  });
+
   detailTask = computed(() => {
     const id = this.detailTaskId();
     if (id === null) return null;
     return this.tasks().find((t) => t.id === id) ?? null;
   });
 
-  editModalTitle = computed(() => (this.editingTaskId() !== null ? 'Edit task' : 'New task'));
+  editModalTitle = computed(() => (this.editingTaskId() ? 'Edit task' : 'New task'));
 
   readonly detailSheetEl = viewChild<ElementRef<NlddSheet>>('detailSheetEl');
 
   readonly editModalEl = viewChild<ElementRef<NlddSheet>>('editModalEl');
 
-  getTech(id: number | null): Technician | null {
-    return this.technicians.find((t) => t.id === id) ?? null;
+  readonly editTitleInput = viewChild<ElementRef<HTMLElement>>('editTitleInput');
+
+  readonly deleteDialogEl = viewChild<ElementRef<NlddSheet>>('deleteDialogEl');
+
+  readonly bulkDeleteDialogEl = viewChild<ElementRef<NlddSheet>>('bulkDeleteDialogEl');
+
+  readonly bulkStatusPopoverEl = viewChild<ElementRef<NlddSheet>>('bulkStatusPopoverEl');
+
+  readonly bulkAssignPopoverEl = viewChild<ElementRef<NlddSheet>>('bulkAssignPopoverEl');
+
+  getTech(id: string | null): Technician | null {
+    return this.technicians().find((t) => t.id === id) ?? null;
   }
 
   formatDate(str: string | null): string {
@@ -427,11 +405,13 @@ export default class TaskManagementAdminComponent {
     });
   }
 
-  taskDisplayId(task: Task): string {
-    return `T-${this.taskIdBase + task.id}`;
-  }
+  // Uses the trailing (random) hex of the uuid rather than the leading bytes,
+  // which in uuidv7 are a millisecond timestamp and collide across tasks
+  // created close together.
+  readonly taskDisplayId = (task: Task): string =>
+    `T-${task.id.replace(/-/g, '').slice(-8).toUpperCase()}`;
 
-  isSelected(id: number): boolean {
+  isSelected(id: string): boolean {
     return this.selectedTasks().has(id);
   }
 
@@ -447,15 +427,49 @@ export default class TaskManagementAdminComponent {
     return this.categoryIcons[category] ?? 'ellipsis';
   }
 
-  tasksForColumn(col: string): Task[] {
-    return this.filteredTasks().filter((t) => t.status === col);
+  // One pass over the filtered tasks per change, rather than one filter per call
+  // site. The template reads each column three times (count, [cdkDropListData],
+  // @for), so a plain method handed CDK a freshly allocated array — a new
+  // identity for the same contents — on every change-detection cycle.
+  private readonly tasksByColumn = computed(() => {
+    const byColumn = new Map<TaskStatusLabel, Task[]>(this.kanbanColumns.map((c) => [c, []]));
+    this.filteredTasks().forEach((task) => byColumn.get(task.status)?.push(task));
+    return byColumn;
+  });
+
+  tasksForColumn(col: TaskStatusLabel): Task[] {
+    return this.tasksByColumn().get(col) ?? [];
+  }
+
+  onKanbanDrop(event: CdkDragDrop<Task[]>, targetStatus: TaskStatusLabel): void {
+    const task = event.item.data as Task;
+    if (!task || task.status === targetStatus) return;
+
+    const previousStatus = task.status;
+    this.tasks.update((list) =>
+      list.map((t) => (t.id === task.id ? { ...t, status: targetStatus } : t)),
+    );
+
+    // Only the status is sent. Sending the dragged card's whole snapshot would
+    // write back every field as this board last saw it, silently reverting any
+    // edit another admin made since the board loaded.
+    firstValueFrom(this.taskApi.updateTask(task.id, { status: targetStatus }))
+      .then(() => this.loadTasks())
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.toast.show('Could not move task');
+        this.tasks.update((list) =>
+          list.map((t) => (t.id === task.id ? { ...t, status: previousStatus } : t)),
+        );
+      });
   }
 
   setView(view: 'list' | 'kanban'): void {
     this.currentView.set(view);
   }
 
-  toggleSelection(id: number, checked: boolean): void {
+  toggleSelection(id: string, checked: boolean): void {
     this.selectedTasks.update((set) => {
       const next = new Set(set);
       if (checked) next.add(id);
@@ -464,17 +478,66 @@ export default class TaskManagementAdminComponent {
     });
   }
 
+  // Scoped to the filtered rows, not the whole board: the checkbox sits in the
+  // header of a table that renders filteredTasks(), so selecting the full task
+  // list would hand bulk delete/update tasks the user cannot see.
   toggleSelectAll(checked: boolean): void {
     if (checked) {
-      this.selectedTasks.set(new Set(this.tasks().map((t) => t.id)));
+      this.selectedTasks.set(new Set(this.filteredTasks().map((t) => t.id)));
     } else {
       this.selectedTasks.set(new Set());
     }
   }
 
-  openDetail(id: number): void {
+  openDetail(id: string): void {
     this.detailTaskId.set(id);
+    // Always refetched, since another admin may have added a note since this
+    // task was last opened. Anything already cached stays on screen meanwhile,
+    // so the list does not flash empty while the response is in flight.
+    this.loadNotes(id);
     this.detailSheetEl()?.nativeElement.show();
+  }
+
+  private loadNotes(id: string): void {
+    this.notesError.set(null);
+    firstValueFrom(this.noteApi.listNotesForTask(id))
+      .then((res) => {
+        const notes = res.notes.map((n) => TaskManagementAdminComponent.mapNote(n));
+        this.tasks.update((tasks) => tasks.map((t) => (t.id === id ? { ...t, notes } : t)));
+      })
+      .catch((err) => {
+        const message = connectErrorMessage(err);
+        // eslint-disable-next-line no-console
+        console.error(message);
+        // Said out loud in the sheet: the note list falls back to whatever was
+        // cached from a previous open (or to nothing at all), which is
+        // indistinguishable from a task that genuinely has no notes.
+        this.notesError.set(message);
+      });
+  }
+
+  retryLoadNotes(): void {
+    const id = this.detailTaskId();
+    if (id !== null) this.loadNotes(id);
+  }
+
+  private static mapNote(n: ProtoNote): Note {
+    return {
+      author: n.createdBy,
+      authorId: n.createdById ? n.createdById : null,
+      text: n.body,
+      time: TaskManagementAdminComponent.relativeTime(
+        n.created ? timestampDate(n.created) : new Date(),
+      ),
+    };
+  }
+
+  private static relativeTime(date: Date): string {
+    const diffMs = Date.now() - date.getTime();
+    const days = Math.floor(diffMs / 86_400_000);
+    if (days <= 0) return 'Today';
+    if (days === 1) return '1 day ago';
+    return `${days} days ago`;
   }
 
   closeDetail(): void {
@@ -488,7 +551,118 @@ export default class TaskManagementAdminComponent {
     this.openEditModal(id);
   }
 
-  openEditModal(taskId: number | null): void {
+  openDeleteDialog(): void {
+    this.deleteDialogEl()?.nativeElement.show();
+  }
+
+  closeDeleteDialog(): void {
+    this.deleteDialogEl()?.nativeElement.hide();
+  }
+
+  confirmDeleteTask(): void {
+    const id = this.detailTaskId();
+    this.closeDeleteDialog();
+    if (id === null) return;
+    firstValueFrom(this.taskApi.deleteTask(id))
+      .then(() => {
+        this.closeDetail();
+        this.loadTasks();
+        this.toast.show('Task deleted');
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.toast.show('Could not delete task');
+      });
+  }
+
+  openBulkDeleteDialog(): void {
+    this.bulkDeleteDialogEl()?.nativeElement.show();
+  }
+
+  closeBulkDeleteDialog(): void {
+    this.bulkDeleteDialogEl()?.nativeElement.hide();
+  }
+
+  confirmBulkDelete(): void {
+    // Same scoping as bulkUpdate: a selection can outlive the task it points at
+    // (another admin deleted it), and those ids would only produce noise.
+    const ids = this.selectedExistingTaskIds();
+    this.closeBulkDeleteDialog();
+    if (ids.length === 0) return;
+    settledPool(ids, BULK_CONCURRENCY, (id) => firstValueFrom(this.taskApi.deleteTask(id)))
+      .then((results) => {
+        this.selectedTasks.set(new Set());
+        this.loadTasks();
+        // The pool settles rather than rejects, so surface partial failures
+        // explicitly rather than reporting blanket success.
+        const failed = TaskManagementAdminComponent.countRejections(results);
+        this.toast.show(
+          failed === 0
+            ? `${ids.length} task(s) deleted`
+            : `${ids.length - failed} of ${ids.length} deleted, ${failed} failed`,
+        );
+      })
+      .catch((err) => {
+        // settledPool itself never rejects, so this only fires if the handler
+        // above throws — which would otherwise surface as an unhandled rejection.
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+      });
+  }
+
+  // The selected ids that still correspond to a loaded task. Membership goes
+  // through a Set rather than a nested scan: select-all on a large board makes
+  // both collections the size of the board, so a .some() per id is quadratic.
+  private selectedExistingTaskIds(): string[] {
+    const loaded = new Set(this.tasks().map((t) => t.id));
+    return [...this.selectedTasks()].filter((id) => loaded.has(id));
+  }
+
+  bulkSetStatus(status: TaskStatusLabel): void {
+    this.bulkStatusPopoverEl()?.nativeElement.hide();
+    this.bulkUpdate({ status }, 'Status updated');
+  }
+
+  // assignee of null unassigns the selected tasks (the "Unassigned" option).
+  bulkAssign(assigneeId: string | null): void {
+    this.bulkAssignPopoverEl()?.nativeElement.hide();
+    this.bulkUpdate({ assignee: assigneeId }, assigneeId ? 'Tasks reassigned' : 'Tasks unassigned');
+  }
+
+  // Applies `patch` to every selected task. Like the kanban drop, this sends
+  // only the changed fields — never the board's snapshot of the other ones.
+  private bulkUpdate(patch: TaskPatch, successMessage: string): void {
+    const ids = this.selectedExistingTaskIds();
+    if (ids.length === 0) return;
+    settledPool(ids, BULK_CONCURRENCY, (id) => firstValueFrom(this.taskApi.updateTask(id, patch)))
+      .then((results) => {
+        this.loadTasks();
+        // The pool settles rather than rejects, so surface partial failures
+        // explicitly rather than reporting blanket success.
+        const failed = TaskManagementAdminComponent.countRejections(results);
+        this.toast.show(
+          failed === 0
+            ? successMessage
+            : `${ids.length - failed} of ${ids.length} updated, ${failed} failed`,
+        );
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+      });
+  }
+
+  // Counts rejected settlements and logs their reasons, for the bulk operations
+  // that use settledPool (which resolves even when individual calls fail).
+  private static countRejections(results: PromiseSettledResult<unknown>[]): number {
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    // eslint-disable-next-line no-console
+    rejected.forEach((r) => console.error(connectErrorMessage(r.reason)));
+    return rejected.length;
+  }
+
+  openEditModal(taskId: string | null): void {
     this.editingTaskId.set(taskId);
     const task = taskId !== null ? this.tasks().find((t) => t.id === taskId) : null;
     this.editFormTitle.set(task?.title ?? '');
@@ -501,11 +675,14 @@ export default class TaskManagementAdminComponent {
     this.editFormAssignee.set(task?.assignee ?? null);
     this.editTitleTouched.set(false);
     this.editModalEl()?.nativeElement.show();
+    // setTimeout ensures the sheet and Lit's async shadow DOM render have
+    // completed before calling focus(), since Lit renders on microtasks.
+    setTimeout(() => this.editTitleInput()?.nativeElement.focus());
   }
 
   closeEditModal(): void {
     this.editModalEl()?.nativeElement.hide();
-    this.editingTaskId.set(undefined);
+    this.editingTaskId.set(null);
   }
 
   saveTask(): void {
@@ -513,7 +690,7 @@ export default class TaskManagementAdminComponent {
     const title = this.editFormTitle().trim();
     if (!title) return;
 
-    const data = {
+    const input: TaskInput = {
       title,
       description: this.editFormDescription().trim(),
       status: this.editFormStatus(),
@@ -525,22 +702,36 @@ export default class TaskManagementAdminComponent {
     };
 
     const editingId = this.editingTaskId();
-    if (editingId !== null && editingId !== undefined) {
-      this.tasks.update((tasks) => tasks.map((t) => (t.id === editingId ? { ...t, ...data } : t)));
-      this.showToast('Task updated');
+
+    let request: Observable<unknown>;
+    if (editingId === null) {
+      request = this.taskApi.createTask(input);
     } else {
-      const newTask: Task = {
-        id: Date.now(),
-        ...data,
-        created: new Date().toISOString().split('T')[0],
-        notes: [],
-      };
-      this.tasks.update((tasks) => [...tasks, newTask]);
-      this.showToast('Task created');
+      // Only the fields this form actually changed are sent, for the same
+      // reason the kanban drop and the bulk actions send a single key: posting
+      // the whole form writes back every column as this board last saw it, so
+      // an edit here would silently revert a status another admin changed
+      // since the sheet was opened.
+      const current = this.tasks().find((t) => t.id === editingId);
+      const patch = current ? TaskApiService.changedFields(current, input) : input;
+      if (Object.keys(patch).length === 0) {
+        this.closeEditModal();
+        return;
+      }
+      request = this.taskApi.updateTask(editingId, patch);
     }
 
-    this.editModalEl()?.nativeElement.hide();
-    this.editingTaskId.set(undefined);
+    firstValueFrom(request)
+      .then(() => {
+        this.loadTasks();
+        this.toast.show(editingId !== null ? 'Task updated' : 'Task created');
+        this.closeEditModal();
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.toast.show('Could not save task');
+      });
   }
 
   addNote(): void {
@@ -548,31 +739,57 @@ export default class TaskManagementAdminComponent {
     if (!text) return;
     const id = this.detailTaskId();
     if (id === null) return;
-    this.tasks.update((tasks) =>
-      tasks.map((t) =>
-        t.id === id ? { ...t, notes: [{ author: null, text, time: 'Just now' }, ...t.notes] } : t,
-      ),
-    );
-    this.newNoteText.set('');
-    this.showToast('Note added');
+    firstValueFrom(this.noteApi.createNoteForTask(id, text))
+      .then(() => {
+        this.newNoteText.set('');
+        this.loadNotes(id);
+        this.toast.show('Note added');
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.toast.show('Could not add note');
+      });
   }
 
-  showToast(msg: string): void {
-    this.toastMessage.set(msg);
-    clearTimeout(this.toastTimeout);
-    this.toastTimeout = window.setTimeout(() => {
-      this.toastMessage.set(null);
-    }, 2000);
-  }
-
+  // Resolves a note's author onto the roster entry that supplies the avatar.
+  // Joined by id, not by display name: two people called "Jan de Vries" would
+  // otherwise share one avatar colour, and the first match would win.
+  //
+  // An author the backend could not attribute is "Unknown", not "Admin" — the
+  // note was written by someone outside the directory, which is not the same
+  // claim as it having come from an administrator.
   noteAuthor(note: Note): { name: string; tech: Technician | null } {
-    const tech = note.author !== null ? this.getTech(note.author) : null;
-    return { name: tech ? tech.name : 'Admin', tech };
+    const tech = note.authorId ? this.getTech(note.authorId) : null;
+    return { name: note.author || 'Unknown', tech };
   }
 
+  // True when a task carries an assignee that the roster has no entry for —
+  // typically someone soft-deleted since the board loaded. Rendering that as
+  // "Unassigned" would quietly drop the fact that the task is still spoken for.
+  //
+  // Gated on the roster having actually loaded. ListUsers runs concurrently
+  // with ListTasks, so without the guard every assigned task claims its
+  // assignee has left for as long as the roster is in flight — and permanently
+  // if ListUsers fails, which is a statement about live data the board is in no
+  // position to make.
+  assigneeMissing(task: Task): boolean {
+    return this.rosterLoaded() && task.assignee !== null && this.getTech(task.assignee) === null;
+  }
+
+  // True when a task has an assignee the board cannot name yet, because the
+  // roster is still loading or failed to load. Distinct from unassigned: the
+  // task is spoken for, we just cannot say by whom.
+  assigneeUnresolved(task: Task): boolean {
+    return !this.rosterLoaded() && task.assignee !== null;
+  }
+
+  // Goes through the same closers as the buttons: hiding the sheets without
+  // clearing detailTaskId/editingTaskId would leave a "closed" task still
+  // addressable by addNote() and detailTask().
   onEscape(): void {
-    this.detailSheetEl()?.nativeElement.hide();
-    this.editModalEl()?.nativeElement.hide();
+    this.closeDetail();
+    this.closeEditModal();
   }
 
   statusBadgeClass(status: string): string {
@@ -599,7 +816,7 @@ export default class TaskManagementAdminComponent {
 
   kanbanCardClass(status: string): string {
     const s = this.statusStyle(status);
-    return `cursor-pointer rounded-xl border ${s.kanbanBorder} bg-white dark:bg-gray-950 p-3.5 hover:shadow-md hover:shadow-slate-200/80 transition-shadow`;
+    return `cursor-grab active:cursor-grabbing rounded-xl border ${s.kanbanBorder} bg-white dark:bg-gray-950 p-3.5 hover:shadow-md hover:shadow-slate-200/80 transition-shadow`;
   }
 
   detailStatusClass(status: string): string {
@@ -617,6 +834,11 @@ export default class TaskManagementAdminComponent {
 
   readonly unassignedAvatarClass = (size = 'h-7 w-7 text-xs'): string =>
     `inline-flex ${size} items-center justify-center rounded-full bg-slate-200 dark:bg-gray-800 text-slate-500 dark:text-gray-400 font-medium shrink-0`;
+
+  // Deliberately not the unassigned grey: an assignee who has left the roster is
+  // a different state from nobody being assigned, and reads as one at a glance.
+  readonly unknownAvatarClass = (size = 'h-7 w-7 text-xs'): string =>
+    `inline-flex ${size} items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-semibold shrink-0`;
 
   shortDate(str: string | null): string {
     if (!str) return '';

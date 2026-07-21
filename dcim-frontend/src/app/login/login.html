@@ -54,7 +54,7 @@
               [value]="email?.value ?? ''"
               (input)="loginForm.get('email')!.setValue($any($event.target).value)"
               (blur)="loginForm.get('email')!.markAsTouched()"
-              [invalid]="!!(email?.invalid && email?.touched)"
+              [invalid]="!!(email?.invalid && email.touched)"
               error-message="login-email-error"
             ></nldd-text-field>
             <nldd-form-field-error-text id="login-email-error">
@@ -74,7 +74,7 @@
               show-accessible-label="Show password"
               hide-text="Hide"
               hide-accessible-label="Hide password"
-              [invalid]="!!(password?.invalid && password?.dirty)"
+              [invalid]="!!(password?.invalid && password.dirty)"
               error-message="login-password-error"
             ></nldd-password-field>
             <nldd-form-field-error-text id="login-password-error">

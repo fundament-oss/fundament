@@ -15,13 +15,18 @@ option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v
 // Note is a polymorphic comment attached to any DCIM entity (core.notes).
 // There is no FK on entity_id — integrity is enforced at the application layer.
 message Note {
-  string                    id          = 10;
-  NoteEntityType            entity_type = 20;
-  string                    entity_id   = 30;
-  string                    body        = 40;
-  string                    created_by  = 50;
-  google.protobuf.Timestamp created     = 60;
-  google.protobuf.Timestamp deleted     = 70 [features.field_presence = EXPLICIT];
+  string                    id            = 10;
+  NoteEntityType            entity_type   = 20;
+  string                    entity_id     = 30;
+  string                    body          = 40;
+  // Display name of the author, resolved from the note's created_by_id user.
+  string                    created_by    = 50;
+  google.protobuf.Timestamp created       = 60;
+  google.protobuf.Timestamp deleted       = 70 [features.field_presence = EXPLICIT];
+  // The author's user id. Carried alongside created_by so a client can join a
+  // note onto the roster by id; matching on the display name instead collides
+  // for users who share a name. Absent for notes with no author.
+  string                    created_by_id = 80 [features.field_presence = EXPLICIT];
 }
 
 service NoteService {
@@ -43,7 +48,13 @@ message CreateNoteRequest {
   NoteEntityType entity_type = 10 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   string         entity_id   = 20 [(buf.validate.field).string = {uuid: true}];
   string         body        = 30 [(buf.validate.field).string.min_len = 1];
-  string         created_by  = 40 [(buf.validate.field).string.min_len = 1];
+  // The author is resolved from the authenticated caller server-side, never
+  // supplied by the client, so a note cannot be attributed to someone else.
+  //
+  // 40 held the client-supplied created_by this replaced. Reserved so the
+  // number cannot come back carrying a different meaning: an old client still
+  // sending a name on 40 must be ignored, not silently reinterpreted.
+  reserved 40;
 }
 
 message CreateNoteResponse {
