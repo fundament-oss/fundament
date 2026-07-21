@@ -1,5 +1,10 @@
 # Build stage
-FROM oven/bun:1-alpine AS build
+# Use a real Node.js (>= v24.15) for the Astro build; the tooling rejects Bun's
+# Node-compat version (24.3.0). Bun is still used as the package manager.
+FROM oven/bun:1.3.14-alpine AS bun
+
+FROM node:24.17-alpine AS build
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 
 # Copy package files
