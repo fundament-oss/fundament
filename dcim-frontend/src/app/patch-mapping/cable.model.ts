@@ -1,11 +1,7 @@
 // ── Port types ────────────────────────────────────────────────────────────────
 
 export type PortType =
-  | 'console-port'
-  | 'console-server-port'
-  | 'power-port'
-  | 'power-outlet'
-  | 'network-interface';
+  'console-port' | 'console-server-port' | 'power-port' | 'power-outlet' | 'network-interface';
 
 export interface Port {
   id: string;

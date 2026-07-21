@@ -2287,7 +2287,7 @@ ALTER TABLE dcim.physical_connections OWNER TO fun_owner;
 CREATE TABLE dcim.notes (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	body text NOT NULL,
-	created_by text,
+	created_by_id uuid,
 	device_catalog_id uuid,
 	port_definition_id uuid,
 	asset_id uuid,
@@ -2319,7 +2319,7 @@ CREATE TABLE dcim.tasks (
 	status text NOT NULL DEFAULT 'ready',
 	priority text NOT NULL DEFAULT 'medium',
 	category text NOT NULL DEFAULT 'other',
-	assignee_id text,
+	assignee_id uuid,
 	due_date timestamptz,
 	location text,
 	created timestamptz NOT NULL DEFAULT now(),
@@ -2348,6 +2348,33 @@ CREATE TABLE dcim.task_steps (
 );
 -- ddl-end --
 ALTER TABLE dcim.task_steps OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim.users | type: TABLE --
+-- DROP TABLE IF EXISTS dcim.users CASCADE;
+CREATE TABLE dcim.users (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	external_ref text,
+	name text NOT NULL,
+	email text,
+	created timestamptz NOT NULL DEFAULT now(),
+	deleted timestamptz,
+	CONSTRAINT users_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+COMMENT ON COLUMN dcim.users.external_ref IS E'Subject of the identity provider this user maps onto (the DCIM JWT `sub`). Null for users that exist only in DCIM and cannot sign in.';
+-- ddl-end --
+ALTER TABLE dcim.users OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: dcim_users_uq_external_ref | type: INDEX --
+-- DROP INDEX IF EXISTS dcim.dcim_users_uq_external_ref CASCADE;
+CREATE UNIQUE INDEX dcim_users_uq_external_ref ON dcim.users
+USING btree
+(
+	external_ref
+)
+WHERE (deleted IS NULL);
 -- ddl-end --
 
 -- object: task_steps_uq_task_ordinal | type: INDEX --
@@ -2904,6 +2931,20 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_task CASCADE;
 ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_task FOREIGN KEY (task_id)
 REFERENCES dcim.tasks (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_notes_fk_created_by | type: CONSTRAINT --
+-- ALTER TABLE dcim.notes DROP CONSTRAINT IF EXISTS dcim_notes_fk_created_by CASCADE;
+ALTER TABLE dcim.notes ADD CONSTRAINT dcim_notes_fk_created_by FOREIGN KEY (created_by_id)
+REFERENCES dcim.users (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: dcim_tasks_fk_assignee | type: CONSTRAINT --
+-- ALTER TABLE dcim.tasks DROP CONSTRAINT IF EXISTS dcim_tasks_fk_assignee CASCADE;
+ALTER TABLE dcim.tasks ADD CONSTRAINT dcim_tasks_fk_assignee FOREIGN KEY (assignee_id)
+REFERENCES dcim.users (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -3653,6 +3694,14 @@ GRANT SELECT,INSERT,UPDATE
 -- object: grant_raw_55ce0b15d8 | type: PERMISSION --
 GRANT SELECT,INSERT,UPDATE
    ON TABLE dcim.task_steps
+   TO fun_dcim_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_e071340f9f | type: PERMISSION --
+GRANT SELECT
+   ON TABLE dcim.users
    TO fun_dcim_api;
 
 -- ddl-end --

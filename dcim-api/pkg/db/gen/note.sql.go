@@ -13,14 +13,14 @@ import (
 )
 
 const noteCreate = `-- name: NoteCreate :one
-INSERT INTO dcim.notes (body, created_by, device_catalog_id, port_definition_id, asset_id, site_id, room_id, rack_row_id, rack_id, placement_id, physical_connection_id, logical_design_id, logical_device_id, logical_connection_id, task_id)
+INSERT INTO dcim.notes (body, created_by_id, device_catalog_id, port_definition_id, asset_id, site_id, room_id, rack_row_id, rack_id, placement_id, physical_connection_id, logical_design_id, logical_device_id, logical_connection_id, task_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING id
 `
 
 type NoteCreateParams struct {
 	Body                 string
-	CreatedBy            pgtype.Text
+	CreatedByID          pgtype.UUID
 	DeviceCatalogID      pgtype.UUID
 	PortDefinitionID     pgtype.UUID
 	AssetID              pgtype.UUID
@@ -39,7 +39,7 @@ type NoteCreateParams struct {
 func (q *Queries) NoteCreate(ctx context.Context, arg NoteCreateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, noteCreate,
 		arg.Body,
-		arg.CreatedBy,
+		arg.CreatedByID,
 		arg.DeviceCatalogID,
 		arg.PortDefinitionID,
 		arg.AssetID,
@@ -78,25 +78,26 @@ func (q *Queries) NoteDelete(ctx context.Context, arg NoteDeleteParams) (int64, 
 }
 
 const noteList = `-- name: NoteList :many
-SELECT id, body, created_by, device_catalog_id, port_definition_id, asset_id, site_id, room_id, rack_row_id, rack_id, placement_id, physical_connection_id, logical_design_id, logical_device_id, logical_connection_id, task_id, created
+SELECT notes.id, notes.body, notes.created_by_id, users.name, notes.device_catalog_id, notes.port_definition_id, notes.asset_id, notes.site_id, notes.room_id, notes.rack_row_id, notes.rack_id, notes.placement_id, notes.physical_connection_id, notes.logical_design_id, notes.logical_device_id, notes.logical_connection_id, notes.task_id, notes.created
 FROM dcim.notes
-WHERE deleted IS NULL
+LEFT JOIN dcim.users ON users.id = notes.created_by_id
+WHERE notes.deleted IS NULL
   AND (
-    ($1::uuid IS NOT NULL AND device_catalog_id = $1::uuid) OR
-    ($2::uuid IS NOT NULL AND port_definition_id = $2::uuid) OR
-    ($3::uuid IS NOT NULL AND asset_id = $3::uuid) OR
-    ($4::uuid IS NOT NULL AND site_id = $4::uuid) OR
-    ($5::uuid IS NOT NULL AND room_id = $5::uuid) OR
-    ($6::uuid IS NOT NULL AND rack_row_id = $6::uuid) OR
-    ($7::uuid IS NOT NULL AND rack_id = $7::uuid) OR
-    ($8::uuid IS NOT NULL AND placement_id = $8::uuid) OR
-    ($9::uuid IS NOT NULL AND physical_connection_id = $9::uuid) OR
-    ($10::uuid IS NOT NULL AND logical_design_id = $10::uuid) OR
-    ($11::uuid IS NOT NULL AND logical_device_id = $11::uuid) OR
-    ($12::uuid IS NOT NULL AND logical_connection_id = $12::uuid) OR
-    ($13::uuid IS NOT NULL AND task_id = $13::uuid)
+    ($1::uuid IS NOT NULL AND notes.device_catalog_id = $1::uuid) OR
+    ($2::uuid IS NOT NULL AND notes.port_definition_id = $2::uuid) OR
+    ($3::uuid IS NOT NULL AND notes.asset_id = $3::uuid) OR
+    ($4::uuid IS NOT NULL AND notes.site_id = $4::uuid) OR
+    ($5::uuid IS NOT NULL AND notes.room_id = $5::uuid) OR
+    ($6::uuid IS NOT NULL AND notes.rack_row_id = $6::uuid) OR
+    ($7::uuid IS NOT NULL AND notes.rack_id = $7::uuid) OR
+    ($8::uuid IS NOT NULL AND notes.placement_id = $8::uuid) OR
+    ($9::uuid IS NOT NULL AND notes.physical_connection_id = $9::uuid) OR
+    ($10::uuid IS NOT NULL AND notes.logical_design_id = $10::uuid) OR
+    ($11::uuid IS NOT NULL AND notes.logical_device_id = $11::uuid) OR
+    ($12::uuid IS NOT NULL AND notes.logical_connection_id = $12::uuid) OR
+    ($13::uuid IS NOT NULL AND notes.task_id = $13::uuid)
   )
-ORDER BY created
+ORDER BY notes.created
 `
 
 type NoteListParams struct {
@@ -118,7 +119,8 @@ type NoteListParams struct {
 type NoteListRow struct {
 	ID                   uuid.UUID
 	Body                 string
-	CreatedBy            pgtype.Text
+	CreatedByID          pgtype.UUID
+	Name                 pgtype.Text
 	DeviceCatalogID      pgtype.UUID
 	PortDefinitionID     pgtype.UUID
 	AssetID              pgtype.UUID
@@ -135,6 +137,9 @@ type NoteListRow struct {
 	Created              pgtype.Timestamptz
 }
 
+// users.name is the note author's display name, joined via notes.created_by_id.
+// It lands on the generated row as the bare field Name (no aliases allowed), so
+// read that as "author name", not as a name belonging to the note itself.
 func (q *Queries) NoteList(ctx context.Context, arg NoteListParams) ([]NoteListRow, error) {
 	rows, err := q.db.Query(ctx, noteList,
 		arg.DeviceCatalogID,
@@ -161,7 +166,8 @@ func (q *Queries) NoteList(ctx context.Context, arg NoteListParams) ([]NoteListR
 		if err := rows.Scan(
 			&i.ID,
 			&i.Body,
-			&i.CreatedBy,
+			&i.CreatedByID,
+			&i.Name,
 			&i.DeviceCatalogID,
 			&i.PortDefinitionID,
 			&i.AssetID,

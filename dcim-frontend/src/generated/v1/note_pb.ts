@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/note.proto.
  */
 export const file_v1_note: GenFile = /*@__PURE__*/
-  fileDesc("Cg12MS9ub3RlLnByb3RvEgdkY2ltLnYxItYBCgROb3RlEgoKAmlkGAogASgJEiwKC2VudGl0eV90eXBlGBQgASgOMhcuZGNpbS52MS5Ob3RlRW50aXR5VHlwZRIRCgllbnRpdHlfaWQYHiABKAkSDAoEYm9keRgoIAEoCRISCgpjcmVhdGVkX2J5GDIgASgJEisKB2NyZWF0ZWQYPCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKB2RlbGV0ZWQYRiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIASJpChBMaXN0Tm90ZXNSZXF1ZXN0EjgKC2VudGl0eV90eXBlGAogASgOMhcuZGNpbS52MS5Ob3RlRW50aXR5VHlwZUIKukgHggEEEAEgABIbCgllbnRpdHlfaWQYFCABKAlCCLpIBXIDsAEBIjEKEUxpc3ROb3Rlc1Jlc3BvbnNlEhwKBW5vdGVzGAogAygLMg0uZGNpbS52MS5Ob3RlIp4BChFDcmVhdGVOb3RlUmVxdWVzdBI4CgtlbnRpdHlfdHlwZRgKIAEoDjIXLmRjaW0udjEuTm90ZUVudGl0eVR5cGVCCrpIB4IBBBABIAASGwoJZW50aXR5X2lkGBQgASgJQgi6SAVyA7ABARIVCgRib2R5GB4gASgJQge6SARyAhABEhsKCmNyZWF0ZWRfYnkYKCABKAlCB7pIBHICEAEiJQoSQ3JlYXRlTm90ZVJlc3BvbnNlEg8KB25vdGVfaWQYCiABKAkiKQoRRGVsZXRlTm90ZVJlcXVlc3QSFAoCaWQYCiABKAlCCLpIBXIDsAEBMtoBCgtOb3RlU2VydmljZRJCCglMaXN0Tm90ZXMSGS5kY2ltLnYxLkxpc3ROb3Rlc1JlcXVlc3QaGi5kY2ltLnYxLkxpc3ROb3Rlc1Jlc3BvbnNlEkUKCkNyZWF0ZU5vdGUSGi5kY2ltLnYxLkNyZWF0ZU5vdGVSZXF1ZXN0GhsuZGNpbS52MS5DcmVhdGVOb3RlUmVzcG9uc2USQAoKRGVsZXRlTm90ZRIaLmRjaW0udjEuRGVsZXRlTm90ZVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHlCT1pDZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9kY2ltLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO2RjaW12MZIDBwgC0j4CEANiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
+  fileDesc("Cg12MS9ub3RlLnByb3RvEgdkY2ltLnYxIvQBCgROb3RlEgoKAmlkGAogASgJEiwKC2VudGl0eV90eXBlGBQgASgOMhcuZGNpbS52MS5Ob3RlRW50aXR5VHlwZRIRCgllbnRpdHlfaWQYHiABKAkSDAoEYm9keRgoIAEoCRISCgpjcmVhdGVkX2J5GDIgASgJEisKB2NyZWF0ZWQYPCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKB2RlbGV0ZWQYRiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgWqAQIIARIcCg1jcmVhdGVkX2J5X2lkGFAgASgJQgWqAQIIASJpChBMaXN0Tm90ZXNSZXF1ZXN0EjgKC2VudGl0eV90eXBlGAogASgOMhcuZGNpbS52MS5Ob3RlRW50aXR5VHlwZUIKukgHggEEEAEgABIbCgllbnRpdHlfaWQYFCABKAlCCLpIBXIDsAEBIjEKEUxpc3ROb3Rlc1Jlc3BvbnNlEhwKBW5vdGVzGAogAygLMg0uZGNpbS52MS5Ob3RlIocBChFDcmVhdGVOb3RlUmVxdWVzdBI4CgtlbnRpdHlfdHlwZRgKIAEoDjIXLmRjaW0udjEuTm90ZUVudGl0eVR5cGVCCrpIB4IBBBABIAASGwoJZW50aXR5X2lkGBQgASgJQgi6SAVyA7ABARIVCgRib2R5GB4gASgJQge6SARyAhABSgQIKBApIiUKEkNyZWF0ZU5vdGVSZXNwb25zZRIPCgdub3RlX2lkGAogASgJIikKEURlbGV0ZU5vdGVSZXF1ZXN0EhQKAmlkGAogASgJQgi6SAVyA7ABATLaAQoLTm90ZVNlcnZpY2USQgoJTGlzdE5vdGVzEhkuZGNpbS52MS5MaXN0Tm90ZXNSZXF1ZXN0GhouZGNpbS52MS5MaXN0Tm90ZXNSZXNwb25zZRJFCgpDcmVhdGVOb3RlEhouZGNpbS52MS5DcmVhdGVOb3RlUmVxdWVzdBobLmRjaW0udjEuQ3JlYXRlTm90ZVJlc3BvbnNlEkAKCkRlbGV0ZU5vdGUSGi5kY2ltLnYxLkRlbGV0ZU5vdGVSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Qk9aQ2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvZGNpbS1hcGkvcGtnL3Byb3RvL2dlbi92MTtkY2ltdjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_empty, file_google_protobuf_go_features, file_google_protobuf_timestamp, file_v1_common]);
 
 /**
  * Note is a polymorphic comment attached to any DCIM entity (core.notes).
@@ -46,6 +46,8 @@ export type Note = Message<"dcim.v1.Note"> & {
   body: string;
 
   /**
+   * Display name of the author, resolved from the note's created_by_id user.
+   *
    * @generated from field: string created_by = 50;
    */
   createdBy: string;
@@ -59,6 +61,15 @@ export type Note = Message<"dcim.v1.Note"> & {
    * @generated from field: google.protobuf.Timestamp deleted = 70 [features.field_presence = EXPLICIT];
    */
   deleted?: Timestamp;
+
+  /**
+   * The author's user id. Carried alongside created_by so a client can join a
+   * note onto the roster by id; matching on the display name instead collides
+   * for users who share a name. Absent for notes with no author.
+   *
+   * @generated from field: string created_by_id = 80 [features.field_presence = EXPLICIT];
+   */
+  createdById: string;
 };
 
 /**
@@ -125,11 +136,6 @@ export type CreateNoteRequest = Message<"dcim.v1.CreateNoteRequest"> & {
    * @generated from field: string body = 30;
    */
   body: string;
-
-  /**
-   * @generated from field: string created_by = 40;
-   */
-  createdBy: string;
 };
 
 /**

@@ -292,6 +292,12 @@ export const CreateTaskResponseSchema: GenMessage<CreateTaskResponse> = /*@__PUR
   messageDesc(file_v1_task, 7);
 
 /**
+ * UpdateTaskRequest patches the fields it explicitly sets and leaves the rest
+ * untouched. For the nullable columns (description, assignee_id, due_date,
+ * location) an explicitly-set field carrying the "empty" sentinel — an empty
+ * string, or the epoch timestamp — clears the column, matching
+ * UpdatePhysicalConnectionRequest.
+ *
  * @generated from message dcim.v1.UpdateTaskRequest
  */
 export type UpdateTaskRequest = Message<"dcim.v1.UpdateTaskRequest"> & {

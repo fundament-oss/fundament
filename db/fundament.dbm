@@ -2814,8 +2814,8 @@ END;]]> </definition>
 	<column name="body" not-null="true">
 		<type name="text" length="0"/>
 	</column>
-	<column name="created_by">
-		<type name="text" length="0"/>
+	<column name="created_by_id">
+		<type name="uuid" length="0"/>
 	</column>
 	<column name="device_catalog_id">
 		<type name="uuid" length="0"/>
@@ -2893,7 +2893,7 @@ END;]]> </definition>
 		<type name="text" length="0"/>
 	</column>
 	<column name="assignee_id">
-		<type name="text" length="0"/>
+		<type name="uuid" length="0"/>
 	</column>
 	<column name="due_date">
 		<type name="timestamptz" length="0"/>
@@ -2953,6 +2953,43 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
+
+<table name="users" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
+	<schema name="dcim"/>
+	<role name="fun_owner"/>
+	<position x="7400" y="1200"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="external_ref">
+		<type name="text" length="0"/>
+		<comment> <![CDATA[Subject of the identity provider this user maps onto (the DCIM JWT `sub`). Null for users that exist only in DCIM and cannot sign in.]]> </comment>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="email">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="users_pk" type="pk-constr" table="dcim.users">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<index name="dcim_users_uq_external_ref" table="dcim.users"
+	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
+	 index-type="btree" factor="0">
+		<idxelement use-sorting="false">
+			<column name="external_ref"/>
+		</idxelement>
+	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
+</index>
 
 <index name="task_steps_uq_task_ordinal" table="dcim.task_steps"
 	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
@@ -3434,9 +3471,21 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="dcim_notes_fk_created_by" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="dcim.users" table="dcim.notes">
+	<columns names="created_by_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="dcim_task_steps_fk_task" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="dcim.tasks" table="dcim.task_steps">
 	<columns names="task_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="dcim_tasks_fk_assignee" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="dcim.users" table="dcim.tasks">
+	<columns names="assignee_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -3870,11 +3919,21 @@ END;]]> </definition>
 	 dst-table="dcim.tasks" reference-fk="dcim_notes_fk_task"
 	 src-required="false" dst-required="false"/>
 
+<relationship name="rel_dcim_notes_users" type="relfk" layers="0"
+	 src-table="dcim.notes"
+	 dst-table="dcim.users" reference-fk="dcim_notes_fk_created_by"
+	 src-required="false" dst-required="false"/>
+
 <relationship name="rel_dcim_task_steps_tasks" type="relfk" layers="0"
 	 custom-color="#f0f0f0"
 	 src-table="dcim.task_steps"
 	 dst-table="dcim.tasks" reference-fk="dcim_task_steps_fk_task"
 	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_dcim_tasks_users" type="relfk" layers="0"
+	 src-table="dcim.tasks"
+	 dst-table="dcim.users" reference-fk="dcim_tasks_fk_assignee"
+	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_idempotency_keys_projects" type="relfk" layers="0"
 	 custom-color="#915d5d"
@@ -4388,5 +4447,10 @@ END;]]> </definition>
 	<object name="dcim.task_steps" type="table"/>
 	<roles names="fun_dcim_api"/>
 	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="dcim.users" type="table"/>
+	<roles names="fun_dcim_api"/>
+	<privileges select="true"/>
 </permission>
 </dbmodel>
