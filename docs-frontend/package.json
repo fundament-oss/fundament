@@ -39,7 +39,7 @@
     "@fortawesome/fontawesome-free": "7.2.0",
     "@nldd/design-system": "0.8.53",
     "@tailwindcss/vite": "4.3.0",
-    "astro": "6.4.2",
+    "astro": "7.1.0",
     "astro-asciidoc": "0.1.1",
     "tailwindcss": "4.3.0"
   }
