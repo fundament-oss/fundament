@@ -347,11 +347,10 @@ html.presenting body {
 html.presenting-full body {
   padding-left: 0;
 }
-/* Native modal dialogs (opened with showModal()) are centered on the whole
-   viewport by the browser. While presenting, the left 40vw is the narration
-   panel, so shift the modal — and its backdrop — into the right pane. The value
-   is read inside the modal component's shadow DOM via an inherited custom
-   property (set on <html> so ::backdrop inherits it too); see modal-pane.ts. */
+/* While presenting, the left 40vw is the narration panel, so app dialogs are
+   centered in the right pane. modal-pane.ts fixes the dialog to the viewport and
+   reads this inset from the custom property, which inherits into the modal
+   component's shadow DOM from <html>. */
 html.presenting {
   --fund-modal-inset-left: 40vw;
 }

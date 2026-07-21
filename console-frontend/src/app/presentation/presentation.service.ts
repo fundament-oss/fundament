@@ -4,6 +4,7 @@ import { Title } from '@angular/platform-browser';
 import { Slide, Tour } from './presentation.model';
 import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
 import { runDrive } from './drive-runner';
+import { closeOpenAppDialogs } from './app-dialogs';
 
 /**
  * Drives the walkthrough overlay: slide state, URL sync (present/tour/slide query
@@ -70,14 +71,15 @@ export class PresentationService {
   /**
    * Reads present/tour/slide from the current URL and starts the walkthrough.
    * The demo build presents by default; pass `?present=0` to open the plain console.
-   * Without a `tour` param it opens the chooser; `?tour=<id>` deep-links into a tour.
+   * Without a `tour` param it opens the default tour at its first slide; the chooser
+   * is reached from there via "Naar de keuze". `?tour=<id>` deep-links into a tour.
    */
   initFromUrl(): void {
     const params = new URLSearchParams(window.location.search);
     if (params.get('present') === '0') return;
     const tourId = params.get('tour');
     if (!tourId) {
-      this.showChooser();
+      this.startTour(DEFAULT_TOUR_ID);
       return;
     }
     const slide = Math.max(1, parseInt(params.get('slide') || '1', 10)) - 1;
@@ -99,6 +101,7 @@ export class PresentationService {
   }
 
   private showChooser(): void {
+    closeOpenAppDialogs();
     this.active.set(true);
     this.mode.set('chooser');
     this.applyClasses();
@@ -108,6 +111,9 @@ export class PresentationService {
   }
 
   goto(index: number): void {
+    // An open app modal (native <dialog>) traps focus and makes the deck inert, so
+    // close it before moving on — otherwise the presenter is stuck on the slide.
+    closeOpenAppDialogs();
     const clamped = Math.min(Math.max(0, index), this.total() - 1);
     this.index.set(clamped);
     this.applyClasses();
@@ -185,6 +191,7 @@ export class PresentationService {
   stop(): void {
     this.cancelDrive();
     this.stopAutoplay();
+    closeOpenAppDialogs();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
     this.active.set(false);
     this.mode.set('chooser');

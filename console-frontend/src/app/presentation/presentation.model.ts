@@ -17,6 +17,8 @@ export interface DriveStep {
   click?: string;
   /** CSS selector of a form to submit (dispatches a native `submit` event). */
   submit?: string;
+  /** Dispatch a bubbling CustomEvent of this name on `document` (demo services listen). */
+  emit?: string;
 }
 
 export interface Slide {

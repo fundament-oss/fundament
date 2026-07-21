@@ -1,4 +1,5 @@
 import { DriveStep, Slide, Tour } from './presentation.model';
+import { PLUGIN_INSTALLS_RESET_EVENT } from './presentation.tokens';
 
 // Tours are the walkthrough's content. The chooser groups them into "verhalen"
 // (no persona) and "word een rol" (with a persona).
@@ -25,16 +26,19 @@ const addClusterDrive: DriveStep[] = [
 ];
 
 /**
- * Installs the first plugin in the catalog (cert-manager) on every eligible cluster.
+ * Installs the first plugin in the catalog (cert-manager) on a single cluster.
  * Selectors lean on static attributes only — `variant`/`slot` are plain attributes in
- * the template, while `text` is an Angular binding and never lands in the DOM.
- * The "select all" checkbox is the modal's first, and renders when >1 cluster is eligible.
+ * the template, while `text` is an Angular binding and never lands in the DOM. The
+ * per-cluster checkboxes live in the modal's `.space-y-2` list (the "select all"
+ * checkbox sits outside it), so the first match selects just one cluster.
+ * The reset event first clears any earlier install, so the slide can be replayed.
  */
 const installPluginDrive: DriveStep[] = [
+  { emit: PLUGIN_INSTALLS_RESET_EVENT },
   { wait: 1400 },
   { click: 'div.grid > div:nth-child(1) nldd-button[variant="primary"]' },
   { wait: 1000 },
-  { set: 'nldd-modal-dialog nldd-checkbox-field', check: true },
+  { set: 'nldd-modal-dialog .space-y-2 nldd-checkbox-field', check: true },
   { wait: 800 },
   { click: 'nldd-modal-dialog nldd-button[slot="actions"][variant="primary"]' },
 ];
@@ -147,10 +151,14 @@ const wholeStory: Tour = {
       id: 'plugins',
       title: 'Plugins',
       lead: 'Een catalogus van bouwstenen: certificaten, logging, databases, inloggen.',
-      bullets: [
-        'Wat al draait staat gemarkeerd als geïnstalleerd, met op hoeveel clusters.',
-        'Kijk mee: Cert Manager wordt hier op alle clusters geïnstalleerd.',
-      ],
+      bullets: ['Wat al draait staat gemarkeerd als geïnstalleerd, met op hoeveel clusters.'],
+      route: '/plugins',
+    },
+    {
+      id: 'plugins-install',
+      title: 'Een plugin installeren',
+      lead: 'Installeren doe je zelf, op de clusters die je kiest.',
+      bullets: ['Kijk mee: Cert Manager wordt hier op een cluster geïnstalleerd.'],
       route: '/plugins',
       drive: installPluginDrive,
     },
@@ -301,7 +309,7 @@ const platformEngineer: Tour = {
       lead: 'Bouwstenen die je één keer aanzet, en die elk team daarna gewoon kan gebruiken.',
       bullets: [
         'Presets bundelen wat vrijwel elk cluster nodig heeft.',
-        'Kijk mee: Cert Manager gaat naar alle clusters tegelijk. De status komt vanzelf op Installed.',
+        'Kijk mee: Cert Manager wordt op een cluster geïnstalleerd. De status komt vanzelf op Installed.',
       ],
       route: '/plugins',
       drive: installPluginDrive,

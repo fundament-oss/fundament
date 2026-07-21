@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { PresentationService } from './presentation.service';
+import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
 
 @Component({
   selector: 'app-presentation-overlay',
@@ -524,10 +525,20 @@ export class PresentationOverlayComponent {
       tag.startsWith('nldd-') ||
       !!target?.isContentEditable;
 
+    // An open app modal moves focus into itself, so the deck keys must still drive
+    // navigation from there (and navigating closes the modal).
+    const modalOpen = hasOpenAppDialog();
+
     if (event.key === 'Escape') {
       // In native fullscreen the browser handles Esc by exiting fullscreen; don't
       // also close the presentation. A second Esc (no longer fullscreen) closes it.
       if (document.fullscreenElement) return;
+      // Escape closes an open app modal first, before leaving the tour.
+      if (modalOpen) {
+        event.preventDefault();
+        closeOpenAppDialogs();
+        return;
+      }
       event.preventDefault();
       // From a tour, Esc steps back to the chooser; from the chooser it closes.
       if (this.presentation.mode() === 'tour') {
@@ -537,7 +548,9 @@ export class PresentationOverlayComponent {
       }
       return;
     }
-    if (inField) return;
+    // Fields own their keys while typing — except when a modal is open, where the
+    // focused control is a button/checkbox and the deck keys must still work.
+    if (inField && !modalOpen) return;
 
     // The chooser is navigated by tabbing between cards, not by the slide keys.
     if (this.presentation.mode() === 'chooser') return;

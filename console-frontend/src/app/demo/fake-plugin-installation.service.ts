@@ -3,6 +3,7 @@
 // actually install a plugin and watch it come up.
 import { Injectable } from '@angular/core';
 import { PluginInstallationItem } from '../plugin-resources/types';
+import { PLUGIN_INSTALLS_RESET_EVENT } from '../presentation/presentation.tokens';
 import * as fx from './fixtures';
 
 // How long a fresh install stays Pending before it reports Running. The plugins
@@ -38,6 +39,14 @@ export default class FakePluginInstallationService {
   private readonly byCluster = new Map<string, DemoInstall[]>();
 
   constructor() {
+    this.seed();
+    // Let the walkthrough reset installs so its install slide can be replayed.
+    document.addEventListener(PLUGIN_INSTALLS_RESET_EVENT, () => this.seed());
+  }
+
+  /** (Re)seed the in-memory installs to the fixture baseline, dropping any added live. */
+  private seed(): void {
+    this.byCluster.clear();
     Object.entries(fx.seededInstalls).forEach(([clusterId, pluginNames]) => {
       this.byCluster.set(
         clusterId,

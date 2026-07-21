@@ -55,6 +55,10 @@ async function runStep(step: DriveStep, signal: AbortSignal): Promise<void> {
     await sleep(step.wait, signal);
     return;
   }
+  if (step.emit) {
+    document.dispatchEvent(new CustomEvent(step.emit, { bubbles: true }));
+    return;
+  }
   if (step.click) {
     const el = await waitForElement(step.click, signal);
     (el as HTMLElement | null)?.click();
