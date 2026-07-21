@@ -76,7 +76,7 @@ interface KubeListResult<T = unknown> {
 
 class SdkError extends Error {
   constructor(
-    public readonly code: 'forbidden' | 'http' | 'transport' | 'timeout',
+    public readonly code: 'unauthorized' | 'forbidden' | 'http' | 'transport' | 'timeout',
     message: string,
     public readonly status?: number,
   ) {
@@ -406,7 +406,11 @@ async function k8sRequest<T>(
 
   if (!res.ok) {
     const message = await readK8sError(res);
-    const code = res.status === 403 ? 'forbidden' : 'http';
+    // A 401 that survives fetchImpl's refresh-and-retry means the freshly
+    // minted token was itself rejected. Surface it as a distinct 'unauthorized'
+    // code (not a generic 'http') so the plugin can prompt re-auth instead of
+    // showing an opaque HTTP error.
+    const code = res.status === 401 ? 'unauthorized' : res.status === 403 ? 'forbidden' : 'http';
     throw new SdkError(code, message, res.status);
   }
   return (await res.json()) as T;

@@ -129,9 +129,10 @@ func mutatePluginScopeClusterRole(role *rbacv1.ClusterRole, cr *pluginsv1.Plugin
 			continue
 		}
 		role.Rules = append(role.Rules, rbacv1.PolicyRule{
-			APIGroups: r.GetApiGroups(),
-			Resources: r.GetResources(),
-			Verbs:     r.GetVerbs(),
+			APIGroups:     r.GetApiGroups(),
+			Resources:     r.GetResources(),
+			Verbs:         r.GetVerbs(),
+			ResourceNames: r.GetResourceNames(),
 		})
 	}
 }
@@ -227,7 +228,12 @@ func mutateService(svc *corev1.Service, cr *pluginsv1.PluginInstallation) {
 	// materialise the plugin's RBAC scope; a plugin can't become Ready until it
 	// has installed, and it can't install without that scope — so gating the
 	// Service on readiness would deadlock the bootstrap.
-	// Reevaluate when moving the definition to the DB
+	//
+	// TODO(FUN-*): this Service also carries live user data-plane traffic (asset
+	// fetches), so publishing not-ready addresses means user requests can hit
+	// not-ready pods during rollouts/crash-loops (→ transient 502s). Drop this
+	// flag once GetDefinition moves to the DB and the controller no longer needs
+	// to dial the not-ready pod, letting the Service gate on readiness normally.
 	svc.Spec.PublishNotReadyAddresses = true
 	svc.Spec.Ports = []corev1.ServicePort{
 		{

@@ -41,6 +41,11 @@ type Server struct {
 	kubeHandler   http.Handler
 	handler       http.Handler
 	pluginGateway *pluginGateway
+	// serveUnauthedMockAssets enables the unauthenticated plugin-console-asset
+	// branch in handleClusterProxy. Only true for the pure-mock in-memory file
+	// server (local dev), never for the sandbox/real credentialed proxies — so
+	// the auth bypass can never reach a live cluster's credentials.
+	serveUnauthedMockAssets bool
 }
 
 func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, error) {
@@ -50,6 +55,7 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 
 	var kubeHandler http.Handler
 	var tokenCache *tokenpkg.Cache
+	var serveUnauthedMockAssets bool
 	switch cfg.Mode {
 	case "real":
 		tokenCache = tokenpkg.NewCache(cfg.GardenerClient, logger)
@@ -64,18 +70,22 @@ func New(logger *slog.Logger, cfg *Config, authzClient *authz.Client) (*Server, 
 			logger.Info("mock mode: proxying kube API requests to plugin sandbox cluster",
 				"kubeconfig", cfg.PluginSandboxKubeconfig)
 		} else {
+			// Pure-mock: the in-memory client serves plugin console assets from
+			// disk, so the unauthenticated asset branch is safe to enable.
 			kubeHandler = &kube.MockClient{PluginTemplatesDir: cfg.MockPluginTemplatesDir}
+			serveUnauthedMockAssets = true
 		}
 	default:
 		return nil, fmt.Errorf("invalid Mode %q: must be \"mock\" or \"real\"", cfg.Mode)
 	}
 
 	s := &Server{
-		logger:        logger,
-		authValidator: auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
-		authz:         authzClient,
-		tokenCache:    tokenCache,
-		kubeHandler:   kubeHandler,
+		logger:                  logger,
+		authValidator:           auth.NewValidatorForAudience(cfg.JWTSecret, auth.ConsoleAuthCookieName, auth.ConsoleIssuer, auth.TokenTypeUser, logger),
+		authz:                   authzClient,
+		tokenCache:              tokenCache,
+		kubeHandler:             kubeHandler,
+		serveUnauthedMockAssets: serveUnauthedMockAssets,
 	}
 
 	pluginSA, err := newPluginSAResolver(cfg, logger)

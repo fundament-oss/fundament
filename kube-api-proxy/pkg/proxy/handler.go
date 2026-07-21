@@ -52,12 +52,15 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 	// TODO(FUN-17): plugin console assets now served by plugin-proxy (Plan C);
 	// this branch is superseded — remove once Plan C/E land.
 	//
-	// Plugin console assets are public static UI files. The sandboxed iframe
-	// that loads them runs with an opaque origin and cannot send credentials,
-	// so the auth/authz check is skipped. The mock handler serves these from
-	// disk; in real mode the apiserver service proxy would forward to the
-	// plugin pod's HTTP handler (which itself does not authenticate them).
-	if kube.IsPluginConsoleAssetPath(r.URL.Path) {
+	// Plugin console assets are public static UI files served straight from
+	// disk by the in-memory mock client (local dev). The auth/authz check is
+	// skipped because those files expose no user-specific data and carry no
+	// credentials. serveUnauthedMockAssets is only set for that pure-mock file
+	// server (see New): the sandbox and real proxies forward to a live apiserver
+	// with admin/SA credentials, so skipping auth there would hand an
+	// unauthenticated caller credentialed cluster access. In every other mode
+	// this falls through to the normal token/cookie auth path below.
+	if s.serveUnauthedMockAssets && kube.IsPluginConsoleAssetPath(r.URL.Path) {
 		ctx := context.WithValue(r.Context(), kube.ClusterIDContextKey{}, clusterID.String())
 		s.kubeHandler.ServeHTTP(w, r.WithContext(ctx))
 		return

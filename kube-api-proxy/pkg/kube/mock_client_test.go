@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPluginConsoleAsset(t *testing.T) {
@@ -45,9 +47,9 @@ func TestPluginConsoleAsset(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.path, func(t *testing.T) {
 			name, asset, ok := pluginConsoleAsset(tc.path)
-			if ok != tc.wantOk || name != tc.wantName || asset != tc.wantAsset {
-				t.Fatalf("got (%q, %q, %v); want (%q, %q, %v)", name, asset, ok, tc.wantName, tc.wantAsset, tc.wantOk)
-			}
+			require.Equal(t, tc.wantOk, ok)
+			require.Equal(t, tc.wantName, name)
+			require.Equal(t, tc.wantAsset, asset)
 		})
 	}
 }
@@ -210,31 +212,21 @@ func TestServeConsoleAsset(t *testing.T) {
 	w := httptest.NewRecorder()
 	mc.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
-	}
-	if got := w.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
-		t.Errorf("Content-Type = %q", got)
-	}
-	if !strings.Contains(w.Body.String(), "<body>test</body>") {
-		t.Errorf("unexpected body: %s", w.Body.String())
-	}
+	require.Equal(t, http.StatusOK, w.Code, "body = %s", w.Body.String())
+	require.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"), "Content-Type = %q", w.Header().Get("Content-Type"))
+	require.Contains(t, w.Body.String(), "<body>test</body>")
 
 	// Path traversal protection.
 	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/../../etc/passwd", nil)
 	w2 := httptest.NewRecorder()
 	mc.ServeHTTP(w2, req2)
-	if w2.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 for traversal, got %d", w2.Code)
-	}
+	require.Equal(t, http.StatusBadRequest, w2.Code, "expected 400 for traversal")
 
 	// Missing file → 404.
 	req3 := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/nope.html", nil)
 	w3 := httptest.NewRecorder()
 	mc.ServeHTTP(w3, req3)
-	if w3.Code != http.StatusNotFound {
-		t.Errorf("expected 404 for missing file, got %d", w3.Code)
-	}
+	require.Equal(t, http.StatusNotFound, w3.Code, "expected 404 for missing file")
 }
 
 func TestMockFSCInstallations(t *testing.T) {

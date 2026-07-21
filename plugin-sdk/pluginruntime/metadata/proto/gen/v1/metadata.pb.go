@@ -206,10 +206,13 @@ func (x *PluginURLs) GetDocumentation() string {
 }
 
 type PolicyRule struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ApiGroups     []string               `protobuf:"bytes,1,rep,name=api_groups,json=apiGroups" json:"api_groups,omitempty"`
-	Resources     []string               `protobuf:"bytes,2,rep,name=resources" json:"resources,omitempty"`
-	Verbs         []string               `protobuf:"bytes,3,rep,name=verbs" json:"verbs,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	ApiGroups []string               `protobuf:"bytes,1,rep,name=api_groups,json=apiGroups" json:"api_groups,omitempty"`
+	Resources []string               `protobuf:"bytes,2,rep,name=resources" json:"resources,omitempty"`
+	Verbs     []string               `protobuf:"bytes,3,rep,name=verbs" json:"verbs,omitempty"`
+	// resource_names optionally restricts the rule to named objects (maps to
+	// rbacv1.PolicyRule.ResourceNames). Empty means all objects of the resource.
+	ResourceNames []string `protobuf:"bytes,4,rep,name=resource_names,json=resourceNames" json:"resource_names,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -261,6 +264,13 @@ func (x *PolicyRule) GetResources() []string {
 func (x *PolicyRule) GetVerbs() []string {
 	if x != nil {
 		return x.Verbs
+	}
+	return nil
+}
+
+func (x *PolicyRule) GetResourceNames() []string {
+	if x != nil {
+		return x.ResourceNames
 	}
 	return nil
 }
@@ -1027,13 +1037,14 @@ const file_v1_metadata_proto_rawDesc = "" +
 	"\n" +
 	"repository\x18\x02 \x01(\tR\n" +
 	"repository\x12$\n" +
-	"\rdocumentation\x18\x03 \x01(\tR\rdocumentation\"_\n" +
+	"\rdocumentation\x18\x03 \x01(\tR\rdocumentation\"\x86\x01\n" +
 	"\n" +
 	"PolicyRule\x12\x1d\n" +
 	"\n" +
 	"api_groups\x18\x01 \x03(\tR\tapiGroups\x12\x1c\n" +
 	"\tresources\x18\x02 \x03(\tR\tresources\x12\x14\n" +
-	"\x05verbs\x18\x03 \x03(\tR\x05verbs\"d\n" +
+	"\x05verbs\x18\x03 \x03(\tR\x05verbs\x12%\n" +
+	"\x0eresource_names\x18\x04 \x03(\tR\rresourceNames\"d\n" +
 	"\vPermissions\x12\"\n" +
 	"\fcapabilities\x18\x01 \x03(\tR\fcapabilities\x121\n" +
 	"\x04rbac\x18\x02 \x03(\v2\x1d.pluginmetadata.v1.PolicyRuleR\x04rbac\"k\n" +

@@ -419,6 +419,19 @@ func TestReconcilePluginScope_AcceptsUnknownPlaceholder(t *testing.T) {
 	}, &role)
 	require.NoError(t, err, "scope ClusterRole must be created for the unknown placeholder")
 	require.Len(t, role.Rules, 1)
+
+	// The RBAC was materialised without hash consent, so the PluginScopeReady
+	// condition must audit that (distinct from the pinned "Materialised" reason).
+	var cond *metav1.Condition
+	for i := range cr.Status.Conditions {
+		if cr.Status.Conditions[i].Type == ConditionPluginScopeReady {
+			cond = &cr.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, cond, "PluginScopeReady Condition must be set")
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, "MaterialisedUnpinned", cond.Reason)
 }
 
 // TestReconcilePluginScope_RejectsUnknownPlaceholderWithoutFlag confirms the

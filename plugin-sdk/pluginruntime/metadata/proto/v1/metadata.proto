@@ -23,6 +23,9 @@ message PolicyRule {
   repeated string api_groups = 1;
   repeated string resources = 2;
   repeated string verbs = 3;
+  // resource_names optionally restricts the rule to named objects (maps to
+  // rbacv1.PolicyRule.ResourceNames). Empty means all objects of the resource.
+  repeated string resource_names = 4;
 }
 
 message Permissions {

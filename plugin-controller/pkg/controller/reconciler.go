@@ -318,11 +318,12 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 	// returned so the workqueue retries with exponential backoff. Without the
 	// retry, a transient RPC failure would leave the SA with no scope until
 	// the informer's periodic resync (~10h).
+	// reconcilePluginScope sets the success PluginScopeReady condition itself
+	// (Materialised / MaterialisedUnpinned); we only record the failure here.
 	if err := r.reconcilePluginScope(ctx, log, cr); err != nil {
 		setPluginScopeCondition(cr, metav1.ConditionFalse, "MaterialisationFailed", err.Error())
 		return fmt.Errorf("reconcile plugin scope: %w", err)
 	}
-	setPluginScopeCondition(cr, metav1.ConditionTrue, "Materialised", "plugin-scope ClusterRole materialised from GetDefinition")
 
 	return nil
 }
@@ -354,10 +355,12 @@ func setPluginScopeCondition(cr *pluginsv1.PluginInstallation, status metav1.Con
 }
 
 // reconcilePluginScope RPCs the plugin's GetDefinition, verifies the pinned
-// hash, and materialises the scope ClusterRole + binding.
+// hash, materialises the scope ClusterRole + binding, and sets the success
+// PluginScopeReady condition on the CR (the caller records failures).
 func (r *Reconciler) reconcilePluginScope(ctx context.Context, log *slog.Logger, cr *pluginsv1.PluginInstallation) error {
 	pinned := cr.Spec.DefinitionRef.DefinitionHash
-	if isUnpinned(pinned) && !r.cfg.AllowUnpinnedHash {
+	unpinned := isUnpinned(pinned)
+	if unpinned && !r.cfg.AllowUnpinnedHash {
 		// Fail-closed: a CR without a real pin cannot materialise arbitrary RBAC.
 		// The operator opts into unpinned installs (empty or the "sha256:unknown"
 		// placeholder) by setting PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true on
@@ -379,7 +382,7 @@ func (r *Reconciler) reconcilePluginScope(ctx context.Context, log *slog.Logger,
 	}
 	def := resp.Msg
 
-	if !isUnpinned(pinned) {
+	if !unpinned {
 		got, err := hashDefinition(def)
 		if err != nil {
 			return fmt.Errorf("hash definition: %w", err)
@@ -387,6 +390,15 @@ func (r *Reconciler) reconcilePluginScope(ctx context.Context, log *slog.Logger,
 		if got != pinned {
 			return fmt.Errorf("definition hash mismatch: pinned=%q, plugin=%q", pinned, got)
 		}
+	} else {
+		// Unpinned install — only reachable with AllowUnpinnedHash set. We
+		// materialise whatever RBAC the plugin's live GetDefinition returns with
+		// no consent bound to a definition hash, so a compromised or updated
+		// plugin image could widen its own ClusterRole. Log loudly so this is
+		// auditable; the PluginScopeReady condition below also carries an
+		// "unpinned/unverified" reason.
+		log.Warn("materialising plugin-scope RBAC from an UNPINNED definition; no hash consent enforced (PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH is set)",
+			"plugin", cr.Name, "definitionHash", pinned)
 	}
 
 	scopeRoleName := pluginScopeClusterRoleName(cr.Name)
@@ -408,6 +420,15 @@ func (r *Reconciler) reconcilePluginScope(ctx context.Context, log *slog.Logger,
 		return fmt.Errorf("reconcile plugin-scope ClusterRoleBinding: %w", err)
 	} else if op != controllerutil.OperationResultNone {
 		log.Info("reconciled resource", "kind", "ClusterRoleBinding", "name", scopeRoleName, "operation", op)
+	}
+
+	// Materialisation succeeded — record readiness. An unpinned definition gets a
+	// distinct reason so the CR advertises that its RBAC carries no hash consent.
+	if unpinned {
+		setPluginScopeCondition(cr, metav1.ConditionTrue, "MaterialisedUnpinned",
+			"plugin-scope ClusterRole materialised from an UNPINNED definition (no hash consent); RBAC reflects whatever the plugin returned")
+	} else {
+		setPluginScopeCondition(cr, metav1.ConditionTrue, "Materialised", "plugin-scope ClusterRole materialised from GetDefinition")
 	}
 	return nil
 }

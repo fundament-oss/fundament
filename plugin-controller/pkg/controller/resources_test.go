@@ -22,9 +22,10 @@ func TestMutatePluginScopeClusterRole_MaterialisesRules(t *testing.T) {
 			Verbs:     []string{"get", "list", "watch"},
 		},
 		{
-			ApiGroups: []string{""},
-			Resources: []string{"secrets"},
-			Verbs:     []string{"get"},
+			ApiGroups:     []string{""},
+			Resources:     []string{"secrets"},
+			Verbs:         []string{"get"},
+			ResourceNames: []string{"cert-manager-webhook-ca"},
 		},
 	}
 
@@ -34,6 +35,11 @@ func TestMutatePluginScopeClusterRole_MaterialisesRules(t *testing.T) {
 	require.Len(t, role.Rules, 2)
 	assert.Equal(t, "cert-manager.io", role.Rules[0].APIGroups[0])
 	assert.Equal(t, []string{"secrets"}, role.Rules[1].Resources)
+	// resource_names must be threaded through: an empty ResourceNames grants
+	// access to ALL objects of the resource, so a rule scoped to a named object
+	// must stay scoped (regression guard for the dropped field).
+	assert.Equal(t, []string{"cert-manager-webhook-ca"}, role.Rules[1].ResourceNames)
+	assert.Empty(t, role.Rules[0].ResourceNames)
 	assert.Equal(t, managedByValue, role.Labels[labelManagedBy])
 }
 
