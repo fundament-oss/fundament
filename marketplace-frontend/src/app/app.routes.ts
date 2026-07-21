@@ -28,6 +28,18 @@ const routes: Routes = [
         (m) => m.default,
       ),
   },
+  // Admin review area.
+  // `submissions/:id` is registered before the bare `admin` route only for
+  // clarity; the router matches on the full path either way.
+  {
+    path: 'admin/submissions/:id',
+    loadComponent: () =>
+      import('./admin-review/submission-detail.component').then((m) => m.default),
+  },
+  {
+    path: 'admin',
+    loadComponent: () => import('./admin-review/review-queue.component').then((m) => m.default),
+  },
   { path: '**', redirectTo: '' },
 ];
 

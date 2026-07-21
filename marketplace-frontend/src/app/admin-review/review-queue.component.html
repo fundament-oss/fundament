@@ -1,0 +1,110 @@
+<a routerLink="/" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
+  <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+  Marketplace
+</a>
+
+<h1 class="text-3xl font-semibold">Review queue</h1>
+<p class="mt-1 max-w-2xl text-lg text-gray-600 dark:text-gray-300">
+  Review plugin submissions and decide whether they get published to the marketplace
+</p>
+
+<!-- Loading State -->
+@if (isLoading()) {
+  <div class="py-8 text-center">
+    <p class="text-gray-600 dark:text-gray-300">Loading submissions...</p>
+  </div>
+} @else {
+  <!-- Status summary -->
+  <div class="mt-6 mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    @for (summary of statusCounts(); track summary.status) {
+      <nldd-card class="block">
+        <div class="flex items-center gap-2.5 p-4">
+          <span
+            class="h-2.5 w-2.5 shrink-0 rounded-full"
+            [style.background]="summary.dotColorVar"
+          ></span>
+          <span class="font-mono text-xl leading-none">{{ summary.count }}</span>
+          <span class="text-gray-600 dark:text-gray-300">{{ summary.label }}</span>
+        </div>
+      </nldd-card>
+    }
+  </div>
+
+  <!-- Submissions Table -->
+  @if (submissions().length === 0) {
+    <nldd-box>
+      <nldd-inline-dialog
+        icon="puzzle-piece"
+        icon-color="secondary"
+        text="Nothing to review"
+        supporting-text="There are no plugin submissions in the queue right now."
+      >
+      </nldd-inline-dialog>
+    </nldd-box>
+  } @else {
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Plugin</th>
+            <th scope="col">Categories</th>
+            <th scope="col">Submitted</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (submission of sortedSubmissions(); track submission.id) {
+            <tr
+              class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+              (click)="goToSubmission(submission.id)"
+            >
+              <td>
+                <div class="flex items-center gap-3">
+                  <app-plugin-icon
+                    [name]="submission.icon"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
+                  />
+                  <div class="py-1">
+                    <p class="text-lg font-medium">
+                      {{ submission.title }}
+                    </p>
+                    <p class="max-w-md truncate text-gray-600 dark:text-gray-400">
+                      {{ submission.description }}
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="flex max-w-xs flex-wrap gap-1.5">
+                  @for (category of submission.categories; track category) {
+                    <nldd-tag color="neutral" [text]="category"></nldd-tag>
+                  }
+                </div>
+              </td>
+              <td class="text-gray-600 dark:text-gray-400">
+                <p class="whitespace-nowrap">{{ submission.submittedAt }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-500">
+                  {{ submission.submitter.name }}
+                </p>
+              </td>
+              <td>
+                <span class="badge {{ statusBadgeClass(submission.status) }}">{{
+                  statusLabel(submission.status)
+                }}</span>
+              </td>
+              <td class="text-right">
+                <nldd-button
+                  [routerLink]="['/admin/submissions', submission.id]"
+                  [text]="submission.status === 'pending' ? 'Review' : 'View'"
+                  variant="secondary"
+                  size="sm"
+                ></nldd-button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

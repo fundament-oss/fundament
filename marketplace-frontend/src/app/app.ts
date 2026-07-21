@@ -18,6 +18,7 @@ import '@nldd/design-system/page';
 import '@nldd/design-system/simple-section';
 import '@nldd/design-system/form-field';
 import '@nldd/design-system/dropdown';
+import '@nldd/design-system/multi-line-text-field';
 import '@nldd/design-system/inline-dialog';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { FundamentLogoIconComponent } from './icons';

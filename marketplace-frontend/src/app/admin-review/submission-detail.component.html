@@ -1,0 +1,230 @@
+@if (isLoading()) {
+  <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading submission...</div>
+} @else if (errorMessage(); as error) {
+  <a routerLink="/admin" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    Back to review queue
+  </a>
+  <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+  </div>
+} @else if (submission(); as submission) {
+  <a routerLink="/admin" class="text-accent-700 mb-3 inline-flex items-center gap-1.5 font-medium">
+    <nldd-icon name="arrow-left" class="h-3.5 w-3.5"></nldd-icon>
+    Review queue
+  </a>
+
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <app-plugin-icon
+        [name]="submission.icon"
+        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white p-1 dark:bg-gray-800"
+      />
+      <div>
+        <h1 class="text-3xl font-semibold">{{ submission.title }}</h1>
+        <p class="mt-1 text-gray-600 dark:text-gray-300">
+          Submitted {{ submission.submittedAt }} · {{ submission.submitter.name }}
+        </p>
+      </div>
+    </div>
+    <nldd-tag
+      [color]="statusTagColor(submission.status)"
+      [text]="statusLabel(submission.status)"
+    ></nldd-tag>
+  </div>
+
+  <!-- Decision (only while pending) -->
+  @if (submission.status === 'pending') {
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="mb-1 text-lg font-semibold">Review this submission</h2>
+        <p class="mb-5 text-gray-600 dark:text-gray-300">
+          Approving publishes the plugin to the marketplace. Rejecting sends the reason and any
+          feedback back to the author.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <nldd-button
+            (click)="approve()"
+            text="Approve"
+            start-icon="check-mark"
+            variant="primary"
+          ></nldd-button>
+          <nldd-button
+            (click)="openReject()"
+            text="Reject"
+            start-icon="dismiss"
+            variant="destructive"
+          ></nldd-button>
+        </div>
+      </div>
+    </nldd-card>
+  }
+
+  <!-- Review outcome (once decided) -->
+  @if (submission.status !== 'pending') {
+    <nldd-card class="mb-6 block">
+      <div class="p-6">
+        <h2 class="mb-4 text-lg font-semibold">Review outcome</h2>
+        <dl class="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
+          <div>
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              Decision
+            </dt>
+            <dd class="mt-2">
+              <nldd-tag
+                [color]="statusTagColor(submission.status)"
+                [text]="statusLabel(submission.status)"
+              ></nldd-tag>
+            </dd>
+          </div>
+          <div>
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              Reviewed
+            </dt>
+            <dd class="mt-2 text-gray-600 dark:text-gray-300">
+              {{ submission.reviewedAt }} · {{ submission.reviewedBy }}
+            </dd>
+          </div>
+          @if (submission.status === 'rejected' && submission.rejectionReason; as reason) {
+            <div>
+              <dt
+                class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Reason
+              </dt>
+              <dd class="mt-2 text-gray-600 dark:text-gray-300">
+                {{ rejectionReasonLabel(reason) }}
+              </dd>
+            </div>
+          }
+          @if (submission.feedback; as feedback) {
+            <div class="sm:col-span-2">
+              <dt
+                class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+              >
+                Feedback to author
+              </dt>
+              <dd class="mt-2 leading-relaxed text-gray-600 dark:text-gray-300">
+                {{ feedback }}
+              </dd>
+            </div>
+          }
+        </dl>
+      </div>
+    </nldd-card>
+  }
+
+  <!-- Submitted metadata -->
+  <nldd-card class="mb-6 block">
+    <div class="p-6">
+      <h2 class="mb-4 text-lg font-semibold">Submitted metadata</h2>
+      <dl class="grid grid-cols-1 gap-x-8 gap-y-6">
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Title
+          </dt>
+          <dd class="mt-2 text-lg">{{ submission.title }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Description
+          </dt>
+          <dd class="mt-2 max-w-3xl leading-relaxed text-gray-600 dark:text-gray-300">
+            {{ submission.description }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Categories
+          </dt>
+          <dd class="mt-2 flex flex-wrap gap-2">
+            @for (category of submission.categories; track category) {
+              <nldd-tag color="neutral" [text]="category"></nldd-tag>
+            }
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+            Submitted by
+          </dt>
+          <dd class="mt-2 text-gray-600 dark:text-gray-300">
+            {{ submission.submitter.name }} ·
+            <a [href]="'mailto:' + submission.submitter.email" class="link">
+              {{ submission.submitter.email }}
+            </a>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </nldd-card>
+
+  <!-- Reject sheet -->
+  <nldd-sheet #rejectSheet accessible-label="Reject submission" placement="right" width="460px">
+    <nldd-page sticky-header="" sticky-footer="">
+      <div slot="header" class="flex items-center justify-between p-4">
+        <h2 class="text-lg font-semibold">Reject submission</h2>
+        <nldd-icon-button
+          icon="dismiss"
+          text="Close"
+          variant="neutral-transparent"
+          size="sm"
+          (click)="closeReject()"
+        ></nldd-icon-button>
+      </div>
+
+      <nldd-simple-section class="space-y-6" padding-top="0">
+        <p class="text-gray-600 dark:text-gray-300">
+          Rejecting <span class="font-medium">{{ submission.title }}</span> sends the reason and any
+          feedback below back to the author so they can address it and resubmit.
+        </p>
+
+        <nldd-form-field label="Reason for rejection">
+          <nldd-dropdown>
+            <select id="reject-reason" (change)="onReasonChange($event)">
+              <option value="" disabled selected>Select a reason…</option>
+              @for (reason of rejectionReasons; track reason.value) {
+                <option [value]="reason.value">{{ reason.label }}</option>
+              }
+            </select>
+          </nldd-dropdown>
+        </nldd-form-field>
+
+        <nldd-form-field label="Feedback to author (optional)">
+          <nldd-multi-line-text-field
+            [value]="feedback()"
+            (input)="onFeedbackInput($event)"
+            placeholder="Add any details that will help the author fix and resubmit…"
+            rows="5"
+          ></nldd-multi-line-text-field>
+          <nldd-form-field-help-text>
+            Shared with the author alongside the reason above.
+          </nldd-form-field-help-text>
+        </nldd-form-field>
+      </nldd-simple-section>
+
+      <div
+        slot="footer"
+        class="flex items-center gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
+      >
+        <nldd-button
+          (click)="closeReject()"
+          type="button"
+          text="Cancel"
+          variant="secondary"
+        ></nldd-button>
+        <nldd-button
+          (click)="submitReject()"
+          type="button"
+          text="Reject submission"
+          start-icon="dismiss"
+          variant="destructive"
+          [disabled]="!canReject()"
+        ></nldd-button>
+      </div>
+    </nldd-page>
+  </nldd-sheet>
+}
