@@ -36,12 +36,8 @@ import { type MarketplacePlugin } from './marketplace.service';
           <p class="line-clamp-2 flex-1 text-sm text-gray-600 dark:text-gray-300">
             {{ plugin().tagline }}
           </p>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center">
             <nldd-tag size="sm" color="neutral" [text]="plugin().category"></nldd-tag>
-            <span class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-              <nldd-icon name="cloud-arrow-down" class="block! h-3.5 w-3.5"></nldd-icon>
-              {{ plugin().installs }}
-            </span>
           </div>
         </div>
       </nldd-card>

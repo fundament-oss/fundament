@@ -29,7 +29,6 @@ export interface AuthoredPlugin {
   icon: string; // base name under /img/plugins/<icon>.svg
   tags: string[];
   category: string;
-  installs: number; // number of clusters this plugin is currently installed on
   status: PluginStatus;
   versions: PluginVersion[];
 }
@@ -67,7 +66,6 @@ const MOCK_PLUGINS: AuthoredPlugin[] = [
     icon: 'cloudnativepg',
     tags: ['database', 'storage', 'official'],
     category: 'Database',
-    installs: 38,
     status: 'published',
     versions: [
       { version: '2.3.1', pushedAt: '2026-06-18', status: 'published' },
@@ -88,7 +86,6 @@ const MOCK_PLUGINS: AuthoredPlugin[] = [
     icon: 'keycloak',
     tags: ['security', 'identity'],
     category: 'Security',
-    installs: 12,
     status: 'in_review',
     versions: [
       { version: '1.4.0', pushedAt: '2026-07-01', status: 'in_review' },
@@ -108,7 +105,6 @@ const MOCK_PLUGINS: AuthoredPlugin[] = [
     icon: 'grafana',
     tags: ['observability', 'monitoring'],
     category: 'Observability',
-    installs: 5,
     status: 'changes_requested',
     versions: [
       {
@@ -134,7 +130,6 @@ const MOCK_PLUGINS: AuthoredPlugin[] = [
     icon: 'sealed-secrets',
     tags: ['security', 'internal'],
     category: 'Security',
-    installs: 0,
     status: 'pushed',
     versions: [{ version: '0.1.0', pushedAt: '2026-07-06', status: 'pushed' }],
   },
