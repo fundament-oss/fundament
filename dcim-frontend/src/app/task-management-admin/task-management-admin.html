@@ -772,7 +772,7 @@
               size="sm"
               class="w-full"
               [value]="newNoteText()"
-              (change)="newNoteText.set($any($event).detail?.value ?? '')"
+              (input)="newNoteText.set($any($event.target).value ?? '')"
               (keydown.enter)="addNote()"
             ></nldd-text-field>
             <button
