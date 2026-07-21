@@ -1254,9 +1254,10 @@ func (b0 CreateTaskResponse_builder) Build() *CreateTaskResponse {
 }
 
 // UpdateTaskRequest patches the fields it explicitly sets and leaves the rest
-// untouched. For the nullable columns (assignee_id, due_date, location) an
-// explicitly-set field carrying the "empty" sentinel — an empty string, or the
-// epoch timestamp — clears the column, matching UpdatePhysicalConnectionRequest.
+// untouched. For the nullable columns (description, assignee_id, due_date,
+// location) an explicitly-set field carrying the "empty" sentinel — an empty
+// string, or the epoch timestamp — clears the column, matching
+// UpdatePhysicalConnectionRequest.
 type UpdateTaskRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`

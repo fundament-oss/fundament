@@ -147,12 +147,14 @@ func TestTaskService_UpdateTask_ClearsNullableFields(t *testing.T) {
 
 	emptyAssignee := ""
 	emptyLocation := ""
+	emptyDescription := ""
 	_, err := client.UpdateTask(context.Background(), connect.NewRequest(
 		(&dcimv1.UpdateTaskRequest_builder{
-			Id:         taskID,
-			AssigneeId: &emptyAssignee,
-			DueDate:    timestamppb.New(time.Unix(0, 0).UTC()),
-			Location:   &emptyLocation,
+			Id:          taskID,
+			Description: &emptyDescription,
+			AssigneeId:  &emptyAssignee,
+			DueDate:     timestamppb.New(time.Unix(0, 0).UTC()),
+			Location:    &emptyLocation,
 		}).Build(),
 	))
 	require.NoError(t, err)
@@ -162,11 +164,39 @@ func TestTaskService_UpdateTask_ClearsNullableFields(t *testing.T) {
 	assert.False(t, task.HasAssigneeId())
 	assert.False(t, task.HasDueDate())
 	assert.Empty(t, task.GetLocation())
+	assert.Empty(t, task.GetDescription())
 
 	// Clearing the nullable columns must not disturb the rest of the row.
 	assert.Equal(t, "Task Clearing Fields", task.GetTitle())
-	assert.Equal(t, "fixture description", task.GetDescription())
 	assert.Equal(t, dcimv1.TaskStatus_TASK_STATUS_READY, task.GetStatus())
+}
+
+// Emptying the description has to write NULL, not '': CreateTask omits a blank
+// description so the column starts NULL, and an edit that blanked it out to ''
+// would leave the table with two spellings of "no description".
+func TestTaskService_UpdateTask_ClearedDescriptionIsNull(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+	client := dcimv1connect.NewTaskServiceClient(env.client(), env.server.URL)
+
+	assigneeID := createUser(t, env, "Null Description", "nulldesc@example.com", "")
+	taskID := createTaskFixture(t, env, "Task Clearing Description", assigneeID)
+
+	emptyDescription := ""
+	_, err := client.UpdateTask(context.Background(), connect.NewRequest(
+		(&dcimv1.UpdateTaskRequest_builder{
+			Id:          taskID,
+			Description: &emptyDescription,
+		}).Build(),
+	))
+	require.NoError(t, err)
+
+	var description *string
+	err = env.adminPool.QueryRow(context.Background(),
+		`SELECT description FROM dcim.tasks WHERE id = $1`, taskID).Scan(&description)
+	require.NoError(t, err)
+	assert.Nil(t, description, "an emptied description must be NULL, not an empty string")
 }
 
 // Clearing is driven by the sentinel, not by the field merely being set: a

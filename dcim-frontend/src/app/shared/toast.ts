@@ -11,6 +11,9 @@ import ToastService from './toast.service';
 
 type PopoverElement = HTMLElement & { showPopover(): void; hidePopover(): void };
 
+// Must match the `duration-300` on the toast's opacity transition below.
+const FADE_MS = 300;
+
 // Rendered once at the app root. Uses the Popover API (rather than plain
 // `position: fixed`) so the toast is promoted to the browser's top layer —
 // the same layer native <dialog>-based nldd-sheet/nldd-modal-dialog use —
@@ -50,16 +53,32 @@ export default class AppToast {
   private readonly toastEl = viewChild<ElementRef<PopoverElement>>('toastEl');
 
   constructor() {
-    effect(() => {
+    effect((onCleanup) => {
       const msg = this.toast.message();
       const el = this.toastEl()?.nativeElement;
       if (!el) return;
-      try {
-        if (msg) el.showPopover();
-        else el.hidePopover();
-      } catch {
-        // Popover already in the requested state — safe to ignore.
+
+      if (msg) {
+        AppToast.setPopover(el, true);
+        return;
       }
+
+      // Hiding is deferred by the length of the opacity transition: a popover
+      // is display:none while closed, so calling hidePopover() as the element
+      // fades would cut straight to invisible and the fade-out would never
+      // render. The class binding has already flipped to opacity-0 by now.
+      const timer = setTimeout(() => AppToast.setPopover(el, false), FADE_MS);
+      onCleanup(() => clearTimeout(timer));
     });
+  }
+
+  private static setPopover(el: PopoverElement, open: boolean): void {
+    try {
+      if (open) el.showPopover();
+      else el.hidePopover();
+    } catch {
+      // Popover already in the requested state, or the element has since been
+      // detached — safe to ignore.
+    }
   }
 }

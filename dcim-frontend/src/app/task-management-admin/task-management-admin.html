@@ -549,18 +549,11 @@
                       }
                     </div>
                   </div>
-                  @if (task.notes.length) {
-                    <div
-                      class="mt-2.5 flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500 border-t border-slate-100 dark:border-gray-800 pt-2.5"
-                    >
-                      <nldd-icon
-                        name="envelope"
-                        style="width: 13px; height: 13px"
-                        aria-hidden="true"
-                      ></nldd-icon
-                      >{{ task.notes.length }} note{{ task.notes.length !== 1 ? 's' : '' }}
-                    </div>
-                  }
+                  <!-- No note count here: ListTasks does not carry one, and notes
+                       are only fetched when a task's detail sheet is opened, so a
+                       badge would appear on the handful of cards that happen to
+                       have been opened and read as "no notes" on all the rest.
+                       Restore it once the task list carries a note count. -->
                 </div>
               }
               @if (tasksForColumn(col).length === 0) {

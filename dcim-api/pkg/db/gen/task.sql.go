@@ -174,44 +174,49 @@ func (q *Queries) TaskList(ctx context.Context, arg TaskListParams) ([]TaskListR
 const taskUpdate = `-- name: TaskUpdate :execrows
 UPDATE dcim.tasks
 SET title       = COALESCE($2, title),
-    description = COALESCE($3, description),
-    status      = COALESCE($4, status),
-    priority    = COALESCE($5, priority),
-    category    = COALESCE($6, category),
+    description = CASE
+                    WHEN $3::bool THEN NULL
+                    ELSE COALESCE($4, description)
+                  END,
+    status      = COALESCE($5, status),
+    priority    = COALESCE($6, priority),
+    category    = COALESCE($7, category),
     assignee_id = CASE
-                    WHEN $7::bool THEN NULL
-                    ELSE COALESCE($8, assignee_id)
+                    WHEN $8::bool THEN NULL
+                    ELSE COALESCE($9, assignee_id)
                   END,
     due_date    = CASE
-                    WHEN $9::bool THEN NULL
-                    ELSE COALESCE($10, due_date)
+                    WHEN $10::bool THEN NULL
+                    ELSE COALESCE($11, due_date)
                   END,
     location    = CASE
-                    WHEN $11::bool THEN NULL
-                    ELSE COALESCE($12, location)
+                    WHEN $12::bool THEN NULL
+                    ELSE COALESCE($13, location)
                   END
 WHERE id = $1 AND deleted IS NULL
 `
 
 type TaskUpdateParams struct {
-	ID            uuid.UUID
-	Title         pgtype.Text
-	Description   pgtype.Text
-	Status        pgtype.Text
-	Priority      pgtype.Text
-	Category      pgtype.Text
-	ClearAssignee bool
-	AssigneeID    pgtype.UUID
-	ClearDueDate  bool
-	DueDate       pgtype.Timestamptz
-	ClearLocation bool
-	Location      pgtype.Text
+	ID               uuid.UUID
+	Title            pgtype.Text
+	ClearDescription bool
+	Description      pgtype.Text
+	Status           pgtype.Text
+	Priority         pgtype.Text
+	Category         pgtype.Text
+	ClearAssignee    bool
+	AssigneeID       pgtype.UUID
+	ClearDueDate     bool
+	DueDate          pgtype.Timestamptz
+	ClearLocation    bool
+	Location         pgtype.Text
 }
 
 func (q *Queries) TaskUpdate(ctx context.Context, arg TaskUpdateParams) (int64, error) {
 	result, err := q.db.Exec(ctx, taskUpdate,
 		arg.ID,
 		arg.Title,
+		arg.ClearDescription,
 		arg.Description,
 		arg.Status,
 		arg.Priority,

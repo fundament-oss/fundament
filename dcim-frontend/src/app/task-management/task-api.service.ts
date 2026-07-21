@@ -42,7 +42,8 @@ export interface TaskInput {
  * The fields an update actually touches. Only the keys present are sent, so a
  * status-only change (kanban drag, bulk action) cannot overwrite a field another
  * admin edited in the meantime. Within a present key, an empty value clears the
- * column: `assignee: null`, `due: ''` and `location: ''` all mean "remove".
+ * column: `assignee: null`, `due: ''`, `location: ''` and `description: ''` all
+ * mean "remove".
  */
 export type TaskPatch = Partial<TaskInput>;
 
@@ -215,12 +216,12 @@ export default class TaskApiService {
     return this.client.updateTask({
       id,
       ...('title' in patch ? { title: patch.title } : {}),
-      ...('description' in patch ? { description: patch.description } : {}),
       ...('status' in patch ? { status: TaskApiService.toProtoStatus(patch.status!) } : {}),
       ...('priority' in patch ? { priority: TaskApiService.toProtoPriority(patch.priority!) } : {}),
       ...('category' in patch ? { category: TaskApiService.toProtoCategory(patch.category!) } : {}),
       // The empty value of a present field clears the column: the backend maps
       // an empty string / the epoch onto a NULL write.
+      ...('description' in patch ? { description: patch.description ?? '' } : {}),
       ...('assignee' in patch ? { assigneeId: patch.assignee ?? '' } : {}),
       ...('location' in patch ? { location: patch.location ?? '' } : {}),
       ...('due' in patch

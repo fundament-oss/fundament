@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { firstValueFrom } from 'rxjs';
 
 import ThemeToggleComponent from '../shared/theme-toggle';
@@ -55,6 +56,13 @@ type Phase = 'gather' | 'task';
 
 /** What the technician walks through: the statuses that still need work done. */
 const WALKTHROUGH_STATUSES: TaskStatusLabel[] = ['Ready', 'In Progress'];
+
+/**
+ * Shown when the caller holds a valid token but has no dcim.users row. The
+ * roster is provisioned out of band, so this is a provisioning gap to report in
+ * plain language, not an error to dump an RPC message for.
+ */
+const NO_DIRECTORY_ENTRY = 'Your account is not in the technician directory';
 
 /**
  * Progress is persisted by id, not by list position. The task list is ordered
@@ -326,7 +334,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       const me = await firstValueFrom(this.userApi.getCurrentUser());
       const meId = me.user?.id;
       if (!meId) {
-        this.loadError.set('Your account is not in the technician directory');
+        this.loadError.set(NO_DIRECTORY_ENTRY);
         return;
       }
 
@@ -368,9 +376,15 @@ export default class TaskManagementTechnicianComponent implements OnInit {
         }),
       );
 
+      // A task with no steps is dropped rather than walked into: the flow
+      // advances one step at a time, so there is nothing for "Done" to complete
+      // on such a task and the technician would be stranded on it with no way
+      // forward. Tasks are seeded without steps often enough for this to bite.
+      const walkable = tasks.filter((t) => t.steps.length > 0);
+
       this.completedSteps.set(completed);
-      this.tasks.set(tasks);
-      this.restoreProgress(tasks);
+      this.tasks.set(walkable);
+      this.restoreProgress(walkable);
       this.loadError.set(null);
       this.hydrated.set(true);
     } catch (err) {
@@ -380,7 +394,13 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       // Surfaced rather than swallowed: with no tasks and no error the page is
       // indistinguishable from "you have nothing to do". hydrated stays false so
       // the auto-save effect cannot overwrite the saved snapshot with an empty one.
-      this.loadError.set(message);
+      //
+      // GetCurrentUser answers NotFound for a caller who is authenticated but
+      // absent from the DCIM roster, which is an ordinary provisioning state
+      // rather than a fault — say so instead of showing the raw RPC message.
+      this.loadError.set(
+        err instanceof ConnectError && err.code === Code.NotFound ? NO_DIRECTORY_ENTRY : message,
+      );
       this.toast.show('Could not load your tasks');
     }
   }
@@ -544,7 +564,9 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   async pressDone(): Promise<void> {
     if (this.phase() === 'gather') {
       if (this.tasks().length === 0) {
-        this.toast.show('No tasks assigned to you');
+        // Covers both "nothing assigned" and "everything assigned has no steps
+        // to walk through", which read the same from here.
+        this.toast.show('No tasks to walk through right now');
         return;
       }
       if (this.checkedItems().size < this.gatherItems().length) {

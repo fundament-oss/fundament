@@ -21,7 +21,10 @@ RETURNING id;
 -- name: TaskUpdate :execrows
 UPDATE dcim.tasks
 SET title       = COALESCE(sqlc.narg('title'), title),
-    description = COALESCE(sqlc.narg('description'), description),
+    description = CASE
+                    WHEN sqlc.arg('clear_description')::bool THEN NULL
+                    ELSE COALESCE(sqlc.narg('description'), description)
+                  END,
     status      = COALESCE(sqlc.narg('status'), status),
     priority    = COALESCE(sqlc.narg('priority'), priority),
     category    = COALESCE(sqlc.narg('category'), category),

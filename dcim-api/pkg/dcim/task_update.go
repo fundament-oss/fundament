@@ -31,10 +31,6 @@ func (s *Server) UpdateTask(
 		params.Title = pgtype.Text{String: req.Msg.GetTitle(), Valid: true}
 	}
 
-	if req.Msg.HasDescription() {
-		params.Description = pgtype.Text{String: req.Msg.GetDescription(), Valid: true}
-	}
-
 	if req.Msg.HasStatus() {
 		params.Status = pgtype.Text{String: taskStatusFromProto(req.Msg.GetStatus()), Valid: true}
 	}
@@ -50,6 +46,19 @@ func (s *Server) UpdateTask(
 	// For the nullable columns, an explicitly-set field clears the column when it
 	// carries the "empty" sentinel (empty string / epoch timestamp) and otherwise
 	// overwrites it. Leaving the field unset keeps the current value.
+	//
+	// description belongs here too: CreateTask omits a blank one so the column
+	// starts NULL, so an edit that empties it has to write NULL as well —
+	// otherwise the table ends up with two spellings of "no description", '' on
+	// rows that were edited and NULL on rows that never had one.
+	if req.Msg.HasDescription() {
+		if v := req.Msg.GetDescription(); v == "" {
+			params.ClearDescription = true
+		} else {
+			params.Description = pgtype.Text{String: v, Valid: true}
+		}
+	}
+
 	if req.Msg.HasAssigneeId() {
 		if v := req.Msg.GetAssigneeId(); v == "" {
 			params.ClearAssignee = true

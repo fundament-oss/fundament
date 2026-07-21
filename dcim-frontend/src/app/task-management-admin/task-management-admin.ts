@@ -48,7 +48,6 @@ interface Note {
 
 interface Task extends TaskData {
   notes: Note[];
-  notesLoaded: boolean;
 }
 
 interface StatusStyle {
@@ -167,18 +166,22 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     this.loadTasks();
   }
 
-  // Called after every mutation (each save, each kanban drop, each bulk action),
-  // and it rebuilds the whole board — which drops the cached notes for every
-  // task. If the detail sheet happens to be open while one of those lands, its
-  // note list empties until the sheet is reopened. Acceptable while the board is
-  // small; the fix is a targeted refresh of the changed rows rather than a full
-  // reload, at which point the notes cache survives.
+  // Called after every mutation (each save, each kanban drop, each bulk action).
+  // It rebuilds the whole board, so already-fetched notes are carried over by id
+  // rather than reset: a mutation landing while the detail sheet is open would
+  // otherwise empty its note list, even though no note changed. ListTasks does
+  // not carry notes, so a task the sheet has never been opened for keeps an
+  // empty list until openDetail() fetches them.
   private loadTasks(): void {
     firstValueFrom(this.taskApi.listTasks())
       .then((res) => {
-        this.tasks.set(
-          res.tasks.map((t) => ({ ...TaskApiService.mapTask(t), notes: [], notesLoaded: false })),
-        );
+        this.tasks.update((previous) => {
+          const notesById = new Map(previous.map((t) => [t.id, t.notes]));
+          return res.tasks.map((t) => ({
+            ...TaskApiService.mapTask(t),
+            notes: notesById.get(t.id) ?? [],
+          }));
+        });
         this.loadError.set(null);
       })
       .catch((err) => {
@@ -485,12 +488,10 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   openDetail(id: string): void {
     this.detailTaskId.set(id);
-    // Notes are cached per task for as long as the board data lives: every
-    // mutation calls loadTasks(), which resets notesLoaded, so reopening a task
-    // after any change still refetches. addNote() refreshes explicitly.
-    if (!this.tasks().find((t) => t.id === id)?.notesLoaded) {
-      this.loadNotes(id);
-    }
+    // Always refetched, since another admin may have added a note since this
+    // task was last opened. Anything already cached stays on screen meanwhile,
+    // so the list does not flash empty while the response is in flight.
+    this.loadNotes(id);
     this.detailSheetEl()?.nativeElement.show();
   }
 
@@ -498,9 +499,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     firstValueFrom(this.noteApi.listNotesForTask(id))
       .then((res) => {
         const notes = res.notes.map((n) => TaskManagementAdminComponent.mapNote(n));
-        this.tasks.update((tasks) =>
-          tasks.map((t) => (t.id === id ? { ...t, notes, notesLoaded: true } : t)),
-        );
+        this.tasks.update((tasks) => tasks.map((t) => (t.id === id ? { ...t, notes } : t)));
       })
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
@@ -684,10 +683,24 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     };
 
     const editingId = this.editingTaskId();
-    const request: Observable<unknown> =
-      editingId !== null
-        ? this.taskApi.updateTask(editingId, input)
-        : this.taskApi.createTask(input);
+
+    let request: Observable<unknown>;
+    if (editingId === null) {
+      request = this.taskApi.createTask(input);
+    } else {
+      // Only the fields this form actually changed are sent, for the same
+      // reason the kanban drop and the bulk actions send a single key: posting
+      // the whole form writes back every column as this board last saw it, so
+      // an edit here would silently revert a status another admin changed
+      // since the sheet was opened.
+      const current = this.tasks().find((t) => t.id === editingId);
+      const patch = current ? TaskManagementAdminComponent.changedFields(current, input) : input;
+      if (Object.keys(patch).length === 0) {
+        this.closeEditModal();
+        return;
+      }
+      request = this.taskApi.updateTask(editingId, patch);
+    }
 
     firstValueFrom(request)
       .then(() => {
@@ -700,6 +713,18 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
         console.error(connectErrorMessage(err));
         this.toast.show('Could not save task');
       });
+  }
+
+  // The keys of `input` whose value differs from the task as the board last
+  // loaded it. Every TaskInput field is also a TaskData field, and both use the
+  // same "empty" spellings ('' / null), so a plain !== comparison is enough —
+  // an untouched field never lands in the patch.
+  private static changedFields(current: TaskData, input: TaskInput): TaskPatch {
+    const patch: TaskPatch = {};
+    (Object.keys(input) as (keyof TaskInput)[])
+      .filter((key) => input[key] !== current[key])
+      .forEach((key) => Object.assign(patch, { [key]: input[key] }));
+    return patch;
   }
 
   addNote(): void {
