@@ -74,6 +74,21 @@ function unknownEnum<T>(kind: string, value: never, fallback: T): T {
 export default class TaskApiService {
   private readonly client = inject(TASK_CLIENT);
 
+  /**
+   * The keys of `input` whose value differs from the task as the board last
+   * loaded it. Every TaskInput field is also a TaskData field, and both use the
+   * same "empty" spellings ('' / null), so a plain !== comparison is enough —
+   * an untouched field never lands in the patch, and so is never written back
+   * over an edit someone else made in the meantime.
+   */
+  static changedFields(current: TaskData, input: TaskInput): TaskPatch {
+    const patch: TaskPatch = {};
+    (Object.keys(input) as (keyof TaskInput)[])
+      .filter((key) => input[key] !== current[key])
+      .forEach((key) => Object.assign(patch, { [key]: input[key] }));
+    return patch;
+  }
+
   /** Maps an API task onto the admin/board view-model. */
   static mapTask(t: ProtoTask): TaskData {
     return {

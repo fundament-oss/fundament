@@ -583,14 +583,14 @@ const file_v1_note_proto_rawDesc = "" +
 	"\tentity_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bentityId\"8\n" +
 	"\x11ListNotesResponse\x12#\n" +
 	"\x05notes\x18\n" +
-	" \x03(\v2\r.dcim.v1.NoteR\x05notes\"\x9d\x01\n" +
+	" \x03(\v2\r.dcim.v1.NoteR\x05notes\"\xa3\x01\n" +
 	"\x11CreateNoteRequest\x12D\n" +
 	"\ventity_type\x18\n" +
 	" \x01(\x0e2\x17.dcim.v1.NoteEntityTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\n" +
 	"entityType\x12%\n" +
 	"\tentity_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bentityId\x12\x1b\n" +
-	"\x04body\x18\x1e \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04body\"-\n" +
+	"\x04body\x18\x1e \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04bodyJ\x04\b(\x10)\"-\n" +
 	"\x12CreateNoteResponse\x12\x17\n" +
 	"\anote_id\x18\n" +
 	" \x01(\tR\x06noteId\"-\n" +

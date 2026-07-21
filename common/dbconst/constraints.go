@@ -133,6 +133,8 @@ const (
 	ConstraintDcimTaskStepsFkTask = "dcim_task_steps_fk_task"
 	// ConstraintDcimTasksFkAssignee is defined on dcim.tasks.
 	ConstraintDcimTasksFkAssignee = "dcim_tasks_fk_assignee"
+	// ConstraintDcimUsersUqExternalRef is defined on dcim.users.
+	ConstraintDcimUsersUqExternalRef = "dcim_users_uq_external_ref"
 	// ConstraintDeviceCatalogsCkCategory is defined on dcim.device_catalogs.
 	ConstraintDeviceCatalogsCkCategory = "device_catalogs_ck_category"
 	// ConstraintDeviceCatalogsUqManufacturerModel is defined on dcim.device_catalogs.
@@ -325,7 +327,7 @@ const (
 	ConstraintTasksCkPriority = "tasks_ck_priority"
 	// ConstraintTasksCkStatus is defined on dcim.tasks.
 	ConstraintTasksCkStatus = "tasks_ck_status"
-	// ConstraintUsersUqExternalRef is defined on dcim.users.
+	// ConstraintUsersUqExternalRef is defined on tenant.users.
 	ConstraintUsersUqExternalRef = "users_uq_external_ref"
 	// ConstraintVerifyDeleted is defined on (constraint trigger).
 	ConstraintVerifyDeleted = "verify_deleted"

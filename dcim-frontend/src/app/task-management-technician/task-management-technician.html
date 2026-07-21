@@ -522,11 +522,16 @@
           (click)="openNoteModal()"
         ></nldd-button>
       </div>
+      <!-- Disabled while the step write is in flight: pressDone() ignores the
+           second press either way, but without this the button looks like it
+           did nothing. -->
       <nldd-button
         variant="primary"
         size="sm"
-        [attr.text]="showCompleteBtn() ? 'Complete' : 'Done'"
+        [attr.text]="savingStep() ? 'Saving…' : showCompleteBtn() ? 'Complete' : 'Done'"
         [attr.end-icon]="showCompleteBtn() ? 'check-mark-circle' : 'check-mark-small'"
+        [attr.disabled]="savingStep() ? '' : null"
+        [attr.aria-busy]="savingStep() ? 'true' : null"
         [attr.aria-label]="showCompleteBtn() ? 'Complete all tasks' : 'Mark step as done'"
         (click)="pressDone()"
       ></nldd-button>

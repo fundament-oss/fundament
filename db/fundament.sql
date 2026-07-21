@@ -2367,9 +2367,9 @@ COMMENT ON COLUMN dcim.users.external_ref IS E'Subject of the identity provider 
 ALTER TABLE dcim.users OWNER TO fun_owner;
 -- ddl-end --
 
--- object: users_uq_external_ref | type: INDEX --
--- DROP INDEX IF EXISTS dcim.users_uq_external_ref CASCADE;
-CREATE UNIQUE INDEX users_uq_external_ref ON dcim.users
+-- object: dcim_users_uq_external_ref | type: INDEX --
+-- DROP INDEX IF EXISTS dcim.dcim_users_uq_external_ref CASCADE;
+CREATE UNIQUE INDEX dcim_users_uq_external_ref ON dcim.users
 USING btree
 (
 	external_ref

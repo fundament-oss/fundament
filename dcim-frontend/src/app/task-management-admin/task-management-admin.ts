@@ -31,6 +31,7 @@ import TaskApiService, {
 } from '../task-management/task-api.service';
 import UserApiService, { RosterUser } from '../task-management/user-api.service';
 import NoteApiService from '../inventory/note-api.service';
+import settledPool from '../shared/settled-pool';
 import ToastService from '../shared/toast.service';
 import connectErrorMessage from '../../connect/error';
 
@@ -78,41 +79,6 @@ const TOAST_SIDEBAR_OFFSET_PX = 120;
 // board would otherwise put one request per task on the wire at once.
 const BULK_CONCURRENCY = 6;
 
-/**
- * Runs `task` over every id with at most `limit` requests in flight, resolving
- * like Promise.allSettled: results come back in input order and a rejection
- * never short-circuits the rest.
- */
-async function settledPool<T>(
-  ids: string[],
-  limit: number,
-  task: (id: string) => Promise<T>,
-): Promise<PromiseSettledResult<T>[]> {
-  const results = new Array<PromiseSettledResult<T>>(ids.length);
-  let next = 0;
-
-  const worker = async (): Promise<void> => {
-    // Claiming the index and advancing the cursor happens synchronously before
-    // the await, so concurrent workers never take the same id.
-    for (;;) {
-      const i = next;
-      next += 1;
-      if (i >= ids.length) return;
-      try {
-        // Sequential within a worker is the point: parallelism comes from
-        // running `limit` workers, which is what bounds the requests in flight.
-        // eslint-disable-next-line no-await-in-loop
-        results[i] = { status: 'fulfilled', value: await task(ids[i]) };
-      } catch (reason) {
-        results[i] = { status: 'rejected', reason };
-      }
-    }
-  };
-
-  await Promise.all(Array.from({ length: Math.min(limit, ids.length) }, worker));
-  return results;
-}
-
 @Component({
   selector: 'app-task-management-admin',
   templateUrl: './task-management-admin.html',
@@ -141,14 +107,34 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   // rather than as a legitimately empty board.
   readonly loadError = signal<string | null>(null);
 
+  // The same, for the detail sheet's note list.
+  readonly notesError = signal<string | null>(null);
+
+  // The signed-in user's roster entry, for the note composer's avatar. Null when
+  // the caller has no directory entry — GetCurrentUser answers NotFound then,
+  // which is an ordinary provisioning state and not worth a toast here: the
+  // board still works, and any note they write comes out unattributed.
+  readonly currentUser = signal<Technician | null>(null);
+
   ngOnInit(): void {
     this.toast.offsetPx.set(TOAST_SIDEBAR_OFFSET_PX);
+    this.loadCurrentUser();
     this.loadUsers();
     this.loadTasks();
   }
 
   ngOnDestroy(): void {
     this.toast.offsetPx.set(0);
+  }
+
+  private loadCurrentUser(): void {
+    firstValueFrom(this.userApi.getCurrentUser())
+      .then((res) => this.currentUser.set(res.user ? UserApiService.mapUser(res.user) : null))
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+        this.currentUser.set(null);
+      });
   }
 
   private loadUsers(): void {
@@ -496,13 +482,26 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   }
 
   private loadNotes(id: string): void {
+    this.notesError.set(null);
     firstValueFrom(this.noteApi.listNotesForTask(id))
       .then((res) => {
         const notes = res.notes.map((n) => TaskManagementAdminComponent.mapNote(n));
         this.tasks.update((tasks) => tasks.map((t) => (t.id === id ? { ...t, notes } : t)));
       })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+      .catch((err) => {
+        const message = connectErrorMessage(err);
+        // eslint-disable-next-line no-console
+        console.error(message);
+        // Said out loud in the sheet: the note list falls back to whatever was
+        // cached from a previous open (or to nothing at all), which is
+        // indistinguishable from a task that genuinely has no notes.
+        this.notesError.set(message);
+      });
+  }
+
+  retryLoadNotes(): void {
+    const id = this.detailTaskId();
+    if (id !== null) this.loadNotes(id);
   }
 
   private static mapNote(n: ProtoNote): Note {
@@ -694,7 +693,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       // an edit here would silently revert a status another admin changed
       // since the sheet was opened.
       const current = this.tasks().find((t) => t.id === editingId);
-      const patch = current ? TaskManagementAdminComponent.changedFields(current, input) : input;
+      const patch = current ? TaskApiService.changedFields(current, input) : input;
       if (Object.keys(patch).length === 0) {
         this.closeEditModal();
         return;
@@ -713,18 +712,6 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
         console.error(connectErrorMessage(err));
         this.toast.show('Could not save task');
       });
-  }
-
-  // The keys of `input` whose value differs from the task as the board last
-  // loaded it. Every TaskInput field is also a TaskData field, and both use the
-  // same "empty" spellings ('' / null), so a plain !== comparison is enough —
-  // an untouched field never lands in the patch.
-  private static changedFields(current: TaskData, input: TaskInput): TaskPatch {
-    const patch: TaskPatch = {};
-    (Object.keys(input) as (keyof TaskInput)[])
-      .filter((key) => input[key] !== current[key])
-      .forEach((key) => Object.assign(patch, { [key]: input[key] }));
-    return patch;
   }
 
   addNote(): void {
@@ -748,9 +735,20 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   // Resolves a note's author onto the roster entry that supplies the avatar.
   // Joined by id, not by display name: two people called "Jan de Vries" would
   // otherwise share one avatar colour, and the first match would win.
+  //
+  // An author the backend could not attribute is "Unknown", not "Admin" — the
+  // note was written by someone outside the directory, which is not the same
+  // claim as it having come from an administrator.
   noteAuthor(note: Note): { name: string; tech: Technician | null } {
     const tech = note.authorId ? this.getTech(note.authorId) : null;
-    return { name: note.author || 'Admin', tech };
+    return { name: note.author || 'Unknown', tech };
+  }
+
+  // True when a task carries an assignee that the roster has no entry for —
+  // typically someone soft-deleted since the board loaded. Rendering that as
+  // "Unassigned" would quietly drop the fact that the task is still spoken for.
+  assigneeMissing(task: Task): boolean {
+    return task.assignee !== null && this.getTech(task.assignee) === null;
   }
 
   // Goes through the same closers as the buttons: hiding the sheets without
@@ -803,6 +801,11 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   readonly unassignedAvatarClass = (size = 'h-7 w-7 text-xs'): string =>
     `inline-flex ${size} items-center justify-center rounded-full bg-slate-200 dark:bg-gray-800 text-slate-500 dark:text-gray-400 font-medium shrink-0`;
+
+  // Deliberately not the unassigned grey: an assignee who has left the roster is
+  // a different state from nobody being assigned, and reads as one at a glance.
+  readonly unknownAvatarClass = (size = 'h-7 w-7 text-xs'): string =>
+    `inline-flex ${size} items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-semibold shrink-0`;
 
   shortDate(str: string | null): string {
     if (!str) return '';

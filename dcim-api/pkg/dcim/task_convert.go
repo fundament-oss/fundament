@@ -5,9 +5,10 @@ import (
 
 	"github.com/google/uuid"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func taskStatusToProto(s string) dcimv1.TaskStatus {

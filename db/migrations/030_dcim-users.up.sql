@@ -16,7 +16,12 @@ CREATE UNIQUE INDEX users_pk ON dcim.users USING btree (id);
 
 ALTER TABLE "dcim"."users" ADD CONSTRAINT "users_pk" PRIMARY KEY USING INDEX "users_pk";
 
-CREATE UNIQUE INDEX users_uq_external_ref ON dcim.users USING btree (external_ref) WHERE (deleted IS NULL);
+-- Prefixed with the schema name because tenant.users already carries a
+-- users_uq_external_ref. Postgres scopes index names per schema, so both can
+-- coexist — but common/dbconst is generated as one flat namespace keyed on the
+-- bare constraint name, so two same-named constraints collapse onto a single Go
+-- constant and error mapping can no longer tell the two tables apart.
+CREATE UNIQUE INDEX dcim_users_uq_external_ref ON dcim.users USING btree (external_ref) WHERE (deleted IS NULL);
 
 
 -- Statements generated automatically, please review:

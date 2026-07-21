@@ -91,11 +91,8 @@ func (s *Server) UpdateTask(
 	rowsAffected, err := s.queries.TaskUpdate(ctx, params)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			switch pgErr.ConstraintName {
-			case dbconst.ConstraintDcimTasksFkAssignee:
-				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("assignee not found"))
-			}
+		if errors.As(err, &pgErr) && pgErr.ConstraintName == dbconst.ConstraintDcimTasksFkAssignee {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("assignee not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update task: %w", err))
 	}

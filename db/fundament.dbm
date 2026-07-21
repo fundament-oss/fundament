@@ -2982,7 +2982,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<index name="users_uq_external_ref" table="dcim.users"
+<index name="dcim_users_uq_external_ref" table="dcim.users"
 	 concurrent="false" unique="true" fast-update="false" buffering="false" nulls-not-distinct="false"
 	 index-type="btree" factor="0">
 		<idxelement use-sorting="false">

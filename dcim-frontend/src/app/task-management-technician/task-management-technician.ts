@@ -11,8 +11,10 @@ import {
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Code, ConnectError } from '@connectrpc/connect';
+import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 
+import type { Task as ProtoTask } from '../../generated/v1/task_pb';
 import ThemeToggleComponent from '../shared/theme-toggle';
 import ThemeService from '../theme.service';
 import AuthService from '../auth.service';
@@ -342,9 +344,16 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       // Only tasks that still need doing. Without this, tasks the technician
       // already finished (or that are blocked/awaiting review) pad the gather
       // checklist and the linear flow walks them back through completed work.
-      const open = res.tasks.filter((t) =>
-        WALKTHROUGH_STATUSES.includes(TaskApiService.fromProtoStatus(t.status)),
-      );
+      const open = res.tasks
+        .filter((t) => WALKTHROUGH_STATUSES.includes(TaskApiService.fromProtoStatus(t.status)))
+        // Re-sorted oldest-first. ListTasks answers newest-first because that is
+        // what the admin board wants at the top; a walkthrough is a queue, so it
+        // should start with the work that has been waiting longest.
+        .sort(
+          (a, b) =>
+            TaskManagementTechnicianComponent.createdMs(a) -
+            TaskManagementTechnicianComponent.createdMs(b),
+        );
 
       // One ListTaskSteps call per task, run in parallel. Bounded in practice by
       // WALKTHROUGH_STATUSES — a technician's open tasks, not the whole board.
@@ -408,6 +417,11 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   retryLoad(): void {
     this.loadError.set(null);
     this.loadTasks();
+  }
+
+  /** Creation time in epoch ms; 0 for a task the API sent without one. */
+  private static createdMs(t: ProtoTask): number {
+    return t.created ? timestampDate(t.created).getTime() : 0;
   }
 
   private static mapPriority(p: TaskPriorityLabel): 'critical' | 'high' | 'normal' {
@@ -589,13 +603,39 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     const step = task?.steps[si];
     if (!task || !step) return;
 
-    // Mark it done optimistically, but roll back and stay on the step if the
-    // write fails — advancing (or showing the completion screen) on a failed
-    // call would lose the technician's work with nothing to show for it.
+    const lastStep = si === task.steps.length - 1;
+
     this.savingStep.set(true);
+    try {
+      // Stay put on a failed write — advancing (or showing the completion
+      // screen) would lose the technician's work with nothing to show for it.
+      if (!(await this.persistStepDone(step))) return;
+      if (lastStep) await this.closeTask(task);
+    } finally {
+      this.savingStep.set(false);
+    }
+
+    if (!lastStep) {
+      this.currentStepIndex.update((v) => v + 1);
+    } else if (ti < this.tasks().length - 1) {
+      this.currentTaskIndex.update((v) => v + 1);
+      this.currentStepIndex.set(0);
+    } else {
+      this.showCompleteScreen.set(true);
+      this.clearProgress();
+    }
+  }
+
+  /**
+   * Ticks the step off optimistically and persists it. Returns false — having
+   * rolled the tick back — when the write failed, so the caller can stay on the
+   * step instead of advancing past work that was never recorded.
+   */
+  private async persistStepDone(step: Step): Promise<boolean> {
     this.completedSteps.update((set) => new Set(set).add(step.id));
     try {
       await firstValueFrom(this.taskStepApi.updateTaskStep(step.id, true));
+      return true;
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
@@ -605,19 +645,26 @@ export default class TaskManagementTechnicianComponent implements OnInit {
         return next;
       });
       this.toast.show('Could not save this step — try again');
-      return;
-    } finally {
-      this.savingStep.set(false);
+      return false;
     }
+  }
 
-    if (si < task.steps.length - 1) {
-      this.currentStepIndex.update((v) => v + 1);
-    } else if (ti < this.tasks().length - 1) {
-      this.currentTaskIndex.update((v) => v + 1);
-      this.currentStepIndex.set(0);
-    } else {
-      this.showCompleteScreen.set(true);
-      this.clearProgress();
+  /**
+   * Closes the task once its last step is done — otherwise a fully walked task
+   * sits in In Progress forever, and reappears in this same walkthrough on the
+   * next login. Only the status is sent, so nothing else on the task is
+   * overwritten with the technician's stale view of it.
+   *
+   * A failure here is reported but never rolls the step back: the step really is
+   * done, and re-opening it would be a lie the technician cannot act on.
+   */
+  private async closeTask(task: Task): Promise<void> {
+    try {
+      await firstValueFrom(this.taskApi.updateTask(task.id, { status: 'Done' }));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(connectErrorMessage(err));
+      this.toast.show('Step saved, but the task could not be closed');
     }
   }
 

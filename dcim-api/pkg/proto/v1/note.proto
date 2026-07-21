@@ -50,6 +50,11 @@ message CreateNoteRequest {
   string         body        = 30 [(buf.validate.field).string.min_len = 1];
   // The author is resolved from the authenticated caller server-side, never
   // supplied by the client, so a note cannot be attributed to someone else.
+  //
+  // 40 held the client-supplied created_by this replaced. Reserved so the
+  // number cannot come back carrying a different meaning: an old client still
+  // sending a name on 40 must be ignored, not silently reinterpreted.
+  reserved 40;
 }
 
 message CreateNoteResponse {

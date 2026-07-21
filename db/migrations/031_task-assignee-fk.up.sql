@@ -1,3 +1,13 @@
+-- NOT DATA-SAFE ON A POPULATED DATABASE. This migration assumes dcim.tasks
+-- holds no assignees yet:
+--   * the cast below fails outright on any assignee_id that is not a uuid;
+--   * a well-formed one then fails the foreign key, because dcim.users was
+--     created empty one migration ago and nothing has been provisioned into it.
+-- That holds at the time of writing — no environment carries real task data.
+-- Before this reaches one that does, provision dcim.users first and rework this
+-- migration to backfill assignee_id from it rather than assuming an empty start.
+-- See also 032, which drops note authorship on the same assumption.
+
 SET SESSION statement_timeout = 3000;
 SET SESSION lock_timeout = 3000;
 
@@ -15,7 +25,10 @@ ANALYZE "dcim"."tasks" ("assignee_id");
 
 SET SESSION statement_timeout = 3000;
 
-ALTER TABLE "dcim"."tasks" ADD CONSTRAINT "dcim_tasks_fk_assignee" FOREIGN KEY (assignee_id) REFERENCES dcim.users(id) NOT VALID;
-
-ALTER TABLE "dcim"."tasks" VALIDATE CONSTRAINT "dcim_tasks_fk_assignee";
+-- Added validated in one statement, rather than NOT VALID followed by an
+-- immediate VALIDATE. Splitting the two only shortens the lock window when the
+-- VALIDATE runs in its own transaction; back to back in one migration the locks
+-- are held together anyway. And the type change above already took ACCESS
+-- EXCLUSIVE and rewrote the table, so there is no window left to protect.
+ALTER TABLE "dcim"."tasks" ADD CONSTRAINT "dcim_tasks_fk_assignee" FOREIGN KEY (assignee_id) REFERENCES dcim.users(id);
 

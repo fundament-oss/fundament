@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
-	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
+	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 )
 
 // dueDate is the due date the fixtures below start out with. Postgres stores
@@ -171,9 +172,10 @@ func TestTaskService_UpdateTask_ClearsNullableFields(t *testing.T) {
 	assert.Equal(t, dcimv1.TaskStatus_TASK_STATUS_READY, task.GetStatus())
 }
 
-// Emptying the description has to write NULL, not '': CreateTask omits a blank
-// description so the column starts NULL, and an edit that blanked it out to ''
-// would leave the table with two spellings of "no description".
+// Emptying the description has to write NULL, not an empty string: CreateTask
+// omits a blank description so the column starts NULL, and an edit that stored
+// a blank one instead would leave the table with two spellings of "no
+// description".
 func TestTaskService_UpdateTask_ClearedDescriptionIsNull(t *testing.T) {
 	t.Parallel()
 
