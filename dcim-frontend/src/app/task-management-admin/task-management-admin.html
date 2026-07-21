@@ -313,6 +313,7 @@
             <th class="w-10 px-3 py-2.5 text-left">
               <nldd-checkbox
                 accessible-label="Select all tasks"
+                [attr.checked]="allFilteredSelected() ? '' : null"
                 (change)="toggleSelectAll($any($event).detail.checked)"
               ></nldd-checkbox>
             </th>

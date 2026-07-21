@@ -57,6 +57,18 @@ const dueToDate = (due: string): Date => new Date(`${due}T00:00:00Z`);
 /** The epoch is the "empty" sentinel that clears due_date server-side. */
 const CLEAR_DUE_DATE = new Date(0);
 
+/**
+ * Reached only when the server sends an enum value this build has no label for
+ * — a schema that moved ahead of the frontend. The display falls back so the
+ * board still renders, but the mismatch is logged rather than passed off as a
+ * legitimate value.
+ */
+function unknownEnum<T>(kind: string, value: never, fallback: T): T {
+  // eslint-disable-next-line no-console
+  console.warn(`Unknown Task${kind} from API: ${String(value)} — displaying "${String(fallback)}"`);
+  return fallback;
+}
+
 @Injectable({ providedIn: 'root' })
 export default class TaskApiService {
   private readonly client = inject(TASK_CLIENT);
@@ -89,8 +101,10 @@ export default class TaskApiService {
         return 'Blocked';
       case ProtoStatus.DONE:
         return 'Done';
-      default:
+      case ProtoStatus.UNSPECIFIED:
         return 'Ready';
+      default:
+        return unknownEnum('Status', s, 'Ready');
     }
   }
 
@@ -115,8 +129,10 @@ export default class TaskApiService {
         return 'High';
       case ProtoPriority.CRITICAL:
         return 'Critical';
-      default:
+      case ProtoPriority.UNSPECIFIED:
         return 'Medium';
+      default:
+        return unknownEnum('Priority', p, 'Medium');
     }
   }
 
@@ -144,8 +160,10 @@ export default class TaskApiService {
         return 'Security';
       case ProtoCategory.OTHER:
         return 'Other';
-      default:
+      case ProtoCategory.UNSPECIFIED:
         return 'Other';
+      default:
+        return unknownEnum('Category', c, 'Other');
     }
   }
 

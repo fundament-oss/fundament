@@ -259,6 +259,12 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     // Auto-save progress on every change, once restoreProgress() has run —
     // otherwise this would immediately overwrite a saved snapshot with the
     // signals' initial (empty) values before it's been read back.
+    //
+    // The snapshot is built BEFORE the hydrated() guard on purpose: an effect
+    // only tracks the signals it actually reads, so returning early would leave
+    // this depending on hydrated() alone and it would never re-run when progress
+    // changes. Do not "tidy" the guard up to the top — that silently disables
+    // auto-save.
     effect(() => {
       const snapshot: ProgressSnapshot = {
         phase: this.phase(),

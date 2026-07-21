@@ -136,6 +136,9 @@ type NoteListRow struct {
 	Created              pgtype.Timestamptz
 }
 
+// users.name is the note author's display name, joined via notes.created_by_id.
+// It lands on the generated row as the bare field Name (no aliases allowed), so
+// read that as "author name", not as a name belonging to the note itself.
 func (q *Queries) NoteList(ctx context.Context, arg NoteListParams) ([]NoteListRow, error) {
 	rows, err := q.db.Query(ctx, noteList,
 		arg.DeviceCatalogID,

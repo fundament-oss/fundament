@@ -71,6 +71,45 @@ interface NlddSheet extends HTMLElement {
 // over the main content area next to it instead of the full viewport.
 const TOAST_SIDEBAR_OFFSET_PX = 120;
 
+// Ceiling on in-flight requests for the bulk actions. Select-all over a large
+// board would otherwise put one request per task on the wire at once.
+const BULK_CONCURRENCY = 6;
+
+/**
+ * Runs `task` over every id with at most `limit` requests in flight, resolving
+ * like Promise.allSettled: results come back in input order and a rejection
+ * never short-circuits the rest.
+ */
+async function settledPool<T>(
+  ids: string[],
+  limit: number,
+  task: (id: string) => Promise<T>,
+): Promise<PromiseSettledResult<T>[]> {
+  const results = new Array<PromiseSettledResult<T>>(ids.length);
+  let next = 0;
+
+  const worker = async (): Promise<void> => {
+    // Claiming the index and advancing the cursor happens synchronously before
+    // the await, so concurrent workers never take the same id.
+    for (;;) {
+      const i = next;
+      next += 1;
+      if (i >= ids.length) return;
+      try {
+        // Sequential within a worker is the point: parallelism comes from
+        // running `limit` workers, which is what bounds the requests in flight.
+        // eslint-disable-next-line no-await-in-loop
+        results[i] = { status: 'fulfilled', value: await task(ids[i]) };
+      } catch (reason) {
+        results[i] = { status: 'rejected', reason };
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(limit, ids.length) }, worker));
+  return results;
+}
+
 @Component({
   selector: 'app-task-management-admin',
   templateUrl: './task-management-admin.html',
@@ -244,7 +283,8 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   detailTaskId = signal<string | null>(null);
 
-  editingTaskId = signal<string | null | undefined>(undefined);
+  // null means "creating a new task"; a string is the id being edited.
+  editingTaskId = signal<string | null>(null);
 
   editFormTitle = signal('');
 
@@ -303,6 +343,15 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       {},
     ),
   );
+
+  // Drives the header checkbox. Mirrors toggleSelectAll's scope (the filtered
+  // rows) so the control reflects what it actually selects.
+  allFilteredSelected = computed(() => {
+    const filtered = this.filteredTasks();
+    if (filtered.length === 0) return false;
+    const selected = this.selectedTasks();
+    return filtered.every((t) => selected.has(t.id));
+  });
 
   detailTask = computed(() => {
     const id = this.detailTaskId();
@@ -407,9 +456,12 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Scoped to the filtered rows, not the whole board: the checkbox sits in the
+  // header of a table that renders filteredTasks(), so selecting the full task
+  // list would hand bulk delete/update tasks the user cannot see.
   toggleSelectAll(checked: boolean): void {
     if (checked) {
-      this.selectedTasks.set(new Set(this.tasks().map((t) => t.id)));
+      this.selectedTasks.set(new Set(this.filteredTasks().map((t) => t.id)));
     } else {
       this.selectedTasks.set(new Set());
     }
@@ -417,7 +469,12 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   openDetail(id: string): void {
     this.detailTaskId.set(id);
-    this.loadNotes(id);
+    // Notes are cached per task for as long as the board data lives: every
+    // mutation calls loadTasks(), which resets notesLoaded, so reopening a task
+    // after any change still refetches. addNote() refreshes explicitly.
+    if (!this.tasks().find((t) => t.id === id)?.notesLoaded) {
+      this.loadNotes(id);
+    }
     this.detailSheetEl()?.nativeElement.show();
   }
 
@@ -499,12 +556,12 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     const ids = [...this.selectedTasks()];
     this.closeBulkDeleteDialog();
     if (ids.length === 0) return;
-    Promise.allSettled(ids.map((id) => firstValueFrom(this.taskApi.deleteTask(id)))).then(
+    settledPool(ids, BULK_CONCURRENCY, (id) => firstValueFrom(this.taskApi.deleteTask(id))).then(
       (results) => {
         this.selectedTasks.set(new Set());
         this.loadTasks();
-        // allSettled never rejects, so surface partial failures explicitly
-        // rather than reporting blanket success.
+        // The pool settles rather than rejects, so surface partial failures
+        // explicitly rather than reporting blanket success.
         const failed = TaskManagementAdminComponent.countRejections(results);
         this.toast.show(
           failed === 0
@@ -531,23 +588,23 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   private bulkUpdate(patch: TaskPatch, successMessage: string): void {
     const ids = [...this.selectedTasks()].filter((id) => this.tasks().some((t) => t.id === id));
     if (ids.length === 0) return;
-    Promise.allSettled(ids.map((id) => firstValueFrom(this.taskApi.updateTask(id, patch)))).then(
-      (results) => {
-        this.loadTasks();
-        // allSettled never rejects, so surface partial failures explicitly
-        // rather than reporting blanket success.
-        const failed = TaskManagementAdminComponent.countRejections(results);
-        this.toast.show(
-          failed === 0
-            ? successMessage
-            : `${ids.length - failed} of ${ids.length} updated, ${failed} failed`,
-        );
-      },
-    );
+    settledPool(ids, BULK_CONCURRENCY, (id) =>
+      firstValueFrom(this.taskApi.updateTask(id, patch)),
+    ).then((results) => {
+      this.loadTasks();
+      // The pool settles rather than rejects, so surface partial failures
+      // explicitly rather than reporting blanket success.
+      const failed = TaskManagementAdminComponent.countRejections(results);
+      this.toast.show(
+        failed === 0
+          ? successMessage
+          : `${ids.length - failed} of ${ids.length} updated, ${failed} failed`,
+      );
+    });
   }
 
   // Counts rejected settlements and logs their reasons, for the bulk operations
-  // that use Promise.allSettled (which resolves even when individual calls fail).
+  // that use settledPool (which resolves even when individual calls fail).
   private static countRejections(results: PromiseSettledResult<unknown>[]): number {
     const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
     // eslint-disable-next-line no-console
@@ -575,7 +632,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   closeEditModal(): void {
     this.editModalEl()?.nativeElement.hide();
-    this.editingTaskId.set(undefined);
+    this.editingTaskId.set(null);
   }
 
   saveTask(): void {
@@ -596,16 +653,15 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
     const editingId = this.editingTaskId();
     const request: Observable<unknown> =
-      editingId !== null && editingId !== undefined
+      editingId !== null
         ? this.taskApi.updateTask(editingId, input)
         : this.taskApi.createTask(input);
 
     firstValueFrom(request)
       .then(() => {
         this.loadTasks();
-        this.toast.show(editingId ? 'Task updated' : 'Task created');
-        this.editModalEl()?.nativeElement.hide();
-        this.editingTaskId.set(undefined);
+        this.toast.show(editingId !== null ? 'Task updated' : 'Task created');
+        this.closeEditModal();
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
@@ -640,9 +696,12 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     return { name: note.author || 'Admin', tech };
   }
 
+  // Goes through the same closers as the buttons: hiding the sheets without
+  // clearing detailTaskId/editingTaskId would leave a "closed" task still
+  // addressable by addNote() and detailTask().
   onEscape(): void {
-    this.detailSheetEl()?.nativeElement.hide();
-    this.editModalEl()?.nativeElement.hide();
+    this.closeDetail();
+    this.closeEditModal();
   }
 
   statusBadgeClass(status: string): string {
