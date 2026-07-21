@@ -338,9 +338,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
         WALKTHROUGH_STATUSES.includes(TaskApiService.fromProtoStatus(t.status)),
       );
 
-      // Improvement: this fans out one ListTaskSteps call per task (N+1). It runs
-      // them in parallel, but a batched "steps for these task ids" endpoint (or
-      // embedding steps in ListTasks) would collapse it into a single round-trip.
+      // One ListTaskSteps call per task, run in parallel. Bounded in practice by
+      // WALKTHROUGH_STATUSES — a technician's open tasks, not the whole board.
       const completed = new Set<string>();
       const tasks = await Promise.all(
         open.map(async (t) => {
@@ -609,11 +608,9 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     this.showPhotoModal.set(false);
   }
 
-  savePhoto(): void {
-    this.showPhotoModal.set(false);
-    this.toast.show('Photo saved');
-  }
-
+  // There is no photo upload endpoint yet, so the capture below is preview-only
+  // and the modal says so. Deliberately no "Save": confirming a write that never
+  // happens would cost the technician the evidence they think they filed.
   onPhotoSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (file) {

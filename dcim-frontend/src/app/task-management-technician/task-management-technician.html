@@ -261,7 +261,7 @@
     </div>
 
     <!-- ── Task rows ── -->
-    @for (task of tasks(); track $index; let taskIdx = $index) {
+    @for (task of tasks(); track task.id; let taskIdx = $index) {
       <div
         class="relative flex gap-4 transition-opacity"
         [class.opacity-100]="isTaskActive(taskIdx)"
@@ -587,14 +587,17 @@
         </div>
       }
     </div>
+    <p class="mt-3 text-xs text-neutral-400 dark:text-gray-500" role="note">
+      Photo upload is not available yet — the preview is local to this device and is not stored with
+      the task.
+    </p>
     <div class="mt-5 flex justify-end gap-2">
       <nldd-button
         variant="secondary"
-        text="Cancel"
+        text="Close"
         size="sm"
         (click)="closePhotoModal()"
       ></nldd-button>
-      <nldd-button variant="primary" text="Save" size="sm" (click)="savePhoto()"></nldd-button>
     </div>
   </div>
 </div>

@@ -199,6 +199,46 @@ func TestTaskService_UpdateTask_ClearIsIndependentPerField(t *testing.T) {
 	assert.True(t, task.HasDueDate(), "an unset due_date must not be cleared by a sibling clear")
 }
 
+// A well-formed assignee id that matches no directory entry violates
+// dcim_tasks_fk_assignee. That is a caller mistake, not a server fault, so it
+// must map onto NotFound rather than leaking out as a 500 — the admin board
+// caches the roster, so it can send an id for a user deleted since page load.
+func TestTaskService_UpdateTask_UnknownAssignee(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+	client := dcimv1connect.NewTaskServiceClient(env.client(), env.server.URL)
+
+	assigneeID := createUser(t, env, "Real Assignee", "real@example.com", "")
+	taskID := createTaskFixture(t, env, "Task With Unknown Assignee", assigneeID)
+
+	_, err := client.UpdateTask(context.Background(), connect.NewRequest(
+		(&dcimv1.UpdateTaskRequest_builder{
+			Id:         taskID,
+			AssigneeId: ptr(validUUID),
+		}).Build(),
+	))
+	requireCode(t, err, connect.CodeNotFound)
+}
+
+func TestTaskService_CreateTask_UnknownAssignee(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+	client := dcimv1connect.NewTaskServiceClient(env.client(), env.server.URL)
+
+	_, err := client.CreateTask(context.Background(), connect.NewRequest(
+		(&dcimv1.CreateTaskRequest_builder{
+			Title:      "Task For A Ghost",
+			Status:     dcimv1.TaskStatus_TASK_STATUS_READY,
+			Priority:   dcimv1.TaskPriority_TASK_PRIORITY_LOW,
+			Category:   dcimv1.TaskCategory_TASK_CATEGORY_HARDWARE,
+			AssigneeId: ptr(validUUID),
+		}).Build(),
+	))
+	requireCode(t, err, connect.CodeNotFound)
+}
+
 func TestTaskService_UpdateTask_Errors(t *testing.T) {
 	t.Parallel()
 

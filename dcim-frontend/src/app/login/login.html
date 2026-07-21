@@ -53,6 +53,7 @@
               appAutofocus
               [value]="email?.value ?? ''"
               (input)="loginForm.get('email')!.setValue($any($event.target).value)"
+              (blur)="loginForm.get('email')!.markAsTouched()"
               [invalid]="!!(email?.invalid && email.touched)"
               error-message="login-email-error"
             ></nldd-text-field>

@@ -2,14 +2,17 @@ package dcim
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 )
@@ -78,6 +81,13 @@ func (s *Server) UpdateTask(
 
 	rowsAffected, err := s.queries.TaskUpdate(ctx, params)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.ConstraintName {
+			case dbconst.ConstraintDcimTasksFkAssignee:
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("assignee not found"))
+			}
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update task: %w", err))
 	}
 

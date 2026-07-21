@@ -14,24 +14,41 @@ import (
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 )
 
-// currentUser resolves the authenticated caller onto their directory entry.
-// The JWT subject is an identity-provider reference, not a DCIM user id, so it
-// is matched against dcim.users.external_ref; everything else (task assignment,
-// note authorship, filtering) uses the internal id this returns.
-func (s *Server) currentUser(ctx context.Context) (db.UserGetByExternalRefRow, error) {
+// lookupCurrentUser resolves the authenticated caller onto their directory
+// entry. The JWT subject is an identity-provider reference, not a DCIM user id,
+// so it is matched against dcim.users.external_ref; everything else (task
+// assignment, note authorship, filtering) uses the internal id this returns.
+//
+// A caller with a valid token but no directory entry is reported as found=false
+// rather than as an error: the roster is provisioned out of band, so being
+// absent from it is an ordinary state that some callers can carry on without.
+func (s *Server) lookupCurrentUser(ctx context.Context) (row db.UserGetByExternalRefRow, found bool, err error) {
 	subject, ok := auth.UserIDFromContext(ctx)
 	if !ok {
-		return db.UserGetByExternalRefRow{}, connect.NewError(connect.CodeUnauthenticated, errors.New("no authenticated user"))
+		return db.UserGetByExternalRefRow{}, false, connect.NewError(connect.CodeUnauthenticated, errors.New("no authenticated user"))
 	}
 
-	row, err := s.queries.UserGetByExternalRef(ctx, db.UserGetByExternalRefParams{
+	row, err = s.queries.UserGetByExternalRef(ctx, db.UserGetByExternalRefParams{
 		ExternalRef: pgtype.Text{String: subject.String(), Valid: true},
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return db.UserGetByExternalRefRow{}, connect.NewError(connect.CodeNotFound, errors.New("no directory entry for the authenticated user"))
+			return db.UserGetByExternalRefRow{}, false, nil
 		}
-		return db.UserGetByExternalRefRow{}, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get current user: %w", err))
+		return db.UserGetByExternalRefRow{}, false, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get current user: %w", err))
+	}
+	return row, true, nil
+}
+
+// currentUser is lookupCurrentUser for the callers that cannot proceed without
+// a directory entry, turning "not in the roster" into a NotFound.
+func (s *Server) currentUser(ctx context.Context) (db.UserGetByExternalRefRow, error) {
+	row, found, err := s.lookupCurrentUser(ctx)
+	if err != nil {
+		return db.UserGetByExternalRefRow{}, err
+	}
+	if !found {
+		return db.UserGetByExternalRefRow{}, connect.NewError(connect.CodeNotFound, errors.New("no directory entry for the authenticated user"))
 	}
 	return row, nil
 }

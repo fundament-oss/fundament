@@ -416,10 +416,6 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   }
 
   onKanbanDrop(event: CdkDragDrop<Task[]>, targetStatus: TaskStatusLabel): void {
-    // Improvement: on success this reloads the whole task list, which also
-    // discards any already-loaded notes and re-fetches everything. A targeted
-    // update of the single moved task (from the update response) would avoid
-    // the extra round-trip and the note churn.
     const task = event.item.data as Task;
     if (!task || task.status === targetStatus) return;
 
@@ -553,11 +549,13 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   }
 
   confirmBulkDelete(): void {
-    const ids = [...this.selectedTasks()];
+    // Same scoping as bulkUpdate: a selection can outlive the task it points at
+    // (another admin deleted it), and those ids would only produce noise.
+    const ids = this.selectedExistingTaskIds();
     this.closeBulkDeleteDialog();
     if (ids.length === 0) return;
-    settledPool(ids, BULK_CONCURRENCY, (id) => firstValueFrom(this.taskApi.deleteTask(id))).then(
-      (results) => {
+    settledPool(ids, BULK_CONCURRENCY, (id) => firstValueFrom(this.taskApi.deleteTask(id)))
+      .then((results) => {
         this.selectedTasks.set(new Set());
         this.loadTasks();
         // The pool settles rather than rejects, so surface partial failures
@@ -568,8 +566,18 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
             ? `${ids.length} task(s) deleted`
             : `${ids.length - failed} of ${ids.length} deleted, ${failed} failed`,
         );
-      },
-    );
+      })
+      .catch((err) => {
+        // settledPool itself never rejects, so this only fires if the handler
+        // above throws — which would otherwise surface as an unhandled rejection.
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+      });
+  }
+
+  // The selected ids that still correspond to a loaded task.
+  private selectedExistingTaskIds(): string[] {
+    return [...this.selectedTasks()].filter((id) => this.tasks().some((t) => t.id === id));
   }
 
   bulkSetStatus(status: TaskStatusLabel): void {
@@ -586,21 +594,24 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   // Applies `patch` to every selected task. Like the kanban drop, this sends
   // only the changed fields — never the board's snapshot of the other ones.
   private bulkUpdate(patch: TaskPatch, successMessage: string): void {
-    const ids = [...this.selectedTasks()].filter((id) => this.tasks().some((t) => t.id === id));
+    const ids = this.selectedExistingTaskIds();
     if (ids.length === 0) return;
-    settledPool(ids, BULK_CONCURRENCY, (id) =>
-      firstValueFrom(this.taskApi.updateTask(id, patch)),
-    ).then((results) => {
-      this.loadTasks();
-      // The pool settles rather than rejects, so surface partial failures
-      // explicitly rather than reporting blanket success.
-      const failed = TaskManagementAdminComponent.countRejections(results);
-      this.toast.show(
-        failed === 0
-          ? successMessage
-          : `${ids.length - failed} of ${ids.length} updated, ${failed} failed`,
-      );
-    });
+    settledPool(ids, BULK_CONCURRENCY, (id) => firstValueFrom(this.taskApi.updateTask(id, patch)))
+      .then((results) => {
+        this.loadTasks();
+        // The pool settles rather than rejects, so surface partial failures
+        // explicitly rather than reporting blanket success.
+        const failed = TaskManagementAdminComponent.countRejections(results);
+        this.toast.show(
+          failed === 0
+            ? successMessage
+            : `${ids.length - failed} of ${ids.length} updated, ${failed} failed`,
+        );
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(connectErrorMessage(err));
+      });
   }
 
   // Counts rejected settlements and logs their reasons, for the bulk operations
