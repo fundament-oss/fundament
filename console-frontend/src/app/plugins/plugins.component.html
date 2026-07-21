@@ -1,4 +1,4 @@
-<div class="card">
+<div class="card @container">
   <!-- Header -->
   <div class="card-header">
     <h1 class="text-3xl font-semibold">Plugins</h1>
@@ -7,13 +7,11 @@
     </p>
   </div>
 
-  <div class="flex flex-col gap-6 p-6 lg:flex-row">
+  <div class="flex flex-col gap-6 p-6 @3xl:flex-row">
     <!-- Main Content Area -->
-    <div class="flex-1">
+    <div class="flex-1 @container">
       <!-- Plugin Cards Grid -->
-      <div
-        class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
-      >
+      <div class="grid grid-cols-1 gap-6 @md:grid-cols-2 @4xl:grid-cols-3">
         @for (plugin of filteredPlugins; track plugin.id) {
           <div
             class="rounded-lg border border-gray-200 bg-white transition-shadow duration-200 hover:shadow-sm dark:border-gray-800 dark:bg-gray-950"
@@ -118,7 +116,7 @@
     </div>
 
     <!-- Right Sidebar with filters -->
-    <div class="shrink-0 space-y-4 lg:w-64">
+    <div class="shrink-0 space-y-4 @3xl:w-64">
       <!-- Preset Filter -->
       <div
         class="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"

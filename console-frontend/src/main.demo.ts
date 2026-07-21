@@ -6,6 +6,7 @@ import App from './app/app';
 import { demoAppConfig } from './app/demo/demo-app.config';
 import { PresentationOverlayComponent } from './app/presentation/presentation-overlay.component';
 import { PresentationService } from './app/presentation/presentation.service';
+import enableModalRightPane from './app/presentation/modal-pane';
 
 bootstrapApplication(App, demoAppConfig)
   .then((appRef) => {
@@ -20,6 +21,8 @@ bootstrapApplication(App, demoAppConfig)
     appRef.attachView(overlayRef.hostView);
     // Force the first render, then start the walkthrough (present-by-default).
     overlayRef.changeDetectorRef.detectChanges();
+    // Center native modal dialogs in the right pane while presenting.
+    enableModalRightPane();
     appRef.injector.get(PresentationService).initFromUrl();
   })
   // eslint-disable-next-line no-console
