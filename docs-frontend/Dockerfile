@@ -31,10 +31,11 @@ ENV ASTRO_TELEMETRY_DISABLED=1
 # Build the application
 RUN bun run build
 
-# Run pagefind explicitly via bunx to ensure the search index is generated.
-# Starlight's internal pagefind hook uses `npx` which may fail silently in bun
-# environments; bunx uses the already-installed package and fails the build loudly.
-RUN bunx pagefind --site dist
+# Run pagefind explicitly to ensure the search index is generated.
+# Starlight's internal pagefind hook uses `npx` which may fail silently; `bun x`
+# uses the already-installed package and fails the build loudly.
+# Note: `bun x` rather than `bunx`, since only the `bun` binary is copied above.
+RUN bun x pagefind --site dist
 
 # Production stage
 FROM nginx:alpine
