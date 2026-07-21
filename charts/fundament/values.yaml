@@ -110,6 +110,30 @@ clusterWorker:
   gardenerMode: mock # mock or real
   # Gardener kubeconfig secret for real mode. Also consumed by authn-api and organization-api.
   gardenerKubeconfigSecret: ""
+  # Provider wiring for real mode (defaults target the local provider in code).
+  gardenerProviderType: ""           # e.g. local, metal
+  gardenerCloudProfile: ""           # e.g. local, metal
+  gardenerRegion: ""                 # default shoot region when a cluster has none, e.g. local
+  gardenerCredentialsBindingName: "" # e.g. local, metal-credentials
+  # Shared credentials the per-project CredentialsBindings reference. The local
+  # provider uses a WorkloadIdentity (garden-local/local, the in-code default);
+  # non-local providers such as metal use a Secret and must set all three.
+  gardenerCredentialsRef: ""           # "namespace/name", e.g. garden/metal-credentials
+  gardenerCredentialsRefKind: ""       # Secret or WorkloadIdentity
+  gardenerCredentialsRefAPIVersion: "" # v1 (Secret) or security.gardener.cloud/v1alpha1 (WorkloadIdentity)
+  gardenerMachineImageName: ""    # e.g. ubuntu
+  gardenerMachineImageVersion: "" # e.g. 24.04
+  gardenerDefaultMachineType: ""  # e.g. c1-medium-x86
+  # Networking CIDRs. Node CIDR empty => the provider's IPAM allocates it (metal
+  # hands out a partition range); the local provider falls back to 10.0.0.0/16.
+  gardenerNodesCIDR: ""    # usually empty for metal
+  gardenerPodsCIDR: ""     # e.g. 10.240.0.0/16 (must be in the tenant super's additionalAnnouncableCIDRs)
+  gardenerServicesCIDR: "" # e.g. 10.248.0.0/16
+  # Provider extension configs stamped verbatim onto every Shoot (YAML here ->
+  # JSON in the env var). Required by metal; leave empty ({}) for the local provider.
+  gardenerInfrastructureConfig: {} # -> spec.provider.infrastructureConfig
+  gardenerControlPlaneConfig: {}   # -> spec.provider.controlPlaneConfig
+  gardenerShootAnnotations: {}     # extra shoot annotations, e.g. cluster.metal-stack.io/tenant: fundament
 
 # Console Frontend
 consoleFrontend:

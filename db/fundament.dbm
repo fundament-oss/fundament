@@ -3,9 +3,9 @@
 CAUTION: Do not modify this file unless you know what you are doing.
  Unexpected results may occur if the code is changed deliberately.
 -->
-<dbmodel pgmodeler-ver="1.2.3" use-changelog="false" max-obj-count="88"
+<dbmodel pgmodeler-ver="2.0.0-beta" use-changelog="false" max-obj-count="111"
 	 gen-disabled-objs-code="false" show-sys-schemas-rects="true"
-	 last-position="379,19" last-zoom="0.65" scene-rect="-1628,-187,9753.32,5847.72"
+	 last-position="-332,174" last-zoom="0.45" scene-rect="-1628,-265,10746.3,5925.72"
 	 default-owner="postgres"
 	 layers="Default layer"
 	 active-layers="0"
@@ -75,10 +75,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<role name="fun_owner"/>
 </schema>
 
-<table name="organizations" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
+<table name="organizations" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="260" y="1200"/>
+	<position x="240" y="1240"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -108,10 +108,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="organization_limits" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="11" z-value="0">
+<table name="organization_limits" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="14" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="260" y="800"/>
+	<position x="840" y="1280"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -180,10 +180,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="project_limits" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
+<table name="project_limits" layers="0" collapse-mode="1" pagination="true" attribs-page="0" ext-attribs-page="0" rls-enabled="true" max-obj-count="10" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="880" y="800"/>
+	<position x="1480" y="80"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -234,10 +234,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="projects" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="6" z-value="0">
+<table name="projects" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="880" y="-20"/>
+	<position x="860" y="20"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -267,10 +267,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	</constraint>
 </table>
 
-<table name="namespaces" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
+<table name="namespaces" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="6" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="1520" y="-20"/>
+	<position x="1520" y="-80"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -881,7 +881,7 @@ END;]]> </definition>
 <table name="users" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="300" y="460"/>
+	<position x="20" y="100"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -914,7 +914,7 @@ END;]]> </definition>
 	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
 </index>
 
-<table name="api_keys" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="13" z-value="0">
+<table name="api_keys" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="13" z-value="0">
 	<schema name="authn"/>
 	<role name="fun_owner"/>
 	<position x="-560" y="800"/>
@@ -1020,10 +1020,10 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
-<table name="clusters" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="16" z-value="0">
+<table name="clusters" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="16" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="880" y="400"/>
+	<position x="940" y="600"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1101,10 +1101,10 @@ END;]]> </definition>
 	<predicate> <![CDATA[synced IS NULL]]> </predicate>
 </index>
 
-<table name="node_pools" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="9" z-value="0">
+<table name="node_pools" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="9" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="1580" y="400"/>
+	<position x="1560" y="960"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1145,7 +1145,7 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<table name="plugins" layers="0" collapse-mode="2" max-obj-count="12" z-value="0">
+<table name="plugins" layers="0" collapse-mode="1" max-obj-count="13" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="840" y="1900"/>
@@ -1154,11 +1154,11 @@ END;]]> </definition>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
-		<comment><![CDATA[Stable identifier, matching the plugin's definition.yaml metadata.name (e.g. "openfsc"). Used as the PluginInstallation resource name in the cluster — not for display.]]></comment>
+		<comment> <![CDATA[Stable identifier, matching the plugin's definition.yaml metadata.name (e.g. "openfsc"). Used as the PluginInstallation resource name in the cluster — not for display.]]> </comment>
 	</column>
 	<column name="display_name" not-null="true" default-value="''">
 		<type name="text" length="0"/>
-		<comment><![CDATA[Human-readable name shown in the Console, matching the plugin's definition.yaml metadata.displayName (e.g. "OpenFSC").]]></comment>
+		<comment> <![CDATA[Human-readable name shown in the Console, matching the plugin's definition.yaml metadata.displayName (e.g. "OpenFSC").]]> </comment>
 	</column>
 	<column name="description_short" not-null="true" default-value="''">
 		<type name="text" length="0"/>
@@ -1192,7 +1192,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="presets" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
+<table name="presets" layers="0" collapse-mode="1" max-obj-count="3" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="-200" y="2360"/>
@@ -1213,7 +1213,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="preset_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
+<table name="preset_plugins" layers="0" collapse-mode="1" max-obj-count="3" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="320" y="2160"/>
@@ -1228,7 +1228,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="tags" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
+<table name="tags" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="2200" y="2340"/>
@@ -1252,7 +1252,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="plugins_tags" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
+<table name="plugins_tags" layers="0" collapse-mode="1" max-obj-count="3" z-value="-4">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1560" y="2340"/>
@@ -1267,7 +1267,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="categories" layers="0" collapse-mode="2" max-obj-count="4" z-value="0">
+<table name="categories" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="2260" y="1940"/>
@@ -1291,7 +1291,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="categories_plugins" layers="0" collapse-mode="2" max-obj-count="3" z-value="-4">
+<table name="categories_plugins" layers="0" collapse-mode="1" max-obj-count="3" z-value="-4">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1540" y="1940"/>
@@ -1306,7 +1306,7 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="plugin_documentation_links" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
+<table name="plugin_documentation_links" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="1560" y="1620"/>
@@ -1343,10 +1343,10 @@ END;]]> </definition>
 		<function signature="tenant.projects_tr_verify_deleted()"/>
 </trigger>
 
-<table name="project_members" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="7" z-value="0">
+<table name="project_members" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="220" y="-40"/>
+	<position x="460" y="140"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1450,10 +1450,10 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<table name="cluster_events" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
+<table name="cluster_events" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="1540" y="1020"/>
+	<position x="240" y="340"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -1509,14 +1509,26 @@ END;]]> </definition>
 		</idxelement>
 </index>
 
-<table name="cluster_outbox" layers="0" collapse-mode="2" max-obj-count="18" z-value="0">
+<table name="cluster_outbox" layers="0" collapse-mode="1" max-obj-count="19" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="2200" y="-40"/>
+	<position x="2220" y="-140"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="cluster_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="organization_user_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="project_member_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="node_pool_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="namespace_id">
 		<type name="uuid" length="0"/>
 	</column>
 	<column name="event" not-null="true" default-value="'updated'">
@@ -1545,18 +1557,6 @@ END;]]> </definition>
 	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
-	</column>
-	<column name="organization_user_id">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="project_member_id">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="node_pool_id">
-		<type name="uuid" length="0"/>
-	</column>
-	<column name="namespace_id">
-		<type name="uuid" length="0"/>
 	</column>
 	<column name="deferrals" not-null="true" default-value="0">
 		<type name="integer" length="0"/>
@@ -1642,10 +1642,10 @@ END;]]> </definition>
 		</idxelement>
 </index>
 
-<table name="outbox" layers="0" collapse-mode="2" max-obj-count="18" z-value="0">
+<table name="outbox" layers="0" collapse-mode="1" max-obj-count="18" z-value="0">
 	<schema name="authz"/>
 	<role name="fun_owner"/>
-	<position x="-580" y="-140"/>
+	<position x="2700" y="200"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2010,10 +2010,10 @@ END;]]> </definition>
 		<function signature="tenant.cluster_outbox_update_cluster_status()"/>
 </trigger>
 
-<table name="organizations_users" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="8" z-value="0">
+<table name="organizations_users" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="8" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="240" y="680"/>
+	<position x="220" y="720"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2120,10 +2120,10 @@ END;]]> </definition>
 		<function signature="tenant.cluster_outbox_project_member_trigger()"/>
 </trigger>
 
-<table name="idempotency_keys" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="18" z-value="0">
+<table name="idempotency_keys" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="18" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
-	<position x="2200" y="840"/>
+	<position x="2300" y="1040"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2132,21 +2132,6 @@ END;]]> </definition>
 	</column>
 	<column name="user_id" not-null="true">
 		<type name="uuid" length="0"/>
-	</column>
-	<column name="procedure" not-null="true">
-		<type name="text" length="0"/>
-	</column>
-	<column name="request_hash" not-null="true">
-		<type name="bytea" length="0"/>
-	</column>
-	<column name="response_bytes">
-		<type name="bytea" length="0"/>
-	</column>
-	<column name="created" not-null="true" default-value="now()">
-		<type name="timestamptz" length="0"/>
-	</column>
-	<column name="expires" not-null="true">
-		<type name="timestamptz" length="0"/>
 	</column>
 	<column name="project_id">
 		<type name="uuid" length="0"/>
@@ -2168,6 +2153,21 @@ END;]]> </definition>
 	</column>
 	<column name="organization_user_id">
 		<type name="uuid" length="0"/>
+	</column>
+	<column name="procedure" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="request_hash" not-null="true">
+		<type name="bytea" length="0"/>
+	</column>
+	<column name="response_bytes">
+		<type name="bytea" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="expires" not-null="true">
+		<type name="timestamptz" length="0"/>
 	</column>
 	<constraint name="idempotency_keys_pk" type="pk-constr" table="tenant.idempotency_keys">
 		<columns names="id" ref-type="src-columns"/>
@@ -2207,7 +2207,7 @@ END;]]> </definition>
 <table name="sites" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="6660" y="-20"/>
+	<position x="8580" y="40"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2234,7 +2234,7 @@ END;]]> </definition>
 <table name="rooms" layers="0" collapse-mode="2" max-obj-count="7" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="6280" y="-40"/>
+	<position x="8040" y="-40"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2264,7 +2264,7 @@ END;]]> </definition>
 <table name="rack_rows" layers="0" collapse-mode="2" max-obj-count="8" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="5840" y="-40"/>
+	<position x="7520" y="40"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2294,10 +2294,10 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="racks" layers="0" collapse-mode="2" max-obj-count="8" z-value="0">
+<table name="racks" layers="0" collapse-mode="1" max-obj-count="8" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="5280" y="40"/>
+	<position x="6900" y="140"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2330,7 +2330,7 @@ END;]]> </definition>
 <table name="device_catalogs" layers="0" collapse-mode="2" max-obj-count="14" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="4260" y="1340"/>
+	<position x="3780" y="360"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2378,10 +2378,10 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="port_definitions" layers="0" collapse-mode="2" max-obj-count="13" z-value="0">
+<table name="port_definitions" layers="0" collapse-mode="1" max-obj-count="13" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="3820" y="240"/>
+	<position x="5400" y="780"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2429,10 +2429,10 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="port_compatibilities" layers="0" collapse-mode="2" max-obj-count="7" z-value="0">
+<table name="port_compatibilities" layers="0" collapse-mode="1" max-obj-count="7" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="3260" y="240"/>
+	<position x="4720" y="640"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2462,7 +2462,7 @@ END;]]> </definition>
 <table name="assets" layers="0" collapse-mode="2" max-obj-count="13" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="3740" y="1340"/>
+	<position x="3660" y="1160"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2513,7 +2513,7 @@ END;]]> </definition>
 <table name="asset_events" layers="0" collapse-mode="2" max-obj-count="7" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="3260" y="1340"/>
+	<position x="3060" y="1040"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2543,7 +2543,7 @@ END;]]> </definition>
 <table name="logical_designs" layers="0" collapse-mode="2" max-obj-count="8" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="6820" y="1180"/>
+	<position x="6220" y="820"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2579,7 +2579,7 @@ END;]]> </definition>
 <table name="logical_devices" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="6160" y="1380"/>
+	<position x="6720" y="500"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2621,7 +2621,7 @@ END;]]> </definition>
 <table name="logical_connections" layers="0" collapse-mode="2" max-obj-count="13" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="5260" y="1320"/>
+	<position x="5600" y="1180"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2666,7 +2666,7 @@ END;]]> </definition>
 <table name="logical_device_layouts" layers="0" collapse-mode="2" max-obj-count="7" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="6820" y="1540"/>
+	<position x="7540" y="520"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2696,7 +2696,7 @@ END;]]> </definition>
 <table name="placements" layers="0" collapse-mode="2" max-obj-count="14" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="4580" y="200"/>
+	<position x="7460" y="1200"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2747,10 +2747,10 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="physical_connections" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
+<table name="physical_connections" layers="0" collapse-mode="2" max-obj-count="15" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="4560" y="820"/>
+	<position x="4480" y="1660"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2804,10 +2804,10 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="notes" layers="0" collapse-mode="2" max-obj-count="22" z-value="0">
+<table name="notes" layers="0" collapse-mode="2" max-obj-count="21" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="6800" y="400"/>
+	<position x="8560" y="1260"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2870,10 +2870,10 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="tasks" layers="0" collapse-mode="2" max-obj-count="15" z-value="0">
+<table name="tasks" layers="0" collapse-mode="2" max-obj-count="13" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="7400" y="400"/>
+	<position x="8240" y="380"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2921,10 +2921,10 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="task_steps" layers="0" collapse-mode="2" max-obj-count="10" z-value="0">
+<table name="task_steps" layers="0" collapse-mode="2" max-obj-count="9" z-value="0">
 	<schema name="dcim"/>
 	<role name="fun_owner"/>
-	<position x="7400" y="800"/>
+	<position x="8760" y="420"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
 	</column>
@@ -2965,6 +2965,18 @@ END;]]> </definition>
 		</idxelement>
 	<predicate> <![CDATA[deleted IS NULL]]> </predicate>
 </index>
+
+<constraint name="organization_limits_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.organization_limits">
+	<columns names="organization_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
+<constraint name="project_limits_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.project_limits">
+	<columns names="project_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
 
 <constraint name="projects_fk_cluster" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.clusters" table="tenant.projects">
@@ -3131,18 +3143,6 @@ END;]]> </definition>
 <constraint name="outbox_fk_organization_user" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations_users" table="authz.outbox">
 	<columns names="organization_user_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="organization_limits_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="tenant.organization_limits">
-	<columns names="organization_id" ref-type="src-columns"/>
-	<columns names="id" ref-type="dst-columns"/>
-</constraint>
-
-<constraint name="project_limits_fk_project" type="fk-constr" comparison-type="MATCH SIMPLE"
-	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.projects" table="tenant.project_limits">
-	<columns names="project_id" ref-type="src-columns"/>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
@@ -3441,66 +3441,79 @@ END;]]> </definition>
 </constraint>
 
 <relationship name="rel_projects_clusters" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.projects"
 	 dst-table="tenant.clusters" reference-fk="projects_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_namespaces_projects" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.namespaces"
 	 dst-table="tenant.projects" reference-fk="namespaces_fk_project"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_clusters_organizations" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.clusters"
 	 dst-table="tenant.organizations" reference-fk="clusters_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_organization_limits_organizations" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.organization_limits"
 	 dst-table="tenant.organizations" reference-fk="organization_limits_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_project_limits_projects" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.project_limits"
 	 dst-table="tenant.projects" reference-fk="project_limits_fk_project"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_cluster_events_clusters" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.cluster_events"
 	 dst-table="tenant.clusters" reference-fk="cluster_events_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_node_pools_clusters" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.node_pools"
 	 dst-table="tenant.clusters" reference-fk="node_pools_fk_cluster"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_plugins_tags_tags" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="appstore.plugins_tags"
 	 dst-table="appstore.tags" reference-fk="plugins_tags_tag_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_categories_plugins_plugins" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="appstore.categories_plugins"
 	 dst-table="appstore.plugins" reference-fk="plugins_categories_plugin_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_categories_plugins_categories" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="appstore.categories_plugins"
 	 dst-table="appstore.categories" reference-fk="plugins_categories_category_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_plugins_tags_plugins" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="appstore.plugins_tags"
 	 dst-table="appstore.plugins" reference-fk="plugins_tags_plugin_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_preset_plugins_plugins" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="appstore.preset_plugins"
 	 dst-table="appstore.plugins" reference-fk="plugins_presets_plugin_id"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_preset_plugins_presets" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="appstore.preset_plugins"
 	 dst-table="appstore.presets" reference-fk="plugins_presets_preset_id"
 	 src-required="false" dst-required="true">
@@ -3510,337 +3523,403 @@ END;]]> </definition>
 </relationship>
 
 <relationship name="rel_plugin_documentation_links_plugins" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="appstore.plugin_documentation_links"
 	 dst-table="appstore.plugins" reference-fk="plugin_documentation_links_fk_plugin"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_api_keys_organizations" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="authn.api_keys"
 	 dst-table="tenant.organizations" reference-fk="api_keys_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_api_keys_users" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="authn.api_keys"
 	 dst-table="tenant.users" reference-fk="api_keys_fk_user"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_project_members_projects" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.project_members"
 	 dst-table="tenant.projects" reference-fk="project_members_fk_project"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_project_members_users" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.project_members"
 	 dst-table="tenant.users" reference-fk="project_members_fk_user"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_outbox_projects" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="authz.outbox"
 	 dst-table="tenant.projects" reference-fk="outbox_fk_project"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_project_members" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="authz.outbox"
 	 dst-table="tenant.project_members" reference-fk="outbox_fk_project_member"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_clusters" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="authz.outbox"
 	 dst-table="tenant.clusters" reference-fk="outbox_fk_cluster"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_node_pools" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="authz.outbox"
 	 dst-table="tenant.node_pools" reference-fk="outbox_fk_node_pool"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_namespaces" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="authz.outbox"
 	 dst-table="tenant.namespaces" reference-fk="outbox_fk_namespace"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_api_keys" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="authz.outbox"
 	 dst-table="authn.api_keys" reference-fk="outbox_fk_api_key"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_outbox_organizations_users" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="authz.outbox"
 	 dst-table="tenant.organizations_users" reference-fk="outbox_fk_organization_user"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_cluster_outbox_clusters" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="tenant.cluster_outbox"
 	 dst-table="tenant.clusters" reference-fk="cluster_outbox_fk_cluster"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_cluster_outbox_organizations_users" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="tenant.cluster_outbox"
 	 dst-table="tenant.organizations_users" reference-fk="cluster_outbox_fk_organization_user"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_cluster_outbox_project_members" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="tenant.cluster_outbox"
 	 dst-table="tenant.project_members" reference-fk="cluster_outbox_fk_project_member"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_cluster_outbox_node_pools" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="tenant.cluster_outbox"
 	 dst-table="tenant.node_pools" reference-fk="cluster_outbox_fk_node_pool"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_cluster_outbox_namespaces" type="relfk" layers="0"
+	 custom-color="#616670"
 	 src-table="tenant.cluster_outbox"
 	 dst-table="tenant.namespaces" reference-fk="cluster_outbox_fk_namespace"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_organizations_users_organizations" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.organizations_users"
 	 dst-table="tenant.organizations" reference-fk="organizations_users_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_organizations_users_users" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="tenant.organizations_users"
 	 dst-table="tenant.users" reference-fk="organizations_users_fk_user"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_rooms_sites" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.rooms"
 	 dst-table="dcim.sites" reference-fk="dcim_rooms_fk_site"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_rack_rows_rooms" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.rack_rows"
 	 dst-table="dcim.rooms" reference-fk="dcim_rack_rows_fk_room"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_racks_rack_rows" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.racks"
 	 dst-table="dcim.rack_rows" reference-fk="dcim_racks_fk_rack_row"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_port_definitions_device_catalogs" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.port_definitions"
 	 dst-table="dcim.device_catalogs" reference-fk="dcim_port_definitions_fk_device_catalog"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_port_compatibilities_port_definitions" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.port_compatibilities"
 	 dst-table="dcim.port_definitions" reference-fk="dcim_port_compatibilities_fk_port_definition"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_port_compatibilities_device_catalogs" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.port_compatibilities"
 	 dst-table="dcim.device_catalogs" reference-fk="dcim_port_compatibilities_fk_catalog"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_assets_device_catalogs" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.assets"
 	 dst-table="dcim.device_catalogs" reference-fk="dcim_assets_fk_device_catalog"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_asset_events_assets" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.asset_events"
 	 dst-table="dcim.assets" reference-fk="dcim_asset_events_fk_asset"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_logical_devices_logical_designs" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.logical_devices"
 	 dst-table="dcim.logical_designs" reference-fk="dcim_logical_devices_fk_design"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_logical_devices_device_catalogs" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.logical_devices"
 	 dst-table="dcim.device_catalogs" reference-fk="dcim_logical_devices_fk_catalog"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_logical_connections_logical_designs" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.logical_connections"
 	 dst-table="dcim.logical_designs" reference-fk="dcim_logical_connections_fk_design"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_logical_connections_a_logical_devices" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.logical_connections"
 	 dst-table="dcim.logical_devices" reference-fk="dcim_logical_connections_fk_a_device"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_logical_connections_b_logical_devices" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.logical_connections"
 	 dst-table="dcim.logical_devices" reference-fk="dcim_logical_connections_fk_b_device"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_logical_device_layouts_logical_devices" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.logical_device_layouts"
 	 dst-table="dcim.logical_devices" reference-fk="dcim_logical_device_layouts_fk_device"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_placements_assets" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.placements"
 	 dst-table="dcim.assets" reference-fk="dcim_placements_fk_asset"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_placements_racks" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.placements"
 	 dst-table="dcim.racks" reference-fk="dcim_placements_fk_rack"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_placements_placements" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.placements"
 	 dst-table="dcim.placements" reference-fk="dcim_placements_fk_parent"
 	 src-required="false" dst-required="false">
 	<line>
-		<position x="5028.28" y="360.175"/>
-	<position x="5028.28" y="167"/>
-	<position x="4856.85" y="167"/>
+		<position x="7870.92" y="1337.84"/>
+	<position x="7870.92" y="1180"/>
+	<position x="7720.61" y="1180"/>
 	</line>
 </relationship>
 
 <relationship name="rel_dcim_placements_port_definitions" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.placements"
 	 dst-table="dcim.port_definitions" reference-fk="dcim_placements_fk_port_definition"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_placements_logical_devices" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.placements"
 	 dst-table="dcim.logical_devices" reference-fk="dcim_placements_fk_logical_device"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_physical_connections_a_placements" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.physical_connections"
 	 dst-table="dcim.placements" reference-fk="dcim_physical_connections_fk_a_placement"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_physical_connections_a_port_definitions" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.physical_connections"
 	 dst-table="dcim.port_definitions" reference-fk="dcim_physical_connections_fk_a_port"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_physical_connections_b_placements" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.physical_connections"
 	 dst-table="dcim.placements" reference-fk="dcim_physical_connections_fk_b_placement"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_physical_connections_b_port_definitions" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.physical_connections"
 	 dst-table="dcim.port_definitions" reference-fk="dcim_physical_connections_fk_b_port"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_dcim_physical_connections_cable_assets" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.physical_connections"
 	 dst-table="dcim.assets" reference-fk="dcim_physical_connections_fk_cable_asset"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_physical_connections_logical_connections" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.physical_connections"
 	 dst-table="dcim.logical_connections" reference-fk="dcim_physical_connections_fk_logical_connection"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_device_catalogs" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.device_catalogs" reference-fk="dcim_notes_fk_device_catalog"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_port_definitions" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.port_definitions" reference-fk="dcim_notes_fk_port_definition"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_assets" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.assets" reference-fk="dcim_notes_fk_asset"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_sites" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.sites" reference-fk="dcim_notes_fk_site"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_rooms" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.rooms" reference-fk="dcim_notes_fk_room"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_rack_rows" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.rack_rows" reference-fk="dcim_notes_fk_rack_row"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_racks" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.racks" reference-fk="dcim_notes_fk_rack"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_placements" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.placements" reference-fk="dcim_notes_fk_placement"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_physical_connections" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.physical_connections" reference-fk="dcim_notes_fk_physical_connection"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_logical_designs" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.logical_designs" reference-fk="dcim_notes_fk_logical_design"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_logical_devices" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.logical_devices" reference-fk="dcim_notes_fk_logical_device"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_logical_connections" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.logical_connections" reference-fk="dcim_notes_fk_logical_connection"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_notes_tasks" type="relfk" layers="0"
+	 custom-color="#63705e"
 	 src-table="dcim.notes"
 	 dst-table="dcim.tasks" reference-fk="dcim_notes_fk_task"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_dcim_task_steps_tasks" type="relfk" layers="0"
+	 custom-color="#f0f0f0"
 	 src-table="dcim.task_steps"
 	 dst-table="dcim.tasks" reference-fk="dcim_task_steps_fk_task"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_idempotency_keys_projects" type="relfk" layers="0"
+	 custom-color="#915d5d"
 	 src-table="tenant.idempotency_keys"
 	 dst-table="tenant.projects" reference-fk="idempotency_keys_fk_project"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_idempotency_keys_project_members" type="relfk" layers="0"
+	 custom-color="#915d5d"
 	 src-table="tenant.idempotency_keys"
 	 dst-table="tenant.project_members" reference-fk="idempotency_keys_fk_project_member"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_idempotency_keys_clusters" type="relfk" layers="0"
+	 custom-color="#915d5d"
 	 src-table="tenant.idempotency_keys"
 	 dst-table="tenant.clusters" reference-fk="idempotency_keys_fk_cluster"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_idempotency_keys_node_pools" type="relfk" layers="0"
+	 custom-color="#915d5d"
 	 src-table="tenant.idempotency_keys"
 	 dst-table="tenant.node_pools" reference-fk="idempotency_keys_fk_node_pool"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_idempotency_keys_namespaces" type="relfk" layers="0"
+	 custom-color="#915d5d"
 	 src-table="tenant.idempotency_keys"
 	 dst-table="tenant.namespaces" reference-fk="idempotency_keys_fk_namespace"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_idempotency_keys_api_keys" type="relfk" layers="0"
+	 custom-color="#915d5d"
 	 src-table="tenant.idempotency_keys"
 	 dst-table="authn.api_keys" reference-fk="idempotency_keys_fk_api_key"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_idempotency_keys_organizations_users" type="relfk" layers="0"
+	 custom-color="#915d5d"
 	 src-table="tenant.idempotency_keys"
 	 dst-table="tenant.organizations_users" reference-fk="idempotency_keys_fk_organization_user"
 	 src-required="false" dst-required="false"/>
 
 <relationship name="rel_idempotency_keys_users" type="relfk" layers="0"
+	 custom-color="#915d5d"
 	 src-table="tenant.idempotency_keys"
 	 dst-table="tenant.users" reference-fk="idempotency_keys_fk_user"
 	 src-required="false" dst-required="true"/>
@@ -4293,7 +4372,7 @@ END;]]> </definition>
 <permission>
 	<object name="dcim.logical_device_layouts" type="table"/>
 	<roles names="fun_dcim_api"/>
-	<privileges select="true" insert="true" update="true" delete="true"/>
+	<privileges select="true" delete="true" insert="true" update="true"/>
 </permission>
 <permission>
 	<object name="dcim.notes" type="table"/>
