@@ -49,7 +49,7 @@ func TestNoteService_CreateNote_AttributesToCaller(t *testing.T) {
 
 	// A second roster member the note must NOT be attributed to.
 	createUser(t, env, "Someone Else", "else@example.com", "00000000-0000-0000-0000-0000000000ff")
-	createUser(t, env, "Note Author", "author@example.com", env.subject)
+	authorID := createUser(t, env, "Note Author", "author@example.com", env.subject)
 
 	taskID := createTaskForNote(t, env, "Task With Notes")
 
@@ -67,6 +67,9 @@ func TestNoteService_CreateNote_AttributesToCaller(t *testing.T) {
 
 	assert.Equal(t, "disk swapped", notes[0].GetBody())
 	assert.Equal(t, "Note Author", notes[0].GetCreatedBy())
+	// The id is what a client joins onto the roster with; the display name alone
+	// would collide between users who share a name.
+	assert.Equal(t, authorID, notes[0].GetCreatedById())
 }
 
 // The roster is provisioned out of band, so a caller who is authenticated but

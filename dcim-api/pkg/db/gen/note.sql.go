@@ -78,7 +78,7 @@ func (q *Queries) NoteDelete(ctx context.Context, arg NoteDeleteParams) (int64, 
 }
 
 const noteList = `-- name: NoteList :many
-SELECT notes.id, notes.body, users.name, notes.device_catalog_id, notes.port_definition_id, notes.asset_id, notes.site_id, notes.room_id, notes.rack_row_id, notes.rack_id, notes.placement_id, notes.physical_connection_id, notes.logical_design_id, notes.logical_device_id, notes.logical_connection_id, notes.task_id, notes.created
+SELECT notes.id, notes.body, notes.created_by_id, users.name, notes.device_catalog_id, notes.port_definition_id, notes.asset_id, notes.site_id, notes.room_id, notes.rack_row_id, notes.rack_id, notes.placement_id, notes.physical_connection_id, notes.logical_design_id, notes.logical_device_id, notes.logical_connection_id, notes.task_id, notes.created
 FROM dcim.notes
 LEFT JOIN dcim.users ON users.id = notes.created_by_id
 WHERE notes.deleted IS NULL
@@ -119,6 +119,7 @@ type NoteListParams struct {
 type NoteListRow struct {
 	ID                   uuid.UUID
 	Body                 string
+	CreatedByID          pgtype.UUID
 	Name                 pgtype.Text
 	DeviceCatalogID      pgtype.UUID
 	PortDefinitionID     pgtype.UUID
@@ -165,6 +166,7 @@ func (q *Queries) NoteList(ctx context.Context, arg NoteListParams) ([]NoteListR
 		if err := rows.Scan(
 			&i.ID,
 			&i.Body,
+			&i.CreatedByID,
 			&i.Name,
 			&i.DeviceCatalogID,
 			&i.PortDefinitionID,

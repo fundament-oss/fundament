@@ -63,6 +63,6 @@ func (s *Server) GetCurrentUser(
 	}
 
 	return connect.NewResponse(dcimv1.GetCurrentUserResponse_builder{
-		User: userToProto(row.ID, row.Name, row.Email),
+		User: userToProtoWithEmail(row.ID, row.Name, row.Email),
 	}.Build()), nil
 }

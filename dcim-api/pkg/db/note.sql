@@ -2,7 +2,7 @@
 -- users.name is the note author's display name, joined via notes.created_by_id.
 -- It lands on the generated row as the bare field Name (no aliases allowed), so
 -- read that as "author name", not as a name belonging to the note itself.
-SELECT notes.id, notes.body, users.name, notes.device_catalog_id, notes.port_definition_id, notes.asset_id, notes.site_id, notes.room_id, notes.rack_row_id, notes.rack_id, notes.placement_id, notes.physical_connection_id, notes.logical_design_id, notes.logical_device_id, notes.logical_connection_id, notes.task_id, notes.created
+SELECT notes.id, notes.body, notes.created_by_id, users.name, notes.device_catalog_id, notes.port_definition_id, notes.asset_id, notes.site_id, notes.room_id, notes.rack_row_id, notes.rack_id, notes.placement_id, notes.physical_connection_id, notes.logical_design_id, notes.logical_device_id, notes.logical_connection_id, notes.task_id, notes.created
 FROM dcim.notes
 LEFT JOIN dcim.users ON users.id = notes.created_by_id
 WHERE notes.deleted IS NULL

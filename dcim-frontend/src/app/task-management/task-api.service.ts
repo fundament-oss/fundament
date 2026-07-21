@@ -187,14 +187,20 @@ export default class TaskApiService {
     return this.client.getTask({ id });
   }
 
+  /**
+   * The nullable columns are omitted when the form left them blank, so they are
+   * created NULL rather than as an empty string. Sending `''` would give the
+   * table two spellings of "no location": `''` on tasks that never had one, NULL
+   * on tasks where it was cleared later through updateTask.
+   */
   createTask(input: TaskInput) {
     return this.client.createTask({
       title: input.title,
-      description: input.description,
       status: TaskApiService.toProtoStatus(input.status),
       priority: TaskApiService.toProtoPriority(input.priority),
       category: TaskApiService.toProtoCategory(input.category),
-      location: input.location,
+      ...(input.description ? { description: input.description } : {}),
+      ...(input.location ? { location: input.location } : {}),
       ...(input.assignee ? { assigneeId: input.assignee } : {}),
       ...(input.due ? { dueDate: timestampFromDate(dueToDate(input.due)) } : {}),
     });

@@ -11,7 +11,7 @@ import (
 
 func (s *Server) ListUsers(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListUsersRequest],
+	_ *connect.Request[dcimv1.ListUsersRequest],
 ) (*connect.Response[dcimv1.ListUsersResponse], error) {
 	rows, err := s.queries.UserList(ctx)
 	if err != nil {
@@ -20,7 +20,7 @@ func (s *Server) ListUsers(
 
 	users := make([]*dcimv1.User, 0, len(rows))
 	for _, row := range rows {
-		users = append(users, userToProto(row.ID, row.Name, row.Email))
+		users = append(users, userToProto(row.ID, row.Name))
 	}
 
 	return connect.NewResponse(dcimv1.ListUsersResponse_builder{

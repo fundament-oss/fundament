@@ -42,19 +42,21 @@ func (q *Queries) UserGetByExternalRef(ctx context.Context, arg UserGetByExterna
 }
 
 const userList = `-- name: UserList :many
-SELECT id, name, email, created
+SELECT id, name
 FROM dcim.users
 WHERE deleted IS NULL
 ORDER BY name
 `
 
 type UserListRow struct {
-	ID      uuid.UUID
-	Name    string
-	Email   pgtype.Text
-	Created pgtype.Timestamptz
+	ID   uuid.UUID
+	Name string
 }
 
+// Deliberately no email. The roster is readable by every authenticated caller
+// and the assignee picker only ever renders a name, so listing it would hand
+// out the whole staff directory's addresses for no consumer. A caller reads
+// their own address through UserGetByExternalRef (GetCurrentUser) instead.
 func (q *Queries) UserList(ctx context.Context) ([]UserListRow, error) {
 	rows, err := q.db.Query(ctx, userList)
 	if err != nil {
@@ -64,12 +66,7 @@ func (q *Queries) UserList(ctx context.Context) ([]UserListRow, error) {
 	var items []UserListRow
 	for rows.Next() {
 		var i UserListRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Email,
-			&i.Created,
-		); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

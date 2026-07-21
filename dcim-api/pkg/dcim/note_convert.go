@@ -40,6 +40,10 @@ func noteFromListRow(row *db.NoteListRow) *dcimv1.Note {
 		note.SetCreatedBy(row.Name.String)
 	}
 
+	if row.CreatedByID.Valid {
+		note.SetCreatedById(uuid.UUID(row.CreatedByID.Bytes).String())
+	}
+
 	return note
 }
 

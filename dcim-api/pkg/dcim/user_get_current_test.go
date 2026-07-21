@@ -38,6 +38,32 @@ func TestUserService_GetCurrentUser_Found(t *testing.T) {
 	assert.Equal(t, "current@example.com", user.GetEmail())
 }
 
+// email is nullable, and userToProtoWithEmail only sets it when the column is
+// non-null. GetCurrentUser is the only place the address is returned at all.
+func TestUserService_GetCurrentUser_NullEmail(t *testing.T) {
+	t.Parallel()
+
+	env := newTestAPI(t)
+	client := dcimv1connect.NewUserServiceClient(env.client(), env.server.URL)
+
+	userID := createUser(t, env, "No Email User", "", env.subject)
+
+	_, err := env.adminPool.Exec(context.Background(),
+		`UPDATE dcim.users SET email = NULL WHERE id = $1`, userID)
+	require.NoError(t, err)
+
+	resp, err := client.GetCurrentUser(context.Background(), connect.NewRequest(
+		&dcimv1.GetCurrentUserRequest{},
+	))
+	require.NoError(t, err)
+
+	user := resp.Msg.GetUser()
+	require.NotNil(t, user)
+
+	assert.Equal(t, userID, user.GetId())
+	assert.False(t, user.HasEmail())
+}
+
 // A valid token for someone with no directory entry is a 404, not a 500 — the
 // caller is authenticated, they just are not in the DCIM roster.
 func TestUserService_GetCurrentUser_NotFound(t *testing.T) {

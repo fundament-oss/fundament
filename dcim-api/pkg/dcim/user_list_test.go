@@ -35,18 +35,16 @@ func TestUserService_ListUsers_Populated(t *testing.T) {
 	assert.Subset(t, got, want)
 }
 
-// email is nullable, and userToProto only sets it when the column is non-null.
-func TestUserService_ListUsers_NullEmail(t *testing.T) {
+// The roster is readable by every authenticated caller, so it must not hand out
+// the staff directory's email addresses — not even for users that have one. The
+// caller reads their own address through GetCurrentUser instead.
+func TestUserService_ListUsers_OmitsEmail(t *testing.T) {
 	t.Parallel()
 
 	env := newTestAPI(t)
 	client := dcimv1connect.NewUserServiceClient(env.client(), env.server.URL)
 
-	userID := createUser(t, env, "No Email User", "", "")
-
-	_, err := env.adminPool.Exec(context.Background(),
-		`UPDATE dcim.users SET email = NULL WHERE id = $1`, userID)
-	require.NoError(t, err)
+	userID := createUser(t, env, "Emailed User", "listed@example.com", "")
 
 	resp, err := client.ListUsers(context.Background(), connect.NewRequest(&dcimv1.ListUsersRequest{}))
 	require.NoError(t, err)
@@ -60,7 +58,12 @@ func TestUserService_ListUsers_NullEmail(t *testing.T) {
 	}
 	require.NotNil(t, found)
 
-	assert.False(t, found.HasEmail())
+	assert.Equal(t, "Emailed User", found.GetName())
+	assert.False(t, found.HasEmail(), "the roster listing must not expose email addresses")
+
+	for _, u := range resp.Msg.GetUsers() {
+		assert.False(t, u.HasEmail(), "no roster entry may carry an email")
+	}
 }
 
 // Soft-deleted users must drop out of the roster entirely.

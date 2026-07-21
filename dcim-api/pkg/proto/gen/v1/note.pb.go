@@ -27,16 +27,19 @@ const (
 // Note is a polymorphic comment attached to any DCIM entity (core.notes).
 // There is no FK on entity_id — integrity is enforced at the application layer.
 type Note struct {
-	state                 protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id         string                 `protobuf:"bytes,10,opt,name=id"`
-	xxx_hidden_EntityType NoteEntityType         `protobuf:"varint,20,opt,name=entity_type,json=entityType,enum=dcim.v1.NoteEntityType"`
-	xxx_hidden_EntityId   string                 `protobuf:"bytes,30,opt,name=entity_id,json=entityId"`
-	xxx_hidden_Body       string                 `protobuf:"bytes,40,opt,name=body"`
-	xxx_hidden_CreatedBy  string                 `protobuf:"bytes,50,opt,name=created_by,json=createdBy"`
-	xxx_hidden_Created    *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created"`
-	xxx_hidden_Deleted    *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=deleted"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id          string                 `protobuf:"bytes,10,opt,name=id"`
+	xxx_hidden_EntityType  NoteEntityType         `protobuf:"varint,20,opt,name=entity_type,json=entityType,enum=dcim.v1.NoteEntityType"`
+	xxx_hidden_EntityId    string                 `protobuf:"bytes,30,opt,name=entity_id,json=entityId"`
+	xxx_hidden_Body        string                 `protobuf:"bytes,40,opt,name=body"`
+	xxx_hidden_CreatedBy   string                 `protobuf:"bytes,50,opt,name=created_by,json=createdBy"`
+	xxx_hidden_Created     *timestamppb.Timestamp `protobuf:"bytes,60,opt,name=created"`
+	xxx_hidden_Deleted     *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=deleted"`
+	xxx_hidden_CreatedById *string                `protobuf:"bytes,80,opt,name=created_by_id,json=createdById"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *Note) Reset() {
@@ -113,6 +116,16 @@ func (x *Note) GetDeleted() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Note) GetCreatedById() string {
+	if x != nil {
+		if x.xxx_hidden_CreatedById != nil {
+			return *x.xxx_hidden_CreatedById
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *Note) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -141,6 +154,11 @@ func (x *Note) SetDeleted(v *timestamppb.Timestamp) {
 	x.xxx_hidden_Deleted = v
 }
 
+func (x *Note) SetCreatedById(v string) {
+	x.xxx_hidden_CreatedById = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 8)
+}
+
 func (x *Note) HasCreated() bool {
 	if x == nil {
 		return false
@@ -155,12 +173,24 @@ func (x *Note) HasDeleted() bool {
 	return x.xxx_hidden_Deleted != nil
 }
 
+func (x *Note) HasCreatedById() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
 func (x *Note) ClearCreated() {
 	x.xxx_hidden_Created = nil
 }
 
 func (x *Note) ClearDeleted() {
 	x.xxx_hidden_Deleted = nil
+}
+
+func (x *Note) ClearCreatedById() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_CreatedById = nil
 }
 
 type Note_builder struct {
@@ -170,10 +200,14 @@ type Note_builder struct {
 	EntityType NoteEntityType
 	EntityId   string
 	Body       string
-	// Display name of the author, resolved from the note's created_by user.
+	// Display name of the author, resolved from the note's created_by_id user.
 	CreatedBy string
 	Created   *timestamppb.Timestamp
 	Deleted   *timestamppb.Timestamp
+	// The author's user id. Carried alongside created_by so a client can join a
+	// note onto the roster by id; matching on the display name instead collides
+	// for users who share a name. Absent for notes with no author.
+	CreatedById *string
 }
 
 func (b0 Note_builder) Build() *Note {
@@ -187,6 +221,10 @@ func (b0 Note_builder) Build() *Note {
 	x.xxx_hidden_CreatedBy = b.CreatedBy
 	x.xxx_hidden_Created = b.Created
 	x.xxx_hidden_Deleted = b.Deleted
+	if b.CreatedById != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 8)
+		x.xxx_hidden_CreatedById = b.CreatedById
+	}
 	return m0
 }
 
@@ -524,7 +562,7 @@ var File_v1_note_proto protoreflect.FileDescriptor
 
 const file_v1_note_proto_rawDesc = "" +
 	"\n" +
-	"\rv1/note.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\x93\x02\n" +
+	"\rv1/note.proto\x12\adcim.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a!google/protobuf/go_features.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0fv1/common.proto\"\xbe\x02\n" +
 	"\x04Note\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x128\n" +
@@ -535,7 +573,8 @@ const file_v1_note_proto_rawDesc = "" +
 	"\n" +
 	"created_by\x182 \x01(\tR\tcreatedBy\x124\n" +
 	"\acreated\x18< \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12;\n" +
-	"\adeleted\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\"\x7f\n" +
+	"\adeleted\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\adeleted\x12)\n" +
+	"\rcreated_by_id\x18P \x01(\tB\x05\xaa\x01\x02\b\x01R\vcreatedById\"\x7f\n" +
 	"\x10ListNotesRequest\x12D\n" +
 	"\ventity_type\x18\n" +
 	" \x01(\x0e2\x17.dcim.v1.NoteEntityTypeB\n" +

@@ -2,15 +2,12 @@ package dcim
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/fundament-oss/fundament/common/dbconst"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 )
 
@@ -38,15 +35,12 @@ func (s *Server) CreateNote(
 		params.CreatedByID = pgtype.UUID{Bytes: author.ID, Valid: true}
 	}
 
+	// No dcim_notes_fk_created_by branch here on purpose: the author id was just
+	// read out of dcim.users in this request and users are only ever soft-deleted,
+	// so the FK cannot realistically fire — and if it did, telling the client
+	// "author not found" about a note whose body was fine only misdirects them.
 	id, err := s.queries.NoteCreate(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			switch pgErr.ConstraintName {
-			case dbconst.ConstraintDcimNotesFkCreatedBy:
-				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("note author not found"))
-			}
-		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create note: %w", err))
 	}
 

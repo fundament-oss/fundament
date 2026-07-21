@@ -38,6 +38,10 @@ type Technician = RosterUser;
 
 interface Note {
   author: string;
+  // The author's roster id, or null for an unattributed note (written by someone
+  // outside the directory). Kept alongside the display name so the avatar can be
+  // resolved by id rather than by matching names.
+  authorId: string | null;
   text: string;
   time: string;
 }
@@ -163,6 +167,12 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     this.loadTasks();
   }
 
+  // Called after every mutation (each save, each kanban drop, each bulk action),
+  // and it rebuilds the whole board — which drops the cached notes for every
+  // task. If the detail sheet happens to be open while one of those lands, its
+  // note list empties until the sheet is reopened. Acceptable while the board is
+  // small; the fix is a targeted refresh of the changed rows rather than a full
+  // reload, at which point the notes cache survives.
   private loadTasks(): void {
     firstValueFrom(this.taskApi.listTasks())
       .then((res) => {
@@ -411,8 +421,18 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     return this.categoryIcons[category] ?? 'ellipsis';
   }
 
-  tasksForColumn(col: string): Task[] {
-    return this.filteredTasks().filter((t) => t.status === col);
+  // One pass over the filtered tasks per change, rather than one filter per call
+  // site. The template reads each column three times (count, [cdkDropListData],
+  // @for), so a plain method handed CDK a freshly allocated array — a new
+  // identity for the same contents — on every change-detection cycle.
+  private readonly tasksByColumn = computed(() => {
+    const byColumn = new Map<TaskStatusLabel, Task[]>(this.kanbanColumns.map((c) => [c, []]));
+    this.filteredTasks().forEach((task) => byColumn.get(task.status)?.push(task));
+    return byColumn;
+  });
+
+  tasksForColumn(col: TaskStatusLabel): Task[] {
+    return this.tasksByColumn().get(col) ?? [];
   }
 
   onKanbanDrop(event: CdkDragDrop<Task[]>, targetStatus: TaskStatusLabel): void {
@@ -489,6 +509,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   private static mapNote(n: ProtoNote): Note {
     return {
       author: n.createdBy,
+      authorId: n.createdById ? n.createdById : null,
       text: n.body,
       time: TaskManagementAdminComponent.relativeTime(
         n.created ? timestampDate(n.created) : new Date(),
@@ -699,11 +720,11 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       });
   }
 
+  // Resolves a note's author onto the roster entry that supplies the avatar.
+  // Joined by id, not by display name: two people called "Jan de Vries" would
+  // otherwise share one avatar colour, and the first match would win.
   noteAuthor(note: Note): { name: string; tech: Technician | null } {
-    // The API exposes the author only as a display name (created_by), not a
-    // user id, so we can't join to the roster by id — match by name to recover
-    // the avatar colour, accepting that same-named users would collide.
-    const tech = this.technicians().find((t) => t.name === note.author) ?? null;
+    const tech = note.authorId ? this.getTech(note.authorId) : null;
     return { name: note.author || 'Admin', tech };
   }
 
