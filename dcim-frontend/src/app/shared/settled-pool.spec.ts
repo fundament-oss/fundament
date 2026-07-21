@@ -71,4 +71,21 @@ describe('settledPool', () => {
     await expect(settledPool([], 6, task)).resolves.toEqual([]);
     expect(task).not.toHaveBeenCalled();
   });
+
+  it('still runs every id when the limit is zero, rather than resolving to holes', async () => {
+    // A limit of zero would start no workers at all, leaving every slot in the
+    // results array an unwritten hole that reads as an undefined settlement.
+    const results = await settledPool(['a', 'b'], 0, async (id) => id.toUpperCase());
+
+    expect(results).toEqual([
+      { status: 'fulfilled', value: 'A' },
+      { status: 'fulfilled', value: 'B' },
+    ]);
+  });
+
+  it('accepts non-string items, so callers can pool over objects', async () => {
+    const results = await settledPool([{ id: 'a' }, { id: 'b' }], 2, async (t) => t.id);
+
+    expect(results.map((r) => (r.status === 'fulfilled' ? r.value : null))).toEqual(['a', 'b']);
+  });
 });

@@ -426,6 +426,13 @@
                   <span [class]="techInitialsClass(tech)" [title]="tech.name" aria-hidden="true">{{
                     tech.initials
                   }}</span>
+                } @else if (assigneeUnresolved(task)) {
+                  <span
+                    [class]="unassignedAvatarClass()"
+                    title="Assigned, but the directory could not be loaded"
+                    aria-hidden="true"
+                    >?</span
+                  >
                 } @else if (assigneeMissing(task)) {
                   <span
                     [class]="unknownAvatarClass()"
@@ -546,6 +553,13 @@
                           aria-hidden="true"
                           >{{ tech.initials }}</span
                         >
+                      } @else if (assigneeUnresolved(task)) {
+                        <span
+                          [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')"
+                          title="Assigned, but the directory could not be loaded"
+                          aria-hidden="true"
+                          >?</span
+                        >
                       } @else if (assigneeMissing(task)) {
                         <span
                           [class]="unknownAvatarClass('h-6 w-6 text-[10px]')"
@@ -609,6 +623,11 @@
                     tech.initials
                   }}</span>
                   <span>{{ tech.name }}</span>
+                } @else if (assigneeUnresolved(task)) {
+                  <span [class]="unassignedAvatarClass()" aria-hidden="true">?</span>
+                  <span class="text-slate-400 dark:text-gray-500 font-normal"
+                    >Assigned — directory unavailable</span
+                  >
                 } @else if (assigneeMissing(task)) {
                   <span [class]="unknownAvatarClass()" aria-hidden="true">?</span>
                   <span class="text-amber-700 dark:text-amber-300 font-normal"

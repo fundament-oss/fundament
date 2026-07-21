@@ -101,6 +101,12 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   readonly technicians = signal<Technician[]>([]);
 
+  // False until ListUsers has actually answered. An empty roster because the
+  // response has not landed (or failed) is not the same fact as an assignee
+  // having left the directory, and assigneeMissing() must not report the first
+  // as the second — see assigneeUnresolved().
+  readonly rosterLoaded = signal(false);
+
   tasks = signal<Task[]>([]);
 
   // Set when the board could not be loaded, so an API failure reads as an error
@@ -139,15 +145,26 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   private loadUsers(): void {
     firstValueFrom(this.userApi.listUsers())
-      .then((res) => this.technicians.set(res.users.map((u) => UserApiService.mapUser(u))))
+      .then((res) => {
+        this.technicians.set(res.users.map((u) => UserApiService.mapUser(u)));
+        this.rosterLoaded.set(true);
+      })
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
+        // Left false deliberately: without a roster the board cannot tell a
+        // departed assignee from one it merely failed to look up, so it says
+        // neither rather than picking the alarming reading.
+        this.rosterLoaded.set(false);
         this.toast.show('Could not load the technician roster');
       });
   }
 
+  // Retries everything the board loads on entry, the current user included —
+  // otherwise a transient GetCurrentUser failure would leave the note
+  // composer's avatar unresolved until a full page reload.
   retryLoad(): void {
+    this.loadCurrentUser();
     this.loadUsers();
     this.loadTasks();
   }
@@ -594,9 +611,12 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       });
   }
 
-  // The selected ids that still correspond to a loaded task.
+  // The selected ids that still correspond to a loaded task. Membership goes
+  // through a Set rather than a nested scan: select-all on a large board makes
+  // both collections the size of the board, so a .some() per id is quadratic.
   private selectedExistingTaskIds(): string[] {
-    return [...this.selectedTasks()].filter((id) => this.tasks().some((t) => t.id === id));
+    const loaded = new Set(this.tasks().map((t) => t.id));
+    return [...this.selectedTasks()].filter((id) => loaded.has(id));
   }
 
   bulkSetStatus(status: TaskStatusLabel): void {
@@ -747,8 +767,21 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   // True when a task carries an assignee that the roster has no entry for —
   // typically someone soft-deleted since the board loaded. Rendering that as
   // "Unassigned" would quietly drop the fact that the task is still spoken for.
+  //
+  // Gated on the roster having actually loaded. ListUsers runs concurrently
+  // with ListTasks, so without the guard every assigned task claims its
+  // assignee has left for as long as the roster is in flight — and permanently
+  // if ListUsers fails, which is a statement about live data the board is in no
+  // position to make.
   assigneeMissing(task: Task): boolean {
-    return task.assignee !== null && this.getTech(task.assignee) === null;
+    return this.rosterLoaded() && task.assignee !== null && this.getTech(task.assignee) === null;
+  }
+
+  // True when a task has an assignee the board cannot name yet, because the
+  // roster is still loading or failed to load. Distinct from unassigned: the
+  // task is spoken for, we just cannot say by whom.
+  assigneeUnresolved(task: Task): boolean {
+    return !this.rosterLoaded() && task.assignee !== null;
   }
 
   // Goes through the same closers as the buttons: hiding the sheets without

@@ -14,6 +14,27 @@ import (
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 )
 
+// KNOWN GAP — dcim.users has no provisioning path outside local development.
+//
+// The table is populated only by db/testdata/030_0101-content.sql, and
+// fun_dcim_api holds SELECT on it and nothing more (migration 030), so no
+// service can write it. There is no sync from dex or dcim-authn-api either.
+// In any environment that is not seeded, therefore:
+//
+//   - GetCurrentUser answers NotFound for every caller, so the technician page
+//     reports "your account is not in the technician directory" to everyone;
+//   - the admin board's assignee picker and bulk-assign menu are empty, and no
+//     task can be assigned to anybody;
+//   - every note is written unattributed, since CreateNote resolves the author
+//     through this same lookup.
+//
+// None of that is a bug in the code below — it behaves correctly for an empty
+// roster. It is a deployment prerequisite that does not exist yet. Closing it
+// needs a decision on where the roster comes from (just-in-time on first
+// authenticated call, explicit write RPCs, or a sync job), plus a migration
+// granting fun_dcim_api the writes that choice implies. Deliberately deferred;
+// do not read the empty-roster handling here as evidence it is solved.
+//
 // lookupCurrentUser resolves the authenticated caller onto their directory
 // entry. The JWT subject is an identity-provider reference, not a DCIM user id,
 // so it is matched against dcim.users.external_ref; everything else (task

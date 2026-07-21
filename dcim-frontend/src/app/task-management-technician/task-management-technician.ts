@@ -25,6 +25,7 @@ import TaskApiService, {
 import TaskStepApiService from '../task-management/task-step-api.service';
 import UserApiService from '../task-management/user-api.service';
 import NoteApiService from '../inventory/note-api.service';
+import settledPool from '../shared/settled-pool';
 import ToastService from '../shared/toast.service';
 import connectErrorMessage from '../../connect/error';
 
@@ -58,6 +59,10 @@ type Phase = 'gather' | 'task';
 
 /** What the technician walks through: the statuses that still need work done. */
 const WALKTHROUGH_STATUSES: TaskStatusLabel[] = ['Ready', 'In Progress'];
+
+// Ceiling on in-flight ListTaskSteps calls while the walkthrough loads, matching
+// the admin board's BULK_CONCURRENCY.
+const STEP_FETCH_CONCURRENCY = 6;
 
 /**
  * Shown when the caller holds a valid token but has no dcim.users row. The
@@ -355,35 +360,44 @@ export default class TaskManagementTechnicianComponent implements OnInit {
             TaskManagementTechnicianComponent.createdMs(b),
         );
 
-      // One ListTaskSteps call per task, run in parallel. Bounded in practice by
-      // WALKTHROUGH_STATUSES — a technician's open tasks, not the whole board.
+      // One ListTaskSteps call per task, through the same bounded pool the admin
+      // board's bulk actions use. WALKTHROUGH_STATUSES keeps this to a
+      // technician's open tasks rather than the whole board, but that is a
+      // property of today's data, not a ceiling — so put a real one on it.
       const completed = new Set<string>();
-      const tasks = await Promise.all(
-        open.map(async (t) => {
-          const stepsRes = await firstValueFrom(this.taskStepApi.listTaskSteps(t.id));
-          const steps: Step[] = stepsRes.steps.map((s, si) => {
-            const art = TaskManagementTechnicianComponent.illustrationFor(si);
-            if (s.completed) completed.add(s.id);
-            return {
-              id: s.id,
-              title: s.title,
-              description: s.description,
-              icon: art.icon,
-              svg: art.svg,
-            };
-          });
+      const settled = await settledPool(open, STEP_FETCH_CONCURRENCY, async (t) => {
+        const stepsRes = await firstValueFrom(this.taskStepApi.listTaskSteps(t.id));
+        const steps: Step[] = stepsRes.steps.map((s, si) => {
+          const art = TaskManagementTechnicianComponent.illustrationFor(si);
+          if (s.completed) completed.add(s.id);
           return {
-            id: t.id,
-            title: t.title,
-            priority: TaskManagementTechnicianComponent.mapPriority(
-              TaskApiService.fromProtoPriority(t.priority),
-            ),
-            category: TaskApiService.fromProtoCategory(t.category),
-            location: t.location,
-            steps,
+            id: s.id,
+            title: s.title,
+            description: s.description,
+            icon: art.icon,
+            svg: art.svg,
           };
-        }),
-      );
+        });
+        return {
+          id: t.id,
+          title: t.title,
+          priority: TaskManagementTechnicianComponent.mapPriority(
+            TaskApiService.fromProtoPriority(t.priority),
+          ),
+          category: TaskApiService.fromProtoCategory(t.category),
+          location: t.location,
+          steps,
+        };
+      });
+
+      // The pool settles rather than rejects, but a partially loaded
+      // walkthrough is worse than a failed one: the technician would be walked
+      // through a queue with silent gaps in it, and the missing tasks would
+      // never be flagged. Fail the whole load instead, as Promise.all did.
+      const failure = settled.find((r) => r.status === 'rejected');
+      if (failure) throw failure.reason;
+
+      const tasks = settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
 
       // A task with no steps is dropped rather than walked into: the flow
       // advances one step at a time, so there is nothing for "Done" to complete
