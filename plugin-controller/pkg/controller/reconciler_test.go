@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
@@ -41,6 +43,18 @@ func (f fakeDefClient) GetDefinition(_ context.Context, _, _ string) (defclient.
 		return defclient.Definition{}, f.err
 	}
 	return defclient.Definition{Manifest: f.manifest, Hash: f.hash}, nil
+}
+
+// countingDefClient counts GetDefinition calls to assert the reconciler does not
+// re-fetch an immutable definition on every poll.
+type countingDefClient struct {
+	inner defclient.Client
+	calls int
+}
+
+func (c *countingDefClient) GetDefinition(ctx context.Context, name, version string) (defclient.Definition, error) {
+	c.calls++
+	return c.inner.GetDefinition(ctx, name, version)
 }
 
 // sampleManifest returns a valid PluginDefinition YAML and its sha256 pin.
@@ -493,6 +507,53 @@ func TestReconcilePluginScope_FetchError(t *testing.T) {
 	}
 	require.NotNil(t, cond)
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+}
+
+// TestReconcile_GatesChildMaterialisationOnGeneration verifies that the
+// definition is fetched (and children materialised) on a spec change, but NOT
+// re-fetched on a subsequent reconcile when the generation is unchanged.
+func TestReconcile_GatesChildMaterialisationOnGeneration(t *testing.T) {
+	scheme := newTestScheme()
+	manifest, pin := sampleManifest(t)
+
+	cr := testCR()
+	cr.SetUID("test-uid")
+	cr.Finalizers = []string{finalizerName}
+	cr.Spec.DefinitionRef.DefinitionHash = pin
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(cr).
+		Build()
+
+	counting := &countingDefClient{inner: fakeDefClient{manifest: manifest, hash: pin}}
+	r := &Reconciler{
+		client:              fakeClient,
+		logger:              slog.Default(),
+		cfg:                 config.Config{StatusPollInterval: 30 * time.Second},
+		statusPoller:        newStatusPoller(),
+		uninstallHTTPClient: http.DefaultClient,
+		defClient:           counting,
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+
+	// First reconcile: generation (1) != observed (0) → materialise; one fetch.
+	_, err := r.Reconcile(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, 1, counting.calls)
+
+	// Deployment was created from the fetched manifest.
+	var deploy appsv1.Deployment
+	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{
+		Name: "plugin-cert-manager", Namespace: pluginNamespace(cr.Name),
+	}, &deploy))
+
+	// Second reconcile: generation unchanged → skip materialisation, no re-fetch.
+	_, err = r.Reconcile(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, 1, counting.calls, "definition must not be re-fetched when generation is unchanged")
 }
 
 func TestMapPhase(t *testing.T) {

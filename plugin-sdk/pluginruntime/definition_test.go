@@ -35,6 +35,45 @@ func TestParseDefinition_RejectsWrongKind(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestParseDefinition_RejectsMutableTagImage(t *testing.T) {
+	// A published definition must pin an immutable digest, not a mutable tag.
+	_, err := ParseDefinition([]byte(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+  version: v1.17.2
+spec:
+  image: quay.io/jetstack/cert-manager-controller:v1.17.2
+  permissions:
+    rbac: []
+`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "digest reference")
+}
+
+func TestParseDefinition_RejectsInvalidImagePullPolicy(t *testing.T) {
+	_, err := ParseDefinition([]byte(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+  version: v1.17.2
+spec:
+  image: quay.io/jetstack/cert-manager-controller@sha256:deadbeef
+  imagePullPolicy: always
+  permissions:
+    rbac: []
+`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "imagePullPolicy")
+}
+
+func TestHashManifest_Stable(t *testing.T) {
+	manifest := []byte("hello")
+	assert.Equal(t, HashManifest(manifest), HashManifest(manifest))
+	assert.True(t, len(HashManifest(manifest)) == len("sha256:")+64)
+	assert.NotEqual(t, HashManifest([]byte("a")), HashManifest([]byte("b")))
+}
+
 func TestParseDefinition_RejectsMissingImage(t *testing.T) {
 	// The image-free source template is NOT a valid PluginDefinition.
 	_, err := ParseDefinition([]byte(`apiVersion: fundament.io/v1

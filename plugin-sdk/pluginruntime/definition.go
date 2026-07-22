@@ -2,10 +2,34 @@ package pluginruntime
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"regexp"
 
 	"gopkg.in/yaml.v3"
 )
+
+// HashManifest returns the content hash that pins a PluginDefinition: the sha256
+// of the raw manifest bytes, prefixed with "sha256:". organization-api derives
+// this when storing a definition and the plugin-controller derives it when
+// verifying an install's consent pin — they MUST agree byte-for-byte, so this is
+// the single shared implementation both call.
+func HashManifest(manifest []byte) string {
+	sum := sha256.Sum256(manifest)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// imageDigestRefRegex requires a digest-pinned image reference (repo@sha256:<hex>).
+// A published PluginDefinition must pin an immutable digest, never a mutable tag,
+// so the manifest hash binds the exact code that runs.
+var imageDigestRefRegex = regexp.MustCompile(`@sha256:[0-9a-f]+$`)
+
+// validImagePullPolicies is the set ParseDefinition accepts for
+// spec.imagePullPolicy. Empty is allowed (Kubernetes applies its default); any
+// other value would be rejected by the plugin cluster's apiserver when the
+// Deployment is created, so reject it at parse/publish time instead.
+var validImagePullPolicies = map[string]bool{"": true, "Always": true, "IfNotPresent": true, "Never": true}
 
 // PluginDefinition is the top-level plugin manifest, modeled after a
 // Kubernetes resource with apiVersion, kind, metadata, and spec.
@@ -151,6 +175,12 @@ func ParseDefinition(data []byte) (PluginDefinition, error) {
 	}
 	if def.Spec.Image == "" {
 		return PluginDefinition{}, fmt.Errorf("plugin definition is missing required field spec.image")
+	}
+	if !imageDigestRefRegex.MatchString(def.Spec.Image) {
+		return PluginDefinition{}, fmt.Errorf("spec.image %q must be a digest reference (repo@sha256:...), not a mutable tag", def.Spec.Image)
+	}
+	if !validImagePullPolicies[def.Spec.ImagePullPolicy] {
+		return PluginDefinition{}, fmt.Errorf("spec.imagePullPolicy %q is invalid, expected one of \"Always\", \"IfNotPresent\", \"Never\" (or empty)", def.Spec.ImagePullPolicy)
 	}
 	return def, nil
 }

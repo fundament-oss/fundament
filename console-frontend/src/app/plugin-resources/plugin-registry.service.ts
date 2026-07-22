@@ -62,7 +62,6 @@ function mapDefinition(
     menu: {
       project: def.menu?.project?.map((e) => ({
         crd: e.crd,
-        label: undefined,
         icon: e.icon || undefined,
       })),
     },
@@ -152,6 +151,7 @@ export default class PluginRegistryService {
         ): r is PromiseFulfilledResult<{
           def: ProtoPluginDefinition | undefined;
           installationId: string;
+          installationName: string;
           installationVersion: string;
         }> => r.status === 'fulfilled',
       )
@@ -159,6 +159,7 @@ export default class PluginRegistryService {
       .map((r) =>
         mapDefinition(r.value.def as ProtoPluginDefinition, {
           installationId: r.value.installationId,
+          installationName: r.value.installationName,
           installationVersion: r.value.installationVersion,
         }),
       );

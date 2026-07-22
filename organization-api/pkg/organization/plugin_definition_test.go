@@ -38,12 +38,17 @@ func TestPutPluginDefinition_IdempotentAndConflict(t *testing.T) {
 	t.Parallel()
 
 	userID := uuid.New()
+	orgID := uuid.New()
 
-	env := newTestAPI(t, WithUser(&UserArgs{
-		ID:    userID,
-		Name:  "test-user",
-		Email: "test@example.com",
-	}))
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
 
 	pluginID := seedCatalogPlugin(t, env, testPluginName)
 
@@ -57,6 +62,7 @@ func TestPutPluginDefinition_IdempotentAndConflict(t *testing.T) {
 		Manifest:      testManifest,
 	}.Build())
 	putReq1.Header().Set("Authorization", "Bearer "+token)
+	putReq1.Header().Set("Fun-Organization", orgID.String())
 
 	resp1, err := client.PutPluginDefinition(ctx, putReq1)
 	require.NoError(t, err)
@@ -70,6 +76,7 @@ func TestPutPluginDefinition_IdempotentAndConflict(t *testing.T) {
 		Manifest:      testManifest,
 	}.Build())
 	putReq2.Header().Set("Authorization", "Bearer "+token)
+	putReq2.Header().Set("Fun-Organization", orgID.String())
 
 	resp2, err := client.PutPluginDefinition(ctx, putReq2)
 	require.NoError(t, err)
@@ -82,22 +89,100 @@ func TestPutPluginDefinition_IdempotentAndConflict(t *testing.T) {
 		Manifest:      append(testManifest, byte('\n')),
 	}.Build())
 	putReq3.Header().Set("Authorization", "Bearer "+token)
+	putReq3.Header().Set("Fun-Organization", orgID.String())
 
 	_, err = client.PutPluginDefinition(ctx, putReq3)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
 }
 
+// TestPutPluginDefinition_RequiresOrganization verifies the endpoint is
+// org-scoped: an authenticated user without a Fun-Organization header cannot
+// publish a definition.
+func TestPutPluginDefinition_RequiresOrganization(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	orgID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+
+	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+		PluginId:      pluginID.String(),
+		PluginVersion: "v1",
+		Manifest:      testManifest,
+	}.Build())
+	putReq.Header().Set("Authorization", "Bearer "+token)
+	// No Fun-Organization header.
+
+	_, err := client.PutPluginDefinition(context.Background(), putReq)
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+}
+
+// TestPutPluginDefinition_RejectsVersionMismatch verifies the request's
+// plugin_version must equal the manifest's metadata.version.
+func TestPutPluginDefinition_RejectsVersionMismatch(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	orgID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+
+	// testManifest declares metadata.version v1; send a different plugin_version.
+	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+		PluginId:      pluginID.String(),
+		PluginVersion: "v2",
+		Manifest:      testManifest,
+	}.Build())
+	putReq.Header().Set("Authorization", "Bearer "+token)
+	putReq.Header().Set("Fun-Organization", orgID.String())
+
+	_, err := client.PutPluginDefinition(context.Background(), putReq)
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+}
+
 func TestPutPluginDefinition_RejectsImagelessTemplate(t *testing.T) {
 	t.Parallel()
 
 	userID := uuid.New()
+	orgID := uuid.New()
 
-	env := newTestAPI(t, WithUser(&UserArgs{
-		ID:    userID,
-		Name:  "test-user",
-		Email: "test@example.com",
-	}))
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
 
 	pluginID := seedCatalogPlugin(t, env, testPluginName)
 
@@ -113,6 +198,7 @@ func TestPutPluginDefinition_RejectsImagelessTemplate(t *testing.T) {
 		Manifest:      template,
 	}.Build())
 	putReq.Header().Set("Authorization", "Bearer "+token)
+	putReq.Header().Set("Fun-Organization", orgID.String())
 
 	_, err := client.PutPluginDefinition(ctx, putReq)
 	require.Error(t, err)
@@ -123,12 +209,17 @@ func TestPutPluginDefinition_UnknownPluginID(t *testing.T) {
 	t.Parallel()
 
 	userID := uuid.New()
+	orgID := uuid.New()
 
-	env := newTestAPI(t, WithUser(&UserArgs{
-		ID:    userID,
-		Name:  "test-user",
-		Email: "test@example.com",
-	}))
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
 
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
@@ -141,6 +232,7 @@ func TestPutPluginDefinition_UnknownPluginID(t *testing.T) {
 		Manifest:      testManifest,
 	}.Build())
 	putReq.Header().Set("Authorization", "Bearer "+token)
+	putReq.Header().Set("Fun-Organization", orgID.String())
 
 	_, err := client.PutPluginDefinition(ctx, putReq)
 	require.Error(t, err)
@@ -151,12 +243,17 @@ func TestPutPluginDefinition_InvalidPluginID(t *testing.T) {
 	t.Parallel()
 
 	userID := uuid.New()
+	orgID := uuid.New()
 
-	env := newTestAPI(t, WithUser(&UserArgs{
-		ID:    userID,
-		Name:  "test-user",
-		Email: "test@example.com",
-	}))
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
 
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
@@ -168,6 +265,7 @@ func TestPutPluginDefinition_InvalidPluginID(t *testing.T) {
 		Manifest:      testManifest,
 	}.Build())
 	putReq.Header().Set("Authorization", "Bearer "+token)
+	putReq.Header().Set("Fun-Organization", orgID.String())
 
 	_, err := client.PutPluginDefinition(ctx, putReq)
 	require.Error(t, err)
@@ -178,12 +276,17 @@ func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 	t.Parallel()
 
 	userID := uuid.New()
+	orgID := uuid.New()
 
-	env := newTestAPI(t, WithUser(&UserArgs{
-		ID:    userID,
-		Name:  "test-user",
-		Email: "test@example.com",
-	}))
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
 
 	pluginID := seedCatalogPlugin(t, env, testPluginName)
 
@@ -198,6 +301,7 @@ func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 		Manifest:      testManifest,
 	}.Build())
 	putReq.Header().Set("Authorization", "Bearer "+token)
+	putReq.Header().Set("Fun-Organization", orgID.String())
 
 	_, err := client.PutPluginDefinition(ctx, putReq)
 	require.NoError(t, err)

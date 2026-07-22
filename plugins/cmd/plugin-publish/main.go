@@ -6,7 +6,8 @@
 // (--image or PLUGIN_IMAGE) — the `just plugin-publish` recipe builds+pushes the
 // image and passes the pushed digest. The catalog plugin id is resolved by name
 // via ListPlugins (or supplied explicitly via --plugin-id). Auth: bearer token
-// from FUNDAMENT_TOKEN.
+// from FUNDAMENT_TOKEN plus the organization context in FUNDAMENT_ORGANIZATION_ID
+// (PutPluginDefinition is org-scoped).
 package main
 
 import (
@@ -103,6 +104,11 @@ func main() {
 		fmt.Fprintln(os.Stderr, "FUNDAMENT_ORG_API_URL is required")
 		os.Exit(1)
 	}
+	orgID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
+	if orgID == "" {
+		fmt.Fprintln(os.Stderr, "FUNDAMENT_ORGANIZATION_ID is required (PutPluginDefinition is org-scoped)")
+		os.Exit(1)
+	}
 
 	// Path is relative to the repo root: run via `just plugin-publish` (or from the root).
 	src, err := os.ReadFile(filepath.Join("plugins", pluginName, "definition.yaml")) //nolint:gosec // path is built from a CLI flag, not untrusted input
@@ -140,6 +146,7 @@ func main() {
 	if tok := os.Getenv("FUNDAMENT_TOKEN"); tok != "" {
 		req.Header().Set("Authorization", "Bearer "+tok)
 	}
+	req.Header().Set("Fun-Organization", orgID)
 	resp, err := client.PutPluginDefinition(ctx, req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "publish failed: %v\n", err)

@@ -2,8 +2,6 @@ package controller
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -44,12 +42,26 @@ const (
 	// treated as unpinned: it can never equal a real digest, so verifying
 	// against it would reject every install forever.
 	unknownDefinitionHash = "sha256:unknown"
+
+	// unknownDefinitionVersion is the terraform/console default placeholder for
+	// spec.definitionRef.pluginVersion until the marketplace supplies real
+	// versions (FUN-11). Unlike the hash, the version is the key used to resolve
+	// the stored definition, so it cannot be silently skipped — an unpinned
+	// version has nothing to fetch.
+	unknownDefinitionVersion = "unknown"
 )
 
 // isUnpinned reports whether a definitionHash carries no real consent record:
 // either empty or the "sha256:unknown" placeholder.
 func isUnpinned(hash string) bool {
 	return hash == "" || hash == unknownDefinitionHash
+}
+
+// isUnpinnedVersion reports whether a pluginVersion is the unresolved
+// placeholder (empty or "unknown"). A definition is stored and fetched by its
+// real metadata.version, so an unpinned version can never resolve one.
+func isUnpinnedVersion(version string) bool {
+	return version == "" || version == unknownDefinitionVersion
 }
 
 type Reconciler struct {
@@ -143,16 +155,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil //nolint:nilerr // intentional: permanent validation error, don't requeue
 	}
 
-	// Reconcile child resources. reconcileChildren mutates cr.Status.Conditions
-	// (PluginScopeReady) — persist those before returning on error so the CR
-	// reflects the failure, even though we'll requeue.
+	// Materialise child resources only when the spec actually changed. The
+	// PluginDefinition is immutable and hash-pinned, and CreateOrUpdate is
+	// level-based, so re-fetching the definition and re-running every child
+	// mutation on the frequent status-poll requeue is pure waste. Gating on
+	// ObservedGeneration keeps the fetch + child reconciliation on the (rare)
+	// spec-change path while the 30s poll below only refreshes status.
+	//
+	// Trade-off: out-of-band drift to a child resource is corrected on the next
+	// spec change or controller restart, not on the poll cadence.
+	//
+	// reconcileChildren mutates cr.Status.Conditions (PluginScopeReady) — persist
+	// those before returning on error so the CR reflects the failure. On success
+	// ObservedGeneration is advanced by the status write below (statusPoller.poll
+	// stamps it), so a failed materialisation leaves it unchanged and retries.
+	if cr.Status.ObservedGeneration != cr.Generation {
+		if err := r.reconcileChildren(ctx, log, &cr); err != nil {
+			if err := r.client.Status().Update(ctx, &cr); err != nil {
+				log.Error("persist status after reconcile error failed", "err", err)
+			}
 
-	if err := r.reconcileChildren(ctx, log, &cr); err != nil {
-		if err := r.client.Status().Update(ctx, &cr); err != nil {
-			log.Error("persist status after reconcile error failed", "err", err)
+			return ctrl.Result{}, fmt.Errorf("reconcile children: %w", err)
 		}
-
-		return ctrl.Result{}, fmt.Errorf("reconcile children: %w", err)
 	}
 
 	// Poll plugin status and update CR. statusPoller.poll returns a fresh
@@ -377,6 +401,12 @@ func setPluginScopeCondition(cr *pluginsv1.PluginInstallation, status metav1.Con
 // Unpinned + AllowUnpinnedHash=false → fail-closed error.
 // Pinned → fetch and require the computed sha256 to match verbatim.
 func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginInstallation) (*pluginruntime.PluginDefinition, error) {
+	if r.defClient == nil {
+		// Guards a misconfigured construction (NewReconciler without
+		// WithDefClient): fail with a clear error instead of a nil-panic.
+		return nil, fmt.Errorf("plugin-controller misconfigured: no definition client (WithDefClient) set")
+	}
+
 	pinned := cr.Spec.DefinitionRef.DefinitionHash
 	if isUnpinned(pinned) && !r.cfg.AllowUnpinnedHash {
 		// Fail-closed: a CR without a real pin cannot materialise arbitrary RBAC.
@@ -384,6 +414,13 @@ func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginIn
 		// placeholder) by setting PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true on
 		// the Deployment.
 		return nil, fmt.Errorf("PluginInstallation %q has no pinned spec.definitionRef.definitionHash (%q) and PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH is false", cr.Name, pinned)
+	}
+
+	// A definition is stored and fetched by its real metadata.version. The
+	// "unknown" placeholder resolves nothing, so fail fast with an actionable
+	// message instead of surfacing a confusing NotFound from the fetch below.
+	if isUnpinnedVersion(cr.Spec.DefinitionRef.PluginVersion) {
+		return nil, fmt.Errorf("PluginInstallation %q has no resolvable spec.definitionRef.pluginVersion (%q); a real published version is required to fetch its PluginDefinition (pending marketplace wiring, FUN-11)", cr.Name, cr.Spec.DefinitionRef.PluginVersion)
 	}
 
 	// Bound the RPC to keep organization-api hiccups from starving the queue.
@@ -395,8 +432,7 @@ func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginIn
 		return nil, fmt.Errorf("fetch definition: %w", err)
 	}
 
-	sum := sha256.Sum256(got.Manifest)
-	computed := "sha256:" + hex.EncodeToString(sum[:])
+	computed := pluginruntime.HashManifest(got.Manifest)
 	// A pinned hash is verified verbatim. Unpinned installs (empty or the
 	// "sha256:unknown" placeholder) are only reachable with AllowUnpinnedHash
 	// set (checked above) and skip comparison — the dev/marketplace-pending
