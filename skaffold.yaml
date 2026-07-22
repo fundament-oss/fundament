@@ -200,6 +200,12 @@ profiles:
         path: /build/artifacts/7/sync
         value: {}
       - op: replace
+        path: /build/artifacts/9/docker/dockerfile
+        value: plugin-controller/hotreload/Dockerfile
+      - op: add
+        path: /build/artifacts/9/sync
+        value: {}
+      - op: replace
         path: /build/artifacts/10/docker/dockerfile
         value: dcim-api/hotreload/Dockerfile
       - op: add
