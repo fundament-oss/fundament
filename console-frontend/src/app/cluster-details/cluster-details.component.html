@@ -427,49 +427,8 @@
         </div>
       </div>
 
-      <!-- Members and Node Pools -->
+      <!-- Node Pools, Plugins and Monitoring -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- Members -->
-        <div class="card card-body">
-          <h3 class="mb-4 text-xl font-medium">
-            Members
-            <!-- TODO: Update this link - clusters belong to organizations, not projects
-            <nldd-button routerLink="/project-members" text="Edit" start-icon="pencil" variant="secondary" size="xs" class="ml-1" ></nldd-button>
-            -->
-          </h3>
-          <div class="space-y-3">
-            @for (member of clusterData.members; track member.name) {
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                  <div class="flex-0">
-                    <div
-                      class="bg-accent-100 dark:bg-accent-900 flex h-8 w-8 items-center justify-center rounded-full"
-                    >
-                      <span class="text-accent-700 dark:text-accent-300 font-medium">{{
-                        member.name.charAt(0)
-                      }}</span>
-                    </div>
-                  </div>
-                  <p class="font-medium">{{ member.name }}</p>
-                </div>
-                <div class="text-right">
-                  <span
-                    class="badge-sm"
-                    [class.badge-purple]="member.role === 'admin'"
-                    [class.badge-blue]="member.role === 'edit'"
-                    [class.badge-emerald]="member.role === 'view'"
-                  >
-                    {{ member.role }}
-                  </span>
-                  <p class="mt-1 text-gray-500 dark:text-gray-400">
-                    Last active: {{ formatDate(member.lastActive) }}
-                  </p>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-
         <!-- Node Pools -->
         <div class="card card-body">
           <h3 class="mb-4 text-xl font-medium">
@@ -595,35 +554,6 @@
           }
         </div>
 
-        <!-- Namespaces Block -->
-        <div class="card card-body">
-          <h3 class="mb-4 text-xl font-medium">
-            Namespaces
-            <nldd-button
-              [routerLink]="['/clusters', clusterData.basics.id, 'namespaces']"
-              text="Edit"
-              start-icon="pencil"
-              variant="secondary"
-              size="xs"
-              class="ml-1"
-            ></nldd-button>
-          </h3>
-          @if (namespaces().length === 0) {
-            <p class="text-gray-500 dark:text-gray-400">No namespaces in this cluster yet.</p>
-          } @else {
-            <div class="space-y-3">
-              @for (namespace of namespaces(); track namespace.id) {
-                <div class="card card-body-sm">
-                  <p class="font-mono text-sm">{{ namespace.name }}</p>
-                  <p class="mt-1 text-gray-500 dark:text-gray-400">
-                    Project: {{ getProjectName(namespace.projectId) }} &bull; Created
-                    {{ formatDate(namespace.created) }}
-                  </p>
-                </div>
-              }
-            </div>
-          }
-        </div>
       </div>
 
       <!-- Danger Zone -->

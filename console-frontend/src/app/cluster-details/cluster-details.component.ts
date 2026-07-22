@@ -237,12 +237,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         details: 'High CPU usage alert cleared',
       },
     ],
-    members: [
-      { name: 'John Doe', role: 'admin', lastActive: '2024-12-06T14:20:00Z' },
-      { name: 'Jane Smith', role: 'edit', lastActive: '2024-12-06T11:45:00Z' },
-      { name: 'Mike Johnson', role: 'view', lastActive: '2024-12-05T16:30:00Z' },
-      { name: 'Sarah Wilson', role: 'edit', lastActive: '2024-12-04T09:15:00Z' },
-    ],
     nodePools: [] as NodePool[],
     resourceUsage: {
       cpu: { used: 2.4, limit: 8.0, unit: 'cores' },
@@ -438,10 +432,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
           : 'Failed to load namespaces',
       );
     }
-  }
-
-  getProjectName(projectId: string): string {
-    return this.organizationDataService.getProjectById(projectId)?.project.alias ?? projectId;
   }
 
   // Load installed plugins for the cluster
