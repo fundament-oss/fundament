@@ -104,7 +104,7 @@ async function readK8sError(response: Response): Promise<string> {
   template: `
     @if (status() === 'error') {
       <div
-        class="bg-danger-50 text-danger-700 dark:bg-danger-950 dark:text-danger-300 flex items-center gap-2 rounded-md border border-rose-200 px-4 py-3 dark:border-rose-800"
+        class="bg-danger-50 text-danger-700 flex items-center gap-2 rounded-md border border-rose-200 px-4 py-3 dark:border-rose-800"
       >
         <span
           >The plugin UI did not load. Check that the plugin is running and includes the SDK.</span

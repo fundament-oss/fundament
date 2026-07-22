@@ -208,7 +208,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
 }
 
 .badge-rose {
-  @apply bg-danger-100 text-danger-800 dark:bg-danger-950 dark:text-danger-200;
+  @apply bg-danger-100 text-danger-800;
 }
 
 .badge-yellow {
@@ -250,7 +250,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
   @apply block cursor-pointer rounded-md border border-gray-200 px-3 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900;
 
   &[checked] {
-    @apply border-accent-300 bg-accent-50 dark:border-accent-700 dark:bg-accent-950;
+    @apply border-accent-300 bg-accent-50;
   }
 }
 
@@ -281,7 +281,7 @@ input.validate-on-touch.ng-invalid.ng-touched {
 }
 
 .breadcrumb .error-message {
-  @apply text-danger-600 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-300 cursor-pointer;
+  @apply text-danger-600 hover:text-danger-700 cursor-pointer;
 }
 
 /* Navigation link styles */
@@ -299,7 +299,7 @@ nldd-navigation-split-view {
 }
 
 .nav-link.active {
-  @apply bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300;
+  @apply bg-accent-50 text-accent-700;
 }
 
 /* Table styles */
@@ -334,5 +334,5 @@ nldd-navigation-split-view {
 
 /* Date range picker styles, defined here since the 'accent' and 'neutral' colors are not available in the component styles */
 app-date-range-picker input {
-  @apply border-neutral-550 ring-accent-200 dark:border-neutral-650 dark:ring-accent-800 w-full appearance-none rounded-[9px] border-2 px-2.5 py-2 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
+  @apply border-neutral-550 ring-accent-200 w-full appearance-none rounded-[9px] border-2 px-2.5 py-2 ring-offset-2 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-900 dark:text-white dark:ring-offset-gray-950;
 }

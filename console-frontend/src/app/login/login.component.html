@@ -27,7 +27,7 @@
             appAutofocus
             [value]="email?.value ?? ''"
             (input)="loginForm.get('email')!.setValue($any($event.target).value)"
-            [invalid]="!!(email?.invalid && email?.touched)"
+            [invalid]="!!(email?.invalid && email.touched)"
             error-message="login-email-error"
           ></nldd-text-field>
           <nldd-form-field-error-text id="login-email-error">
@@ -47,7 +47,7 @@
             show-accessible-label="Show password"
             hide-text="Hide"
             hide-accessible-label="Hide password"
-            [invalid]="!!(password?.invalid && password?.dirty)"
+            [invalid]="!!(password?.invalid && password.dirty)"
             error-message="login-password-error"
           ></nldd-password-field>
           <nldd-form-field-error-text id="login-password-error">
@@ -56,8 +56,8 @@
         </nldd-form-field>
 
         @if (error()) {
-          <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-            <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
+          <div class="bg-danger-50 rounded-md p-3">
+            <p class="text-danger-800">{{ error() }}</p>
           </div>
         }
 

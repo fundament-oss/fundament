@@ -158,16 +158,16 @@ export default class DateRangePickerComponent {
       rangeEnd = from <= hover ? hover : from;
     }
     if (rangeStart && rangeEnd && date > rangeStart && date < rangeEnd) {
-      return `${base} bg-accent-100 text-accent-900 dark:bg-accent-800/50 dark:text-accent-100`;
+      return `${base} bg-accent-100 text-accent-900`;
     }
 
     if (!inMonth) {
-      return `${base} text-neutral-400 dark:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800`;
+      return `${base} text-neutral-400 hover:bg-neutral-100`;
     }
     if (isToday) {
-      return `${base} font-semibold text-accent-500 dark:text-accent-400 hover:bg-neutral-100 dark:hover:bg-neutral-800`;
+      return `${base} font-semibold text-accent-500 hover:bg-neutral-100`;
     }
-    return `${base} text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800`;
+    return `${base} text-neutral-800 hover:bg-neutral-100`;
   }
 
   onDocumentClick(event: MouseEvent): void {

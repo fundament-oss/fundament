@@ -23,12 +23,12 @@
       (blur)="onClusterNameBlur()"
       (input)="onClusterNameInput($event)"
       [invalid]="
-        (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) || clusterNameExists()
+        (clusterName?.invalid && (clusterName.dirty || formSubmitted())) || clusterNameExists()
       "
       error-message="add-cluster-name-error"
     ></nldd-text-field>
     <nldd-form-field-error-text id="add-cluster-name-error">
-      @if (clusterName?.invalid && (clusterName?.dirty || formSubmitted())) {
+      @if (clusterName?.invalid && (clusterName.dirty || formSubmitted())) {
         {{ getClusterNameError() }}
       }
       @if (clusterNameExists()) {

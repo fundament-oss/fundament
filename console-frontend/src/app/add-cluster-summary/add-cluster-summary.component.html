@@ -68,13 +68,10 @@
   <!-- Error Message -->
   @if (errorMessage()) {
     <div
-      class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
+      class="bg-danger-50 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
     >
-      <nldd-icon
-        name="dismiss-circle"
-        class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
-      ></nldd-icon>
-      <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
+      <nldd-icon name="dismiss-circle" class="text-danger-500! h-4.5 w-4.5 shrink-0"></nldd-icon>
+      <p class="text-danger-700">{{ errorMessage() }}</p>
     </div>
   }
 
@@ -86,16 +83,16 @@
         bannerState() === 'ready'
           ? 'border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30'
           : bannerState() === 'failed'
-            ? 'bg-danger-50 dark:bg-danger-950/30 border-rose-200 dark:border-rose-900/40'
+            ? 'bg-danger-50 border-rose-200 dark:border-rose-900/40'
             : bannerState() === 'partial'
               ? 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30'
-              : 'border-accent-200 bg-accent-50 dark:border-accent-900/40 dark:bg-accent-950/30'
+              : 'border-accent-200 bg-accent-50'
       "
     >
       <div class="flex items-center gap-3">
         @if (bannerState() === 'creating' || bannerState() === 'provisioning') {
           <app-loading-indicator
-            class="fill-accent-600 text-accent-200 dark:fill-accent-400 dark:text-accent-900 h-4 w-4 shrink-0 animate-spin"
+            class="fill-accent-600 text-accent-200 h-4 w-4 shrink-0 animate-spin"
           />
         } @else if (bannerState() === 'ready') {
           <nldd-icon
@@ -110,7 +107,7 @@
         } @else {
           <nldd-icon
             name="dismiss-circle"
-            class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+            class="text-danger-500! h-4.5 w-4.5 shrink-0"
           ></nldd-icon>
         }
         <div>
@@ -120,10 +117,10 @@
               bannerState() === 'ready'
                 ? 'text-green-800 dark:text-green-200'
                 : bannerState() === 'failed'
-                  ? 'text-danger-800 dark:text-danger-200'
+                  ? 'text-danger-800'
                   : bannerState() === 'partial'
                     ? 'text-amber-800 dark:text-amber-200'
-                    : 'text-accent-800 dark:text-accent-200'
+                    : 'text-accent-800'
             "
           >
             @if (bannerState() === 'creating') {
@@ -208,7 +205,7 @@
             (item.requestStatus === 'succeeded' && item.syncStatus === 'syncing')
           ) {
             <app-loading-indicator
-              class="fill-accent-600 dark:fill-accent-400 h-5 w-5 shrink-0 animate-spin text-gray-200 dark:text-gray-800"
+              class="fill-accent-600 h-5 w-5 shrink-0 animate-spin text-gray-200 dark:text-gray-800"
             />
           } @else if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
             <nldd-icon name="dismiss-circle" class="text-danger-500! h-5 w-5 shrink-0"></nldd-icon>
@@ -226,15 +223,15 @@
             @if (item.requestStatus === 'pending') {
               <p class="text-sm text-gray-500 dark:text-gray-400">Waiting...</p>
             } @else if (item.requestStatus === 'in_progress') {
-              <p class="text-accent-600 dark:text-accent-400 text-sm">Creating...</p>
+              <p class="text-accent-600 text-sm">Creating...</p>
             } @else if (item.requestStatus === 'failed') {
-              <p class="text-danger-600 dark:text-danger-400 text-sm">{{ item.error }}</p>
+              <p class="text-danger-600 text-sm">{{ item.error }}</p>
             } @else if (item.syncStatus === 'syncing') {
-              <p class="text-accent-600 dark:text-accent-400 text-sm">
+              <p class="text-accent-600 text-sm">
                 Syncing{{ item.shootStatus ? ' (' + item.shootStatus + ')' : '' }}...
               </p>
             } @else if (item.syncStatus === 'failed') {
-              <p class="text-danger-600 dark:text-danger-400 text-sm">{{ item.error }}</p>
+              <p class="text-danger-600 text-sm">{{ item.error }}</p>
             } @else if (item.syncStatus === 'synced') {
               <p class="text-sm text-green-600 dark:text-green-400">Ready</p>
             } @else {

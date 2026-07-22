@@ -7,14 +7,9 @@
 
   <div class="p-6">
     <!-- Info banner -->
-    <div
-      class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
-    >
-      <nldd-icon
-        name="info-circle"
-        class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
-      ></nldd-icon>
-      <p class="text-accent-700 dark:text-accent-300">
+    <div class="border-accent-200 bg-accent-50 mb-6 flex items-start gap-3 rounded-md border p-4">
+      <nldd-icon name="info-circle" class="text-accent-600! mt-0.5 h-5 w-5 shrink-0"></nldd-icon>
+      <p class="text-accent-700">
         Roles provide actual access to namespace resources. Only admins (on organization or project
         level) can manage roles.
       </p>
@@ -143,7 +138,7 @@
           </select>
         </nldd-dropdown>
         @if (memberIdError()) {
-          <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">Please select a member.</p>
+          <p class="text-danger-600 mt-1 text-sm">Please select a member.</p>
         }
       }
     </nldd-form-field>
@@ -197,9 +192,7 @@
               </select>
             </nldd-dropdown>
             @if (namespaceError()) {
-              <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">
-                Please select a namespace.
-              </p>
+              <p class="text-danger-600 mt-1 text-sm">Please select a namespace.</p>
             }
           </div>
         }
@@ -212,9 +205,7 @@
               (input)="modalCustomNamespace.set($any($event.target).value)"
             ></nldd-text-field>
             @if (customNamespaceError()) {
-              <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">
-                Please enter a namespace pattern.
-              </p>
+              <p class="text-danger-600 mt-1 text-sm">Please enter a namespace pattern.</p>
             }
           </div>
         }
@@ -224,9 +215,7 @@
     <div class="mb-4">
       <span class="mb-2 block font-medium text-gray-700 dark:text-white">Roles</span>
       @if (rolesError()) {
-        <p class="text-danger-600 dark:text-danger-400 mb-2 text-sm">
-          Please select at least one role.
-        </p>
+        <p class="text-danger-600 mb-2 text-sm">Please select at least one role.</p>
       }
       <div class="space-y-3">
         @for (role of availableRoles; track role) {
