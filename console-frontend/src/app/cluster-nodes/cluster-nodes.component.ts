@@ -179,7 +179,6 @@ export default class ClusterNodesComponent implements OnInit {
               clusterId: this.clusterId,
               name: newPool.name,
               machineType: newPool.machineType,
-              regionMachineTypeId: newPool.regionMachineTypeId ?? '',
               autoscaleMin: newPool.autoscaleMin,
               autoscaleMax: newPool.autoscaleMax,
             });

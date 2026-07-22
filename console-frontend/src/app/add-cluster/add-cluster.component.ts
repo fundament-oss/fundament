@@ -43,12 +43,12 @@ export default class AddClusterComponent implements OnInit {
   clusterForm: FormGroup;
 
   // Region catalog (regions with their offered kubernetes versions), loaded
-  // from the API. The form controls hold the catalog ids.
+  // from the API. Text-only: the form controls hold the catalog names.
   private catalogRegions: Region[] = [];
 
   regions = signal<{ value: string; label: string }[]>([]);
 
-  kubernetesVersions = signal<{ value: string; label: string }[]>([]);
+  kubernetesVersions = signal<string[]>([]);
 
   catalogError = signal<string | null>(null);
 
@@ -77,17 +77,21 @@ export default class AddClusterComponent implements OnInit {
       return;
     }
 
-    this.regions.set(this.catalogRegions.map((r) => ({ value: r.id, label: r.name })));
+    if (this.catalogRegions.length === 0) {
+      // Valid state until an operator seeds the catalog - explain instead of
+      // presenting an empty, unsubmittable form.
+      this.catalogError.set('No regions are available yet. Ask an operator to seed the region catalog.');
+      return;
+    }
+
+    this.regions.set(this.catalogRegions.map((r) => ({ value: r.name, label: r.name })));
 
     // Restore existing wizard state, else default to the first region.
     const state = this.stateService.getState();
-    const restoredRegion =
-      state.regionId && this.catalogRegions.find((r) => r.id === state.regionId);
+    const restoredRegion = state.region && this.catalogRegions.find((r) => r.name === state.region);
     const region = restoredRegion || this.catalogRegions[0];
-    if (region) {
-      this.clusterForm.get('region')?.setValue(region.id);
-      this.refreshVersions(region, state.kubernetesVersionId);
-    }
+    this.clusterForm.get('region')?.setValue(region.name);
+    this.refreshVersions(region, state.kubernetesVersion);
     if (state.clusterName) {
       this.clusterForm.patchValue({ clusterName: state.clusterName });
     }
@@ -95,14 +99,13 @@ export default class AddClusterComponent implements OnInit {
 
   // Recompute the version options for the selected region; keep the requested
   // version when the region offers it, else fall back to the first offered.
-  private refreshVersions(region: Region, preferredVersionId?: string) {
-    const versions = region.kubernetesVersions.map((v) => ({ value: v.id, label: v.version }));
-    this.kubernetesVersions.set(versions);
+  private refreshVersions(region: Region, preferredVersion?: string) {
+    this.kubernetesVersions.set(region.kubernetesVersions);
 
-    const preferred = preferredVersionId && versions.find((v) => v.value === preferredVersionId);
+    const preferred = preferredVersion && region.kubernetesVersions.includes(preferredVersion);
     this.clusterForm
       .get('kubernetesVersion')
-      ?.setValue(preferred ? preferred.value : (versions[0]?.value ?? ''));
+      ?.setValue(preferred ? preferredVersion : (region.kubernetesVersions[0] ?? ''));
   }
 
   get clusterName() {
@@ -150,19 +153,12 @@ export default class AddClusterComponent implements OnInit {
     }
 
     const clusterData = this.clusterForm.value;
-    const region = this.catalogRegions.find((r) => r.id === clusterData.region);
-    const version = region?.kubernetesVersions.find((v) => v.id === clusterData.kubernetesVersion);
-    if (!region || !version) {
-      return;
-    }
 
-    // Save state: the catalog ids drive the create request, the names the display.
+    // Save state
     this.stateService.updateBasicInfo({
       clusterName: clusterData.clusterName,
-      region: region.name,
-      regionId: region.id,
-      kubernetesVersion: version.version,
-      kubernetesVersionId: version.id,
+      region: clusterData.region,
+      kubernetesVersion: clusterData.kubernetesVersion,
     });
     this.stateService.markStepCompleted(0);
 
@@ -186,7 +182,7 @@ export default class AddClusterComponent implements OnInit {
 
     // Region drives the offered kubernetes versions.
     if (controlName === 'region') {
-      const region = this.catalogRegions.find((r) => r.id === value);
+      const region = this.catalogRegions.find((r) => r.name === value);
       if (region) {
         const currentVersion = this.clusterForm.get('kubernetesVersion')?.value as string;
         this.refreshVersions(region, currentVersion);

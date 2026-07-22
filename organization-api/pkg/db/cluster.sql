@@ -74,8 +74,11 @@ WHERE NOT EXISTS (
 RETURNING id;
 
 -- name: ClusterUpdate :execrows
+-- kubernetes_version_id is resolved server-side from the catalog together with
+-- the version text (expand phase: both columns updated in lockstep).
 UPDATE tenant.clusters
-SET kubernetes_version = COALESCE(sqlc.narg('kubernetes_version'), kubernetes_version)
+SET kubernetes_version = COALESCE(sqlc.narg('kubernetes_version'), kubernetes_version),
+    kubernetes_version_id = COALESCE(sqlc.narg('kubernetes_version_id'), kubernetes_version_id)
 WHERE id = $1 AND deleted IS NULL;
 
 -- name: ClusterDelete :execrows

@@ -42,11 +42,11 @@ export default class AddClusterNodesComponent implements OnInit {
   }
 
   async ngOnInit() {
-    const { regionId } = this.stateService.getState();
-    if (!regionId) {
+    const { region: regionName } = this.stateService.getState();
+    if (!regionName) {
       return;
     }
-    const region = await this.regionCatalog.getRegionById(regionId);
+    const region = await this.regionCatalog.getRegionByName(regionName);
     if (region) {
       this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
     }

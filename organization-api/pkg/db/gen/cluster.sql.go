@@ -335,17 +335,21 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 
 const clusterUpdate = `-- name: ClusterUpdate :execrows
 UPDATE tenant.clusters
-SET kubernetes_version = COALESCE($2, kubernetes_version)
+SET kubernetes_version = COALESCE($2, kubernetes_version),
+    kubernetes_version_id = COALESCE($3, kubernetes_version_id)
 WHERE id = $1 AND deleted IS NULL
 `
 
 type ClusterUpdateParams struct {
-	ID                uuid.UUID
-	KubernetesVersion pgtype.Text
+	ID                  uuid.UUID
+	KubernetesVersion   pgtype.Text
+	KubernetesVersionID pgtype.UUID
 }
 
+// kubernetes_version_id is resolved server-side from the catalog together with
+// the version text (expand phase: both columns updated in lockstep).
 func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (int64, error) {
-	result, err := q.db.Exec(ctx, clusterUpdate, arg.ID, arg.KubernetesVersion)
+	result, err := q.db.Exec(ctx, clusterUpdate, arg.ID, arg.KubernetesVersion, arg.KubernetesVersionID)
 	if err != nil {
 		return 0, err
 	}

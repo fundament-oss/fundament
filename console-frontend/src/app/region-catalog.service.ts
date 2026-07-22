@@ -5,14 +5,14 @@ import { CLUSTER } from '../connect/tokens';
 import { ListRegionsRequestSchema, Region } from '../generated/v1/cluster_pb';
 
 export interface MachineTypeOption {
-  value: string; // catalog.region_machine_types id (CreateNodePoolRequest.regionMachineTypeId)
+  value: string; // machine type name - exactly what CreateNodePoolRequest.machineType accepts
   label: string;
-  name: string; // machine type name, e.g. c1-medium-x86
 }
 
 // Loads the region catalog (regions with their offered kubernetes versions and
 // machine types) once and shares it between the add-cluster wizard and the
-// cluster nodes page.
+// cluster nodes page. The catalog is text-only: names are what the create
+// endpoints accept.
 @Injectable({ providedIn: 'root' })
 export class RegionCatalogService {
   private client = inject(CLUSTER);
@@ -33,12 +33,6 @@ export class RegionCatalogService {
     return this.regionsPromise;
   }
 
-  async getRegionById(regionId: string): Promise<Region | undefined> {
-    const regions = await this.getRegions();
-    return regions.find((r) => r.id === regionId);
-  }
-
-  // Look up by the user-facing region name (clusters store it as their region).
   async getRegionByName(name: string): Promise<Region | undefined> {
     const regions = await this.getRegions();
     return regions.find((r) => r.name === name);
@@ -46,15 +40,17 @@ export class RegionCatalogService {
 
   static machineTypeOptions(region: Region): MachineTypeOption[] {
     return region.machineTypes.map((mt) => ({
-      value: mt.id,
+      value: mt.name,
       label: `${mt.name} (${mt.lcpu} lCPU, ${RegionCatalogService.formatMemory(mt.memory)})`,
-      name: mt.name,
     }));
   }
 
+  // bigint-safe: derive GiB with one decimal without converting the raw byte
+  // count through Number (which would lose precision above 2^53).
   private static formatMemory(bytes: bigint): string {
-    const gib = Number(bytes) / 1024 ** 3;
-    const rounded = Number.isInteger(gib) ? gib.toString() : gib.toFixed(1);
-    return `${rounded} GiB RAM`;
+    const tenthGib = Number((bytes * 10n) / 1073741824n); // safe: catalog sizes are far below 2^53 tenths
+    const whole = Math.floor(tenthGib / 10);
+    const frac = tenthGib % 10;
+    return frac === 0 ? `${whole} GiB RAM` : `${whole}.${frac} GiB RAM`;
   }
 }

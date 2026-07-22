@@ -24,10 +24,7 @@ import { MachineTypeOption } from '../region-catalog.service';
 
 export interface NodePoolData {
   name: string;
-  machineType: string;
-  // Catalog reference (region_machine_types id). Set when the form runs in
-  // catalog mode (machineTypeOptions provided); the create request sends it.
-  regionMachineTypeId?: string;
+  machineType: string; // catalog machine type name - what the create request sends
   autoscaleMin: number;
   autoscaleMax: number;
 }
@@ -48,24 +45,18 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     }
   }
 
-  // Region-scoped machine types from the catalog. When set, the form runs in
-  // catalog mode: the machineType controls hold region_machine_types ids and
-  // the emitted pools carry regionMachineTypeId. Without it (legacy cluster
-  // whose region is not in the catalog) the pools carry only the free-text
-  // machine type name.
+  // Region-scoped machine types from the catalog (names + display labels).
+  // An empty list normalizes to null: the fallback list stays in place until
+  // real options arrive.
   @Input() set machineTypeOptions(options: MachineTypeOption[] | null) {
-    // An empty list means "no catalog options" - normalize to legacy mode so the
-    // dropdown keeps its fallback and submits do not emit bogus catalog ids.
     this.catalogOptions = options && options.length > 0 ? options : null;
-    if (options && options.length > 0) {
-      // Re-anchor controls whose value is not a valid option (initial default,
-      // or names loaded before the catalog arrived).
+    if (this.catalogOptions) {
+      const opts = this.catalogOptions;
+      // Re-anchor controls whose value is not an offered machine type.
       this.nodePools.controls.forEach((control) => {
         const mt = control.get('machineType');
-        const value = mt?.value as string;
-        if (!options.some((o) => o.value === value)) {
-          const byName = options.find((o) => o.name === value);
-          mt?.setValue(byName ? byName.value : options[0].value);
+        if (!opts.some((o) => o.value === mt?.value)) {
+          mt?.setValue(opts[0].value);
         }
       });
       this.cdr.markForCheck();
@@ -83,14 +74,14 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
 
   private catalogOptions: MachineTypeOption[] | null = null;
 
-  // Fallback for legacy clusters without a catalog region.
+  // Fallback until the catalog options arrive.
   private static readonly legacyMachineTypes: MachineTypeOption[] = [
-    { value: 'n1-standard-1', label: 'n1-standard-1 (1 vCPU, 3.75 GB RAM)', name: 'n1-standard-1' },
-    { value: 'n1-standard-2', label: 'n1-standard-2 (2 vCPU, 7.5 GB RAM)', name: 'n1-standard-2' },
-    { value: 'n1-standard-4', label: 'n1-standard-4 (4 vCPU, 15 GB RAM)', name: 'n1-standard-4' },
-    { value: 'n1-standard-8', label: 'n1-standard-8 (8 vCPU, 30 GB RAM)', name: 'n1-standard-8' },
-    { value: 'n1-highmem-2', label: 'n1-highmem-2 (2 vCPU, 13 GB RAM)', name: 'n1-highmem-2' },
-    { value: 'n1-highmem-4', label: 'n1-highmem-4 (4 vCPU, 26 GB RAM)', name: 'n1-highmem-4' },
+    { value: 'n1-standard-1', label: 'n1-standard-1 (1 vCPU, 3.75 GB RAM)' },
+    { value: 'n1-standard-2', label: 'n1-standard-2 (2 vCPU, 7.5 GB RAM)' },
+    { value: 'n1-standard-4', label: 'n1-standard-4 (4 vCPU, 15 GB RAM)' },
+    { value: 'n1-standard-8', label: 'n1-standard-8 (8 vCPU, 30 GB RAM)' },
+    { value: 'n1-highmem-2', label: 'n1-highmem-2 (2 vCPU, 13 GB RAM)' },
+    { value: 'n1-highmem-4', label: 'n1-highmem-4 (4 vCPU, 26 GB RAM)' },
   ];
 
   get machineTypes(): MachineTypeOption[] {
@@ -134,18 +125,11 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     });
   }
 
-  // The machineType control holds the option VALUE: the region_machine_types id
-  // in catalog mode, the machine type name in legacy mode.
+  // The machineType control holds the machine type name.
   private initialMachineTypeValue(data?: NodePoolData): string {
     const options = this.machineTypes;
-    if (data) {
-      if (data.regionMachineTypeId && options.some((o) => o.value === data.regionMachineTypeId)) {
-        return data.regionMachineTypeId;
-      }
-      const byName = options.find((o) => o.name === data.machineType);
-      if (byName) {
-        return byName.value;
-      }
+    if (data && options.some((o) => o.value === data.machineType)) {
+      return data.machineType;
     }
     return options[0]?.value ?? '';
   }
@@ -238,21 +222,7 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
       return;
     }
 
-    const raw = this.nodePoolsForm.value as { nodePools: NodePoolData[] };
-    const catalogMode = this.catalogOptions !== null;
-    const nodePools = raw.nodePools.map((pool) => {
-      // The control value is the option value; resolve the display name from it.
-      const option = this.machineTypes.find((o) => o.value === pool.machineType);
-      return {
-        name: pool.name,
-        machineType: option?.name ?? pool.machineType,
-        regionMachineTypeId: catalogMode ? pool.machineType : undefined,
-        autoscaleMin: pool.autoscaleMin,
-        autoscaleMax: pool.autoscaleMax,
-      };
-    });
-
-    this.formSubmit.emit({ nodePools });
+    this.formSubmit.emit(this.nodePoolsForm.value);
   }
 
   private static scrollToFirstError() {

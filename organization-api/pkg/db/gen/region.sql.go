@@ -11,36 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const regionKubernetesVersionGet = `-- name: RegionKubernetesVersionGet :one
-SELECT
-    catalog.regions.name AS region_name,
-    catalog.kubernetes_versions.version
-FROM catalog.region_kubernetes_versions
-JOIN catalog.regions ON catalog.regions.id = catalog.region_kubernetes_versions.region_id
-JOIN catalog.kubernetes_versions ON catalog.kubernetes_versions.id = catalog.region_kubernetes_versions.kubernetes_version_id
-WHERE catalog.region_kubernetes_versions.region_id = $1
-  AND catalog.region_kubernetes_versions.kubernetes_version_id = $2
-`
-
-type RegionKubernetesVersionGetParams struct {
-	RegionID            uuid.UUID
-	KubernetesVersionID uuid.UUID
-}
-
-type RegionKubernetesVersionGetRow struct {
-	RegionName string
-	Version    string
-}
-
-// Resolve a (region, version) availability pair to its display names; no row
-// means the version is not offered in that region.
-func (q *Queries) RegionKubernetesVersionGet(ctx context.Context, arg RegionKubernetesVersionGetParams) (RegionKubernetesVersionGetRow, error) {
-	row := q.db.QueryRow(ctx, regionKubernetesVersionGet, arg.RegionID, arg.KubernetesVersionID)
-	var i RegionKubernetesVersionGetRow
-	err := row.Scan(&i.RegionName, &i.Version)
-	return i, err
-}
-
 const regionKubernetesVersionList = `-- name: RegionKubernetesVersionList :many
 SELECT
     catalog.region_kubernetes_versions.region_id,
@@ -77,6 +47,31 @@ func (q *Queries) RegionKubernetesVersionList(ctx context.Context) ([]RegionKube
 	return items, nil
 }
 
+const regionKubernetesVersionResolve = `-- name: RegionKubernetesVersionResolve :one
+SELECT
+    catalog.region_kubernetes_versions.region_id,
+    catalog.region_kubernetes_versions.kubernetes_version_id
+FROM catalog.region_kubernetes_versions
+JOIN catalog.regions ON catalog.regions.id = catalog.region_kubernetes_versions.region_id
+JOIN catalog.kubernetes_versions ON catalog.kubernetes_versions.id = catalog.region_kubernetes_versions.kubernetes_version_id
+WHERE catalog.regions.name = $1
+  AND catalog.kubernetes_versions.version = $2
+`
+
+type RegionKubernetesVersionResolveParams struct {
+	RegionName string
+	Version    string
+}
+
+// Resolve (region name, version) to the catalog ids; no row means the version
+// is not offered in that region (or the region does not exist).
+func (q *Queries) RegionKubernetesVersionResolve(ctx context.Context, arg RegionKubernetesVersionResolveParams) (CatalogRegionKubernetesVersion, error) {
+	row := q.db.QueryRow(ctx, regionKubernetesVersionResolve, arg.RegionName, arg.Version)
+	var i CatalogRegionKubernetesVersion
+	err := row.Scan(&i.RegionID, &i.KubernetesVersionID)
+	return i, err
+}
+
 const regionList = `-- name: RegionList :many
 
 SELECT id, name
@@ -109,32 +104,6 @@ func (q *Queries) RegionList(ctx context.Context) ([]RegionListRow, error) {
 		return nil, err
 	}
 	return items, nil
-}
-
-const regionMachineTypeGet = `-- name: RegionMachineTypeGet :one
-SELECT
-    catalog.region_machine_types.region_id,
-    catalog.machine_types.name AS machine_type_name
-FROM catalog.region_machine_types
-JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
-WHERE catalog.region_machine_types.id = $1
-`
-
-type RegionMachineTypeGetParams struct {
-	ID uuid.UUID
-}
-
-type RegionMachineTypeGetRow struct {
-	RegionID        uuid.UUID
-	MachineTypeName string
-}
-
-// Resolve a region_machine_types row to its region + machine-type name.
-func (q *Queries) RegionMachineTypeGet(ctx context.Context, arg RegionMachineTypeGetParams) (RegionMachineTypeGetRow, error) {
-	row := q.db.QueryRow(ctx, regionMachineTypeGet, arg.ID)
-	var i RegionMachineTypeGetRow
-	err := row.Scan(&i.RegionID, &i.MachineTypeName)
-	return i, err
 }
 
 const regionMachineTypeList = `-- name: RegionMachineTypeList :many
@@ -181,4 +150,28 @@ func (q *Queries) RegionMachineTypeList(ctx context.Context) ([]RegionMachineTyp
 		return nil, err
 	}
 	return items, nil
+}
+
+const regionMachineTypeResolve = `-- name: RegionMachineTypeResolve :one
+SELECT
+    catalog.region_machine_types.id
+FROM catalog.region_machine_types
+JOIN catalog.regions ON catalog.regions.id = catalog.region_machine_types.region_id
+JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
+WHERE catalog.regions.name = $1
+  AND catalog.machine_types.name = $2
+`
+
+type RegionMachineTypeResolveParams struct {
+	RegionName      string
+	MachineTypeName string
+}
+
+// Resolve (region name, machine type name) to the region_machine_types row; no
+// row means the machine type is not offered in that region.
+func (q *Queries) RegionMachineTypeResolve(ctx context.Context, arg RegionMachineTypeResolveParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, regionMachineTypeResolve, arg.RegionName, arg.MachineTypeName)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }

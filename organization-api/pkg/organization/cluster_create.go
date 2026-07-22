@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -31,43 +30,27 @@ func (s *Server) CreateCluster(
 		return nil, err
 	}
 
-	params := db.ClusterCreateParams{
-		OrganizationID:    organizationID,
-		Name:              req.Msg.GetName(),
-		Region:            req.Msg.GetRegion(),
-		KubernetesVersion: req.Msg.GetKubernetesVersion(),
+	// Resolve the (region, version) names against the catalog: creation is only
+	// valid for offered combinations (pre-validate with ListRegions).
+	offering, err := s.queries.RegionKubernetesVersionResolve(ctx, db.RegionKubernetesVersionResolveParams{
+		RegionName: req.Msg.GetRegion(),
+		Version:    req.Msg.GetKubernetesVersion(),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeInvalidArgument,
+				fmt.Errorf("kubernetes version %q is not offered in region %q", req.Msg.GetKubernetesVersion(), req.Msg.GetRegion()))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve region offering: %w", err))
 	}
 
-	// Catalog path: resolve the (region, version) pair and fill the legacy text
-	// columns from it (expand phase - the worker still reads the text columns).
-	// Legacy path: the text fields are stored as-is, ids stay NULL.
-	if req.Msg.GetRegionId() != "" || req.Msg.GetKubernetesVersionId() != "" {
-		regionID, err := parseUUIDField(req.Msg.GetRegionId(), "region_id")
-		if err != nil {
-			return nil, err
-		}
-		versionID, err := parseUUIDField(req.Msg.GetKubernetesVersionId(), "kubernetes_version_id")
-		if err != nil {
-			return nil, err
-		}
-
-		offering, err := s.queries.RegionKubernetesVersionGet(ctx, db.RegionKubernetesVersionGetParams{
-			RegionID:            regionID,
-			KubernetesVersionID: versionID,
-		})
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("the kubernetes version is not offered in the selected region"))
-			}
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve region offering: %w", err))
-		}
-
-		params.Region = offering.RegionName
-		params.KubernetesVersion = offering.Version
-		params.RegionID = pgtype.UUID{Bytes: regionID, Valid: true}
-		params.KubernetesVersionID = pgtype.UUID{Bytes: versionID, Valid: true}
-	} else if req.Msg.GetRegion() == "" || req.Msg.GetKubernetesVersion() == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("either region_id and kubernetes_version_id or region and kubernetes_version must be set"))
+	params := db.ClusterCreateParams{
+		OrganizationID:      organizationID,
+		Name:                req.Msg.GetName(),
+		Region:              req.Msg.GetRegion(),
+		KubernetesVersion:   req.Msg.GetKubernetesVersion(),
+		RegionID:            pgtype.UUID{Bytes: offering.RegionID, Valid: true},
+		KubernetesVersionID: pgtype.UUID{Bytes: offering.KubernetesVersionID, Valid: true},
 	}
 
 	clusterID, err := s.queries.ClusterCreate(ctx, params)
@@ -80,7 +63,8 @@ func (s *Server) CreateCluster(
 		// between resolve and insert.
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok &&
 			pgErr.Code == pgerrcode.ForeignKeyViolation && pgErr.ConstraintName == dbconst.ConstraintClustersFkRegionVersion {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("the kubernetes version is not offered in the selected region"))
+			return nil, connect.NewError(connect.CodeInvalidArgument,
+				fmt.Errorf("kubernetes version %q is not offered in region %q", req.Msg.GetKubernetesVersion(), req.Msg.GetRegion()))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create cluster: %w", err))
 	}
@@ -89,20 +73,10 @@ func (s *Server) CreateCluster(
 		"cluster_id", clusterID,
 		"organization_id", organizationID,
 		"name", req.Msg.GetName(),
-		"region", params.Region,
+		"region", req.Msg.GetRegion(),
 	)
 
 	return connect.NewResponse(organizationv1.CreateClusterResponse_builder{
 		ClusterId: clusterID.String(),
 	}.Build()), nil
-}
-
-// parseUUIDField parses a request uuid field, mapping failures (including
-// empty) to InvalidArgument.
-func parseUUIDField(value, field string) (uuid.UUID, error) {
-	id, err := uuid.Parse(value)
-	if err != nil {
-		return uuid.UUID{}, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s must be a valid uuid", field))
-	}
-	return id, nil
 }

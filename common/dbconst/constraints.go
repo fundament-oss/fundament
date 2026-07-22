@@ -131,10 +131,10 @@ const (
 	ConstraintDcimRacksFkRackRow = "dcim_racks_fk_rack_row"
 	// ConstraintDcimRoomsFkSite is defined on dcim.rooms.
 	ConstraintDcimRoomsFkSite = "dcim_rooms_fk_site"
-	// ConstraintDcimTaskStepsFkTask is defined on dcim.task_steps.
-	ConstraintDcimTaskStepsFkTask = "dcim_task_steps_fk_task"
 	// ConstraintDcimTasksFkAssignee is defined on dcim.tasks.
 	ConstraintDcimTasksFkAssignee = "dcim_tasks_fk_assignee"
+	// ConstraintDcimTaskStepsFkTask is defined on dcim.task_steps.
+	ConstraintDcimTaskStepsFkTask = "dcim_task_steps_fk_task"
 	// ConstraintDcimUsersUqExternalRef is defined on dcim.users.
 	ConstraintDcimUsersUqExternalRef = "dcim_users_uq_external_ref"
 	// ConstraintDeviceCatalogsCkCategory is defined on dcim.device_catalogs.
@@ -341,14 +341,14 @@ const (
 	ConstraintSitesUqName = "sites_uq_name"
 	// ConstraintTagsUqName is defined on appstore.tags.
 	ConstraintTagsUqName = "tags_uq_name"
-	// ConstraintTaskStepsUqTaskOrdinal is defined on dcim.task_steps.
-	ConstraintTaskStepsUqTaskOrdinal = "task_steps_uq_task_ordinal"
 	// ConstraintTasksCkCategory is defined on dcim.tasks.
 	ConstraintTasksCkCategory = "tasks_ck_category"
 	// ConstraintTasksCkPriority is defined on dcim.tasks.
 	ConstraintTasksCkPriority = "tasks_ck_priority"
 	// ConstraintTasksCkStatus is defined on dcim.tasks.
 	ConstraintTasksCkStatus = "tasks_ck_status"
+	// ConstraintTaskStepsUqTaskOrdinal is defined on dcim.task_steps.
+	ConstraintTaskStepsUqTaskOrdinal = "task_steps_uq_task_ordinal"
 	// ConstraintUsersUqExternalRef is defined on tenant.users.
 	ConstraintUsersUqExternalRef = "users_uq_external_ref"
 	// ConstraintVerifyDeleted is defined on (constraint trigger).

@@ -30,56 +30,50 @@ func (s *Server) CreateNodePool(
 		return nil, err
 	}
 
-	if _, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID}); err != nil {
+	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{ID: clusterID})
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	params := db.NodePoolCreateParams{
-		ClusterID:    clusterID,
-		Name:         req.Msg.GetName(),
-		MachineType:  req.Msg.GetMachineType(),
-		AutoscaleMin: req.Msg.GetAutoscaleMin(),
-		AutoscaleMax: req.Msg.GetAutoscaleMax(),
+	// Resolve the machine type name against the catalog within the cluster's
+	// region: only offered types are valid (pre-validate with ListRegions).
+	offering, err := s.queries.RegionMachineTypeResolve(ctx, db.RegionMachineTypeResolveParams{
+		RegionName:      cluster.Region,
+		MachineTypeName: req.Msg.GetMachineType(),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeInvalidArgument,
+				fmt.Errorf("machine type %q is not offered in region %q", req.Msg.GetMachineType(), cluster.Region))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve machine type: %w", err))
 	}
 
-	// Catalog path: resolve the region_machine_types row and fill the legacy
-	// machine_type text column from it (expand phase - the worker still reads
-	// the text column). The region-match trigger asserts the row's region is
-	// the cluster's region. Legacy path: the text field is stored as-is.
-	if req.Msg.GetRegionMachineTypeId() != "" {
-		regionMachineTypeID, err := parseUUIDField(req.Msg.GetRegionMachineTypeId(), "region_machine_type_id")
-		if err != nil {
-			return nil, err
-		}
-
-		offering, err := s.queries.RegionMachineTypeGet(ctx, db.RegionMachineTypeGetParams{ID: regionMachineTypeID})
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown machine type"))
-			}
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve machine type: %w", err))
-		}
-
-		params.MachineType = offering.MachineTypeName
-		params.RegionMachineTypeID = pgtype.UUID{Bytes: regionMachineTypeID, Valid: true}
-	} else if req.Msg.GetMachineType() == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("either region_machine_type_id or machine_type must be set"))
+	params := db.NodePoolCreateParams{
+		ClusterID:           clusterID,
+		Name:                req.Msg.GetName(),
+		MachineType:         req.Msg.GetMachineType(),
+		RegionMachineTypeID: pgtype.UUID{Bytes: offering, Valid: true},
+		AutoscaleMin:        req.Msg.GetAutoscaleMin(),
+		AutoscaleMax:        req.Msg.GetAutoscaleMax(),
 	}
 
 	nodePoolID, err := s.queries.NodePoolCreate(ctx, params)
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-			// The region-match constraint trigger: the machine type belongs to a
-			// different region than the cluster (also raised when the cluster
-			// predates the catalog and has no region_id yet).
+			// The region-match constraint trigger: the resolved row's region does
+			// not match the cluster's region_id (e.g. a pre-catalog cluster whose
+			// region_id is still NULL).
 			if pgErr.Code == pgerrcode.RaiseException && pgErr.Hint == dbconst.HintNodePoolRegionMismatch {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("the machine type is not offered in the cluster's region"))
+				return nil, connect.NewError(connect.CodeFailedPrecondition,
+					fmt.Errorf("the cluster is not linked to the region catalog; contact an operator"))
 			}
 			if pgErr.Code == pgerrcode.ForeignKeyViolation && pgErr.ConstraintName == dbconst.ConstraintNodePoolsFkRegionMachineType {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown machine type"))
+				return nil, connect.NewError(connect.CodeInvalidArgument,
+					fmt.Errorf("machine type %q is not offered in region %q", req.Msg.GetMachineType(), cluster.Region))
 			}
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create node pool: %w", err))

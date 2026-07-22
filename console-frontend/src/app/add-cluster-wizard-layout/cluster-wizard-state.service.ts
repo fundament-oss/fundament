@@ -1,21 +1,16 @@
 import { Injectable, signal } from '@angular/core';
 
 export interface ClusterWizardState {
-  // Basic cluster information (step 1). region/kubernetesVersion are the
-  // display names; the ids reference the region catalog and are what the
-  // create request sends.
+  // Basic cluster information (step 1). Names come from the region catalog
+  // (ListRegions) and are exactly what the create request sends.
   clusterName?: string;
   region?: string;
-  regionId?: string;
   kubernetesVersion?: string;
-  kubernetesVersionId?: string;
 
-  // Node pools (step 2). regionMachineTypeId references the catalog
-  // (region_machine_types); machineType is the display name.
+  // Node pools (step 2)
   nodePools?: {
     name: string;
     machineType: string;
-    regionMachineTypeId?: string;
     autoscaleMin: number;
     autoscaleMax: number;
   }[];
@@ -36,13 +31,7 @@ export class ClusterWizardStateService {
     return this.state();
   }
 
-  updateBasicInfo(data: {
-    clusterName?: string;
-    region?: string;
-    regionId?: string;
-    kubernetesVersion?: string;
-    kubernetesVersionId?: string;
-  }) {
+  updateBasicInfo(data: { clusterName?: string; region?: string; kubernetesVersion?: string }) {
     this.state.update((current) => ({
       ...current,
       ...data,

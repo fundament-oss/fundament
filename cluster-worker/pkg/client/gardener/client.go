@@ -89,9 +89,8 @@ type ClusterToSync struct {
 	Namespace         string    // Gardener namespace (garden-{project-name})
 	Region            string
 	KubernetesVersion string
-	// CloudProfile / CloudProfileRegion come from the catalog regions row
-	// (catalog.regions via clusters.region_id). Empty on legacy clusters without
-	// a catalog reference; the provider env defaults apply then.
+	// CloudProfile / CloudProfileRegion select the gardener CloudProfile and the
+	// region within it; empty falls back to the provider defaults.
 	CloudProfile       string
 	CloudProfileRegion string
 	Deleted            *time.Time

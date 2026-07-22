@@ -28,6 +28,11 @@ type AppstorePresetPlugin struct {
 	PluginID uuid.UUID
 }
 
+type CatalogRegionKubernetesVersion struct {
+	RegionID            uuid.UUID
+	KubernetesVersionID uuid.UUID
+}
+
 type TenantClusterEvent struct {
 	ID         uuid.UUID
 	ClusterID  uuid.UUID
