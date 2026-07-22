@@ -22,13 +22,15 @@ export default function buildPluginConsoleUrl(args: {
   pluginVersion: string;
   path: string;
 }): string {
-  // Pre-built absolute URLs (e.g. /plugin-ui/demo/...) are passed through so
-  // the bundled demo plugin still loads. Under FUN-17 the demo will move to
-  // plugin-proxy too; that's a follow-up.
-  if (/^https?:\/\//.test(args.path) || args.path.startsWith('/plugin-ui/')) {
-    return args.path;
-  }
-
+  // The asset path is always resolved against — and served from — the
+  // plugin-proxy origin. We deliberately do NOT pass any path through
+  // verbatim: `path` originates from the plugin's own GetDefinition RPC
+  // (attacker-controlled if a plugin is compromised), and an absolute
+  // `https://…` or console-origin `/plugin-ui/…` src would either exfiltrate
+  // the minted PluginToken to a foreign origin or defeat the iframe sandbox
+  // (`allow-same-origin` on the console origin is a no-op). Building every
+  // path into the plugin-proxy URL pins the iframe — and therefore the
+  // postMessage target origin — to plugin-proxy.
   const base = args.pluginProxyUrl.replace(/\/$/, '');
   const consolePath = args.path.startsWith('/') ? args.path.slice(1) : args.path;
   return (
@@ -75,12 +77,10 @@ export function buildCustomUIUrl(args: {
   if (!plugin || !kind || !clusterId) return null;
   const path = plugin.customComponents?.[kind]?.[view];
   if (!path) return null;
-  // A `/plugin-ui/...` (or absolute) path is passed through verbatim and needs
-  // no installation name/version. For a plugin-proxy-served asset both are
-  // required; an empty version would build `/plugins/<name>//console/...`,
-  // which the handler's parsePath rejects.
-  const passthrough = /^https?:\/\//.test(path) || path.startsWith('/plugin-ui/');
-  if (!passthrough && (!plugin.installationName || !plugin.installationVersion)) return null;
+  // Every asset is served from plugin-proxy, so the installation name/version
+  // are always required; an empty version would build
+  // `/plugins/<name>//console/...`, which the handler's parsePath rejects.
+  if (!plugin.installationName || !plugin.installationVersion) return null;
   return buildPluginConsoleUrl({
     pluginProxyUrl,
     clusterId,

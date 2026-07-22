@@ -14,9 +14,6 @@ externalUrls:
   dcim: https://dcim.fundament.localhost:8443
   dcimAuthn: https://dcim-authn.fundament.localhost:8443
   corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
-  # The in-cluster Console plus the `ng serve` origins, so a plugin iframe still
-  # loads when the Console runs outside the cluster against this deployment.
-  consoleOrigins: "https://console.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true

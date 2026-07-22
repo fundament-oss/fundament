@@ -53,12 +53,19 @@ export class PluginAuthService {
 
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  // epochs[key] bumps on every release(key). A mint captures the epoch when it
-  // starts and, on resolve, skips re-populating the maps / re-arming the timer
-  // if it changed — otherwise a mint that resolves after release() resurrects a
-  // refresh timer for a destroyed iframe. Never deleted: a missing entry would
-  // default to 0 and defeat the guard.
+  // epochs[key] bumps on every teardown of `key`. A mint captures the epoch
+  // when it starts and, on resolve, skips re-populating the maps / re-arming
+  // the timer if it changed — otherwise a mint that resolves after teardown
+  // resurrects a refresh timer for a destroyed iframe. Never deleted: a missing
+  // entry would default to 0 and defeat the guard.
   private readonly epochs = new Map<string, number>();
+
+  // refcounts[key] tracks how many live consumers (iframes) share a
+  // (cluster, install) tuple. retain() increments; release() decrements and
+  // only tears the tuple down when it hits zero. Without this, destroying one
+  // of two iframes on the same key would cancel the shared refresh timer and
+  // drop the token, silently expiring the surviving iframe's session.
+  private readonly refcounts = new Map<string, number>();
 
   // eslint-disable-next-line @angular-eslint/prefer-inject
   constructor(@Optional() @Inject(MINT_CLIENT) overrideClient?: MintClient) {
@@ -150,8 +157,27 @@ export class PluginAuthService {
     return this.epochs.get(key) ?? 0;
   }
 
+  // retain registers a live consumer for a (cluster, install) tuple. Callers
+  // MUST pair each retain() with exactly one release() (e.g. iframe ngOnInit /
+  // onDestroy). acquire() deliberately does NOT retain: it's called several
+  // times per consumer lifecycle (initial mint, sendInit, 401 refresh), so
+  // coupling it to the refcount would leave the count permanently above zero.
+  retain(clusterId: string, installationId: string): void {
+    const key = makeKey(clusterId, installationId);
+    this.refcounts.set(key, (this.refcounts.get(key) ?? 0) + 1);
+  }
+
   release(clusterId: string, installationId: string): void {
     const key = makeKey(clusterId, installationId);
+    // Decrement the refcount; only the last consumer tears the tuple down.
+    // Other live iframes on the same key keep their token and refresh timer.
+    const remaining = (this.refcounts.get(key) ?? 0) - 1;
+    if (remaining > 0) {
+      this.refcounts.set(key, remaining);
+      return;
+    }
+    this.refcounts.delete(key);
+
     // Bump the epoch before clearing so an in-flight mint sees it and bails.
     this.epochs.set(key, this.epochOf(key) + 1);
     const timer = this.timers.get(key);

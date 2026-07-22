@@ -110,17 +110,15 @@ export default class PluginIframeComponent implements OnInit {
   private iframeRef = viewChild<ElementRef<HTMLIFrameElement>>('pluginFrame');
 
   private pluginProxyOrigin = computed(() => {
-    // Derive the expected postMessage origin from the ACTUAL iframe src, not
-    // from pluginProxyUrl. The src is cross-site (the plugin-proxy URL) for
-    // real plugins but same-origin (`/plugin-ui/...`) for the bundled demo;
-    // pinning to pluginProxyUrl would wrongly reject the demo's messages once
-    // a cross-site pluginProxyUrl is configured.
+    // Derive the expected postMessage origin from the ACTUAL iframe src. The
+    // src is always the plugin-proxy asset URL (buildPluginConsoleUrl pins
+    // every path to the plugin-proxy origin), so this resolves to that
+    // cross-site origin.
     //
-    // Resolving against window.location.href turns a relative `/plugin-ui/...`
-    // src into the current origin and leaves an absolute cross-site src on its
-    // own origin. Normalizing via URL.origin also strips any trailing slash —
-    // MessageEvent.origin is bare per the HTML spec, and postMessage rejects
-    // any targetOrigin that isn't a valid origin.
+    // Resolving against window.location.href normalizes the absolute src onto
+    // its own origin. Normalizing via URL.origin also strips any trailing
+    // slash — MessageEvent.origin is bare per the HTML spec, and postMessage
+    // rejects any targetOrigin that isn't a valid origin.
     const src = this.src();
     try {
       return new URL(src, window.location.href).origin;
@@ -151,6 +149,11 @@ export default class PluginIframeComponent implements OnInit {
     }, 5000);
 
     this.destroyRef.onDestroy(() => clearTimeout(readyTimeout));
+
+    // Register this iframe as a live consumer of the (cluster, install) token.
+    // Paired with the release() in onDestroy below so PluginAuthService only
+    // tears the tuple down once the last iframe on this key is gone.
+    this.auth.retain(this.clusterId(), this.installationId());
 
     // Kick off the first mint in parallel with the iframe load. The signal
     // effect below pushes token-refreshed / auth-failed to the iframe once

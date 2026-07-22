@@ -154,4 +154,30 @@ describe('PluginAuthService', () => {
       vi.useRealTimers();
     }
   });
+
+  it('keeps the token alive until the last consumer releases (refcount)', async () => {
+    const client = new FakeMintClient();
+    const svc = new PluginAuthService(client);
+
+    // Two iframes share the same (cluster, installation) tuple.
+    svc.retain('c1', 'i1');
+    svc.retain('c1', 'i1');
+    await svc.acquire('c1', 'i1');
+    expect(client.callCount).toBe(1);
+
+    // One iframe is destroyed: the tuple must survive for the other, so the
+    // cached token is still served (no re-mint) and its refresh timer stands.
+    svc.release('c1', 'i1');
+    const cached = await svc.acquire('c1', 'i1');
+    expect(cached.token).toBe('t1');
+    expect(client.callCount).toBe(1);
+
+    // The last iframe is destroyed: teardown clears the cache, so the next
+    // acquire mints fresh.
+    svc.release('c1', 'i1');
+    client.nextResp = { token: 't2', expiresAt: inFuture(900) };
+    const fresh = await svc.acquire('c1', 'i1');
+    expect(fresh.token).toBe('t2');
+    expect(client.callCount).toBe(2);
+  });
 });
