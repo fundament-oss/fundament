@@ -55,6 +55,7 @@ import { FundamentLogoIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
+import { repaintSchemeSensitiveLayers } from './utils/color-scheme-repaint';
 import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
@@ -521,6 +522,12 @@ export default class App implements OnInit {
     } else {
       htmlElement.classList.remove('dark');
     }
+
+    // The design system keys its own color-scheme handling on :root[data-scheme],
+    // so keep that in sync with our 'dark' class. Mirrors the inline script in index.html.
+    htmlElement.dataset['scheme'] = this.isDarkMode() ? 'dark' : 'light';
+
+    repaintSchemeSensitiveLayers();
   }
 
   // Persist the user's explicit theme choice to localStorage.

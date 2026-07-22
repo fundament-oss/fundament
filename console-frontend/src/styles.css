@@ -98,7 +98,9 @@
 
 /* Make the CSS color-scheme follow the app's .dark class so that NLDD web
    components using light-dark() respond to our toggle instead of the OS setting.
-   html.dark specificity (0,1,1) beats :root (0,1,0) from the storybook tokens. */
+   html.dark specificity (0,1,1) beats :root (0,1,0) from the storybook tokens.
+   The theme toggle also sets :root[data-scheme], which NLDD keys its own
+   color-scheme handling on; these rules stay as the fallback. */
 html:not(.dark) {
   color-scheme: light;
 }
