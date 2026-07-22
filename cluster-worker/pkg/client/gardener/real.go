@@ -212,14 +212,15 @@ func (r *RealClient) ApplyShoot(ctx context.Context, cluster *ClusterToSync) err
 		// Gardener's controllers update shoots continuously (status, finalizers -
 		// especially right after creation, when the cluster and node-pool outbox
 		// events sync back to back), so a plain get-modify-update regularly loses
-		// the optimistic-concurrency race. Re-read and re-apply on conflict.
+		// the optimistic-concurrency race. Re-read and re-apply on conflict,
+		// re-reading by name/namespace so every attempt deterministically targets
+		// the shoot found above. Errors are returned unwrapped inside the closure
+		// so RetryOnConflict can recognize conflicts.
+		key := client.ObjectKeyFromObject(existing)
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			shoot, err := r.getShootByClusterID(ctx, cluster.ID)
-			if err != nil {
-				return fmt.Errorf("failed to look up existing shoot: %w", err)
-			}
-			if shoot == nil {
-				return fmt.Errorf("shoot for cluster %s disappeared during update", cluster.ID)
+			shoot := &gardencorev1beta1.Shoot{}
+			if err := r.client.Get(ctx, key, shoot); err != nil {
+				return err
 			}
 			if err := r.updateShootSpec(shoot, cluster); err != nil {
 				return err
