@@ -6,49 +6,49 @@ package dbconst
 type AssetEventEventType string
 
 const (
-	AssetEventEventType_Received AssetEventEventType = "received"
-	AssetEventEventType_Deployed AssetEventEventType = "deployed"
-	AssetEventEventType_Moved AssetEventEventType = "moved"
-	AssetEventEventType_RmaSent AssetEventEventType = "rma_sent"
-	AssetEventEventType_RmaReceived AssetEventEventType = "rma_received"
+	AssetEventEventType_Received       AssetEventEventType = "received"
+	AssetEventEventType_Deployed       AssetEventEventType = "deployed"
+	AssetEventEventType_Moved          AssetEventEventType = "moved"
+	AssetEventEventType_RmaSent        AssetEventEventType = "rma_sent"
+	AssetEventEventType_RmaReceived    AssetEventEventType = "rma_received"
 	AssetEventEventType_Decommissioned AssetEventEventType = "decommissioned"
-	AssetEventEventType_Reserved AssetEventEventType = "reserved"
-	AssetEventEventType_Note AssetEventEventType = "note"
+	AssetEventEventType_Reserved       AssetEventEventType = "reserved"
+	AssetEventEventType_Note           AssetEventEventType = "note"
 )
 
 // AssetStatus represents valid values for dcim.assets.status.
 type AssetStatus string
 
 const (
-	AssetStatus_InStock AssetStatus = "in_stock"
-	AssetStatus_Deployed AssetStatus = "deployed"
-	AssetStatus_Rma AssetStatus = "rma"
+	AssetStatus_InStock        AssetStatus = "in_stock"
+	AssetStatus_Deployed       AssetStatus = "deployed"
+	AssetStatus_Rma            AssetStatus = "rma"
 	AssetStatus_Decommissioned AssetStatus = "decommissioned"
-	AssetStatus_InTransit AssetStatus = "in_transit"
-	AssetStatus_Reserved AssetStatus = "reserved"
+	AssetStatus_InTransit      AssetStatus = "in_transit"
+	AssetStatus_Reserved       AssetStatus = "reserved"
 )
 
 // ClusterEventEventType represents valid values for tenant.cluster_events.event_type.
 type ClusterEventEventType string
 
 const (
-	ClusterEventEventType_SyncRequested ClusterEventEventType = "sync_requested"
-	ClusterEventEventType_SyncClaimed ClusterEventEventType = "sync_claimed"
-	ClusterEventEventType_SyncSucceeded ClusterEventEventType = "sync_succeeded"
-	ClusterEventEventType_SyncFailed ClusterEventEventType = "sync_failed"
+	ClusterEventEventType_SyncRequested     ClusterEventEventType = "sync_requested"
+	ClusterEventEventType_SyncClaimed       ClusterEventEventType = "sync_claimed"
+	ClusterEventEventType_SyncSucceeded     ClusterEventEventType = "sync_succeeded"
+	ClusterEventEventType_SyncFailed        ClusterEventEventType = "sync_failed"
 	ClusterEventEventType_StatusProgressing ClusterEventEventType = "status_progressing"
-	ClusterEventEventType_StatusReady ClusterEventEventType = "status_ready"
-	ClusterEventEventType_StatusError ClusterEventEventType = "status_error"
-	ClusterEventEventType_StatusDeleted ClusterEventEventType = "status_deleted"
+	ClusterEventEventType_StatusReady       ClusterEventEventType = "status_ready"
+	ClusterEventEventType_StatusError       ClusterEventEventType = "status_error"
+	ClusterEventEventType_StatusDeleted     ClusterEventEventType = "status_deleted"
 	ClusterEventEventType_UserSyncSucceeded ClusterEventEventType = "user_sync_succeeded"
-	ClusterEventEventType_UserSyncFailed ClusterEventEventType = "user_sync_failed"
+	ClusterEventEventType_UserSyncFailed    ClusterEventEventType = "user_sync_failed"
 )
 
 // ClusterEventSyncAction represents valid values for tenant.cluster_events.sync_action.
 type ClusterEventSyncAction string
 
 const (
-	ClusterEventSyncAction_Sync ClusterEventSyncAction = "sync"
+	ClusterEventSyncAction_Sync   ClusterEventSyncAction = "sync"
 	ClusterEventSyncAction_Delete ClusterEventSyncAction = "delete"
 )
 
@@ -56,58 +56,58 @@ const (
 type ClusterOutboxEvent string
 
 const (
-	ClusterOutboxEvent_Created ClusterOutboxEvent = "created"
-	ClusterOutboxEvent_Updated ClusterOutboxEvent = "updated"
-	ClusterOutboxEvent_Deleted ClusterOutboxEvent = "deleted"
+	ClusterOutboxEvent_Created   ClusterOutboxEvent = "created"
+	ClusterOutboxEvent_Updated   ClusterOutboxEvent = "updated"
+	ClusterOutboxEvent_Deleted   ClusterOutboxEvent = "deleted"
 	ClusterOutboxEvent_Reconcile ClusterOutboxEvent = "reconcile"
-	ClusterOutboxEvent_Ready ClusterOutboxEvent = "ready"
+	ClusterOutboxEvent_Ready     ClusterOutboxEvent = "ready"
 )
 
 // ClusterOutboxSource represents valid values for tenant.cluster_outbox.source.
 type ClusterOutboxSource string
 
 const (
-	ClusterOutboxSource_Trigger ClusterOutboxSource = "trigger"
+	ClusterOutboxSource_Trigger   ClusterOutboxSource = "trigger"
 	ClusterOutboxSource_Reconcile ClusterOutboxSource = "reconcile"
-	ClusterOutboxSource_Manual ClusterOutboxSource = "manual"
-	ClusterOutboxSource_Status ClusterOutboxSource = "status"
+	ClusterOutboxSource_Manual    ClusterOutboxSource = "manual"
+	ClusterOutboxSource_Status    ClusterOutboxSource = "status"
 )
 
 // ClusterOutboxStatus represents valid values for tenant.cluster_outbox.status.
 type ClusterOutboxStatus string
 
 const (
-	ClusterOutboxStatus_Pending ClusterOutboxStatus = "pending"
+	ClusterOutboxStatus_Pending   ClusterOutboxStatus = "pending"
 	ClusterOutboxStatus_Completed ClusterOutboxStatus = "completed"
-	ClusterOutboxStatus_Retrying ClusterOutboxStatus = "retrying"
-	ClusterOutboxStatus_Failed ClusterOutboxStatus = "failed"
+	ClusterOutboxStatus_Retrying  ClusterOutboxStatus = "retrying"
+	ClusterOutboxStatus_Failed    ClusterOutboxStatus = "failed"
 )
 
 // DeviceCatalogCategory represents valid values for dcim.device_catalogs.category.
 type DeviceCatalogCategory string
 
 const (
-	DeviceCatalogCategory_Server DeviceCatalogCategory = "server"
-	DeviceCatalogCategory_Switch DeviceCatalogCategory = "switch"
-	DeviceCatalogCategory_Pdu DeviceCatalogCategory = "pdu"
-	DeviceCatalogCategory_PatchPanel DeviceCatalogCategory = "patch_panel"
-	DeviceCatalogCategory_Sfp DeviceCatalogCategory = "sfp"
-	DeviceCatalogCategory_Nic DeviceCatalogCategory = "nic"
-	DeviceCatalogCategory_Cpu DeviceCatalogCategory = "cpu"
-	DeviceCatalogCategory_Dimm DeviceCatalogCategory = "dimm"
-	DeviceCatalogCategory_Disk DeviceCatalogCategory = "disk"
-	DeviceCatalogCategory_Cable DeviceCatalogCategory = "cable"
-	DeviceCatalogCategory_Adapter DeviceCatalogCategory = "adapter"
-	DeviceCatalogCategory_PowerSupply DeviceCatalogCategory = "power_supply"
-	DeviceCatalogCategory_CableManager DeviceCatalogCategory = "cable_manager"
+	DeviceCatalogCategory_Server        DeviceCatalogCategory = "server"
+	DeviceCatalogCategory_Switch        DeviceCatalogCategory = "switch"
+	DeviceCatalogCategory_Pdu           DeviceCatalogCategory = "pdu"
+	DeviceCatalogCategory_PatchPanel    DeviceCatalogCategory = "patch_panel"
+	DeviceCatalogCategory_Sfp           DeviceCatalogCategory = "sfp"
+	DeviceCatalogCategory_Nic           DeviceCatalogCategory = "nic"
+	DeviceCatalogCategory_Cpu           DeviceCatalogCategory = "cpu"
+	DeviceCatalogCategory_Dimm          DeviceCatalogCategory = "dimm"
+	DeviceCatalogCategory_Disk          DeviceCatalogCategory = "disk"
+	DeviceCatalogCategory_Cable         DeviceCatalogCategory = "cable"
+	DeviceCatalogCategory_Adapter       DeviceCatalogCategory = "adapter"
+	DeviceCatalogCategory_PowerSupply   DeviceCatalogCategory = "power_supply"
+	DeviceCatalogCategory_CableManager  DeviceCatalogCategory = "cable_manager"
 	DeviceCatalogCategory_ConsoleServer DeviceCatalogCategory = "console_server"
-	DeviceCatalogCategory_Storage DeviceCatalogCategory = "storage"
-	DeviceCatalogCategory_Cooling DeviceCatalogCategory = "cooling"
-	DeviceCatalogCategory_Firewall DeviceCatalogCategory = "firewall"
-	DeviceCatalogCategory_Kvm DeviceCatalogCategory = "kvm"
-	DeviceCatalogCategory_Gpu DeviceCatalogCategory = "gpu"
-	DeviceCatalogCategory_Transceiver DeviceCatalogCategory = "transceiver"
-	DeviceCatalogCategory_Other DeviceCatalogCategory = "other"
+	DeviceCatalogCategory_Storage       DeviceCatalogCategory = "storage"
+	DeviceCatalogCategory_Cooling       DeviceCatalogCategory = "cooling"
+	DeviceCatalogCategory_Firewall      DeviceCatalogCategory = "firewall"
+	DeviceCatalogCategory_Kvm           DeviceCatalogCategory = "kvm"
+	DeviceCatalogCategory_Gpu           DeviceCatalogCategory = "gpu"
+	DeviceCatalogCategory_Transceiver   DeviceCatalogCategory = "transceiver"
+	DeviceCatalogCategory_Other         DeviceCatalogCategory = "other"
 )
 
 // LogicalConnectionConnectionType represents valid values for dcim.logical_connections.connection_type.
@@ -115,7 +115,7 @@ type LogicalConnectionConnectionType string
 
 const (
 	LogicalConnectionConnectionType_Network LogicalConnectionConnectionType = "network"
-	LogicalConnectionConnectionType_Power LogicalConnectionConnectionType = "power"
+	LogicalConnectionConnectionType_Power   LogicalConnectionConnectionType = "power"
 	LogicalConnectionConnectionType_Console LogicalConnectionConnectionType = "console"
 )
 
@@ -123,8 +123,8 @@ const (
 type LogicalDesignStatus string
 
 const (
-	LogicalDesignStatus_Draft LogicalDesignStatus = "draft"
-	LogicalDesignStatus_Active LogicalDesignStatus = "active"
+	LogicalDesignStatus_Draft    LogicalDesignStatus = "draft"
+	LogicalDesignStatus_Active   LogicalDesignStatus = "active"
 	LogicalDesignStatus_Archived LogicalDesignStatus = "archived"
 )
 
@@ -132,25 +132,25 @@ const (
 type LogicalDeviceRole string
 
 const (
-	LogicalDeviceRole_Compute LogicalDeviceRole = "compute"
-	LogicalDeviceRole_Tor LogicalDeviceRole = "tor"
-	LogicalDeviceRole_Spine LogicalDeviceRole = "spine"
-	LogicalDeviceRole_Core LogicalDeviceRole = "core"
-	LogicalDeviceRole_Pdu LogicalDeviceRole = "pdu"
-	LogicalDeviceRole_PatchPanel LogicalDeviceRole = "patch_panel"
-	LogicalDeviceRole_Storage LogicalDeviceRole = "storage"
-	LogicalDeviceRole_Firewall LogicalDeviceRole = "firewall"
-	LogicalDeviceRole_LoadBalancer LogicalDeviceRole = "load_balancer"
+	LogicalDeviceRole_Compute       LogicalDeviceRole = "compute"
+	LogicalDeviceRole_Tor           LogicalDeviceRole = "tor"
+	LogicalDeviceRole_Spine         LogicalDeviceRole = "spine"
+	LogicalDeviceRole_Core          LogicalDeviceRole = "core"
+	LogicalDeviceRole_Pdu           LogicalDeviceRole = "pdu"
+	LogicalDeviceRole_PatchPanel    LogicalDeviceRole = "patch_panel"
+	LogicalDeviceRole_Storage       LogicalDeviceRole = "storage"
+	LogicalDeviceRole_Firewall      LogicalDeviceRole = "firewall"
+	LogicalDeviceRole_LoadBalancer  LogicalDeviceRole = "load_balancer"
 	LogicalDeviceRole_ConsoleServer LogicalDeviceRole = "console_server"
-	LogicalDeviceRole_CableManager LogicalDeviceRole = "cable_manager"
-	LogicalDeviceRole_Adapter LogicalDeviceRole = "adapter"
+	LogicalDeviceRole_CableManager  LogicalDeviceRole = "cable_manager"
+	LogicalDeviceRole_Adapter       LogicalDeviceRole = "adapter"
 )
 
 // OrganizationsUserPermission represents valid values for tenant.organizations_users.permission.
 type OrganizationsUserPermission string
 
 const (
-	OrganizationsUserPermission_Admin OrganizationsUserPermission = "admin"
+	OrganizationsUserPermission_Admin  OrganizationsUserPermission = "admin"
 	OrganizationsUserPermission_Viewer OrganizationsUserPermission = "viewer"
 )
 
@@ -158,63 +158,63 @@ const (
 type OrganizationsUserStatus string
 
 const (
-	OrganizationsUserStatus_Pending OrganizationsUserStatus = "pending"
+	OrganizationsUserStatus_Pending  OrganizationsUserStatus = "pending"
 	OrganizationsUserStatus_Accepted OrganizationsUserStatus = "accepted"
 	OrganizationsUserStatus_Declined OrganizationsUserStatus = "declined"
-	OrganizationsUserStatus_Revoked OrganizationsUserStatus = "revoked"
+	OrganizationsUserStatus_Revoked  OrganizationsUserStatus = "revoked"
 )
 
 // OutboxStatus represents valid values for authz.outbox.status.
 type OutboxStatus string
 
 const (
-	OutboxStatus_Pending OutboxStatus = "pending"
+	OutboxStatus_Pending   OutboxStatus = "pending"
 	OutboxStatus_Completed OutboxStatus = "completed"
-	OutboxStatus_Retrying OutboxStatus = "retrying"
-	OutboxStatus_Failed OutboxStatus = "failed"
+	OutboxStatus_Retrying  OutboxStatus = "retrying"
+	OutboxStatus_Failed    OutboxStatus = "failed"
 )
 
 // PhysicalConnectionCableType represents valid values for dcim.physical_connections.cable_type.
 type PhysicalConnectionCableType string
 
 const (
-	PhysicalConnectionCableType_Cat5e PhysicalConnectionCableType = "cat5e"
-	PhysicalConnectionCableType_Cat6 PhysicalConnectionCableType = "cat6"
-	PhysicalConnectionCableType_Cat6a PhysicalConnectionCableType = "cat6a"
-	PhysicalConnectionCableType_Cat7 PhysicalConnectionCableType = "cat7"
-	PhysicalConnectionCableType_Cat8 PhysicalConnectionCableType = "cat8"
-	PhysicalConnectionCableType_Dac PhysicalConnectionCableType = "dac"
-	PhysicalConnectionCableType_Aoc PhysicalConnectionCableType = "aoc"
-	PhysicalConnectionCableType_Mmf PhysicalConnectionCableType = "mmf"
-	PhysicalConnectionCableType_Smf PhysicalConnectionCableType = "smf"
-	PhysicalConnectionCableType_Power PhysicalConnectionCableType = "power"
+	PhysicalConnectionCableType_Cat5e   PhysicalConnectionCableType = "cat5e"
+	PhysicalConnectionCableType_Cat6    PhysicalConnectionCableType = "cat6"
+	PhysicalConnectionCableType_Cat6a   PhysicalConnectionCableType = "cat6a"
+	PhysicalConnectionCableType_Cat7    PhysicalConnectionCableType = "cat7"
+	PhysicalConnectionCableType_Cat8    PhysicalConnectionCableType = "cat8"
+	PhysicalConnectionCableType_Dac     PhysicalConnectionCableType = "dac"
+	PhysicalConnectionCableType_Aoc     PhysicalConnectionCableType = "aoc"
+	PhysicalConnectionCableType_Mmf     PhysicalConnectionCableType = "mmf"
+	PhysicalConnectionCableType_Smf     PhysicalConnectionCableType = "smf"
+	PhysicalConnectionCableType_Power   PhysicalConnectionCableType = "power"
 	PhysicalConnectionCableType_Console PhysicalConnectionCableType = "console"
-	PhysicalConnectionCableType_Usb PhysicalConnectionCableType = "usb"
-	PhysicalConnectionCableType_Other PhysicalConnectionCableType = "other"
+	PhysicalConnectionCableType_Usb     PhysicalConnectionCableType = "usb"
+	PhysicalConnectionCableType_Other   PhysicalConnectionCableType = "other"
 )
 
 // PhysicalConnectionColor represents valid values for dcim.physical_connections.color.
 type PhysicalConnectionColor string
 
 const (
-	PhysicalConnectionColor_DarkGrey PhysicalConnectionColor = "dark_grey"
+	PhysicalConnectionColor_DarkGrey  PhysicalConnectionColor = "dark_grey"
 	PhysicalConnectionColor_LightGrey PhysicalConnectionColor = "light_grey"
-	PhysicalConnectionColor_Red PhysicalConnectionColor = "red"
-	PhysicalConnectionColor_Green PhysicalConnectionColor = "green"
-	PhysicalConnectionColor_Blue PhysicalConnectionColor = "blue"
-	PhysicalConnectionColor_Yellow PhysicalConnectionColor = "yellow"
-	PhysicalConnectionColor_Purple PhysicalConnectionColor = "purple"
-	PhysicalConnectionColor_Orange PhysicalConnectionColor = "orange"
-	PhysicalConnectionColor_Teal PhysicalConnectionColor = "teal"
-	PhysicalConnectionColor_White PhysicalConnectionColor = "white"
+	PhysicalConnectionColor_Red       PhysicalConnectionColor = "red"
+	PhysicalConnectionColor_Green     PhysicalConnectionColor = "green"
+	PhysicalConnectionColor_Blue      PhysicalConnectionColor = "blue"
+	PhysicalConnectionColor_Yellow    PhysicalConnectionColor = "yellow"
+	PhysicalConnectionColor_Purple    PhysicalConnectionColor = "purple"
+	PhysicalConnectionColor_Orange    PhysicalConnectionColor = "orange"
+	PhysicalConnectionColor_Teal      PhysicalConnectionColor = "teal"
+	PhysicalConnectionColor_White     PhysicalConnectionColor = "white"
 )
 
 // PhysicalConnectionStatus represents valid values for dcim.physical_connections.status.
 type PhysicalConnectionStatus string
 
 const (
-	PhysicalConnectionStatus_Planned PhysicalConnectionStatus = "planned"
-	PhysicalConnectionStatus_Connected PhysicalConnectionStatus = "connected"
+	PhysicalConnectionStatus_Planned        PhysicalConnectionStatus = "planned"
+	PhysicalConnectionStatus_Connected      PhysicalConnectionStatus = "connected"
 	PhysicalConnectionStatus_Decommissioned PhysicalConnectionStatus = "decommissioned"
 )
 
@@ -222,7 +222,7 @@ const (
 type PlacementSlotType string
 
 const (
-	PlacementSlotType_Unit PlacementSlotType = "unit"
+	PlacementSlotType_Unit  PlacementSlotType = "unit"
 	PlacementSlotType_Power PlacementSlotType = "power"
 	PlacementSlotType_ZeroU PlacementSlotType = "zero_u"
 )
@@ -231,19 +231,19 @@ const (
 type PortCompatibilitieCompatibleCategory string
 
 const (
-	PortCompatibilitieCompatibleCategory_Server PortCompatibilitieCompatibleCategory = "server"
-	PortCompatibilitieCompatibleCategory_Switch PortCompatibilitieCompatibleCategory = "switch"
-	PortCompatibilitieCompatibleCategory_Pdu PortCompatibilitieCompatibleCategory = "pdu"
-	PortCompatibilitieCompatibleCategory_PatchPanel PortCompatibilitieCompatibleCategory = "patch_panel"
-	PortCompatibilitieCompatibleCategory_Sfp PortCompatibilitieCompatibleCategory = "sfp"
-	PortCompatibilitieCompatibleCategory_Nic PortCompatibilitieCompatibleCategory = "nic"
-	PortCompatibilitieCompatibleCategory_Cpu PortCompatibilitieCompatibleCategory = "cpu"
-	PortCompatibilitieCompatibleCategory_Dimm PortCompatibilitieCompatibleCategory = "dimm"
-	PortCompatibilitieCompatibleCategory_Disk PortCompatibilitieCompatibleCategory = "disk"
-	PortCompatibilitieCompatibleCategory_Cable PortCompatibilitieCompatibleCategory = "cable"
-	PortCompatibilitieCompatibleCategory_Adapter PortCompatibilitieCompatibleCategory = "adapter"
-	PortCompatibilitieCompatibleCategory_PowerSupply PortCompatibilitieCompatibleCategory = "power_supply"
-	PortCompatibilitieCompatibleCategory_CableManager PortCompatibilitieCompatibleCategory = "cable_manager"
+	PortCompatibilitieCompatibleCategory_Server        PortCompatibilitieCompatibleCategory = "server"
+	PortCompatibilitieCompatibleCategory_Switch        PortCompatibilitieCompatibleCategory = "switch"
+	PortCompatibilitieCompatibleCategory_Pdu           PortCompatibilitieCompatibleCategory = "pdu"
+	PortCompatibilitieCompatibleCategory_PatchPanel    PortCompatibilitieCompatibleCategory = "patch_panel"
+	PortCompatibilitieCompatibleCategory_Sfp           PortCompatibilitieCompatibleCategory = "sfp"
+	PortCompatibilitieCompatibleCategory_Nic           PortCompatibilitieCompatibleCategory = "nic"
+	PortCompatibilitieCompatibleCategory_Cpu           PortCompatibilitieCompatibleCategory = "cpu"
+	PortCompatibilitieCompatibleCategory_Dimm          PortCompatibilitieCompatibleCategory = "dimm"
+	PortCompatibilitieCompatibleCategory_Disk          PortCompatibilitieCompatibleCategory = "disk"
+	PortCompatibilitieCompatibleCategory_Cable         PortCompatibilitieCompatibleCategory = "cable"
+	PortCompatibilitieCompatibleCategory_Adapter       PortCompatibilitieCompatibleCategory = "adapter"
+	PortCompatibilitieCompatibleCategory_PowerSupply   PortCompatibilitieCompatibleCategory = "power_supply"
+	PortCompatibilitieCompatibleCategory_CableManager  PortCompatibilitieCompatibleCategory = "cable_manager"
 	PortCompatibilitieCompatibleCategory_ConsoleServer PortCompatibilitieCompatibleCategory = "console_server"
 )
 
@@ -251,8 +251,8 @@ const (
 type PortDefinitionDirection string
 
 const (
-	PortDefinitionDirection_In PortDefinitionDirection = "in"
-	PortDefinitionDirection_Out PortDefinitionDirection = "out"
+	PortDefinitionDirection_In    PortDefinitionDirection = "in"
+	PortDefinitionDirection_Out   PortDefinitionDirection = "out"
 	PortDefinitionDirection_Bidir PortDefinitionDirection = "bidir"
 )
 
@@ -260,19 +260,19 @@ const (
 type PortDefinitionPortType string
 
 const (
-	PortDefinitionPortType_Network PortDefinitionPortType = "network"
-	PortDefinitionPortType_PowerIn PortDefinitionPortType = "power_in"
+	PortDefinitionPortType_Network  PortDefinitionPortType = "network"
+	PortDefinitionPortType_PowerIn  PortDefinitionPortType = "power_in"
 	PortDefinitionPortType_PowerOut PortDefinitionPortType = "power_out"
-	PortDefinitionPortType_Slot PortDefinitionPortType = "slot"
-	PortDefinitionPortType_Bay PortDefinitionPortType = "bay"
-	PortDefinitionPortType_Console PortDefinitionPortType = "console"
+	PortDefinitionPortType_Slot     PortDefinitionPortType = "slot"
+	PortDefinitionPortType_Bay      PortDefinitionPortType = "bay"
+	PortDefinitionPortType_Console  PortDefinitionPortType = "console"
 )
 
 // ProjectMemberRole represents valid values for tenant.project_members.role.
 type ProjectMemberRole string
 
 const (
-	ProjectMemberRole_Admin ProjectMemberRole = "admin"
+	ProjectMemberRole_Admin  ProjectMemberRole = "admin"
 	ProjectMemberRole_Viewer ProjectMemberRole = "viewer"
 )
 
@@ -281,20 +281,20 @@ type TaskCategory string
 
 const (
 	TaskCategory_Hardware TaskCategory = "hardware"
-	TaskCategory_Network TaskCategory = "network"
-	TaskCategory_Cooling TaskCategory = "cooling"
-	TaskCategory_Power TaskCategory = "power"
+	TaskCategory_Network  TaskCategory = "network"
+	TaskCategory_Cooling  TaskCategory = "cooling"
+	TaskCategory_Power    TaskCategory = "power"
 	TaskCategory_Security TaskCategory = "security"
-	TaskCategory_Other TaskCategory = "other"
+	TaskCategory_Other    TaskCategory = "other"
 )
 
 // TaskPriority represents valid values for dcim.tasks.priority.
 type TaskPriority string
 
 const (
-	TaskPriority_Low TaskPriority = "low"
-	TaskPriority_Medium TaskPriority = "medium"
-	TaskPriority_High TaskPriority = "high"
+	TaskPriority_Low      TaskPriority = "low"
+	TaskPriority_Medium   TaskPriority = "medium"
+	TaskPriority_High     TaskPriority = "high"
 	TaskPriority_Critical TaskPriority = "critical"
 )
 
@@ -302,9 +302,9 @@ const (
 type TaskStatus string
 
 const (
-	TaskStatus_Ready TaskStatus = "ready"
+	TaskStatus_Ready      TaskStatus = "ready"
 	TaskStatus_InProgress TaskStatus = "in_progress"
-	TaskStatus_Review TaskStatus = "review"
-	TaskStatus_Blocked TaskStatus = "blocked"
-	TaskStatus_Done TaskStatus = "done"
+	TaskStatus_Review     TaskStatus = "review"
+	TaskStatus_Blocked    TaskStatus = "blocked"
+	TaskStatus_Done       TaskStatus = "done"
 )
