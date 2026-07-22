@@ -43,17 +43,26 @@ spec:
             - name: health
               containerPort: 8081
               protocol: TCP
+          # Local-dev image builds + first-run pulls from the k3d registry can
+          # take many minutes before the operator answers /livez. Gate liveness
+          # and readiness behind a startupProbe that gives it up to 15 minutes;
+          # in production the container comes up in seconds and this exits
+          # immediately, so it's effectively a no-op.
+          startupProbe:
+            httpGet:
+              path: /livez
+              port: health
+            periodSeconds: 10
+            failureThreshold: 90
           livenessProbe:
             httpGet:
               path: /livez
               port: health
-            initialDelaySeconds: 5
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /readyz
               port: health
-            initialDelaySeconds: 5
             periodSeconds: 10
           securityContext:
             allowPrivilegeEscalation: false

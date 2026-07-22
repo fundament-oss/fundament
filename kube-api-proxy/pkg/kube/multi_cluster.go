@@ -93,7 +93,9 @@ func (m *MultiClusterProxy) buildProxy(ctx context.Context, clusterID string) (*
 		return nil, fmt.Errorf("get admin kubeconfig for cluster %s: %w", clusterID, err)
 	}
 
-	c, err := NewFromBytes(adminKC.Kubeconfig)
+	// Anonymous: the Director injects a per-user/plugin SA token as the identity,
+	// so the admin kubeconfig's client cert must not travel on the transport.
+	c, err := NewAnonymousFromBytes(adminKC.Kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("build client for cluster %s: %w", clusterID, err)
 	}

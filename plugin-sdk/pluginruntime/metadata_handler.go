@@ -64,9 +64,10 @@ func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb
 	rbacRules := make([]*pb.PolicyRule, len(def.Spec.Permissions.RBAC))
 	for i, rule := range def.Spec.Permissions.RBAC {
 		rbacRules[i] = &pb.PolicyRule{
-			ApiGroups: rule.APIGroups,
-			Resources: rule.Resources,
-			Verbs:     rule.Verbs,
+			ApiGroups:     rule.APIGroups,
+			Resources:     rule.Resources,
+			Verbs:         rule.Verbs,
+			ResourceNames: rule.ResourceNames,
 		}
 	}
 

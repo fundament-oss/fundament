@@ -83,6 +83,7 @@ func TestGetInstallationManifest_ReturnsIdentity(t *testing.T) {
 	assert.Equal(t, MockPluginHash, msg.GetDefinitionHash())
 	assert.Equal(t, MockOrganizationID.String(), msg.GetOrganizationId())
 	assert.Equal(t, "Running", msg.GetStatus())
+	assert.Equal(t, MockPluginName, msg.GetInstallationName(), "installation name is the CR metadata.name")
 }
 
 // Mints keep working through teardown so plugin tokens can read state during

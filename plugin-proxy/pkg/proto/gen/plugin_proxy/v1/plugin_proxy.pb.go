@@ -96,14 +96,15 @@ func (b0 GetInstallationManifestRequest_builder) Build() *GetInstallationManifes
 // GetInstallationManifestResponse carries the installation's identity only;
 // it never carries RBAC. authn-api signs these fields into the PluginToken.
 type GetInstallationManifestResponse struct {
-	state                     protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_PluginName     string                 `protobuf:"bytes,10,opt,name=plugin_name,json=pluginName"`
-	xxx_hidden_PluginVersion  string                 `protobuf:"bytes,20,opt,name=plugin_version,json=pluginVersion"`
-	xxx_hidden_DefinitionHash string                 `protobuf:"bytes,30,opt,name=definition_hash,json=definitionHash"`
-	xxx_hidden_OrganizationId string                 `protobuf:"bytes,40,opt,name=organization_id,json=organizationId"`
-	xxx_hidden_Status         string                 `protobuf:"bytes,50,opt,name=status"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PluginName       string                 `protobuf:"bytes,10,opt,name=plugin_name,json=pluginName"`
+	xxx_hidden_PluginVersion    string                 `protobuf:"bytes,20,opt,name=plugin_version,json=pluginVersion"`
+	xxx_hidden_DefinitionHash   string                 `protobuf:"bytes,30,opt,name=definition_hash,json=definitionHash"`
+	xxx_hidden_OrganizationId   string                 `protobuf:"bytes,40,opt,name=organization_id,json=organizationId"`
+	xxx_hidden_Status           string                 `protobuf:"bytes,50,opt,name=status"`
+	xxx_hidden_InstallationName string                 `protobuf:"bytes,60,opt,name=installation_name,json=installationName"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *GetInstallationManifestResponse) Reset() {
@@ -166,6 +167,13 @@ func (x *GetInstallationManifestResponse) GetStatus() string {
 	return ""
 }
 
+func (x *GetInstallationManifestResponse) GetInstallationName() string {
+	if x != nil {
+		return x.xxx_hidden_InstallationName
+	}
+	return ""
+}
+
 func (x *GetInstallationManifestResponse) SetPluginName(v string) {
 	x.xxx_hidden_PluginName = v
 }
@@ -186,6 +194,10 @@ func (x *GetInstallationManifestResponse) SetStatus(v string) {
 	x.xxx_hidden_Status = v
 }
 
+func (x *GetInstallationManifestResponse) SetInstallationName(v string) {
+	x.xxx_hidden_InstallationName = v
+}
+
 type GetInstallationManifestResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -197,6 +209,12 @@ type GetInstallationManifestResponse_builder struct {
 	OrganizationId string
 	// The installation lifecycle phase (status.phase), e.g. "Running".
 	Status string
+	// The PluginInstallation CR's metadata.name. The plugin's namespace and
+	// ServiceAccount are named plugin-{installation_name}; kube-api-proxy uses
+	// this to address the SA directly, since installation_id (the CR UID) is not
+	// name-addressable via the kube API. installation_id stays authoritative:
+	// kube-api-proxy verifies the resolved CR's UID against it.
+	InstallationName string
 }
 
 func (b0 GetInstallationManifestResponse_builder) Build() *GetInstallationManifestResponse {
@@ -208,6 +226,7 @@ func (b0 GetInstallationManifestResponse_builder) Build() *GetInstallationManife
 	x.xxx_hidden_DefinitionHash = b.DefinitionHash
 	x.xxx_hidden_OrganizationId = b.OrganizationId
 	x.xxx_hidden_Status = b.Status
+	x.xxx_hidden_InstallationName = b.InstallationName
 	return m0
 }
 
@@ -220,7 +239,7 @@ const file_plugin_proxy_v1_plugin_proxy_proto_rawDesc = "" +
 	"\n" +
 	"cluster_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x121\n" +
-	"\x0finstallation_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0einstallationId\"\xdd\x01\n" +
+	"\x0finstallation_id\x18\x14 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0einstallationId\"\x8a\x02\n" +
 	"\x1fGetInstallationManifestResponse\x12\x1f\n" +
 	"\vplugin_name\x18\n" +
 	" \x01(\tR\n" +
@@ -228,7 +247,8 @@ const file_plugin_proxy_v1_plugin_proxy_proto_rawDesc = "" +
 	"\x0eplugin_version\x18\x14 \x01(\tR\rpluginVersion\x12'\n" +
 	"\x0fdefinition_hash\x18\x1e \x01(\tR\x0edefinitionHash\x121\n" +
 	"\x0forganization_id\x18( \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganizationId\x12\x16\n" +
-	"\x06status\x182 \x01(\tR\x06status2\x99\x01\n" +
+	"\x06status\x182 \x01(\tR\x06status\x12+\n" +
+	"\x11installation_name\x18< \x01(\tR\x10installationName2\x99\x01\n" +
 	"\x19PluginInstallationService\x12|\n" +
 	"\x17GetInstallationManifest\x12/.plugin_proxy.v1.GetInstallationManifestRequest\x1a0.plugin_proxy.v1.GetInstallationManifestResponseBgZ[github.com/fundament-oss/fundament/plugin-proxy/pkg/proto/gen/plugin_proxy/v1;pluginproxyv1\x92\x03\a\xd2>\x02\x10\x03\b\x02b\beditionsp\xe8\a"
 

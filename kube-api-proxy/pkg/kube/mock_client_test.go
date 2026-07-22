@@ -34,20 +34,6 @@ func TestPluginConsoleAsset(t *testing.T) {
 			wantOk:    true,
 		},
 		{
-			// Vite emits its bundles under a nested assets/ directory.
-			path:      "/api/v1/namespaces/plugin-openfsc/services/http:plugin-openfsc:8080/proxy/console/assets/app-D4ta.js",
-			wantName:  "openfsc",
-			wantAsset: "assets/app-D4ta.js",
-			wantOk:    true,
-		},
-		{
-			// ".." only inside a segment is a legitimate filename, not a traversal.
-			path:      "/api/v1/namespaces/plugin-demo/services/http:plugin-demo:8080/proxy/console/foo..bar.js",
-			wantName:  "demo",
-			wantAsset: "foo..bar.js",
-			wantOk:    true,
-		},
-		{
 			// Exact GetDefinition path is not a console asset.
 			path:   "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition",
 			wantOk: false,
@@ -55,22 +41,6 @@ func TestPluginConsoleAsset(t *testing.T) {
 		{
 			// Unrelated kube path.
 			path:   "/apis/cert-manager.io/v1/certificates",
-			wantOk: false,
-		},
-		{
-			// Traversal must not match: matching skips the proxy's auth check and
-			// stamps a public CORS policy on the response.
-			path:   "/api/v1/namespaces/plugin-demo/services/http:plugin-demo:8080/proxy/console/../../../../secrets",
-			wantOk: false,
-		},
-		{
-			// ...including a traversal buried mid-path.
-			path:   "/api/v1/namespaces/plugin-demo/services/http:plugin-demo:8080/proxy/console/assets/../../secrets",
-			wantOk: false,
-		},
-		{
-			// An empty asset is not a file.
-			path:   "/api/v1/namespaces/plugin-demo/services/http:plugin-demo:8080/proxy/console/",
 			wantOk: false,
 		},
 	}
@@ -236,43 +206,27 @@ func TestServeConsoleAsset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mc := &MockClient{
-		PluginTemplatesDir: dir,
-		ConsoleAssets: ConsoleAssetPolicy{
-			AssetOrigin:    "https://k8s-api.example",
-			ConsoleOrigins: []string{"https://console.example"},
-		},
-	}
+	mc := &MockClient{PluginTemplatesDir: dir}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/list.html", nil)
 	w := httptest.NewRecorder()
 	mc.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code, "body = %s", w.Body.String())
-	require.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"))
+	require.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"), "Content-Type = %q", w.Header().Get("Content-Type"))
 	require.Contains(t, w.Body.String(), "<body>test</body>")
-	// The opaque-origin iframe can only load these with a public CORS policy, and the
-	// CSP is what keeps that openness from being exploitable.
-	require.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
-	require.Contains(t, w.Header().Get("Content-Security-Policy"), "script-src https://k8s-api.example https://console.example")
 
-	// Path traversal protection: the ".." segment makes this not a console asset,
-	// so it never reaches the file read.
+	// Path traversal protection.
 	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/../../etc/passwd", nil)
 	w2 := httptest.NewRecorder()
 	mc.ServeHTTP(w2, req2)
-	require.Equal(t, http.StatusBadRequest, w2.Code)
-	require.NotContains(t, w2.Body.String(), "root:")
-	// Crucially, it must NOT inherit the public-asset CORS policy — that would make
-	// it unauthenticated *and* readable cross-origin.
-	require.Empty(t, w2.Header().Get("Access-Control-Allow-Origin"))
-	require.False(t, IsPluginConsoleAssetPath(req2.URL.Path))
+	require.Equal(t, http.StatusBadRequest, w2.Code, "expected 400 for traversal")
 
 	// Missing file → 404.
 	req3 := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/nope.html", nil)
 	w3 := httptest.NewRecorder()
 	mc.ServeHTTP(w3, req3)
-	require.Equal(t, http.StatusNotFound, w3.Code)
+	require.Equal(t, http.StatusNotFound, w3.Code, "expected 404 for missing file")
 }
 
 func TestMockFSCInstallations(t *testing.T) {

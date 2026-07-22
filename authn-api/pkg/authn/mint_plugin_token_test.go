@@ -120,9 +120,10 @@ const testPluginName = "test-plugin"
 
 func activeManifest() *InstallationManifest {
 	return &InstallationManifest{
-		PluginName:     testPluginName,
-		PluginVersion:  "1.2.3",
-		DefinitionHash: "sha256:1f3c9a",
+		InstallationName: "test-plugin-install",
+		PluginName:       testPluginName,
+		PluginVersion:    "1.2.3",
+		DefinitionHash:   "sha256:1f3c9a",
 	}
 }
 
@@ -142,6 +143,7 @@ func TestMintPluginToken_Success(t *testing.T) {
 	assert.Equal(t, h.userID.String(), claims.Subject)
 	assert.Equal(t, h.clusterID.String(), claims.ClusterID)
 	assert.Equal(t, h.installationID.String(), claims.InstallationID)
+	assert.Equal(t, "test-plugin-install", claims.InstallationName)
 	assert.Equal(t, testPluginName, claims.PluginName)
 	assert.Equal(t, "1.2.3", claims.PluginVersion)
 	assert.Equal(t, "sha256:1f3c9a", claims.DefinitionHash)

@@ -3,24 +3,6 @@
 import type { FundamentSdk } from './sdk.ts';
 import type { Condition, FSCInstallation, GatewayStatus } from './types.ts';
 
-// The Console origin, taken from the `?host=` param the host sets on the iframe
-// src. Empty string when unframed (the dev preview), so asset URLs stay relative.
-//
-// Anyone can craft a link with a `?host=` of their choosing, so this value is not
-// evidence of anything — the parse below only rejects non-http(s) schemes. What
-// keeps a foreign origin from being loaded is server-side: see loadPluginAsset.
-export function hostOrigin(): string {
-  const raw = new URLSearchParams(location.search).get('host');
-  if (!raw) return '';
-  try {
-    const url = new URL(raw);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
-    return url.origin;
-  } catch {
-    return '';
-  }
-}
-
 // Resolves once `el` has loaded (or failed to). Both <link> and <script> fire
 // load/error, so one helper covers the pair.
 function whenSettled(el: HTMLLinkElement | HTMLScriptElement, what: string): Promise<void> {
@@ -30,30 +12,25 @@ function whenSettled(el: HTMLLinkElement | HTMLScriptElement, what: string): Pro
   });
 }
 
-// Loads the host's `/plugin-ui/<base>.{css,js}` pair. Injected at runtime because
-// the sandboxed iframe only learns the host origin from `?host=`; classic
-// <link>/<script> load cross-origin into the opaque-origin iframe without CORS.
-//
-// The `?host=` origin is attacker-controllable in a hand-crafted link, so it is not
-// trusted to be the Console: kube-api-proxy rejects a console-asset request whose
-// `?host=` is not an allowed Console origin, and serves the assets under a
-// `script-src`/`style-src` CSP naming those origins. This loader would therefore
-// fail (blocked subresource) rather than execute a foreign bundle.
+// Loads the plugin-proxy's `/plugins/sdk/v1/<base>.{css,js}` pair. Under FUN-17
+// the iframe runs on the dedicated plugin-proxy origin — the same origin that
+// serves these bundles — so the bare-path URLs resolve on plugin-proxy and
+// satisfy the plugin CSP (script-src/style-src 'self'). The /v1/ segment tracks
+// fundament:init's protocolVersion; a breaking protocol change ships as
+// /plugins/sdk/v2/ alongside, so pinned plugins keep loading v1 unchanged.
 //
 // Both halves are awaited: resolving on the script alone would let a view render
 // <nldd-*> components before their stylesheet arrived, i.e. a flash of unstyled
 // content inside the iframe.
 function loadPluginAsset(base: string): Promise<void> {
-  const host = hostOrigin();
-
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = `${host}/plugin-ui/${base}.css`;
+  link.href = `/plugins/sdk/v1/${base}.css`;
   const css = whenSettled(link, `${base}.css`);
   document.head.appendChild(link);
 
   const script = document.createElement('script');
-  script.src = `${host}/plugin-ui/${base}.js`;
+  script.src = `/plugins/sdk/v1/${base}.js`;
   const js = whenSettled(script, `${base}.js`);
   document.head.appendChild(script);
 
@@ -120,10 +97,11 @@ export function errorRow(colspan: number, err: unknown): string {
   return `<tr><td colspan="${colspan}" class="plugin-text">${escapeHtml(`Failed to load: ${message}`)}</td></tr>`;
 }
 
-// Posts a message to the host (Console). The ?host= origin scopes it; the
-// console-preview stand-in runs unframed, hence the same-origin fallback.
+// Posts a message to the host (Console). The SDK's pinned parentOrigin scopes it
+// under FUN-17; falls back to '*' before init (or in the console-preview
+// stand-in, which runs unframed).
 function postToHost(message: unknown): void {
-  window.parent.postMessage(message, hostOrigin() || window.location.origin);
+  window.parent.postMessage(message, window.fundament?.parentOrigin ?? '*');
 }
 
 // The host resolves the destination relative to the iframe's current route, so the
