@@ -55,7 +55,7 @@ import { FundamentLogoIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
-import { repaintSchemeSensitiveLayers } from './utils/color-scheme-repaint';
+import repaintSchemeSensitiveLayers from './utils/color-scheme-repaint';
 import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';

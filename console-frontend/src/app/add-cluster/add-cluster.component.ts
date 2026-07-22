@@ -80,7 +80,9 @@ export default class AddClusterComponent implements OnInit {
     if (this.catalogRegions.length === 0) {
       // Valid state until an operator seeds the catalog - explain instead of
       // presenting an empty, unsubmittable form.
-      this.catalogError.set('No regions are available yet. Ask an operator to seed the region catalog.');
+      this.catalogError.set(
+        'No regions are available yet. Ask an operator to seed the region catalog.',
+      );
       return;
     }
 
