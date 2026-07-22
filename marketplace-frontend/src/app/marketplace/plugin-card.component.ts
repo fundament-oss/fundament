@@ -2,11 +2,12 @@ import { Component, input, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } fro
 import { RouterLink } from '@angular/router';
 import { PluginIconComponent } from '../icons';
 import { type MarketplacePlugin } from './marketplace.service';
+import PluginLabelsComponent from './plugin-labels.component';
 
 // Compact plugin tile used across the marketplace home sections and results grid.
 @Component({
   selector: 'app-plugin-card',
-  imports: [RouterLink, PluginIconComponent],
+  imports: [RouterLink, PluginIconComponent, PluginLabelsComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -29,15 +30,13 @@ import { type MarketplacePlugin } from './marketplace.service';
               </h3>
               <p class="truncate text-sm text-gray-500 dark:text-gray-400">{{ plugin().vendor }}</p>
             </div>
-            @if (plugin().official) {
-              <nldd-tag size="sm" color="success" icon="check-mark" text="Official"></nldd-tag>
-            }
           </div>
           <p class="line-clamp-2 flex-1 text-sm text-gray-600 dark:text-gray-300">
             {{ plugin().tagline }}
           </p>
-          <div class="flex items-center">
+          <div class="flex flex-wrap items-center gap-1.5">
             <nldd-tag size="sm" color="neutral" [text]="plugin().category"></nldd-tag>
+            <app-plugin-labels [labels]="plugin().labels" />
           </div>
         </div>
       </nldd-card>

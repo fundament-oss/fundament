@@ -64,7 +64,7 @@ const MOCK_PLUGINS: AuthoredPlugin[] = [
     repositoryUrl: 'https://github.com/example-gov/postgres-operator',
     image: 'registry.fundament.io/plugins/postgres-operator:2.3.1',
     icon: 'cloudnativepg',
-    tags: ['database', 'storage', 'official'],
+    tags: ['database', 'storage', 'postgres'],
     category: 'Database',
     status: 'published',
     versions: [

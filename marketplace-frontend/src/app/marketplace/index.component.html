@@ -57,11 +57,11 @@
             </dt>
           </div>
           <div>
-            <dd class="font-display text-3xl font-semibold tabular-nums">{{ officialCount() }}</dd>
+            <dd class="font-display text-3xl font-semibold tabular-nums">{{ coreCount() }}</dd>
             <dt
               class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
             >
-              Official
+              Core
             </dt>
           </div>
         </dl>
@@ -234,14 +234,7 @@
                       >
                         Editors’ pick
                       </span>
-                      @if (p.official) {
-                        <nldd-tag
-                          size="sm"
-                          color="success"
-                          icon="check-mark"
-                          text="Official"
-                        ></nldd-tag>
-                      }
+                      <app-plugin-labels [labels]="p.labels" />
                     </div>
                     <h3 class="mt-1 text-xl font-semibold group-hover:underline">
                       {{ p.displayName }}

@@ -12,11 +12,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TitleService } from '../title.service';
 import MarketplaceService, { type MarketplacePlugin, type Category } from './marketplace.service';
 import PluginCardComponent from './plugin-card.component';
+import PluginLabelsComponent from './plugin-labels.component';
 import { PluginIconComponent } from '../icons';
 
 @Component({
   selector: 'app-marketplace-index',
-  imports: [PluginCardComponent, PluginIconComponent, RouterLink],
+  imports: [PluginCardComponent, PluginLabelsComponent, PluginIconComponent, RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './index.component.html',
@@ -93,7 +94,9 @@ export default class MarketplaceIndexComponent implements OnInit {
     [...this.plugins()].sort((a, b) => b.addedAt.localeCompare(a.addedAt)).slice(0, 6),
   );
 
-  officialCount = computed(() => this.plugins().filter((plugin) => plugin.official).length);
+  coreCount = computed(
+    () => this.plugins().filter((plugin) => plugin.labels.includes('core')).length,
+  );
 
   // Counts track the active search, so the sidebar shows where the hits are
   // rather than a static catalogue total that contradicts the visible results.

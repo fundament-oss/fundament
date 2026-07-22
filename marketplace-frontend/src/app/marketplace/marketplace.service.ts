@@ -26,6 +26,11 @@ export interface FeatureBlock {
   body: string;
 }
 
+// Trust and support labels a listing can carry. `core` and `rijksoverheid` say
+// where a plugin comes from, `support-9-to-17` what support it ships with, so a
+// plugin can hold several at once.
+export type PluginLabel = 'core' | 'rijksoverheid' | 'support-9-to-17';
+
 export interface MarketplacePlugin {
   name: string; // stable slug, used in URLs
   displayName: string;
@@ -35,7 +40,7 @@ export interface MarketplacePlugin {
   icon: string; // base name under /img/plugins/<icon>.svg
   category: string;
   tags: string[];
-  official: boolean;
+  labels: PluginLabel[];
   version: string;
   addedAt: string; // ISO date, used to sort "recently added"
   featured: boolean;
@@ -63,7 +68,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'cert-manager',
     category: 'Security',
     tags: ['certificates', 'tls', 'security'],
-    official: true,
+    labels: ['core', 'support-9-to-17'],
     version: 'v1.17.2',
     addedAt: '2026-02-10',
     featured: true,
@@ -98,7 +103,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'istio',
     category: 'Networking',
     tags: ['service-mesh', 'networking', 'security'],
-    official: true,
+    labels: ['core', 'support-9-to-17'],
     version: 'v1.24.0',
     addedAt: '2026-03-04',
     featured: true,
@@ -130,7 +135,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'istio-gateway',
     category: 'Networking',
     tags: ['ingress', 'networking', 'gateway'],
-    official: true,
+    labels: ['core'],
     version: 'v1.24.0',
     addedAt: '2026-03-04',
     featured: false,
@@ -162,7 +167,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'grafana',
     category: 'Observability',
     tags: ['observability', 'dashboards', 'monitoring'],
-    official: false,
+    labels: ['support-9-to-17'],
     version: 'v11.3.0',
     addedAt: '2026-04-18',
     featured: true,
@@ -189,7 +194,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'grafana-loki',
     category: 'Observability',
     tags: ['logs', 'observability'],
-    official: false,
+    labels: [],
     version: 'v3.2.0',
     addedAt: '2026-05-22',
     featured: false,
@@ -213,7 +218,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'grafana-tempo',
     category: 'Observability',
     tags: ['tracing', 'observability'],
-    official: false,
+    labels: [],
     version: 'v2.6.0',
     addedAt: '2026-06-11',
     featured: false,
@@ -237,7 +242,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'grafana-mimir',
     category: 'Observability',
     tags: ['metrics', 'observability'],
-    official: false,
+    labels: ['support-9-to-17'],
     version: 'v2.14.0',
     addedAt: '2026-06-25',
     featured: false,
@@ -261,7 +266,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'grafana-alloy',
     category: 'Observability',
     tags: ['agent', 'observability', 'opentelemetry'],
-    official: false,
+    labels: [],
     version: 'v1.5.0',
     addedAt: '2026-07-02',
     featured: false,
@@ -288,7 +293,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'cloudnativepg',
     category: 'Database',
     tags: ['database', 'postgres', 'storage'],
-    official: true,
+    labels: ['core', 'support-9-to-17'],
     version: 'v1.24.1',
     addedAt: '2026-01-28',
     featured: true,
@@ -320,7 +325,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'eck-operator',
     category: 'Database',
     tags: ['search', 'database', 'elastic'],
-    official: false,
+    labels: [],
     version: 'v2.14.0',
     addedAt: '2026-05-09',
     featured: false,
@@ -349,7 +354,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'keycloak',
     category: 'Security',
     tags: ['identity', 'sso', 'security'],
-    official: true,
+    labels: ['core', 'rijksoverheid', 'support-9-to-17'],
     version: 'v26.0.0',
     addedAt: '2026-02-19',
     featured: false,
@@ -376,7 +381,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'pinniped',
     category: 'Security',
     tags: ['authentication', 'security', 'identity'],
-    official: true,
+    labels: ['core', 'rijksoverheid'],
     version: 'v0.36.0',
     addedAt: '2026-06-30',
     featured: false,
@@ -400,7 +405,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'sealed-secrets',
     category: 'Security',
     tags: ['secrets', 'gitops', 'security'],
-    official: true,
+    labels: ['core'],
     version: 'v0.27.1',
     addedAt: '2026-04-01',
     featured: false,
@@ -426,7 +431,7 @@ const PLUGINS: MarketplacePlugin[] = [
     icon: 'openfsc',
     category: 'Networking',
     tags: ['government', 'connectivity', 'networking'],
-    official: true,
+    labels: ['rijksoverheid', 'support-9-to-17'],
     version: 'v0.9.0',
     addedAt: '2026-07-08',
     featured: false,

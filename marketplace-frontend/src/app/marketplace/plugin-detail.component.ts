@@ -11,10 +11,11 @@ import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PluginIconComponent } from '../icons';
 import MarketplaceService, { type MarketplacePlugin } from './marketplace.service';
+import PluginLabelsComponent from './plugin-labels.component';
 
 @Component({
   selector: 'app-plugin-detail',
-  imports: [RouterLink, PluginIconComponent],
+  imports: [RouterLink, PluginIconComponent, PluginLabelsComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-detail.component.html',
