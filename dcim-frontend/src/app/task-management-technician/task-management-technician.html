@@ -161,7 +161,7 @@
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
           [class]="
             gatherCompleted()
-              ? 'bg-accent-600 text-white'
+              ? 'bg-accent-filled text-accent-filled-content'
               : phase() === 'gather'
                 ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 text-sm'
                 : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
@@ -273,7 +273,7 @@
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
             [class]="
               isTaskDone(taskIdx)
-                ? 'bg-accent-600 text-white'
+                ? 'bg-accent-filled text-accent-filled-content'
                 : isTaskActive(taskIdx)
                   ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 text-sm'
                   : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
@@ -363,7 +363,7 @@
                       class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
                       [class]="
                         isStepDone(taskIdx, si)
-                          ? 'bg-accent-600 text-white'
+                          ? 'bg-accent-filled text-accent-filled-content'
                           : isStepActive(taskIdx, si)
                             ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 text-xs'
                             : 'border-2 border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-medium text-slate-400 dark:text-gray-500'
@@ -541,7 +541,7 @@
 
 <!-- Photo Modal -->
 <div
-  class="fixed inset-0 z-50 items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm"
+  class="fixed inset-0 z-50 items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
   [class.hidden]="!showPhotoModal()"
   [class.flex]="showPhotoModal()"
   role="dialog"
@@ -609,7 +609,7 @@
 
 <!-- Notes Modal -->
 <div
-  class="fixed inset-0 z-50 items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm"
+  class="fixed inset-0 z-50 items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
   [class.hidden]="!showNoteModal()"
   [class.flex]="showNoteModal()"
   role="dialog"

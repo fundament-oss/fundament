@@ -64,71 +64,76 @@
 }
 
 @theme {
-  --color-accent-25: oklch(0.973 0.013 253.4);
-  --color-accent-50: oklch(0.947 0.026 253.4);
-  --color-accent-75: oklch(0.922 0.038 253.4);
-  --color-accent-100: oklch(0.897 0.051 253.4);
-  --color-accent-150: oklch(0.849 0.076 253.4);
-  --color-accent-200: oklch(0.804 0.097 253.4);
-  --color-accent-250: oklch(0.76 0.097 253.4);
-  --color-accent-300: oklch(0.718 0.097 253.4);
-  --color-accent-350: oklch(0.677 0.097 253.4);
-  --color-accent-400: oklch(0.638 0.097 253.4);
-  --color-accent-450: oklch(0.6 0.097 253.4);
-  --color-accent-500: oklch(0.563 0.097 253.4);
-  --color-accent-550: oklch(0.527 0.097 253.4);
-  --color-accent-600: oklch(0.492 0.097 253.4);
-  --color-accent-650: oklch(0.457 0.097 253.4);
-  --color-accent-700: oklch(0.421 0.097 253.4);
-  --color-accent-750: oklch(0.386 0.097 253.4);
-  --color-accent-800: oklch(0.348 0.097 253.4);
-  --color-accent-850: oklch(0.308 0.096 253.4);
-  --color-accent-900: oklch(0.262 0.082 253.4);
-  --color-accent-950: oklch(0.203 0.063 253.4);
+  /* Map onto the design system primitives instead of copying their light-mode
+     values: every primitive is a `light-dark()` pair that mirrors the ramp
+     (step N in light == step 1000-N in dark), so `bg-accent-50 text-accent-700`
+     reads as a tinted highlight in both schemes. Never pair these utilities
+     with a `dark:` variant — that would invert an already-inverted colour. */
+  --color-accent-25: var(--primitives-color-accent-25);
+  --color-accent-50: var(--primitives-color-accent-50);
+  --color-accent-75: var(--primitives-color-accent-75);
+  --color-accent-100: var(--primitives-color-accent-100);
+  --color-accent-150: var(--primitives-color-accent-150);
+  --color-accent-200: var(--primitives-color-accent-200);
+  --color-accent-250: var(--primitives-color-accent-250);
+  --color-accent-300: var(--primitives-color-accent-300);
+  --color-accent-350: var(--primitives-color-accent-350);
+  --color-accent-400: var(--primitives-color-accent-400);
+  --color-accent-450: var(--primitives-color-accent-450);
+  --color-accent-500: var(--primitives-color-accent-500);
+  --color-accent-550: var(--primitives-color-accent-550);
+  --color-accent-600: var(--primitives-color-accent-600);
+  --color-accent-650: var(--primitives-color-accent-650);
+  --color-accent-700: var(--primitives-color-accent-700);
+  --color-accent-750: var(--primitives-color-accent-750);
+  --color-accent-800: var(--primitives-color-accent-800);
+  --color-accent-850: var(--primitives-color-accent-850);
+  --color-accent-900: var(--primitives-color-accent-900);
+  --color-accent-950: var(--primitives-color-accent-950);
 
-  --color-neutral-25: oklch(0.974 0.004 253.4);
-  --color-neutral-50: oklch(0.948 0.007 253.4);
-  --color-neutral-75: oklch(0.923 0.009 253.4);
-  --color-neutral-100: oklch(0.898 0.011 253.4);
-  --color-neutral-150: oklch(0.85 0.015 253.4);
-  --color-neutral-200: oklch(0.804 0.019 253.4);
-  --color-neutral-250: oklch(0.76 0.023 253.4);
-  --color-neutral-300: oklch(0.718 0.026 253.4);
-  --color-neutral-350: oklch(0.677 0.03 253.4);
-  --color-neutral-400: oklch(0.638 0.033 253.4);
-  --color-neutral-450: oklch(0.6 0.037 253.4);
-  --color-neutral-500: oklch(0.563 0.04 253.4);
-  --color-neutral-550: oklch(0.527 0.036 253.4);
-  --color-neutral-600: oklch(0.491 0.032 253.4);
-  --color-neutral-650: oklch(0.456 0.029 253.4);
-  --color-neutral-700: oklch(0.421 0.026 253.4);
-  --color-neutral-750: oklch(0.385 0.023 253.4);
-  --color-neutral-800: oklch(0.347 0.02 253.4);
-  --color-neutral-850: oklch(0.307 0.018 253.4);
-  --color-neutral-900: oklch(0.261 0.015 253.4);
-  --color-neutral-950: oklch(0.202 0.011 253.4);
+  --color-neutral-25: var(--primitives-color-neutral-25);
+  --color-neutral-50: var(--primitives-color-neutral-50);
+  --color-neutral-75: var(--primitives-color-neutral-75);
+  --color-neutral-100: var(--primitives-color-neutral-100);
+  --color-neutral-150: var(--primitives-color-neutral-150);
+  --color-neutral-200: var(--primitives-color-neutral-200);
+  --color-neutral-250: var(--primitives-color-neutral-250);
+  --color-neutral-300: var(--primitives-color-neutral-300);
+  --color-neutral-350: var(--primitives-color-neutral-350);
+  --color-neutral-400: var(--primitives-color-neutral-400);
+  --color-neutral-450: var(--primitives-color-neutral-450);
+  --color-neutral-500: var(--primitives-color-neutral-500);
+  --color-neutral-550: var(--primitives-color-neutral-550);
+  --color-neutral-600: var(--primitives-color-neutral-600);
+  --color-neutral-650: var(--primitives-color-neutral-650);
+  --color-neutral-700: var(--primitives-color-neutral-700);
+  --color-neutral-750: var(--primitives-color-neutral-750);
+  --color-neutral-800: var(--primitives-color-neutral-800);
+  --color-neutral-850: var(--primitives-color-neutral-850);
+  --color-neutral-900: var(--primitives-color-neutral-900);
+  --color-neutral-950: var(--primitives-color-neutral-950);
 
-  --color-danger-25: oklch(0.975 0.012 29.5);
-  --color-danger-50: oklch(0.951 0.025 29.5);
-  --color-danger-75: oklch(0.927 0.037 29.5);
-  --color-danger-100: oklch(0.903 0.05 29.5);
-  --color-danger-150: oklch(0.859 0.077 29.5);
-  --color-danger-200: oklch(0.816 0.104 29.5);
-  --color-danger-250: oklch(0.776 0.132 29.5);
-  --color-danger-300: oklch(0.737 0.161 29.5);
-  --color-danger-350: oklch(0.7 0.191 29.5);
-  --color-danger-400: oklch(0.663 0.207 29.5);
-  --color-danger-450: oklch(0.625 0.207 29.5);
-  --color-danger-500: oklch(0.588 0.207 29.5);
-  --color-danger-550: oklch(0.552 0.207 29.5);
-  --color-danger-600: oklch(0.517 0.207 29.5);
-  --color-danger-650: oklch(0.48 0.195 29.5);
-  --color-danger-700: oklch(0.443 0.18 29.5);
-  --color-danger-750: oklch(0.405 0.165 29.5);
-  --color-danger-800: oklch(0.365 0.148 29.5);
-  --color-danger-850: oklch(0.323 0.131 29.5);
-  --color-danger-900: oklch(0.275 0.112 29.5);
-  --color-danger-950: oklch(0.212 0.086 29.5);
+  --color-danger-25: var(--primitives-color-critical-25);
+  --color-danger-50: var(--primitives-color-critical-50);
+  --color-danger-75: var(--primitives-color-critical-75);
+  --color-danger-100: var(--primitives-color-critical-100);
+  --color-danger-150: var(--primitives-color-critical-150);
+  --color-danger-200: var(--primitives-color-critical-200);
+  --color-danger-250: var(--primitives-color-critical-250);
+  --color-danger-300: var(--primitives-color-critical-300);
+  --color-danger-350: var(--primitives-color-critical-350);
+  --color-danger-400: var(--primitives-color-critical-400);
+  --color-danger-450: var(--primitives-color-critical-450);
+  --color-danger-500: var(--primitives-color-critical-500);
+  --color-danger-550: var(--primitives-color-critical-550);
+  --color-danger-600: var(--primitives-color-critical-600);
+  --color-danger-650: var(--primitives-color-critical-650);
+  --color-danger-700: var(--primitives-color-critical-700);
+  --color-danger-750: var(--primitives-color-critical-750);
+  --color-danger-800: var(--primitives-color-critical-800);
+  --color-danger-850: var(--primitives-color-critical-850);
+  --color-danger-900: var(--primitives-color-critical-900);
+  --color-danger-950: var(--primitives-color-critical-950);
 
   /* Semantic colors */
   --color-dividers: var(--semantics-dividers-color);
@@ -138,6 +143,12 @@
   --color-content-secondary: var(--semantics-content-secondary-color);
   --color-links: var(--semantics-links-color);
   --color-links-hover: var(--semantics-links-is-hovered-color);
+
+  /* A solid accent fill carrying text. The mirrored ramp lightens every step
+     above 500 in dark mode, so `bg-accent-600 text-white` loses contrast there;
+     these tokens pick the step the design system itself uses per scheme. */
+  --color-accent-filled: var(--semantics-categories-accent-filled-background-color);
+  --color-accent-filled-content: var(--semantics-categories-accent-filled-primary-content-color);
 
   /* Spacing */
   --spacing-primitives-space-6: 6px;

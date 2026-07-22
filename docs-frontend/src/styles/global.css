@@ -1,27 +1,32 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-accent-25: oklch(0.973 0.013 253.4);
-  --color-accent-50: oklch(0.947 0.026 253.4);
-  --color-accent-75: oklch(0.922 0.038 253.4);
-  --color-accent-100: oklch(0.897 0.051 253.4);
-  --color-accent-150: oklch(0.849 0.076 253.4);
-  --color-accent-200: oklch(0.804 0.097 253.4);
-  --color-accent-250: oklch(0.76 0.097 253.4);
-  --color-accent-300: oklch(0.718 0.097 253.4);
-  --color-accent-350: oklch(0.677 0.097 253.4);
-  --color-accent-400: oklch(0.638 0.097 253.4);
-  --color-accent-450: oklch(0.6 0.097 253.4);
-  --color-accent-500: oklch(0.563 0.097 253.4);
-  --color-accent-550: oklch(0.527 0.097 253.4);
-  --color-accent-600: oklch(0.492 0.097 253.4);
-  --color-accent-650: oklch(0.457 0.097 253.4);
-  --color-accent-700: oklch(0.421 0.097 253.4);
-  --color-accent-750: oklch(0.386 0.097 253.4);
-  --color-accent-800: oklch(0.348 0.097 253.4);
-  --color-accent-850: oklch(0.308 0.096 253.4);
-  --color-accent-900: oklch(0.262 0.082 253.4);
-  --color-accent-950: oklch(0.203 0.063 253.4);
+  /* Map onto the design system primitives instead of copying their light-mode
+     values: every primitive is a `light-dark()` pair that mirrors the ramp
+     (step N in light == step 1000-N in dark), so a tint like `bg-accent-100
+     text-accent-700` reads the same way in both schemes. Never pair these
+     utilities with a `dark:` variant — that inverts an already-inverted colour. */
+  --color-accent-25: var(--primitives-color-accent-25);
+  --color-accent-50: var(--primitives-color-accent-50);
+  --color-accent-75: var(--primitives-color-accent-75);
+  --color-accent-100: var(--primitives-color-accent-100);
+  --color-accent-150: var(--primitives-color-accent-150);
+  --color-accent-200: var(--primitives-color-accent-200);
+  --color-accent-250: var(--primitives-color-accent-250);
+  --color-accent-300: var(--primitives-color-accent-300);
+  --color-accent-350: var(--primitives-color-accent-350);
+  --color-accent-400: var(--primitives-color-accent-400);
+  --color-accent-450: var(--primitives-color-accent-450);
+  --color-accent-500: var(--primitives-color-accent-500);
+  --color-accent-550: var(--primitives-color-accent-550);
+  --color-accent-600: var(--primitives-color-accent-600);
+  --color-accent-650: var(--primitives-color-accent-650);
+  --color-accent-700: var(--primitives-color-accent-700);
+  --color-accent-750: var(--primitives-color-accent-750);
+  --color-accent-800: var(--primitives-color-accent-800);
+  --color-accent-850: var(--primitives-color-accent-850);
+  --color-accent-900: var(--primitives-color-accent-900);
+  --color-accent-950: var(--primitives-color-accent-950);
 
   /* Semantic colors */
   --color-dividers: var(--semantics-dividers-color);
