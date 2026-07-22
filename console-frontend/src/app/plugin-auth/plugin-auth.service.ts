@@ -1,4 +1,12 @@
-import { Inject, Injectable, InjectionToken, Optional, inject, signal, type Signal } from '@angular/core';
+import {
+  Inject,
+  Injectable,
+  InjectionToken,
+  Optional,
+  inject,
+  signal,
+  type Signal,
+} from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TOKEN } from '../../connect/tokens';
 

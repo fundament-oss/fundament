@@ -158,7 +158,7 @@ export default class PluginIframeComponent implements OnInit {
     // Kick off the first mint in parallel with the iframe load. The signal
     // effect below pushes token-refreshed / auth-failed to the iframe once
     // it's ready.
-    void this.auth.acquire(this.clusterId(), this.installationId()).catch(() => {
+    this.auth.acquire(this.clusterId(), this.installationId()).catch(() => {
       // Persistent failure sets the signal to null; the effect below sends
       // fundament:auth-failed.
     });
@@ -248,7 +248,9 @@ export default class PluginIframeComponent implements OnInit {
     switch (msg.type) {
       case 'plugin:ready':
         this.status.set('ready');
-        void this.sendInit(iframe);
+        // Fire and forget: sendInit swallows its own mint failures and posts
+        // fundament:auth-failed to the iframe instead of rejecting.
+        this.sendInit(iframe);
         return;
       case 'plugin:resize':
         if (typeof msg.height === 'number' && msg.height > 0) {

@@ -573,7 +573,7 @@
                           @if (cable) {
                             <a
                               routerLink="/patch-mapping"
-                              class="font-mono text-accent-600 dark:text-accent-300 underline hover:text-accent-800 dark:hover:text-accent-200 focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
+                              class="font-mono text-accent-600 underline hover:text-accent-800 focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
                               [title]="cable.id"
                               >{{ cable.label ?? cable.id }}</a
                             >
@@ -587,7 +587,7 @@
                               cable.aSide.deviceId === deviceId() ? cable.bSide : cable.aSide;
                             <a
                               [routerLink]="['/racks/device', peer.deviceId]"
-                              class="text-accent-600 dark:text-accent-300 hover:underline focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
+                              class="text-accent-600 hover:underline focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
                               >{{ peer.deviceName }}</a
                             >
                             <span class="text-gray-400 dark:text-gray-500 ml-1"

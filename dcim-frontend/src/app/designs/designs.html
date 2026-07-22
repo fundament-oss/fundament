@@ -42,7 +42,7 @@
       class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500"
       [class]="
         statusFilter() === 'all'
-          ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300'
+          ? 'bg-accent-50 text-accent-700'
           : 'text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
       "
     >
@@ -53,7 +53,7 @@
       class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500"
       [class]="
         statusFilter() === 'draft'
-          ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300'
+          ? 'bg-accent-50 text-accent-700'
           : 'text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
       "
     >
@@ -64,7 +64,7 @@
       class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500"
       [class]="
         statusFilter() === 'active'
-          ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300'
+          ? 'bg-accent-50 text-accent-700'
           : 'text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
       "
     >
@@ -75,7 +75,7 @@
       class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500"
       [class]="
         statusFilter() === 'archived'
-          ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300'
+          ? 'bg-accent-50 text-accent-700'
           : 'text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800'
       "
     >
@@ -110,7 +110,7 @@
         <div role="cell" class="flex-1 min-w-0">
           <a
             [routerLink]="['/designs', design.id]"
-            class="text-sm font-medium text-slate-900 dark:text-white hover:text-accent-700 dark:hover:text-accent-300 transition-colors truncate block"
+            class="text-sm font-medium text-slate-900 dark:text-white hover:text-accent-700 transition-colors truncate block"
           >
             {{ design.name }}
           </a>
@@ -202,8 +202,8 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+        <div class="bg-danger-50 rounded-md p-3 mb-3" role="alert">
+          <p class="text-danger-800 whitespace-pre-line">
             {{ formErrorMessage() }}
           </p>
         </div>

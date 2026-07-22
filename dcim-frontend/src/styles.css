@@ -8,15 +8,11 @@
    in-app theme switcher controls dark mode. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Make the CSS color-scheme follow the app's .dark class so that Overheid web
-   components using light-dark() respond to our toggle instead of the OS setting.
-   html.dark specificity (0,1,1) beats :root (0,1,0) from the storybook tokens. */
-html:not(.dark) {
-  color-scheme: light;
-}
-html.dark {
-  color-scheme: dark;
-}
+/* The CSS color-scheme is driven by :root[data-scheme], which the inline script
+   in index.html and ThemeService keep in sync with the 'dark' class. The design
+   system's own `:root[data-scheme="light"|"dark"] { color-scheme }` rules do the
+   work, and at specificity (0,2,0) they outrank anything we could hang off
+   html.dark (0,1,1) — so do not add a local color-scheme rule here. */
 
 :root {
   --primitives-font-size-100: theme('fontSize.base');

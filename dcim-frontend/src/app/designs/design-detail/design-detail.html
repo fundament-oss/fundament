@@ -91,7 +91,7 @@
           <button
             (click)="selectedDeviceId.set(device.id)"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors hover:bg-slate-50 dark:hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-            [class]="selectedDeviceId() === device.id ? 'bg-accent-50 dark:bg-accent-950' : ''"
+            [class]="selectedDeviceId() === device.id ? 'bg-accent-50' : ''"
             [attr.aria-pressed]="selectedDeviceId() === device.id"
           >
             <span
@@ -264,9 +264,7 @@
   <div class="flex flex-col items-center justify-center flex-1 text-slate-400 dark:text-gray-500">
     <nldd-icon name="pencil-on-square" class="w-8 h-8" aria-hidden="true"></nldd-icon>
     <p class="mt-3 text-sm">Design not found.</p>
-    <a
-      routerLink="/designs"
-      class="mt-2 text-xs text-accent-700 dark:text-accent-300 hover:underline"
+    <a routerLink="/designs" class="mt-2 text-xs text-accent-700 hover:underline"
       >Back to Designs</a
     >
   </div>
@@ -285,8 +283,8 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+        <div class="bg-danger-50 rounded-md p-3 mb-3" role="alert">
+          <p class="text-danger-800 whitespace-pre-line">
             {{ formErrorMessage() }}
           </p>
         </div>
@@ -372,8 +370,8 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+        <div class="bg-danger-50 rounded-md p-3 mb-3" role="alert">
+          <p class="text-danger-800 whitespace-pre-line">
             {{ formErrorMessage() }}
           </p>
         </div>

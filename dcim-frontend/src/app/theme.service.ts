@@ -1,8 +1,11 @@
 import { Injectable, signal } from '@angular/core';
 
+import repaintSchemeSensitiveLayers from './utils/color-scheme-repaint';
+
 // Manages the app's light/dark theme. The active theme is reflected by a `dark`
-// class on the <html> element (so Tailwind `dark:` variants and the CSS
-// color-scheme follow it). An explicit user choice is persisted to
+// class on the <html> element (driving Tailwind `dark:` variants) and by
+// `data-scheme` on that same element (driving the CSS color-scheme, and the
+// design system's own scheme handling). An explicit user choice is persisted to
 // localStorage; without one, the OS `prefers-color-scheme` setting is followed
 // so it keeps tracking the OS on later visits.
 @Injectable({ providedIn: 'root' })
@@ -44,6 +47,18 @@ export default class ThemeService {
       htmlElement.classList.add('dark');
     } else {
       htmlElement.classList.remove('dark');
+    }
+
+    // The design system keys its own color-scheme handling on :root[data-scheme],
+    // so keep that in sync with our 'dark' class. Mirrors the inline script in index.html.
+    const scheme = this.isDarkMode() ? 'dark' : 'light';
+    const schemeChanged = htmlElement.dataset['scheme'] !== scheme;
+    htmlElement.dataset['scheme'] = scheme;
+
+    // Only worth a forced reflow when the scheme actually flipped. On boot the
+    // inline script in index.html has already set the attribute, so this skips.
+    if (schemeChanged) {
+      repaintSchemeSensitiveLayers();
     }
   }
 }
