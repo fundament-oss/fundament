@@ -40,7 +40,7 @@
   <!-- Region -->
   <nldd-form-field label="Region">
     <nldd-radio-button-group name="region" (change)="onRadioChange('region', $event)">
-      @for (r of regions; track r.value) {
+      @for (r of regions(); track r.value) {
         <nldd-radio-button-field
           [value]="r.value"
           [label]="r.label"
@@ -54,8 +54,8 @@
   <nldd-form-field label="Kubernetes version">
     <nldd-dropdown>
       <select id="kubernetesVersion" formControlName="kubernetesVersion">
-        @for (kv of kubernetesVersions; track kv) {
-          <option [value]="kv">{{ kv }}</option>
+        @for (kv of kubernetesVersions(); track kv.value) {
+          <option [value]="kv.value">{{ kv.label }}</option>
         }
       </select>
     </nldd-dropdown>

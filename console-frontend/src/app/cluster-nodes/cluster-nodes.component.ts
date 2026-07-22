@@ -22,8 +22,10 @@ import {
   CreateNodePoolRequestSchema,
   UpdateNodePoolRequestSchema,
   DeleteNodePoolRequestSchema,
+  GetClusterRequestSchema,
   NodePool,
 } from '../../generated/v1/cluster_pb';
+import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
 import { fetchClusterName } from '../utils/cluster-status';
 
 @Component({
@@ -44,6 +46,8 @@ export default class ClusterNodesComponent implements OnInit {
 
   private client = inject(CLUSTER);
 
+  private regionCatalog = inject(RegionCatalogService);
+
   private clusterId = '';
 
   private existingNodePools: NodePool[] = [];
@@ -60,6 +64,10 @@ export default class ClusterNodesComponent implements OnInit {
 
   clusterName = signal<string | null>(null);
 
+  // Region-scoped machine types when the cluster's region is in the catalog;
+  // null keeps the form in legacy free-text mode.
+  machineTypeOptions = signal<MachineTypeOption[] | null>(null);
+
   constructor() {
     this.titleService.setTitle('Cluster nodes');
     this.clusterId = this.route.snapshot.paramMap.get('id') || '';
@@ -69,7 +77,28 @@ export default class ClusterNodesComponent implements OnInit {
     await Promise.all([
       fetchClusterName(this.client, this.clusterId).then((name) => this.clusterName.set(name)),
       this.loadNodePools(),
+      this.loadMachineTypeOptions(),
     ]);
+  }
+
+  // Match the cluster's region (stored as the catalog region name) against the
+  // catalog; no match (legacy cluster) leaves the form in free-text mode.
+  private async loadMachineTypeOptions() {
+    try {
+      const response = await firstValueFrom(
+        this.client.getCluster(create(GetClusterRequestSchema, { clusterId: this.clusterId })),
+      );
+      const regionName = response.cluster?.region;
+      if (!regionName) {
+        return;
+      }
+      const region = await this.regionCatalog.getRegionByName(regionName);
+      if (region) {
+        this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
+      }
+    } catch {
+      // Catalog unavailable: the form falls back to legacy free-text mode.
+    }
   }
 
   async loadNodePools() {
@@ -150,6 +179,7 @@ export default class ClusterNodesComponent implements OnInit {
               clusterId: this.clusterId,
               name: newPool.name,
               machineType: newPool.machineType,
+              regionMachineTypeId: newPool.regionMachineTypeId ?? '',
               autoscaleMin: newPool.autoscaleMin,
               autoscaleMax: newPool.autoscaleMax,
             });

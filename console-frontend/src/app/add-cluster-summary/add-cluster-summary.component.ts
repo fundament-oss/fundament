@@ -34,6 +34,7 @@ interface ProgressItem {
   nodePoolConfig?: {
     name: string;
     machineType: string;
+    regionMachineTypeId?: string;
     autoscaleMin: number;
     autoscaleMax: number;
   };
@@ -97,7 +98,13 @@ export default class AddClusterSummaryComponent {
     },
   );
 
-  private clusterConfig?: { name: string; region: string; kubernetesVersion: string };
+  private clusterConfig?: {
+    name: string;
+    region: string;
+    regionId?: string;
+    kubernetesVersion: string;
+    kubernetesVersionId?: string;
+  };
 
   private idempotency = createIdempotencyRef();
 
@@ -124,7 +131,9 @@ export default class AddClusterSummaryComponent {
     this.clusterConfig = {
       name: wizardState.clusterName,
       region: wizardState.region,
+      regionId: wizardState.regionId,
       kubernetesVersion: wizardState.kubernetesVersion,
+      kubernetesVersionId: wizardState.kubernetesVersionId,
     };
     this.clusterDisplayName.set(wizardState.clusterName);
 
@@ -173,6 +182,8 @@ export default class AddClusterSummaryComponent {
         name: this.clusterConfig.name,
         region: this.clusterConfig.region,
         kubernetesVersion: this.clusterConfig.kubernetesVersion,
+        regionId: this.clusterConfig.regionId ?? '',
+        kubernetesVersionId: this.clusterConfig.kubernetesVersionId ?? '',
       });
 
       const response = await withIdempotency((opts) => this.client.createCluster(request, opts), {
@@ -219,7 +230,13 @@ export default class AddClusterSummaryComponent {
 
   private async createNodePool(
     key: string,
-    config: { name: string; machineType: string; autoscaleMin: number; autoscaleMax: number },
+    config: {
+      name: string;
+      machineType: string;
+      regionMachineTypeId?: string;
+      autoscaleMin: number;
+      autoscaleMax: number;
+    },
     clusterId?: string,
     abortSignal?: AbortSignal,
   ) {
@@ -233,6 +250,7 @@ export default class AddClusterSummaryComponent {
         clusterId: cid,
         name: config.name,
         machineType: config.machineType,
+        regionMachineTypeId: config.regionMachineTypeId ?? '',
         autoscaleMin: config.autoscaleMin,
         autoscaleMax: config.autoscaleMax,
       });
