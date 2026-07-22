@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 	"github.com/fundament-oss/fundament/common/kubename"
@@ -24,14 +25,27 @@ func (h *Handler) resolveProjectNamespace(ctx context.Context, orgName string, o
 // clusterToSyncBase builds a ClusterToSync with the common fields shared across
 // sync, status checking, and deleted cluster verification.
 // Callers set additional fields (ShootName, Deleted, NodePools) as needed.
-func clusterToSyncBase(id uuid.UUID, name, orgName string, orgID uuid.UUID, namespace, region, k8sVersion string) *gardener.ClusterToSync {
+// cloudProfile/cloudProfileRegion are the catalog regions row (NULL on legacy
+// clusters without a region_id - the gardener client falls back to its
+// provider defaults then).
+func clusterToSyncBase(id uuid.UUID, name, orgName string, orgID uuid.UUID, namespace, region, k8sVersion string, cloudProfile, cloudProfileRegion pgtype.Text) *gardener.ClusterToSync {
 	return &gardener.ClusterToSync{
-		ID:                id,
-		OrganizationID:    orgID,
-		OrganizationName:  orgName,
-		Name:              name,
-		Namespace:         namespace,
-		Region:            region,
-		KubernetesVersion: k8sVersion,
+		ID:                 id,
+		OrganizationID:     orgID,
+		OrganizationName:   orgName,
+		Name:               name,
+		Namespace:          namespace,
+		Region:             region,
+		KubernetesVersion:  k8sVersion,
+		CloudProfile:       textOrEmpty(cloudProfile),
+		CloudProfileRegion: textOrEmpty(cloudProfileRegion),
 	}
+}
+
+// textOrEmpty unwraps a nullable text column to its string, empty when NULL.
+func textOrEmpty(t pgtype.Text) string {
+	if t.Valid {
+		return t.String
+	}
+	return ""
 }

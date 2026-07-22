@@ -55,7 +55,7 @@ func (h *Handler) pollActiveClusters(ctx context.Context) error {
 			continue
 		}
 
-		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
 
 		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
 		if err != nil {
@@ -173,7 +173,7 @@ func (h *Handler) pollDeletedClusters(ctx context.Context) error {
 			continue
 		}
 
-		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
+		clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
 		clusterToSync.Deleted = deleted
 
 		shootStatus, err := h.statusChecker.GetShootStatus(ctx, clusterToSync)
