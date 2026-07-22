@@ -1,7 +1,8 @@
 import { Injectable, signal } from '@angular/core';
 
 export interface ClusterWizardState {
-  // Basic cluster information (step 1)
+  // Basic cluster information (step 1). Names come from the region catalog
+  // (ListRegions) and are exactly what the create request sends.
   clusterName?: string;
   region?: string;
   kubernetesVersion?: string;

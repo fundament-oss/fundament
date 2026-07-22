@@ -89,9 +89,13 @@ type ClusterToSync struct {
 	Namespace         string    // Gardener namespace (garden-{project-name})
 	Region            string
 	KubernetesVersion string
-	Deleted           *time.Time
-	NodePools         []NodePool // Node pool configurations for Gardener worker groups
-	NodeLimits        NodeLimits // Owning organization's node caps, applied at Shoot build time
+	// CloudProfile / CloudProfileRegion select the gardener CloudProfile and the
+	// region within it; empty falls back to the provider defaults.
+	CloudProfile       string
+	CloudProfileRegion string
+	Deleted            *time.Time
+	NodePools          []NodePool // Node pool configurations for Gardener worker groups
+	NodeLimits         NodeLimits // Owning organization's node caps, applied at Shoot build time
 }
 
 // NodeLimits are an organization's node caps from tenant.organization_limits.

@@ -3,6 +3,8 @@
 package dbconst
 
 const (
+	// HintNodePoolRegionMismatch can be thrown by tenant.node_pool_region_match_trigger.
+	HintNodePoolRegionMismatch = "node_pool_region_mismatch"
 	// HintProjectContainsOneAdmin can be thrown by tenant.project_members_tr_protect_last_admin.
 	HintProjectContainsOneAdmin = "project_contains_one_admin"
 )

@@ -63,6 +63,10 @@ CAUTION: Do not modify this file unless you know what you are doing.
 	<role name="fun_owner"/>
 </schema>
 
+<schema name="catalog" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
+	<role name="fun_owner"/>
+</schema>
+
 <schema name="authn" layers="0" rect-visible="true" fill-color="#e1e1e1" name-color="#31363b">
 	<role name="fun_owner"/>
 </schema>
@@ -352,6 +356,35 @@ END;]]> </definition>
         END,
         'trigger'
     );
+    RETURN NULL;
+END;]]> </definition>
+</function>
+
+<function name="node_pool_region_match_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY DEFINER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="tenant"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    IF NEW.region_machine_type_id IS NOT NULL THEN
+        IF (SELECT region_id FROM catalog.region_machine_types WHERE id = NEW.region_machine_type_id)
+           IS DISTINCT FROM
+           (SELECT region_id FROM tenant.clusters WHERE id = NEW.cluster_id)
+        THEN
+            RAISE EXCEPTION 'node_pool region_machine_type region does not match cluster region'
+                        USING HINT = 'node_pool_region_mismatch';
+        END IF;
+    END IF;
     RETURN NULL;
 END;]]> </definition>
 </function>
@@ -1020,6 +1053,124 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<table name="kubernetes_versions" layers="0" collapse-mode="1" max-obj-count="2" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-800" y="2360"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="version" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="kubernetes_versions_pk" type="pk-constr" table="catalog.kubernetes_versions">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="kubernetes_versions_uq_version" type="uq-constr" table="catalog.kubernetes_versions">
+		<columns names="version" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="machine_types" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-800" y="2460"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="lcpu" not-null="true">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="memory" not-null="true">
+		<type name="bigint" length="0"/>
+	</column>
+	<constraint name="machine_types_pk" type="pk-constr" table="catalog.machine_types">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="machine_types_uq_name" type="uq-constr" table="catalog.machine_types">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="regions" layers="0" collapse-mode="1" max-obj-count="6" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-800" y="2560"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="cloud_profile" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="cloud_profile_region" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="regions_pk" type="pk-constr" table="catalog.regions">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="regions_uq_name" type="uq-constr" table="catalog.regions">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="region_kubernetes_versions" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-500" y="2360"/>
+	<column name="region_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="kubernetes_version_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<constraint name="region_kubernetes_versions_pk" type="pk-constr" table="catalog.region_kubernetes_versions">
+		<columns names="region_id,kubernetes_version_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="region_kubernetes_versions_fk_region" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.regions" table="catalog.region_kubernetes_versions">
+		<columns names="region_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+	<constraint name="region_kubernetes_versions_fk_version" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.kubernetes_versions" table="catalog.region_kubernetes_versions">
+		<columns names="kubernetes_version_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+</table>
+
+<table name="region_machine_types" layers="0" collapse-mode="1" max-obj-count="5" z-value="0">
+	<schema name="catalog"/>
+	<role name="fun_owner"/>
+	<position x="-500" y="2460"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="region_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="machine_type_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<constraint name="region_machine_types_pk" type="pk-constr" table="catalog.region_machine_types">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="region_machine_types_uq" type="uq-constr" table="catalog.region_machine_types">
+		<columns names="region_id,machine_type_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="region_machine_types_fk_region" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.regions" table="catalog.region_machine_types">
+		<columns names="region_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+	<constraint name="region_machine_types_fk_machine_type" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.machine_types" table="catalog.region_machine_types">
+		<columns names="machine_type_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
+	</constraint>
+</table>
+
 <table name="clusters" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="16" z-value="0">
 	<schema name="tenant"/>
 	<role name="fun_owner"/>
@@ -1066,11 +1217,21 @@ END;]]> </definition>
 	<column name="outbox_error">
 		<type name="text" length="0"/>
 	</column>
+	<column name="region_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="kubernetes_version_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<constraint name="clusters_pk" type="pk-constr" table="tenant.clusters">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="clusters_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.clusters">
 		<columns names="organization_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="clusters_fk_region_version" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.region_kubernetes_versions" table="tenant.clusters">
+		<columns names="region_id,kubernetes_version_id" ref-type="src-columns"/>
+		<columns names="region_id,kubernetes_version_id" ref-type="dst-columns"/>
 	</constraint>
 </table>
 
@@ -1129,11 +1290,18 @@ END;]]> </definition>
 	<column name="deleted">
 		<type name="timestamptz" length="0"/>
 	</column>
+	<column name="region_machine_type_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<constraint name="node_pools_pk" type="pk-constr" table="tenant.node_pools">
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 	<constraint name="node_pools_uq_name" type="uq-constr" nulls-not-distinct="true" table="tenant.node_pools">
 		<columns names="cluster_id,name,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="node_pools_fk_region_machine_type" type="fk-constr" comparison-type="MATCH SIMPLE" upd-action="CASCADE" del-action="RESTRICT" ref-table="catalog.region_machine_types" table="tenant.node_pools">
+		<columns names="region_machine_type_id" ref-type="src-columns"/>
+		<columns names="id" ref-type="dst-columns"/>
 	</constraint>
 </table>
 
@@ -1227,7 +1395,6 @@ END;]]> </definition>
 		<columns names="preset_id,plugin_id" ref-type="src-columns"/>
 	</constraint>
 </table>
-
 <table name="tags" layers="0" collapse-mode="1" max-obj-count="4" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
@@ -1943,7 +2110,13 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="tenant.node_pools">
 		<function signature="tenant.node_pool_outbox_trigger()"/>
-		<columns names="name,machine_type,autoscale_min,autoscale_max,deleted"/>
+		<columns names="name,machine_type,region_machine_type_id,autoscale_min,autoscale_max,deleted"/>
+</trigger>
+
+<trigger name="region_match" firing-type="AFTER" per-line="true" constraint="true"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="tenant.node_pools">
+		<function signature="tenant.node_pool_region_match_trigger()"/>
 </trigger>
 
 <trigger name="namespace_outbox" firing-type="AFTER" per-line="true" constraint="false"
@@ -3987,6 +4160,36 @@ END;]]> </definition>
 	<object name="appstore" type="schema"/>
 	<roles names="fun_fundament_api"/>
 	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="catalog" type="schema"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="catalog.regions" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="catalog.kubernetes_versions" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="catalog.machine_types" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="catalog.region_kubernetes_versions" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
+</permission>
+<permission>
+	<object name="catalog.region_machine_types" type="table"/>
+	<roles names="fun_fundament_api,fun_cluster_worker,fun_authn_api"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="tenant" type="schema"/>

@@ -24,6 +24,7 @@
     } @else {
       <app-shared-node-pools-form
         [initialData]="initialNodePools()"
+        [machineTypeOptions]="machineTypeOptions()"
         (formSubmit)="onFormSubmit($event)"
       >
         <div class="flex space-x-3">
