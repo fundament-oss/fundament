@@ -39,14 +39,15 @@ type TenantClusterEvent struct {
 }
 
 type TenantNodePool struct {
-	ID           uuid.UUID
-	ClusterID    uuid.UUID
-	Name         string
-	MachineType  string
-	AutoscaleMin int32
-	AutoscaleMax int32
-	Created      pgtype.Timestamptz
-	Deleted      pgtype.Timestamptz
+	ID                  uuid.UUID
+	ClusterID           uuid.UUID
+	Name                string
+	MachineType         string
+	AutoscaleMin        int32
+	AutoscaleMax        int32
+	Created             pgtype.Timestamptz
+	Deleted             pgtype.Timestamptz
+	RegionMachineTypeID pgtype.UUID
 }
 
 type TenantProject struct {

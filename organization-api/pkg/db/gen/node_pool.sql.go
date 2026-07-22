@@ -13,19 +13,22 @@ import (
 )
 
 const nodePoolCreate = `-- name: NodePoolCreate :one
-INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO tenant.node_pools (cluster_id, name, machine_type, autoscale_min, autoscale_max, region_machine_type_id)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id
 `
 
 type NodePoolCreateParams struct {
-	ClusterID    uuid.UUID
-	Name         string
-	MachineType  string
-	AutoscaleMin int32
-	AutoscaleMax int32
+	ClusterID           uuid.UUID
+	Name                string
+	MachineType         string
+	AutoscaleMin        int32
+	AutoscaleMax        int32
+	RegionMachineTypeID pgtype.UUID
 }
 
+// region_machine_type_id is the catalog reference (expand phase: the legacy
+// machine_type text column is written alongside it).
 func (q *Queries) NodePoolCreate(ctx context.Context, arg NodePoolCreateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, nodePoolCreate,
 		arg.ClusterID,
@@ -33,6 +36,7 @@ func (q *Queries) NodePoolCreate(ctx context.Context, arg NodePoolCreateParams) 
 		arg.MachineType,
 		arg.AutoscaleMin,
 		arg.AutoscaleMax,
+		arg.RegionMachineTypeID,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -58,7 +62,7 @@ func (q *Queries) NodePoolDelete(ctx context.Context, arg NodePoolDeleteParams) 
 }
 
 const nodePoolGetByID = `-- name: NodePoolGetByID :one
-SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted
+SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id
 FROM tenant.node_pools
 WHERE id = $1 AND deleted IS NULL
 `
@@ -79,12 +83,13 @@ func (q *Queries) NodePoolGetByID(ctx context.Context, arg NodePoolGetByIDParams
 		&i.AutoscaleMax,
 		&i.Created,
 		&i.Deleted,
+		&i.RegionMachineTypeID,
 	)
 	return i, err
 }
 
 const nodePoolListByClusterID = `-- name: NodePoolListByClusterID :many
-SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted
+SELECT id, cluster_id, name, machine_type, autoscale_min, autoscale_max, created, deleted, region_machine_type_id
 FROM tenant.node_pools
 WHERE cluster_id = $1 AND deleted IS NULL
 ORDER BY created DESC
@@ -112,6 +117,7 @@ func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListB
 			&i.AutoscaleMax,
 			&i.Created,
 			&i.Deleted,
+			&i.RegionMachineTypeID,
 		); err != nil {
 			return nil, err
 		}

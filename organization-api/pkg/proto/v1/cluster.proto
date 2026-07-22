@@ -23,6 +23,10 @@ message SyncState {
 
 // ClusterService manages Kubernetes clusters
 service ClusterService {
+  // List the region catalog: every region with the kubernetes versions and
+  // machine types it offers (drives the create-cluster cascade).
+  rpc ListRegions(ListRegionsRequest) returns (ListRegionsResponse);
+
   // List all clusters for the current organization
   rpc ListClusters(ListClustersRequest) returns (ListClustersResponse);
 
@@ -138,14 +142,19 @@ message NodePool {
   string version = 80;
 }
 
-// Create cluster request
+// Create cluster request.
+// Either the catalog references (region_id + kubernetes_version_id) or the
+// legacy text fields (region + kubernetes_version) must be set; the catalog
+// path is validated against catalog.region_kubernetes_versions.
 message CreateClusterRequest {
   string name = 10 [(buf.validate.field).string = {
     min_len: 1
     max_len: 255
   }];
-  string region = 20 [(buf.validate.field).string = {min_len: 1}];
-  string kubernetes_version = 30 [(buf.validate.field).string = {min_len: 1}];
+  string region = 20;
+  string kubernetes_version = 30;
+  string region_id = 40;
+  string kubernetes_version_id = 50;
 }
 
 // Node pool specification
@@ -233,9 +242,12 @@ message CreateNodePoolRequest {
     min_len: 1
     max_len: 255
   }];
-  string machine_type = 30 [(buf.validate.field).string = {min_len: 1}];
+  // Either region_machine_type_id (catalog reference, validated against the
+  // cluster's region) or the legacy machine_type text must be set.
+  string machine_type = 30;
   int32 autoscale_min = 40 [(buf.validate.field).int32 = {gte: 0}];
   int32 autoscale_max = 50 [(buf.validate.field).int32 = {gte: 0}];
+  string region_machine_type_id = 60;
 }
 
 // Create node pool response
@@ -287,3 +299,33 @@ message GetNodePoolResponse {
   NodePool node_pool = 10;
 }
 
+
+// List regions request
+message ListRegionsRequest {}
+
+// List regions response
+message ListRegionsResponse {
+  repeated Region regions = 10;
+}
+
+// A region from the catalog with its per-region offerings.
+message Region {
+  string id = 10;
+  string name = 20;
+  repeated RegionKubernetesVersion kubernetes_versions = 30;
+  repeated RegionMachineType machine_types = 40;
+}
+
+// A kubernetes version offered in a region.
+message RegionKubernetesVersion {
+  string id = 10; // catalog.kubernetes_versions id (CreateClusterRequest.kubernetes_version_id)
+  string version = 20;
+}
+
+// A machine type offered in a region.
+message RegionMachineType {
+  string id = 10; // catalog.region_machine_types id (CreateNodePoolRequest.region_machine_type_id)
+  string name = 20;
+  int32 lcpu = 30;
+  int64 memory = 40; // bytes
+}
