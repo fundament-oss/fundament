@@ -13,8 +13,8 @@ import (
 )
 
 const clusterCreate = `-- name: ClusterCreate :one
-INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version)
-SELECT $1, $2, $3, $4
+INSERT INTO tenant.clusters (organization_id, name, region, kubernetes_version, region_id, kubernetes_version_id)
+SELECT $1, $2, $3, $4, $5, $6
 WHERE NOT EXISTS (
     SELECT 1
     FROM tenant.clusters
@@ -26,21 +26,27 @@ RETURNING id
 `
 
 type ClusterCreateParams struct {
-	OrganizationID    uuid.UUID
-	Name              string
-	Region            string
-	KubernetesVersion string
+	OrganizationID      uuid.UUID
+	Name                string
+	Region              string
+	KubernetesVersion   string
+	RegionID            pgtype.UUID
+	KubernetesVersionID pgtype.UUID
 }
 
 // Create a cluster if no active or pending-delete cluster with the same name exists.
 // Allows creation only after Gardener confirms deletion (shoot_status = 'deleted').
 // Returns NULL if blocked (caller should check for pgx.ErrNoRows).
+// region_id/kubernetes_version_id are the catalog references (expand phase: the
+// legacy text columns are written alongside them).
 func (q *Queries) ClusterCreate(ctx context.Context, arg ClusterCreateParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, clusterCreate,
 		arg.OrganizationID,
 		arg.Name,
 		arg.Region,
 		arg.KubernetesVersion,
+		arg.RegionID,
+		arg.KubernetesVersionID,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -329,17 +335,21 @@ func (q *Queries) ClusterList(ctx context.Context) ([]ClusterListRow, error) {
 
 const clusterUpdate = `-- name: ClusterUpdate :execrows
 UPDATE tenant.clusters
-SET kubernetes_version = COALESCE($2, kubernetes_version)
+SET kubernetes_version = COALESCE($2, kubernetes_version),
+    kubernetes_version_id = COALESCE($3, kubernetes_version_id)
 WHERE id = $1 AND deleted IS NULL
 `
 
 type ClusterUpdateParams struct {
-	ID                uuid.UUID
-	KubernetesVersion pgtype.Text
+	ID                  uuid.UUID
+	KubernetesVersion   pgtype.Text
+	KubernetesVersionID pgtype.UUID
 }
 
+// kubernetes_version_id is resolved server-side from the catalog together with
+// the version text (expand phase: both columns updated in lockstep).
 func (q *Queries) ClusterUpdate(ctx context.Context, arg ClusterUpdateParams) (int64, error) {
-	result, err := q.db.Exec(ctx, clusterUpdate, arg.ID, arg.KubernetesVersion)
+	result, err := q.db.Exec(ctx, clusterUpdate, arg.ID, arg.KubernetesVersion, arg.KubernetesVersionID)
 	if err != nil {
 		return 0, err
 	}

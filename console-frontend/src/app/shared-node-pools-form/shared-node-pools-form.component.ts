@@ -20,10 +20,11 @@ import {
 } from '@angular/forms';
 import AutofocusDirective from '../autofocus.directive';
 import DropdownSyncDirective from '../dropdown-sync.directive';
+import { MachineTypeOption } from '../region-catalog.service';
 
 export interface NodePoolData {
   name: string;
-  machineType: string;
+  machineType: string; // catalog machine type name - what the create request sends
   autoscaleMin: number;
   autoscaleMax: number;
 }
@@ -44,6 +45,24 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     }
   }
 
+  // Region-scoped machine types from the catalog (names + display labels).
+  // An empty list normalizes to null: the fallback list stays in place until
+  // real options arrive.
+  @Input() set machineTypeOptions(options: MachineTypeOption[] | null) {
+    this.catalogOptions = options && options.length > 0 ? options : null;
+    if (this.catalogOptions) {
+      const opts = this.catalogOptions;
+      // Re-anchor controls whose value is not an offered machine type.
+      this.nodePools.controls.forEach((control) => {
+        const mt = control.get('machineType');
+        if (!opts.some((o) => o.value === mt?.value)) {
+          mt?.setValue(opts[0].value);
+        }
+      });
+      this.cdr.markForCheck();
+    }
+  }
+
   @Output() formSubmit = new EventEmitter<{ nodePools: NodePoolData[] }>();
 
   private fb = inject(FormBuilder);
@@ -53,8 +72,10 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   // Form
   nodePoolsForm: FormGroup;
 
-  // Dropdown options based on Gardener
-  machineTypes = [
+  private catalogOptions: MachineTypeOption[] | null = null;
+
+  // Fallback until the catalog options arrive.
+  private static readonly legacyMachineTypes: MachineTypeOption[] = [
     { value: 'n1-standard-1', label: 'n1-standard-1 (1 vCPU, 3.75 GB RAM)' },
     { value: 'n1-standard-2', label: 'n1-standard-2 (2 vCPU, 7.5 GB RAM)' },
     { value: 'n1-standard-4', label: 'n1-standard-4 (4 vCPU, 15 GB RAM)' },
@@ -62,6 +83,10 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     { value: 'n1-highmem-2', label: 'n1-highmem-2 (2 vCPU, 13 GB RAM)' },
     { value: 'n1-highmem-4', label: 'n1-highmem-4 (4 vCPU, 26 GB RAM)' },
   ];
+
+  get machineTypes(): MachineTypeOption[] {
+    return this.catalogOptions ?? SharedNodePoolsFormComponent.legacyMachineTypes;
+  }
 
   constructor() {
     this.nodePoolsForm = this.fb.group({
@@ -88,7 +113,7 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
           this.uniqueNodePoolNameValidator.bind(this),
         ],
       ],
-      machineType: [data?.machineType || 'n1-standard-1', Validators.required],
+      machineType: [this.initialMachineTypeValue(data), Validators.required],
       autoscaleMin: [
         data?.autoscaleMin || 1,
         [Validators.required, Validators.min(1), Validators.max(100)],
@@ -98,6 +123,15 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
         [Validators.required, Validators.min(1), Validators.max(100)],
       ],
     });
+  }
+
+  // The machineType control holds the machine type name.
+  private initialMachineTypeValue(data?: NodePoolData): string {
+    const options = this.machineTypes;
+    if (data && options.some((o) => o.value === data.machineType)) {
+      return data.machineType;
+    }
+    return options[0]?.value ?? '';
   }
 
   private loadInitialData(data: NodePoolData[]) {

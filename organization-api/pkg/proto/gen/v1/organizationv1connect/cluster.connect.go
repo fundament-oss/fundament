@@ -33,6 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ClusterServiceListRegionsProcedure is the fully-qualified name of the ClusterService's
+	// ListRegions RPC.
+	ClusterServiceListRegionsProcedure = "/organization.v1.ClusterService/ListRegions"
 	// ClusterServiceListClustersProcedure is the fully-qualified name of the ClusterService's
 	// ListClusters RPC.
 	ClusterServiceListClustersProcedure = "/organization.v1.ClusterService/ListClusters"
@@ -79,6 +82,9 @@ const (
 
 // ClusterServiceClient is a client for the organization.v1.ClusterService service.
 type ClusterServiceClient interface {
+	// List the region catalog: every region with the kubernetes versions and
+	// machine types it offers (drives the create-cluster cascade).
+	ListRegions(context.Context, *connect.Request[v1.ListRegionsRequest]) (*connect.Response[v1.ListRegionsResponse], error)
 	// List all clusters for the current organization
 	ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error)
 	// Get detailed information about a specific cluster
@@ -120,6 +126,12 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 	baseURL = strings.TrimRight(baseURL, "/")
 	clusterServiceMethods := v1.File_v1_cluster_proto.Services().ByName("ClusterService").Methods()
 	return &clusterServiceClient{
+		listRegions: connect.NewClient[v1.ListRegionsRequest, v1.ListRegionsResponse](
+			httpClient,
+			baseURL+ClusterServiceListRegionsProcedure,
+			connect.WithSchema(clusterServiceMethods.ByName("ListRegions")),
+			connect.WithClientOptions(opts...),
+		),
 		listClusters: connect.NewClient[v1.ListClustersRequest, v1.ListClustersResponse](
 			httpClient,
 			baseURL+ClusterServiceListClustersProcedure,
@@ -209,6 +221,7 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // clusterServiceClient implements ClusterServiceClient.
 type clusterServiceClient struct {
+	listRegions                  *connect.Client[v1.ListRegionsRequest, v1.ListRegionsResponse]
 	listClusters                 *connect.Client[v1.ListClustersRequest, v1.ListClustersResponse]
 	getCluster                   *connect.Client[v1.GetClusterRequest, v1.GetClusterResponse]
 	getClusterByName             *connect.Client[v1.GetClusterByNameRequest, v1.GetClusterResponse]
@@ -223,6 +236,11 @@ type clusterServiceClient struct {
 	createNodePool               *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
 	updateNodePool               *connect.Client[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse]
 	deleteNodePool               *connect.Client[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse]
+}
+
+// ListRegions calls organization.v1.ClusterService.ListRegions.
+func (c *clusterServiceClient) ListRegions(ctx context.Context, req *connect.Request[v1.ListRegionsRequest]) (*connect.Response[v1.ListRegionsResponse], error) {
+	return c.listRegions.CallUnary(ctx, req)
 }
 
 // ListClusters calls organization.v1.ClusterService.ListClusters.
@@ -297,6 +315,9 @@ func (c *clusterServiceClient) DeleteNodePool(ctx context.Context, req *connect.
 
 // ClusterServiceHandler is an implementation of the organization.v1.ClusterService service.
 type ClusterServiceHandler interface {
+	// List the region catalog: every region with the kubernetes versions and
+	// machine types it offers (drives the create-cluster cascade).
+	ListRegions(context.Context, *connect.Request[v1.ListRegionsRequest]) (*connect.Response[v1.ListRegionsResponse], error)
 	// List all clusters for the current organization
 	ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error)
 	// Get detailed information about a specific cluster
@@ -334,6 +355,12 @@ type ClusterServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	clusterServiceMethods := v1.File_v1_cluster_proto.Services().ByName("ClusterService").Methods()
+	clusterServiceListRegionsHandler := connect.NewUnaryHandler(
+		ClusterServiceListRegionsProcedure,
+		svc.ListRegions,
+		connect.WithSchema(clusterServiceMethods.ByName("ListRegions")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clusterServiceListClustersHandler := connect.NewUnaryHandler(
 		ClusterServiceListClustersProcedure,
 		svc.ListClusters,
@@ -420,6 +447,8 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 	)
 	return "/organization.v1.ClusterService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case ClusterServiceListRegionsProcedure:
+			clusterServiceListRegionsHandler.ServeHTTP(w, r)
 		case ClusterServiceListClustersProcedure:
 			clusterServiceListClustersHandler.ServeHTTP(w, r)
 		case ClusterServiceGetClusterProcedure:
@@ -456,6 +485,10 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 
 // UnimplementedClusterServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedClusterServiceHandler struct{}
+
+func (UnimplementedClusterServiceHandler) ListRegions(context.Context, *connect.Request[v1.ListRegionsRequest]) (*connect.Response[v1.ListRegionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.ListRegions is not implemented"))
+}
 
 func (UnimplementedClusterServiceHandler) ListClusters(context.Context, *connect.Request[v1.ListClustersRequest]) (*connect.Response[v1.ListClustersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.ListClusters is not implemented"))

@@ -110,7 +110,7 @@ func (h *Handler) syncCluster(ctx context.Context, id uuid.UUID, sc handler.Sync
 	}
 
 	// 7. Build ClusterToSync and apply
-	clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion)
+	clusterToSync := clusterToSyncBase(cluster.ID, cluster.Name, cluster.OrganizationName, cluster.OrganizationID, namespace, cluster.Region, cluster.KubernetesVersion, cluster.CloudProfile, cluster.CloudProfileRegion)
 	clusterToSync.ShootName = kubename.GenerateShootName(cluster.Name, cluster.ID)
 	clusterToSync.Deleted = deleted
 	clusterToSync.NodePools = toGardenerNodePools(nodePoolRows)

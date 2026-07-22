@@ -1,5 +1,5 @@
 -- ** Database generated with pgModeler (PostgreSQL Database Modeler).
--- ** pgModeler version: 1.2.3
+-- ** pgModeler version: 2.0.0-beta
 -- ** PostgreSQL version: 18.0
 -- ** Project Site: pgmodeler.io
 -- ** Model Author: ---
@@ -19,6 +19,13 @@ ALTER SCHEMA tenant OWNER TO fun_owner;
 CREATE SCHEMA appstore;
 -- ddl-end --
 ALTER SCHEMA appstore OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: catalog | type: SCHEMA --
+-- DROP SCHEMA IF EXISTS catalog CASCADE;
+CREATE SCHEMA catalog;
+-- ddl-end --
+ALTER SCHEMA catalog OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: authn | type: SCHEMA --
@@ -42,7 +49,7 @@ CREATE SCHEMA dcim;
 ALTER SCHEMA dcim OWNER TO fun_owner;
 -- ddl-end --
 
-SET search_path TO pg_catalog,public,tenant,appstore,authn,authz,dcim;
+SET search_path TO pg_catalog,public,tenant,appstore,catalog,authn,authz,dcim;
 -- ddl-end --
 
 -- object: tenant.organizations | type: TABLE --
@@ -216,6 +223,35 @@ END;
 $function$;
 -- ddl-end --
 ALTER FUNCTION tenant.node_pool_outbox_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: tenant.node_pool_region_match_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS tenant.node_pool_region_match_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION tenant.node_pool_region_match_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY DEFINER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    IF NEW.region_machine_type_id IS NOT NULL THEN
+        IF (SELECT region_id FROM catalog.region_machine_types WHERE id = NEW.region_machine_type_id)
+           IS DISTINCT FROM
+           (SELECT region_id FROM tenant.clusters WHERE id = NEW.cluster_id)
+        THEN
+            RAISE EXCEPTION 'node_pool region_machine_type region does not match cluster region'
+                        USING HINT = 'node_pool_region_mismatch';
+        END IF;
+    END IF;
+    RETURN NULL;
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION tenant.node_pool_region_match_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
 -- object: tenant.namespace_outbox_trigger | type: FUNCTION --
@@ -839,6 +875,70 @@ $function$;
 ALTER FUNCTION authn.api_key_update_last_used(uuid) OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: catalog.kubernetes_versions | type: TABLE --
+-- DROP TABLE IF EXISTS catalog.kubernetes_versions CASCADE;
+CREATE TABLE catalog.kubernetes_versions (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	version text NOT NULL,
+	CONSTRAINT kubernetes_versions_pk PRIMARY KEY (id),
+	CONSTRAINT kubernetes_versions_uq_version UNIQUE (version)
+);
+-- ddl-end --
+ALTER TABLE catalog.kubernetes_versions OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: catalog.machine_types | type: TABLE --
+-- DROP TABLE IF EXISTS catalog.machine_types CASCADE;
+CREATE TABLE catalog.machine_types (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	name text NOT NULL,
+	lcpu integer NOT NULL,
+	memory bigint NOT NULL,
+	CONSTRAINT machine_types_pk PRIMARY KEY (id),
+	CONSTRAINT machine_types_uq_name UNIQUE (name)
+);
+-- ddl-end --
+ALTER TABLE catalog.machine_types OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: catalog.regions | type: TABLE --
+-- DROP TABLE IF EXISTS catalog.regions CASCADE;
+CREATE TABLE catalog.regions (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	name text NOT NULL,
+	cloud_profile text NOT NULL,
+	cloud_profile_region text NOT NULL,
+	CONSTRAINT regions_pk PRIMARY KEY (id),
+	CONSTRAINT regions_uq_name UNIQUE (name)
+);
+-- ddl-end --
+ALTER TABLE catalog.regions OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: catalog.region_kubernetes_versions | type: TABLE --
+-- DROP TABLE IF EXISTS catalog.region_kubernetes_versions CASCADE;
+CREATE TABLE catalog.region_kubernetes_versions (
+	region_id uuid NOT NULL,
+	kubernetes_version_id uuid NOT NULL,
+	CONSTRAINT region_kubernetes_versions_pk PRIMARY KEY (region_id,kubernetes_version_id)
+);
+-- ddl-end --
+ALTER TABLE catalog.region_kubernetes_versions OWNER TO fun_owner;
+-- ddl-end --
+
+-- object: catalog.region_machine_types | type: TABLE --
+-- DROP TABLE IF EXISTS catalog.region_machine_types CASCADE;
+CREATE TABLE catalog.region_machine_types (
+	id uuid NOT NULL DEFAULT uuidv7(),
+	region_id uuid NOT NULL,
+	machine_type_id uuid NOT NULL,
+	CONSTRAINT region_machine_types_pk PRIMARY KEY (id),
+	CONSTRAINT region_machine_types_uq UNIQUE (region_id,machine_type_id)
+);
+-- ddl-end --
+ALTER TABLE catalog.region_machine_types OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: tenant.clusters | type: TABLE --
 -- DROP TABLE IF EXISTS tenant.clusters CASCADE;
 CREATE TABLE tenant.clusters (
@@ -856,6 +956,8 @@ CREATE TABLE tenant.clusters (
 	outbox_status text,
 	outbox_retries integer NOT NULL DEFAULT 0,
 	outbox_error text,
+	region_id uuid,
+	kubernetes_version_id uuid,
 	CONSTRAINT clusters_pk PRIMARY KEY (id),
 	CONSTRAINT clusters_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted)
 );
@@ -923,6 +1025,7 @@ CREATE TABLE tenant.node_pools (
 	autoscale_max integer NOT NULL,
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
+	region_machine_type_id uuid,
 	CONSTRAINT node_pools_pk PRIMARY KEY (id),
 	CONSTRAINT node_pools_uq_name UNIQUE NULLS NOT DISTINCT (cluster_id,name,deleted)
 );
@@ -1312,6 +1415,10 @@ USING btree
 CREATE TABLE tenant.cluster_outbox (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	cluster_id uuid,
+	organization_user_id uuid,
+	project_member_id uuid,
+	node_pool_id uuid,
+	namespace_id uuid,
 	event text NOT NULL DEFAULT 'updated',
 	source text NOT NULL DEFAULT 'trigger',
 	status text NOT NULL DEFAULT 'pending',
@@ -1321,10 +1428,6 @@ CREATE TABLE tenant.cluster_outbox (
 	failed timestamptz,
 	status_info text,
 	created timestamptz NOT NULL DEFAULT now(),
-	organization_user_id uuid,
-	project_member_id uuid,
-	node_pool_id uuid,
-	namespace_id uuid,
 	deferrals integer NOT NULL DEFAULT 0,
 	CONSTRAINT cluster_outbox_pk PRIMARY KEY (id),
 	CONSTRAINT cluster_outbox_ck_single_fk CHECK (num_nonnulls(cluster_id, organization_user_id, project_member_id, node_pool_id, namespace_id) = 1),
@@ -1675,10 +1778,20 @@ CREATE OR REPLACE TRIGGER node_pools_outbox
 -- object: node_pool_outbox | type: TRIGGER --
 -- DROP TRIGGER IF EXISTS node_pool_outbox ON tenant.node_pools CASCADE;
 CREATE OR REPLACE TRIGGER node_pool_outbox
-	AFTER INSERT OR UPDATE OF name,machine_type,autoscale_min,autoscale_max,deleted
+	AFTER INSERT OR UPDATE OF name,machine_type,region_machine_type_id,autoscale_min,autoscale_max,deleted
 	ON tenant.node_pools
 	FOR EACH ROW
 	EXECUTE PROCEDURE tenant.node_pool_outbox_trigger();
+-- ddl-end --
+
+-- object: region_match | type: TRIGGER --
+-- region_match ON tenant.node_pools CASCADE;
+CREATE CONSTRAINT TRIGGER region_match
+	AFTER INSERT OR UPDATE
+	ON tenant.node_pools
+	NOT DEFERRABLE 
+	FOR EACH ROW
+	EXECUTE PROCEDURE tenant.node_pool_region_match_trigger();
 -- ddl-end --
 
 -- object: namespace_outbox | type: TRIGGER --
@@ -1935,11 +2048,6 @@ CREATE TABLE tenant.idempotency_keys (
 	id uuid NOT NULL DEFAULT uuidv7(),
 	idempotency_key uuid NOT NULL,
 	user_id uuid NOT NULL,
-	procedure text NOT NULL,
-	request_hash bytea NOT NULL,
-	response_bytes bytea,
-	created timestamptz NOT NULL DEFAULT now(),
-	expires timestamptz NOT NULL,
 	project_id uuid,
 	project_member_id uuid,
 	cluster_id uuid,
@@ -1947,6 +2055,11 @@ CREATE TABLE tenant.idempotency_keys (
 	namespace_id uuid,
 	api_key_id uuid,
 	organization_user_id uuid,
+	procedure text NOT NULL,
+	request_hash bytea NOT NULL,
+	response_bytes bytea,
+	created timestamptz NOT NULL DEFAULT now(),
+	expires timestamptz NOT NULL,
 	CONSTRAINT idempotency_keys_pk PRIMARY KEY (id),
 	CONSTRAINT idempotency_keys_uq_key_user UNIQUE (idempotency_key,user_id),
 	CONSTRAINT idempotency_keys_ck_single_fk CHECK (num_nonnulls(
@@ -2430,11 +2543,53 @@ REFERENCES tenant.users (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
+-- object: region_kubernetes_versions_fk_region | type: CONSTRAINT --
+-- ALTER TABLE catalog.region_kubernetes_versions DROP CONSTRAINT IF EXISTS region_kubernetes_versions_fk_region CASCADE;
+ALTER TABLE catalog.region_kubernetes_versions ADD CONSTRAINT region_kubernetes_versions_fk_region FOREIGN KEY (region_id)
+REFERENCES catalog.regions (id) MATCH SIMPLE
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
+-- object: region_kubernetes_versions_fk_version | type: CONSTRAINT --
+-- ALTER TABLE catalog.region_kubernetes_versions DROP CONSTRAINT IF EXISTS region_kubernetes_versions_fk_version CASCADE;
+ALTER TABLE catalog.region_kubernetes_versions ADD CONSTRAINT region_kubernetes_versions_fk_version FOREIGN KEY (kubernetes_version_id)
+REFERENCES catalog.kubernetes_versions (id) MATCH SIMPLE
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
+-- object: region_machine_types_fk_region | type: CONSTRAINT --
+-- ALTER TABLE catalog.region_machine_types DROP CONSTRAINT IF EXISTS region_machine_types_fk_region CASCADE;
+ALTER TABLE catalog.region_machine_types ADD CONSTRAINT region_machine_types_fk_region FOREIGN KEY (region_id)
+REFERENCES catalog.regions (id) MATCH SIMPLE
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
+-- object: region_machine_types_fk_machine_type | type: CONSTRAINT --
+-- ALTER TABLE catalog.region_machine_types DROP CONSTRAINT IF EXISTS region_machine_types_fk_machine_type CASCADE;
+ALTER TABLE catalog.region_machine_types ADD CONSTRAINT region_machine_types_fk_machine_type FOREIGN KEY (machine_type_id)
+REFERENCES catalog.machine_types (id) MATCH SIMPLE
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
+-- object: clusters_fk_region_version | type: CONSTRAINT --
+-- ALTER TABLE tenant.clusters DROP CONSTRAINT IF EXISTS clusters_fk_region_version CASCADE;
+ALTER TABLE tenant.clusters ADD CONSTRAINT clusters_fk_region_version FOREIGN KEY (region_id,kubernetes_version_id)
+REFERENCES catalog.region_kubernetes_versions (region_id,kubernetes_version_id) MATCH SIMPLE
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
 -- object: clusters_fk_organization | type: CONSTRAINT --
 -- ALTER TABLE tenant.clusters DROP CONSTRAINT IF EXISTS clusters_fk_organization CASCADE;
 ALTER TABLE tenant.clusters ADD CONSTRAINT clusters_fk_organization FOREIGN KEY (organization_id)
 REFERENCES tenant.organizations (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: node_pools_fk_region_machine_type | type: CONSTRAINT --
+-- ALTER TABLE tenant.node_pools DROP CONSTRAINT IF EXISTS node_pools_fk_region_machine_type CASCADE;
+ALTER TABLE tenant.node_pools ADD CONSTRAINT node_pools_fk_region_machine_type FOREIGN KEY (region_machine_type_id)
+REFERENCES catalog.region_machine_types (id) MATCH SIMPLE
+ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ddl-end --
 
 -- object: node_pools_fk_cluster | type: CONSTRAINT --
@@ -2959,6 +3114,54 @@ ON DELETE NO ACTION ON UPDATE NO ACTION;
 GRANT USAGE
    ON SCHEMA appstore
    TO fun_fundament_api;
+
+-- ddl-end --
+
+
+-- object: "grant_U_a95c3ca815" | type: PERMISSION --
+GRANT USAGE
+   ON SCHEMA catalog
+   TO fun_fundament_api,fun_cluster_worker,fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_104545bc50 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE catalog.regions
+   TO fun_fundament_api,fun_cluster_worker,fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_33051191dc | type: PERMISSION --
+GRANT SELECT
+   ON TABLE catalog.kubernetes_versions
+   TO fun_fundament_api,fun_cluster_worker,fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_43f1a84e46 | type: PERMISSION --
+GRANT SELECT
+   ON TABLE catalog.machine_types
+   TO fun_fundament_api,fun_cluster_worker,fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_f407865fdb | type: PERMISSION --
+GRANT SELECT
+   ON TABLE catalog.region_kubernetes_versions
+   TO fun_fundament_api,fun_cluster_worker,fun_authn_api;
+
+-- ddl-end --
+
+
+-- object: grant_r_5e092e716d | type: PERMISSION --
+GRANT SELECT
+   ON TABLE catalog.region_machine_types
+   TO fun_fundament_api,fun_cluster_worker,fun_authn_api;
 
 -- ddl-end --
 

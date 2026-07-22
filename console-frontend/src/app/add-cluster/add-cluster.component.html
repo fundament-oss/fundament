@@ -37,10 +37,14 @@
     </nldd-form-field-error-text>
   </nldd-form-field>
 
+  @if (catalogError()) {
+    <p class="text-danger-700 dark:text-danger-300">{{ catalogError() }}</p>
+  }
+
   <!-- Region -->
   <nldd-form-field label="Region">
     <nldd-radio-button-group name="region" (change)="onRadioChange('region', $event)">
-      @for (r of regions; track r.value) {
+      @for (r of regions(); track r.value) {
         <nldd-radio-button-field
           [value]="r.value"
           [label]="r.label"
@@ -54,7 +58,7 @@
   <nldd-form-field label="Kubernetes version">
     <nldd-dropdown>
       <select id="kubernetesVersion" formControlName="kubernetesVersion">
-        @for (kv of kubernetesVersions; track kv) {
+        @for (kv of kubernetesVersions(); track kv) {
           <option [value]="kv">{{ kv }}</option>
         }
       </select>

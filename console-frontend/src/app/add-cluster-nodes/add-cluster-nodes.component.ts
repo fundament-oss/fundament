@@ -1,6 +1,8 @@
 import {
   Component,
   inject,
+  OnInit,
+  signal,
   ViewChild,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -12,6 +14,7 @@ import {
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
+import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
 
 @Component({
   selector: 'app-add-cluster-nodes',
@@ -20,7 +23,7 @@ import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-nodes.component.html',
 })
-export default class AddClusterNodesComponent {
+export default class AddClusterNodesComponent implements OnInit {
   @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
 
   private titleService = inject(TitleService);
@@ -29,8 +32,28 @@ export default class AddClusterNodesComponent {
 
   private stateService = inject(ClusterWizardStateService);
 
+  private regionCatalog = inject(RegionCatalogService);
+
+  // Machine types offered by the region chosen in step 1.
+  machineTypeOptions = signal<MachineTypeOption[] | null>(null);
+
   constructor() {
     this.titleService.setTitle('Add cluster nodes');
+  }
+
+  async ngOnInit() {
+    const { region: regionName } = this.stateService.getState();
+    if (!regionName) {
+      return;
+    }
+    try {
+      const region = await this.regionCatalog.getRegionByName(regionName);
+      if (region) {
+        this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
+      }
+    } catch {
+      // Catalog unavailable: the form falls back to its built-in list.
+    }
   }
 
   onFormSubmit(data: { nodePools: NodePoolData[] }) {
