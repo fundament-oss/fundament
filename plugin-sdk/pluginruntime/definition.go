@@ -69,6 +69,11 @@ type PolicyRule struct {
 	APIGroups []string `yaml:"apiGroups"`
 	Resources []string `yaml:"resources"`
 	Verbs     []string `yaml:"verbs"`
+	// ResourceNames optionally restricts the rule to named objects. Empty means
+	// all objects of the resource — so a plugin scoping access to specific names
+	// must set this, and it must survive the round-trip to the materialised
+	// ClusterRole.
+	ResourceNames []string `yaml:"resourceNames"`
 }
 
 // MenuDefinition describes how the plugin appears in the Fundament console.

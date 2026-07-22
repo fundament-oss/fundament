@@ -1,0 +1,37 @@
+      import {
+        loadSdk,
+        renderDefList,
+        renderConditionsTable,
+        issuerType,
+      } from './_shared.js';
+
+      await loadSdk();
+      const ctx = await fundament.init;
+      const content = document.getElementById('content');
+      const heading = document.getElementById('heading');
+
+      if (!ctx.resource?.name) {
+        content.textContent = 'No cluster issuer selected.';
+      } else {
+        try {
+          const item = await fundament.k8s.get({
+            group: 'cert-manager.io',
+            version: 'v1',
+            resource: 'clusterissuers',
+            name: ctx.resource.name,
+          });
+          heading.textContent = `Cluster issuer · ${item.metadata?.name ?? ctx.resource.name}`;
+          const meta = {
+            Name: item.metadata?.name,
+            Created: item.metadata?.creationTimestamp,
+            Type: issuerType(item),
+          };
+          content.innerHTML = `
+            <h2 class="plugin-heading">Spec</h2>
+            ${renderDefList(meta)}
+            <h2 class="plugin-heading">Conditions</h2>
+            ${renderConditionsTable(item)}`;
+        } catch (err) {
+          content.textContent = `Failed to load: ${err?.message ?? err}`;
+        }
+      }

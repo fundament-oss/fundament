@@ -151,6 +151,9 @@ profiles:
   # Hot reload profile for local development
   - name: hotreload
     patches:
+      - op: replace
+        path: /deploy/statusCheckDeadlineSeconds
+        value: 1500
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-
         value: charts/fundament/values-hotreload.yaml

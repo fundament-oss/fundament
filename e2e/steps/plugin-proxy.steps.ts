@@ -33,12 +33,13 @@ async function captureResponse(world: ICustomWorld, response: Response): Promise
   s.body = await response.text();
 }
 
-// Expand ${PLUGIN_PROXY_URL} / ${CONSOLE_URL} so feature strings work in both
-// local dev (fundament.localhost) and PR envs (pr${N}.${DOMAIN}).
+// Expand ${PLUGIN_PROXY_URL} / ${CONSOLE_URL} / ${CLUSTER_ID} so feature strings
+// work in both local dev (fundament.localhost) and PR envs (pr${N}.${DOMAIN}).
 function resolveUrls(world: ICustomWorld, text: string): string {
   return text
     .replace(/\$\{PLUGIN_PROXY_URL\}/g, world.pluginProxyUrl ?? '')
-    .replace(/\$\{CONSOLE_URL\}/g, world.consoleUrl ?? '');
+    .replace(/\$\{CONSOLE_URL\}/g, world.consoleUrl ?? '')
+    .replace(/\$\{CLUSTER_ID\}/g, SEEDED_CLUSTER_ID);
 }
 
 // --- Given ---
@@ -55,7 +56,19 @@ Given('I have a plugin token for the seeded installation', async function (this:
 // --- When ---
 
 When('I GET the asset {string}', async function (this: ICustomWorld, path: string) {
-  const response = await fetch(`${this.pluginProxyUrl}${path}`, { redirect: 'manual' });
+  // The asset route is /clusters/{clusterID}/plugins/{name}/{version}/console/{path}
+  // and is gated by the console UserToken cookie + OpenFGA can_view. Send the
+  // authenticated user's token as the fundament_auth cookie (matches
+  // common/auth/auth.go ConsoleAuthCookieName). Malformed-path negative cases
+  // are rejected by parsePath before auth, so the cookie is harmless there.
+  const headers: Record<string, string> = {};
+  if (this.authToken) {
+    headers.Cookie = `fundament_auth=${this.authToken}`;
+  }
+  const response = await fetch(`${this.pluginProxyUrl}${resolveUrls(this, path)}`, {
+    redirect: 'manual',
+    headers,
+  });
   await captureResponse(this, response);
 });
 

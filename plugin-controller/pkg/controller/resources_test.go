@@ -8,21 +8,21 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
-	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
+	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 )
 
 func TestMutatePluginScopeClusterRole_MaterialisesRules(t *testing.T) {
 	cr := &pluginsv1.PluginInstallation{}
 	cr.Name = "cert-manager"
 
-	rules := []definition.RBACRule{
+	rules := []*pluginmetadatav1.PolicyRule{
 		{
-			APIGroups: []string{"cert-manager.io"},
+			ApiGroups: []string{"cert-manager.io"},
 			Resources: []string{"certificates"},
 			Verbs:     []string{"get", "list", "watch"},
 		},
 		{
-			APIGroups:     []string{""},
+			ApiGroups:     []string{""},
 			Resources:     []string{"secrets"},
 			Verbs:         []string{"get"},
 			ResourceNames: []string{"cert-manager-webhook-ca"},
@@ -34,7 +34,12 @@ func TestMutatePluginScopeClusterRole_MaterialisesRules(t *testing.T) {
 
 	require.Len(t, role.Rules, 2)
 	assert.Equal(t, "cert-manager.io", role.Rules[0].APIGroups[0])
-	assert.Equal(t, "cert-manager-webhook-ca", role.Rules[1].ResourceNames[0])
+	assert.Equal(t, []string{"secrets"}, role.Rules[1].Resources)
+	// resource_names must be threaded through: an empty ResourceNames grants
+	// access to ALL objects of the resource, so a rule scoped to a named object
+	// must stay scoped (regression guard for the dropped field).
+	assert.Equal(t, []string{"cert-manager-webhook-ca"}, role.Rules[1].ResourceNames)
+	assert.Empty(t, role.Rules[0].ResourceNames)
 	assert.Equal(t, managedByValue, role.Labels[labelManagedBy])
 }
 

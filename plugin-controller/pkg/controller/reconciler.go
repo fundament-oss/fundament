@@ -2,9 +2,13 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sort"
 	"time"
 
 	"connectrpc.com/connect"
@@ -19,12 +23,34 @@ import (
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
-	"github.com/fundament-oss/fundament/plugin-controller/pkg/definition"
 	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1/pluginmetadatav1connect"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const finalizerName = "plugins.fundament.io/cleanup"
+const (
+	finalizerName = "plugins.fundament.io/cleanup"
+
+	// scopeRPCTimeout bounds a single GetDefinition RPC during reconcile.
+	// Kept short so one wedged plugin pod can't back up the work queue.
+	scopeRPCTimeout = 15 * time.Second
+
+	// ConditionPluginScopeReady is the Status Condition surfaced on the CR when
+	// the plugin-scope ClusterRole materialisation succeeds or fails.
+	ConditionPluginScopeReady = "PluginScopeReady"
+
+	// unknownDefinitionHash is the terraform provider's default placeholder,
+	// used until the marketplace supplies real content hashes (FUN-11). It is
+	// treated as unpinned: it can never equal a real digest, so verifying
+	// against it would reject every install forever.
+	unknownDefinitionHash = "sha256:unknown"
+)
+
+// isUnpinned reports whether a definitionHash carries no real consent record:
+// either empty or the "sha256:unknown" placeholder.
+func isUnpinned(hash string) bool {
+	return hash == "" || hash == unknownDefinitionHash
+}
 
 type Reconciler struct {
 	client              client.Client
@@ -32,7 +58,14 @@ type Reconciler struct {
 	cfg                 config.Config
 	statusPoller        *statusPoller
 	uninstallHTTPClient connect.HTTPClient
-	definitionResolver  definition.Resolver
+	// scopeHTTPClient is used for the per-reconcile GetDefinition RPC. Distinct
+	// from uninstallHTTPClient (5m) because a slow or wedged plugin pod would
+	// otherwise starve the reconcile work queue.
+	scopeHTTPClient connect.HTTPClient
+
+	// pluginServiceURLOverride, when set, replaces pluginServiceURL(cr.Name)
+	// in RPC calls. Used by tests to point the reconciler at a local stub.
+	pluginServiceURLOverride string
 }
 
 // ReconcilerOption configures the Reconciler.
@@ -52,10 +85,12 @@ func WithUninstallHTTPClient(c connect.HTTPClient) ReconcilerOption {
 	}
 }
 
-// WithDefinitionResolver sets the PluginDefinition resolver. Defaults to the
-// mock resolver if unset.
-func WithDefinitionResolver(r definition.Resolver) ReconcilerOption {
-	return func(rec *Reconciler) { rec.definitionResolver = r }
+// WithScopeHTTPClient sets the HTTP client used for the per-reconcile
+// GetDefinition RPC that materialises the plugin-scope ClusterRole.
+func WithScopeHTTPClient(c connect.HTTPClient) ReconcilerOption {
+	return func(r *Reconciler) {
+		r.scopeHTTPClient = c
+	}
 }
 
 func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opts ...ReconcilerOption) *Reconciler {
@@ -65,13 +100,11 @@ func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opt
 		cfg:                 *cfg,
 		statusPoller:        newStatusPoller(),
 		uninstallHTTPClient: &http.Client{Timeout: 5 * time.Minute},
+		scopeHTTPClient:     &http.Client{Timeout: scopeRPCTimeout},
 	}
 
 	for _, opt := range opts {
 		opt(r)
-	}
-	if r.definitionResolver == nil {
-		r.definitionResolver = definition.NewMockResolver()
 	}
 	return r
 }
@@ -112,13 +145,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil //nolint:nilerr // intentional: permanent validation error, don't requeue
 	}
 
-	// Reconcile child resources
+	// Reconcile child resources. reconcileChildren mutates cr.Status.Conditions
+	// (PluginScopeReady) — persist those before returning on error so the CR
+	// reflects the failure, even though we'll requeue.
+
 	if err := r.reconcileChildren(ctx, log, &cr); err != nil {
+		if err := r.client.Status().Update(ctx, &cr); err != nil {
+			log.Error("persist status after reconcile error failed", "err", err)
+		}
+
 		return ctrl.Result{}, fmt.Errorf("reconcile children: %w", err)
 	}
 
-	// Poll plugin status and update CR
+	// Poll plugin status and update CR. statusPoller.poll returns a fresh
+	// PluginInstallationStatus with no Conditions — carry the Conditions
+	// materialised inside reconcileChildren across the assignment.
 	status := r.statusPoller.poll(ctx, &cr)
+	status.Conditions = cr.Status.Conditions
 	cr.Status = status
 	if err := r.client.Status().Update(ctx, &cr); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update status: %w", err)
@@ -146,8 +189,8 @@ func (r *Reconciler) handleDeletion(ctx context.Context, log *slog.Logger, cr *p
 	log.Info("cleaning up plugin resources")
 
 	// Delete the plugin-scope ClusterRole/ClusterRoleBinding materialised from
-	// the pinned PluginDefinition. The opaque spec.clusterRoles binding is no
-	// longer written; nothing to clean up for it here.
+	// the plugin's declared definition (may not exist if the plugin never
+	// answered GetDefinition).
 	scopeName := pluginScopeClusterRoleName(cr.Name)
 	scopeCRB := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: scopeName}}
 	if err := r.client.Delete(ctx, scopeCRB); err != nil && !apierrors.IsNotFound(err) {
@@ -239,35 +282,6 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 		log.Info("reconciled resource", "kind", "RoleBinding", "name", rb.Name, "operation", op)
 	}
 
-	// Resolve the immutable pinned PluginDefinition and materialise the plugin
-	// SA's scope ClusterRole from it (FUN-17). This replaces binding the opaque
-	// spec.clusterRoles.
-	def, err := r.definitionResolver.Resolve(ctx, cr.Spec.DefinitionRef.DefinitionHash)
-	if err != nil {
-		return fmt.Errorf("resolve pinned definition %q: %w", cr.Spec.DefinitionRef.DefinitionHash, err)
-	}
-
-	scopeRoleName := pluginScopeClusterRoleName(cr.Name)
-	scopeRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
-	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeRole, func() error {
-		mutatePluginScopeClusterRole(scopeRole, cr, def.Permissions.RBAC)
-		return nil
-	}); err != nil {
-		return fmt.Errorf("reconcile plugin-scope ClusterRole: %w", err)
-	} else if op != controllerutil.OperationResultNone {
-		log.Info("reconciled resource", "kind", "ClusterRole", "name", scopeRoleName, "operation", op)
-	}
-
-	scopeCRB := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
-	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeCRB, func() error {
-		mutatePluginScopeClusterRoleBinding(scopeCRB, cr)
-		return nil
-	}); err != nil {
-		return fmt.Errorf("reconcile plugin-scope ClusterRoleBinding: %w", err)
-	} else if op != controllerutil.OperationResultNone {
-		log.Info("reconciled resource", "kind", "ClusterRoleBinding", "name", scopeRoleName, "operation", op)
-	}
-
 	// Deployment (in plugin namespace, no owner ref — cleaned up via namespace deletion)
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: childName(cr.Name), Namespace: nsName},
@@ -294,7 +308,209 @@ func (r *Reconciler) reconcileChildren(ctx context.Context, log *slog.Logger, cr
 		log.Info("reconciled resource", "kind", "Service", "name", svc.Name, "operation", op)
 	}
 
+	// Materialise the plugin-scope ClusterRole (FUN-17) from the plugin's own
+	// PluginMetadataService/GetDefinition. The plugin itself is the source of
+	// truth for its declared permissions; admins pin
+	// cr.Spec.DefinitionRef.DefinitionHash to bind consent to a specific
+	// definition shape.
+	//
+	// Errors here are surfaced via a PluginScopeReady Condition on the CR AND
+	// returned so the workqueue retries with exponential backoff. Without the
+	// retry, a transient RPC failure would leave the SA with no scope until
+	// the informer's periodic resync (~10h).
+	// reconcilePluginScope sets the success PluginScopeReady condition itself
+	// (Materialised / MaterialisedUnpinned); we only record the failure here.
+	if err := r.reconcilePluginScope(ctx, log, cr); err != nil {
+		setPluginScopeCondition(cr, metav1.ConditionFalse, "MaterialisationFailed", err.Error())
+		return fmt.Errorf("reconcile plugin scope: %w", err)
+	}
+
 	return nil
+}
+
+// setPluginScopeCondition upserts the PluginScopeReady Condition on the CR's
+// status. Same-value updates preserve LastTransitionTime; changes reset it.
+func setPluginScopeCondition(cr *pluginsv1.PluginInstallation, status metav1.ConditionStatus, reason, message string) {
+	cond := metav1.Condition{
+		Type:               ConditionPluginScopeReady,
+		Status:             status,
+		ObservedGeneration: cr.Generation,
+		Reason:             reason,
+		Message:            message,
+	}
+	for i, existing := range cr.Status.Conditions {
+		if existing.Type != ConditionPluginScopeReady {
+			continue
+		}
+		if existing.Status == status {
+			cond.LastTransitionTime = existing.LastTransitionTime
+		} else {
+			cond.LastTransitionTime = metav1.Now()
+		}
+		cr.Status.Conditions[i] = cond
+		return
+	}
+	cond.LastTransitionTime = metav1.Now()
+	cr.Status.Conditions = append(cr.Status.Conditions, cond)
+}
+
+// reconcilePluginScope RPCs the plugin's GetDefinition, verifies the pinned
+// hash, materialises the scope ClusterRole + binding, and sets the success
+// PluginScopeReady condition on the CR (the caller records failures).
+func (r *Reconciler) reconcilePluginScope(ctx context.Context, log *slog.Logger, cr *pluginsv1.PluginInstallation) error {
+	pinned := cr.Spec.DefinitionRef.DefinitionHash
+	unpinned := isUnpinned(pinned)
+	if unpinned && !r.cfg.AllowUnpinnedHash {
+		// Fail-closed: a CR without a real pin cannot materialise arbitrary RBAC.
+		// The operator opts into unpinned installs (empty or the "sha256:unknown"
+		// placeholder) by setting PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true on
+		// the Deployment.
+		return fmt.Errorf("PluginInstallation %q has no pinned spec.definitionRef.definitionHash (%q) and PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH is false", cr.Name, pinned)
+	}
+
+	url := r.pluginServiceURLOverride
+	if url == "" {
+		url = pluginServiceURL(cr.Name)
+	}
+	// Bound the RPC to keep one wedged plugin from starving the reconcile queue.
+	rpcCtx, cancel := context.WithTimeout(ctx, scopeRPCTimeout)
+	defer cancel()
+	rpcClient := pluginmetadatav1connect.NewPluginMetadataServiceClient(r.scopeHTTPClient, url)
+	resp, err := rpcClient.GetDefinition(rpcCtx, connect.NewRequest(&pluginmetadatav1.GetDefinitionRequest{}))
+	if err != nil {
+		return fmt.Errorf("GetDefinition RPC: %w", err)
+	}
+	def := resp.Msg
+
+	if !unpinned {
+		got, err := hashDefinition(def)
+		if err != nil {
+			return fmt.Errorf("hash definition: %w", err)
+		}
+		if got != pinned {
+			return fmt.Errorf("definition hash mismatch: pinned=%q, plugin=%q", pinned, got)
+		}
+	} else {
+		// Unpinned install — only reachable with AllowUnpinnedHash set. We
+		// materialise whatever RBAC the plugin's live GetDefinition returns with
+		// no consent bound to a definition hash, so a compromised or updated
+		// plugin image could widen its own ClusterRole. Log loudly so this is
+		// auditable; the PluginScopeReady condition below also carries an
+		// "unpinned/unverified" reason.
+		log.Warn("materialising plugin-scope RBAC from an UNPINNED definition; no hash consent enforced (PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH is set)",
+			"plugin", cr.Name, "definitionHash", pinned)
+	}
+
+	scopeRoleName := pluginScopeClusterRoleName(cr.Name)
+	scopeRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
+	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeRole, func() error {
+		mutatePluginScopeClusterRole(scopeRole, cr, def.GetPermissions().GetRbac())
+		return nil
+	}); err != nil {
+		return fmt.Errorf("reconcile plugin-scope ClusterRole: %w", err)
+	} else if op != controllerutil.OperationResultNone {
+		log.Info("reconciled resource", "kind", "ClusterRole", "name", scopeRoleName, "operation", op)
+	}
+
+	scopeCRB := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: scopeRoleName}}
+	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, scopeCRB, func() error {
+		mutatePluginScopeClusterRoleBinding(scopeCRB, cr)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("reconcile plugin-scope ClusterRoleBinding: %w", err)
+	} else if op != controllerutil.OperationResultNone {
+		log.Info("reconciled resource", "kind", "ClusterRoleBinding", "name", scopeRoleName, "operation", op)
+	}
+
+	// Materialisation succeeded — record readiness. An unpinned definition gets a
+	// distinct reason so the CR advertises that its RBAC carries no hash consent.
+	if unpinned {
+		setPluginScopeCondition(cr, metav1.ConditionTrue, "MaterialisedUnpinned",
+			"plugin-scope ClusterRole materialised from an UNPINNED definition (no hash consent); RBAC reflects whatever the plugin returned")
+	} else {
+		setPluginScopeCondition(cr, metav1.ConditionTrue, "Materialised", "plugin-scope ClusterRole materialised from GetDefinition")
+	}
+	return nil
+}
+
+// hashDefinition computes SHA-256 over a canonical JSON serialization of the
+// plugin's GetDefinitionResponse. Protojson gives a stable text form; walking
+// it through encoding/json.Marshal after Unmarshal into a generic map sorts
+// object keys deterministically. Unlike proto.MarshalOptions{Deterministic:
+// true} — which the protobuf-go documentation explicitly warns is NOT stable
+// across library versions or languages — this scheme produces the same bytes
+// for the same logical message across controller upgrades.
+func hashDefinition(def *pluginmetadatav1.GetDefinitionResponse) (string, error) {
+	// UseProtoNames keeps field names as declared in the .proto file (snake_case).
+	raw, err := protojson.MarshalOptions{UseProtoNames: true, EmitUnpopulated: false}.Marshal(def)
+	if err != nil {
+		return "", fmt.Errorf("protojson marshal: %w", err)
+	}
+	canonical, err := canonicalizeJSON(raw)
+	if err != nil {
+		return "", fmt.Errorf("canonicalize json: %w", err)
+	}
+	sum := sha256.Sum256(canonical)
+	return "sha256:" + hex.EncodeToString(sum[:]), nil
+}
+
+// canonicalizeJSON round-trips JSON through a sorted intermediate to produce a
+// byte-stable representation: object keys sorted lexicographically, arrays kept
+// in order (already ordered by protojson), no insignificant whitespace.
+func canonicalizeJSON(raw []byte) ([]byte, error) {
+	var tree any
+	if err := json.Unmarshal(raw, &tree); err != nil {
+		return nil, err
+	}
+	return marshalSorted(tree)
+}
+
+func marshalSorted(v any) ([]byte, error) {
+	switch t := v.(type) {
+	case map[string]any:
+		keys := make([]string, 0, len(t))
+		for k := range t {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		var buf []byte
+		buf = append(buf, '{')
+		for i, k := range keys {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
+			kb, err := json.Marshal(k)
+			if err != nil {
+				return nil, err
+			}
+			buf = append(buf, kb...)
+			buf = append(buf, ':')
+			vb, err := marshalSorted(t[k])
+			if err != nil {
+				return nil, err
+			}
+			buf = append(buf, vb...)
+		}
+		buf = append(buf, '}')
+		return buf, nil
+	case []any:
+		var buf []byte
+		buf = append(buf, '[')
+		for i, e := range t {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
+			eb, err := marshalSorted(e)
+			if err != nil {
+				return nil, err
+			}
+			buf = append(buf, eb...)
+		}
+		buf = append(buf, ']')
+		return buf, nil
+	default:
+		return json.Marshal(v)
+	}
 }
 
 func (r *Reconciler) fundamentEnvVars() []corev1.EnvVar {

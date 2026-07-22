@@ -115,11 +115,12 @@ func (s *AuthnServer) signPluginToken(
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(PluginTokenExpiry)),
 		},
-		ClusterID:      clusterID.String(),
-		InstallationID: installationID.String(),
-		PluginName:     manifest.PluginName,
-		PluginVersion:  manifest.PluginVersion,
-		DefinitionHash: manifest.DefinitionHash,
+		ClusterID:        clusterID.String(),
+		InstallationID:   installationID.String(),
+		InstallationName: manifest.InstallationName,
+		PluginName:       manifest.PluginName,
+		PluginVersion:    manifest.PluginVersion,
+		DefinitionHash:   manifest.DefinitionHash,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
