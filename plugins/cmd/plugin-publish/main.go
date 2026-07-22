@@ -74,9 +74,22 @@ func injectImage(src []byte, image, pullPolicy string) ([]byte, error) {
 	return out, nil
 }
 
+// withAuth attaches the bearer token (FUNDAMENT_TOKEN) and organization context
+// to a Connect request. Every authenticated PluginService call needs these —
+// ListPlugins as much as PutPluginDefinition.
+func withAuth(req interface{ Header() http.Header }, orgID string) {
+	if tok := os.Getenv("FUNDAMENT_TOKEN"); tok != "" {
+		req.Header().Set("Authorization", "Bearer "+tok)
+	}
+	req.Header().Set("Fun-Organization", orgID)
+}
+
 // resolvePluginID looks up the catalog plugin id by name via ListPlugins.
-func resolvePluginID(ctx context.Context, client organizationv1connect.PluginServiceClient, name string) (string, error) {
-	resp, err := client.ListPlugins(ctx, connect.NewRequest(organizationv1.ListPluginsRequest_builder{}.Build()))
+func resolvePluginID(ctx context.Context, client organizationv1connect.PluginServiceClient, name, orgID string) (string, error) {
+	req := connect.NewRequest(organizationv1.ListPluginsRequest_builder{}.Build())
+	withAuth(req, orgID)
+
+	resp, err := client.ListPlugins(ctx, req)
 	if err != nil {
 		return "", fmt.Errorf("list plugins: %w", err)
 	}
@@ -99,11 +112,13 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: plugin-publish --plugin <name> --image repo@sha256:<digest> [--plugin-id <uuid>]")
 		os.Exit(2)
 	}
+
 	apiURL := os.Getenv("FUNDAMENT_ORG_API_URL")
 	if apiURL == "" {
 		fmt.Fprintln(os.Stderr, "FUNDAMENT_ORG_API_URL is required")
 		os.Exit(1)
 	}
+
 	orgID := os.Getenv("FUNDAMENT_ORGANIZATION_ID")
 	if orgID == "" {
 		fmt.Fprintln(os.Stderr, "FUNDAMENT_ORGANIZATION_ID is required (PutPluginDefinition is org-scoped)")
@@ -116,11 +131,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "read definition: %v\n", err)
 		os.Exit(1)
 	}
+
 	published, err := injectImage(src, image, "IfNotPresent")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "inject image: %v\n", err)
 		os.Exit(1)
 	}
+
 	def, err := pluginruntime.ParseDefinition(published) // strict validation
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "invalid published manifest: %v\n", err)
@@ -131,7 +148,7 @@ func main() {
 	ctx := context.Background()
 
 	if pluginID == "" {
-		pluginID, err = resolvePluginID(ctx, client, def.Metadata.Name)
+		pluginID, err = resolvePluginID(ctx, client, def.Metadata.Name, orgID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "resolve plugin id: %v\n", err)
 			os.Exit(1)
@@ -143,15 +160,15 @@ func main() {
 		PluginVersion: def.Metadata.Version,
 		Manifest:      published,
 	}.Build())
-	if tok := os.Getenv("FUNDAMENT_TOKEN"); tok != "" {
-		req.Header().Set("Authorization", "Bearer "+tok)
-	}
-	req.Header().Set("Fun-Organization", orgID)
+
+	withAuth(req, orgID)
+
 	resp, err := client.PutPluginDefinition(ctx, req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "publish failed: %v\n", err)
 		os.Exit(1)
 	}
+
 	fmt.Printf("published plugin=%s version=%s hash=%s id=%s definition_id=%s\n",
 		def.Metadata.Name, resp.Msg.GetPluginVersion(), resp.Msg.GetHash(), resp.Msg.GetPluginId(), resp.Msg.GetId())
 }

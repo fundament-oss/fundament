@@ -36,3 +36,4 @@ pluginController:
   logLevel: debug
   # `just plugin-install` sets an empty definitionHash; allow it in the sandbox.
   allowUnpinnedHash: true
+  organizationApiUrl: https://organization.fundament.localhost:8443
