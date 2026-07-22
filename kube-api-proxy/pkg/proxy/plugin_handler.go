@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kubereq"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/pluginsa"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/useraccess"
@@ -114,6 +115,8 @@ func (g *pluginGateway) serve(w http.ResponseWriter, r *http.Request, pathCluste
 	g.audit(claims, &attrs, sa.PinnedDefinitionHash, "allowed")
 	ctx := WithSAToken(r.Context(), sa.Token)
 	ctx = WithUserID(ctx, userID)
+	// The multi-cluster proxy resolves the target apiserver from this key.
+	ctx = context.WithValue(ctx, kube.ClusterIDContextKey{}, clusterUUID.String())
 	g.kubeHandler.ServeHTTP(w, r.WithContext(ctx))
 }
 

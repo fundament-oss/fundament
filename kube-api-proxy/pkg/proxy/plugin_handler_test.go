@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fundament-oss/fundament/common/auth"
+	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kubereq"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/pluginsa"
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/useraccess"
@@ -114,6 +115,31 @@ func TestPluginGateway_AcceptsClusterIDCasingDifference(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code, "body: %s", w.Body.String())
 	require.NotNil(t, g.lastForwarded(), "request was not forwarded despite matching cluster UUIDs")
+}
+
+// TestPluginGateway_ForwardsClusterIDContext verifies the gateway forwards with
+// kube.ClusterIDContextKey set in canonical form (the multi-cluster proxy needs
+// it to resolve the target apiserver).
+func TestPluginGateway_ForwardsClusterIDContext(t *testing.T) {
+	secret := []byte("s")
+	clusterID := uuid.New()
+	// Claim spells the ID in upper case; the forwarded key must be canonical.
+	upper := strings.ToUpper(clusterID.String())
+
+	g := newPluginGateway(t, secret, true, true)
+	tok := mintPluginToken(t, secret, uuid.NewString(), upper)
+
+	r := httptest.NewRequestWithContext(context.Background(), "GET", "/api/v1/pods", http.NoBody)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	w := httptest.NewRecorder()
+	g.serve(w, r, clusterID.String())
+
+	require.Equal(t, http.StatusOK, w.Code, "body: %s", w.Body.String())
+	fwd := g.lastForwarded()
+	require.NotNil(t, fwd, "request was not forwarded")
+	got, ok := fwd.Context().Value(kube.ClusterIDContextKey{}).(string)
+	require.True(t, ok, "forwarded request is missing kube.ClusterIDContextKey")
+	assert.Equal(t, clusterID.String(), got)
 }
 
 func TestPluginGateway_RejectsWhenSARDenies(t *testing.T) {
