@@ -46,9 +46,13 @@ export default class AddClusterNodesComponent implements OnInit {
     if (!regionName) {
       return;
     }
-    const region = await this.regionCatalog.getRegionByName(regionName);
-    if (region) {
-      this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
+    try {
+      const region = await this.regionCatalog.getRegionByName(regionName);
+      if (region) {
+        this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
+      }
+    } catch {
+      // Catalog unavailable: the form falls back to its built-in list.
     }
   }
 

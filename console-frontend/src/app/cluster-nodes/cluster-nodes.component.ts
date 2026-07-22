@@ -65,7 +65,7 @@ export default class ClusterNodesComponent implements OnInit {
   clusterName = signal<string | null>(null);
 
   // Region-scoped machine types when the cluster's region is in the catalog;
-  // null keeps the form in legacy free-text mode.
+  // null keeps the form on its built-in fallback machine-type list.
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
 
   constructor() {
@@ -82,7 +82,7 @@ export default class ClusterNodesComponent implements OnInit {
   }
 
   // Match the cluster's region (stored as the catalog region name) against the
-  // catalog; no match (legacy cluster) leaves the form in free-text mode.
+  // catalog; no match (legacy cluster) leaves the form on its fallback list.
   private async loadMachineTypeOptions() {
     try {
       const response = await firstValueFrom(
@@ -97,7 +97,7 @@ export default class ClusterNodesComponent implements OnInit {
         this.machineTypeOptions.set(RegionCatalogService.machineTypeOptions(region));
       }
     } catch {
-      // Catalog unavailable: the form falls back to legacy free-text mode.
+      // Catalog unavailable: the form falls back to its built-in list.
     }
   }
 
