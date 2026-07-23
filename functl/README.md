@@ -42,16 +42,18 @@ Use `functl config dir` to see the resolved directory, or `functl config path` f
 
 ### Configuration file
 
-Create `~/.config/fundament/config.yaml` to override defaults:
+functl works without a config file: the built-in defaults point at the
+deployed environment (`https://organization-api.fundament-poc.nl` and
+`https://authn.fundament-poc.nl`). Create `~/.config/fundament/config.yaml`
+only to point at another environment or change other settings:
 
 ```yaml
-api_endpoint: https://organization-api.fundament-poc.nl
-authn_url: https://authn.fundament-poc.nl
+api_endpoint: https://organization-api.my-own-fundament.example
+authn_url: https://authn.my-own-fundament.example
 output: table
 ```
 
-The built-in defaults point at the deployed environment shown above. For
-local development the repo's `mise.toml` sets `FUNCTL_API_ENDPOINT` and
+For local development the repo's `mise.toml` sets `FUNCTL_API_ENDPOINT` and
 `FUNCTL_AUTHN_URL` to the local skaffold endpoints, which override both the
 defaults and the config file.
 
