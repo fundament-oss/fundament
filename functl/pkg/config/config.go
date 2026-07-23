@@ -33,15 +33,21 @@ func DefaultConfig() *Config {
 	}
 }
 
+// Environment variables that override the endpoint configuration.
+const (
+	EnvAPIEndpoint = "FUNCTL_API_ENDPOINT"
+	EnvAuthnURL    = "FUNCTL_AUTHN_URL"
+)
+
 // applyEnvOverrides overrides endpoint settings from the environment.
-// FUNCTL_API_ENDPOINT and FUNCTL_AUTHN_URL take precedence over both the
-// config file and the built-in defaults; the fundament repo sets them via
-// mise so a checkout talks to the local dev endpoints.
+// EnvAPIEndpoint and EnvAuthnURL take precedence over both the config file
+// and the built-in defaults; the fundament repo sets them via mise so a
+// checkout talks to the local dev endpoints.
 func applyEnvOverrides(cfg *Config) {
-	if v := os.Getenv("FUNCTL_API_ENDPOINT"); v != "" {
+	if v := os.Getenv(EnvAPIEndpoint); v != "" {
 		cfg.APIEndpoint = v
 	}
-	if v := os.Getenv("FUNCTL_AUTHN_URL"); v != "" {
+	if v := os.Getenv(EnvAuthnURL); v != "" {
 		cfg.AuthnURL = v
 	}
 }

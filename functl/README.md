@@ -62,6 +62,7 @@ defaults and the config file.
 | `FUNCTL_CONFIG_DIR` | Override the configuration directory path (must be absolute) |
 | `FUNCTL_API_ENDPOINT` | Override the organization API endpoint (takes precedence over config file) |
 | `FUNCTL_AUTHN_URL` | Override the authn API endpoint (takes precedence over config file) |
+| `FUNCTL_DEBUG` | Enable debug logging (same as `--debug`); shows the resolved endpoints on startup |
 | `FUNDAMENT_API_KEY` | API key for authentication (takes precedence over credentials file) |
 
 ## Authentication
