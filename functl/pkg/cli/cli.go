@@ -26,6 +26,7 @@ type CLI struct {
 	Project   ProjectCmd   `cmd:"" help:"Manage projects."`
 	Namespace NamespaceCmd `cmd:"" help:"Manage namespaces."`
 	APIKey    APIKeyCmd    `cmd:"" name:"apikey" help:"Manage API keys."`
+	Version   VersionCmd   `cmd:"" help:"Print the functl version."`
 }
 
 // Context holds shared dependencies for command execution.

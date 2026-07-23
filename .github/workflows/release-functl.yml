@@ -1,0 +1,75 @@
+name: Release functl
+
+on:
+  push:
+    branches: [master]
+
+permissions: {}
+
+concurrency:
+  group: release-functl
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build binaries
+        run: |
+          VERSION="${GITHUB_SHA::7}-master-${{ github.run_number }}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/arm64; do
+            GOOS="${target%/*}"
+            GOARCH="${target#*/}"
+            OUT_DIR="dist/functl_${GOOS}_${GOARCH}"
+            mkdir -p "$OUT_DIR"
+            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
+              go build -trimpath \
+                -ldflags "-s -w -X github.com/fundament-oss/fundament/functl/pkg/cli.version=${VERSION}" \
+                -o "$OUT_DIR/functl" ./functl/cmd/functl
+            tar -C "$OUT_DIR" -czf "dist/functl_${GOOS}_${GOARCH}.tar.gz" functl
+          done
+          (cd dist && sha256sum *.tar.gz > SHA256SUMS)
+
+      - name: Update rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Move the rolling tag to the current commit.
+          git tag -f functl-latest
+          git push -f origin functl-latest
+
+          if ! gh release view functl-latest > /dev/null 2>&1; then
+            gh release create functl-latest \
+              --prerelease \
+              --title "functl (rolling)" \
+              --notes "placeholder"
+          fi
+
+          gh release edit functl-latest \
+            --prerelease \
+            --title "functl (rolling)" \
+            --notes "Rolling build of functl from the latest push to master.
+
+          - Version: \`${VERSION}\`
+          - Commit: ${GITHUB_SHA}
+
+          See functl/README.md for install instructions."
+
+          gh release upload functl-latest \
+            dist/functl_linux_amd64.tar.gz \
+            dist/functl_linux_arm64.tar.gz \
+            dist/functl_darwin_arm64.tar.gz \
+            dist/SHA256SUMS \
+            --clobber
