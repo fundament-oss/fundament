@@ -74,9 +74,11 @@ interface KubeListResult<T = unknown> {
   items: T[];
 }
 
+type SdkErrorCode = 'unauthorized' | 'forbidden' | 'http' | 'transport' | 'timeout';
+
 class SdkError extends Error {
   constructor(
-    public readonly code: 'unauthorized' | 'forbidden' | 'http' | 'transport' | 'timeout',
+    public readonly code: SdkErrorCode,
     message: string,
     public readonly status?: number,
   ) {
@@ -136,7 +138,7 @@ const themeListeners = new Set<(theme: Theme) => void>();
 interface AuthState {
   token: string | null;
   expiresAt: number;
-  waiters: Array<{ resolve: (t: string) => void; reject: (e: Error) => void }>;
+  waiters: { resolve: (t: string) => void; reject: (e: Error) => void }[];
   failed: { reason: AuthFailReason } | null;
 }
 
@@ -146,12 +148,12 @@ function deliverTokenToWaiters(): void {
   if (auth.token === null) return;
   const t = auth.token;
   const pending = auth.waiters.splice(0);
-  for (const w of pending) w.resolve(t);
+  pending.forEach((w) => w.resolve(t));
 }
 
 function failAllWaiters(reason: AuthFailReason): void {
   const pending = auth.waiters.splice(0);
-  for (const w of pending) w.reject(new Error(`plugin auth failed: ${reason}`));
+  pending.forEach((w) => w.reject(new Error(`plugin auth failed: ${reason}`)));
 }
 
 function applyTheme(theme: Theme): void {
@@ -410,7 +412,12 @@ async function k8sRequest<T>(
     // minted token was itself rejected. Surface it as a distinct 'unauthorized'
     // code (not a generic 'http') so the plugin can prompt re-auth instead of
     // showing an opaque HTTP error.
-    const code = res.status === 401 ? 'unauthorized' : res.status === 403 ? 'forbidden' : 'http';
+    let code: SdkErrorCode = 'http';
+    if (res.status === 401) {
+      code = 'unauthorized';
+    } else if (res.status === 403) {
+      code = 'forbidden';
+    }
     throw new SdkError(code, message, res.status);
   }
   return (await res.json()) as T;

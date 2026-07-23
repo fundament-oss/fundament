@@ -80,7 +80,9 @@ export default class AddClusterComponent implements OnInit {
     if (this.catalogRegions.length === 0) {
       // Valid state until an operator seeds the catalog - explain instead of
       // presenting an empty, unsubmittable form.
-      this.catalogError.set('No regions are available yet. Ask an operator to seed the region catalog.');
+      this.catalogError.set(
+        'No regions are available yet. Ask an operator to seed the region catalog.',
+      );
       return;
     }
 
@@ -98,14 +100,38 @@ export default class AddClusterComponent implements OnInit {
   }
 
   // Recompute the version options for the selected region; keep the requested
-  // version when the region offers it, else fall back to the first offered.
+  // version when the region offers it, else fall back to the newest offered.
   private refreshVersions(region: Region, preferredVersion?: string) {
     this.kubernetesVersions.set(region.kubernetesVersions);
 
     const preferred = preferredVersion && region.kubernetesVersions.includes(preferredVersion);
     this.clusterForm
       .get('kubernetesVersion')
-      ?.setValue(preferred ? preferredVersion : (region.kubernetesVersions[0] ?? ''));
+      ?.setValue(
+        preferred ? preferredVersion : AddClusterComponent.newestVersion(region.kubernetesVersions),
+      );
+  }
+
+  private static newestVersion(versions: string[]): string {
+    return versions.reduce(
+      (newest, v) => (AddClusterComponent.compareVersions(v, newest) > 0 ? v : newest),
+      versions[0] ?? '',
+    );
+  }
+
+  // The catalog orders versions as text, which ranks '1.9.0' above '1.34.0',
+  // so compare the dot-separated components numerically instead.
+  private static compareVersions(a: string, b: string): number {
+    const partsA = a.split('.');
+    const partsB = b.split('.');
+    for (let i = 0; i < Math.max(partsA.length, partsB.length); i += 1) {
+      const numA = parseInt(partsA[i], 10) || 0;
+      const numB = parseInt(partsB[i], 10) || 0;
+      if (numA !== numB) {
+        return numA - numB;
+      }
+    }
+    return 0;
   }
 
   get clusterName() {

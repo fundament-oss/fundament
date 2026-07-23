@@ -816,7 +816,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   kanbanCardClass(status: string): string {
     const s = this.statusStyle(status);
-    return `cursor-grab active:cursor-grabbing rounded-xl border ${s.kanbanBorder} bg-white dark:bg-gray-950 p-3.5 hover:shadow-md hover:shadow-slate-200/80 transition-shadow`;
+    return `cursor-grab active:cursor-grabbing rounded-xl border ${s.kanbanBorder} bg-white dark:bg-gray-950 p-3.5 hover:shadow-md hover:shadow-slate-200/80 dark:hover:shadow-black/60 transition-shadow`;
   }
 
   detailStatusClass(status: string): string {
