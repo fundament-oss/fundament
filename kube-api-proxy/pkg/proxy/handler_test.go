@@ -66,3 +66,35 @@ func TestPeekTokenType(t *testing.T) {
 		})
 	}
 }
+
+// TestIsAllowedPath feeds raw {path...} wildcard values as r.PathValue returns
+// them in production (percent-decoded, no leading slash) and checks whole-segment
+// matching of the first path segment.
+func TestIsAllowedPath(t *testing.T) {
+	cases := []struct {
+		raw  string
+		want bool
+	}{
+		{"api", true},
+		{"api/v1/pods", true},
+		{"apis", true},
+		{"apis/apps/v1/deployments", true},
+		{"openapi/v3", true},
+		{"version", true},
+		{"", false},
+		{"healthz", false},
+		{"livez", false},
+		{"metrics", false},
+		{"logs", false},
+		// Prefix collisions must not match: only whole path segments count.
+		{"apix", false},
+		{"apisx/apps", false},
+		{"versionz", false},
+		{"openapix/v3", false},
+	}
+	for _, tc := range cases {
+		t.Run("path "+tc.raw, func(t *testing.T) {
+			assert.Equal(t, tc.want, isAllowedPath(tc.raw))
+		})
+	}
+}

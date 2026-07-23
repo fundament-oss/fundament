@@ -16,9 +16,9 @@ import (
 	"github.com/fundament-oss/fundament/kube-api-proxy/pkg/kube"
 )
 
-// allowedPathPrefixes are the Kubernetes API path prefixes the proxy forwards.
-// All other paths return 404.
-var allowedPathPrefixes = []string{"api", "apis", "openapi/"}
+// allowedPathRoots are the Kubernetes API path roots the proxy forwards,
+// matched on the whole first path segment. All other roots return 404.
+var allowedPathRoots = []string{"api", "apis", "openapi", "version"}
 
 // handleClusterProxy proxies Kubernetes API requests to a specific cluster.
 // The cluster ID and remaining path are extracted from the URL via Go 1.22+ wildcards:
@@ -37,7 +37,7 @@ func (s *Server) handleClusterProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// {path...} does not include leading slash.
+	// {path...} does not include a leading slash.
 	path := r.PathValue("path")
 	if !isAllowedPath(path) {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -149,13 +149,13 @@ func peekTokenType(r *http.Request) auth.TokenType {
 	return auth.TokenTypeUser
 }
 
-// isAllowedPath checks whether the path (without leading slash) starts with
-// one of the allowed Kubernetes API prefixes.
-func isAllowedPath(path string) bool {
-	for _, prefix := range allowedPathPrefixes {
-		if path == strings.TrimSuffix(prefix, "/") || strings.HasPrefix(path, prefix) {
-			return true
-		}
-	}
-	return false
+// isAllowedPath reports whether the first segment of the raw wildcard path (the
+// {path...} value, without a leading slash) is an allowed Kubernetes API root.
+// It matches whole segments, so "apix" or "versionz" do not match "api" /
+// "version". It does not concern itself with "." / ".." segments: the apiserver
+// owns path normalization and authorizes every request against the injected SA
+// token, so a traversal attempt cannot cross a privilege boundary here.
+func isAllowedPath(rawPath string) bool {
+	root, _, _ := strings.Cut(rawPath, "/")
+	return slices.Contains(allowedPathRoots, root)
 }
