@@ -4,6 +4,19 @@ CLI for managing Fundament platform resources using an API key.
 
 ## Installation
 
+### Download a prebuilt binary
+
+Every push to master publishes binaries for Linux (amd64, arm64) and macOS (Apple Silicon) to the rolling [`functl-latest`](https://github.com/fundament-oss/fundament/releases/tag/functl-latest) release:
+
+```bash
+# Pick your platform: linux_amd64, linux_arm64, or darwin_arm64
+curl -fsSL https://github.com/fundament-oss/fundament/releases/download/functl-latest/functl_linux_amd64.tar.gz \
+  | tar -xzf - functl
+sudo mv functl /usr/local/bin/
+```
+
+Checksums are published alongside the archives as `SHA256SUMS`. Check the installed build with `functl version`.
+
 ### Build from source
 
 ```bash
