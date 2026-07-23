@@ -1,10 +1,13 @@
 <!-- Error Message -->
 @if (errorMessage()) {
   <div
-    class="bg-danger-50 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
+    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
   >
-    <nldd-icon name="dismiss-circle" class="text-danger-500! h-4.5 w-4.5 shrink-0"></nldd-icon>
-    <p class="text-danger-700">{{ errorMessage() }}</p>
+    <nldd-icon
+      name="dismiss-circle"
+      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+    ></nldd-icon>
+    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
   </div>
 }
 
@@ -13,7 +16,7 @@
   <div class="py-12 text-center">
     <div role="status" class="flex justify-center">
       <app-loading-indicator
-        class="fill-accent-600 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
+        class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
       />
       <span class="sr-only">Loading...</span>
     </div>
@@ -81,9 +84,13 @@
       </div>
 
       <!-- Danger Zone -->
-      <div class="bg-danger-50 rounded-md border border-rose-200 p-4 dark:border-rose-900">
-        <h3 class="text-danger-800 mb-2 text-lg font-medium">Danger zone</h3>
-        <p class="text-danger-700 mb-4">Deleting a project is permanent and cannot be undone.</p>
+      <div
+        class="bg-danger-50 dark:bg-danger-900/20 rounded-md border border-rose-200 p-4 dark:border-rose-900"
+      >
+        <h3 class="text-danger-800 dark:text-danger-200 mb-2 text-lg font-medium">Danger zone</h3>
+        <p class="text-danger-700 dark:text-danger-300 mb-4">
+          Deleting a project is permanent and cannot be undone.
+        </p>
         <nldd-button
           (click)="showDeleteModal.set(true)"
           text="Delete this project"
@@ -153,7 +160,7 @@
     <strong class="font-semibold">{{ project()?.alias || project()?.name }}</strong
     >?
   </p>
-  <p class="text-danger-600 mt-2">This cannot be undone.</p>
+  <p class="text-danger-600 dark:text-danger-400 mt-2">This cannot be undone.</p>
 
   <nldd-button
     slot="actions"

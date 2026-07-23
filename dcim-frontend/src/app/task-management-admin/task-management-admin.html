@@ -141,7 +141,6 @@
   <!-- ── LEFT SIDEBAR: Filters ──────────────────────────────────── -->
   <aside
     class="w-60 shrink-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-y-auto"
-    data-scheme-repaint
     aria-label="Task filters"
   >
     <div class="px-4 py-3 flex flex-col gap-5">
@@ -167,7 +166,7 @@
           class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             statusFilter() === 'all'
-              ? 'bg-accent-50 text-accent-700 font-medium'
+              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
               : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
           "
         >
@@ -180,7 +179,7 @@
             class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
             [class]="
               statusFilter() === status
-                ? 'bg-accent-50 text-accent-700 font-medium'
+                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
                 : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
             "
           >
@@ -211,7 +210,7 @@
           class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             priorityFilter() === 'all'
-              ? 'bg-accent-50 text-accent-700 font-medium'
+              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
               : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
           "
         >
@@ -223,7 +222,7 @@
             class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
             [class]="
               priorityFilter() === priority
-                ? 'bg-accent-50 text-accent-700 font-medium'
+                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
                 : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
             "
           >
@@ -254,7 +253,7 @@
           class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
           [class]="
             categoryFilter() === 'all'
-              ? 'bg-accent-50 text-accent-700 font-medium'
+              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
               : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
           "
         >
@@ -266,7 +265,7 @@
             class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
             [class]="
               categoryFilter() === cat
-                ? 'bg-accent-50 text-accent-700 font-medium'
+                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
                 : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
             "
           >
@@ -509,7 +508,7 @@
                        being dragged (the card itself follows the cursor). -->
                   <div
                     *cdkDragPlaceholder
-                    class="rounded-xl border-2 border-dashed border-accent-400 bg-accent-50/50 min-h-[96px]"
+                    class="rounded-xl border-2 border-dashed border-accent-400 dark:border-accent-600 bg-accent-50/50 dark:bg-accent-950/30 min-h-[96px]"
                   ></div>
                   <h4 class="text-sm font-medium text-slate-900 dark:text-white leading-snug">
                     {{ task.title }}

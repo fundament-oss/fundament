@@ -13,9 +13,14 @@
 
   <div class="p-6">
     <!-- Info banner -->
-    <div class="border-accent-200 bg-accent-50 mb-6 flex items-start gap-3 rounded-md border p-4">
-      <nldd-icon name="info-circle" class="text-accent-600! mt-0.5 h-5 w-5 shrink-0"></nldd-icon>
-      <div class="text-accent-700">
+    <div
+      class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
+    >
+      <nldd-icon
+        name="info-circle"
+        class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
+      ></nldd-icon>
+      <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Organization admins can manage members across all projects. This permission overrides
           project-level permissions.
@@ -50,7 +55,7 @@
         <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
           <div role="status" class="flex justify-center">
             <app-loading-indicator
-              class="fill-accent-600 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
+              class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
             />
             <span class="sr-only">Loading...</span>
           </div>
@@ -129,7 +134,7 @@
         <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
           <div role="status" class="flex justify-center">
             <app-loading-indicator
-              class="fill-accent-600 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
+              class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
             />
             <span class="sr-only">Loading...</span>
           </div>
@@ -137,13 +142,13 @@
         </div>
       } @else if (error()) {
         <div
-          class="bg-danger-50 rounded-md border border-rose-200 p-8 text-center dark:border-rose-800"
+          class="bg-danger-50 dark:bg-danger-950 rounded-md border border-rose-200 p-8 text-center dark:border-rose-800"
         >
           <nldd-icon
             name="exclamation-circle"
             class="text-danger-400! mx-auto h-12 w-12"
           ></nldd-icon>
-          <p class="text-danger-600 mt-2">{{ error() }}</p>
+          <p class="text-danger-600 dark:text-danger-400 mt-2">{{ error() }}</p>
           <nldd-button
             type="button"
             (click)="loadMembers()"
@@ -255,7 +260,9 @@
     <strong class="font-semibold">{{ deletingMember()?.name }}</strong>
     from this organization?
   </p>
-  <p class="text-danger-600 mt-2">This will revoke their access to all organization resources.</p>
+  <p class="text-danger-600 dark:text-danger-400 mt-2">
+    This will revoke their access to all organization resources.
+  </p>
 
   <nldd-button
     slot="actions"
@@ -285,7 +292,7 @@
   <nldd-spacer size="24"></nldd-spacer>
 
   <div class="mb-4">
-    <span class="mb-2 block text-neutral-800">Member</span>
+    <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
     <p>{{ editingMember()?.name }}</p>
     <p class="text-sm text-gray-500 dark:text-gray-400">
       {{ editingMember()?.email || editingMember()?.externalRef }}

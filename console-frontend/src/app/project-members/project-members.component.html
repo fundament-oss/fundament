@@ -9,9 +9,14 @@
 
   <div class="p-6">
     <!-- Info banner -->
-    <div class="border-accent-200 bg-accent-50 mb-6 flex items-start gap-3 rounded-md border p-4">
-      <nldd-icon name="info-circle" class="text-accent-600! mt-0.5 h-5 w-5 shrink-0"></nldd-icon>
-      <div class="text-accent-700">
+    <div
+      class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
+    >
+      <nldd-icon
+        name="info-circle"
+        class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
+      ></nldd-icon>
+      <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Members marked with
           <nldd-icon name="lock-closed" class="inline-block h-3.5 w-3.5 align-middle"></nldd-icon>
@@ -19,7 +24,7 @@
           these in
           <a
             [routerLink]="['/organization/members']"
-            class="text-accent-600 hover:text-accent-700 font-medium underline hover:no-underline"
+            class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 font-medium underline hover:no-underline"
             >Organization members</a
           >. Organization viewers can be upgraded to admin at the project level.
         </p>
@@ -28,7 +33,7 @@
           configure
           <a
             [routerLink]="['/projects', projectId(), 'roles']"
-            class="text-accent-600 hover:text-accent-700 font-medium underline hover:no-underline"
+            class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 font-medium underline hover:no-underline"
             >Roles</a
           >.
         </p>
@@ -48,14 +53,14 @@
 
     @if (error()) {
       <div
-        class="bg-danger-50 mb-5 flex items-start gap-3 rounded-md border border-rose-200 p-4 dark:border-rose-800"
+        class="bg-danger-50 dark:bg-danger-950 mb-5 flex items-start gap-3 rounded-md border border-rose-200 p-4 dark:border-rose-800"
       >
         <nldd-icon
           name="exclamation-circle"
           class="text-danger-400! mt-0.5 h-5 w-5 shrink-0"
         ></nldd-icon>
         <div class="flex-1">
-          <p class="text-danger-600">{{ error() }}</p>
+          <p class="text-danger-600 dark:text-danger-400">{{ error() }}</p>
         </div>
         <nldd-button
           type="button"
@@ -70,7 +75,7 @@
       <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
         <div role="status" class="flex justify-center">
           <app-loading-indicator
-            class="fill-accent-600 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
+            class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
           />
           <span class="sr-only">Loading...</span>
         </div>
@@ -220,7 +225,7 @@
 
     @if (editingMemberView()) {
       <div class="mb-4">
-        <span class="mb-2 block text-neutral-800">Member</span>
+        <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
         <p>{{ editingMemberView()?.member?.userName }}</p>
       </div>
     }

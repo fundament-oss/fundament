@@ -49,8 +49,8 @@
   <nldd-simple-section>
     <div class="flex flex-col gap-6">
       @if (serverError()) {
-        <div class="bg-danger-50 rounded-md p-3" role="alert">
-          <p class="text-danger-800 whitespace-pre-line">
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
             {{ serverError() }}
           </p>
         </div>
@@ -62,7 +62,7 @@
           class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"
         >
           <span
-            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-100 text-accent-700 text-[10px] font-bold"
+            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-100 dark:bg-accent-950 text-accent-700 dark:text-accent-300 text-[10px] font-bold"
             aria-hidden="true"
             >A</span
           >

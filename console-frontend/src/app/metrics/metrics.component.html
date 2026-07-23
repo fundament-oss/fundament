@@ -56,7 +56,9 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <!-- Time range presets -->
       <div class="lg:col-span-2">
-        <span class="mb-0.5 block leading-5 text-neutral-800"> Time range </span>
+        <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
+          Time range
+        </span>
         <nldd-segmented-control [value]="selectedPreset()" (change)="onPresetChangeEvent($event)">
           @for (preset of presets; track preset.value) {
             <nldd-segmented-control-item
@@ -128,10 +130,13 @@
     <!-- Error message -->
     @if (errorMessage()) {
       <div
-        class="bg-danger-50 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
+        class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
       >
-        <nldd-icon name="dismiss-circle" class="text-danger-500! h-4.5 w-4.5 shrink-0"></nldd-icon>
-        <p class="text-danger-700">{{ errorMessage() }}</p>
+        <nldd-icon
+          name="dismiss-circle"
+          class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+        ></nldd-icon>
+        <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
       </div>
     }
 

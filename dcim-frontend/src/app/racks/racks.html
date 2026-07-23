@@ -96,7 +96,7 @@
                 class="relative w-full px-3 py-2.5 text-left transition-colors border-b border-slate-100 dark:border-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
                 [class]="
                   currentRackId() === rack.id
-                    ? 'bg-accent-50'
+                    ? 'bg-accent-50 dark:bg-accent-950'
                     : 'hover:bg-slate-50 dark:hover:bg-gray-900'
                 "
                 [attr.aria-selected]="currentRackId() === rack.id"
@@ -256,7 +256,6 @@
     <aside
       class="w-72 shrink-0 border-l border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-y-auto"
       aria-label="Rack info"
-      data-scheme-repaint
     >
       @if (currentRack(); as rack) {
         <!-- Legend -->
@@ -331,7 +330,7 @@
                 <div class="flex gap-2.5">
                   <div class="shrink-0 pt-0.5">
                     <span
-                      class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 text-xs font-semibold text-accent-700 shrink-0 select-none"
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 dark:bg-accent-950 text-xs font-semibold text-accent-700 dark:text-accent-300 shrink-0 select-none"
                       aria-hidden="true"
                     >
                       {{ comment.initials }}
@@ -424,8 +423,8 @@
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
       @if (rackErrorMessage()) {
-        <div class="bg-danger-50 rounded-md p-3">
-          <p class="text-danger-800 whitespace-pre-line">
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
             {{ rackErrorMessage() }}
           </p>
         </div>
@@ -515,8 +514,8 @@
     </div>
     <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
       @if (deviceErrorMessage()) {
-        <div class="bg-danger-50 rounded-md p-3">
-          <p class="text-danger-800 whitespace-pre-line">
+        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
+          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
             {{ deviceErrorMessage() }}
           </p>
         </div>

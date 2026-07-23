@@ -22,7 +22,7 @@
   </div>
 
   <!-- Nested Tree -->
-  <div class="-mx-2 -mb-2 max-h-96 space-y-1 overflow-y-auto px-2 pb-2" data-scheme-repaint>
+  <div class="-mx-2 -mb-2 max-h-96 space-y-1 overflow-y-auto px-2 pb-2">
     @if (filteredOrganizations().length === 0) {
       <div class="py-1 text-center text-gray-500 dark:text-gray-400">No results found.</div>
     } @else {
@@ -40,7 +40,7 @@
             [class]="
               'ring-accent-500 flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left font-medium transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950 dark:hover:bg-gray-800 ' +
               (isOrganizationSelected(org.id)
-                ? 'bg-accent-50 text-accent-700'
+                ? 'bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300'
                 : 'text-gray-700 dark:text-gray-300')
             "
           >
@@ -68,7 +68,7 @@
                   [class]="
                     'ring-accent-500 flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left font-medium transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950 dark:hover:bg-gray-800 ' +
                     (isProjectSelected(project.id)
-                      ? 'bg-accent-50 text-accent-700'
+                      ? 'bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300'
                       : 'text-gray-700 dark:text-gray-300')
                   "
                 >

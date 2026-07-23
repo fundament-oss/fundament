@@ -119,7 +119,7 @@
           </span>
         }
         <span
-          class="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-2.5 py-0.5 text-xs font-medium text-accent-700 ring-1 ring-accent-200/80"
+          class="inline-flex items-center gap-1.5 rounded-full bg-accent-50 dark:bg-accent-950 px-2.5 py-0.5 text-xs font-medium text-accent-700 dark:text-accent-300 ring-1 ring-accent-200/80 dark:ring-accent-800/80"
           aria-label="Status: In progress"
         >
           <span class="h-1.5 w-1.5 rounded-full bg-accent-500 shrink-0" aria-hidden="true"></span>In
@@ -161,9 +161,9 @@
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
           [class]="
             gatherCompleted()
-              ? 'bg-accent-filled text-accent-filled-content'
+              ? 'bg-accent-600 text-white'
               : phase() === 'gather'
-                ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 text-sm'
+                ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-sm'
                 : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
           "
           aria-hidden="true"
@@ -194,9 +194,9 @@
             style="width: 20px; height: 20px"
             [class]="
               phase() === 'gather'
-                ? 'text-accent-600'
+                ? 'text-accent-600 dark:text-accent-300'
                 : gatherCompleted()
-                  ? 'text-accent-400'
+                  ? 'text-accent-400 dark:text-accent-300'
                   : 'text-slate-400 dark:text-gray-500'
             "
             aria-hidden="true"
@@ -273,9 +273,9 @@
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
             [class]="
               isTaskDone(taskIdx)
-                ? 'bg-accent-filled text-accent-filled-content'
+                ? 'bg-accent-600 text-white'
                 : isTaskActive(taskIdx)
-                  ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 text-sm'
+                  ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-sm'
                   : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
             "
             aria-hidden="true"
@@ -363,9 +363,9 @@
                       class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
                       [class]="
                         isStepDone(taskIdx, si)
-                          ? 'bg-accent-filled text-accent-filled-content'
+                          ? 'bg-accent-600 text-white'
                           : isStepActive(taskIdx, si)
-                            ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 text-xs'
+                            ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-xs'
                             : 'border-2 border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-medium text-slate-400 dark:text-gray-500'
                       "
                       aria-hidden="true"
@@ -406,9 +406,9 @@
                         style="width: 18px; height: 18px"
                         [class]="
                           isStepActive(taskIdx, si)
-                            ? 'text-accent-600'
+                            ? 'text-accent-600 dark:text-accent-300'
                             : isStepDone(taskIdx, si)
-                              ? 'text-accent-400'
+                              ? 'text-accent-400 dark:text-accent-300'
                               : 'text-slate-400 dark:text-gray-500'
                         "
                         aria-hidden="true"
@@ -541,7 +541,7 @@
 
 <!-- Photo Modal -->
 <div
-  class="fixed inset-0 z-50 items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+  class="fixed inset-0 z-50 items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm"
   [class.hidden]="!showPhotoModal()"
   [class.flex]="showPhotoModal()"
   role="dialog"
@@ -556,7 +556,7 @@
     <div class="flex items-center gap-2 text-base font-semibold text-neutral-900 dark:text-white">
       <nldd-icon
         name="square-arrow-up"
-        class="w-4.5 h-4.5 text-accent-600"
+        class="w-4.5 h-4.5 text-accent-600 dark:text-accent-300"
         aria-hidden="true"
       ></nldd-icon>
       Take Photo
@@ -564,7 +564,7 @@
     <p class="mt-1 text-sm text-neutral-400 dark:text-gray-500">{{ currentStepLabel() }}</p>
     <div class="mt-4">
       <label
-        class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-200 dark:border-gray-800 bg-neutral-50 dark:bg-gray-900 px-4 py-8 transition hover:border-accent-400 hover:bg-accent-50/30"
+        class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-200 dark:border-gray-800 bg-neutral-50 dark:bg-gray-900 px-4 py-8 transition hover:border-accent-400 hover:bg-accent-50/30 dark:hover:bg-accent-950/30"
       >
         <nldd-icon
           name="square-plus-on-square"
@@ -609,7 +609,7 @@
 
 <!-- Notes Modal -->
 <div
-  class="fixed inset-0 z-50 items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+  class="fixed inset-0 z-50 items-center justify-center bg-neutral-900/50 p-4 backdrop-blur-sm"
   [class.hidden]="!showNoteModal()"
   [class.flex]="showNoteModal()"
   role="dialog"
@@ -624,7 +624,7 @@
     <div class="flex items-center gap-2 text-base font-semibold text-neutral-900 dark:text-white">
       <nldd-icon
         name="pencil-on-square"
-        class="w-4.5 h-4.5 text-accent-600"
+        class="w-4.5 h-4.5 text-accent-600 dark:text-accent-300"
         aria-hidden="true"
       ></nldd-icon>
       Add Note

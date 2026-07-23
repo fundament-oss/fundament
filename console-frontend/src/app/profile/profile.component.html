@@ -11,15 +11,20 @@
     </div>
   } @else if (error()) {
     <div class="card-body-lg">
-      <div class="bg-danger-50 rounded-md p-4">
-        <p class="text-danger-800">{{ error() }}</p>
+      <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-4">
+        <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
       </div>
     </div>
   } @else {
     <div class="card-body-lg">
-      <div class="border-accent-200 bg-accent-50 mb-6 flex items-start gap-3 rounded-md border p-4">
-        <nldd-icon name="info-circle" class="text-accent-600! mt-0.5 h-5 w-5 shrink-0"></nldd-icon>
-        <p class="text-accent-700">
+      <div
+        class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
+      >
+        <nldd-icon
+          name="info-circle"
+          class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
+        ></nldd-icon>
+        <p class="text-accent-700 dark:text-accent-300">
           Your name and password are managed by your OIDC provider and cannot be changed here.
         </p>
       </div>

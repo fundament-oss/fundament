@@ -10,10 +10,10 @@
         toastService.toast()?.type === 'success'
           ? 'bg-emerald-400/20 text-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-500'
           : toastService.toast()?.type === 'error'
-            ? 'bg-danger-400/20 text-danger-400'
+            ? 'bg-danger-400/20 text-danger-400 dark:bg-danger-500/20 dark:text-danger-500'
             : toastService.toast()?.type === 'warning'
               ? 'bg-amber-400/20 text-amber-400 dark:bg-amber-500/20 dark:text-amber-500'
-              : 'bg-accent-400/20 text-accent-400'
+              : 'bg-accent-400/20 text-accent-400 dark:bg-accent-500/20 dark:text-accent-500'
       "
     >
       @if (toastService.toast()?.type === 'success') {
@@ -208,7 +208,7 @@
           </button>
         </div>
 
-        <nav class="overflow-y-auto px-3 pb-6" data-scheme-repaint>
+        <nav class="overflow-y-auto px-3 pb-6">
           @if (selectedType()) {
             <div class="mb-1.5 pt-5">
               <p
