@@ -11,7 +11,7 @@ Every push to master publishes binaries for Linux (amd64, arm64) and macOS (Appl
 ```bash
 # Pick your platform: linux_amd64, linux_arm64, or darwin_arm64
 curl -fsSL https://github.com/fundament-oss/fundament/releases/download/functl-latest/functl_linux_amd64.tar.gz \
-  | tar -xz functl
+  | tar -xzf - functl
 sudo mv functl /usr/local/bin/
 ```
 
