@@ -13,10 +13,18 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
-import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-modal';
+import InstallPluginModalComponent, {
+  type PluginVersionOption,
+  type InstallSelection,
+  type RetrySelection,
+} from '../install-plugin-modal/install-plugin-modal';
 import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
-import { GetPluginDetailRequestSchema, type PluginDetail } from '../../generated/v1/plugin_pb';
+import {
+  GetPluginDetailRequestSchema,
+  ListPluginDefinitionsRequestSchema,
+  type PluginDetail,
+} from '../../generated/v1/plugin_pb';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
@@ -71,6 +79,9 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   plugin = signal<PluginDetail | null>(null);
 
   clusters = signal<ClusterWithState[]>([]);
+
+  // Published versions of this plugin, offered in the install modal.
+  installVersions = signal<PluginVersionOption[]>([]);
 
   isLoading = signal<boolean>(true);
 
@@ -153,8 +164,26 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     return this.sanitizer.sanitize(1, html) || '';
   }
 
-  openInstallModal(): void {
+  async openInstallModal(): Promise<void> {
+    const plugin = this.plugin();
+    this.installVersions.set(plugin ? await this.fetchPluginVersions(plugin.id) : []);
     this.showInstallModal.set(true);
+  }
+
+  // Fetches the plugin's published versions (latest first) for the install
+  // modal's version picker; returns [] on failure so the modal shows its
+  // "no published version" state rather than breaking.
+  private async fetchPluginVersions(pluginId: string): Promise<PluginVersionOption[]> {
+    try {
+      const resp = await firstValueFrom(
+        this.pluginClient.listPluginDefinitions(
+          create(ListPluginDefinitionsRequestSchema, { pluginId }),
+        ),
+      );
+      return resp.definitions.map((d) => ({ version: d.version, hash: d.hash }));
+    } catch {
+      return [];
+    }
   }
 
   closeInstallModal(): void {
@@ -241,11 +270,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onInstallOnClusters(clusterIds: string[]): Promise<void> {
+  async onInstallOnClusters(selection: InstallSelection): Promise<void> {
     const plugin = this.plugin();
     if (!plugin) return;
 
-    const targets = clusterIds.filter(
+    const targets = selection.clusterIds.filter(
       (id) => this.clusters().find((c) => c.id === id)?.phase === null,
     );
     if (targets.length === 0) return;
@@ -257,8 +286,8 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
         this.pluginInstallationService.installPlugin(
           id,
           plugin.name,
-          plugin.pluginVersion,
-          plugin.definitionHash,
+          selection.version,
+          selection.hash,
         ),
       ),
     );
@@ -289,10 +318,11 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onRetryInstall(clusterId: string): Promise<void> {
+  async onRetryInstall(retry: RetrySelection): Promise<void> {
     const plugin = this.plugin();
     if (!plugin) return;
 
+    const clusterId = retry.clusterId;
     this.setPhase(clusterId, 'Pending');
     try {
       await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name).catch(() => {});
@@ -300,8 +330,8 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       await this.pluginInstallationService.installPlugin(
         clusterId,
         plugin.name,
-        plugin.pluginVersion,
-        plugin.definitionHash,
+        retry.version,
+        retry.hash,
       );
       this.startInstallPollingIfNeeded();
     } catch {

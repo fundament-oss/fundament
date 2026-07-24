@@ -16,6 +16,9 @@ service PluginService {
   rpc GetPluginDetail(GetPluginDetailRequest) returns (GetPluginDetailResponse);
   // List all available presets
   rpc ListPresets(ListPresetsRequest) returns (ListPresetsResponse);
+  // List the published definitions (version + hash) for a plugin, latest first.
+  // Used by the console to offer a version to pin on install.
+  rpc ListPluginDefinitions(ListPluginDefinitionsRequest) returns (ListPluginDefinitionsResponse);
   // Idempotent upsert of a plugin definition. Server computes the hash from the
   // manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
   // same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
@@ -153,6 +156,19 @@ message GetPluginDefinitionResponse {
   bytes manifest = 10;
   string hash = 20;
   PluginDefinition definition = 30;
+}
+
+message ListPluginDefinitionsRequest {
+  string plugin_id = 10;
+}
+message ListPluginDefinitionsResponse {
+  repeated PluginDefinitionVersion definitions = 10;
+}
+// A published definition's pin: the version an install references and the
+// sha256 hash of that manifest.
+message PluginDefinitionVersion {
+  string version = 10;
+  string hash = 20;
 }
 
 message PluginDefinition {
