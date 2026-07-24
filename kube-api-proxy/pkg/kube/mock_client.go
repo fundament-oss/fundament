@@ -219,12 +219,6 @@ func (m *MockClient) Do(ctx context.Context, method, path string, body io.Reader
 		return 404, r(`{"message":"not found"}`), nil
 	case path == crdBasePath:
 		return 200, r(mockCRDListJSON), nil
-	case isPluginGetDefinition(path, "cert-manager"):
-		return 200, r(mockCertManagerDefinitionJSON), nil
-	case isPluginGetDefinition(path, "cnpg"), isPluginGetDefinition(path, "CloudNativePG"):
-		return 200, r(mockCnpgDefinitionJSON), nil
-	case isPluginGetDefinition(path, "openfsc"):
-		return 200, r(mockOpenfscDefinitionJSON), nil
 	case isResourceList(path, "cert-manager.io", "v1", "certificates"):
 		return 200, r(mockCertificateListJSON), nil
 	case isResourceGet(path, "cert-manager.io", "v1", "certificates"):
@@ -337,12 +331,6 @@ func (m *MockClient) serveConsoleAsset(w http.ResponseWriter, _ *http.Request, p
 }
 
 const mockEmptyList = `{"apiVersion":"v1","kind":"List","metadata":{"resourceVersion":""},"items":[]}`
-
-// isPluginGetDefinition reports whether path is a Kubernetes service proxy request to
-// GetDefinition on the given plugin's metadata service.
-func isPluginGetDefinition(path, pluginName string) bool {
-	return path == "/api/v1/namespaces/plugin-"+pluginName+"/services/http:plugin-"+pluginName+":8080/proxy/pluginmetadata.v1.PluginMetadataService/GetDefinition"
-}
 
 // isResourceList reports whether path is a Kubernetes list request for the given group/version/plural.
 // Matches both cluster-scoped (/apis/{g}/{v}/{plural}) and namespaced

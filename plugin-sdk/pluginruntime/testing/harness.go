@@ -126,7 +126,6 @@ func RunInProcess(plugin pluginruntime.Plugin) (*InProcessPlugin, error) {
 
 	handler := pluginruntime.NewMetadataHandler(
 		func() pluginruntime.PluginStatus { return h.CurrentStatus() },
-		func() pluginruntime.PluginDefinition { return plugin.Definition() },
 		uninstallFn,
 	)
 	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(handler)

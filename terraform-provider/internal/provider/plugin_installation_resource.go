@@ -41,7 +41,6 @@ type PluginInstallationResourceModel struct {
 	PluginName     types.String `tfsdk:"plugin_name"`
 	PluginVersion  types.String `tfsdk:"plugin_version"`
 	DefinitionHash types.String `tfsdk:"definition_hash"`
-	Image          types.String `tfsdk:"image"`
 	Phase          types.String `tfsdk:"phase"`
 }
 
@@ -60,7 +59,6 @@ type pluginDefinitionRef struct {
 }
 
 type pluginInstallationSpec struct {
-	Image         string              `json:"image"`
 	DefinitionRef pluginDefinitionRef `json:"definitionRef"`
 }
 
@@ -70,6 +68,11 @@ type pluginInstallationStatus struct {
 }
 
 const pluginInstallationAPIVersion = "plugins.fundament.io/v1"
+
+// unpinnedPluginVersion is the placeholder plugin_version that means "not
+// explicitly pinned" — the provider resolves the latest published definition
+// instead.
+const unpinnedPluginVersion = "unknown"
 
 // definitionHashRegex validates definition_hash: "sha256:" followed by a
 // 64-character lowercase hex digest, or the placeholder "sha256:unknown" used
@@ -129,7 +132,7 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 				},
 			},
 			"plugin_version": schema.StringAttribute{
-				Description: "The published version of the plugin definition to pin (definitionRef.pluginVersion). Optional; defaults to \"unknown\" until the marketplace supplies real versions (FUN-11). The pin is immutable, so changing this value forces a replacement.",
+				Description: "The published version of the plugin definition to pin (definitionRef.pluginVersion). Optional; when omitted the provider pins the latest published version for the plugin. The pin is immutable, so changing this value forces a replacement.",
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("unknown"),
@@ -139,7 +142,7 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 				},
 			},
 			"definition_hash": schema.StringAttribute{
-				Description: "The sha256 content hash of the pinned plugin definition (definitionRef.definitionHash), prefixed with \"sha256:\". Optional; defaults to \"sha256:unknown\" until the marketplace supplies real hashes (FUN-11). The pin is immutable, so changing this value forces a replacement.",
+				Description: "The sha256 content hash of the pinned plugin definition (definitionRef.definitionHash), prefixed with \"sha256:\". Optional; when omitted the provider pins the hash of the latest published definition. The pin is immutable, so changing this value forces a replacement.",
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("sha256:unknown"),
@@ -148,13 +151,6 @@ func (r *PluginInstallationResource) Schema(ctx context.Context, req resource.Sc
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"image": schema.StringAttribute{
-				Description: "The container image reference for the plugin (e.g. ghcr.io/fundament/grafana:v10.2.0). Must be set explicitly. Changing this value forces a replacement.",
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -208,10 +204,24 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 	pluginName := plan.PluginName.ValueString()
 	pluginVersion := plan.PluginVersion.ValueString()
 	definitionHash := plan.DefinitionHash.ValueString()
-	image := plan.Image.ValueString()
 
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
+
+	// When the version isn't explicitly pinned (the "unknown" placeholder or
+	// empty), pin the latest published definition resolved from organization-api.
+	// Version and hash are pinned together as a matched pair.
+	if pluginVersion == "" || pluginVersion == unpinnedPluginVersion {
+		version, hash, err := r.resolveLatestDefinition(ctx, pluginName)
+		if err != nil {
+			resp.Diagnostics.AddError("Unable to Resolve Plugin Definition", err.Error())
+			return
+		}
+		pluginVersion = version
+		definitionHash = hash
+		plan.PluginVersion = types.StringValue(version)
+		plan.DefinitionHash = types.StringValue(hash)
+	}
 
 	tflog.Debug(ctx, "Waiting for cluster to be running before installing plugin", map[string]any{"cluster_id": clusterID})
 
@@ -228,7 +238,6 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 		Kind:       "PluginInstallation",
 		Metadata:   pluginInstallationMetadata{Name: pluginName},
 		Spec: pluginInstallationSpec{
-			Image: image,
 			DefinitionRef: pluginDefinitionRef{
 				PluginName:     pluginName,
 				PluginVersion:  pluginVersion,
@@ -266,17 +275,16 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 			resp.Diagnostics.AddError("Unable to Read Existing Plugin Installation on 409", err.Error())
 			return
 		}
-		if existingCRD.Spec.Image != image ||
-			existingCRD.Spec.DefinitionRef.PluginVersion != pluginVersion ||
+		if existingCRD.Spec.DefinitionRef.PluginVersion != pluginVersion ||
 			existingCRD.Spec.DefinitionRef.DefinitionHash != definitionHash {
 			resp.Diagnostics.AddError(
 				"Plugin Installation Already Exists With Different Configuration",
 				fmt.Sprintf("A plugin installation for %q already exists on cluster %q with a different spec "+
-					"(existing: image=%q version=%q hash=%q; planned: image=%q version=%q hash=%q). "+
+					"(existing: version=%q hash=%q; planned: version=%q hash=%q). "+
 					"Import it with `terraform import fundament_plugin_installation.<name> %s/%s` or delete it manually.",
 					pluginName, clusterID,
-					existingCRD.Spec.Image, existingCRD.Spec.DefinitionRef.PluginVersion, existingCRD.Spec.DefinitionRef.DefinitionHash,
-					image, pluginVersion, definitionHash,
+					existingCRD.Spec.DefinitionRef.PluginVersion, existingCRD.Spec.DefinitionRef.DefinitionHash,
+					pluginVersion, definitionHash,
 					clusterID, pluginName),
 			)
 			return
@@ -312,6 +320,29 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 
 	tflog.Info(ctx, "Created plugin installation", map[string]any{"id": plan.ID.ValueString(), "phase": plan.Phase.ValueString()})
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// resolveLatestDefinition returns the latest published version and definition
+// hash for a catalog plugin, resolved via organization-api ListPlugins (auth
+// headers are added by the client transport). It errors when the plugin is not
+// in the catalog or has no published definition to pin.
+func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context, pluginName string) (string, string, error) {
+	listReq := connect.NewRequest(organizationv1.ListPluginsRequest_builder{}.Build())
+	listResp, err := r.client.PluginService.ListPlugins(ctx, listReq)
+	if err != nil {
+		return "", "", fmt.Errorf("list plugins: %w", err)
+	}
+	for _, p := range listResp.Msg.GetPlugins() {
+		if p.GetName() != pluginName {
+			continue
+		}
+		version, hash := p.GetPluginVersion(), p.GetDefinitionHash()
+		if version == "" || hash == "" {
+			return "", "", fmt.Errorf("plugin %q has no published definition to install", pluginName)
+		}
+		return version, hash, nil
+	}
+	return "", "", fmt.Errorf("plugin %q not found in the Fundament catalog", pluginName)
 }
 
 func (r *PluginInstallationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -399,11 +430,6 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	if crd.Spec.Image != "" {
-		state.Image = types.StringValue(crd.Spec.Image)
-	} else {
-		state.Image = types.StringNull()
-	}
 	if crd.Spec.DefinitionRef.PluginVersion != "" {
 		state.PluginVersion = types.StringValue(crd.Spec.DefinitionRef.PluginVersion)
 	} else {

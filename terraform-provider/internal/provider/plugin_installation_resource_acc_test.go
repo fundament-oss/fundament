@@ -37,7 +37,6 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 	suffix := acctest.RandString(6)
 	clusterName := "tf-acc-plugin-" + suffix
 	pluginName := "grafana"
-	image := "ghcr.io/fundament/grafana:v10.2.0"
 	resourceName := "fundament_plugin_installation.test"
 
 	resource.Test(t, resource.TestCase{
@@ -45,11 +44,10 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read
 			{
-				Config: testAccPluginInstallationResourceConfig(clusterName, pluginName, image, endpoint, organizationID, kubeProxyURL),
+				Config: testAccPluginInstallationResourceConfig(clusterName, pluginName, endpoint, organizationID, kubeProxyURL),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "cluster_id"),
 					resource.TestCheckResourceAttr(resourceName, "plugin_name", pluginName),
-					resource.TestCheckResourceAttr(resourceName, "image", image),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "phase", "Running"),
 				),
@@ -65,12 +63,12 @@ func TestAccPluginInstallationResource_basic(t *testing.T) {
 	})
 }
 
-func testAccPluginInstallationResourceConfig(clusterName, pluginName, image, endpoint, organizationID, kubeProxyURL string) string {
+func testAccPluginInstallationResourceConfig(clusterName, pluginName, endpoint, organizationID, kubeProxyURL string) string {
 	return fmt.Sprintf(`
 provider "fundament" {
-  endpoint            = %[4]q
-  organization_id     = %[5]q
-  kube_api_proxy_url  = %[6]q
+  endpoint            = %[3]q
+  organization_id     = %[4]q
+  kube_api_proxy_url  = %[5]q
   # api_key read from environment variable FUNDAMENT_API_KEY
 }
 
@@ -83,7 +81,6 @@ resource "fundament_cluster" "test" {
 resource "fundament_plugin_installation" "test" {
   cluster_id  = fundament_cluster.test.id
   plugin_name = %[2]q
-  image       = %[3]q
 }
-`, clusterName, pluginName, image, endpoint, organizationID, kubeProxyURL)
+`, clusterName, pluginName, endpoint, organizationID, kubeProxyURL)
 }

@@ -2,11 +2,36 @@ package pluginruntime
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"os"
+	"regexp"
 
 	"gopkg.in/yaml.v3"
 )
+
+// HashManifest returns the content hash that pins a PluginDefinition: the sha256
+// of the raw manifest bytes, prefixed with "sha256:". organization-api derives
+// this when storing a definition and the plugin-controller derives it when
+// verifying an install's consent pin — they MUST agree byte-for-byte, so this is
+// the single shared implementation both call.
+func HashManifest(manifest []byte) string {
+	sum := sha256.Sum256(manifest)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// imageDigestRefRegex requires a digest-pinned image reference
+// (repo@sha256:<64 hex chars>). A published PluginDefinition must pin an
+// immutable digest, never a mutable tag, so the manifest hash binds the exact
+// code that runs. A sha256 digest is exactly 64 hex characters — anchoring the
+// length rejects a truncated or malformed digest that `+` would wave through.
+var imageDigestRefRegex = regexp.MustCompile(`@sha256:[0-9a-f]{64}$`)
+
+// validImagePullPolicies is the set ParseDefinition accepts for
+// spec.imagePullPolicy. Empty is allowed (Kubernetes applies its default); any
+// other value would be rejected by the plugin cluster's apiserver when the
+// Deployment is created, so reject it at parse/publish time instead.
+var validImagePullPolicies = map[string]bool{"": true, "Always": true, "IfNotPresent": true, "Never": true}
 
 // PluginDefinition is the top-level plugin manifest, modeled after a
 // Kubernetes resource with apiVersion, kind, metadata, and spec.
@@ -25,6 +50,13 @@ type PluginSpec struct {
 	UIHints          map[string]UIHint           `yaml:"uiHints"`
 	CRDs             []string                    `yaml:"crds"`
 	AllowedResources []AllowedResource           `yaml:"allowedResources"`
+	// Image is the container image the plugin runs as, injected into the manifest
+	// at publish time (never authored). Declaring it in the manifest — rather than
+	// on the PluginInstallation CR — makes the manifest hash bind the exact code.
+	// Always a digest reference (repo@sha256:...) in a published definition.
+	Image string `yaml:"image"`
+	// ImagePullPolicy mirrors corev1.PullPolicy ("Always"|"IfNotPresent"|"Never").
+	ImagePullPolicy string `yaml:"imagePullPolicy"`
 }
 
 // AllowedResource declares a Kubernetes resource the plugin's UI iframe is
@@ -122,22 +154,18 @@ type StatusValue struct {
 	Label string `yaml:"label"`
 }
 
-// LoadDefinition reads a YAML plugin manifest from path and returns
-// the PluginDefinition. It validates that apiVersion is "fundament.io/v1"
-// and kind is "PluginDefinition".
-func LoadDefinition(path string) (PluginDefinition, error) {
-	data, err := os.ReadFile(path) //nolint:gosec // path is provided by plugin developer, not user input
-	if err != nil {
-		return PluginDefinition{}, fmt.Errorf("read plugin definition: %w", err)
-	}
-
+// ParseDefinition decodes and validates a complete, published PluginDefinition
+// from bytes. It is the shared parser used by organization-api and
+// just plugin-publish. It is strict: a valid PluginDefinition always carries an
+// image (the image-free source definition.yaml is a template, not a valid
+// definition, until publish injects the image).
+func ParseDefinition(data []byte) (PluginDefinition, error) {
 	var def PluginDefinition
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&def); err != nil {
 		return PluginDefinition{}, fmt.Errorf("parse plugin definition: %w", err)
 	}
-
 	if def.APIVersion != "fundament.io/v1" {
 		return PluginDefinition{}, fmt.Errorf("unsupported apiVersion %q, expected \"fundament.io/v1\"", def.APIVersion)
 	}
@@ -147,7 +175,15 @@ func LoadDefinition(path string) (PluginDefinition, error) {
 	if def.Metadata.Name == "" {
 		return PluginDefinition{}, fmt.Errorf("plugin definition is missing required field metadata.name")
 	}
-
+	if def.Spec.Image == "" {
+		return PluginDefinition{}, fmt.Errorf("plugin definition is missing required field spec.image")
+	}
+	if !imageDigestRefRegex.MatchString(def.Spec.Image) {
+		return PluginDefinition{}, fmt.Errorf("spec.image %q must be a digest reference (repo@sha256:<64 hex chars>), not a mutable tag", def.Spec.Image)
+	}
+	if !validImagePullPolicies[def.Spec.ImagePullPolicy] {
+		return PluginDefinition{}, fmt.Errorf("spec.imagePullPolicy %q is invalid, expected one of \"Always\", \"IfNotPresent\", \"Never\" (or empty)", def.Spec.ImagePullPolicy)
+	}
 	return def, nil
 }
 

@@ -259,6 +259,10 @@ const (
 	ConstraintPlacementsCkSlotType = "placements_ck_slot_type"
 	// ConstraintPlacementsCkUnitStart is defined on dcim.placements.
 	ConstraintPlacementsCkUnitStart = "placements_ck_unit_start"
+	// ConstraintPluginDefinitionsFkPlugin is defined on appstore.plugin_definitions.
+	ConstraintPluginDefinitionsFkPlugin = "plugin_definitions_fk_plugin"
+	// ConstraintPluginDefinitionsUqPluginVersion is defined on appstore.plugin_definitions.
+	ConstraintPluginDefinitionsUqPluginVersion = "plugin_definitions_uq_plugin_version"
 	// ConstraintPluginDocumentationLinksFkPlugin is defined on appstore.plugin_documentation_links.
 	ConstraintPluginDocumentationLinksFkPlugin = "plugin_documentation_links_fk_plugin"
 	// ConstraintPluginsCategoriesCategoryId is defined on appstore.categories_plugins.

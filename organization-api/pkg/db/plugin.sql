@@ -1,8 +1,22 @@
 -- name: PluginList :many
-SELECT id, name, display_name, description_short, description, image
+SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name, appstore.plugins.description_short, appstore.plugins.description, appstore.plugins.image,
+  COALESCE((
+    SELECT appstore.plugin_definitions.plugin_version
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
+    ORDER BY appstore.plugin_definitions.created DESC
+    LIMIT 1
+  ), '')::text AS latest_version,
+  COALESCE((
+    SELECT appstore.plugin_definitions.hash
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
+    ORDER BY appstore.plugin_definitions.created DESC
+    LIMIT 1
+  ), '')::text AS latest_hash
 FROM appstore.plugins
-WHERE deleted IS NULL
-ORDER BY COALESCE(NULLIF(display_name, ''), name);
+WHERE appstore.plugins.deleted IS NULL
+ORDER BY COALESCE(NULLIF(appstore.plugins.display_name, ''), appstore.plugins.name);
 
 -- name: PluginTagsList :many
 SELECT pt.plugin_id, t.id, t.name
@@ -19,9 +33,23 @@ WHERE c.deleted IS NULL
 ORDER BY c.name;
 
 -- name: PluginGetByID :one
-SELECT id, name, display_name, description_short, description, image, author_name, author_url, repository_url
+SELECT appstore.plugins.id, appstore.plugins.name, appstore.plugins.display_name, appstore.plugins.description_short, appstore.plugins.description, appstore.plugins.image, appstore.plugins.author_name, appstore.plugins.author_url, appstore.plugins.repository_url,
+  COALESCE((
+    SELECT appstore.plugin_definitions.plugin_version
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
+    ORDER BY appstore.plugin_definitions.created DESC
+    LIMIT 1
+  ), '')::text AS latest_version,
+  COALESCE((
+    SELECT appstore.plugin_definitions.hash
+    FROM appstore.plugin_definitions
+    WHERE appstore.plugin_definitions.plugin_id = appstore.plugins.id AND appstore.plugin_definitions.deleted IS NULL
+    ORDER BY appstore.plugin_definitions.created DESC
+    LIMIT 1
+  ), '')::text AS latest_hash
 FROM appstore.plugins
-WHERE id = $1 AND deleted IS NULL;
+WHERE appstore.plugins.id = $1 AND appstore.plugins.deleted IS NULL;
 
 -- name: PluginTagsListByPluginID :many
 SELECT pt.plugin_id, t.id, t.name

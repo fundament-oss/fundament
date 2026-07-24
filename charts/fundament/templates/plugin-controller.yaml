@@ -154,25 +154,18 @@ spec:
               value: {{ $.Release.Name }}
             - name: FUNDAMENT_ORGANIZATION_ID
               value: {{ $.Release.Name }}
+            - name: ORGANIZATION_API_URL
+              value: {{ $.Values.pluginController.organizationApiUrl | default "http://organization-api:8080" }}
             - name: LOG_LEVEL
               value: {{ $.Values.pluginController.logLevel }}
             {{- if $.Values.pluginController.allowUnpinnedHash }}
-            # Local dev only: lets PluginInstallations with an empty
-            # definitionHash materialise their scope from the plugin's live
-            # GetDefinition without hash verification. Never set in production.
+            # Local dev only: lets PluginInstallations with an unpinned
+            # definitionHash materialise their scope from the fetched
+            # PluginDefinition manifest without hash verification. Never set in
+            # production.
             - name: PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH
               value: "true"
             {{- end }}
-          livenessProbe:
-            httpGet:
-              path: /livez
-              port: 8097
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: 8097
-            initialDelaySeconds: 5
-            periodSeconds: 10
+          {{- include "fundament.livenessProbe" (dict "root" $ "port" 8097) | nindent 10 }}
+          {{- include "fundament.readinessProbe" (dict "root" $ "port" 8097) | nindent 10 }}
 {{- end }}

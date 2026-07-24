@@ -75,7 +75,6 @@ func run(plugin Plugin, opts ...RunOption) error {
 
 	handler := NewMetadataHandler(
 		func() PluginStatus { return h.CurrentStatus() },
-		func() PluginDefinition { return plugin.Definition() },
 		uninstallFn,
 	)
 	path, rpcHandler := pluginmetadatav1connect.NewPluginMetadataServiceHandler(handler)

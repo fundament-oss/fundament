@@ -1,8 +1,6 @@
 // Plugin Definition YAML schema types
 
 export interface PluginDefinition {
-  apiVersion: string;
-  kind: 'PluginDefinition';
   name: string;
   label: string;
   version: string;
@@ -122,7 +120,6 @@ export interface PluginNavItem {
 export interface PluginInstallationItem {
   metadata: { name: string; uid: string };
   spec: {
-    image: string;
     definitionRef: {
       pluginName: string;
       pluginVersion: string;
@@ -136,26 +133,6 @@ export interface PluginInstallationListResponse {
   items: PluginInstallationItem[];
 }
 
-export interface GetDefinitionMenuEntry {
-  crd: string;
-  label: string;
-  icon?: string;
-}
-
-export interface GetDefinitionResponse {
-  name: string;
-  displayName: string;
-  version: string;
-  description: string;
-  author?: string;
-  apiVersion: string;
-  menu: {
-    project?: GetDefinitionMenuEntry[];
-  };
-  crds: string[];
-  customComponents?: Record<string, CustomComponentMapping>;
-  allowedResources?: AllowedResource[];
-}
 
 export interface RawCrdYaml {
   apiVersion: string;

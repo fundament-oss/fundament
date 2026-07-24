@@ -15,18 +15,16 @@ func ptr[T any](v T) *T { return &v }
 // using pluginruntime types directly (no intermediate conversion types).
 type metadataHandler struct {
 	pluginmetadatav1connect.UnimplementedPluginMetadataServiceHandler
-	getStatus     func() PluginStatus
-	getDefinition func() PluginDefinition
-	uninstall     func(context.Context) error
+	getStatus func() PluginStatus
+	uninstall func(context.Context) error
 }
 
-// NewMetadataHandler creates a metadata handler that serves plugin status and
-// definition via the PluginMetadataService Connect RPC service.
-func NewMetadataHandler(statusFn func() PluginStatus, defFn func() PluginDefinition, uninstallFn func(context.Context) error) *metadataHandler {
+// NewMetadataHandler creates a metadata handler that serves plugin status
+// via the PluginMetadataService Connect RPC service.
+func NewMetadataHandler(statusFn func() PluginStatus, uninstallFn func(context.Context) error) *metadataHandler {
 	return &metadataHandler{
-		getStatus:     statusFn,
-		getDefinition: defFn,
-		uninstall:     uninstallFn,
+		getStatus: statusFn,
+		uninstall: uninstallFn,
 	}
 }
 
@@ -35,114 +33,6 @@ func (h *metadataHandler) GetStatus(_ context.Context, _ *connect.Request[pb.Get
 	return connect.NewResponse(&pb.GetStatusResponse{
 		Phase:   ptr(string(status.Phase)),
 		Message: ptr(status.Message),
-	}), nil
-}
-
-func (h *metadataHandler) GetDefinition(_ context.Context, _ *connect.Request[pb.GetDefinitionRequest]) (*connect.Response[pb.GetDefinitionResponse], error) {
-	def := h.getDefinition()
-
-	orgMenu := make([]*pb.MenuEntry, len(def.Spec.Menu.Organization))
-	for i, entry := range def.Spec.Menu.Organization {
-		orgMenu[i] = &pb.MenuEntry{
-			Crd:    ptr(entry.CRD),
-			List:   ptr(entry.List),
-			Detail: ptr(entry.Detail),
-			Icon:   ptr(entry.Icon),
-		}
-	}
-
-	projectMenu := make([]*pb.MenuEntry, len(def.Spec.Menu.Project))
-	for i, entry := range def.Spec.Menu.Project {
-		projectMenu[i] = &pb.MenuEntry{
-			Crd:    ptr(entry.CRD),
-			List:   ptr(entry.List),
-			Detail: ptr(entry.Detail),
-			Icon:   ptr(entry.Icon),
-		}
-	}
-
-	rbacRules := make([]*pb.PolicyRule, len(def.Spec.Permissions.RBAC))
-	for i, rule := range def.Spec.Permissions.RBAC {
-		rbacRules[i] = &pb.PolicyRule{
-			ApiGroups:     rule.APIGroups,
-			Resources:     rule.Resources,
-			Verbs:         rule.Verbs,
-			ResourceNames: rule.ResourceNames,
-		}
-	}
-
-	customComponents := make(map[string]*pb.ComponentMapping, len(def.Spec.CustomComponents))
-	for k, v := range def.Spec.CustomComponents {
-		customComponents[k] = &pb.ComponentMapping{
-			List:   ptr(v.List),
-			Detail: ptr(v.Detail),
-			Create: ptr(v.Create),
-		}
-	}
-
-	allowedResources := make([]*pb.AllowedResource, len(def.Spec.AllowedResources))
-	for i, r := range def.Spec.AllowedResources {
-		allowedResources[i] = &pb.AllowedResource{
-			Group:    ptr(r.Group),
-			Version:  ptr(r.Version),
-			Resource: ptr(r.Resource),
-			Verbs:    r.Verbs,
-		}
-	}
-
-	uiHints := make(map[string]*pb.UIHint, len(def.Spec.UIHints))
-	for k, v := range def.Spec.UIHints {
-		formGroups := make([]*pb.FormGroup, len(v.FormGroups))
-		for i, fg := range v.FormGroups {
-			formGroups[i] = &pb.FormGroup{
-				Name:   ptr(fg.Name),
-				Fields: fg.Fields,
-			}
-		}
-
-		statusValues := make(map[string]*pb.StatusValue, len(v.StatusMapping.Values))
-		for sk, sv := range v.StatusMapping.Values {
-			statusValues[sk] = &pb.StatusValue{
-				Badge: ptr(sv.Badge),
-				Label: ptr(sv.Label),
-			}
-		}
-
-		uiHints[k] = &pb.UIHint{
-			FormGroups: formGroups,
-			StatusMapping: &pb.StatusMapping{
-				JsonPath: ptr(v.StatusMapping.JSONPath),
-				Values:   statusValues,
-			},
-		}
-	}
-
-	return connect.NewResponse(&pb.GetDefinitionResponse{
-		Name:        ptr(def.Metadata.Name),
-		Version:     ptr(def.Metadata.Version),
-		Description: ptr(def.Metadata.Description),
-		DisplayName: ptr(def.Metadata.DisplayName),
-		Author:      ptr(def.Metadata.Author),
-		License:     ptr(def.Metadata.License),
-		Icon:        ptr(def.Metadata.Icon),
-		Urls: &pb.PluginURLs{
-			Homepage:      ptr(def.Metadata.URLs.Homepage),
-			Repository:    ptr(def.Metadata.URLs.Repository),
-			Documentation: ptr(def.Metadata.URLs.Documentation),
-		},
-		Tags: def.Metadata.Tags,
-		Permissions: &pb.Permissions{
-			Capabilities: def.Spec.Permissions.Capabilities,
-			Rbac:         rbacRules,
-		},
-		Menu: &pb.MenuDefinition{
-			Organization: orgMenu,
-			Project:      projectMenu,
-		},
-		CustomComponents: customComponents,
-		UiHints:          uiHints,
-		Crds:             def.Spec.CRDs,
-		AllowedResources: allowedResources,
 	}), nil
 }
 

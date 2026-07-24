@@ -29,21 +29,15 @@ var externalDNSCRDs = []string{
 
 // ExternalDNSPlugin implements the external-dns Fundament plugin.
 type ExternalDNSPlugin struct {
-	def        pluginruntime.PluginDefinition
 	helmClient *helm.Client
 	k8sClient  client.Client
 }
 
-// NewExternalDNSPlugin creates a new ExternalDNSPlugin with the given definition.
-func NewExternalDNSPlugin(def *pluginruntime.PluginDefinition) *ExternalDNSPlugin {
+// NewExternalDNSPlugin creates a new ExternalDNSPlugin.
+func NewExternalDNSPlugin() *ExternalDNSPlugin {
 	return &ExternalDNSPlugin{
-		def:        *def,
 		helmClient: helm.NewClient(namespace),
 	}
-}
-
-func (p *ExternalDNSPlugin) Definition() pluginruntime.PluginDefinition {
-	return p.def
 }
 
 func (p *ExternalDNSPlugin) Start(ctx context.Context, host pluginruntime.Host) error {

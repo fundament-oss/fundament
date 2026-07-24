@@ -135,5 +135,7 @@ func pluginDetailFromRow(
 		Author:             author,
 		RepositoryUrl:      repositoryUrl,
 		DocumentationLinks: protoDocLinks,
+		PluginVersion:      plugin.LatestVersion,
+		DefinitionHash:     plugin.LatestHash,
 	}.Build()
 }

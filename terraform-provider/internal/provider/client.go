@@ -15,6 +15,7 @@ type FundamentClient struct {
 	MemberService    organizationv1connect.MemberServiceClient
 	InviteService    organizationv1connect.InviteServiceClient
 	NamespaceService organizationv1connect.NamespaceServiceClient
+	PluginService    organizationv1connect.PluginServiceClient
 
 	// KubeProxyURL is the base URL for the kube-api-proxy service.
 	KubeProxyURL        string
@@ -110,6 +111,7 @@ func newFundamentClientWithTransport(endpoint string, kubeProxyURL string, trans
 		MemberService:       organizationv1connect.NewMemberServiceClient(httpClient, endpoint),
 		InviteService:       organizationv1connect.NewInviteServiceClient(httpClient, endpoint),
 		NamespaceService:    organizationv1connect.NewNamespaceServiceClient(httpClient, endpoint),
+		PluginService:       organizationv1connect.NewPluginServiceClient(httpClient, endpoint),
 		KubeProxyURL:        kubeProxyURL,
 		KubeProxyHTTPClient: kubeProxyClient,
 	}

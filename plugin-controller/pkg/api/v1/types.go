@@ -3,7 +3,6 @@
 package v1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,8 +29,6 @@ type PluginInstallation struct {
 
 // +k8s:deepcopy-gen=true
 type PluginInstallationSpec struct {
-	Image           string            `json:"image"`
-	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	// DefinitionRef is the immutable pin to the published PluginDefinition the
 	// installer consented to. plugin-controller resolves the definition by
 	// DefinitionHash and materialises the plugin SA's Role from it (FUN-17).
@@ -56,9 +53,9 @@ type DefinitionRef struct {
 	PluginName    string `json:"pluginName"`
 	PluginVersion string `json:"pluginVersion"`
 	// DefinitionHash is the admin's install-time consent record: plugin-controller
-	// enforces that the plugin's own GetDefinition RPC hashes to this value
-	// before materialising the plugin-scope ClusterRole. May be omitted only
-	// when the controller Deployment sets
+	// enforces that the sha256 of the published manifest bytes stored in
+	// organization-api matches this value before materialising the plugin-scope
+	// ClusterRole. May be omitted only when the controller Deployment sets
 	// PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true — for local development.
 	DefinitionHash string `json:"definitionHash"`
 }
