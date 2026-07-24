@@ -483,6 +483,68 @@ func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 	assert.Equal(t, v2Hash, detailResp.Msg.GetPlugin().GetDefinitionHash())
 }
 
+// TestListPluginDefinitions_LatestFirst verifies the endpoint returns all
+// published (version, hash) pairs for a plugin, newest first — the set the
+// console offers as install-time version choices.
+func TestListPluginDefinitions_LatestFirst(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	orgID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+	ctx := context.Background()
+
+	list := func(t *testing.T) []*organizationv1.PluginDefinitionVersion {
+		t.Helper()
+		req := connect.NewRequest(organizationv1.ListPluginDefinitionsRequest_builder{
+			PluginId: pluginID.String(),
+		}.Build())
+		req.Header().Set("Authorization", "Bearer "+token)
+		req.Header().Set("Fun-Organization", orgID.String())
+		resp, err := client.ListPluginDefinitions(ctx, req)
+		require.NoError(t, err)
+		return resp.Msg.GetDefinitions()
+	}
+
+	// No definitions published yet → empty list.
+	assert.Empty(t, list(t))
+
+	put := func(version string, manifest []byte) string {
+		t.Helper()
+		req := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+			PluginId: pluginID.String(), PluginVersion: version, Manifest: manifest,
+		}.Build())
+		req.Header().Set("Authorization", "Bearer "+token)
+		req.Header().Set("Fun-Organization", orgID.String())
+		resp, err := client.PutPluginDefinition(ctx, req)
+		require.NoError(t, err)
+		return resp.Msg.GetHash()
+	}
+
+	put("v1", testManifest)
+	v2Manifest := bytes.ReplaceAll(testManifest, []byte("version: v1"), []byte("version: v2"))
+	v2Hash := put("v2", v2Manifest)
+
+	defs := list(t)
+	require.Len(t, defs, 2)
+	assert.Equal(t, "v2", defs[0].GetVersion(), "latest published version first")
+	assert.Equal(t, v2Hash, defs[0].GetHash())
+	assert.Equal(t, "v1", defs[1].GetVersion())
+}
+
 func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 	t.Parallel()
 

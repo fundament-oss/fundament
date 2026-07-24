@@ -13,6 +13,30 @@
     <strong class="font-semibold">{{ pluginDisplayName() }}</strong> on:
   </p>
 
+  @if (versions().length > 0) {
+    <nldd-form-field label="Version" class="mb-4 block">
+      <nldd-dropdown>
+        <select
+          [value]="selectedVersion()"
+          (change)="onVersionChange($any($event).target.value)"
+        >
+          @for (v of versions(); track v.version) {
+            <option [value]="v.version">{{ v.version }}</option>
+          }
+        </select>
+      </nldd-dropdown>
+    </nldd-form-field>
+  } @else {
+    <nldd-box class="mb-4 block">
+      <nldd-inline-dialog
+        icon="ship-wheel"
+        icon-color="secondary"
+        text="No published version"
+        supporting-text="This plugin has no published definition to install yet."
+      ></nldd-inline-dialog>
+    </nldd-box>
+  }
+
   @if (clusters().length === 0) {
     <nldd-box>
       <nldd-inline-dialog
@@ -101,7 +125,9 @@
     (click)="onInstallSelected()"
     text="Install on selected ({{ selectedCount() }})"
     variant="primary"
-    [attr.disabled]="eligibleClusters().length === 0 || selectedCount() === 0 ? '' : null"
+    [attr.disabled]="
+      eligibleClusters().length === 0 || selectedCount() === 0 || versions().length === 0 ? '' : null
+    "
   ></nldd-button>
   <nldd-button
     slot="actions"
