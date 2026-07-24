@@ -254,7 +254,12 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
     const results = await Promise.allSettled(
       targets.map((id) =>
-        this.pluginInstallationService.installPlugin(id, plugin.name, 'unknown', 'sha256:unknown'),
+        this.pluginInstallationService.installPlugin(
+          id,
+          plugin.name,
+          plugin.pluginVersion,
+          plugin.definitionHash,
+        ),
       ),
     );
 
@@ -292,7 +297,12 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     try {
       await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name).catch(() => {});
       await this.waitForUninstall(clusterId, plugin.name);
-      await this.pluginInstallationService.installPlugin(clusterId, plugin.name, 'unknown', 'sha256:unknown');
+      await this.pluginInstallationService.installPlugin(
+        clusterId,
+        plugin.name,
+        plugin.pluginVersion,
+        plugin.definitionHash,
+      );
       this.startInstallPollingIfNeeded();
     } catch {
       this.toastService.error(

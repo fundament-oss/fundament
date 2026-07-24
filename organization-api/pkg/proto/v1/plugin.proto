@@ -55,6 +55,11 @@ message PluginSummary {
   repeated Tag tags = 40;
   repeated Category categories = 50;
   string image = 60;
+  // Latest published definition: the version and sha256 hash a fresh install
+  // pins. Both empty when the plugin has no published definition yet — it cannot
+  // be installed until one exists.
+  string plugin_version = 70;
+  string definition_hash = 80;
 }
 
 // List plugins request
@@ -109,6 +114,9 @@ message PluginDetail {
   Author author = 60;
   string repository_url = 70;
   repeated DocumentationLink documentation_links = 80;
+  // Latest published definition; see PluginSummary.plugin_version.
+  string plugin_version = 90;
+  string definition_hash = 100;
 }
 
 // Get plugin detail request

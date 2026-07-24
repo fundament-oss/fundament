@@ -176,6 +176,8 @@ type PluginSummary struct {
 	xxx_hidden_Tags             *[]*Tag                `protobuf:"bytes,40,rep,name=tags"`
 	xxx_hidden_Categories       *[]*Category           `protobuf:"bytes,50,rep,name=categories"`
 	xxx_hidden_Image            string                 `protobuf:"bytes,60,opt,name=image"`
+	xxx_hidden_PluginVersion    string                 `protobuf:"bytes,70,opt,name=plugin_version,json=pluginVersion"`
+	xxx_hidden_DefinitionHash   string                 `protobuf:"bytes,80,opt,name=definition_hash,json=definitionHash"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -265,6 +267,20 @@ func (x *PluginSummary) GetImage() string {
 	return ""
 }
 
+func (x *PluginSummary) GetPluginVersion() string {
+	if x != nil {
+		return x.xxx_hidden_PluginVersion
+	}
+	return ""
+}
+
+func (x *PluginSummary) GetDefinitionHash() string {
+	if x != nil {
+		return x.xxx_hidden_DefinitionHash
+	}
+	return ""
+}
+
 func (x *PluginSummary) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -297,6 +313,14 @@ func (x *PluginSummary) SetImage(v string) {
 	x.xxx_hidden_Image = v
 }
 
+func (x *PluginSummary) SetPluginVersion(v string) {
+	x.xxx_hidden_PluginVersion = v
+}
+
+func (x *PluginSummary) SetDefinitionHash(v string) {
+	x.xxx_hidden_DefinitionHash = v
+}
+
 type PluginSummary_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -312,6 +336,11 @@ type PluginSummary_builder struct {
 	Tags             []*Tag
 	Categories       []*Category
 	Image            string
+	// Latest published definition: the version and sha256 hash a fresh install
+	// pins. Both empty when the plugin has no published definition yet — it cannot
+	// be installed until one exists.
+	PluginVersion  string
+	DefinitionHash string
 }
 
 func (b0 PluginSummary_builder) Build() *PluginSummary {
@@ -326,6 +355,8 @@ func (b0 PluginSummary_builder) Build() *PluginSummary {
 	x.xxx_hidden_Tags = &b.Tags
 	x.xxx_hidden_Categories = &b.Categories
 	x.xxx_hidden_Image = b.Image
+	x.xxx_hidden_PluginVersion = b.PluginVersion
+	x.xxx_hidden_DefinitionHash = b.DefinitionHash
 	return m0
 }
 
@@ -822,6 +853,8 @@ type PluginDetail struct {
 	xxx_hidden_Author             *Author                `protobuf:"bytes,60,opt,name=author"`
 	xxx_hidden_RepositoryUrl      string                 `protobuf:"bytes,70,opt,name=repository_url,json=repositoryUrl"`
 	xxx_hidden_DocumentationLinks *[]*DocumentationLink  `protobuf:"bytes,80,rep,name=documentation_links,json=documentationLinks"`
+	xxx_hidden_PluginVersion      string                 `protobuf:"bytes,90,opt,name=plugin_version,json=pluginVersion"`
+	xxx_hidden_DefinitionHash     string                 `protobuf:"bytes,100,opt,name=definition_hash,json=definitionHash"`
 	unknownFields                 protoimpl.UnknownFields
 	sizeCache                     protoimpl.SizeCache
 }
@@ -927,6 +960,20 @@ func (x *PluginDetail) GetDocumentationLinks() []*DocumentationLink {
 	return nil
 }
 
+func (x *PluginDetail) GetPluginVersion() string {
+	if x != nil {
+		return x.xxx_hidden_PluginVersion
+	}
+	return ""
+}
+
+func (x *PluginDetail) GetDefinitionHash() string {
+	if x != nil {
+		return x.xxx_hidden_DefinitionHash
+	}
+	return ""
+}
+
 func (x *PluginDetail) SetId(v string) {
 	x.xxx_hidden_Id = v
 }
@@ -967,6 +1014,14 @@ func (x *PluginDetail) SetDocumentationLinks(v []*DocumentationLink) {
 	x.xxx_hidden_DocumentationLinks = &v
 }
 
+func (x *PluginDetail) SetPluginVersion(v string) {
+	x.xxx_hidden_PluginVersion = v
+}
+
+func (x *PluginDetail) SetDefinitionHash(v string) {
+	x.xxx_hidden_DefinitionHash = v
+}
+
 func (x *PluginDetail) HasAuthor() bool {
 	if x == nil {
 		return false
@@ -993,6 +1048,9 @@ type PluginDetail_builder struct {
 	Author             *Author
 	RepositoryUrl      string
 	DocumentationLinks []*DocumentationLink
+	// Latest published definition; see PluginSummary.plugin_version.
+	PluginVersion  string
+	DefinitionHash string
 }
 
 func (b0 PluginDetail_builder) Build() *PluginDetail {
@@ -1009,6 +1067,8 @@ func (b0 PluginDetail_builder) Build() *PluginDetail {
 	x.xxx_hidden_Author = b.Author
 	x.xxx_hidden_RepositoryUrl = b.RepositoryUrl
 	x.xxx_hidden_DocumentationLinks = &b.DocumentationLinks
+	x.xxx_hidden_PluginVersion = b.PluginVersion
+	x.xxx_hidden_DefinitionHash = b.DefinitionHash
 	return m0
 }
 
@@ -2808,7 +2868,7 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x14 \x01(\tR\x04name\"\xa0\x02\n" +
+	"\x04name\x18\x14 \x01(\tR\x04name\"\xf0\x02\n" +
 	"\rPluginSummary\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -2820,7 +2880,9 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\n" +
 	"categories\x182 \x03(\v2\x19.organization.v1.CategoryR\n" +
 	"categories\x12\x14\n" +
-	"\x05image\x18< \x01(\tR\x05image\"\x14\n" +
+	"\x05image\x18< \x01(\tR\x05image\x12%\n" +
+	"\x0eplugin_version\x18F \x01(\tR\rpluginVersion\x12'\n" +
+	"\x0fdefinition_hash\x18P \x01(\tR\x0edefinitionHash\"\x14\n" +
 	"\x12ListPluginsRequest\"O\n" +
 	"\x13ListPluginsResponse\x128\n" +
 	"\aplugins\x18\n" +
@@ -2845,7 +2907,7 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"\x06Author\x12\x12\n" +
 	"\x04name\x18\n" +
 	" \x01(\tR\x04name\x12\x10\n" +
-	"\x03url\x18\x14 \x01(\tR\x03url\"\xb6\x03\n" +
+	"\x03url\x18\x14 \x01(\tR\x03url\"\x86\x04\n" +
 	"\fPluginDetail\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x12\n" +
@@ -2859,7 +2921,9 @@ const file_v1_plugin_proto_rawDesc = "" +
 	"categories\x12/\n" +
 	"\x06author\x18< \x01(\v2\x17.organization.v1.AuthorR\x06author\x12%\n" +
 	"\x0erepository_url\x18F \x01(\tR\rrepositoryUrl\x12S\n" +
-	"\x13documentation_links\x18P \x03(\v2\".organization.v1.DocumentationLinkR\x12documentationLinks\"5\n" +
+	"\x13documentation_links\x18P \x03(\v2\".organization.v1.DocumentationLinkR\x12documentationLinks\x12%\n" +
+	"\x0eplugin_version\x18Z \x01(\tR\rpluginVersion\x12'\n" +
+	"\x0fdefinition_hash\x18d \x01(\tR\x0edefinitionHash\"5\n" +
 	"\x16GetPluginDetailRequest\x12\x1b\n" +
 	"\tplugin_id\x18\n" +
 	" \x01(\tR\bpluginId\"P\n" +
