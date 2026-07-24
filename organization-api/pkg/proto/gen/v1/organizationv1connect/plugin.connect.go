@@ -60,7 +60,8 @@ type PluginServiceClient interface {
 	ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error)
 	// Idempotent upsert of a plugin definition. Server computes the hash from the
 	// manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
-	// same (plugin_id, version) with a different hash → FAILED_PRECONDITION.
+	// same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
+	// replace=true, which soft-deletes the existing row and stores the new one.
 	// Requires the catalog plugin to exist — FAILED_PRECONDITION otherwise.
 	// Requires an authenticated user.
 	PutPluginDefinition(context.Context, *connect.Request[v1.PutPluginDefinitionRequest]) (*connect.Response[v1.PutPluginDefinitionResponse], error)
@@ -158,7 +159,8 @@ type PluginServiceHandler interface {
 	ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error)
 	// Idempotent upsert of a plugin definition. Server computes the hash from the
 	// manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
-	// same (plugin_id, version) with a different hash → FAILED_PRECONDITION.
+	// same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
+	// replace=true, which soft-deletes the existing row and stores the new one.
 	// Requires the catalog plugin to exist — FAILED_PRECONDITION otherwise.
 	// Requires an authenticated user.
 	PutPluginDefinition(context.Context, *connect.Request[v1.PutPluginDefinitionRequest]) (*connect.Response[v1.PutPluginDefinitionResponse], error)

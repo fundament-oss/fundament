@@ -1144,6 +1144,7 @@ type PutPluginDefinitionRequest struct {
 	xxx_hidden_PluginId      string                 `protobuf:"bytes,10,opt,name=plugin_id,json=pluginId"`
 	xxx_hidden_PluginVersion string                 `protobuf:"bytes,20,opt,name=plugin_version,json=pluginVersion"`
 	xxx_hidden_Manifest      []byte                 `protobuf:"bytes,30,opt,name=manifest"`
+	xxx_hidden_Replace       bool                   `protobuf:"varint,40,opt,name=replace"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -1194,6 +1195,13 @@ func (x *PutPluginDefinitionRequest) GetManifest() []byte {
 	return nil
 }
 
+func (x *PutPluginDefinitionRequest) GetReplace() bool {
+	if x != nil {
+		return x.xxx_hidden_Replace
+	}
+	return false
+}
+
 func (x *PutPluginDefinitionRequest) SetPluginId(v string) {
 	x.xxx_hidden_PluginId = v
 }
@@ -1209,12 +1217,21 @@ func (x *PutPluginDefinitionRequest) SetManifest(v []byte) {
 	x.xxx_hidden_Manifest = v
 }
 
+func (x *PutPluginDefinitionRequest) SetReplace(v bool) {
+	x.xxx_hidden_Replace = v
+}
+
 type PutPluginDefinitionRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	PluginId      string
 	PluginVersion string
 	Manifest      []byte
+	// Republish: when an active definition already exists for (plugin_id, version)
+	// with a different hash, soft-delete it and store this one in its place.
+	// Without this, that case is rejected so a pinned definition is never silently
+	// replaced.
+	Replace bool
 }
 
 func (b0 PutPluginDefinitionRequest_builder) Build() *PutPluginDefinitionRequest {
@@ -1224,6 +1241,7 @@ func (b0 PutPluginDefinitionRequest_builder) Build() *PutPluginDefinitionRequest
 	x.xxx_hidden_PluginId = b.PluginId
 	x.xxx_hidden_PluginVersion = b.PluginVersion
 	x.xxx_hidden_Manifest = b.Manifest
+	x.xxx_hidden_Replace = b.Replace
 	return m0
 }
 
@@ -2847,12 +2865,13 @@ const file_v1_plugin_proto_rawDesc = "" +
 	" \x01(\tR\bpluginId\"P\n" +
 	"\x17GetPluginDetailResponse\x125\n" +
 	"\x06plugin\x18\n" +
-	" \x01(\v2\x1d.organization.v1.PluginDetailR\x06plugin\"|\n" +
+	" \x01(\v2\x1d.organization.v1.PluginDetailR\x06plugin\"\x96\x01\n" +
 	"\x1aPutPluginDefinitionRequest\x12\x1b\n" +
 	"\tplugin_id\x18\n" +
 	" \x01(\tR\bpluginId\x12%\n" +
 	"\x0eplugin_version\x18\x14 \x01(\tR\rpluginVersion\x12\x1a\n" +
-	"\bmanifest\x18\x1e \x01(\fR\bmanifest\"\x85\x01\n" +
+	"\bmanifest\x18\x1e \x01(\fR\bmanifest\x12\x18\n" +
+	"\areplace\x18( \x01(\bR\areplace\"\x85\x01\n" +
 	"\x1bPutPluginDefinitionResponse\x12\x0e\n" +
 	"\x02id\x18\n" +
 	" \x01(\tR\x02id\x12\x1b\n" +

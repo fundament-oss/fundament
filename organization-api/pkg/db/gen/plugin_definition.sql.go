@@ -120,3 +120,22 @@ func (q *Queries) PluginDefinitionInsert(ctx context.Context, arg PluginDefiniti
 	)
 	return i, err
 }
+
+const pluginDefinitionSoftDelete = `-- name: PluginDefinitionSoftDelete :execrows
+UPDATE appstore.plugin_definitions
+SET deleted = now()
+WHERE appstore.plugin_definitions.plugin_id = $1 AND appstore.plugin_definitions.plugin_version = $2 AND appstore.plugin_definitions.deleted IS NULL
+`
+
+type PluginDefinitionSoftDeleteParams struct {
+	PluginID      uuid.UUID
+	PluginVersion string
+}
+
+func (q *Queries) PluginDefinitionSoftDelete(ctx context.Context, arg PluginDefinitionSoftDeleteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pluginDefinitionSoftDelete, arg.PluginID, arg.PluginVersion)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

@@ -272,6 +272,136 @@ func TestPutPluginDefinition_InvalidPluginID(t *testing.T) {
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
 
+// TestPutPluginDefinition_RejectsNameMismatch verifies the manifest's
+// metadata.name must equal the catalog plugin it is published under.
+func TestPutPluginDefinition_RejectsNameMismatch(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	orgID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	// Catalog plugin has a different name than the manifest's metadata.name.
+	pluginID := seedCatalogPlugin(t, env, "some-other-plugin")
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+
+	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+		PluginId:      pluginID.String(),
+		PluginVersion: "v1",
+		Manifest:      testManifest,
+	}.Build())
+	putReq.Header().Set("Authorization", "Bearer "+token)
+	putReq.Header().Set("Fun-Organization", orgID.String())
+
+	_, err := client.PutPluginDefinition(context.Background(), putReq)
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+}
+
+// TestPutPluginDefinition_RejectsOversizedManifest verifies the manifest byte
+// cap is enforced.
+func TestPutPluginDefinition_RejectsOversizedManifest(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	orgID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+
+	// One byte over the 1 MiB handler cap, comfortably under the 2 MiB transport
+	// read limit so the handler (not the transport) rejects it.
+	oversized := make([]byte, (1<<20)+1)
+
+	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+		PluginId:      pluginID.String(),
+		PluginVersion: "v1",
+		Manifest:      oversized,
+	}.Build())
+	putReq.Header().Set("Authorization", "Bearer "+token)
+	putReq.Header().Set("Fun-Organization", orgID.String())
+
+	_, err := client.PutPluginDefinition(context.Background(), putReq)
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+}
+
+// TestPutPluginDefinition_Replace verifies replace=true republishes a new
+// manifest over an existing (plugin_id, version), and Get then serves it.
+func TestPutPluginDefinition_Replace(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	orgID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "test-user",
+			Email:  "test@example.com",
+			OrgIDs: []uuid.UUID{orgID},
+		}),
+	)
+
+	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+	ctx := context.Background()
+
+	put := func(manifest []byte, replace bool) (*connect.Response[organizationv1.PutPluginDefinitionResponse], error) {
+		req := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+			PluginId:      pluginID.String(),
+			PluginVersion: "v1",
+			Manifest:      manifest,
+			Replace:       replace,
+		}.Build())
+		req.Header().Set("Authorization", "Bearer "+token)
+		req.Header().Set("Fun-Organization", orgID.String())
+		return client.PutPluginDefinition(ctx, req)
+	}
+
+	resp1, err := put(testManifest, false)
+	require.NoError(t, err)
+
+	// Same version, different bytes (trailing comment), with replace → succeeds
+	// with a new hash.
+	revised := append(append([]byte{}, testManifest...), []byte("# rev2\n")...)
+	resp2, err := put(revised, true)
+	require.NoError(t, err)
+	assert.NotEqual(t, resp1.Msg.GetHash(), resp2.Msg.GetHash())
+
+	// Get now serves the replacement.
+	getReq := connect.NewRequest(organizationv1.GetPluginDefinitionRequest_builder{
+		PluginName:    testPluginName,
+		PluginVersion: "v1",
+	}.Build())
+	getResp, err := client.GetPluginDefinition(ctx, getReq)
+	require.NoError(t, err)
+	assert.Equal(t, resp2.Msg.GetHash(), getResp.Msg.GetHash())
+}
+
 func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 	t.Parallel()
 

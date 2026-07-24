@@ -13,3 +13,8 @@ WHERE plugin_id = $1 AND plugin_version = $2 AND hash = $3 AND deleted IS NULL;
 INSERT INTO appstore.plugin_definitions (plugin_id, plugin_version, manifest, hash)
 VALUES ($1, $2, $3, $4)
 RETURNING id, plugin_id, plugin_version, hash, created;
+
+-- name: PluginDefinitionSoftDelete :execrows
+UPDATE appstore.plugin_definitions
+SET deleted = now()
+WHERE appstore.plugin_definitions.plugin_id = $1 AND appstore.plugin_definitions.plugin_version = $2 AND appstore.plugin_definitions.deleted IS NULL;

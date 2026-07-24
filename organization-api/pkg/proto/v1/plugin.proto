@@ -18,7 +18,8 @@ service PluginService {
   rpc ListPresets(ListPresetsRequest) returns (ListPresetsResponse);
   // Idempotent upsert of a plugin definition. Server computes the hash from the
   // manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
-  // same (plugin_id, version) with a different hash → FAILED_PRECONDITION.
+  // same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
+  // replace=true, which soft-deletes the existing row and stores the new one.
   // Requires the catalog plugin to exist — FAILED_PRECONDITION otherwise.
   // Requires an authenticated user.
   rpc PutPluginDefinition(PutPluginDefinitionRequest) returns (PutPluginDefinitionResponse);
@@ -124,6 +125,11 @@ message PutPluginDefinitionRequest {
   string plugin_id = 10;
   string plugin_version = 20;
   bytes manifest = 30;
+  // Republish: when an active definition already exists for (plugin_id, version)
+  // with a different hash, soft-delete it and store this one in its place.
+  // Without this, that case is rejected so a pinned definition is never silently
+  // replaced.
+  bool replace = 40;
 }
 message PutPluginDefinitionResponse {
   string id = 10;

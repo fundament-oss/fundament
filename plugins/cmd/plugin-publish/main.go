@@ -103,9 +103,11 @@ func resolvePluginID(ctx context.Context, client organizationv1connect.PluginSer
 
 func main() {
 	var pluginName, image, pluginID string
+	var replace bool
 	flag.StringVar(&pluginName, "plugin", "", "plugin name (directory under plugins/)")
 	flag.StringVar(&image, "image", os.Getenv("PLUGIN_IMAGE"), "resolved image digest reference (repo@sha256:...)")
 	flag.StringVar(&pluginID, "plugin-id", "", "optional catalog plugin uuid; when empty, resolved by name via ListPlugins")
+	flag.BoolVar(&replace, "replace", false, "republish: soft-delete an existing definition for this version and store this one in its place")
 	flag.Parse()
 
 	if pluginName == "" || image == "" {
@@ -159,6 +161,7 @@ func main() {
 		PluginId:      pluginID,
 		PluginVersion: def.Metadata.Version,
 		Manifest:      published,
+		Replace:       replace,
 	}.Build())
 
 	withAuth(req, orgID)

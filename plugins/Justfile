@@ -46,39 +46,11 @@ undeploy:
 
 # --- Plugin commands ---
 
-# An optional <plugin>/.sandbox-config file (KEY=VALUE lines) becomes
-# spec.config, surfaced to the plugin as FUNP_<KEY> env vars (e.g. the openfsc
-# `operator-push` recipe records OPERATOR_IMAGE there).
-
-# Build a plugin image, push to registry, and apply the PluginInstallation CR
-plugin-install plugin:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    tag=$(git describe --always --dirty)
-    image="localhost:{{ registry_port }}/{{ plugin }}-plugin:${tag}"
-    docker build -t "${image}" -f "{{ plugin }}/Dockerfile" ..
-    docker push "${image}"
-    config=""
-    if [ -f "{{ plugin }}/.sandbox-config" ]; then
-      config=$'\n  config:'
-      while IFS='=' read -r key value; do
-        [ -n "${key}" ] || continue
-        config+=$'\n'"    ${key}: \"${value}\""
-      done < "{{ plugin }}/.sandbox-config"
-    fi
-    kubectl --context {{ kube_context }} apply -f - <<EOF
-    apiVersion: plugins.fundament.io/v1
-    kind: PluginInstallation
-    metadata:
-      name: {{ plugin }}
-    spec:
-      image: ${image}
-      imagePullPolicy: Always
-      definitionRef:
-        pluginName: {{ plugin }}
-        pluginVersion: ${tag}
-        definitionHash: ""${config}
-    EOF
+# To install a plugin, publish its definition with `plugin-publish` (below), then
+# reference the published pluginVersion/definitionHash from a PluginInstallation.
+# The old `plugin-install` recipe is gone: it set spec.image (the CRD now sources
+# the image from the published definition, not the CR) and pinned a git-describe
+# pluginVersion that no stored definition is keyed under.
 
 # Delete a PluginInstallation CR
 plugin-uninstall plugin:
