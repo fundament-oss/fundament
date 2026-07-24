@@ -20,10 +20,12 @@ func HashManifest(manifest []byte) string {
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
-// imageDigestRefRegex requires a digest-pinned image reference (repo@sha256:<hex>).
-// A published PluginDefinition must pin an immutable digest, never a mutable tag,
-// so the manifest hash binds the exact code that runs.
-var imageDigestRefRegex = regexp.MustCompile(`@sha256:[0-9a-f]+$`)
+// imageDigestRefRegex requires a digest-pinned image reference
+// (repo@sha256:<64 hex chars>). A published PluginDefinition must pin an
+// immutable digest, never a mutable tag, so the manifest hash binds the exact
+// code that runs. A sha256 digest is exactly 64 hex characters — anchoring the
+// length rejects a truncated or malformed digest that `+` would wave through.
+var imageDigestRefRegex = regexp.MustCompile(`@sha256:[0-9a-f]{64}$`)
 
 // validImagePullPolicies is the set ParseDefinition accepts for
 // spec.imagePullPolicy. Empty is allowed (Kubernetes applies its default); any
@@ -177,7 +179,7 @@ func ParseDefinition(data []byte) (PluginDefinition, error) {
 		return PluginDefinition{}, fmt.Errorf("plugin definition is missing required field spec.image")
 	}
 	if !imageDigestRefRegex.MatchString(def.Spec.Image) {
-		return PluginDefinition{}, fmt.Errorf("spec.image %q must be a digest reference (repo@sha256:...), not a mutable tag", def.Spec.Image)
+		return PluginDefinition{}, fmt.Errorf("spec.image %q must be a digest reference (repo@sha256:<64 hex chars>), not a mutable tag", def.Spec.Image)
 	}
 	if !validImagePullPolicies[def.Spec.ImagePullPolicy] {
 		return PluginDefinition{}, fmt.Errorf("spec.imagePullPolicy %q is invalid, expected one of \"Always\", \"IfNotPresent\", \"Never\" (or empty)", def.Spec.ImagePullPolicy)

@@ -69,7 +69,7 @@ func TestMutateDeployment_UsesManifestImage(t *testing.T) {
 
 	def := pluginruntime.PluginDefinition{
 		Spec: pluginruntime.PluginSpec{
-			Image:           "quay.io/jetstack/cert-manager-controller@sha256:deadbeef",
+			Image:           "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
 			ImagePullPolicy: "IfNotPresent",
 		},
 	}
@@ -81,7 +81,7 @@ func TestMutateDeployment_UsesManifestImage(t *testing.T) {
 
 	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
 	container := deploy.Spec.Template.Spec.Containers[0]
-	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeef", container.Image)
+	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", container.Image)
 	assert.Equal(t, corev1.PullIfNotPresent, container.ImagePullPolicy)
 	assert.Equal(t, "cert-manager", container.Name)
 

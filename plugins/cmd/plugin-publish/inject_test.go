@@ -22,11 +22,11 @@ spec:
         resources: [certificates]
         verbs: [get]
 `)
-	out, err := injectImage(src, "localhost:5112/cert-manager-plugin@sha256:abc", "IfNotPresent")
+	out, err := injectImage(src, "localhost:5112/cert-manager-plugin@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", "IfNotPresent")
 	require.NoError(t, err)
 	def, err := pluginruntime.ParseDefinition(out) // strict: proves image is present
 	require.NoError(t, err)
-	assert.Equal(t, "localhost:5112/cert-manager-plugin@sha256:abc", def.Spec.Image)
+	assert.Equal(t, "localhost:5112/cert-manager-plugin@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", def.Spec.Image)
 	assert.Equal(t, "IfNotPresent", def.Spec.ImagePullPolicy)
 	// original RBAC survives
 	require.Len(t, def.Spec.Permissions.RBAC, 1)

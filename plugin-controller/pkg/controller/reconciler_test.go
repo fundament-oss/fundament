@@ -66,7 +66,7 @@ metadata:
   name: cert-manager
   version: v1.17.2
 spec:
-  image: quay.io/jetstack/cert-manager-controller@sha256:deadbeef
+  image: quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   imagePullPolicy: IfNotPresent
   permissions:
     rbac:
@@ -224,7 +224,7 @@ func TestReconcileChildren_CreatesResources(t *testing.T) {
 	}, &deploy)
 	require.NoError(t, err)
 	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
-	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeef", deploy.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", deploy.Spec.Template.Spec.Containers[0].Image)
 	assert.Equal(t, corev1.PullIfNotPresent, deploy.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 
 	// Verify Service created in plugin namespace
@@ -321,7 +321,7 @@ func TestReconcileChildren_DeploymentUsesManifestImage(t *testing.T) {
 	}, &deploy)
 	require.NoError(t, err)
 	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
-	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeef", deploy.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", deploy.Spec.Template.Spec.Containers[0].Image)
 }
 
 // TestReconcileChildren_DeploymentCreatedAfterScope verifies that on the first
@@ -509,10 +509,11 @@ func TestReconcilePluginScope_FetchError(t *testing.T) {
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
 }
 
-// TestReconcile_GatesChildMaterialisationOnGeneration verifies that the
-// definition is fetched (and children materialised) on a spec change, but NOT
-// re-fetched on a subsequent reconcile when the generation is unchanged.
-func TestReconcile_GatesChildMaterialisationOnGeneration(t *testing.T) {
+// TestReconcile_RepairsDriftAndCachesDefinition verifies the controller is
+// level-triggered: a child deleted out of band is recreated on the next
+// reconcile even though the generation is unchanged, while the immutable,
+// hash-pinned definition is served from cache rather than re-fetched.
+func TestReconcile_RepairsDriftAndCachesDefinition(t *testing.T) {
 	scheme := newTestScheme()
 	manifest, pin := sampleManifest(t)
 
@@ -535,25 +536,30 @@ func TestReconcile_GatesChildMaterialisationOnGeneration(t *testing.T) {
 		statusPoller:        newStatusPoller(),
 		uninstallHTTPClient: http.DefaultClient,
 		defClient:           counting,
+		defCache:            newDefinitionCache(),
 	}
 
 	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: cr.Name}}
+	ctx := context.Background()
+	deployKey := types.NamespacedName{Name: "plugin-cert-manager", Namespace: pluginNamespace(cr.Name)}
 
-	// First reconcile: generation (1) != observed (0) → materialise; one fetch.
-	_, err := r.Reconcile(context.Background(), req)
+	// First reconcile: materialise children; one fetch.
+	_, err := r.Reconcile(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 1, counting.calls)
+	require.NoError(t, fakeClient.Get(ctx, deployKey, &appsv1.Deployment{}))
 
-	// Deployment was created from the fetched manifest.
-	var deploy appsv1.Deployment
-	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{
-		Name: "plugin-cert-manager", Namespace: pluginNamespace(cr.Name),
-	}, &deploy))
+	// Simulate out-of-band drift: delete the Deployment.
+	require.NoError(t, fakeClient.Delete(ctx, &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: deployKey.Name, Namespace: deployKey.Namespace},
+	}))
 
-	// Second reconcile: generation unchanged → skip materialisation, no re-fetch.
-	_, err = r.Reconcile(context.Background(), req)
+	// Second reconcile (generation unchanged): level-triggered → the drifted
+	// Deployment is recreated, and the pinned definition is served from cache.
+	_, err = r.Reconcile(ctx, req)
 	require.NoError(t, err)
-	assert.Equal(t, 1, counting.calls, "definition must not be re-fetched when generation is unchanged")
+	assert.NoError(t, fakeClient.Get(ctx, deployKey, &appsv1.Deployment{}), "drifted child must be recreated")
+	assert.Equal(t, 1, counting.calls, "pinned definition must be served from cache, not re-fetched")
 }
 
 func TestMapPhase(t *testing.T) {

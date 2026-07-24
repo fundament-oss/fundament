@@ -77,6 +77,11 @@ type Reconciler struct {
 	// the CR's install-time consent pin before materialising RBAC or
 	// launching the pod.
 	defClient defclient.Client
+
+	// defCache memoises verified, parsed PluginDefinitions by their content
+	// hash so the level-triggered reconcile does not re-fetch an unchanged
+	// (immutable, hash-pinned) definition from organization-api on every poll.
+	defCache *definitionCache
 }
 
 // ReconcilerOption configures the Reconciler.
@@ -111,6 +116,7 @@ func NewReconciler(c client.Client, logger *slog.Logger, cfg *config.Config, opt
 		cfg:                 *cfg,
 		statusPoller:        newStatusPoller(),
 		uninstallHTTPClient: &http.Client{Timeout: 5 * time.Minute},
+		defCache:            newDefinitionCache(),
 	}
 
 	for _, opt := range opts {
@@ -155,28 +161,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil //nolint:nilerr // intentional: permanent validation error, don't requeue
 	}
 
-	// Materialise child resources only when the spec actually changed. The
-	// PluginDefinition is immutable and hash-pinned, and CreateOrUpdate is
-	// level-based, so re-fetching the definition and re-running every child
-	// mutation on the frequent status-poll requeue is pure waste. Gating on
-	// ObservedGeneration keeps the fetch + child reconciliation on the (rare)
-	// spec-change path while the 30s poll below only refreshes status.
-	//
-	// Trade-off: out-of-band drift to a child resource is corrected on the next
-	// spec change or controller restart, not on the poll cadence.
+	// Materialise child resources on every reconcile — the controller is
+	// level-triggered, so out-of-band drift (a deleted scope ClusterRole,
+	// RoleBinding or Deployment) is repaired on the next poll rather than
+	// lingering until the spec changes. CreateOrUpdate is level-based, so an
+	// unchanged child is a no-op read, and the immutable, hash-pinned
+	// PluginDefinition is served from defCache after the first fetch, so the
+	// steady-state poll neither re-fetches from organization-api nor depends on
+	// it being reachable.
 	//
 	// reconcileChildren mutates cr.Status.Conditions (PluginScopeReady) — persist
-	// those before returning on error so the CR reflects the failure. On success
-	// ObservedGeneration is advanced by the status write below (statusPoller.poll
-	// stamps it), so a failed materialisation leaves it unchanged and retries.
-	if cr.Status.ObservedGeneration != cr.Generation {
-		if err := r.reconcileChildren(ctx, log, &cr); err != nil {
-			if err := r.client.Status().Update(ctx, &cr); err != nil {
-				log.Error("persist status after reconcile error failed", "err", err)
-			}
-
-			return ctrl.Result{}, fmt.Errorf("reconcile children: %w", err)
+	// those before returning on error so the CR reflects the failure.
+	if err := r.reconcileChildren(ctx, log, &cr); err != nil {
+		if err := r.client.Status().Update(ctx, &cr); err != nil {
+			log.Error("persist status after reconcile error failed", "err", err)
 		}
+
+		return ctrl.Result{}, fmt.Errorf("reconcile children: %w", err)
 	}
 
 	// Poll plugin status and update CR. statusPoller.poll returns a fresh
@@ -423,6 +424,17 @@ func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginIn
 		return nil, fmt.Errorf("PluginInstallation %q has no resolvable spec.definitionRef.pluginVersion (%q); a real published version is required to fetch its PluginDefinition (pending marketplace wiring, FUN-11)", cr.Name, cr.Spec.DefinitionRef.PluginVersion)
 	}
 
+	// A pinned definition is immutable and content-addressed, so a previously
+	// verified manifest for this hash can be served from cache — the
+	// level-triggered reconcile hits this on every poll without touching
+	// organization-api. Unpinned dev installs have no stable hash and fall
+	// through to a fresh fetch each time (hot-reload).
+	if !isUnpinned(pinned) && r.defCache != nil {
+		if def, ok := r.defCache.get(pinned); ok {
+			return def, nil
+		}
+	}
+
 	// Bound the RPC to keep organization-api hiccups from starving the queue.
 	rpcCtx, cancel := context.WithTimeout(ctx, scopeRPCTimeout)
 	defer cancel()
@@ -444,6 +456,12 @@ func (r *Reconciler) fetchDefinition(ctx context.Context, cr *pluginsv1.PluginIn
 	def, err := pluginruntime.ParseDefinition(got.Manifest)
 	if err != nil {
 		return nil, fmt.Errorf("parse manifest: %w", err)
+	}
+
+	// Cache only verified, pinned definitions — keyed by the consent hash so a
+	// republish under a new hash is a cache miss, never a stale hit.
+	if !isUnpinned(pinned) && r.defCache != nil {
+		r.defCache.put(pinned, &def)
 	}
 	return &def, nil
 }

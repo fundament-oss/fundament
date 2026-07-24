@@ -51,6 +51,8 @@ interface PluginWithPresets extends Pick<
   | 'categories'
   | 'tags'
   | 'image'
+  | 'pluginVersion'
+  | 'definitionHash'
 > {
   presets?: string[]; // Array of preset IDs this plugin belongs to
 }
@@ -198,6 +200,8 @@ export default class PluginsComponent implements OnInit, OnDestroy {
           categories: backendPlugin.categories,
           tags: backendPlugin.tags,
           image: backendPlugin.image,
+          pluginVersion: backendPlugin.pluginVersion,
+          definitionHash: backendPlugin.definitionHash,
           presets: assignedPresets,
         };
       });

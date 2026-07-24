@@ -14,7 +14,7 @@ metadata:
   name: cert-manager
   version: v1.17.2
 spec:
-  image: quay.io/jetstack/cert-manager-controller@sha256:deadbeef
+  image: quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   imagePullPolicy: IfNotPresent
   permissions:
     rbac:
@@ -24,7 +24,7 @@ spec:
 `)
 	def, err := ParseDefinition(data)
 	require.NoError(t, err)
-	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeef", def.Spec.Image)
+	assert.Equal(t, "quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", def.Spec.Image)
 	assert.Equal(t, "IfNotPresent", def.Spec.ImagePullPolicy)
 	require.Len(t, def.Spec.Permissions.RBAC, 1)
 	assert.Equal(t, []string{"cert-manager.io"}, def.Spec.Permissions.RBAC[0].APIGroups)
@@ -51,7 +51,8 @@ spec:
 	assert.Contains(t, err.Error(), "digest reference")
 }
 
-func TestParseDefinition_RejectsInvalidImagePullPolicy(t *testing.T) {
+func TestParseDefinition_RejectsWrongLengthDigest(t *testing.T) {
+	// A sha256 digest is exactly 64 hex chars; a truncated one must be rejected.
 	_, err := ParseDefinition([]byte(`apiVersion: fundament.io/v1
 kind: PluginDefinition
 metadata:
@@ -59,6 +60,21 @@ metadata:
   version: v1.17.2
 spec:
   image: quay.io/jetstack/cert-manager-controller@sha256:deadbeef
+  permissions:
+    rbac: []
+`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "digest reference")
+}
+
+func TestParseDefinition_RejectsInvalidImagePullPolicy(t *testing.T) {
+	_, err := ParseDefinition([]byte(`apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: cert-manager
+  version: v1.17.2
+spec:
+  image: quay.io/jetstack/cert-manager-controller@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   imagePullPolicy: always
   permissions:
     rbac: []

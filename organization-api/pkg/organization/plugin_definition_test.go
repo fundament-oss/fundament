@@ -17,7 +17,7 @@ import (
 
 const testPluginName = "test-plugin-def"
 
-var testManifest = []byte("apiVersion: fundament.io/v1\nkind: PluginDefinition\nmetadata:\n  name: test-plugin-def\n  version: v1\nspec:\n  image: repo@sha256:aa\n  permissions:\n    rbac:\n      - apiGroups: [cert-manager.io]\n        resources: [certificates]\n        verbs: [get]\n")
+var testManifest = []byte("apiVersion: fundament.io/v1\nkind: PluginDefinition\nmetadata:\n  name: test-plugin-def\n  version: v1\nspec:\n  image: repo@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n  permissions:\n    rbac:\n      - apiGroups: [cert-manager.io]\n        resources: [certificates]\n        verbs: [get]\n")
 
 func newPluginServiceClient(env *testEnv) organizationv1connect.PluginServiceClient {
 	return organizationv1connect.NewPluginServiceClient(env.server.Client(), env.server.URL)
@@ -527,7 +527,7 @@ func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, resp.Msg.GetManifest())
 	assert.True(t, strings.HasPrefix(resp.Msg.GetHash(), "sha256:"))
-	assert.Equal(t, "repo@sha256:aa", resp.Msg.GetDefinition().GetImage())
+	assert.Equal(t, "repo@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", resp.Msg.GetDefinition().GetImage())
 	require.Len(t, resp.Msg.GetDefinition().GetPermissions().GetRbac(), 1)
 	assert.Equal(t, []string{"cert-manager.io"}, resp.Msg.GetDefinition().GetPermissions().GetRbac()[0].GetApiGroups())
 }
