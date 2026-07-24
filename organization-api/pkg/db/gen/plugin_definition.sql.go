@@ -121,6 +121,42 @@ func (q *Queries) PluginDefinitionInsert(ctx context.Context, arg PluginDefiniti
 	return i, err
 }
 
+const pluginDefinitionListByPlugin = `-- name: PluginDefinitionListByPlugin :many
+SELECT appstore.plugin_definitions.plugin_version, appstore.plugin_definitions.hash
+FROM appstore.plugin_definitions
+WHERE appstore.plugin_definitions.plugin_id = $1 AND appstore.plugin_definitions.deleted IS NULL
+ORDER BY appstore.plugin_definitions.created DESC
+`
+
+type PluginDefinitionListByPluginParams struct {
+	PluginID uuid.UUID
+}
+
+type PluginDefinitionListByPluginRow struct {
+	PluginVersion string
+	Hash          string
+}
+
+func (q *Queries) PluginDefinitionListByPlugin(ctx context.Context, arg PluginDefinitionListByPluginParams) ([]PluginDefinitionListByPluginRow, error) {
+	rows, err := q.db.Query(ctx, pluginDefinitionListByPlugin, arg.PluginID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PluginDefinitionListByPluginRow
+	for rows.Next() {
+		var i PluginDefinitionListByPluginRow
+		if err := rows.Scan(&i.PluginVersion, &i.Hash); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const pluginDefinitionSoftDelete = `-- name: PluginDefinitionSoftDelete :execrows
 UPDATE appstore.plugin_definitions
 SET deleted = now()
