@@ -5,7 +5,7 @@ sidebar:
 ---
 
 This page walks through the first things you do as a new Fundament user: signing
-in, finding your organization, creating a project, launching a cluster and
+in, finding your organization, launching a cluster, creating a project and
 installing a plugin.
 
 If you are looking to build plugins on top of Fundament rather than use it, see the
@@ -30,17 +30,10 @@ After signing in you land on the dashboard. If you belong to more than one
 organization, use the organization picker in the header to switch between them —
 everything else in the console is scoped to the organization you have selected.
 
-## 2. Create a project
+## 2. Create a cluster
 
-A project is where your workloads live. Each project runs on exactly one cluster,
-and a cluster can host multiple projects; see
-[Organizations and projects](./organizations.md) for the full resource model.
-
-Go to **Projects → Add project**, give the project a name and pick the cluster it
-should run on. If your organization has no cluster yet, create one first
-(step 3) and come back.
-
-## 3. Create a cluster
+Every project runs on a cluster, so the cluster comes first. If your organization
+already has one you can use, skip to step 3.
 
 Go to **Clusters → Add cluster**. The wizard has three steps:
 
@@ -51,6 +44,15 @@ Go to **Clusters → Add cluster**. The wizard has three steps:
 Provisioning takes a while; the cluster shows up in the list with its state
 while it is being created. See [Clusters](./clusters.md) for what the individual
 fields mean and how to change them later.
+
+## 3. Create a project
+
+A project is where your workloads live. Each project runs on exactly one cluster,
+and a cluster can host multiple projects; see
+[Organizations and projects](./organizations.md) for the full resource model.
+
+Go to **Projects → Add project**, give the project a name and pick the cluster it
+should run on.
 
 ## 4. Install a plugin
 

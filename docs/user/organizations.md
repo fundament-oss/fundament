@@ -4,7 +4,7 @@ sidebar:
   order: 4
 ---
 
-# Resource Model
+## Resource Model
 
 Fundament organises resources in a hierarchy. An organization owns clusters and projects. Each project runs on exactly one cluster, but a cluster can host multiple projects.
 
