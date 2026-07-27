@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Create Gateway</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Create Gateway</h1>
+      <p class="plugin-text" id="intro">Loading…</p>
+
+      <form id="form" class="plugin-form" hidden>
+        <div class="plugin-error" id="error" hidden></div>
+
+        <nldd-form-field label="Name">
+          <nldd-text-field
+            id="name"
+            name="name"
+            required
+            maxlength="63"
+            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
+            placeholder="web"
+            error-message="name-error"
+          ></nldd-text-field>
+          <nldd-form-field-help-text>Lowercase letters, digits and dashes.</nldd-form-field-help-text>
+          <nldd-form-field-error-text id="name-error">Enter a valid name.</nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <!-- Replaced at runtime with a dropdown (project namespaces) or a text field. -->
+        <div id="namespace-field"></div>
+
+        <p class="plugin-hint">An HTTP listener on port 80 is always created. Enable HTTPS to add a TLS listener on port 443.</p>
+
+        <nldd-checkbox-field id="https-enabled" name="https-enabled" label="Enable HTTPS (port 443)"></nldd-checkbox-field>
+
+        <fieldset class="plugin-fieldset" id="https-fieldset" hidden>
+          <legend class="plugin-legend">TLS</legend>
+          <nldd-form-field label="Certificate source">
+            <nldd-dropdown>
+              <select id="tls-mode" name="tls-mode" aria-label="Certificate source">
+                <option value="secret">Existing TLS secret</option>
+                <option value="certManager">cert-manager (cluster issuer)</option>
+              </select>
+            </nldd-dropdown>
+          </nldd-form-field>
+
+          <nldd-form-field label="TLS secret name" id="tls-secret-field">
+            <nldd-text-field id="tls-secret" name="tls-secret" placeholder="web-tls" error-message="tls-secret-error"></nldd-text-field>
+            <nldd-form-field-help-text>Name of an existing kubernetes.io/tls Secret in the namespace.</nldd-form-field-help-text>
+            <nldd-form-field-error-text id="tls-secret-error">This field is required.</nldd-form-field-error-text>
+          </nldd-form-field>
+
+          <nldd-form-field label="Cluster issuer" id="cluster-issuer-field" hidden>
+            <nldd-text-field id="cluster-issuer" name="cluster-issuer" placeholder="letsencrypt" error-message="cluster-issuer-error"></nldd-text-field>
+            <nldd-form-field-help-text>cert-manager provisions a &lt;name&gt;-tls Secret via this ClusterIssuer.</nldd-form-field-help-text>
+            <nldd-form-field-error-text id="cluster-issuer-error">This field is required.</nldd-form-field-error-text>
+          </nldd-form-field>
+        </fieldset>
+
+        <div class="plugin-actions">
+          <nldd-button id="submit" type="button" variant="primary" text="Create Gateway"></nldd-button>
+          <nldd-button id="back" type="button" variant="secondary" text="Back"></nldd-button>
+        </div>
+      </form>
+    </div>
+
+    <script type="module" src="/src/create.ts"></script>
+  </body>
+</html>

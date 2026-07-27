@@ -1,5 +1,6 @@
 mod cert-manager
 mod openfsc
+mod envoy-gateway 'gateway-api/envoy-gateway'
 
 cluster := "fundament-plugin"
 registry := "plugin-registry.localhost"

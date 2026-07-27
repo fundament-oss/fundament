@@ -1,8 +1,8 @@
 apiVersion: fundament.io/v1
 kind: PluginDefinition
 metadata:
-  name: gateway-api
-  displayName: Gateway API
+  name: gateway-api-istio
+  displayName: Gateway API (Istio)
   version: v0.1.0
   description: Gateway API implementation powered by Istio. Manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, and TLSRoutes.
   author: Fundament

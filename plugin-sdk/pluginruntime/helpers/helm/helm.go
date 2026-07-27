@@ -51,6 +51,24 @@ func (c *Client) InstallFromRepo(ctx context.Context, releaseName, chart, repoUR
 	return c.runInstall(ctx, args)
 }
 
+// ociInstallArgs builds the "helm upgrade --install" argument list for an OCI
+// chart reference, pinning --version when set. Split out from InstallFromOCI so
+// the argument construction is unit-testable without shelling out to helm.
+func (c *Client) ociInstallArgs(releaseName, chartRef, version string, values map[string]string) []string {
+	args := []string{"upgrade", "--install", releaseName, chartRef, "--namespace", c.namespace, "--create-namespace", "--wait"}
+	if version != "" {
+		args = append(args, "--version", version)
+	}
+	return appendSortedValues(args, values)
+}
+
+// InstallFromOCI runs "helm upgrade --install" for a chart hosted in an OCI
+// registry (chartRef like "oci://docker.io/envoyproxy/gateway-helm"). Unlike
+// InstallFromRepo there is no --repo; the version pins the chart via --version.
+func (c *Client) InstallFromOCI(ctx context.Context, releaseName, chartRef, version string, values map[string]string) error {
+	return c.runInstall(ctx, c.ociInstallArgs(releaseName, chartRef, version, values))
+}
+
 // runInstall executes a helm install, retrying on RBAC-forbidden errors until
 // the plugin SA's scope is granted (see the BANDAID note above). Any other
 // failure returns immediately.

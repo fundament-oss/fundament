@@ -34,3 +34,22 @@ func TestIsRBACForbidden(t *testing.T) {
 		})
 	}
 }
+
+func TestOCIInstallArgs(t *testing.T) {
+	c := NewClient("envoy-gateway-system")
+	args := c.ociInstallArgs("eg", "oci://docker.io/envoyproxy/gateway-helm", "v1.8.3",
+		map[string]string{"b": "2", "a": "1"})
+
+	assert.Equal(t, []string{
+		"upgrade", "--install", "eg", "oci://docker.io/envoyproxy/gateway-helm",
+		"--namespace", "envoy-gateway-system", "--create-namespace", "--wait",
+		"--version", "v1.8.3",
+		"--set", "a=1", "--set", "b=2",
+	}, args)
+}
+
+func TestOCIInstallArgsNoVersion(t *testing.T) {
+	c := NewClient("ns")
+	args := c.ociInstallArgs("r", "oci://example/chart", "", nil)
+	assert.NotContains(t, args, "--version")
+}
