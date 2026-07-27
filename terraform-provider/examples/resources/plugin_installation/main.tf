@@ -23,7 +23,6 @@ resource "fundament_cluster" "prod" {
 resource "fundament_plugin_installation" "grafana" {
   cluster_id  = fundament_cluster.prod.id
   plugin_name = "grafana"
-  image       = "ghcr.io/fundament/grafana:v10.2.0"
 
   # plugin_version and definition_hash pin an immutable, content-addressed
   # PluginDefinition (FUN-17). They are optional and default to placeholders

@@ -1360,6 +1360,39 @@ END;]]> </definition>
 	</constraint>
 </table>
 
+<table name="plugin_definitions" layers="0" collapse-mode="2" max-obj-count="7" z-value="0">
+	<schema name="appstore"/>
+	<role name="fun_owner"/>
+	<position x="840" y="1620"/>
+	<column name="id" not-null="true" default-value="uuidv7()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="plugin_id" not-null="true">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="plugin_version" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="manifest" not-null="true">
+		<type name="bytea" length="0"/>
+	</column>
+	<column name="hash" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="created" not-null="true" default-value="now()">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<column name="deleted">
+		<type name="timestamptz" length="0"/>
+	</column>
+	<constraint name="plugin_definitions_uq_plugin_version" type="uq-constr" nulls-not-distinct="true" table="appstore.plugin_definitions">
+		<columns names="plugin_id,plugin_version,deleted" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="plugin_definitions_pk" type="pk-constr" table="appstore.plugin_definitions">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
 <table name="presets" layers="0" collapse-mode="1" max-obj-count="3" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
@@ -3248,6 +3281,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="plugin_definitions_fk_plugin" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.plugin_definitions">
+	<columns names="plugin_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="plugins_categories_plugin_id" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="appstore.plugins" table="appstore.categories_plugins">
 	<columns names="plugin_id" ref-type="src-columns"/>
@@ -3726,6 +3765,11 @@ END;]]> </definition>
 	 custom-color="#f0f0f0"
 	 src-table="appstore.plugins_tags"
 	 dst-table="appstore.plugins" reference-fk="plugins_tags_plugin_id"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_plugin_definitions_plugins" type="relfk" layers="0"
+	 src-table="appstore.plugin_definitions"
+	 dst-table="appstore.plugins" reference-fk="plugin_definitions_fk_plugin"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_preset_plugins_plugins" type="relfk" layers="0"
@@ -4308,6 +4352,11 @@ END;]]> </definition>
 </permission>
 <permission>
 	<object name="appstore.plugins" type="table"/>
+	<roles names="fun_fundament_api"/>
+	<privileges select="true" insert="true" update="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugin_definitions" type="table"/>
 	<roles names="fun_fundament_api"/>
 	<privileges select="true" insert="true" update="true"/>
 </permission>

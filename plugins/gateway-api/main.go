@@ -8,13 +8,7 @@ import (
 )
 
 func main() {
-	def, err := pluginruntime.LoadDefinition("definition.yaml")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to load definition: %v\n", err)
-		os.Exit(1)
-	}
-
-	plugin, err := NewGatewayAPIPlugin(&def)
+	plugin, err := NewGatewayAPIPlugin()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create plugin: %v\n", err)
 		os.Exit(1)

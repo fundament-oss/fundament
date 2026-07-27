@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPluginInstallationResourceModel(t *testing.T) {
@@ -15,7 +16,6 @@ func TestPluginInstallationResourceModel(t *testing.T) {
 		PluginName:     types.StringValue("grafana"),
 		PluginVersion:  types.StringValue("10.2.0"),
 		DefinitionHash: types.StringValue("sha256:abc123"),
-		Image:          types.StringValue("ghcr.io/fundament/grafana:v10.2.0"),
 		Phase:          types.StringValue("Running"),
 	}
 
@@ -34,9 +34,6 @@ func TestPluginInstallationResourceModel(t *testing.T) {
 	if model.DefinitionHash.ValueString() != "sha256:abc123" {
 		t.Errorf("expected DefinitionHash 'sha256:abc123', got %q", model.DefinitionHash.ValueString())
 	}
-	if model.Image.ValueString() != "ghcr.io/fundament/grafana:v10.2.0" {
-		t.Errorf("expected Image 'ghcr.io/fundament/grafana:v10.2.0', got %q", model.Image.ValueString())
-	}
 	if model.Phase.ValueString() != "Running" {
 		t.Errorf("expected Phase 'Running', got %q", model.Phase.ValueString())
 	}
@@ -48,7 +45,6 @@ func TestPluginInstallationCreatePayload_DefinitionRef(t *testing.T) {
 		Kind:       "PluginInstallation",
 		Metadata:   pluginInstallationMetadata{Name: "grafana"},
 		Spec: pluginInstallationSpec{
-			Image: "ghcr.io/fundament/grafana:v10.2.0",
 			DefinitionRef: pluginDefinitionRef{
 				PluginName:     "grafana",
 				PluginVersion:  "unknown",
@@ -65,12 +61,12 @@ func TestPluginInstallationCreatePayload_DefinitionRef(t *testing.T) {
 	got := string(body)
 	for _, want := range []string{
 		`"definitionRef":{"pluginName":"grafana","pluginVersion":"unknown","definitionHash":"sha256:unknown"}`,
-		`"image":"ghcr.io/fundament/grafana:v10.2.0"`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("payload %s does not contain %s", got, want)
 		}
 	}
+	assert.NotContains(t, got, `"image"`, "payload must not contain image field")
 	if strings.Contains(got, `"pluginName":"grafana","image"`) || strings.Contains(got, `"spec":{"pluginName"`) {
 		t.Errorf("payload must not carry the legacy top-level spec.pluginName: %s", got)
 	}
@@ -81,7 +77,6 @@ func TestPluginInstallationResourceModelNullValues(t *testing.T) {
 		ID:         types.StringNull(),
 		ClusterID:  types.StringValue("cluster-123"),
 		PluginName: types.StringValue("grafana"),
-		Image:      types.StringValue("ghcr.io/fundament/grafana:v10.2.0"),
 		Phase:      types.StringNull(),
 	}
 
@@ -93,9 +88,6 @@ func TestPluginInstallationResourceModelNullValues(t *testing.T) {
 	}
 	if model.ClusterID.IsNull() {
 		t.Error("expected ClusterID to not be null")
-	}
-	if model.Image.IsNull() {
-		t.Error("expected Image to not be null")
 	}
 }
 

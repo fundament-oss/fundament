@@ -55,7 +55,6 @@ func testPluginCR() *pluginsv1.PluginInstallation {
 			UID:  types.UID(MockInstallationID.String()),
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
-			Image: "ghcr.io/example/" + MockPluginName + ":" + MockPluginVersion,
 			DefinitionRef: pluginsv1.DefinitionRef{
 				PluginName:     MockPluginName,
 				PluginVersion:  MockPluginVersion,

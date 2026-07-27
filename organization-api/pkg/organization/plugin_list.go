@@ -104,5 +104,7 @@ func pluginSummaryFromRow(
 		Tags:             tagsByPlugin[row.ID],
 		Categories:       categoriesByPlugin[row.ID],
 		Image:            row.Image,
+		PluginVersion:    row.LatestVersion,
+		DefinitionHash:   row.LatestHash,
 	}.Build()
 }

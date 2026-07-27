@@ -1,0 +1,51 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 19
+:state: prediscussion
+
+= FUN-19 Plugin Definition Storage
+
+== Introduction
+
+A plugin is installed by creating a `PluginInstallation` CR (link:/funs/fun-11[FUN-11], link:/funs/fun-17[FUN-17]). Before the plugin-controller can materialise that install it needs the plugin's *PluginDefinition* manifest — the document that declares the plugin's container image, its cluster RBAC scope, and its Console surface (menu entries, CRDs, custom components, UI hints). The image drives the Deployment; the RBAC drives the `ClusterRole`/`RoleBinding` the controller creates; the rest drives the Console.
+
+This FUN records where that manifest lives and how it is published and fetched. It replaces the earlier model — in which the definition was fetched from the running plugin pod — with a definition *stored centrally in organization-api* and fetched from there.
+
+== The problem with fetching the definition from the plugin
+
+Originally the controller (and the Console) fetched the definition from the plugin itself, via a `PluginMetadataService/GetDefinition` RPC proxied to the plugin pod. That has two defects:
+
+* *Chicken-and-egg.* The controller needs the definition — specifically the image and the RBAC scope — in order to create the Deployment. Fetching it from the pod means the thing that produces the answer is the thing you are trying to stand up.
+* *Trust.* The RBAC scope a plugin runs under is a privileged decision. Deriving it from a document the plugin serves *about itself* at reconcile time makes the plugin the author of its own permissions. The admin's install-time consent (link:/funs/fun-17[FUN-17]) is recorded as a hash of the manifest, but if the manifest only lives in the pod there is no stable, host-side artifact to pin that consent to.
+
+== Decision: store published definitions in organization-api
+
+A plugin's definition is *published* to organization-api and stored in `appstore.plugin_definitions`, keyed by `(plugin_id, plugin_version)`. The row holds the raw manifest bytes verbatim, plus a content hash. Records are soft-deleted, never removed.
+
+== Consent and the definition hash
+
+The stored hash is the anchor for the FUN-17 consent record. A `PluginInstallation` pins `spec.definitionRef.definitionHash` — the hash of the exact manifest bytes the admin consented to. At reconcile time the controller fetches the definition by `(pluginName, pluginVersion)`, recomputes the hash over the returned bytes, and refuses to materialise the plugin's RBAC unless the recomputed hash matches the pin. This is fail-closed: an unpinned install (empty or the `sha256:unknown` placeholder) is only allowed when the controller is explicitly run with `PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true`, a local-dev escape hatch that must never be set in production.
+
+Because the manifest now lives host-side, the permissions a plugin runs under are derived from a document the *platform* stores and the admin pinned — not from something the plugin serves about itself at reconcile time.
+
+== The definition fetch is a cross-cluster call
+
+The plugin-controller runs in the plugin (sandbox) cluster, while organization-api runs in the management cluster. Moving the definition into organization-api therefore turns what used to be an intra-cluster fetch (controller → plugin pod, same cluster) into a *cross-cluster* one (controller → management-cluster organization-api). Two consequences follow:
+
+* `GetPluginDefinition` is a *public* endpoint. The controller fetching a definition has no user session to present, and the definition is not user-scoped data, so the fetch carries no token. (Deeper admin-only gating of *publishing* is tracked as a follow-up once a role concept exists; `PutPluginDefinition` stays organization-scoped in the meantime.)
+* organization-api must be *reachable from the plugin cluster*. The controller's `ORGANIZATION_API_URL` must therefore be organization-api's externally-routable URL (the same endpoint the Console uses), not the in-cluster `organization-api:8080` Service name — that name does not resolve from the plugin cluster's DNS.
+
+== Consequences
+
+* *The controller no longer depends on the plugin pod to learn how to deploy it.* The image and RBAC scope come from a host-stored, admin-pinned manifest, resolving the chicken-and-egg and the self-authored-permissions problems.
+* *A new cross-cluster dependency.* Installs now require organization-api to be reachable from the plugin cluster; an unreachable or misconfigured `ORGANIZATION_API_URL` surfaces as a `GetPluginDefinition` `unavailable` error during reconcile (retried on requeue).
+* *Republishing is deliberate.* Content is immutable per active `(plugin, version)`; changing it is an explicit soft-delete-then-publish, which keeps the consent hash meaningful.
+* *Marketplace wiring is still pending (link:/funs/fun-11[FUN-11]).* Until the marketplace supplies the published `pluginVersion` and `definitionHash` per plugin, the Console's install path sends development placeholders, so a real published version must currently be installed by applying the `PluginInstallation` directly.
+
+== References
+
+* link:/funs/fun-11[FUN-11 Plugins and the Marketplace] — the plugin/catalog model definitions are published against.
+* link:/funs/fun-17[FUN-17 Plugin Authorization] — the install-time consent hash and the plugin RBAC scope this storage anchors.
+* link:/funs/fun-16[FUN-16 Plugin isolation] — the sandbox model the plugin cluster derives from.

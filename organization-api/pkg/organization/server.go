@@ -120,7 +120,11 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 	clusterPath, clusterHandler := organizationv1connect.NewClusterServiceHandler(s, interceptors)
 	mux.Handle(clusterPath, clusterHandler)
 
-	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(s, interceptors)
+	// PutPluginDefinition carries a manifest body; cap the read so an oversized
+	// payload is rejected off the wire before it is buffered into memory. The
+	// domain-level limit (maxManifestBytes) is enforced in the handler; this
+	// backstop sits a little above it to leave room for proto framing.
+	pluginPath, pluginHandler := organizationv1connect.NewPluginServiceHandler(s, interceptors, connect.WithReadMaxBytes(2*maxManifestBytes))
 	mux.Handle(pluginPath, pluginHandler)
 
 	// gRPC reflection for API discovery (used by Bruno, grpcurl, etc.)

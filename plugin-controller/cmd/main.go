@@ -22,6 +22,7 @@ import (
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/config"
 	"github.com/fundament-oss/fundament/plugin-controller/pkg/controller"
+	"github.com/fundament-oss/fundament/plugin-controller/pkg/defclient"
 )
 
 func main() {
@@ -81,7 +82,14 @@ func run() error {
 		return fmt.Errorf("add readyz check: %w", err)
 	}
 
-	reconciler := controller.NewReconciler(mgr.GetClient(), logger, &cfg)
+	// defclient talks to organization-api, which serves the platform's
+	// source-of-truth PluginDefinition manifests. Its per-request timeout is
+	// enforced by the reconciler (see scopeRPCTimeout); the HTTP client's own
+	// timeout is a broad safety net.
+	defHTTP := &http.Client{Timeout: 30 * time.Second}
+	reconciler := controller.NewReconciler(mgr.GetClient(), logger, &cfg,
+		controller.WithDefClient(defclient.New(cfg.OrganizationAPIURL, defHTTP)),
+	)
 	if err := reconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup controller: %w", err)
 	}

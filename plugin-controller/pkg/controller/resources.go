@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
-	pluginmetadatav1 "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/metadata/proto/gen/v1"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
 const (
@@ -118,21 +118,19 @@ func pluginScopeClusterRoleName(installationName string) string {
 }
 
 // mutatePluginScopeClusterRole materialises the plugin's declared
-// permissions.rbac (fetched via GetDefinition RPC) into a real ClusterRole.
-// The cluster's own RBAC engine evaluates this when kube-api-proxy injects the
-// plugin SA token — there is no bespoke matcher anywhere.
-func mutatePluginScopeClusterRole(role *rbacv1.ClusterRole, cr *pluginsv1.PluginInstallation, rules []*pluginmetadatav1.PolicyRule) {
+// permissions.rbac (parsed from the fetched PluginDefinition manifest) into a
+// real ClusterRole. The cluster's own RBAC engine evaluates this when
+// kube-api-proxy injects the plugin SA token — there is no bespoke matcher
+// anywhere.
+func mutatePluginScopeClusterRole(role *rbacv1.ClusterRole, cr *pluginsv1.PluginInstallation, rules []pluginruntime.PolicyRule) {
 	role.Labels = mergeLabels(role.Labels, childLabels(cr))
 	role.Rules = make([]rbacv1.PolicyRule, 0, len(rules))
-	for _, r := range rules {
-		if r == nil {
-			continue
-		}
+	for _, rule := range rules {
 		role.Rules = append(role.Rules, rbacv1.PolicyRule{
-			APIGroups:     r.GetApiGroups(),
-			Resources:     r.GetResources(),
-			Verbs:         r.GetVerbs(),
-			ResourceNames: r.GetResourceNames(),
+			APIGroups:     rule.APIGroups,
+			Resources:     rule.Resources,
+			Verbs:         rule.Verbs,
+			ResourceNames: rule.ResourceNames,
 		})
 	}
 }
@@ -153,8 +151,11 @@ func mutatePluginScopeClusterRoleBinding(crb *rbacv1.ClusterRoleBinding, cr *plu
 	}}
 }
 
-// mutateDeployment applies the desired state to an existing or empty Deployment.
-func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallation, fundEnvVars []corev1.EnvVar) {
+// mutateDeployment applies the desired state to an existing or empty
+// Deployment. Image and pull policy are sourced from the parsed
+// PluginDefinition — never from the CR — so the hash-verified manifest is the
+// sole gate on what image runs.
+func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallation, def *pluginruntime.PluginDefinition, fundEnvVars []corev1.EnvVar) {
 	labels := childLabels(cr)
 	replicas := int32(1)
 
@@ -183,8 +184,8 @@ func mutateDeployment(deploy *appsv1.Deployment, cr *pluginsv1.PluginInstallatio
 			Containers: []corev1.Container{
 				{
 					Name:            cr.Name,
-					Image:           cr.Spec.Image,
-					ImagePullPolicy: cr.Spec.ImagePullPolicy,
+					Image:           def.Spec.Image,
+					ImagePullPolicy: corev1.PullPolicy(def.Spec.ImagePullPolicy),
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          "http",

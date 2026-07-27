@@ -36,3 +36,8 @@ pluginController:
   logLevel: debug
   # `just plugin-install` sets an empty definitionHash; allow it in the sandbox.
   allowUnpinnedHash: true
+  # The sandbox cluster is network-isolated from organization-api (which lives in
+  # the management cluster). `just plugin-sandbox-orgapi` bridges the two via a
+  # relay container published on the host; the controller reaches it through
+  # host.k3d.internal. Run that recipe once after cluster setup. See FUN-19.
+  organizationApiUrl: http://host.k3d.internal:38080

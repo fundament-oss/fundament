@@ -66,6 +66,7 @@ func (s *Server) isPublicEndpoint(procedure string) bool {
 	publicEndpoints := map[string]bool{
 		"/fundament.organization.v1.OrganizationService/HealthCheck": true,
 		// Add more public endpoints as needed
+		"/organization.v1.PluginService/GetPluginDefinition": true,
 	}
 	return publicEndpoints[procedure]
 }
@@ -78,6 +79,11 @@ func (s *Server) isUserScopedEndpoint(procedure string) bool {
 		"/organization.v1.InviteService/ListInvitations":         true,
 		"/organization.v1.InviteService/AcceptInvitation":        true,
 		"/organization.v1.InviteService/DeclineInvitation":       true,
+		// PutPluginDefinition is intentionally NOT user-scoped: publishing a
+		// definition (which sets a plugin's image and cluster RBAC) requires a
+		// valid Fun-Organization header and membership in that organization, so
+		// any authenticated user cannot seed a definition. Deeper admin-only
+		// gating is tracked as a follow-up once a role concept exists.
 	}
 	return userScopedEndpoints[procedure]
 }

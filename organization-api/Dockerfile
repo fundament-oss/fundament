@@ -3,6 +3,7 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY organization-api/ ./organization-api/
+COPY plugin-sdk/ ./plugin-sdk/
 COPY common/ ./common/
 RUN CGO_ENABLED=0 go build ./organization-api/cmd/fun-organization-api
 
