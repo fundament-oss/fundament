@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/fundament-oss/fundament/common/authz"
 	"github.com/fundament-oss/fundament/common/dbconst"
 	"github.com/fundament-oss/fundament/common/rollback"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
@@ -42,6 +43,14 @@ func (s *Server) PutPluginDefinition(
 	pluginID, err := uuid.Parse(pluginIDStr)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("plugin_id must be a valid uuid: %w", err))
+	}
+	// Authorization decision: OpenFGA. Publishing/editing a plugin definition
+	// requires can_edit on the plugin, which resolves to admin from the owning
+	// organization. Retry absorbs the eventual consistency of the outbox ->
+	// authz-worker -> OpenFGA sync. RLS on appstore.plugin_definitions is the
+	// backstop (see the insert-error mapping below); this is the primary gate.
+	if err := s.checkPermissionWithRetry(ctx, authz.CanEdit(), authz.Plugin(pluginID)); err != nil {
+		return nil, err
 	}
 	// Strict parse rejects an image-free template (and any malformed manifest):
 	// a stored PluginDefinition must be complete.
@@ -137,6 +146,14 @@ func (s *Server) PutPluginDefinition(
 			pgErr.Code == pgerrcode.UniqueViolation && pgErr.ConstraintName == dbconst.ConstraintPluginDefinitionsUqPluginVersion {
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
 				fmt.Errorf("plugin definition %s@%s already exists with a different hash; set replace=true to republish", catalogRow.Name, version))
+		}
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok &&
+			pgErr.Code == pgerrcode.InsufficientPrivilege {
+			// RLS rejected the write: the caller's organization does not own this
+			// plugin. The gate is enforced entirely in the database (row-level
+			// security); we only translate the rejection into a clean API error.
+			return nil, connect.NewError(connect.CodePermissionDenied,
+				fmt.Errorf("organization is not the owner of plugin %s", catalogRow.Name))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("insert plugin definition: %w", err))
 	}
