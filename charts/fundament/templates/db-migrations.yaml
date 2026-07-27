@@ -47,6 +47,8 @@ spec:
             - |
               set -e
               trek apply
+              echo "Seeding system organization..."
+              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0100-system-org.sql
               echo "Seeding appstore plugin catalog..."
               psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
               {{- if and $.Values.db.reset $.Values.openfga.enabled }}
