@@ -9,6 +9,11 @@ plugins/openfsc/console-ui/node_modules/
 # keep any local build out of the context.
 plugins/openfsc/console/
 
+# Local Gardener (gardener-up) lives under .dev/ and leaves root-owned files
+# (e.g. backupbuckets) that fail the build-context scan of images built from
+# the repo root, such as plugin-proxy.
+.dev/
+
 .git
 **/.gitignore
 **/.gitattributes
