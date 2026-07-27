@@ -363,6 +363,8 @@ func (w *Worker) dispatchItem(ctx context.Context, qtx *db.Queries, item *db.Get
 		return w.handler.Namespace(ctx, qtx, item.NamespaceID.Bytes)
 	case item.ApiKeyID.Valid:
 		return w.handler.ApiKey(ctx, qtx, item.ApiKeyID.Bytes)
+	case item.PluginID.Valid:
+		return w.handler.Plugin(ctx, qtx, item.PluginID.Bytes)
 	default:
 		return fmt.Errorf("unknown outbox subject FK")
 	}
