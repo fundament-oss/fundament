@@ -104,8 +104,12 @@ export default defineConfig({
       plugins: [sidebarMetaPlugin()],
       sidebar: [
         {
-          label: 'Documentation',
-          items: [{ autogenerate: { directory: 'docs' } }],
+          label: 'User documentation',
+          items: [{ autogenerate: { directory: 'docs/user' } }],
+        },
+        {
+          label: 'Developer documentation',
+          items: [{ autogenerate: { directory: 'docs/developer' } }],
         },
         {
           label: 'Fundament Update Notes',

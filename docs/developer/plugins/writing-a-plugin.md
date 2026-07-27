@@ -1,7 +1,7 @@
 ---
 title: Writing a plugin
 sidebar:
-  order: 2
+  order: 3
 ---
 
 Writing a plugin consists of several steps, each described below.
@@ -201,4 +201,4 @@ service PluginMetadataService {
 
 ## Plugin sandbox
 
-A self-contained development environment for plugin development. See [`plugins/README.md`](../../plugins/README.md) for setup instructions and available commands.
+A self-contained development environment for plugin development. See [`plugins/README.md`](https://github.com/fundament-oss/fundament/blob/master/plugins/README.md) for setup instructions and available commands.

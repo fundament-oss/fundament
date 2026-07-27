@@ -12,11 +12,12 @@ The focus of the project is currently on research and ideation. Some initial PoC
 
 ## Documentation
 
-- [Overview](docs/overview.md)
-- [Infrastructure](docs/infrastructure.md)
-- [Organizations](docs/organizations.md)
-- [Tools](docs/tools.md)
-- [Development setup](docs/development-setup.md)
+- [Overview](docs/user/overview.md)
+- [Infrastructure](docs/user/infrastructure.md)
+- [Organizations and projects](docs/user/organizations.md)
+- [Plugins](docs/user/plugins.md)
+- [Development setup](docs/developer/development-setup.md)
+- [Plugin development](docs/developer/plugins/index.md)
 
 ## Contributing
 

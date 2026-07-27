@@ -22,7 +22,8 @@ RUN mv /tmp/docs/funs ./src/content/docs/funs \
  && mv /tmp/docs/adr ./src/content/docs/adr \
  && cp -r /tmp/docs/assets public/assets \
  && cp -r /tmp/docs/. ./src/content/docs/docs && rm -rf /tmp/docs \
- && find ./src/content/docs/docs -name '*.md' -exec sed -i 's|(assets/|(/assets/|g' {} +
+ && find ./src/content/docs/docs -name '*.md' -exec sed -i 's|](\(\.\./\)*assets/|](/assets/|g' {} + \
+ && find ./src/content/docs/docs -name '*.md' -exec sed -i 's|](\(\.\.*/[^)]*\)\.md\([)#]\)|](\1\2|g' {} +
 
 # Disable Astro telemetry
 ENV ASTRO_TELEMETRY_DISABLED=1

@@ -1,6 +1,6 @@
 # Fundament Docs
 
-Temporary repo for docs using Astro and AsciiDoc support.
+Directory for landing page and docs using Astro and AsciiDoc support.
 
 ## Installation
 

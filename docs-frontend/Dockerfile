@@ -17,13 +17,17 @@ RUN bun install --frozen-lockfile
 COPY docs-frontend/ .
 
 # Copy docs, FUNs, and ADRs into their respective content directories
-# Serve assets statically to avoid Astro/Vite processing large SVGs
+# Serve assets statically to avoid Astro/Vite processing large SVGs.
+# The two sed passes make links that are written for GitHub work on the site:
+# asset paths become absolute, and relative `./page.md` links lose the extension
+# (Astro serves them extensionless).
 COPY docs/ /tmp/docs/
 RUN mv /tmp/docs/funs ./src/content/docs/funs \
  && mv /tmp/docs/adr ./src/content/docs/adr \
  && cp -r /tmp/docs/assets public/assets \
  && mv /tmp/docs ./src/content/docs/docs \
- && find ./src/content/docs/docs -name '*.md' -exec sed -i 's|(assets/|(/assets/|g' {} +
+ && find ./src/content/docs/docs -name '*.md' -exec sed -i 's|](\(\.\./\)*assets/|](/assets/|g' {} + \
+ && find ./src/content/docs/docs -name '*.md' -exec sed -i 's|](\(\.\.*/[^)]*\)\.md\([)#]\)|](\1\2|g' {} +
 
 # Disable Astro telemetry
 ENV ASTRO_TELEMETRY_DISABLED=1

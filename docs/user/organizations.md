@@ -1,14 +1,14 @@
 ---
-title: Organizations
+title: Organizations and projects
 sidebar:
-  order: 3
+  order: 4
 ---
 
 # Resource Model
 
 Fundament organises resources in a hierarchy. An organization owns clusters and projects. Each project runs on exactly one cluster, but a cluster can host multiple projects.
 
-![Resource Model](assets/resource-model.drawio.svg)
+![Resource Model](../assets/resource-model.drawio.svg)
 
 ## Organization
 
@@ -64,7 +64,7 @@ Ownership is tracked by `fundament.io/namespace-id`, not the name: renaming a
 namespace in fundament only updates the `fundament.io/namespace-name` label (the
 k8s resource name is immutable), so workloads are never destroyed by a rename.
 Deleting a namespace in fundament hard-deletes the cluster-side namespace and
-all workloads within it. See [cluster-worker](../cluster-worker/README.md#namespace-sync)
+all workloads within it. See [cluster-worker](https://github.com/fundament-oss/fundament/blob/master/cluster-worker/README.md#namespace-sync)
 for the sync mechanism.
 
 ## Example
@@ -83,6 +83,6 @@ Access control follows the resource hierarchy:
 
 Users are invited to an organization and can then be added to projects. Service accounts follow the same model.
 
-## Tools
+## Plugins
 
-[Tools](./tools.md) are installed per cluster. All projects on a cluster have access to the tools installed on that cluster. See [Tools](./tools.md) for details.
+[Plugins](./plugins.md) are installed per cluster. All projects on a cluster have access to the plugins installed on that cluster. See [Plugins](./plugins.md) for details.

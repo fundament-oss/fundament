@@ -1,7 +1,8 @@
 ---
 title: Plugins
 sidebar:
-  order: 1
+  label: Overview
+  order: 2
 ---
 
 The plugin system allows extending Fundament with installable plugins that integrate into the platform's console UI, RBAC, and lifecycle management.
@@ -48,7 +49,7 @@ The plugin system allows extending Fundament with installable plugins that integ
 |-----------|---------|
 | [**Plugin Runtime**](#plugin-runtime) | Go framework that plugins implement. Handles HTTP, health probes, metadata API, logging, and lifecycle. |
 | [**Plugin Controller**](#plugin-controller) | Kubernetes controller that watches `PluginInstallation` CRs and manages plugin namespaces, RBAC, and deployments. |
-| [**Plugin**](writing-a-plugin) | A container image that uses the SDK. Implements business logic (install software, manage CRDs, serve console UI). |
+| [**Plugin**](/docs/developer/plugins/writing-a-plugin) | A container image that uses the SDK. Implements business logic (install software, manage CRDs, serve console UI). |
 
 ## Plugin Runtime
 

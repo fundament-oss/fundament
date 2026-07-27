@@ -1,7 +1,7 @@
 ---
 title: "Example: cert-manager"
 sidebar:
-  order: 4
+  order: 5
 ---
 
 The cert-manager plugin is a reference implementation that installs and manages cert-manager.
