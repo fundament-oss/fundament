@@ -1,0 +1,41 @@
+<nldd-modal-dialog
+  appDialogSync
+  [show]="show()"
+  [text]="'Delete ' + resourceKind()"
+  variant="alert"
+  (close)="dismiss.emit()"
+>
+  <nldd-spacer size="24"></nldd-spacer>
+
+  <p>
+    Are you sure you want to delete
+    <strong class="font-semibold">{{ resourceName() }}</strong>? This cannot be undone.
+  </p>
+
+  @if (errorMessage()) {
+    <nldd-box class="mt-4 block">
+      <nldd-inline-dialog
+        icon="exclamation-triangle"
+        icon-color="critical"
+        [text]="errorMessage()!"
+      ></nldd-inline-dialog>
+    </nldd-box>
+  }
+
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirm.emit()"
+    text="Yes, delete"
+    variant="destructive"
+    [disabled]="deleting()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="dismiss.emit()"
+    text="Cancel"
+    variant="secondary"
+    [disabled]="deleting()"
+  ></nldd-button>
+</nldd-modal-dialog>

@@ -100,6 +100,13 @@
                           variant="secondary"
                           size="sm"
                         ></nldd-button>
+                        <nldd-button
+                          (click)="openDelete(resource)"
+                          text="Delete"
+                          start-icon="trash"
+                          variant="destructive"
+                          size="sm"
+                        ></nldd-button>
                       </div>
                     </td>
                   </tr>
@@ -137,4 +144,14 @@
       }
     </div>
   </div>
+
+  <app-resource-delete-modal
+    [show]="pendingDelete() !== null"
+    [resourceKind]="pendingDelete()?.kind ?? ''"
+    [resourceName]="pendingDelete()?.metadata?.name ?? ''"
+    [deleting]="deleting()"
+    [errorMessage]="deleteError()"
+    (confirm)="confirmDelete()"
+    (dismiss)="closeDelete()"
+  />
 }

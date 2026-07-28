@@ -63,4 +63,21 @@ export default class KubePluginLoaderService {
     );
     return { crd, resource };
   }
+
+  async deleteResource(
+    pluginName: string,
+    crd: ParsedCrd,
+    clusterId: string,
+    name: string,
+    namespace: string | undefined,
+  ): Promise<void> {
+    await this.pluginStore.deleteResource(
+      crd,
+      clusterId,
+      this.configService.getConfig().kubeApiProxyUrl,
+      pluginName,
+      name,
+      namespace,
+    );
+  }
 }

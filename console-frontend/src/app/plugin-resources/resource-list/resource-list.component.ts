@@ -12,6 +12,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
+import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
@@ -46,7 +47,7 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 
 @Component({
   selector: 'app-resource-list',
-  imports: [RouterLink, PluginIframeComponent],
+  imports: [RouterLink, PluginIframeComponent, ResourceDeleteModalComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -182,4 +183,48 @@ export default class ResourceListComponent implements OnInit {
   detailQueryParams = buildDetailQueryParams;
 
   formatCell = buildCellValue;
+
+  // --- Per-row delete ---
+
+  pendingDelete = signal<KubeResource | null>(null);
+
+  deleting = signal(false);
+
+  deleteError = signal<string | null>(null);
+
+  openDelete(resource: KubeResource): void {
+    this.deleteError.set(null);
+    this.pendingDelete.set(resource);
+  }
+
+  closeDelete(): void {
+    if (!this.deleting()) this.pendingDelete.set(null);
+  }
+
+  async confirmDelete(): Promise<void> {
+    const crd = this.crdDef();
+    const clusterId = this.clusterContext.selectedClusterId();
+    const target = this.pendingDelete();
+    if (!crd || !clusterId || !target) return;
+
+    this.deleting.set(true);
+    this.deleteError.set(null);
+    try {
+      await this.loader.deleteResource(
+        this.pluginName(),
+        crd,
+        clusterId,
+        target.metadata.name,
+        target.metadata.namespace,
+      );
+      this.pendingDelete.set(null);
+      await this.loadCrdsAndResources(this.pluginName(), this.resourceKind(), clusterId);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[ResourceList] Failed to delete resource:', err);
+      this.deleteError.set('Failed to delete. Please try again.');
+    } finally {
+      this.deleting.set(false);
+    }
+  }
 }
