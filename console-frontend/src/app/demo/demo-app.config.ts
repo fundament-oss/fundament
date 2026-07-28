@@ -1,4 +1,4 @@
-import { ApplicationConfig } from '@angular/core';
+import { ApplicationConfig, inject } from '@angular/core';
 import { appConfig } from '../app.config';
 import { ConfigService, AppConfiguration } from '../config.service';
 import AuthnApiService from '../authn-api.service';
@@ -11,6 +11,10 @@ import DemoConfigService from './demo-config.service';
 import DemoTitleService from './demo-title.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import FakePluginInstallationService from './fake-plugin-installation.service';
+import PluginRegistryService from '../plugin-resources/plugin-registry.service';
+import FakePluginRegistryService from './fake-plugin-registry.service';
+import PluginResourceStoreService from '../plugin-resources/plugin-resource-store.service';
+import FakePluginResourceStoreService from './fake-plugin-resource-store.service';
 
 // Dummy URLs — the demo transports are in-memory and ignore baseUrl.
 const demoConfig: AppConfiguration = {
@@ -43,6 +47,18 @@ const demoAppConfig: ApplicationConfig = {
     {
       provide: PluginInstallationService,
       useFactory: () => new FakePluginInstallationService() as unknown as PluginInstallationService,
+    },
+    // Everything the console would otherwise read from the cluster over
+    // kube-api-proxy: plugin definitions, CRDs and their objects. Without these
+    // the demo fires fetches at demo://kube, which the page's CSP blocks.
+    {
+      provide: PluginRegistryService,
+      useFactory: () => inject(FakePluginRegistryService) as unknown as PluginRegistryService,
+    },
+    {
+      provide: PluginResourceStoreService,
+      useFactory: () =>
+        inject(FakePluginResourceStoreService) as unknown as PluginResourceStoreService,
     },
     { provide: AUTHN_TRANSPORT, useFactory: () => createDemoTransport() },
     { provide: ORGANIZATION_TRANSPORT, useFactory: () => createDemoTransport() },

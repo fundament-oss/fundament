@@ -3,8 +3,19 @@
 // actually install a plugin and watch it come up.
 import { Injectable } from '@angular/core';
 import { PluginInstallationItem } from '../plugin-resources/types';
-import { PLUGIN_INSTALLS_RESET_EVENT } from '../presentation/presentation.tokens';
+import {
+  PLUGIN_INSTALLS_ENSURE_EVENT,
+  PLUGIN_INSTALLS_RESET_EVENT,
+} from '../presentation/presentation.tokens';
 import * as fx from './fixtures';
+
+/**
+ * Dispatched on `document` whenever the in-memory installs change, so the parts
+ * of the console that read them once — the sidebar menu, built per project — can
+ * follow along instead of waiting for a navigation. Stands in for the watch the
+ * real console would have on the cluster.
+ */
+export const PLUGIN_INSTALLS_CHANGED_EVENT = 'demo:plugin-installs-changed';
 
 // How long a fresh install stays Pending before it reports Running. The plugins
 // page polls every 5s, so this is short enough to land within one poll while the
@@ -44,25 +55,49 @@ export default class FakePluginInstallationService {
     this.seed();
     // Let the walkthrough reset installs so its install slide can be replayed.
     document.addEventListener(PLUGIN_INSTALLS_RESET_EVENT, () => this.seed());
+    // ...and let the slides after it put their own subject in place.
+    document.addEventListener(PLUGIN_INSTALLS_ENSURE_EVENT, () => this.ensureUiPlugins());
+  }
+
+  private static notifyChanged(): void {
+    document.dispatchEvent(new CustomEvent(PLUGIN_INSTALLS_CHANGED_EVENT));
+  }
+
+  /** An install of a catalog plugin, already running (nothing to wait for). */
+  private static seededInstall(pluginName: string): DemoInstall {
+    const plugin = fx.plugins.find((p) => p.name === pluginName);
+    return {
+      pluginName,
+      pluginVersion: plugin?.pluginVersion || 'demo',
+      definitionHash: plugin?.definitionHash || 'sha256:demo',
+      startedAt: null,
+    };
   }
 
   /** (Re)seed the in-memory installs to the fixture baseline, dropping any added live. */
   private seed(): void {
     this.byCluster.clear();
     Object.entries(fx.seededInstalls).forEach(([clusterId, pluginNames]) => {
-      this.byCluster.set(
-        clusterId,
-        pluginNames.map((pluginName) => {
-          const plugin = fx.plugins.find((p) => p.name === pluginName);
-          return {
-            pluginName,
-            pluginVersion: plugin?.pluginVersion || 'demo',
-            definitionHash: plugin?.definitionHash || 'sha256:demo',
-            startedAt: null,
-          };
-        }),
-      );
+      this.byCluster.set(clusterId, pluginNames.map(FakePluginInstallationService.seededInstall));
     });
+    FakePluginInstallationService.notifyChanged();
+  }
+
+  /**
+   * Install every plugin the console has a UI for, on every cluster, as already
+   * running. Idempotent: an install that is there stays as it is, so arriving
+   * from the install slide keeps that slide's freshly installed (and briefly
+   * Pending) plugin instead of skipping its status change.
+   */
+  private ensureUiPlugins(): void {
+    Object.keys(fx.seededInstalls).forEach((clusterId) => {
+      const current = this.byCluster.get(clusterId) ?? [];
+      const missing = Object.keys(fx.pluginDefinitions)
+        .filter((pluginName) => !current.some((i) => i.pluginName === pluginName))
+        .map(FakePluginInstallationService.seededInstall);
+      if (missing.length > 0) this.byCluster.set(clusterId, [...current, ...missing]);
+    });
+    FakePluginInstallationService.notifyChanged();
   }
 
   async listInstallations(clusterId: string): Promise<PluginInstallationItem[]> {
@@ -94,6 +129,7 @@ export default class FakePluginInstallationService {
         startedAt: Date.now(),
       },
     ]);
+    FakePluginInstallationService.notifyChanged();
   }
 
   async uninstallPlugin(clusterId: string, pluginName: string): Promise<void> {
@@ -102,5 +138,6 @@ export default class FakePluginInstallationService {
       clusterId,
       current.filter((i) => i.pluginName !== pluginName),
     );
+    FakePluginInstallationService.notifyChanged();
   }
 }

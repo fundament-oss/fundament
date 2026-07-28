@@ -1,10 +1,24 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  CUSTOM_ELEMENTS_SCHEMA,
+  effect,
+  ElementRef,
+  inject,
+  viewChildren,
+} from '@angular/core';
+import '@nldd/design-system/dropdown';
 import PresentationService from './presentation.service';
-import { LOCALES } from './i18n';
+import { isLocale, LOCALES } from './i18n';
 import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
+import DropdownSyncDirective from '../dropdown-sync.directive';
+
+type LitDropdown = HTMLElement & { updateComplete?: Promise<unknown> };
 
 @Component({
   selector: 'app-presentation-overlay',
+  imports: [DropdownSyncDirective],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:keydown)': 'onKeydown($event)' },
   template: `
@@ -29,19 +43,18 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
             <header class="chooser-head">
               <div class="chooser-title-row">
                 <h1 class="deck-title">Fundament</h1>
-                <div class="lang" role="group" [attr.aria-label]="presentation.ui().languageLabel">
-                  @for (option of locales; track option) {
-                    <button
-                      type="button"
-                      class="lang-btn"
-                      [class.active]="presentation.locale() === option"
-                      [attr.aria-pressed]="presentation.locale() === option"
-                      (click)="presentation.setLocale(option)"
-                    >
-                      {{ option.toUpperCase() }}
-                    </button>
-                  }
-                </div>
+                <nldd-dropdown #langDropdown size="sm" width="5.5rem" class="lang">
+                  <select
+                    [attr.aria-label]="presentation.ui().languageLabel"
+                    (change)="onLocaleChange($event)"
+                  >
+                    @for (option of locales; track option) {
+                      <option [value]="option" [selected]="option === presentation.locale()">
+                        {{ option.toUpperCase() }}
+                      </option>
+                    }
+                  </select>
+                </nldd-dropdown>
               </div>
               <p class="deck-lead">{{ presentation.ui().chooserLead }}</p>
             </header>
@@ -133,6 +146,18 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
                 <button type="button" class="text-link" (click)="presentation.goto(0)">
                   {{ presentation.ui().restart }}
                 </button>
+                <nldd-dropdown #langDropdown size="xs" width="5rem" class="lang">
+                  <select
+                    [attr.aria-label]="presentation.ui().languageLabel"
+                    (change)="onLocaleChange($event)"
+                  >
+                    @for (option of locales; track option) {
+                      <option [value]="option" [selected]="option === presentation.locale()">
+                        {{ option.toUpperCase() }}
+                      </option>
+                    }
+                  </select>
+                </nldd-dropdown>
               </div>
               <div class="nav">
                 <button
@@ -167,10 +192,8 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
               <span [class.active]="presentation.skipOptional()">
                 <span class="k">o</span> {{ presentation.ui().hintSkipOptional }}
               </span>
-              <span>
-                <span class="k">l</span> {{ presentation.ui().hintLanguage }}
-                <span class="lang-current">{{ presentation.locale().toUpperCase() }}</span>
-              </span>
+              <!-- No current-language badge here: the dropdown above shows it. -->
+              <span> <span class="k">l</span> {{ presentation.ui().hintLanguage }} </span>
             </div>
           </div>
 
@@ -301,42 +324,11 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
         gap: 1rem;
       }
       /* --- Language switcher --------------------------------------------- */
+      /* The switcher is a design-system dropdown, so it brings its own palette
+         to the dark panel. It only needs to keep its own width in the flex rows
+         it sits in (the chooser title row and the slide footer). */
       .lang {
-        display: inline-flex;
-        padding: 2px;
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        border-radius: 999px;
-      }
-      .lang-btn {
-        appearance: none;
-        cursor: pointer;
-        padding: 0.3rem 0.75rem;
-        border: none;
-        border-radius: 999px;
-        background: transparent;
-        font: inherit;
-        font-size: 0.78rem;
-        font-weight: 600;
-        letter-spacing: 0.06em;
-        color: rgba(255, 255, 255, 0.7);
-        transition:
-          background 0.15s,
-          color 0.15s;
-      }
-      .lang-btn:hover {
-        color: #fff;
-      }
-      .lang-btn.active {
-        background: rgba(255, 255, 255, 0.18);
-        color: #fff;
-      }
-      .lang-btn:focus-visible {
-        outline: 2px solid #fff;
-        outline-offset: 2px;
-      }
-      .lang-current {
-        font-weight: 600;
-        color: #fff;
+        flex: 0 0 auto;
       }
       .section-label {
         margin: 0 0 0.9rem;
@@ -612,6 +604,33 @@ export default class PresentationOverlayComponent {
   readonly presentation = inject(PresentationService);
 
   readonly locales = LOCALES;
+
+  private readonly langDropdowns = viewChildren<ElementRef<LitDropdown>>('langDropdown');
+
+  constructor() {
+    // The locale also changes from the `l` shortcut, which the dropdown cannot
+    // see: the slotted <select> keeps its old selection and the component keeps
+    // its old display label. Push the value in and re-run the component's own
+    // slot handler (the same supported path DropdownSyncDirective uses).
+    effect(() => {
+      const locale = this.presentation.locale();
+      this.langDropdowns().forEach(({ nativeElement }) => {
+        const select = nativeElement.querySelector('select');
+        if (select) select.value = locale;
+        const resync = () =>
+          nativeElement.shadowRoot?.querySelector('slot')?.dispatchEvent(new Event('slotchange'));
+        // Before the custom element upgrades there is no shadow root yet;
+        // DropdownSyncDirective syncs that first render.
+        nativeElement.updateComplete?.then(resync);
+        resync();
+      });
+    });
+  }
+
+  onLocaleChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (isLocale(value)) this.presentation.setLocale(value);
+  }
 
   onKeydown(event: KeyboardEvent): void {
     if (!this.presentation.active()) return;

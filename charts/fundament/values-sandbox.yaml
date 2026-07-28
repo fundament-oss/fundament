@@ -8,6 +8,7 @@ externalUrls:
   kubeApiProxy: https://k8s-api.fundament.projects.digilab.network
   pluginProxy: https://plugin-proxy.fundament.projects.digilab.network
   console: https://console.fundament.projects.digilab.network
+  consoleDemo: https://console-demo.fundament.projects.digilab.network
   docs: https://docs.fundament.projects.digilab.network
   cookieDomain: fundament.projects.digilab.network
   dcimApi: https://dcim-api.fundament.projects.digilab.network

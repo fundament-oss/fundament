@@ -39,6 +39,7 @@ import {
   Router,
   NavigationEnd,
   ActivatedRouteSnapshot,
+  type IsActiveMatchOptions,
 } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
@@ -46,6 +47,7 @@ import AuthnApiService from './authn-api.service';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
+import { ConfigService } from './config.service';
 import SelectorModalComponent from './selector-modal/selector-modal.component';
 import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
@@ -59,6 +61,7 @@ import KubeClusterContextService from './plugin-resources/kube-cluster-context.s
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
+import { crdRefToLabel } from './plugin-resources/crd-schema.utils';
 
 const reloadApp = () => {
   window.location.reload();
@@ -89,6 +92,8 @@ export default class App implements OnInit {
   private router = inject(Router);
 
   private apiService = inject(AuthnApiService);
+
+  private configService = inject(ConfigService);
 
   protected toastService = inject(ToastService);
 
@@ -151,6 +156,22 @@ export default class App implements OnInit {
   // Breadcrumb state
   breadcrumbSegments = signal<BreadcrumbSegment[]>([]);
 
+  // Walkthrough (console-demo) URL; empty where the demo is not deployed, which
+  // hides the header's "Take a tour" button.
+  tourUrl = signal('');
+
+  // routerLinkActive options for the sidebar links that must not stay active on
+  // their sub-routes ("General", "Settings"). The shorthand `{ exact: true }`
+  // also demands an exact query-string match, so any link carrying query params
+  // — the walkthrough's ?present/?tour, a filter, a deep link — would leave
+  // these unhighlighted. Only the path decides.
+  readonly exactPath: IsActiveMatchOptions = {
+    paths: 'exact',
+    queryParams: 'ignored',
+    fragment: 'ignored',
+    matrixParams: 'ignored',
+  };
+
   constructor() {
     // Refresh breadcrumbs when organization data changes (e.g. after renaming)
     effect(() => {
@@ -188,6 +209,7 @@ export default class App implements OnInit {
   async ngOnInit() {
     this.mobileMq.addEventListener('change', (e) => this.isMobile.set(e.matches));
     this.initializeTheme();
+    this.tourUrl.set(App.tourUrlInEnglish(this.configService.getConfig().consoleDemoUrl));
 
     // Initialize authentication state
     await this.apiService.initializeAuth();
@@ -338,7 +360,10 @@ export default class App implements OnInit {
   private updateSidebarStateFromRoute(url: string) {
     // Match project routes: /projects/:projectId or /projects/:projectId/...
     // Exclude /projects/add which is the add-project page (not a project detail)
-    const projectRouteMatch = url.match(/^\/projects\/([^/]+)/);
+    // The router url carries the query string and fragment, so stop the id at
+    // `?`/`#` too — otherwise /projects/:id?foo=bar yields an id that matches no
+    // project and the sidebar falls back to "Select...".
+    const projectRouteMatch = url.match(/^\/projects\/([^/?#]+)/);
 
     if (projectRouteMatch && projectRouteMatch[1] !== 'add') {
       const projectId = projectRouteMatch[1];
@@ -404,7 +429,10 @@ export default class App implements OnInit {
       const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
       const allMenuItems = [...(plugin?.menu.project ?? [])];
       const menuItem = allMenuItems.find((m) => m.crd === params['resourceKind']);
-      label = menuItem ? (menuItem.label ?? menuItem.crd) : (params['resourceKind'] ?? 'Resources');
+      // Same label the sidebar shows: the raw CRD reference is not presentable.
+      label = menuItem
+        ? (menuItem.label ?? crdRefToLabel(menuItem.crd))
+        : (params['resourceKind'] ?? 'Resources');
     }
 
     if (label === ':resourceName') {
@@ -456,7 +484,9 @@ export default class App implements OnInit {
 
   // Check if current route is clusters or clusters/add
   isClustersActive(): boolean {
-    return this.router.url === '/' || this.router.url.startsWith('/clusters/');
+    // Compare on the path alone: the router url also carries the query string.
+    const path = this.router.url.split(/[?#]/)[0];
+    return path === '/' || path.startsWith('/clusters/');
   }
 
   // Check if current route is project members or roles
@@ -467,6 +497,21 @@ export default class App implements OnInit {
       this.router.url.startsWith(`/projects/${projectId}/members`) ||
       this.router.url.startsWith(`/projects/${projectId}/roles`)
     );
+  }
+
+  // The walkthrough resolves its narration language from `?lang`, defaulting to
+  // Dutch. The console itself is English, so send visitors into the English tour.
+  private static tourUrlInEnglish(consoleDemoUrl?: string): string {
+    if (!consoleDemoUrl) return '';
+    try {
+      const url = new URL(consoleDemoUrl);
+      url.searchParams.set('lang', 'en');
+      return url.toString();
+    } catch {
+      // Not an absolute URL (misconfigured): link to it as given rather than
+      // dropping the button.
+      return consoleDemoUrl;
+    }
   }
 
   // Initialize theme from an explicit saved choice, falling back to the OS

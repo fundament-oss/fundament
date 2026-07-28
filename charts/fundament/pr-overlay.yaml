@@ -79,6 +79,7 @@ spec:
       kubeApiProxy: https://k8s-api.pr${PR_NUM}.${DOMAIN}
       pluginProxy: https://plugin-proxy.pr${PR_NUM}.${DOMAIN}
       console: https://console.pr${PR_NUM}.${DOMAIN}
+      consoleDemo: https://console-demo.pr${PR_NUM}.${DOMAIN}
       docs: https://docs.pr${PR_NUM}.${DOMAIN}
       cookieDomain: pr${PR_NUM}.${DOMAIN}
       dcimApi: https://dcim-api.pr${PR_NUM}.${DOMAIN}

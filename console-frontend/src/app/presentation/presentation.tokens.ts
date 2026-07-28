@@ -15,3 +15,13 @@ export const PRESENTATION_ENABLED = new InjectionToken<boolean>('PRESENTATION_EN
  * Manager was already installed on an earlier pass. Never fires in production.
  */
 export const PLUGIN_INSTALLS_RESET_EVENT = 'demo:reset-plugin-installs';
+
+/**
+ * Demo-only event dispatched on `document` to make sure every plugin the console
+ * has a UI for is installed and running. The slides that show an installed plugin
+ * come after the install slide, but a deck is also deep-linked (`?slide=`),
+ * restarted and stepped through backwards — so those slides put the state they
+ * describe in place themselves instead of depending on an earlier slide's drive.
+ * A no-op when the plugin is already installed. Never fires in production.
+ */
+export const PLUGIN_INSTALLS_ENSURE_EVENT = 'demo:ensure-plugin-installs';

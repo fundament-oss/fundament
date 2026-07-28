@@ -34,6 +34,7 @@ import {
 } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, NodePoolStatus, ResourceUsageSchema } from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
+import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
 
 const daysAgo = (n: number) => timestampFromDate(new Date(Date.now() - n * 86_400_000));
 
@@ -483,6 +484,142 @@ export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
 export const seededInstalls: Record<string, string[]> = {
   'cl-production': ['openfsc', 'grafana'],
   'cl-staging': ['openfsc'],
+};
+
+// --- Plugin UI ------------------------------------------------------------
+//
+// What the console normally reads from the cluster through kube-api-proxy: the
+// plugin definition behind an installation, its CRDs, and the objects of those
+// CRDs. Only cert-manager carries a project menu here — that is the plugin the
+// walkthrough installs, and a plugin without a menu simply has no console UI,
+// exactly as in production.
+//
+// No customComponents on purpose: a custom UI is an iframe served by
+// plugin-proxy, which the static demo has no backend for. Without it the
+// console renders its own UI from the CRD schema below.
+
+const certificateCrd: ParsedCrd = {
+  group: 'cert-manager.io',
+  kind: 'Certificate',
+  plural: 'certificates',
+  singular: 'certificate',
+  scope: 'Namespaced',
+  version: 'v1',
+  additionalPrinterColumns: [
+    { name: 'Ready', type: 'string', jsonPath: '.status.conditions[?(@.type=="Ready")].status' },
+    { name: 'Secret', type: 'string', jsonPath: '.spec.secretName' },
+    { name: 'Issuer', type: 'string', jsonPath: '.spec.issuerRef.name' },
+    { name: 'Age', type: 'date', jsonPath: '.metadata.creationTimestamp' },
+  ],
+  specSchema: {
+    required: ['secretName', 'issuerRef'],
+    properties: {
+      commonName: { type: 'string', description: 'Common name of the requested certificate.' },
+      dnsNames: {
+        type: 'array',
+        description: 'DNS names the certificate is valid for.',
+        items: { type: 'string' },
+      },
+      secretName: {
+        type: 'string',
+        description: 'Name of the secret the issued certificate is written to.',
+      },
+      duration: { type: 'string', description: 'How long the certificate stays valid.' },
+      renewBefore: { type: 'string', description: 'How long before expiry to renew.' },
+      issuerRef: {
+        type: 'object',
+        description: 'The issuer that signs this certificate.',
+        required: ['name', 'kind'],
+        properties: {
+          name: { type: 'string' },
+          kind: { type: 'string', enum: ['Issuer', 'ClusterIssuer'] },
+        },
+      },
+    },
+  },
+  statusSchema: {
+    properties: {
+      notAfter: { type: 'string', format: 'date-time', description: 'Expiry of the certificate.' },
+      renewalTime: { type: 'string', format: 'date-time', description: 'Next renewal attempt.' },
+    },
+  },
+};
+
+/** Parsed CRDs per plugin, in place of the ones kube-api-proxy would serve. */
+export const pluginCrds: Record<string, ParsedCrd[]> = {
+  'cert-manager': [certificateCrd],
+};
+
+/** Plugin definitions per catalog name; an installation without one has no UI. */
+export const pluginDefinitions: Record<string, PluginDefinition> = {
+  'cert-manager': {
+    name: 'cert-manager',
+    label: 'Cert Manager',
+    version: 'v1.17.2',
+    description: 'Certificaten die het platform zelf aanvraagt en op tijd vernieuwt.',
+    author: 'Fundament',
+    // Menu entries reference a CRD by `plural.group`, exactly as the real
+    // definition.yaml in plugins/cert-manager does.
+    menu: { project: [{ crd: 'certificates.cert-manager.io', icon: 'certificate' }] },
+    crds: ['certificates.cert-manager.io'],
+    allowedResources: [
+      { group: 'cert-manager.io', version: 'v1', resource: 'certificates', verbs: ['get', 'list'] },
+    ],
+    installationId: 'demo-cert-manager',
+    installationName: 'cert-manager',
+    installationVersion: 'v1.17.2',
+  },
+};
+
+const certificate = (
+  name: string,
+  namespace: string,
+  dnsName: string,
+  ready: boolean,
+  ageDays: number,
+): KubeResource => ({
+  apiVersion: 'cert-manager.io/v1',
+  kind: 'Certificate',
+  metadata: {
+    name,
+    namespace,
+    uid: `demo-cert-${name}`,
+    creationTimestamp: new Date(Date.now() - ageDays * 86_400_000).toISOString(),
+  },
+  spec: {
+    commonName: dnsName,
+    dnsNames: [dnsName],
+    secretName: `${name}-tls`,
+    duration: '2160h0m0s',
+    renewBefore: '720h0m0s',
+    issuerRef: { name: 'letsencrypt', kind: 'ClusterIssuer' },
+  },
+  status: {
+    conditions: [
+      {
+        type: 'Ready',
+        status: ready ? 'True' : 'False',
+        reason: ready ? 'Ready' : 'InProgress',
+        message: ready
+          ? 'Certificate is up to date and has not expired'
+          : 'Waiting for the issuer to sign the request',
+        // A ready certificate last changed state when it was issued; one still
+        // being signed changed state just now. The detail view shows this column.
+        lastTransitionTime: new Date(Date.now() - (ready ? ageDays * 86_400_000 : 0)).toISOString(),
+      },
+    ],
+    notAfter: new Date(Date.now() + 60 * 86_400_000).toISOString(),
+    renewalTime: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+  },
+});
+
+/** Objects per `${pluginName}/${kind}`, in place of a live cluster's. */
+export const pluginResources: Record<string, KubeResource[]> = {
+  'cert-manager/Certificate': [
+    certificate('burgerzaken-portaal', 'burgerzaken-prod', 'burgerzaken.gemeente.nl', true, 90),
+    certificate('burgerzaken-api', 'burgerzaken-prod', 'api.burgerzaken.gemeente.nl', true, 42),
+    certificate('burgerzaken-afspraken', 'burgerzaken-prod', 'afspraken.gemeente.nl', false, 0),
+  ],
 };
 
 // --- Organization members -------------------------------------------------

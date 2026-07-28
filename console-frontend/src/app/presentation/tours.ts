@@ -1,6 +1,6 @@
 import { DriveStep, Slide, Tour } from './presentation.model';
 import { loc } from './i18n';
-import { PLUGIN_INSTALLS_RESET_EVENT } from './presentation.tokens';
+import { PLUGIN_INSTALLS_ENSURE_EVENT, PLUGIN_INSTALLS_RESET_EVENT } from './presentation.tokens';
 
 // Tours are the walkthrough's content. The chooser groups them into "verhalen"
 // (no persona) and "word een rol" (with a persona).
@@ -27,11 +27,20 @@ const KEYS_ASIDE = loc(
   'Use the arrow keys ← → to move through the slides. Esc goes back to the menu.',
 );
 
-/** Types a cluster name into the wizard and submits step 1. */
+/**
+ * Walks the cluster wizard: types a name into step 1, then carries on through
+ * step 2 to the summary. Step 2 (node pools) starts out valid — it seeds one
+ * pool with a generated name, the first machine type and a 1–3 autoscale range —
+ * so submitting its form as-is lands on the summary. The summary is where the
+ * walkthrough stops: the cluster is not actually created.
+ * Each page has exactly one `nldd-form`, so the same selector fits both steps.
+ */
 const addClusterDrive: DriveStep[] = [
   { wait: 900 },
   { set: '#clusterName', value: 'burgerzaken-acc', type: true },
   { wait: 700 },
+  { submit: 'nldd-form' },
+  { wait: 1400 },
   { submit: 'nldd-form' },
 ];
 
@@ -43,6 +52,14 @@ const addClusterDrive: DriveStep[] = [
  * checkbox sits outside it), so the first match selects just one cluster.
  * The reset event first clears any earlier install, so the slide can be replayed.
  */
+/**
+ * Puts the installed plugin in place for the slides that show it off. Arriving
+ * from the install slide it changes nothing; jumping straight to one of these
+ * slides (a `?slide=` link, a restart, stepping backwards) it installs Cert
+ * Manager so the sidebar and its screens are not empty.
+ */
+const installedPluginDrive: DriveStep[] = [{ emit: PLUGIN_INSTALLS_ENSURE_EVENT }];
+
 const installPluginDrive: DriveStep[] = [
   { emit: PLUGIN_INSTALLS_RESET_EVENT },
   { wait: 1400 },
@@ -73,12 +90,12 @@ const ICONS = {
 
 // --- Verhalen -------------------------------------------------------------
 
-const wholeStory: Tour = {
-  id: 'clusters-projects',
-  title: loc('Het hele verhaal', 'The whole story'),
+const intro: Tour = {
+  id: 'intro',
+  title: loc('Zo werkt Fundament', 'How Fundament works'),
   lead: loc(
-    'Van overzicht tot het aanmaken van een cluster en het beheren van een project.',
-    'From the overview to creating a cluster and running a project.',
+    'Van clusteroverzicht tot een project met een plugin en zijn certificaten.',
+    'From the cluster overview to a project with a plugin and its certificates.',
   ),
   icon: ICONS.compass,
   slides: [
@@ -253,6 +270,71 @@ const wholeStory: Tour = {
       ],
       route: '/plugins',
       drive: installPluginDrive,
+    },
+    {
+      id: 'plugin-in-menu',
+      title: loc('De plugin staat er meteen in', 'The plugin is there right away'),
+      lead: loc(
+        'Cert Manager draait nu op het cluster, dus elk project erop krijgt het in zijn menu.',
+        'Cert Manager now runs on the cluster, so every project on it gets it in the menu.',
+      ),
+      bullets: [
+        loc(
+          'Links in de zijbalk staat Cert Manager, met "Certificates" eronder.',
+          'Cert Manager appears in the sidebar on the left, with "Certificates" under it.',
+        ),
+        loc(
+          'De plugin bepaalt zelf welk menu hij meebrengt; het team hoeft niets in te richten.',
+          'The plugin brings its own menu along; the team has nothing to set up.',
+        ),
+      ],
+      route: '/projects/pr-burgerzaken',
+      drive: installedPluginDrive,
+    },
+    {
+      id: 'plugin-resources',
+      title: loc('De plugin gebruiken', 'Using the plugin'),
+      lead: loc(
+        'De certificaten van dit project, in dezelfde console.',
+        "This project's certificates, in the same console.",
+      ),
+      bullets: [
+        loc(
+          'Het scherm komt uit de CRD van de plugin: kolommen, velden en detail zijn afgeleid van het schema.',
+          "The screen comes from the plugin's CRD: columns, fields and detail are derived from the schema.",
+        ),
+        loc(
+          'Je team beheert zo zijn certificaten zonder kubectl of een apart dashboard.',
+          'Your team manages its certificates without kubectl or a separate dashboard.',
+        ),
+      ],
+      // The menu links to the CRD by `plural.group`, so the route carries that too.
+      route: '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io',
+      drive: installedPluginDrive,
+    },
+    {
+      id: 'plugin-resource-detail',
+      title: loc('Eén certificaat van dichtbij', 'One certificate up close'),
+      lead: loc(
+        'burgerzaken-portaal: waar het certificaat voor geldt, en of het gezond is.',
+        'burgerzaken-portaal: what the certificate covers, and whether it is healthy.',
+      ),
+      bullets: [
+        loc(
+          'De domeinnaam, de secret waar het certificaat in landt, en wanneer het wordt vernieuwd.',
+          'The domain name, the secret the certificate lands in, and when it gets renewed.',
+        ),
+        loc(
+          'Ook dit scherm is niets meer dan het CRD-schema: de console kent cert-manager niet, alleen het schema.',
+          'This screen too is nothing but the CRD schema: the console knows nothing of cert-manager, only the schema.',
+        ),
+      ],
+      // Namespaced objects take `?ns=`, but the deck owns the query string; without
+      // it the console falls back to matching the object by name, which is what the
+      // list links to here anyway.
+      route:
+        '/projects/pr-burgerzaken/plugin-resources/cert-manager/certificates.cert-manager.io/burgerzaken-portaal',
+      drive: installedPluginDrive,
     },
     closing(
       'Dit was een statische rondleiding met voorbeelddata. De echte console werkt precies zo, met jouw eigen clusters en projecten.',
@@ -782,14 +864,14 @@ const policyMaker: Tour = {
 };
 
 export const TOURS: Record<string, Tour> = {
-  [wholeStory.id]: wholeStory,
+  [intro.id]: intro,
   [developer.id]: developer,
   [platformEngineer.id]: platformEngineer,
   [securityOfficer.id]: securityOfficer,
   [policyMaker.id]: policyMaker,
 };
 
-export const DEFAULT_TOUR_ID = wholeStory.id;
+export const DEFAULT_TOUR_ID = intro.id;
 
 /** Chooser sections: tours without a persona, then the ones told through a role. */
 export const STORY_TOURS = Object.values(TOURS).filter((tour) => !tour.persona);

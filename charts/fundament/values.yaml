@@ -21,6 +21,7 @@ externalUrls:
   pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; defaults to console URL if empty)
   console: "" # e.g., https://app.example.com
+  consoleDemo: "" # e.g., https://console-demo.example.com (walkthrough; empty hides the console's "Take a tour" button)
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
