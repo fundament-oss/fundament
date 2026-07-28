@@ -116,7 +116,10 @@ plugin-sandbox-orgapi:
 # to organization-api. Requires PLUGIN_REGISTRY (e.g. localhost:5112),
 # FUNDAMENT_ORG_API_URL and FUNDAMENT_ORGANIZATION_ID; FUNDAMENT_TOKEN for the
 # authenticated (org-scoped) endpoint.
-plugin-publish name:
+# Extra flags pass through to plugin-publish, e.g.:
+#   just plugin-publish gateway-api/envoy-gateway --replace
+# (--replace republishes an existing pluginVersion, soft-deleting the old definition).
+plugin-publish name *flags:
     #!/usr/bin/env bash
     set -euo pipefail
     : "${PLUGIN_REGISTRY:?PLUGIN_REGISTRY is required (e.g. localhost:5112)}"
@@ -137,4 +140,4 @@ plugin-publish name:
     # tokens in push output are layer/config digests, not the pushed manifest.
     digest=$(docker push "${repo}:${tag}" | grep -oE 'digest: sha256:[a-f0-9]{64}' | grep -oE 'sha256:[a-f0-9]{64}' | head -1)
     [ -n "${digest}" ] || { echo "could not resolve pushed digest"; exit 1; }
-    go run ./plugins/cmd/plugin-publish --plugin '{{ name }}' --image "${repo}@${digest}"
+    go run ./plugins/cmd/plugin-publish --plugin '{{ name }}' --image "${repo}@${digest}" {{ flags }}
