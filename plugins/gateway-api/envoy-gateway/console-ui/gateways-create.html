@@ -51,7 +51,9 @@
           </nldd-form-field>
 
           <nldd-form-field label="Cluster issuer" id="cluster-issuer-field" hidden>
-            <nldd-text-field id="cluster-issuer" name="cluster-issuer" placeholder="letsencrypt" error-message="cluster-issuer-error"></nldd-text-field>
+            <!-- Filled at runtime: a dropdown of cert-manager ClusterIssuers, or a
+                 free-text field when none are found / cert-manager isn't installed. -->
+            <div id="cluster-issuer-control"></div>
             <nldd-form-field-help-text>cert-manager provisions a &lt;name&gt;-tls Secret via this ClusterIssuer.</nldd-form-field-help-text>
             <nldd-form-field-error-text id="cluster-issuer-error">This field is required.</nldd-form-field-error-text>
           </nldd-form-field>

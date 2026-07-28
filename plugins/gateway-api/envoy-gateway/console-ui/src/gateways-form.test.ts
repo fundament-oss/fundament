@@ -4,7 +4,7 @@
 // mirroring the part of Lit the form depends on.
 
 import { describe, expect, it } from 'vitest';
-import { buildGatewayBody, validateForm } from './gateways-form.ts';
+import { buildGatewayBody, clusterIssuerControlHtml, validateForm } from './gateways-form.ts';
 
 function upgrade(root: ParentNode): void {
   root.querySelectorAll('nldd-text-field, nldd-checkbox-field').forEach((el) => {
@@ -96,5 +96,20 @@ describe('validateForm', () => {
   });
   it('passes for a valid HTTP-only form', () => {
     expect(validateForm(renderForm({ name: 'web', https: false }))).toBe(true);
+  });
+});
+
+describe('clusterIssuerControlHtml', () => {
+  it('renders a dropdown of ClusterIssuer names with id cluster-issuer', () => {
+    const html = clusterIssuerControlHtml(['letsencrypt-prod', 'letsencrypt-staging']);
+    expect(html).toContain('<select id="cluster-issuer"');
+    expect(html).toContain('<option value="letsencrypt-prod">letsencrypt-prod</option>');
+    expect(html).toContain('<option value="letsencrypt-staging">letsencrypt-staging</option>');
+  });
+
+  it('falls back to a free-text field when there are no issuers', () => {
+    const html = clusterIssuerControlHtml([]);
+    expect(html).toContain('<nldd-text-field id="cluster-issuer"');
+    expect(html).not.toContain('<select');
   });
 });

@@ -64,6 +64,19 @@ export function buildGatewayBody(root: ParentNode, namespace: string): GatewayBo
   };
 }
 
+// Renders the cluster-issuer control: a dropdown of ClusterIssuer names when
+// cert-manager exposes any, else a free-text field (cert-manager absent, no
+// issuers, or the list was denied). Both use id "cluster-issuer", so
+// buildGatewayBody reads them the same way. ClusterIssuer names are RFC-1123
+// (lowercase alphanumeric, '-', '.'), so they carry no HTML-special characters.
+export function clusterIssuerControlHtml(issuers: string[]): string {
+  if (issuers.length > 0) {
+    const options = issuers.map((n) => `<option value="${n}">${n}</option>`).join('');
+    return `<nldd-dropdown><select id="cluster-issuer" name="cluster-issuer" aria-label="Cluster issuer">${options}</select></nldd-dropdown>`;
+  }
+  return `<nldd-text-field id="cluster-issuer" name="cluster-issuer" placeholder="letsencrypt"></nldd-text-field>`;
+}
+
 export function validateForm(root: ParentNode): boolean {
   if (!trimmedValue(root, 'name')) return false;
   if (isChecked(root, 'https-enabled')) {

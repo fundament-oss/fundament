@@ -40,6 +40,11 @@ spec:
       - apiGroups: ["gateway.envoyproxy.io"]
         resources: ["envoyproxies", "securitypolicies", "backendtrafficpolicies", "clienttrafficpolicies"]
         verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      # Read-only: the Gateway create form offers a dropdown of cert-manager
+      # ClusterIssuers when cert-manager is chosen as the TLS certificate source.
+      - apiGroups: ["cert-manager.io"]
+        resources: ["clusterissuers"]
+        verbs: ["get", "list", "watch"]
       # --- Install-time permissions ---
       # The plugin runs `helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm
       # --create-namespace --wait`. These cluster-wide rules grant exactly what Helm and the
@@ -179,6 +184,11 @@ spec:
       version: v1alpha1
       resource: clienttrafficpolicies
       verbs: [list, get, create]
+    # Read-only: populate the ClusterIssuer dropdown in the Gateway create form.
+    - group: cert-manager.io
+      version: v1
+      resource: clusterissuers
+      verbs: [list]
 
   uiHints:
     gateways.gateway.networking.k8s.io:

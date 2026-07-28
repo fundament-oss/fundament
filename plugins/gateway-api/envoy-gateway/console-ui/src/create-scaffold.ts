@@ -23,7 +23,7 @@ export interface CreateFormOptions {
 
 // An <nldd-dropdown> computes its label on `slotchange`, which can fire before
 // programmatically-inserted <option>s exist. Re-dispatch it once rendered.
-function resyncDropdown(dropdown: HTMLElement | null): void {
+export function resyncDropdown(dropdown: HTMLElement | null): void {
   const apply = () =>
     dropdown?.shadowRoot?.querySelector('slot')?.dispatchEvent(new Event('slotchange'));
   (dropdown as (HTMLElement & { updateComplete?: Promise<unknown> }) | null)?.updateComplete?.then?.(apply);
