@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file v1/plugin.proto.
  */
 export const file_v1_plugin: GenFile = /*@__PURE__*/
-  fileDesc("Cg92MS9wbHVnaW4ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIfCgNUYWcSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCSIkCghDYXRlZ29yeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJIoICCg1QbHVnaW5TdW1tYXJ5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMZGlzcGxheV9uYW1lGBkgASgJEhMKC2Rlc2NyaXB0aW9uGB4gASgJEhkKEWRlc2NyaXB0aW9uX3Nob3J0GCMgASgJEiIKBHRhZ3MYKCADKAsyFC5vcmdhbml6YXRpb24udjEuVGFnEi0KCmNhdGVnb3JpZXMYMiADKAsyGS5vcmdhbml6YXRpb24udjEuQ2F0ZWdvcnkSDQoFaW1hZ2UYPCABKAkSFgoOcGx1Z2luX3ZlcnNpb24YRiABKAkSFwoPZGVmaW5pdGlvbl9oYXNoGFAgASgJIhQKEkxpc3RQbHVnaW5zUmVxdWVzdCJGChNMaXN0UGx1Z2luc1Jlc3BvbnNlEi8KB3BsdWdpbnMYCiADKAsyHi5vcmdhbml6YXRpb24udjEuUGx1Z2luU3VtbWFyeSJLCgZQcmVzZXQSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRISCgpwbHVnaW5faWRzGCggAygJIhQKEkxpc3RQcmVzZXRzUmVxdWVzdCI/ChNMaXN0UHJlc2V0c1Jlc3BvbnNlEigKB3ByZXNldHMYCiADKAsyFy5vcmdhbml6YXRpb24udjEuUHJlc2V0Ik0KEURvY3VtZW50YXRpb25MaW5rEgoKAmlkGAogASgJEg0KBXRpdGxlGBQgASgJEhAKCHVybF9uYW1lGB4gASgJEgsKA3VybBgoIAEoCSIjCgZBdXRob3ISDAoEbmFtZRgKIAEoCRILCgN1cmwYFCABKAki9AIKDFBsdWdpbkRldGFpbBIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhQKDGRpc3BsYXlfbmFtZRgZIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRIZChFkZXNjcmlwdGlvbl9zaG9ydBgjIAEoCRIiCgR0YWdzGCggAygLMhQub3JnYW5pemF0aW9uLnYxLlRhZxItCgpjYXRlZ29yaWVzGDIgAygLMhkub3JnYW5pemF0aW9uLnYxLkNhdGVnb3J5EicKBmF1dGhvchg8IAEoCzIXLm9yZ2FuaXphdGlvbi52MS5BdXRob3ISFgoOcmVwb3NpdG9yeV91cmwYRiABKAkSPwoTZG9jdW1lbnRhdGlvbl9saW5rcxhQIAMoCzIiLm9yZ2FuaXphdGlvbi52MS5Eb2N1bWVudGF0aW9uTGluaxIWCg5wbHVnaW5fdmVyc2lvbhhaIAEoCRIXCg9kZWZpbml0aW9uX2hhc2gYZCABKAkiKwoWR2V0UGx1Z2luRGV0YWlsUmVxdWVzdBIRCglwbHVnaW5faWQYCiABKAkiSAoXR2V0UGx1Z2luRGV0YWlsUmVzcG9uc2USLQoGcGx1Z2luGAogASgLMh0ub3JnYW5pemF0aW9uLnYxLlBsdWdpbkRldGFpbCJqChpQdXRQbHVnaW5EZWZpbml0aW9uUmVxdWVzdBIRCglwbHVnaW5faWQYCiABKAkSFgoOcGx1Z2luX3ZlcnNpb24YFCABKAkSEAoIbWFuaWZlc3QYHiABKAwSDwoHcmVwbGFjZRgoIAEoCCJiChtQdXRQbHVnaW5EZWZpbml0aW9uUmVzcG9uc2USCgoCaWQYCiABKAkSEQoJcGx1Z2luX2lkGBQgASgJEhYKDnBsdWdpbl92ZXJzaW9uGB4gASgJEgwKBGhhc2gYKCABKAkiSQoaR2V0UGx1Z2luRGVmaW5pdGlvblJlcXVlc3QSEwoLcGx1Z2luX25hbWUYCiABKAkSFgoOcGx1Z2luX3ZlcnNpb24YFCABKAkidAobR2V0UGx1Z2luRGVmaW5pdGlvblJlc3BvbnNlEhAKCG1hbmlmZXN0GAogASgMEgwKBGhhc2gYFCABKAkSNQoKZGVmaW5pdGlvbhgeIAEoCzIhLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5EZWZpbml0aW9uIvUEChBQbHVnaW5EZWZpbml0aW9uEjsKCG1ldGFkYXRhGAogASgLMikub3JnYW5pemF0aW9uLnYxLlBsdWdpbkRlZmluaXRpb25NZXRhZGF0YRINCgVpbWFnZRgUIAEoCRIZChFpbWFnZV9wdWxsX3BvbGljeRgeIAEoCRI3CgtwZXJtaXNzaW9ucxgoIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5QZXJtaXNzaW9ucxIpCgRtZW51GDIgASgLMhsub3JnYW5pemF0aW9uLnYxLlBsdWdpbk1lbnUSDAoEY3Jkcxg8IAMoCRJSChFjdXN0b21fY29tcG9uZW50cxhGIAMoCzI3Lm9yZ2FuaXphdGlvbi52MS5QbHVnaW5EZWZpbml0aW9uLkN1c3RvbUNvbXBvbmVudHNFbnRyeRJBChFhbGxvd2VkX3Jlc291cmNlcxhQIAMoCzImLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5BbGxvd2VkUmVzb3VyY2USQAoIdWlfaGludHMYWiADKAsyLi5vcmdhbml6YXRpb24udjEuUGx1Z2luRGVmaW5pdGlvbi5VaUhpbnRzRW50cnkaYAoVQ3VzdG9tQ29tcG9uZW50c0VudHJ5EgsKA2tleRgBIAEoCRI2CgV2YWx1ZRgCIAEoCzInLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5Db21wb25lbnRNYXBwaW5nOgI4ARpNCgxVaUhpbnRzRW50cnkSCwoDa2V5GAEgASgJEiwKBXZhbHVlGAIgASgLMh0ub3JnYW5pemF0aW9uLnYxLlBsdWdpblVJSGludDoCOAEizAEKGFBsdWdpbkRlZmluaXRpb25NZXRhZGF0YRIMCgRuYW1lGAogASgJEhQKDGRpc3BsYXlfbmFtZRgUIAEoCRIPCgd2ZXJzaW9uGB4gASgJEhMKC2Rlc2NyaXB0aW9uGCggASgJEg4KBmF1dGhvchgyIAEoCRIPCgdsaWNlbnNlGDwgASgJEgwKBGljb24YRiABKAkSKQoEdXJscxhQIAEoCzIbLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5VUkxzEgwKBHRhZ3MYWiADKAkiSQoKUGx1Z2luVVJMcxIQCghob21lcGFnZRgKIAEoCRISCgpyZXBvc2l0b3J5GBQgASgJEhUKDWRvY3VtZW50YXRpb24YHiABKAkiWgoRUGx1Z2luUGVybWlzc2lvbnMSFAoMY2FwYWJpbGl0aWVzGAogAygJEi8KBHJiYWMYFCADKAsyIS5vcmdhbml6YXRpb24udjEuUGx1Z2luUG9saWN5UnVsZSJIChBQbHVnaW5Qb2xpY3lSdWxlEhIKCmFwaV9ncm91cHMYCiADKAkSEQoJcmVzb3VyY2VzGBQgAygJEg0KBXZlcmJzGB4gAygJIncKClBsdWdpbk1lbnUSNgoMb3JnYW5pemF0aW9uGAogAygLMiAub3JnYW5pemF0aW9uLnYxLlBsdWdpbk1lbnVFbnRyeRIxCgdwcm9qZWN0GBQgAygLMiAub3JnYW5pemF0aW9uLnYxLlBsdWdpbk1lbnVFbnRyeSJKCg9QbHVnaW5NZW51RW50cnkSCwoDY3JkGAogASgJEgwKBGxpc3QYFCABKAgSDgoGZGV0YWlsGB4gASgIEgwKBGljb24YKCABKAkiRgoWUGx1Z2luQ29tcG9uZW50TWFwcGluZxIMCgRsaXN0GAogASgJEg4KBmRldGFpbBgUIAEoCRIOCgZjcmVhdGUYHiABKAkiWAoVUGx1Z2luQWxsb3dlZFJlc291cmNlEg0KBWdyb3VwGAogASgJEg8KB3ZlcnNpb24YFCABKAkSEAoIcmVzb3VyY2UYHiABKAkSDQoFdmVyYnMYKCADKAkigwEKDFBsdWdpblVJSGludBI1Cgtmb3JtX2dyb3VwcxgKIAMoCzIgLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5Gb3JtR3JvdXASPAoOc3RhdHVzX21hcHBpbmcYFCABKAsyJC5vcmdhbml6YXRpb24udjEuUGx1Z2luU3RhdHVzTWFwcGluZyIvCg9QbHVnaW5Gb3JtR3JvdXASDAoEbmFtZRgKIAEoCRIOCgZmaWVsZHMYFCADKAkivQEKE1BsdWdpblN0YXR1c01hcHBpbmcSEQoJanNvbl9wYXRoGAogASgJEkAKBnZhbHVlcxgUIAMoCzIwLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5TdGF0dXNNYXBwaW5nLlZhbHVlc0VudHJ5GlEKC1ZhbHVlc0VudHJ5EgsKA2tleRgBIAEoCRIxCgV2YWx1ZRgCIAEoCzIiLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5TdGF0dXNWYWx1ZToCOAEiMQoRUGx1Z2luU3RhdHVzVmFsdWUSDQoFYmFkZ2UYCiABKAkSDQoFbGFiZWwYFCABKAkyjQQKDVBsdWdpblNlcnZpY2USWAoLTGlzdFBsdWdpbnMSIy5vcmdhbml6YXRpb24udjEuTGlzdFBsdWdpbnNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5zUmVzcG9uc2USZAoPR2V0UGx1Z2luRGV0YWlsEicub3JnYW5pemF0aW9uLnYxLkdldFBsdWdpbkRldGFpbFJlcXVlc3QaKC5vcmdhbml6YXRpb24udjEuR2V0UGx1Z2luRGV0YWlsUmVzcG9uc2USWAoLTGlzdFByZXNldHMSIy5vcmdhbml6YXRpb24udjEuTGlzdFByZXNldHNSZXF1ZXN0GiQub3JnYW5pemF0aW9uLnYxLkxpc3RQcmVzZXRzUmVzcG9uc2UScAoTUHV0UGx1Z2luRGVmaW5pdGlvbhIrLm9yZ2FuaXphdGlvbi52MS5QdXRQbHVnaW5EZWZpbml0aW9uUmVxdWVzdBosLm9yZ2FuaXphdGlvbi52MS5QdXRQbHVnaW5EZWZpbml0aW9uUmVzcG9uc2UScAoTR2V0UGx1Z2luRGVmaW5pdGlvbhIrLm9yZ2FuaXphdGlvbi52MS5HZXRQbHVnaW5EZWZpbml0aW9uUmVxdWVzdBosLm9yZ2FuaXphdGlvbi52MS5HZXRQbHVnaW5EZWZpbml0aW9uUmVzcG9uc2VCX1pTZ2l0aHViLmNvbS9mdW5kYW1lbnQtb3NzL2Z1bmRhbWVudC9vcmdhbml6YXRpb24tYXBpL3BrZy9wcm90by9nZW4vdjE7b3JnYW5pemF0aW9udjGSAwcIAtI+AhADYghlZGl0aW9uc3DoBw", [file_google_protobuf_go_features]);
+  fileDesc("Cg92MS9wbHVnaW4ucHJvdG8SD29yZ2FuaXphdGlvbi52MSIfCgNUYWcSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCSIkCghDYXRlZ29yeRIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJIoICCg1QbHVnaW5TdW1tYXJ5EgoKAmlkGAogASgJEgwKBG5hbWUYFCABKAkSFAoMZGlzcGxheV9uYW1lGBkgASgJEhMKC2Rlc2NyaXB0aW9uGB4gASgJEhkKEWRlc2NyaXB0aW9uX3Nob3J0GCMgASgJEiIKBHRhZ3MYKCADKAsyFC5vcmdhbml6YXRpb24udjEuVGFnEi0KCmNhdGVnb3JpZXMYMiADKAsyGS5vcmdhbml6YXRpb24udjEuQ2F0ZWdvcnkSDQoFaW1hZ2UYPCABKAkSFgoOcGx1Z2luX3ZlcnNpb24YRiABKAkSFwoPZGVmaW5pdGlvbl9oYXNoGFAgASgJIhQKEkxpc3RQbHVnaW5zUmVxdWVzdCJGChNMaXN0UGx1Z2luc1Jlc3BvbnNlEi8KB3BsdWdpbnMYCiADKAsyHi5vcmdhbml6YXRpb24udjEuUGx1Z2luU3VtbWFyeSJLCgZQcmVzZXQSCgoCaWQYCiABKAkSDAoEbmFtZRgUIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRISCgpwbHVnaW5faWRzGCggAygJIhQKEkxpc3RQcmVzZXRzUmVxdWVzdCI/ChNMaXN0UHJlc2V0c1Jlc3BvbnNlEigKB3ByZXNldHMYCiADKAsyFy5vcmdhbml6YXRpb24udjEuUHJlc2V0Ik0KEURvY3VtZW50YXRpb25MaW5rEgoKAmlkGAogASgJEg0KBXRpdGxlGBQgASgJEhAKCHVybF9uYW1lGB4gASgJEgsKA3VybBgoIAEoCSIjCgZBdXRob3ISDAoEbmFtZRgKIAEoCRILCgN1cmwYFCABKAki9AIKDFBsdWdpbkRldGFpbBIKCgJpZBgKIAEoCRIMCgRuYW1lGBQgASgJEhQKDGRpc3BsYXlfbmFtZRgZIAEoCRITCgtkZXNjcmlwdGlvbhgeIAEoCRIZChFkZXNjcmlwdGlvbl9zaG9ydBgjIAEoCRIiCgR0YWdzGCggAygLMhQub3JnYW5pemF0aW9uLnYxLlRhZxItCgpjYXRlZ29yaWVzGDIgAygLMhkub3JnYW5pemF0aW9uLnYxLkNhdGVnb3J5EicKBmF1dGhvchg8IAEoCzIXLm9yZ2FuaXphdGlvbi52MS5BdXRob3ISFgoOcmVwb3NpdG9yeV91cmwYRiABKAkSPwoTZG9jdW1lbnRhdGlvbl9saW5rcxhQIAMoCzIiLm9yZ2FuaXphdGlvbi52MS5Eb2N1bWVudGF0aW9uTGluaxIWCg5wbHVnaW5fdmVyc2lvbhhaIAEoCRIXCg9kZWZpbml0aW9uX2hhc2gYZCABKAkiKwoWR2V0UGx1Z2luRGV0YWlsUmVxdWVzdBIRCglwbHVnaW5faWQYCiABKAkiSAoXR2V0UGx1Z2luRGV0YWlsUmVzcG9uc2USLQoGcGx1Z2luGAogASgLMh0ub3JnYW5pemF0aW9uLnYxLlBsdWdpbkRldGFpbCJqChpQdXRQbHVnaW5EZWZpbml0aW9uUmVxdWVzdBIRCglwbHVnaW5faWQYCiABKAkSFgoOcGx1Z2luX3ZlcnNpb24YFCABKAkSEAoIbWFuaWZlc3QYHiABKAwSDwoHcmVwbGFjZRgoIAEoCCJiChtQdXRQbHVnaW5EZWZpbml0aW9uUmVzcG9uc2USCgoCaWQYCiABKAkSEQoJcGx1Z2luX2lkGBQgASgJEhYKDnBsdWdpbl92ZXJzaW9uGB4gASgJEgwKBGhhc2gYKCABKAkiSQoaR2V0UGx1Z2luRGVmaW5pdGlvblJlcXVlc3QSEwoLcGx1Z2luX25hbWUYCiABKAkSFgoOcGx1Z2luX3ZlcnNpb24YFCABKAkidAobR2V0UGx1Z2luRGVmaW5pdGlvblJlc3BvbnNlEhAKCG1hbmlmZXN0GAogASgMEgwKBGhhc2gYFCABKAkSNQoKZGVmaW5pdGlvbhgeIAEoCzIhLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5EZWZpbml0aW9uIjEKHExpc3RQbHVnaW5EZWZpbml0aW9uc1JlcXVlc3QSEQoJcGx1Z2luX2lkGAogASgJIl4KHUxpc3RQbHVnaW5EZWZpbml0aW9uc1Jlc3BvbnNlEj0KC2RlZmluaXRpb25zGAogAygLMigub3JnYW5pemF0aW9uLnYxLlBsdWdpbkRlZmluaXRpb25WZXJzaW9uIjgKF1BsdWdpbkRlZmluaXRpb25WZXJzaW9uEg8KB3ZlcnNpb24YCiABKAkSDAoEaGFzaBgUIAEoCSL1BAoQUGx1Z2luRGVmaW5pdGlvbhI7CghtZXRhZGF0YRgKIAEoCzIpLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5EZWZpbml0aW9uTWV0YWRhdGESDQoFaW1hZ2UYFCABKAkSGQoRaW1hZ2VfcHVsbF9wb2xpY3kYHiABKAkSNwoLcGVybWlzc2lvbnMYKCABKAsyIi5vcmdhbml6YXRpb24udjEuUGx1Z2luUGVybWlzc2lvbnMSKQoEbWVudRgyIAEoCzIbLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5NZW51EgwKBGNyZHMYPCADKAkSUgoRY3VzdG9tX2NvbXBvbmVudHMYRiADKAsyNy5vcmdhbml6YXRpb24udjEuUGx1Z2luRGVmaW5pdGlvbi5DdXN0b21Db21wb25lbnRzRW50cnkSQQoRYWxsb3dlZF9yZXNvdXJjZXMYUCADKAsyJi5vcmdhbml6YXRpb24udjEuUGx1Z2luQWxsb3dlZFJlc291cmNlEkAKCHVpX2hpbnRzGFogAygLMi4ub3JnYW5pemF0aW9uLnYxLlBsdWdpbkRlZmluaXRpb24uVWlIaW50c0VudHJ5GmAKFUN1c3RvbUNvbXBvbmVudHNFbnRyeRILCgNrZXkYASABKAkSNgoFdmFsdWUYAiABKAsyJy5vcmdhbml6YXRpb24udjEuUGx1Z2luQ29tcG9uZW50TWFwcGluZzoCOAEaTQoMVWlIaW50c0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5VSUhpbnQ6AjgBIswBChhQbHVnaW5EZWZpbml0aW9uTWV0YWRhdGESDAoEbmFtZRgKIAEoCRIUCgxkaXNwbGF5X25hbWUYFCABKAkSDwoHdmVyc2lvbhgeIAEoCRITCgtkZXNjcmlwdGlvbhgoIAEoCRIOCgZhdXRob3IYMiABKAkSDwoHbGljZW5zZRg8IAEoCRIMCgRpY29uGEYgASgJEikKBHVybHMYUCABKAsyGy5vcmdhbml6YXRpb24udjEuUGx1Z2luVVJMcxIMCgR0YWdzGFogAygJIkkKClBsdWdpblVSTHMSEAoIaG9tZXBhZ2UYCiABKAkSEgoKcmVwb3NpdG9yeRgUIAEoCRIVCg1kb2N1bWVudGF0aW9uGB4gASgJIloKEVBsdWdpblBlcm1pc3Npb25zEhQKDGNhcGFiaWxpdGllcxgKIAMoCRIvCgRyYmFjGBQgAygLMiEub3JnYW5pemF0aW9uLnYxLlBsdWdpblBvbGljeVJ1bGUiSAoQUGx1Z2luUG9saWN5UnVsZRISCgphcGlfZ3JvdXBzGAogAygJEhEKCXJlc291cmNlcxgUIAMoCRINCgV2ZXJicxgeIAMoCSJ3CgpQbHVnaW5NZW51EjYKDG9yZ2FuaXphdGlvbhgKIAMoCzIgLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5NZW51RW50cnkSMQoHcHJvamVjdBgUIAMoCzIgLm9yZ2FuaXphdGlvbi52MS5QbHVnaW5NZW51RW50cnkiSgoPUGx1Z2luTWVudUVudHJ5EgsKA2NyZBgKIAEoCRIMCgRsaXN0GBQgASgIEg4KBmRldGFpbBgeIAEoCBIMCgRpY29uGCggASgJIkYKFlBsdWdpbkNvbXBvbmVudE1hcHBpbmcSDAoEbGlzdBgKIAEoCRIOCgZkZXRhaWwYFCABKAkSDgoGY3JlYXRlGB4gASgJIlgKFVBsdWdpbkFsbG93ZWRSZXNvdXJjZRINCgVncm91cBgKIAEoCRIPCgd2ZXJzaW9uGBQgASgJEhAKCHJlc291cmNlGB4gASgJEg0KBXZlcmJzGCggAygJIoMBCgxQbHVnaW5VSUhpbnQSNQoLZm9ybV9ncm91cHMYCiADKAsyIC5vcmdhbml6YXRpb24udjEuUGx1Z2luRm9ybUdyb3VwEjwKDnN0YXR1c19tYXBwaW5nGBQgASgLMiQub3JnYW5pemF0aW9uLnYxLlBsdWdpblN0YXR1c01hcHBpbmciLwoPUGx1Z2luRm9ybUdyb3VwEgwKBG5hbWUYCiABKAkSDgoGZmllbGRzGBQgAygJIr0BChNQbHVnaW5TdGF0dXNNYXBwaW5nEhEKCWpzb25fcGF0aBgKIAEoCRJACgZ2YWx1ZXMYFCADKAsyMC5vcmdhbml6YXRpb24udjEuUGx1Z2luU3RhdHVzTWFwcGluZy5WYWx1ZXNFbnRyeRpRCgtWYWx1ZXNFbnRyeRILCgNrZXkYASABKAkSMQoFdmFsdWUYAiABKAsyIi5vcmdhbml6YXRpb24udjEuUGx1Z2luU3RhdHVzVmFsdWU6AjgBIjEKEVBsdWdpblN0YXR1c1ZhbHVlEg0KBWJhZGdlGAogASgJEg0KBWxhYmVsGBQgASgJMoUFCg1QbHVnaW5TZXJ2aWNlElgKC0xpc3RQbHVnaW5zEiMub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5zUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5MaXN0UGx1Z2luc1Jlc3BvbnNlEmQKD0dldFBsdWdpbkRldGFpbBInLm9yZ2FuaXphdGlvbi52MS5HZXRQbHVnaW5EZXRhaWxSZXF1ZXN0Gigub3JnYW5pemF0aW9uLnYxLkdldFBsdWdpbkRldGFpbFJlc3BvbnNlElgKC0xpc3RQcmVzZXRzEiMub3JnYW5pemF0aW9uLnYxLkxpc3RQcmVzZXRzUmVxdWVzdBokLm9yZ2FuaXphdGlvbi52MS5MaXN0UHJlc2V0c1Jlc3BvbnNlEnYKFUxpc3RQbHVnaW5EZWZpbml0aW9ucxItLm9yZ2FuaXphdGlvbi52MS5MaXN0UGx1Z2luRGVmaW5pdGlvbnNSZXF1ZXN0Gi4ub3JnYW5pemF0aW9uLnYxLkxpc3RQbHVnaW5EZWZpbml0aW9uc1Jlc3BvbnNlEnAKE1B1dFBsdWdpbkRlZmluaXRpb24SKy5vcmdhbml6YXRpb24udjEuUHV0UGx1Z2luRGVmaW5pdGlvblJlcXVlc3QaLC5vcmdhbml6YXRpb24udjEuUHV0UGx1Z2luRGVmaW5pdGlvblJlc3BvbnNlEnAKE0dldFBsdWdpbkRlZmluaXRpb24SKy5vcmdhbml6YXRpb24udjEuR2V0UGx1Z2luRGVmaW5pdGlvblJlcXVlc3QaLC5vcmdhbml6YXRpb24udjEuR2V0UGx1Z2luRGVmaW5pdGlvblJlc3BvbnNlQl9aU2dpdGh1Yi5jb20vZnVuZGFtZW50LW9zcy9mdW5kYW1lbnQvb3JnYW5pemF0aW9uLWFwaS9wa2cvcHJvdG8vZ2VuL3YxO29yZ2FuaXphdGlvbnYxkgMHCALSPgIQA2IIZWRpdGlvbnNw6Ac", [file_google_protobuf_go_features]);
 
 /**
  * Tag information
@@ -533,6 +533,65 @@ export const GetPluginDefinitionResponseSchema: GenMessage<GetPluginDefinitionRe
   messageDesc(file_v1_plugin, 16);
 
 /**
+ * @generated from message organization.v1.ListPluginDefinitionsRequest
+ */
+export type ListPluginDefinitionsRequest = Message<"organization.v1.ListPluginDefinitionsRequest"> & {
+  /**
+   * @generated from field: string plugin_id = 10;
+   */
+  pluginId: string;
+};
+
+/**
+ * Describes the message organization.v1.ListPluginDefinitionsRequest.
+ * Use `create(ListPluginDefinitionsRequestSchema)` to create a new message.
+ */
+export const ListPluginDefinitionsRequestSchema: GenMessage<ListPluginDefinitionsRequest> = /*@__PURE__*/
+  messageDesc(file_v1_plugin, 17);
+
+/**
+ * @generated from message organization.v1.ListPluginDefinitionsResponse
+ */
+export type ListPluginDefinitionsResponse = Message<"organization.v1.ListPluginDefinitionsResponse"> & {
+  /**
+   * @generated from field: repeated organization.v1.PluginDefinitionVersion definitions = 10;
+   */
+  definitions: PluginDefinitionVersion[];
+};
+
+/**
+ * Describes the message organization.v1.ListPluginDefinitionsResponse.
+ * Use `create(ListPluginDefinitionsResponseSchema)` to create a new message.
+ */
+export const ListPluginDefinitionsResponseSchema: GenMessage<ListPluginDefinitionsResponse> = /*@__PURE__*/
+  messageDesc(file_v1_plugin, 18);
+
+/**
+ * A published definition's pin: the version an install references and the
+ * sha256 hash of that manifest.
+ *
+ * @generated from message organization.v1.PluginDefinitionVersion
+ */
+export type PluginDefinitionVersion = Message<"organization.v1.PluginDefinitionVersion"> & {
+  /**
+   * @generated from field: string version = 10;
+   */
+  version: string;
+
+  /**
+   * @generated from field: string hash = 20;
+   */
+  hash: string;
+};
+
+/**
+ * Describes the message organization.v1.PluginDefinitionVersion.
+ * Use `create(PluginDefinitionVersionSchema)` to create a new message.
+ */
+export const PluginDefinitionVersionSchema: GenMessage<PluginDefinitionVersion> = /*@__PURE__*/
+  messageDesc(file_v1_plugin, 19);
+
+/**
  * @generated from message organization.v1.PluginDefinition
  */
 export type PluginDefinition = Message<"organization.v1.PluginDefinition"> & {
@@ -587,7 +646,7 @@ export type PluginDefinition = Message<"organization.v1.PluginDefinition"> & {
  * Use `create(PluginDefinitionSchema)` to create a new message.
  */
 export const PluginDefinitionSchema: GenMessage<PluginDefinition> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 17);
+  messageDesc(file_v1_plugin, 20);
 
 /**
  * @generated from message organization.v1.PluginDefinitionMetadata
@@ -644,7 +703,7 @@ export type PluginDefinitionMetadata = Message<"organization.v1.PluginDefinition
  * Use `create(PluginDefinitionMetadataSchema)` to create a new message.
  */
 export const PluginDefinitionMetadataSchema: GenMessage<PluginDefinitionMetadata> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 18);
+  messageDesc(file_v1_plugin, 21);
 
 /**
  * @generated from message organization.v1.PluginURLs
@@ -671,7 +730,7 @@ export type PluginURLs = Message<"organization.v1.PluginURLs"> & {
  * Use `create(PluginURLsSchema)` to create a new message.
  */
 export const PluginURLsSchema: GenMessage<PluginURLs> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 19);
+  messageDesc(file_v1_plugin, 22);
 
 /**
  * @generated from message organization.v1.PluginPermissions
@@ -693,7 +752,7 @@ export type PluginPermissions = Message<"organization.v1.PluginPermissions"> & {
  * Use `create(PluginPermissionsSchema)` to create a new message.
  */
 export const PluginPermissionsSchema: GenMessage<PluginPermissions> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 20);
+  messageDesc(file_v1_plugin, 23);
 
 /**
  * @generated from message organization.v1.PluginPolicyRule
@@ -720,7 +779,7 @@ export type PluginPolicyRule = Message<"organization.v1.PluginPolicyRule"> & {
  * Use `create(PluginPolicyRuleSchema)` to create a new message.
  */
 export const PluginPolicyRuleSchema: GenMessage<PluginPolicyRule> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 21);
+  messageDesc(file_v1_plugin, 24);
 
 /**
  * @generated from message organization.v1.PluginMenu
@@ -742,7 +801,7 @@ export type PluginMenu = Message<"organization.v1.PluginMenu"> & {
  * Use `create(PluginMenuSchema)` to create a new message.
  */
 export const PluginMenuSchema: GenMessage<PluginMenu> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 22);
+  messageDesc(file_v1_plugin, 25);
 
 /**
  * @generated from message organization.v1.PluginMenuEntry
@@ -774,7 +833,7 @@ export type PluginMenuEntry = Message<"organization.v1.PluginMenuEntry"> & {
  * Use `create(PluginMenuEntrySchema)` to create a new message.
  */
 export const PluginMenuEntrySchema: GenMessage<PluginMenuEntry> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 23);
+  messageDesc(file_v1_plugin, 26);
 
 /**
  * @generated from message organization.v1.PluginComponentMapping
@@ -801,7 +860,7 @@ export type PluginComponentMapping = Message<"organization.v1.PluginComponentMap
  * Use `create(PluginComponentMappingSchema)` to create a new message.
  */
 export const PluginComponentMappingSchema: GenMessage<PluginComponentMapping> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 24);
+  messageDesc(file_v1_plugin, 27);
 
 /**
  * @generated from message organization.v1.PluginAllowedResource
@@ -833,7 +892,7 @@ export type PluginAllowedResource = Message<"organization.v1.PluginAllowedResour
  * Use `create(PluginAllowedResourceSchema)` to create a new message.
  */
 export const PluginAllowedResourceSchema: GenMessage<PluginAllowedResource> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 25);
+  messageDesc(file_v1_plugin, 28);
 
 /**
  * @generated from message organization.v1.PluginUIHint
@@ -855,7 +914,7 @@ export type PluginUIHint = Message<"organization.v1.PluginUIHint"> & {
  * Use `create(PluginUIHintSchema)` to create a new message.
  */
 export const PluginUIHintSchema: GenMessage<PluginUIHint> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 26);
+  messageDesc(file_v1_plugin, 29);
 
 /**
  * @generated from message organization.v1.PluginFormGroup
@@ -877,7 +936,7 @@ export type PluginFormGroup = Message<"organization.v1.PluginFormGroup"> & {
  * Use `create(PluginFormGroupSchema)` to create a new message.
  */
 export const PluginFormGroupSchema: GenMessage<PluginFormGroup> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 27);
+  messageDesc(file_v1_plugin, 30);
 
 /**
  * @generated from message organization.v1.PluginStatusMapping
@@ -899,7 +958,7 @@ export type PluginStatusMapping = Message<"organization.v1.PluginStatusMapping">
  * Use `create(PluginStatusMappingSchema)` to create a new message.
  */
 export const PluginStatusMappingSchema: GenMessage<PluginStatusMapping> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 28);
+  messageDesc(file_v1_plugin, 31);
 
 /**
  * @generated from message organization.v1.PluginStatusValue
@@ -921,7 +980,7 @@ export type PluginStatusValue = Message<"organization.v1.PluginStatusValue"> & {
  * Use `create(PluginStatusValueSchema)` to create a new message.
  */
 export const PluginStatusValueSchema: GenMessage<PluginStatusValue> = /*@__PURE__*/
-  messageDesc(file_v1_plugin, 29);
+  messageDesc(file_v1_plugin, 32);
 
 /**
  * PluginService provides information about available plugins and presets
@@ -958,6 +1017,17 @@ export const PluginService: GenService<{
     methodKind: "unary";
     input: typeof ListPresetsRequestSchema;
     output: typeof ListPresetsResponseSchema;
+  },
+  /**
+   * List the published definitions (version + hash) for a plugin, latest first.
+   * Used by the console to offer a version to pin on install.
+   *
+   * @generated from rpc organization.v1.PluginService.ListPluginDefinitions
+   */
+  listPluginDefinitions: {
+    methodKind: "unary";
+    input: typeof ListPluginDefinitionsRequestSchema;
+    output: typeof ListPluginDefinitionsResponseSchema;
   },
   /**
    * Idempotent upsert of a plugin definition. Server computes the hash from the

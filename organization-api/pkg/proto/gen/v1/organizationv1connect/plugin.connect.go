@@ -42,6 +42,9 @@ const (
 	// PluginServiceListPresetsProcedure is the fully-qualified name of the PluginService's ListPresets
 	// RPC.
 	PluginServiceListPresetsProcedure = "/organization.v1.PluginService/ListPresets"
+	// PluginServiceListPluginDefinitionsProcedure is the fully-qualified name of the PluginService's
+	// ListPluginDefinitions RPC.
+	PluginServiceListPluginDefinitionsProcedure = "/organization.v1.PluginService/ListPluginDefinitions"
 	// PluginServicePutPluginDefinitionProcedure is the fully-qualified name of the PluginService's
 	// PutPluginDefinition RPC.
 	PluginServicePutPluginDefinitionProcedure = "/organization.v1.PluginService/PutPluginDefinition"
@@ -58,6 +61,9 @@ type PluginServiceClient interface {
 	GetPluginDetail(context.Context, *connect.Request[v1.GetPluginDetailRequest]) (*connect.Response[v1.GetPluginDetailResponse], error)
 	// List all available presets
 	ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error)
+	// List the published definitions (version + hash) for a plugin, latest first.
+	// Used by the console to offer a version to pin on install.
+	ListPluginDefinitions(context.Context, *connect.Request[v1.ListPluginDefinitionsRequest]) (*connect.Response[v1.ListPluginDefinitionsResponse], error)
 	// Idempotent upsert of a plugin definition. Server computes the hash from the
 	// manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
 	// same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
@@ -100,6 +106,12 @@ func NewPluginServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(pluginServiceMethods.ByName("ListPresets")),
 			connect.WithClientOptions(opts...),
 		),
+		listPluginDefinitions: connect.NewClient[v1.ListPluginDefinitionsRequest, v1.ListPluginDefinitionsResponse](
+			httpClient,
+			baseURL+PluginServiceListPluginDefinitionsProcedure,
+			connect.WithSchema(pluginServiceMethods.ByName("ListPluginDefinitions")),
+			connect.WithClientOptions(opts...),
+		),
 		putPluginDefinition: connect.NewClient[v1.PutPluginDefinitionRequest, v1.PutPluginDefinitionResponse](
 			httpClient,
 			baseURL+PluginServicePutPluginDefinitionProcedure,
@@ -117,11 +129,12 @@ func NewPluginServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // pluginServiceClient implements PluginServiceClient.
 type pluginServiceClient struct {
-	listPlugins         *connect.Client[v1.ListPluginsRequest, v1.ListPluginsResponse]
-	getPluginDetail     *connect.Client[v1.GetPluginDetailRequest, v1.GetPluginDetailResponse]
-	listPresets         *connect.Client[v1.ListPresetsRequest, v1.ListPresetsResponse]
-	putPluginDefinition *connect.Client[v1.PutPluginDefinitionRequest, v1.PutPluginDefinitionResponse]
-	getPluginDefinition *connect.Client[v1.GetPluginDefinitionRequest, v1.GetPluginDefinitionResponse]
+	listPlugins           *connect.Client[v1.ListPluginsRequest, v1.ListPluginsResponse]
+	getPluginDetail       *connect.Client[v1.GetPluginDetailRequest, v1.GetPluginDetailResponse]
+	listPresets           *connect.Client[v1.ListPresetsRequest, v1.ListPresetsResponse]
+	listPluginDefinitions *connect.Client[v1.ListPluginDefinitionsRequest, v1.ListPluginDefinitionsResponse]
+	putPluginDefinition   *connect.Client[v1.PutPluginDefinitionRequest, v1.PutPluginDefinitionResponse]
+	getPluginDefinition   *connect.Client[v1.GetPluginDefinitionRequest, v1.GetPluginDefinitionResponse]
 }
 
 // ListPlugins calls organization.v1.PluginService.ListPlugins.
@@ -137,6 +150,11 @@ func (c *pluginServiceClient) GetPluginDetail(ctx context.Context, req *connect.
 // ListPresets calls organization.v1.PluginService.ListPresets.
 func (c *pluginServiceClient) ListPresets(ctx context.Context, req *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error) {
 	return c.listPresets.CallUnary(ctx, req)
+}
+
+// ListPluginDefinitions calls organization.v1.PluginService.ListPluginDefinitions.
+func (c *pluginServiceClient) ListPluginDefinitions(ctx context.Context, req *connect.Request[v1.ListPluginDefinitionsRequest]) (*connect.Response[v1.ListPluginDefinitionsResponse], error) {
+	return c.listPluginDefinitions.CallUnary(ctx, req)
 }
 
 // PutPluginDefinition calls organization.v1.PluginService.PutPluginDefinition.
@@ -157,6 +175,9 @@ type PluginServiceHandler interface {
 	GetPluginDetail(context.Context, *connect.Request[v1.GetPluginDetailRequest]) (*connect.Response[v1.GetPluginDetailResponse], error)
 	// List all available presets
 	ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error)
+	// List the published definitions (version + hash) for a plugin, latest first.
+	// Used by the console to offer a version to pin on install.
+	ListPluginDefinitions(context.Context, *connect.Request[v1.ListPluginDefinitionsRequest]) (*connect.Response[v1.ListPluginDefinitionsResponse], error)
 	// Idempotent upsert of a plugin definition. Server computes the hash from the
 	// manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
 	// same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
@@ -195,6 +216,12 @@ func NewPluginServiceHandler(svc PluginServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(pluginServiceMethods.ByName("ListPresets")),
 		connect.WithHandlerOptions(opts...),
 	)
+	pluginServiceListPluginDefinitionsHandler := connect.NewUnaryHandler(
+		PluginServiceListPluginDefinitionsProcedure,
+		svc.ListPluginDefinitions,
+		connect.WithSchema(pluginServiceMethods.ByName("ListPluginDefinitions")),
+		connect.WithHandlerOptions(opts...),
+	)
 	pluginServicePutPluginDefinitionHandler := connect.NewUnaryHandler(
 		PluginServicePutPluginDefinitionProcedure,
 		svc.PutPluginDefinition,
@@ -215,6 +242,8 @@ func NewPluginServiceHandler(svc PluginServiceHandler, opts ...connect.HandlerOp
 			pluginServiceGetPluginDetailHandler.ServeHTTP(w, r)
 		case PluginServiceListPresetsProcedure:
 			pluginServiceListPresetsHandler.ServeHTTP(w, r)
+		case PluginServiceListPluginDefinitionsProcedure:
+			pluginServiceListPluginDefinitionsHandler.ServeHTTP(w, r)
 		case PluginServicePutPluginDefinitionProcedure:
 			pluginServicePutPluginDefinitionHandler.ServeHTTP(w, r)
 		case PluginServiceGetPluginDefinitionProcedure:
@@ -238,6 +267,10 @@ func (UnimplementedPluginServiceHandler) GetPluginDetail(context.Context, *conne
 
 func (UnimplementedPluginServiceHandler) ListPresets(context.Context, *connect.Request[v1.ListPresetsRequest]) (*connect.Response[v1.ListPresetsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.PluginService.ListPresets is not implemented"))
+}
+
+func (UnimplementedPluginServiceHandler) ListPluginDefinitions(context.Context, *connect.Request[v1.ListPluginDefinitionsRequest]) (*connect.Response[v1.ListPluginDefinitionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.PluginService.ListPluginDefinitions is not implemented"))
 }
 
 func (UnimplementedPluginServiceHandler) PutPluginDefinition(context.Context, *connect.Request[v1.PutPluginDefinitionRequest]) (*connect.Response[v1.PutPluginDefinitionResponse], error) {
