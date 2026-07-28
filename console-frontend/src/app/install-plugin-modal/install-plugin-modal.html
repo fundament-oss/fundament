@@ -16,21 +16,26 @@
   @if (versions().length > 0) {
     <nldd-form-field label="Version" class="mb-4 block">
       <nldd-dropdown>
-        <select
-          [value]="selectedVersion()"
-          (change)="onVersionChange($any($event).target.value)"
-        >
+        <select [value]="selectedVersion()" (change)="onVersionChange($any($event).target.value)">
           @for (v of versions(); track v.version) {
             <option [value]="v.version">{{ v.version }}</option>
           }
         </select>
       </nldd-dropdown>
     </nldd-form-field>
+  } @else if (versionsError()) {
+    <nldd-box class="mb-4 block">
+      <nldd-inline-dialog
+        icon="exclamation-triangle"
+        icon-color="critical"
+        text="Couldn't load versions"
+        supporting-text="Something went wrong loading this plugin's versions. Close this dialog and try again."
+      ></nldd-inline-dialog>
+    </nldd-box>
   } @else {
     <nldd-box class="mb-4 block">
       <nldd-inline-dialog
-        icon="ship-wheel"
-        icon-color="secondary"
+        variant="alert"
         text="No published version"
         supporting-text="This plugin has no published definition to install yet."
       ></nldd-inline-dialog>
@@ -126,7 +131,9 @@
     text="Install on selected ({{ selectedCount() }})"
     variant="primary"
     [attr.disabled]="
-      eligibleClusters().length === 0 || selectedCount() === 0 || versions().length === 0 ? '' : null
+      eligibleClusters().length === 0 || selectedCount() === 0 || versions().length === 0
+        ? ''
+        : null
     "
   ></nldd-button>
   <nldd-button

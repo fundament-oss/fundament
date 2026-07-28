@@ -83,6 +83,10 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
   // Published versions of this plugin, offered in the install modal.
   installVersions = signal<PluginVersionOption[]>([]);
 
+  // True when fetching the versions failed, so the modal can show an error
+  // state instead of the "no published version" notice.
+  installVersionsError = signal(false);
+
   isLoading = signal<boolean>(true);
 
   errorMessage = signal<string | null>(null);
@@ -166,28 +170,37 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   async openInstallModal(): Promise<void> {
     const plugin = this.plugin();
-    this.installVersions.set(plugin ? await this.fetchPluginVersions(plugin.id) : []);
+    this.installVersionsError.set(false);
+    if (!plugin) {
+      this.installVersions.set([]);
+      this.showInstallModal.set(true);
+      return;
+    }
+    try {
+      this.installVersions.set(await this.fetchPluginVersions(plugin.id));
+    } catch {
+      this.installVersions.set([]);
+      this.installVersionsError.set(true);
+    }
     this.showInstallModal.set(true);
   }
 
   // Fetches the plugin's published versions (latest first) for the install
-  // modal's version picker; returns [] on failure so the modal shows its
-  // "no published version" state rather than breaking.
+  // modal's version picker. Throws on failure so the caller can tell a fetch
+  // error apart from a plugin that simply has nothing published yet.
   private async fetchPluginVersions(pluginId: string): Promise<PluginVersionOption[]> {
-    try {
-      const resp = await firstValueFrom(
-        this.pluginClient.listPluginDefinitions(
-          create(ListPluginDefinitionsRequestSchema, { pluginId }),
-        ),
-      );
-      return resp.definitions.map((d) => ({ version: d.version, hash: d.hash }));
-    } catch {
-      return [];
-    }
+    const resp = await firstValueFrom(
+      this.pluginClient.listPluginDefinitions(
+        create(ListPluginDefinitionsRequestSchema, { pluginId }),
+      ),
+    );
+    return resp.definitions.map((d) => ({ version: d.version, hash: d.hash }));
   }
 
   closeInstallModal(): void {
     this.showInstallModal.set(false);
+    this.installVersions.set([]);
+    this.installVersionsError.set(false);
   }
 
   ngOnDestroy() {

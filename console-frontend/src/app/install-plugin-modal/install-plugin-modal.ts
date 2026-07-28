@@ -10,6 +10,7 @@ import {
   ElementRef,
 } from '@angular/core';
 import DialogSyncDirective from '../dialog-sync.directive';
+import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { LoadingIndicatorComponent } from '../icons';
 import {
@@ -50,7 +51,7 @@ export interface RetrySelection {
 
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [DialogSyncDirective, LoadingIndicatorComponent],
+  imports: [DialogSyncDirective, DropdownSyncDirective, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -65,6 +66,11 @@ export default class InstallPluginModalComponent {
   // Published versions to choose from, latest first. Empty means nothing is
   // published yet — the plugin cannot be installed.
   versions = input<PluginVersionOption[]>([]);
+
+  // True when fetching the versions failed (as opposed to succeeding with an
+  // empty list). Lets the modal distinguish a transient error from "nothing
+  // published yet" so it doesn't send the user chasing a publishing problem.
+  versionsError = input(false);
 
   show = input(false);
 

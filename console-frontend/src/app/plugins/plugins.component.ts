@@ -125,6 +125,10 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   // Published versions of the selected plugin, offered in the install modal.
   installVersions = signal<PluginVersionOption[]>([]);
 
+  // True when fetching the selected plugin's versions failed, so the modal can
+  // show an error state instead of the "no published version" notice.
+  installVersionsError = signal(false);
+
   isLoading = signal(true);
 
   errorMessage = signal<string | null>(null);
@@ -496,29 +500,38 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   async onInstallPlugin(plugin: PluginWithPresets) {
     this.selectedPlugin = plugin;
-    this.installVersions.set(await this.fetchPluginVersions(plugin.id));
+    let versions: PluginVersionOption[] = [];
+    let errored = false;
+    try {
+      versions = await this.fetchPluginVersions(plugin.id);
+    } catch {
+      errored = true;
+    }
+    // Quick clicks (plugin A then B) can resolve out of order; ignore a result
+    // for a plugin the user has since navigated away from.
+    if (this.selectedPlugin !== plugin) return;
+    this.installVersions.set(versions);
+    this.installVersionsError.set(errored);
     this.showInstallModal.set(true);
   }
 
   // Fetches the plugin's published versions (latest first) for the install
-  // modal's version picker; returns [] on failure so the modal shows the
-  // "no published version" state rather than breaking.
+  // modal's version picker. Throws on failure so the caller can tell a fetch
+  // error apart from a plugin that simply has nothing published yet.
   private async fetchPluginVersions(pluginId: string): Promise<PluginVersionOption[]> {
-    try {
-      const resp = await firstValueFrom(
-        this.pluginClient.listPluginDefinitions(
-          create(ListPluginDefinitionsRequestSchema, { pluginId }),
-        ),
-      );
-      return resp.definitions.map((d) => ({ version: d.version, hash: d.hash }));
-    } catch {
-      return [];
-    }
+    const resp = await firstValueFrom(
+      this.pluginClient.listPluginDefinitions(
+        create(ListPluginDefinitionsRequestSchema, { pluginId }),
+      ),
+    );
+    return resp.definitions.map((d) => ({ version: d.version, hash: d.hash }));
   }
 
   closeInstallModal(): void {
     this.showInstallModal.set(false);
     this.selectedPlugin = null;
+    this.installVersions.set([]);
+    this.installVersionsError.set(false);
   }
 
   private clusterName(clusterId: string): string {
