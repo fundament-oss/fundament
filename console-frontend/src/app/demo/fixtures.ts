@@ -30,7 +30,9 @@ import {
   CategorySchema,
   AuthorSchema,
   DocumentationLinkSchema,
+  PluginDefinitionVersionSchema,
   type PluginDetail,
+  type PluginDefinitionVersion,
 } from '../../generated/v1/plugin_pb';
 import { ClusterStatus, NodePoolStatus, ResourceUsageSchema } from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
@@ -339,7 +341,39 @@ const CATEGORIES = {
   identity: category('cat-identity', 'Identity'),
 };
 
-const image = (name: string, version: string) => `ghcr.io/fundament/plugins/${name}:${version}`;
+// The published definitions per plugin, latest first — what the install modal's
+// version picker offers and what an install pins. The first entry is the version
+// the catalog card advertises; without one a plugin reads as "not published yet"
+// and cannot be installed at all.
+const VERSIONS: Record<string, string[]> = {
+  'cert-manager': ['v1.17.2', 'v1.17.1', 'v1.16.3'],
+  openfsc: ['v4.0.0', 'v3.2.1'],
+  'istio-gateway': ['v0.1.0'],
+  'sealed-secrets': ['v0.27.1', 'v0.26.3'],
+  grafana: ['v11.4.0', 'v11.3.1'],
+  'grafana-loki': ['v3.3.2', 'v3.2.0'],
+  cloudnativepg: ['v1.25.0', 'v1.24.2'],
+  keycloak: ['v26.0.7', 'v26.0.5'],
+};
+
+const latestVersion = (name: string) => VERSIONS[name]?.[0] ?? '';
+
+// Stands in for the sha256 of a published manifest: shaped like the real thing and
+// deterministic, so the same version always resolves to the same hash — the install
+// pins it and the plugin's installation shows it back.
+const definitionHash = (name: string, version: string) => {
+  const digest = `${name}@${version}`
+    .split('')
+    .reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) % 0xffffffff, 7);
+  return `sha256:${digest.toString(16).padStart(8, '0').repeat(8)}`;
+};
+
+/** The catalog fields that follow from a plugin's latest published version. */
+const published = (name: string) => ({
+  image: `ghcr.io/fundament/plugins/${name}:${latestVersion(name)}`,
+  pluginVersion: latestVersion(name),
+  definitionHash: definitionHash(name, latestVersion(name)),
+});
 
 // cert-manager is deliberately first: it is the card the platform-engineer tour
 // auto-installs, and the drive script targets the first card in the grid.
@@ -353,7 +387,7 @@ export const plugins = [
       'Automated TLS certificate management for Kubernetes using cert-manager. Vraagt certificaten aan, vernieuwt ze op tijd, en levert ze als secret aan je workloads.',
     tags: [OFFICIAL, tag('tag-tls', 'tls')],
     categories: [CATEGORIES.security],
-    image: image('cert-manager', 'v1.17.2'),
+    ...published('cert-manager'),
   }),
   create(PluginSummarySchema, {
     id: 'pl-openfsc',
@@ -364,7 +398,7 @@ export const plugins = [
       'Federated Service Connectivity (FSC) voor teams. Installeert de openfsc-operator; elk team declareert een FSCInstallation in zijn eigen namespace om daar een OpenFSC-peer te draaien.',
     tags: [OFFICIAL, tag('tag-fsc', 'fsc')],
     categories: [CATEGORIES.networking],
-    image: image('openfsc', 'v4.0.0'),
+    ...published('openfsc'),
   }),
   create(PluginSummarySchema, {
     id: 'pl-istio-gateway',
@@ -375,7 +409,7 @@ export const plugins = [
       'Gateway API-implementatie op basis van Istio. Beheert Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes en TLSRoutes voor het verkeer je cluster in.',
     tags: [OFFICIAL, tag('tag-ingress', 'ingress')],
     categories: [CATEGORIES.networking],
-    image: image('istio-gateway', 'v0.1.0'),
+    ...published('istio-gateway'),
   }),
   create(PluginSummarySchema, {
     id: 'pl-sealed-secrets',
@@ -386,7 +420,7 @@ export const plugins = [
       'Versleutelt secrets zo dat alleen de controller in het cluster ze kan lezen. Daardoor kan de versleutelde versie gewoon mee in je repository.',
     tags: [tag('tag-secrets', 'secrets')],
     categories: [CATEGORIES.security],
-    image: image('sealed-secrets', 'v0.27.1'),
+    ...published('sealed-secrets'),
   }),
   create(PluginSummarySchema, {
     id: 'pl-grafana',
@@ -397,7 +431,7 @@ export const plugins = [
       'Grafana-dashboards voor je eigen diensten, met de metrics van het platform als basis. Alerts komen bij je eigen team terecht.',
     tags: [tag('tag-dashboards', 'dashboards')],
     categories: [CATEGORIES.observability],
-    image: image('grafana', 'v11.4.0'),
+    ...published('grafana'),
   }),
   create(PluginSummarySchema, {
     id: 'pl-grafana-loki',
@@ -408,7 +442,7 @@ export const plugins = [
       'Verzamelt de logs van je workloads en maakt ze doorzoekbaar per namespace, zodat teams alleen hun eigen logs zien.',
     tags: [tag('tag-logs', 'logs')],
     categories: [CATEGORIES.observability],
-    image: image('grafana-loki', 'v3.3.2'),
+    ...published('grafana-loki'),
   }),
   create(PluginSummarySchema, {
     id: 'pl-cloudnativepg',
@@ -419,7 +453,7 @@ export const plugins = [
       'Draait PostgreSQL-clusters in je eigen namespace, met back-ups en failover geregeld door de operator.',
     tags: [tag('tag-postgres', 'postgres')],
     categories: [CATEGORIES.data],
-    image: image('cloudnativepg', 'v1.25.0'),
+    ...published('cloudnativepg'),
   }),
   create(PluginSummarySchema, {
     id: 'pl-keycloak',
@@ -430,7 +464,7 @@ export const plugins = [
       'Identity- en accessmanagement voor je eigen dienst: inloggen, rollen en tokens, zonder dat elk team het zelf bouwt.',
     tags: [tag('tag-sso', 'sso')],
     categories: [CATEGORIES.identity],
-    image: image('keycloak', 'v26.0.7'),
+    ...published('keycloak'),
   }),
 ];
 
@@ -477,7 +511,25 @@ export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
         url: `https://docs.fundament.dev/plugins/${summary.name}`,
       }),
     ],
+    pluginVersion: summary.pluginVersion,
+    definitionHash: summary.definitionHash,
   });
+};
+
+/**
+ * Published definitions of a plugin, latest first — what the install modal's version
+ * picker offers. An unknown plugin gets an empty list, the same "nothing published"
+ * answer the real backend gives.
+ */
+export const pluginDefinitionVersions = (pluginId: string): PluginDefinitionVersion[] => {
+  const summary = plugins.find((p) => p.id === pluginId);
+  if (!summary) return [];
+  return (VERSIONS[summary.name] ?? []).map((version) =>
+    create(PluginDefinitionVersionSchema, {
+      version,
+      hash: definitionHash(summary.name, version),
+    }),
+  );
 };
 
 /** Plugins already running when the walkthrough starts, per cluster. */

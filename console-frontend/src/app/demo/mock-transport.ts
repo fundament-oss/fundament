@@ -38,6 +38,7 @@ import {
   ListPluginsResponseSchema,
   ListPresetsResponseSchema,
   GetPluginDetailResponseSchema,
+  ListPluginDefinitionsResponseSchema,
 } from '../../generated/v1/plugin_pb';
 import { APIKeyService, ListAPIKeysResponseSchema } from '../../generated/v1/apikey_pb';
 import { AuthnService, GetUserInfoResponseSchema } from '../../generated/authn/v1/authn_pb';
@@ -213,6 +214,14 @@ export default function createDemoTransport(): Transport {
       getPluginDetail: async (req) => {
         await delay();
         return create(GetPluginDetailResponseSchema, { plugin: fx.pluginDetail(req.pluginId) });
+      },
+      // The install modal's version picker. Left unanswered it errors, and the modal
+      // shows "Couldn't load versions" instead of letting the install slide run.
+      listPluginDefinitions: async (req) => {
+        await delay(80);
+        return create(ListPluginDefinitionsResponseSchema, {
+          definitions: fx.pluginDefinitionVersions(req.pluginId),
+        });
       },
     });
 
