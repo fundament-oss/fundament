@@ -171,6 +171,8 @@
 <app-install-plugin-modal
   [pluginDisplayName]="selectedPlugin?.displayName || selectedPlugin?.name || ''"
   [clusters]="clustersForModal"
+  [versions]="installVersions()"
+  [versionsError]="installVersionsError()"
   [show]="showInstallModal()"
   (closeModal)="closeInstallModal()"
   (install)="onInstallOnClusters($event)"
