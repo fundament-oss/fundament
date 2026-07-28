@@ -47,20 +47,19 @@ func (f fakeVersioner) ServerVersion() (*version.Info, error) {
 }
 
 func TestCheckKubernetesVersionTooOld(t *testing.T) {
-	err := checkKubernetesVersion(fakeVersioner{info: &version.Info{GitVersion: "v1.30.6+k3s1"}}, "v1.8.3")
+	err := checkKubernetesVersion(fakeVersioner{info: &version.Info{GitVersion: "v1.30.6+k3s1"}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "requires Kubernetes >= 1.31")
 	assert.Contains(t, err.Error(), "v1.30.6+k3s1") // reports the actual cluster version
-	assert.Contains(t, err.Error(), "v1.8.3")       // reports the Envoy Gateway version
 }
 
 func TestCheckKubernetesVersionOK(t *testing.T) {
-	err := checkKubernetesVersion(fakeVersioner{info: &version.Info{GitVersion: "v1.31.5+k3s1"}}, "v1.8.3")
+	err := checkKubernetesVersion(fakeVersioner{info: &version.Info{GitVersion: "v1.31.5+k3s1"}})
 	assert.NoError(t, err)
 }
 
 func TestCheckKubernetesVersionDiscoveryError(t *testing.T) {
-	err := checkKubernetesVersion(fakeVersioner{err: errors.New("boom")}, "v1.8.3")
+	err := checkKubernetesVersion(fakeVersioner{err: errors.New("boom")})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "server version")
 }

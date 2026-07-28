@@ -69,7 +69,7 @@ func (p *EnvoyGatewayPlugin) Start(ctx context.Context, host pluginruntime.Host)
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("create discovery client: %w", pluginerrors.NewPermanent(err))
 	}
-	if err := checkKubernetesVersion(discoveryClient, p.cfg.EnvoyGatewayVersion); err != nil {
+	if err := checkKubernetesVersion(discoveryClient); err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseDegraded, Message: err.Error()})
 		return fmt.Errorf("kubernetes preflight: %w", pluginerrors.NewTransient(err))
 	}

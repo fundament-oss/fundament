@@ -32,7 +32,7 @@ func newDiscoveryClient(cfg *rest.Config) (*discovery.DiscoveryClient, error) {
 // checkKubernetesVersion fails fast, with an actionable message, when the cluster
 // is older than Envoy Gateway supports — rather than letting the CRD apply fail
 // deep inside the Helm install with an opaque error.
-func checkKubernetesVersion(sv serverVersioner, envoyGatewayVersion string) error {
+func checkKubernetesVersion(sv serverVersioner) error {
 	info, err := sv.ServerVersion()
 	if err != nil {
 		return fmt.Errorf("get kubernetes server version: %w", err)
@@ -43,8 +43,8 @@ func checkKubernetesVersion(sv serverVersioner, envoyGatewayVersion string) erro
 	}
 	if !ok {
 		return fmt.Errorf(
-			"Envoy Gateway %s requires Kubernetes >= 1.%d, but the cluster is %s — upgrade the cluster or pin an older FUNP_ENVOY_GATEWAY_VERSION",
-			envoyGatewayVersion, minKubernetesMinor, info.GitVersion,
+			"the Envoy Gateway plugin requires Kubernetes >= 1.%d, but the cluster is %s — upgrade the cluster before installing",
+			minKubernetesMinor, info.GitVersion,
 		)
 	}
 	return nil

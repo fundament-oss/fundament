@@ -191,17 +191,21 @@ export default class ResourceDetailComponent implements OnInit {
   async confirmDelete(): Promise<void> {
     const crd = this.crdDef();
     const clusterId = this.clusterContext.selectedClusterId();
-    if (!crd || !clusterId) return;
+    const resource = this.resource();
+    if (!crd || !clusterId || !resource) return;
 
     this.deleting.set(true);
     this.deleteError.set(null);
     try {
+      // Delete by the loaded resource's own name/namespace, not the route's ?ns=
+      // query param: a deep link without ?ns= still resolves the resource via the
+      // list-and-match fallback, so metadata.namespace is the authoritative value.
       await this.loader.deleteResource(
         this.pluginName(),
         crd,
         clusterId,
-        this.resourceId(),
-        this.resourceNamespace(),
+        resource.metadata.name,
+        resource.metadata.namespace,
       );
       this.showDeleteModal.set(false);
       this.router.navigate(this.listLink, { relativeTo: this.route });

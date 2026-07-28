@@ -218,13 +218,26 @@ export default class ResourceListComponent implements OnInit {
         target.metadata.namespace,
       );
       this.pendingDelete.set(null);
-      await this.loadCrdsAndResources(this.pluginName(), this.resourceKind(), clusterId);
+      await this.reloadResources(crd, clusterId);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[ResourceList] Failed to delete resource:', err);
       this.deleteError.set('Failed to delete. Please try again.');
     } finally {
       this.deleting.set(false);
+    }
+  }
+
+  // Refreshes the list after a delete. The CRD schema and plugin registry are
+  // unchanged, so re-list resources only rather than re-running the full
+  // loadCrdsAndResources (which re-fetches the CRD schema).
+  private async reloadResources(crd: ParsedCrd, clusterId: string): Promise<void> {
+    try {
+      this.resources.set(await this.loader.loadResources(this.pluginName(), crd, clusterId));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[ResourceList] Failed to reload resources:', err);
+      this.errorMessage.set('Failed to load resources. Please try again.');
     }
   }
 }

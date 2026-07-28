@@ -46,16 +46,6 @@ export function loadNlddDesignSystem(): Promise<void> {
   return loadPluginAsset('nldd-design-system');
 }
 
-export function escapeHtml(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function postToHost(message: unknown): void {
   window.parent.postMessage(message, window.fundament?.parentOrigin ?? '*');
 }

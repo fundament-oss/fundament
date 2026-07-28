@@ -72,7 +72,11 @@ export async function mountCreateForm(opts: CreateFormOptions): Promise<void> {
     // A programmatic .click() (Enter-to-submit) isn't blocked by `disabled`, so guard.
     if (submitButton.disabled) return;
     errorBox.hidden = true;
-    if (!opts.validate(form)) {
+    // The namespace control is universal (dropdown for project routes, free-text
+    // org-level). A programmatic .click() skips native `required`, so validate it
+    // here — an empty namespace would otherwise build an invalid create request.
+    const namespace = trimmedValue(form, 'namespace');
+    if (!opts.validate(form) || !namespace) {
       errorBox.textContent = 'Please fill in the required fields.';
       errorBox.hidden = false;
       return;
@@ -80,7 +84,6 @@ export async function mountCreateForm(opts: CreateFormOptions): Promise<void> {
 
     submitButton.disabled = true;
     try {
-      const namespace = trimmedValue(form, 'namespace');
       const body = opts.buildBody(form, namespace);
       const created = await window.fundament.k8s.create<{ metadata?: { name?: string } }>(
         { ...opts.resource, namespace },

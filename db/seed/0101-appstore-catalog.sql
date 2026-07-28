@@ -276,22 +276,6 @@ OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs t
 - Inter-organization service connectivity
 - Common Ground / data exchange between government bodies
 - Federated APIs across trust domains', 'Fundament', 'https://fsc-standaard.nl', 'https://gitlab.com/rinis-oss/fsc/open-fsc', ''),
-    ('019b4000-3000-7000-8000-00000000000f', 'gateway-api-istio', 'Gateway API (Istio)', 'Gateway API implementation powered by Istio', '## Overview
-
-The Gateway API plugin powered by Istio manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, and TLSRoutes using Istio as the underlying implementation.
-
-## Key Features
-
-- **Standard Gateway API**: Native support for the Kubernetes Gateway API
-- **Istio-powered**: Backed by the Istio control plane and ingress gateway
-- **TLS Termination**: Optional cert-manager integration for certificates
-- **Multi-protocol Routing**: HTTP, gRPC, TCP, and TLS routes
-
-## Use Cases
-
-- Ingress for Kubernetes workloads via the Gateway API
-- Migrating from Ingress to the Gateway API
-- Advanced traffic management with Istio', 'Fundament', 'https://istio.io', 'https://github.com/istio/istio', ''),
     ('019b4000-3000-7000-8000-000000000010', 'gateway-api-envoy', 'Gateway API (Envoy Gateway)', 'Gateway API implementation powered by Envoy Gateway', '## Overview
 
 The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway control plane and manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, TLSRoutes, and Envoy Gateway policies.
@@ -348,8 +332,6 @@ INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
     ('019b4000-3000-7000-8000-00000000000d', '019b4000-4000-7000-8000-000000000001'),
     -- OpenFSC -> Networking
     ('019b4000-3000-7000-8000-00000000000e', '019b4000-4000-7000-8000-000000000003'),
-    -- Gateway API (Istio) -> Networking
-    ('019b4000-3000-7000-8000-00000000000f', '019b4000-4000-7000-8000-000000000003'),
     -- Gateway API (Envoy Gateway) -> Networking
     ('019b4000-3000-7000-8000-000000000010', '019b4000-4000-7000-8000-000000000003')
 ON CONFLICT (plugin_id, category_id) DO NOTHING;
