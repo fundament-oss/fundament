@@ -2,7 +2,15 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { Slide, Tour } from './presentation.model';
-import { DEFAULT_LOCALE, isLocale, Locale, Localized, LOCALE_STORAGE_KEY, UI } from './i18n';
+import {
+  DECK_NAME,
+  DEFAULT_LOCALE,
+  isLocale,
+  Locale,
+  Localized,
+  LOCALE_STORAGE_KEY,
+  UI,
+} from './i18n';
 import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
 import runDrive from './drive-runner';
 import { closeOpenAppDialogs } from './app-dialogs';
@@ -185,7 +193,17 @@ export default class PresentationService {
       return;
     }
     const slide = this.currentSlide();
-    if (slide) this.title.setTitle(this.text(slide.title));
+    if (slide) this.title.setTitle(this.documentTitle(this.text(slide.title)));
+  }
+
+  /**
+   * Slide titles are suffixed with the demo name, except on the opening slide of
+   * the intro tour, whose title is the product name itself — "Fundament —
+   * Fundament demo" would read as a mistake.
+   */
+  private documentTitle(slideTitle: string): string {
+    const demo = this.ui().demoTitle;
+    return slideTitle === DECK_NAME ? demo : `${slideTitle} — ${demo}`;
   }
 
   next(): void {

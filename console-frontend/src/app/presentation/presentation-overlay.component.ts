@@ -146,7 +146,7 @@ type LitDropdown = HTMLElement & { updateComplete?: Promise<unknown> };
                 <button type="button" class="text-link" (click)="presentation.goto(0)">
                   {{ presentation.ui().restart }}
                 </button>
-                <nldd-dropdown #langDropdown size="xs" width="5rem" class="lang">
+                <nldd-dropdown #langDropdown size="xs" width="3.5rem" class="lang">
                   <select
                     [attr.aria-label]="presentation.ui().languageLabel"
                     (change)="onLocaleChange($event)"

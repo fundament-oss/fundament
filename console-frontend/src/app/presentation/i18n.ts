@@ -26,6 +26,12 @@ export function isLocale(value: string | null): value is Locale {
   return value === 'nl' || value === 'en';
 }
 
+/**
+ * The product name. The intro tour's opening slide is titled with it verbatim,
+ * so the document title builder recognises that slide by this value.
+ */
+export const DECK_NAME = 'Fundament';
+
 interface UiStrings {
   tooSmall: string;
   close: string;
@@ -45,6 +51,7 @@ interface UiStrings {
   languageLabel: string;
   chooserTitle: string;
   consoleTitle: string;
+  demoTitle: string;
 }
 
 /** The overlay's own chrome — everything that is not tour content. */
@@ -68,6 +75,7 @@ export const UI: Record<Locale, UiStrings> = {
     languageLabel: 'Taal',
     chooserTitle: 'Fundament — kies je rondleiding',
     consoleTitle: 'Fundament Console',
+    demoTitle: 'Fundament demo',
   },
   en: {
     tooSmall: 'Presentation mode works best on a large screen or a projector.',
@@ -88,5 +96,6 @@ export const UI: Record<Locale, UiStrings> = {
     languageLabel: 'Language',
     chooserTitle: 'Fundament — choose your tour',
     consoleTitle: 'Fundament Console',
+    demoTitle: 'Fundament demo',
   },
 };
