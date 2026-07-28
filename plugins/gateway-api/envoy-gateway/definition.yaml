@@ -131,11 +131,53 @@ spec:
   customComponents:
     Gateway:
       create: gateways-create.html
+    HTTPRoute:
+      create: httproutes-create.html
+    GRPCRoute:
+      create: grpcroutes-create.html
+    TCPRoute:
+      create: tcproutes-create.html
+    TLSRoute:
+      create: tlsroutes-create.html
+    SecurityPolicy:
+      create: securitypolicies-create.html
+    BackendTrafficPolicy:
+      create: backendtrafficpolicies-create.html
+    ClientTrafficPolicy:
+      create: clienttrafficpolicies-create.html
 
   allowedResources:
     - group: gateway.networking.k8s.io
       version: v1
       resource: gateways
+      verbs: [list, get, create]
+    - group: gateway.networking.k8s.io
+      version: v1
+      resource: httproutes
+      verbs: [list, get, create]
+    - group: gateway.networking.k8s.io
+      version: v1
+      resource: grpcroutes
+      verbs: [list, get, create]
+    - group: gateway.networking.k8s.io
+      version: v1alpha2
+      resource: tcproutes
+      verbs: [list, get, create]
+    - group: gateway.networking.k8s.io
+      version: v1alpha2
+      resource: tlsroutes
+      verbs: [list, get, create]
+    - group: gateway.envoyproxy.io
+      version: v1alpha1
+      resource: securitypolicies
+      verbs: [list, get, create]
+    - group: gateway.envoyproxy.io
+      version: v1alpha1
+      resource: backendtrafficpolicies
+      verbs: [list, get, create]
+    - group: gateway.envoyproxy.io
+      version: v1alpha1
+      resource: clienttrafficpolicies
       verbs: [list, get, create]
 
   uiHints:

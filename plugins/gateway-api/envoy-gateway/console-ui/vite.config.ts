@@ -15,9 +15,16 @@ export default defineConfig({
     outDir: fileURLToPath(new URL('../console', import.meta.url)),
     emptyOutDir: true,
     rollupOptions: {
-      // Output filename must match definition.yaml's customComponents.Gateway.create.
+      // Output filenames must match definition.yaml's customComponents.*.create.
       input: {
         'gateways-create': entry('gateways-create'),
+        'httproutes-create': entry('httproutes-create'),
+        'grpcroutes-create': entry('grpcroutes-create'),
+        'tcproutes-create': entry('tcproutes-create'),
+        'tlsroutes-create': entry('tlsroutes-create'),
+        'securitypolicies-create': entry('securitypolicies-create'),
+        'backendtrafficpolicies-create': entry('backendtrafficpolicies-create'),
+        'clienttrafficpolicies-create': entry('clienttrafficpolicies-create'),
       },
     },
   },

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Create BackendTrafficPolicy</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Create BackendTrafficPolicy</h1>
+      <p class="plugin-text" id="intro">Loading…</p>
+
+      <form id="form" class="plugin-form" hidden>
+        <div class="plugin-error" id="error" hidden></div>
+
+        <nldd-form-field label="Name">
+          <nldd-text-field id="name" name="name" required maxlength="63"
+            pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" placeholder="rate-limit" error-message="name-error"></nldd-text-field>
+          <nldd-form-field-help-text>Lowercase letters, digits and dashes.</nldd-form-field-help-text>
+          <nldd-form-field-error-text id="name-error">Enter a valid name.</nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <div id="namespace-field"></div>
+
+        <fieldset class="plugin-fieldset">
+          <legend class="plugin-legend">Attach to (targetRef)</legend>
+          <nldd-form-field label="Kind">
+            <nldd-dropdown>
+              <select id="target-kind" name="target-kind" aria-label="Target kind">
+                <option value="Gateway">Gateway</option>
+                <option value="HTTPRoute">HTTPRoute</option>
+                <option value="GRPCRoute">GRPCRoute</option>
+              </select>
+            </nldd-dropdown>
+          </nldd-form-field>
+          <nldd-form-field label="Name">
+            <nldd-text-field id="target-name" name="target-name" required placeholder="demo" error-message="target-name-error"></nldd-text-field>
+            <nldd-form-field-error-text id="target-name-error">This field is required.</nldd-form-field-error-text>
+          </nldd-form-field>
+        </fieldset>
+
+        <fieldset class="plugin-fieldset">
+          <legend class="plugin-legend">Local rate limit (optional)</legend>
+          <div class="plugin-row">
+            <nldd-form-field label="Requests" style="flex: 0 0 10rem">
+              <nldd-text-field id="rate-requests" name="rate-requests" type="number" min="1" placeholder="100"></nldd-text-field>
+              <nldd-form-field-help-text>Leave blank for no rate limit.</nldd-form-field-help-text>
+            </nldd-form-field>
+            <nldd-form-field label="Per" style="flex: 0 0 10rem">
+              <nldd-dropdown>
+                <select id="rate-unit" name="rate-unit" aria-label="Rate unit">
+                  <option value="Second">Second</option>
+                  <option value="Minute">Minute</option>
+                  <option value="Hour">Hour</option>
+                </select>
+              </nldd-dropdown>
+            </nldd-form-field>
+          </div>
+        </fieldset>
+
+        <div class="plugin-actions">
+          <nldd-button id="submit" type="button" variant="primary" text="Create BackendTrafficPolicy"></nldd-button>
+          <nldd-button id="back" type="button" variant="secondary" text="Back"></nldd-button>
+        </div>
+      </form>
+    </div>
+
+    <script type="module" src="/src/backendtrafficpolicies-create.ts"></script>
+  </body>
+</html>
