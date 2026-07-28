@@ -21,13 +21,6 @@ externalUrls:
   pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; defaults to console URL if empty)
   console: "" # e.g., https://app.example.com
-  # Origins the Console is served from. kube-api-proxy only serves a plugin console
-  # asset when its ?host= names one of these, and its CSP only lets the asset load
-  # scripts from them. Comma-separated; defaults to `console` if empty. Add a dev
-  # server origin here when running the Console outside the cluster.
-  # This and `kubeApiProxy` are both required when kubeApiProxy.mode is "real" — the
-  # proxy refuses to start without them rather than serve plugin assets unprotected.
-  consoleOrigins: "" # e.g., "https://app.example.com,http://localhost:4200"
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
@@ -94,6 +87,10 @@ kubeApiProxy:
   logLevel: info
   mode: mock # "mock" or "real"
   gardenerKubeconfigSecret: "" # Secret name containing a Gardener kubeconfig (only used when mode is "real")
+  # sandboxKubeconfigSecret: Secret whose "kubeconfig" key targets a local
+  # plugin sandbox cluster. In mock mode, kube-api-proxy proxies every request
+  # there instead of using MockClient's canned responses. Local dev only.
+  sandboxKubeconfigSecret: ""
   httproute:
     enabled: false
     parentRefs: []
@@ -110,6 +107,30 @@ clusterWorker:
   gardenerMode: mock # mock or real
   # Gardener kubeconfig secret for real mode. Also consumed by authn-api and organization-api.
   gardenerKubeconfigSecret: ""
+  # Provider wiring for real mode (defaults target the local provider in code).
+  gardenerProviderType: ""           # e.g. local, metal
+  gardenerCloudProfile: ""           # e.g. local, metal
+  gardenerRegion: ""                 # default shoot region when a cluster has none, e.g. local
+  gardenerCredentialsBindingName: "" # e.g. local, metal-credentials
+  # Shared credentials the per-project CredentialsBindings reference. The local
+  # provider uses a WorkloadIdentity (garden-local/local, the in-code default);
+  # non-local providers such as metal use a Secret and must set all three.
+  gardenerCredentialsRef: ""           # "namespace/name", e.g. garden/metal-credentials
+  gardenerCredentialsRefKind: ""       # Secret or WorkloadIdentity
+  gardenerCredentialsRefAPIVersion: "" # v1 (Secret) or security.gardener.cloud/v1alpha1 (WorkloadIdentity)
+  gardenerMachineImageName: ""    # e.g. ubuntu
+  gardenerMachineImageVersion: "" # e.g. 24.04
+  gardenerDefaultMachineType: ""  # e.g. c1-medium-x86
+  # Networking CIDRs. Node CIDR empty => the provider's IPAM allocates it (metal
+  # hands out a partition range); the local provider falls back to 10.0.0.0/16.
+  gardenerNodesCIDR: ""    # usually empty for metal
+  gardenerPodsCIDR: ""     # e.g. 10.240.0.0/16 (must be in the tenant super's additionalAnnouncableCIDRs)
+  gardenerServicesCIDR: "" # e.g. 10.248.0.0/16
+  # Provider extension configs stamped verbatim onto every Shoot (YAML here ->
+  # JSON in the env var). Required by metal; leave empty ({}) for the local provider.
+  gardenerInfrastructureConfig: {} # -> spec.provider.infrastructureConfig
+  gardenerControlPlaneConfig: {}   # -> spec.provider.controlPlaneConfig
+  gardenerShootAnnotations: {}     # extra shoot annotations, e.g. cluster.metal-stack.io/tenant: fundament
 
 # Console Frontend
 consoleFrontend:
@@ -156,6 +177,13 @@ openfga:
 pluginController:
   enabled: false
   logLevel: info
+  # Skip the plugin definition-hash gate for installs with an empty
+  # definitionHash. Local-dev convenience; keep false in production.
+  allowUnpinnedHash: false
+  # organizationApiUrl: internal cluster URL for organization-api (gRPC/Connect).
+  # Defaults to http://organization-api:8080, matching the Service name in
+  # charts/fundament/templates/organization-api.yaml.
+  organizationApiUrl: ""
 
 # Plugin Proxy. Runs in the main fundament cluster and dials out to plugin
 # clusters; not deployed inside the plugin sandbox.
@@ -164,6 +192,11 @@ pluginProxy:
   replicas: 1
   logLevel: info
   mode: mock # "mock" or "real" (real is future work)
+  # sandboxKubeconfigSecret: name of a Secret whose "kubeconfig" key is a
+  # kubeconfig granting admin access to a local plugin sandbox cluster (e.g.
+  # k3d-fundament-plugin). When set, plugin-proxy fetches plugin assets from
+  # that cluster via PodFetcher instead of using MockFetcher. Local dev only.
+  sandboxKubeconfigSecret: ""
   httproute:
     enabled: false
     parentRefs: []

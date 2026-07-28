@@ -21,6 +21,7 @@ spec:
     capabilities:
       - internet_access
     rbac:
+      # --- Runtime resources the plugin reconciles / surfaces in the UI ---
       - apiGroups:
           - cert-manager.io
         resources:
@@ -45,6 +46,127 @@ spec:
           - get
           - list
           - watch
+      # --- Install-time permissions ---
+      # The plugin runs `helm upgrade --install cert-manager … --create-namespace
+      # --wait` with Helm's default "secret" storage driver. These rules grant
+      # exactly what Helm and the cert-manager v1.17 chart need to create and
+      # wait on the release. Rules are cluster-wide (PolicyRule carries no
+      # namespace); escalate/bind let the installer create cert-manager's own
+      # ClusterRoles/RoleBindings without re-declaring every rule they contain.
+      - apiGroups:
+          - ""
+        resources:
+          - namespaces # helm --create-namespace
+        verbs:
+          - get
+          - list
+          - create
+      - apiGroups:
+          - ""
+        resources:
+          - secrets # Helm release storage + cert-manager CA/serving secrets
+          - serviceaccounts
+          - services
+          - configmaps
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - ""
+        resources:
+          - pods # helm --wait readiness polling
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - apps
+        resources:
+          - deployments # controller, cainjector, webhook (+ --wait)
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - apps
+        resources:
+          - replicasets # helm --wait polls the Deployment rollout via ReplicaSets
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - batch
+        resources:
+          - jobs # cert-manager's startupapicheck post-install hook Job
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - delete
+      - apiGroups:
+          - apiextensions.k8s.io
+        resources:
+          - customresourcedefinitions
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - admissionregistration.k8s.io
+        resources:
+          - validatingwebhookconfigurations
+          - mutatingwebhookconfigurations
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      - apiGroups:
+          - rbac.authorization.k8s.io
+        resources:
+          - clusterroles
+          - roles
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+          - bind # create (Cluster)RoleBindings that reference these
+          - escalate # write cert-manager's rules without holding them all
+      - apiGroups:
+          - rbac.authorization.k8s.io
+        resources:
+          - clusterrolebindings
+          - rolebindings
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
   menu:
     organization:
       - crd: clusterissuers.cert-manager.io

@@ -7,9 +7,6 @@ import (
 
 // Plugin is the main interface that plugin developers implement.
 type Plugin interface {
-	// Definition returns the static metadata for this plugin.
-	Definition() PluginDefinition
-
 	// Start runs the plugin's business logic. It should block until ctx is cancelled.
 	// The plugin should call host.ReportReady() once it is ready to serve traffic.
 	Start(ctx context.Context, host Host) error

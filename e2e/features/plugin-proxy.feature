@@ -7,7 +7,8 @@ Feature: Plugin Proxy external listener
 
   # "external listener" = port 8080, the only listener exposed via the
   # ingress. It carries two route groups:
-  #   - /plugins/...        — no auth, immutable cache, FUN-17 strict CSP
+  #   - /clusters/{id}/plugins/...  — console UserToken cookie required,
+  #                           OpenFGA can_view(user, cluster), FUN-17 strict CSP
   #   - /installations/...  — PluginToken required (aud=fundament-plugin),
   #                           installation_id must match the URL,
   #                           OpenFGA can_view(user, cluster) re-checked
@@ -24,9 +25,10 @@ Feature: Plugin Proxy external listener
 
   @api @plugin-proxy @smoke
   Scenario: Asset bundle is served with the FUN-17 strict CSP
-    When I GET the asset "/plugins/cert-manager/v1.17.2/console/index.html"
+    When I GET the asset "/clusters/${CLUSTER_ID}/plugins/cert-manager/v1.17.2/console/index.html"
     Then the response status should be 200
     And the "Content-Type" header should start with "text/html"
+    And the "Cache-Control" header should contain "private"
     And the "Cache-Control" header should contain "immutable"
     And the "Content-Security-Policy" header should contain "default-src 'self'"
     And the "Content-Security-Policy" header should contain "script-src 'self'"
@@ -43,8 +45,8 @@ Feature: Plugin Proxy external listener
 
     Examples:
       | path                                                       |
-      | /plugins/cert-manager/v1.17.2/console/../etc/passwd        |
-      | /plugins/cert-manager/v1.17.2/console/                     |
+      | /clusters/${CLUSTER_ID}/plugins/cert-manager/v1.17.2/console/../etc/passwd |
+      | /clusters/${CLUSTER_ID}/plugins/cert-manager/v1.17.2/console/              |
 
   @api @plugin-proxy @negative
   Scenario: Installation route without a token is unauthorized

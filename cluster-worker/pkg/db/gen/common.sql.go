@@ -20,10 +20,13 @@ SELECT
     tenant.clusters.kubernetes_version,
     tenant.clusters.deleted,
     tenant.clusters.organization_id,
-    tenant.organizations.name AS organization_name
+    tenant.organizations.name AS organization_name,
+    catalog.regions.cloud_profile,
+    catalog.regions.cloud_profile_region
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
 WHERE
     tenant.clusters.id = $1
 `
@@ -33,17 +36,21 @@ type ClusterGetForSyncParams struct {
 }
 
 type ClusterGetForSyncRow struct {
-	ID                uuid.UUID
-	Name              string
-	Region            string
-	KubernetesVersion string
-	Deleted           pgtype.Timestamptz
-	OrganizationID    uuid.UUID
-	OrganizationName  string
+	ID                 uuid.UUID
+	Name               string
+	Region             string
+	KubernetesVersion  string
+	Deleted            pgtype.Timestamptz
+	OrganizationID     uuid.UUID
+	OrganizationName   string
+	CloudProfile       pgtype.Text
+	CloudProfileRegion pgtype.Text
 }
 
 // Get cluster with the fields needed to build a gardener.ClusterToSync.
 // Used by the cluster handler's Sync() method.
+// The catalog join resolves the region's cloud profile; NULL (legacy cluster
+// without region_id) falls back to the worker's provider defaults.
 func (q *Queries) ClusterGetForSync(ctx context.Context, arg ClusterGetForSyncParams) (ClusterGetForSyncRow, error) {
 	row := q.db.QueryRow(ctx, clusterGetForSync, arg.ClusterID)
 	var i ClusterGetForSyncRow
@@ -55,6 +62,8 @@ func (q *Queries) ClusterGetForSync(ctx context.Context, arg ClusterGetForSyncPa
 		&i.Deleted,
 		&i.OrganizationID,
 		&i.OrganizationName,
+		&i.CloudProfile,
+		&i.CloudProfileRegion,
 	)
 	return i, err
 }

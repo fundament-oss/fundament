@@ -11,7 +11,10 @@
 
 <!-- Form -->
 <div class="px-6 py-6">
-  <app-shared-node-pools-form (formSubmit)="onFormSubmit($event)">
+  <app-shared-node-pools-form
+    [machineTypeOptions]="machineTypeOptions()"
+    (formSubmit)="onFormSubmit($event)"
+  >
     <div class="flex space-x-3">
       <nldd-button
         routerLink="/clusters/add"

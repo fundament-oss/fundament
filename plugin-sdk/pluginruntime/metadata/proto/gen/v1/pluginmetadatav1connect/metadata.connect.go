@@ -36,9 +36,6 @@ const (
 	// PluginMetadataServiceGetStatusProcedure is the fully-qualified name of the
 	// PluginMetadataService's GetStatus RPC.
 	PluginMetadataServiceGetStatusProcedure = "/pluginmetadata.v1.PluginMetadataService/GetStatus"
-	// PluginMetadataServiceGetDefinitionProcedure is the fully-qualified name of the
-	// PluginMetadataService's GetDefinition RPC.
-	PluginMetadataServiceGetDefinitionProcedure = "/pluginmetadata.v1.PluginMetadataService/GetDefinition"
 	// PluginMetadataServiceRequestUninstallProcedure is the fully-qualified name of the
 	// PluginMetadataService's RequestUninstall RPC.
 	PluginMetadataServiceRequestUninstallProcedure = "/pluginmetadata.v1.PluginMetadataService/RequestUninstall"
@@ -47,7 +44,6 @@ const (
 // PluginMetadataServiceClient is a client for the pluginmetadata.v1.PluginMetadataService service.
 type PluginMetadataServiceClient interface {
 	GetStatus(context.Context, *connect.Request[v1.GetStatusRequest]) (*connect.Response[v1.GetStatusResponse], error)
-	GetDefinition(context.Context, *connect.Request[v1.GetDefinitionRequest]) (*connect.Response[v1.GetDefinitionResponse], error)
 	RequestUninstall(context.Context, *connect.Request[v1.RequestUninstallRequest]) (*connect.Response[v1.RequestUninstallResponse], error)
 }
 
@@ -68,12 +64,6 @@ func NewPluginMetadataServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(pluginMetadataServiceMethods.ByName("GetStatus")),
 			connect.WithClientOptions(opts...),
 		),
-		getDefinition: connect.NewClient[v1.GetDefinitionRequest, v1.GetDefinitionResponse](
-			httpClient,
-			baseURL+PluginMetadataServiceGetDefinitionProcedure,
-			connect.WithSchema(pluginMetadataServiceMethods.ByName("GetDefinition")),
-			connect.WithClientOptions(opts...),
-		),
 		requestUninstall: connect.NewClient[v1.RequestUninstallRequest, v1.RequestUninstallResponse](
 			httpClient,
 			baseURL+PluginMetadataServiceRequestUninstallProcedure,
@@ -86,18 +76,12 @@ func NewPluginMetadataServiceClient(httpClient connect.HTTPClient, baseURL strin
 // pluginMetadataServiceClient implements PluginMetadataServiceClient.
 type pluginMetadataServiceClient struct {
 	getStatus        *connect.Client[v1.GetStatusRequest, v1.GetStatusResponse]
-	getDefinition    *connect.Client[v1.GetDefinitionRequest, v1.GetDefinitionResponse]
 	requestUninstall *connect.Client[v1.RequestUninstallRequest, v1.RequestUninstallResponse]
 }
 
 // GetStatus calls pluginmetadata.v1.PluginMetadataService.GetStatus.
 func (c *pluginMetadataServiceClient) GetStatus(ctx context.Context, req *connect.Request[v1.GetStatusRequest]) (*connect.Response[v1.GetStatusResponse], error) {
 	return c.getStatus.CallUnary(ctx, req)
-}
-
-// GetDefinition calls pluginmetadata.v1.PluginMetadataService.GetDefinition.
-func (c *pluginMetadataServiceClient) GetDefinition(ctx context.Context, req *connect.Request[v1.GetDefinitionRequest]) (*connect.Response[v1.GetDefinitionResponse], error) {
-	return c.getDefinition.CallUnary(ctx, req)
 }
 
 // RequestUninstall calls pluginmetadata.v1.PluginMetadataService.RequestUninstall.
@@ -109,7 +93,6 @@ func (c *pluginMetadataServiceClient) RequestUninstall(ctx context.Context, req 
 // service.
 type PluginMetadataServiceHandler interface {
 	GetStatus(context.Context, *connect.Request[v1.GetStatusRequest]) (*connect.Response[v1.GetStatusResponse], error)
-	GetDefinition(context.Context, *connect.Request[v1.GetDefinitionRequest]) (*connect.Response[v1.GetDefinitionResponse], error)
 	RequestUninstall(context.Context, *connect.Request[v1.RequestUninstallRequest]) (*connect.Response[v1.RequestUninstallResponse], error)
 }
 
@@ -126,12 +109,6 @@ func NewPluginMetadataServiceHandler(svc PluginMetadataServiceHandler, opts ...c
 		connect.WithSchema(pluginMetadataServiceMethods.ByName("GetStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
-	pluginMetadataServiceGetDefinitionHandler := connect.NewUnaryHandler(
-		PluginMetadataServiceGetDefinitionProcedure,
-		svc.GetDefinition,
-		connect.WithSchema(pluginMetadataServiceMethods.ByName("GetDefinition")),
-		connect.WithHandlerOptions(opts...),
-	)
 	pluginMetadataServiceRequestUninstallHandler := connect.NewUnaryHandler(
 		PluginMetadataServiceRequestUninstallProcedure,
 		svc.RequestUninstall,
@@ -142,8 +119,6 @@ func NewPluginMetadataServiceHandler(svc PluginMetadataServiceHandler, opts ...c
 		switch r.URL.Path {
 		case PluginMetadataServiceGetStatusProcedure:
 			pluginMetadataServiceGetStatusHandler.ServeHTTP(w, r)
-		case PluginMetadataServiceGetDefinitionProcedure:
-			pluginMetadataServiceGetDefinitionHandler.ServeHTTP(w, r)
 		case PluginMetadataServiceRequestUninstallProcedure:
 			pluginMetadataServiceRequestUninstallHandler.ServeHTTP(w, r)
 		default:
@@ -157,10 +132,6 @@ type UnimplementedPluginMetadataServiceHandler struct{}
 
 func (UnimplementedPluginMetadataServiceHandler) GetStatus(context.Context, *connect.Request[v1.GetStatusRequest]) (*connect.Response[v1.GetStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pluginmetadata.v1.PluginMetadataService.GetStatus is not implemented"))
-}
-
-func (UnimplementedPluginMetadataServiceHandler) GetDefinition(context.Context, *connect.Request[v1.GetDefinitionRequest]) (*connect.Response[v1.GetDefinitionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pluginmetadata.v1.PluginMetadataService.GetDefinition is not implemented"))
 }
 
 func (UnimplementedPluginMetadataServiceHandler) RequestUninstall(context.Context, *connect.Request[v1.RequestUninstallRequest]) (*connect.Response[v1.RequestUninstallResponse], error) {

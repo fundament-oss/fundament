@@ -16,6 +16,17 @@ service PluginService {
   rpc GetPluginDetail(GetPluginDetailRequest) returns (GetPluginDetailResponse);
   // List all available presets
   rpc ListPresets(ListPresetsRequest) returns (ListPresetsResponse);
+  // Idempotent upsert of a plugin definition. Server computes the hash from the
+  // manifest bytes. Same (plugin_id, version, hash) → returns the existing row;
+  // same (plugin_id, version) with a different hash → FAILED_PRECONDITION unless
+  // replace=true, which soft-deletes the existing row and stores the new one.
+  // Requires the catalog plugin to exist — FAILED_PRECONDITION otherwise.
+  // Requires an authenticated user.
+  rpc PutPluginDefinition(PutPluginDefinitionRequest) returns (PutPluginDefinitionResponse);
+  // Fetch a plugin definition by (plugin_name, plugin_version). The plugin is
+  // resolved via the plugin catalog by name. Returns the verbatim manifest
+  // bytes, the sha256 hash, and a parsed PluginDefinition.
+  rpc GetPluginDefinition(GetPluginDefinitionRequest) returns (GetPluginDefinitionResponse);
 }
 
 // Tag information
@@ -44,6 +55,11 @@ message PluginSummary {
   repeated Tag tags = 40;
   repeated Category categories = 50;
   string image = 60;
+  // Latest published definition: the version and sha256 hash a fresh install
+  // pins. Both empty when the plugin has no published definition yet — it cannot
+  // be installed until one exists.
+  string plugin_version = 70;
+  string definition_hash = 80;
 }
 
 // List plugins request
@@ -98,6 +114,9 @@ message PluginDetail {
   Author author = 60;
   string repository_url = 70;
   repeated DocumentationLink documentation_links = 80;
+  // Latest published definition; see PluginSummary.plugin_version.
+  string plugin_version = 90;
+  string definition_hash = 100;
 }
 
 // Get plugin detail request
@@ -108,4 +127,104 @@ message GetPluginDetailRequest {
 // Get plugin detail response
 message GetPluginDetailResponse {
   PluginDetail plugin = 10;
+}
+
+message PutPluginDefinitionRequest {
+  string plugin_id = 10;
+  string plugin_version = 20;
+  bytes manifest = 30;
+  // Republish: when an active definition already exists for (plugin_id, version)
+  // with a different hash, soft-delete it and store this one in its place.
+  // Without this, that case is rejected so a pinned definition is never silently
+  // replaced.
+  bool replace = 40;
+}
+message PutPluginDefinitionResponse {
+  string id = 10;
+  string plugin_id = 20;
+  string plugin_version = 30;
+  string hash = 40;
+}
+message GetPluginDefinitionRequest {
+  string plugin_name = 10;
+  string plugin_version = 20;
+}
+message GetPluginDefinitionResponse {
+  bytes manifest = 10;
+  string hash = 20;
+  PluginDefinition definition = 30;
+}
+
+message PluginDefinition {
+  PluginDefinitionMetadata metadata = 10;
+  string image = 20;
+  string image_pull_policy = 30;
+  PluginPermissions permissions = 40;
+  PluginMenu menu = 50;
+  repeated string crds = 60;
+  map<string, PluginComponentMapping> custom_components = 70;
+  repeated PluginAllowedResource allowed_resources = 80;
+  map<string, PluginUIHint> ui_hints = 90;
+}
+message PluginDefinitionMetadata {
+  string name = 10;
+  string display_name = 20;
+  string version = 30;
+  string description = 40;
+  string author = 50;
+  string license = 60;
+  string icon = 70;
+  PluginURLs urls = 80;
+  repeated string tags = 90;
+}
+message PluginURLs {
+  string homepage = 10;
+  string repository = 20;
+  string documentation = 30;
+}
+message PluginPermissions {
+  repeated string capabilities = 10;
+  repeated PluginPolicyRule rbac = 20;
+}
+message PluginPolicyRule {
+  repeated string api_groups = 10;
+  repeated string resources = 20;
+  repeated string verbs = 30;
+}
+message PluginMenu {
+  repeated PluginMenuEntry organization = 10;
+  repeated PluginMenuEntry project = 20;
+}
+message PluginMenuEntry {
+  string crd = 10;
+  bool list = 20;
+  bool detail = 30;
+  string icon = 40;
+}
+message PluginComponentMapping {
+  string list = 10;
+  string detail = 20;
+  string create = 30;
+}
+message PluginAllowedResource {
+  string group = 10;
+  string version = 20;
+  string resource = 30;
+  repeated string verbs = 40;
+}
+message PluginUIHint {
+  repeated PluginFormGroup form_groups = 10;
+  PluginStatusMapping status_mapping = 20;
+}
+message PluginFormGroup {
+  string name = 10;
+  repeated string fields = 20;
+}
+message PluginStatusMapping {
+  string json_path = 10;
+  map<string, PluginStatusValue> values = 20;
+}
+message PluginStatusValue {
+  string badge = 10;
+  string label = 20;
 }

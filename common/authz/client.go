@@ -2,9 +2,11 @@ package authz
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 
+	"github.com/google/uuid"
 	"github.com/openfga/go-sdk/client"
 )
 
@@ -33,6 +35,26 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	return &Client{fga: fgaClient}, nil
+}
+
+// CanViewCluster is a convenience wrapper around Evaluate for the frequently
+// used (user, can_view, cluster) tuple. Returns (false, error) if the client
+// is nil so callers can wire it through configuration-optional paths without
+// nil-guarding at every call site. Used by both kube-api-proxy and
+// plugin-proxy — see the ClusterViewChecker interfaces in those services.
+func (c *Client) CanViewCluster(ctx context.Context, userID, clusterID uuid.UUID) (bool, error) {
+	if c == nil {
+		return false, errors.New("openfga client not configured")
+	}
+	dec, err := c.Evaluate(ctx, EvaluationRequest{
+		Subject:  User(userID),
+		Action:   CanView(),
+		Resource: Cluster(clusterID),
+	})
+	if err != nil {
+		return false, fmt.Errorf("openfga can_view: %w", err)
+	}
+	return dec.Decision, nil
 }
 
 // Healthy checks that the OpenFGA store is reachable.

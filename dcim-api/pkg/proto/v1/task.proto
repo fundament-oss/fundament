@@ -113,6 +113,11 @@ message CreateTaskResponse {
   string task_id = 10;
 }
 
+// UpdateTaskRequest patches the fields it explicitly sets and leaves the rest
+// untouched. For the nullable columns (description, assignee_id, due_date,
+// location) an explicitly-set field carrying the "empty" sentinel — an empty
+// string, or the epoch timestamp — clears the column, matching
+// UpdatePhysicalConnectionRequest.
 message UpdateTaskRequest {
   string                    id          = 10 [(buf.validate.field).string = {uuid: true}];
   string                    title       = 20 [features.field_presence = EXPLICIT];

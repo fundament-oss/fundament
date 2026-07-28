@@ -15,7 +15,7 @@ var ErrNoActiveOrganization = errors.New("no active organization: pass --org=<or
 
 // CLI defines the root command-line interface structure.
 type CLI struct {
-	Debug       bool         `help:"Enable debug logging."`
+	Debug       bool         `help:"Enable debug logging." short:"d" env:"FUNCTL_DEBUG"`
 	Output      OutputFormat `help:"Output format: table or json." short:"o" default:"table" enum:"table,json"`
 	OrgOverride string       `name:"org" help:"Organization ID (overrides the active organization configured via 'functl org set')."`
 
@@ -26,6 +26,7 @@ type CLI struct {
 	Project   ProjectCmd   `cmd:"" help:"Manage projects."`
 	Namespace NamespaceCmd `cmd:"" help:"Manage namespaces."`
 	APIKey    APIKeyCmd    `cmd:"" name:"apikey" help:"Manage API keys."`
+	Version   VersionCmd   `cmd:"" help:"Print the functl version."`
 }
 
 // Context holds shared dependencies for command execution.

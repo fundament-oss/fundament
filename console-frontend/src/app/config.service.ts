@@ -4,6 +4,7 @@ export interface AppConfiguration {
   authnApiUrl: string;
   organizationApiUrl: string;
   kubeApiProxyUrl: string;
+  pluginProxyUrl: string;
 }
 
 @Injectable({
@@ -32,6 +33,7 @@ export class ConfigService {
         authnApiUrl: '',
         organizationApiUrl: '',
         kubeApiProxyUrl: '',
+        pluginProxyUrl: '',
       };
 
       return this.config;

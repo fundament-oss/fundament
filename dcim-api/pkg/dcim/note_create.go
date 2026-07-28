@@ -21,9 +21,24 @@ func (s *Server) CreateNote(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	params.Body = req.Msg.GetBody()
-	params.CreatedBy = pgtype.Text{String: req.Msg.GetCreatedBy(), Valid: true}
+	// Attribute the note to the authenticated caller, never to a client-supplied
+	// value, so the author cannot be spoofed. The roster is provisioned out of
+	// band, so a caller who is not in it writes an unattributed note rather than
+	// being refused — note-taking must not depend on directory coverage.
+	author, found, err := s.lookupCurrentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	params.Body = req.Msg.GetBody()
+	if found {
+		params.CreatedByID = pgtype.UUID{Bytes: author.ID, Valid: true}
+	}
+
+	// No dcim_notes_fk_created_by branch here on purpose: the author id was just
+	// read out of dcim.users in this request and users are only ever soft-deleted,
+	// so the FK cannot realistically fire — and if it did, telling the client
+	// "author not found" about a note whose body was fine only misdirects them.
 	id, err := s.queries.NoteCreate(ctx, params)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create note: %w", err))

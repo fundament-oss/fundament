@@ -19,6 +19,8 @@ import { RoomService } from '../generated/v1/room_pb';
 import { RackRowService } from '../generated/v1/rack_row_pb';
 import { NoteService } from '../generated/v1/note_pb';
 import { PlacementService } from '../generated/v1/placement_pb';
+import { TaskService, TaskStepService } from '../generated/v1/task_pb';
+import { UserService } from '../generated/v1/user_pb';
 
 export const DCIM_TRANSPORT = new InjectionToken<Transport>('dcim-transport', {
   providedIn: 'root',
@@ -51,3 +53,6 @@ export const ROOM_CLIENT = createClientToken(RoomService);
 export const RACK_ROW_CLIENT = createClientToken(RackRowService);
 export const NOTE_CLIENT = createClientToken(NoteService);
 export const PLACEMENT_CLIENT = createClientToken(PlacementService);
+export const TASK_CLIENT = createClientToken(TaskService);
+export const TASK_STEP_CLIENT = createClientToken(TaskStepService);
+export const USER_CLIENT = createClientToken(UserService);

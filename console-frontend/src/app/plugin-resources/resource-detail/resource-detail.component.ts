@@ -20,7 +20,7 @@ import { TitleService } from '../../title.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
-import buildPluginConsoleUrl from '../plugin-console-url.utils';
+import { buildCustomUIUrl } from '../plugin-console-url.utils';
 
 function checkIsWideField(schema: CrdPropertySchema): boolean {
   return (
@@ -82,22 +82,19 @@ export default class ResourceDetailComponent implements OnInit {
 
   private plugin = computed(() => this.registry.getPlugin(this.pluginName()));
 
-  customUIUrl = computed(() => {
-    const kind = this.crdDef()?.kind;
-    if (!kind) return null;
-    const plugin = this.plugin();
-    const path = plugin?.customComponents?.[kind]?.detail;
-    const clusterId = this.clusterContext.selectedClusterId();
-    if (!plugin || !path || !clusterId) return null;
-    return buildPluginConsoleUrl({
-      kubeApiProxyUrl: this.config.getConfig().kubeApiProxyUrl,
-      clusterId,
-      pluginName: plugin.name,
-      path,
-    });
-  });
+  customUIUrl = computed(() =>
+    buildCustomUIUrl({
+      plugin: this.plugin(),
+      kind: this.crdDef()?.kind,
+      view: 'detail',
+      clusterId: this.clusterContext.selectedClusterId(),
+      pluginProxyUrl: this.config.getConfig().pluginProxyUrl,
+    }),
+  );
 
-  protected allowedResources = computed(() => this.plugin()?.allowedResources ?? []);
+  protected installationId = computed(() => this.plugin()?.installationId ?? '');
+
+  protected installationVersion = computed(() => this.plugin()?.installationVersion ?? '');
 
   isLoading = signal(false);
 

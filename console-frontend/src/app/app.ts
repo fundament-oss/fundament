@@ -521,6 +521,10 @@ export default class App implements OnInit {
     } else {
       htmlElement.classList.remove('dark');
     }
+
+    // The design system keys its own color-scheme handling on :root[data-scheme],
+    // so keep that in sync with our 'dark' class. Mirrors the inline script in index.html.
+    htmlElement.dataset['scheme'] = this.isDarkMode() ? 'dark' : 'light';
   }
 
   // Persist the user's explicit theme choice to localStorage.

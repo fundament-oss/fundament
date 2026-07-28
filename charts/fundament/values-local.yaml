@@ -14,9 +14,6 @@ externalUrls:
   dcim: https://dcim.fundament.localhost:8443
   dcimAuthn: https://dcim-authn.fundament.localhost:8443
   corsAllowedOrigins: "https://console.fundament.localhost:8443,https://dcim.fundament.localhost:8443,https://dcim-authn.fundament.localhost:8443,https://plugin-proxy.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
-  # The in-cluster Console plus the `ng serve` origins, so a plugin iframe still
-  # loads when the Console runs outside the cluster against this deployment.
-  consoleOrigins: "https://console.fundament.localhost:8443,http://localhost:4200,http://localhost:5173"
 
 db:
   enabled: true
@@ -48,6 +45,9 @@ kubeApiProxy:
   replicas: 1
   logLevel: debug
   mode: mock
+  # Point kube-api-proxy at the local k3d-fundament-plugin sandbox cluster.
+  # Same Secret plugin-proxy uses — created by: just plugin-sandbox-kubeconfig
+  sandboxKubeconfigSecret: plugin-sandbox-kubeconfig
 
 consoleFrontend:
   enabled: true
@@ -125,12 +125,17 @@ dex:
 pluginController:
   enabled: true
   logLevel: debug
+  # `just plugin-install` sets an empty definitionHash; allow it locally.
+  allowUnpinnedHash: true
 
 pluginProxy:
   enabled: true
   replicas: 1
   logLevel: debug
   mode: mock
+  # Point plugin-proxy at the local k3d-fundament-plugin sandbox cluster.
+  # Create the referenced Secret with: just plugin-sandbox-kubeconfig
+  sandboxKubeconfigSecret: plugin-sandbox-kubeconfig
 
 dcimApi:
   enabled: true

@@ -2,11 +2,15 @@ package dcim
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/fundament-oss/fundament/common/dbconst"
 	db "github.com/fundament-oss/fundament/dcim-api/pkg/db/gen"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 )
@@ -27,7 +31,12 @@ func (s *Server) CreateTask(
 	}
 
 	if req.Msg.HasAssigneeId() {
-		params.AssigneeID = pgtype.Text{String: req.Msg.GetAssigneeId(), Valid: true}
+		assigneeID, err := uuid.Parse(req.Msg.GetAssigneeId())
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid assignee_id: %w", err))
+		}
+
+		params.AssigneeID = pgtype.UUID{Bytes: assigneeID, Valid: true}
 	}
 
 	if req.Msg.HasDueDate() {
@@ -40,6 +49,10 @@ func (s *Server) CreateTask(
 
 	id, err := s.queries.TaskCreate(ctx, params)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.ConstraintName == dbconst.ConstraintDcimTasksFkAssignee {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("assignee not found"))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create task: %w", err))
 	}
 

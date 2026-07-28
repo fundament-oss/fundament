@@ -3,6 +3,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -29,21 +30,49 @@ type Config struct {
 	HealthPort      int           `env:"HEALTH_PORT" envDefault:"8097"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
-	GardenerMode       string `env:"GARDENER_MODE"`
-	GardenerKubeconfig string `env:"GARDENER_KUBECONFIG"`
-
-	// Provider configuration for real Gardener mode.
-	ProviderType                   string `env:"GARDENER_PROVIDER_TYPE"`
-	ProviderCloudProfile           string `env:"GARDENER_CLOUD_PROFILE"`
-	ProviderCredentialsBindingName string `env:"GARDENER_CREDENTIALS_BINDING_NAME"`
-	ProviderMachineImageName       string `env:"GARDENER_MACHINE_IMAGE_NAME"`
-	ProviderMachineImageVersion    string `env:"GARDENER_MACHINE_IMAGE_VERSION"`
-	ProviderDefaultMachineType     string `env:"GARDENER_DEFAULT_MACHINE_TYPE"`
+	Gardener GardenerConfig `envPrefix:"GARDENER_"`
 
 	Outbox    outbox.Config         `envPrefix:"OUTBOX_"`
 	Status    status.Config         `envPrefix:"STATUS_"`
 	Reconcile reconcile.Config      `envPrefix:"RECONCILE_"`
 	Cluster   clusterhandler.Config `envPrefix:"CLUSTER_"`
+}
+
+// GardenerConfig configures the Gardener client and the provider defaults the
+// cluster-worker stamps onto Shoots. Every field is read under the GARDENER_ env
+// prefix (factored out here rather than repeated per tag), so each env var is the
+// UPPER_SNAKE of the field name, e.g. ProviderType -> GARDENER_PROVIDER_TYPE.
+// The zero values target Gardener's local provider; non-local providers such as
+// metal override the provider fields (see the deployment's Helm values).
+type GardenerConfig struct {
+	Mode       string `env:"MODE"`       // mock or real
+	Kubeconfig string `env:"KUBECONFIG"` // required when Mode == real
+
+	ProviderType           string `env:"PROVIDER_TYPE"`            // e.g. local, metal
+	CloudProfile           string `env:"CLOUD_PROFILE"`            // e.g. local, metal
+	Region                 string `env:"REGION"`                   // default Shoot region when the cluster specifies none
+	CredentialsBindingName string `env:"CREDENTIALS_BINDING_NAME"` // e.g. local, metal-credentials
+
+	// Shared credentials that the per-project CredentialsBindings reference. The
+	// in-code defaults target the local provider's WorkloadIdentity
+	// (garden-local/local); metal uses a Secret and must set all three.
+	CredentialsRef           string `env:"CREDENTIALS_REF"`             // "namespace/name"
+	CredentialsRefKind       string `env:"CREDENTIALS_REF_KIND"`        // Secret or WorkloadIdentity
+	CredentialsRefAPIVersion string `env:"CREDENTIALS_REF_API_VERSION"` // v1 or security.gardener.cloud/v1alpha1
+
+	MachineImageName    string `env:"MACHINE_IMAGE_NAME"`
+	MachineImageVersion string `env:"MACHINE_IMAGE_VERSION"`
+	DefaultMachineType  string `env:"DEFAULT_MACHINE_TYPE"`
+
+	NodesCIDR    string `env:"NODES_CIDR"` // empty => provider IPAM allocates (metal); local falls back to 10.0.0.0/16
+	PodsCIDR     string `env:"PODS_CIDR"`
+	ServicesCIDR string `env:"SERVICES_CIDR"`
+
+	// Provider extension configs (raw JSON) stamped verbatim onto Shoots, plus
+	// extra Shoot annotations (a JSON object). Used by non-local providers (metal).
+	InfrastructureConfig string `env:"INFRASTRUCTURE_CONFIG"`
+	ControlPlaneConfig   string `env:"CONTROL_PLANE_CONFIG"`
+	ShootAnnotations     string `env:"SHOOT_ANNOTATIONS"`
 }
 
 // ReadyChecker reports whether a worker is ready to serve traffic.
@@ -80,7 +109,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	registry.RegisterReconcile(ch)
 
 	// User sync handler (SA/CRB lifecycle on shoots)
-	shootAccess, err := createShootAccess(cfg.GardenerMode, gardenerClient, logger)
+	shootAccess, err := createShootAccess(cfg.Gardener.Mode, gardenerClient, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +156,7 @@ func (a *App) Run(ctx context.Context) error {
 		"reconcile_interval", a.cfg.Reconcile.Interval,
 		"status_interval", a.cfg.Status.Interval,
 		"max_retries", a.cfg.Outbox.MaxRetries,
-		"gardener_mode", a.cfg.GardenerMode)
+		"gardener_mode", a.cfg.Gardener.Mode)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -154,47 +183,88 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func createGardenerClient(cfg *Config, logger *slog.Logger) (gardener.Client, error) {
-	switch cfg.GardenerMode {
+	g := cfg.Gardener
+	switch g.Mode {
 	case "mock":
 		logger.Info("using mock Gardener client (in-memory)")
 		return gardener.NewMock(logger), nil
 
 	case "real":
-		if cfg.GardenerKubeconfig == "" {
+		if g.Kubeconfig == "" {
 			return nil, fmt.Errorf("GARDENER_KUBECONFIG required for real mode")
 		}
 		providerCfg := gardener.NewProviderConfig()
-		if cfg.ProviderType != "" {
-			providerCfg.Type = cfg.ProviderType
+		if g.ProviderType != "" {
+			providerCfg.Type = g.ProviderType
 		}
-		if cfg.ProviderCloudProfile != "" {
-			providerCfg.CloudProfile = cfg.ProviderCloudProfile
+		if g.CloudProfile != "" {
+			providerCfg.CloudProfile = g.CloudProfile
 		}
-		if cfg.ProviderCredentialsBindingName != "" {
-			providerCfg.CredentialsBindingName = cfg.ProviderCredentialsBindingName
+		if g.Region != "" {
+			providerCfg.Region = g.Region
 		}
-		if cfg.ProviderMachineImageName != "" {
-			providerCfg.MachineImageName = cfg.ProviderMachineImageName
+		if g.CredentialsBindingName != "" {
+			providerCfg.CredentialsBindingName = g.CredentialsBindingName
 		}
-		if cfg.ProviderMachineImageVersion != "" {
-			providerCfg.MachineImageVersion = cfg.ProviderMachineImageVersion
+		if g.CredentialsRef != "" {
+			providerCfg.CredentialsRef = g.CredentialsRef
 		}
-		if cfg.ProviderDefaultMachineType != "" {
-			providerCfg.DefaultMachineType = cfg.ProviderDefaultMachineType
+		if g.CredentialsRefKind != "" {
+			providerCfg.CredentialsRefKind = g.CredentialsRefKind
+		}
+		if g.CredentialsRefAPIVersion != "" {
+			providerCfg.CredentialsRefAPIVersion = g.CredentialsRefAPIVersion
+		}
+		if g.MachineImageName != "" {
+			providerCfg.MachineImageName = g.MachineImageName
+		}
+		if g.MachineImageVersion != "" {
+			providerCfg.MachineImageVersion = g.MachineImageVersion
+		}
+		if g.DefaultMachineType != "" {
+			providerCfg.DefaultMachineType = g.DefaultMachineType
+		}
+		if g.NodesCIDR != "" {
+			providerCfg.NodesCIDR = g.NodesCIDR
+		}
+		if g.PodsCIDR != "" {
+			providerCfg.PodsCIDR = g.PodsCIDR
+		}
+		if g.ServicesCIDR != "" {
+			providerCfg.ServicesCIDR = g.ServicesCIDR
+		}
+		if g.InfrastructureConfig != "" {
+			if !json.Valid([]byte(g.InfrastructureConfig)) {
+				return nil, fmt.Errorf("GARDENER_INFRASTRUCTURE_CONFIG is not valid JSON")
+			}
+			providerCfg.InfrastructureConfig = g.InfrastructureConfig
+		}
+		if g.ControlPlaneConfig != "" {
+			if !json.Valid([]byte(g.ControlPlaneConfig)) {
+				return nil, fmt.Errorf("GARDENER_CONTROL_PLANE_CONFIG is not valid JSON")
+			}
+			providerCfg.ControlPlaneConfig = g.ControlPlaneConfig
+		}
+		if g.ShootAnnotations != "" {
+			anns := map[string]string{}
+			if err := json.Unmarshal([]byte(g.ShootAnnotations), &anns); err != nil {
+				return nil, fmt.Errorf("parse GARDENER_SHOOT_ANNOTATIONS: %w", err)
+			}
+			providerCfg.ShootAnnotations = anns
 		}
 
 		logger.Info("using real Gardener client",
-			"kubeconfig", cfg.GardenerKubeconfig,
+			"kubeconfig", g.Kubeconfig,
 			"provider", providerCfg.Type,
 			"cloudProfile", providerCfg.CloudProfile)
-		client, err := gardener.NewReal(cfg.GardenerKubeconfig, providerCfg, logger)
+		client, err := gardener.NewReal(g.Kubeconfig, providerCfg, logger)
 		if err != nil {
 			return nil, fmt.Errorf("create gardener client: %w", err)
 		}
 		return client, nil
 
 	default:
-		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", cfg.GardenerMode)
+		return nil, fmt.Errorf("invalid GARDENER_MODE: %s (must be mock or real)", g.Mode)
 	}
 }
 

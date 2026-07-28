@@ -44,32 +44,95 @@
   class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-2.5"
   [class.hidden]="selectedTasks().size === 0"
 >
-  <div class="flex items-center gap-2.5">
-    <!-- Bulk actions -->
+  <div class="flex items-center justify-between gap-2.5">
     <span class="text-xs font-medium text-slate-600 dark:text-gray-300"
       >{{ selectedTasks().size }} selected</span
     >
-    <nldd-button
-      variant="neutral-transparent"
-      text="Status"
-      start-icon="pencil"
-      size="sm"
-    ></nldd-button>
-    <nldd-button
-      variant="neutral-transparent"
-      text="Assign"
-      start-icon="person"
-      size="sm"
-    ></nldd-button>
-    <nldd-button
-      variant="neutral-transparent"
-      start-icon="trash"
-      size="sm"
-      accessible-label="Delete selected"
-      class="text-danger-700 dark:text-danger-300"
-    ></nldd-button>
+    <!-- Bulk actions -->
+    <div class="flex items-center gap-2.5">
+      <nldd-button
+        id="bulkStatusTrigger"
+        variant="neutral-transparent"
+        text="Status"
+        start-icon="pencil"
+        size="sm"
+        expandable
+        popup-type="menu"
+      ></nldd-button>
+      <nldd-button
+        id="bulkAssignTrigger"
+        variant="neutral-transparent"
+        text="Assign"
+        start-icon="person"
+        size="sm"
+        expandable
+        popup-type="menu"
+      ></nldd-button>
+      <nldd-button
+        variant="destructive"
+        start-icon="trash"
+        size="sm"
+        accessible-label="Delete selected"
+        (click)="openBulkDeleteDialog()"
+      ></nldd-button>
+    </div>
   </div>
 </div>
+
+<nldd-popover
+  id="bulkStatusPopover"
+  #bulkStatusPopoverEl
+  anchor="bulkStatusTrigger"
+  accessible-label="Set status"
+  role="menu"
+>
+  <div class="flex flex-col gap-0.5 p-1" role="none">
+    @for (s of kanbanColumns; track s) {
+      <button
+        type="button"
+        role="menuitem"
+        class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-gray-200 dark:hover:bg-gray-900"
+        (click)="bulkSetStatus(s)"
+      >
+        <span [class]="statusDotClass(s)" aria-hidden="true"></span>
+        {{ s }}
+      </button>
+    }
+  </div>
+</nldd-popover>
+
+<nldd-popover
+  id="bulkAssignPopover"
+  #bulkAssignPopoverEl
+  anchor="bulkAssignTrigger"
+  accessible-label="Assign to"
+  role="menu"
+>
+  <div class="flex max-h-60 flex-col gap-0.5 overflow-y-auto p-1" role="none">
+    <button
+      type="button"
+      role="menuitem"
+      class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-gray-200 dark:hover:bg-gray-900"
+      (click)="bulkAssign(null)"
+    >
+      <span [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')" aria-hidden="true">—</span>
+      Unassigned
+    </button>
+    @for (tech of technicians(); track tech.id) {
+      <button
+        type="button"
+        role="menuitem"
+        class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-gray-200 dark:hover:bg-gray-900"
+        (click)="bulkAssign(tech.id)"
+      >
+        <span [class]="techInitialsClass(tech, 'h-6 w-6 text-[10px]')" aria-hidden="true">{{
+          tech.initials
+        }}</span>
+        {{ tech.name }}
+      </button>
+    }
+  </div>
+</nldd-popover>
 
 <!-- ══════════════════════════════════════════════════════════════
      BODY (sidebar + main)
@@ -225,6 +288,23 @@
 
   <!-- ── MAIN ───────────────────────────────────────────────────── -->
   <main class="flex-1 min-w-0 overflow-y-auto px-6 pb-6">
+    @if (loadError()) {
+      <div
+        class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950"
+        role="alert"
+      >
+        <p class="text-sm font-semibold text-red-800 dark:text-red-200">Could not load tasks</p>
+        <p class="mt-1 text-sm text-red-700 dark:text-red-300">{{ loadError() }}</p>
+        <button
+          type="button"
+          class="mt-2 text-sm font-medium text-red-800 underline dark:text-red-200"
+          (click)="retryLoad()"
+        >
+          Try again
+        </button>
+      </div>
+    }
+
     <!-- ── LIST VIEW ── -->
     <div [class.hidden]="currentView() === 'kanban'">
       <table class="w-full border-collapse">
@@ -233,6 +313,7 @@
             <th class="w-10 px-3 py-2.5 text-left">
               <nldd-checkbox
                 accessible-label="Select all tasks"
+                [attr.checked]="allFilteredSelected() ? '' : null"
                 (change)="toggleSelectAll($any($event).detail.checked)"
               ></nldd-checkbox>
             </th>
@@ -345,6 +426,20 @@
                   <span [class]="techInitialsClass(tech)" [title]="tech.name" aria-hidden="true">{{
                     tech.initials
                   }}</span>
+                } @else if (assigneeUnresolved(task)) {
+                  <span
+                    [class]="unassignedAvatarClass()"
+                    title="Assigned, but the directory could not be loaded"
+                    aria-hidden="true"
+                    >?</span
+                  >
+                } @else if (assigneeMissing(task)) {
+                  <span
+                    [class]="unknownAvatarClass()"
+                    title="Assigned to someone who is no longer in the directory"
+                    aria-hidden="true"
+                    >?</span
+                  >
                 } @else {
                   <span [class]="unassignedAvatarClass()" aria-hidden="true">
                     <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
@@ -369,10 +464,13 @@
     </div>
 
     <!-- ── KANBAN VIEW ── -->
-    <div class="pt-5" [class.hidden]="currentView() === 'list'">
-      <div class="flex gap-3 overflow-x-auto pb-6 snap-x snap-mandatory sm:snap-none">
+    <div class="pt-5 h-full" [class.hidden]="currentView() === 'list'">
+      <div
+        class="flex h-full items-stretch gap-3 overflow-x-auto pb-6 snap-x snap-mandatory sm:snap-none"
+        cdkDropListGroup
+      >
         @for (col of kanbanColumns; track col) {
-          <div class="shrink-0 w-72 snap-center">
+          <div class="shrink-0 w-72 snap-center flex flex-col min-h-0">
             <div class="mb-3 flex items-center gap-2">
               <span
                 class="h-2 w-2 rounded-full"
@@ -385,15 +483,33 @@
                 >{{ tasksForColumn(col).length }}</span
               >
             </div>
-            <div class="space-y-2">
+            <!-- Whole lane (including empty space below the last card) is a drop
+                 target. Sorting is disabled: columns have no persisted order, so
+                 dropping only changes status, never position. -->
+            <div
+              class="flex-1 min-h-0 space-y-2 rounded-xl bg-slate-50/60 dark:bg-gray-900/40 p-2"
+              cdkDropList
+              cdkDropListSortingDisabled
+              [id]="'kanban-col-' + col"
+              [cdkDropListData]="tasksForColumn(col)"
+              (cdkDropListDropped)="onKanbanDrop($event, col)"
+            >
               @for (task of tasksForColumn(col); track task.id) {
                 <div
                   [class]="kanbanCardClass(task.status)"
+                  cdkDrag
+                  [cdkDragData]="task"
                   tabindex="0"
                   (click)="openDetail(task.id)"
                   (keydown.enter)="openDetail(task.id)"
                   (keydown.space)="openDetail(task.id)"
                 >
+                  <!-- Ghost slot shown where the card will land while it is
+                       being dragged (the card itself follows the cursor). -->
+                  <div
+                    *cdkDragPlaceholder
+                    class="rounded-xl border-2 border-dashed border-accent-400 dark:border-accent-600 bg-accent-50/50 dark:bg-accent-950/30 min-h-[96px]"
+                  ></div>
                   <h4 class="text-sm font-medium text-slate-900 dark:text-white leading-snug">
                     {{ task.title }}
                   </h4>
@@ -437,6 +553,20 @@
                           aria-hidden="true"
                           >{{ tech.initials }}</span
                         >
+                      } @else if (assigneeUnresolved(task)) {
+                        <span
+                          [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')"
+                          title="Assigned, but the directory could not be loaded"
+                          aria-hidden="true"
+                          >?</span
+                        >
+                      } @else if (assigneeMissing(task)) {
+                        <span
+                          [class]="unknownAvatarClass('h-6 w-6 text-[10px]')"
+                          title="Assigned to someone who is no longer in the directory"
+                          aria-hidden="true"
+                          >?</span
+                        >
                       } @else {
                         <span
                           [class]="unassignedAvatarClass('h-6 w-6 text-[10px]')"
@@ -447,24 +577,15 @@
                       }
                     </div>
                   </div>
-                  @if (task.notes.length) {
-                    <div
-                      class="mt-2.5 flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500 border-t border-slate-100 dark:border-gray-800 pt-2.5"
-                    >
-                      <nldd-icon
-                        name="envelope"
-                        style="width: 13px; height: 13px"
-                        aria-hidden="true"
-                      ></nldd-icon
-                      >{{ task.notes.length }} note{{ task.notes.length !== 1 ? 's' : '' }}
-                    </div>
-                  }
+                  <!-- No note count here: ListTasks does not carry one, and notes
+                       are only fetched when a task's detail sheet is opened, so a
+                       badge would appear on the handful of cards that happen to
+                       have been opened and read as "no notes" on all the rest.
+                       Restore it once the task list carries a note count. -->
                 </div>
               }
               @if (tasksForColumn(col).length === 0) {
-                <div
-                  class="rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-800 p-6 text-center text-xs text-slate-400 dark:text-gray-500"
-                >
+                <div class="p-6 text-center text-xs text-slate-400 dark:text-gray-500">
                   No tasks
                 </div>
               }
@@ -502,6 +623,16 @@
                     tech.initials
                   }}</span>
                   <span>{{ tech.name }}</span>
+                } @else if (assigneeUnresolved(task)) {
+                  <span [class]="unassignedAvatarClass()" aria-hidden="true">?</span>
+                  <span class="text-slate-400 dark:text-gray-500 font-normal"
+                    >Assigned — directory unavailable</span
+                  >
+                } @else if (assigneeMissing(task)) {
+                  <span [class]="unknownAvatarClass()" aria-hidden="true">?</span>
+                  <span class="text-amber-700 dark:text-amber-300 font-normal"
+                    >No longer in the directory</span
+                  >
                 } @else {
                   <span [class]="unassignedAvatarClass()" aria-hidden="true">
                     <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
@@ -547,6 +678,14 @@
               start-icon="eye"
               size="sm"
               href="/task-management-technician"
+              target="_blank"
+            ></nldd-button>
+            <nldd-button
+              variant="destructive"
+              text="Delete task"
+              start-icon="trash"
+              size="sm"
+              (click)="openDeleteDialog()"
             ></nldd-button>
           </div>
 
@@ -559,7 +698,24 @@
               >
             </p>
             <div class="space-y-3">
-              @if (task.notes.length === 0) {
+              @if (notesError()) {
+                <div
+                  class="rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950"
+                  role="alert"
+                >
+                  <p class="text-sm font-semibold text-red-800 dark:text-red-200">
+                    Could not load notes
+                  </p>
+                  <p class="mt-1 text-sm text-red-700 dark:text-red-300">{{ notesError() }}</p>
+                  <button
+                    type="button"
+                    class="mt-2 text-sm font-medium text-red-800 underline dark:text-red-200"
+                    (click)="retryLoadNotes()"
+                  >
+                    Try again
+                  </button>
+                </div>
+              } @else if (task.notes.length === 0) {
                 <p class="text-sm text-slate-400 dark:text-gray-500 text-center py-4">
                   No notes yet
                 </p>
@@ -573,11 +729,9 @@
                         tech.initials
                       }}</span>
                     } @else {
-                      <span
-                        class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white text-xs font-semibold shrink-0 select-none"
-                        aria-hidden="true"
-                        >A</span
-                      >
+                      <!-- No roster entry to take a colour from: either the note
+                           predates the directory or its author has left it. -->
+                      <span [class]="unassignedAvatarClass()" aria-hidden="true">?</span>
                     }
                   </div>
                   <div class="flex-1 rounded-xl bg-slate-50 dark:bg-gray-900 px-3.5 py-3">
@@ -601,12 +755,16 @@
 
         <!-- Add note -->
         <div class="mt-4 flex gap-2.5">
-          <div
-            class="h-8 w-8 shrink-0 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold select-none"
-            aria-hidden="true"
-          >
-            A
-          </div>
+          <!-- The signed-in user, since that is who the backend attributes the
+               note to. A caller outside the directory gets the neutral avatar,
+               matching the unattributed note their write will produce. -->
+          @if (currentUser(); as me) {
+            <span [class]="techInitialsClass(me, 'h-8 w-8 text-xs')" [title]="me.name">{{
+              me.initials
+            }}</span>
+          } @else {
+            <span [class]="unassignedAvatarClass('h-8 w-8 text-xs')" aria-hidden="true">?</span>
+          }
           <div class="flex-1 relative">
             <nldd-text-field
               placeholder="Add a note…"
@@ -614,7 +772,7 @@
               size="sm"
               class="w-full"
               [value]="newNoteText()"
-              (change)="newNoteText.set($any($event).detail?.value ?? '')"
+              (input)="newNoteText.set($any($event.target).value ?? '')"
               (keydown.enter)="addNote()"
             ></nldd-text-field>
             <button
@@ -632,6 +790,60 @@
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
+     DELETE TASK CONFIRMATION
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #deleteDialogEl
+  variant="alert"
+  icon="trash"
+  text="Delete this task?"
+  supporting-text="This cannot be undone."
+  accessible-label="Delete task confirmation"
+>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    size="sm"
+    (click)="closeDeleteDialog()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    size="sm"
+    (click)="confirmDeleteTask()"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════
+     BULK DELETE CONFIRMATION
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #bulkDeleteDialogEl
+  variant="alert"
+  icon="trash"
+  [attr.text]="'Delete ' + selectedTasks().size + ' task(s)?'"
+  supporting-text="This cannot be undone."
+  accessible-label="Delete selected tasks confirmation"
+>
+  <nldd-button
+    slot="actions"
+    variant="secondary"
+    text="Cancel"
+    size="sm"
+    (click)="closeBulkDeleteDialog()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Delete"
+    size="sm"
+    (click)="confirmBulkDelete()"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════
      ADD / EDIT TASK SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #editModalEl accessible-label="Add / edit task" placement="right" width="520px">
@@ -646,6 +858,7 @@
       <div class="space-y-4">
         <nldd-form-field label="Title">
           <nldd-text-field
+            #editTitleInput
             id="editTitle"
             placeholder="E.g. Replace broken harddisk"
             accessible-label="Title"
@@ -733,13 +946,14 @@
               for="editDue"
               >Due date</label
             >
-            <input
-              id="editDue"
+            <nldd-text-field
               type="date"
-              class="w-full rounded-lg border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition"
+              input-id="editDue"
+              class="w-full"
               [value]="editFormDue()"
-              (change)="editFormDue.set($any($event).target.value)"
-            />
+              (change)="editFormDue.set($any($event).detail?.value ?? '')"
+              (keydown.enter)="saveTask()"
+            ></nldd-text-field>
           </div>
         </div>
         <div>
@@ -775,7 +989,7 @@
               name="assignee"
               class="space-y-1.5"
               (change)="
-                editFormAssignee.set($any($event).detail.value ? +$any($event).detail.value : null)
+                editFormAssignee.set($any($event).detail.value ? $any($event).detail.value : null)
               "
             >
               <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- click delegates to the inner radio button, which remains keyboard-focusable via the radio group -->
@@ -793,7 +1007,7 @@
                   [attr.checked]="editFormAssignee() === null ? '' : null"
                 ></nldd-radio-button-field>
               </div>
-              @for (tech of technicians; track tech.id) {
+              @for (tech of technicians(); track tech.id) {
                 <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- click delegates to the inner radio button, which remains keyboard-focusable via the radio group -->
                 <div
                   class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-800 p-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors"
@@ -838,25 +1052,3 @@
     </div>
   </nldd-page>
 </nldd-sheet>
-
-<!-- ══════════════════════════════════════════════════════════════
-     TOAST
-     ══════════════════════════════════════════════════════════════ -->
-<div
-  class="pointer-events-none fixed bottom-24 left-1/2 z-50 -translate-x-1/2 transition-opacity duration-300"
-  [class.opacity-0]="!toastMessage()"
-  [class.opacity-100]="!!toastMessage()"
-  aria-live="polite"
-  aria-atomic="true"
->
-  <div
-    class="flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-xl ring-1 ring-slate-700"
-  >
-    <nldd-icon
-      name="check-mark"
-      style="width: 14px; height: 14px; color: #34d399"
-      aria-hidden="true"
-    ></nldd-icon>
-    <span>{{ toastMessage() }}</span>
-  </div>
-</div>

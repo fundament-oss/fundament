@@ -193,10 +193,13 @@ SELECT
     tenant.clusters.shoot_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
-    tenant.organizations.name AS organization_name
+    tenant.organizations.name AS organization_name,
+    catalog.regions.cloud_profile,
+    catalog.regions.cloud_profile_region
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
 WHERE
     ( -- Delete has been synced: has shoot_status or a completed outbox row
         tenant.clusters.shoot_status IS NOT NULL
@@ -231,6 +234,8 @@ type ClusterListDeletedNeedingVerificationRow struct {
 	OrganizationID     uuid.UUID
 	ShootStatusUpdated pgtype.Timestamptz
 	OrganizationName   string
+	CloudProfile       pgtype.Text
+	CloudProfileRegion pgtype.Text
 }
 
 // Get deleted clusters where we need to verify Shoot is actually gone from Gardener.
@@ -254,6 +259,8 @@ func (q *Queries) ClusterListDeletedNeedingVerification(ctx context.Context, arg
 			&i.OrganizationID,
 			&i.ShootStatusUpdated,
 			&i.OrganizationName,
+			&i.CloudProfile,
+			&i.CloudProfileRegion,
 		); err != nil {
 			return nil, err
 		}
@@ -275,10 +282,13 @@ SELECT
     tenant.clusters.shoot_status,
     tenant.clusters.organization_id,
     tenant.clusters.shoot_status_updated,
-    tenant.organizations.name AS organization_name
+    tenant.organizations.name AS organization_name,
+    catalog.regions.cloud_profile,
+    catalog.regions.cloud_profile_region
 FROM
     tenant.clusters
     JOIN tenant.organizations ON tenant.organizations.id = tenant.clusters.organization_id
+    LEFT JOIN catalog.regions ON catalog.regions.id = tenant.clusters.region_id
 WHERE
     ( -- Cluster has been synced: has shoot_status or a completed outbox row
         tenant.clusters.shoot_status IS NOT NULL
@@ -315,6 +325,8 @@ type ClusterListNeedingStatusCheckRow struct {
 	OrganizationID     uuid.UUID
 	ShootStatusUpdated pgtype.Timestamptz
 	OrganizationName   string
+	CloudProfile       pgtype.Text
+	CloudProfileRegion pgtype.Text
 }
 
 // Get clusters where we need to check Gardener status (active clusters).
@@ -339,6 +351,8 @@ func (q *Queries) ClusterListNeedingStatusCheck(ctx context.Context, arg Cluster
 			&i.OrganizationID,
 			&i.ShootStatusUpdated,
 			&i.OrganizationName,
+			&i.CloudProfile,
+			&i.CloudProfileRegion,
 		); err != nil {
 			return nil, err
 		}
@@ -398,12 +412,14 @@ const nodePoolListByClusterID = `-- name: NodePoolListByClusterID :many
 SELECT
     tenant.node_pools.id,
     tenant.node_pools.name,
-    tenant.node_pools.machine_type,
+    COALESCE(catalog.machine_types.name, tenant.node_pools.machine_type) AS machine_type,
     tenant.node_pools.autoscale_min,
     tenant.node_pools.autoscale_max,
     tenant.node_pools.created
 FROM
     tenant.node_pools
+    LEFT JOIN catalog.region_machine_types ON catalog.region_machine_types.id = tenant.node_pools.region_machine_type_id
+    LEFT JOIN catalog.machine_types ON catalog.machine_types.id = catalog.region_machine_types.machine_type_id
 WHERE
     tenant.node_pools.cluster_id = $1
     AND tenant.node_pools.deleted IS NULL
@@ -427,6 +443,8 @@ type NodePoolListByClusterIDRow struct {
 
 // Fetch active (non-deleted) node pools for a cluster.
 // Used by the cluster handler to build Gardener worker groups.
+// The catalog join resolves the machine-type name when the pool references
+// region_machine_types; legacy pools fall back to the machine_type text column.
 func (q *Queries) NodePoolListByClusterID(ctx context.Context, arg NodePoolListByClusterIDParams) ([]NodePoolListByClusterIDRow, error) {
 	rows, err := q.db.Query(ctx, nodePoolListByClusterID, arg.ClusterID)
 	if err != nil {

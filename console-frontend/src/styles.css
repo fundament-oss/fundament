@@ -4,69 +4,84 @@
 @import '@nldd/design-system/styles';
 
 @theme {
-  --color-accent-25: var(--primitives-color-accent-25);
-  --color-accent-50: var(--primitives-color-accent-50);
-  --color-accent-75: var(--primitives-color-accent-75);
-  --color-accent-100: var(--primitives-color-accent-100);
-  --color-accent-150: var(--primitives-color-accent-150);
-  --color-accent-200: var(--primitives-color-accent-200);
-  --color-accent-250: var(--primitives-color-accent-250);
-  --color-accent-300: var(--primitives-color-accent-300);
-  --color-accent-350: var(--primitives-color-accent-350);
-  --color-accent-400: var(--primitives-color-accent-400);
-  --color-accent-450: var(--primitives-color-accent-450);
-  --color-accent-500: var(--primitives-color-accent-500);
-  --color-accent-550: var(--primitives-color-accent-550);
-  --color-accent-600: var(--primitives-color-accent-600);
-  --color-accent-650: var(--primitives-color-accent-650);
-  --color-accent-700: var(--primitives-color-accent-700);
-  --color-accent-750: var(--primitives-color-accent-750);
-  --color-accent-800: var(--primitives-color-accent-800);
-  --color-accent-850: var(--primitives-color-accent-850);
-  --color-accent-900: var(--primitives-color-accent-900);
-  --color-accent-950: var(--primitives-color-accent-950);
+  /* The colour ramps are copied as literal values out of the design system
+     (dist/css/palettes.generated.css: accent = lintblauw, neutral = coolgray,
+     danger = rood) instead of mapped onto `var(--primitives-color-*)`. Those
+     primitives are `light-dark()` pairs mirrored around step 500, so utilities
+     built on them flip scheme on their own.
 
-  --color-neutral-25: var(--primitives-color-neutral-25);
-  --color-neutral-50: var(--primitives-color-neutral-50);
-  --color-neutral-75: var(--primitives-color-neutral-75);
-  --color-neutral-100: var(--primitives-color-neutral-100);
-  --color-neutral-150: var(--primitives-color-neutral-150);
-  --color-neutral-200: var(--primitives-color-neutral-200);
-  --color-neutral-250: var(--primitives-color-neutral-250);
-  --color-neutral-300: var(--primitives-color-neutral-300);
-  --color-neutral-350: var(--primitives-color-neutral-350);
-  --color-neutral-400: var(--primitives-color-neutral-400);
-  --color-neutral-450: var(--primitives-color-neutral-450);
-  --color-neutral-500: var(--primitives-color-neutral-500);
-  --color-neutral-550: var(--primitives-color-neutral-550);
-  --color-neutral-600: var(--primitives-color-neutral-600);
-  --color-neutral-650: var(--primitives-color-neutral-650);
-  --color-neutral-700: var(--primitives-color-neutral-700);
-  --color-neutral-750: var(--primitives-color-neutral-750);
-  --color-neutral-800: var(--primitives-color-neutral-800);
-  --color-neutral-850: var(--primitives-color-neutral-850);
-  --color-neutral-900: var(--primitives-color-neutral-900);
-  --color-neutral-950: var(--primitives-color-neutral-950);
+     We pin the values because we want full control over the dark mode
+     variants. A good dark mode is not a straight inversion of the light one:
+     surfaces, cards and tints each need their own slightly different
+     background, which is only expressible when a step means one fixed colour
+     and we pick its `dark:` counterpart ourselves.
 
-  --color-danger-50: var(--primitives-color-critical-50);
-  --color-danger-100: var(--primitives-color-critical-100);
-  --color-danger-150: var(--primitives-color-critical-150);
-  --color-danger-200: var(--primitives-color-critical-200);
-  --color-danger-250: var(--primitives-color-critical-250);
-  --color-danger-300: var(--primitives-color-critical-300);
-  --color-danger-350: var(--primitives-color-critical-350);
-  --color-danger-400: var(--primitives-color-critical-400);
-  --color-danger-450: var(--primitives-color-critical-450);
-  --color-danger-500: var(--primitives-color-critical-500);
-  --color-danger-550: var(--primitives-color-critical-550);
-  --color-danger-600: var(--primitives-color-critical-600);
-  --color-danger-650: var(--primitives-color-critical-650);
-  --color-danger-700: var(--primitives-color-critical-700);
-  --color-danger-750: var(--primitives-color-critical-750);
-  --color-danger-800: var(--primitives-color-critical-800);
-  --color-danger-850: var(--primitives-color-critical-850);
-  --color-danger-900: var(--primitives-color-critical-900);
-  --color-danger-950: var(--primitives-color-critical-950);
+     Refresh these when bumping @nldd/design-system. */
+  --color-accent-25: oklch(0.973 0.013 253.4);
+  --color-accent-50: oklch(0.947 0.024 253.4);
+  --color-accent-75: oklch(0.922 0.034 253.4);
+  --color-accent-100: oklch(0.897 0.044 253.4);
+  --color-accent-150: oklch(0.85 0.063 253.4);
+  --color-accent-200: oklch(0.804 0.083 253.4);
+  --color-accent-250: oklch(0.76 0.097 253.4);
+  --color-accent-300: oklch(0.718 0.097 253.4);
+  --color-accent-350: oklch(0.678 0.097 253.4);
+  --color-accent-400: oklch(0.638 0.097 253.4);
+  --color-accent-450: oklch(0.6 0.097 253.4);
+  --color-accent-500: oklch(0.562 0.097 253.4);
+  --color-accent-550: oklch(0.528 0.097 253.4);
+  --color-accent-600: oklch(0.491 0.097 253.4);
+  --color-accent-650: oklch(0.456 0.097 253.4);
+  --color-accent-700: oklch(0.422 0.097 253.4);
+  --color-accent-750: oklch(0.387 0.097 253.4);
+  --color-accent-800: oklch(0.348 0.083 253.4);
+  --color-accent-850: oklch(0.307 0.063 253.4);
+  --color-accent-900: oklch(0.262 0.044 253.4);
+  --color-accent-950: oklch(0.202 0.024 253.4);
+
+  --color-neutral-25: oklch(0.974 0.004 257.4);
+  --color-neutral-50: oklch(0.947 0.007 257.4);
+  --color-neutral-75: oklch(0.923 0.009 257.4);
+  --color-neutral-100: oklch(0.898 0.011 257.4);
+  --color-neutral-150: oklch(0.85 0.015 257.4);
+  --color-neutral-200: oklch(0.804 0.019 257.4);
+  --color-neutral-250: oklch(0.762 0.023 257.4);
+  --color-neutral-300: oklch(0.719 0.026 257.4);
+  --color-neutral-350: oklch(0.678 0.03 257.4);
+  --color-neutral-400: oklch(0.639 0.033 257.4);
+  --color-neutral-450: oklch(0.6 0.037 257.4);
+  --color-neutral-500: oklch(0.563 0.04 257.4);
+  --color-neutral-550: oklch(0.529 0.036 257.4);
+  --color-neutral-600: oklch(0.491 0.032 257.4);
+  --color-neutral-650: oklch(0.457 0.029 257.4);
+  --color-neutral-700: oklch(0.421 0.026 257.4);
+  --color-neutral-750: oklch(0.385 0.023 257.4);
+  --color-neutral-800: oklch(0.348 0.02 257.4);
+  --color-neutral-850: oklch(0.307 0.018 257.4);
+  --color-neutral-900: oklch(0.261 0.015 257.4);
+  --color-neutral-950: oklch(0.201 0.011 257.4);
+
+  --color-danger-25: oklch(0.974 0.013 29.5);
+  --color-danger-50: oklch(0.951 0.025 29.5);
+  --color-danger-75: oklch(0.927 0.037 29.5);
+  --color-danger-100: oklch(0.903 0.051 29.5);
+  --color-danger-150: oklch(0.858 0.073 29.5);
+  --color-danger-200: oklch(0.814 0.094 29.5);
+  --color-danger-250: oklch(0.773 0.115 29.5);
+  --color-danger-300: oklch(0.733 0.135 29.5);
+  --color-danger-350: oklch(0.696 0.156 29.5);
+  --color-danger-400: oklch(0.658 0.177 29.5);
+  --color-danger-450: oklch(0.624 0.198 29.5);
+  --color-danger-500: oklch(0.588 0.207 29.5);
+  --color-danger-550: oklch(0.551 0.198 29.5);
+  --color-danger-600: oklch(0.513 0.177 29.5);
+  --color-danger-650: oklch(0.475 0.156 29.5);
+  --color-danger-700: oklch(0.438 0.135 29.5);
+  --color-danger-750: oklch(0.398 0.115 29.5);
+  --color-danger-800: oklch(0.358 0.094 29.5);
+  --color-danger-850: oklch(0.315 0.073 29.5);
+  --color-danger-900: oklch(0.266 0.052 29.5);
+  --color-danger-950: oklch(0.205 0.031 29.5);
 
   /* Semantic colors */
   --color-dividers: var(--semantics-dividers-color);
@@ -96,15 +111,11 @@
 /* Dark mode variant using the 'dark' class on the HTML element */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Make the CSS color-scheme follow the app's .dark class so that NLDD web
-   components using light-dark() respond to our toggle instead of the OS setting.
-   html.dark specificity (0,1,1) beats :root (0,1,0) from the storybook tokens. */
-html:not(.dark) {
-  color-scheme: light;
-}
-html.dark {
-  color-scheme: dark;
-}
+/* The CSS color-scheme is driven by :root[data-scheme], which the inline script
+   in index.html and applyTheme() keep in sync with the 'dark' class. The design
+   system's own `:root[data-scheme="light"|"dark"] { color-scheme }` rules do the
+   work, and at specificity (0,2,0) they outrank anything we could hang off
+   html.dark (0,1,1) — so do not add a local color-scheme rule here. */
 
 /* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
 ::view-transition-group(root) {

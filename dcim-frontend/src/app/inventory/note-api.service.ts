@@ -9,13 +9,25 @@ import { NOTE_CLIENT } from '../../connect/tokens';
 export default class NoteApiService {
   private readonly client = inject(NOTE_CLIENT);
 
-  /** Maps an API note onto the UI comment model used by the notes card. */
+  /**
+   * Maps an API note onto the UI comment model used by the notes card.
+   *
+   * The author is resolved server-side from the note's created_by_id, so it is
+   * empty for a note whose writer has no directory entry — and for every note
+   * written before authorship became an FK, since migration 030 dropped the old
+   * free-text column without a backfill. Name that state "Unknown" rather than
+   * rendering a nameless comment: the initials already fall back to "?", and a
+   * blank byline reads as a rendering fault instead of as missing authorship.
+   * Matches the admin board's noteAuthor().
+   */
   static mapNote(n: ProtoNote): NoteComment {
     const created = n.created ? timestampDate(n.created) : new Date();
     const daysAgo = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
     return {
       id: n.id,
-      author: n.createdBy,
+      author: n.createdBy || 'Unknown',
+      // Derived from the raw name, so an unattributed note keeps the neutral
+      // "?" rather than taking a "U" off the fallback label.
       initials: NoteApiService.initials(n.createdBy),
       daysAgo,
       content: n.body,
@@ -40,16 +52,25 @@ export default class NoteApiService {
     return this.client.listNotes({ entityType: NoteEntityType.PLACEMENT, entityId: placementId });
   }
 
-  // TODO: replace the placeholder author with the authenticated user once the
-  // frontend has an identity source (authnApiUrl is configured but unused).
-  private static readonly PLACEHOLDER_AUTHOR = 'You';
+  listNotesForTask(taskId: string) {
+    return this.client.listNotes({ entityType: NoteEntityType.TASK, entityId: taskId });
+  }
+
+  // The author is not sent by the client: the backend attributes the note to
+  // the authenticated caller (derived from the JWT) so it cannot be spoofed.
+  createNoteForTask(taskId: string, body: string) {
+    return this.client.createNote({
+      entityType: NoteEntityType.TASK,
+      entityId: taskId,
+      body,
+    });
+  }
 
   createNoteForPlacement(placementId: string, body: string) {
     return this.client.createNote({
       entityType: NoteEntityType.PLACEMENT,
       entityId: placementId,
       body,
-      createdBy: NoteApiService.PLACEHOLDER_AUTHOR,
     });
   }
 }

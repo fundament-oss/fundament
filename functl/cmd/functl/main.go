@@ -35,6 +35,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: failed to load config: %v\n", err)
 		os.Exit(1)
 	}
+	logger.Debug("resolved endpoints",
+		"api_endpoint", cfg.APIEndpoint,
+		"api_endpoint_from_env", os.Getenv(config.EnvAPIEndpoint) != "",
+		"authn_url", cfg.AuthnURL,
+		"authn_url_from_env", os.Getenv(config.EnvAuthnURL) != "")
 
 	runCtx := &cli.Context{
 		Debug:  root.Debug,

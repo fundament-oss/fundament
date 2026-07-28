@@ -12,9 +12,10 @@
   <app-plugin-iframe
     [src]="customUIUrl()!"
     [pluginName]="pluginName()"
+    [pluginVersion]="installationVersion()"
+    [installationId]="installationId()"
     [crdKind]="crdDef()!.kind"
     view="create"
-    [allowedResources]="allowedResources()"
     [clusterId]="clusterContext.selectedClusterId()!"
     [namespaces]="namespaces()"
   />

@@ -28,6 +28,11 @@ type AppstorePresetPlugin struct {
 	PluginID uuid.UUID
 }
 
+type CatalogRegionKubernetesVersion struct {
+	RegionID            uuid.UUID
+	KubernetesVersionID uuid.UUID
+}
+
 type TenantClusterEvent struct {
 	ID         uuid.UUID
 	ClusterID  uuid.UUID
@@ -39,14 +44,15 @@ type TenantClusterEvent struct {
 }
 
 type TenantNodePool struct {
-	ID           uuid.UUID
-	ClusterID    uuid.UUID
-	Name         string
-	MachineType  string
-	AutoscaleMin int32
-	AutoscaleMax int32
-	Created      pgtype.Timestamptz
-	Deleted      pgtype.Timestamptz
+	ID                  uuid.UUID
+	ClusterID           uuid.UUID
+	Name                string
+	MachineType         string
+	AutoscaleMin        int32
+	AutoscaleMax        int32
+	Created             pgtype.Timestamptz
+	Deleted             pgtype.Timestamptz
+	RegionMachineTypeID pgtype.UUID
 }
 
 type TenantProject struct {

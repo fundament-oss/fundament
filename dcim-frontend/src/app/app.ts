@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import ThemeService from './theme.service';
+import AppToast from './shared/toast';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, AppToast],
   templateUrl: './app.html',
 })
 export default class App {

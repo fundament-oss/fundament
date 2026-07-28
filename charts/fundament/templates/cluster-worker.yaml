@@ -39,8 +39,60 @@ spec:
               value: {{ $.Values.clusterWorker.gardenerProviderType | default "local" }}
             - name: GARDENER_CLOUD_PROFILE
               value: {{ $.Values.clusterWorker.gardenerCloudProfile | default "local" }}
+            {{- with $.Values.clusterWorker.gardenerRegion }}
+            - name: GARDENER_REGION
+              value: {{ . | quote }}
+            {{- end }}
             - name: GARDENER_CREDENTIALS_BINDING_NAME
               value: {{ $.Values.clusterWorker.gardenerCredentialsBindingName | default "" }}
+            {{- with $.Values.clusterWorker.gardenerCredentialsRef }}
+            - name: GARDENER_CREDENTIALS_REF
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerCredentialsRefKind }}
+            - name: GARDENER_CREDENTIALS_REF_KIND
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerCredentialsRefAPIVersion }}
+            - name: GARDENER_CREDENTIALS_REF_API_VERSION
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerMachineImageName }}
+            - name: GARDENER_MACHINE_IMAGE_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerMachineImageVersion }}
+            - name: GARDENER_MACHINE_IMAGE_VERSION
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerDefaultMachineType }}
+            - name: GARDENER_DEFAULT_MACHINE_TYPE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerNodesCIDR }}
+            - name: GARDENER_NODES_CIDR
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerPodsCIDR }}
+            - name: GARDENER_PODS_CIDR
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerServicesCIDR }}
+            - name: GARDENER_SERVICES_CIDR
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerInfrastructureConfig }}
+            - name: GARDENER_INFRASTRUCTURE_CONFIG
+              value: {{ . | toJson | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerControlPlaneConfig }}
+            - name: GARDENER_CONTROL_PLANE_CONFIG
+              value: {{ . | toJson | quote }}
+            {{- end }}
+            {{- with $.Values.clusterWorker.gardenerShootAnnotations }}
+            - name: GARDENER_SHOOT_ANNOTATIONS
+              value: {{ . | toJson | quote }}
+            {{- end }}
             {{- end }}
           {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
           volumeMounts:

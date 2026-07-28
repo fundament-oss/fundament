@@ -40,23 +40,13 @@ spec:
             spec:
               type: object
               required:
-                - image
                 - definitionRef
               properties:
-                image:
-                  type: string
-                imagePullPolicy:
-                  type: string
-                  enum:
-                    - Always
-                    - IfNotPresent
-                    - Never
                 definitionRef:
                   type: object
                   required:
                     - pluginName
                     - pluginVersion
-                    - definitionHash
                   properties:
                     pluginName:
                       type: string
@@ -64,9 +54,16 @@ spec:
                       type: string
                     definitionHash:
                       type: string
+                      description: >-
+                        SHA-256 hash of the published manifest bytes stored in
+                        organization-api (prefixed with "sha256:") — the admin's
+                        install-time consent record. May be omitted only when the
+                        plugin-controller Deployment sets
+                        PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true (local dev).
+                        Never enable in production.
                   x-kubernetes-validations:
-                    - rule: self.definitionHash.startsWith('sha256:')
-                      message: definitionHash must be a sha256 content hash (prefixed with 'sha256:')
+                    - rule: "!has(self.definitionHash) || self.definitionHash == '' || self.definitionHash.startsWith('sha256:')"
+                      message: definitionHash must be empty or a sha256 content hash (prefixed with 'sha256:')
                     - rule: self == oldSelf
                       message: definitionRef is immutable once set
                 config:
@@ -92,3 +89,35 @@ spec:
                 observedGeneration:
                   type: integer
                   format: int64
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - "Unknown"
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type

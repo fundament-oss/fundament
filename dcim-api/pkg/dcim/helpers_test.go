@@ -15,6 +15,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,6 +38,10 @@ type testEnv struct {
 	server    *httptest.Server
 	adminPool *pgxpool.Pool
 	testToken string
+	// subject is the JWT subject testToken is signed with. GetCurrentUser
+	// matches it against dcim.users.external_ref, so tests that need the caller
+	// to resolve onto a directory entry seed a user with this as external_ref.
+	subject string
 }
 
 type authTransport struct {
@@ -55,11 +60,11 @@ func (e *testEnv) client() *http.Client {
 	return &http.Client{Transport: &authTransport{base: base.Transport, token: e.testToken}}
 }
 
-func signTestToken(t *testing.T) string {
+func signTestToken(t *testing.T, subject string) string {
 	t.Helper()
 	claims := jwt.MapClaims{
 		"iss": auth.DCIMIssuer,
-		"sub": uuid.New().String(),
+		"sub": subject,
 		"exp": time.Now().Add(time.Hour).Unix(),
 	}
 	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -92,10 +97,13 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 
+	subject := uuid.New().String()
+
 	return &testEnv{
 		server:    ts,
 		adminPool: adminPool,
-		testToken: signTestToken(t),
+		testToken: signTestToken(t, subject),
+		subject:   subject,
 	}
 }
 
@@ -289,6 +297,40 @@ func placeAssetInRack(t *testing.T, env *testEnv, assetID, rackID string, unit i
 	require.NotEmpty(t, resp.Msg.GetPlacementId())
 
 	return resp.Msg.GetPlacementId()
+}
+
+// createUser seeds a directory entry. There is no CreateUser RPC — the DCIM API
+// role only holds SELECT on dcim.users — so this goes in over the admin pool.
+// Pass an empty externalRef for a user with no identity-provider link.
+func createUser(t *testing.T, env *testEnv, name, email, externalRef string) string {
+	t.Helper()
+
+	var ref pgtype.Text
+	if externalRef != "" {
+		ref = pgtype.Text{String: externalRef, Valid: true}
+	}
+
+	var id uuid.UUID
+	err := env.adminPool.QueryRow(context.Background(),
+		`INSERT INTO dcim.users (external_ref, name, email) VALUES ($1, $2, $3) RETURNING id`,
+		ref, name, email,
+	).Scan(&id)
+	require.NoError(t, err)
+
+	return id.String()
+}
+
+func createTask(t *testing.T, env *testEnv, req *dcimv1.CreateTaskRequest) string {
+	t.Helper()
+
+	client := dcimv1connect.NewTaskServiceClient(env.client(), env.server.URL)
+
+	resp, err := client.CreateTask(context.Background(), connect.NewRequest(req))
+	require.NoError(t, err)
+
+	require.NotEmpty(t, resp.Msg.GetTaskId())
+
+	return resp.Msg.GetTaskId()
 }
 
 func placeAssetInSubComponent(t *testing.T, env *testEnv, assetID, parentPlacementID, parentPortDefinitionID string) string {

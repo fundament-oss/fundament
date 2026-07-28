@@ -84,3 +84,47 @@ func TestConfigDir_Default(t *testing.T) {
 		t.Errorf("got %q, want %q", dir, want)
 	}
 }
+
+func TestLoadConfig_EnvOverrides_NoConfigFile(t *testing.T) {
+	t.Setenv("FUNCTL_CONFIG_DIR", t.TempDir())
+	t.Setenv(EnvAPIEndpoint, "https://api.env.example")
+	t.Setenv(EnvAuthnURL, "https://authn.env.example")
+
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.APIEndpoint != "https://api.env.example" {
+		t.Errorf("APIEndpoint: got %q, want the env override", cfg.APIEndpoint)
+	}
+	if cfg.AuthnURL != "https://authn.env.example" {
+		t.Errorf("AuthnURL: got %q, want the env override", cfg.AuthnURL)
+	}
+}
+
+func TestLoadConfig_EnvOverrides_ConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("FUNCTL_CONFIG_DIR", dir)
+	content := "api_endpoint: https://api.file.example\nauthn_url: https://authn.file.example\noutput: json\n"
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(content), 0o600); err != nil {
+		t.Fatalf("write config file: %v", err)
+	}
+	// Only the API endpoint is overridden; an empty env var counts as unset.
+	// Both vars are set explicitly because dev shells export them via mise.
+	t.Setenv(EnvAPIEndpoint, "https://api.env.example")
+	t.Setenv(EnvAuthnURL, "")
+
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.APIEndpoint != "https://api.env.example" {
+		t.Errorf("APIEndpoint: got %q, want the env override", cfg.APIEndpoint)
+	}
+	if cfg.AuthnURL != "https://authn.file.example" {
+		t.Errorf("AuthnURL: got %q, want the config file value", cfg.AuthnURL)
+	}
+	if cfg.Output != "json" {
+		t.Errorf("Output: got %q, want the config file value", cfg.Output)
+	}
+}

@@ -77,11 +77,12 @@ func (s *Service) GetInstallationManifest(
 	)
 
 	resp := pluginproxyv1.GetInstallationManifestResponse_builder{
-		PluginName:     found.Spec.DefinitionRef.PluginName,
-		PluginVersion:  found.Spec.DefinitionRef.PluginVersion,
-		DefinitionHash: found.Spec.DefinitionRef.DefinitionHash,
-		OrganizationId: target.OrganizationID.String(),
-		Status:         phase,
+		PluginName:       found.Spec.DefinitionRef.PluginName,
+		PluginVersion:    found.Spec.DefinitionRef.PluginVersion,
+		DefinitionHash:   found.Spec.DefinitionRef.DefinitionHash,
+		OrganizationId:   target.OrganizationID.String(),
+		Status:           phase,
+		InstallationName: found.Name,
 	}.Build()
 	return connect.NewResponse(resp), nil
 }

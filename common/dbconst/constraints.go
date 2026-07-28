@@ -49,6 +49,8 @@ const (
 	ConstraintClusterOutboxUqNsReconcile = "cluster_outbox_uq_ns_reconcile"
 	// ConstraintClustersFkOrganization is defined on tenant.clusters.
 	ConstraintClustersFkOrganization = "clusters_fk_organization"
+	// ConstraintClustersFkRegionVersion is defined on tenant.clusters.
+	ConstraintClustersFkRegionVersion = "clusters_fk_region_version"
 	// ConstraintClustersUqName is defined on tenant.clusters.
 	ConstraintClustersUqName = "clusters_uq_name"
 	// ConstraintDcimAssetEventsFkAsset is defined on dcim.asset_events.
@@ -69,6 +71,8 @@ const (
 	ConstraintDcimLogicalDevicesFkDesign = "dcim_logical_devices_fk_design"
 	// ConstraintDcimNotesFkAsset is defined on dcim.notes.
 	ConstraintDcimNotesFkAsset = "dcim_notes_fk_asset"
+	// ConstraintDcimNotesFkCreatedBy is defined on dcim.notes.
+	ConstraintDcimNotesFkCreatedBy = "dcim_notes_fk_created_by"
 	// ConstraintDcimNotesFkDeviceCatalog is defined on dcim.notes.
 	ConstraintDcimNotesFkDeviceCatalog = "dcim_notes_fk_device_catalog"
 	// ConstraintDcimNotesFkLogicalConnection is defined on dcim.notes.
@@ -129,6 +133,10 @@ const (
 	ConstraintDcimRoomsFkSite = "dcim_rooms_fk_site"
 	// ConstraintDcimTaskStepsFkTask is defined on dcim.task_steps.
 	ConstraintDcimTaskStepsFkTask = "dcim_task_steps_fk_task"
+	// ConstraintDcimTasksFkAssignee is defined on dcim.tasks.
+	ConstraintDcimTasksFkAssignee = "dcim_tasks_fk_assignee"
+	// ConstraintDcimUsersUqExternalRef is defined on dcim.users.
+	ConstraintDcimUsersUqExternalRef = "dcim_users_uq_external_ref"
 	// ConstraintDeviceCatalogsCkCategory is defined on dcim.device_catalogs.
 	ConstraintDeviceCatalogsCkCategory = "device_catalogs_ck_category"
 	// ConstraintDeviceCatalogsUqManufacturerModel is defined on dcim.device_catalogs.
@@ -153,6 +161,8 @@ const (
 	ConstraintIdempotencyKeysFkUser = "idempotency_keys_fk_user"
 	// ConstraintIdempotencyKeysUqKeyUser is defined on tenant.idempotency_keys.
 	ConstraintIdempotencyKeysUqKeyUser = "idempotency_keys_uq_key_user"
+	// ConstraintKubernetesVersionsUqVersion is defined on catalog.kubernetes_versions.
+	ConstraintKubernetesVersionsUqVersion = "kubernetes_versions_uq_version"
 	// ConstraintLogicalConnectionsCkConnectionType is defined on dcim.logical_connections.
 	ConstraintLogicalConnectionsCkConnectionType = "logical_connections_ck_connection_type"
 	// ConstraintLogicalDesignsCkStatus is defined on dcim.logical_designs.
@@ -165,6 +175,8 @@ const (
 	ConstraintLogicalDevicesCkRole = "logical_devices_ck_role"
 	// ConstraintLogicalDevicesUqDesignLabel is defined on dcim.logical_devices.
 	ConstraintLogicalDevicesUqDesignLabel = "logical_devices_uq_design_label"
+	// ConstraintMachineTypesUqName is defined on catalog.machine_types.
+	ConstraintMachineTypesUqName = "machine_types_uq_name"
 	// ConstraintNamespacesCkName is defined on tenant.namespaces.
 	ConstraintNamespacesCkName = "namespaces_ck_name"
 	// ConstraintNamespacesFkProject is defined on tenant.namespaces.
@@ -173,6 +185,8 @@ const (
 	ConstraintNamespacesUqName = "namespaces_uq_name"
 	// ConstraintNodePoolsFkCluster is defined on tenant.node_pools.
 	ConstraintNodePoolsFkCluster = "node_pools_fk_cluster"
+	// ConstraintNodePoolsFkRegionMachineType is defined on tenant.node_pools.
+	ConstraintNodePoolsFkRegionMachineType = "node_pools_fk_region_machine_type"
 	// ConstraintNodePoolsUqName is defined on tenant.node_pools.
 	ConstraintNodePoolsUqName = "node_pools_uq_name"
 	// ConstraintNotesCkSingleRef is defined on dcim.notes.
@@ -245,6 +259,10 @@ const (
 	ConstraintPlacementsCkSlotType = "placements_ck_slot_type"
 	// ConstraintPlacementsCkUnitStart is defined on dcim.placements.
 	ConstraintPlacementsCkUnitStart = "placements_ck_unit_start"
+	// ConstraintPluginDefinitionsFkPlugin is defined on appstore.plugin_definitions.
+	ConstraintPluginDefinitionsFkPlugin = "plugin_definitions_fk_plugin"
+	// ConstraintPluginDefinitionsUqPluginVersion is defined on appstore.plugin_definitions.
+	ConstraintPluginDefinitionsUqPluginVersion = "plugin_definitions_uq_plugin_version"
 	// ConstraintPluginDocumentationLinksFkPlugin is defined on appstore.plugin_documentation_links.
 	ConstraintPluginDocumentationLinksFkPlugin = "plugin_documentation_links_fk_plugin"
 	// ConstraintPluginsCategoriesCategoryId is defined on appstore.categories_plugins.
@@ -305,6 +323,20 @@ const (
 	ConstraintRackRowsUqRoomName = "rack_rows_uq_room_name"
 	// ConstraintRacksUqRackRowName is defined on dcim.racks.
 	ConstraintRacksUqRackRowName = "racks_uq_rack_row_name"
+	// ConstraintRegionKubernetesVersionsFkRegion is defined on catalog.region_kubernetes_versions.
+	ConstraintRegionKubernetesVersionsFkRegion = "region_kubernetes_versions_fk_region"
+	// ConstraintRegionKubernetesVersionsFkVersion is defined on catalog.region_kubernetes_versions.
+	ConstraintRegionKubernetesVersionsFkVersion = "region_kubernetes_versions_fk_version"
+	// ConstraintRegionMachineTypesFkMachineType is defined on catalog.region_machine_types.
+	ConstraintRegionMachineTypesFkMachineType = "region_machine_types_fk_machine_type"
+	// ConstraintRegionMachineTypesFkRegion is defined on catalog.region_machine_types.
+	ConstraintRegionMachineTypesFkRegion = "region_machine_types_fk_region"
+	// ConstraintRegionMachineTypesUq is defined on catalog.region_machine_types.
+	ConstraintRegionMachineTypesUq = "region_machine_types_uq"
+	// ConstraintRegionMatch is defined on (constraint trigger).
+	ConstraintRegionMatch = "region_match"
+	// ConstraintRegionsUqName is defined on catalog.regions.
+	ConstraintRegionsUqName = "regions_uq_name"
 	// ConstraintRequireAdmin is defined on (constraint trigger).
 	ConstraintRequireAdmin = "require_admin"
 	// ConstraintRoomsUqSiteName is defined on dcim.rooms.

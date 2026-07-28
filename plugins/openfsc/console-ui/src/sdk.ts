@@ -36,6 +36,9 @@ export interface KubeList<T = unknown> {
 
 export interface FundamentSdk {
   init: Promise<InitContext>;
+  // The pinned Console origin, used as the postMessage targetOrigin under FUN-17.
+  // null before fundament:init arrives; absent on the unframed dev stand-in.
+  readonly parentOrigin?: string | null;
   k8s: {
     list<T = unknown>(ref: K8sRef): Promise<KubeList<T>>;
     get<T = unknown>(ref: K8sGetRef): Promise<T>;

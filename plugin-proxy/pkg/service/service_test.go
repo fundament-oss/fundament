@@ -55,7 +55,6 @@ func testPluginCR() *pluginsv1.PluginInstallation {
 			UID:  types.UID(MockInstallationID.String()),
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
-			Image: "ghcr.io/example/" + MockPluginName + ":" + MockPluginVersion,
 			DefinitionRef: pluginsv1.DefinitionRef{
 				PluginName:     MockPluginName,
 				PluginVersion:  MockPluginVersion,
@@ -83,6 +82,7 @@ func TestGetInstallationManifest_ReturnsIdentity(t *testing.T) {
 	assert.Equal(t, MockPluginHash, msg.GetDefinitionHash())
 	assert.Equal(t, MockOrganizationID.String(), msg.GetOrganizationId())
 	assert.Equal(t, "Running", msg.GetStatus())
+	assert.Equal(t, MockPluginName, msg.GetInstallationName(), "installation name is the CR metadata.name")
 }
 
 // Mints keep working through teardown so plugin tokens can read state during

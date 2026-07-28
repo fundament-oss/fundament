@@ -66,6 +66,7 @@ func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
 	mux.Handle(dcimv1connect.NewNoteServiceHandler(s, interceptors))
 	mux.Handle(dcimv1connect.NewTaskServiceHandler(s, interceptors))
 	mux.Handle(dcimv1connect.NewTaskStepServiceHandler(s, interceptors))
+	mux.Handle(dcimv1connect.NewUserServiceHandler(s, interceptors))
 
 	reflector := grpcreflect.NewStaticReflector(
 		"dcim.v1.SiteService",
@@ -83,6 +84,7 @@ func New(logger *slog.Logger, database *psqldb.DB, jwtSecret []byte) *Server {
 		"dcim.v1.NoteService",
 		"dcim.v1.TaskService",
 		"dcim.v1.TaskStepService",
+		"dcim.v1.UserService",
 	)
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))

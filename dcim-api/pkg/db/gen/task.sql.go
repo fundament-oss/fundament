@@ -24,7 +24,7 @@ type TaskCreateParams struct {
 	Status      string
 	Priority    string
 	Category    string
-	AssigneeID  pgtype.Text
+	AssigneeID  pgtype.UUID
 	DueDate     pgtype.Timestamptz
 	Location    pgtype.Text
 }
@@ -80,7 +80,7 @@ type TaskGetByIDRow struct {
 	Status      string
 	Priority    string
 	Category    string
-	AssigneeID  pgtype.Text
+	AssigneeID  pgtype.UUID
 	DueDate     pgtype.Timestamptz
 	Location    pgtype.Text
 	Created     pgtype.Timestamptz
@@ -111,15 +111,15 @@ WHERE deleted IS NULL
   AND ($1::text IS NULL OR status = $1::text)
   AND ($2::text IS NULL OR priority = $2::text)
   AND ($3::text IS NULL OR category = $3::text)
-  AND ($4::text IS NULL OR assignee_id = $4::text)
-ORDER BY created
+  AND ($4::uuid IS NULL OR assignee_id = $4::uuid)
+ORDER BY created DESC
 `
 
 type TaskListParams struct {
 	Status     pgtype.Text
 	Priority   pgtype.Text
 	Category   pgtype.Text
-	AssigneeID pgtype.Text
+	AssigneeID pgtype.UUID
 }
 
 type TaskListRow struct {
@@ -129,7 +129,7 @@ type TaskListRow struct {
 	Status      string
 	Priority    string
 	Category    string
-	AssigneeID  pgtype.Text
+	AssigneeID  pgtype.UUID
 	DueDate     pgtype.Timestamptz
 	Location    pgtype.Text
 	Created     pgtype.Timestamptz
@@ -174,38 +174,58 @@ func (q *Queries) TaskList(ctx context.Context, arg TaskListParams) ([]TaskListR
 const taskUpdate = `-- name: TaskUpdate :execrows
 UPDATE dcim.tasks
 SET title       = COALESCE($2, title),
-    description = COALESCE($3, description),
-    status      = COALESCE($4, status),
-    priority    = COALESCE($5, priority),
-    category    = COALESCE($6, category),
-    assignee_id = COALESCE($7, assignee_id),
-    due_date    = COALESCE($8, due_date),
-    location    = COALESCE($9, location)
+    description = CASE
+                    WHEN $3::bool THEN NULL
+                    ELSE COALESCE($4, description)
+                  END,
+    status      = COALESCE($5, status),
+    priority    = COALESCE($6, priority),
+    category    = COALESCE($7, category),
+    assignee_id = CASE
+                    WHEN $8::bool THEN NULL
+                    ELSE COALESCE($9, assignee_id)
+                  END,
+    due_date    = CASE
+                    WHEN $10::bool THEN NULL
+                    ELSE COALESCE($11, due_date)
+                  END,
+    location    = CASE
+                    WHEN $12::bool THEN NULL
+                    ELSE COALESCE($13, location)
+                  END
 WHERE id = $1 AND deleted IS NULL
 `
 
 type TaskUpdateParams struct {
-	ID          uuid.UUID
-	Title       pgtype.Text
-	Description pgtype.Text
-	Status      pgtype.Text
-	Priority    pgtype.Text
-	Category    pgtype.Text
-	AssigneeID  pgtype.Text
-	DueDate     pgtype.Timestamptz
-	Location    pgtype.Text
+	ID               uuid.UUID
+	Title            pgtype.Text
+	ClearDescription bool
+	Description      pgtype.Text
+	Status           pgtype.Text
+	Priority         pgtype.Text
+	Category         pgtype.Text
+	ClearAssignee    bool
+	AssigneeID       pgtype.UUID
+	ClearDueDate     bool
+	DueDate          pgtype.Timestamptz
+	ClearLocation    bool
+	Location         pgtype.Text
 }
 
 func (q *Queries) TaskUpdate(ctx context.Context, arg TaskUpdateParams) (int64, error) {
 	result, err := q.db.Exec(ctx, taskUpdate,
 		arg.ID,
 		arg.Title,
+		arg.ClearDescription,
 		arg.Description,
 		arg.Status,
 		arg.Priority,
 		arg.Category,
+		arg.ClearAssignee,
 		arg.AssigneeID,
+		arg.ClearDueDate,
 		arg.DueDate,
+		arg.ClearLocation,
 		arg.Location,
 	)
 	if err != nil {
