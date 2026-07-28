@@ -59,6 +59,21 @@ func NewEnvoyGatewayPlugin() (*EnvoyGatewayPlugin, error) {
 }
 
 func (p *EnvoyGatewayPlugin) Start(ctx context.Context, host pluginruntime.Host) error {
+	cfg := ctrl.GetConfigOrDie()
+
+	// Preflight the cluster version before touching Helm: on Kubernetes < 1.31 the
+	// bundled TLSRoute CRD is rejected as invalid, so surface a clear message here
+	// instead of a cryptic "missing CRDs: [tlsroutes...]" later in the install.
+	discoveryClient, err := newDiscoveryClient(cfg)
+	if err != nil {
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
+		return fmt.Errorf("create discovery client: %w", pluginerrors.NewPermanent(err))
+	}
+	if err := checkKubernetesVersion(discoveryClient, p.cfg.EnvoyGatewayVersion); err != nil {
+		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseDegraded, Message: err.Error()})
+		return fmt.Errorf("kubernetes preflight: %w", pluginerrors.NewTransient(err))
+	}
+
 	installed, err := p.installer.isInstalled(ctx)
 	if err != nil {
 		return fmt.Errorf("check envoy gateway status: %w", pluginerrors.NewTransient(err))
@@ -77,7 +92,7 @@ func (p *EnvoyGatewayPlugin) Start(ctx context.Context, host pluginruntime.Host)
 		return fmt.Errorf("add apiextensions to scheme: %w", pluginerrors.NewPermanent(err))
 	}
 
-	k8sClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	k8sClient, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("create kubernetes client: %w", pluginerrors.NewPermanent(err))
