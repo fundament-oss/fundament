@@ -3,7 +3,7 @@
 // values are never used for real network calls.
 import { AppConfiguration } from '../config.service';
 
-export class DemoConfigService {
+export default class DemoConfigService {
   constructor(private readonly config: AppConfiguration) {}
 
   async loadConfig(): Promise<AppConfiguration> {

@@ -81,6 +81,12 @@ jobs:
           - image-name: console-frontend
             dockerfile: console-frontend/Dockerfile
             context: "."
+          # Same image, built from the demo entrypoint: the guided walkthrough on
+          # in-memory data, served on the console-demo subdomain.
+          - image-name: console-demo-frontend
+            dockerfile: console-frontend/Dockerfile
+            context: "."
+            build-args: BUILD_SCRIPT=build:demo
           - image-name: cluster-worker
             dockerfile: cluster-worker/Dockerfile
             context: "."
@@ -120,6 +126,7 @@ jobs:
       image-name: ${{ matrix.image-name }}
       dockerfile: ${{ matrix.dockerfile }}
       context: ${{ matrix.context }}
+      build-args: ${{ matrix.build-args }}
 
   deploy:
     needs: [gate, build]
@@ -209,6 +216,7 @@ jobs:
             | Service | URL |
             |---------|-----|
             | Console | https://console.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
+            | Console demo (walkthrough) | https://console-demo.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Authn API | https://authn.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Organization API | https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |
             | Kube API Proxy | https://k8s-api.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }} |

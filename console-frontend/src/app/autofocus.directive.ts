@@ -1,5 +1,5 @@
 import { afterNextRender, Directive, ElementRef, inject, input } from '@angular/core';
-import { isPresenting } from './presentation/presenting';
+import isPresenting from './presentation/presenting';
 
 @Directive({
   selector: '[appAutofocus]',

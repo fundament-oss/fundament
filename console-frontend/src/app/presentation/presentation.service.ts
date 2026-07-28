@@ -2,9 +2,18 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { Slide, Tour } from './presentation.model';
+import { DEFAULT_LOCALE, isLocale, Locale, Localized, LOCALE_STORAGE_KEY, UI } from './i18n';
 import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
-import { runDrive } from './drive-runner';
+import runDrive from './drive-runner';
 import { closeOpenAppDialogs } from './app-dialogs';
+import { ToastService } from '../toast.service';
+
+/** `?lang` wins (shareable deep links), then the last choice, then Dutch. */
+function resolveLocale(fromUrl: string | null): Locale {
+  if (isLocale(fromUrl)) return fromUrl;
+  const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
+  return isLocale(stored) ? stored : DEFAULT_LOCALE;
+}
 
 /**
  * Drives the walkthrough overlay: slide state, URL sync (present/tour/slide query
@@ -12,10 +21,12 @@ import { closeOpenAppDialogs } from './app-dialogs';
  * Provided in root but only ever activated in the demo build.
  */
 @Injectable({ providedIn: 'root' })
-export class PresentationService {
+export default class PresentationService {
   private readonly router = inject(Router);
 
   private readonly title = inject(Title);
+
+  private readonly toasts = inject(ToastService);
 
   readonly active = signal(false);
 
@@ -36,6 +47,12 @@ export class PresentationService {
 
   /** Whether the browser is in native fullscreen (toggled with `f`). */
   readonly browserFullscreen = signal(false);
+
+  /** Narration language (toggled with `l`); the app pane is unaffected. */
+  readonly locale = signal<Locale>(DEFAULT_LOCALE);
+
+  /** The overlay's own chrome in the current locale. */
+  readonly ui = computed(() => UI[this.locale()]);
 
   readonly tour = computed<Tour>(() => TOURS[this.tourId()] ?? TOURS[DEFAULT_TOUR_ID]);
 
@@ -76,6 +93,9 @@ export class PresentationService {
    */
   initFromUrl(): void {
     const params = new URLSearchParams(window.location.search);
+    // Resolve the locale before the present=0 bail-out, so the signal is correct
+    // even when the walkthrough is switched off.
+    this.locale.set(resolveLocale(params.get('lang')));
     if (params.get('present') === '0') return;
     const tourId = params.get('tour');
     if (!tourId) {
@@ -84,6 +104,32 @@ export class PresentationService {
     }
     const slide = Math.max(1, parseInt(params.get('slide') || '1', 10)) - 1;
     this.startTour(tourId, slide);
+  }
+
+  /** Resolves one localized string in the current locale. */
+  text(value: Localized): string {
+    return value[this.locale()];
+  }
+
+  toggleLocale(): void {
+    this.setLocale(this.locale() === 'nl' ? 'en' : 'nl');
+  }
+
+  /**
+   * Switching language only re-renders the narration panel. It deliberately does
+   * not go through the router: the app pane must not re-navigate and the current
+   * slide's drive script must not run a second time.
+   */
+  setLocale(locale: Locale): void {
+    if (locale === this.locale()) return;
+    this.locale.set(locale);
+    localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    this.applyTitle();
+    // Patch `lang` in place so a reload or a copied link keeps the language,
+    // without a history entry per toggle.
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', locale);
+    window.history.replaceState(window.history.state, '', url);
   }
 
   startTour(tourId: string, index = 0): void {
@@ -102,18 +148,25 @@ export class PresentationService {
 
   private showChooser(): void {
     closeOpenAppDialogs();
+    this.toasts.dismiss();
     this.active.set(true);
     this.mode.set('chooser');
     this.applyClasses();
     this.applyTitle();
     // Drop tour/slide so a reload lands on the chooser again.
-    this.router.navigate([this.currentPath()], { queryParams: { present: 1 } });
+    this.router.navigate([this.currentPath()], {
+      queryParams: { present: 1, lang: this.locale() },
+    });
   }
 
   goto(index: number): void {
     // An open app modal (native <dialog>) traps focus and makes the deck inert, so
     // close it before moving on — otherwise the presenter is stuck on the slide.
     closeOpenAppDialogs();
+    // A toast raised by the previous slide's drive script belongs to that slide.
+    // ToastService only clears on navigation, and its set-then-navigate grace
+    // period is spent by the slide's own navigation, so drop it explicitly.
+    this.toasts.dismiss();
     const clamped = Math.min(Math.max(0, index), this.total() - 1);
     this.index.set(clamped);
     this.applyClasses();
@@ -128,11 +181,11 @@ export class PresentationService {
    */
   private applyTitle(): void {
     if (this.mode() === 'chooser') {
-      this.title.setTitle('Fundament — kies je rondleiding');
+      this.title.setTitle(this.ui().chooserTitle);
       return;
     }
     const slide = this.currentSlide();
-    if (slide) this.title.setTitle(slide.title);
+    if (slide) this.title.setTitle(this.text(slide.title));
   }
 
   next(): void {
@@ -148,7 +201,12 @@ export class PresentationService {
   /** Next index in `dir`, skipping `skippable` slides when skipOptional is on. */
   private nextIndex(from: number, dir: 1 | -1): number {
     let i = from + dir;
-    while (i > 0 && i < this.total() - 1 && this.skipOptional() && this.tour().slides[i].skippable) {
+    while (
+      i > 0 &&
+      i < this.total() - 1 &&
+      this.skipOptional() &&
+      this.tour().slides[i].skippable
+    ) {
       i += dir;
     }
     return Math.min(Math.max(0, i), this.total() - 1);
@@ -156,10 +214,12 @@ export class PresentationService {
 
   /** Toggle the browser's native fullscreen (the `f` shortcut). */
   toggleFull(): void {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen().catch(() => undefined);
+    // browserFullscreen tracks document.fullscreenElement via the fullscreenchange
+    // listener in the constructor.
+    if (this.browserFullscreen()) {
+      document.exitFullscreen().catch(() => undefined);
     } else {
-      void document.documentElement.requestFullscreen().catch(() => undefined);
+      document.documentElement.requestFullscreen().catch(() => undefined);
     }
   }
 
@@ -192,12 +252,13 @@ export class PresentationService {
     this.cancelDrive();
     this.stopAutoplay();
     closeOpenAppDialogs();
-    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    this.toasts.dismiss();
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
     this.active.set(false);
     this.mode.set('chooser');
     document.documentElement.classList.remove('presenting', 'presenting-full');
     // Hand the title back to the console; the next route change re-sets it.
-    this.title.setTitle('Fundament Console');
+    this.title.setTitle(this.ui().consoleTitle);
     this.router.navigate([this.currentPath()], { queryParams: {} });
   }
 
@@ -215,7 +276,12 @@ export class PresentationService {
   private syncUrlAndNavigate(): void {
     this.cancelDrive();
     const slide = this.currentSlide();
-    const queryParams = { present: 1, tour: this.tourId(), slide: this.index() + 1 };
+    const queryParams = {
+      present: 1,
+      tour: this.tourId(),
+      slide: this.index() + 1,
+      lang: this.locale(),
+    };
     const path = slide?.route ?? this.currentPath();
     this.router.navigate([path], { queryParams }).then(() => {
       if (slide?.drive?.length) this.startDrive(slide);
@@ -226,7 +292,8 @@ export class PresentationService {
     this.cancelDrive();
     const controller = new AbortController();
     this.driveController = controller;
-    void runDrive(slide.drive ?? [], controller.signal);
+    // runDrive swallows its own errors (including aborts), so nothing to handle here.
+    runDrive(slide.drive ?? [], controller.signal);
   }
 
   private cancelDrive(): void {
@@ -234,4 +301,3 @@ export class PresentationService {
     this.driveController = null;
   }
 }
-

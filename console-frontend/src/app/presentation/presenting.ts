@@ -6,6 +6,6 @@
  * The overlay owns the keyboard (← → Esc), so anything that would steal focus into
  * a field on render must stay put while this is true.
  */
-export function isPresenting(): boolean {
+export default function isPresenting(): boolean {
   return document.documentElement.classList.contains('presenting');
 }

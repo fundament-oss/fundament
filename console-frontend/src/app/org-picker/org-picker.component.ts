@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import type { Organization } from '../../generated/v1/organization_pb';
 import type { Invitation } from '../../generated/v1/invite_pb';
-import { isPresenting } from '../presentation/presenting';
+import isPresenting from '../presentation/presenting';
 
 @Component({
   selector: 'app-org-picker',

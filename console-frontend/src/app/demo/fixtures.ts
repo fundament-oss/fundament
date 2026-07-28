@@ -10,6 +10,8 @@ import {
   NodePoolSchema,
   ClusterEventSchema,
   ResourceUsageInfoSchema,
+  RegionSchema,
+  RegionMachineTypeSchema,
   type NodePool,
 } from '../../generated/v1/cluster_pb';
 import { NamespaceSchema } from '../../generated/v1/namespace_pb';
@@ -122,48 +124,82 @@ export const clusterDetails = new Map(
 );
 
 export const nodePoolsByCluster = new Map<string, NodePool[]>([
+  [
+    'cl-production',
     [
-      'cl-production',
-      [
-        create(NodePoolSchema, {
-          id: 'np-general',
-          name: 'general',
-          machineType: 'e2-standard-4',
-          currentNodes: 3,
-          minNodes: 2,
-          maxNodes: 6,
-          status: NodePoolStatus.HEALTHY,
-          version: '1.34.0',
-        }),
-        create(NodePoolSchema, {
-          id: 'np-memory',
-          name: 'memory-optimized',
-          machineType: 'e2-highmem-4',
-          currentNodes: 1,
-          minNodes: 1,
-          maxNodes: 3,
-          status: NodePoolStatus.HEALTHY,
-          version: '1.34.0',
-        }),
-      ],
-    ],
-    [
-      'cl-staging',
-      [
-        create(NodePoolSchema, {
-          id: 'np-general',
-          name: 'general',
-          machineType: 'e2-standard-2',
-          currentNodes: 2,
-          minNodes: 1,
-          maxNodes: 4,
-          status: NodePoolStatus.HEALTHY,
-          version: '1.33.0',
-        }),
-      ],
+      create(NodePoolSchema, {
+        id: 'np-general',
+        name: 'general',
+        machineType: 'e2-standard-4',
+        currentNodes: 3,
+        minNodes: 2,
+        maxNodes: 6,
+        status: NodePoolStatus.HEALTHY,
+        version: '1.34.0',
+      }),
+      create(NodePoolSchema, {
+        id: 'np-memory',
+        name: 'memory-optimized',
+        machineType: 'e2-highmem-4',
+        currentNodes: 1,
+        minNodes: 1,
+        maxNodes: 3,
+        status: NodePoolStatus.HEALTHY,
+        version: '1.34.0',
+      }),
     ],
   ],
-);
+  [
+    'cl-staging',
+    [
+      create(NodePoolSchema, {
+        id: 'np-general',
+        name: 'general',
+        machineType: 'e2-standard-2',
+        currentNodes: 2,
+        minNodes: 1,
+        maxNodes: 4,
+        status: NodePoolStatus.HEALTHY,
+        version: '1.33.0',
+      }),
+    ],
+  ],
+]);
+
+// --- Region catalog -------------------------------------------------------
+
+// Backs ClusterService.ListRegions, which the add-cluster wizard loads before it
+// renders (it shows an error instead of the form when the call fails) and which the
+// node pool pages use to fill the machine type dropdown.
+//
+// `local` must stay first: the wizard defaults to the first region, and it is the
+// region the cluster fixtures above already use. Every machineType referenced by
+// nodePoolsByCluster must appear here, otherwise the node pool forms offer a list
+// that cannot reproduce the pools shown next to them.
+
+const gib = (n: number) => BigInt(n) * 1073741824n;
+
+const machineType = (name: string, lcpu: number, memoryGib: number) =>
+  create(RegionMachineTypeSchema, { name, lcpu, memory: gib(memoryGib) });
+
+const MACHINE_TYPES = [
+  machineType('e2-standard-2', 2, 8),
+  machineType('e2-standard-4', 4, 16),
+  machineType('e2-highmem-4', 4, 32),
+];
+
+export const regions = [
+  create(RegionSchema, {
+    name: 'local',
+    kubernetesVersions: ['1.34.0', '1.33.0', '1.32.5'],
+    machineTypes: MACHINE_TYPES,
+  }),
+  create(RegionSchema, {
+    name: 'nl-north-1',
+    kubernetesVersions: ['1.34.0', '1.33.0'],
+    machineTypes: MACHINE_TYPES,
+  }),
+];
 
 export const clusterActivity = [
   create(ClusterEventSchema, {
@@ -302,8 +338,7 @@ const CATEGORIES = {
   identity: category('cat-identity', 'Identity'),
 };
 
-const image = (name: string, version: string) =>
-  `ghcr.io/fundament/plugins/${name}:${version}`;
+const image = (name: string, version: string) => `ghcr.io/fundament/plugins/${name}:${version}`;
 
 // cert-manager is deliberately first: it is the card the platform-engineer tour
 // auto-installs, and the drive script targets the first card in the grid.

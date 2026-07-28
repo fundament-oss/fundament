@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { PresentationService } from './presentation.service';
+import PresentationService from './presentation.service';
+import { LOCALES } from './i18n';
 import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
 
 @Component({
@@ -8,32 +9,60 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
   host: { '(document:keydown)': 'onKeydown($event)' },
   template: `
     @if (presentation.active()) {
-      <aside class="deck" [class.full]="presentation.deckFull()" aria-label="Presentation narration">
+      <!-- lang sits on the panel, not <html>: only the narration is translated,
+           the console in the right pane stays in the app's own language. -->
+      <aside
+        class="deck"
+        [class.full]="presentation.deckFull()"
+        [attr.lang]="presentation.locale()"
+        aria-label="Presentation narration"
+      >
         <div class="too-small">
-          <p>De presentatiemodus werkt het beste op een groot scherm of projector.</p>
-          <button type="button" class="ghost-btn" (click)="presentation.stop()">Sluiten</button>
+          <p>{{ presentation.ui().tooSmall }}</p>
+          <button type="button" class="ghost-btn" (click)="presentation.stop()">
+            {{ presentation.ui().close }}
+          </button>
         </div>
 
         @if (presentation.mode() === 'chooser') {
           <div class="chooser">
             <header class="chooser-head">
-              <h1 class="deck-title">Fundament</h1>
-              <p class="deck-lead">
-                Kies een rondleiding, of bekijk het platform door de ogen van een rol.
-              </p>
+              <div class="chooser-title-row">
+                <h1 class="deck-title">Fundament</h1>
+                <div class="lang" role="group" [attr.aria-label]="presentation.ui().languageLabel">
+                  @for (option of locales; track option) {
+                    <button
+                      type="button"
+                      class="lang-btn"
+                      [class.active]="presentation.locale() === option"
+                      [attr.aria-pressed]="presentation.locale() === option"
+                      (click)="presentation.setLocale(option)"
+                    >
+                      {{ option.toUpperCase() }}
+                    </button>
+                  }
+                </div>
+              </div>
+              <p class="deck-lead">{{ presentation.ui().chooserLead }}</p>
             </header>
 
             <section>
-              <h2 class="section-label">Verhalen</h2>
+              <h2 class="section-label">{{ presentation.ui().stories }}</h2>
               <ul class="cards">
                 @for (tour of presentation.storyTours; track tour.id) {
                   <li>
-                    <button type="button" class="card story" (click)="presentation.startTour(tour.id)">
+                    <button
+                      type="button"
+                      class="card story"
+                      (click)="presentation.startTour(tour.id)"
+                    >
                       <svg class="card-icon" viewBox="0 0 24 24" aria-hidden="true">
                         <path [attr.d]="tour.icon" />
                       </svg>
-                      <span class="card-name">{{ tour.title }}</span>
-                      <span class="card-blurb">{{ tour.lead }}</span>
+                      <span class="card-name">{{ presentation.text(tour.title) }}</span>
+                      @if (tour.lead) {
+                        <span class="card-blurb">{{ presentation.text(tour.lead) }}</span>
+                      }
                     </button>
                   </li>
                 }
@@ -41,7 +70,7 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
             </section>
 
             <section>
-              <h2 class="section-label">Of word een rol</h2>
+              <h2 class="section-label">{{ presentation.ui().personas }}</h2>
               <ul class="cards">
                 @for (tour of presentation.personaTours; track tour.id) {
                   <li>
@@ -49,87 +78,105 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
                       <svg class="card-icon" viewBox="0 0 24 24" aria-hidden="true">
                         <path [attr.d]="tour.icon" />
                       </svg>
-                      <span class="card-name">{{ tour.persona?.name }}</span>
-                      <span class="card-role">{{ tour.persona?.role }}</span>
-                      <span class="card-blurb">{{ tour.persona?.blurb }}</span>
+                      @if (tour.persona; as persona) {
+                        <span class="card-name">{{ persona.name }}</span>
+                        <span class="card-role">{{ presentation.text(persona.role) }}</span>
+                        <span class="card-blurb">{{ presentation.text(persona.blurb) }}</span>
+                      }
                     </button>
                   </li>
                 }
               </ul>
             </section>
 
-            <p class="chooser-aside"><span class="k">Esc</span> sluit de presentatie.</p>
+            <p class="chooser-aside">
+              <span class="k">Esc</span> {{ presentation.ui().escCloses }}
+            </p>
           </div>
         } @else {
+          <div class="deck-body">
+            @if (presentation.currentSlide(); as slide) {
+              <div class="eyebrow">{{ presentation.text(presentation.tour().title) }}</div>
+              <h1 class="deck-title">{{ presentation.text(slide.title) }}</h1>
+              @if (slide.lead; as lead) {
+                <p class="deck-lead">{{ presentation.text(lead) }}</p>
+              }
+              @if (slide.bullets?.length) {
+                <ul class="deck-bullets">
+                  @for (bullet of slide.bullets; track $index) {
+                    <li>{{ presentation.text(bullet) }}</li>
+                  }
+                </ul>
+              }
+              @if (slide.link; as link) {
+                <a class="slide-link" [href]="link.url" target="_blank" rel="noopener">
+                  {{ link.label ? presentation.text(link.label) : link.url }}
+                </a>
+              }
+            }
+          </div>
 
-        <div class="deck-body">
-          @if (presentation.currentSlide(); as slide) {
-            <div class="eyebrow">{{ presentation.tour().title }}</div>
-            <h1 class="deck-title">{{ slide.title }}</h1>
-            @if (slide.lead) {
-              <p class="deck-lead">{{ slide.lead }}</p>
-            }
-            @if (slide.bullets?.length) {
-              <ul class="deck-bullets">
-                @for (bullet of slide.bullets; track bullet) {
-                  <li>{{ bullet }}</li>
-                }
-              </ul>
-            }
-            @if (slide.link) {
-              <a class="slide-link" [href]="slide.link.url" target="_blank" rel="noopener">
-                {{ slide.link.label || slide.link.url }}
-              </a>
-            }
+          @if (presentation.currentSlide()?.aside; as aside) {
+            <p class="deck-aside">{{ presentation.text(aside) }}</p>
           }
-        </div>
 
-        @if (presentation.currentSlide()?.aside; as aside) {
-          <p class="deck-aside">{{ aside }}</p>
-        }
+          <div class="footer">
+            <div class="footer-row">
+              <div class="counter-wrap">
+                <span class="counter">
+                  {{ presentation.currentLabel() }} <span class="sep">/</span>
+                  {{ presentation.total() }}
+                </span>
+                <button type="button" class="text-link" (click)="presentation.backToChooser()">
+                  {{ presentation.ui().toChoice }}
+                </button>
+                <button type="button" class="text-link" (click)="presentation.goto(0)">
+                  {{ presentation.ui().restart }}
+                </button>
+              </div>
+              <div class="nav">
+                <button
+                  type="button"
+                  class="round-btn"
+                  (click)="presentation.prev()"
+                  [disabled]="presentation.index() === 0"
+                  [attr.aria-label]="presentation.ui().prevSlide"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                </button>
+                <button
+                  type="button"
+                  class="round-btn"
+                  (click)="presentation.next()"
+                  [disabled]="presentation.index() === presentation.total() - 1"
+                  [attr.aria-label]="presentation.ui().nextSlide"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </div>
+            </div>
 
-        <div class="footer">
-          <div class="footer-row">
-            <div class="counter-wrap">
-              <span class="counter">
-                {{ presentation.currentLabel() }} <span class="sep">/</span> {{ presentation.total() }}
+            <div class="hints">
+              <span><span class="k">Esc</span> {{ presentation.ui().hintBack }}</span>
+              <span [class.active]="presentation.browserFullscreen()">
+                <span class="k">f</span> {{ presentation.ui().hintFullscreen }}
               </span>
-              <button type="button" class="text-link" (click)="presentation.backToChooser()">
-                ← Naar de keuze
-              </button>
-              <button type="button" class="text-link" (click)="presentation.goto(0)">↺ Opnieuw</button>
-            </div>
-            <div class="nav">
-              <button
-                type="button"
-                class="round-btn"
-                (click)="presentation.prev()"
-                [disabled]="presentation.index() === 0"
-                aria-label="Vorige slide"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
-              </button>
-              <button
-                type="button"
-                class="round-btn"
-                (click)="presentation.next()"
-                [disabled]="presentation.index() === presentation.total() - 1"
-                aria-label="Volgende slide"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
-              </button>
+              <span [class.active]="presentation.autoplay()">
+                <span class="k">a</span> {{ presentation.ui().hintAutoplay }}
+              </span>
+              <span [class.active]="presentation.skipOptional()">
+                <span class="k">o</span> {{ presentation.ui().hintSkipOptional }}
+              </span>
+              <span>
+                <span class="k">l</span> {{ presentation.ui().hintLanguage }}
+                <span class="lang-current">{{ presentation.locale().toUpperCase() }}</span>
+              </span>
             </div>
           </div>
 
-          <div class="hints">
-            <span><span class="k">Esc</span> terug naar de keuze</span>
-            <span [class.active]="presentation.browserFullscreen()"><span class="k">f</span> volledig scherm</span>
-            <span [class.active]="presentation.autoplay()"><span class="k">a</span> autoplay</span>
-            <span [class.active]="presentation.skipOptional()"><span class="k">o</span> sla optionele over</span>
+          <div class="progress">
+            <div class="progress-fill" [style.width.%]="presentation.progress()"></div>
           </div>
-        </div>
-
-        <div class="progress"><div class="progress-fill" [style.width.%]="presentation.progress()"></div></div>
         }
       </aside>
     }
@@ -247,6 +294,50 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
         flex-direction: column;
         gap: 0.6rem;
       }
+      .chooser-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      /* --- Language switcher --------------------------------------------- */
+      .lang {
+        display: inline-flex;
+        padding: 2px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 999px;
+      }
+      .lang-btn {
+        appearance: none;
+        cursor: pointer;
+        padding: 0.3rem 0.75rem;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        font: inherit;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: rgba(255, 255, 255, 0.7);
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+      .lang-btn:hover {
+        color: #fff;
+      }
+      .lang-btn.active {
+        background: rgba(255, 255, 255, 0.18);
+        color: #fff;
+      }
+      .lang-btn:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+      }
+      .lang-current {
+        font-weight: 600;
+        color: #fff;
+      }
       .section-label {
         margin: 0 0 0.9rem;
         text-transform: uppercase;
@@ -278,7 +369,10 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.28);
         border-radius: 14px;
-        transition: background 0.15s, border-color 0.15s, transform 0.15s;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          transform 0.15s;
       }
       .card:hover {
         background: rgba(255, 255, 255, 0.12);
@@ -412,7 +506,9 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
         background: transparent;
         color: #fff;
         cursor: pointer;
-        transition: background 0.15s, border-color 0.15s;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
       }
       .round-btn svg {
         width: 1.1rem;
@@ -473,7 +569,9 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
         font: inherit;
         font-size: 1rem;
         line-height: 1;
-        transition: background 0.15s, border-color 0.15s;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
       }
       .ghost-btn:hover:not(:disabled) {
         background: rgba(255, 255, 255, 0.2);
@@ -510,8 +608,10 @@ import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
     `,
   ],
 })
-export class PresentationOverlayComponent {
+export default class PresentationOverlayComponent {
   readonly presentation = inject(PresentationService);
+
+  readonly locales = LOCALES;
 
   onKeydown(event: KeyboardEvent): void {
     if (!this.presentation.active()) return;
@@ -551,6 +651,13 @@ export class PresentationOverlayComponent {
     // Fields own their keys while typing — except when a modal is open, where the
     // focused control is a button/checkbox and the deck keys must still work.
     if (inField && !modalOpen) return;
+
+    // Language applies to the chooser too, so handle it before the slide keys.
+    if (event.key === 'l' || event.key === 'L') {
+      event.preventDefault();
+      this.presentation.toggleLocale();
+      return;
+    }
 
     // The chooser is navigated by tabbing between cards, not by the slide keys.
     if (this.presentation.mode() === 'chooser') return;

@@ -15,7 +15,10 @@ import InstallPluginModalComponent from '../install-plugin-modal/install-plugin-
 import { LoadingIndicatorComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
-import { PRESENTATION_ENABLED, PLUGIN_INSTALLS_RESET_EVENT } from '../presentation/presentation.tokens';
+import {
+  PRESENTATION_ENABLED,
+  PLUGIN_INSTALLS_RESET_EVENT,
+} from '../presentation/presentation.tokens';
 import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,

@@ -3,9 +3,9 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { createComponent } from '@angular/core';
 import App from './app/app';
-import { demoAppConfig } from './app/demo/demo-app.config';
-import { PresentationOverlayComponent } from './app/presentation/presentation-overlay.component';
-import { PresentationService } from './app/presentation/presentation.service';
+import demoAppConfig from './app/demo/demo-app.config';
+import PresentationOverlayComponent from './app/presentation/presentation-overlay.component';
+import PresentationService from './app/presentation/presentation.service';
 import enableModalRightPane from './app/presentation/modal-pane';
 
 bootstrapApplication(App, demoAppConfig)

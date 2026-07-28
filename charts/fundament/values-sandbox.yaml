@@ -46,6 +46,10 @@ consoleFrontend:
   enabled: true
   replicas: 1
 
+consoleDemoFrontend:
+  enabled: true
+  replicas: 1
+
 docsFrontend:
   enabled: true
   replicas: 1

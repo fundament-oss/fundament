@@ -7,9 +7,9 @@ type ClosableDialogHost = HTMLElement & { hide?: () => void };
 
 /** The app modals currently open in the app pane. */
 function openAppDialogs(): ClosableDialogHost[] {
-  return Array.from(
-    document.querySelectorAll<ClosableDialogHost>('nldd-modal-dialog'),
-  ).filter((el) => !!el.shadowRoot?.querySelector('dialog[open]'));
+  return Array.from(document.querySelectorAll<ClosableDialogHost>('nldd-modal-dialog')).filter(
+    (el) => !!el.shadowRoot?.querySelector('dialog[open]'),
+  );
 }
 
 /** True while the app has a modal open; it makes the deck's nav buttons inert. */

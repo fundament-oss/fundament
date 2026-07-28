@@ -3,9 +3,9 @@
 // ignored. Outside the walkthrough it behaves like the real service.
 import { inject } from '@angular/core';
 import { Title, Meta } from '@angular/platform-browser';
-import { PresentationService } from '../presentation/presentation.service';
+import PresentationService from '../presentation/presentation.service';
 
-export class DemoTitleService {
+export default class DemoTitleService {
   private title = inject(Title);
 
   private meta = inject(Meta);

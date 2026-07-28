@@ -13,7 +13,8 @@ const INSTALL_MS = 3000;
 
 interface DemoInstall {
   pluginName: string;
-  image: string;
+  pluginVersion: string;
+  definitionHash: string;
   /** Wall-clock time the install was requested; null for seeded installs. */
   startedAt: number | null;
 }
@@ -21,13 +22,14 @@ interface DemoInstall {
 function toItem(install: DemoInstall): PluginInstallationItem {
   const running = install.startedAt === null || Date.now() - install.startedAt > INSTALL_MS;
   return {
-    metadata: { name: install.pluginName },
+    // The plugins page matches installs to catalog entries on metadata.name, so
+    // keep the catalog name here rather than the RFC-1123 slug the real API uses.
+    metadata: { name: install.pluginName, uid: `demo-${install.pluginName}` },
     spec: {
-      image: install.image,
       definitionRef: {
         pluginName: install.pluginName,
-        pluginVersion: 'demo',
-        definitionHash: 'sha256:demo',
+        pluginVersion: install.pluginVersion,
+        definitionHash: install.definitionHash,
       },
     },
     status: { phase: running ? 'Running' : 'Pending', ready: running },
@@ -50,11 +52,15 @@ export default class FakePluginInstallationService {
     Object.entries(fx.seededInstalls).forEach(([clusterId, pluginNames]) => {
       this.byCluster.set(
         clusterId,
-        pluginNames.map((pluginName) => ({
-          pluginName,
-          image: fx.plugins.find((p) => p.name === pluginName)?.image ?? '',
-          startedAt: null,
-        })),
+        pluginNames.map((pluginName) => {
+          const plugin = fx.plugins.find((p) => p.name === pluginName);
+          return {
+            pluginName,
+            pluginVersion: plugin?.pluginVersion || 'demo',
+            definitionHash: plugin?.definitionHash || 'sha256:demo',
+            startedAt: null,
+          };
+        }),
       );
     });
   }
@@ -68,10 +74,26 @@ export default class FakePluginInstallationService {
     return install ? toItem(install) : null;
   }
 
-  async installPlugin(clusterId: string, pluginName: string, image: string): Promise<void> {
+  // Mirrors the real signature. Unlike the real service this does not reject an
+  // unpinned definition: the fixture catalog carries no pluginVersion/definitionHash,
+  // and the walkthrough's install slide must succeed regardless.
+  async installPlugin(
+    clusterId: string,
+    pluginName: string,
+    pluginVersion: string,
+    definitionHash: string,
+  ): Promise<void> {
     const current = this.byCluster.get(clusterId) ?? [];
     if (current.some((i) => i.pluginName === pluginName)) return;
-    this.byCluster.set(clusterId, [...current, { pluginName, image, startedAt: Date.now() }]);
+    this.byCluster.set(clusterId, [
+      ...current,
+      {
+        pluginName,
+        pluginVersion: pluginVersion || 'demo',
+        definitionHash: definitionHash || 'sha256:demo',
+        startedAt: Date.now(),
+      },
+    ]);
   }
 
   async uninstallPlugin(clusterId: string, pluginName: string): Promise<void> {

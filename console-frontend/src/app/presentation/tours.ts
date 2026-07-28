@@ -1,4 +1,5 @@
 import { DriveStep, Slide, Tour } from './presentation.model';
+import { loc } from './i18n';
 import { PLUGIN_INSTALLS_RESET_EVENT } from './presentation.tokens';
 
 // Tours are the walkthrough's content. The chooser groups them into "verhalen"
@@ -8,14 +9,23 @@ import { PLUGIN_INSTALLS_RESET_EVENT } from './presentation.tokens';
 // demo transport (src/app/demo/mock-transport.ts); cluster/project ids must match
 // src/app/demo/fixtures.ts. A route whose RPCs the mock transport doesn't answer
 // renders an error pane mid-presentation, so stick to what is already stubbed.
+//
+// Copy is written once per language with `loc(nl, en)`. Structure (ids, routes,
+// drive scripts) is shared, so the two locales cannot drift apart and a missing
+// translation fails the build rather than the demo.
 
 const CONSOLE_LINK = {
   url: 'https://console.fundament.projects.digilab.network/',
-  label: 'console.fundament.projects.digilab.network',
+  label: loc(
+    'console.fundament.projects.digilab.network',
+    'console.fundament.projects.digilab.network',
+  ),
 };
 
-const KEYS_ASIDE =
-  'Gebruik de pijltjestoetsen ← → om door de slides te navigeren. Esc gaat terug naar de keuze.';
+const KEYS_ASIDE = loc(
+  'Gebruik de pijltjestoetsen ← → om door de slides te navigeren. Esc gaat terug naar de keuze.',
+  'Use the arrow keys ← → to move through the slides. Esc goes back to the menu.',
+);
 
 /** Types a cluster name into the wizard and submits step 1. */
 const addClusterDrive: DriveStep[] = [
@@ -43,12 +53,12 @@ const installPluginDrive: DriveStep[] = [
   { click: 'nldd-modal-dialog nldd-button[slot="actions"][variant="primary"]' },
 ];
 
-const closing = (lead: string): Slide => ({
+const closing = (nl: string, en: string): Slide => ({
   id: 'closing',
   kind: 'closing',
   full: true,
-  title: 'Zelf proberen?',
-  lead,
+  title: loc('Zelf proberen?', 'Try it yourself?'),
+  lead: loc(nl, en),
   link: CONSOLE_LINK,
 });
 
@@ -65,105 +75,188 @@ const ICONS = {
 
 const wholeStory: Tour = {
   id: 'clusters-projects',
-  title: 'Het hele verhaal',
-  lead: 'Van overzicht tot het aanmaken van een cluster en het beheren van een project.',
+  title: loc('Het hele verhaal', 'The whole story'),
+  lead: loc(
+    'Van overzicht tot het aanmaken van een cluster en het beheren van een project.',
+    'From the overview to creating a cluster and running a project.',
+  ),
   icon: ICONS.compass,
   slides: [
     {
       id: 'intro',
       kind: 'opening',
       full: true,
-      title: 'Fundament',
-      lead: 'Het platform waarmee teams zelf Kubernetes-clusters en projecten beheren.',
+      title: loc('Fundament', 'Fundament'),
+      lead: loc(
+        'Het platform waarmee teams zelf Kubernetes-clusters en projecten beheren.',
+        'The platform where teams run their own Kubernetes clusters and projects.',
+      ),
       bullets: [
-        'Geen tickets, geen wachttijd: teams regelen hun eigen infrastructuur.',
-        'In deze rondleiding lopen we langs clusters, een cluster aanmaken, en projectbeheer.',
+        loc(
+          'Geen tickets, geen wachttijd: teams regelen hun eigen infrastructuur.',
+          'No tickets, no waiting: teams arrange their own infrastructure.',
+        ),
+        loc(
+          'In deze rondleiding lopen we langs clusters, een cluster aanmaken, en projectbeheer.',
+          'This tour walks through clusters, creating a cluster, and running a project.',
+        ),
       ],
       aside: KEYS_ASIDE,
     },
     {
       id: 'dashboard',
-      title: 'Het overzicht',
-      lead: 'Alle clusters van de organisatie in één blik.',
+      title: loc('Het overzicht', 'The overview'),
+      lead: loc(
+        'Alle clusters van de organisatie in één blik.',
+        "Every one of the organisation's clusters at a glance.",
+      ),
       bullets: [
-        'Elk cluster toont status, regio en het aantal projecten en node pools.',
-        'Rechts zie je de echte console, met voorbeelddata.',
+        loc(
+          'Elk cluster toont status, regio en het aantal projecten en node pools.',
+          'Each cluster shows its status, region, and how many projects and node pools it has.',
+        ),
+        loc(
+          'Rechts zie je de echte console, met voorbeelddata.',
+          'On the right is the real console, running on sample data.',
+        ),
       ],
       route: '/',
     },
     {
       id: 'cluster-detail',
-      title: 'Een cluster van dichtbij',
-      lead: 'Klik door naar een cluster voor status, resourcegebruik en activiteit.',
+      title: loc('Een cluster van dichtbij', 'A cluster up close'),
+      lead: loc(
+        'Klik door naar een cluster voor status, resourcegebruik en activiteit.',
+        'Open a cluster for its status, resource usage and activity.',
+      ),
       bullets: [
-        'Resourcegebruik (CPU, geheugen, pods) is direct zichtbaar.',
-        'De activiteitenfeed laat zien wat het platform op de achtergrond doet.',
+        loc(
+          'Resourcegebruik (CPU, geheugen, pods) is direct zichtbaar.',
+          'Resource usage (CPU, memory, pods) is visible straight away.',
+        ),
+        loc(
+          'De activiteitenfeed laat zien wat het platform op de achtergrond doet.',
+          'The activity feed shows what the platform is doing in the background.',
+        ),
       ],
       route: '/clusters/cl-production',
     },
     {
       id: 'cluster-nodes',
-      title: 'Node pools',
-      lead: 'Reken- en geheugencapaciteit, opgedeeld in autoscalende node pools.',
-      bullets: ['Per pool: machinetype, min/max nodes en gezondheid.'],
+      title: loc('Node pools', 'Node pools'),
+      lead: loc(
+        'Reken- en geheugencapaciteit, opgedeeld in autoscalende node pools.',
+        'Compute and memory capacity, divided into autoscaling node pools.',
+      ),
+      bullets: [
+        loc(
+          'Per pool: machinetype, min/max nodes en gezondheid.',
+          'Per pool: machine type, min/max nodes and health.',
+        ),
+      ],
       route: '/clusters/cl-production/nodes',
     },
     {
       id: 'cluster-namespaces',
-      title: 'Namespaces',
-      lead: 'De namespaces die op dit cluster draaien, per project.',
+      title: loc('Namespaces', 'Namespaces'),
+      lead: loc(
+        'De namespaces die op dit cluster draaien, per project.',
+        'The namespaces running on this cluster, grouped by project.',
+      ),
       route: '/clusters/cl-production/namespaces',
       skippable: true,
     },
     {
       id: 'add-cluster',
-      title: 'Een nieuw cluster aanmaken',
-      lead: 'De wizard vult zichzelf: kijk hoe de clusternaam wordt ingetypt.',
+      title: loc('Een nieuw cluster aanmaken', 'Creating a new cluster'),
+      lead: loc(
+        'De wizard vult zichzelf: kijk hoe de clusternaam wordt ingetypt.',
+        'The wizard fills itself in: watch the cluster name being typed.',
+      ),
       bullets: [
-        'Naam, regio en Kubernetes-versie in stap 1.',
-        'Daarna node pools en een samenvatting.',
+        loc(
+          'Naam, regio en Kubernetes-versie in stap 1.',
+          'Name, region and Kubernetes version in step 1.',
+        ),
+        loc('Daarna node pools en een samenvatting.', 'Then node pools and a summary.'),
       ],
       route: '/clusters/add',
       drive: addClusterDrive,
     },
     {
       id: 'projects',
-      title: 'Projecten',
-      lead: 'Projecten koppelen teams aan namespaces op een cluster.',
-      bullets: ['Elk project toont zijn cluster, aantal namespaces en leden.'],
+      title: loc('Projecten', 'Projects'),
+      lead: loc(
+        'Projecten koppelen teams aan namespaces op een cluster.',
+        'Projects tie teams to namespaces on a cluster.',
+      ),
+      bullets: [
+        loc(
+          'Elk project toont zijn cluster, aantal namespaces en leden.',
+          'Each project shows its cluster, its namespaces and its members.',
+        ),
+      ],
       route: '/projects',
     },
     {
       id: 'project-members',
-      title: 'Projectleden',
-      lead: 'Teams beheren zelf wie toegang heeft en met welke rol.',
-      bullets: ['Rollen: beheerder of viewer, met least privilege als uitgangspunt.'],
+      title: loc('Projectleden', 'Project members'),
+      lead: loc(
+        'Teams beheren zelf wie toegang heeft en met welke rol.',
+        'Teams manage for themselves who has access, and in which role.',
+      ),
+      bullets: [
+        loc(
+          'Rollen: beheerder of viewer, met least privilege als uitgangspunt.',
+          'Roles: admin or viewer, with least privilege as the starting point.',
+        ),
+      ],
       route: '/projects/pr-burgerzaken/members',
     },
     {
       id: 'project-limits',
-      title: 'Resource limits',
-      lead: 'Standaard resource requests en limits per project.',
+      title: loc('Resource limits', 'Resource limits'),
+      lead: loc(
+        'Standaard resource requests en limits per project.',
+        'Default resource requests and limits, per project.',
+      ),
       route: '/projects/pr-burgerzaken/limits',
       skippable: true,
     },
     {
       id: 'plugins',
-      title: 'Plugins',
-      lead: 'Een catalogus van bouwstenen: certificaten, logging, databases, inloggen.',
-      bullets: ['Wat al draait staat gemarkeerd als geïnstalleerd, met op hoeveel clusters.'],
+      title: loc('Plugins', 'Plugins'),
+      lead: loc(
+        'Een catalogus van bouwstenen: certificaten, logging, databases, inloggen.',
+        'A catalogue of building blocks: certificates, logging, databases, sign-in.',
+      ),
+      bullets: [
+        loc(
+          'Wat al draait staat gemarkeerd als geïnstalleerd, met op hoeveel clusters.',
+          'Whatever is already running is marked as installed, and on how many clusters.',
+        ),
+      ],
       route: '/plugins',
     },
     {
       id: 'plugins-install',
-      title: 'Een plugin installeren',
-      lead: 'Installeren doe je zelf, op de clusters die je kiest.',
-      bullets: ['Kijk mee: Cert Manager wordt hier op een cluster geïnstalleerd.'],
+      title: loc('Een plugin installeren', 'Installing a plugin'),
+      lead: loc(
+        'Installeren doe je zelf, op de clusters die je kiest.',
+        'You install it yourself, on the clusters you pick.',
+      ),
+      bullets: [
+        loc(
+          'Kijk mee: Cert Manager wordt hier op een cluster geïnstalleerd.',
+          'Watch along: Cert Manager is being installed on a cluster here.',
+        ),
+      ],
       route: '/plugins',
       drive: installPluginDrive,
     },
     closing(
       'Dit was een statische rondleiding met voorbeelddata. De echte console werkt precies zo, met jouw eigen clusters en projecten.',
+      'That was a scripted tour on sample data. The real console works exactly like this, with your own clusters and projects.',
     ),
   ],
 };
@@ -172,290 +265,519 @@ const wholeStory: Tour = {
 
 const developer: Tour = {
   id: 'dev',
-  title: 'Daan Hofman · ontwikkelaar',
-  lead: 'Van projectoverzicht tot een namespace waar je vandaag op deployt.',
+  title: loc('Daan Hofman · ontwikkelaar', 'Daan Hofman · developer'),
+  lead: loc(
+    'Van projectoverzicht tot een namespace waar je vandaag op deployt.',
+    'From the project overview to a namespace you can deploy to today.',
+  ),
   icon: ICONS.terminal,
   persona: {
     name: 'Daan Hofman',
-    role: 'Ontwikkelaar',
-    blurb: 'Je bouwt een gemeentedienst en wilt vandaag nog deployen.',
+    role: loc('Ontwikkelaar', 'Developer'),
+    blurb: loc(
+      'Je bouwt een gemeentedienst en wilt vandaag nog deployen.',
+      'You are building a municipal service and want to deploy today.',
+    ),
   },
   slides: [
     {
       id: 'intro',
       kind: 'opening',
       full: true,
-      title: 'Daan Hofman',
-      lead: 'Ontwikkelaar in het team burgerzaken. Je hebt een namespace nodig, en je hebt hem nu nodig.',
+      title: loc('Daan Hofman', 'Daan Hofman'),
+      lead: loc(
+        'Ontwikkelaar in het team burgerzaken. Je hebt een namespace nodig, en je hebt hem nu nodig.',
+        'Developer on the civil affairs team. You need a namespace, and you need it now.',
+      ),
       bullets: [
-        'Vroeger: een ticket voor een namespace, en dan wachten op een andere afdeling.',
-        'Nu: je regelt het zelf, en je weet precies binnen welke grenzen je werkt.',
+        loc(
+          'Vroeger: een ticket voor een namespace, en dan wachten op een andere afdeling.',
+          'It used to be: raise a ticket for a namespace, then wait on another department.',
+        ),
+        loc(
+          'Nu: je regelt het zelf, en je weet precies binnen welke grenzen je werkt.',
+          'Now: you arrange it yourself, and you know exactly what limits you work within.',
+        ),
       ],
       aside: KEYS_ASIDE,
     },
     {
       id: 'projects',
-      title: 'Waar je aan werkt',
-      lead: 'Je projecten, met het cluster waarop ze draaien.',
-      bullets: ['Een project bundelt je namespaces, je teamgenoten en je limits.'],
+      title: loc('Waar je aan werkt', 'What you work on'),
+      lead: loc(
+        'Je projecten, met het cluster waarop ze draaien.',
+        'Your projects, and the cluster each one runs on.',
+      ),
+      bullets: [
+        loc(
+          'Een project bundelt je namespaces, je teamgenoten en je limits.',
+          'A project bundles your namespaces, your teammates and your limits.',
+        ),
+      ],
       route: '/projects',
     },
     {
       id: 'project',
-      title: 'Het project burgerzaken',
-      lead: 'Alles wat je team nodig heeft, op één plek.',
+      title: loc('Het project burgerzaken', 'The civil affairs project'),
+      lead: loc(
+        'Alles wat je team nodig heeft, op één plek.',
+        'Everything your team needs, in one place.',
+      ),
       route: '/projects/pr-burgerzaken',
     },
     {
       id: 'namespaces',
-      title: 'Je namespace',
-      lead: 'Hier landt je deploy. Geen ticket, geen wachtrij.',
-      bullets: ['De namespace bestaat op het cluster zodra het project is aangemaakt.'],
+      title: loc('Je namespace', 'Your namespace'),
+      lead: loc(
+        'Hier landt je deploy. Geen ticket, geen wachtrij.',
+        'This is where your deploy lands. No ticket, no queue.',
+      ),
+      bullets: [
+        loc(
+          'De namespace bestaat op het cluster zodra het project is aangemaakt.',
+          'The namespace exists on the cluster as soon as the project is created.',
+        ),
+      ],
       route: '/projects/pr-burgerzaken/namespaces',
     },
     {
       id: 'limits',
-      title: 'Binnen welke grenzen',
-      lead: 'Standaard requests en limits, zodat één dienst nooit het cluster opeet.',
-      bullets: ['Je ziet de grenzen vooraf, in plaats van ze te ontdekken bij een incident.'],
+      title: loc('Binnen welke grenzen', 'The limits you work within'),
+      lead: loc(
+        'Standaard requests en limits, zodat één dienst nooit het cluster opeet.',
+        'Default requests and limits, so no single service can eat the whole cluster.',
+      ),
+      bullets: [
+        loc(
+          'Je ziet de grenzen vooraf, in plaats van ze te ontdekken bij een incident.',
+          'You see the limits up front, instead of discovering them during an incident.',
+        ),
+      ],
       route: '/projects/pr-burgerzaken/limits',
       skippable: true,
     },
     {
       id: 'members',
-      title: 'Je teamgenoten erbij',
-      lead: 'Een nieuwe collega toegang geven doe je zelf, met de rol die past.',
-      bullets: ['Beheerder of viewer, met least privilege als uitgangspunt.'],
+      title: loc('Je teamgenoten erbij', 'Adding your teammates'),
+      lead: loc(
+        'Een nieuwe collega toegang geven doe je zelf, met de rol die past.',
+        'Giving a new colleague access is something you do yourself, in the right role.',
+      ),
+      bullets: [
+        loc(
+          'Beheerder of viewer, met least privilege als uitgangspunt.',
+          'Admin or viewer, with least privilege as the starting point.',
+        ),
+      ],
       route: '/projects/pr-burgerzaken/members',
     },
     {
       id: 'plugins',
-      title: 'Wat je niet zelf hoeft te bouwen',
-      lead: 'Een database, certificaten, inloggen: het staat in de catalogus.',
+      title: loc('Wat je niet zelf hoeft te bouwen', "What you don't have to build"),
+      lead: loc(
+        'Een database, certificaten, inloggen: het staat in de catalogus.',
+        'A database, certificates, sign-in: it is all in the catalogue.',
+      ),
       bullets: [
-        'Wat op je cluster geïnstalleerd is, kun je in je eigen namespace gebruiken.',
-        'Geen eigen Postgres-cluster meer opzetten om te beginnen.',
+        loc(
+          'Wat op je cluster geïnstalleerd is, kun je in je eigen namespace gebruiken.',
+          'Whatever is installed on your cluster, you can use from your own namespace.',
+        ),
+        loc(
+          'Geen eigen Postgres-cluster meer opzetten om te beginnen.',
+          'No more standing up your own Postgres cluster just to get started.',
+        ),
       ],
       route: '/plugins',
     },
-    closing('Je eigen project, je eigen namespace, en je deploy die vandaag draait.'),
+    closing(
+      'Je eigen project, je eigen namespace, en je deploy die vandaag draait.',
+      'Your own project, your own namespace, and your deploy running today.',
+    ),
   ],
 };
 
 const platformEngineer: Tour = {
   id: 'platform',
-  title: 'Yara Nijhuis · platform engineer',
-  lead: 'Van clusteroverzicht en node pools tot een nieuw cluster in een paar klikken.',
+  title: loc('Yara Nijhuis · platform engineer', 'Yara Nijhuis · platform engineer'),
+  lead: loc(
+    'Van clusteroverzicht en node pools tot een nieuw cluster in een paar klikken.',
+    'From the cluster overview and node pools to a new cluster in a few clicks.',
+  ),
   icon: ICONS.layers,
   persona: {
     name: 'Yara Nijhuis',
-    role: 'Platform engineer',
-    blurb: 'Je draait de clusters waar alle teams op landen.',
+    role: loc('Platform engineer', 'Platform engineer'),
+    blurb: loc(
+      'Je draait de clusters waar alle teams op landen.',
+      'You run the clusters every team lands on.',
+    ),
   },
   slides: [
     {
       id: 'intro',
       kind: 'opening',
       full: true,
-      title: 'Yara Nijhuis',
-      lead: 'Platform engineer. Je levert de bodem waar de teams van de gemeente op bouwen.',
+      title: loc('Yara Nijhuis', 'Yara Nijhuis'),
+      lead: loc(
+        'Platform engineer. Je levert de bodem waar de teams van de gemeente op bouwen.',
+        "Platform engineer. You provide the ground the municipality's teams build on.",
+      ),
       bullets: [
-        'Je wilt geen namespace-tickets afhandelen, je wilt capaciteit en standaarden bewaken.',
-        'Fundament geeft de teams self-service, en jou het overzicht.',
+        loc(
+          'Je wilt geen namespace-tickets afhandelen, je wilt capaciteit en standaarden bewaken.',
+          'You do not want to work through namespace tickets; you want to watch capacity and standards.',
+        ),
+        loc(
+          'Fundament geeft de teams self-service, en jou het overzicht.',
+          'Fundament gives the teams self-service, and gives you the overview.',
+        ),
       ],
       aside: KEYS_ASIDE,
     },
     {
       id: 'dashboard',
-      title: 'Alle clusters',
-      lead: 'Status, regio, projecten en node pools van de hele organisatie.',
+      title: loc('Alle clusters', 'Every cluster'),
+      lead: loc(
+        'Status, regio, projecten en node pools van de hele organisatie.',
+        'Status, region, projects and node pools across the whole organisation.',
+      ),
       route: '/',
     },
     {
       id: 'cluster-detail',
-      title: 'Capaciteit en activiteit',
-      lead: 'CPU, geheugen en pods per cluster, plus wat het platform op de achtergrond doet.',
-      bullets: ['De activiteitenfeed laat elke reconciliatie zien, met poging en resultaat.'],
+      title: loc('Capaciteit en activiteit', 'Capacity and activity'),
+      lead: loc(
+        'CPU, geheugen en pods per cluster, plus wat het platform op de achtergrond doet.',
+        'CPU, memory and pods per cluster, plus what the platform is doing in the background.',
+      ),
+      bullets: [
+        loc(
+          'De activiteitenfeed laat elke reconciliatie zien, met poging en resultaat.',
+          'The activity feed shows every reconciliation, with the attempt and the result.',
+        ),
+      ],
       route: '/clusters/cl-production',
     },
     {
       id: 'nodes',
-      title: 'Node pools',
-      lead: 'Autoscalende pools met een machinetype en een min/max.',
-      bullets: ['Groeit een team, dan groeit de pool mee, binnen de grenzen die jij zet.'],
+      title: loc('Node pools', 'Node pools'),
+      lead: loc(
+        'Autoscalende pools met een machinetype en een min/max.',
+        'Autoscaling pools with a machine type and a min/max.',
+      ),
+      bullets: [
+        loc(
+          'Groeit een team, dan groeit de pool mee, binnen de grenzen die jij zet.',
+          'When a team grows, the pool grows with it, within the bounds you set.',
+        ),
+      ],
       route: '/clusters/cl-production/nodes',
     },
     {
       id: 'namespaces',
-      title: 'Wie draait er op dit cluster',
-      lead: 'De namespaces per project, zodat je weet wat er landt.',
+      title: loc('Wie draait er op dit cluster', 'Who runs on this cluster'),
+      lead: loc(
+        'De namespaces per project, zodat je weet wat er landt.',
+        'The namespaces per project, so you know what lands where.',
+      ),
       route: '/clusters/cl-production/namespaces',
       skippable: true,
     },
     {
       id: 'add-cluster',
-      title: 'Een nieuw cluster',
-      lead: 'Een acceptatiecluster erbij: naam, regio en versie. Kijk hoe de naam wordt ingetypt.',
+      title: loc('Een nieuw cluster', 'A new cluster'),
+      lead: loc(
+        'Een acceptatiecluster erbij: naam, regio en versie. Kijk hoe de naam wordt ingetypt.',
+        'One more acceptance cluster: name, region and version. Watch the name being typed.',
+      ),
       bullets: [
-        'Daarna node pools en een samenvatting, en het platform reconcilieert de rest.',
-        'Elk cluster komt uit dezelfde wizard, dus elk cluster ziet er hetzelfde uit.',
+        loc(
+          'Daarna node pools en een samenvatting, en het platform reconcilieert de rest.',
+          'Then node pools and a summary, and the platform reconciles the rest.',
+        ),
+        loc(
+          'Elk cluster komt uit dezelfde wizard, dus elk cluster ziet er hetzelfde uit.',
+          'Every cluster comes out of the same wizard, so every cluster looks the same.',
+        ),
       ],
       route: '/clusters/add',
       drive: addClusterDrive,
     },
     {
       id: 'plugins',
-      title: 'De catalogus',
-      lead: 'Bouwstenen die je één keer aanzet, en die elk team daarna gewoon kan gebruiken.',
+      title: loc('De catalogus', 'The catalogue'),
+      lead: loc(
+        'Bouwstenen die je één keer aanzet, en die elk team daarna gewoon kan gebruiken.',
+        'Building blocks you switch on once, that every team can simply use afterwards.',
+      ),
       bullets: [
-        'Presets bundelen wat vrijwel elk cluster nodig heeft.',
-        'Kijk mee: Cert Manager wordt op een cluster geïnstalleerd. De status komt vanzelf op Installed.',
+        loc(
+          'Presets bundelen wat vrijwel elk cluster nodig heeft.',
+          'Presets bundle what nearly every cluster needs.',
+        ),
+        loc(
+          'Kijk mee: Cert Manager wordt op een cluster geïnstalleerd. De status komt vanzelf op Installed.',
+          'Watch along: Cert Manager is installed on a cluster. The status moves to Installed on its own.',
+        ),
       ],
       route: '/plugins',
       drive: installPluginDrive,
     },
-    closing('Teams die zichzelf bedienen, en jij die de bodem bewaakt in plaats van tickets.'),
+    closing(
+      'Teams die zichzelf bedienen, en jij die de bodem bewaakt in plaats van tickets.',
+      'Teams that serve themselves, and you watching the foundation instead of a ticket queue.',
+    ),
   ],
 };
 
 const securityOfficer: Tour = {
   id: 'security',
-  title: 'Ruben de Groot · security officer',
-  lead: 'Toegang, least privilege en een audittrail die vanzelf ontstaat.',
+  title: loc('Ruben de Groot · security officer', 'Ruben de Groot · security officer'),
+  lead: loc(
+    'Toegang, least privilege en een audittrail die vanzelf ontstaat.',
+    'Access, least privilege, and an audit trail that builds itself.',
+  ),
   icon: ICONS.shield,
   persona: {
     name: 'Ruben de Groot',
-    role: 'Security officer',
-    blurb: 'Je bewaakt toegang, least privilege en de audittrail.',
+    role: loc('Security officer', 'Security officer'),
+    blurb: loc(
+      'Je bewaakt toegang, least privilege en de audittrail.',
+      'You watch over access, least privilege and the audit trail.',
+    ),
   },
   slides: [
     {
       id: 'intro',
       kind: 'opening',
       full: true,
-      title: 'Ruben de Groot',
-      lead: 'Security officer. Je wilt controle, maar je wilt geen poortwachter zijn.',
+      title: loc('Ruben de Groot', 'Ruben de Groot'),
+      lead: loc(
+        'Security officer. Je wilt controle, maar je wilt geen poortwachter zijn.',
+        'Security officer. You want control, but you do not want to be a gatekeeper.',
+      ),
       bullets: [
-        'Self-service klinkt als controleverlies. Dat is het hier niet.',
-        'Teams regelen hun toegang zelf, binnen grenzen die vastliggen en zichtbaar zijn.',
+        loc(
+          'Self-service klinkt als controleverlies. Dat is het hier niet.',
+          'Self-service sounds like losing control. Here, it is not.',
+        ),
+        loc(
+          'Teams regelen hun toegang zelf, binnen grenzen die vastliggen en zichtbaar zijn.',
+          'Teams manage their own access, within limits that are fixed and visible.',
+        ),
       ],
       aside: KEYS_ASIDE,
     },
     {
       id: 'project-members',
-      title: 'Wie mag wat',
-      lead: 'Toegang staat per project vast, met een expliciete rol per persoon.',
+      title: loc('Wie mag wat', 'Who may do what'),
+      lead: loc(
+        'Toegang staat per project vast, met een expliciete rol per persoon.',
+        'Access is fixed per project, with an explicit role for each person.',
+      ),
       bullets: [
-        'Beheerder of viewer: geen impliciete rechten, geen gedeelde accounts.',
-        'Least privilege is het uitgangspunt, niet een controle achteraf.',
+        loc(
+          'Beheerder of viewer: geen impliciete rechten, geen gedeelde accounts.',
+          'Admin or viewer: no implicit rights, no shared accounts.',
+        ),
+        loc(
+          'Least privilege is het uitgangspunt, niet een controle achteraf.',
+          'Least privilege is the starting point, not an audit after the fact.',
+        ),
       ],
       route: '/projects/pr-burgerzaken/members',
     },
     {
       id: 'org-members',
-      title: 'Wie zit er in de organisatie',
-      lead: 'Iedereen met toegang tot het platform, op één lijst.',
-      bullets: ['Vertrekt iemand, dan haal je dat op één plek weg.'],
+      title: loc('Wie zit er in de organisatie', 'Who is in the organisation'),
+      lead: loc(
+        'Iedereen met toegang tot het platform, op één lijst.',
+        'Everyone with access to the platform, on a single list.',
+      ),
+      bullets: [
+        loc(
+          'Vertrekt iemand, dan haal je dat op één plek weg.',
+          'When someone leaves, you revoke it in one place.',
+        ),
+      ],
       route: '/organization/members',
     },
     {
       id: 'activity',
-      title: 'De audittrail',
-      lead: 'Elke wijziging aan een cluster staat in de activiteitenfeed.',
+      title: loc('De audittrail', 'The audit trail'),
+      lead: loc(
+        'Elke wijziging aan een cluster staat in de activiteitenfeed.',
+        'Every change to a cluster shows up in the activity feed.',
+      ),
       bullets: [
-        'Wat er veranderde, wanneer, en of het lukte.',
-        'Je hoeft niemand te vragen wat er gebeurd is.',
+        loc(
+          'Wat er veranderde, wanneer, en of het lukte.',
+          'What changed, when, and whether it succeeded.',
+        ),
+        loc(
+          'Je hoeft niemand te vragen wat er gebeurd is.',
+          'You never have to ask anyone what happened.',
+        ),
       ],
       route: '/clusters/cl-production',
     },
     {
       id: 'org-limits',
-      title: 'Grenzen die centraal vastliggen',
-      lead: 'Maximale nodes en standaard resource limits gelden voor de hele organisatie.',
+      title: loc('Grenzen die centraal vastliggen', 'Limits fixed centrally'),
+      lead: loc(
+        'Maximale nodes en standaard resource limits gelden voor de hele organisatie.',
+        'Maximum nodes and default resource limits apply across the whole organisation.',
+      ),
       route: '/organization/limits',
       skippable: true,
     },
     {
       id: 'plugin-detail',
-      title: 'Wat je binnenhaalt',
-      lead: 'Elke plugin heeft een herkomst: een leverancier, een repository en documentatie.',
+      title: loc('Wat je binnenhaalt', 'What you are bringing in'),
+      lead: loc(
+        'Elke plugin heeft een herkomst: een leverancier, een repository en documentatie.',
+        'Every plugin has a provenance: a supplier, a repository and documentation.',
+      ),
       bullets: [
-        'Teams kiezen uit een catalogus die jij kent, niet uit willekeurige Helm-charts.',
-        'Je ziet per plugin waar het vandaan komt voordat het op een cluster landt.',
+        loc(
+          'Teams kiezen uit een catalogus die jij kent, niet uit willekeurige Helm-charts.',
+          'Teams pick from a catalogue you know, not from arbitrary Helm charts.',
+        ),
+        loc(
+          'Je ziet per plugin waar het vandaan komt voordat het op een cluster landt.',
+          'For each plugin you can see where it came from before it lands on a cluster.',
+        ),
       ],
       route: '/plugins/pl-cert-manager',
     },
-    closing('Controle door grenzen vooraf, in plaats van goedkeuring per aanvraag.'),
+    closing(
+      'Controle door grenzen vooraf, in plaats van goedkeuring per aanvraag.',
+      'Control through limits set up front, instead of approval request by request.',
+    ),
   ],
 };
 
 const policyMaker: Tour = {
   id: 'beleid',
-  title: 'Iris Wolters · CIO',
-  lead: 'Waarom een gemeente hier zelf op wil bouwen.',
+  title: loc('Iris Wolters · CIO', 'Iris Wolters · CIO'),
+  lead: loc(
+    'Waarom een gemeente hier zelf op wil bouwen.',
+    'Why a municipality would want to build on this itself.',
+  ),
   icon: ICONS.building,
   persona: {
     name: 'Iris Wolters',
-    role: 'CIO',
-    blurb: 'Je beslist of de gemeente hierop gaat bouwen.',
+    role: loc('CIO', 'CIO'),
+    blurb: loc(
+      'Je beslist of de gemeente hierop gaat bouwen.',
+      'You decide whether the municipality builds on this.',
+    ),
   },
   slides: [
     {
       id: 'intro',
       kind: 'opening',
       full: true,
-      title: 'Iris Wolters',
-      lead: 'CIO bij een gemeente. Je beslist waar de digitale dienstverlening op draait.',
+      title: loc('Iris Wolters', 'Iris Wolters'),
+      lead: loc(
+        'CIO bij een gemeente. Je beslist waar de digitale dienstverlening op draait.',
+        'CIO at a municipality. You decide what public digital services run on.',
+      ),
       bullets: [
-        'Je wilt tempo voor je teams, zonder afhankelijk te worden van één leverancier.',
-        'En je wilt kunnen uitleggen waar de gegevens van inwoners staan.',
+        loc(
+          'Je wilt tempo voor je teams, zonder afhankelijk te worden van één leverancier.',
+          'You want speed for your teams, without becoming dependent on a single supplier.',
+        ),
+        loc(
+          'En je wilt kunnen uitleggen waar de gegevens van inwoners staan.',
+          "And you want to be able to explain where residents' data is held.",
+        ),
       ],
       aside: KEYS_ASIDE,
     },
     {
       id: 'why',
       full: true,
-      title: 'Wachten is de grootste kostenpost',
-      lead: 'Niet de infrastructuur, maar de doorlooptijd eromheen.',
+      title: loc('Wachten is de grootste kostenpost', 'Waiting is the biggest cost'),
+      lead: loc(
+        'Niet de infrastructuur, maar de doorlooptijd eromheen.',
+        'Not the infrastructure, but the lead time around it.',
+      ),
       bullets: [
-        'Een namespace die drie weken duurt, kost meer dan de servers die eronder draaien.',
-        'Fundament haalt die wachttijd eruit: teams regelen het zelf.',
+        loc(
+          'Een namespace die drie weken duurt, kost meer dan de servers die eronder draaien.',
+          'A namespace that takes three weeks costs more than the servers underneath it.',
+        ),
+        loc(
+          'Fundament haalt die wachttijd eruit: teams regelen het zelf.',
+          'Fundament takes that wait out: teams arrange it themselves.',
+        ),
       ],
     },
     {
       id: 'autonomy',
       full: true,
-      title: 'Geen lock-in',
-      lead: 'Standaard Kubernetes, open source, en gemeenten die het samen beheren.',
+      title: loc('Geen lock-in', 'No lock-in'),
+      lead: loc(
+        'Standaard Kubernetes, open source, en gemeenten die het samen beheren.',
+        'Standard Kubernetes, open source, and municipalities running it together.',
+      ),
       bullets: [
-        'Wat je hier bouwt, draait ook ergens anders.',
-        'De keuze om te vertrekken blijft van jou, en dat houdt de samenwerking gezond.',
+        loc(
+          'Wat je hier bouwt, draait ook ergens anders.',
+          'What you build here runs somewhere else too.',
+        ),
+        loc(
+          'De keuze om te vertrekken blijft van jou, en dat houdt de samenwerking gezond.',
+          'The choice to leave stays yours, and that keeps the partnership healthy.',
+        ),
       ],
     },
     {
       id: 'dashboard',
-      title: 'Wat je ervoor terugkrijgt',
-      lead: 'Alle clusters van de organisatie, met hun regio, op één scherm.',
-      bullets: ['Geen schaduw-IT: je ziet waar wat draait.'],
+      title: loc('Wat je ervoor terugkrijgt', 'What you get back'),
+      lead: loc(
+        'Alle clusters van de organisatie, met hun regio, op één scherm.',
+        "All of the organisation's clusters, with their regions, on one screen.",
+      ),
+      bullets: [
+        loc('Geen schaduw-IT: je ziet waar wat draait.', 'No shadow IT: you see what runs where.'),
+      ],
       route: '/',
     },
     {
       id: 'projects',
-      title: 'De teams zelf',
-      lead: 'Elk project is een team met een eigen plek op het platform.',
+      title: loc('De teams zelf', 'The teams themselves'),
+      lead: loc(
+        'Elk project is een team met een eigen plek op het platform.',
+        'Each project is a team with its own place on the platform.',
+      ),
       route: '/projects',
     },
     {
       id: 'plugins',
-      title: 'Gebaande paden',
-      lead: 'Een gedeelde catalogus, zodat niet elk team zijn eigen wiel uitvindt.',
+      title: loc('Gebaande paden', 'Well-trodden paths'),
+      lead: loc(
+        'Een gedeelde catalogus, zodat niet elk team zijn eigen wiel uitvindt.',
+        'A shared catalogue, so not every team reinvents its own wheel.',
+      ),
       bullets: [
-        'Wat één gemeente toevoegt, kunnen de andere gebruiken.',
-        'Open source, en de herkomst van elke bouwsteen is te controleren.',
+        loc(
+          'Wat één gemeente toevoegt, kunnen de andere gebruiken.',
+          'What one municipality adds, the others can use.',
+        ),
+        loc(
+          'Open source, en de herkomst van elke bouwsteen is te controleren.',
+          'Open source, and the provenance of every building block can be checked.',
+        ),
       ],
       route: '/plugins',
     },
-    closing('Tempo voor je teams, overzicht voor jou, en geen leverancier die de deur dichthoudt.'),
+    closing(
+      'Tempo voor je teams, overzicht voor jou, en geen leverancier die de deur dichthoudt.',
+      'Speed for your teams, oversight for you, and no supplier holding the door shut.',
+    ),
   ],
 };
 
@@ -470,6 +792,6 @@ export const TOURS: Record<string, Tour> = {
 export const DEFAULT_TOUR_ID = wholeStory.id;
 
 /** Chooser sections: tours without a persona, then the ones told through a role. */
-export const STORY_TOURS = Object.values(TOURS).filter((t) => !t.persona);
+export const STORY_TOURS = Object.values(TOURS).filter((tour) => !tour.persona);
 
-export const PERSONA_TOURS = Object.values(TOURS).filter((t) => !!t.persona);
+export const PERSONA_TOURS = Object.values(TOURS).filter((tour) => !!tour.persona);

@@ -1,43 +1,57 @@
 // Demo-only in-memory ConnectRPC transport for the static walkthrough build.
 // Redirects every RPC to handwritten fixtures — no network, no backend.
 import { create } from '@bufbuild/protobuf';
-import { Transport, createRouterTransport  } from '@connectrpc/connect';
-import { OrganizationService,
+import { Transport, createRouterTransport } from '@connectrpc/connect';
+import {
+  OrganizationService,
   ListOrganizationsResponseSchema,
   GetOrganizationResponseSchema,
-  GetOrganizationLimitsResponseSchema } from '../../generated/v1/organization_pb';
-import { ClusterService,
+  GetOrganizationLimitsResponseSchema,
+} from '../../generated/v1/organization_pb';
+import {
+  ClusterService,
   ListClustersResponseSchema,
   GetClusterResponseSchema,
   ListNodePoolsResponseSchema,
   GetClusterActivityResponseSchema,
   CreateClusterResponseSchema,
+  ListRegionsResponseSchema,
   ListClustersResponse_ClusterSummarySchema,
-  ClusterDetailsSchema } from '../../generated/v1/cluster_pb';
-import { NamespaceService,
+  ClusterDetailsSchema,
+} from '../../generated/v1/cluster_pb';
+import {
+  NamespaceService,
   ListClusterNamespacesResponseSchema,
-  ListProjectNamespacesResponseSchema } from '../../generated/v1/namespace_pb';
-import { ProjectService,
+  ListProjectNamespacesResponseSchema,
+} from '../../generated/v1/namespace_pb';
+import {
+  ProjectService,
   ListProjectsResponseSchema,
   GetProjectResponseSchema,
   ListProjectMembersResponseSchema,
-  GetProjectLimitsResponseSchema } from '../../generated/v1/project_pb';
-import { MemberService, ListMembersResponseSchema  } from '../../generated/v1/member_pb';
-import { InviteService, ListInvitationsResponseSchema  } from '../../generated/v1/invite_pb';
-import { PluginService,
+  GetProjectLimitsResponseSchema,
+} from '../../generated/v1/project_pb';
+import { MemberService, ListMembersResponseSchema } from '../../generated/v1/member_pb';
+import { InviteService, ListInvitationsResponseSchema } from '../../generated/v1/invite_pb';
+import {
+  PluginService,
   ListPluginsResponseSchema,
   ListPresetsResponseSchema,
-  GetPluginDetailResponseSchema } from '../../generated/v1/plugin_pb';
-import { APIKeyService, ListAPIKeysResponseSchema  } from '../../generated/v1/apikey_pb';
-import { AuthnService, GetUserInfoResponseSchema  } from '../../generated/authn/v1/authn_pb';
+  GetPluginDetailResponseSchema,
+} from '../../generated/v1/plugin_pb';
+import { APIKeyService, ListAPIKeysResponseSchema } from '../../generated/v1/apikey_pb';
+import { AuthnService, GetUserInfoResponseSchema } from '../../generated/authn/v1/authn_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import * as fx from './fixtures';
 
 // Artificial latency so the app's loading/skeleton states are visible while presenting.
 const LATENCY_MS = 260;
-const delay = (ms = LATENCY_MS) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms = LATENCY_MS) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
-export function createDemoTransport(): Transport {
+export default function createDemoTransport(): Transport {
   return createRouterTransport((router) => {
     router.service(AuthnService, {
       getUserInfo: async () => {
@@ -84,6 +98,10 @@ export function createDemoTransport(): Transport {
         return create(ListNodePoolsResponseSchema, {
           nodePools: fx.nodePoolsByCluster.get(req.clusterId) ?? [],
         });
+      },
+      listRegions: async () => {
+        await delay();
+        return create(ListRegionsResponseSchema, { regions: fx.regions });
       },
       getClusterActivity: async () => {
         await delay();

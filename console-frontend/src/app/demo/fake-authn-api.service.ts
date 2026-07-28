@@ -4,7 +4,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import type { User } from '../../generated/authn/v1/authn_pb';
 import { demoUser } from './fixtures';
 
-export class FakeAuthnApiService {
+export default class FakeAuthnApiService {
   private currentUserSubject = new BehaviorSubject<User | undefined>(demoUser);
 
   currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
@@ -17,6 +17,9 @@ export class FakeAuthnApiService {
     return this.currentUserSubject.value;
   }
 
+  // Both must stay instance methods to match AuthnApiService's shape, and both are
+  // genuinely no-ops here: the subject is seeded at construction and never expires.
+  /* eslint-disable class-methods-use-this */
   async initializeAuth(): Promise<void> {
     // Already authenticated via the seeded subject; nothing to do.
   }
@@ -24,6 +27,7 @@ export class FakeAuthnApiService {
   async refreshToken(): Promise<void> {
     // No-op in the demo build.
   }
+  /* eslint-enable class-methods-use-this */
 
   async logout(): Promise<void> {
     this.currentUserSubject.next(undefined);

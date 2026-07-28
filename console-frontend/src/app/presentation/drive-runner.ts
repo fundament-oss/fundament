@@ -1,6 +1,11 @@
 // Auto-drive runner for the walkthrough. Drives the live app pane through the same
 // DOM events its components already handle (e.g. nldd-text-field's `input` CustomEvent
 // with detail.value), so no component internals are touched.
+//
+// A drive script is sequential by definition: each step must land before the next one
+// is dispatched, and typing is emitted one character at a time. Awaiting in a loop is
+// the behaviour, not an oversight.
+/* eslint-disable no-await-in-loop */
 import { DriveStep } from './presentation.model';
 
 const CHAR_MS = 80; // per-character typing delay
@@ -12,14 +17,15 @@ const sleep = (ms: number, signal: AbortSignal) =>
       reject(new DOMException('aborted', 'AbortError'));
       return;
     }
-    const timer = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort);
-      resolve();
-    }, ms);
+    let timer: ReturnType<typeof setTimeout>;
     const onAbort = () => {
       clearTimeout(timer);
       reject(new DOMException('aborted', 'AbortError'));
     };
+    timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
     signal.addEventListener('abort', onAbort, { once: true });
   });
 
@@ -97,12 +103,17 @@ async function runStep(step: DriveStep, signal: AbortSignal): Promise<void> {
 /**
  * Runs a drive script. Resolves when finished or silently on abort.
  */
-export async function runDrive(steps: DriveStep[], signal: AbortSignal): Promise<void> {
+export default async function runDrive(steps: DriveStep[], signal: AbortSignal): Promise<void> {
   try {
-    for (const step of steps) {
+    // A while loop, not for..of (banned) and not an indexed for (prefer-for-of would
+    // then ask for the banned form back).
+    let i = 0;
+    while (i < steps.length) {
+      const step = steps[i];
       if (signal.aborted) return;
       await runStep(step, signal);
       if (!step.wait) await sleep(STEP_MS, signal);
+      i += 1;
     }
   } catch (err) {
     if ((err as DOMException)?.name !== 'AbortError') {
