@@ -17,6 +17,9 @@ COPY docs-frontend/ .
 
 # Copy docs, FUNs, and ADRs into their respective content directories
 # Serve assets statically to avoid Astro/Vite processing large SVGs. Note: cp instead of mv, since the docs/docs dir may already exist, resulting in docs/docs/docs after mv.
+# The sed passes mirror docs-frontend/Dockerfile — see the comment there for the
+# link conventions they imply, and for the three cases that must be written
+# site-absolute because no relative form works on both GitHub and the site.
 COPY docs/ /tmp/docs/
 RUN mv /tmp/docs/funs ./src/content/docs/funs \
  && mv /tmp/docs/adr ./src/content/docs/adr \

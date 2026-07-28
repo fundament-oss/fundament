@@ -9,7 +9,7 @@ in, finding your organization, launching a cluster, creating a project and
 installing a plugin.
 
 If you are looking to build plugins on top of Fundament rather than use it, see the
-[Developer documentation](/docs/developer/development-setup) instead.
+[Developer documentation](../developer/development-setup.md) instead.
 
 ## Before you start
 

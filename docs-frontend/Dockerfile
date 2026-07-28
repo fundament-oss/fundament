@@ -20,7 +20,23 @@ COPY docs-frontend/ .
 # Serve assets statically to avoid Astro/Vite processing large SVGs.
 # The two sed passes make links that are written for GitHub work on the site:
 # asset paths become absolute, and relative `./page.md` links lose the extension
-# (Astro serves them extensionless).
+# (Astro serves them extensionless). Prefer that relative form — it is valid on
+# GitHub and rewritten here.
+#
+# Three cases have no relative form that works in both places and must be written
+# site-absolute (`/docs/...`, `/adr/...`), accepting that they 404 on GitHub:
+#
+#   1. Links to ADRs and FUNs. The sed only strips `.md`, and those pages are
+#      `.adoc` moved *out* of docs/ below: GitHub needs `../adr/0009-x.adoc`
+#      while the site needs `../../adr/0009-x`.
+#   2. Links *to* an index.md page. `astro.config.ts` sets trailingSlash 'never',
+#      so index.md is served at `/docs/developer/plugins` with no trailing slash
+#      and `../developer/plugins/index` is not a route.
+#   3. Links *from* an index.md page, for the same reason: relative links resolve
+#      against `/docs/developer/` rather than `/docs/developer/plugins/`.
+#
+# Cases 2 and 3 fail silently — nginx.conf falls back to `/index.html`, so a
+# broken link serves the home page with a 200 rather than a 404.
 COPY docs/ /tmp/docs/
 RUN mv /tmp/docs/funs ./src/content/docs/funs \
  && mv /tmp/docs/adr ./src/content/docs/adr \
