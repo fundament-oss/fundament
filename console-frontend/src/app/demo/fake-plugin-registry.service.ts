@@ -5,12 +5,19 @@
 // definitions and CRDs are fixtures.
 import { inject, Injectable, signal } from '@angular/core';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
+import type PluginRegistryService from '../plugin-resources/plugin-registry.service';
 import type { ParsedCrd, PluginDefinition } from '../plugin-resources/types';
 import { PLUGIN_INSTALLS_CHANGED_EVENT } from './fake-plugin-installation.service';
 import * as fx from './fixtures';
 
 @Injectable({ providedIn: 'root' })
-export default class FakePluginRegistryService {
+export default class FakePluginRegistryService
+  implements
+    Pick<
+      PluginRegistryService,
+      'loadPlugins' | 'loadCrdsForPlugin' | 'reset' | 'getPlugin' | 'getCrd' | 'allPlugins'
+    >
+{
   // Resolves to FakePluginInstallationService in the demo injector, so the menu
   // reflects the install the walkthrough performs on its plugin slide.
   private readonly installations = inject(PluginInstallationService);

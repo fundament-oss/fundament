@@ -3,6 +3,7 @@
 // kube-api-proxy; the static demo has no such origin and its CSP blocks the
 // request, so the objects come from the fixtures instead.
 import { Injectable } from '@angular/core';
+import type PluginResourceStoreService from '../plugin-resources/plugin-resource-store.service';
 import type { KubeResource, ParsedCrd } from '../plugin-resources/types';
 import * as fx from './fixtures';
 
@@ -11,7 +12,9 @@ function resourcesFor(pluginName: string, kind: string): KubeResource[] {
 }
 
 @Injectable({ providedIn: 'root' })
-export default class FakePluginResourceStoreService {
+export default class FakePluginResourceStoreService
+  implements Pick<PluginResourceStoreService, 'loadResources' | 'loadResource' | 'getResource'>
+{
   // Signatures mirror the real service (including the unused kubeApiProxyUrl),
   // so the callers it is swapped in for need no demo-specific branch.
   // eslint-disable-next-line class-methods-use-this

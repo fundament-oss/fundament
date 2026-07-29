@@ -1,25 +1,16 @@
 // Demo-only stand-in for TitleService. While the walkthrough is running the slide
 // owns the document title, so page-level setTitle() calls from route components are
-// ignored. Outside the walkthrough it behaves like the real service.
+// dropped. Outside the walkthrough it is the real service, unchanged — hence the
+// subclass: the title format lives in one place and cannot drift.
 import { inject } from '@angular/core';
-import { Title, Meta } from '@angular/platform-browser';
+import { TitleService } from '../title.service';
 import PresentationService from '../presentation/presentation.service';
 
-export default class DemoTitleService {
-  private title = inject(Title);
-
-  private meta = inject(Meta);
-
+export default class DemoTitleService extends TitleService {
   private presentation = inject(PresentationService);
 
-  private readonly DEFAULT_TITLE = 'Fundament Console';
-
-  setTitle(pageTitle?: string): void {
+  override setTitle(pageTitle?: string): void {
     if (this.presentation.active()) return;
-    this.title.setTitle(pageTitle ? `${pageTitle} - ${this.DEFAULT_TITLE}` : this.DEFAULT_TITLE);
-  }
-
-  setDescription(description: string): void {
-    this.meta.updateTag({ name: 'description', content: description });
+    super.setTitle(pageTitle);
   }
 }

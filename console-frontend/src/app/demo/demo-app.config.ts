@@ -27,6 +27,15 @@ const demoConfig: AppConfiguration = {
 // Reuse the real app providers, then override the backend seams. Later providers win
 // in Angular DI, so every RPC client resolves the in-memory transport and the auth
 // guard sees a seeded user.
+//
+// Each fake `implements Pick<Real, ...>` of the service it stands in for. That pins the
+// members it lists: change a signature or rename one on the real service and the build
+// breaks here rather than the demo at runtime. It does not pin the *set* of members, so
+// a method added to the real service still compiles — keep the Pick lists exhaustive by
+// hand.
+//
+// The `as unknown as` casts below are still needed: a class with private members is only
+// assignable from itself or a subclass, and the fakes are neither.
 const demoAppConfig: ApplicationConfig = {
   providers: [
     ...appConfig.providers,
@@ -38,11 +47,9 @@ const demoAppConfig: ApplicationConfig = {
       provide: AuthnApiService,
       useFactory: () => new FakeAuthnApiService() as unknown as AuthnApiService,
     },
-    // While presenting, the slide title owns the document title.
-    {
-      provide: TitleService,
-      useFactory: () => new DemoTitleService() as unknown as TitleService,
-    },
+    // While presenting, the slide title owns the document title. A real subclass, so
+    // the console's own title format is inherited rather than restated.
+    { provide: TitleService, useClass: DemoTitleService },
     // Installs are in-memory, so the walkthrough can install a plugin for real.
     {
       provide: PluginInstallationService,

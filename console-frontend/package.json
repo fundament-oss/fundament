@@ -11,7 +11,7 @@
     "prestart:demo": "bun run prebuild",
     "start:demo": "ng serve --configuration demo",
     "prebuild:demo": "bun run prebuild",
-    "build:demo": "ng build --configuration demo",
+    "build:demo": "ng build --configuration production,demo",
     "prewatch": "bun run prebuild",
     "watch": "ng build --watch --configuration development",
     "pretest": "node generate-proto-version.js",

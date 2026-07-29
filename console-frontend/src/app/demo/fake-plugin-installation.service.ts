@@ -2,6 +2,7 @@
 // kube API proxy over fetch(); here installs live in memory so the walkthrough can
 // actually install a plugin and watch it come up.
 import { Injectable } from '@angular/core';
+import type PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { PluginInstallationItem } from '../plugin-resources/types';
 import {
   PLUGIN_INSTALLS_ENSURE_EVENT,
@@ -48,7 +49,13 @@ function toItem(install: DemoInstall): PluginInstallationItem {
 }
 
 @Injectable({ providedIn: 'root' })
-export default class FakePluginInstallationService {
+export default class FakePluginInstallationService
+  implements
+    Pick<
+      PluginInstallationService,
+      'listInstallations' | 'getInstallation' | 'installPlugin' | 'uninstallPlugin'
+    >
+{
   private readonly byCluster = new Map<string, DemoInstall[]>();
 
   constructor() {

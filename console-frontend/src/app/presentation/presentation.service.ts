@@ -110,8 +110,17 @@ export default class PresentationService {
       this.startTour(DEFAULT_TOUR_ID);
       return;
     }
-    const slide = Math.max(1, parseInt(params.get('slide') || '1', 10)) - 1;
-    this.startTour(tourId, slide);
+    this.startTour(tourId, PresentationService.parseSlideParam(params.get('slide')));
+  }
+
+  /**
+   * `?slide=` as a zero-based index. Deck links are shared and hand-edited, so a
+   * missing, truncated or non-numeric value must fall back to the first slide —
+   * NaN would propagate through goto()'s clamp and leave the deck blank.
+   */
+  private static parseSlideParam(value: string | null): number {
+    const parsed = Number.parseInt(value ?? '', 10);
+    return Number.isFinite(parsed) ? Math.max(1, parsed) - 1 : 0;
   }
 
   /** Resolves one localized string in the current locale. */
@@ -288,7 +297,8 @@ export default class PresentationService {
   }
 
   private currentPath(): string {
-    return this.router.url.split('?')[0] || '/';
+    // The router url carries the query string and fragment; only the path is a route.
+    return this.router.url.split(/[?#]/)[0] || '/';
   }
 
   private syncUrlAndNavigate(): void {

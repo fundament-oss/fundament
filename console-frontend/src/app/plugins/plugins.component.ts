@@ -194,6 +194,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   backendPresets: Preset[] = [];
 
   async ngOnInit() {
+    // Registered before the loads below, so a failed load does not also take the
+    // walkthrough's install-replay with it.
+    if (this.presentationEnabled) {
+      document.addEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
+    }
+
     try {
       // Fetch plugins and presets in parallel; use pre-fetched cluster data from service
       const [pluginsResponse, presetsResponse] = await Promise.all([
@@ -244,10 +250,6 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       }
 
       this.startInstallPollingIfNeeded();
-
-      if (this.presentationEnabled) {
-        document.addEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
-      }
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error ? `Failed to load data: ${error.message}` : 'Failed to load data',

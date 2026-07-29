@@ -35,7 +35,7 @@ export default '${version}';
   );
 }
 
-// Standalone checkouts (e.g. the Vercel demo deploy) only contain this directory,
+// Standalone checkouts only contain this directory,
 // so the sibling organization-api is absent. The version is solely used for the
 // live server/client handshake in app.config.ts, which the mock-backed demo never
 // performs — so a placeholder is correct rather than a build failure.

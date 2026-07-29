@@ -45,14 +45,6 @@ const addClusterDrive: DriveStep[] = [
 ];
 
 /**
- * Installs the first plugin in the catalog (cert-manager) on a single cluster.
- * Selectors lean on static attributes only — `variant`/`slot` are plain attributes in
- * the template, while `text` is an Angular binding and never lands in the DOM. The
- * per-cluster checkboxes live in the modal's `.space-y-2` list (the "select all"
- * checkbox sits outside it), so the first match selects just one cluster.
- * The reset event first clears any earlier install, so the slide can be replayed.
- */
-/**
  * Puts the installed plugin in place for the slides that show it off. Arriving
  * from the install slide it changes nothing; jumping straight to one of these
  * slides (a `?slide=` link, a restart, stepping backwards) it installs Cert
@@ -60,6 +52,14 @@ const addClusterDrive: DriveStep[] = [
  */
 const installedPluginDrive: DriveStep[] = [{ emit: PLUGIN_INSTALLS_ENSURE_EVENT }];
 
+/**
+ * Installs the first plugin in the catalog (cert-manager) on a single cluster.
+ * Selectors lean on static attributes only — `variant`/`slot` are plain attributes in
+ * the template, while `text` is an Angular binding and never lands in the DOM. The
+ * per-cluster checkboxes live in the modal's `.space-y-2` list (the "select all"
+ * checkbox sits outside it), so the first match selects just one cluster.
+ * The reset event first clears any earlier install, so the slide can be replayed.
+ */
 const installPluginDrive: DriveStep[] = [
   { emit: PLUGIN_INSTALLS_RESET_EVENT },
   { wait: 1400 },

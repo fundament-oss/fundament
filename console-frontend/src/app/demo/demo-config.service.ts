@@ -1,9 +1,11 @@
 // Demo-only stand-in for ConfigService: returns fixed dummy URLs without fetching.
 // The demo transports are in-memory (createRouterTransport ignores baseUrl), so these
 // values are never used for real network calls.
-import { AppConfiguration } from '../config.service';
+import { AppConfiguration, ConfigService } from '../config.service';
 
-export default class DemoConfigService {
+export default class DemoConfigService
+  implements Pick<ConfigService, 'loadConfig' | 'getConfig'>
+{
   constructor(private readonly config: AppConfiguration) {}
 
   async loadConfig(): Promise<AppConfiguration> {
