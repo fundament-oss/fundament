@@ -80,6 +80,7 @@ func TestMain(m *testing.M) {
 
 	adminPool := newAdminPool()
 
+	testdb.UseGlobalTrustAuth(dataDir, adminPool)
 	testdb.CreateRoles(context.Background(), adminPool)
 
 	if err = setupTemplateDatabaseWithMigrations(adminPool); err != nil {
