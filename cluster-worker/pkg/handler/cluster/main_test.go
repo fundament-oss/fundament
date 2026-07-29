@@ -80,7 +80,7 @@ func TestMain(m *testing.M) {
 
 	adminPool := newAdminPool()
 
-	useGlobalTrustAuth(dataDir, adminPool)
+	testdb.UseGlobalTrustAuth(dataDir, adminPool)
 	testdb.CreateRoles(context.Background(), adminPool)
 
 	if err = setupTemplateDatabaseWithMigrations(adminPool); err != nil {
@@ -220,23 +220,6 @@ func findProjectRoot() string {
 func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
-}
-
-// useGlobalTrustAuth switches pg_hba.conf to trust auth so the passwordless
-// roles created by testdb.CreateRoles can connect over TCP.
-func useGlobalTrustAuth(dataDir string, pool *pgxpool.Pool) {
-	pgHBAPath := filepath.Join(dataDir, "pg_hba.conf")
-	content, err := os.ReadFile(pgHBAPath) //nolint:gosec // test helper
-	if err != nil {
-		log.Fatalf("failed to read pg_hba.conf: %v", err)
-	}
-	updated := strings.ReplaceAll(string(content), " password\n", " trust\n")
-	if err := os.WriteFile(pgHBAPath, []byte(updated), 0o600); err != nil { //nolint:gosec // test helper
-		log.Fatalf("failed to write pg_hba.conf: %v", err)
-	}
-	if _, err := pool.Exec(context.Background(), "SELECT pg_reload_conf()"); err != nil {
-		log.Fatalf("failed to reload pg_hba.conf: %v", err)
-	}
 }
 
 func newAdminPool() *pgxpool.Pool {
