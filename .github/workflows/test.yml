@@ -245,3 +245,35 @@ jobs:
         working-directory: plugins/openfsc/console-ui
         run: bun run build
 
+  # The docs image build in build.yml is gated behind `should_deploy`, so it is
+  # skipped on draft PRs and on PRs labelled no-preview-env. This job runs
+  # unconditionally so broken links are caught on every PR.
+  docs-frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      # Astro's tooling rejects Bun's Node-compat version; it needs a real Node.
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        working-directory: docs-frontend
+        run: bun install --frozen-lockfile
+
+      - name: Sync docs
+        working-directory: docs-frontend
+        run: node scripts/sync-docs.mjs
+
+      # src/links-validator.ts runs at the end of the build and fails it on any
+      # link that does not resolve. External http(s) links are not checked here
+      # — DOCS_CHECK_EXTERNAL=1 does that, and needs the network.
+      - name: Build and validate links
+        working-directory: docs-frontend
+        run: bun run build
+

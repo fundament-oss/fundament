@@ -4,6 +4,7 @@ import type { default as shikiHighlighter } from './shiki-highlighter.js';
 import { fileURLToPath } from 'node:url';
 import starlight from '@astrojs/starlight';
 import tailwindcss from '@tailwindcss/vite';
+import linksValidator from './src/links-validator';
 import sidebarMetaPlugin from './src/sidebar-meta-plugin';
 
 type ShikiOptions = Parameters<typeof shikiHighlighter>[0];
@@ -125,6 +126,19 @@ export default defineConfig({
         // Icon fonts for Asciidoctor Font Icons
         '@fortawesome/fontawesome-free/css/fontawesome.css',
         '@fortawesome/fontawesome-free/css/solid.css',
+      ],
+    }),
+
+    // Must come after starlight() so it sees the finished output. Set
+    // DOCS_CHECK_EXTERNAL=1 to also verify http(s) links over the network.
+    linksValidator({
+      exclude: [
+        // Local-dev URLs and the placeholder hostnames the architecture docs
+        // use in examples: illustrations, not links anyone can follow.
+        'https://*.localhost/**',
+        'https://*.localhost:*/**',
+        'https://*.fundament.io',
+        'https://*.fundament.io/**',
       ],
     }),
   ],
