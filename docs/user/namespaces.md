@@ -17,7 +17,7 @@ Organization
         └── Namespace(s) on that cluster
 ```
 
-A project can own several namespaces — for example one per environment — but
+A project can own several namespaces, for example one per environment, but
 every one of them lives on the project's cluster. A cluster hosts the namespaces
 of all the projects assigned to it.
 
@@ -37,7 +37,7 @@ Namespace names follow the Kubernetes rules: lowercase letters, digits and `-`,
 starting and ending with a letter or digit. On top of that the platform
 requires:
 
-- **At most 50 characters** — shorter than the Kubernetes limit of 63, because
+- **At most 50 characters**, shorter than the Kubernetes limit of 63, because
   of the prefix described below.
 - **Unique within the project.** Two projects may each have a `staging`.
 - **Not a system name.** `default`, `kube-system`, `kube-public`,
@@ -74,6 +74,10 @@ Resource limits are set on **Organization → Limits** and **Project → Limits*
 See [Members and roles](./members-and-roles.md) for who is allowed to change
 them. There are two kinds, and only the second one reaches namespaces.
 
+The values in the tables below are the platform's starting values, offered in
+the console and restored by **Reset to defaults**. They are not floors: a limit
+left unset means no limit at all, not the value listed here.
+
 ### Node limits (organization only)
 
 | Limit | Default | Effect |
@@ -97,7 +101,7 @@ how each one is enforced.
 
 These are set at both the organization and the project level, and they land in
 every namespace as a Kubernetes LimitRange named `fundament-defaults`. Where
-both levels set the same field, the **lower value wins** — a project can only
+both levels set the same field, the **lower value wins**: a project can only
 tighten what the organization allows, never loosen it. A field left unset at
 both levels means no default is applied for it, and if no field is set at all
 the LimitRange is not created.
@@ -109,6 +113,6 @@ no CPU or memory request and limit of its own gets these values, and a container
 that specifies its own keeps them, however large. Storage and object counts are
 not limited at all.
 
-Where a namespace does run out of room is at the cluster level — pods stay
+Where a namespace does run out of room is at the cluster level: pods stay
 `Pending` when the cluster cannot grow enough nodes to schedule them, which is
 where the node limits above come back in.

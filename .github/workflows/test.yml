@@ -225,6 +225,14 @@ jobs:
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-openfsc-${{ hashFiles('plugins/openfsc/console-ui/bun.lock') }}
 
       - name: Install dependencies
         working-directory: plugins/openfsc/console-ui
@@ -253,14 +261,24 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Pinned to the version docs-frontend/Dockerfile builds with, so a CI pass
+      # means the image build passes too.
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
 
       # Astro's tooling rejects Bun's Node-compat version; it needs a real Node.
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: 24
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-docs-frontend-${{ hashFiles('docs-frontend/bun.lock') }}
 
       - name: Install dependencies
         working-directory: docs-frontend

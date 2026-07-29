@@ -28,16 +28,26 @@ run `node scripts/sync-docs.mjs`.
 
 ## Writing links
 
-Write links in the relative form that works on GitHub — `[Clusters](./clusters.md)`
-and `![Diagram](../assets/x.svg)`. `scripts/sync-docs.mjs` rewrites them for the
-site: it strips `.md` (Astro serves pages extensionless) and makes asset paths
-absolute.
+Write links in the relative form that works on GitHub. `scripts/sync-docs.mjs`
+rewrites them for the site:
+
+| Write                             | Becomes                | Why                                 |
+| --------------------------------- | ---------------------- | ----------------------------------- |
+| `[Clusters](./clusters.md)`       | `./clusters`           | Astro serves pages extensionless    |
+| `[Clusters](clusters.md)`         | `clusters`             | same, leading `./` optional         |
+| `![Diagram](../assets/x.svg)`     | `/assets/x.svg`        | assets are served from `/assets`    |
+| `link:template.adoc[]` (AsciiDoc) | `link:template[]`      | extension stripped, slug lowercased |
+| `link:../funs/FUN-7.adoc[]`       | `link:../funs/fun-7[]` | ADR ↔ FUN links work in both places |
+
+Links inside code blocks and inline code spans are left verbatim.
 
 Three cases have no relative form valid in both places and must be written
 site-absolute, accepting a 404 on GitHub. See the header of
 `scripts/sync-docs.mjs` for the details:
 
-1. Links to ADRs and FUNs, which are `.adoc` and are moved out of `docs/`.
+1. Links from a Markdown page to an ADR or FUN, which are moved out of `docs/`
+   and so sit at a different depth on either side. (AsciiDoc-to-AsciiDoc links
+   are fine, per the table above.)
 2. Links _to_ an index page.
 3. Links _from_ an index page.
 
@@ -53,7 +63,12 @@ This matters because broken links are otherwise invisible in production:
 `nginx.conf` falls back to `/index.html`, so a broken link serves the home page
 with a 200 rather than a 404.
 
+The same broken link found on many pages (a sidebar or footer entry, say) is
+reported once with a count, not once per page.
+
 External http(s) links are only checked when `DOCS_CHECK_EXTERNAL=1` is set, to
 keep PR builds off the network. A URL behind a login middleware counts as valid:
 an auth challenge (401/403) proves the page exists, only its body is gated.
 Placeholder and local-dev hostnames are excluded in `astro.config.ts`.
+`.github/workflows/docs-external-links.yml` runs that check weekly, so link rot
+surfaces on a schedule rather than in front of a reader.

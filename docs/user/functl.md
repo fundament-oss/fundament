@@ -5,8 +5,8 @@ sidebar:
 ---
 
 `functl` is the command-line client for the Fundament platform API. It does what
-the console does — organizations, projects, namespaces, clusters, members and
-API keys — from a terminal or a CI pipeline.
+the console does (organizations, projects, namespaces, clusters, members and
+API keys) from a terminal or a CI pipeline.
 
 The [functl README](https://github.com/fundament-oss/fundament/blob/master/functl/README.md)
 is the canonical reference for flags and options; this page is the short version.
@@ -62,13 +62,13 @@ functl org unset
 | `functl cluster` | `list`, `get`, `kubeconfig`, `token` |
 | `functl apikey` | `list`, `create`, `revoke`, `delete` |
 | `functl config` | `dir`, `path` |
-| `functl version` | — |
+| `functl version` | none |
 
 Run `functl <group> --help` for the flags of any individual command.
 
 ### Cluster credentials
 
-`functl cluster kubeconfig` writes a kubeconfig for a cluster — the usual way to
+`functl cluster kubeconfig` writes a kubeconfig for a cluster, the usual way to
 point `kubectl` at a Fundament cluster. `functl cluster token` is the exec
 credential plugin that kubeconfig calls: it exchanges your API key for a
 short-lived platform token and prints it as an `ExecCredential`. You rarely run
@@ -109,6 +109,6 @@ functl project list -o json
 
 ## See also
 
-- [API keys](./api-keys.md) — creating and rotating the key `functl` uses.
-- [OpenTofu provider](./opentofu-provider.md) — for declarative management
+- [API keys](./api-keys.md): creating and rotating the key `functl` uses.
+- [OpenTofu provider](./opentofu-provider.md): for declarative management
   instead of imperative commands.

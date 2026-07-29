@@ -15,7 +15,7 @@ infrastructure provisioned with metal-stack; see
 [**Clusters → Add cluster**](https://console.fundament.projects.digilab.network/clusters/add)
 starts a three-step wizard.
 
-### Step 1 — Cluster
+### Step 1: Cluster
 
 | Field | Notes |
 | --- | --- |
@@ -23,16 +23,16 @@ starts a three-step wizard.
 | Region | Picked from the region catalog offered by the installation. The region determines which Kubernetes versions and machine types you can choose. |
 | Kubernetes version | The versions offered by the chosen region. |
 
-### Step 2 — Nodes
+### Step 2: Nodes
 
 Define one or more node pools. A node pool is a group of identical machines; the
 machine types on offer come from the region you picked in step 1. Use separate
 pools when you need different machine sizes or want to isolate workloads onto
 their own hardware.
 
-### Step 3 — Summary
+### Step 3: Summary
 
-Review everything and confirm. Provisioning is asynchronous — the cluster appears
+Review everything and confirm. Provisioning is asynchronous: the cluster appears
 in the cluster list and moves through its states while the platform builds it.
 
 ## Regions and availability zones
@@ -60,7 +60,7 @@ Editing a pool means changing its minimum and maximum. **Save changes** applies
 the whole form at once: pools you added are created, pools you removed are
 deleted, and pools whose bounds you changed are updated. Because name and
 machine type are fixed, moving a workload to different hardware means adding a
-pool with the new machine type and removing the old one — the platform does not
+pool with the new machine type and removing the old one. The platform does not
 convert a pool in place.
 
 ### Autoscaling
@@ -69,7 +69,7 @@ The minimum and maximum are the bounds of the Kubernetes cluster autoscaler:
 nodes are added when pods cannot be scheduled and removed when they are no
 longer needed, within that range. The **Nodes** tab shows each pool's current
 node count alongside its bounds. There is no manual "set the node count to N"
-operation — set the minimum instead.
+operation; set the minimum instead.
 
 ### Interaction with organization limits
 
@@ -86,13 +86,13 @@ and they behave differently per limit:
   shrinking.
 
 A cluster with no node pools at all still gets one default worker pool, sized
-1–3 nodes.
+1 to 3 nodes.
 
 ### Applying changes
 
 Node pool changes are asynchronous, like cluster creation: the console saves
 them and the platform reconciles the cluster's worker pools with Gardener in
-the background. Nodes are replaced rather than modified — adding, removing or
+the background. Nodes are replaced rather than modified: adding, removing or
 shrinking a pool takes the nodes involved out of service, so drain-sensitive
 workloads should have a PodDisruptionBudget.
 
@@ -110,7 +110,7 @@ organization can run a different set, at different versions.
 ## Cluster access
 
 Access to a cluster's Kubernetes API goes through a kubeconfig you download per
-cluster. There is no separate kubeconfig per namespace — one kubeconfig covers
+cluster. There is no separate kubeconfig per namespace: one kubeconfig covers
 the whole cluster, and what you may actually do in it is decided per request
 (see [What the kubeconfig grants](#what-the-kubeconfig-grants) below).
 
@@ -124,7 +124,7 @@ functl cluster kubeconfig <CLUSTER_ID> > ~/.kube/fundament.yaml
 ```
 
 Both require view access on the cluster, which every member of the owning
-organization has — organization admins and members alike. The cluster must be
+organization has: organization admins and members alike. The cluster must be
 ready; asking for a kubeconfig while it is still being provisioned fails with
 "cluster not ready yet".
 
@@ -144,7 +144,7 @@ users:
 ```
 
 So [`functl`](./functl.md) must be installed, on your `PATH` and logged in
-(`functl auth login`) for the kubeconfig to work — including on machines that
+(`functl auth login`) for the kubeconfig to work, including on machines that
 only ever run `kubectl`. `kubectl` calls `functl cluster token` whenever it
 needs a fresh token; you never handle the token yourself.
 
@@ -152,8 +152,8 @@ needs a fresh token; you never handle the token yourself.
 
 Every request goes to the API proxy rather than straight to the cluster. The
 proxy checks that you may view the cluster, then swaps your platform token for
-your personal ServiceAccount on that cluster — `fundament-<user-id>` in the
-`fundament-system` namespace — and forwards the request. What that
+your personal ServiceAccount on that cluster (`fundament-<user-id>` in the
+`fundament-system` namespace) and forwards the request. What that
 ServiceAccount may do depends on your role:
 
 | Your role | Cluster-side result |
@@ -170,13 +170,13 @@ Two consequences worth knowing:
   immediately after being granted access a request can return 503 with
   "service account sync pending". Retry shortly.
 
-Finer-grained in-cluster authorization — per-namespace role bindings derived
-from project membership — is described as future work in FUN-7 and is not
+Finer-grained in-cluster authorization (per-namespace role bindings derived
+from project membership) is described as future work in FUN-7 and is not
 implemented yet; see [Members and roles](./members-and-roles.md).
 
 ## Lifecycle
 
-Cluster lifecycle management — creation, upgrades, and deletion — follows the
+Cluster lifecycle management (creation, upgrades, and deletion) follows the
 model described in
 [ADR 0006](/adr/0006-cluster-lifecycle-management). In line with the platform's
 soft-delete policy, deleting a cluster in the console removes it from your view

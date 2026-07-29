@@ -36,7 +36,7 @@ ADRs are categorized by architectural layer:
 == How to add an ADR
 
 1. Find the next number by checking existing files in `docs/adr/`
-2. Create `docs/adr/XXXX-short-name.adoc` using link:/adr/template[the template]
+2. Create `docs/adr/XXXX-short-name.adoc` using link:template.adoc[the template]
 3. If the ADR relates to a FUN, add an `include::` in the FUN at the relevant location
 
 == Dependencies

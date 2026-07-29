@@ -4,8 +4,8 @@ sidebar:
   order: 8
 ---
 
-Access in Fundament is granted at three levels — organization, cluster and
-project — and inherited downwards. This page covers who can do what and how to
+Access in Fundament is granted at three levels (organization, cluster and
+project) and inherited downwards. This page covers who can do what and how to
 manage it; the underlying resource model is described in
 [Organizations and projects](./organizations.md).
 
@@ -45,15 +45,15 @@ Kubernetes roles within a specific namespace, so that someone can deploy in one
 namespace while only reading in another.
 
 :::note[Not yet in effect]
-The page is a preview. It lets you build bindings out of four roles — `deploy`,
-`view-pods`, `view-logs` and `manage-services` — but nothing is stored or
+The page is a preview. It lets you build bindings out of four roles (`deploy`,
+`view-pods`, `view-logs` and `manage-services`), but nothing is stored or
 enforced yet, and the list of roles is not final.
 :::
 
 What is enforced today has no namespace dimension. A namespace inherits its
 permissions wholesale from its project: a project admin can view, edit and
 delete every namespace in the project, and a project viewer can view all of
-them. On the cluster itself the split is coarser still — organization admins
+them. On the cluster itself the split is coarser still: organization admins
 get `cluster-admin`, everyone else gets whatever the cluster's own RBAC grants
 their ServiceAccount. See
 [Cluster access](./clusters.md#what-the-kubeconfig-grants).

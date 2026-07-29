@@ -29,8 +29,8 @@ in. Authentication is handled by the platform's identity provider, so you use
 the same credentials as for the rest of your organization's tooling.
 
 After signing in you land on the dashboard. If you belong to more than one
-organization, use the organization picker in the header to switch between them —
-everything else in the console is scoped to the organization you have selected.
+organization, use the organization picker in the header to switch between them.
+Everything else in the console is scoped to the organization you have selected.
 
 ## 2. Create a cluster
 
@@ -39,9 +39,9 @@ already has one you can use, skip to step 3.
 
 Go to **Clusters → Add cluster**. The wizard has three steps:
 
-1. **Cluster** — name, region and Kubernetes version.
-2. **Nodes** — one or more node pools, each with a machine type and a size.
-3. **Summary** — review and confirm.
+1. **Cluster**: name, region and Kubernetes version.
+2. **Nodes**: one or more node pools, each with a machine type and a size.
+3. **Summary**: review and confirm.
 
 Provisioning takes a while; the cluster shows up in the list with its state
 while it is being created. See [Clusters](./clusters.md) for what the individual
@@ -88,7 +88,7 @@ request.
 Two things that surprise people the first time:
 
 - The namespace is called something else on the cluster. A `staging` namespace
-  in project `payments` shows up in `kubectl` as `payments1f3a-staging` — see
+  in project `payments` shows up in `kubectl` as `payments1f3a-staging`; see
   [Namespaces](./namespaces.md#the-name-on-the-cluster).
 - What you may do depends on your role. Organization admins get full access;
   project members get only what the cluster's RBAC grants them. See

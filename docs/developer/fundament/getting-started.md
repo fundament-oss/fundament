@@ -64,4 +64,6 @@ just dev
 
 ## Console frontend
 
-The Console frontend should now be available at https://console.fundament.localhost:8443/
+The Console frontend should now be available at https://console.fundament.localhost:8443/. See
+[`console-frontend/README.md`](https://github.com/fundament-oss/fundament/blob/master/console-frontend/README.md)
+for linting, formatting and the other frontend commands.

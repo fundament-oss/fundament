@@ -60,10 +60,44 @@ const AUTH_STATUSES = [401, 403, 405, 429];
 
 const NON_HTTP_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const EXTERNAL_HREF = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
-const ANCHOR_HREF = /<a\b[^>]*?\shref=(["'])(.*?)\1/gis;
-const IMG_SRC = /<img\b[^>]*?\ssrc=(["'])(.*?)\1/gis;
+
+/**
+ * `<tag ... attribute="value">`. Earlier attributes are skipped a whole quoted
+ * run at a time, so a value containing a literal `>` does not end the match --
+ * a plain `[^>]*?` would stop inside it and drop the element silently.
+ */
+function attributeIn(tag: string, attribute: string): RegExp {
+  return new RegExp(`<${tag}\\b(?:"[^"]*"|'[^']*'|[^>"'])*?\\s${attribute}=(["'])(.*?)\\1`, 'gis');
+}
+
+const ANCHOR_HREF = attributeIn('a', 'href');
+const IMG_SRC = attributeIn('img', 'src');
+const ANCHOR_NAME = attributeIn('a', 'name');
 const ELEMENT_ID = /\sid=(["'])(.*?)\1/gis;
-const ANCHOR_NAME = /<a\b[^>]*?\sname=(["'])(.*?)\1/gis;
+
+const ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+};
+
+/**
+ * Attribute values arrive escaped: an href with a query string is serialized
+ * as `?a=1&amp;b=2`, which would be fetched literally.
+ */
+function decodeEntities(value: string): string {
+  return value.replace(
+    /&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi,
+    (match, decimal: string | undefined, hex: string | undefined, name: string | undefined) => {
+      if (decimal !== undefined) return String.fromCodePoint(Number(decimal));
+      if (hex !== undefined) return String.fromCodePoint(parseInt(hex, 16));
+      return ENTITIES[name!.toLowerCase()] ?? match;
+    }
+  );
+}
 
 /** `**` spans separators, `*` does not. Everything else is literal. */
 function globToRegExp(pattern: string): RegExp {
@@ -101,7 +135,7 @@ function routeFromHtmlFile(file: string): string {
 }
 
 function collectMatches(html: string, pattern: RegExp): string[] {
-  return [...html.matchAll(pattern)].map((match) => match[2] ?? '');
+  return [...html.matchAll(pattern)].map((match) => decodeEntities(match[2] ?? ''));
 }
 
 function readPage(root: string, file: string): Page {
@@ -187,6 +221,10 @@ export default function linksValidator(options: LinksValidatorOptions = {}): Ast
   const isExcluded = (...candidates: string[]) =>
     candidates.some((candidate) => excluded.some((pattern) => pattern.test(candidate)));
 
+  // Captured at config time rather than derived from the output directory, so
+  // the source mapping survives an `outDir` that is not `<root>/dist`.
+  let projectRoot: string | undefined;
+
   return {
     name: 'links-validator',
     hooks: {
@@ -194,6 +232,7 @@ export default function linksValidator(options: LinksValidatorOptions = {}): Ast
       // landing page builds — every link it makes into the docs then reports as
       // broken. Fail up front with the actual cause instead.
       'astro:config:setup': ({ config }) => {
+        projectRoot = fileURLToPath(config.root);
         const synced = fileURLToPath(new URL('src/content/docs/docs', config.root));
         if (!statSync(synced, { throwIfNoEntry: false })?.isDirectory()) {
           throw new Error(
@@ -211,7 +250,7 @@ export default function linksValidator(options: LinksValidatorOptions = {}): Ast
           .filter((file) => file.endsWith('.html'))
           .map((file) => readPage(root, file));
         const routes = new Map(pages.map((page) => [page.route, page]));
-        const sources = buildSourceIndex(path.resolve(root, '..'));
+        const sources = buildSourceIndex(projectRoot ?? path.resolve(root, '..'));
 
         const findings: Finding[] = [];
         const externalUrls = new Map<string, Finding[]>();
@@ -279,18 +318,33 @@ export default function linksValidator(options: LinksValidatorOptions = {}): Ast
           return;
         }
 
-        const bySource = new Map<string, Finding[]>();
+        // The sidebar, header and footer render on every page, so one bad link
+        // there is found once per page. Collapse on (href, reason) and report a
+        // single exemplar with a count, rather than 68 copies of one mistake.
+        const byLink = new Map<string, { finding: Finding; pages: number }>();
         for (const finding of findings) {
-          bySource.set(finding.source, [...(bySource.get(finding.source) ?? []), finding]);
+          const key = `${finding.href} ${finding.reason}`;
+          const seen = byLink.get(key);
+          if (seen) seen.pages += 1;
+          else byLink.set(key, { finding, pages: 1 });
+        }
+
+        const bySource = new Map<string, { finding: Finding; pages: number }[]>();
+        for (const entry of byLink.values()) {
+          const { source } = entry.finding;
+          bySource.set(source, [...(bySource.get(source) ?? []), entry]);
         }
         const report = [...bySource]
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([source, group]) => {
-            const lines = group.map(({ href, reason }) => `    ${href}\n      ${reason}`);
-            return `  ${source}  (${group[0]!.route})\n${lines.join('\n')}`;
+            const lines = group.map(({ finding, pages }) => {
+              const alsoOn = pages > 1 ? ` (and on ${pages - 1} more page(s))` : '';
+              return `    ${finding.href}\n      ${finding.reason}${alsoOn}`;
+            });
+            return `  ${source}  (${group[0]!.finding.route})\n${lines.join('\n')}`;
           })
           .join('\n');
-        const summary = `${findings.length} broken link(s) in ${bySource.size} page(s):\n${report}`;
+        const summary = `${byLink.size} broken link(s), first seen in ${bySource.size} page(s):\n${report}`;
 
         if (warnOnly) logger.warn(summary);
         else throw new Error(summary);

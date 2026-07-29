@@ -49,8 +49,8 @@ exchanges the API key for a short-lived token and refreshes it as needed.
 
 | Resource | Manages |
 | --- | --- |
-| `fundament_cluster` | A managed Kubernetes cluster — see [Clusters](./clusters.md) |
-| `fundament_project_member` | A user's membership of a project — see [Members and roles](./members-and-roles.md) |
+| `fundament_cluster` | A managed Kubernetes cluster. See [Clusters](./clusters.md) |
+| `fundament_project_member` | A user's membership of a project. See [Members and roles](./members-and-roles.md) |
 
 ## Data sources
 
@@ -72,5 +72,5 @@ output "cluster_names" {
 
 ## See also
 
-- [Getting started](./getting-started.md) — the same steps in the console.
-- [API keys](./api-keys.md) — creating the key the provider authenticates with.
+- [Getting started](./getting-started.md): the same steps in the console.
+- [API keys](./api-keys.md): creating the key the provider authenticates with.
