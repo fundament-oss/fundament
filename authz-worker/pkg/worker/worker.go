@@ -48,6 +48,11 @@ type Worker struct {
 	logger  *slog.Logger
 	cfg     Config
 	ready   atomic.Bool
+
+	// dispatch processes a single locked outbox item within tx. It defaults to
+	// dispatchItem and exists as a field so tests can substitute failure
+	// scenarios, including ones that abort tx (SQLSTATE 25P02).
+	dispatch func(ctx context.Context, tx pgx.Tx, qtx *db.Queries, item *db.GetAndLockNextOutboxRowRow) error
 }
 
 // New creates a new authz worker with sensible defaults.
@@ -57,13 +62,18 @@ func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, logger *slog.Logge
 	hostname, _ := os.Hostname()
 	workerID := fmt.Sprintf("%s-%d", hostname, os.Getpid())
 
-	return &Worker{
+	w := &Worker{
 		pool:    pool,
 		queries: db.New(pool),
 		handler: handler.New(fgaClient, logger),
 		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,
 	}
+	w.dispatch = func(ctx context.Context, _ pgx.Tx, qtx *db.Queries, item *db.GetAndLockNextOutboxRowRow) error {
+		return w.dispatchItem(ctx, qtx, item)
+	}
+
+	return w
 }
 
 // IsReady returns whether the worker has an active LISTEN connection and is processing.
@@ -263,7 +273,7 @@ func (w *Worker) processOneItem(ctx context.Context) (found bool, err error) {
 		return false, fmt.Errorf("get next outbox row: %w", err)
 	}
 
-	dispatchErr := w.dispatchItem(ctx, qtx, &item)
+	dispatchErr := w.dispatch(ctx, tx, qtx, &item)
 
 	// Past this point the side effect on OpenFGA has already happened (success
 	// or partial), so the outbox row MUST be marked + committed even if the
@@ -273,12 +283,16 @@ func (w *Worker) processOneItem(ctx context.Context) (found bool, err error) {
 	defer cancel()
 
 	if dispatchErr != nil {
-		if err := w.handleProcessingError(finalizeCtx, qtx, &item, dispatchErr); err != nil {
-			return true, fmt.Errorf("handle processing error: %w", err)
+		// dispatchItem may have failed on a SQL statement, which aborts the
+		// transaction (SQLSTATE 25P02) and makes it unusable for any further
+		// query. Roll back to release the row lock, then record the retry or
+		// failure via a fresh pool connection instead of the aborted tx.
+		if err := tx.Rollback(finalizeCtx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			return true, fmt.Errorf("rollback after dispatch error: %w", err)
 		}
 
-		if err := tx.Commit(finalizeCtx); err != nil {
-			return true, fmt.Errorf("dispatch item commit: %w", err)
+		if err := w.handleProcessingError(finalizeCtx, w.queries, &item, dispatchErr); err != nil {
+			return true, fmt.Errorf("handle processing error: %w", err)
 		}
 
 		return true, dispatchErr
