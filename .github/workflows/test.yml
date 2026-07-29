@@ -81,6 +81,40 @@ jobs:
         working-directory: cluster-worker
         run: go test ./... -count=1
 
+  authz-worker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Trek binary
+        id: cache-trek
+        uses: actions/cache@v5
+        with:
+          path: ~/go/bin/trek
+          key: trek-${{ runner.os }}-v0.12.1
+
+      - name: Cache embedded PostgreSQL
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.FUNDAMENT_TEST_CACHE_DIR }}-authz-worker
+          key: embedded-pg-authz-worker-${{ runner.os }}
+
+      - name: Install dependencies
+        run: go get ./...
+
+      - name: Install Trek
+        if: steps.cache-trek.outputs.cache-hit != 'true'
+        run: go install github.com/printeers/trek@v0.12.1
+
+      - name: Run tests (authz-worker)
+        working-directory: authz-worker
+        run: go test ./... -count=1
+
   common:
     runs-on: ubuntu-24.04
     steps:
@@ -182,7 +216,7 @@ jobs:
         run: go get ./...
 
       - name: Run tests
-        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|cluster-worker|common|dcim-api)/')
+        run: go test -count=1 $(go list ./... | grep -v -E '/(organization-api|authz-worker|cluster-worker|common|dcim-api)/')
 
   openfsc-console-ui:
     runs-on: ubuntu-24.04
