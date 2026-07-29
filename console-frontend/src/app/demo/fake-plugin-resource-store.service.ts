@@ -12,9 +12,10 @@ function resourcesFor(pluginName: string, kind: string): KubeResource[] {
 }
 
 @Injectable({ providedIn: 'root' })
-export default class FakePluginResourceStoreService
-  implements Pick<PluginResourceStoreService, 'loadResources' | 'loadResource' | 'getResource'>
-{
+export default class FakePluginResourceStoreService implements Pick<
+  PluginResourceStoreService,
+  'loadResources' | 'loadResource' | 'getResource'
+> {
   // Signatures mirror the real service (including the unused kubeApiProxyUrl),
   // so the callers it is swapped in for need no demo-specific branch.
   // eslint-disable-next-line class-methods-use-this

@@ -49,13 +49,10 @@ function toItem(install: DemoInstall): PluginInstallationItem {
 }
 
 @Injectable({ providedIn: 'root' })
-export default class FakePluginInstallationService
-  implements
-    Pick<
-      PluginInstallationService,
-      'listInstallations' | 'getInstallation' | 'installPlugin' | 'uninstallPlugin'
-    >
-{
+export default class FakePluginInstallationService implements Pick<
+  PluginInstallationService,
+  'listInstallations' | 'getInstallation' | 'installPlugin' | 'uninstallPlugin'
+> {
   private readonly byCluster = new Map<string, DemoInstall[]>();
 
   constructor() {

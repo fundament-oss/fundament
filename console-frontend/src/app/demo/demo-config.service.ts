@@ -3,9 +3,7 @@
 // values are never used for real network calls.
 import { AppConfiguration, ConfigService } from '../config.service';
 
-export default class DemoConfigService
-  implements Pick<ConfigService, 'loadConfig' | 'getConfig'>
-{
+export default class DemoConfigService implements Pick<ConfigService, 'loadConfig' | 'getConfig'> {
   constructor(private readonly config: AppConfiguration) {}
 
   async loadConfig(): Promise<AppConfiguration> {

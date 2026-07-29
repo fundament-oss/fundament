@@ -11,13 +11,10 @@ import { PLUGIN_INSTALLS_CHANGED_EVENT } from './fake-plugin-installation.servic
 import * as fx from './fixtures';
 
 @Injectable({ providedIn: 'root' })
-export default class FakePluginRegistryService
-  implements
-    Pick<
-      PluginRegistryService,
-      'loadPlugins' | 'loadCrdsForPlugin' | 'reset' | 'getPlugin' | 'getCrd' | 'allPlugins'
-    >
-{
+export default class FakePluginRegistryService implements Pick<
+  PluginRegistryService,
+  'loadPlugins' | 'loadCrdsForPlugin' | 'reset' | 'getPlugin' | 'getCrd' | 'allPlugins'
+> {
   // Resolves to FakePluginInstallationService in the demo injector, so the menu
   // reflects the install the walkthrough performs on its plugin slide.
   private readonly installations = inject(PluginInstallationService);

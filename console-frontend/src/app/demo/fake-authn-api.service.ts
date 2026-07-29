@@ -5,19 +5,16 @@ import type { User } from '../../generated/authn/v1/authn_pb';
 import type AuthnApiService from '../authn-api.service';
 import { demoUser } from './fixtures';
 
-export default class FakeAuthnApiService
-  implements
-    Pick<
-      AuthnApiService,
-      | 'currentUser$'
-      | 'login'
-      | 'getUserInfo'
-      | 'initializeAuth'
-      | 'refreshToken'
-      | 'logout'
-      | 'isAuthenticated'
-    >
-{
+export default class FakeAuthnApiService implements Pick<
+  AuthnApiService,
+  | 'currentUser$'
+  | 'login'
+  | 'getUserInfo'
+  | 'initializeAuth'
+  | 'refreshToken'
+  | 'logout'
+  | 'isAuthenticated'
+> {
   private currentUserSubject = new BehaviorSubject<User | undefined>(demoUser);
 
   currentUser$: Observable<User | undefined> = this.currentUserSubject.asObservable();
