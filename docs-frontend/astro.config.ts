@@ -137,7 +137,7 @@ export default defineConfig({
         // use in examples: illustrations, not links anyone can follow.
         'https://*.localhost/**',
         'https://*.localhost:*/**',
-        'https://*.fundament.io',
+        'https://*\\.fundament\\.io',
         'https://*.fundament.io/**',
       ],
     }),
