@@ -54,20 +54,25 @@ const installedPluginDrive: DriveStep[] = [{ emit: PLUGIN_INSTALLS_ENSURE_EVENT 
 
 /**
  * Installs the first plugin in the catalog (cert-manager) on a single cluster.
- * Selectors lean on static attributes only — `variant`/`slot` are plain attributes in
- * the template, while `text` is an Angular binding and never lands in the DOM. The
- * per-cluster checkboxes live in the modal's `.space-y-2` list (the "select all"
- * checkbox sits outside it), so the first match selects just one cluster.
+ *
+ * The targets carry `data-tour` attributes rather than being matched on layout
+ * classes or DOM position: those belong to the console's presentation and get
+ * reshuffled (a grid rewritten to container queries, a `space-y-2` list turned
+ * into `flex gap-2`) without anyone realising the walkthrough hung on them.
+ * `querySelector` returns the first match, which is the first catalog card —
+ * cert-manager, which fixtures.ts deliberately lists first. Inside the modal the
+ * first `nldd-checkbox-field` under `install-clusters` is a per-cluster box; the
+ * "select all" checkbox sits outside that list, so exactly one cluster is ticked.
  * The reset event first clears any earlier install, so the slide can be replayed.
  */
 const installPluginDrive: DriveStep[] = [
   { emit: PLUGIN_INSTALLS_RESET_EVENT },
   { wait: 1400 },
-  { click: 'div.grid > div:nth-child(1) nldd-button[variant="primary"]' },
+  { click: '[data-tour="plugin-install"]' },
   { wait: 1000 },
-  { set: 'nldd-modal-dialog .space-y-2 nldd-checkbox-field', check: true },
+  { set: '[data-tour="install-clusters"] nldd-checkbox-field', check: true },
   { wait: 800 },
-  { click: 'nldd-modal-dialog nldd-button[slot="actions"][variant="primary"]' },
+  { click: '[data-tour="install-confirm"]' },
 ];
 
 const closing = (nl: string, en: string): Slide => ({

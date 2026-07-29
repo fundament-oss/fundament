@@ -97,7 +97,15 @@ export default class FakePluginInstallationService
    * Pending) plugin instead of skipping its status change.
    */
   private ensureUiPlugins(): void {
-    Object.keys(fx.seededInstalls).forEach((clusterId) => {
+    // Every cluster the demo currently knows about, not just the ones with a
+    // seeded baseline: the add-cluster wizard appends to fx.clusterSummaries, and
+    // a cluster created during the walkthrough must get the UI plugins too.
+    const clusterIds = new Set([
+      ...fx.clusterSummaries.map((cluster) => cluster.id),
+      ...Object.keys(fx.seededInstalls),
+      ...this.byCluster.keys(),
+    ]);
+    clusterIds.forEach((clusterId) => {
       const current = this.byCluster.get(clusterId) ?? [];
       const missing = Object.keys(fx.pluginDefinitions)
         .filter((pluginName) => !current.some((i) => i.pluginName === pluginName))

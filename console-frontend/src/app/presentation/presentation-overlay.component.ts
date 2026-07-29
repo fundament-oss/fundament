@@ -29,7 +29,7 @@ type LitDropdown = HTMLElement & { updateComplete?: Promise<unknown> };
         class="deck"
         [class.full]="presentation.deckFull()"
         [attr.lang]="presentation.locale()"
-        aria-label="Presentation narration"
+        [attr.aria-label]="presentation.ui().deckLabel"
       >
         <div class="too-small">
           <p>{{ presentation.ui().tooSmall }}</p>

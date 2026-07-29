@@ -33,6 +33,8 @@ export function isLocale(value: string | null): value is Locale {
 export const DECK_NAME = 'Fundament';
 
 interface UiStrings {
+  /** Accessible name of the narration panel; it carries `lang`, so translate it. */
+  deckLabel: string;
   tooSmall: string;
   close: string;
   chooserLead: string;
@@ -57,6 +59,7 @@ interface UiStrings {
 /** The overlay's own chrome — everything that is not tour content. */
 export const UI: Record<Locale, UiStrings> = {
   nl: {
+    deckLabel: 'Presentatietoelichting',
     tooSmall: 'De presentatiemodus werkt het beste op een groot scherm of projector.',
     close: 'Sluiten',
     chooserLead: 'Kies een rondleiding, of bekijk het platform door de ogen van een rol.',
@@ -78,6 +81,7 @@ export const UI: Record<Locale, UiStrings> = {
     demoTitle: 'Fundament demo',
   },
   en: {
+    deckLabel: 'Presentation narration',
     tooSmall: 'Presentation mode works best on a large screen or a projector.',
     close: 'Close',
     chooserLead: 'Pick a tour, or see the platform through the eyes of a role.',

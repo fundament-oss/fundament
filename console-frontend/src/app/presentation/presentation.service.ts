@@ -83,6 +83,9 @@ export default class PresentationService {
 
   private driveController: AbortController | null = null;
 
+  /** Bumped on every cancelDrive(); only the newest navigation may start a drive. */
+  private navToken = 0;
+
   private autoplayTimer: ReturnType<typeof setInterval> | null = null;
 
   private static readonly AUTOPLAY_MS = 6000;
@@ -303,6 +306,9 @@ export default class PresentationService {
 
   private syncUrlAndNavigate(): void {
     this.cancelDrive();
+    // Taken after cancelDrive(), which bumps the token: this is the only
+    // navigation now allowed to start a drive.
+    const token = this.navToken;
     const slide = this.currentSlide();
     const queryParams = {
       present: 1,
@@ -312,6 +318,11 @@ export default class PresentationService {
     };
     const path = slide?.route ?? this.currentPath();
     this.router.navigate([path], { queryParams }).then(() => {
+      // A navigation that a later goto() superseded still resolves (with false),
+      // so without this guard holding down → would let the abandoned slide's
+      // callback cancel the current slide's drive and run its own script against
+      // whatever route is on screen by then.
+      if (token !== this.navToken) return;
       if (slide?.drive?.length) this.startDrive(slide);
     });
   }
@@ -325,6 +336,9 @@ export default class PresentationService {
   }
 
   private cancelDrive(): void {
+    // Invalidates any in-flight navigation callback too, so leaving a slide (or
+    // the tour) can never be followed by that slide's drive starting late.
+    this.navToken += 1;
     this.driveController?.abort();
     this.driveController = null;
   }

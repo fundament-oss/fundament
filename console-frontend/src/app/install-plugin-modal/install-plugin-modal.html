@@ -62,7 +62,9 @@
       ></nldd-checkbox-field>
     }
 
-    <div class="space-y-2">
+    <!-- data-tour: the per-cluster list the walkthrough ticks a single box in
+         (src/app/presentation/tours.ts). Keep the attribute. -->
+    <div data-tour="install-clusters" class="space-y-2">
       @for (cluster of clusters(); track cluster.id) {
         <div
           class="flex items-center justify-between gap-3 rounded-md border border-gray-200 p-3 dark:border-gray-800"
@@ -124,7 +126,10 @@
     </div>
   }
 
+  <!-- data-tour: confirm button of the walkthrough's install slide
+       (src/app/presentation/tours.ts). Keep the attribute. -->
   <nldd-button
+    data-tour="install-confirm"
     slot="actions"
     type="button"
     (click)="onInstallSelected()"
