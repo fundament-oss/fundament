@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"connectrpc.com/connect"
-
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -21,13 +19,13 @@ func (c *ClusterKubeconfigCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Clusters().GetKubeconfig(context.Background(), connect.NewRequest(organizationv1.GetKubeconfigRequest_builder{
+	resp, err := apiClient.Clusters().GetKubeconfig(context.Background(), organizationv1.GetKubeconfigRequest_builder{
 		ClusterId: c.ClusterID,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
-	fmt.Print(resp.Msg.GetKubeconfigContent())
+	fmt.Print(resp.GetKubeconfigContent())
 	return nil
 }

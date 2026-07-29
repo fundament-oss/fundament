@@ -19,9 +19,9 @@ func Test_OrganizationLimits_Get_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.GetOrganizationLimits(context.Background(), connect.NewRequest(
+	_, err := client.GetOrganizationLimits(context.Background(),
 		organizationv1.GetOrganizationLimitsRequest_builder{Id: uuid.New().String()}.Build(),
-	))
+	)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -42,14 +42,15 @@ func Test_OrganizationLimits_Get_NoLimitsSet(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.GetOrganizationLimitsRequest_builder{Id: orgID.String()}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	req := organizationv1.GetOrganizationLimitsRequest_builder{Id: orgID.String()}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.GetOrganizationLimits(context.Background(), req)
+	res, err := client.GetOrganizationLimits(ctx, req)
 	require.NoError(t, err)
 
-	limits := res.Msg.GetLimits()
+	limits := res.GetLimits()
 	require.NotNil(t, limits)
 	assert.False(t, limits.HasMaxNodesPerCluster())
 	assert.False(t, limits.HasMaxNodePoolsPerCluster())
@@ -60,7 +61,7 @@ func Test_OrganizationLimits_Get_NoLimitsSet(t *testing.T) {
 	assert.False(t, limits.HasDefaultCpuLimitM())
 
 	// Platform defaults are always returned, even when the organization has no limits set.
-	defaults := res.Msg.GetDefaults()
+	defaults := res.GetDefaults()
 	require.NotNil(t, defaults)
 	assert.EqualValues(t, 10, defaults.GetMaxNodesPerCluster())
 	assert.EqualValues(t, 5, defaults.GetMaxNodePoolsPerCluster())
@@ -85,7 +86,7 @@ func Test_OrganizationLimits_Get(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	updateReq := connect.NewRequest(organizationv1.UpdateOrganizationLimitsRequest_builder{
+	updateReq := organizationv1.UpdateOrganizationLimitsRequest_builder{
 		Id:                     orgID.String(),
 		MaxNodesPerCluster:     proto.Int32(50),
 		MaxNodePoolsPerCluster: proto.Int32(10),
@@ -94,21 +95,23 @@ func Test_OrganizationLimits_Get(t *testing.T) {
 		DefaultMemoryLimitMi:   proto.Int32(256),
 		DefaultCpuRequestM:     proto.Int32(100),
 		DefaultCpuLimitM:       proto.Int32(500),
-	}.Build())
-	updateReq.Header().Set("Authorization", "Bearer "+token)
-	updateReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	updateCtx, updateCallInfo := connect.NewClientContext(context.Background())
+	updateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	updateCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.UpdateOrganizationLimits(context.Background(), updateReq)
+	_, err := client.UpdateOrganizationLimits(updateCtx, updateReq)
 	require.NoError(t, err)
 
-	getReq := connect.NewRequest(organizationv1.GetOrganizationLimitsRequest_builder{Id: orgID.String()}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
+	getReq := organizationv1.GetOrganizationLimitsRequest_builder{Id: orgID.String()}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.GetOrganizationLimits(context.Background(), getReq)
+	res, err := client.GetOrganizationLimits(getCtx, getReq)
 	require.NoError(t, err)
 
-	limits := res.Msg.GetLimits()
+	limits := res.GetLimits()
 	require.NotNil(t, limits)
 	assert.EqualValues(t, 50, limits.GetMaxNodesPerCluster())
 	assert.EqualValues(t, 10, limits.GetMaxNodePoolsPerCluster())

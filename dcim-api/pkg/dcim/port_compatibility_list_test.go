@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 	"github.com/stretchr/testify/assert"
@@ -17,19 +16,19 @@ func createPortDefinition(t *testing.T, env *testEnv, catalogID, name string) st
 
 	client := dcimv1connect.NewCatalogServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreatePortDefinition(context.Background(), connect.NewRequest(
+	resp, err := client.CreatePortDefinition(context.Background(),
 		(&dcimv1.CreatePortDefinitionRequest_builder{
 			DeviceCatalogId: catalogID,
 			Name:            name,
 			PortType:        dcimv1.PortType_PORT_TYPE_NETWORK,
 			Direction:       dcimv1.PortDirection_PORT_DIRECTION_BIDIR,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetPortDefinitionId())
+	require.NotEmpty(t, resp.GetPortDefinitionId())
 
-	return resp.Msg.GetPortDefinitionId()
+	return resp.GetPortDefinitionId()
 }
 
 // TestCatalogService_ListPortCompatibilities verifies that both kinds of
@@ -49,12 +48,12 @@ func TestCatalogService_ListPortCompatibilities(t *testing.T) {
 	// Entry-specific compatibility: the API derives the category (SERVER) from
 	// the compatible catalog entry created by the helper.
 	compatID := createCatalogEntry(t, env, "Compatible SFP")
-	_, err := client.CreatePortCompatibility(context.Background(), connect.NewRequest(
+	_, err := client.CreatePortCompatibility(context.Background(),
 		(&dcimv1.CreatePortCompatibilityRequest_builder{
 			PortDefinitionId:    portDefID,
 			CompatibleCatalogId: compatID,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	// Category-wide compatibility (no specific catalog entry). The create API
@@ -65,12 +64,12 @@ func TestCatalogService_ListPortCompatibilities(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	resp, err := client.ListPortCompatibilities(context.Background(), connect.NewRequest(
+	resp, err := client.ListPortCompatibilities(context.Background(),
 		(&dcimv1.ListPortCompatibilitiesRequest_builder{PortDefinitionId: portDefID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	compatibilities := resp.Msg.GetCompatibilities()
+	compatibilities := resp.GetCompatibilities()
 	require.Len(t, compatibilities, 2)
 
 	var entrySpecific, categoryWide *dcimv1.PortCompatibility

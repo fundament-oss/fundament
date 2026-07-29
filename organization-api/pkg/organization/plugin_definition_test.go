@@ -57,42 +57,45 @@ func TestPutPluginDefinition_IdempotentAndConflict(t *testing.T) {
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
 
-	putReq1 := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq1 := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v1",
 		Manifest:      testManifest,
-	}.Build())
-	putReq1.Header().Set("Authorization", "Bearer "+token)
-	putReq1.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx1, putCallInfo1 := connect.NewClientContext(ctx)
+	putCallInfo1.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo1.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	resp1, err := client.PutPluginDefinition(ctx, putReq1)
+	resp1, err := client.PutPluginDefinition(putCtx1, putReq1)
 	require.NoError(t, err)
-	assert.True(t, strings.HasPrefix(resp1.Msg.GetHash(), "sha256:"))
-	assert.Equal(t, pluginID.String(), resp1.Msg.GetPluginId())
+	assert.True(t, strings.HasPrefix(resp1.GetHash(), "sha256:"))
+	assert.Equal(t, pluginID.String(), resp1.GetPluginId())
 
 	// Same bytes → idempotent, same hash.
-	putReq2 := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq2 := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v1",
 		Manifest:      testManifest,
-	}.Build())
-	putReq2.Header().Set("Authorization", "Bearer "+token)
-	putReq2.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx2, putCallInfo2 := connect.NewClientContext(ctx)
+	putCallInfo2.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo2.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	resp2, err := client.PutPluginDefinition(ctx, putReq2)
+	resp2, err := client.PutPluginDefinition(putCtx2, putReq2)
 	require.NoError(t, err)
-	assert.Equal(t, resp1.Msg.GetHash(), resp2.Msg.GetHash())
+	assert.Equal(t, resp1.GetHash(), resp2.GetHash())
 
 	// Different bytes, same (plugin_id, version) → FAILED_PRECONDITION.
-	putReq3 := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq3 := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v1",
 		Manifest:      append(testManifest, byte('\n')),
-	}.Build())
-	putReq3.Header().Set("Authorization", "Bearer "+token)
-	putReq3.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx3, putCallInfo3 := connect.NewClientContext(ctx)
+	putCallInfo3.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo3.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.PutPluginDefinition(ctx, putReq3)
+	_, err = client.PutPluginDefinition(putCtx3, putReq3)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
 }
@@ -120,15 +123,16 @@ func TestPutPluginDefinition_RequiresOrganization(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 
-	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v1",
 		Manifest:      testManifest,
-	}.Build())
-	putReq.Header().Set("Authorization", "Bearer "+token)
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(context.Background())
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
 	// No Fun-Organization header.
 
-	_, err := client.PutPluginDefinition(context.Background(), putReq)
+	_, err := client.PutPluginDefinition(putCtx, putReq)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
@@ -156,15 +160,16 @@ func TestPutPluginDefinition_RejectsVersionMismatch(t *testing.T) {
 	client := newPluginServiceClient(env)
 
 	// testManifest declares metadata.version v1; send a different plugin_version.
-	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v2",
 		Manifest:      testManifest,
-	}.Build())
-	putReq.Header().Set("Authorization", "Bearer "+token)
-	putReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(context.Background())
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.PutPluginDefinition(context.Background(), putReq)
+	_, err := client.PutPluginDefinition(putCtx, putReq)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
@@ -193,15 +198,16 @@ func TestPutPluginDefinition_RejectsImagelessTemplate(t *testing.T) {
 
 	template := []byte("apiVersion: fundament.io/v1\nkind: PluginDefinition\nmetadata:\n  name: test-plugin-def\n  version: v1\nspec:\n  permissions:\n    rbac: []\n")
 
-	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v1",
 		Manifest:      template,
-	}.Build())
-	putReq.Header().Set("Authorization", "Bearer "+token)
-	putReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(ctx)
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.PutPluginDefinition(ctx, putReq)
+	_, err := client.PutPluginDefinition(putCtx, putReq)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
@@ -227,15 +233,16 @@ func TestPutPluginDefinition_UnknownPluginID(t *testing.T) {
 	ctx := context.Background()
 
 	unknownID := uuid.New()
-	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      unknownID.String(),
 		PluginVersion: "v1",
 		Manifest:      testManifest,
-	}.Build())
-	putReq.Header().Set("Authorization", "Bearer "+token)
-	putReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(ctx)
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.PutPluginDefinition(ctx, putReq)
+	_, err := client.PutPluginDefinition(putCtx, putReq)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeFailedPrecondition, connect.CodeOf(err))
 }
@@ -260,15 +267,16 @@ func TestPutPluginDefinition_InvalidPluginID(t *testing.T) {
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
 
-	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      "not-a-uuid",
 		PluginVersion: "v1",
 		Manifest:      testManifest,
-	}.Build())
-	putReq.Header().Set("Authorization", "Bearer "+token)
-	putReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(ctx)
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.PutPluginDefinition(ctx, putReq)
+	_, err := client.PutPluginDefinition(putCtx, putReq)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
@@ -296,15 +304,16 @@ func TestPutPluginDefinition_RejectsNameMismatch(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 
-	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v1",
 		Manifest:      testManifest,
-	}.Build())
-	putReq.Header().Set("Authorization", "Bearer "+token)
-	putReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(context.Background())
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.PutPluginDefinition(context.Background(), putReq)
+	_, err := client.PutPluginDefinition(putCtx, putReq)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
@@ -335,15 +344,16 @@ func TestPutPluginDefinition_RejectsOversizedManifest(t *testing.T) {
 	// read limit so the handler (not the transport) rejects it.
 	oversized := make([]byte, (1<<20)+1)
 
-	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v1",
 		Manifest:      oversized,
-	}.Build())
-	putReq.Header().Set("Authorization", "Bearer "+token)
-	putReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(context.Background())
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.PutPluginDefinition(context.Background(), putReq)
+	_, err := client.PutPluginDefinition(putCtx, putReq)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 }
@@ -371,15 +381,16 @@ func TestPutPluginDefinition_Replace(t *testing.T) {
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
 
-	put := func(manifest []byte, replace bool) (*connect.Response[organizationv1.PutPluginDefinitionResponse], error) {
-		req := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	put := func(manifest []byte, replace bool) (*organizationv1.PutPluginDefinitionResponse, error) {
+		req := organizationv1.PutPluginDefinitionRequest_builder{
 			PluginId:      pluginID.String(),
 			PluginVersion: "v1",
 			Manifest:      manifest,
 			Replace:       replace,
-		}.Build())
-		req.Header().Set("Authorization", "Bearer "+token)
-		req.Header().Set("Fun-Organization", orgID.String())
+		}.Build()
+		ctx, callInfo := connect.NewClientContext(ctx)
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 		return client.PutPluginDefinition(ctx, req)
 	}
 
@@ -391,16 +402,16 @@ func TestPutPluginDefinition_Replace(t *testing.T) {
 	revised := append(append([]byte{}, testManifest...), []byte("# rev2\n")...)
 	resp2, err := put(revised, true)
 	require.NoError(t, err)
-	assert.NotEqual(t, resp1.Msg.GetHash(), resp2.Msg.GetHash())
+	assert.NotEqual(t, resp1.GetHash(), resp2.GetHash())
 
 	// Get now serves the replacement.
-	getReq := connect.NewRequest(organizationv1.GetPluginDefinitionRequest_builder{
+	getReq := organizationv1.GetPluginDefinitionRequest_builder{
 		PluginName:    testPluginName,
 		PluginVersion: "v1",
-	}.Build())
+	}.Build()
 	getResp, err := client.GetPluginDefinition(ctx, getReq)
 	require.NoError(t, err)
-	assert.Equal(t, resp2.Msg.GetHash(), getResp.Msg.GetHash())
+	assert.Equal(t, resp2.GetHash(), getResp.GetHash())
 }
 
 // TestListPlugins_SurfacesLatestDefinition verifies ListPlugins and
@@ -429,12 +440,13 @@ func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 
 	findSummary := func(t *testing.T) *organizationv1.PluginSummary {
 		t.Helper()
-		req := connect.NewRequest(organizationv1.ListPluginsRequest_builder{}.Build())
-		req.Header().Set("Authorization", "Bearer "+token)
-		req.Header().Set("Fun-Organization", orgID.String())
+		req := organizationv1.ListPluginsRequest_builder{}.Build()
+		ctx, callInfo := connect.NewClientContext(ctx)
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 		resp, err := client.ListPlugins(ctx, req)
 		require.NoError(t, err)
-		for _, p := range resp.Msg.GetPlugins() {
+		for _, p := range resp.GetPlugins() {
 			if p.GetName() == testPluginName {
 				return p
 			}
@@ -450,16 +462,17 @@ func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 
 	put := func(version string, manifest []byte) string {
 		t.Helper()
-		req := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+		req := organizationv1.PutPluginDefinitionRequest_builder{
 			PluginId:      pluginID.String(),
 			PluginVersion: version,
 			Manifest:      manifest,
-		}.Build())
-		req.Header().Set("Authorization", "Bearer "+token)
-		req.Header().Set("Fun-Organization", orgID.String())
+		}.Build()
+		ctx, callInfo := connect.NewClientContext(ctx)
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 		resp, err := client.PutPluginDefinition(ctx, req)
 		require.NoError(t, err)
-		return resp.Msg.GetHash()
+		return resp.GetHash()
 	}
 
 	// Publish v1, then v2 — the latest by created is v2.
@@ -472,15 +485,16 @@ func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 	assert.Equal(t, v2Hash, after.GetDefinitionHash())
 
 	// GetPluginDetail reports the same.
-	detailReq := connect.NewRequest(organizationv1.GetPluginDetailRequest_builder{
+	detailReq := organizationv1.GetPluginDetailRequest_builder{
 		PluginId: pluginID.String(),
-	}.Build())
-	detailReq.Header().Set("Authorization", "Bearer "+token)
-	detailReq.Header().Set("Fun-Organization", orgID.String())
-	detailResp, err := client.GetPluginDetail(ctx, detailReq)
+	}.Build()
+	detailCtx, detailCallInfo := connect.NewClientContext(ctx)
+	detailCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	detailCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	detailResp, err := client.GetPluginDetail(detailCtx, detailReq)
 	require.NoError(t, err)
-	assert.Equal(t, "v2", detailResp.Msg.GetPlugin().GetPluginVersion())
-	assert.Equal(t, v2Hash, detailResp.Msg.GetPlugin().GetDefinitionHash())
+	assert.Equal(t, "v2", detailResp.GetPlugin().GetPluginVersion())
+	assert.Equal(t, v2Hash, detailResp.GetPlugin().GetDefinitionHash())
 }
 
 // TestListPluginDefinitions_LatestFirst verifies the endpoint returns all
@@ -509,14 +523,15 @@ func TestListPluginDefinitions_LatestFirst(t *testing.T) {
 
 	list := func(t *testing.T) []*organizationv1.PluginDefinitionVersion {
 		t.Helper()
-		req := connect.NewRequest(organizationv1.ListPluginDefinitionsRequest_builder{
+		req := organizationv1.ListPluginDefinitionsRequest_builder{
 			PluginId: pluginID.String(),
-		}.Build())
-		req.Header().Set("Authorization", "Bearer "+token)
-		req.Header().Set("Fun-Organization", orgID.String())
+		}.Build()
+		ctx, callInfo := connect.NewClientContext(ctx)
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 		resp, err := client.ListPluginDefinitions(ctx, req)
 		require.NoError(t, err)
-		return resp.Msg.GetDefinitions()
+		return resp.GetDefinitions()
 	}
 
 	// No definitions published yet → empty list.
@@ -524,14 +539,15 @@ func TestListPluginDefinitions_LatestFirst(t *testing.T) {
 
 	put := func(version string, manifest []byte) string {
 		t.Helper()
-		req := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+		req := organizationv1.PutPluginDefinitionRequest_builder{
 			PluginId: pluginID.String(), PluginVersion: version, Manifest: manifest,
-		}.Build())
-		req.Header().Set("Authorization", "Bearer "+token)
-		req.Header().Set("Fun-Organization", orgID.String())
+		}.Build()
+		ctx, callInfo := connect.NewClientContext(ctx)
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 		resp, err := client.PutPluginDefinition(ctx, req)
 		require.NoError(t, err)
-		return resp.Msg.GetHash()
+		return resp.GetHash()
 	}
 
 	put("v1", testManifest)
@@ -568,30 +584,31 @@ func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 	ctx := context.Background()
 
 	// Arrange: Put a manifest first.
-	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v1",
 		Manifest:      testManifest,
-	}.Build())
-	putReq.Header().Set("Authorization", "Bearer "+token)
-	putReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(ctx)
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.PutPluginDefinition(ctx, putReq)
+	_, err := client.PutPluginDefinition(putCtx, putReq)
 	require.NoError(t, err)
 
 	// Act: Get the definition (public endpoint, no auth needed).
-	getReq := connect.NewRequest(organizationv1.GetPluginDefinitionRequest_builder{
+	getReq := organizationv1.GetPluginDefinitionRequest_builder{
 		PluginName:    testPluginName,
 		PluginVersion: "v1",
-	}.Build())
+	}.Build()
 
 	resp, err := client.GetPluginDefinition(ctx, getReq)
 	require.NoError(t, err)
-	assert.NotEmpty(t, resp.Msg.GetManifest())
-	assert.True(t, strings.HasPrefix(resp.Msg.GetHash(), "sha256:"))
-	assert.Equal(t, "repo@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", resp.Msg.GetDefinition().GetImage())
-	require.Len(t, resp.Msg.GetDefinition().GetPermissions().GetRbac(), 1)
-	assert.Equal(t, []string{"cert-manager.io"}, resp.Msg.GetDefinition().GetPermissions().GetRbac()[0].GetApiGroups())
+	assert.NotEmpty(t, resp.GetManifest())
+	assert.True(t, strings.HasPrefix(resp.GetHash(), "sha256:"))
+	assert.Equal(t, "repo@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", resp.GetDefinition().GetImage())
+	require.Len(t, resp.GetDefinition().GetPermissions().GetRbac(), 1)
+	assert.Equal(t, []string{"cert-manager.io"}, resp.GetDefinition().GetPermissions().GetRbac()[0].GetApiGroups())
 }
 
 func TestGetPluginDefinition_NotFound(t *testing.T) {
@@ -601,10 +618,10 @@ func TestGetPluginDefinition_NotFound(t *testing.T) {
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
 
-	getReq := connect.NewRequest(organizationv1.GetPluginDefinitionRequest_builder{
+	getReq := organizationv1.GetPluginDefinitionRequest_builder{
 		PluginName:    "nope",
 		PluginVersion: "v1",
-	}.Build())
+	}.Build()
 
 	_, err := client.GetPluginDefinition(ctx, getReq)
 	require.Error(t, err)

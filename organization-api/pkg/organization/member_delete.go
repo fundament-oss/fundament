@@ -14,8 +14,8 @@ import (
 
 func (s *Server) DeleteMember(
 	ctx context.Context,
-	req *connect.Request[organizationv1.DeleteMemberRequest],
-) (*connect.Response[organizationv1.DeleteMemberResponse], error) {
+	req *organizationv1.DeleteMemberRequest,
+) (*organizationv1.DeleteMemberResponse, error) {
 	userID, ok := UserIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
@@ -30,7 +30,7 @@ func (s *Server) DeleteMember(
 		return nil, err
 	}
 
-	id := uuid.MustParse(req.Msg.GetId())
+	id := uuid.MustParse(req.GetId())
 
 	member, err := s.queries.MemberGetByID(ctx, db.MemberGetByIDParams{ID: id})
 	if err != nil {
@@ -45,5 +45,5 @@ func (s *Server) DeleteMember(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete member: %w", err))
 	}
 
-	return connect.NewResponse(organizationv1.DeleteMemberResponse_builder{}.Build()), nil
+	return organizationv1.DeleteMemberResponse_builder{}.Build(), nil
 }

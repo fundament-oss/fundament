@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteNodePool(
 	ctx context.Context,
-	req *connect.Request[organizationv1.DeleteNodePoolRequest],
-) (*connect.Response[organizationv1.DeleteNodePoolResponse], error) {
-	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
+	req *organizationv1.DeleteNodePoolRequest,
+) (*organizationv1.DeleteNodePoolResponse, error) {
+	nodePoolID := uuid.MustParse(req.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.NodePool(nodePoolID)); err != nil {
 		return nil, err
@@ -33,5 +33,5 @@ func (s *Server) DeleteNodePool(
 
 	s.logger.InfoContext(ctx, "node pool deleted", "node_pool_id", nodePoolID)
 
-	return connect.NewResponse(organizationv1.DeleteNodePoolResponse_builder{}.Build()), nil
+	return organizationv1.DeleteNodePoolResponse_builder{}.Build(), nil
 }

@@ -53,11 +53,11 @@ const (
 
 // RackRowServiceClient is a client for the dcim.v1.RackRowService service.
 type RackRowServiceClient interface {
-	ListRackRows(context.Context, *connect.Request[v1.ListRackRowsRequest]) (*connect.Response[v1.ListRackRowsResponse], error)
-	GetRackRow(context.Context, *connect.Request[v1.GetRackRowRequest]) (*connect.Response[v1.GetRackRowResponse], error)
-	CreateRackRow(context.Context, *connect.Request[v1.CreateRackRowRequest]) (*connect.Response[v1.CreateRackRowResponse], error)
-	UpdateRackRow(context.Context, *connect.Request[v1.UpdateRackRowRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteRackRow(context.Context, *connect.Request[v1.DeleteRackRowRequest]) (*connect.Response[emptypb.Empty], error)
+	ListRackRows(context.Context, *v1.ListRackRowsRequest) (*v1.ListRackRowsResponse, error)
+	GetRackRow(context.Context, *v1.GetRackRowRequest) (*v1.GetRackRowResponse, error)
+	CreateRackRow(context.Context, *v1.CreateRackRowRequest) (*v1.CreateRackRowResponse, error)
+	UpdateRackRow(context.Context, *v1.UpdateRackRowRequest) (*emptypb.Empty, error)
+	DeleteRackRow(context.Context, *v1.DeleteRackRowRequest) (*emptypb.Empty, error)
 }
 
 // NewRackRowServiceClient constructs a client for the dcim.v1.RackRowService service. By default,
@@ -114,37 +114,57 @@ type rackRowServiceClient struct {
 }
 
 // ListRackRows calls dcim.v1.RackRowService.ListRackRows.
-func (c *rackRowServiceClient) ListRackRows(ctx context.Context, req *connect.Request[v1.ListRackRowsRequest]) (*connect.Response[v1.ListRackRowsResponse], error) {
-	return c.listRackRows.CallUnary(ctx, req)
+func (c *rackRowServiceClient) ListRackRows(ctx context.Context, req *v1.ListRackRowsRequest) (*v1.ListRackRowsResponse, error) {
+	response, err := c.listRackRows.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetRackRow calls dcim.v1.RackRowService.GetRackRow.
-func (c *rackRowServiceClient) GetRackRow(ctx context.Context, req *connect.Request[v1.GetRackRowRequest]) (*connect.Response[v1.GetRackRowResponse], error) {
-	return c.getRackRow.CallUnary(ctx, req)
+func (c *rackRowServiceClient) GetRackRow(ctx context.Context, req *v1.GetRackRowRequest) (*v1.GetRackRowResponse, error) {
+	response, err := c.getRackRow.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // CreateRackRow calls dcim.v1.RackRowService.CreateRackRow.
-func (c *rackRowServiceClient) CreateRackRow(ctx context.Context, req *connect.Request[v1.CreateRackRowRequest]) (*connect.Response[v1.CreateRackRowResponse], error) {
-	return c.createRackRow.CallUnary(ctx, req)
+func (c *rackRowServiceClient) CreateRackRow(ctx context.Context, req *v1.CreateRackRowRequest) (*v1.CreateRackRowResponse, error) {
+	response, err := c.createRackRow.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateRackRow calls dcim.v1.RackRowService.UpdateRackRow.
-func (c *rackRowServiceClient) UpdateRackRow(ctx context.Context, req *connect.Request[v1.UpdateRackRowRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.updateRackRow.CallUnary(ctx, req)
+func (c *rackRowServiceClient) UpdateRackRow(ctx context.Context, req *v1.UpdateRackRowRequest) (*emptypb.Empty, error) {
+	response, err := c.updateRackRow.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteRackRow calls dcim.v1.RackRowService.DeleteRackRow.
-func (c *rackRowServiceClient) DeleteRackRow(ctx context.Context, req *connect.Request[v1.DeleteRackRowRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.deleteRackRow.CallUnary(ctx, req)
+func (c *rackRowServiceClient) DeleteRackRow(ctx context.Context, req *v1.DeleteRackRowRequest) (*emptypb.Empty, error) {
+	response, err := c.deleteRackRow.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // RackRowServiceHandler is an implementation of the dcim.v1.RackRowService service.
 type RackRowServiceHandler interface {
-	ListRackRows(context.Context, *connect.Request[v1.ListRackRowsRequest]) (*connect.Response[v1.ListRackRowsResponse], error)
-	GetRackRow(context.Context, *connect.Request[v1.GetRackRowRequest]) (*connect.Response[v1.GetRackRowResponse], error)
-	CreateRackRow(context.Context, *connect.Request[v1.CreateRackRowRequest]) (*connect.Response[v1.CreateRackRowResponse], error)
-	UpdateRackRow(context.Context, *connect.Request[v1.UpdateRackRowRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteRackRow(context.Context, *connect.Request[v1.DeleteRackRowRequest]) (*connect.Response[emptypb.Empty], error)
+	ListRackRows(context.Context, *v1.ListRackRowsRequest) (*v1.ListRackRowsResponse, error)
+	GetRackRow(context.Context, *v1.GetRackRowRequest) (*v1.GetRackRowResponse, error)
+	CreateRackRow(context.Context, *v1.CreateRackRowRequest) (*v1.CreateRackRowResponse, error)
+	UpdateRackRow(context.Context, *v1.UpdateRackRowRequest) (*emptypb.Empty, error)
+	DeleteRackRow(context.Context, *v1.DeleteRackRowRequest) (*emptypb.Empty, error)
 }
 
 // NewRackRowServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -154,31 +174,31 @@ type RackRowServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewRackRowServiceHandler(svc RackRowServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	rackRowServiceMethods := v1.File_v1_rack_row_proto.Services().ByName("RackRowService").Methods()
-	rackRowServiceListRackRowsHandler := connect.NewUnaryHandler(
+	rackRowServiceListRackRowsHandler := connect.NewUnaryHandlerSimple(
 		RackRowServiceListRackRowsProcedure,
 		svc.ListRackRows,
 		connect.WithSchema(rackRowServiceMethods.ByName("ListRackRows")),
 		connect.WithHandlerOptions(opts...),
 	)
-	rackRowServiceGetRackRowHandler := connect.NewUnaryHandler(
+	rackRowServiceGetRackRowHandler := connect.NewUnaryHandlerSimple(
 		RackRowServiceGetRackRowProcedure,
 		svc.GetRackRow,
 		connect.WithSchema(rackRowServiceMethods.ByName("GetRackRow")),
 		connect.WithHandlerOptions(opts...),
 	)
-	rackRowServiceCreateRackRowHandler := connect.NewUnaryHandler(
+	rackRowServiceCreateRackRowHandler := connect.NewUnaryHandlerSimple(
 		RackRowServiceCreateRackRowProcedure,
 		svc.CreateRackRow,
 		connect.WithSchema(rackRowServiceMethods.ByName("CreateRackRow")),
 		connect.WithHandlerOptions(opts...),
 	)
-	rackRowServiceUpdateRackRowHandler := connect.NewUnaryHandler(
+	rackRowServiceUpdateRackRowHandler := connect.NewUnaryHandlerSimple(
 		RackRowServiceUpdateRackRowProcedure,
 		svc.UpdateRackRow,
 		connect.WithSchema(rackRowServiceMethods.ByName("UpdateRackRow")),
 		connect.WithHandlerOptions(opts...),
 	)
-	rackRowServiceDeleteRackRowHandler := connect.NewUnaryHandler(
+	rackRowServiceDeleteRackRowHandler := connect.NewUnaryHandlerSimple(
 		RackRowServiceDeleteRackRowProcedure,
 		svc.DeleteRackRow,
 		connect.WithSchema(rackRowServiceMethods.ByName("DeleteRackRow")),
@@ -205,22 +225,22 @@ func NewRackRowServiceHandler(svc RackRowServiceHandler, opts ...connect.Handler
 // UnimplementedRackRowServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedRackRowServiceHandler struct{}
 
-func (UnimplementedRackRowServiceHandler) ListRackRows(context.Context, *connect.Request[v1.ListRackRowsRequest]) (*connect.Response[v1.ListRackRowsResponse], error) {
+func (UnimplementedRackRowServiceHandler) ListRackRows(context.Context, *v1.ListRackRowsRequest) (*v1.ListRackRowsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackRowService.ListRackRows is not implemented"))
 }
 
-func (UnimplementedRackRowServiceHandler) GetRackRow(context.Context, *connect.Request[v1.GetRackRowRequest]) (*connect.Response[v1.GetRackRowResponse], error) {
+func (UnimplementedRackRowServiceHandler) GetRackRow(context.Context, *v1.GetRackRowRequest) (*v1.GetRackRowResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackRowService.GetRackRow is not implemented"))
 }
 
-func (UnimplementedRackRowServiceHandler) CreateRackRow(context.Context, *connect.Request[v1.CreateRackRowRequest]) (*connect.Response[v1.CreateRackRowResponse], error) {
+func (UnimplementedRackRowServiceHandler) CreateRackRow(context.Context, *v1.CreateRackRowRequest) (*v1.CreateRackRowResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackRowService.CreateRackRow is not implemented"))
 }
 
-func (UnimplementedRackRowServiceHandler) UpdateRackRow(context.Context, *connect.Request[v1.UpdateRackRowRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedRackRowServiceHandler) UpdateRackRow(context.Context, *v1.UpdateRackRowRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackRowService.UpdateRackRow is not implemented"))
 }
 
-func (UnimplementedRackRowServiceHandler) DeleteRackRow(context.Context, *connect.Request[v1.DeleteRackRowRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedRackRowServiceHandler) DeleteRackRow(context.Context, *v1.DeleteRackRowRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackRowService.DeleteRackRow is not implemented"))
 }

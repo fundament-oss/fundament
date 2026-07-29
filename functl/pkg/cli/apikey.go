@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"connectrpc.com/connect"
-
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -27,12 +25,12 @@ func (c *APIKeyListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.APIKeys().ListAPIKeys(context.Background(), connect.NewRequest(organizationv1.ListAPIKeysRequest_builder{}.Build()))
+	resp, err := apiClient.APIKeys().ListAPIKeys(context.Background(), organizationv1.ListAPIKeysRequest_builder{}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to list API keys: %w", err)
 	}
 
-	apiKeys := resp.Msg.GetApiKeys()
+	apiKeys := resp.GetApiKeys()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(apiKeys)
@@ -93,19 +91,19 @@ func (c *APIKeyCreateCmd) Run(ctx *Context) error {
 		ExpiresIn: c.ExpiresIn,
 	}.Build()
 
-	resp, err := apiClient.APIKeys().CreateAPIKey(context.Background(), connect.NewRequest(req))
+	resp, err := apiClient.APIKeys().CreateAPIKey(context.Background(), req)
 	if err != nil {
 		return fmt.Errorf("failed to create API key: %w", err)
 	}
 
 	if ctx.Output == OutputJSON {
-		return PrintJSON(resp.Msg)
+		return PrintJSON(resp)
 	}
 
 	fmt.Println("API key created successfully!")
 	fmt.Println()
-	fmt.Printf("ID:    %s\n", resp.Msg.GetId())
-	fmt.Printf("Token: %s\n", resp.Msg.GetToken())
+	fmt.Printf("ID:    %s\n", resp.GetId())
+	fmt.Printf("Token: %s\n", resp.GetToken())
 	fmt.Println()
 	fmt.Println("IMPORTANT: Copy this token now. You will not be able to see it again.")
 	return nil
@@ -123,9 +121,9 @@ func (c *APIKeyRevokeCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = apiClient.APIKeys().RevokeAPIKey(context.Background(), connect.NewRequest(organizationv1.RevokeAPIKeyRequest_builder{
+	_, err = apiClient.APIKeys().RevokeAPIKey(context.Background(), organizationv1.RevokeAPIKeyRequest_builder{
 		ApiKeyId: c.APIKeyID,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to revoke API key: %w", err)
 	}
@@ -146,9 +144,9 @@ func (c *APIKeyDeleteCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = apiClient.APIKeys().DeleteAPIKey(context.Background(), connect.NewRequest(organizationv1.DeleteAPIKeyRequest_builder{
+	_, err = apiClient.APIKeys().DeleteAPIKey(context.Background(), organizationv1.DeleteAPIKeyRequest_builder{
 		ApiKeyId: c.APIKeyID,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to delete API key: %w", err)
 	}

@@ -19,14 +19,14 @@ func TestRackService_DeleteRack_HappyFlow(t *testing.T) {
 	rowID := createRackRowFixture(t, env, "Rack Delete")
 	rackID := createRack(t, env, rowID, "Rack To Delete", 24)
 
-	_, err := client.DeleteRack(context.Background(), connect.NewRequest(
+	_, err := client.DeleteRack(context.Background(),
 		(&dcimv1.DeleteRackRequest_builder{Id: rackID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	_, err = client.GetRack(context.Background(), connect.NewRequest(
+	_, err = client.GetRack(context.Background(),
 		(&dcimv1.GetRackRequest_builder{Id: rackID}).Build(),
-	))
+	)
 	requireCode(t, err, connect.CodeNotFound)
 }
 
@@ -48,9 +48,9 @@ func TestRackService_DeleteRack_Errors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := client.DeleteRack(context.Background(), connect.NewRequest(
+			_, err := client.DeleteRack(context.Background(),
 				(&dcimv1.DeleteRackRequest_builder{Id: tc.id}).Build(),
-			))
+			)
 			requireCode(t, err, tc.want)
 		})
 	}

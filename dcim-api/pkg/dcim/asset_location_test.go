@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 	"github.com/stretchr/testify/assert"
@@ -26,12 +25,12 @@ func TestAssetService_GetAssetLocation_Rack(t *testing.T) {
 	assetID := createAsset(t, env, catalogID)
 	placeAssetInRack(t, env, assetID, rackID, 5)
 
-	resp, err := client.GetAssetLocation(context.Background(), connect.NewRequest(
+	resp, err := client.GetAssetLocation(context.Background(),
 		(&dcimv1.GetAssetLocationRequest_builder{AssetId: assetID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	loc := resp.Msg.GetLocation()
+	loc := resp.GetLocation()
 	require.NotNil(t, loc)
 	assert.Equal(t, "Loc site", loc.GetSiteName())
 	assert.Equal(t, "Loc room", loc.GetRoomName())
@@ -62,26 +61,26 @@ func TestAssetService_GetAssetLocation_SubComponentResolvesToHostRack(t *testing
 	// Define a port on the host so the sub-component placement has a real
 	// parent_port_definition_id to point at.
 	catalogClient := dcimv1connect.NewCatalogServiceClient(env.client(), env.server.URL)
-	portResp, err := catalogClient.CreatePortDefinition(context.Background(), connect.NewRequest(
+	portResp, err := catalogClient.CreatePortDefinition(context.Background(),
 		(&dcimv1.CreatePortDefinitionRequest_builder{
 			DeviceCatalogId: hostCatalogID,
 			Name:            "slot0",
 			PortType:        dcimv1.PortType_PORT_TYPE_SLOT,
 			Direction:       dcimv1.PortDirection_PORT_DIRECTION_BIDIR,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	componentCatalogID := createCatalogEntry(t, env, "Component model")
 	componentAssetID := createAsset(t, env, componentCatalogID)
-	placeAssetInSubComponent(t, env, componentAssetID, hostPlacementID, portResp.Msg.GetPortDefinitionId())
+	placeAssetInSubComponent(t, env, componentAssetID, hostPlacementID, portResp.GetPortDefinitionId())
 
-	resp, err := client.GetAssetLocation(context.Background(), connect.NewRequest(
+	resp, err := client.GetAssetLocation(context.Background(),
 		(&dcimv1.GetAssetLocationRequest_builder{AssetId: componentAssetID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	loc := resp.Msg.GetLocation()
+	loc := resp.GetLocation()
 	require.NotNil(t, loc)
 	assert.Equal(t, "Nested rack", loc.GetRackName())
 	assert.Equal(t, rackID, loc.GetRackId())
@@ -97,11 +96,11 @@ func TestAssetService_GetAssetLocation_Unplaced(t *testing.T) {
 	catalogID := createCatalogEntry(t, env, "Unplaced model")
 	assetID := createAsset(t, env, catalogID)
 
-	resp, err := client.GetAssetLocation(context.Background(), connect.NewRequest(
+	resp, err := client.GetAssetLocation(context.Background(),
 		(&dcimv1.GetAssetLocationRequest_builder{AssetId: assetID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	// No location means the rack id is empty.
-	assert.Empty(t, resp.Msg.GetLocation().GetRackId())
+	assert.Empty(t, resp.GetLocation().GetRackId())
 }

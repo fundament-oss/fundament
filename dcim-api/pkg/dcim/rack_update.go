@@ -18,24 +18,24 @@ import (
 
 func (s *Server) UpdateRack(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateRackRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	rackID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateRackRequest,
+) (*emptypb.Empty, error) {
+	rackID := uuid.MustParse(req.GetId())
 
 	params := db.RackUpdateParams{
 		ID: rackID,
 	}
 
-	if req.Msg.HasName() {
-		params.Name = pgtype.Text{String: req.Msg.GetName(), Valid: true}
+	if req.HasName() {
+		params.Name = pgtype.Text{String: req.GetName(), Valid: true}
 	}
 
-	if req.Msg.HasTotalUnits() {
-		params.TotalUnits = pgtype.Int4{Int32: req.Msg.GetTotalUnits(), Valid: true}
+	if req.HasTotalUnits() {
+		params.TotalUnits = pgtype.Int4{Int32: req.GetTotalUnits(), Valid: true}
 	}
 
-	if req.Msg.HasPositionInRow() {
-		params.PositionInRow = pgtype.Int4{Int32: req.Msg.GetPositionInRow(), Valid: true}
+	if req.HasPositionInRow() {
+		params.PositionInRow = pgtype.Int4{Int32: req.GetPositionInRow(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.RackUpdate(ctx, params)
@@ -53,5 +53,5 @@ func (s *Server) UpdateRack(
 
 	s.logger.InfoContext(ctx, "rack updated", "rack_id", rackID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

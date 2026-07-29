@@ -31,11 +31,11 @@ func New(baseURL string, httpClient connect.HTTPClient) Client {
 }
 
 func (c *connectClient) GetDefinition(ctx context.Context, pluginName, pluginVersion string) (Definition, error) {
-	resp, err := c.rpc.GetPluginDefinition(ctx, connect.NewRequest(organizationv1.GetPluginDefinitionRequest_builder{
+	resp, err := c.rpc.GetPluginDefinition(ctx, organizationv1.GetPluginDefinitionRequest_builder{
 		PluginName: pluginName, PluginVersion: pluginVersion,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return Definition{}, fmt.Errorf("GetPluginDefinition RPC: %w", err)
 	}
-	return Definition{Manifest: resp.Msg.GetManifest(), Hash: resp.Msg.GetHash()}, nil
+	return Definition{Manifest: resp.GetManifest(), Hash: resp.GetHash()}, nil
 }

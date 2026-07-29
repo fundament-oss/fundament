@@ -16,8 +16,8 @@ import (
 // permission check or org filter (same pattern as ListPresets).
 func (s *Server) ListRegions(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListRegionsRequest],
-) (*connect.Response[organizationv1.ListRegionsResponse], error) {
+	req *organizationv1.ListRegionsRequest,
+) (*organizationv1.ListRegionsResponse, error) {
 	regions, err := s.queries.RegionList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list regions: %w", err))
@@ -56,7 +56,7 @@ func (s *Server) ListRegions(
 		}.Build())
 	}
 
-	return connect.NewResponse(organizationv1.ListRegionsResponse_builder{
+	return organizationv1.ListRegionsResponse_builder{
 		Regions: result,
-	}.Build()), nil
+	}.Build(), nil
 }

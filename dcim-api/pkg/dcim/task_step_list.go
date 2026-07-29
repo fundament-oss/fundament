@@ -13,9 +13,9 @@ import (
 
 func (s *Server) ListTaskSteps(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListTaskStepsRequest],
-) (*connect.Response[dcimv1.ListTaskStepsResponse], error) {
-	taskID := uuid.MustParse(req.Msg.GetTaskId())
+	req *dcimv1.ListTaskStepsRequest,
+) (*dcimv1.ListTaskStepsResponse, error) {
+	taskID := uuid.MustParse(req.GetTaskId())
 
 	rows, err := s.queries.TaskStepList(ctx, db.TaskStepListParams{TaskID: taskID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) ListTaskSteps(
 		steps = append(steps, taskStepFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListTaskStepsResponse_builder{
+	return dcimv1.ListTaskStepsResponse_builder{
 		Steps: steps,
-	}.Build()), nil
+	}.Build(), nil
 }

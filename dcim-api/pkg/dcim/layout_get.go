@@ -13,9 +13,9 @@ import (
 
 func (s *Server) GetLayout(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetLayoutRequest],
-) (*connect.Response[dcimv1.GetLayoutResponse], error) {
-	designID := uuid.MustParse(req.Msg.GetDesignId())
+	req *dcimv1.GetLayoutRequest,
+) (*dcimv1.GetLayoutResponse, error) {
+	designID := uuid.MustParse(req.GetDesignId())
 
 	rows, err := s.queries.LogicalDeviceLayoutGetByDesign(ctx, db.LogicalDeviceLayoutGetByDesignParams{LogicalDesignID: designID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetLayout(
 		positions = append(positions, layoutFromRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.GetLayoutResponse_builder{
+	return dcimv1.GetLayoutResponse_builder{
 		Positions: positions,
-	}.Build()), nil
+	}.Build(), nil
 }

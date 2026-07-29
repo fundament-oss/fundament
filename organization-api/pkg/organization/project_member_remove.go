@@ -18,9 +18,9 @@ import (
 
 func (s *Server) RemoveProjectMember(
 	ctx context.Context,
-	req *connect.Request[organizationv1.RemoveProjectMemberRequest],
-) (*connect.Response[organizationv1.RemoveProjectMemberResponse], error) {
-	memberID := uuid.MustParse(req.Msg.GetMemberId())
+	req *organizationv1.RemoveProjectMemberRequest,
+) (*organizationv1.RemoveProjectMemberResponse, error) {
+	memberID := uuid.MustParse(req.GetMemberId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.ProjectMember(memberID)); err != nil {
 		return nil, err
@@ -47,5 +47,5 @@ func (s *Server) RemoveProjectMember(
 		"member_id", memberID,
 	)
 
-	return connect.NewResponse(organizationv1.RemoveProjectMemberResponse_builder{}.Build()), nil
+	return organizationv1.RemoveProjectMemberResponse_builder{}.Build(), nil
 }

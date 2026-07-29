@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -19,10 +18,10 @@ type stubPlugin struct {
 	organizationv1connect.UnimplementedPluginServiceHandler
 }
 
-func (stubPlugin) GetPluginDefinition(_ context.Context, req *connect.Request[organizationv1.GetPluginDefinitionRequest]) (*connect.Response[organizationv1.GetPluginDefinitionResponse], error) {
-	return connect.NewResponse(organizationv1.GetPluginDefinitionResponse_builder{
+func (stubPlugin) GetPluginDefinition(_ context.Context, _ *organizationv1.GetPluginDefinitionRequest) (*organizationv1.GetPluginDefinitionResponse, error) {
+	return organizationv1.GetPluginDefinitionResponse_builder{
 		Manifest: []byte("manifest-bytes"), Hash: "sha256:abc",
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func TestGetDefinition(t *testing.T) {

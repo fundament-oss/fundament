@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetPhysicalConnection(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetPhysicalConnectionRequest],
-) (*connect.Response[dcimv1.GetPhysicalConnectionResponse], error) {
-	connID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetPhysicalConnectionRequest,
+) (*dcimv1.GetPhysicalConnectionResponse, error) {
+	connID := uuid.MustParse(req.GetId())
 
 	conn, err := s.queries.PhysicalConnectionGetByID(ctx, db.PhysicalConnectionGetByIDParams{ID: connID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetPhysicalConnection(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get physical connection: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetPhysicalConnectionResponse_builder{
+	return dcimv1.GetPhysicalConnectionResponse_builder{
 		Connection: physicalConnectionFromRow(&conn),
-	}.Build()), nil
+	}.Build(), nil
 }

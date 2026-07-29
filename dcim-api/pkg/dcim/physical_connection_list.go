@@ -13,9 +13,9 @@ import (
 
 func (s *Server) ListConnectionsByPlacement(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListConnectionsByPlacementRequest],
-) (*connect.Response[dcimv1.ListConnectionsByPlacementResponse], error) {
-	placementID := uuid.MustParse(req.Msg.GetPlacementId())
+	req *dcimv1.ListConnectionsByPlacementRequest,
+) (*dcimv1.ListConnectionsByPlacementResponse, error) {
+	placementID := uuid.MustParse(req.GetPlacementId())
 
 	rows, err := s.queries.PhysicalConnectionListByPlacement(ctx, db.PhysicalConnectionListByPlacementParams{
 		APlacementID: placementID,
@@ -29,16 +29,16 @@ func (s *Server) ListConnectionsByPlacement(
 		connections = append(connections, physicalConnectionFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListConnectionsByPlacementResponse_builder{
+	return dcimv1.ListConnectionsByPlacementResponse_builder{
 		Connections: connections,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func (s *Server) ListConnectionsBySite(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListConnectionsBySiteRequest],
-) (*connect.Response[dcimv1.ListConnectionsBySiteResponse], error) {
-	siteID := uuid.MustParse(req.Msg.GetSiteId())
+	req *dcimv1.ListConnectionsBySiteRequest,
+) (*dcimv1.ListConnectionsBySiteResponse, error) {
+	siteID := uuid.MustParse(req.GetSiteId())
 
 	rows, err := s.queries.PhysicalConnectionListBySite(ctx, db.PhysicalConnectionListBySiteParams{
 		SiteID: siteID,
@@ -52,7 +52,7 @@ func (s *Server) ListConnectionsBySite(
 		connections = append(connections, physicalConnectionFromListBySiteRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListConnectionsBySiteResponse_builder{
+	return dcimv1.ListConnectionsBySiteResponse_builder{
 		Connections: connections,
-	}.Build()), nil
+	}.Build(), nil
 }

@@ -13,9 +13,9 @@ import (
 
 func (s *Server) ListPortDefinitions(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListPortDefinitionsRequest],
-) (*connect.Response[dcimv1.ListPortDefinitionsResponse], error) {
-	catalogID := uuid.MustParse(req.Msg.GetDeviceCatalogId())
+	req *dcimv1.ListPortDefinitionsRequest,
+) (*dcimv1.ListPortDefinitionsResponse, error) {
+	catalogID := uuid.MustParse(req.GetDeviceCatalogId())
 
 	rows, err := s.queries.PortDefinitionList(ctx, db.PortDefinitionListParams{DeviceCatalogID: catalogID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) ListPortDefinitions(
 		portDefs = append(portDefs, portDefinitionFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListPortDefinitionsResponse_builder{
+	return dcimv1.ListPortDefinitionsResponse_builder{
 		PortDefinitions: portDefs,
-	}.Build()), nil
+	}.Build(), nil
 }

@@ -21,20 +21,20 @@ func TestSiteService_UpdateSite_HappyFlow(t *testing.T) {
 
 	newName := "Site After Update"
 	newAddress := "Updated street 1"
-	_, err := client.UpdateSite(context.Background(), connect.NewRequest(
+	_, err := client.UpdateSite(context.Background(),
 		(&dcimv1.UpdateSiteRequest_builder{
 			Id:      siteID,
 			Name:    &newName,
 			Address: &newAddress,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	getResp, err := client.GetSite(context.Background(), connect.NewRequest(
+	getResp, err := client.GetSite(context.Background(),
 		(&dcimv1.GetSiteRequest_builder{Id: siteID}).Build(),
-	))
+	)
 	require.NoError(t, err)
-	site := getResp.Msg.GetSite()
+	site := getResp.GetSite()
 	require.NotNil(t, site)
 	assert.Equal(t, newName, site.GetName())
 	assert.Equal(t, newAddress, site.GetAddress())
@@ -58,9 +58,9 @@ func TestSiteService_UpdateSite(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := client.UpdateSite(context.Background(), connect.NewRequest(
+			_, err := client.UpdateSite(context.Background(),
 				(&dcimv1.UpdateSiteRequest_builder{Id: tc.id}).Build(),
-			))
+			)
 			requireCode(t, err, tc.want)
 		})
 	}

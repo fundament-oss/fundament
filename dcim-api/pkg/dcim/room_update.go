@@ -18,20 +18,20 @@ import (
 
 func (s *Server) UpdateRoom(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateRoomRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	roomID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateRoomRequest,
+) (*emptypb.Empty, error) {
+	roomID := uuid.MustParse(req.GetId())
 
 	params := db.RoomUpdateParams{
 		ID: roomID,
 	}
 
-	if req.Msg.HasName() {
-		params.Name = pgtype.Text{String: req.Msg.GetName(), Valid: true}
+	if req.HasName() {
+		params.Name = pgtype.Text{String: req.GetName(), Valid: true}
 	}
 
-	if req.Msg.HasFloor() {
-		params.Floor = pgtype.Text{String: req.Msg.GetFloor(), Valid: true}
+	if req.HasFloor() {
+		params.Floor = pgtype.Text{String: req.GetFloor(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.RoomUpdate(ctx, params)
@@ -49,5 +49,5 @@ func (s *Server) UpdateRoom(
 
 	s.logger.InfoContext(ctx, "room updated", "room_id", roomID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

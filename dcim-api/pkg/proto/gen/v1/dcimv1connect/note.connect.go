@@ -44,9 +44,9 @@ const (
 
 // NoteServiceClient is a client for the dcim.v1.NoteService service.
 type NoteServiceClient interface {
-	ListNotes(context.Context, *connect.Request[v1.ListNotesRequest]) (*connect.Response[v1.ListNotesResponse], error)
-	CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error)
-	DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[emptypb.Empty], error)
+	ListNotes(context.Context, *v1.ListNotesRequest) (*v1.ListNotesResponse, error)
+	CreateNote(context.Context, *v1.CreateNoteRequest) (*v1.CreateNoteResponse, error)
+	DeleteNote(context.Context, *v1.DeleteNoteRequest) (*emptypb.Empty, error)
 }
 
 // NewNoteServiceClient constructs a client for the dcim.v1.NoteService service. By default, it uses
@@ -89,25 +89,37 @@ type noteServiceClient struct {
 }
 
 // ListNotes calls dcim.v1.NoteService.ListNotes.
-func (c *noteServiceClient) ListNotes(ctx context.Context, req *connect.Request[v1.ListNotesRequest]) (*connect.Response[v1.ListNotesResponse], error) {
-	return c.listNotes.CallUnary(ctx, req)
+func (c *noteServiceClient) ListNotes(ctx context.Context, req *v1.ListNotesRequest) (*v1.ListNotesResponse, error) {
+	response, err := c.listNotes.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // CreateNote calls dcim.v1.NoteService.CreateNote.
-func (c *noteServiceClient) CreateNote(ctx context.Context, req *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error) {
-	return c.createNote.CallUnary(ctx, req)
+func (c *noteServiceClient) CreateNote(ctx context.Context, req *v1.CreateNoteRequest) (*v1.CreateNoteResponse, error) {
+	response, err := c.createNote.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteNote calls dcim.v1.NoteService.DeleteNote.
-func (c *noteServiceClient) DeleteNote(ctx context.Context, req *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.deleteNote.CallUnary(ctx, req)
+func (c *noteServiceClient) DeleteNote(ctx context.Context, req *v1.DeleteNoteRequest) (*emptypb.Empty, error) {
+	response, err := c.deleteNote.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // NoteServiceHandler is an implementation of the dcim.v1.NoteService service.
 type NoteServiceHandler interface {
-	ListNotes(context.Context, *connect.Request[v1.ListNotesRequest]) (*connect.Response[v1.ListNotesResponse], error)
-	CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error)
-	DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[emptypb.Empty], error)
+	ListNotes(context.Context, *v1.ListNotesRequest) (*v1.ListNotesResponse, error)
+	CreateNote(context.Context, *v1.CreateNoteRequest) (*v1.CreateNoteResponse, error)
+	DeleteNote(context.Context, *v1.DeleteNoteRequest) (*emptypb.Empty, error)
 }
 
 // NewNoteServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -117,19 +129,19 @@ type NoteServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewNoteServiceHandler(svc NoteServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	noteServiceMethods := v1.File_v1_note_proto.Services().ByName("NoteService").Methods()
-	noteServiceListNotesHandler := connect.NewUnaryHandler(
+	noteServiceListNotesHandler := connect.NewUnaryHandlerSimple(
 		NoteServiceListNotesProcedure,
 		svc.ListNotes,
 		connect.WithSchema(noteServiceMethods.ByName("ListNotes")),
 		connect.WithHandlerOptions(opts...),
 	)
-	noteServiceCreateNoteHandler := connect.NewUnaryHandler(
+	noteServiceCreateNoteHandler := connect.NewUnaryHandlerSimple(
 		NoteServiceCreateNoteProcedure,
 		svc.CreateNote,
 		connect.WithSchema(noteServiceMethods.ByName("CreateNote")),
 		connect.WithHandlerOptions(opts...),
 	)
-	noteServiceDeleteNoteHandler := connect.NewUnaryHandler(
+	noteServiceDeleteNoteHandler := connect.NewUnaryHandlerSimple(
 		NoteServiceDeleteNoteProcedure,
 		svc.DeleteNote,
 		connect.WithSchema(noteServiceMethods.ByName("DeleteNote")),
@@ -152,14 +164,14 @@ func NewNoteServiceHandler(svc NoteServiceHandler, opts ...connect.HandlerOption
 // UnimplementedNoteServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedNoteServiceHandler struct{}
 
-func (UnimplementedNoteServiceHandler) ListNotes(context.Context, *connect.Request[v1.ListNotesRequest]) (*connect.Response[v1.ListNotesResponse], error) {
+func (UnimplementedNoteServiceHandler) ListNotes(context.Context, *v1.ListNotesRequest) (*v1.ListNotesResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.NoteService.ListNotes is not implemented"))
 }
 
-func (UnimplementedNoteServiceHandler) CreateNote(context.Context, *connect.Request[v1.CreateNoteRequest]) (*connect.Response[v1.CreateNoteResponse], error) {
+func (UnimplementedNoteServiceHandler) CreateNote(context.Context, *v1.CreateNoteRequest) (*v1.CreateNoteResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.NoteService.CreateNote is not implemented"))
 }
 
-func (UnimplementedNoteServiceHandler) DeleteNote(context.Context, *connect.Request[v1.DeleteNoteRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedNoteServiceHandler) DeleteNote(context.Context, *v1.DeleteNoteRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.NoteService.DeleteNote is not implemented"))
 }

@@ -13,8 +13,8 @@ import (
 
 func (s *Server) ListAPIKeys(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListAPIKeysRequest],
-) (*connect.Response[organizationv1.ListAPIKeysResponse], error) {
+	req *organizationv1.ListAPIKeysRequest,
+) (*organizationv1.ListAPIKeysResponse, error) {
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
@@ -42,7 +42,7 @@ func (s *Server) ListAPIKeys(
 		result = append(result, apiKeyFromListRow(&keys[idx]))
 	}
 
-	return connect.NewResponse(organizationv1.ListAPIKeysResponse_builder{
+	return organizationv1.ListAPIKeysResponse_builder{
 		ApiKeys: result,
-	}.Build()), nil
+	}.Build(), nil
 }

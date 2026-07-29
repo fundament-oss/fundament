@@ -19,7 +19,7 @@ func Test_ListInvitations_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.ListInvitations(context.Background(), connect.NewRequest(&organizationv1.ListInvitationsRequest{}))
+	_, err := client.ListInvitations(context.Background(), &organizationv1.ListInvitationsRequest{})
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -50,29 +50,31 @@ func Test_ListInvitations_HappyFlow(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
+	req := organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.InviteMember(context.Background(), req)
+	_, err := client.InviteMember(ctx, req)
 	require.NoError(t, err)
 
 	userToInviteToken := env.createAuthnToken(t, userToInviteUUID)
 
-	listReq := connect.NewRequest(&organizationv1.ListInvitationsRequest{})
-	listReq.Header().Set("Authorization", "Bearer "+userToInviteToken)
-	listReq.Header().Set("Fun-Organization", orgID.String())
+	listReq := &organizationv1.ListInvitationsRequest{}
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+userToInviteToken)
+	listCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	invitationsRes, err := client.ListInvitations(context.Background(), listReq)
+	invitationsRes, err := client.ListInvitations(listCtx, listReq)
 	require.NoError(t, err)
 
 	require.NotNil(t, invitationsRes)
-	require.Len(t, invitationsRes.Msg.GetInvitations(), 1)
-	require.NotNil(t, invitationsRes.Msg.GetInvitations()[0].GetCreated().AsTime())
-	require.Equal(t, "viewer", invitationsRes.Msg.GetInvitations()[0].GetPermission())
-	require.Equal(t, orgID.String(), invitationsRes.Msg.GetInvitations()[0].GetOrganizationId())
-	require.Equal(t, "test-org", invitationsRes.Msg.GetInvitations()[0].GetOrganizationAlias())
+	require.Len(t, invitationsRes.GetInvitations(), 1)
+	require.NotNil(t, invitationsRes.GetInvitations()[0].GetCreated().AsTime())
+	require.Equal(t, "viewer", invitationsRes.GetInvitations()[0].GetPermission())
+	require.Equal(t, orgID.String(), invitationsRes.GetInvitations()[0].GetOrganizationId())
+	require.Equal(t, "test-org", invitationsRes.GetInvitations()[0].GetOrganizationAlias())
 }

@@ -146,11 +146,11 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Create the project member
-	createReq := connect.NewRequest(organizationv1.AddProjectMemberRequest_builder{
+	createReq := organizationv1.AddProjectMemberRequest_builder{
 		ProjectId: plan.ProjectID.ValueString(),
 		UserId:    plan.UserID.ValueString(),
 		Role:      protoRole,
-	}.Build())
+	}.Build()
 
 	createResp, err := createIdempotent(ctx, r.client.ProjectService.AddProjectMember, createReq)
 	if err != nil {
@@ -180,13 +180,13 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	// Set the ID from the response
-	plan.ID = types.StringValue(createResp.Msg.GetMemberId())
+	plan.ID = types.StringValue(createResp.GetMemberId())
 
 	// Read back the created member to get computed fields.
 	// Retry on permission_denied: OpenFGA needs time to sync after the member is added.
-	getReq := connect.NewRequest(organizationv1.GetProjectMemberRequest_builder{
-		MemberId: createResp.Msg.GetMemberId(),
-	}.Build())
+	getReq := organizationv1.GetProjectMemberRequest_builder{
+		MemberId: createResp.GetMemberId(),
+	}.Build()
 
 	getResp, err := r.client.ProjectService.GetProjectMember(ctx, getReq)
 	if err != nil {
@@ -197,15 +197,15 @@ func (r *ProjectMemberResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	permissionStr, err := projectMemberPermissionFromProto(getResp.Msg.GetMember().GetRole())
+	permissionStr, err := projectMemberPermissionFromProto(getResp.GetMember().GetRole())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid Project Member Permission",
-			fmt.Sprintf("Unable to convert permission for member %q: %s", getResp.Msg.GetMember().GetId(), err.Error()),
+			fmt.Sprintf("Unable to convert permission for member %q: %s", getResp.GetMember().GetId(), err.Error()),
 		)
 		return
 	}
-	m := getResp.Msg.GetMember()
+	m := getResp.GetMember()
 	plan.ProjectID = types.StringValue(m.GetProjectId())
 	plan.UserID = types.StringValue(m.GetUserId())
 	plan.UserName = types.StringValue(m.GetUserName())
@@ -303,10 +303,10 @@ func (r *ProjectMemberResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	// Update the member role
-	updateReq := connect.NewRequest(organizationv1.UpdateProjectMemberRoleRequest_builder{
+	updateReq := organizationv1.UpdateProjectMemberRoleRequest_builder{
 		MemberId: state.ID.ValueString(),
 		Role:     protoRole,
-	}.Build())
+	}.Build()
 
 	_, err = r.client.ProjectService.UpdateProjectMemberRole(ctx, updateReq)
 	if err != nil {
@@ -382,9 +382,9 @@ func (r *ProjectMemberResource) Delete(ctx context.Context, req resource.DeleteR
 		"id": state.ID.ValueString(),
 	})
 
-	deleteReq := connect.NewRequest(organizationv1.RemoveProjectMemberRequest_builder{
+	deleteReq := organizationv1.RemoveProjectMemberRequest_builder{
 		MemberId: state.ID.ValueString(),
-	}.Build())
+	}.Build()
 
 	_, err := r.client.ProjectService.RemoveProjectMember(ctx, deleteReq)
 	if err != nil {
@@ -456,9 +456,9 @@ func (r *ProjectMemberResource) ImportState(ctx context.Context, req resource.Im
 func readProjectMemberIntoModel(ctx context.Context, client *FundamentClient, model *ProjectMemberModel) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	getReq := connect.NewRequest(organizationv1.GetProjectMemberRequest_builder{
+	getReq := organizationv1.GetProjectMemberRequest_builder{
 		MemberId: model.ID.ValueString(),
-	}.Build())
+	}.Build()
 
 	getResp, err := client.ProjectService.GetProjectMember(ctx, getReq)
 	if err != nil {
@@ -472,7 +472,7 @@ func readProjectMemberIntoModel(ctx context.Context, client *FundamentClient, mo
 		return false, diags
 	}
 
-	member := getResp.Msg.GetMember()
+	member := getResp.GetMember()
 	permissionStr, err := projectMemberPermissionFromProto(member.GetRole())
 	if err != nil {
 		diags.AddError(

@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteLayout(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteLayoutRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	designID := uuid.MustParse(req.Msg.GetDesignId())
+	req *dcimv1.DeleteLayoutRequest,
+) (*emptypb.Empty, error) {
+	designID := uuid.MustParse(req.GetDesignId())
 
 	err := s.queries.LogicalDeviceLayoutDeleteByDesign(ctx, db.LogicalDeviceLayoutDeleteByDesignParams{LogicalDesignID: designID})
 	if err != nil {
@@ -25,5 +25,5 @@ func (s *Server) DeleteLayout(
 
 	s.logger.InfoContext(ctx, "layout deleted", "design_id", designID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

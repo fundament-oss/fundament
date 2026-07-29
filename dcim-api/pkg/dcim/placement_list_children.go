@@ -14,9 +14,9 @@ import (
 
 func (s *Server) ListChildPlacements(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListChildPlacementsRequest],
-) (*connect.Response[dcimv1.ListChildPlacementsResponse], error) {
-	parentID := uuid.MustParse(req.Msg.GetParentPlacementId())
+	req *dcimv1.ListChildPlacementsRequest,
+) (*dcimv1.ListChildPlacementsResponse, error) {
+	parentID := uuid.MustParse(req.GetParentPlacementId())
 
 	rows, err := s.queries.PlacementListByParent(ctx, db.PlacementListByParentParams{
 		ParentPlacementID: pgtype.UUID{Bytes: parentID, Valid: true},
@@ -30,7 +30,7 @@ func (s *Server) ListChildPlacements(
 		placements = append(placements, placementFromParentListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListChildPlacementsResponse_builder{
+	return dcimv1.ListChildPlacementsResponse_builder{
 		Placements: placements,
-	}.Build()), nil
+	}.Build(), nil
 }

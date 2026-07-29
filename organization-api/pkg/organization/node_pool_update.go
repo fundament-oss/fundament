@@ -15,9 +15,9 @@ import (
 
 func (s *Server) UpdateNodePool(
 	ctx context.Context,
-	req *connect.Request[organizationv1.UpdateNodePoolRequest],
-) (*connect.Response[organizationv1.UpdateNodePoolResponse], error) {
-	nodePoolID := uuid.MustParse(req.Msg.GetNodePoolId())
+	req *organizationv1.UpdateNodePoolRequest,
+) (*organizationv1.UpdateNodePoolResponse, error) {
+	nodePoolID := uuid.MustParse(req.GetNodePoolId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.NodePool(nodePoolID)); err != nil {
 		return nil, err
@@ -25,8 +25,8 @@ func (s *Server) UpdateNodePool(
 
 	params := db.NodePoolUpdateParams{
 		ID:           nodePoolID,
-		AutoscaleMin: pgtype.Int4{Int32: req.Msg.GetAutoscaleMin(), Valid: true},
-		AutoscaleMax: pgtype.Int4{Int32: req.Msg.GetAutoscaleMax(), Valid: true},
+		AutoscaleMin: pgtype.Int4{Int32: req.GetAutoscaleMin(), Valid: true},
+		AutoscaleMax: pgtype.Int4{Int32: req.GetAutoscaleMax(), Valid: true},
 	}
 
 	rowsAffected, err := s.queries.NodePoolUpdate(ctx, params)
@@ -40,5 +40,5 @@ func (s *Server) UpdateNodePool(
 
 	s.logger.InfoContext(ctx, "node pool updated", "node_pool_id", nodePoolID)
 
-	return connect.NewResponse(organizationv1.UpdateNodePoolResponse_builder{}.Build()), nil
+	return organizationv1.UpdateNodePoolResponse_builder{}.Build(), nil
 }

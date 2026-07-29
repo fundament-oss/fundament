@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetDesign(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetDesignRequest],
-) (*connect.Response[dcimv1.GetDesignResponse], error) {
-	designID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetDesignRequest,
+) (*dcimv1.GetDesignResponse, error) {
+	designID := uuid.MustParse(req.GetId())
 
 	design, err := s.queries.LogicalDesignGetByID(ctx, db.LogicalDesignGetByIDParams{ID: designID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetDesign(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get design: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetDesignResponse_builder{
+	return dcimv1.GetDesignResponse_builder{
 		Design: designFromRow(&design),
-	}.Build()), nil
+	}.Build(), nil
 }

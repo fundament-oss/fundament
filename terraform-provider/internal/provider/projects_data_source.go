@@ -122,7 +122,7 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 	tflog.Debug(ctx, "Fetching projects")
 
 	listReq := organizationv1.ListProjectsRequest_builder{ClusterId: state.ClusterID.ValueString()}.Build()
-	rpcReq := connect.NewRequest(listReq)
+	rpcReq := listReq
 
 	// Call the API
 	rpcResp, err := d.client.ProjectService.ListProjects(ctx, rpcReq)
@@ -149,21 +149,21 @@ func (d *ProjectsDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	// Build cluster name cache to avoid redundant API calls
 	clusterNames := make(map[string]string)
-	for _, project := range rpcResp.Msg.GetProjects() {
+	for _, project := range rpcResp.GetProjects() {
 		if _, ok := clusterNames[project.GetClusterId()]; !ok {
-			clusterReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+			clusterReq := organizationv1.GetClusterRequest_builder{
 				ClusterId: project.GetClusterId(),
-			}.Build())
+			}.Build()
 			clusterResp, err := d.client.ClusterService.GetCluster(ctx, clusterReq)
 			if err == nil {
-				clusterNames[project.GetClusterId()] = clusterResp.Msg.GetCluster().GetName()
+				clusterNames[project.GetClusterId()] = clusterResp.GetCluster().GetName()
 			}
 		}
 	}
 
 	// Map response to state
-	state.Projects = make([]ProjectModel, len(rpcResp.Msg.GetProjects()))
-	for i, project := range rpcResp.Msg.GetProjects() {
+	state.Projects = make([]ProjectModel, len(rpcResp.GetProjects()))
+	for i, project := range rpcResp.GetProjects() {
 		var created basetypes.StringValue
 
 		if project.GetCreated().CheckValid() == nil {

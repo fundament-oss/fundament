@@ -113,11 +113,11 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		"namespace_name": namespaceName,
 	})
 
-	rpcReq := connect.NewRequest(organizationv1.GetNamespaceByProjectAndNameRequest_builder{
+	rpcReq := organizationv1.GetNamespaceByProjectAndNameRequest_builder{
 		ClusterName:   clusterName,
 		ProjectName:   projectName,
 		NamespaceName: namespaceName,
-	}.Build())
+	}.Build()
 
 	rpcResp, err := d.client.NamespaceService.GetNamespaceByProjectAndName(ctx, rpcReq)
 	if err != nil {
@@ -146,7 +146,7 @@ func (d *NamespaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	ns := rpcResp.Msg.GetNamespace()
+	ns := rpcResp.GetNamespace()
 	config.ID = types.StringValue(ns.GetId())
 	config.Name = types.StringValue(ns.GetName())
 	config.ProjectID = types.StringValue(ns.GetProjectId())

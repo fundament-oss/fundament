@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"connectrpc.com/connect"
-
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -31,12 +29,12 @@ func (c *ProjectListCmd) Run(ctx *Context) error {
 	}
 
 	listReq := organizationv1.ListProjectsRequest_builder{ClusterId: c.Cluster}.Build()
-	resp, err := apiClient.Projects().ListProjects(context.Background(), connect.NewRequest(listReq))
+	resp, err := apiClient.Projects().ListProjects(context.Background(), listReq)
 	if err != nil {
 		return fmt.Errorf("failed to list projects: %w", err)
 	}
 
-	projects := resp.Msg.GetProjects()
+	projects := resp.GetProjects()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(projects)
@@ -77,14 +75,14 @@ func (c *ProjectGetCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Projects().GetProject(context.Background(), connect.NewRequest(organizationv1.GetProjectRequest_builder{
+	resp, err := apiClient.Projects().GetProject(context.Background(), organizationv1.GetProjectRequest_builder{
 		ProjectId: c.ProjectID,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to get project: %w", err)
 	}
 
-	project := resp.Msg.GetProject()
+	project := resp.GetProject()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(project)
@@ -128,12 +126,12 @@ func (c *ProjectCreateCmd) Run(ctx *Context) error {
 		Alias:     &alias,
 	}.Build()
 
-	resp, err := apiClient.Projects().CreateProject(context.Background(), connect.NewRequest(req))
+	resp, err := apiClient.Projects().CreateProject(context.Background(), req)
 	if err != nil {
 		return fmt.Errorf("failed to create project: %w", err)
 	}
 
-	projectID := resp.Msg.GetProjectId()
+	projectID := resp.GetProjectId()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]string{
@@ -166,7 +164,7 @@ func (c *ProjectUpdateCmd) Run(ctx *Context) error {
 		Alias:     &alias,
 	}.Build()
 
-	_, err = apiClient.Projects().UpdateProject(context.Background(), connect.NewRequest(req))
+	_, err = apiClient.Projects().UpdateProject(context.Background(), req)
 	if err != nil {
 		return fmt.Errorf("failed to update project: %w", err)
 	}

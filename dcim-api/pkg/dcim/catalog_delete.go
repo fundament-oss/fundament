@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteCatalogEntry(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteCatalogEntryRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	catalogID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteCatalogEntryRequest,
+) (*emptypb.Empty, error) {
+	catalogID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.DeviceCatalogDelete(ctx, db.DeviceCatalogDeleteParams{ID: catalogID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteCatalogEntry(
 
 	s.logger.InfoContext(ctx, "catalog entry deleted", "catalog_entry_id", catalogID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

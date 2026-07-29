@@ -43,8 +43,8 @@ const (
 
 // PluginMetadataServiceClient is a client for the pluginmetadata.v1.PluginMetadataService service.
 type PluginMetadataServiceClient interface {
-	GetStatus(context.Context, *connect.Request[v1.GetStatusRequest]) (*connect.Response[v1.GetStatusResponse], error)
-	RequestUninstall(context.Context, *connect.Request[v1.RequestUninstallRequest]) (*connect.Response[v1.RequestUninstallResponse], error)
+	GetStatus(context.Context, *v1.GetStatusRequest) (*v1.GetStatusResponse, error)
+	RequestUninstall(context.Context, *v1.RequestUninstallRequest) (*v1.RequestUninstallResponse, error)
 }
 
 // NewPluginMetadataServiceClient constructs a client for the
@@ -80,20 +80,28 @@ type pluginMetadataServiceClient struct {
 }
 
 // GetStatus calls pluginmetadata.v1.PluginMetadataService.GetStatus.
-func (c *pluginMetadataServiceClient) GetStatus(ctx context.Context, req *connect.Request[v1.GetStatusRequest]) (*connect.Response[v1.GetStatusResponse], error) {
-	return c.getStatus.CallUnary(ctx, req)
+func (c *pluginMetadataServiceClient) GetStatus(ctx context.Context, req *v1.GetStatusRequest) (*v1.GetStatusResponse, error) {
+	response, err := c.getStatus.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // RequestUninstall calls pluginmetadata.v1.PluginMetadataService.RequestUninstall.
-func (c *pluginMetadataServiceClient) RequestUninstall(ctx context.Context, req *connect.Request[v1.RequestUninstallRequest]) (*connect.Response[v1.RequestUninstallResponse], error) {
-	return c.requestUninstall.CallUnary(ctx, req)
+func (c *pluginMetadataServiceClient) RequestUninstall(ctx context.Context, req *v1.RequestUninstallRequest) (*v1.RequestUninstallResponse, error) {
+	response, err := c.requestUninstall.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // PluginMetadataServiceHandler is an implementation of the pluginmetadata.v1.PluginMetadataService
 // service.
 type PluginMetadataServiceHandler interface {
-	GetStatus(context.Context, *connect.Request[v1.GetStatusRequest]) (*connect.Response[v1.GetStatusResponse], error)
-	RequestUninstall(context.Context, *connect.Request[v1.RequestUninstallRequest]) (*connect.Response[v1.RequestUninstallResponse], error)
+	GetStatus(context.Context, *v1.GetStatusRequest) (*v1.GetStatusResponse, error)
+	RequestUninstall(context.Context, *v1.RequestUninstallRequest) (*v1.RequestUninstallResponse, error)
 }
 
 // NewPluginMetadataServiceHandler builds an HTTP handler from the service implementation. It
@@ -103,13 +111,13 @@ type PluginMetadataServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewPluginMetadataServiceHandler(svc PluginMetadataServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	pluginMetadataServiceMethods := v1.File_v1_metadata_proto.Services().ByName("PluginMetadataService").Methods()
-	pluginMetadataServiceGetStatusHandler := connect.NewUnaryHandler(
+	pluginMetadataServiceGetStatusHandler := connect.NewUnaryHandlerSimple(
 		PluginMetadataServiceGetStatusProcedure,
 		svc.GetStatus,
 		connect.WithSchema(pluginMetadataServiceMethods.ByName("GetStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
-	pluginMetadataServiceRequestUninstallHandler := connect.NewUnaryHandler(
+	pluginMetadataServiceRequestUninstallHandler := connect.NewUnaryHandlerSimple(
 		PluginMetadataServiceRequestUninstallProcedure,
 		svc.RequestUninstall,
 		connect.WithSchema(pluginMetadataServiceMethods.ByName("RequestUninstall")),
@@ -130,10 +138,10 @@ func NewPluginMetadataServiceHandler(svc PluginMetadataServiceHandler, opts ...c
 // UnimplementedPluginMetadataServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPluginMetadataServiceHandler struct{}
 
-func (UnimplementedPluginMetadataServiceHandler) GetStatus(context.Context, *connect.Request[v1.GetStatusRequest]) (*connect.Response[v1.GetStatusResponse], error) {
+func (UnimplementedPluginMetadataServiceHandler) GetStatus(context.Context, *v1.GetStatusRequest) (*v1.GetStatusResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pluginmetadata.v1.PluginMetadataService.GetStatus is not implemented"))
 }
 
-func (UnimplementedPluginMetadataServiceHandler) RequestUninstall(context.Context, *connect.Request[v1.RequestUninstallRequest]) (*connect.Response[v1.RequestUninstallResponse], error) {
+func (UnimplementedPluginMetadataServiceHandler) RequestUninstall(context.Context, *v1.RequestUninstallRequest) (*v1.RequestUninstallResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pluginmetadata.v1.PluginMetadataService.RequestUninstall is not implemented"))
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -28,15 +27,15 @@ func listTaskNotes(t *testing.T, env *testEnv, taskID string) []*dcimv1.Note {
 
 	client := dcimv1connect.NewNoteServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.ListNotes(context.Background(), connect.NewRequest(
+	resp, err := client.ListNotes(context.Background(),
 		(&dcimv1.ListNotesRequest_builder{
 			EntityType: dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_TASK,
 			EntityId:   taskID,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	return resp.Msg.GetNotes()
+	return resp.GetNotes()
 }
 
 // The author is resolved from the JWT, never from the request, so a note is
@@ -54,13 +53,13 @@ func TestNoteService_CreateNote_AttributesToCaller(t *testing.T) {
 
 	taskID := createTaskForNote(t, env, "Task With Notes")
 
-	_, err := client.CreateNote(context.Background(), connect.NewRequest(
+	_, err := client.CreateNote(context.Background(),
 		(&dcimv1.CreateNoteRequest_builder{
 			EntityType: dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_TASK,
 			EntityId:   taskID,
 			Body:       "disk swapped",
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	notes := listTaskNotes(t, env, taskID)
@@ -85,13 +84,13 @@ func TestNoteService_CreateNote_NoDirectoryEntry(t *testing.T) {
 
 	taskID := createTaskForNote(t, env, "Task Noted By A Stranger")
 
-	_, err := client.CreateNote(context.Background(), connect.NewRequest(
+	_, err := client.CreateNote(context.Background(),
 		(&dcimv1.CreateNoteRequest_builder{
 			EntityType: dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_TASK,
 			EntityId:   taskID,
 			Body:       "no roster entry here",
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	notes := listTaskNotes(t, env, taskID)
@@ -116,13 +115,13 @@ func TestNoteService_CreateNote_SoftDeletedAuthor(t *testing.T) {
 
 	taskID := createTaskForNote(t, env, "Task Noted After Deletion")
 
-	_, err = client.CreateNote(context.Background(), connect.NewRequest(
+	_, err = client.CreateNote(context.Background(),
 		(&dcimv1.CreateNoteRequest_builder{
 			EntityType: dcimv1.NoteEntityType_NOTE_ENTITY_TYPE_TASK,
 			EntityId:   taskID,
 			Body:       "written after the author was removed",
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	notes := listTaskNotes(t, env, taskID)

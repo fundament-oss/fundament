@@ -19,9 +19,9 @@ func Test_OrganizationLimits_Update_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.UpdateOrganizationLimits(context.Background(), connect.NewRequest(
+	_, err := client.UpdateOrganizationLimits(context.Background(),
 		organizationv1.UpdateOrganizationLimitsRequest_builder{Id: uuid.New().String()}.Build(),
-	))
+	)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -42,7 +42,7 @@ func Test_OrganizationLimits_Update(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	updateReq := connect.NewRequest(organizationv1.UpdateOrganizationLimitsRequest_builder{
+	updateReq := organizationv1.UpdateOrganizationLimitsRequest_builder{
 		Id:                     orgID.String(),
 		MaxNodesPerCluster:     proto.Int32(50),
 		MaxNodePoolsPerCluster: proto.Int32(10),
@@ -51,21 +51,23 @@ func Test_OrganizationLimits_Update(t *testing.T) {
 		DefaultMemoryLimitMi:   proto.Int32(256),
 		DefaultCpuRequestM:     proto.Int32(100),
 		DefaultCpuLimitM:       proto.Int32(500),
-	}.Build())
-	updateReq.Header().Set("Authorization", "Bearer "+token)
-	updateReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	updateCtx, updateCallInfo := connect.NewClientContext(context.Background())
+	updateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	updateCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.UpdateOrganizationLimits(context.Background(), updateReq)
+	_, err := client.UpdateOrganizationLimits(updateCtx, updateReq)
 	require.NoError(t, err)
 
-	getReq := connect.NewRequest(organizationv1.GetOrganizationLimitsRequest_builder{Id: orgID.String()}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
+	getReq := organizationv1.GetOrganizationLimitsRequest_builder{Id: orgID.String()}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	getRes, err := client.GetOrganizationLimits(context.Background(), getReq)
+	getRes, err := client.GetOrganizationLimits(getCtx, getReq)
 	require.NoError(t, err)
 
-	limits := getRes.Msg.GetLimits()
+	limits := getRes.GetLimits()
 	require.NotNil(t, limits)
 	assert.EqualValues(t, 50, limits.GetMaxNodesPerCluster())
 	assert.EqualValues(t, 10, limits.GetMaxNodePoolsPerCluster())
@@ -90,34 +92,37 @@ func Test_OrganizationLimits_Update_Overwrites(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	firstUpdate := connect.NewRequest(organizationv1.UpdateOrganizationLimitsRequest_builder{
+	firstUpdate := organizationv1.UpdateOrganizationLimitsRequest_builder{
 		Id:                 orgID.String(),
 		MaxNodesPerCluster: proto.Int32(50),
-	}.Build())
-	firstUpdate.Header().Set("Authorization", "Bearer "+token)
-	firstUpdate.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	firstUpdateCtx, firstUpdateCallInfo := connect.NewClientContext(context.Background())
+	firstUpdateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	firstUpdateCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.UpdateOrganizationLimits(context.Background(), firstUpdate)
+	_, err := client.UpdateOrganizationLimits(firstUpdateCtx, firstUpdate)
 	require.NoError(t, err)
 
-	secondUpdate := connect.NewRequest(organizationv1.UpdateOrganizationLimitsRequest_builder{
+	secondUpdate := organizationv1.UpdateOrganizationLimitsRequest_builder{
 		Id:                 orgID.String(),
 		MaxNodesPerCluster: proto.Int32(100),
-	}.Build())
-	secondUpdate.Header().Set("Authorization", "Bearer "+token)
-	secondUpdate.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	secondUpdateCtx, secondUpdateCallInfo := connect.NewClientContext(context.Background())
+	secondUpdateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	secondUpdateCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.UpdateOrganizationLimits(context.Background(), secondUpdate)
+	_, err = client.UpdateOrganizationLimits(secondUpdateCtx, secondUpdate)
 	require.NoError(t, err)
 
-	getReq := connect.NewRequest(organizationv1.GetOrganizationLimitsRequest_builder{Id: orgID.String()}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
+	getReq := organizationv1.GetOrganizationLimitsRequest_builder{Id: orgID.String()}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	getRes, err := client.GetOrganizationLimits(context.Background(), getReq)
+	getRes, err := client.GetOrganizationLimits(getCtx, getReq)
 	require.NoError(t, err)
 
-	assert.EqualValues(t, 100, getRes.Msg.GetLimits().GetMaxNodesPerCluster())
+	assert.EqualValues(t, 100, getRes.GetLimits().GetMaxNodesPerCluster())
 }
 
 func Test_OrganizationLimits_Update_IsolatedBetweenOrgs(t *testing.T) {
@@ -139,24 +144,26 @@ func Test_OrganizationLimits_Update_IsolatedBetweenOrgs(t *testing.T) {
 	token2 := env.createAuthnToken(t, user2ID)
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	updateReq := connect.NewRequest(organizationv1.UpdateOrganizationLimitsRequest_builder{
+	updateReq := organizationv1.UpdateOrganizationLimitsRequest_builder{
 		Id:                 org1ID.String(),
 		MaxNodesPerCluster: proto.Int32(42),
-	}.Build())
-	updateReq.Header().Set("Authorization", "Bearer "+token1)
-	updateReq.Header().Set("Fun-Organization", org1ID.String())
+	}.Build()
+	updateCtx, updateCallInfo := connect.NewClientContext(context.Background())
+	updateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token1)
+	updateCallInfo.RequestHeader().Set("Fun-Organization", org1ID.String())
 
-	_, err := client.UpdateOrganizationLimits(context.Background(), updateReq)
+	_, err := client.UpdateOrganizationLimits(updateCtx, updateReq)
 	require.NoError(t, err)
 
 	// org2 should see no limits
-	getReq := connect.NewRequest(organizationv1.GetOrganizationLimitsRequest_builder{Id: org2ID.String()}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token2)
-	getReq.Header().Set("Fun-Organization", org2ID.String())
+	getReq := organizationv1.GetOrganizationLimitsRequest_builder{Id: org2ID.String()}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token2)
+	getCallInfo.RequestHeader().Set("Fun-Organization", org2ID.String())
 
-	getRes, err := client.GetOrganizationLimits(context.Background(), getReq)
+	getRes, err := client.GetOrganizationLimits(getCtx, getReq)
 	require.NoError(t, err)
-	assert.False(t, getRes.Msg.GetLimits().HasMaxNodesPerCluster())
+	assert.False(t, getRes.GetLimits().HasMaxNodesPerCluster())
 }
 
 func Test_OrganizationLimits_Update_MemoryLimitLessThanRequest(t *testing.T) {
@@ -173,15 +180,16 @@ func Test_OrganizationLimits_Update_MemoryLimitLessThanRequest(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.UpdateOrganizationLimitsRequest_builder{
+	req := organizationv1.UpdateOrganizationLimitsRequest_builder{
 		Id:                     orgID.String(),
 		DefaultMemoryRequestMi: proto.Int32(256),
 		DefaultMemoryLimitMi:   proto.Int32(128),
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.UpdateOrganizationLimits(context.Background(), req)
+	_, err := client.UpdateOrganizationLimits(ctx, req)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -202,15 +210,16 @@ func Test_OrganizationLimits_Update_CpuLimitLessThanRequest(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewOrganizationServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.UpdateOrganizationLimitsRequest_builder{
+	req := organizationv1.UpdateOrganizationLimitsRequest_builder{
 		Id:                 orgID.String(),
 		DefaultCpuRequestM: proto.Int32(500),
 		DefaultCpuLimitM:   proto.Int32(100),
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.UpdateOrganizationLimits(context.Background(), req)
+	_, err := client.UpdateOrganizationLimits(ctx, req)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)

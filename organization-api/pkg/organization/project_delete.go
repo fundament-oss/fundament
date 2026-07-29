@@ -17,9 +17,9 @@ import (
 
 func (s *Server) DeleteProject(
 	ctx context.Context,
-	req *connect.Request[organizationv1.DeleteProjectRequest],
-) (*connect.Response[organizationv1.DeleteProjectResponse], error) {
-	projectID := uuid.MustParse(req.Msg.GetProjectId())
+	req *organizationv1.DeleteProjectRequest,
+) (*organizationv1.DeleteProjectResponse, error) {
+	projectID := uuid.MustParse(req.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanDelete(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -41,5 +41,5 @@ func (s *Server) DeleteProject(
 
 	s.logger.InfoContext(ctx, "project deleted", "project_id", projectID)
 
-	return connect.NewResponse(organizationv1.DeleteProjectResponse_builder{}.Build()), nil
+	return organizationv1.DeleteProjectResponse_builder{}.Build(), nil
 }

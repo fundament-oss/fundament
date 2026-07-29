@@ -28,17 +28,17 @@ func NewMetadataHandler(statusFn func() PluginStatus, uninstallFn func(context.C
 	}
 }
 
-func (h *metadataHandler) GetStatus(_ context.Context, _ *connect.Request[pb.GetStatusRequest]) (*connect.Response[pb.GetStatusResponse], error) {
+func (h *metadataHandler) GetStatus(_ context.Context, _ *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
 	status := h.getStatus()
-	return connect.NewResponse(&pb.GetStatusResponse{
+	return &pb.GetStatusResponse{
 		Phase:   ptr(string(status.Phase)),
 		Message: ptr(status.Message),
-	}), nil
+	}, nil
 }
 
-func (h *metadataHandler) RequestUninstall(ctx context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+func (h *metadataHandler) RequestUninstall(ctx context.Context, _ *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error) {
 	if err := h.uninstall(ctx); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	return connect.NewResponse(&pb.RequestUninstallResponse{}), nil
+	return &pb.RequestUninstallResponse{}, nil
 }

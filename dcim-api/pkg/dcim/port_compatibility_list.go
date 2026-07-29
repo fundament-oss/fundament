@@ -13,9 +13,9 @@ import (
 
 func (s *Server) ListPortCompatibilities(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListPortCompatibilitiesRequest],
-) (*connect.Response[dcimv1.ListPortCompatibilitiesResponse], error) {
-	portDefID := uuid.MustParse(req.Msg.GetPortDefinitionId())
+	req *dcimv1.ListPortCompatibilitiesRequest,
+) (*dcimv1.ListPortCompatibilitiesResponse, error) {
+	portDefID := uuid.MustParse(req.GetPortDefinitionId())
 
 	rows, err := s.queries.PortCompatibilityList(ctx, db.PortCompatibilityListParams{PortDefinitionID: portDefID})
 	if err != nil {
@@ -36,7 +36,7 @@ func (s *Server) ListPortCompatibilities(
 		compatibilities = append(compatibilities, pc)
 	}
 
-	return connect.NewResponse(dcimv1.ListPortCompatibilitiesResponse_builder{
+	return dcimv1.ListPortCompatibilitiesResponse_builder{
 		Compatibilities: compatibilities,
-	}.Build()), nil
+	}.Build(), nil
 }

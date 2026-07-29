@@ -50,13 +50,13 @@ const (
 // InviteServiceClient is a client for the organization.v1.InviteService service.
 type InviteServiceClient interface {
 	// Invite a new member by email (org-scoped)
-	InviteMember(context.Context, *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error)
+	InviteMember(context.Context, *v1.InviteMemberRequest) (*v1.InviteMemberResponse, error)
 	// List pending invitations for the current user (user-scoped, no org header needed)
-	ListInvitations(context.Context, *connect.Request[v1.ListInvitationsRequest]) (*connect.Response[v1.ListInvitationsResponse], error)
+	ListInvitations(context.Context, *v1.ListInvitationsRequest) (*v1.ListInvitationsResponse, error)
 	// Accept a pending invitation (user-scoped, no org header needed)
-	AcceptInvitation(context.Context, *connect.Request[v1.AcceptInvitationRequest]) (*connect.Response[v1.AcceptInvitationResponse], error)
+	AcceptInvitation(context.Context, *v1.AcceptInvitationRequest) (*v1.AcceptInvitationResponse, error)
 	// Decline a pending invitation (user-scoped, no org header needed)
-	DeclineInvitation(context.Context, *connect.Request[v1.DeclineInvitationRequest]) (*connect.Response[v1.DeclineInvitationResponse], error)
+	DeclineInvitation(context.Context, *v1.DeclineInvitationRequest) (*v1.DeclineInvitationResponse, error)
 }
 
 // NewInviteServiceClient constructs a client for the organization.v1.InviteService service. By
@@ -106,35 +106,51 @@ type inviteServiceClient struct {
 }
 
 // InviteMember calls organization.v1.InviteService.InviteMember.
-func (c *inviteServiceClient) InviteMember(ctx context.Context, req *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error) {
-	return c.inviteMember.CallUnary(ctx, req)
+func (c *inviteServiceClient) InviteMember(ctx context.Context, req *v1.InviteMemberRequest) (*v1.InviteMemberResponse, error) {
+	response, err := c.inviteMember.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // ListInvitations calls organization.v1.InviteService.ListInvitations.
-func (c *inviteServiceClient) ListInvitations(ctx context.Context, req *connect.Request[v1.ListInvitationsRequest]) (*connect.Response[v1.ListInvitationsResponse], error) {
-	return c.listInvitations.CallUnary(ctx, req)
+func (c *inviteServiceClient) ListInvitations(ctx context.Context, req *v1.ListInvitationsRequest) (*v1.ListInvitationsResponse, error) {
+	response, err := c.listInvitations.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // AcceptInvitation calls organization.v1.InviteService.AcceptInvitation.
-func (c *inviteServiceClient) AcceptInvitation(ctx context.Context, req *connect.Request[v1.AcceptInvitationRequest]) (*connect.Response[v1.AcceptInvitationResponse], error) {
-	return c.acceptInvitation.CallUnary(ctx, req)
+func (c *inviteServiceClient) AcceptInvitation(ctx context.Context, req *v1.AcceptInvitationRequest) (*v1.AcceptInvitationResponse, error) {
+	response, err := c.acceptInvitation.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeclineInvitation calls organization.v1.InviteService.DeclineInvitation.
-func (c *inviteServiceClient) DeclineInvitation(ctx context.Context, req *connect.Request[v1.DeclineInvitationRequest]) (*connect.Response[v1.DeclineInvitationResponse], error) {
-	return c.declineInvitation.CallUnary(ctx, req)
+func (c *inviteServiceClient) DeclineInvitation(ctx context.Context, req *v1.DeclineInvitationRequest) (*v1.DeclineInvitationResponse, error) {
+	response, err := c.declineInvitation.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // InviteServiceHandler is an implementation of the organization.v1.InviteService service.
 type InviteServiceHandler interface {
 	// Invite a new member by email (org-scoped)
-	InviteMember(context.Context, *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error)
+	InviteMember(context.Context, *v1.InviteMemberRequest) (*v1.InviteMemberResponse, error)
 	// List pending invitations for the current user (user-scoped, no org header needed)
-	ListInvitations(context.Context, *connect.Request[v1.ListInvitationsRequest]) (*connect.Response[v1.ListInvitationsResponse], error)
+	ListInvitations(context.Context, *v1.ListInvitationsRequest) (*v1.ListInvitationsResponse, error)
 	// Accept a pending invitation (user-scoped, no org header needed)
-	AcceptInvitation(context.Context, *connect.Request[v1.AcceptInvitationRequest]) (*connect.Response[v1.AcceptInvitationResponse], error)
+	AcceptInvitation(context.Context, *v1.AcceptInvitationRequest) (*v1.AcceptInvitationResponse, error)
 	// Decline a pending invitation (user-scoped, no org header needed)
-	DeclineInvitation(context.Context, *connect.Request[v1.DeclineInvitationRequest]) (*connect.Response[v1.DeclineInvitationResponse], error)
+	DeclineInvitation(context.Context, *v1.DeclineInvitationRequest) (*v1.DeclineInvitationResponse, error)
 }
 
 // NewInviteServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -144,25 +160,25 @@ type InviteServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewInviteServiceHandler(svc InviteServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	inviteServiceMethods := v1.File_v1_invite_proto.Services().ByName("InviteService").Methods()
-	inviteServiceInviteMemberHandler := connect.NewUnaryHandler(
+	inviteServiceInviteMemberHandler := connect.NewUnaryHandlerSimple(
 		InviteServiceInviteMemberProcedure,
 		svc.InviteMember,
 		connect.WithSchema(inviteServiceMethods.ByName("InviteMember")),
 		connect.WithHandlerOptions(opts...),
 	)
-	inviteServiceListInvitationsHandler := connect.NewUnaryHandler(
+	inviteServiceListInvitationsHandler := connect.NewUnaryHandlerSimple(
 		InviteServiceListInvitationsProcedure,
 		svc.ListInvitations,
 		connect.WithSchema(inviteServiceMethods.ByName("ListInvitations")),
 		connect.WithHandlerOptions(opts...),
 	)
-	inviteServiceAcceptInvitationHandler := connect.NewUnaryHandler(
+	inviteServiceAcceptInvitationHandler := connect.NewUnaryHandlerSimple(
 		InviteServiceAcceptInvitationProcedure,
 		svc.AcceptInvitation,
 		connect.WithSchema(inviteServiceMethods.ByName("AcceptInvitation")),
 		connect.WithHandlerOptions(opts...),
 	)
-	inviteServiceDeclineInvitationHandler := connect.NewUnaryHandler(
+	inviteServiceDeclineInvitationHandler := connect.NewUnaryHandlerSimple(
 		InviteServiceDeclineInvitationProcedure,
 		svc.DeclineInvitation,
 		connect.WithSchema(inviteServiceMethods.ByName("DeclineInvitation")),
@@ -187,18 +203,18 @@ func NewInviteServiceHandler(svc InviteServiceHandler, opts ...connect.HandlerOp
 // UnimplementedInviteServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedInviteServiceHandler struct{}
 
-func (UnimplementedInviteServiceHandler) InviteMember(context.Context, *connect.Request[v1.InviteMemberRequest]) (*connect.Response[v1.InviteMemberResponse], error) {
+func (UnimplementedInviteServiceHandler) InviteMember(context.Context, *v1.InviteMemberRequest) (*v1.InviteMemberResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.InviteService.InviteMember is not implemented"))
 }
 
-func (UnimplementedInviteServiceHandler) ListInvitations(context.Context, *connect.Request[v1.ListInvitationsRequest]) (*connect.Response[v1.ListInvitationsResponse], error) {
+func (UnimplementedInviteServiceHandler) ListInvitations(context.Context, *v1.ListInvitationsRequest) (*v1.ListInvitationsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.InviteService.ListInvitations is not implemented"))
 }
 
-func (UnimplementedInviteServiceHandler) AcceptInvitation(context.Context, *connect.Request[v1.AcceptInvitationRequest]) (*connect.Response[v1.AcceptInvitationResponse], error) {
+func (UnimplementedInviteServiceHandler) AcceptInvitation(context.Context, *v1.AcceptInvitationRequest) (*v1.AcceptInvitationResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.InviteService.AcceptInvitation is not implemented"))
 }
 
-func (UnimplementedInviteServiceHandler) DeclineInvitation(context.Context, *connect.Request[v1.DeclineInvitationRequest]) (*connect.Response[v1.DeclineInvitationResponse], error) {
+func (UnimplementedInviteServiceHandler) DeclineInvitation(context.Context, *v1.DeclineInvitationRequest) (*v1.DeclineInvitationResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.InviteService.DeclineInvitation is not implemented"))
 }

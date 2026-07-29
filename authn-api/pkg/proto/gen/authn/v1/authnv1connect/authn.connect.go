@@ -50,7 +50,7 @@ const (
 type AuthnServiceClient interface {
 	// GetUserInfo returns the current user's information
 	// Validates the JWT from Authorization header or cookie
-	GetUserInfo(context.Context, *connect.Request[v1.GetUserInfoRequest]) (*connect.Response[v1.GetUserInfoResponse], error)
+	GetUserInfo(context.Context, *v1.GetUserInfoRequest) (*v1.GetUserInfoResponse, error)
 }
 
 // NewAuthnServiceClient constructs a client for the authn.v1.AuthnService service. By default, it
@@ -79,15 +79,19 @@ type authnServiceClient struct {
 }
 
 // GetUserInfo calls authn.v1.AuthnService.GetUserInfo.
-func (c *authnServiceClient) GetUserInfo(ctx context.Context, req *connect.Request[v1.GetUserInfoRequest]) (*connect.Response[v1.GetUserInfoResponse], error) {
-	return c.getUserInfo.CallUnary(ctx, req)
+func (c *authnServiceClient) GetUserInfo(ctx context.Context, req *v1.GetUserInfoRequest) (*v1.GetUserInfoResponse, error) {
+	response, err := c.getUserInfo.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // AuthnServiceHandler is an implementation of the authn.v1.AuthnService service.
 type AuthnServiceHandler interface {
 	// GetUserInfo returns the current user's information
 	// Validates the JWT from Authorization header or cookie
-	GetUserInfo(context.Context, *connect.Request[v1.GetUserInfoRequest]) (*connect.Response[v1.GetUserInfoResponse], error)
+	GetUserInfo(context.Context, *v1.GetUserInfoRequest) (*v1.GetUserInfoResponse, error)
 }
 
 // NewAuthnServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -97,7 +101,7 @@ type AuthnServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewAuthnServiceHandler(svc AuthnServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	authnServiceMethods := v1.File_authn_v1_authn_proto.Services().ByName("AuthnService").Methods()
-	authnServiceGetUserInfoHandler := connect.NewUnaryHandler(
+	authnServiceGetUserInfoHandler := connect.NewUnaryHandlerSimple(
 		AuthnServiceGetUserInfoProcedure,
 		svc.GetUserInfo,
 		connect.WithSchema(authnServiceMethods.ByName("GetUserInfo")),
@@ -116,7 +120,7 @@ func NewAuthnServiceHandler(svc AuthnServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedAuthnServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAuthnServiceHandler struct{}
 
-func (UnimplementedAuthnServiceHandler) GetUserInfo(context.Context, *connect.Request[v1.GetUserInfoRequest]) (*connect.Response[v1.GetUserInfoResponse], error) {
+func (UnimplementedAuthnServiceHandler) GetUserInfo(context.Context, *v1.GetUserInfoRequest) (*v1.GetUserInfoResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("authn.v1.AuthnService.GetUserInfo is not implemented"))
 }
 
@@ -124,12 +128,12 @@ func (UnimplementedAuthnServiceHandler) GetUserInfo(context.Context, *connect.Re
 type TokenServiceClient interface {
 	// ExchangeToken exchanges an API key for a short-lived JWT
 	// The API key should be provided in the Authorization header as Bearer token
-	ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error)
+	ExchangeToken(context.Context, *v1.ExchangeTokenRequest) (*v1.ExchangeTokenResponse, error)
 	// MintPluginToken issues a short-lived JWT scoped to a specific plugin
 	// installation on a specific cluster. The caller authenticates with a
 	// UserToken. The minted token carries aud=fundament-plugin and is rejected
 	// by every API except kube-api-proxy and plugin-proxy.
-	MintPluginToken(context.Context, *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error)
+	MintPluginToken(context.Context, *v1.MintPluginTokenRequest) (*v1.MintPluginTokenResponse, error)
 }
 
 // NewTokenServiceClient constructs a client for the authn.v1.TokenService service. By default, it
@@ -165,25 +169,33 @@ type tokenServiceClient struct {
 }
 
 // ExchangeToken calls authn.v1.TokenService.ExchangeToken.
-func (c *tokenServiceClient) ExchangeToken(ctx context.Context, req *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error) {
-	return c.exchangeToken.CallUnary(ctx, req)
+func (c *tokenServiceClient) ExchangeToken(ctx context.Context, req *v1.ExchangeTokenRequest) (*v1.ExchangeTokenResponse, error) {
+	response, err := c.exchangeToken.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // MintPluginToken calls authn.v1.TokenService.MintPluginToken.
-func (c *tokenServiceClient) MintPluginToken(ctx context.Context, req *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error) {
-	return c.mintPluginToken.CallUnary(ctx, req)
+func (c *tokenServiceClient) MintPluginToken(ctx context.Context, req *v1.MintPluginTokenRequest) (*v1.MintPluginTokenResponse, error) {
+	response, err := c.mintPluginToken.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // TokenServiceHandler is an implementation of the authn.v1.TokenService service.
 type TokenServiceHandler interface {
 	// ExchangeToken exchanges an API key for a short-lived JWT
 	// The API key should be provided in the Authorization header as Bearer token
-	ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error)
+	ExchangeToken(context.Context, *v1.ExchangeTokenRequest) (*v1.ExchangeTokenResponse, error)
 	// MintPluginToken issues a short-lived JWT scoped to a specific plugin
 	// installation on a specific cluster. The caller authenticates with a
 	// UserToken. The minted token carries aud=fundament-plugin and is rejected
 	// by every API except kube-api-proxy and plugin-proxy.
-	MintPluginToken(context.Context, *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error)
+	MintPluginToken(context.Context, *v1.MintPluginTokenRequest) (*v1.MintPluginTokenResponse, error)
 }
 
 // NewTokenServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -193,13 +205,13 @@ type TokenServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewTokenServiceHandler(svc TokenServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	tokenServiceMethods := v1.File_authn_v1_authn_proto.Services().ByName("TokenService").Methods()
-	tokenServiceExchangeTokenHandler := connect.NewUnaryHandler(
+	tokenServiceExchangeTokenHandler := connect.NewUnaryHandlerSimple(
 		TokenServiceExchangeTokenProcedure,
 		svc.ExchangeToken,
 		connect.WithSchema(tokenServiceMethods.ByName("ExchangeToken")),
 		connect.WithHandlerOptions(opts...),
 	)
-	tokenServiceMintPluginTokenHandler := connect.NewUnaryHandler(
+	tokenServiceMintPluginTokenHandler := connect.NewUnaryHandlerSimple(
 		TokenServiceMintPluginTokenProcedure,
 		svc.MintPluginToken,
 		connect.WithSchema(tokenServiceMethods.ByName("MintPluginToken")),
@@ -220,10 +232,10 @@ func NewTokenServiceHandler(svc TokenServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedTokenServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedTokenServiceHandler struct{}
 
-func (UnimplementedTokenServiceHandler) ExchangeToken(context.Context, *connect.Request[v1.ExchangeTokenRequest]) (*connect.Response[v1.ExchangeTokenResponse], error) {
+func (UnimplementedTokenServiceHandler) ExchangeToken(context.Context, *v1.ExchangeTokenRequest) (*v1.ExchangeTokenResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("authn.v1.TokenService.ExchangeToken is not implemented"))
 }
 
-func (UnimplementedTokenServiceHandler) MintPluginToken(context.Context, *connect.Request[v1.MintPluginTokenRequest]) (*connect.Response[v1.MintPluginTokenResponse], error) {
+func (UnimplementedTokenServiceHandler) MintPluginToken(context.Context, *v1.MintPluginTokenRequest) (*v1.MintPluginTokenResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("authn.v1.TokenService.MintPluginToken is not implemented"))
 }

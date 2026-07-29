@@ -11,14 +11,14 @@ import (
 
 func (s *Server) GetAssetStats(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetAssetStatsRequest],
-) (*connect.Response[dcimv1.GetAssetStatsResponse], error) {
+	req *dcimv1.GetAssetStatsRequest,
+) (*dcimv1.GetAssetStatsResponse, error) {
 	row, err := s.queries.AssetStats(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get asset stats: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetAssetStatsResponse_builder{
+	return dcimv1.GetAssetStatsResponse_builder{
 		Stats: dcimv1.AssetStats_builder{
 			Total:          row.Total,
 			Available:      row.Available,
@@ -28,5 +28,5 @@ func (s *Server) GetAssetStats(
 			Requested:      row.Requested,
 			Decommissioned: row.Decommissioned,
 		}.Build(),
-	}.Build()), nil
+	}.Build(), nil
 }

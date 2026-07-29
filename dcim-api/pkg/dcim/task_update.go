@@ -19,28 +19,28 @@ import (
 
 func (s *Server) UpdateTask(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateTaskRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	taskID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateTaskRequest,
+) (*emptypb.Empty, error) {
+	taskID := uuid.MustParse(req.GetId())
 
 	params := db.TaskUpdateParams{
 		ID: taskID,
 	}
 
-	if req.Msg.HasTitle() {
-		params.Title = pgtype.Text{String: req.Msg.GetTitle(), Valid: true}
+	if req.HasTitle() {
+		params.Title = pgtype.Text{String: req.GetTitle(), Valid: true}
 	}
 
-	if req.Msg.HasStatus() {
-		params.Status = pgtype.Text{String: taskStatusFromProto(req.Msg.GetStatus()), Valid: true}
+	if req.HasStatus() {
+		params.Status = pgtype.Text{String: taskStatusFromProto(req.GetStatus()), Valid: true}
 	}
 
-	if req.Msg.HasPriority() {
-		params.Priority = pgtype.Text{String: taskPriorityFromProto(req.Msg.GetPriority()), Valid: true}
+	if req.HasPriority() {
+		params.Priority = pgtype.Text{String: taskPriorityFromProto(req.GetPriority()), Valid: true}
 	}
 
-	if req.Msg.HasCategory() {
-		params.Category = pgtype.Text{String: taskCategoryFromProto(req.Msg.GetCategory()), Valid: true}
+	if req.HasCategory() {
+		params.Category = pgtype.Text{String: taskCategoryFromProto(req.GetCategory()), Valid: true}
 	}
 
 	// For the nullable columns, an explicitly-set field clears the column when it
@@ -51,16 +51,16 @@ func (s *Server) UpdateTask(
 	// starts NULL, so an edit that empties it has to write NULL as well —
 	// otherwise the table ends up with two spellings of "no description", '' on
 	// rows that were edited and NULL on rows that never had one.
-	if req.Msg.HasDescription() {
-		if v := req.Msg.GetDescription(); v == "" {
+	if req.HasDescription() {
+		if v := req.GetDescription(); v == "" {
 			params.ClearDescription = true
 		} else {
 			params.Description = pgtype.Text{String: v, Valid: true}
 		}
 	}
 
-	if req.Msg.HasAssigneeId() {
-		if v := req.Msg.GetAssigneeId(); v == "" {
+	if req.HasAssigneeId() {
+		if v := req.GetAssigneeId(); v == "" {
 			params.ClearAssignee = true
 		} else {
 			assigneeID, err := uuid.Parse(v)
@@ -72,16 +72,16 @@ func (s *Server) UpdateTask(
 		}
 	}
 
-	if req.Msg.HasDueDate() {
-		if t := req.Msg.GetDueDate().AsTime(); t.Equal(time.Unix(0, 0).UTC()) {
+	if req.HasDueDate() {
+		if t := req.GetDueDate().AsTime(); t.Equal(time.Unix(0, 0).UTC()) {
 			params.ClearDueDate = true
 		} else {
 			params.DueDate = pgtype.Timestamptz{Time: t, Valid: true}
 		}
 	}
 
-	if req.Msg.HasLocation() {
-		if v := req.Msg.GetLocation(); v == "" {
+	if req.HasLocation() {
+		if v := req.GetLocation(); v == "" {
 			params.ClearLocation = true
 		} else {
 			params.Location = pgtype.Text{String: v, Valid: true}
@@ -103,5 +103,5 @@ func (s *Server) UpdateTask(
 
 	s.logger.InfoContext(ctx, "task updated", "task_id", taskID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

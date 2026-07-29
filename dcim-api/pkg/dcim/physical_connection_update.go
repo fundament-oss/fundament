@@ -19,24 +19,24 @@ import (
 
 func (s *Server) UpdatePhysicalConnection(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdatePhysicalConnectionRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	connID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdatePhysicalConnectionRequest,
+) (*emptypb.Empty, error) {
+	connID := uuid.MustParse(req.GetId())
 
 	params := db.PhysicalConnectionUpdateParams{
 		ID: connID,
 	}
 
-	if req.Msg.HasCableAssetId() {
-		if v := req.Msg.GetCableAssetId(); v == "" {
+	if req.HasCableAssetId() {
+		if v := req.GetCableAssetId(); v == "" {
 			params.ClearCableAssetID = true
 		} else {
 			params.CableAssetID = pgtype.UUID{Bytes: uuid.MustParse(v), Valid: true}
 		}
 	}
 
-	if req.Msg.HasLogicalConnectionId() {
-		if v := req.Msg.GetLogicalConnectionId(); v == "" {
+	if req.HasLogicalConnectionId() {
+		if v := req.GetLogicalConnectionId(); v == "" {
 			params.ClearLogicalConnectionID = true
 		} else {
 			params.LogicalConnectionID = pgtype.UUID{Bytes: uuid.MustParse(v), Valid: true}
@@ -46,32 +46,32 @@ func (s *Server) UpdatePhysicalConnection(
 	// For the presentation attributes, an explicitly-set field clears the column
 	// when it carries the "empty" sentinel (UNSPECIFIED enum / empty label) and
 	// otherwise overwrites it. Leaving the field unset keeps the current value.
-	if req.Msg.HasCableType() {
-		if t := req.Msg.GetCableType(); t == dcimv1.CableType_CABLE_TYPE_UNSPECIFIED {
+	if req.HasCableType() {
+		if t := req.GetCableType(); t == dcimv1.CableType_CABLE_TYPE_UNSPECIFIED {
 			params.ClearCableType = true
 		} else {
 			params.CableType = cableTypeToDB(t)
 		}
 	}
 
-	if req.Msg.HasStatus() {
-		if st := req.Msg.GetStatus(); st == dcimv1.CableStatus_CABLE_STATUS_UNSPECIFIED {
+	if req.HasStatus() {
+		if st := req.GetStatus(); st == dcimv1.CableStatus_CABLE_STATUS_UNSPECIFIED {
 			params.ClearStatus = true
 		} else {
 			params.Status = cableStatusToDB(st)
 		}
 	}
 
-	if req.Msg.HasColor() {
-		if c := req.Msg.GetColor(); c == dcimv1.CableColor_CABLE_COLOR_UNSPECIFIED {
+	if req.HasColor() {
+		if c := req.GetColor(); c == dcimv1.CableColor_CABLE_COLOR_UNSPECIFIED {
 			params.ClearColor = true
 		} else {
 			params.Color = cableColorToDB(c)
 		}
 	}
 
-	if req.Msg.HasLabel() {
-		if v := req.Msg.GetLabel(); v == "" {
+	if req.HasLabel() {
+		if v := req.GetLabel(); v == "" {
 			params.ClearLabel = true
 		} else {
 			params.Label = pgtype.Text{String: v, Valid: true}
@@ -98,5 +98,5 @@ func (s *Server) UpdatePhysicalConnection(
 
 	s.logger.InfoContext(ctx, "physical connection updated", "connection_id", connID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }
