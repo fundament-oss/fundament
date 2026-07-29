@@ -28,7 +28,7 @@ opentofu = "1.11.3"
 # Protobuf
 "aqua:bufbuild/buf" = "1.66.0"
 "go:google.golang.org/protobuf/cmd/protoc-gen-go" = "1.36.11"
-"go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "1.19.1"
+"go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "1.20.0"
 
 # Go
 go = "1.26.5"
