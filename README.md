@@ -16,7 +16,7 @@ The focus of the project is currently on research and ideation. Some initial PoC
 - [Infrastructure](docs/user/infrastructure.md)
 - [Organizations and projects](docs/user/organizations.md)
 - [Plugins](docs/user/plugins.md)
-- [Development setup](docs/developer/development-setup.md)
+- [Fundament development](docs/developer/fundament/getting-started.md)
 - [Plugin development](docs/developer/plugins/index.md)
 
 ## Contributing

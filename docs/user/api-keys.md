@@ -11,7 +11,8 @@ see [Members and roles](./members-and-roles.md).
 
 ## Creating a key
 
-Go to **API keys** in the console and create a key with:
+Go to [**API keys**](https://console.fundament.projects.digilab.network/api-keys)
+in the console and create a key with:
 
 - **Name** — how you recognise it later (1–255 characters).
 - **Expiry** — how long the key stays valid. A key can also be created without

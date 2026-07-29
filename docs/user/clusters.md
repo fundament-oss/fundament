@@ -12,7 +12,8 @@ infrastructure provisioned with metal-stack; see
 
 ## Creating a cluster
 
-**Clusters → Add cluster** starts a three-step wizard.
+[**Clusters → Add cluster**](https://console.fundament.projects.digilab.network/clusters/add)
+starts a three-step wizard.
 
 ### Step 1 — Cluster
 

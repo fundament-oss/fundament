@@ -20,7 +20,7 @@ A Plugin is installed as a Helm Chart, with optional additional configuration an
 
 ## Plugin Marketplace
 
-The Plugin Marketplace allows Cluster Admins to find and install Plugins into their Cluster.
+The [Plugin Marketplace](https://console.fundament.projects.digilab.network/plugins) allows Cluster Admins to find and install Plugins into their Cluster.
 
 There are four labels of Plugins. These indicate the quality and level of support of a Plugin:
 

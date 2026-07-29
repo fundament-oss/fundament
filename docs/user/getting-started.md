@@ -9,22 +9,24 @@ in, finding your organization, launching a cluster, creating a project and
 installing a plugin.
 
 If you are looking to build plugins on top of Fundament rather than use it, see the
-[Developer documentation](../developer/development-setup.md) instead.
+[Developer documentation](../developer/fundament/getting-started.md) instead.
 
 ## Before you start
 
 You need:
 
-- An account in a Fundament installation, and the URL of its console.
+- An account in a Fundament installation, and the URL of its console. For the
+  hosted installation that is the
+  [Fundament Console](https://console.fundament.projects.digilab.network/).
 - Membership of at least one organization. Organizations are not self-service:
   an existing organization admin invites you. See
   [Members and roles](./members-and-roles.md).
 
 ## 1. Sign in
 
-Open the console and sign in. Authentication is handled by the platform's
-identity provider, so you use the same credentials as for the rest of your
-organization's tooling.
+Open the [console](https://console.fundament.projects.digilab.network/) and sign
+in. Authentication is handled by the platform's identity provider, so you use
+the same credentials as for the rest of your organization's tooling.
 
 After signing in you land on the dashboard. If you belong to more than one
 organization, use the organization picker in the header to switch between them —

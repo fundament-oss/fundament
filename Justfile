@@ -47,7 +47,7 @@ setup-certs:
     #!/usr/bin/env bash
     set -e
     which mkcert > /dev/null 2>&1 || { echo "mkcert not installed. Run: mise install"; exit 1; }
-    which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/development-setup.md for installation instructions."; exit 1; }
+    which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/developer/fundament/getting-started.md for installation instructions."; exit 1; }
     TRUST_STORES=system,nss mkcert -install
     echo "Waiting for cert-manager to become available..."
     deadline=$(( $(date +%s) + 120 ))
