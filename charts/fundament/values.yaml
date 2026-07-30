@@ -21,6 +21,7 @@ externalUrls:
   pluginProxy: "" # e.g., https://plugin-proxy.example.com (FUN-17 dedicated origin)
   corsAllowedOrigins: "" # e.g., "https://console.example.com" (comma-separated; defaults to console URL if empty)
   console: "" # e.g., https://app.example.com
+  consoleDemo: "" # e.g., https://console-demo.example.com (walkthrough; empty hides the console's "Take a tour" button)
   docs: "" # e.g., https://docs.example.com
   dcimApi: "" # e.g., https://dcim-api.example.com
   dcimAuthn: "" # e.g., https://dcim-authn.example.com
@@ -33,6 +34,7 @@ images:
   authnApi: ghcr.io/fundament-oss/fundament/authn-api:latest
   organizationApi: ghcr.io/fundament-oss/fundament/organization-api:latest
   consoleFrontend: ghcr.io/fundament-oss/fundament/console-frontend:latest
+  consoleDemoFrontend: ghcr.io/fundament-oss/fundament/console-demo-frontend:latest
   docsFrontend: ghcr.io/fundament-oss/fundament/docs-frontend:latest
   clusterWorker: ghcr.io/fundament-oss/fundament/cluster-worker:latest
   authzWorker: ghcr.io/fundament-oss/fundament/authz-worker:latest
@@ -143,6 +145,19 @@ consoleFrontend:
     #    namespace: gateway-ns
     hostnames: []
     #  - console.example.com
+
+# Console walkthrough (demo build on in-memory data; no backend required).
+# Not enabled in production — see values-production.yaml.
+consoleDemoFrontend:
+  enabled: false
+  replicas: 1
+  httproute:
+    enabled: false
+    parentRefs: []
+    #  - name: gateway
+    #    namespace: gateway-ns
+    hostnames: []
+    #  - console-demo.example.com
 
 # Docs frontend
 docsFrontend:

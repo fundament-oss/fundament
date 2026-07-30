@@ -1,7 +1,7 @@
 import { Injectable, inject, computed } from '@angular/core';
 import PluginRegistryService from './plugin-registry.service';
 import type { PluginNavGroup } from './types';
-import { kindToLabel } from './crd-schema.utils';
+import { crdRefToLabel } from './crd-schema.utils';
 
 @Injectable({ providedIn: 'root' })
 export default class PluginNavService {
@@ -17,7 +17,9 @@ export default class PluginNavService {
         pluginName: plugin.name,
         label: plugin.label,
         items: (plugin.menu[section] ?? []).map((menuItem) => ({
-          label: menuItem.label ?? kindToLabel(menuItem.crd),
+          // menuItem.crd is a CRD reference ("certificates.cert-manager.io"),
+          // not a kind — see crdRefToLabel.
+          label: menuItem.label ?? crdRefToLabel(menuItem.crd),
           crdPlural: menuItem.crd,
           icon: menuItem.icon,
         })),

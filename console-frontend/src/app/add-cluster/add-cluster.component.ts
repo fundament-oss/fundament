@@ -10,6 +10,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
 import AutofocusDirective from '../autofocus.directive';
+import DropdownSyncDirective from '../dropdown-sync.directive';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
@@ -17,7 +18,7 @@ import { Region } from '../../generated/v1/cluster_pb';
 
 @Component({
   selector: 'app-add-cluster',
-  imports: [ReactiveFormsModule, AutofocusDirective],
+  imports: [ReactiveFormsModule, AutofocusDirective, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster.component.html',

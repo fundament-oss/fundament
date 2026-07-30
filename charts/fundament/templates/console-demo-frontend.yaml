@@ -1,0 +1,83 @@
+{{/*
+The guided walkthrough of the console: the same nginx image as console-frontend, built
+from the demo entrypoint (`bun run build:demo`). All of its data is compiled into the
+bundle, so unlike console-frontend it needs no config.json ConfigMap and no backend.
+CONNECT_SRC is deliberately left unset — nginx.conf references it, and the CMD's envsubst
+resolves it to an empty string, giving a valid `connect-src 'self' ;`. The demo makes no
+network calls, so there is nothing to allow.
+*/}}
+{{- if $.Values.consoleDemoFrontend.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: console-demo-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "console-demo-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  replicas: {{ $.Values.consoleDemoFrontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "fundament.selectorLabels" (dict "root" $ "name" "console-demo-frontend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fundament.labels" (dict "root" $ "name" "console-demo-frontend" "component" "frontend") | nindent 8 }}
+    spec:
+      containers:
+        - name: console-demo-frontend
+          image: {{ $.Values.images.consoleDemoFrontend }}
+          ports:
+            - name: http
+              containerPort: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: console-demo-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "console-demo-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      name: http
+  selector:
+    {{- include "fundament.selectorLabels" (dict "root" $ "name" "console-demo-frontend") | nindent 4 }}
+
+{{- if $.Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: console-demo-frontend
+  labels:
+    {{- include "fundament.labels" (dict "root" $ "name" "console-demo-frontend" "component" "frontend") | nindent 4 }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.tls.clusterIssuer }}
+  {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  {{- if $.Values.ingress.tls.clusterIssuer }}
+  tls:
+    - hosts:
+        - console-demo.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      secretName: console-demo-frontend-tls
+  {{- end }}
+  rules:
+    - host: console-demo.{{ include "fundament.ingress.infix" . }}{{ $.Values.ingress.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: console-demo-frontend
+                port:
+                  name: http
+{{- end }}
+
+{{- end }}

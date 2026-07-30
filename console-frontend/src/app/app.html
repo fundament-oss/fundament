@@ -85,8 +85,20 @@
       </h1>
     </div>
 
-    <!-- Right: dark/light toggle + user account -->
+    <!-- Right: walkthrough + dark/light toggle + user account -->
     <div class="flex items-center gap-2">
+      @if (tourUrl()) {
+        <nldd-icon-button
+          [attr.href]="tourUrl()"
+          target="_blank"
+          rel="noopener noreferrer"
+          icon="play"
+          size="sm"
+          variant="secondary"
+          accessible-label="Take a tour"
+        ></nldd-icon-button>
+      }
+
       <nldd-segmented-control
         [value]="isDarkMode() ? 'dark' : 'light'"
         variant="icon"
@@ -291,7 +303,7 @@
                 <a
                   routerLink="/organization"
                   routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
+                  [routerLinkActiveOptions]="exactPath"
                   class="nav-link"
                   (click)="closeSidebar()"
                 >
@@ -304,7 +316,7 @@
                 <a
                   [routerLink]="['/projects', selectedProjectId()]"
                   routerLinkActive="active"
-                  [routerLinkActiveOptions]="{ exact: true }"
+                  [routerLinkActiveOptions]="exactPath"
                   class="nav-link"
                   (click)="closeSidebar()"
                 >

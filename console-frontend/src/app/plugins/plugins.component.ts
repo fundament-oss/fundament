@@ -20,6 +20,10 @@ import { LoadingIndicatorComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
+  PRESENTATION_ENABLED,
+  PLUGIN_INSTALLS_RESET_EVENT,
+} from '../presentation/presentation.tokens';
+import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,
   ListPluginDefinitionsRequestSchema,
@@ -114,6 +118,14 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   private pluginInstallationService = inject(PluginInstallationService);
 
+  private presentationEnabled = inject(PRESENTATION_ENABLED);
+
+  // Demo/walkthrough only: reset the install state to the mock baseline so the
+  // install slide can be replayed. Inert in production, where the event never fires.
+  private readonly onDemoReset = (): void => {
+    this.reloadInstalls();
+  };
+
   selectedCategory = 'all';
 
   selectedPreset = 'all';
@@ -182,6 +194,12 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   backendPresets: Preset[] = [];
 
   async ngOnInit() {
+    // Registered before the loads below, so a failed load does not also take the
+    // walkthrough's install-replay with it.
+    if (this.presentationEnabled) {
+      document.addEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
+    }
+
     try {
       // Fetch plugins and presets in parallel; use pre-fetched cluster data from service
       const [pluginsResponse, presetsResponse] = await Promise.all([
@@ -243,6 +261,15 @@ export default class PluginsComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.stopPolling();
     this.stopInstallPolling();
+    document.removeEventListener(PLUGIN_INSTALLS_RESET_EVENT, this.onDemoReset);
+  }
+
+  // Re-read installs from the (reset) backend and drop any stale in-flight polling.
+  private reloadInstalls(): void {
+    this.stopInstallPolling();
+    this.fetchInstalls()
+      .then((installs) => this.installs.set(installs))
+      .catch(() => {}); // Background refresh; a failed read just leaves the current view.
   }
 
   private async refreshClusters() {

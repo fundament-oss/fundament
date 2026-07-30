@@ -1,4 +1,4 @@
-import { fieldNameToLabel, kindToLabel } from './crd-schema.utils';
+import { crdRefToLabel, fieldNameToLabel, kindToLabel } from './crd-schema.utils';
 
 describe('kindToLabel', () => {
   it('pluralizes a single-word kind', () => {
@@ -34,6 +34,22 @@ describe('kindToLabel', () => {
 
   it('returns an empty string for an empty kind', () => {
     expect(kindToLabel('')).toBe('');
+  });
+});
+
+describe('crdRefToLabel', () => {
+  it('drops the API group and does not pluralize again', () => {
+    // kindToLabel gave "certificates.cert-manager.ios" here.
+    expect(crdRefToLabel('certificates.cert-manager.io')).toBe('Certificates');
+    expect(crdRefToLabel('fscinstallations.openfsc.fundament.io')).toBe('Fscinstallations');
+  });
+
+  it('accepts a bare plural', () => {
+    expect(crdRefToLabel('certificates')).toBe('Certificates');
+  });
+
+  it('returns an empty string for an empty reference', () => {
+    expect(crdRefToLabel('')).toBe('');
   });
 });
 

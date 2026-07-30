@@ -133,7 +133,6 @@ export interface PluginInstallationListResponse {
   items: PluginInstallationItem[];
 }
 
-
 export interface RawCrdYaml {
   apiVersion: string;
   kind: string;
