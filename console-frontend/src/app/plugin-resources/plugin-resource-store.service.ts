@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import type { KubeResource, ParsedCrd } from './types';
 import buildResourceUrl from './kube-url.utils';
+import { KubeApiError } from './kube-api-error';
 
 @Injectable({ providedIn: 'root' })
 export default class PluginResourceStoreService {
@@ -104,7 +105,10 @@ export default class PluginResourceStoreService {
 
     // A 404 means it's already gone — treat that as success (idempotent delete).
     if (!response.ok && response.status !== 404) {
-      throw new Error(`Failed to delete ${crd.kind} ${name}: ${response.status}`);
+      throw new KubeApiError(
+        `Failed to delete ${crd.kind} ${name}: ${response.status}`,
+        response.status,
+      );
     }
 
     this.cache.delete(`${pluginName}/${crd.kind}/${clusterId}`);

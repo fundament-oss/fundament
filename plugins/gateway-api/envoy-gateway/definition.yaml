@@ -96,39 +96,48 @@ spec:
   menu:
     project:
       - crd: gateways.gateway.networking.k8s.io
+        label: Gateways
         list: true
         detail: true
         icon: server
       - crd: httproutes.gateway.networking.k8s.io
+        label: HTTP routes
         list: true
         detail: true
         icon: globe
       - crd: grpcroutes.gateway.networking.k8s.io
+        label: gRPC routes
         list: true
         detail: true
         icon: zap
       - crd: tcproutes.gateway.networking.k8s.io
+        label: TCP routes
         list: true
         detail: true
         icon: cable
       - crd: tlsroutes.gateway.networking.k8s.io
+        label: TLS routes
         list: true
         detail: true
         icon: lock
       - crd: securitypolicies.gateway.envoyproxy.io
+        label: Security policies
         list: true
         detail: true
         icon: shield
       - crd: backendtrafficpolicies.gateway.envoyproxy.io
+        label: Backend traffic policies
         list: true
         detail: true
         icon: gauge
       - crd: clienttrafficpolicies.gateway.envoyproxy.io
+        label: Client traffic policies
         list: true
         detail: true
         icon: gauge
     organization:
       - crd: gateways.gateway.networking.k8s.io
+        label: Gateways
         list: true
         detail: true
         icon: server

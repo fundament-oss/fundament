@@ -216,6 +216,7 @@ message PluginMenuEntry {
   bool list = 20;
   bool detail = 30;
   string icon = 40;
+  string label = 50;
 }
 message PluginComponentMapping {
   string list = 10;

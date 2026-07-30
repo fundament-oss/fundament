@@ -51,10 +51,10 @@ func checkKubernetesVersion(sv serverVersioner) error {
 }
 
 // kubernetesMinorAtLeast reports whether the server's git version is at least
-// 1.<min>. GitVersion looks like "v1.30.6+k3s1" / "v1.31.5-eks-..."; only the
-// major and minor components are parsed, tolerating a leading "v" and any
+// 1.<minMinor>. GitVersion looks like "v1.30.6+k3s1" / "v1.31.5-eks-..."; only
+// the major and minor components are parsed, tolerating a leading "v" and any
 // build-metadata suffix on the minor.
-func kubernetesMinorAtLeast(gitVersion string, min int) (bool, error) {
+func kubernetesMinorAtLeast(gitVersion string, minMinor int) (bool, error) {
 	trimmed := strings.TrimPrefix(strings.TrimSpace(gitVersion), "v")
 	parts := strings.SplitN(trimmed, ".", 3)
 	if len(parts) < 2 {
@@ -71,7 +71,7 @@ func kubernetesMinorAtLeast(gitVersion string, min int) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("parse kubernetes minor version from %q: %w", gitVersion, err)
 	}
-	return major == 1 && minor >= min, nil
+	return major == 1 && minor >= minMinor, nil
 }
 
 // leadingDigits returns the leading run of ASCII digits in s (e.g. "31+" -> "31").

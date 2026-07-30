@@ -15,6 +15,7 @@ import FieldRendererComponent from '../field-renderers/field-renderer.component'
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import PluginRegistryService from '../plugin-registry.service';
+import { deleteErrorMessage } from '../kube-api-error';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
@@ -47,7 +48,12 @@ function toRecord(val: unknown): Record<string, unknown> {
 
 @Component({
   selector: 'app-resource-detail',
-  imports: [RouterLink, FieldRendererComponent, PluginIframeComponent, ResourceDeleteModalComponent],
+  imports: [
+    RouterLink,
+    FieldRendererComponent,
+    PluginIframeComponent,
+    ResourceDeleteModalComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -106,6 +112,17 @@ export default class ResourceDetailComponent implements OnInit {
   crdDef = signal<ParsedCrd | undefined>(undefined);
 
   resource = signal<KubeResource | undefined>(undefined);
+
+  // The CRD is the authoritative source for kind/apiVersion: a resource resolved
+  // via the list-and-match fallback (deep link without ?ns=) is a List item,
+  // which the apiserver returns without kind/apiVersion set.
+  kind = computed(() => this.crdDef()?.kind ?? this.resource()?.kind ?? '');
+
+  apiVersion = computed(() => {
+    const crd = this.crdDef();
+    if (crd) return `${crd.group}/${crd.version}`;
+    return this.resource()?.apiVersion ?? '';
+  });
 
   specSections = computed(() => {
     const crd = this.crdDef();
@@ -212,7 +229,7 @@ export default class ResourceDetailComponent implements OnInit {
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[ResourceDetail] Failed to delete resource:', err);
-      this.deleteError.set('Failed to delete. Please try again.');
+      this.deleteError.set(deleteErrorMessage(err));
     } finally {
       this.deleting.set(false);
     }

@@ -147,7 +147,7 @@
 
   <app-resource-delete-modal
     [show]="pendingDelete() !== null"
-    [resourceKind]="pendingDelete()?.kind ?? ''"
+    [resourceKind]="crdDef()?.kind ?? ''"
     [resourceName]="pendingDelete()?.metadata?.name ?? ''"
     [deleting]="deleting()"
     [errorMessage]="deleteError()"

@@ -16,6 +16,7 @@ import ResourceDeleteModalComponent from '../resource-delete-modal/resource-dele
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
+import { deleteErrorMessage } from '../kube-api-error';
 import { TitleService } from '../../title.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
@@ -222,7 +223,7 @@ export default class ResourceListComponent implements OnInit {
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[ResourceList] Failed to delete resource:', err);
-      this.deleteError.set('Failed to delete. Please try again.');
+      this.deleteError.set(deleteErrorMessage(err));
     } finally {
       this.deleting.set(false);
     }

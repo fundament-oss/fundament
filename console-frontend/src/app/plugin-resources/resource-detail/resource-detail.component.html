@@ -47,11 +47,11 @@
         <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Kind</dt>
-            <dd class="mt-1">{{ resource()!.kind }}</dd>
+            <dd class="mt-1">{{ kind() }}</dd>
           </div>
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">API Version</dt>
-            <dd class="mt-1 font-mono text-sm">{{ resource()!.apiVersion }}</dd>
+            <dd class="mt-1 font-mono text-sm">{{ apiVersion() }}</dd>
           </div>
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Created</dt>
@@ -157,7 +157,7 @@
 
     <app-resource-delete-modal
       [show]="showDeleteModal()"
-      [resourceKind]="resource()!.kind"
+      [resourceKind]="kind()"
       [resourceName]="resource()!.metadata.name"
       [deleting]="deleting()"
       [errorMessage]="deleteError()"

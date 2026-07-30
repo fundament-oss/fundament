@@ -62,6 +62,7 @@ function mapDefinition(
     menu: {
       project: def.menu?.project?.map((e) => ({
         crd: e.crd,
+        label: e.label || undefined,
         icon: e.icon || undefined,
       })),
     },
@@ -71,7 +72,11 @@ function mapDefinition(
         ? Object.fromEntries(
             Object.entries(def.customComponents).map(([k, v]) => [
               k,
-              { list: v.list || undefined, detail: v.detail || undefined, create: v.create || undefined },
+              {
+                list: v.list || undefined,
+                detail: v.detail || undefined,
+                create: v.create || undefined,
+              },
             ]),
           )
         : undefined,
