@@ -275,7 +275,23 @@ OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs t
 
 - Inter-organization service connectivity
 - Common Ground / data exchange between government bodies
-- Federated APIs across trust domains', 'Fundament', 'https://fsc-standaard.nl', 'https://gitlab.com/rinis-oss/fsc/open-fsc', '')
+- Federated APIs across trust domains', 'Fundament', 'https://fsc-standaard.nl', 'https://gitlab.com/rinis-oss/fsc/open-fsc', ''),
+    ('019b4000-3000-7000-8000-000000000010', 'gateway-api-envoy', 'Gateway API (Envoy Gateway)', 'Gateway API implementation powered by Envoy Gateway', '## Overview
+
+The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway control plane and manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, TLSRoutes, and Envoy Gateway policies.
+
+## Key Features
+
+- **Standard Gateway API**: Native support for the Kubernetes Gateway API
+- **Envoy Gateway-powered**: Backed by the Envoy Gateway control plane
+- **Guided Gateway creation**: Create Gateways from the console with sensible defaults
+- **Policy support**: SecurityPolicy, BackendTrafficPolicy, and ClientTrafficPolicy
+
+## Use Cases
+
+- Ingress for Kubernetes workloads via the Gateway API
+- Advanced traffic management with Envoy
+- Per-Gateway security and traffic policies', 'Fundament', 'https://gateway.envoyproxy.io', 'https://github.com/envoyproxy/gateway', '')
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     display_name = EXCLUDED.display_name,
@@ -315,7 +331,9 @@ INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
     -- Grafana Tempo -> Observability
     ('019b4000-3000-7000-8000-00000000000d', '019b4000-4000-7000-8000-000000000001'),
     -- OpenFSC -> Networking
-    ('019b4000-3000-7000-8000-00000000000e', '019b4000-4000-7000-8000-000000000003')
+    ('019b4000-3000-7000-8000-00000000000e', '019b4000-4000-7000-8000-000000000003'),
+    -- Gateway API (Envoy Gateway) -> Networking
+    ('019b4000-3000-7000-8000-000000000010', '019b4000-4000-7000-8000-000000000003')
 ON CONFLICT (plugin_id, category_id) DO NOTHING;
 
 -- Plugin-Tag associations

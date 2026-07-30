@@ -62,6 +62,7 @@ function mapDefinition(
     menu: {
       project: def.menu?.project?.map((e) => ({
         crd: e.crd,
+        label: e.label || undefined,
         icon: e.icon || undefined,
       })),
     },

@@ -120,6 +120,9 @@ type MenuEntry struct {
 	List   bool   `yaml:"list"`
 	Detail bool   `yaml:"detail"`
 	Icon   string `yaml:"icon"`
+	// Label overrides the sidebar entry text. When empty the console derives a
+	// label from the CRD name, which mangles the full "<plural>.<group>" form.
+	Label string `yaml:"label"`
 }
 
 // ComponentMapping maps a CRD to custom UI component names.

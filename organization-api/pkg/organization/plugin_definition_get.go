@@ -53,7 +53,7 @@ func pluginDefinitionToProto(def *pluginruntime.PluginDefinition) *organizationv
 		out := make([]*organizationv1.PluginMenuEntry, 0, len(entries))
 		for _, e := range entries {
 			out = append(out, organizationv1.PluginMenuEntry_builder{
-				Crd: e.CRD, List: e.List, Detail: e.Detail, Icon: e.Icon,
+				Crd: e.CRD, List: e.List, Detail: e.Detail, Icon: e.Icon, Label: e.Label,
 			}.Build())
 		}
 		return out

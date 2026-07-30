@@ -10,10 +10,12 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import FieldRendererComponent from '../field-renderers/field-renderer.component';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
+import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import PluginRegistryService from '../plugin-registry.service';
+import { deleteErrorMessage } from '../kube-api-error';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
@@ -46,13 +48,20 @@ function toRecord(val: unknown): Record<string, unknown> {
 
 @Component({
   selector: 'app-resource-detail',
-  imports: [RouterLink, FieldRendererComponent, PluginIframeComponent],
+  imports: [
+    RouterLink,
+    FieldRendererComponent,
+    PluginIframeComponent,
+    ResourceDeleteModalComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ResourceDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
+
+  private router = inject(Router);
 
   private titleService = inject(TitleService);
 
@@ -103,6 +112,17 @@ export default class ResourceDetailComponent implements OnInit {
   crdDef = signal<ParsedCrd | undefined>(undefined);
 
   resource = signal<KubeResource | undefined>(undefined);
+
+  // The CRD is the authoritative source for kind/apiVersion: a resource resolved
+  // via the list-and-match fallback (deep link without ?ns=) is a List item,
+  // which the apiserver returns without kind/apiVersion set.
+  kind = computed(() => this.crdDef()?.kind ?? this.resource()?.kind ?? '');
+
+  apiVersion = computed(() => {
+    const crd = this.crdDef();
+    if (crd) return `${crd.group}/${crd.version}`;
+    return this.resource()?.apiVersion ?? '';
+  });
 
   specSections = computed(() => {
     const crd = this.crdDef();
@@ -165,6 +185,55 @@ export default class ResourceDetailComponent implements OnInit {
   }
 
   readonly listLink = ['..'];
+
+  showDeleteModal = signal(false);
+
+  deleting = signal(false);
+
+  deleteError = signal<string | null>(null);
+
+  // Only offer delete in the native detail view — custom-UI plugins manage their
+  // own resources through their iframe.
+  canDelete = computed(() => !this.customUIUrl() && this.resource() !== undefined);
+
+  openDeleteModal(): void {
+    this.deleteError.set(null);
+    this.showDeleteModal.set(true);
+  }
+
+  closeDeleteModal(): void {
+    if (!this.deleting()) this.showDeleteModal.set(false);
+  }
+
+  async confirmDelete(): Promise<void> {
+    const crd = this.crdDef();
+    const clusterId = this.clusterContext.selectedClusterId();
+    const resource = this.resource();
+    if (!crd || !clusterId || !resource) return;
+
+    this.deleting.set(true);
+    this.deleteError.set(null);
+    try {
+      // Delete by the loaded resource's own name/namespace, not the route's ?ns=
+      // query param: a deep link without ?ns= still resolves the resource via the
+      // list-and-match fallback, so metadata.namespace is the authoritative value.
+      await this.loader.deleteResource(
+        this.pluginName(),
+        crd,
+        clusterId,
+        resource.metadata.name,
+        resource.metadata.namespace,
+      );
+      this.showDeleteModal.set(false);
+      this.router.navigate(this.listLink, { relativeTo: this.route });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[ResourceDetail] Failed to delete resource:', err);
+      this.deleteError.set(deleteErrorMessage(err));
+    } finally {
+      this.deleting.set(false);
+    }
+  }
 
   formatLabel = fieldNameToLabel;
 

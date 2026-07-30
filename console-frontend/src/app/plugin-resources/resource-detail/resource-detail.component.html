@@ -15,17 +15,31 @@
     <!-- Header -->
     <div class="card">
       <div class="card-header">
-        <a
-          [routerLink]="listLink"
-          class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 mb-1 inline-flex items-center"
-          ><nldd-icon name="arrow-left" class="mr-1 h-4 w-4"></nldd-icon> Back to list</a
-        >
-        <h1 class="text-3xl font-semibold">{{ resource()!.metadata.name }}</h1>
-        @if (resource()!.metadata.namespace) {
-          <p class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
-            Namespace: {{ resource()!.metadata.namespace }}
-          </p>
-        }
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <a
+              [routerLink]="listLink"
+              class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 mb-1 inline-flex items-center"
+              ><nldd-icon name="arrow-left" class="mr-1 h-4 w-4"></nldd-icon> Back to list</a
+            >
+            <h1 class="text-3xl font-semibold">{{ resource()!.metadata.name }}</h1>
+            @if (resource()!.metadata.namespace) {
+              <p class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
+                Namespace: {{ resource()!.metadata.namespace }}
+              </p>
+            }
+          </div>
+          @if (canDelete()) {
+            <nldd-button
+              type="button"
+              text="Delete"
+              start-icon="trash"
+              variant="destructive"
+              size="sm"
+              (click)="openDeleteModal()"
+            ></nldd-button>
+          }
+        </div>
       </div>
 
       <!-- Metadata -->
@@ -33,11 +47,11 @@
         <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Kind</dt>
-            <dd class="mt-1">{{ resource()!.kind }}</dd>
+            <dd class="mt-1">{{ kind() }}</dd>
           </div>
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">API Version</dt>
-            <dd class="mt-1 font-mono text-sm">{{ resource()!.apiVersion }}</dd>
+            <dd class="mt-1 font-mono text-sm">{{ apiVersion() }}</dd>
           </div>
           <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Created</dt>
@@ -140,6 +154,16 @@
         </div>
       </div>
     }
+
+    <app-resource-delete-modal
+      [show]="showDeleteModal()"
+      [resourceKind]="kind()"
+      [resourceName]="resource()!.metadata.name"
+      [deleting]="deleting()"
+      [errorMessage]="deleteError()"
+      (confirm)="confirmDelete()"
+      (dismiss)="closeDeleteModal()"
+    />
   </div>
 } @else {
   <div class="card">
