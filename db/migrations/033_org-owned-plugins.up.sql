@@ -52,6 +52,12 @@ CREATE POLICY "plugins_delete_owner" ON "appstore"."plugins"
 
 ALTER TABLE "appstore"."plugins" ENABLE ROW LEVEL SECURITY;
 
+-- authz-worker reads appstore.plugins (GetPluginByID) to sync ownership to
+-- OpenFGA. It already has USAGE on the appstore schema; grant table SELECT too.
+-- Row visibility relies on fun_authz_worker's BYPASSRLS attribute (same as every
+-- other RLS table it reads), so no per-worker policy is needed.
+GRANT SELECT ON TABLE "appstore"."plugins" TO fun_authz_worker;
+
 -- RLS on appstore.plugin_definitions: ownership lives on the parent plugins
 -- row, so writes are gated by the parent's organization_id (no aliases).
 CREATE POLICY "plugin_definitions_select_all" ON "appstore"."plugin_definitions"
