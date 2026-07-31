@@ -6,12 +6,13 @@ import {
   Injector,
   runInInjectionContext,
 } from '@angular/core';
-import { provideRouter, withRouterConfig } from '@angular/router';
+import { provideRouter, withNavigationErrorHandler, withRouterConfig } from '@angular/router';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { BehaviorSubject } from 'rxjs';
 import { AUTHN_TRANSPORT, ORGANIZATION_TRANSPORT } from '../connect/connect.module';
 import EXPECTED_API_VERSION from '../proto-version.gen';
 import routes from './app.routes';
+import { recoverFromChunkLoadError } from './chunk-load-recovery';
 import { ConfigService } from './config.service';
 import OrganizationContextService from './organization-context.service';
 
@@ -30,7 +31,14 @@ const handleVersionMismatch = (serverVersion: string) => {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, withRouterConfig({ paramsInheritanceStrategy: 'always' })),
+    provideRouter(
+      routes,
+      withRouterConfig({ paramsInheritanceStrategy: 'always' }),
+      // A deploy replaces the content-hashed bundles, so a tab still running
+      // the old app fails to lazy-load route chunks; recover via a full page
+      // load of the destination url.
+      withNavigationErrorHandler(recoverFromChunkLoadError),
+    ),
     // Initialize configuration before app starts
     provideAppInitializer(() => {
       const configService = inject(ConfigService);
