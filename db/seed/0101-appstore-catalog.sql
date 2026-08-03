@@ -276,7 +276,7 @@ OpenFSC brings Federated Service Connectivity (FSC) to Kubernetes. It installs t
 - Inter-organization service connectivity
 - Common Ground / data exchange between government bodies
 - Federated APIs across trust domains', 'Fundament', 'https://fsc-standaard.nl', 'https://gitlab.com/rinis-oss/fsc/open-fsc', ''),
-    ('019b4000-3000-7000-8000-000000000010', 'gateway-api-envoy', 'Gateway API (Envoy Gateway)', 'Gateway API implementation powered by Envoy Gateway', '## Overview
+    ('019b4000-3000-7000-8000-000000000010', '019b4000-1000-7000-8000-000000000001', 'gateway-api-envoy', 'Gateway API (Envoy Gateway)', 'Gateway API implementation powered by Envoy Gateway', '## Overview
 
 The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway control plane and manages Gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, TLSRoutes, and Envoy Gateway policies.
 
