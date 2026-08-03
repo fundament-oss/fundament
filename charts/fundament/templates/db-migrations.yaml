@@ -47,6 +47,15 @@ spec:
               trek apply
               echo "Seeding appstore plugin catalog..."
               psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
+              {{- if and $.Values.db.reset $.Values.openfga.enabled }}
+              # Reset the OpenFGA datastore here, coupled with the DB reset, so
+              # the two always happen together as one triggered event. OpenFGA no
+              # longer resets itself on pod start, so an unrelated openfga rollout
+              # can't wipe the store out from under an already-synced outbox.
+              echo "Resetting OpenFGA datastore (coupled with the DB reset)..."
+              psql "$OPENFGA_DATASTORE_URI" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+              echo "OpenFGA datastore reset complete."
+              {{- end }}
           env:
             - name: TREK_POSTGRES_HOST
               value: {{ include "fundament.db.host" . }}
@@ -89,4 +98,13 @@ spec:
               value: fundament
             - name: PGSSLMODE
               value: disable
+            {{- if and $.Values.db.reset $.Values.openfga.enabled }}
+            # OpenFGA datastore connection (separate DB on the same cluster), used
+            # only for the coupled reset step above.
+            - name: OPENFGA_DATASTORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: db-fun-openfga
+                  key: uri
+            {{- end }}
 {{- end }}

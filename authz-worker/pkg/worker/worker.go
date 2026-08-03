@@ -142,13 +142,16 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 	w.processBatch(ctx)
 
 	for {
-		notified, err := w.waitForNotification(ctx, conn)
-		if err != nil {
+		// The bool reports whether a NOTIFY arrived (true) or the poll interval
+		// elapsed (false); we drain the outbox on both. Polling matters because
+		// the outbox_notify trigger only fires AFTER INSERT: a row left in
+		// 'retrying' emits no NOTIFY when its retry_after elapses, so without a
+		// timeout-driven pass it would lag forever and trip the consumer's
+		// circuit breaker.
+		if _, err := w.waitForNotification(ctx, conn); err != nil {
 			return err
 		}
-		if notified {
-			w.processBatch(ctx)
-		}
+		w.processBatch(ctx)
 	}
 }
 
