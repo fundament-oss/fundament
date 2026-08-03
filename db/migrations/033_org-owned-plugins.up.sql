@@ -12,7 +12,61 @@ ALTER TABLE "appstore"."plugins" ADD COLUMN "organization_id" uuid;
 
 COMMENT ON COLUMN "appstore"."plugins"."organization_id" IS E'Owning organization. Gates who may publish/edit this plugin (RLS). Catalog visibility is NOT org-scoped — reads stay global.';
 
--- Backfill existing plugins to the system organization.
+-- OpenFGA authorization: sync plugin ownership to OpenFGA via the authz.outbox
+-- pipeline. A trigger on appstore.plugins enqueues an outbox row on insert/update;
+-- the authz-worker writes the organization -> owner -> plugin tuple. Created
+-- BEFORE the ownership backfill below on purpose: the backfill UPDATE then
+-- enqueues every pre-existing plugin through this single canonical path, and on
+-- fresh installs the 0101 catalog seed's INSERTs do the same — so no separate
+-- backfill INSERT into authz.outbox is needed.
+ALTER TABLE "authz"."outbox" ADD COLUMN "plugin_id" uuid;
+
+ALTER TABLE "authz"."outbox" DROP CONSTRAINT "outbox_ck_single_fk";
+
+ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_ck_single_fk" CHECK (num_nonnulls(
+	project_id,
+	project_member_id,
+	cluster_id,
+	node_pool_id,
+	namespace_id,
+	api_key_id,
+	organization_user_id,
+	plugin_id
+) = 1);
+
+CREATE OR REPLACE FUNCTION authz.plugins_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS
+$function$
+BEGIN
+    -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (plugin_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+
+ALTER FUNCTION authz.plugins_sync_trigger() OWNER TO fun_owner;
+
+CREATE OR REPLACE TRIGGER plugins_outbox
+	AFTER INSERT OR UPDATE
+	ON appstore.plugins
+	FOR EACH ROW
+	EXECUTE PROCEDURE authz.plugins_sync_trigger();
+
+-- Backfill existing plugins to the system organization. With the trigger above
+-- already in place, this UPDATE enqueues an authz.outbox row for every plugin
+-- that predates org ownership. On a fresh database appstore.plugins is still
+-- empty here (seeded afterwards), so this is a no-op and the 0101 seed INSERTs
+-- enqueue via the trigger instead.
 UPDATE "appstore"."plugins"
 SET "organization_id" = '019b4000-1000-7000-8000-000000000001'
 WHERE "organization_id" IS NULL;
@@ -85,61 +139,3 @@ CREATE POLICY "plugin_definitions_delete_owner" ON "appstore"."plugin_definition
 	USING ((EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())));
 
 ALTER TABLE "appstore"."plugin_definitions" ENABLE ROW LEVEL SECURITY;
-
--- OpenFGA authorization: sync plugin ownership (plugin owner organization) to
--- OpenFGA via the authz.outbox pipeline. A trigger on appstore.plugins enqueues
--- an outbox row on insert/update; the authz-worker writes the tuple. Because it
--- is a trigger, the seeded catalog plugins enqueue automatically.
-ALTER TABLE "authz"."outbox" ADD COLUMN "plugin_id" uuid;
-
-ALTER TABLE "authz"."outbox" DROP CONSTRAINT "outbox_ck_single_fk";
-
-ALTER TABLE "authz"."outbox" ADD CONSTRAINT "outbox_ck_single_fk" CHECK (num_nonnulls(
-	project_id,
-	project_member_id,
-	cluster_id,
-	node_pool_id,
-	namespace_id,
-	api_key_id,
-	organization_user_id,
-	plugin_id
-) = 1);
-
-CREATE OR REPLACE FUNCTION authz.plugins_sync_trigger ()
-	RETURNS trigger
-	LANGUAGE plpgsql
-	VOLATILE
-	CALLED ON NULL INPUT
-	SECURITY INVOKER
-	PARALLEL UNSAFE
-	COST 1
-	AS
-$function$
-BEGIN
-    -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
-    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
-        INSERT INTO authz.outbox (plugin_id)
-        VALUES (COALESCE(NEW.id, OLD.id));
-    END IF;
-    RETURN COALESCE(NEW, OLD);
-END;
-$function$;
-
-ALTER FUNCTION authz.plugins_sync_trigger() OWNER TO fun_owner;
-
-CREATE OR REPLACE TRIGGER plugins_outbox
-	AFTER INSERT OR UPDATE
-	ON appstore.plugins
-	FOR EACH ROW
-	EXECUTE PROCEDURE authz.plugins_sync_trigger();
-
--- Enqueue an authz sync for every existing plugin. The backfill UPDATE above
--- ran before this trigger existed, so it emitted no outbox rows, and the
--- 0101 catalog seed's ON CONFLICT DO UPDATE is a no-op for these unchanged
--- rows (so the trigger's NEW IS DISTINCT FROM OLD guard suppresses it there
--- too). Without this, plugins that predate org ownership never get their
--- organization -> owner -> plugin tuple in OpenFGA. Runs once with the
--- migration; on a fresh database appstore.plugins is still empty here (seeded
--- afterwards) so this is a no-op and the trigger handles the seed INSERTs.
-INSERT INTO authz.outbox (plugin_id)
-SELECT id FROM appstore.plugins;
