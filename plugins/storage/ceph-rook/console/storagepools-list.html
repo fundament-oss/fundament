@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Storage Pools</title>
+  </head>
+  <body class="light">
+    <div class="plugin-card">
+      <h1 class="plugin-heading">Storage Pools</h1>
+      <div style="margin-bottom: 1rem;">
+        <a href="../storagepools-create.html" class="plugin-button" style="display: inline-block; padding: 0.5rem 1rem; background-color: #3b82f6; color: white; border-radius: 0.375rem; text-decoration: none;">
+          Create StoragePool
+        </a>
+      </div>
+      <div id="content">
+        <table class="plugin-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Phase</th>
+              <th>Storage Class</th>
+              <th>Replicas</th>
+              <th>Failure Domain</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr>
+              <td colspan="5" class="plugin-text">Loading…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <script type="module" src="./storagepools-list.js"></script>
+  </body>
+</html>

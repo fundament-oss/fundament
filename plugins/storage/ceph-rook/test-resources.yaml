@@ -1,0 +1,28 @@
+# Sample StoragePool for sandbox verification.
+#
+# Before applying, check available Disk CRs:
+#   kubectl get disks
+#
+# The spec.disks names below MUST match Disk CR names discovered on your cluster.
+# Disk names are cluster-specific (derived from node name + device path by the
+# disk-inventory controller). Replace the placeholder below with the actual names
+# from your cluster's Disk inventory.
+#
+# Example discovery check:
+#   kubectl get disks -o wide
+#   # NAME                         NODE          SIZE          AVAILABLE
+#   # worker-0-sdb                 worker-0      107374182400  true
+#
+# NOTE: k3d nodes typically do not have spare raw (unformatted) block devices.
+# This test-resources.yaml is intended for clusters with genuine bare-metal or
+# VM nodes that have unformatted disks attached. On a plain k3d cluster the
+# StoragePool will remain in a non-Ready phase because no Disks will be discovered.
+apiVersion: storage.fundament.io/v1alpha1
+kind: StoragePool
+metadata:
+  name: test-pool
+spec:
+  # Replace with actual Disk CR names from `kubectl get disks`:
+  disks:
+    - placeholder-node-sdb
+  replication: auto
