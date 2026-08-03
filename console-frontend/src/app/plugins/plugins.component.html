@@ -36,18 +36,12 @@
               @if (plugin.tags && plugin.tags.length > 0) {
                 <p class="mb-2 flex flex-wrap gap-1">
                   @for (tag of plugin.tags; track tag.id) {
-                    <span
-                      [class]="
-                        tag.name.toLowerCase() === 'official'
-                          ? 'inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
-                          : 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                      "
-                    >
-                      @if (tag.name.toLowerCase() === 'official') {
-                        <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
-                      }
-                      {{ tag.name }}
-                    </span>
+                    <nldd-tag
+                      size="sm"
+                      [attr.color]="tag.name.toLowerCase() === 'official' ? 'success' : 'neutral'"
+                      [attr.icon]="tag.name.toLowerCase() === 'official' ? 'check-mark' : null"
+                      [attr.text]="tag.name"
+                    ></nldd-tag>
                   }
                 </p>
               }
@@ -62,10 +56,14 @@
             <div class="px-6 pb-6">
               @if (runningInstallCount(plugin.name) > 0) {
                 <p class="mb-3">
-                  <span class="badge badge-sm badge-emerald">
-                    <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
-                    Installed on {{ runningInstallCount(plugin.name) }}/{{ clusterCount }}
-                  </span>
+                  <nldd-tag
+                    color="success"
+                    size="sm"
+                    icon="check-mark"
+                    [attr.text]="
+                      'Installed on ' + runningInstallCount(plugin.name) + '/' + clusterCount
+                    "
+                  ></nldd-tag>
                 </p>
               }
               <div class="flex space-x-3">

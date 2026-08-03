@@ -14,9 +14,11 @@ import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
@@ -55,13 +57,15 @@ interface OrganizationMember {
 
 @Component({
   selector: 'app-organization-members',
-  imports: [DialogSyncDirective, LoadingIndicatorComponent],
+  imports: [DialogSyncDirective, SheetSyncDirective, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class OrganizationMembersComponent implements OnInit {
   private titleService = inject(TitleService);
+
+  private toastService = inject(ToastService);
 
   private memberClient = inject(MEMBER);
 
@@ -161,6 +165,7 @@ export default class OrganizationMembersComponent implements OnInit {
     event?.preventDefault();
 
     const email = this.inviteEmail().trim();
+    const permission = this.invitePermission();
 
     if (!email) {
       return;
@@ -170,12 +175,11 @@ export default class OrganizationMembersComponent implements OnInit {
     this.inviteError.set(null);
 
     try {
-      await withIdempotency(
-        (opts) =>
-          this.inviteClient.inviteMember({ email, permission: this.invitePermission() }, opts),
-        { signal: this.idempotency.reset() },
-      );
+      await withIdempotency((opts) => this.inviteClient.inviteMember({ email, permission }, opts), {
+        signal: this.idempotency.reset(),
+      });
       this.closeModal();
+      this.toastService.success(`'${email}' invited as ${permission}`);
       await this.loadMembers();
     } catch (err: unknown) {
       if (err instanceof ConnectError) {
@@ -195,8 +199,14 @@ export default class OrganizationMembersComponent implements OnInit {
   }
 
   async cancelInvitation(id: string) {
+    const invitation = this.pendingInvitations().find((m) => m.id === id);
+    const invitee = invitation?.email || invitation?.name;
+
     try {
       await firstValueFrom(this.memberClient.deleteMember({ id }));
+      this.toastService.success(
+        invitee ? `Invitation for '${invitee}' cancelled` : 'Invitation cancelled',
+      );
       await this.loadMembers();
     } catch (err) {
       this.error.set(
@@ -220,6 +230,7 @@ export default class OrganizationMembersComponent implements OnInit {
       await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
       this.showDeleteModal.set(false);
       this.deletingMember.set(null);
+      this.toastService.success(`'${member.name}' removed from the organization`);
       await this.loadMembers();
     } catch (err) {
       this.error.set(
@@ -255,6 +266,7 @@ export default class OrganizationMembersComponent implements OnInit {
       );
       this.showEditModal.set(false);
       this.editingMember.set(null);
+      this.toastService.success(`Permission for '${member.name}' changed to ${newPermission}`);
       await this.loadMembers();
     } catch (err) {
       this.error.set(
@@ -274,24 +286,10 @@ export default class OrganizationMembersComponent implements OnInit {
 
   getAvatarColor = getAvatarColor;
 
-  inviteDialogRef = viewChild<ElementRef<HTMLElement>>('inviteDialog');
-
-  onInviteModalOpen(): void {
-    const el = this.inviteDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
-  }
-
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 
   onDeleteModalOpen(): void {
     const el = this.deleteDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
-  }
-
-  editDialogRef = viewChild<ElementRef<HTMLElement>>('editDialog');
-
-  onEditModalOpen(): void {
-    const el = this.editDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }
 }

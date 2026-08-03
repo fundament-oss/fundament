@@ -114,6 +114,25 @@ export default class ResourceListComponent implements OnInit {
     );
   });
 
+  /**
+   * `columns` track list for `nldd-table`. The plugin declares its own columns,
+   * so the grid template has to be derived rather than written out literally.
+   */
+  tableColumns = computed(() =>
+    ['minmax(200px, 1fr)', ...this.columns().map(() => 'minmax(120px, 1fr)'), '64px'].join(' '),
+  );
+
+  /** Same, minus the low-priority columns that `hide-below="lg"` drops. */
+  tableMdColumns = computed(() =>
+    [
+      'minmax(200px, 1fr)',
+      ...this.columns()
+        .filter((col) => !col.priority || col.priority === 0)
+        .map(() => 'minmax(120px, 1fr)'),
+      '64px',
+    ].join(' '),
+  );
+
   kindLabel = computed(() => {
     const crd = this.crdDef();
     if (crd) return kindToLabel(crd.kind);

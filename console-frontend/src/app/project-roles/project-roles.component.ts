@@ -12,9 +12,13 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TitleService } from '../title.service';
+import { ToastService } from '../toast.service';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import DropdownSyncDirective from '../dropdown-sync.directive';
+
+type LitDropdown = HTMLElement & { updateComplete?: Promise<unknown> };
 
 interface RoleBinding {
   id: string;
@@ -28,13 +32,15 @@ const AVAILABLE_ROLES = ['deploy', 'view-pods', 'view-logs', 'manage-services'];
 
 @Component({
   selector: 'app-project-roles',
-  imports: [FormsModule, DialogSyncDirective, DropdownSyncDirective],
+  imports: [FormsModule, DialogSyncDirective, SheetSyncDirective, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './project-roles.component.html',
 })
 export default class ProjectRolesComponent implements OnInit {
   private titleService = inject(TitleService);
+
+  private toastService = inject(ToastService);
 
   private route = inject(ActivatedRoute);
 
@@ -190,6 +196,39 @@ export default class ProjectRolesComponent implements OnInit {
     this.showCreateModal.set(true);
   }
 
+  createSheetRef = viewChild<ElementRef<HTMLElement>>('createSheet');
+
+  /**
+   * Clears the member selection every time the sheet opens.
+   *
+   * `modalMemberId` is already reset in `openCreateModal`, but the member picked before the
+   * sheet last closed stays visible in the dropdown: the field then looks filled in while the
+   * form still rejects it with "Please select a member". Push the reset value into the slotted
+   * `<select>` and re-run the dropdown's own slot handler so its display label follows — the
+   * same supported path `DropdownSyncDirective` uses.
+   */
+  onCreateSheetOpen(): void {
+    if (this.editingBinding()) return;
+
+    const sheet = this.createSheetRef()?.nativeElement;
+    if (!sheet) return;
+
+    // Query the sheet rather than a view query on the dropdown: `nldd-form` moves the fields it
+    // is given into an inner `<form>`, so it owns where these elements end up.
+    const select = sheet.querySelector<HTMLSelectElement>('select[name="memberId"]');
+    if (!select) return;
+    select.value = this.modalMemberId();
+
+    const dropdown = select.closest<LitDropdown>('nldd-dropdown');
+    if (!dropdown) return;
+    const resync = () =>
+      dropdown.shadowRoot?.querySelector('slot')?.dispatchEvent(new Event('slotchange'));
+    // Before the custom element upgrades there is no shadow root yet; DropdownSyncDirective
+    // syncs that first render.
+    dropdown.updateComplete?.then(resync);
+    resync();
+  }
+
   toggleRole(role: string, checked: boolean) {
     this.modalRoles.update((roles) => ({ ...roles, [role]: checked }));
   }
@@ -243,6 +282,7 @@ export default class ProjectRolesComponent implements OnInit {
       this.roleBindings.update((bindings) =>
         bindings.map((rb) => (rb.id === editId ? { ...rb, roles: selectedRoles } : rb)),
       );
+      this.toastService.success(`Role binding for '${member.name}' updated`);
     } else {
       const newBinding: RoleBinding = {
         id: `rb-${Date.now()}`,
@@ -252,6 +292,7 @@ export default class ProjectRolesComponent implements OnInit {
         roles: selectedRoles,
       };
       this.roleBindings.update((bindings) => [...bindings, newBinding]);
+      this.toastService.success(`Role binding for '${member.name}' created`);
     }
 
     this.showCreateModal.set(false);
@@ -271,13 +312,7 @@ export default class ProjectRolesComponent implements OnInit {
 
     this.roleBindings.update((bindings) => bindings.filter((rb) => rb.id !== bindingId));
     this.showRemoveModal.set(false);
-  }
-
-  createModalDialogRef = viewChild<ElementRef<HTMLElement>>('createModal');
-
-  onCreateModalOpen(): void {
-    const el = this.createModalDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
+    this.toastService.success(`Role binding for '${binding.memberName}' removed`);
   }
 
   removeModalDialogRef = viewChild<ElementRef<HTMLElement>>('removeModal');

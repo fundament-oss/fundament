@@ -101,79 +101,75 @@
   </div>
 }
 
-<!-- Edit Project Modal -->
-<nldd-modal-dialog
-  #editDialog
-  appDialogSync
+<!-- Edit Project Sheet -->
+<nldd-sheet
+  #editSheet
+  appSheetSync
   [show]="showEditModal()"
-  text="Edit project"
-  (open)="onEditModalOpen()"
+  accessible-label="Edit project"
+  placement="right"
+  width="480px"
   (close)="showEditModal.set(false)"
 >
-  <nldd-spacer size="24"></nldd-spacer>
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit project"
+      dismiss-text="Cancel"
+      (dismiss)="showEditModal.set(false)"
+    ></nldd-top-title-bar>
 
-  <nldd-form (submit)="saveEdit()" (keydown.enter)="saveEdit()" novalidate>
-    <nldd-form-field label="Alias">
-      <nldd-text-field
-        appAutofocus
-        [value]="editingAlias()"
-        (input)="editingAlias.set($any($event.target).value)"
-        (keyup.escape)="showEditModal.set(false)"
-      ></nldd-text-field>
-    </nldd-form-field>
-  </nldd-form>
+    <nldd-simple-section>
+      <nldd-form (submit)="saveEdit()" (keydown.enter)="saveEdit()" novalidate>
+        <nldd-form-field label="Alias">
+          <nldd-text-field
+            autofocus
+            [value]="editingAlias()"
+            (input)="editingAlias.set($any($event.target).value)"
+            (keyup.escape)="showEditModal.set(false)"
+          ></nldd-text-field>
+        </nldd-form-field>
+      </nldd-form>
+    </nldd-simple-section>
 
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="saveEdit()"
-    [disabled]="saving()"
-    text="Save"
-    start-icon="check-mark"
-    variant="primary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="showEditModal.set(false)"
-    [disabled]="saving()"
-    text="Cancel"
-    start-icon="dismiss-small"
-    variant="secondary"
-  ></nldd-button>
-</nldd-modal-dialog>
+    <div slot="footer" class="border-t border-gray-200 px-6 py-4 dark:border-gray-800">
+      <nldd-button
+        type="button"
+        (click)="saveEdit()"
+        [disabled]="saving()"
+        text="Save"
+        start-icon="check-mark"
+        variant="primary"
+        width="full"
+      ></nldd-button>
+    </div>
+  </nldd-page>
+</nldd-sheet>
 
 <!-- Delete Project Modal -->
 <nldd-modal-dialog
   #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
-  text="Delete project"
+  [attr.text]="'Delete project ' + (project()?.alias || project()?.name) + '?'"
+  supporting-text="This permanently removes the project and everything in it. This cannot be undone."
+  accessible-label="Confirm project deletion"
   variant="alert"
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
-  <nldd-spacer size="24"></nldd-spacer>
-
-  <p>
-    Are you sure you want to delete project
-    <strong class="font-semibold">{{ project()?.alias || project()?.name }}</strong
-    >?
-  </p>
-  <p class="text-danger-600 dark:text-danger-400 mt-2">This cannot be undone.</p>
-
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="deleteProject()"
-    text="Yes, delete this project"
-    variant="destructive"
-  ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteModal.set(false)"
-    text="Cancel"
+    text="Keep project"
     variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="deleteProject()"
+    text="Delete project"
+    variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>

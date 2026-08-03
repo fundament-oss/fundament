@@ -100,213 +100,217 @@
         </nldd-inline-dialog>
       </nldd-box>
     } @else {
-      <div class="table-container">
-        <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th width="40%" scope="col">Name</th>
-              <th width="20%" scope="col">Permission</th>
-              <th width="20%" scope="col">Source</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
-            @for (view of memberViews(); track view.member.id) {
-              <tr>
-                <td>
-                  <div class="font-medium">{{ view.member.userName }}</div>
-                  <div class="text-sm text-gray-500 dark:text-gray-400">
-                    Added to project {{ formatMemberDate(view.member) }}
-                  </div>
-                </td>
-                <td>
-                  <span
-                    class="badge capitalize"
-                    [class.badge-purple]="view.member.role === ProjectMemberRole.ADMIN"
-                    [class.badge-blue]="view.member.role === ProjectMemberRole.VIEWER"
-                  >
-                    {{ roleToString(view.member.role) }}
-                  </span>
-                </td>
-                <td>
-                  @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
-                    <span class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                      <nldd-icon name="lock-closed" class="h-3.5 w-3.5"></nldd-icon>
-                      Organization
-                    </span>
-                  } @else if (view.source === 'org') {
-                    <span class="text-gray-600 dark:text-gray-400">Organization</span>
-                  } @else {
-                    <span class="text-gray-600 dark:text-gray-400">Project</span>
-                  }
-                </td>
-                <td>
-                  @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
-                    <!-- Org admin: locked, no actions -->
-                    <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
-                  } @else {
-                    <nldd-button
-                      type="button"
-                      (click)="openEditMemberModal(view)"
+      <nldd-table
+        accessible-label="Project members"
+        columns="minmax(200px, 1fr) 140px 160px 64px"
+        md-columns="minmax(200px, 1fr) 140px 64px"
+        sm-columns="minmax(200px, 1fr) 140px 64px"
+      >
+        <nldd-table-row slot="header">
+          <nldd-text-cell text="**Name**"></nldd-text-cell>
+          <nldd-text-cell text="**Permission**"></nldd-text-cell>
+          <nldd-text-cell text="**Source**" hide-below="lg"></nldd-text-cell>
+          <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
+        </nldd-table-row>
+
+        @for (view of memberViews(); track view.member.id) {
+          <nldd-table-row>
+            <nldd-text-cell
+              [attr.text]="view.member.userName"
+              [attr.supporting-text]="'Added to project ' + formatMemberDate(view.member)"
+            ></nldd-text-cell>
+            <nldd-cell>
+              <nldd-tag
+                class="capitalize"
+                size="sm"
+                [attr.color]="view.member.role === ProjectMemberRole.ADMIN ? 'paars' : 'accent'"
+                [attr.text]="roleToString(view.member.role)"
+              ></nldd-tag>
+            </nldd-cell>
+            <nldd-cell hide-below="lg" width="full">
+              @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
+                <span class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                  <nldd-icon name="lock-closed" class="h-3.5 w-3.5"></nldd-icon>
+                  Organization
+                </span>
+              } @else if (view.source === 'org') {
+                <span class="text-gray-600 dark:text-gray-400">Organization</span>
+              } @else {
+                <span class="text-gray-600 dark:text-gray-400">Project</span>
+              }
+            </nldd-cell>
+            <nldd-cell horizontal-alignment="right">
+              <!-- Org admins are locked: no actions. -->
+              @if (view.source !== 'org' || view.member.role !== ProjectMemberRole.ADMIN) {
+                <nldd-icon-button
+                  icon="ellipsis"
+                  size="sm"
+                  variant="neutral-transparent"
+                  expandable
+                  popup-type="menu"
+                  [attr.accessible-label]="'Actions for ' + view.member.userName"
+                >
+                  <nldd-menu slot="popup">
+                    <nldd-menu-item
                       text="Edit"
-                      start-icon="pencil"
-                      variant="secondary"
-                      size="sm"
-                    ></nldd-button>
+                      icon="pencil"
+                      (select)="openEditMemberModal(view)"
+                    ></nldd-menu-item>
                     @if (view.source === 'project' && view.orgPermission !== null) {
-                      <nldd-button
-                        (click)="resetToOrgDefault(view)"
+                      <nldd-menu-divider></nldd-menu-divider>
+                      <nldd-menu-item
                         text="Reset"
-                        start-icon="arrow-u-turn-backward"
-                        variant="destructive"
-                        size="sm"
-                        class="ml-2"
-                      ></nldd-button>
+                        icon="arrow-u-turn-backward"
+                        destructive
+                        (select)="resetToOrgDefault(view)"
+                      ></nldd-menu-item>
                     } @else if (view.source === 'project') {
-                      <nldd-button
-                        (click)="openRemoveMemberModal(view)"
+                      <nldd-menu-divider></nldd-menu-divider>
+                      <nldd-menu-item
                         text="Remove"
-                        start-icon="trash"
-                        variant="destructive"
-                        size="sm"
-                        class="ml-2"
-                      ></nldd-button>
+                        icon="trash"
+                        destructive
+                        (select)="openRemoveMemberModal(view)"
+                      ></nldd-menu-item>
                     }
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+                  </nldd-menu>
+                </nldd-icon-button>
+              }
+            </nldd-cell>
+          </nldd-table-row>
+        }
+      </nldd-table>
     }
   </div>
 </div>
 
-<!-- Add/Edit Member Modal -->
-<nldd-modal-dialog
-  #addMemberDialog
-  appDialogSync
+<!-- Add/Edit Member Sheet -->
+<nldd-sheet
+  #addMemberSheet
+  appSheetSync
   [show]="showAddMemberModal()"
-  [attr.text]="editingMemberView() ? 'Edit member' : 'Add member to project'"
-  (open)="onAddMemberModalOpen()"
+  accessible-label="Add or edit project member"
+  placement="right"
+  width="480px"
   (close)="showAddMemberModal.set(false)"
 >
-  <nldd-spacer size="24"></nldd-spacer>
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="editingMemberView() ? 'Edit member' : 'Add member to project'"
+      dismiss-text="Cancel"
+      (dismiss)="showAddMemberModal.set(false)"
+    ></nldd-top-title-bar>
 
-  <nldd-form
-    [formGroup]="memberForm"
-    (submit)="saveMember($event)"
-    (keydown.enter)="saveMember($event)"
-  >
-    @if (!editingMemberView()) {
-      <nldd-form-field label="User" class="mb-4">
-        <nldd-dropdown>
-          <select id="userId" formControlName="userId">
-            <option value="">Select a user</option>
-            @for (user of availableUsers(); track user.id) {
-              <option [value]="user.id">{{ user.name }}</option>
+    <nldd-simple-section>
+      <nldd-form
+        [formGroup]="memberForm"
+        (submit)="saveMember($event)"
+        (keydown.enter)="saveMember($event)"
+      >
+        @if (!editingMemberView()) {
+          <nldd-form-field label="User" class="mb-4">
+            <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
+                 can't see it. Autofocus is the recommended pattern for a modal's first field. -->
+            <!-- eslint-disable @angular-eslint/template/no-autofocus -->
+            <nldd-dropdown>
+              <select autofocus id="userId" formControlName="userId">
+                <option value="">Select a user</option>
+                @for (user of availableUsers(); track user.id) {
+                  <option [value]="user.id">{{ user.name }}</option>
+                }
+              </select>
+            </nldd-dropdown>
+            <!-- eslint-enable @angular-eslint/template/no-autofocus -->
+            @if (availableUsers().length === 0) {
+              <p class="text-gray-600 dark:text-gray-400">No users available to add.</p>
             }
-          </select>
-        </nldd-dropdown>
-        @if (availableUsers().length === 0) {
-          <p class="text-gray-600 dark:text-gray-400">No users available to add.</p>
+            <nldd-form-field-error-text id="project-member-user-error">
+              @if (
+                memberForm.get('userId')?.invalid &&
+                (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
+              ) {
+                Please select a user.
+              }
+            </nldd-form-field-error-text>
+          </nldd-form-field>
         }
-        <nldd-form-field-error-text id="project-member-user-error">
-          @if (
-            memberForm.get('userId')?.invalid &&
-            (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
-          ) {
-            Please select a user.
-          }
-        </nldd-form-field-error-text>
-      </nldd-form-field>
-    }
 
-    @if (editingMemberView()) {
-      <div class="mb-4">
-        <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
-        <p>{{ editingMemberView()?.member?.userName }}</p>
-      </div>
-    }
+        @if (editingMemberView()) {
+          <div class="mb-4">
+            <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
+            <p>{{ editingMemberView()?.member?.userName }}</p>
+          </div>
+        }
 
-    <div class="mb-4">
-      <nldd-form-field label="Permission">
-        <nldd-radio-button-group name="permission" (change)="onPermissionChange($event)">
-          <div class="radio-option mb-2">
-            <nldd-radio-button-field
-              value="viewer"
-              label="Project viewer"
-              [checked]="memberForm.get('permission')?.value === 'viewer'"
-            ></nldd-radio-button-field>
-            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-              >Read access to resources</span
-            >
-          </div>
-          <div class="radio-option">
-            <nldd-radio-button-field
-              value="admin"
-              label="Project admin"
-              [checked]="memberForm.get('permission')?.value === 'admin'"
-            ></nldd-radio-button-field>
-            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-              >Full access to resources</span
-            >
-          </div>
-        </nldd-radio-button-group>
-      </nldd-form-field>
+        <div class="mb-4">
+          <nldd-form-field label="Permission">
+            <nldd-radio-button-group name="permission" (change)="onPermissionChange($event)">
+              <div class="radio-option mb-2">
+                <nldd-radio-button-field
+                  value="viewer"
+                  label="Project viewer"
+                  [checked]="memberForm.get('permission')?.value === 'viewer'"
+                ></nldd-radio-button-field>
+                <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+                  >Read access to resources</span
+                >
+              </div>
+              <div class="radio-option">
+                <nldd-radio-button-field
+                  value="admin"
+                  label="Project admin"
+                  [checked]="memberForm.get('permission')?.value === 'admin'"
+                ></nldd-radio-button-field>
+                <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+                  >Full access to resources</span
+                >
+              </div>
+            </nldd-radio-button-group>
+          </nldd-form-field>
+        </div>
+      </nldd-form>
+    </nldd-simple-section>
+
+    <div slot="footer" class="border-t border-gray-200 px-6 py-4 dark:border-gray-800">
+      <nldd-button
+        type="button"
+        (click)="saveMember()"
+        [text]="
+          isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'
+        "
+        [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
+        variant="primary"
+        width="full"
+      ></nldd-button>
     </div>
-  </nldd-form>
-
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="saveMember()"
-    text="Save changes"
-    [text]="isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'"
-    [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
-    variant="primary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="showAddMemberModal.set(false)"
-    [disabled]="isAddingMember()"
-    text="Cancel"
-    variant="secondary"
-  ></nldd-button>
-</nldd-modal-dialog>
+  </nldd-page>
+</nldd-sheet>
 
 <!-- Remove Member Modal -->
 <nldd-modal-dialog
   #removeMemberDialog
   appDialogSync
   [show]="showRemoveMemberModal()"
-  text="Remove member"
+  [attr.text]="'Remove ' + pendingRemoveView()?.member?.userName + ' from this project?'"
+  supporting-text="They immediately lose access to this project and its resources. You can add them again later."
+  accessible-label="Confirm member removal"
   variant="alert"
   (open)="onRemoveMemberModalOpen()"
   (close)="showRemoveMemberModal.set(false)"
 >
-  <nldd-spacer size="24"></nldd-spacer>
-
-  <p>
-    Are you sure you want to remove
-    <strong class="font-semibold">{{ pendingRemoveView()?.member?.userName }}</strong>
-    from this project?
-  </p>
-
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="confirmRemoveMember()"
-    text="Yes, remove this member"
-    variant="destructive"
-  ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="showRemoveMemberModal.set(false)"
-    text="Cancel"
+    text="Keep member"
     variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmRemoveMember()"
+    text="Remove member"
+    variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>

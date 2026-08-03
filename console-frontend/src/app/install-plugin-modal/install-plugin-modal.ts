@@ -6,12 +6,11 @@ import {
   input,
   output,
   signal,
-  viewChild,
-  ElementRef,
 } from '@angular/core';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
 import DropdownSyncDirective from '../dropdown-sync.directive';
-import focusFirstModalInput from '../modal-focus';
+import isPresenting from '../presentation/presenting';
 import { LoadingIndicatorComponent } from '../icons';
 import {
   getInstallStatusDisplay,
@@ -49,9 +48,22 @@ export interface RetrySelection {
   hash: string;
 }
 
+/**
+ * Empty string to let `nldd-sheet` focus the version picker when the sheet opens, null while the
+ * walkthrough is driving: focus inside a field there swallows the overlay's arrow keys.
+ */
+function autofocusUnlessPresenting(): '' | null {
+  return isPresenting() ? null : '';
+}
+
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [DialogSyncDirective, DropdownSyncDirective, LoadingIndicatorComponent],
+  imports: [
+    DialogSyncDirective,
+    SheetSyncDirective,
+    DropdownSyncDirective,
+    LoadingIndicatorComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,8 +96,6 @@ export default class InstallPluginModalComponent {
 
   // Emits a cluster to retry a failed installation on, with the current pin.
   retry = output<RetrySelection>();
-
-  dialogRef = viewChild<ElementRef<HTMLElement>>('dialog');
 
   // Cluster IDs currently selected for batch install.
   selected = signal<Set<string>>(new Set());
@@ -145,9 +155,9 @@ export default class InstallPluginModalComponent {
   onOpen(): void {
     this.selected.set(new Set());
     this.pickedVersion.set(null);
-    const el = this.dialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
   }
+
+  readonly autofocusVersion = autofocusUnlessPresenting;
 
   onVersionChange(version: string): void {
     this.pickedVersion.set(version);

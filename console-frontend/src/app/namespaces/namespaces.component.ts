@@ -24,13 +24,14 @@ import {
   Namespace,
 } from '../../generated/v1/namespace_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 import NamespaceSelection from '../utils/namespace-selection';
 
 @Component({
   selector: 'app-namespaces',
-  imports: [ReactiveFormsModule, DialogSyncDirective],
+  imports: [ReactiveFormsModule, DialogSyncDirective, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './namespaces.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,6 +62,9 @@ export default class NamespacesComponent implements OnInit {
   isBulkDeleting = signal<boolean>(false);
 
   errorMessage = signal<string | null>(null);
+
+  /** Kept apart from errorMessage: a failed create belongs in the sheet the user is still in. */
+  createErrorMessage = signal<string | null>(null);
 
   showCreateNamespaceModal = signal<boolean>(false);
 
@@ -111,12 +115,13 @@ export default class NamespacesComponent implements OnInit {
 
   openCreateNamespaceModal() {
     this.namespaceForm.reset();
+    this.createErrorMessage.set(null);
     this.showCreateNamespaceModal.set(true);
   }
 
   async createNamespace(event?: Event) {
     event?.preventDefault();
-    this.errorMessage.set(null);
+    this.createErrorMessage.set(null);
 
     if (this.namespaceForm.invalid) {
       this.namespaceForm.markAllAsTouched();
@@ -144,7 +149,7 @@ export default class NamespacesComponent implements OnInit {
         this.organizationDataService.loadOrganizationData(),
       ]);
     } catch (error) {
-      this.errorMessage.set(
+      this.createErrorMessage.set(
         error instanceof Error
           ? `Failed to create namespace: ${error.message}`
           : 'Failed to create namespace',
@@ -247,6 +252,12 @@ export default class NamespacesComponent implements OnInit {
     this.namespaceForm.get('name')?.markAsDirty();
   }
 
+  /** Also covers `touched`, so submitting an untouched empty field shows the error. */
+  isNameInvalid(): boolean {
+    const nameControl = this.namespaceForm.get('name');
+    return !!nameControl?.invalid && (nameControl.dirty || nameControl.touched);
+  }
+
   getNameError(): string {
     const nameControl = this.namespaceForm.get('name');
     if (nameControl?.hasError('required')) {
@@ -259,13 +270,6 @@ export default class NamespacesComponent implements OnInit {
       return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
     }
     return '';
-  }
-
-  createNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('createNamespaceDialog');
-
-  onCreateNamespaceModalOpen(): void {
-    const el = this.createNamespaceDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
   }
 
   deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');

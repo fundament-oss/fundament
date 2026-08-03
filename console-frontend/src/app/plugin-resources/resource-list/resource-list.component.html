@@ -48,72 +48,75 @@
       } @else {
         <!-- Table -->
         @if (resources().length > 0) {
-          <div class="table-container">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th scope="col">Name</th>
-                  @for (col of columns(); track col.name) {
-                    <th
-                      scope="col"
-                      [class.hidden]="col.priority && col.priority > 0"
-                      [class.lg:table-cell]="col.priority && col.priority > 0"
+          <nldd-table
+            [attr.accessible-label]="kindLabel()"
+            [attr.columns]="tableColumns()"
+            [attr.md-columns]="tableMdColumns()"
+            [attr.sm-columns]="tableMdColumns()"
+          >
+            <nldd-table-row slot="header">
+              <nldd-text-cell text="**Name**"></nldd-text-cell>
+              @for (col of columns(); track col.name) {
+                <nldd-text-cell
+                  [attr.text]="'**' + col.name + '**'"
+                  [attr.hide-below]="col.priority && col.priority > 0 ? 'lg' : null"
+                ></nldd-text-cell>
+              }
+              <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
+            </nldd-table-row>
+
+            @for (resource of resources(); track resource.metadata.uid) {
+              <nldd-table-row>
+                <nldd-cell width="full" vertical-alignment="top">
+                  <div class="py-2">
+                    <a
+                      [routerLink]="detailLink(resource)"
+                      [queryParams]="detailQueryParams(resource)"
+                      class="font-medium hover:underline"
+                      >{{ resource.metadata.name }}</a
                     >
-                      {{ col.name }}
-                    </th>
-                  }
-                  <th scope="col">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (resource of resources(); track resource.metadata.uid) {
-                  <tr>
-                    <td class="whitespace-normal">
-                      <a
+                    @if (resource.metadata.namespace) {
+                      <div class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
+                        {{ resource.metadata.namespace }}
+                      </div>
+                    }
+                  </div>
+                </nldd-cell>
+                @for (col of columns(); track col.name) {
+                  <nldd-text-cell
+                    [attr.text]="formatCell(resource, col)"
+                    [attr.hide-below]="col.priority && col.priority > 0 ? 'lg' : null"
+                  ></nldd-text-cell>
+                }
+                <nldd-cell horizontal-alignment="right">
+                  <nldd-icon-button
+                    icon="ellipsis"
+                    size="sm"
+                    variant="neutral-transparent"
+                    expandable
+                    popup-type="menu"
+                    [attr.accessible-label]="'Actions for ' + resource.metadata.name"
+                  >
+                    <nldd-menu slot="popup">
+                      <nldd-menu-item
+                        text="View"
+                        icon="eye"
                         [routerLink]="detailLink(resource)"
                         [queryParams]="detailQueryParams(resource)"
-                        class="font-medium hover:underline"
-                        >{{ resource.metadata.name }}</a
-                      >
-                      @if (resource.metadata.namespace) {
-                        <div class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
-                          {{ resource.metadata.namespace }}
-                        </div>
-                      }
-                    </td>
-                    @for (col of columns(); track col.name) {
-                      <td
-                        [class.hidden]="col.priority && col.priority > 0"
-                        [class.lg:table-cell]="col.priority && col.priority > 0"
-                        class="whitespace-normal"
-                      >
-                        {{ formatCell(resource, col) }}
-                      </td>
-                    }
-                    <td>
-                      <div class="flex gap-1">
-                        <nldd-button
-                          [routerLink]="detailLink(resource)"
-                          [queryParams]="detailQueryParams(resource)"
-                          text="View"
-                          start-icon="eye"
-                          variant="secondary"
-                          size="sm"
-                        ></nldd-button>
-                        <nldd-button
-                          (click)="openDelete(resource)"
-                          text="Delete"
-                          start-icon="trash"
-                          variant="destructive"
-                          size="sm"
-                        ></nldd-button>
-                      </div>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+                      ></nldd-menu-item>
+                      <nldd-menu-divider></nldd-menu-divider>
+                      <nldd-menu-item
+                        text="Delete"
+                        icon="trash"
+                        destructive
+                        (select)="openDelete(resource)"
+                      ></nldd-menu-item>
+                    </nldd-menu>
+                  </nldd-icon-button>
+                </nldd-cell>
+              </nldd-table-row>
+            }
+          </nldd-table>
         }
 
         <!-- Empty State -->

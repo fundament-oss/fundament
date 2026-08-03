@@ -62,51 +62,43 @@
           <p class="mt-4 text-gray-600 dark:text-gray-300">Loading invitations...</p>
         </div>
       } @else if (pendingInvitations().length > 0) {
-        <div class="table-container">
-          <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th width="60%" scope="col">Email</th>
-                <th width="20%" scope="col">Permission</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
-              @for (invitation of pendingInvitations(); track invitation.id) {
-                <tr>
-                  <td>
-                    <div>
-                      <span class="font-medium">
-                        {{ invitation.email || invitation.name }}
-                      </span>
-                      <p class="text-gray-500 dark:text-gray-400">
-                        Invited {{ formatTimeAgo(invitation.created) }}
-                      </p>
-                    </div>
-                  </td>
-                  <td>
-                    <span
-                      class="badge capitalize"
-                      [class.badge-purple]="invitation.permission === 'admin'"
-                      [class.badge-blue]="invitation.permission === 'viewer'"
-                    >
-                      {{ invitation.permission }}
-                    </span>
-                  </td>
-                  <td>
-                    <nldd-button
-                      (click)="cancelInvitation(invitation.id)"
-                      text="Cancel"
-                      start-icon="trash"
-                      variant="destructive"
-                      size="sm"
-                    ></nldd-button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        <nldd-table accessible-label="Pending invitations" columns="minmax(200px, 1fr) 140px 120px">
+          <nldd-table-row slot="header">
+            <nldd-text-cell text="**Email**"></nldd-text-cell>
+            <nldd-text-cell text="**Permission**"></nldd-text-cell>
+            <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
+          </nldd-table-row>
+
+          @for (invitation of pendingInvitations(); track invitation.id) {
+            <nldd-table-row>
+              <nldd-text-cell
+                [attr.text]="invitation.email || invitation.name"
+                [attr.supporting-text]="'Invited ' + formatTimeAgo(invitation.created)"
+              ></nldd-text-cell>
+              <nldd-cell>
+                <nldd-tag
+                  class="capitalize"
+                  size="sm"
+                  [attr.color]="invitation.permission === 'admin' ? 'paars' : 'accent'"
+                  [attr.text]="invitation.permission"
+                ></nldd-tag>
+              </nldd-cell>
+              <nldd-cell horizontal-alignment="right">
+                <nldd-button
+                  type="button"
+                  text="Cancel"
+                  start-icon="trash"
+                  size="sm"
+                  variant="destructive"
+                  [attr.accessible-label]="
+                    'Cancel invitation for ' + (invitation.email || invitation.name)
+                  "
+                  (click)="cancelInvitation(invitation.id)"
+                ></nldd-button>
+              </nldd-cell>
+            </nldd-table-row>
+          }
+        </nldd-table>
       } @else {
         <nldd-box>
           <nldd-inline-dialog icon="envelope" icon-color="secondary" text="No pending invitations">
@@ -167,77 +159,74 @@
           </nldd-inline-dialog>
         </nldd-box>
       } @else {
-        <div class="table-container">
-          <table class="table min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th width="60%" scope="col">Name</th>
-                <th width="20%" scope="col">Permission</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-950">
-              @for (member of activeMembers(); track member.id) {
-                <tr>
-                  <td>
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-medium text-white"
-                        [class]="getAvatarColor(member.name)"
-                      >
-                        {{ getInitials(member.name) }}
-                      </div>
-                      <div>
-                        <div class="flex items-center gap-2">
-                          <span class="font-medium">{{ member.name }}</span>
-                          @if (member.isCurrentUser) {
-                            <span class="badge badge-gray text-gray-600! dark:text-gray-400!"
-                              >You</span
-                            >
-                          }
-                        </div>
-                        <p class="text-gray-500 dark:text-gray-400">
-                          Joined {{ formatTimeAgo(member.created) }}
-                        </p>
-                      </div>
+        <nldd-table accessible-label="Active members" columns="minmax(200px, 1fr) 140px 64px">
+          <nldd-table-row slot="header">
+            <nldd-text-cell text="**Name**"></nldd-text-cell>
+            <nldd-text-cell text="**Permission**"></nldd-text-cell>
+            <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
+          </nldd-table-row>
+
+          @for (member of activeMembers(); track member.id) {
+            <nldd-table-row>
+              <nldd-cell width="full">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-medium text-white"
+                    [class]="getAvatarColor(member.name)"
+                  >
+                    {{ getInitials(member.name) }}
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium">{{ member.name }}</span>
+                      @if (member.isCurrentUser) {
+                        <nldd-tag color="neutral" size="sm" text="You"></nldd-tag>
+                      }
                     </div>
-                  </td>
-                  <td>
-                    <span
-                      class="badge capitalize"
-                      [class.badge-purple]="member.permission === 'admin'"
-                      [class.badge-blue]="member.permission === 'viewer'"
-                    >
-                      {{ member.permission }}
-                    </span>
-                  </td>
-                  <td>
-                    @if (member.isCurrentUser) {
-                      <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
-                    } @else {
-                      <nldd-button
-                        type="button"
-                        (click)="openEditModal(member)"
+                    <p class="text-gray-500 dark:text-gray-400">
+                      Joined {{ formatTimeAgo(member.created) }}
+                    </p>
+                  </div>
+                </div>
+              </nldd-cell>
+              <nldd-cell>
+                <nldd-tag
+                  class="capitalize"
+                  size="sm"
+                  [attr.color]="member.permission === 'admin' ? 'paars' : 'accent'"
+                  [attr.text]="member.permission"
+                ></nldd-tag>
+              </nldd-cell>
+              <nldd-cell horizontal-alignment="right">
+                @if (!member.isCurrentUser) {
+                  <nldd-icon-button
+                    icon="ellipsis"
+                    size="sm"
+                    variant="neutral-transparent"
+                    expandable
+                    popup-type="menu"
+                    [attr.accessible-label]="'Actions for ' + member.name"
+                  >
+                    <nldd-menu slot="popup">
+                      <nldd-menu-item
                         text="Edit"
-                        start-icon="pencil"
-                        variant="secondary"
-                        size="sm"
-                        class="mr-2"
-                      ></nldd-button>
-                      <nldd-button
-                        (click)="openDeleteModal(member)"
+                        icon="pencil"
+                        (select)="openEditModal(member)"
+                      ></nldd-menu-item>
+                      <nldd-menu-divider></nldd-menu-divider>
+                      <nldd-menu-item
                         text="Remove"
-                        start-icon="trash"
-                        variant="destructive"
-                        size="sm"
-                      ></nldd-button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+                        icon="trash"
+                        destructive
+                        (select)="openDeleteModal(member)"
+                      ></nldd-menu-item>
+                    </nldd-menu>
+                  </nldd-icon-button>
+                }
+              </nldd-cell>
+            </nldd-table-row>
+          }
+        </nldd-table>
       }
     </div>
   </div>
@@ -248,157 +237,66 @@
   #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
-  text="Remove member"
+  [attr.text]="'Remove ' + deletingMember()?.name + ' from this organization?'"
+  supporting-text="This revokes their access to all organization resources, including every project they are a member of."
+  accessible-label="Confirm member removal"
   variant="alert"
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
-  <nldd-spacer size="24"></nldd-spacer>
-
-  <p>
-    Are you sure you want to remove
-    <strong class="font-semibold">{{ deletingMember()?.name }}</strong>
-    from this organization?
-  </p>
-  <p class="text-danger-600 dark:text-danger-400 mt-2">
-    This will revoke their access to all organization resources.
-  </p>
-
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="confirmDeleteMember()"
-    text="Yes, remove member"
-    variant="destructive"
-  ></nldd-button>
   <nldd-button
     slot="actions"
     type="button"
     (click)="showDeleteModal.set(false)"
-    text="Cancel"
+    text="Keep member"
     variant="secondary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="confirmDeleteMember()"
+    text="Remove member"
+    variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
 
-<!-- Edit Member Modal -->
-<nldd-modal-dialog
-  #editDialog
-  appDialogSync
+<!-- Edit Member Sheet -->
+<nldd-sheet
+  #editSheet
+  appSheetSync
   [show]="showEditModal()"
-  text="Edit member"
-  (open)="onEditModalOpen()"
+  accessible-label="Edit member"
+  placement="right"
+  width="480px"
   (close)="showEditModal.set(false)"
 >
-  <nldd-spacer size="24"></nldd-spacer>
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit member"
+      dismiss-text="Cancel"
+      (dismiss)="showEditModal.set(false)"
+    ></nldd-top-title-bar>
 
-  <div class="mb-4">
-    <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
-    <p>{{ editingMember()?.name }}</p>
-    <p class="text-sm text-gray-500 dark:text-gray-400">
-      {{ editingMember()?.email || editingMember()?.externalRef }}
-    </p>
-  </div>
-
-  <nldd-form-field label="Permission">
-    <nldd-radio-button-group
-      name="editPermission"
-      (change)="editPermission.set($any($event).detail.value)"
-    >
-      <div class="radio-option mb-2">
-        <nldd-radio-button-field
-          value="viewer"
-          label="Viewer"
-          [checked]="editPermission() === 'viewer'"
-        ></nldd-radio-button-field>
-        <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-          >Read access to resources</span
-        >
+    <nldd-simple-section>
+      <div class="mb-4">
+        <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
+        <p>{{ editingMember()?.name }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          {{ editingMember()?.email || editingMember()?.externalRef }}
+        </p>
       </div>
-      <div class="radio-option">
-        <nldd-radio-button-field
-          value="admin"
-          label="Admin"
-          [checked]="editPermission() === 'admin'"
-        ></nldd-radio-button-field>
-        <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-          >Full access to resources</span
-        >
-      </div>
-    </nldd-radio-button-group>
-  </nldd-form-field>
 
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="confirmEditMember()"
-    text="Save changes"
-    [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
-    [disabled]="isSubmitting()"
-    variant="primary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="showEditModal.set(false)"
-    [disabled]="isSubmitting()"
-    text="Cancel"
-    variant="secondary"
-  ></nldd-button>
-</nldd-modal-dialog>
-
-<!-- Invite Modal -->
-<nldd-modal-dialog
-  #inviteDialog
-  appDialogSync
-  [show]="isModalOpen()"
-  text="Invite user"
-  (open)="onInviteModalOpen()"
-  (close)="closeModal()"
->
-  <nldd-spacer size="24"></nldd-spacer>
-
-  <p class="mb-6 text-gray-600 dark:text-gray-400">
-    Enter the email address of the user you want to invite. They will be able to sign in via SSO
-    once added. No invitation email is sent yet, let the user know they should sign in themselves.
-  </p>
-
-  <nldd-form
-    (submit)="submitInvitation($event)"
-    (keydown.enter)="submitInvitation($event)"
-    novalidate
-  >
-    <nldd-form-field label="Email address" class="mb-4">
-      <nldd-text-field
-        type="email"
-        id="email"
-        [value]="inviteEmail()"
-        (input)="
-          inviteEmail.set($any($event.target).value);
-          inviteEmailDirty.set(true);
-          inviteError.set(null)
-        "
-        placeholder="user@example.com"
-        [disabled]="isSubmitting()"
-        [invalid]="!!(inviteError() || (inviteEmailDirty() && !inviteEmail().trim()))"
-        error-message="org-invite-email-error"
-      ></nldd-text-field>
-      <nldd-form-field-error-text id="org-invite-email-error">
-        {{ inviteError() || 'The user email is required' }}
-      </nldd-form-field-error-text>
-    </nldd-form-field>
-
-    <div class="mb-6">
       <nldd-form-field label="Permission">
         <nldd-radio-button-group
-          name="permission"
-          (change)="invitePermission.set($any($event).detail.value)"
-          [disabled]="isSubmitting()"
+          name="editPermission"
+          (change)="editPermission.set($any($event).detail.value)"
         >
           <div class="radio-option mb-2">
             <nldd-radio-button-field
               value="viewer"
               label="Viewer"
-              [checked]="invitePermission() === 'viewer'"
+              [checked]="editPermission() === 'viewer'"
             ></nldd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Read access to resources</span
@@ -408,7 +306,7 @@
             <nldd-radio-button-field
               value="admin"
               label="Admin"
-              [checked]="invitePermission() === 'admin'"
+              [checked]="editPermission() === 'admin'"
             ></nldd-radio-button-field>
             <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
               >Full access to resources</span
@@ -416,24 +314,114 @@
           </div>
         </nldd-radio-button-group>
       </nldd-form-field>
-    </div>
-  </nldd-form>
+    </nldd-simple-section>
 
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="submitInvitation()"
-    text="Send invitation"
-    [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
-    [disabled]="isSubmitting()"
-    variant="primary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="closeModal()"
-    [disabled]="isSubmitting()"
-    text="Cancel"
-    variant="secondary"
-  ></nldd-button>
-</nldd-modal-dialog>
+    <div slot="footer" class="border-t border-gray-200 px-6 py-4 dark:border-gray-800">
+      <nldd-button
+        type="button"
+        (click)="confirmEditMember()"
+        [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
+        [disabled]="isSubmitting()"
+        variant="primary"
+        width="full"
+      ></nldd-button>
+    </div>
+  </nldd-page>
+</nldd-sheet>
+
+<!-- Invite Sheet -->
+<nldd-sheet
+  #inviteSheet
+  appSheetSync
+  [show]="isModalOpen()"
+  accessible-label="Invite user"
+  placement="right"
+  width="480px"
+  (close)="closeModal()"
+>
+  <nldd-page sticky-header="" sticky-footer="">
+    <nldd-top-title-bar
+      slot="header"
+      text="Invite user"
+      dismiss-text="Cancel"
+      (dismiss)="closeModal()"
+    ></nldd-top-title-bar>
+
+    <nldd-simple-section>
+      <p class="mb-6 text-gray-600 dark:text-gray-400">
+        Enter the email address of the user you want to invite. They will be able to sign in via SSO
+        once added. No invitation email is sent yet, let the user know they should sign in
+        themselves.
+      </p>
+
+      <nldd-form
+        (submit)="submitInvitation($event)"
+        (keydown.enter)="submitInvitation($event)"
+        novalidate
+      >
+        <nldd-form-field label="Email address" class="mb-4">
+          <nldd-text-field
+            autofocus
+            type="email"
+            id="email"
+            [value]="inviteEmail()"
+            (input)="
+              inviteEmail.set($any($event.target).value);
+              inviteEmailDirty.set(true);
+              inviteError.set(null)
+            "
+            placeholder="user@example.com"
+            [disabled]="isSubmitting()"
+            [invalid]="!!(inviteError() || (inviteEmailDirty() && !inviteEmail().trim()))"
+            error-message="org-invite-email-error"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="org-invite-email-error">
+            {{ inviteError() || 'The user email is required' }}
+          </nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <div class="mb-6">
+          <nldd-form-field label="Permission">
+            <nldd-radio-button-group
+              name="permission"
+              (change)="invitePermission.set($any($event).detail.value)"
+              [disabled]="isSubmitting()"
+            >
+              <div class="radio-option mb-2">
+                <nldd-radio-button-field
+                  value="viewer"
+                  label="Viewer"
+                  [checked]="invitePermission() === 'viewer'"
+                ></nldd-radio-button-field>
+                <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+                  >Read access to resources</span
+                >
+              </div>
+              <div class="radio-option">
+                <nldd-radio-button-field
+                  value="admin"
+                  label="Admin"
+                  [checked]="invitePermission() === 'admin'"
+                ></nldd-radio-button-field>
+                <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
+                  >Full access to resources</span
+                >
+              </div>
+            </nldd-radio-button-group>
+          </nldd-form-field>
+        </div>
+      </nldd-form>
+    </nldd-simple-section>
+
+    <div slot="footer" class="border-t border-gray-200 px-6 py-4 dark:border-gray-800">
+      <nldd-button
+        type="button"
+        (click)="submitInvitation()"
+        [text]="isSubmitting() ? 'Sending...' : 'Send invitation'"
+        [disabled]="isSubmitting()"
+        variant="primary"
+        width="full"
+      ></nldd-button>
+    </div>
+  </nldd-page>
+</nldd-sheet>
