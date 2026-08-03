@@ -43,6 +43,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/title-cell';
 import '@nldd/design-system/tag';
 import '@nldd/design-system/menu';
+import '@nldd/design-system/step-indicator';
 import {
   RouterOutlet,
   RouterLink,

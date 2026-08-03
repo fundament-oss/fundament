@@ -45,6 +45,14 @@ export default class OrganizationLimitsComponent implements OnInit {
 
   maxNodesPerNodePool = signal<number | undefined>(undefined);
 
+  // A limit that is switched off is stored as undefined, which is how the API
+  // encodes "no limit".
+  maxNodesPerClusterLimited = signal(false);
+
+  maxNodePoolsLimited = signal(false);
+
+  maxNodesPerNodePoolLimited = signal(false);
+
   clusterSaving = signal(false);
 
   private savedCluster = signal<{
@@ -68,6 +76,12 @@ export default class OrganizationLimitsComponent implements OnInit {
   defaultCpuRequestM = signal<number | undefined>(undefined);
 
   defaultCpuLimitM = signal<number | undefined>(undefined);
+
+  // Request and limit are switched as one pair: a LimitRange without either is
+  // no constraint at all.
+  memoryLimited = signal(false);
+
+  cpuLimited = signal(false);
 
   namespaceSaving = signal(false);
 
@@ -157,6 +171,8 @@ export default class OrganizationLimitsComponent implements OnInit {
       this.defaultMemoryLimitMi.set(savedNamespace.defaultMemoryLimitMi);
       this.defaultCpuRequestM.set(savedNamespace.defaultCpuRequestM);
       this.defaultCpuLimitM.set(savedNamespace.defaultCpuLimitM);
+      this.syncClusterToggles();
+      this.syncNamespaceToggles();
     } catch {
       this.toastService.error('Failed to load organization limits');
     } finally {
@@ -205,6 +221,7 @@ export default class OrganizationLimitsComponent implements OnInit {
     this.maxNodesPerCluster.set(defaults.maxNodesPerCluster);
     this.maxNodePools.set(defaults.maxNodePools);
     this.maxNodesPerNodePool.set(defaults.maxNodesPerNodePool);
+    this.syncClusterToggles();
   }
 
   resetNamespaceLimits(): void {
@@ -213,6 +230,83 @@ export default class OrganizationLimitsComponent implements OnInit {
     this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
     this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
     this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
+    this.syncNamespaceToggles();
+  }
+
+  // A switch is on exactly when a value is set, so the form always opens on
+  // what is actually stored.
+  private syncClusterToggles(): void {
+    this.maxNodesPerClusterLimited.set(this.maxNodesPerCluster() !== undefined);
+    this.maxNodePoolsLimited.set(this.maxNodePools() !== undefined);
+    this.maxNodesPerNodePoolLimited.set(this.maxNodesPerNodePool() !== undefined);
+  }
+
+  private syncNamespaceToggles(): void {
+    this.memoryLimited.set(
+      this.defaultMemoryRequestMi() !== undefined || this.defaultMemoryLimitMi() !== undefined,
+    );
+    this.cpuLimited.set(
+      this.defaultCpuRequestM() !== undefined || this.defaultCpuLimitM() !== undefined,
+    );
+  }
+
+  toggleMaxNodesPerCluster(limited: boolean): void {
+    this.maxNodesPerClusterLimited.set(limited);
+    if (!limited) {
+      this.maxNodesPerCluster.set(undefined);
+    } else if (this.maxNodesPerCluster() === undefined) {
+      this.maxNodesPerCluster.set(this.clusterDefaults().maxNodesPerCluster);
+    }
+  }
+
+  toggleMaxNodePools(limited: boolean): void {
+    this.maxNodePoolsLimited.set(limited);
+    if (!limited) {
+      this.maxNodePools.set(undefined);
+    } else if (this.maxNodePools() === undefined) {
+      this.maxNodePools.set(this.clusterDefaults().maxNodePools);
+    }
+  }
+
+  toggleMaxNodesPerNodePool(limited: boolean): void {
+    this.maxNodesPerNodePoolLimited.set(limited);
+    if (!limited) {
+      this.maxNodesPerNodePool.set(undefined);
+    } else if (this.maxNodesPerNodePool() === undefined) {
+      this.maxNodesPerNodePool.set(this.clusterDefaults().maxNodesPerNodePool);
+    }
+  }
+
+  toggleMemoryDefaults(limited: boolean): void {
+    this.memoryLimited.set(limited);
+    const defaults = this.namespaceDefaults();
+    if (!limited) {
+      this.defaultMemoryRequestMi.set(undefined);
+      this.defaultMemoryLimitMi.set(undefined);
+      return;
+    }
+    if (this.defaultMemoryRequestMi() === undefined) {
+      this.defaultMemoryRequestMi.set(defaults.defaultMemoryRequestMi);
+    }
+    if (this.defaultMemoryLimitMi() === undefined) {
+      this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
+    }
+  }
+
+  toggleCpuDefaults(limited: boolean): void {
+    this.cpuLimited.set(limited);
+    const defaults = this.namespaceDefaults();
+    if (!limited) {
+      this.defaultCpuRequestM.set(undefined);
+      this.defaultCpuLimitM.set(undefined);
+      return;
+    }
+    if (this.defaultCpuRequestM() === undefined) {
+      this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
+    }
+    if (this.defaultCpuLimitM() === undefined) {
+      this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
+    }
   }
 
   async saveNamespaceLimits(event?: Event) {

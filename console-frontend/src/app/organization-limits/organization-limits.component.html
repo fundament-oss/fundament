@@ -5,92 +5,168 @@
     </div>
   } @else {
     <!-- Cluster Limits (Gardener) -->
-    <nldd-form class="card" (submit)="saveClusterLimits($event)">
+    <div class="card">
       <div class="card-header">
-        <h2 class="text-xl font-semibold dark:text-white">Cluster Limits</h2>
+        <h2 class="text-xl font-semibold dark:text-white">Cluster limits</h2>
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
           Maximum resource quotas enforced by Gardener for shoot clusters in this organization.
+          Every quota is unlimited unless you set one.
         </p>
       </div>
 
       <div class="card-body-lg">
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
-          <!-- Max nodes per cluster -->
-          <div>
-            <nldd-form-field label="Max nodes per cluster">
-              <nldd-number-field
-                id="maxNodesPerCluster"
-                full-width="true"
-                min="1"
-                step="1"
-                [value]="maxNodesPerCluster()"
-                (input)="
-                  $any($event).detail && maxNodesPerCluster.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-              <nldd-form-field-help-text>
-                Maximum total number of nodes across all node pools in a shoot cluster.
-              </nldd-form-field-help-text>
-            </nldd-form-field>
+        <nldd-form (submit)="saveClusterLimits($event)">
+          <div class="space-y-8">
+            <!-- Max nodes per cluster -->
+            <div>
+              <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
+                Nodes per cluster
+              </span>
+              <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+                Caps the total number of nodes across all node pools in a shoot cluster.
+              </p>
+              <nldd-segmented-control
+                size="sm"
+                name="maxNodesPerClusterLimited"
+                accessible-label="Nodes per cluster"
+                [value]="maxNodesPerClusterLimited() ? 'limited' : 'unlimited'"
+                (change)="toggleMaxNodesPerCluster($any($event).detail.value === 'limited')"
+              >
+                <nldd-segmented-control-item
+                  value="unlimited"
+                  text="Unlimited"
+                ></nldd-segmented-control-item>
+                <nldd-segmented-control-item
+                  value="limited"
+                  text="Limited"
+                ></nldd-segmented-control-item>
+              </nldd-segmented-control>
+              @if (maxNodesPerClusterLimited()) {
+                <div class="mt-3 max-w-xs">
+                  <nldd-form-field label="Max nodes per cluster">
+                    <nldd-number-field
+                      id="maxNodesPerCluster"
+                      full-width="true"
+                      min="1"
+                      step="1"
+                      [value]="maxNodesPerCluster()"
+                      (input)="
+                        $any($event).detail &&
+                          maxNodesPerCluster.set(toInt($any($event).detail.value))
+                      "
+                    ></nldd-number-field>
+                  </nldd-form-field>
+                </div>
+              }
+            </div>
+
+            <!-- Max node pools -->
+            <div>
+              <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
+                Node pools per cluster
+              </span>
+              <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+                Caps how many node pools can be configured per shoot cluster.
+              </p>
+              <nldd-segmented-control
+                size="sm"
+                name="maxNodePoolsLimited"
+                accessible-label="Node pools per cluster"
+                [value]="maxNodePoolsLimited() ? 'limited' : 'unlimited'"
+                (change)="toggleMaxNodePools($any($event).detail.value === 'limited')"
+              >
+                <nldd-segmented-control-item
+                  value="unlimited"
+                  text="Unlimited"
+                ></nldd-segmented-control-item>
+                <nldd-segmented-control-item
+                  value="limited"
+                  text="Limited"
+                ></nldd-segmented-control-item>
+              </nldd-segmented-control>
+              @if (maxNodePoolsLimited()) {
+                <div class="mt-3 max-w-xs">
+                  <nldd-form-field label="Max node pools per cluster">
+                    <nldd-number-field
+                      id="maxNodePools"
+                      full-width="true"
+                      min="1"
+                      step="1"
+                      [value]="maxNodePools()"
+                      (input)="
+                        $any($event).detail && maxNodePools.set(toInt($any($event).detail.value))
+                      "
+                    ></nldd-number-field>
+                  </nldd-form-field>
+                </div>
+              }
+            </div>
+
+            <!-- Max nodes per node pool -->
+            <div>
+              <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
+                Nodes per node pool
+              </span>
+              <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+                Caps how many nodes a single node pool may hold, including the autoscaler maximum.
+              </p>
+              <nldd-segmented-control
+                size="sm"
+                name="maxNodesPerNodePoolLimited"
+                accessible-label="Nodes per node pool"
+                [value]="maxNodesPerNodePoolLimited() ? 'limited' : 'unlimited'"
+                (change)="toggleMaxNodesPerNodePool($any($event).detail.value === 'limited')"
+              >
+                <nldd-segmented-control-item
+                  value="unlimited"
+                  text="Unlimited"
+                ></nldd-segmented-control-item>
+                <nldd-segmented-control-item
+                  value="limited"
+                  text="Limited"
+                ></nldd-segmented-control-item>
+              </nldd-segmented-control>
+              @if (maxNodesPerNodePoolLimited()) {
+                <div class="mt-3 max-w-xs">
+                  <nldd-form-field label="Max nodes per node pool">
+                    <nldd-number-field
+                      id="maxNodesPerNodePool"
+                      full-width="true"
+                      min="1"
+                      step="1"
+                      [value]="maxNodesPerNodePool()"
+                      (input)="
+                        $any($event).detail &&
+                          maxNodesPerNodePool.set(toInt($any($event).detail.value))
+                      "
+                    ></nldd-number-field>
+                  </nldd-form-field>
+                </div>
+              }
+            </div>
           </div>
 
-          <!-- Max node pools -->
-          <div>
-            <nldd-form-field label="Max node pools per cluster">
-              <nldd-number-field
-                id="maxNodePools"
-                full-width="true"
-                min="1"
-                step="1"
-                [value]="maxNodePools()"
-                (input)="$any($event).detail && maxNodePools.set(toInt($any($event).detail.value))"
-              ></nldd-number-field>
-              <nldd-form-field-help-text>
-                Maximum number of node pools that can be configured per shoot cluster.
-              </nldd-form-field-help-text>
-            </nldd-form-field>
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <nldd-button
+              type="submit"
+              [disabled]="saving()"
+              [text]="clusterSaving() ? 'Saving…' : 'Save cluster limits'"
+              variant="primary"
+            ></nldd-button>
+            <nldd-button
+              type="button"
+              (click)="resetClusterLimits()"
+              [disabled]="saving()"
+              text="Reset to defaults"
+              variant="secondary"
+            ></nldd-button>
           </div>
-
-          <!-- Max nodes per node pool -->
-          <div>
-            <nldd-form-field label="Max nodes per node pool">
-              <nldd-number-field
-                id="maxNodesPerNodePool"
-                full-width="true"
-                min="1"
-                step="1"
-                [value]="maxNodesPerNodePool()"
-                (input)="
-                  $any($event).detail && maxNodesPerNodePool.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-              <nldd-form-field-help-text>
-                Maximum number of nodes allowed in a single node pool (applies to autoscaler max).
-              </nldd-form-field-help-text>
-            </nldd-form-field>
-          </div>
-        </div>
-
-        <div class="mt-6 flex flex-wrap items-center gap-3">
-          <nldd-button
-            type="submit"
-            [disabled]="saving()"
-            [text]="clusterSaving() ? 'Saving…' : 'Save cluster limits'"
-            variant="primary"
-          ></nldd-button>
-          <nldd-button
-            type="button"
-            (click)="resetClusterLimits()"
-            [disabled]="saving()"
-            text="Reset to defaults"
-            variant="secondary"
-          ></nldd-button>
-        </div>
+        </nldd-form>
       </div>
-    </nldd-form>
+    </div>
 
     <!-- Namespace Resource Defaults (Kubernetes) -->
-    <nldd-form class="card" (submit)="saveNamespaceLimits($event)">
+    <div class="card">
       <div class="card-header">
         <h2 class="text-xl font-semibold dark:text-white">Namespace resource defaults</h2>
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
@@ -101,95 +177,142 @@
       </div>
 
       <div class="card-body-lg">
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
-          <!-- Default memory request -->
-          <div>
-            <nldd-form-field label="Default memory request (MiB)">
-              <nldd-number-field
-                id="defaultMemoryRequest"
-                full-width="true"
-                min="1"
-                step="1"
-                [attr.max]="defaultMemoryLimitMi() ?? null"
-                [value]="defaultMemoryRequestMi()"
-                (input)="
-                  $any($event).detail &&
-                    defaultMemoryRequestMi.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-            </nldd-form-field>
+        <nldd-form (submit)="saveNamespaceLimits($event)">
+          <div class="space-y-8">
+            <!-- Memory -->
+            <div>
+              <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
+                Memory per container
+              </span>
+              <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+                Unlimited means containers without their own memory settings run without a request
+                or limit. Memory is in mebibytes (MiB).
+              </p>
+              <nldd-segmented-control
+                size="sm"
+                name="memoryLimited"
+                accessible-label="Memory per container"
+                [value]="memoryLimited() ? 'limited' : 'unlimited'"
+                (change)="toggleMemoryDefaults($any($event).detail.value === 'limited')"
+              >
+                <nldd-segmented-control-item
+                  value="unlimited"
+                  text="Unlimited"
+                ></nldd-segmented-control-item>
+                <nldd-segmented-control-item
+                  value="limited"
+                  text="Limited"
+                ></nldd-segmented-control-item>
+              </nldd-segmented-control>
+              @if (memoryLimited()) {
+                <div class="mt-3 max-w-xs space-y-4">
+                  <nldd-form-field label="Default memory request (MiB)">
+                    <nldd-number-field
+                      id="defaultMemoryRequest"
+                      full-width="true"
+                      min="1"
+                      step="1"
+                      [attr.max]="defaultMemoryLimitMi() ?? null"
+                      [value]="defaultMemoryRequestMi()"
+                      (input)="
+                        $any($event).detail &&
+                          defaultMemoryRequestMi.set(toInt($any($event).detail.value))
+                      "
+                    ></nldd-number-field>
+                  </nldd-form-field>
+                  <nldd-form-field label="Default memory limit (MiB)">
+                    <nldd-number-field
+                      id="defaultMemoryLimit"
+                      full-width="true"
+                      [min]="defaultMemoryRequestMi() ?? 1"
+                      step="1"
+                      [value]="defaultMemoryLimitMi()"
+                      (input)="
+                        $any($event).detail &&
+                          defaultMemoryLimitMi.set(toInt($any($event).detail.value))
+                      "
+                    ></nldd-number-field>
+                  </nldd-form-field>
+                </div>
+              }
+            </div>
+
+            <!-- CPU -->
+            <div>
+              <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
+                CPU per container
+              </span>
+              <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+                Unlimited means containers without their own CPU settings run without a request or
+                limit. CPU is in millicores (m), where 1000 m equals 1 vCPU.
+              </p>
+              <nldd-segmented-control
+                size="sm"
+                name="cpuLimited"
+                accessible-label="CPU per container"
+                [value]="cpuLimited() ? 'limited' : 'unlimited'"
+                (change)="toggleCpuDefaults($any($event).detail.value === 'limited')"
+              >
+                <nldd-segmented-control-item
+                  value="unlimited"
+                  text="Unlimited"
+                ></nldd-segmented-control-item>
+                <nldd-segmented-control-item
+                  value="limited"
+                  text="Limited"
+                ></nldd-segmented-control-item>
+              </nldd-segmented-control>
+              @if (cpuLimited()) {
+                <div class="mt-3 max-w-xs space-y-4">
+                  <nldd-form-field label="Default CPU request (m)">
+                    <nldd-number-field
+                      id="defaultCpuRequest"
+                      full-width="true"
+                      min="1"
+                      step="1"
+                      [attr.max]="defaultCpuLimitM() ?? null"
+                      [value]="defaultCpuRequestM()"
+                      (input)="
+                        $any($event).detail &&
+                          defaultCpuRequestM.set(toInt($any($event).detail.value))
+                      "
+                    ></nldd-number-field>
+                  </nldd-form-field>
+                  <nldd-form-field label="Default CPU limit (m)">
+                    <nldd-number-field
+                      id="defaultCpuLimit"
+                      full-width="true"
+                      [min]="defaultCpuRequestM() ?? 1"
+                      step="1"
+                      [value]="defaultCpuLimitM()"
+                      (input)="
+                        $any($event).detail &&
+                          defaultCpuLimitM.set(toInt($any($event).detail.value))
+                      "
+                    ></nldd-number-field>
+                  </nldd-form-field>
+                </div>
+              }
+            </div>
           </div>
 
-          <!-- Default memory limit -->
-          <div>
-            <nldd-form-field label="Default memory limit (MiB)">
-              <nldd-number-field
-                id="defaultMemoryLimit"
-                full-width="true"
-                [min]="defaultMemoryRequestMi() ?? 1"
-                step="1"
-                [value]="defaultMemoryLimitMi()"
-                (input)="
-                  $any($event).detail && defaultMemoryLimitMi.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-            </nldd-form-field>
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <nldd-button
+              type="submit"
+              [disabled]="saving()"
+              [text]="namespaceSaving() ? 'Saving…' : 'Save namespace defaults'"
+              variant="primary"
+            ></nldd-button>
+            <nldd-button
+              type="button"
+              (click)="resetNamespaceLimits()"
+              [disabled]="saving()"
+              text="Reset to defaults"
+              variant="secondary"
+            ></nldd-button>
           </div>
-
-          <!-- Default CPU request -->
-          <div>
-            <nldd-form-field label="Default CPU request (m)">
-              <nldd-number-field
-                id="defaultCpuRequest"
-                full-width="true"
-                min="1"
-                step="1"
-                [attr.max]="defaultCpuLimitM() ?? null"
-                [value]="defaultCpuRequestM()"
-                (input)="
-                  $any($event).detail && defaultCpuRequestM.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-            </nldd-form-field>
-          </div>
-
-          <!-- Default CPU limit -->
-          <div>
-            <nldd-form-field label="Default CPU limit (m)">
-              <nldd-number-field
-                id="defaultCpuLimit"
-                full-width="true"
-                [min]="defaultCpuRequestM() ?? 1"
-                step="1"
-                [value]="defaultCpuLimitM()"
-                (input)="
-                  $any($event).detail && defaultCpuLimitM.set(toInt($any($event).detail.value))
-                "
-              ></nldd-number-field>
-            </nldd-form-field>
-          </div>
-        </div>
-
-        <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
-          Memory is in mebibytes (MiB). CPU is in millicores (m) — 1000 m = 1 vCPU.
-        </p>
-
-        <div class="mt-6 flex flex-wrap items-center gap-3">
-          <nldd-button
-            type="submit"
-            [disabled]="saving()"
-            [text]="namespaceSaving() ? 'Saving…' : 'Save namespace defaults'"
-            variant="primary"
-          ></nldd-button>
-          <nldd-button
-            type="button"
-            (click)="resetNamespaceLimits()"
-            [disabled]="saving()"
-            text="Reset to defaults"
-            variant="secondary"
-          ></nldd-button>
-        </div>
+        </nldd-form>
       </div>
-    </nldd-form>
+    </div>
   }
 </div>

@@ -1,43 +1,16 @@
-<nav class="mb-6 justify-between sm:flex sm:pb-8">
-  @for (step of steps; track step.route; let i = $index; let isFirst = $first; let isLast = $last) {
-    <div
-      [attr.data-completed]="isCompleted(i) ? 'true' : null"
-      [attr.data-active]="isActive(i) ? 'true' : null"
-      class="group items-center not-last:grow sm:flex"
-      [class.grow]="!isLast"
-    >
-      <a
-        class="relative flex items-center"
-        [class.hover:text-accent-700]="canNavigate(i)"
-        [class.dark:hover:text-accent-400]="canNavigate(i)"
-        [routerLink]="canNavigate(i) ? step.route : null"
-        [attr.aria-disabled]="!canNavigate(i) ? 'true' : null"
-      >
-        <span
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-3 border-gray-200 font-semibold text-gray-400 group-data-[active=true]:border-emerald-500 group-data-[active=true]:text-emerald-500 group-data-[completed=true]:border-emerald-500 group-data-[completed=true]:text-emerald-500 dark:border-gray-700 dark:text-gray-500"
-        >
-          @if (isCompleted(i)) {
-            <app-checkmark-icon class="h-4 w-4" />
-          } @else if (isActive(i)) {
-            <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
-          } @else {
-            {{ i + 1 }}
-          }
-        </span>
-        <span
-          class="top-11 ml-3 font-medium whitespace-nowrap sm:absolute sm:ml-0"
-          [class]="isFirst ? 'left-0' : isLast ? 'right-0' : 'left-1/2 sm:-translate-x-1/2'"
-          >{{ step.name }}</span
-        >
-      </a>
-      @if (!isLast) {
-        <div
-          class="ml-4 min-h-2 w-1 flex-1 bg-gray-200 group-data-[completed=true]:bg-emerald-500 sm:ml-0 sm:min-h-1 dark:bg-gray-700"
-        ></div>
-      }
-    </div>
+<nldd-step-indicator
+  class="mb-6 block"
+  accessible-label="Cluster creation progress"
+  [current]="currentStepNumber()"
+>
+  @for (step of steps; track step.route; let i = $index) {
+    <nldd-step-indicator-item
+      [text]="step.name"
+      [button]="canNavigate(i)"
+      (click)="goToStep(i)"
+    ></nldd-step-indicator-item>
   }
-</nav>
+</nldd-step-indicator>
 
 <div class="card">
   <router-outlet (activate)="onActivate()"></router-outlet>

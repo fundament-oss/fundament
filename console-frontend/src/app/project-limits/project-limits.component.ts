@@ -45,6 +45,13 @@ export default class ProjectLimitsComponent implements OnInit {
 
   defaultCpuLimitM = signal<number | undefined>(undefined);
 
+  // Request and limit are switched as one pair: a LimitRange without either is
+  // no constraint at all. Switched off is stored as undefined, which is how the
+  // API encodes "no default set".
+  memoryLimited = signal(false);
+
+  cpuLimited = signal(false);
+
   saving = signal(false);
 
   // Platform defaults returned by the API, used by the "Reset to defaults" action.
@@ -91,6 +98,7 @@ export default class ProjectLimitsComponent implements OnInit {
       this.defaultMemoryLimitMi.set(positive(limits?.defaultMemoryLimitMi));
       this.defaultCpuRequestM.set(positive(limits?.defaultCpuRequestM));
       this.defaultCpuLimitM.set(positive(limits?.defaultCpuLimitM));
+      this.syncToggles();
     } catch {
       this.toastService.error('Failed to load project limits');
     } finally {
@@ -107,6 +115,50 @@ export default class ProjectLimitsComponent implements OnInit {
     this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
     this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
     this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
+    this.syncToggles();
+  }
+
+  // A switch is on exactly when a value is set, so the form always opens on
+  // what is actually stored.
+  private syncToggles(): void {
+    this.memoryLimited.set(
+      this.defaultMemoryRequestMi() !== undefined || this.defaultMemoryLimitMi() !== undefined,
+    );
+    this.cpuLimited.set(
+      this.defaultCpuRequestM() !== undefined || this.defaultCpuLimitM() !== undefined,
+    );
+  }
+
+  toggleMemoryDefaults(limited: boolean): void {
+    this.memoryLimited.set(limited);
+    const defaults = this.namespaceDefaults();
+    if (!limited) {
+      this.defaultMemoryRequestMi.set(undefined);
+      this.defaultMemoryLimitMi.set(undefined);
+      return;
+    }
+    if (this.defaultMemoryRequestMi() === undefined) {
+      this.defaultMemoryRequestMi.set(defaults.defaultMemoryRequestMi);
+    }
+    if (this.defaultMemoryLimitMi() === undefined) {
+      this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
+    }
+  }
+
+  toggleCpuDefaults(limited: boolean): void {
+    this.cpuLimited.set(limited);
+    const defaults = this.namespaceDefaults();
+    if (!limited) {
+      this.defaultCpuRequestM.set(undefined);
+      this.defaultCpuLimitM.set(undefined);
+      return;
+    }
+    if (this.defaultCpuRequestM() === undefined) {
+      this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
+    }
+    if (this.defaultCpuLimitM() === undefined) {
+      this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
+    }
   }
 
   async save(event?: Event) {

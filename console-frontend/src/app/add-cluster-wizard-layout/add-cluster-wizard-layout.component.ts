@@ -5,9 +5,9 @@ import {
   signal,
   OnDestroy,
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
-import { CheckmarkIconComponent } from '../icons';
+import { Router, RouterOutlet } from '@angular/router';
 import { ClusterWizardStateService } from './cluster-wizard-state.service';
 
 interface ProgressStep {
@@ -17,9 +17,10 @@ interface ProgressStep {
 
 @Component({
   selector: 'app-add-cluster-wizard-layout',
-  imports: [RouterOutlet, RouterLink, CheckmarkIconComponent],
+  imports: [RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-wizard-layout.component.html',
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class AddClusterWizardLayoutComponent implements OnDestroy {
   private router = inject(Router);
@@ -47,6 +48,9 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
     }
     return -1;
   });
+
+  // nldd-step-indicator is 1-based and derives every step's status from it.
+  currentStepNumber = computed(() => Math.max(this.currentStepIndex() + 1, 1));
 
   ngOnDestroy(): void {
     // Reset state when leaving the wizard
@@ -93,12 +97,11 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
     this.router.navigate(['/']);
   }
 
-  isCompleted(index: number): boolean {
-    return this.stateService.isStepCompleted(index);
-  }
-
-  isActive(index: number): boolean {
-    return index === this.currentStepIndex();
+  // Steps render as a button rather than a link: the anchor would live inside
+  // the element's shadow DOM, out of routerLink's reach.
+  goToStep(index: number) {
+    if (!this.canNavigate(index)) return;
+    this.router.navigate([this.steps[index].route]);
   }
 
   canNavigate(index: number): boolean {
