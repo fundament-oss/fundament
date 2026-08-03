@@ -46,10 +46,13 @@ func (s *Server) PutPluginDefinition(
 	}
 	// Authorization decision: OpenFGA. Publishing/editing a plugin definition
 	// requires can_edit on the plugin, which resolves to admin from the owning
-	// organization. Retry absorbs the eventual consistency of the outbox ->
-	// authz-worker -> OpenFGA sync. RLS on appstore.plugin_definitions is the
-	// backstop (see the insert-error mapping below); this is the primary gate.
-	if err := s.checkPermissionWithRetry(ctx, authz.CanEdit(), authz.Plugin(pluginID)); err != nil {
+	// organization. No retry here (unlike the create endpoints): the plugin is a
+	// pre-existing catalog entry, not a resource this caller just created, so
+	// there is no ownership-sync race to absorb. PutPluginDefinition is
+	// idempotent, so a caller that races a fresh ownership sync can simply retry.
+	// RLS on appstore.plugin_definitions is the backstop (see the insert-error
+	// mapping below); this is the primary gate.
+	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Plugin(pluginID)); err != nil {
 		return nil, err
 	}
 	// Strict parse rejects an image-free template (and any malformed manifest):
