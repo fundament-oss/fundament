@@ -1,0 +1,16 @@
+export kube_context := "k3d-fundament-plugin"
+
+_default:
+    @just --list
+
+# Apply sample StoragePool to verify ceph-rook works end-to-end
+test:
+    kubectl --context {{ kube_context }} apply -f test-resources.yaml
+    @echo "Waiting for StoragePool to become Ready..."
+    kubectl --context {{ kube_context }} wait --for=jsonpath='{.status.phase}'=Ready storagepool/test-pool --timeout=300s
+    kubectl --context {{ kube_context }} get storagepool test-pool
+    kubectl --context {{ kube_context }} get storageclass
+
+# Remove sample StoragePool
+test-cleanup:
+    kubectl --context {{ kube_context }} delete -f test-resources.yaml --ignore-not-found
