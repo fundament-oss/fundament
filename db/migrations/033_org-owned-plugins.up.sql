@@ -132,3 +132,14 @@ CREATE OR REPLACE TRIGGER plugins_outbox
 	ON appstore.plugins
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.plugins_sync_trigger();
+
+-- Enqueue an authz sync for every existing plugin. The backfill UPDATE above
+-- ran before this trigger existed, so it emitted no outbox rows, and the
+-- 0101 catalog seed's ON CONFLICT DO UPDATE is a no-op for these unchanged
+-- rows (so the trigger's NEW IS DISTINCT FROM OLD guard suppresses it there
+-- too). Without this, plugins that predate org ownership never get their
+-- organization -> owner -> plugin tuple in OpenFGA. Runs once with the
+-- migration; on a fresh database appstore.plugins is still empty here (seeded
+-- afterwards) so this is a no-op and the trigger handles the seed INSERTs.
+INSERT INTO authz.outbox (plugin_id)
+SELECT id FROM appstore.plugins;
