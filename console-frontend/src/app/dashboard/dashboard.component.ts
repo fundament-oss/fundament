@@ -15,7 +15,7 @@ import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER } from '../../connect/tokens';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
-import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-dashboard',
@@ -40,7 +40,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   errorMessage = signal<string>('');
 
   // Expose utility functions for template
-  getStatusColor = getStatusColor;
+  getStatusTagColor = getStatusTagColor;
 
   getStatusLabel = getStatusLabel;
 

@@ -33,7 +33,7 @@ import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { LoadingIndicatorComponent } from '../icons';
-import { getStatusColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
@@ -57,15 +57,15 @@ const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   return labels[status];
 };
 
-const getSyncStatusColor = (status: string | undefined): string => {
+const getSyncStatusTagColor = (status: string | undefined): string => {
   const colors: Record<string, string> = {
-    ready: 'badge-emerald',
-    progressing: 'badge-blue',
-    pending: 'badge-yellow',
-    error: 'badge-red',
-    deleting: 'badge-orange',
+    ready: 'success',
+    progressing: 'mintgroen',
+    pending: 'lichtblauw',
+    error: 'critical',
+    deleting: 'oranje',
   };
-  return colors[status ?? ''] || 'badge-gray';
+  return colors[status ?? ''] || 'neutral';
 };
 
 const getSyncStatusLabel = (syncState: SyncState | null): string => {
@@ -155,7 +155,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   ClusterStatus = ClusterStatus;
 
   // Expose utility functions for template
-  getStatusColor = getStatusColor;
+  getStatusTagColor = getStatusTagColor;
 
   getStatusLabel = getStatusLabel;
 
@@ -460,7 +460,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   // Sync status methods
-  getSyncStatusColor = getSyncStatusColor;
+  getSyncStatusTagColor = getSyncStatusTagColor;
 
   getSyncStatusLabel = getSyncStatusLabel;
 

@@ -190,7 +190,7 @@
     @if (!isLoginPage()) {
       <nldd-split-view-pane slot="sidebar" class="bg-white dark:bg-gray-950">
         <!-- Context selector -->
-        <div class="px-3 pt-4">
+        <div class="shrink-0 grow-0 px-3 pt-4">
           <div
             class="mb-1.5 px-2 text-sm font-medium tracking-wide text-gray-600 dark:text-gray-400"
           >
@@ -220,7 +220,7 @@
           </button>
         </div>
 
-        <nav class="overflow-y-auto px-3 pb-6">
+        <nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
           @if (selectedType()) {
             <div class="mb-1.5 pt-5">
               <p
@@ -251,7 +251,7 @@
                   class="nav-link"
                   (click)="closeSidebar()"
                 >
-                  <nldd-icon name="folder-stack" class="mr-3 h-5 w-5"></nldd-icon>
+                  <nldd-icon name="folder-on-folder" class="mr-3 h-5 w-5"></nldd-icon>
                   Projects
                 </a>
               </li>

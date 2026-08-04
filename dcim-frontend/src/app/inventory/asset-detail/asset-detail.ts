@@ -22,11 +22,7 @@ import {
   HistoryEntry,
   NoteComment,
 } from '../inventory';
-import {
-  ASSET_STATUS_BADGE_CLASS,
-  ASSET_STATUS_DOT_CLASS,
-  ASSET_STATUS_LABEL,
-} from '../asset-status';
+import { ASSET_STATUS_TAG_COLOR, ASSET_STATUS_LABEL } from '../asset-status';
 import InventoryApiService from '../inventory-api.service';
 import CatalogApiService from '../../catalog/catalog-api.service';
 import NoteApiService from '../note-api.service';
@@ -354,9 +350,7 @@ export default class AssetDetailComponent implements OnInit {
 
   readonly statusLabel = (status: AssetStatus): string => ASSET_STATUS_LABEL[status];
 
-  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
-
-  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
+  readonly statusTagColor = (status: AssetStatus): string => ASSET_STATUS_TAG_COLOR[status];
 
   readonly statusIcon = (status: AssetStatus): string => {
     const icons: Record<AssetStatus, string> = {
@@ -440,7 +434,7 @@ export default class AssetDetailComponent implements OnInit {
       Cooling: 'cloud',
       KVM: 'puzzle-piece',
       Other: 'ellipsis',
-      Memory: 'folder-stack',
+      Memory: 'folder-on-folder',
       Disk: 'cylinder-split',
       NIC: 'puzzle-piece',
       PSU: 'lock-closed',

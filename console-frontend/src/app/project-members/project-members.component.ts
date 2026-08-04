@@ -16,6 +16,8 @@ import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency
 import { TitleService } from '../title.service';
 import { PROJECT, MEMBER } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
+import AutofocusDirective from '../autofocus.directive';
 import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
@@ -57,9 +59,11 @@ const formatMemberDate = (member: ProjectMember): string =>
   imports: [
     ReactiveFormsModule,
     DialogSyncDirective,
+    SheetSyncDirective,
     DropdownSyncDirective,
     RouterLink,
     LoadingIndicatorComponent,
+    AutofocusDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -279,13 +283,6 @@ export default class ProjectMembersComponent implements OnInit {
   roleToString = roleToString;
 
   formatMemberDate = formatMemberDate;
-
-  addMemberDialogRef = viewChild<ElementRef<HTMLElement>>('addMemberDialog');
-
-  onAddMemberModalOpen(): void {
-    const el = this.addMemberDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
-  }
 
   removeMemberDialogRef = viewChild<ElementRef<HTMLElement>>('removeMemberDialog');
 

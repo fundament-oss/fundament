@@ -72,12 +72,12 @@
           <h1 class="text-sm font-semibold text-gray-900 dark:text-white font-mono">
             {{ dev.name }}
           </h1>
-          <span
-            class="ml-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-            [class]="stateBadgeClass(dev.state)"
-          >
-            {{ dev.state }}
-          </span>
+          <nldd-tag
+            class="ml-1 capitalize"
+            size="sm"
+            [attr.color]="stateTagColor(dev.state)"
+            [attr.text]="dev.state"
+          ></nldd-tag>
           <span class="ml-auto text-sm text-gray-400 dark:text-gray-500">{{
             deviceTypeLabel(dev.type)
           }}</span>
@@ -219,12 +219,12 @@
               <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
                 <dt class="text-sm text-gray-500 dark:text-gray-400">State</dt>
                 <dd>
-                  <span
-                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize"
-                    [class]="stateBadgeClass(dev.state)"
-                  >
-                    {{ dev.state }}
-                  </span>
+                  <nldd-tag
+                    class="capitalize"
+                    size="sm"
+                    [attr.color]="stateTagColor(dev.state)"
+                    [attr.text]="dev.state"
+                  ></nldd-tag>
                 </dd>
               </div>
               <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
@@ -315,12 +315,11 @@
                 <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
                   <dt class="text-sm text-gray-500 dark:text-gray-400">Power State</dt>
                   <dd>
-                    <span
-                      class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
-                      [class]="powerBadgeClass(ipmi.powerstate)"
-                    >
-                      {{ ipmi.powerstate }}
-                    </span>
+                    <nldd-tag
+                      size="sm"
+                      [attr.color]="powerTagColor(ipmi.powerstate)"
+                      [attr.text]="ipmi.powerstate"
+                    ></nldd-tag>
                   </dd>
                 </div>
                 <div class="grid grid-cols-2 gap-2 px-4 py-2.5">
@@ -538,53 +537,42 @@
               [attr.aria-labelledby]="'port-tab-' + activePortTab()"
             >
               @if (devicePorts().length > 0) {
-                <table
-                  class="w-full text-xs"
-                  [attr.aria-label]="PORT_TYPE_LABEL[activePortTab()] + ' table'"
+                <nldd-table
+                  [attr.accessible-label]="PORT_TYPE_LABEL[activePortTab()] + ' table'"
+                  columns="minmax(120px, 1fr) minmax(120px, 1fr) minmax(160px, 1.5fr) 120px"
                 >
-                  <thead
-                    class="bg-slate-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800"
-                  >
-                    <tr>
-                      <th class="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Name
-                      </th>
-                      <th class="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Cable
-                      </th>
-                      <th class="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
-                        Peer
-                      </th>
-                      <th class="px-4 py-2 text-right font-medium text-gray-500 dark:text-gray-400">
-                        <span class="sr-only">Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-50">
-                    @for (port of devicePorts(); track port.id) {
-                      @let cable = portCableMap().get(port.id);
-                      <tr class="hover:bg-slate-50 dark:hover:bg-gray-900 group">
-                        <td
-                          class="px-4 py-2.5 font-mono text-gray-800 dark:text-gray-100 font-medium"
-                        >
-                          {{ port.name }}
-                        </td>
-                        <td class="px-4 py-2.5">
-                          @if (cable) {
-                            <a
-                              routerLink="/patch-mapping"
-                              class="font-mono text-accent-600 dark:text-accent-300 underline hover:text-accent-800 dark:hover:text-accent-200 focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
-                              [title]="cable.id"
-                              >{{ cable.label ?? cable.id }}</a
-                            >
-                          } @else {
-                            <span class="text-gray-300 dark:text-gray-600">—</span>
-                          }
-                        </td>
-                        <td class="px-4 py-2.5 font-mono text-gray-500 dark:text-gray-400">
-                          @if (cable) {
-                            @let peer =
-                              cable.aSide.deviceId === deviceId() ? cable.bSide : cable.aSide;
+                  <nldd-table-row slot="header">
+                    <nldd-text-cell text="**Name**" size="sm"></nldd-text-cell>
+                    <nldd-text-cell text="**Cable**" size="sm"></nldd-text-cell>
+                    <nldd-text-cell text="**Peer**" size="sm"></nldd-text-cell>
+                    <nldd-text-cell
+                      text="**Actions**"
+                      size="sm"
+                      horizontal-alignment="right"
+                    ></nldd-text-cell>
+                  </nldd-table-row>
+
+                  @for (port of devicePorts(); track port.id) {
+                    @let cable = portCableMap().get(port.id);
+                    <nldd-table-row>
+                      <nldd-text-cell class="font-mono" [attr.text]="port.name"></nldd-text-cell>
+                      <nldd-cell width="full">
+                        @if (cable) {
+                          <a
+                            routerLink="/patch-mapping"
+                            class="font-mono text-accent-600 dark:text-accent-300 underline hover:text-accent-800 dark:hover:text-accent-200 focus:outline-none focus:ring-2 focus:ring-accent-500 rounded text-xs"
+                            [title]="cable.id"
+                            >{{ cable.label ?? cable.id }}</a
+                          >
+                        } @else {
+                          <span class="text-gray-300 dark:text-gray-600">—</span>
+                        }
+                      </nldd-cell>
+                      <nldd-cell width="full">
+                        @if (cable) {
+                          @let peer =
+                            cable.aSide.deviceId === deviceId() ? cable.bSide : cable.aSide;
+                          <span class="font-mono text-xs">
                             <a
                               [routerLink]="['/racks/device', peer.deviceId]"
                               class="text-accent-600 dark:text-accent-300 hover:underline focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
@@ -593,37 +581,33 @@
                             <span class="text-gray-400 dark:text-gray-500 ml-1"
                               >› {{ peer.portName }}</span
                             >
-                          } @else {
-                            <span class="text-gray-300 dark:text-gray-600">—</span>
-                          }
-                        </td>
-                        <td class="px-4 py-2.5 text-right">
-                          <div
-                            class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1"
-                          >
-                            @if (cable) {
-                              <nldd-button
-                                variant="secondary"
-                                size="xs"
-                                text="Disconnect"
-                                (click)="disconnectCable(port.id)"
-                                [attr.aria-label]="'Disconnect ' + port.name"
-                              ></nldd-button>
-                            } @else {
-                              <nldd-button
-                                variant="secondary"
-                                size="xs"
-                                text="Connect"
-                                (click)="openConnectForm(port)"
-                                [attr.aria-label]="'Connect ' + port.name"
-                              ></nldd-button>
-                            }
-                          </div>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
+                          </span>
+                        } @else {
+                          <span class="text-gray-300 dark:text-gray-600">—</span>
+                        }
+                      </nldd-cell>
+                      <nldd-cell horizontal-alignment="right">
+                        @if (cable) {
+                          <nldd-button
+                            variant="secondary"
+                            size="xs"
+                            text="Disconnect"
+                            (click)="disconnectCable(port.id)"
+                            [attr.aria-label]="'Disconnect ' + port.name"
+                          ></nldd-button>
+                        } @else {
+                          <nldd-button
+                            variant="secondary"
+                            size="xs"
+                            text="Connect"
+                            (click)="openConnectForm(port)"
+                            [attr.aria-label]="'Connect ' + port.name"
+                          ></nldd-button>
+                        }
+                      </nldd-cell>
+                    </nldd-table-row>
+                  }
+                </nldd-table>
               } @else {
                 <div
                   class="py-8 flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500 text-xs"

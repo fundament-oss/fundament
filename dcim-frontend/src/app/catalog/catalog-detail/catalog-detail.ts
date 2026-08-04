@@ -20,11 +20,7 @@ import {
   PortDefinition,
   PortCompatibility,
 } from '../../inventory/inventory';
-import {
-  ASSET_STATUS_BADGE_CLASS,
-  ASSET_STATUS_DOT_CLASS,
-  ASSET_STATUS_LABEL,
-} from '../../inventory/asset-status';
+import { ASSET_STATUS_TAG_COLOR, ASSET_STATUS_LABEL } from '../../inventory/asset-status';
 import CatalogApiService from '../catalog-api.service';
 import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
@@ -456,7 +452,5 @@ export default class CatalogDetailComponent implements OnInit {
 
   readonly statusLabel = (status: AssetStatus): string => ASSET_STATUS_LABEL[status];
 
-  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
-
-  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
+  readonly statusTagColor = (status: AssetStatus): string => ASSET_STATUS_TAG_COLOR[status];
 }

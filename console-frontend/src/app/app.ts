@@ -17,7 +17,6 @@ import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/checkbox-field';
 import '@nldd/design-system/form';
-import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
 import '@nldd/design-system/dropdown';
 import '@nldd/design-system/modal-dialog';
@@ -31,7 +30,20 @@ import '@nldd/design-system/switch-field';
 import '@nldd/design-system/text-field';
 import '@nldd/design-system/segmented-control';
 import '@nldd/design-system/navigation-split-view';
+// nldd-navigation-split-view does not pull in the panes it hosts, and app.html
+// places them itself.
+import '@nldd/design-system/split-view-pane';
 import '@nldd/design-system/inline-dialog';
+import '@nldd/design-system/sheet';
+import '@nldd/design-system/page';
+import '@nldd/design-system/simple-section';
+import '@nldd/design-system/top-title-bar';
+import '@nldd/design-system/table';
+import '@nldd/design-system/cell';
+import '@nldd/design-system/text-cell';
+import '@nldd/design-system/tag';
+import '@nldd/design-system/menu';
+import '@nldd/design-system/step-indicator';
 import {
   RouterOutlet,
   RouterLink,

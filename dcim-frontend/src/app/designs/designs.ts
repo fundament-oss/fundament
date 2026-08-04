@@ -14,7 +14,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   LogicalDesign,
   LogicalDesignStatus,
-  LOGICAL_DESIGN_STATUS_BADGE_CLASS,
+  LOGICAL_DESIGN_STATUS_TAG_COLOR,
 } from './design.model';
 import DesignApiService from './design-api.service';
 import connectErrorMessage from '../../connect/error';
@@ -180,8 +180,8 @@ export default class DesignsComponent implements OnInit {
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  readonly statusBadgeClass = (status: LogicalDesignStatus): string =>
-    LOGICAL_DESIGN_STATUS_BADGE_CLASS[status];
+  readonly statusTagColor = (status: LogicalDesignStatus): string =>
+    LOGICAL_DESIGN_STATUS_TAG_COLOR[status];
 
   readonly statusLabel = (status: LogicalDesignStatus): string => {
     const statusMap: Record<LogicalDesignStatus, string> = {

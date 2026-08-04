@@ -344,24 +344,25 @@ export default class CatalogComponent implements OnInit {
     return map[category] ?? 'rectangle-stack';
   };
 
-  readonly categoryBadgeClass = (category: AssetCategory): string => {
+  /** `color` for an `nldd-tag` per asset category, drawn from the Rijkskleuren palette. */
+  readonly categoryTagColor = (category: AssetCategory): string => {
     const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300',
-      Switch: 'bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-300',
-      Storage: 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300',
-      Power: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
-      Firewall: 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300',
-      Cooling: 'bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300',
-      KVM: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
-      Memory: 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300',
-      Disk: 'bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-300',
-      NIC: 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
-      PSU: 'bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300',
-      CPU: 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300',
-      GPU: 'bg-pink-50 dark:bg-pink-950 text-pink-700 dark:text-pink-300',
-      Transceiver: 'bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300',
-      Other: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
+      Server: 'donkerblauw',
+      Switch: 'violet',
+      Storage: 'lintblauw',
+      Power: 'donkergeel',
+      Firewall: 'rood',
+      Cooling: 'lichtblauw',
+      KVM: 'neutral',
+      Memory: 'donkergroen',
+      Disk: 'oranje',
+      NIC: 'mintgroen',
+      PSU: 'geel',
+      CPU: 'paars',
+      GPU: 'roze',
+      Transceiver: 'hemelblauw',
+      Other: 'neutral',
     };
-    return map[category] ?? 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300';
+    return map[category] ?? 'neutral';
   };
 }

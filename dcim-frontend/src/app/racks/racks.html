@@ -306,10 +306,12 @@
               >
                 Notes
                 @if (notes.comments.length > 0) {
-                  <span
-                    class="ml-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400"
-                    >{{ notes.comments.length }}</span
-                  >
+                  <nldd-tag
+                    class="ml-1.5"
+                    color="neutral"
+                    size="sm"
+                    [attr.text]="notes.comments.length"
+                  ></nldd-tag>
                 }
               </h2>
             </div>
@@ -414,11 +416,11 @@
      RACK EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #rackSheet accessible-label="Rack details" placement="right" width="400px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editRack()?.id ? 'Edit rack' : 'Add rack'"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeRackForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
@@ -432,6 +434,7 @@
       <nldd-form-field label="Rack name">
         <nldd-text-field
           #fRackName
+          autofocus
           [attr.value]="editRack()?.name ?? ''"
           placeholder="AMS-01-R01"
           [attr.invalid]="isFieldInvalid('name') ? '' : null"
@@ -485,12 +488,8 @@
         }}</nldd-form-field-error-text>
       </nldd-form-field>
     </nldd-simple-section>
-    <div
-      slot="footer"
-      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
-    >
-      <nldd-button variant="secondary" text="Cancel" (click)="closeRackForm()"></nldd-button>
-      <nldd-button variant="primary" text="Save" (click)="saveRack()"></nldd-button>
+    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
+      <nldd-button variant="primary" text="Save" width="full" (click)="saveRack()"></nldd-button>
     </div>
   </nldd-page>
 </nldd-sheet>
@@ -499,20 +498,14 @@
      DEVICE ADD SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #deviceSheet accessible-label="Add device" placement="right" width="400px">
-  <div class="flex flex-col h-full">
-    <div
-      class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-gray-800 shrink-0"
-    >
-      <h2 class="text-base font-semibold text-slate-900 dark:text-white">Add device</h2>
-      <nldd-icon-button
-        icon="dismiss"
-        variant="neutral-transparent"
-        size="sm"
-        text="Close"
-        (click)="closeAddDevice()"
-      ></nldd-icon-button>
-    </div>
-    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+  <nldd-page sticky-header sticky-footer>
+    <nldd-top-title-bar
+      slot="header"
+      text="Add device"
+      dismiss-text="Cancel"
+      (dismiss)="closeAddDevice()"
+    ></nldd-top-title-bar>
+    <nldd-simple-section class="flex flex-col gap-4">
       @if (deviceErrorMessage()) {
         <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
           <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
@@ -521,9 +514,13 @@
         </div>
       }
       <nldd-form-field label="Asset">
+        <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
+             can't see it. Autofocus is the recommended pattern for a sheet's first field. -->
+        <!-- eslint-disable @angular-eslint/template/no-autofocus -->
         <nldd-dropdown [attr.invalid]="isDeviceFieldInvalid('asset_id') ? true : null">
           <select
             #fDeviceAsset
+            autofocus
             aria-label="Asset"
             [attr.aria-invalid]="isDeviceFieldInvalid('asset_id') ? 'true' : null"
           >
@@ -533,6 +530,7 @@
             }
           </select>
         </nldd-dropdown>
+        <!-- eslint-enable @angular-eslint/template/no-autofocus -->
         @if (isDeviceFieldInvalid('asset_id')) {
           <nldd-form-field-error-text id="error-device-asset">{{
             deviceFieldError('asset_id')
@@ -572,14 +570,16 @@
           deviceFieldError('location.rack.rack_unit_start')
         }}</nldd-form-field-error-text>
       </nldd-form-field>
+    </nldd-simple-section>
+    <div slot="footer" class="px-6 py-4 border-t border-slate-200 dark:border-gray-800 flex">
+      <nldd-button
+        variant="accent-filled"
+        text="Add"
+        width="full"
+        (click)="saveDevice()"
+      ></nldd-button>
     </div>
-    <div
-      class="shrink-0 px-6 py-4 border-t border-slate-200 dark:border-gray-800 flex justify-end gap-2"
-    >
-      <nldd-button variant="neutral-tinted" text="Cancel" (click)="closeAddDevice()"></nldd-button>
-      <nldd-button variant="accent-filled" text="Add" (click)="saveDevice()"></nldd-button>
-    </div>
-  </div>
+  </nldd-page>
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -587,20 +587,20 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
   #deviceModal
-  [attr.text]="'Delete ' + (deleteDeviceTarget()?.name ?? '') + '?'"
-  supporting-text="This removes the device from the rack. This action cannot be undone."
+  [attr.text]="'Delete device ' + (deleteDeviceTarget()?.name ?? '') + ' from this rack?'"
+  supporting-text="The device is removed from the rack and its units become free again. This cannot be undone."
   accessible-label="Confirm device deletion"
 >
   <nldd-button
     slot="actions"
-    variant="neutral-tinted"
-    text="Cancel"
+    variant="secondary"
+    text="Keep device"
     (click)="cancelDeleteDevice()"
   ></nldd-button>
   <nldd-button
     slot="actions"
     variant="destructive"
-    text="Delete"
+    text="Delete device"
     (click)="confirmDeleteDevice()"
   ></nldd-button>
 </nldd-modal-dialog>
@@ -612,19 +612,19 @@
   #rackModal
   (close)="cancelDeleteRack()"
   [attr.text]="'Delete rack ' + (deleteRack()?.name ?? '') + '?'"
-  supporting-text="All devices in this rack will be unplaced. This action cannot be undone."
+  supporting-text="Every device in this rack is unplaced. This cannot be undone."
   accessible-label="Confirm rack deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDeleteRack()"
+    variant="secondary"
+    text="Keep rack"
+    (click)="cancelDeleteRack()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDeleteRack()"
+    variant="destructive"
+    text="Delete rack"
+    (click)="confirmDeleteRack()"
   ></nldd-button>
 </nldd-modal-dialog>

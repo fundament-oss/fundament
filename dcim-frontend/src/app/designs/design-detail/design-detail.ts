@@ -22,7 +22,7 @@ import {
   LogicalDeviceRole,
   LogicalDesignStatus,
   deviceRoleColors,
-  LOGICAL_DESIGN_STATUS_BADGE_CLASS,
+  LOGICAL_DESIGN_STATUS_TAG_COLOR,
 } from '../design.model';
 import DesignApiService from '../design-api.service';
 import connectErrorMessage from '../../../connect/error';
@@ -436,16 +436,16 @@ export default class DesignDetailComponent implements OnInit {
     return connMap[type];
   };
 
-  readonly connTypeBadgeClass = (type: LogicalConnectionType): string => {
+  readonly connTypeTagColor = (type: LogicalConnectionType): string => {
     const connMap: Record<LogicalConnectionType, string> = {
-      network: 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300',
-      power: 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300',
-      console: 'bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300',
+      network: 'hemelblauw',
+      power: 'donkergeel',
+      console: 'neutral',
     };
     return connMap[type];
   };
 
-  readonly statusBadgeClass = (status: string): string =>
-    LOGICAL_DESIGN_STATUS_BADGE_CLASS[status as LogicalDesignStatus] ??
-    LOGICAL_DESIGN_STATUS_BADGE_CLASS.draft;
+  readonly statusTagColor = (status: string): string =>
+    LOGICAL_DESIGN_STATUS_TAG_COLOR[status as LogicalDesignStatus] ??
+    LOGICAL_DESIGN_STATUS_TAG_COLOR.draft;
 }

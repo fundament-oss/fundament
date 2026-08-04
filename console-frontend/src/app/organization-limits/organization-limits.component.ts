@@ -6,6 +6,7 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  type WritableSignal,
 } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -18,11 +19,30 @@ import { ORGANIZATION } from '../../connect/tokens';
 import OrganizationContextService from '../organization-context.service';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { positive, toInt } from '../utils/limits';
+import { pairLimited, positive, toInt } from '../utils/limits';
+import NamespaceResourceDefaultsComponent, {
+  type NamespaceDefaults,
+} from '../namespace-resource-defaults/namespace-resource-defaults.component';
+
+// Off stores undefined, which is how the API encodes "no limit"; on seeds an
+// empty field with the platform default and leaves a saved value alone.
+function toggleClusterLimit(
+  limited: boolean,
+  toggle: WritableSignal<boolean>,
+  value: WritableSignal<number | undefined>,
+  seed: number | undefined,
+): void {
+  toggle.set(limited);
+  if (!limited) {
+    value.set(undefined);
+  } else if (value() === undefined) {
+    value.set(seed);
+  }
+}
 
 @Component({
   selector: 'app-organization-limits',
-  imports: [],
+  imports: [NamespaceResourceDefaultsComponent],
   templateUrl: './organization-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -44,6 +64,14 @@ export default class OrganizationLimitsComponent implements OnInit {
   maxNodePools = signal<number | undefined>(undefined);
 
   maxNodesPerNodePool = signal<number | undefined>(undefined);
+
+  // A limit that is switched off is stored as undefined, which is how the API
+  // encodes "no limit".
+  maxNodesPerClusterLimited = signal(false);
+
+  maxNodePoolsLimited = signal(false);
+
+  maxNodesPerNodePoolLimited = signal(false);
 
   clusterSaving = signal(false);
 
@@ -69,6 +97,12 @@ export default class OrganizationLimitsComponent implements OnInit {
 
   defaultCpuLimitM = signal<number | undefined>(undefined);
 
+  // Owned here rather than in the fields component so a load or a reset can put
+  // the switches back on what is actually stored.
+  memoryLimited = signal(false);
+
+  cpuLimited = signal(false);
+
   namespaceSaving = signal(false);
 
   private savedNamespace = signal<{
@@ -83,12 +117,7 @@ export default class OrganizationLimitsComponent implements OnInit {
     defaultCpuLimitM: undefined,
   });
 
-  private namespaceDefaults = signal<{
-    defaultMemoryRequestMi: number | undefined;
-    defaultMemoryLimitMi: number | undefined;
-    defaultCpuRequestM: number | undefined;
-    defaultCpuLimitM: number | undefined;
-  }>({
+  protected namespaceDefaults = signal<NamespaceDefaults>({
     defaultMemoryRequestMi: undefined,
     defaultMemoryLimitMi: undefined,
     defaultCpuRequestM: undefined,
@@ -157,6 +186,8 @@ export default class OrganizationLimitsComponent implements OnInit {
       this.defaultMemoryLimitMi.set(savedNamespace.defaultMemoryLimitMi);
       this.defaultCpuRequestM.set(savedNamespace.defaultCpuRequestM);
       this.defaultCpuLimitM.set(savedNamespace.defaultCpuLimitM);
+      this.syncClusterToggles();
+      this.syncNamespaceToggles();
     } catch {
       this.toastService.error('Failed to load organization limits');
     } finally {
@@ -205,6 +236,7 @@ export default class OrganizationLimitsComponent implements OnInit {
     this.maxNodesPerCluster.set(defaults.maxNodesPerCluster);
     this.maxNodePools.set(defaults.maxNodePools);
     this.maxNodesPerNodePool.set(defaults.maxNodesPerNodePool);
+    this.syncClusterToggles();
   }
 
   resetNamespaceLimits(): void {
@@ -213,6 +245,47 @@ export default class OrganizationLimitsComponent implements OnInit {
     this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
     this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
     this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
+    this.syncNamespaceToggles();
+  }
+
+  // A switch is on exactly when a value is set, so the form always opens on
+  // what is actually stored.
+  private syncClusterToggles(): void {
+    this.maxNodesPerClusterLimited.set(this.maxNodesPerCluster() !== undefined);
+    this.maxNodePoolsLimited.set(this.maxNodePools() !== undefined);
+    this.maxNodesPerNodePoolLimited.set(this.maxNodesPerNodePool() !== undefined);
+  }
+
+  private syncNamespaceToggles(): void {
+    this.memoryLimited.set(pairLimited(this.defaultMemoryRequestMi(), this.defaultMemoryLimitMi()));
+    this.cpuLimited.set(pairLimited(this.defaultCpuRequestM(), this.defaultCpuLimitM()));
+  }
+
+  toggleMaxNodesPerCluster(limited: boolean): void {
+    toggleClusterLimit(
+      limited,
+      this.maxNodesPerClusterLimited,
+      this.maxNodesPerCluster,
+      this.clusterDefaults().maxNodesPerCluster,
+    );
+  }
+
+  toggleMaxNodePools(limited: boolean): void {
+    toggleClusterLimit(
+      limited,
+      this.maxNodePoolsLimited,
+      this.maxNodePools,
+      this.clusterDefaults().maxNodePools,
+    );
+  }
+
+  toggleMaxNodesPerNodePool(limited: boolean): void {
+    toggleClusterLimit(
+      limited,
+      this.maxNodesPerNodePoolLimited,
+      this.maxNodesPerNodePool,
+      this.clusterDefaults().maxNodesPerNodePool,
+    );
   }
 
   async saveNamespaceLimits(event?: Event) {

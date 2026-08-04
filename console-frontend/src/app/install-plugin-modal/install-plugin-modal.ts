@@ -6,12 +6,10 @@ import {
   input,
   output,
   signal,
-  viewChild,
-  ElementRef,
 } from '@angular/core';
-import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
 import DropdownSyncDirective from '../dropdown-sync.directive';
-import focusFirstModalInput from '../modal-focus';
+import AutofocusDirective from '../autofocus.directive';
 import { LoadingIndicatorComponent } from '../icons';
 import {
   getInstallStatusDisplay,
@@ -51,7 +49,12 @@ export interface RetrySelection {
 
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [DialogSyncDirective, DropdownSyncDirective, LoadingIndicatorComponent],
+  imports: [
+    SheetSyncDirective,
+    DropdownSyncDirective,
+    LoadingIndicatorComponent,
+    AutofocusDirective,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,8 +87,6 @@ export default class InstallPluginModalComponent {
 
   // Emits a cluster to retry a failed installation on, with the current pin.
   retry = output<RetrySelection>();
-
-  dialogRef = viewChild<ElementRef<HTMLElement>>('dialog');
 
   // Cluster IDs currently selected for batch install.
   selected = signal<Set<string>>(new Set());
@@ -145,8 +146,6 @@ export default class InstallPluginModalComponent {
   onOpen(): void {
     this.selected.set(new Set());
     this.pickedVersion.set(null);
-    const el = this.dialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
   }
 
   onVersionChange(version: string): void {

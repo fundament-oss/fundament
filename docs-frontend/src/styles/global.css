@@ -38,7 +38,7 @@
 
   /* Semantic colors */
   --color-dividers: var(--semantics-dividers-color);
-  --color-surface-bg: var(--semantics-surfaces-background-color);
+  --color-surface-bg: var(--semantics-surfaces-base-background-color);
   --color-surface-tinted: var(--semantics-surfaces-tinted-background-color);
   --color-content: var(--semantics-content-color);
   --color-content-secondary: var(--semantics-content-secondary-color);

@@ -15,8 +15,9 @@ import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
-import AutofocusDirective from '../autofocus.directive';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
+import AutofocusDirective from '../autofocus.directive';
 import focusFirstModalInput from '../modal-focus';
 import { PROJECT, NAMESPACE, CLUSTER } from '../../connect/tokens';
 import {
@@ -35,7 +36,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-detail',
-  imports: [LoadingIndicatorComponent, DialogSyncDirective, AutofocusDirective],
+  imports: [LoadingIndicatorComponent, DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -216,13 +217,6 @@ export default class ProjectDetailComponent implements OnInit {
         );
       }
     }
-  }
-
-  editDialogRef = viewChild<ElementRef<HTMLElement>>('editDialog');
-
-  onEditModalOpen(): void {
-    const el = this.editDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
   }
 
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
