@@ -175,7 +175,6 @@ func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDet
 		KubernetesVersion: row.KubernetesVersion,
 		Status:            clusterStatusFromDB(row.Deleted, row.ShootStatus),
 		Created:           timestamppb.New(row.Created.Time),
-		ResourceUsage:     nil, // Stub
 		SyncState: syncStateFromRow(
 			row.OutboxStatus,
 			row.OutboxRetries,

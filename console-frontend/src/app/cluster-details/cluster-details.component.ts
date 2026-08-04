@@ -15,7 +15,7 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { CLUSTER, NAMESPACE, PLUGIN } from '../../connect/tokens';
+import { CLUSTER, METRICS, NAMESPACE, PLUGIN } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
@@ -27,6 +27,7 @@ import {
   type SyncState,
 } from '../../generated/v1/cluster_pb';
 import { ListClusterNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
+import { GetClusterWorkloadMetricsRequestSchema } from '../../generated/v1/metrics_pb';
 import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
@@ -36,6 +37,14 @@ import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../util
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
+
+interface ClusterResourceUsage {
+  cpu: { used: number; total: number; unit: string };
+  memory: { used: number; total: number; unit: string };
+  pods: { used: number; total: number; unit: string };
+}
+
+const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 const getUsagePercentage = (used: number, limit: number): number =>
   Math.round((used / limit) * 100);
@@ -134,6 +143,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private client = inject(CLUSTER);
 
+  private metricsClient = inject(METRICS);
+
   private namespaceClient = inject(NAMESPACE);
 
   private organizationDataService = inject(OrganizationDataService);
@@ -164,11 +175,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   showDeleteModal = signal<boolean>(false);
 
-
-
-
-
-
   // Namespace management
   namespaces = signal<Namespace[]>([]);
 
@@ -182,6 +188,11 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   isLoadingPlugins = signal<boolean>(true);
 
   // Activity/Events data
+  // Live usage totals from the cluster's per-shoot Prometheus (MetricsService);
+  // null until real data is available (cluster not ready, or metrics backend
+  // unreachable), which renders the card's fallback text.
+  resourceUsage = signal<ClusterResourceUsage | null>(null);
+
   clusterEvents = signal<ClusterEvent[]>([]);
 
   isLoadingEvents = signal<boolean>(true);
@@ -230,12 +241,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       },
     ],
     nodePools: [] as NodePool[],
-    resourceUsage: {
-      cpu: { used: 2.4, limit: 8.0, unit: 'cores' },
-      memory: { used: 12.8, limit: 32.0, unit: 'GB' },
-      disk: { used: 45.2, limit: 100.0, unit: 'GB' },
-      pods: { used: 28, limit: 110, unit: 'pods' },
-    },
     workerNodes: {
       nodeType: 'n1-standard-2 (2 vCPU, 7.5 GB RAM)',
       minAutoscaling: 1,
@@ -283,6 +288,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         this.loadNamespaces(clusterId),
         this.loadInstalledPlugins(clusterId),
         this.loadClusterEvents(clusterId),
+        this.loadResourceUsage(clusterId),
       ]);
 
       this.updatePolling();
@@ -313,6 +319,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
+      // The usage card loads once on init; when the cluster finishes
+      // provisioning while the page is open, fetch it now instead of
+      // requiring a page refresh.
+      if (!this.resourceUsage() && !isTransitionalStatus(response.cluster.status)) {
+        void this.loadResourceUsage(clusterId);
+      }
       this.cdr.markForCheck();
       this.updatePolling();
     } catch {
@@ -342,6 +354,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   readonly formatDate = formatDateTimeUtil;
 
   getUsagePercentage = getUsagePercentage;
+
+  round1 = round1;
 
   getUsageColor = getUsageColor;
 
@@ -455,6 +469,30 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   getSyncStatusLabel = getSyncStatusLabel;
 
   // Load cluster activity/events
+  async loadResourceUsage(clusterId: string): Promise<void> {
+    try {
+      const request = create(GetClusterWorkloadMetricsRequestSchema, { clusterId });
+      const response = await firstValueFrom(this.metricsClient.getClusterWorkloadMetrics(request));
+      const t = response.totals;
+      // All-zero totals mean the metrics backend has nothing yet (cluster
+      // provisioning); keep the fallback instead of rendering 0 / 0 bars.
+      if (!t || (!t.cpu?.total && !t.pods?.total)) {
+        return;
+      }
+      this.resourceUsage.set({
+        cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
+        memory: {
+          used: t.memory?.used ?? 0,
+          total: t.memory?.total ?? 0,
+          unit: t.memory?.unit ?? 'GiB',
+        },
+        pods: { used: t.pods?.used ?? 0, total: t.pods?.total ?? 0, unit: t.pods?.unit ?? 'pods' },
+      });
+    } catch {
+      // Non-fatal: the card falls back to its "not available" text.
+    }
+  }
+
   async loadClusterEvents(clusterId: string): Promise<void> {
     try {
       this.isLoadingEvents.set(true);
