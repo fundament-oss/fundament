@@ -22,7 +22,6 @@ import {
   DeleteClusterRequestSchema,
   GetClusterActivityRequestSchema,
   GetKubeconfigRequestSchema,
-  GetClusterMetricsCredentialsRequestSchema,
   NodePool,
   type ClusterEvent,
   type SyncState,
@@ -165,16 +164,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   showDeleteModal = signal<boolean>(false);
 
-  showCredentialsModal = signal<boolean>(false);
 
-  credentialsLoading = signal<boolean>(false);
 
-  credentialsError = signal<string | null>(null);
 
-  credentials = signal<{ username: string; password: string } | null>(null);
 
-  // Tracks which field was just copied so we can flip the icon to a checkmark.
-  copiedField = signal<'username' | 'password' | null>(null);
 
   // Namespace management
   namespaces = signal<Namespace[]>([]);
@@ -203,7 +196,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     },
     status: ClusterStatus.UNSPECIFIED,
     syncState: null as SyncState | null,
-    observabilityUrl: '',
     creationDate: '2024-11-15T10:30:00Z', // Mock data - not available from API
     activity: [
       {
@@ -282,7 +274,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       };
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
-      this.clusterData.observabilityUrl = response.cluster.observabilityUrl;
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
       this.titleService.setTitle(response.cluster.name);
@@ -322,7 +313,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
-      this.clusterData.observabilityUrl = response.cluster.observabilityUrl;
       this.cdr.markForCheck();
       this.updatePolling();
     } catch {
@@ -518,59 +508,5 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     this.deleteConfirmationInput.set('');
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
-  }
-
-  openObservabilityDashboard(): void {
-    const url = this.clusterData.observabilityUrl;
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
-  }
-
-  async openCredentialsModal(): Promise<void> {
-    this.showCredentialsModal.set(true);
-    this.credentialsError.set(null);
-    this.copiedField.set(null);
-
-    // Credentials are cached for the component lifetime; if Gardener rotates
-    // them between reconciles, the user must refresh the page to see the new ones.
-    if (this.credentials()) {
-      return;
-    }
-
-    this.credentialsLoading.set(true);
-    try {
-      const request = create(GetClusterMetricsCredentialsRequestSchema, {
-        clusterId: this.clusterData.basics.id,
-      });
-      const response = await firstValueFrom(this.client.getClusterMetricsCredentials(request));
-      this.credentials.set({ username: response.username, password: response.password });
-    } catch (error) {
-      this.credentialsError.set(
-        error instanceof Error
-          ? `Failed to load credentials: ${error.message}`
-          : 'Failed to load credentials',
-      );
-    } finally {
-      this.credentialsLoading.set(false);
-    }
-  }
-
-  closeCredentialsModal(): void {
-    this.showCredentialsModal.set(false);
-  }
-
-  async copyCredential(field: 'username' | 'password'): Promise<void> {
-    const creds = this.credentials();
-    if (!creds) return;
-    try {
-      await navigator.clipboard.writeText(creds[field]);
-      this.copiedField.set(field);
-      setTimeout(() => {
-        if (this.copiedField() === field) {
-          this.copiedField.set(null);
-        }
-      }, 1500);
-    } catch {
-      this.toastService.error('Failed to copy to clipboard');
-    }
   }
 }

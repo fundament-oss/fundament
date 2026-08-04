@@ -60,9 +60,6 @@ const (
 	// ClusterServiceGetKubeconfigProcedure is the fully-qualified name of the ClusterService's
 	// GetKubeconfig RPC.
 	ClusterServiceGetKubeconfigProcedure = "/organization.v1.ClusterService/GetKubeconfig"
-	// ClusterServiceGetClusterMetricsCredentialsProcedure is the fully-qualified name of the
-	// ClusterService's GetClusterMetricsCredentials RPC.
-	ClusterServiceGetClusterMetricsCredentialsProcedure = "/organization.v1.ClusterService/GetClusterMetricsCredentials"
 	// ClusterServiceListNodePoolsProcedure is the fully-qualified name of the ClusterService's
 	// ListNodePools RPC.
 	ClusterServiceListNodePoolsProcedure = "/organization.v1.ClusterService/ListNodePools"
@@ -101,8 +98,6 @@ type ClusterServiceClient interface {
 	GetClusterActivity(context.Context, *v1.GetClusterActivityRequest) (*v1.GetClusterActivityResponse, error)
 	// Download kubeconfig for a cluster
 	GetKubeconfig(context.Context, *v1.GetKubeconfigRequest) (*v1.GetKubeconfigResponse, error)
-	// Fetch the basic-auth credentials for a cluster's metrics dashboard.
-	GetClusterMetricsCredentials(context.Context, *v1.GetClusterMetricsCredentialsRequest) (*v1.GetClusterMetricsCredentialsResponse, error)
 	// List node pools for a cluster
 	ListNodePools(context.Context, *v1.ListNodePoolsRequest) (*v1.ListNodePoolsResponse, error)
 	// Get a node pool by ID
@@ -180,12 +175,6 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(clusterServiceMethods.ByName("GetKubeconfig")),
 			connect.WithClientOptions(opts...),
 		),
-		getClusterMetricsCredentials: connect.NewClient[v1.GetClusterMetricsCredentialsRequest, v1.GetClusterMetricsCredentialsResponse](
-			httpClient,
-			baseURL+ClusterServiceGetClusterMetricsCredentialsProcedure,
-			connect.WithSchema(clusterServiceMethods.ByName("GetClusterMetricsCredentials")),
-			connect.WithClientOptions(opts...),
-		),
 		listNodePools: connect.NewClient[v1.ListNodePoolsRequest, v1.ListNodePoolsResponse](
 			httpClient,
 			baseURL+ClusterServiceListNodePoolsProcedure,
@@ -221,21 +210,20 @@ func NewClusterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // clusterServiceClient implements ClusterServiceClient.
 type clusterServiceClient struct {
-	listRegions                  *connect.Client[v1.ListRegionsRequest, v1.ListRegionsResponse]
-	listClusters                 *connect.Client[v1.ListClustersRequest, v1.ListClustersResponse]
-	getCluster                   *connect.Client[v1.GetClusterRequest, v1.GetClusterResponse]
-	getClusterByName             *connect.Client[v1.GetClusterByNameRequest, v1.GetClusterResponse]
-	createCluster                *connect.Client[v1.CreateClusterRequest, v1.CreateClusterResponse]
-	updateCluster                *connect.Client[v1.UpdateClusterRequest, v1.UpdateClusterResponse]
-	deleteCluster                *connect.Client[v1.DeleteClusterRequest, v1.DeleteClusterResponse]
-	getClusterActivity           *connect.Client[v1.GetClusterActivityRequest, v1.GetClusterActivityResponse]
-	getKubeconfig                *connect.Client[v1.GetKubeconfigRequest, v1.GetKubeconfigResponse]
-	getClusterMetricsCredentials *connect.Client[v1.GetClusterMetricsCredentialsRequest, v1.GetClusterMetricsCredentialsResponse]
-	listNodePools                *connect.Client[v1.ListNodePoolsRequest, v1.ListNodePoolsResponse]
-	getNodePool                  *connect.Client[v1.GetNodePoolRequest, v1.GetNodePoolResponse]
-	createNodePool               *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
-	updateNodePool               *connect.Client[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse]
-	deleteNodePool               *connect.Client[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse]
+	listRegions        *connect.Client[v1.ListRegionsRequest, v1.ListRegionsResponse]
+	listClusters       *connect.Client[v1.ListClustersRequest, v1.ListClustersResponse]
+	getCluster         *connect.Client[v1.GetClusterRequest, v1.GetClusterResponse]
+	getClusterByName   *connect.Client[v1.GetClusterByNameRequest, v1.GetClusterResponse]
+	createCluster      *connect.Client[v1.CreateClusterRequest, v1.CreateClusterResponse]
+	updateCluster      *connect.Client[v1.UpdateClusterRequest, v1.UpdateClusterResponse]
+	deleteCluster      *connect.Client[v1.DeleteClusterRequest, v1.DeleteClusterResponse]
+	getClusterActivity *connect.Client[v1.GetClusterActivityRequest, v1.GetClusterActivityResponse]
+	getKubeconfig      *connect.Client[v1.GetKubeconfigRequest, v1.GetKubeconfigResponse]
+	listNodePools      *connect.Client[v1.ListNodePoolsRequest, v1.ListNodePoolsResponse]
+	getNodePool        *connect.Client[v1.GetNodePoolRequest, v1.GetNodePoolResponse]
+	createNodePool     *connect.Client[v1.CreateNodePoolRequest, v1.CreateNodePoolResponse]
+	updateNodePool     *connect.Client[v1.UpdateNodePoolRequest, v1.UpdateNodePoolResponse]
+	deleteNodePool     *connect.Client[v1.DeleteNodePoolRequest, v1.DeleteNodePoolResponse]
 }
 
 // ListRegions calls organization.v1.ClusterService.ListRegions.
@@ -319,15 +307,6 @@ func (c *clusterServiceClient) GetKubeconfig(ctx context.Context, req *v1.GetKub
 	return nil, err
 }
 
-// GetClusterMetricsCredentials calls organization.v1.ClusterService.GetClusterMetricsCredentials.
-func (c *clusterServiceClient) GetClusterMetricsCredentials(ctx context.Context, req *v1.GetClusterMetricsCredentialsRequest) (*v1.GetClusterMetricsCredentialsResponse, error) {
-	response, err := c.getClusterMetricsCredentials.CallUnary(ctx, connect.NewRequest(req))
-	if response != nil {
-		return response.Msg, err
-	}
-	return nil, err
-}
-
 // ListNodePools calls organization.v1.ClusterService.ListNodePools.
 func (c *clusterServiceClient) ListNodePools(ctx context.Context, req *v1.ListNodePoolsRequest) (*v1.ListNodePoolsResponse, error) {
 	response, err := c.listNodePools.CallUnary(ctx, connect.NewRequest(req))
@@ -394,8 +373,6 @@ type ClusterServiceHandler interface {
 	GetClusterActivity(context.Context, *v1.GetClusterActivityRequest) (*v1.GetClusterActivityResponse, error)
 	// Download kubeconfig for a cluster
 	GetKubeconfig(context.Context, *v1.GetKubeconfigRequest) (*v1.GetKubeconfigResponse, error)
-	// Fetch the basic-auth credentials for a cluster's metrics dashboard.
-	GetClusterMetricsCredentials(context.Context, *v1.GetClusterMetricsCredentialsRequest) (*v1.GetClusterMetricsCredentialsResponse, error)
 	// List node pools for a cluster
 	ListNodePools(context.Context, *v1.ListNodePoolsRequest) (*v1.ListNodePoolsResponse, error)
 	// Get a node pool by ID
@@ -469,12 +446,6 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 		connect.WithSchema(clusterServiceMethods.ByName("GetKubeconfig")),
 		connect.WithHandlerOptions(opts...),
 	)
-	clusterServiceGetClusterMetricsCredentialsHandler := connect.NewUnaryHandlerSimple(
-		ClusterServiceGetClusterMetricsCredentialsProcedure,
-		svc.GetClusterMetricsCredentials,
-		connect.WithSchema(clusterServiceMethods.ByName("GetClusterMetricsCredentials")),
-		connect.WithHandlerOptions(opts...),
-	)
 	clusterServiceListNodePoolsHandler := connect.NewUnaryHandlerSimple(
 		ClusterServiceListNodePoolsProcedure,
 		svc.ListNodePools,
@@ -525,8 +496,6 @@ func NewClusterServiceHandler(svc ClusterServiceHandler, opts ...connect.Handler
 			clusterServiceGetClusterActivityHandler.ServeHTTP(w, r)
 		case ClusterServiceGetKubeconfigProcedure:
 			clusterServiceGetKubeconfigHandler.ServeHTTP(w, r)
-		case ClusterServiceGetClusterMetricsCredentialsProcedure:
-			clusterServiceGetClusterMetricsCredentialsHandler.ServeHTTP(w, r)
 		case ClusterServiceListNodePoolsProcedure:
 			clusterServiceListNodePoolsHandler.ServeHTTP(w, r)
 		case ClusterServiceGetNodePoolProcedure:
@@ -580,10 +549,6 @@ func (UnimplementedClusterServiceHandler) GetClusterActivity(context.Context, *v
 
 func (UnimplementedClusterServiceHandler) GetKubeconfig(context.Context, *v1.GetKubeconfigRequest) (*v1.GetKubeconfigResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetKubeconfig is not implemented"))
-}
-
-func (UnimplementedClusterServiceHandler) GetClusterMetricsCredentials(context.Context, *v1.GetClusterMetricsCredentialsRequest) (*v1.GetClusterMetricsCredentialsResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.ClusterService.GetClusterMetricsCredentials is not implemented"))
 }
 
 func (UnimplementedClusterServiceHandler) ListNodePools(context.Context, *v1.ListNodePoolsRequest) (*v1.ListNodePoolsResponse, error) {

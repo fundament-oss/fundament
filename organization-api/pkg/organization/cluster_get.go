@@ -8,12 +8,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/fundament-oss/fundament/common/authz"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
-	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -58,7 +56,6 @@ func (s *Server) GetClusterByName(
 		OutboxError:        cluster.OutboxError,
 	}
 	details := clusterDetailsFromRow(row)
-	details.SetObservabilityUrl(s.lookupObservabilityURL(ctx, row.ID, row.ShootStatus))
 
 	return organizationv1.GetClusterResponse_builder{
 		Cluster: details,
@@ -90,7 +87,6 @@ func (s *Server) GetCluster(
 	}
 
 	details := clusterDetailsFromRow(&cluster)
-	details.SetObservabilityUrl(s.lookupObservabilityURL(ctx, cluster.ID, cluster.ShootStatus))
 
 	return organizationv1.GetClusterResponse_builder{
 		Cluster: details,
@@ -135,50 +131,6 @@ func (s *Server) GetClusterActivity(
 	}.Build(), nil
 }
 
-func (s *Server) GetClusterMetricsCredentials(
-	ctx context.Context,
-	req *organizationv1.GetClusterMetricsCredentialsRequest,
-) (*organizationv1.GetClusterMetricsCredentialsResponse, error) {
-	clusterID := uuid.MustParse(req.GetClusterId())
-
-	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
-		return nil, err
-	}
-
-	cluster, err := s.queries.ClusterGetByID(ctx, db.ClusterGetByIDParams{
-		ID: clusterID,
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
-	}
-
-	if cluster.Deleted.Valid {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("cluster not found"))
-	}
-	if !cluster.ShootStatus.Valid || cluster.ShootStatus.String != shootStatusReady {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("cluster not ready yet"))
-	}
-
-	info, err := s.gardener.Monitoring(ctx, clusterID)
-	if err != nil {
-		if errors.Is(err, gardener.ErrNotFound) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("metrics credentials not available"))
-		}
-		s.logger.Warn("failed to resolve metrics credentials",
-			"cluster_id", clusterID,
-			"error", err)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to fetch metrics credentials"))
-	}
-
-	return organizationv1.GetClusterMetricsCredentialsResponse_builder{
-		Username: info.Username,
-		Password: info.Password,
-	}.Build(), nil
-}
-
 func (s *Server) GetKubeconfig(
 	ctx context.Context,
 	req *organizationv1.GetKubeconfigRequest,
@@ -213,25 +165,6 @@ func (s *Server) GetKubeconfig(
 	return organizationv1.GetKubeconfigResponse_builder{
 		KubeconfigContent: kubeconfig,
 	}.Build(), nil
-}
-
-// lookupObservabilityURL fetches the per-shoot Plutono URL for clusters that
-// are ready. Any error short of "found nothing" is logged and swallowed: a
-// transient Gardener glitch shouldn't fail cluster-details.
-func (s *Server) lookupObservabilityURL(ctx context.Context, clusterID uuid.UUID, shootStatus pgtype.Text) string {
-	if !shootStatus.Valid || shootStatus.String != shootStatusReady {
-		return ""
-	}
-	info, err := s.gardener.Monitoring(ctx, clusterID)
-	if err != nil {
-		if !errors.Is(err, gardener.ErrNotFound) {
-			s.logger.Warn("failed to resolve observability url",
-				"cluster_id", clusterID,
-				"error", err)
-		}
-		return ""
-	}
-	return info.URL
 }
 
 func clusterDetailsFromRow(row *db.ClusterGetByIDRow) *organizationv1.ClusterDetails {
