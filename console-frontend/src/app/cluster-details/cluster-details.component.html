@@ -219,166 +219,63 @@
 
       <!-- Resource Usage Stats -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- Resource Usage Charts -->
+        <!-- Resource usage (live totals from the cluster's metrics backend) -->
         <div class="card card-body">
-          <h3 class="mb-4 text-xl font-medium">Resource usage</h3>
-          <div class="space-y-4">
-            <!-- CPU Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">CPU</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.cpu.used }} /
-                  {{ clusterData.resourceUsage.cpu.limit }}
-                  {{ clusterData.resourceUsage.cpu.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
-                      getUsagePercentage(
-                        clusterData.resourceUsage.cpu.used,
-                        clusterData.resourceUsage.cpu.limit
-                      )
-                    )
-                  "
-                  [style.width.%]="
-                    getUsagePercentage(
-                      clusterData.resourceUsage.cpu.used,
-                      clusterData.resourceUsage.cpu.limit
-                    )
-                  "
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.cpu.used,
-                    clusterData.resourceUsage.cpu.limit
-                  )
-                }}% used
-              </div>
-            </div>
-
-            <!-- Memory Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">Memory</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.memory.used }} /
-                  {{ clusterData.resourceUsage.memory.limit }}
-                  {{ clusterData.resourceUsage.memory.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
-                      getUsagePercentage(
-                        clusterData.resourceUsage.memory.used,
-                        clusterData.resourceUsage.memory.limit
-                      )
-                    )
-                  "
-                  [style.width.%]="
-                    getUsagePercentage(
-                      clusterData.resourceUsage.memory.used,
-                      clusterData.resourceUsage.memory.limit
-                    )
-                  "
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.memory.used,
-                    clusterData.resourceUsage.memory.limit
-                  )
-                }}% used
-              </div>
-            </div>
-
-            <!-- Disk Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">Disk</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.disk.used }} /
-                  {{ clusterData.resourceUsage.disk.limit }}
-                  {{ clusterData.resourceUsage.disk.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
-                      getUsagePercentage(
-                        clusterData.resourceUsage.disk.used,
-                        clusterData.resourceUsage.disk.limit
-                      )
-                    )
-                  "
-                  [style.width.%]="
-                    getUsagePercentage(
-                      clusterData.resourceUsage.disk.used,
-                      clusterData.resourceUsage.disk.limit
-                    )
-                  "
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.disk.used,
-                    clusterData.resourceUsage.disk.limit
-                  )
-                }}% used
-              </div>
-            </div>
-
-            <!-- Pods Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">Pods</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.pods.used }} /
-                  {{ clusterData.resourceUsage.pods.limit }}
-                  {{ clusterData.resourceUsage.pods.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
-                      getUsagePercentage(
-                        clusterData.resourceUsage.pods.used,
-                        clusterData.resourceUsage.pods.limit
-                      )
-                    )
-                  "
-                  [style.width.%]="
-                    getUsagePercentage(
-                      clusterData.resourceUsage.pods.used,
-                      clusterData.resourceUsage.pods.limit
-                    )
-                  "
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.pods.used,
-                    clusterData.resourceUsage.pods.limit
-                  )
-                }}% used
-              </div>
-            </div>
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-xl font-medium">Resource usage</h3>
+            <a
+              routerLink="/metrics"
+              class="text-primary-700 dark:text-primary-300 text-sm hover:underline"
+            >
+              View metrics
+            </a>
           </div>
+          @if (resourceUsage(); as usage) {
+            <div class="space-y-4">
+              @for (
+                row of [
+                  { label: 'CPU', data: usage.cpu },
+                  { label: 'Memory', data: usage.memory },
+                  { label: 'Pods', data: usage.pods },
+                ];
+                track row.label
+              ) {
+                <div>
+                  <div class="mb-1 flex justify-between">
+                    <span class="font-medium text-gray-700">{{ row.label }}</span>
+                    <span class="text-gray-500 dark:text-gray-400"
+                      >{{ round1(row.data.used) }} / {{ round1(row.data.total) }}
+                      {{ row.data.unit }}</span
+                    >
+                  </div>
+                  <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                    <div
+                      class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                      [class]="getUsageColor(getUsagePercentage(row.data.used, row.data.total))"
+                      [style.width.%]="getUsagePercentage(row.data.used, row.data.total)"
+                    ></div>
+                  </div>
+                  <div class="mt-1 text-gray-500 dark:text-gray-400">
+                    {{ getUsagePercentage(row.data.used, row.data.total) }}% used
+                  </div>
+                </div>
+              }
+              <!-- Disk: not served by the metrics backend yet; placeholder until
+                   we decide whether to add an ephemeral-storage query. -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700">Disk</span>
+                  <span class="text-gray-500 dark:text-gray-400">&mdash;</span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">? % used</div>
+              </div>
+            </div>
+          } @else {
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              Usage data becomes available once the cluster is ready.
+            </p>
+          }
         </div>
 
         <!-- Event History -->
@@ -418,7 +315,7 @@
         </div>
       </div>
 
-      <!-- Node Pools, Plugins and Monitoring -->
+      <!-- Node Pools and Plugins -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- Node Pools -->
         <div class="card card-body">

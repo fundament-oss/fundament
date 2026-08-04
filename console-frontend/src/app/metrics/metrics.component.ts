@@ -225,7 +225,9 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   selectedNamespace = signal('');
 
-  selectedPreset = signal<TimeRangePreset>('7d');
+  // Default to 1h: young clusters have little history, and the longer ranges
+  // render near-invisibly sparse lines until enough samples accumulate.
+  selectedPreset = signal<TimeRangePreset>('1h');
 
   // dateFrom, dateTo, and the chart series arrays are plain fields rather than
   // signals. Chart updates are imperative (Chart.js update()), so they don't
@@ -279,7 +281,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   constructor() {
     this.titleService.setTitle('Metrics');
-    this.applyPreset('7d');
+    this.applyPreset('1h');
   }
 
   ngOnInit() {
