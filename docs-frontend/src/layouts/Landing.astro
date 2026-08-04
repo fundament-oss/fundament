@@ -1,4 +1,7 @@
 ---
+// Required here as well as in src/styles/starlight-custom.css: customCss only
+// applies to Starlight-rendered doc pages, and this layout is outside that
+// pipeline, so the landing page would otherwise ship without the design system.
 import '@nldd/design-system/styles';
 import '../styles/global.css';
 
@@ -107,6 +110,7 @@ const isActive = (path: string) => pathname === path || pathname === `${path}/`;
 
 <script>
   import '@nldd/design-system/button';
+  import '@nldd/design-system/icon';
   import '@nldd/design-system/icon-button';
 </script>
 
