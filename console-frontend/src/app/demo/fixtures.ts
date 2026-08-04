@@ -100,7 +100,6 @@ export const clusterDetails = new Map(
       kubernetesVersion: '1.34.0',
       status: ClusterStatus.RUNNING,
       created: daysAgo(180),
-      observabilityUrl: 'https://grafana.fundament.example/d/production',
       resourceUsage: create(ResourceUsageInfoSchema, {
         cpu: usage(5200, 16000, 'm'),
         memory: usage(11, 32, 'Gi'),
@@ -115,7 +114,6 @@ export const clusterDetails = new Map(
       kubernetesVersion: '1.33.0',
       status: ClusterStatus.RUNNING,
       created: daysAgo(90),
-      observabilityUrl: 'https://grafana.fundament.example/d/staging',
       resourceUsage: create(ResourceUsageInfoSchema, {
         cpu: usage(1800, 8000, 'm'),
         memory: usage(4, 16, 'Gi'),
