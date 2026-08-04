@@ -27,6 +27,7 @@ import { ListProjectsRequestSchema, Project } from '../../generated/v1/project_p
 import { fetchClusterName } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
+import AutofocusDirective from '../autofocus.directive';
 import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
@@ -42,6 +43,7 @@ import NamespaceSelection from '../utils/namespace-selection';
     DropdownSyncDirective,
     RouterLink,
     LoadingIndicatorComponent,
+    AutofocusDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,

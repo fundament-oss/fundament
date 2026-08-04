@@ -270,7 +270,7 @@
   width="480px"
   (close)="showEditModal.set(false)"
 >
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       text="Edit member"
@@ -339,7 +339,7 @@
   width="480px"
   (close)="closeModal()"
 >
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       text="Invite user"
@@ -361,7 +361,7 @@
       >
         <nldd-form-field label="Email address" class="mb-4">
           <nldd-text-field
-            autofocus
+            appAutofocus
             type="email"
             id="email"
             [value]="inviteEmail()"

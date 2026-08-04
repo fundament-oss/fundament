@@ -277,7 +277,7 @@
      DEVICE EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #deviceSheet accessible-label="Device details" placement="right" width="400px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editDevice()?.id ? 'Edit Device' : 'Add Device'"
@@ -364,7 +364,7 @@
      CONNECTION EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #connSheet accessible-label="Connection details" placement="right" width="420px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editConnection()?.id ? 'Edit Connection' : 'Add Connection'"

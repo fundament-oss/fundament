@@ -130,7 +130,7 @@
   (open)="onCreateSheetOpen()"
   (close)="showCreateModal.set(false)"
 >
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editingBinding() ? 'Edit role binding' : 'Create role binding'"
@@ -144,12 +144,9 @@
           @if (editingBinding()) {
             <p>{{ editingBinding()?.memberName }}</p>
           } @else {
-            <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
-                 can't see it. Autofocus is the recommended pattern for a modal's first field. -->
-            <!-- eslint-disable @angular-eslint/template/no-autofocus -->
             <nldd-dropdown [attr.invalid]="memberIdError() ? true : null">
               <select
-                autofocus
+                appAutofocus
                 id="rb-member"
                 [ngModel]="modalMemberId()"
                 (ngModelChange)="modalMemberId.set($event)"
@@ -162,7 +159,6 @@
                 }
               </select>
             </nldd-dropdown>
-            <!-- eslint-enable @angular-eslint/template/no-autofocus -->
             @if (memberIdError()) {
               <p class="text-danger-600 dark:text-danger-400 mt-1 text-sm">
                 Please select a member.

@@ -366,7 +366,7 @@
      PORT DEFINITION EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #portSheet accessible-label="Port definition details" placement="right" width="400px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editPortDef()?.id ? 'Edit Port' : 'New Port'"
@@ -493,7 +493,7 @@
      ADD COMPATIBILITY SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #compatSheet accessible-label="Add port compatibility" placement="right" width="400px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       text="Add port compatibility"

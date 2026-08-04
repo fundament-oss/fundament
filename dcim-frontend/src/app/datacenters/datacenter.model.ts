@@ -12,7 +12,11 @@ export function statusTagColor(status: DatacenterStatus): string {
     case 'maintenance':
       return 'lichtblauw';
     default:
-      throw new Error(`unhandled datacenter status: ${status satisfies never}`);
+      // `satisfies never` fails the build when a status is added without a
+      // color here. At runtime an unexpected value off the wire degrades to a
+      // plain tag rather than throwing out of the template that renders it.
+      status satisfies never;
+      return 'neutral';
   }
 }
 

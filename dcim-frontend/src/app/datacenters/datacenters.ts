@@ -255,7 +255,7 @@ export default class DatacentersComponent implements OnInit {
 
   readonly rackFillBarClass = (): string => 'bg-emerald-200 dark:bg-emerald-900';
 
-  readonly statusTagColor = (status: DatacenterStatus): string => statusTagColor(status);
+  readonly statusTagColor = statusTagColor;
 
   readonly statusLabel = (status: DatacenterStatus): string => {
     switch (status) {

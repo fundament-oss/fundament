@@ -25,13 +25,14 @@ import {
 } from '../../generated/v1/namespace_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
+import AutofocusDirective from '../autofocus.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 import NamespaceSelection from '../utils/namespace-selection';
 
 @Component({
   selector: 'app-namespaces',
-  imports: [ReactiveFormsModule, DialogSyncDirective, SheetSyncDirective],
+  imports: [ReactiveFormsModule, DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './namespaces.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

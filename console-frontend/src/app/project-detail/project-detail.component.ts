@@ -17,6 +17,7 @@ import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
+import AutofocusDirective from '../autofocus.directive';
 import focusFirstModalInput from '../modal-focus';
 import { PROJECT, NAMESPACE, CLUSTER } from '../../connect/tokens';
 import {
@@ -35,7 +36,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-project-detail',
-  imports: [LoadingIndicatorComponent, DialogSyncDirective, SheetSyncDirective],
+  imports: [LoadingIndicatorComponent, DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

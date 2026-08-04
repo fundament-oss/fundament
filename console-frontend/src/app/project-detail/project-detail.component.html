@@ -111,7 +111,7 @@
   width="480px"
   (close)="showEditModal.set(false)"
 >
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       text="Edit project"
@@ -123,7 +123,7 @@
       <nldd-form (submit)="saveEdit()" (keydown.enter)="saveEdit()" novalidate>
         <nldd-form-field label="Alias">
           <nldd-text-field
-            autofocus
+            appAutofocus
             [value]="editingAlias()"
             (input)="editingAlias.set($any($event.target).value)"
             (keyup.escape)="showEditModal.set(false)"

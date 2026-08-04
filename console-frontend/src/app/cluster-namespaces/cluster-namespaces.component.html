@@ -133,7 +133,7 @@
   width="480px"
   (close)="showAddNamespaceModal.set(false)"
 >
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       text="Add namespace"
@@ -188,7 +188,7 @@
 
         <nldd-form-field label="Namespace name" class="mb-4">
           <nldd-text-field
-            autofocus
+            appAutofocus
             id="namespaceName"
             [value]="namespaceForm.get('name')?.value ?? ''"
             placeholder="E.g. my-namespace"

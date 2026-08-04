@@ -10,7 +10,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
 import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
@@ -56,6 +56,8 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 })
 export default class ResourceListComponent implements OnInit {
   private route = inject(ActivatedRoute);
+
+  private router = inject(Router);
 
   private registry = inject(PluginRegistryService);
 
@@ -189,6 +191,35 @@ export default class ResourceListComponent implements OnInit {
   detailLink = buildDetailLink;
 
   detailQueryParams = buildDetailQueryParams;
+
+  /** Resolved URL of a resource's detail page, for the `href` of a menu item. */
+  protected detailHref(resource: KubeResource): string {
+    return this.router.serializeUrl(
+      this.router.createUrlTree(buildDetailLink(resource), {
+        relativeTo: this.route,
+        queryParams: buildDetailQueryParams(resource),
+      }),
+    );
+  }
+
+  /**
+   * Routes a left-click on the "View" menu item in-app.
+   *
+   * `nldd-menu-item[href]` renders a real anchor, which is what gives the item its
+   * middle-click and "open in new tab" behaviour — but that anchor sits in the
+   * element's shadow DOM, so `routerLink` cannot bind to it and the browser would
+   * do a full page load. Anything with a modifier is left to the browser.
+   */
+  protected onDetailClick(event: MouseEvent, resource: KubeResource): void {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
+    this.router.navigate(buildDetailLink(resource), {
+      relativeTo: this.route,
+      queryParams: buildDetailQueryParams(resource),
+    });
+  }
 
   formatCell = buildCellValue;
 

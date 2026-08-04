@@ -623,7 +623,7 @@
      TASK DETAIL SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #detailSheetEl accessible-label="Task details" placement="right" width="520px">
-  <nldd-page sticky-header="">
+  <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="detailTask()?.title ?? ''"
@@ -871,7 +871,7 @@
      ADD / EDIT TASK SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #editModalEl accessible-label="Add / edit task" placement="right" width="520px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editModalTitle()"

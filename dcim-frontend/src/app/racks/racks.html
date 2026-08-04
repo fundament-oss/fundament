@@ -416,7 +416,7 @@
      RACK EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #rackSheet accessible-label="Rack details" placement="right" width="400px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editRack()?.id ? 'Edit rack' : 'Add rack'"
@@ -498,7 +498,7 @@
      DEVICE ADD SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #deviceSheet accessible-label="Add device" placement="right" width="400px">
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       text="Add device"

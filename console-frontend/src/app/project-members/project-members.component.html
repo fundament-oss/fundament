@@ -194,7 +194,7 @@
   width="480px"
   (close)="showAddMemberModal.set(false)"
 >
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editingMemberView() ? 'Edit member' : 'Add member to project'"
@@ -210,18 +210,14 @@
       >
         @if (!editingMemberView()) {
           <nldd-form-field label="User" class="mb-4">
-            <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
-                 can't see it. Autofocus is the recommended pattern for a modal's first field. -->
-            <!-- eslint-disable @angular-eslint/template/no-autofocus -->
             <nldd-dropdown>
-              <select autofocus id="userId" formControlName="userId">
+              <select appAutofocus id="userId" formControlName="userId">
                 <option value="">Select a user</option>
                 @for (user of availableUsers(); track user.id) {
                   <option [value]="user.id">{{ user.name }}</option>
                 }
               </select>
             </nldd-dropdown>
-            <!-- eslint-enable @angular-eslint/template/no-autofocus -->
             @if (availableUsers().length === 0) {
               <p class="text-gray-600 dark:text-gray-400">No users available to add.</p>
             }

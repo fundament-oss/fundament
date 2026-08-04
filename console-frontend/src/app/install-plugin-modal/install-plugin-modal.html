@@ -8,7 +8,7 @@
   (open)="onOpen()"
   (close)="onClose()"
 >
-  <nldd-page sticky-header="" sticky-footer="">
+  <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
       text="Install plugin"
@@ -24,12 +24,9 @@
 
       @if (versions().length > 0) {
         <nldd-form-field label="Version" class="mb-4 block">
-          <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
-               can't see it. Autofocus is the recommended pattern for a modal's first field. -->
-          <!-- eslint-disable @angular-eslint/template/no-autofocus -->
           <nldd-dropdown>
             <select
-              [attr.autofocus]="autofocusVersion()"
+              appAutofocus
               [value]="selectedVersion()"
               (change)="onVersionChange($any($event).target.value)"
             >
@@ -38,7 +35,6 @@
               }
             </select>
           </nldd-dropdown>
-          <!-- eslint-enable @angular-eslint/template/no-autofocus -->
         </nldd-form-field>
       } @else if (versionsError()) {
         <nldd-box class="mb-4 block">
