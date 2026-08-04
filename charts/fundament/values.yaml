@@ -206,12 +206,17 @@ pluginProxy:
   enabled: false
   replicas: 1
   logLevel: info
-  mode: mock # "mock" or "real" (real is future work)
+  mode: mock # "mock" or "real"
   # sandboxKubeconfigSecret: name of a Secret whose "kubeconfig" key is a
   # kubeconfig granting admin access to a local plugin sandbox cluster (e.g.
   # k3d-fundament-plugin). When set, plugin-proxy fetches plugin assets from
-  # that cluster via PodFetcher instead of using MockFetcher. Local dev only.
+  # that cluster via PodFetcher instead of using MockFetcher. Local dev only;
+  # ignored in real mode.
   sandboxKubeconfigSecret: ""
+  # gardenerKubeconfigSecret: name of a Secret whose "kubeconfig" key holds a
+  # garden-cluster kubeconfig; required in real mode for shoot access. Same
+  # secret kube-api-proxy uses.
+  gardenerKubeconfigSecret: ""
   httproute:
     enabled: false
     parentRefs: []
