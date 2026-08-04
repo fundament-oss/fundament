@@ -14,7 +14,7 @@ import {
   CableStatus,
   CABLE_TYPE_LABEL,
   CableType,
-  cableStatusColors,
+  cableStatusTagColor,
   cableStatusLabel,
   cableTypeLabel,
   PORT_TYPE_LABEL,
@@ -184,15 +184,6 @@ export default class CableListComponent {
       ),
   );
 
-  readonly statusDotClass = (status: CableStatus | undefined): string => {
-    const map: Record<CableStatus, string> = {
-      planned: 'bg-amber-400',
-      connected: 'bg-teal-500',
-      decommissioned: 'bg-slate-400',
-    };
-    return status ? map[status] : 'bg-slate-300 dark:bg-gray-700';
-  };
-
   clearFilters(): void {
     this.filterDeviceId.set('');
     this.filterStatus.set('');
@@ -255,7 +246,17 @@ export default class CableListComponent {
     URL.revokeObjectURL(url);
   }
 
-  readonly cableStatusColors = cableStatusColors;
+  readonly cableStatusTagColor = cableStatusTagColor;
+
+  // A bare indicator dot in the status filter menu, not a tag.
+  readonly statusDotClass = (status: CableStatus | undefined): string => {
+    const map: Record<CableStatus, string> = {
+      planned: 'bg-amber-400',
+      connected: 'bg-teal-500',
+      decommissioned: 'bg-slate-400',
+    };
+    return status ? map[status] : 'bg-slate-300 dark:bg-gray-700';
+  };
 
   readonly cableStatusLabel = cableStatusLabel;
 

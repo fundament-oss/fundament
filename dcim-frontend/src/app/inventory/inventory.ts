@@ -19,7 +19,7 @@ import { RackSlotType } from '../../generated/v1/common_pb';
 import InventoryApiService from './inventory-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import PlacementApiService, { RackOption } from './placement-api.service';
-import { ASSET_STATUS_BADGE_CLASS, ASSET_STATUS_DOT_CLASS } from './asset-status';
+import { ASSET_STATUS_TAG_COLOR } from './asset-status';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
@@ -534,9 +534,20 @@ export default class InventoryComponent implements OnInit {
     return this.statuses.find((s) => s.value === status)?.label ?? status;
   }
 
-  readonly statusBadgeClass = (status: AssetStatus): string => ASSET_STATUS_BADGE_CLASS[status];
+  readonly statusTagColor = (status: AssetStatus): string => ASSET_STATUS_TAG_COLOR[status];
 
-  readonly statusDotClass = (status: AssetStatus): string => ASSET_STATUS_DOT_CLASS[status];
+  // A bare indicator dot in the status filter menu, not a tag.
+  readonly statusDotClass = (status: AssetStatus): string => {
+    const map: Record<AssetStatus, string> = {
+      deployed: 'bg-teal-400',
+      available: 'bg-green-400',
+      'needs-repair': 'bg-amber-400',
+      decommissioned: 'bg-slate-400',
+      'on-order': 'bg-blue-400',
+      requested: 'bg-purple-400',
+    };
+    return map[status];
+  };
 
   readonly categoryIcon = (category: AssetCategory): string => {
     const map: Partial<Record<AssetCategory, string>> = {

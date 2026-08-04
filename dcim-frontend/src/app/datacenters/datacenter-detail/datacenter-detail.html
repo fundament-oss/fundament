@@ -290,7 +290,7 @@
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editRoom()?.id ? 'Edit room' : 'New room'"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeRoomForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
@@ -305,6 +305,7 @@
         <nldd-form-field label="Room name">
           <nldd-text-field
             #fRoomName
+            autofocus
             [attr.value]="room.name ?? ''"
             placeholder="Main Hall"
             [attr.invalid]="isRoomFieldInvalid('name') ? '' : null"
@@ -332,12 +333,8 @@
         </nldd-form-field>
       }
     </nldd-simple-section>
-    <div
-      slot="footer"
-      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
-    >
-      <nldd-button variant="secondary" text="Cancel" (click)="closeRoomForm()"></nldd-button>
-      <nldd-button variant="primary" text="Save" (click)="saveRoom()"></nldd-button>
+    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
+      <nldd-button variant="primary" text="Save" width="full" (click)="saveRoom()"></nldd-button>
     </div>
   </nldd-page>
 </nldd-sheet>
@@ -348,21 +345,21 @@
 <nldd-modal-dialog
   #roomModal
   (close)="cancelDeleteRoom()"
-  [attr.text]="'Delete room \'' + (deleteRoom()?.name ?? '') + '\'?'"
-  supporting-text="All rack rows in this room will also be removed."
+  [attr.text]="'Delete room ' + (deleteRoom()?.name ?? '') + '?'"
+  supporting-text="Every rack row in this room is removed as well. This cannot be undone."
   accessible-label="Confirm room deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDeleteRoom()"
+    variant="secondary"
+    text="Keep room"
+    (click)="cancelDeleteRoom()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDeleteRoom()"
+    variant="destructive"
+    text="Delete room"
+    (click)="confirmDeleteRoom()"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -374,7 +371,7 @@
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editRackRow()?.id ? 'Edit rack row' : 'Add rack row'"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeRackRowForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
@@ -389,6 +386,7 @@
         <nldd-form-field label="Row name">
           <nldd-text-field
             #fRowName
+            autofocus
             [attr.value]="row.name ?? ''"
             placeholder="Row A"
             [attr.invalid]="isRowFieldInvalid('name') ? '' : null"
@@ -431,12 +429,8 @@
         </div>
       }
     </nldd-simple-section>
-    <div
-      slot="footer"
-      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
-    >
-      <nldd-button variant="secondary" text="Cancel" (click)="closeRackRowForm()"></nldd-button>
-      <nldd-button variant="primary" text="Save" (click)="saveRackRow()"></nldd-button>
+    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
+      <nldd-button variant="primary" text="Save" width="full" (click)="saveRackRow()"></nldd-button>
     </div>
   </nldd-page>
 </nldd-sheet>
@@ -447,21 +441,21 @@
 <nldd-modal-dialog
   #rowModal
   (close)="cancelDeleteRackRow()"
-  [attr.text]="'Delete rack row \'' + (deleteRackRow()?.name ?? '') + '\'?'"
-  supporting-text="This action cannot be undone."
+  [attr.text]="'Delete rack row ' + (deleteRackRow()?.name ?? '') + '?'"
+  supporting-text="The rack row and its position in this room are removed. This cannot be undone."
   accessible-label="Confirm rack row deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDeleteRackRow()"
+    variant="secondary"
+    text="Keep rack row"
+    (click)="cancelDeleteRackRow()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDeleteRackRow()"
+    variant="destructive"
+    text="Delete rack row"
+    (click)="confirmDeleteRackRow()"
   ></nldd-button>
 </nldd-modal-dialog>
 
@@ -473,7 +467,7 @@
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editRack()?.id ? 'Edit rack' : 'Add rack'"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeRackForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
@@ -488,6 +482,7 @@
         <nldd-form-field label="Rack name">
           <nldd-text-field
             #fRackName
+            autofocus
             [attr.value]="rack.name ?? ''"
             placeholder="Rack 01"
             [attr.invalid]="isRackFieldInvalid('name') ? '' : null"
@@ -515,12 +510,8 @@
         </nldd-form-field>
       }
     </nldd-simple-section>
-    <div
-      slot="footer"
-      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
-    >
-      <nldd-button variant="secondary" text="Cancel" (click)="closeRackForm()"></nldd-button>
-      <nldd-button variant="primary" text="Save" (click)="saveRack()"></nldd-button>
+    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
+      <nldd-button variant="primary" text="Save" width="full" (click)="saveRack()"></nldd-button>
     </div>
   </nldd-page>
 </nldd-sheet>
@@ -531,20 +522,20 @@
 <nldd-modal-dialog
   #rackModal
   (close)="cancelDeleteRack()"
-  [attr.text]="'Delete rack \'' + (deleteRack()?.name ?? '') + '\'?'"
-  supporting-text="This action cannot be undone."
+  [attr.text]="'Delete rack ' + (deleteRack()?.name ?? '') + '?'"
+  supporting-text="The rack and its position in this rack row are removed. This cannot be undone."
   accessible-label="Confirm rack deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDeleteRack()"
+    variant="secondary"
+    text="Keep rack"
+    (click)="cancelDeleteRack()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDeleteRack()"
+    variant="destructive"
+    text="Delete rack"
+    (click)="confirmDeleteRack()"
   ></nldd-button>
 </nldd-modal-dialog>

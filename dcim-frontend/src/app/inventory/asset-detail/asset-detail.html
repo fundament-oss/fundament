@@ -47,18 +47,12 @@
                 <span class="font-mono text-xs text-slate-400 dark:text-gray-500">{{
                   a.assetTag
                 }}</span>
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  [class]="statusBadgeClass(a.status)"
-                  [attr.aria-label]="'Status: ' + statusLabel(a.status)"
-                >
-                  <span
-                    class="h-1.5 w-1.5 rounded-full"
-                    [class]="statusDotClass(a.status)"
-                    aria-hidden="true"
-                  ></span>
-                  {{ statusLabel(a.status) }}
-                </span>
+                <nldd-tag
+                  size="sm"
+                  [attr.color]="statusTagColor(a.status)"
+                  [attr.text]="statusLabel(a.status)"
+                  [attr.accessible-label]="'Status: ' + statusLabel(a.status)"
+                ></nldd-tag>
               </div>
             </div>
           </div>
@@ -128,16 +122,12 @@
                   Category
                 </dt>
                 <dd>
-                  <span
-                    class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-gray-300"
-                  >
-                    <nldd-icon
-                      [name]="categoryIcon(a.category)"
-                      class="w-3 h-3"
-                      aria-hidden="true"
-                    ></nldd-icon>
-                    {{ a.category }}
-                  </span>
+                  <nldd-tag
+                    color="neutral"
+                    size="sm"
+                    [attr.icon]="categoryIcon(a.category)"
+                    [attr.text]="a.category"
+                  ></nldd-tag>
                 </dd>
               </div>
 
@@ -288,11 +278,11 @@
                   Notes
                 </h2>
                 @if (notes().length > 0) {
-                  <span
-                    class="inline-flex items-center rounded-full bg-slate-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-slate-500 dark:text-gray-400"
-                  >
-                    {{ notes().length }} comment{{ notes().length === 1 ? '' : 's' }}
-                  </span>
+                  <nldd-tag
+                    color="neutral"
+                    size="sm"
+                    [attr.text]="notes().length + (notes().length === 1 ? ' comment' : ' comments')"
+                  ></nldd-tag>
                 }
               </div>
 
@@ -539,28 +529,28 @@
             </div>
             <div class="px-5 py-4 flex flex-col gap-2">
               <nldd-button
-                class="w-full"
+                width="full"
                 variant="neutral-transparent"
                 text="Create maintenance task"
                 start-icon="list"
                 size="sm"
               ></nldd-button>
               <nldd-button
-                class="w-full"
+                width="full"
                 variant="neutral-transparent"
                 text="Change location"
                 start-icon="arrow-up-arrow-down"
                 size="sm"
               ></nldd-button>
               <nldd-button
-                class="w-full"
+                width="full"
                 variant="neutral-transparent"
                 text="View audit history"
                 start-icon="history"
                 size="sm"
               ></nldd-button>
               <nldd-button
-                class="w-full"
+                width="full"
                 variant="destructive"
                 text="Decommission asset"
                 start-icon="trash"
@@ -604,7 +594,7 @@
     <nldd-top-title-bar
       slot="header"
       text="Edit asset"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeAssetForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
@@ -626,6 +616,7 @@
         <nldd-form-field label="Asset tag">
           <nldd-text-field
             #fAssetTag
+            autofocus
             [attr.value]="editAsset()?.assetTag ?? ''"
             placeholder="AST-001"
             (keydown.enter)="saveAsset()"
@@ -722,12 +713,8 @@
         ></nldd-multi-line-text-field>
       </nldd-form-field>
     </nldd-simple-section>
-    <div
-      slot="footer"
-      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
-    >
-      <nldd-button variant="secondary" text="Cancel" (click)="closeAssetForm()"></nldd-button>
-      <nldd-button variant="primary" text="Save" (click)="saveAsset()"></nldd-button>
+    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
+      <nldd-button variant="primary" text="Save" width="full" (click)="saveAsset()"></nldd-button>
     </div>
   </nldd-page>
 </nldd-sheet>

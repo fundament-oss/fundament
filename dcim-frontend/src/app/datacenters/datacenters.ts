@@ -21,7 +21,7 @@ import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
 import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
-import { DatacenterInfo, DatacenterStatus, RackCell } from './datacenter.model';
+import { DatacenterInfo, DatacenterStatus, RackCell, statusTagColor } from './datacenter.model';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 interface NativeElementRef {
@@ -255,31 +255,7 @@ export default class DatacentersComponent implements OnInit {
 
   readonly rackFillBarClass = (): string => 'bg-emerald-200 dark:bg-emerald-900';
 
-  readonly statusBadgeClass = (status: DatacenterStatus): string => {
-    switch (status) {
-      case 'operational':
-        return 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 ring-1 ring-teal-200 dark:ring-teal-800';
-      case 'degraded':
-        return 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800';
-      case 'maintenance':
-        return 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 ring-1 ring-slate-200 dark:ring-gray-700';
-      default:
-        return '';
-    }
-  };
-
-  readonly statusDotClass = (status: DatacenterStatus): string => {
-    switch (status) {
-      case 'operational':
-        return 'bg-teal-500';
-      case 'degraded':
-        return 'bg-amber-500';
-      case 'maintenance':
-        return 'bg-slate-400';
-      default:
-        return '';
-    }
-  };
+  readonly statusTagColor = (status: DatacenterStatus): string => statusTagColor(status);
 
   readonly statusLabel = (status: DatacenterStatus): string => {
     switch (status) {

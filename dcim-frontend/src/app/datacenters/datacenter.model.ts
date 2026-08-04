@@ -2,6 +2,20 @@
 
 export type DatacenterStatus = 'operational' | 'degraded' | 'maintenance';
 
+/** `color` for an `nldd-tag` per datacenter status. */
+export function statusTagColor(status: DatacenterStatus): string {
+  switch (status) {
+    case 'operational':
+      return 'success';
+    case 'degraded':
+      return 'warning';
+    case 'maintenance':
+      return 'lichtblauw';
+    default:
+      throw new Error(`unhandled datacenter status: ${status satisfies never}`);
+  }
+}
+
 export interface DatacenterInfo {
   id: string;
   name: string;

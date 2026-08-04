@@ -73,8 +73,15 @@
           <!-- Device + manage ports -->
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
+              <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
+                   can't see it. Autofocus is the recommended pattern for a sheet's first field. -->
+              <!-- eslint-disable @angular-eslint/template/no-autofocus -->
               <nldd-dropdown class="flex-1">
-                <select id="a-device" (change)="onADeviceChange($any($event.target).value)">
+                <select
+                  autofocus
+                  id="a-device"
+                  (change)="onADeviceChange($any($event.target).value)"
+                >
                   <option value="" [selected]="!aDeviceId()">Select device…</option>
                   @for (dev of dcDevices(); track dev.id) {
                     <option [value]="dev.id" [selected]="dev.id === aDeviceId()">
@@ -83,6 +90,7 @@
                   }
                 </select>
               </nldd-dropdown>
+              <!-- eslint-enable @angular-eslint/template/no-autofocus -->
               <nldd-icon-button
                 icon="gear"
                 variant="neutral-transparent"

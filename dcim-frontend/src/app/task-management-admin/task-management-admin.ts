@@ -57,6 +57,8 @@ interface StatusStyle {
   dot: string;
   kanbanAccent: string;
   kanbanBorder: string;
+  /** `color` for an `nldd-tag`. */
+  tagColor: string;
 }
 
 interface PriorityStyle {
@@ -64,6 +66,8 @@ interface PriorityStyle {
   text: string;
   dot: string;
   ring: string;
+  /** `color` for an `nldd-tag`. */
+  tagColor: string;
 }
 
 interface NlddSheet extends HTMLElement {
@@ -203,6 +207,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       dot: 'bg-slate-400',
       kanbanAccent: 'bg-slate-400',
       kanbanBorder: 'border-slate-200 dark:border-gray-800',
+      tagColor: 'neutral',
     },
     'In Progress': {
       bg: 'bg-indigo-50 dark:bg-indigo-950',
@@ -210,6 +215,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       dot: 'bg-indigo-500',
       kanbanAccent: 'bg-indigo-500',
       kanbanBorder: 'border-indigo-200 dark:border-indigo-800',
+      tagColor: 'donkerblauw',
     },
     Review: {
       bg: 'bg-amber-50 dark:bg-amber-950',
@@ -217,6 +223,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       dot: 'bg-amber-500',
       kanbanAccent: 'bg-amber-500',
       kanbanBorder: 'border-amber-200 dark:border-amber-800',
+      tagColor: 'donkergeel',
     },
     Blocked: {
       bg: 'bg-red-50 dark:bg-red-950',
@@ -224,6 +231,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       dot: 'bg-red-500',
       kanbanAccent: 'bg-red-500',
       kanbanBorder: 'border-red-200 dark:border-red-800',
+      tagColor: 'critical',
     },
     Done: {
       bg: 'bg-emerald-50 dark:bg-emerald-950',
@@ -231,6 +239,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       dot: 'bg-emerald-500',
       kanbanAccent: 'bg-emerald-500',
       kanbanBorder: 'border-emerald-200 dark:border-emerald-800',
+      tagColor: 'success',
     },
   };
 
@@ -240,24 +249,28 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       text: 'text-red-700 dark:text-red-300',
       dot: 'bg-red-500',
       ring: 'ring-red-200/80 dark:ring-red-800/80',
+      tagColor: 'critical',
     },
     High: {
       bg: 'bg-orange-50 dark:bg-orange-950',
       text: 'text-orange-700 dark:text-orange-300',
       dot: 'bg-orange-500',
       ring: 'ring-orange-200/80 dark:ring-orange-800/80',
+      tagColor: 'oranje',
     },
     Medium: {
       bg: 'bg-yellow-50 dark:bg-yellow-950',
       text: 'text-yellow-700 dark:text-yellow-300',
       dot: 'bg-yellow-400',
       ring: 'ring-yellow-200/80 dark:ring-yellow-800/80',
+      tagColor: 'geel',
     },
     Low: {
       bg: 'bg-slate-100 dark:bg-gray-800',
       text: 'text-slate-500 dark:text-gray-400',
       dot: 'bg-slate-400',
       ring: 'ring-slate-200/80 dark:ring-gray-700/80',
+      tagColor: 'neutral',
     },
   };
 
@@ -792,9 +805,8 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     this.closeEditModal();
   }
 
-  statusBadgeClass(status: string): string {
-    const s = this.statusStyle(status);
-    return `inline-flex items-center gap-1.5 rounded-full ${s.bg} px-2.5 py-0.5 text-xs font-medium ${s.text}`;
+  statusTagColor(status: string): string {
+    return this.statusStyle(status).tagColor;
   }
 
   statusDotClass(status: string): string {
@@ -809,24 +821,13 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     return `h-2 w-2 rounded-full ${this.priorityStyle(priority).dot} shrink-0`;
   }
 
-  priorityBadgeClass(priority: string): string {
-    const p = this.priorityStyle(priority);
-    return `inline-flex items-center gap-1.5 rounded-full ${p.bg} px-2.5 py-0.5 text-xs font-medium ${p.text} ring-1 ${p.ring}`;
+  priorityTagColor(priority: string): string {
+    return this.priorityStyle(priority).tagColor;
   }
 
   kanbanCardClass(status: string): string {
     const s = this.statusStyle(status);
     return `cursor-grab active:cursor-grabbing rounded-xl border ${s.kanbanBorder} bg-white dark:bg-gray-950 p-3.5 hover:shadow-md hover:shadow-slate-200/80 dark:hover:shadow-black/60 transition-shadow`;
-  }
-
-  detailStatusClass(status: string): string {
-    const s = this.statusStyle(status);
-    return `inline-flex items-center gap-1.5 rounded-full ${s.bg} px-2.5 py-0.5 text-xs font-medium ${s.text}`;
-  }
-
-  detailPriorityClass(priority: string): string {
-    const p = this.priorityStyle(priority);
-    return `inline-flex items-center gap-1.5 rounded-full ${p.bg} px-2.5 py-0.5 text-xs font-medium ${p.text} ring-1 ${p.ring}`;
   }
 
   readonly techInitialsClass = (tech: Technician, size = 'h-7 w-7 text-xs'): string =>

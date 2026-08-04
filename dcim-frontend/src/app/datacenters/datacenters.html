@@ -14,18 +14,12 @@
         <span class="text-sm text-slate-400 dark:text-gray-500 hidden sm:inline truncate">{{
           dc.fullName
         }}</span>
-        <span
-          class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
-          [class]="statusBadgeClass(dc.status)"
-          [attr.aria-label]="'Status: ' + statusLabel(dc.status)"
-        >
-          <span
-            class="h-1.5 w-1.5 rounded-full"
-            [class]="statusDotClass(dc.status)"
-            aria-hidden="true"
-          ></span>
-          {{ statusLabel(dc.status) }}
-        </span>
+        <nldd-tag
+          size="sm"
+          [attr.color]="statusTagColor(dc.status)"
+          [attr.text]="statusLabel(dc.status)"
+          [attr.accessible-label]="'Status: ' + statusLabel(dc.status)"
+        ></nldd-tag>
       </div>
       <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5 hidden sm:block">
         {{ dc.city }}, {{ dc.country }}
@@ -184,7 +178,7 @@
                   <nldd-segmented-control-item
                     value="isometric"
                     text="Isometric"
-                    icon="folder-stack"
+                    icon="folder-on-folder"
                   ></nldd-segmented-control-item>
                 </nldd-segmented-control>
               </div>
@@ -438,7 +432,7 @@
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editForm()?.id ? 'Edit datacenter' : 'Add datacenter'"
-      dismiss-text="Close"
+      dismiss-text="Cancel"
       (dismiss)="closeEditForm()"
     ></nldd-top-title-bar>
     <nldd-simple-section class="space-y-4">
@@ -452,6 +446,7 @@
       <nldd-form-field label="Short name (e.g. AMS-01)">
         <nldd-text-field
           #fName
+          autofocus
           [attr.value]="editForm()?.name ?? ''"
           placeholder="AMS-01"
           (keydown.enter)="saveDc()"
@@ -567,12 +562,8 @@
         }}</nldd-form-field-error-text>
       </nldd-form-field>
     </nldd-simple-section>
-    <div
-      slot="footer"
-      class="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-gray-800"
-    >
-      <nldd-button variant="secondary" text="Cancel" (click)="closeEditForm()"></nldd-button>
-      <nldd-button variant="primary" text="Save" (click)="saveDc()"></nldd-button>
+    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
+      <nldd-button variant="primary" text="Save" width="full" (click)="saveDc()"></nldd-button>
     </div>
   </nldd-page>
 </nldd-sheet>
@@ -583,21 +574,21 @@
 <nldd-modal-dialog
   #deleteModal
   (close)="cancelDelete()"
-  [attr.text]="'Delete ' + (deleteTarget()?.name ?? '') + '?'"
-  supporting-text="All rooms, rack rows, and floor positions will be removed. This action cannot be undone."
+  [attr.text]="'Delete datacenter ' + (deleteTarget()?.name ?? '') + '?'"
+  supporting-text="All rooms, rack rows, and floor positions in this datacenter are removed. This cannot be undone."
   accessible-label="Confirm datacenter deletion"
 >
   <nldd-button
     slot="actions"
-    variant="destructive"
-    text="Delete"
-    (click)="confirmDeleteDc()"
+    variant="secondary"
+    text="Keep datacenter"
+    (click)="cancelDelete()"
   ></nldd-button>
   <nldd-button
     slot="actions"
-    variant="secondary"
-    text="Cancel"
-    (click)="cancelDelete()"
+    variant="destructive"
+    text="Delete datacenter"
+    (click)="confirmDeleteDc()"
   ></nldd-button>
 </nldd-modal-dialog>
 
