@@ -11,11 +11,28 @@ import { rewireFormFields } from './sheet-sync.directive';
 await import('@nldd/design-system/form-field');
 await import('@nldd/design-system/text-field');
 
-/** Lets the custom elements render and their MutationObservers flush. */
-function settle(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 20);
-  });
+/**
+ * Waits for a condition instead of for a duration: the custom elements render and
+ * their MutationObservers flush on their own schedule, and a fixed sleep is
+ * either slower than it needs to be or too short on a loaded CI runner.
+ */
+async function waitFor(condition: () => boolean, timeoutMs = 2000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (condition()) return true;
+    if (Date.now() > deadline) return false;
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((resolve) => {
+      setTimeout(resolve, 5);
+    });
+  }
+}
+
+/** Resolves once the elements are upgraded and have rendered once. */
+async function upgraded(field: HTMLElement): Promise<void> {
+  await customElements.whenDefined('nldd-form-field');
+  await customElements.whenDefined('nldd-text-field');
+  await (field as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
 }
 
 function buildField(): { field: HTMLElement; input: HTMLElement; error: HTMLElement } {
@@ -39,39 +56,38 @@ function markInvalid(input: HTMLElement): void {
   input.setAttribute('invalid', '');
 }
 
+const shown = (error: HTMLElement) => () => error.hasAttribute('invalid');
+
 describe('rewireFormFields', () => {
   it('nldd-form-field shows its error text while it stays in place', async () => {
-    const { input, error } = buildField();
-    await settle();
+    const { field, input, error } = buildField();
+    await upgraded(field);
 
     markInvalid(input);
-    await settle();
 
-    expect(error.hasAttribute('invalid')).toBe(true);
+    expect(await waitFor(shown(error))).toBe(true);
   });
 
   it('restores error text visibility after the field is portalled', async () => {
     const { field, input, error } = buildField();
-    await settle();
+    await upgraded(field);
 
     document.body.appendChild(field);
     rewireFormFields(document.body);
-    await settle();
-
     markInvalid(input);
-    await settle();
 
-    expect(error.hasAttribute('invalid')).toBe(true);
+    expect(await waitFor(shown(error))).toBe(true);
   });
 
   it('error text stays hidden while the input is valid', async () => {
     const { field, error } = buildField();
-    await settle();
+    await upgraded(field);
 
     document.body.appendChild(field);
     rewireFormFields(document.body);
-    await settle();
 
-    expect(error.hasAttribute('invalid')).toBe(false);
+    // Short window on purpose: nothing should ever flip this on, so the only
+    // question is whether the rewire itself does by accident.
+    expect(await waitFor(shown(error), 100)).toBe(false);
   });
 });

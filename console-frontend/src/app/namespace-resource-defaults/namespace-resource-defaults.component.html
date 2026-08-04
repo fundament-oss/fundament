@@ -1,0 +1,93 @@
+<div class="space-y-8">
+  <!-- Memory -->
+  <div>
+    <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
+      Memory per container
+    </span>
+    <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+      Unlimited means containers without their own memory settings run without a request or limit.
+      Memory is in mebibytes (MiB).
+    </p>
+    <nldd-segmented-control
+      size="sm"
+      name="memoryLimited"
+      accessible-label="Memory per container"
+      [value]="memoryLimited() ? 'limited' : 'unlimited'"
+      (change)="toggleMemory($any($event).detail.value === 'limited')"
+    >
+      <nldd-segmented-control-item value="unlimited" text="Unlimited"></nldd-segmented-control-item>
+      <nldd-segmented-control-item value="limited" text="Limited"></nldd-segmented-control-item>
+    </nldd-segmented-control>
+    @if (memoryLimited()) {
+      <div class="mt-3 max-w-xs space-y-4">
+        <nldd-form-field label="Default memory request (MiB)">
+          <nldd-number-field
+            id="defaultMemoryRequest"
+            full-width="true"
+            min="1"
+            step="1"
+            [attr.max]="memoryLimitMi() ?? null"
+            [value]="memoryRequestMi()"
+            (input)="$any($event).detail && memoryRequestMi.set(toInt($any($event).detail.value))"
+          ></nldd-number-field>
+        </nldd-form-field>
+        <nldd-form-field label="Default memory limit (MiB)">
+          <nldd-number-field
+            id="defaultMemoryLimit"
+            full-width="true"
+            [min]="memoryRequestMi() ?? 1"
+            step="1"
+            [value]="memoryLimitMi()"
+            (input)="$any($event).detail && memoryLimitMi.set(toInt($any($event).detail.value))"
+          ></nldd-number-field>
+        </nldd-form-field>
+      </div>
+    }
+  </div>
+
+  <!-- CPU -->
+  <div>
+    <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
+      CPU per container
+    </span>
+    <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+      Unlimited means containers without their own CPU settings run without a request or limit. CPU
+      is in millicores (m), where 1000 m equals 1 vCPU.
+    </p>
+    <nldd-segmented-control
+      size="sm"
+      name="cpuLimited"
+      accessible-label="CPU per container"
+      [value]="cpuLimited() ? 'limited' : 'unlimited'"
+      (change)="toggleCpu($any($event).detail.value === 'limited')"
+    >
+      <nldd-segmented-control-item value="unlimited" text="Unlimited"></nldd-segmented-control-item>
+      <nldd-segmented-control-item value="limited" text="Limited"></nldd-segmented-control-item>
+    </nldd-segmented-control>
+    @if (cpuLimited()) {
+      <div class="mt-3 max-w-xs space-y-4">
+        <nldd-form-field label="Default CPU request (m)">
+          <nldd-number-field
+            id="defaultCpuRequest"
+            full-width="true"
+            min="1"
+            step="1"
+            [attr.max]="cpuLimitM() ?? null"
+            [value]="cpuRequestM()"
+            (input)="$any($event).detail && cpuRequestM.set(toInt($any($event).detail.value))"
+          ></nldd-number-field>
+        </nldd-form-field>
+        <nldd-form-field label="Default CPU limit (m)">
+          <nldd-number-field
+            id="defaultCpuLimit"
+            full-width="true"
+            [min]="cpuRequestM() ?? 1"
+            step="1"
+            [value]="cpuLimitM()"
+            (input)="$any($event).detail && cpuLimitM.set(toInt($any($event).detail.value))"
+          ></nldd-number-field>
+        </nldd-form-field>
+      </div>
+    }
+  </div>
+</div>

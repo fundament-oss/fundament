@@ -59,7 +59,7 @@
               @for (col of columns(); track col.name) {
                 <nldd-text-cell
                   [attr.text]="'**' + col.name + '**'"
-                  [attr.hide-below]="col.priority && col.priority > 0 ? 'lg' : null"
+                  [attr.hide-below]="isDroppedWhenNarrow(col) ? 'lg' : null"
                 ></nldd-text-cell>
               }
               <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
@@ -85,7 +85,7 @@
                 @for (col of columns(); track col.name) {
                   <nldd-text-cell
                     [attr.text]="formatCell(resource, col)"
-                    [attr.hide-below]="col.priority && col.priority > 0 ? 'lg' : null"
+                    [attr.hide-below]="isDroppedWhenNarrow(col) ? 'lg' : null"
                   ></nldd-text-cell>
                 }
                 <nldd-cell horizontal-alignment="right">

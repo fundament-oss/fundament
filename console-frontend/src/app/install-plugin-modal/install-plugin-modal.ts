@@ -7,7 +7,6 @@ import {
   output,
   signal,
 } from '@angular/core';
-import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import DropdownSyncDirective from '../dropdown-sync.directive';
 import isPresenting from '../presentation/presenting';
@@ -48,22 +47,9 @@ export interface RetrySelection {
   hash: string;
 }
 
-/**
- * Empty string to let `nldd-sheet` focus the version picker when the sheet opens, null while the
- * walkthrough is driving: focus inside a field there swallows the overlay's arrow keys.
- */
-function autofocusUnlessPresenting(): '' | null {
-  return isPresenting() ? null : '';
-}
-
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [
-    DialogSyncDirective,
-    SheetSyncDirective,
-    DropdownSyncDirective,
-    LoadingIndicatorComponent,
-  ],
+  imports: [SheetSyncDirective, DropdownSyncDirective, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -152,12 +138,18 @@ export default class InstallPluginModalComponent {
     this.selected.set(checked ? new Set(eligible.map((cluster) => cluster.id)) : new Set());
   }
 
+  /**
+   * Empty string to let `nldd-sheet` focus the version picker, null while the walkthrough is
+   * driving: focus inside a field there swallows the overlay's arrow keys. Sampled once per
+   * open rather than read on every change detection — only the first render can autofocus.
+   */
+  protected autofocusVersion = signal<'' | null>(null);
+
   onOpen(): void {
     this.selected.set(new Set());
     this.pickedVersion.set(null);
+    this.autofocusVersion.set(isPresenting() ? null : '');
   }
-
-  readonly autofocusVersion = autofocusUnlessPresenting;
 
   onVersionChange(version: string): void {
     this.pickedVersion.set(version);

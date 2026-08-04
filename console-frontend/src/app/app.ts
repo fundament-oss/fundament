@@ -30,6 +30,9 @@ import '@nldd/design-system/switch-field';
 import '@nldd/design-system/text-field';
 import '@nldd/design-system/segmented-control';
 import '@nldd/design-system/navigation-split-view';
+// nldd-navigation-split-view does not pull in the panes it hosts, and app.html
+// places them itself.
+import '@nldd/design-system/split-view-pane';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/sheet';
 import '@nldd/design-system/page';

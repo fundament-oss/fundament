@@ -9,3 +9,11 @@ export function toInt(value: unknown): number | undefined {
 export function positive(value: number | undefined): number | undefined {
   return value && value > 0 ? value : undefined;
 }
+
+/**
+ * Whether a request/limit pair counts as limited: either half being set is a
+ * constraint, so a form opens on what is actually stored.
+ */
+export function pairLimited(request: number | undefined, limit: number | undefined): boolean {
+  return request !== undefined || limit !== undefined;
+}

@@ -21,6 +21,7 @@ import { TitleService } from '../../title.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
+import { isDroppedWhenNarrow, narrowTableTracks, tableTracks } from '../table-tracks';
 import {
   resolveJsonPath,
   formatColumnValue,
@@ -114,24 +115,11 @@ export default class ResourceListComponent implements OnInit {
     );
   });
 
-  /**
-   * `columns` track list for `nldd-table`. The plugin declares its own columns,
-   * so the grid template has to be derived rather than written out literally.
-   */
-  tableColumns = computed(() =>
-    ['minmax(200px, 1fr)', ...this.columns().map(() => 'minmax(120px, 1fr)'), '64px'].join(' '),
-  );
+  tableColumns = computed(() => tableTracks(this.columns()));
 
-  /** Same, minus the low-priority columns that `hide-below="lg"` drops. */
-  tableMdColumns = computed(() =>
-    [
-      'minmax(200px, 1fr)',
-      ...this.columns()
-        .filter((col) => !col.priority || col.priority === 0)
-        .map(() => 'minmax(120px, 1fr)'),
-      '64px',
-    ].join(' '),
-  );
+  tableMdColumns = computed(() => narrowTableTracks(this.columns()));
+
+  protected readonly isDroppedWhenNarrow = isDroppedWhenNarrow;
 
   kindLabel = computed(() => {
     const crd = this.crdDef();

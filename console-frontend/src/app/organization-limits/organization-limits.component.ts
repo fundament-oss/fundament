@@ -6,6 +6,7 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
+  type WritableSignal,
 } from '@angular/core';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -18,11 +19,30 @@ import { ORGANIZATION } from '../../connect/tokens';
 import OrganizationContextService from '../organization-context.service';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { positive, toInt } from '../utils/limits';
+import { pairLimited, positive, toInt } from '../utils/limits';
+import NamespaceResourceDefaultsComponent, {
+  type NamespaceDefaults,
+} from '../namespace-resource-defaults/namespace-resource-defaults.component';
+
+// Off stores undefined, which is how the API encodes "no limit"; on seeds an
+// empty field with the platform default and leaves a saved value alone.
+function toggleClusterLimit(
+  limited: boolean,
+  toggle: WritableSignal<boolean>,
+  value: WritableSignal<number | undefined>,
+  seed: number | undefined,
+): void {
+  toggle.set(limited);
+  if (!limited) {
+    value.set(undefined);
+  } else if (value() === undefined) {
+    value.set(seed);
+  }
+}
 
 @Component({
   selector: 'app-organization-limits',
-  imports: [],
+  imports: [NamespaceResourceDefaultsComponent],
   templateUrl: './organization-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -77,8 +97,8 @@ export default class OrganizationLimitsComponent implements OnInit {
 
   defaultCpuLimitM = signal<number | undefined>(undefined);
 
-  // Request and limit are switched as one pair: a LimitRange without either is
-  // no constraint at all.
+  // Owned here rather than in the fields component so a load or a reset can put
+  // the switches back on what is actually stored.
   memoryLimited = signal(false);
 
   cpuLimited = signal(false);
@@ -97,12 +117,7 @@ export default class OrganizationLimitsComponent implements OnInit {
     defaultCpuLimitM: undefined,
   });
 
-  private namespaceDefaults = signal<{
-    defaultMemoryRequestMi: number | undefined;
-    defaultMemoryLimitMi: number | undefined;
-    defaultCpuRequestM: number | undefined;
-    defaultCpuLimitM: number | undefined;
-  }>({
+  protected namespaceDefaults = signal<NamespaceDefaults>({
     defaultMemoryRequestMi: undefined,
     defaultMemoryLimitMi: undefined,
     defaultCpuRequestM: undefined,
@@ -242,71 +257,35 @@ export default class OrganizationLimitsComponent implements OnInit {
   }
 
   private syncNamespaceToggles(): void {
-    this.memoryLimited.set(
-      this.defaultMemoryRequestMi() !== undefined || this.defaultMemoryLimitMi() !== undefined,
-    );
-    this.cpuLimited.set(
-      this.defaultCpuRequestM() !== undefined || this.defaultCpuLimitM() !== undefined,
-    );
+    this.memoryLimited.set(pairLimited(this.defaultMemoryRequestMi(), this.defaultMemoryLimitMi()));
+    this.cpuLimited.set(pairLimited(this.defaultCpuRequestM(), this.defaultCpuLimitM()));
   }
 
   toggleMaxNodesPerCluster(limited: boolean): void {
-    this.maxNodesPerClusterLimited.set(limited);
-    if (!limited) {
-      this.maxNodesPerCluster.set(undefined);
-    } else if (this.maxNodesPerCluster() === undefined) {
-      this.maxNodesPerCluster.set(this.clusterDefaults().maxNodesPerCluster);
-    }
+    toggleClusterLimit(
+      limited,
+      this.maxNodesPerClusterLimited,
+      this.maxNodesPerCluster,
+      this.clusterDefaults().maxNodesPerCluster,
+    );
   }
 
   toggleMaxNodePools(limited: boolean): void {
-    this.maxNodePoolsLimited.set(limited);
-    if (!limited) {
-      this.maxNodePools.set(undefined);
-    } else if (this.maxNodePools() === undefined) {
-      this.maxNodePools.set(this.clusterDefaults().maxNodePools);
-    }
+    toggleClusterLimit(
+      limited,
+      this.maxNodePoolsLimited,
+      this.maxNodePools,
+      this.clusterDefaults().maxNodePools,
+    );
   }
 
   toggleMaxNodesPerNodePool(limited: boolean): void {
-    this.maxNodesPerNodePoolLimited.set(limited);
-    if (!limited) {
-      this.maxNodesPerNodePool.set(undefined);
-    } else if (this.maxNodesPerNodePool() === undefined) {
-      this.maxNodesPerNodePool.set(this.clusterDefaults().maxNodesPerNodePool);
-    }
-  }
-
-  toggleMemoryDefaults(limited: boolean): void {
-    this.memoryLimited.set(limited);
-    const defaults = this.namespaceDefaults();
-    if (!limited) {
-      this.defaultMemoryRequestMi.set(undefined);
-      this.defaultMemoryLimitMi.set(undefined);
-      return;
-    }
-    if (this.defaultMemoryRequestMi() === undefined) {
-      this.defaultMemoryRequestMi.set(defaults.defaultMemoryRequestMi);
-    }
-    if (this.defaultMemoryLimitMi() === undefined) {
-      this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
-    }
-  }
-
-  toggleCpuDefaults(limited: boolean): void {
-    this.cpuLimited.set(limited);
-    const defaults = this.namespaceDefaults();
-    if (!limited) {
-      this.defaultCpuRequestM.set(undefined);
-      this.defaultCpuLimitM.set(undefined);
-      return;
-    }
-    if (this.defaultCpuRequestM() === undefined) {
-      this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
-    }
-    if (this.defaultCpuLimitM() === undefined) {
-      this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
-    }
+    toggleClusterLimit(
+      limited,
+      this.maxNodesPerNodePoolLimited,
+      this.maxNodesPerNodePool,
+      this.clusterDefaults().maxNodesPerNodePool,
+    );
   }
 
   async saveNamespaceLimits(event?: Event) {

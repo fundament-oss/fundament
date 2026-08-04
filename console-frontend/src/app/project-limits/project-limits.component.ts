@@ -17,11 +17,14 @@ import {
 import { PROJECT } from '../../connect/tokens';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { positive, toInt } from '../utils/limits';
+import { pairLimited, positive } from '../utils/limits';
+import NamespaceResourceDefaultsComponent, {
+  type NamespaceDefaults,
+} from '../namespace-resource-defaults/namespace-resource-defaults.component';
 
 @Component({
   selector: 'app-project-limits',
-  imports: [],
+  imports: [NamespaceResourceDefaultsComponent],
   templateUrl: './project-limits.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -45,9 +48,8 @@ export default class ProjectLimitsComponent implements OnInit {
 
   defaultCpuLimitM = signal<number | undefined>(undefined);
 
-  // Request and limit are switched as one pair: a LimitRange without either is
-  // no constraint at all. Switched off is stored as undefined, which is how the
-  // API encodes "no default set".
+  // Owned here rather than in the fields component so a load or a reset can put
+  // the switches back on what is actually stored.
   memoryLimited = signal(false);
 
   cpuLimited = signal(false);
@@ -55,19 +57,12 @@ export default class ProjectLimitsComponent implements OnInit {
   saving = signal(false);
 
   // Platform defaults returned by the API, used by the "Reset to defaults" action.
-  private namespaceDefaults = signal<{
-    defaultMemoryRequestMi: number | undefined;
-    defaultMemoryLimitMi: number | undefined;
-    defaultCpuRequestM: number | undefined;
-    defaultCpuLimitM: number | undefined;
-  }>({
+  protected namespaceDefaults = signal<NamespaceDefaults>({
     defaultMemoryRequestMi: undefined,
     defaultMemoryLimitMi: undefined,
     defaultCpuRequestM: undefined,
     defaultCpuLimitM: undefined,
   });
-
-  protected readonly toInt = toInt;
 
   constructor() {
     this.titleService.setTitle('Limits');
@@ -118,47 +113,9 @@ export default class ProjectLimitsComponent implements OnInit {
     this.syncToggles();
   }
 
-  // A switch is on exactly when a value is set, so the form always opens on
-  // what is actually stored.
   private syncToggles(): void {
-    this.memoryLimited.set(
-      this.defaultMemoryRequestMi() !== undefined || this.defaultMemoryLimitMi() !== undefined,
-    );
-    this.cpuLimited.set(
-      this.defaultCpuRequestM() !== undefined || this.defaultCpuLimitM() !== undefined,
-    );
-  }
-
-  toggleMemoryDefaults(limited: boolean): void {
-    this.memoryLimited.set(limited);
-    const defaults = this.namespaceDefaults();
-    if (!limited) {
-      this.defaultMemoryRequestMi.set(undefined);
-      this.defaultMemoryLimitMi.set(undefined);
-      return;
-    }
-    if (this.defaultMemoryRequestMi() === undefined) {
-      this.defaultMemoryRequestMi.set(defaults.defaultMemoryRequestMi);
-    }
-    if (this.defaultMemoryLimitMi() === undefined) {
-      this.defaultMemoryLimitMi.set(defaults.defaultMemoryLimitMi);
-    }
-  }
-
-  toggleCpuDefaults(limited: boolean): void {
-    this.cpuLimited.set(limited);
-    const defaults = this.namespaceDefaults();
-    if (!limited) {
-      this.defaultCpuRequestM.set(undefined);
-      this.defaultCpuLimitM.set(undefined);
-      return;
-    }
-    if (this.defaultCpuRequestM() === undefined) {
-      this.defaultCpuRequestM.set(defaults.defaultCpuRequestM);
-    }
-    if (this.defaultCpuLimitM() === undefined) {
-      this.defaultCpuLimitM.set(defaults.defaultCpuLimitM);
-    }
+    this.memoryLimited.set(pairLimited(this.defaultMemoryRequestMi(), this.defaultMemoryLimitMi()));
+    this.cpuLimited.set(pairLimited(this.defaultCpuRequestM(), this.defaultCpuLimitM()));
   }
 
   async save(event?: Event) {

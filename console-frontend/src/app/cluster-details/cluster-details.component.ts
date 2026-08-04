@@ -63,7 +63,7 @@ const getSyncStatusTagColor = (status: string | undefined): string => {
     progressing: 'mintgroen',
     pending: 'lichtblauw',
     error: 'critical',
-    deleting: 'robijnrood',
+    deleting: 'oranje',
   };
   return colors[status ?? ''] || 'neutral';
 };

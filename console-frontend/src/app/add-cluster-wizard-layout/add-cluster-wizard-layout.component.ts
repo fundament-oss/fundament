@@ -8,6 +8,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
+import type { StepIndicatorStatus } from '@nldd/design-system/step-indicator';
 import { ClusterWizardStateService } from './cluster-wizard-state.service';
 
 interface ProgressStep {
@@ -49,8 +50,16 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
     return -1;
   });
 
-  // nldd-step-indicator is 1-based and derives every step's status from it.
+  // nldd-step-indicator is 1-based; it drives the collapsed "step x of y" line
+  // and is the fallback for items that carry no status of their own.
   currentStepNumber = computed(() => Math.max(this.currentStepIndex() + 1, 1));
+
+  // Set per item rather than left to `current`: the wizard can be stepped back
+  // into, and a step that is already filled in stays ticked when it does.
+  stepStatus(index: number): StepIndicatorStatus {
+    if (index === this.currentStepIndex()) return 'current';
+    return this.stateService.isStepCompleted(index) ? 'past' : 'future';
+  }
 
   ngOnDestroy(): void {
     // Reset state when leaving the wizard
