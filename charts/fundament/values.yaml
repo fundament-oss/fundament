@@ -78,7 +78,15 @@ organizationApi:
   enabled: false
   replicas: 1
   logLevel: info
-  prometheusURL: mock # Prometheus URL for metrics; "mock" uses generated data
+  # Metrics backend: "mock" uses generated data; "per-shoot" queries each
+  # cluster's per-shoot Gardener Prometheus at the monitoring secret's
+  # prometheus-url annotation (requires the Gardener kubeconfig); any other
+  # URL queries that single Prometheus.
+  prometheusURL: mock
+  # Optional Secret (key ca.crt, PEM bundle) trusted for Prometheus/ingress
+  # TLS. Needed in local dev where seed ingress certs are shoot-CA-signed;
+  # leave empty on landscapes with publicly trusted ingress certificates.
+  prometheusCASecret: ""
   httproute:
     enabled: false
     parentRefs: []
