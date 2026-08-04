@@ -34,6 +34,11 @@ const (
 	// plutonoURLAnnotation is the annotation Gardener sets on the monitoring
 	// secret carrying the Plutono dashboard URL.
 	plutonoURLAnnotation = "plutono-url"
+
+	// prometheusURLAnnotation carries the per-shoot Prometheus ingress URL.
+	// It accepts the same basic-auth credentials as the dashboard and serves
+	// the standard Prometheus HTTP API directly — no Plutono involved.
+	prometheusURLAnnotation = "prometheus-url"
 )
 
 // ErrNotFound is returned when no shoot or monitoring secret exists for the
@@ -41,12 +46,16 @@ const (
 // a hard error.
 var ErrNotFound = errors.New("monitoring resource not found")
 
-// MonitoringInfo carries the per-shoot Plutono dashboard URL and the
-// basic-auth credentials Gardener generates for it.
+// MonitoringInfo carries the per-shoot observability endpoints and the
+// basic-auth credentials Gardener generates for them.
 type MonitoringInfo struct {
-	URL      string
-	Username string
-	Password string
+	// URL is the Plutono dashboard URL (the user-facing deep link).
+	URL string
+	// PrometheusURL is the per-shoot Prometheus ingress; empty when the
+	// Gardener version does not annotate it.
+	PrometheusURL string
+	Username      string
+	Password      string
 }
 
 // Client looks up Gardener-side artifacts for a given cluster.
@@ -124,9 +133,10 @@ func (c *RealClient) Monitoring(ctx context.Context, clusterID uuid.UUID) (*Moni
 		return nil, ErrNotFound
 	}
 	return &MonitoringInfo{
-		URL:      url,
-		Username: string(secret.Data["username"]),
-		Password: string(secret.Data["password"]),
+		URL:           url,
+		PrometheusURL: secret.Annotations[prometheusURLAnnotation],
+		Username:      string(secret.Data["username"]),
+		Password:      string(secret.Data["password"]),
 	}, nil
 }
 

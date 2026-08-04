@@ -988,14 +988,15 @@ func (b0 GetOrgWorkloadMetricsResponse_builder) Build() *GetOrgWorkloadMetricsRe
 // ClusterWorkloadSummary summarises workload usage for a single cluster within
 // an org-level view.
 type ClusterWorkloadSummary struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_ClusterId   string                 `protobuf:"bytes,5,opt,name=cluster_id,json=clusterId"`
-	xxx_hidden_ClusterName string                 `protobuf:"bytes,10,opt,name=cluster_name,json=clusterName"`
-	xxx_hidden_Cpu         *ResourceUsage         `protobuf:"bytes,20,opt,name=cpu"`
-	xxx_hidden_Memory      *ResourceUsage         `protobuf:"bytes,30,opt,name=memory"`
-	xxx_hidden_Pods        *ResourceUsage         `protobuf:"bytes,40,opt,name=pods"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId          string                 `protobuf:"bytes,5,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_ClusterName        string                 `protobuf:"bytes,10,opt,name=cluster_name,json=clusterName"`
+	xxx_hidden_Cpu                *ResourceUsage         `protobuf:"bytes,20,opt,name=cpu"`
+	xxx_hidden_Memory             *ResourceUsage         `protobuf:"bytes,30,opt,name=memory"`
+	xxx_hidden_Pods               *ResourceUsage         `protobuf:"bytes,40,opt,name=pods"`
+	xxx_hidden_MetricsUnavailable bool                   `protobuf:"varint,50,opt,name=metrics_unavailable,json=metricsUnavailable"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *ClusterWorkloadSummary) Reset() {
@@ -1058,6 +1059,13 @@ func (x *ClusterWorkloadSummary) GetPods() *ResourceUsage {
 	return nil
 }
 
+func (x *ClusterWorkloadSummary) GetMetricsUnavailable() bool {
+	if x != nil {
+		return x.xxx_hidden_MetricsUnavailable
+	}
+	return false
+}
+
 func (x *ClusterWorkloadSummary) SetClusterId(v string) {
 	x.xxx_hidden_ClusterId = v
 }
@@ -1076,6 +1084,10 @@ func (x *ClusterWorkloadSummary) SetMemory(v *ResourceUsage) {
 
 func (x *ClusterWorkloadSummary) SetPods(v *ResourceUsage) {
 	x.xxx_hidden_Pods = v
+}
+
+func (x *ClusterWorkloadSummary) SetMetricsUnavailable(v bool) {
+	x.xxx_hidden_MetricsUnavailable = v
 }
 
 func (x *ClusterWorkloadSummary) HasCpu() bool {
@@ -1119,6 +1131,10 @@ type ClusterWorkloadSummary_builder struct {
 	Cpu         *ResourceUsage
 	Memory      *ResourceUsage
 	Pods        *ResourceUsage
+	// True when this cluster's metrics backend could not be reached; the
+	// usage fields are then zero and should be rendered as unavailable
+	// rather than as real zeros.
+	MetricsUnavailable bool
 }
 
 func (b0 ClusterWorkloadSummary_builder) Build() *ClusterWorkloadSummary {
@@ -1130,6 +1146,7 @@ func (b0 ClusterWorkloadSummary_builder) Build() *ClusterWorkloadSummary {
 	x.xxx_hidden_Cpu = b.Cpu
 	x.xxx_hidden_Memory = b.Memory
 	x.xxx_hidden_Pods = b.Pods
+	x.xxx_hidden_MetricsUnavailable = b.MetricsUnavailable
 	return m0
 }
 
@@ -2152,7 +2169,7 @@ const file_v1_metrics_proto_rawDesc = "" +
 	"\bclusters\x18\x14 \x03(\v2'.organization.v1.ClusterWorkloadSummaryR\bclusters\x12I\n" +
 	"\n" +
 	"namespaces\x18\x1e \x03(\v2).organization.v1.NamespaceWorkloadMetricsR\n" +
-	"namespaces\"\xf8\x01\n" +
+	"namespaces\"\xa9\x02\n" +
 	"\x16ClusterWorkloadSummary\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\x05 \x01(\tR\tclusterId\x12!\n" +
@@ -2160,7 +2177,8 @@ const file_v1_metrics_proto_rawDesc = "" +
 	" \x01(\tR\vclusterName\x120\n" +
 	"\x03cpu\x18\x14 \x01(\v2\x1e.organization.v1.ResourceUsageR\x03cpu\x126\n" +
 	"\x06memory\x18\x1e \x01(\v2\x1e.organization.v1.ResourceUsageR\x06memory\x122\n" +
-	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\"\xb2\x01\n" +
+	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\x12/\n" +
+	"\x13metrics_unavailable\x182 \x01(\bR\x12metricsUnavailable\"\xb2\x01\n" +
 	"\x1fGetOrgWorkloadTimeSeriesRequest\x127\n" +
 	"\x05start\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +

@@ -137,6 +137,10 @@ message ClusterWorkloadSummary {
   ResourceUsage cpu = 20;
   ResourceUsage memory = 30;
   ResourceUsage pods = 40;
+  // True when this cluster's metrics backend could not be reached; the
+  // usage fields are then zero and should be rendered as unavailable
+  // rather than as real zeros.
+  bool metrics_unavailable = 50;
 }
 
 // GetOrgWorkloadTimeSeriesRequest requests org-wide aggregated time-series metrics.
