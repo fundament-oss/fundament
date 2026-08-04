@@ -1,7 +1,8 @@
 mod terraform-provider
 mod e2e
 mod cluster-worker
-mod deploy-remote
+mod deploy-remote "tools/deploy-remote"
+mod devbox "tools/deploy-remote/devbox.just"
 
 _default:
     @just --list

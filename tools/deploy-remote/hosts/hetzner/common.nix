@@ -1,15 +1,12 @@
-# Hetzner: a one-time-use cloud box (cattle) — cloud networking, no preserved identity.
-# Installed by nixos-anywhere run inside a throwaway nix container (see hetzner.sh)
-# — no local nix required; the box itself builds the closure (--build-on-remote).
+# Shared Hetzner Cloud VM config (hardware, boot, disk) — used by both the
+# one-time-use test box (./default.nix) and the devbox (../hetzner-devbox).
+# Role differences (ephemeral vs persistent state, dev tooling) live in the hosts.
 { pkgs, lib, ... }:
 {
   imports = [
     ../../modules/baseline.nix
-    ../../modules/ephemeral-scratch.nix # reboot-to-clean; drop for a pure throwaway
     ./disko.nix
   ];
-
-  networking.hostName = "fundament-test";
 
   # Cloud networking: DHCP, no Wi-Fi.
   networking.useDHCP = lib.mkDefault true;
