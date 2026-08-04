@@ -20,6 +20,7 @@ import (
 
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
+	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 )
 
@@ -45,6 +46,8 @@ type apiOptions struct {
 	clock           clock.Clock
 	idempotency     bool
 	kubeAPIProxyURL string
+	prometheusURL   string
+	gardenerClient  gardener.Client
 }
 
 type APIOption func(*apiOptions)
@@ -115,6 +118,17 @@ func WithKubeAPIProxy(url string) APIOption {
 	}
 }
 
+// WithPrometheusBackend sets the metrics backend selection: prometheusURL
+// semantics match production ("mock" or "" for generated data, "per-shoot"
+// for per-shoot resolution through the given Gardener client, or any other
+// URL for one global backend).
+func WithPrometheusBackend(prometheusURL string, g gardener.Client) APIOption {
+	return func(o *apiOptions) {
+		o.prometheusURL = prometheusURL
+		o.gardenerClient = g
+	}
+}
+
 func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	opts := apiOptions{
 		t:             t,
@@ -138,6 +152,8 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		CORSAllowedOrigins: []string{"*"},
 		Clock:              opts.clock,
 		KubeAPIProxyURL:    opts.kubeAPIProxyURL,
+		PrometheusURL:      opts.prometheusURL,
+		GardenerClient:     opts.gardenerClient,
 	}
 
 	var idempotencyStore *idempotency.Store
