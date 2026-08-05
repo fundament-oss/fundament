@@ -19,22 +19,25 @@ import (
 var ErrPodRequired = errors.New("kubernetes log backend requires a namespace and pod")
 
 // KubeClient reads container logs from the Kubernetes pod-log endpoint through
-// the kube-api-proxy. It forwards the caller's Fundament JWT so the proxy can
-// authorise the request and inject the per-user ServiceAccount token.
+// the kube-api-proxy. It forwards the caller's own credentials (bearer token
+// or session cookie) so the proxy can authorise the request and inject the
+// per-user ServiceAccount token.
 //
 // This backend is narrower than Loki: it needs a specific pod, cannot search
 // across pods, and only sees logs the node still retains.
 type KubeClient struct {
-	proxyURL   string // base kube-api-proxy URL (e.g. https://kube-proxy.example)
-	authToken  string // caller's bearer token (raw, without "Bearer " prefix)
+	proxyURL   string      // base kube-api-proxy URL (e.g. http://kube-api-proxy:8081)
+	auth       http.Header // caller's auth headers (Authorization and/or Cookie), forwarded verbatim
 	httpClient *http.Client
 }
 
-// NewKubeClient returns a KubeClient. authToken is the caller's bearer token.
-func NewKubeClient(proxyURL, authToken string) *KubeClient {
+// NewKubeClient returns a KubeClient. auth carries the caller's credential
+// headers — Authorization for token clients, Cookie for the browser session —
+// and is forwarded on every request.
+func NewKubeClient(proxyURL string, auth http.Header) *KubeClient {
 	return &KubeClient{
 		proxyURL:   strings.TrimRight(proxyURL, "/"),
-		authToken:  authToken,
+		auth:       auth,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
 }
@@ -77,7 +80,10 @@ func (c *KubeClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 	if p.Namespace == "" || p.Pod == "" {
 		return nil, ErrPodRequired
 	}
-	resp, err := c.openLogStream(ctx, p, true, 100) //nolint:bodyclose // closed by the reader goroutine below
+	// tailLines=0: emit only lines written after the stream opens. Replaying
+	// history here would duplicate what the caller already fetched via Query
+	// (the Vali tail likewise starts at "now").
+	resp, err := c.openLogStream(ctx, p, true, 0) //nolint:bodyclose // closed by the reader goroutine below
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +107,7 @@ func (c *KubeClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 
 // Labels is not supported by the pod-log endpoint; the frontend falls back to
 // the cluster/namespace listing APIs to populate filters.
-func (*KubeClient) Labels(_ context.Context, _, _ string) (Labels, error) {
+func (*KubeClient) Labels(_ context.Context, _, _ string, _, _ time.Time) (Labels, error) {
 	return Labels{}, nil
 }
 
@@ -133,8 +139,8 @@ func (c *KubeClient) openLogStream(ctx context.Context, p *QueryParams, follow b
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
-	if c.authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.authToken)
+	for name, values := range c.auth {
+		req.Header[name] = values
 	}
 
 	resp, err := c.httpClient.Do(req)

@@ -1,6 +1,9 @@
 package logs
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // StubClient is a no-op Client used when no log backend is configured.
 // All methods return empty results without errors.
@@ -18,6 +21,6 @@ func (StubClient) Tail(_ context.Context, _ *QueryParams) (<-chan Entry, error) 
 	return ch, nil
 }
 
-func (StubClient) Labels(_ context.Context, _, _ string) (Labels, error) {
+func (StubClient) Labels(_ context.Context, _, _ string, _, _ time.Time) (Labels, error) {
 	return Labels{}, nil
 }

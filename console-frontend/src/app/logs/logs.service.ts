@@ -101,10 +101,15 @@ export class LogsApiService {
     };
   }
 
-  async labels(clusterId: string, namespace?: string): Promise<LogLabels> {
+  async labels(clusterId: string, namespace?: string, from?: Date, to?: Date): Promise<LogLabels> {
     const response = await firstValueFrom(
       this.logsClient.getLogLabels(
-        create(GetLogLabelsRequestSchema, { clusterId, namespace: namespace ?? '' }),
+        create(GetLogLabelsRequestSchema, {
+          clusterId,
+          namespace: namespace ?? '',
+          start: from ? timestampFromDate(from) : undefined,
+          end: to ? timestampFromDate(to) : undefined,
+        }),
       ),
     );
     return {

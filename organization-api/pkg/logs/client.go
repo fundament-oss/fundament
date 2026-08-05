@@ -63,8 +63,10 @@ type Client interface {
 	// closed when the stream ends.
 	Tail(ctx context.Context, p *QueryParams) (<-chan Entry, error)
 	// Labels returns distinct label values for filter dropdowns. namespace, when
-	// non-empty, scopes pod/container results.
-	Labels(ctx context.Context, clusterID, namespace string) (Labels, error)
+	// non-empty, scopes pod/container results. start/end bound the window the
+	// values are observed in (label values are time-scoped in Vali); zero
+	// values leave the backend's default window.
+	Labels(ctx context.Context, clusterID, namespace string, start, end time.Time) (Labels, error)
 }
 
 const defaultLimit = 1000

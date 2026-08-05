@@ -268,14 +268,23 @@ export default class LogAnalyticsComponent implements OnInit, AfterViewInit, OnD
   private async onClusterSelected(): Promise<void> {
     const clusterId = this.selectedCluster();
     if (!clusterId) return;
+    await this.refreshLabels();
+    await this.loadLogs();
+  }
+
+  // Label values are time-scoped in the backend, so the namespace dropdown
+  // must follow the active window.
+  private async refreshLabels(): Promise<void> {
+    const clusterId = this.selectedCluster();
+    if (!clusterId) return;
     try {
-      const labels = await this.logsApi.labels(clusterId);
+      const { from, to } = this.timeRange();
+      const labels = await this.logsApi.labels(clusterId, undefined, from, to);
       this.backend.set(labels.backend);
       this.namespaces.set(labels.namespaces);
     } catch {
       // best-effort
     }
-    await this.loadLogs();
   }
 
   private async loadLogs(): Promise<void> {
@@ -318,6 +327,7 @@ export default class LogAnalyticsComponent implements OnInit, AfterViewInit, OnD
 
   onTimePresetChange(value: string): void {
     this.timePreset.set(value);
+    void this.refreshLabels();
     void this.loadLogs();
   }
 
