@@ -98,16 +98,6 @@
   --font-mono: var(--primitives-font-family-monospace);
 }
 
-:root {
-  --primitives-font-size-100: theme('fontSize.base');
-
-  /* Custom focus ring, since the NLDD default is very dark */
-  --semantics-focus-ring-outline: none;
-  --semantics-focus-ring-box-shadow:
-    var(--semantics-surfaces-base-background-color) 0 0 0 2px,
-    var(--primitives-color-accent-200) 0 0 0 4px;
-}
-
 /* Dark mode variant using the 'dark' class on the HTML element */
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -117,43 +107,13 @@
    work, and at specificity (0,2,0) they outrank anything we could hang off
    html.dark (0,1,1) — so do not add a local color-scheme rule here. */
 
-/* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
-::view-transition-group(root) {
-  @apply animate-[700ms_ease-out];
-}
-
-::view-transition-new(root) {
-  animation-name: reveal-light;
-  animation-fill-mode: both;
-}
-
-::view-transition-old(root),
-.dark::view-transition-old(root) {
-  @apply -z-10 animate-none;
-  animation-fill-mode: both;
-}
-
-.dark::view-transition-new(root) {
-  animation-name: reveal-dark;
-  animation-fill-mode: both;
-}
-
-@keyframes reveal-light {
-  from {
-    clip-path: polygon(171% 50%, 50% 171%, 50% 171%, 171% 50%);
-  }
-  to {
-    clip-path: polygon(171% 50%, 50% 171%, -50% 71%, 50% -71%);
-  }
-}
-
-@keyframes reveal-dark {
-  from {
-    clip-path: polygon(50% -71%, -50% 71%, -50% 71%, 50% -71%);
-  }
-  to {
-    clip-path: polygon(50% -71%, -50% 71%, 50% 171%, 171% 50%);
-  }
+/* Angular puts two elements in the main pane that are pure plumbing: the
+   router-outlet anchor, and the routed component wrapping its nldd-page. The
+   pane flex-grows every slotted child, so both would claim a share of the
+   height. `display: contents` takes them out of the layout and leaves the
+   nldd-page as the pane's own child — no visual styling involved. */
+nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > * {
+  display: contents;
 }
 
 body {
@@ -255,24 +215,6 @@ input.validate-on-touch.ng-invalid.ng-touched {
 
 .breadcrumb .error-message {
   @apply text-danger-600 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-300 cursor-pointer;
-}
-
-/* Navigation link styles */
-
-nldd-navigation-split-view {
-  --semantics-dividers-color: var(--color-gray-200);
-}
-
-.dark nldd-navigation-split-view {
-  --semantics-dividers-color: var(--color-gray-800);
-}
-
-.nav-link {
-  @apply ring-accent-500 flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-left font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:text-gray-300 dark:ring-offset-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-200;
-}
-
-.nav-link.active {
-  @apply bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300;
 }
 
 /* Table styles */
