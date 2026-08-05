@@ -21,6 +21,7 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
+	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 )
 
@@ -48,6 +49,7 @@ type apiOptions struct {
 	kubeAPIProxyURL string
 	prometheusURL   string
 	gardenerClient  gardener.Client
+	mockLogsClient  *logs.MockClient
 }
 
 type APIOption func(*apiOptions)
@@ -129,6 +131,14 @@ func WithPrometheusBackend(prometheusURL string, g gardener.Client) APIOption {
 	}
 }
 
+// WithMockLogs serves the logs RPCs from the given mock client, as production
+// does in mock mode.
+func WithMockLogs(c *logs.MockClient) APIOption {
+	return func(o *apiOptions) {
+		o.mockLogsClient = c
+	}
+}
+
 func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	opts := apiOptions{
 		t:             t,
@@ -154,6 +164,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		KubeAPIProxyURL:    opts.kubeAPIProxyURL,
 		PrometheusURL:      opts.prometheusURL,
 		GardenerClient:     opts.gardenerClient,
+		MockLogsClient:     opts.mockLogsClient,
 	}
 
 	var idempotencyStore *idempotency.Store
