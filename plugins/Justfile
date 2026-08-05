@@ -30,6 +30,11 @@ cluster-delete:
     k3d cluster delete {{ cluster }}
     @k3d registry delete {{ registry }} 2>/dev/null || true
 
+# Loop-backed block devices for Rook Ceph; run without arguments for usage.
+# Opt-in — only needed when working on the ceph-rook plugin.
+storage-disks *args:
+    CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh {{ args }}
+
 # --- Deployment commands ---
 
 # Deploy plugin-controller with file watching (auto-rebuild on changes)

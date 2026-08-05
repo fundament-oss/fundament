@@ -25,3 +25,15 @@ registries:
           - http://plugin-registry.localhost:5000
 volumes:
   - volume: ${PWD}/../charts/fundament/crds/plugininstallations.plugins.fundament.io.yaml:/var/lib/rancher/k3s/server/manifests/plugininstallations.plugins.fundament.io.yaml
+  # A node's /dev is a tmpfs snapshot taken when the container starts, so a block
+  # device attached to the host afterwards stays invisible. Binding the host's
+  # /dev makes it live, which is what lets disks be attached and reattached
+  # without recreating the cluster. The node is privileged, so it reaches the
+  # host's devices either way.
+  - volume: /dev:/dev
+    nodeFilters:
+      - server:0
+  # Device identification reads the udev database, and k3d puts a tmpfs on /run.
+  - volume: /run/udev:/run/udev:ro
+    nodeFilters:
+      - server:0
