@@ -229,15 +229,70 @@
       </div>
     }
 
+    <!-- Log source switch.
+         TODO(#978 follow-up): provisional visual treatment (deliberately loud
+         orange so the mode difference stands out) — UI design pass pending. -->
+    <div class="flex items-center gap-3">
+      <div
+        class="inline-flex overflow-hidden rounded-lg border border-orange-300 dark:border-orange-700"
+        role="group"
+        aria-label="Log source"
+      >
+        <button
+          type="button"
+          class="px-3 py-1.5 text-sm font-medium"
+          [class]="
+            !isLiveMode()
+              ? 'bg-orange-500 text-white'
+              : 'bg-white text-orange-700 hover:bg-orange-50 dark:bg-gray-900 dark:text-orange-300 dark:hover:bg-orange-950'
+          "
+          [attr.aria-pressed]="!isLiveMode()"
+          (click)="onSourceModeChange('vali')"
+        >
+          Cluster logs
+        </button>
+        <button
+          type="button"
+          class="border-l border-orange-300 px-3 py-1.5 text-sm font-medium dark:border-orange-700"
+          [class]="
+            isLiveMode()
+              ? 'bg-orange-500 text-white'
+              : 'bg-white text-orange-700 hover:bg-orange-50 dark:bg-gray-900 dark:text-orange-300 dark:hover:bg-orange-950'
+          "
+          [attr.aria-pressed]="isLiveMode()"
+          (click)="onSourceModeChange('live')"
+        >
+          Plugin logs (live)
+        </button>
+      </div>
+      <span class="text-xs text-gray-500 dark:text-gray-400">
+        @if (isLiveMode()) {
+          Live pod logs, read directly from the cluster
+        } @else {
+          System logs from the cluster's logging stack
+        }
+      </span>
+    </div>
+
+    @if (isLiveMode()) {
+      <div
+        class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
+      >
+        Plugin logs are read live from a single pod with your own cluster access. Select a plugin
+        and a pod to view logs. History is limited to what the node retains, and search filters the
+        loaded lines only — no cross-pod search.
+      </div>
+    }
+
     <!-- Backend status banners -->
-    @if (isNoBackend()) {
+    @if (isNoBackend() && !isLiveMode()) {
       <div
         class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
       >
         No log backend is configured. Configure Loki (or the Kubernetes pod-log fallback) to view
         logs.
       </div>
-    } @else if (isFallback()) {
+    } @else if (isFallback() && !isLiveMode()) {
       <div
         class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
       >
@@ -271,13 +326,22 @@
         </label>
 
         <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-500 dark:text-gray-400">Namespace</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">
+            {{ isLiveMode() ? 'Plugin' : 'Namespace' }}
+          </span>
           <select
             [ngModel]="selectedNamespace()"
             (ngModelChange)="onNamespaceChange($event)"
             class="text-sm"
           >
-            <option value="">All namespaces</option>
+            @if (isLiveMode()) {
+              <option value="">Select a plugin…</option>
+              @if (namespaces().length === 0) {
+                <option value="" disabled>No plugins installed</option>
+              }
+            } @else {
+              <option value="">All namespaces</option>
+            }
             @for (ns of namespaces(); track ns) {
               <option [value]="ns">{{ ns }}</option>
             }
@@ -287,7 +351,11 @@
         <label class="flex flex-col gap-1">
           <span class="text-xs text-gray-500 dark:text-gray-400">Pod</span>
           <select [ngModel]="selectedPod()" (ngModelChange)="onPodChange($event)" class="text-sm">
-            <option value="">All pods</option>
+            @if (isLiveMode()) {
+              <option value="">Select a pod…</option>
+            } @else {
+              <option value="">All pods</option>
+            }
             @for (pod of pods(); track pod) {
               <option [value]="pod">{{ pod }}</option>
             }
