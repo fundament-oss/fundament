@@ -3,10 +3,7 @@
   <div
     class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
   >
-    <nldd-icon
-      name="dismiss-circle"
-      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
-    ></nldd-icon>
+    <nldd-icon name="dismiss-circle" class="shrink-0" size="20" color="critical"></nldd-icon>
     <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -58,12 +55,12 @@
       </div>
 
       <div class="mb-2 flex items-center gap-3 px-3">
-        <nldd-checkbox-field
+        <nldd-checkbox
           [checked]="selection.allSelected()"
           [indeterminate]="selection.someSelected()"
           accessible-label="Select all namespaces"
           (change)="selection.toggleAll($any($event).detail.checked)"
-        ></nldd-checkbox-field>
+        ></nldd-checkbox>
         <span class="text-sm text-gray-500 dark:text-gray-400">Select all</span>
       </div>
 
@@ -73,12 +70,12 @@
             class="flex items-center justify-between rounded-md border border-gray-200 p-3 dark:border-gray-800"
           >
             <div class="flex items-center gap-3">
-              <nldd-checkbox-field
+              <nldd-checkbox
                 [checked]="selection.has(namespace.id)"
                 [value]="namespace.id"
                 accessible-label="Select namespace {{ namespace.name }}"
                 (change)="selection.set(namespace.id, $any($event).detail.checked)"
-              ></nldd-checkbox-field>
+              ></nldd-checkbox>
               <div>
                 <p class="font-mono text-sm">{{ namespace.name }}</p>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -127,7 +124,9 @@
         >
           <nldd-icon
             name="dismiss-circle"
-            class="text-danger-500! dark:text-danger-400! mt-0.5 h-4.5 w-4.5 shrink-0"
+            class="mt-0.5 shrink-0"
+            size="20"
+            color="critical"
           ></nldd-icon>
           <p class="text-danger-700 dark:text-danger-300">{{ createErrorMessage() }}</p>
         </div>

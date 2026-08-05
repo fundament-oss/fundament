@@ -23,7 +23,7 @@
         <nldd-form-field label="Default memory request (MiB)">
           <nldd-number-field
             id="defaultMemoryRequest"
-            full-width="true"
+            width="full"
             min="1"
             step="1"
             [attr.max]="memoryLimitMi() ?? null"
@@ -34,7 +34,7 @@
         <nldd-form-field label="Default memory limit (MiB)">
           <nldd-number-field
             id="defaultMemoryLimit"
-            full-width="true"
+            width="full"
             [min]="memoryRequestMi() ?? 1"
             step="1"
             [value]="memoryLimitMi()"
@@ -69,7 +69,7 @@
         <nldd-form-field label="Default CPU request (m)">
           <nldd-number-field
             id="defaultCpuRequest"
-            full-width="true"
+            width="full"
             min="1"
             step="1"
             [attr.max]="cpuLimitM() ?? null"
@@ -80,7 +80,7 @@
         <nldd-form-field label="Default CPU limit (m)">
           <nldd-number-field
             id="defaultCpuLimit"
-            full-width="true"
+            width="full"
             [min]="cpuRequestM() ?? 1"
             step="1"
             [value]="cpuLimitM()"

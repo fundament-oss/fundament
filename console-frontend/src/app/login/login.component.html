@@ -43,10 +43,10 @@
             [value]="password?.value ?? ''"
             (input)="loginForm.get('password')!.setValue($any($event.target).value)"
             (blur)="loginForm.get('password')!.markAsTouched()"
-            show-text="Show"
-            show-accessible-label="Show password"
-            hide-text="Hide"
-            hide-accessible-label="Hide password"
+            show-button-text="Show"
+            show-button-accessible-label="Show password"
+            hide-button-text="Hide"
+            hide-button-accessible-label="Hide password"
             [invalid]="!!(password?.invalid && password.dirty)"
             error-message="login-password-error"
           ></nldd-password-field>
@@ -61,14 +61,16 @@
           </div>
         }
 
-        <nldd-button
-          variant="primary"
-          full-width
-          [attr.disabled]="isLoading() ? '' : null"
-          text="Sign in"
-          [text]="isLoading() ? 'Signing in...' : 'Sign in'"
-          type="submit"
-        ></nldd-button>
+        <nldd-form-actions>
+          <nldd-button
+            variant="primary"
+            width="full"
+            [attr.disabled]="isLoading() ? '' : null"
+            text="Sign in"
+            [text]="isLoading() ? 'Signing in...' : 'Sign in'"
+            type="submit"
+          ></nldd-button>
+        </nldd-form-actions>
       </nldd-form>
     </div>
   </div>

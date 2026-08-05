@@ -18,10 +18,7 @@
   <div
     class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
   >
-    <nldd-icon
-      name="dismiss-circle"
-      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
-    ></nldd-icon>
+    <nldd-icon name="dismiss-circle" class="shrink-0" size="20" color="critical"></nldd-icon>
     <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
   </div>
 }
@@ -65,7 +62,7 @@
                       "
                     >
                       @if (tag.name.toLowerCase() === 'official') {
-                        <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
+                        <nldd-icon name="check-mark" class="mr-1" size="16"></nldd-icon>
                       }
                       {{ tag.name }}
                     </span>
@@ -74,7 +71,7 @@
                     <span
                       class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     >
-                      <nldd-icon name="check-mark" class="mr-1 h-3 w-3"></nldd-icon>
+                      <nldd-icon name="check-mark" class="mr-1" size="16"></nldd-icon>
                       Installed on {{ getInstalledClusterCount() }} cluster{{
                         getInstalledClusterCount() > 1 ? 's' : ''
                       }}
@@ -109,21 +106,27 @@
             <div class="flex items-start">
               <nldd-icon
                 name="check-mark"
-                class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
+                class="mr-3 shrink-0"
+                size="20"
+                color="success"
               ></nldd-icon>
               <span class="text-gray-600 dark:text-gray-300">Community support</span>
             </div>
             <div class="flex items-start">
               <nldd-icon
                 name="check-mark"
-                class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
+                class="mr-3 shrink-0"
+                size="20"
+                color="success"
               ></nldd-icon>
               <span class="text-gray-600 dark:text-gray-300">Open source</span>
             </div>
             <div class="flex items-start">
               <nldd-icon
                 name="check-mark"
-                class="mr-3 h-5 w-5 shrink-0 text-emerald-600! dark:text-emerald-400!"
+                class="mr-3 shrink-0"
+                size="20"
+                color="success"
               ></nldd-icon>
               <span class="text-gray-600 dark:text-gray-300">Regular updates</span>
             </div>
