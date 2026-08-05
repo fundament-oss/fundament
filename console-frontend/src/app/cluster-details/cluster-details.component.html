@@ -1,582 +1,587 @@
-<!-- Error Message -->
-@if (errorMessage()) {
-  <div
-    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
-  >
-    <nldd-icon
-      name="dismiss-circle"
-      class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
-    ></nldd-icon>
-    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
-  </div>
-}
+<!-- Same outer layout as the cluster list it belongs to. The back button is
+     forced visible: the split view hides a pane's back button on wide screens,
+     but on a detail page it is the way up to the parent, not a pane affordance. -->
+<nldd-page sticky-header style="--context-back-button-display: flex">
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="clusterData.basics.name || 'Cluster'"
+    back-text="Clusters"
+    collapse-anchor="cluster-title"
+    (back)="pageNav.goTo('/')"
+  ></nldd-top-title-bar>
 
-<!-- Loading State -->
-@if (isLoading()) {
-  <div class="py-12 text-center">
-    <div role="status" class="flex justify-center">
-      <app-loading-indicator
-        class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
-      />
-      <span class="sr-only">Loading...</span>
-    </div>
-    <p class="mt-4 text-gray-600 dark:text-gray-300">Loading cluster details...</p>
-  </div>
-}
+  <nldd-simple-section>
+    <!-- Error Message -->
+    @if (errorMessage()) {
+      <div
+        class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
+      >
+        <nldd-icon
+          name="dismiss-circle"
+          class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
+        ></nldd-icon>
+        <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
+      </div>
+    }
 
-<!-- Content (only show when not loading) -->
-@if (!isLoading()) {
-  <div class="card">
-    <!-- Header -->
-    <div class="card-header">
-      <div class="grid items-center gap-3 lg:grid-cols-2">
-        <div>
-          <h1 class="text-3xl font-semibold">
-            {{ clusterData.basics.name || 'Unknown cluster' }}
-          </h1>
-          <p class="mt-1 text-gray-600 dark:text-gray-300">
-            Created {{ formatDate(clusterData.creationDate) }}
-          </p>
-        </div>
+    <!-- Loading State -->
+    @if (isLoading()) {
+      <nldd-activity-indicator
+        show-text
+        text="Loading cluster details..."
+      ></nldd-activity-indicator>
+    }
 
-        <div class="flex gap-2 lg:justify-end">
+    @if (!isLoading()) {
+      <nldd-title id="cluster-title" size="2">
+        <h1>{{ clusterData.basics.name || 'Unknown cluster' }}</h1>
+      </nldd-title>
+      <nldd-rich-text>
+        <p>Created {{ formatDate(clusterData.creationDate) }}</p>
+      </nldd-rich-text>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
+      <nldd-toolbar label="Cluster actions">
+        <nldd-toolbar-item slot="start">
           <nldd-button
             type="button"
             (click)="openTerminal()"
             text="Open terminal"
             variant="secondary"
             start-icon="terminal"
-            size="sm"
           ></nldd-button>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="start">
           <nldd-button
             type="button"
             (click)="downloadKubeconfig()"
             [disabled]="isDownloadingKubeconfig()"
             [text]="isDownloadingKubeconfig() ? 'Downloading…' : 'Download kubeconfig'"
             start-icon="arrow-down-in-bucket"
-            variant="primary"
-            size="sm"
           ></nldd-button>
-        </div>
-      </div>
-    </div>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
 
-    <!-- Summary Content -->
-    <div class="card-body-lg space-y-6">
-      <!-- Basics Block -->
-      <div class="card card-body">
-        <h3 class="mb-4 text-xl font-medium">Basics</h3>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
-            <dd class="mt-1">{{ clusterData.basics.name }}</dd>
-          </dl>
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Region</dt>
-            <dd class="mt-1">
-              {{ clusterData.basics.region.toUpperCase() }}
-            </dd>
-          </dl>
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Status</dt>
-            <dd class="mt-1">
-              <nldd-tag
-                [attr.color]="getStatusTagColor(clusterData.status)"
-                [attr.text]="getStatusLabel(clusterData.status)"
-              ></nldd-tag>
-            </dd>
-          </dl>
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
-            <dd class="mt-1">
-              {{ clusterData.basics.kubernetesVersion }}
-              <nldd-button
-                text="Upgrade"
-                start-icon="arrow-up"
-                variant="secondary"
-                size="xs"
-                class="ml-1"
-              ></nldd-button>
-            </dd>
-          </dl>
-        </div>
-      </div>
+      <nldd-spacer size="24"></nldd-spacer>
 
-      <!-- Gardener Sync State Block -->
-      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-        <h3 class="mb-4 text-xl font-medium">Provisioning status</h3>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Gardener status</dt>
-            <dd class="mt-1">
-              <nldd-tag
-                class="capitalize"
-                [attr.color]="getSyncStatusTagColor(clusterData.syncState?.shootStatus)"
-                [attr.text]="getSyncStatusLabel(clusterData.syncState)"
-              ></nldd-tag>
-            </dd>
-          </dl>
-          @if (clusterData.syncState?.shootMessage) {
-            <dl class="sm:col-span-2 lg:col-span-3">
-              <dt class="font-medium text-gray-500 dark:text-gray-400">Message</dt>
-              <dd class="mt-1">
-                {{ clusterData.syncState.shootMessage }}
-              </dd>
-            </dl>
-          }
-          @if (clusterData.syncState?.outboxError) {
-            <dl class="sm:col-span-2">
-              <dt class="font-medium text-gray-500 dark:text-gray-400">Sync error</dt>
-              <dd class="text-danger-600 dark:text-danger-400 mt-1">
-                {{ clusterData.syncState.outboxError }}
-              </dd>
-            </dl>
-          }
-          @if (clusterData.syncState?.outboxStatus) {
+      <nldd-container gap="24">
+        <div class="card card-body">
+          <h3 class="mb-4 text-xl font-medium">Basics</h3>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <dl>
-              <dt class="font-medium text-gray-500 dark:text-gray-400">Outbox status</dt>
-              <dd class="mt-1">
-                {{ clusterData.syncState!.outboxStatus }}
-              </dd>
+              <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
+              <dd class="mt-1">{{ clusterData.basics.name }}</dd>
             </dl>
-          }
-          @if (clusterData.syncState && clusterData.syncState.outboxRetries > 0) {
             <dl>
-              <dt class="font-medium text-gray-500 dark:text-gray-400">Outbox retries</dt>
+              <dt class="font-medium text-gray-500 dark:text-gray-400">Region</dt>
               <dd class="mt-1">
-                {{ clusterData.syncState.outboxRetries }}
+                {{ clusterData.basics.region.toUpperCase() }}
               </dd>
             </dl>
-          }
+            <dl>
+              <dt class="font-medium text-gray-500 dark:text-gray-400">Status</dt>
+              <dd class="mt-1">
+                <nldd-tag
+                  [attr.color]="getStatusTagColor(clusterData.status)"
+                  [attr.text]="getStatusLabel(clusterData.status)"
+                ></nldd-tag>
+              </dd>
+            </dl>
+            <dl>
+              <dt class="font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
+              <dd class="mt-1">
+                {{ clusterData.basics.kubernetesVersion }}
+                <nldd-button
+                  text="Upgrade"
+                  start-icon="arrow-up"
+                  variant="secondary"
+                  size="xs"
+                  class="ml-1"
+                ></nldd-button>
+              </dd>
+            </dl>
+          </div>
         </div>
 
-        <!-- Collapsible Sync History -->
-        @if (clusterData.syncState) {
-          <details class="group mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
-            <summary class="inline-flex cursor-pointer items-center font-medium">
-              <nldd-icon
-                name="caret-right"
-                class="text-accent-500! mr-1 h-4 w-4 transition-transform group-open:rotate-90"
-              ></nldd-icon>
-              Sync details
-            </summary>
+        <!-- Gardener Sync State Block -->
+        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+          <h3 class="mb-4 text-xl font-medium">Provisioning status</h3>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <dl>
+              <dt class="font-medium text-gray-500 dark:text-gray-400">Gardener status</dt>
+              <dd class="mt-1">
+                <nldd-tag
+                  class="capitalize"
+                  [attr.color]="getSyncStatusTagColor(clusterData.syncState?.shootStatus)"
+                  [attr.text]="getSyncStatusLabel(clusterData.syncState)"
+                ></nldd-tag>
+              </dd>
+            </dl>
+            @if (clusterData.syncState?.shootMessage) {
+              <dl class="sm:col-span-2 lg:col-span-3">
+                <dt class="font-medium text-gray-500 dark:text-gray-400">Message</dt>
+                <dd class="mt-1">
+                  {{ clusterData.syncState.shootMessage }}
+                </dd>
+              </dl>
+            }
+            @if (clusterData.syncState?.outboxError) {
+              <dl class="sm:col-span-2">
+                <dt class="font-medium text-gray-500 dark:text-gray-400">Sync error</dt>
+                <dd class="text-danger-600 dark:text-danger-400 mt-1">
+                  {{ clusterData.syncState.outboxError }}
+                </dd>
+              </dl>
+            }
+            @if (clusterData.syncState?.outboxStatus) {
+              <dl>
+                <dt class="font-medium text-gray-500 dark:text-gray-400">Outbox status</dt>
+                <dd class="mt-1">
+                  {{ clusterData.syncState!.outboxStatus }}
+                </dd>
+              </dl>
+            }
+            @if (clusterData.syncState && clusterData.syncState.outboxRetries > 0) {
+              <dl>
+                <dt class="font-medium text-gray-500 dark:text-gray-400">Outbox retries</dt>
+                <dd class="mt-1">
+                  {{ clusterData.syncState.outboxRetries }}
+                </dd>
+              </dl>
+            }
+          </div>
 
-            <nldd-table
-              class="mt-3"
-              accessible-label="Sync details"
-              columns="minmax(140px, 1fr) minmax(200px, 2fr)"
-            >
-              <nldd-table-row slot="header">
-                <nldd-text-cell text="**Property**"></nldd-text-cell>
-                <nldd-text-cell text="**Value**"></nldd-text-cell>
-              </nldd-table-row>
+          <!-- Collapsible Sync History -->
+          @if (clusterData.syncState) {
+            <details class="group mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
+              <summary class="inline-flex cursor-pointer items-center font-medium">
+                <nldd-icon
+                  name="caret-right"
+                  class="text-accent-500! mr-1 h-4 w-4 transition-transform group-open:rotate-90"
+                ></nldd-icon>
+                Sync details
+              </summary>
 
-              <nldd-table-row>
-                <nldd-text-cell color="secondary" text="Shoot status"></nldd-text-cell>
-                <nldd-text-cell
-                  [attr.text]="clusterData.syncState.shootStatus || 'N/A'"
-                ></nldd-text-cell>
-              </nldd-table-row>
-              <nldd-table-row>
-                <nldd-text-cell color="secondary" text="Status message"></nldd-text-cell>
-                <nldd-text-cell
-                  [attr.text]="clusterData.syncState.shootMessage || 'N/A'"
-                ></nldd-text-cell>
-              </nldd-table-row>
-              <nldd-table-row>
-                <nldd-text-cell color="secondary" text="Status updated"></nldd-text-cell>
-                <nldd-text-cell
-                  [attr.text]="
-                    clusterData.syncState.statusUpdatedAt
-                      ? formatDate(clusterData.syncState.statusUpdatedAt)
-                      : 'N/A'
-                  "
-                ></nldd-text-cell>
-              </nldd-table-row>
-              <nldd-table-row>
-                <nldd-text-cell color="secondary" text="Outbox status"></nldd-text-cell>
-                <nldd-text-cell
-                  [attr.text]="clusterData.syncState.outboxStatus || 'N/A'"
-                ></nldd-text-cell>
-              </nldd-table-row>
-              <nldd-table-row>
-                <nldd-text-cell color="secondary" text="Outbox retries"></nldd-text-cell>
-                <nldd-text-cell [attr.text]="clusterData.syncState.outboxRetries"></nldd-text-cell>
-              </nldd-table-row>
-              @if (clusterData.syncState.outboxError) {
+              <nldd-table
+                class="mt-3"
+                accessible-label="Sync details"
+                columns="minmax(140px, 1fr) minmax(200px, 2fr)"
+              >
+                <nldd-table-row slot="header">
+                  <nldd-text-cell text="**Property**"></nldd-text-cell>
+                  <nldd-text-cell text="**Value**"></nldd-text-cell>
+                </nldd-table-row>
+
                 <nldd-table-row>
-                  <nldd-text-cell color="secondary" text="Outbox error"></nldd-text-cell>
+                  <nldd-text-cell color="secondary" text="Shoot status"></nldd-text-cell>
                   <nldd-text-cell
-                    color="critical"
-                    [attr.text]="clusterData.syncState.outboxError"
+                    [attr.text]="clusterData.syncState.shootStatus || 'N/A'"
                   ></nldd-text-cell>
                 </nldd-table-row>
-              }
-            </nldd-table>
-          </details>
-        }
-      </div>
+                <nldd-table-row>
+                  <nldd-text-cell color="secondary" text="Status message"></nldd-text-cell>
+                  <nldd-text-cell
+                    [attr.text]="clusterData.syncState.shootMessage || 'N/A'"
+                  ></nldd-text-cell>
+                </nldd-table-row>
+                <nldd-table-row>
+                  <nldd-text-cell color="secondary" text="Status updated"></nldd-text-cell>
+                  <nldd-text-cell
+                    [attr.text]="
+                      clusterData.syncState.statusUpdatedAt
+                        ? formatDate(clusterData.syncState.statusUpdatedAt)
+                        : 'N/A'
+                    "
+                  ></nldd-text-cell>
+                </nldd-table-row>
+                <nldd-table-row>
+                  <nldd-text-cell color="secondary" text="Outbox status"></nldd-text-cell>
+                  <nldd-text-cell
+                    [attr.text]="clusterData.syncState.outboxStatus || 'N/A'"
+                  ></nldd-text-cell>
+                </nldd-table-row>
+                <nldd-table-row>
+                  <nldd-text-cell color="secondary" text="Outbox retries"></nldd-text-cell>
+                  <nldd-text-cell
+                    [attr.text]="clusterData.syncState.outboxRetries"
+                  ></nldd-text-cell>
+                </nldd-table-row>
+                @if (clusterData.syncState.outboxError) {
+                  <nldd-table-row>
+                    <nldd-text-cell color="secondary" text="Outbox error"></nldd-text-cell>
+                    <nldd-text-cell
+                      color="critical"
+                      [attr.text]="clusterData.syncState.outboxError"
+                    ></nldd-text-cell>
+                  </nldd-table-row>
+                }
+              </nldd-table>
+            </details>
+          }
+        </div>
 
-      <!-- Resource Usage Stats -->
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- Resource Usage Charts -->
-        <div class="card card-body">
-          <h3 class="mb-4 text-xl font-medium">Resource usage</h3>
-          <div class="space-y-4">
-            <!-- CPU Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">CPU</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.cpu.used }} /
-                  {{ clusterData.resourceUsage.cpu.limit }}
-                  {{ clusterData.resourceUsage.cpu.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
+        <!-- Resource Usage Stats -->
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <!-- Resource Usage Charts -->
+          <div class="card card-body">
+            <h3 class="mb-4 text-xl font-medium">Resource usage</h3>
+            <div class="space-y-4">
+              <!-- CPU Usage -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700">CPU</span>
+                  <span class="text-gray-500 dark:text-gray-400"
+                    >{{ clusterData.resourceUsage.cpu.used }} /
+                    {{ clusterData.resourceUsage.cpu.limit }}
+                    {{ clusterData.resourceUsage.cpu.unit }}</span
+                  >
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="
+                      getUsageColor(
+                        getUsagePercentage(
+                          clusterData.resourceUsage.cpu.used,
+                          clusterData.resourceUsage.cpu.limit
+                        )
+                      )
+                    "
+                    [style.width.%]="
                       getUsagePercentage(
                         clusterData.resourceUsage.cpu.used,
                         clusterData.resourceUsage.cpu.limit
                       )
-                    )
-                  "
-                  [style.width.%]="
+                    "
+                  ></div>
+                </div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                  {{
                     getUsagePercentage(
                       clusterData.resourceUsage.cpu.used,
                       clusterData.resourceUsage.cpu.limit
                     )
-                  "
-                ></div>
+                  }}% used
+                </div>
               </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.cpu.used,
-                    clusterData.resourceUsage.cpu.limit
-                  )
-                }}% used
-              </div>
-            </div>
 
-            <!-- Memory Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">Memory</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.memory.used }} /
-                  {{ clusterData.resourceUsage.memory.limit }}
-                  {{ clusterData.resourceUsage.memory.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
+              <!-- Memory Usage -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700">Memory</span>
+                  <span class="text-gray-500 dark:text-gray-400"
+                    >{{ clusterData.resourceUsage.memory.used }} /
+                    {{ clusterData.resourceUsage.memory.limit }}
+                    {{ clusterData.resourceUsage.memory.unit }}</span
+                  >
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="
+                      getUsageColor(
+                        getUsagePercentage(
+                          clusterData.resourceUsage.memory.used,
+                          clusterData.resourceUsage.memory.limit
+                        )
+                      )
+                    "
+                    [style.width.%]="
                       getUsagePercentage(
                         clusterData.resourceUsage.memory.used,
                         clusterData.resourceUsage.memory.limit
                       )
-                    )
-                  "
-                  [style.width.%]="
+                    "
+                  ></div>
+                </div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                  {{
                     getUsagePercentage(
                       clusterData.resourceUsage.memory.used,
                       clusterData.resourceUsage.memory.limit
                     )
-                  "
-                ></div>
+                  }}% used
+                </div>
               </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.memory.used,
-                    clusterData.resourceUsage.memory.limit
-                  )
-                }}% used
-              </div>
-            </div>
 
-            <!-- Disk Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">Disk</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.disk.used }} /
-                  {{ clusterData.resourceUsage.disk.limit }}
-                  {{ clusterData.resourceUsage.disk.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
+              <!-- Disk Usage -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700">Disk</span>
+                  <span class="text-gray-500 dark:text-gray-400"
+                    >{{ clusterData.resourceUsage.disk.used }} /
+                    {{ clusterData.resourceUsage.disk.limit }}
+                    {{ clusterData.resourceUsage.disk.unit }}</span
+                  >
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="
+                      getUsageColor(
+                        getUsagePercentage(
+                          clusterData.resourceUsage.disk.used,
+                          clusterData.resourceUsage.disk.limit
+                        )
+                      )
+                    "
+                    [style.width.%]="
                       getUsagePercentage(
                         clusterData.resourceUsage.disk.used,
                         clusterData.resourceUsage.disk.limit
                       )
-                    )
-                  "
-                  [style.width.%]="
+                    "
+                  ></div>
+                </div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                  {{
                     getUsagePercentage(
                       clusterData.resourceUsage.disk.used,
                       clusterData.resourceUsage.disk.limit
                     )
-                  "
-                ></div>
+                  }}% used
+                </div>
               </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.disk.used,
-                    clusterData.resourceUsage.disk.limit
-                  )
-                }}% used
-              </div>
-            </div>
 
-            <!-- Pods Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">Pods</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.pods.used }} /
-                  {{ clusterData.resourceUsage.pods.limit }}
-                  {{ clusterData.resourceUsage.pods.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
+              <!-- Pods Usage -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700">Pods</span>
+                  <span class="text-gray-500 dark:text-gray-400"
+                    >{{ clusterData.resourceUsage.pods.used }} /
+                    {{ clusterData.resourceUsage.pods.limit }}
+                    {{ clusterData.resourceUsage.pods.unit }}</span
+                  >
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="
+                      getUsageColor(
+                        getUsagePercentage(
+                          clusterData.resourceUsage.pods.used,
+                          clusterData.resourceUsage.pods.limit
+                        )
+                      )
+                    "
+                    [style.width.%]="
                       getUsagePercentage(
                         clusterData.resourceUsage.pods.used,
                         clusterData.resourceUsage.pods.limit
                       )
-                    )
-                  "
-                  [style.width.%]="
+                    "
+                  ></div>
+                </div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                  {{
                     getUsagePercentage(
                       clusterData.resourceUsage.pods.used,
                       clusterData.resourceUsage.pods.limit
                     )
-                  "
-                ></div>
+                  }}% used
+                </div>
               </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.pods.used,
-                    clusterData.resourceUsage.pods.limit
-                  )
-                }}% used
-              </div>
+            </div>
+          </div>
+
+          <!-- Event History -->
+          <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+            <h3 class="mb-4 text-xl font-medium">Event History</h3>
+            <div class="max-h-80 space-y-3 overflow-y-auto" tabindex="0">
+              @if (clusterEvents().length === 0) {
+                <p class="text-gray-500 dark:text-gray-400">No events recorded yet</p>
+              } @else {
+                @for (event of clusterEvents(); track event.id) {
+                  <div
+                    class="relative flex items-start space-x-3 after:absolute after:top-6 after:bottom-0 after:left-1 after:w-px after:bg-gray-300 after:content-[''] last:after:hidden dark:after:bg-gray-600"
+                  >
+                    <div class="flex-0">
+                      <div
+                        class="mt-2 h-2.25 w-2.25 rounded-full"
+                        [class]="getEventTypeColor(event.eventType)"
+                      ></div>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="font-medium">
+                        {{ getEventTypeLabel(event.eventType) }}
+                      </p>
+                      <p class="text-gray-500 dark:text-gray-400">
+                        {{ getEventDetails(event) }}
+                      </p>
+                      @if (event.createdAt) {
+                        <p class="mt-1 text-gray-500 dark:text-gray-400">
+                          {{ formatDate(event.createdAt) }}
+                        </p>
+                      }
+                    </div>
+                  </div>
+                }
+              }
             </div>
           </div>
         </div>
 
-        <!-- Event History -->
-        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-          <h3 class="mb-4 text-xl font-medium">Event History</h3>
-          <div class="max-h-80 space-y-3 overflow-y-auto" tabindex="0">
-            @if (clusterEvents().length === 0) {
-              <p class="text-gray-500 dark:text-gray-400">No events recorded yet</p>
+        <!-- Node Pools, Plugins and Monitoring -->
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <!-- Node Pools -->
+          <div class="card card-body">
+            <h3 class="mb-4 text-xl font-medium">
+              Node pools
+              <nldd-button
+                [routerLink]="['/clusters', clusterData.basics.id, 'nodes']"
+                text="Edit"
+                start-icon="pencil"
+                variant="secondary"
+                size="xs"
+                class="ml-1"
+              ></nldd-button>
+            </h3>
+            @if (clusterData.nodePools.length === 0) {
+              <p class="text-gray-500 dark:text-gray-400">No node pools are configured yet.</p>
             } @else {
-              @for (event of clusterEvents(); track event.id) {
-                <div
-                  class="relative flex items-start space-x-3 after:absolute after:top-6 after:bottom-0 after:left-1 after:w-px after:bg-gray-300 after:content-[''] last:after:hidden dark:after:bg-gray-600"
-                >
-                  <div class="flex-0">
-                    <div
-                      class="mt-2 h-2.25 w-2.25 rounded-full"
-                      [class]="getEventTypeColor(event.eventType)"
-                    ></div>
+              <div class="space-y-4">
+                @for (pool of clusterData.nodePools; track pool.name) {
+                  <div class="card card-body-sm">
+                    <div class="mb-2 flex items-center justify-between">
+                      <h4 class="font-medium">{{ pool.name }}</h4>
+                      <nldd-tag
+                        size="sm"
+                        [attr.color]="
+                          pool.status === NodePoolStatus.HEALTHY
+                            ? 'success'
+                            : pool.status === NodePoolStatus.UNHEALTHY
+                              ? 'critical'
+                              : pool.status === NodePoolStatus.DEGRADED
+                                ? 'warning'
+                                : 'neutral'
+                        "
+                        [attr.text]="getNodePoolStatusLabel(pool.status)"
+                      ></nldd-tag>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <span class="text-gray-500 dark:text-gray-400">Type:</span>
+                        <span class="ml-1">{{ pool.machineType }}</span>
+                      </div>
+                      <div class="text-right">
+                        <span class="text-gray-500 dark:text-gray-400">Nodes:</span>
+                        <span class="ml-1"
+                          >{{ pool.currentNodes }} (min: {{ pool.minNodes }} - max:
+                          {{ pool.maxNodes }})</span
+                        >
+                      </div>
+                      @if (pool.version) {
+                        <div>
+                          <span class="text-gray-500 dark:text-gray-400">Version:</span>
+                          <span class="ml-1">{{ pool.version }}</span>
+                        </div>
+                      }
+                    </div>
                   </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="font-medium">
-                      {{ getEventTypeLabel(event.eventType) }}
-                    </p>
-                    <p class="text-gray-500 dark:text-gray-400">
-                      {{ getEventDetails(event) }}
-                    </p>
-                    @if (event.createdAt) {
-                      <p class="mt-1 text-gray-500 dark:text-gray-400">
-                        {{ formatDate(event.createdAt) }}
-                      </p>
-                    }
-                  </div>
-                </div>
-              }
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Plugins Block -->
+          <div class="card card-body">
+            <h3 class="mb-4 text-xl font-medium">
+              Plugins
+              <nldd-button
+                [routerLink]="['/clusters', clusterData.basics.id, 'plugins']"
+                text="Edit"
+                start-icon="pencil"
+                variant="secondary"
+                size="xs"
+                class="ml-1"
+              ></nldd-button>
+            </h3>
+            @if (isLoadingPlugins()) {
+              <p class="text-gray-500 dark:text-gray-400">Loading plugins...</p>
+            } @else if (installedPlugins().length > 0) {
+              <dl>
+                <dt class="mb-2 font-medium text-gray-500 dark:text-gray-400">
+                  Installed plugins ({{ installedPlugins().length }})
+                </dt>
+                <dd class="flex flex-wrap gap-1">
+                  @for (plugin of installedPlugins(); track plugin.id) {
+                    <nldd-tag color="accent" [attr.text]="plugin.name"></nldd-tag>
+                  }
+                </dd>
+              </dl>
+            } @else {
+              <p class="text-gray-500 dark:text-gray-400">No plugins installed</p>
+            }
+          </div>
+
+          <!-- Monitoring Block -->
+          <div class="card card-body">
+            <h3 class="mb-4 text-lg font-medium dark:text-white">Monitoring</h3>
+            @if (clusterData.observabilityUrl && clusterData.status === ClusterStatus.RUNNING) {
+              <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                Per-shoot Plutono dashboard with Prometheus metrics. Authenticate using the
+                Gardener-issued basic-auth credentials.
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <nldd-button
+                  type="button"
+                  (click)="openObservabilityDashboard()"
+                  text="Open dashboard"
+                  start-icon="chart-x-y-axis-line"
+                  variant="primary"
+                ></nldd-button>
+                <nldd-button
+                  type="button"
+                  (click)="openCredentialsModal()"
+                  text="Show credentials"
+                  start-icon="lock-closed"
+                  variant="secondary"
+                ></nldd-button>
+              </div>
+            } @else {
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Metrics dashboard becomes available once the cluster is ready.
+              </p>
             }
           </div>
         </div>
-      </div>
 
-      <!-- Node Pools, Plugins and Monitoring -->
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- Node Pools -->
-        <div class="card card-body">
-          <h3 class="mb-4 text-xl font-medium">
-            Node pools
-            <nldd-button
-              [routerLink]="['/clusters', clusterData.basics.id, 'nodes']"
-              text="Edit"
-              start-icon="pencil"
-              variant="secondary"
-              size="xs"
-              class="ml-1"
-            ></nldd-button>
-          </h3>
-          @if (clusterData.nodePools.length === 0) {
-            <p class="text-gray-500 dark:text-gray-400">No node pools are configured yet.</p>
-          } @else {
-            <div class="space-y-4">
-              @for (pool of clusterData.nodePools; track pool.name) {
-                <div class="card card-body-sm">
-                  <div class="mb-2 flex items-center justify-between">
-                    <h4 class="font-medium">{{ pool.name }}</h4>
-                    <nldd-tag
-                      size="sm"
-                      [attr.color]="
-                        pool.status === NodePoolStatus.HEALTHY
-                          ? 'success'
-                          : pool.status === NodePoolStatus.UNHEALTHY
-                            ? 'critical'
-                            : pool.status === NodePoolStatus.DEGRADED
-                              ? 'warning'
-                              : 'neutral'
-                      "
-                      [attr.text]="getNodePoolStatusLabel(pool.status)"
-                    ></nldd-tag>
-                  </div>
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <span class="text-gray-500 dark:text-gray-400">Type:</span>
-                      <span class="ml-1">{{ pool.machineType }}</span>
-                    </div>
-                    <div class="text-right">
-                      <span class="text-gray-500 dark:text-gray-400">Nodes:</span>
-                      <span class="ml-1"
-                        >{{ pool.currentNodes }} (min: {{ pool.minNodes }} - max:
-                        {{ pool.maxNodes }})</span
-                      >
-                    </div>
-                    @if (pool.version) {
-                      <div>
-                        <span class="text-gray-500 dark:text-gray-400">Version:</span>
-                        <span class="ml-1">{{ pool.version }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </div>
-
-        <!-- Plugins Block -->
-        <div class="card card-body">
-          <h3 class="mb-4 text-xl font-medium">
-            Plugins
-            <nldd-button
-              [routerLink]="['/clusters', clusterData.basics.id, 'plugins']"
-              text="Edit"
-              start-icon="pencil"
-              variant="secondary"
-              size="xs"
-              class="ml-1"
-            ></nldd-button>
-          </h3>
-          @if (isLoadingPlugins()) {
-            <p class="text-gray-500 dark:text-gray-400">Loading plugins...</p>
-          } @else if (installedPlugins().length > 0) {
-            <dl>
-              <dt class="mb-2 font-medium text-gray-500 dark:text-gray-400">
-                Installed plugins ({{ installedPlugins().length }})
-              </dt>
-              <dd class="flex flex-wrap gap-1">
-                @for (plugin of installedPlugins(); track plugin.id) {
-                  <nldd-tag color="accent" [attr.text]="plugin.name"></nldd-tag>
-                }
-              </dd>
-            </dl>
-          } @else {
-            <p class="text-gray-500 dark:text-gray-400">No plugins installed</p>
-          }
-        </div>
-
-        <!-- Monitoring Block -->
-        <div class="card card-body">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Monitoring</h3>
-          @if (clusterData.observabilityUrl && clusterData.status === ClusterStatus.RUNNING) {
-            <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-              Per-shoot Plutono dashboard with Prometheus metrics. Authenticate using the
-              Gardener-issued basic-auth credentials.
+        <!-- Danger Zone -->
+        <div
+          class="bg-danger-50 dark:bg-danger-900/20 rounded-md border border-rose-200 p-4 dark:border-rose-900"
+        >
+          <h3 class="text-danger-800 dark:text-danger-200 mb-2 text-lg font-medium">Danger zone</h3>
+          <p class="text-danger-700 dark:text-danger-300 mb-4">
+            Deleting a cluster is permanent and cannot be undone.
+          </p>
+          @if (namespaces().length > 0) {
+            <p class="text-danger-700 dark:text-danger-300 mb-4 text-sm">
+              This cluster still has {{ namespaces().length }} namespace{{
+                namespaces().length === 1 ? '' : 's'
+              }}.
+              <a [routerLink]="['/clusters', clusterData.basics.id, 'namespaces']" class="link"
+                >Delete all namespaces</a
+              >
+              before you can delete the cluster.
             </p>
-            <div class="flex flex-wrap gap-2">
-              <nldd-button
-                type="button"
-                (click)="openObservabilityDashboard()"
-                text="Open dashboard"
-                start-icon="chart-x-y-axis-line"
-                variant="primary"
-              ></nldd-button>
-              <nldd-button
-                type="button"
-                (click)="openCredentialsModal()"
-                text="Show credentials"
-                start-icon="lock-closed"
-                variant="secondary"
-              ></nldd-button>
-            </div>
-          } @else {
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Metrics dashboard becomes available once the cluster is ready.
+          } @else if (namespacesLoadError()) {
+            <p class="text-danger-700 dark:text-danger-300 mb-4 text-sm">
+              Couldn't load this cluster's namespaces, so deletion is blocked until we can confirm
+              it is empty. Reload the page and try again.
             </p>
           }
+          <nldd-button
+            (click)="showDeleteModal.set(true)"
+            text="Delete this cluster"
+            variant="destructive"
+            [disabled]="namespaces().length > 0 || namespacesLoadError()"
+          ></nldd-button>
         </div>
-      </div>
-
-      <!-- Danger Zone -->
-      <div
-        class="bg-danger-50 dark:bg-danger-900/20 rounded-md border border-rose-200 p-4 dark:border-rose-900"
-      >
-        <h3 class="text-danger-800 dark:text-danger-200 mb-2 text-lg font-medium">Danger zone</h3>
-        <p class="text-danger-700 dark:text-danger-300 mb-4">
-          Deleting a cluster is permanent and cannot be undone.
-        </p>
-        @if (namespaces().length > 0) {
-          <p class="text-danger-700 dark:text-danger-300 mb-4 text-sm">
-            This cluster still has {{ namespaces().length }} namespace{{
-              namespaces().length === 1 ? '' : 's'
-            }}.
-            <a [routerLink]="['/clusters', clusterData.basics.id, 'namespaces']" class="link"
-              >Delete all namespaces</a
-            >
-            before you can delete the cluster.
-          </p>
-        } @else if (namespacesLoadError()) {
-          <p class="text-danger-700 dark:text-danger-300 mb-4 text-sm">
-            Couldn't load this cluster's namespaces, so deletion is blocked until we can confirm it
-            is empty. Reload the page and try again.
-          </p>
-        }
-        <nldd-button
-          (click)="showDeleteModal.set(true)"
-          text="Delete this cluster"
-          variant="destructive"
-          [disabled]="namespaces().length > 0 || namespacesLoadError()"
-        ></nldd-button>
-      </div>
-    </div>
-  </div>
-}
+      </nldd-container>
+    }
+  </nldd-simple-section>
+</nldd-page>
 
 <!-- Metrics credentials modal -->
 <nldd-modal-dialog

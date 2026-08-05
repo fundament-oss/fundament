@@ -9,10 +9,12 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
+  effect,
 } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import PageNavService from '../page-nav.service';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { CLUSTER, NAMESPACE, PLUGIN } from '../../connect/tokens';
@@ -127,6 +129,28 @@ const getEventDetails = (event: ClusterEvent): string => {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ClusterDetailsComponent implements OnInit, OnDestroy {
+  protected pageNav = inject(PageNavService);
+
+  /**
+   * nldd-top-title-bar resolves `collapse-anchor` once, when the attribute
+   * changes, and never retries. The heading it points at only renders once the
+   * cluster has loaded, so at that moment there is nothing to find and the bar
+   * never wires up its scroll listener. Re-set the attribute when the content
+   * appears, so it resolves against a DOM that now has the heading.
+   */
+  private rearmCollapseAnchor = effect(() => {
+    if (this.isLoading()) return;
+    queueMicrotask(() => {
+      const bar = document.querySelector('nldd-page > nldd-top-title-bar');
+      const anchor = bar?.getAttribute('collapse-anchor');
+      if (!bar || !anchor) return;
+      bar.removeAttribute('collapse-anchor');
+      (bar as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete?.then(() => {
+        bar.setAttribute('collapse-anchor', anchor);
+      });
+    });
+  });
+
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
