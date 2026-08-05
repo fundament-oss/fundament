@@ -91,6 +91,11 @@ message GetLogLabelsRequest {
   string cluster_id = 10 [(buf.validate.field).string = {uuid: true}];
   // Optional: scope the pod/container results to a single namespace.
   string namespace = 20;
+  // Optional time range: label values are time-scoped in Vali, so a range
+  // that matches the query window keeps dropdowns and results consistent.
+  // Defaults to the last 24 hours when not set.
+  google.protobuf.Timestamp start = 30 [features.field_presence = EXPLICIT];
+  google.protobuf.Timestamp end = 40 [features.field_presence = EXPLICIT];
 }
 
 // GetLogLabelsResponse contains distinct label values for filter dropdowns.

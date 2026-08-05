@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -195,7 +196,7 @@ func TestPerShootLogs_LabelsThroughProxy(t *testing.T) {
 	client, err := cache.clientFor(context.Background(), clusterID)
 	require.NoError(t, err)
 
-	labels, err := client.Labels(context.Background(), clusterID.String(), "")
+	labels, err := client.Labels(context.Background(), clusterID.String(), "", time.Time{}, time.Time{})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"kube-system"}, labels.Namespaces)
 }

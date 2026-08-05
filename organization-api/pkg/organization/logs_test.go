@@ -3,6 +3,8 @@ package organization_test
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -10,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
 	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
@@ -153,4 +156,185 @@ func Test_Logs_GetLogLabels_UnknownCluster_NotFound(t *testing.T) {
 	_, err := l.client.GetLogLabels(context.Background(), req)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+}
+
+// plutonoFake simulates a shoot Plutono behind the seed ingress basic auth
+// for handler-level tests: proxy by numeric id only, Vali behind id 2 with
+// fixed labels/streams, everything else admin-only or unable-to-load.
+type plutonoFake struct{}
+
+func (plutonoFake) handler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, _, ok := r.BasicAuth(); !ok {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/api/datasources/proxy/2/vali/api/v1/label/"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"status":"success","data":["kube-system"]}`))
+		case r.URL.Path == "/api/datasources/proxy/2/vali/api/v1/query_range":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"streams","result":[
+				{"stream":{"namespace_name":"kube-system","pod_name":"calico-node-x","container_name":"calico-node"},
+				 "values":[["1700000000000000000","calico says hi"]]}]}}`))
+		case strings.HasPrefix(r.URL.Path, "/api/datasources/proxy/"):
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"Unable to load datasource meta data"}`))
+		default:
+			w.WriteHeader(http.StatusForbidden)
+		}
+	})
+}
+
+func newPerShootLogsEnv(t *testing.T, g gardener.Client, extra ...APIOption) *logsEnv {
+	t.Helper()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+	opts := make([]APIOption, 0, 3+len(extra))
+	opts = append(opts,
+		WithOrganization(orgID, "logs-org"),
+		WithUser(&UserArgs{ID: userID, Name: "logs-user", OrgIDs: []uuid.UUID{orgID}}),
+		WithLogsBackend("per-shoot", g),
+	)
+	opts = append(opts, extra...)
+	env := newTestAPI(t, opts...)
+	token := env.createAuthnToken(t, userID)
+
+	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+	req := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+		Name:              "logs-cluster",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build())
+	req.Header().Set("Authorization", "Bearer "+token)
+	req.Header().Set("Fun-Organization", orgID.String())
+	res, err := clusterClient.CreateCluster(context.Background(), req)
+	require.NoError(t, err)
+
+	return &logsEnv{
+		env:       env,
+		token:     token,
+		orgID:     orgID,
+		clusterID: uuid.MustParse(res.Msg.GetClusterId()),
+		client:    organizationv1connect.NewLogsServiceClient(env.server.Client(), env.server.URL),
+	}
+}
+
+// Spec scenario "Hibernated or provisioning shoot": a missing monitoring
+// secret degrades to empty responses marked LOG_BACKEND_NONE — never a
+// connect error.
+func Test_Logs_PerShoot_MonitoringMissing_Degrades(t *testing.T) {
+	t.Parallel()
+	// An empty mapGardener answers ErrNotFound for every cluster.
+	l := newPerShootLogsEnv(t, &mapGardener{info: make(map[uuid.UUID]*gardener.MonitoringInfo)})
+
+	qreq := connect.NewRequest(organizationv1.QueryLogsRequest_builder{
+		ClusterId: l.clusterID.String(),
+	}.Build())
+	l.authed(qreq.Header())
+	qres, err := l.client.QueryLogs(context.Background(), qreq)
+	require.NoError(t, err, "a cluster without logs must not fail the RPC")
+	assert.Empty(t, qres.Msg.GetEntries())
+	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_NONE, qres.Msg.GetBackend())
+
+	lreq := connect.NewRequest(organizationv1.GetLogLabelsRequest_builder{
+		ClusterId: l.clusterID.String(),
+	}.Build())
+	l.authed(lreq.Header())
+	lres, err := l.client.GetLogLabels(context.Background(), lreq)
+	require.NoError(t, err)
+	assert.Empty(t, lres.Msg.GetNamespaces())
+	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_NONE, lres.Msg.GetBackend())
+}
+
+// Spec scenario dead backend: the monitoring secret resolves but the seed
+// ingress is unreachable — still empty + LOG_BACKEND_NONE, no connect error.
+func Test_Logs_PerShoot_DeadBackend_Degrades(t *testing.T) {
+	t.Parallel()
+
+	closed := httptest.NewServer(http.NotFoundHandler())
+	closed.Close()
+	g := &mapGardener{info: make(map[uuid.UUID]*gardener.MonitoringInfo)}
+	l := newPerShootLogsEnv(t, g)
+	g.set(l.clusterID, &gardener.MonitoringInfo{URL: closed.URL, Username: "u", Password: "p"})
+
+	req := connect.NewRequest(organizationv1.QueryLogsRequest_builder{
+		ClusterId: l.clusterID.String(),
+	}.Build())
+	l.authed(req.Header())
+
+	res, err := l.client.QueryLogs(context.Background(), req)
+	require.NoError(t, err, "an unreachable backend must not fail the RPC")
+	assert.Empty(t, res.Msg.GetEntries())
+	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_NONE, res.Msg.GetBackend())
+}
+
+// Spec scenario "Plugin pod logs": a query pinned to a namespace+pod that
+// Vali does not cover reads through the kube-api-proxy with the caller's
+// token and reports LOG_BACKEND_KUBERNETES.
+func Test_Logs_PluginPod_RoutesThroughKubeProxy(t *testing.T) {
+	t.Parallel()
+
+	plutonoSrv := httptest.NewServer(plutonoFake{}.handler())
+	t.Cleanup(plutonoSrv.Close)
+	g := &mapGardener{info: make(map[uuid.UUID]*gardener.MonitoringInfo)}
+
+	var gotPath, gotAuth string
+	kube := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotAuth = r.Header.Get("Authorization")
+		_, _ = w.Write([]byte("2026-08-05T12:00:00.000000000Z plugin says hi\n"))
+	}))
+	t.Cleanup(kube.Close)
+
+	l := newPerShootLogsEnv(t, g, WithKubeAPIProxy(kube.URL))
+	g.set(l.clusterID, &gardener.MonitoringInfo{URL: plutonoSrv.URL, Username: "u", Password: "p"})
+
+	req := connect.NewRequest(organizationv1.QueryLogsRequest_builder{
+		ClusterId: l.clusterID.String(),
+		Namespace: "plugin-envoy-gateway",
+		Pod:       "envoy-gateway-abc",
+	}.Build())
+	l.authed(req.Header())
+
+	res, err := l.client.QueryLogs(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, res.Msg.GetEntries(), 1)
+	assert.Equal(t, "plugin says hi", res.Msg.GetEntries()[0].GetMessage())
+	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_KUBERNETES, res.Msg.GetBackend())
+	assert.Contains(t, gotPath, "/namespaces/plugin-envoy-gateway/pods/envoy-gateway-abc/log")
+	assert.Equal(t, "Bearer "+l.token, gotAuth)
+}
+
+// A namespace Vali does cover stays on the Vali backend even when a pod is
+// selected.
+func Test_Logs_SystemPod_StaysOnVali(t *testing.T) {
+	t.Parallel()
+
+	plutonoSrv := httptest.NewServer(plutonoFake{}.handler())
+	t.Cleanup(plutonoSrv.Close)
+	g := &mapGardener{info: make(map[uuid.UUID]*gardener.MonitoringInfo)}
+
+	kube := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	t.Cleanup(kube.Close)
+
+	l := newPerShootLogsEnv(t, g, WithKubeAPIProxy(kube.URL))
+	g.set(l.clusterID, &gardener.MonitoringInfo{URL: plutonoSrv.URL, Username: "u", Password: "p"})
+
+	req := connect.NewRequest(organizationv1.QueryLogsRequest_builder{
+		ClusterId: l.clusterID.String(),
+		Namespace: "kube-system",
+		Pod:       "calico-node-x",
+	}.Build())
+	l.authed(req.Header())
+
+	res, err := l.client.QueryLogs(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, organizationv1.LogBackend_LOG_BACKEND_LOKI, res.Msg.GetBackend())
+	require.Len(t, res.Msg.GetEntries(), 1)
+	assert.Equal(t, "calico says hi", res.Msg.GetEntries()[0].GetMessage())
 }

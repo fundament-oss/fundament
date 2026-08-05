@@ -129,7 +129,7 @@ func TestLokiClient_Labels(t *testing.T) {
 	defer srv.Close()
 
 	c := NewLokiClient(srv.URL)
-	labels, err := c.Labels(context.Background(), "cluster-1", "prod")
+	labels, err := c.Labels(context.Background(), "cluster-1", "prod", time.Time{}, time.Time{})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"prod", "staging"}, labels.Namespaces)
 	assert.Equal(t, []string{"api-1"}, labels.Pods)

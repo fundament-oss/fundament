@@ -621,6 +621,8 @@ type GetLogLabelsRequest struct {
 	state                protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_ClusterId string                 `protobuf:"bytes,10,opt,name=cluster_id,json=clusterId"`
 	xxx_hidden_Namespace string                 `protobuf:"bytes,20,opt,name=namespace"`
+	xxx_hidden_Start     *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=start"`
+	xxx_hidden_End       *timestamppb.Timestamp `protobuf:"bytes,40,opt,name=end"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -664,6 +666,20 @@ func (x *GetLogLabelsRequest) GetNamespace() string {
 	return ""
 }
 
+func (x *GetLogLabelsRequest) GetStart() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_Start
+	}
+	return nil
+}
+
+func (x *GetLogLabelsRequest) GetEnd() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_End
+	}
+	return nil
+}
+
 func (x *GetLogLabelsRequest) SetClusterId(v string) {
 	x.xxx_hidden_ClusterId = v
 }
@@ -672,12 +688,47 @@ func (x *GetLogLabelsRequest) SetNamespace(v string) {
 	x.xxx_hidden_Namespace = v
 }
 
+func (x *GetLogLabelsRequest) SetStart(v *timestamppb.Timestamp) {
+	x.xxx_hidden_Start = v
+}
+
+func (x *GetLogLabelsRequest) SetEnd(v *timestamppb.Timestamp) {
+	x.xxx_hidden_End = v
+}
+
+func (x *GetLogLabelsRequest) HasStart() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Start != nil
+}
+
+func (x *GetLogLabelsRequest) HasEnd() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_End != nil
+}
+
+func (x *GetLogLabelsRequest) ClearStart() {
+	x.xxx_hidden_Start = nil
+}
+
+func (x *GetLogLabelsRequest) ClearEnd() {
+	x.xxx_hidden_End = nil
+}
+
 type GetLogLabelsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	ClusterId string
 	// Optional: scope the pod/container results to a single namespace.
 	Namespace string
+	// Optional time range: label values are time-scoped in Vali, so a range
+	// that matches the query window keeps dropdowns and results consistent.
+	// Defaults to the last 24 hours when not set.
+	Start *timestamppb.Timestamp
+	End   *timestamppb.Timestamp
 }
 
 func (b0 GetLogLabelsRequest_builder) Build() *GetLogLabelsRequest {
@@ -686,6 +737,8 @@ func (b0 GetLogLabelsRequest_builder) Build() *GetLogLabelsRequest {
 	_, _ = b, x
 	x.xxx_hidden_ClusterId = b.ClusterId
 	x.xxx_hidden_Namespace = b.Namespace
+	x.xxx_hidden_Start = b.Start
+	x.xxx_hidden_End = b.End
 	return m0
 }
 
@@ -830,12 +883,14 @@ const file_v1_logs_proto_rawDesc = "" +
 	"\tnamespace\x18\x14 \x01(\tR\tnamespace\x12\x10\n" +
 	"\x03pod\x18\x1e \x01(\tR\x03pod\x12\x1c\n" +
 	"\tcontainer\x18( \x01(\tR\tcontainer\x12\x16\n" +
-	"\x06search\x18< \x01(\tR\x06search\"\\\n" +
+	"\x06search\x18< \x01(\tR\x06search\"\xca\x01\n" +
 	"\x13GetLogLabelsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\x12\x1c\n" +
-	"\tnamespace\x18\x14 \x01(\tR\tnamespace\"\xa1\x01\n" +
+	"\tnamespace\x18\x14 \x01(\tR\tnamespace\x127\n" +
+	"\x05start\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
+	"\x03end\x18( \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\"\xa1\x01\n" +
 	"\x14GetLogLabelsResponse\x12\x1e\n" +
 	"\n" +
 	"namespaces\x18\n" +
@@ -877,18 +932,20 @@ var file_v1_logs_proto_depIdxs = []int32{
 	8,  // 3: organization.v1.QueryLogsRequest.end:type_name -> google.protobuf.Timestamp
 	1,  // 4: organization.v1.QueryLogsResponse.entries:type_name -> organization.v1.LogEntry
 	0,  // 5: organization.v1.QueryLogsResponse.backend:type_name -> organization.v1.LogBackend
-	0,  // 6: organization.v1.GetLogLabelsResponse.backend:type_name -> organization.v1.LogBackend
-	2,  // 7: organization.v1.LogsService.QueryLogs:input_type -> organization.v1.QueryLogsRequest
-	4,  // 8: organization.v1.LogsService.TailLogs:input_type -> organization.v1.TailLogsRequest
-	5,  // 9: organization.v1.LogsService.GetLogLabels:input_type -> organization.v1.GetLogLabelsRequest
-	3,  // 10: organization.v1.LogsService.QueryLogs:output_type -> organization.v1.QueryLogsResponse
-	1,  // 11: organization.v1.LogsService.TailLogs:output_type -> organization.v1.LogEntry
-	6,  // 12: organization.v1.LogsService.GetLogLabels:output_type -> organization.v1.GetLogLabelsResponse
-	10, // [10:13] is the sub-list for method output_type
-	7,  // [7:10] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	8,  // 6: organization.v1.GetLogLabelsRequest.start:type_name -> google.protobuf.Timestamp
+	8,  // 7: organization.v1.GetLogLabelsRequest.end:type_name -> google.protobuf.Timestamp
+	0,  // 8: organization.v1.GetLogLabelsResponse.backend:type_name -> organization.v1.LogBackend
+	2,  // 9: organization.v1.LogsService.QueryLogs:input_type -> organization.v1.QueryLogsRequest
+	4,  // 10: organization.v1.LogsService.TailLogs:input_type -> organization.v1.TailLogsRequest
+	5,  // 11: organization.v1.LogsService.GetLogLabels:input_type -> organization.v1.GetLogLabelsRequest
+	3,  // 12: organization.v1.LogsService.QueryLogs:output_type -> organization.v1.QueryLogsResponse
+	1,  // 13: organization.v1.LogsService.TailLogs:output_type -> organization.v1.LogEntry
+	6,  // 14: organization.v1.LogsService.GetLogLabels:output_type -> organization.v1.GetLogLabelsResponse
+	12, // [12:15] is the sub-list for method output_type
+	9,  // [9:12] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_v1_logs_proto_init() }

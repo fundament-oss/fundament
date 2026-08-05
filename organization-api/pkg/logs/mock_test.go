@@ -63,13 +63,13 @@ func TestMockClientQueryFilters(t *testing.T) {
 func TestMockClientLabels(t *testing.T) {
 	m := NewMockClient()
 
-	all, err := m.Labels(context.Background(), "c", "")
+	all, err := m.Labels(context.Background(), "c", "", time.Time{}, time.Time{})
 	require.NoError(t, err)
 	assert.Contains(t, all.Namespaces, "kube-system")
 	assert.Contains(t, all.Namespaces, "plugin-envoy-gateway")
 	assert.NotEmpty(t, all.Pods)
 
-	scoped, err := m.Labels(context.Background(), "c", "monitoring")
+	scoped, err := m.Labels(context.Background(), "c", "monitoring", time.Time{}, time.Time{})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"node-exporter-vw6p8"}, scoped.Pods)
 	assert.Equal(t, []string{"node-exporter"}, scoped.Containers)

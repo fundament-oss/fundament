@@ -23,7 +23,7 @@ func TestKubeClient_Query(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewKubeClient(srv.URL, "user-jwt")
+	c := NewKubeClient(srv.URL, http.Header{"Authorization": {"Bearer user-jwt"}})
 	entries, err := c.Query(context.Background(), &QueryParams{
 		ClusterID: "cluster-1",
 		Namespace: "prod",
@@ -47,7 +47,7 @@ func TestKubeClient_Query(t *testing.T) {
 }
 
 func TestKubeClient_QueryRequiresPod(t *testing.T) {
-	c := NewKubeClient("http://example", "tok")
+	c := NewKubeClient("http://example", nil)
 	_, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Namespace: "prod"})
 	require.ErrorIs(t, err, ErrPodRequired)
 }
@@ -59,7 +59,7 @@ func TestKubeClient_QueryHTTPError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewKubeClient(srv.URL, "tok")
+	c := NewKubeClient(srv.URL, nil)
 	_, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Namespace: "prod", Pod: "api-1"})
 	require.Error(t, err, "expected error on 403")
 }

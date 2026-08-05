@@ -166,7 +166,7 @@ func (c *LokiClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 	return out, nil
 }
 
-func (c *LokiClient) Labels(ctx context.Context, _ /*clusterID*/, namespace string) (Labels, error) {
+func (c *LokiClient) Labels(ctx context.Context, _ /*clusterID*/, namespace string, start, end time.Time) (Labels, error) {
 	scope := ""
 	if namespace != "" {
 		scope = fmt.Sprintf("{%s=%q}", labelNamespace, namespace)
@@ -175,28 +175,34 @@ func (c *LokiClient) Labels(ctx context.Context, _ /*clusterID*/, namespace stri
 		labels Labels
 		err    error
 	)
-	if labels.Namespaces, err = c.labelValues(ctx, labelNamespace, ""); err != nil {
+	if labels.Namespaces, err = c.labelValues(ctx, labelNamespace, "", start, end); err != nil {
 		return Labels{}, err
 	}
-	if labels.Pods, err = c.labelValues(ctx, labelPod, scope); err != nil {
+	if labels.Pods, err = c.labelValues(ctx, labelPod, scope, start, end); err != nil {
 		return Labels{}, err
 	}
-	if labels.Containers, err = c.labelValues(ctx, labelContainer, scope); err != nil {
+	if labels.Containers, err = c.labelValues(ctx, labelContainer, scope, start, end); err != nil {
 		return Labels{}, err
 	}
 	return labels, nil
 }
 
-func (c *LokiClient) labelValues(ctx context.Context, name, query string) ([]string, error) {
+func (c *LokiClient) labelValues(ctx context.Context, name, query string, start, end time.Time) ([]string, error) {
 	u, err := url.Parse(c.baseURL + apiPrefix + "/label/" + name + "/values")
 	if err != nil {
 		return nil, fmt.Errorf("parse url: %w", err)
 	}
+	q := u.Query()
 	if query != "" {
-		q := u.Query()
 		q.Set("query", query)
-		u.RawQuery = q.Encode()
 	}
+	if !start.IsZero() {
+		q.Set("start", strconv.FormatInt(start.UnixNano(), 10))
+	}
+	if !end.IsZero() {
+		q.Set("end", strconv.FormatInt(end.UnixNano(), 10))
+	}
+	u.RawQuery = q.Encode()
 	req, err := c.newRequest(ctx, u.String())
 	if err != nil {
 		return nil, err

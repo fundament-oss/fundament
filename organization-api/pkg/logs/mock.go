@@ -122,7 +122,7 @@ func (m *MockClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 }
 
 // Labels lists the synthetic streams' label values.
-func (m *MockClient) Labels(_ context.Context, _, namespace string) (Labels, error) {
+func (m *MockClient) Labels(_ context.Context, _, namespace string, _, _ time.Time) (Labels, error) {
 	var l Labels
 	seenNS := map[string]bool{}
 	seenPod := map[string]bool{}

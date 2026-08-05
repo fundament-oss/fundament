@@ -101,9 +101,9 @@ func (p *perShootLogsClient) Tail(ctx context.Context, params *logs.QueryParams)
 	})
 }
 
-func (p *perShootLogsClient) Labels(ctx context.Context, clusterID, namespace string) (logs.Labels, error) {
+func (p *perShootLogsClient) Labels(ctx context.Context, clusterID, namespace string, start, end time.Time) (logs.Labels, error) {
 	return callWithReResolve(ctx, p, func(inner logs.Client) (logs.Labels, error) {
-		return inner.Labels(ctx, clusterID, namespace)
+		return inner.Labels(ctx, clusterID, namespace, start, end)
 	})
 }
 

@@ -384,7 +384,8 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     const clusterId = this.selectedCluster();
     if (!clusterId) return;
     try {
-      const labels = await this.logsApi.labels(clusterId);
+      const { from, to } = this.timeRange();
+      const labels = await this.logsApi.labels(clusterId, undefined, from, to);
       this.backend.set(labels.backend);
       this.namespaces.set(labels.namespaces);
       this.pods.set(labels.pods);
@@ -399,7 +400,16 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     const clusterId = this.selectedCluster();
     if (!clusterId) return;
     try {
-      const labels = await this.logsApi.labels(clusterId, this.selectedNamespace() || undefined);
+      const { from, to } = this.timeRange();
+      const labels = await this.logsApi.labels(
+        clusterId,
+        this.selectedNamespace() || undefined,
+        from,
+        to,
+      );
+      // The namespace list is unscoped in the response, so it can refresh
+      // here too (it is time-scoped, like all label values).
+      this.namespaces.set(labels.namespaces);
       this.pods.set(labels.pods);
       this.containers.set(labels.containers);
     } catch {
@@ -613,6 +623,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   onTimePresetChange(value: string): void {
     this.timePreset.set(value);
     this.currentPage.set(0);
+    // Label values are time-scoped in the backend, so the filter dropdowns
+    // must follow the active window.
+    void this.refineLabels();
     void this.loadLogs();
   }
 
