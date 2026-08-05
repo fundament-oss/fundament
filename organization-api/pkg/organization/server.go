@@ -26,15 +26,17 @@ import (
 )
 
 type Config struct {
-	JWTSecret            []byte
-	CORSAllowedOrigins   []string
-	Clock                clock.Clock
-	MockPrometheusClient *prom.MockClient
-	MockLogsClient       *logs.MockClient
-	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
-	PrometheusCAFile     string // PEM bundle trusted for Prometheus/ingress TLS (e.g. Gardener seed CAs in local dev)
-	KubeAPIProxyURL      string // Base URL for the kube-api-proxy (e.g. "https://kube-proxy.fundament.example")
-	GardenerClient       gardener.Client
+	JWTSecret               []byte
+	CORSAllowedOrigins      []string
+	Clock                   clock.Clock
+	MockPrometheusClient    *prom.MockClient
+	MockLogsClient          *logs.MockClient
+	PrometheusURL           string // Prometheus URL for metrics; "mock" uses generated data
+	LogsURL                 string // Logs backend selector: "mock", "per-shoot", or a global Loki-API URL
+	PrometheusCAFile        string // PEM bundle trusted for Prometheus/Plutono/ingress TLS (e.g. Gardener seed CAs in local dev)
+	KubeAPIProxyURL         string // Browser-facing kube-api-proxy URL (embedded in kubeconfigs handed to users)
+	KubeAPIProxyInternalURL string // kube-api-proxy URL for org-api's own server-side calls; falls back to KubeAPIProxyURL
+	GardenerClient          gardener.Client
 }
 
 type Server struct {
@@ -50,9 +52,12 @@ type Server struct {
 	mockPromClient *prom.MockClient
 	mockLogsClient *logs.MockClient
 	prometheusURL  string
+	logsURL        string
 	promOpts       []prom.Option
+	logsOpts       []logs.Option
 	gardener       gardener.Client
 	perShoot       *perShootClients
+	perShootLogs   *perShootLogs
 }
 
 // Option configures optional Server dependencies.
@@ -76,13 +81,17 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		gardenerClient = gardener.NoopClient{}
 	}
 
+	// One CA bundle covers every seed-ingress upstream (per-shoot Prometheus
+	// and Plutono/Vali share the same ingress certificates).
 	var promOpts []prom.Option
+	var logsOpts []logs.Option
 	if cfg.PrometheusCAFile != "" {
 		transport, err := prom.TransportWithCA(cfg.PrometheusCAFile)
 		if err != nil {
 			return nil, fmt.Errorf("load prometheus CA bundle: %w", err)
 		}
 		promOpts = append(promOpts, prom.WithTransport(transport))
+		logsOpts = append(logsOpts, logs.WithTransport(transport))
 	}
 
 	s := &Server{
@@ -96,9 +105,12 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		mockPromClient: cfg.MockPrometheusClient,
 		mockLogsClient: cfg.MockLogsClient,
 		prometheusURL:  cfg.PrometheusURL,
+		logsURL:        cfg.LogsURL,
 		promOpts:       promOpts,
+		logsOpts:       logsOpts,
 		gardener:       gardenerClient,
 		perShoot:       newPerShootClients(gardenerClient, logger, promOpts...),
+		perShootLogs:   newPerShootLogs(gardenerClient, logger, logsOpts...),
 	}
 
 	for _, opt := range opts {

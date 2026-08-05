@@ -48,6 +48,7 @@ type apiOptions struct {
 	idempotency     bool
 	kubeAPIProxyURL string
 	prometheusURL   string
+	logsURL         string
 	gardenerClient  gardener.Client
 	mockLogsClient  *logs.MockClient
 }
@@ -139,6 +140,20 @@ func WithMockLogs(c *logs.MockClient) APIOption {
 	}
 }
 
+// WithLogsBackend sets the logs backend selection: logsURL semantics match
+// production ("mock" or "" for generated data, "per-shoot" for per-shoot Vali
+// resolution through the given Gardener client, or any other URL for one
+// global Loki-API backend). A nil Gardener client leaves the one configured
+// by other options in place.
+func WithLogsBackend(logsURL string, g gardener.Client) APIOption {
+	return func(o *apiOptions) {
+		o.logsURL = logsURL
+		if g != nil {
+			o.gardenerClient = g
+		}
+	}
+}
+
 func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 	opts := apiOptions{
 		t:             t,
@@ -163,6 +178,7 @@ func newTestAPI(t *testing.T, options ...APIOption) *testEnv {
 		Clock:              opts.clock,
 		KubeAPIProxyURL:    opts.kubeAPIProxyURL,
 		PrometheusURL:      opts.prometheusURL,
+		LogsURL:            opts.logsURL,
 		GardenerClient:     opts.gardenerClient,
 		MockLogsClient:     opts.mockLogsClient,
 	}

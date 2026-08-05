@@ -38,7 +38,7 @@ func DiscoverValiProxyBase(ctx context.Context, plutonoURL, username, password s
 		probe := NewLokiClientWithAuth(base, username, password, opts...)
 		probe.httpClient.Timeout = 10 * time.Second
 
-		_, err := probe.labelValues(ctx, labelNamespace, "")
+		_, err := probe.labelValues(ctx, labelNamespace, "", time.Time{}, time.Time{})
 		if err == nil {
 			return base, nil
 		}
