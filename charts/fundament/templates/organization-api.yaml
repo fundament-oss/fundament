@@ -35,6 +35,8 @@ spec:
               value: {{ .Values.organizationApi.logLevel }}
             - name: PROMETHEUS_URL
               value: {{ $.Values.organizationApi.prometheusURL | quote }}
+            - name: LOGS_URL
+              value: {{ $.Values.organizationApi.logsURL | quote }}
             {{- if $.Values.externalUrls.corsAllowedOrigins }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ $.Values.externalUrls.corsAllowedOrigins }}
@@ -42,6 +44,10 @@ spec:
             {{- if $.Values.externalUrls.kubeApiProxy }}
             - name: KUBE_API_PROXY_URL
               value: {{ $.Values.externalUrls.kubeApiProxy }}
+            # org-api's own calls to the proxy (plugin-pod logs) go over the
+            # in-cluster Service; the external URL above is browser-facing.
+            - name: KUBE_API_PROXY_INTERNAL_URL
+              value: http://kube-api-proxy:8081
             {{- end }}
             {{- if $.Values.organizationApi.kubeApiProxyInsecure }}
             - name: KUBE_API_PROXY_INSECURE
