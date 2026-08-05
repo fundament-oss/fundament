@@ -16,10 +16,7 @@
     <div
       class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
     >
-      <nldd-icon
-        name="info-circle"
-        class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
-      ></nldd-icon>
+      <nldd-icon name="info-circle" class="mt-0.5 shrink-0" size="20" color="accent"></nldd-icon>
       <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Organization admins can manage members across all projects. This permission overrides
@@ -52,15 +49,12 @@
       </p>
 
       @if (isLoading()) {
-        <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
-          <div role="status" class="flex justify-center">
-            <app-loading-indicator
-              class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
-            />
-            <span class="sr-only">Loading...</span>
-          </div>
-          <p class="mt-4 text-gray-600 dark:text-gray-300">Loading invitations...</p>
-        </div>
+        <nldd-simple-section>
+          <nldd-activity-indicator
+            show-text
+            text="Loading invitations..."
+          ></nldd-activity-indicator>
+        </nldd-simple-section>
       } @else if (pendingInvitations().length > 0) {
         <nldd-table accessible-label="Pending invitations" columns="minmax(200px, 1fr) 140px 120px">
           <nldd-table-row slot="header">
@@ -123,22 +117,18 @@
       </p>
 
       @if (isLoading()) {
-        <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
-          <div role="status" class="flex justify-center">
-            <app-loading-indicator
-              class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
-            />
-            <span class="sr-only">Loading...</span>
-          </div>
-          <p class="mt-4 text-gray-600 dark:text-gray-300">Loading members...</p>
-        </div>
+        <nldd-simple-section>
+          <nldd-activity-indicator show-text text="Loading members..."></nldd-activity-indicator>
+        </nldd-simple-section>
       } @else if (error()) {
         <div
           class="bg-danger-50 dark:bg-danger-950 rounded-md border border-rose-200 p-8 text-center dark:border-rose-800"
         >
           <nldd-icon
             name="exclamation-circle"
-            class="text-danger-400! mx-auto h-12 w-12"
+            class="mx-auto"
+            size="48"
+            color="critical"
           ></nldd-icon>
           <p class="text-danger-600 dark:text-danger-400 mt-2">{{ error() }}</p>
           <nldd-button

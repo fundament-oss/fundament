@@ -1,14 +1,8 @@
 <!-- Loading State -->
 @if (isLoading()) {
-  <div class="py-12 text-center">
-    <div role="status" class="flex justify-center">
-      <app-loading-indicator
-        class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
-      />
-      <span class="sr-only">Loading...</span>
-    </div>
-    <p class="mt-4 text-gray-500 dark:text-gray-400">Loading projects...</p>
-  </div>
+  <nldd-simple-section>
+    <nldd-activity-indicator show-text text="Loading projects..."></nldd-activity-indicator>
+  </nldd-simple-section>
 }
 
 <!-- Content (only show when not loading) -->
@@ -71,7 +65,7 @@
                   routerLink="/clusters/{{ project.clusterId }}"
                   class="focus-visible:ring-accent-500 mt-1 inline-flex max-w-full items-center gap-1.5 rounded text-sm font-medium text-gray-500 hover:text-gray-700 focus-visible:ring-2 focus-visible:outline-none dark:text-gray-400 dark:hover:text-gray-200"
                 >
-                  <nldd-icon name="ship-wheel" class="h-3.5 w-3.5 shrink-0"></nldd-icon>
+                  <nldd-icon name="ship-wheel" class="shrink-0" size="16"></nldd-icon>
                   <span class="truncate">{{ project.clusterName }}</span>
                 </a>
               </div>

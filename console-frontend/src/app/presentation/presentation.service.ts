@@ -9,6 +9,7 @@ import {
   Locale,
   Localized,
   LOCALE_STORAGE_KEY,
+  PRESENT_STORAGE_KEY,
   UI,
 } from './i18n';
 import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
@@ -107,7 +108,16 @@ export default class PresentationService {
     // Resolve the locale before the present=0 bail-out, so the signal is correct
     // even when the walkthrough is switched off.
     this.locale.set(resolveLocale(params.get('lang')));
-    if (params.get('present') === '0') return;
+
+    // `?present=0` is remembered, like the locale is: the router drops query
+    // params on its first navigation, so the flag would not survive a refresh.
+    // Any other value clears it, so `?present=1` switches the walkthrough back on.
+    const present = params.get('present');
+    if (present === '0') localStorage.setItem(PRESENT_STORAGE_KEY, '1');
+    else if (present !== null) localStorage.removeItem(PRESENT_STORAGE_KEY);
+
+    if (localStorage.getItem(PRESENT_STORAGE_KEY) === '1') return;
+
     const tourId = params.get('tour');
     if (!tourId) {
       this.startTour(DEFAULT_TOUR_ID);

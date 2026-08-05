@@ -91,15 +91,9 @@
 
       <!-- Loading State -->
       @if (isLoading()) {
-        <div class="py-12 text-center">
-          <div role="status" class="flex justify-center">
-            <app-loading-indicator
-              class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
-            />
-            <span class="sr-only">Loading...</span>
-          </div>
-          <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">Loading plugins...</p>
-        </div>
+        <nldd-simple-section>
+          <nldd-activity-indicator show-text text="Loading plugins..."></nldd-activity-indicator>
+        </nldd-simple-section>
       }
 
       <!-- Empty State -->

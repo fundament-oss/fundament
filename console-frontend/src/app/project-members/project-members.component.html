@@ -12,14 +12,11 @@
     <div
       class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
     >
-      <nldd-icon
-        name="info-circle"
-        class="text-accent-600! dark:text-accent-400! mt-0.5 h-5 w-5 shrink-0"
-      ></nldd-icon>
+      <nldd-icon name="info-circle" class="mt-0.5 shrink-0" size="20" color="accent"></nldd-icon>
       <div class="text-accent-700 dark:text-accent-300">
         <p class="mb-2">
           Members marked with
-          <nldd-icon name="lock-closed" class="inline-block h-3.5 w-3.5 align-middle"></nldd-icon>
+          <nldd-icon name="lock-closed" class="inline-block align-middle" size="16"></nldd-icon>
           inherit their permission from the organization level and cannot be changed here. Modify
           these in
           <a
@@ -57,7 +54,9 @@
       >
         <nldd-icon
           name="exclamation-circle"
-          class="text-danger-400! mt-0.5 h-5 w-5 shrink-0"
+          class="mt-0.5 shrink-0"
+          size="20"
+          color="critical"
         ></nldd-icon>
         <div class="flex-1">
           <p class="text-danger-600 dark:text-danger-400">{{ error() }}</p>
@@ -72,15 +71,9 @@
     }
 
     @if (isLoading()) {
-      <div class="rounded-md border border-gray-200 p-8 text-center dark:border-gray-800">
-        <div role="status" class="flex justify-center">
-          <app-loading-indicator
-            class="fill-accent-600 dark:fill-accent-400 h-8 w-8 animate-spin text-gray-200 dark:text-gray-800"
-          />
-          <span class="sr-only">Loading...</span>
-        </div>
-        <p class="mt-4 text-gray-600 dark:text-gray-300">Loading members...</p>
-      </div>
+      <nldd-simple-section>
+        <nldd-activity-indicator show-text text="Loading members..."></nldd-activity-indicator>
+      </nldd-simple-section>
     } @else if (memberViews().length === 0) {
       <nldd-box>
         <nldd-inline-dialog
@@ -130,7 +123,7 @@
             <nldd-cell hide-below="lg" width="full">
               @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
                 <span class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                  <nldd-icon name="lock-closed" class="h-3.5 w-3.5"></nldd-icon>
+                  <nldd-icon name="lock-closed" size="16"></nldd-icon>
                   Organization
                 </span>
               } @else if (view.source === 'org') {
