@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   OnInit,
   OnDestroy,
   ChangeDetectionStrategy,
@@ -11,7 +12,7 @@ import {
   ElementRef,
   effect,
 } from '@angular/core';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import PageNavService from '../page-nav.service';
@@ -34,7 +35,6 @@ import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
-import { LoadingIndicatorComponent } from '../icons';
 import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
@@ -44,10 +44,26 @@ const getUsagePercentage = (used: number, limit: number): number =>
   Math.round((used / limit) * 100);
 
 const getUsageColor = (percentage: number): string => {
-  if (percentage >= 90) return 'bg-danger-500';
-  if (percentage >= 75) return 'bg-yellow-500';
-  return 'bg-green-500';
+  if (percentage >= 90) return 'critical';
+  if (percentage >= 75) return 'warning';
+  return 'success';
 };
+
+interface ResourceMetric {
+  label: string;
+  color: string;
+  used: number;
+  limit: number;
+  valueText: string;
+  accessibleLabel: string;
+}
+
+/** `plugin.name` is the install identifier (e.g. "openfsc") that names the
+ *  PluginInstallation resource, so it is never what a user should read. */
+const pluginDisplayName = (plugin: PluginSummary): string => plugin.displayName || plugin.name;
+
+const pluginIconSrc = (plugin: PluginSummary): string =>
+  `/img/plugins/${plugin.name.toLowerCase().replace(/[^a-z]+/g, '-')}.svg`;
 
 const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   const labels: Record<NodePoolStatus, string> = {
@@ -94,19 +110,11 @@ const getEventTypeLabel = (eventType: string): string => {
   return labels[eventType] || eventType;
 };
 
-const getEventTypeColor = (eventType: string): string => {
-  const colors: Record<string, string> = {
-    sync_requested: 'bg-blue-500',
-    sync_claimed: 'bg-blue-500',
-    sync_succeeded: 'bg-green-500',
-    sync_failed: 'bg-danger-500',
-    status_progressing: 'bg-blue-500',
-    status_ready: 'bg-green-500',
-    status_error: 'bg-danger-500',
-    status_deleted: 'bg-gray-500',
-  };
-  return colors[eventType] || 'bg-gray-500';
-};
+/** Only failures get tinted. On a timeline every dot is the same neutral track
+ *  color, so the row itself has to carry the one distinction that matters — and
+ *  the event label names it too, so color is never the sole signal. */
+const getEventTypeColor = (eventType: string): string =>
+  eventType === 'sync_failed' || eventType === 'status_error' ? 'critical' : 'default';
 
 const getEventDetails = (event: ClusterEvent): string => {
   if (event.message) {
@@ -123,7 +131,7 @@ const getEventDetails = (event: ClusterEvent): string => {
 
 @Component({
   selector: 'app-cluster-details',
-  imports: [RouterLink, LoadingIndicatorComponent, DialogSyncDirective],
+  imports: [RouterOutlet, DialogSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -188,6 +196,34 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   isLoading = signal<boolean>(true);
 
   showDeleteModal = signal<boolean>(false);
+
+  showDeleteBlockedModal = signal<boolean>(false);
+
+  /** Why deletion is blocked, or null when it is not. */
+  deleteBlockedReason = computed(() => {
+    const count = this.namespaces().length;
+    if (count > 0) {
+      return `This cluster still has ${count} namespace${count === 1 ? '' : 's'}. Kubernetes will not release a cluster while namespaces are running on it, so remove them first and then delete the cluster.`;
+    }
+    if (this.namespacesLoadError()) {
+      return "We couldn't load this cluster's namespaces, so there is no way to confirm it is empty. Reload the page and try again.";
+    }
+    return null;
+  });
+
+  /** The button stays enabled either way: blocked means "explain", not "ignore". */
+  onDeleteClusterClick(): void {
+    if (this.deleteBlockedReason()) {
+      this.showDeleteBlockedModal.set(true);
+      return;
+    }
+    this.showDeleteModal.set(true);
+  }
+
+  goToNamespaces(): void {
+    this.showDeleteBlockedModal.set(false);
+    this.pageNav.goTo(`/clusters/${this.clusterData.basics.id}/namespaces`);
+  }
 
   showCredentialsModal = signal<boolean>(false);
 
@@ -375,9 +411,30 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   readonly formatDate = formatDateTimeUtil;
 
-  getUsagePercentage = getUsagePercentage;
+  /** The four usage bars, each carrying its own display and ARIA text. A getter
+   *  rather than a computed: `clusterData` is a plain object the polling code
+   *  mutates in place, so there is no signal to derive from. */
+  get resourceMetrics(): ResourceMetric[] {
+    const usage = this.clusterData.resourceUsage;
 
-  getUsageColor = getUsageColor;
+    return [
+      { label: 'CPU', ...usage.cpu },
+      { label: 'Memory', ...usage.memory },
+      { label: 'Disk', ...usage.disk },
+      { label: 'Pods', ...usage.pods },
+    ].map(({ label, used, limit, unit }) => {
+      const percentage = getUsagePercentage(used, limit);
+
+      return {
+        label,
+        used,
+        limit,
+        color: getUsageColor(percentage),
+        valueText: `${used} / ${limit} ${unit} (${percentage}%)`,
+        accessibleLabel: `${used} of ${limit} ${unit} used, ${percentage}%`,
+      };
+    });
+  }
 
   openTerminal(): void {
     // Mock implementation - would open terminal in real app
@@ -532,6 +589,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   getEventTypeLabel = getEventTypeLabel;
 
   getEventTypeColor = getEventTypeColor;
+
+  pluginDisplayName = pluginDisplayName;
+
+  pluginIconSrc = pluginIconSrc;
 
   getEventDetails = getEventDetails;
 

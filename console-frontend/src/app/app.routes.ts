@@ -68,42 +68,6 @@ const routes: Routes = [
         ],
       },
       {
-        path: 'clusters/:id/nodes',
-        loadComponent: () =>
-          import('./cluster-nodes/cluster-nodes.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [
-            { label: 'Clusters', route: '/' },
-            { label: ':clusterName', route: '/clusters/:id' },
-            { label: 'Nodes' },
-          ],
-        },
-      },
-      {
-        path: 'clusters/:id/plugins',
-        loadComponent: () =>
-          import('./cluster-plugins/cluster-plugins.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [
-            { label: 'Clusters', route: '/' },
-            { label: ':clusterName', route: '/clusters/:id' },
-            { label: 'Plugins' },
-          ],
-        },
-      },
-      {
-        path: 'clusters/:id/namespaces',
-        loadComponent: () =>
-          import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [
-            { label: 'Clusters', route: '/' },
-            { label: ':clusterName', route: '/clusters/:id' },
-            { label: 'Namespaces' },
-          ],
-        },
-      },
-      {
         path: 'projects',
         loadComponent: () => import('./projects/projects.component').then((m) => m.default),
         data: {
@@ -140,6 +104,46 @@ const routes: Routes = [
         data: {
           breadcrumbs: [{ label: 'Clusters', route: '/' }, { label: ':clusterName' }],
         },
+        // Both editors open as a sheet over the detail page, so they are children
+        // of it: the page behind the sheet stays mounted and keeps its scroll.
+        children: [
+          {
+            path: 'nodes',
+            loadComponent: () =>
+              import('./cluster-nodes/cluster-nodes.component').then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: 'Clusters', route: '/' },
+                { label: ':clusterName', route: '/clusters/:id' },
+                { label: 'Nodes' },
+              ],
+            },
+          },
+          {
+            path: 'namespaces',
+            loadComponent: () =>
+              import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: 'Clusters', route: '/' },
+                { label: ':clusterName', route: '/clusters/:id' },
+                { label: 'Namespaces' },
+              ],
+            },
+          },
+          {
+            path: 'plugins',
+            loadComponent: () =>
+              import('./cluster-plugins/cluster-plugins.component').then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: 'Clusters', route: '/' },
+                { label: ':clusterName', route: '/clusters/:id' },
+                { label: 'Plugins' },
+              ],
+            },
+          },
+        ],
       },
       {
         path: 'projects/:id/namespaces',

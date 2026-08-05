@@ -8,7 +8,7 @@ import {
   viewChild,
   ElementRef,
 } from '@angular/core';
-import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -30,7 +30,6 @@ import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
 import DropdownSyncDirective from '../dropdown-sync.directive';
 import focusFirstModalInput from '../modal-focus';
-import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 import NamespaceSelection from '../utils/namespace-selection';
 
@@ -41,8 +40,6 @@ import NamespaceSelection from '../utils/namespace-selection';
     DialogSyncDirective,
     SheetSyncDirective,
     DropdownSyncDirective,
-    RouterLink,
-    LoadingIndicatorComponent,
     AutofocusDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -89,7 +86,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   projects = signal<Project[]>([]);
 
-  showAddNamespaceModal = signal<boolean>(false);
+  showAddNamespaceStep = signal<boolean>(false);
 
   isLoadingProjects = signal<boolean>(false);
 
@@ -172,10 +169,10 @@ export default class ClusterNamespacesComponent implements OnInit {
     return project?.alias || projectId;
   }
 
-  openAddNamespaceModal(): void {
+  openAddNamespaceStep(): void {
     this.namespaceForm.reset();
     this.createErrorMessage.set(null);
-    this.showAddNamespaceModal.set(true);
+    this.showAddNamespaceStep.set(true);
     this.loadProjects();
   }
 
@@ -200,7 +197,7 @@ export default class ClusterNamespacesComponent implements OnInit {
         signal: this.idempotency.reset(),
       });
 
-      this.showAddNamespaceModal.set(false);
+      this.showAddNamespaceStep.set(false);
       this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
 
       // Reload namespaces and organization data

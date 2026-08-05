@@ -17,6 +17,7 @@ import {
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
 import { CLUSTER } from '../../connect/tokens';
+import SheetSyncDirective from '../sheet-sync.directive';
 import {
   ListNodePoolsRequestSchema,
   CreateNodePoolRequestSchema,
@@ -30,7 +31,7 @@ import { fetchClusterName } from '../utils/cluster-status';
 
 @Component({
   selector: 'app-cluster-nodes',
-  imports: [SharedNodePoolsFormComponent],
+  imports: [SharedNodePoolsFormComponent, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-nodes.component.html',

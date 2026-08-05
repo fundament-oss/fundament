@@ -19,10 +19,11 @@ import { ClusterStatus } from '../../generated/v1/common_pb';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
+import SheetSyncDirective from '../sheet-sync.directive';
 
 @Component({
   selector: 'app-cluster-plugins',
-  imports: [SharedPluginsFormComponent],
+  imports: [SharedPluginsFormComponent, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './cluster-plugins.component.html',
@@ -55,6 +56,13 @@ export default class ClusterPluginsComponent implements OnInit {
   currentPluginIds = signal<string[]>([]);
 
   clusterName = signal<string | null>(null);
+
+  /** Falls back to the bare noun while the cluster name is still loading, so the
+   *  title bar never shows a dangling "Plugins for". */
+  protected pageTitle = computed(() => {
+    const name = this.clusterName();
+    return name ? `Plugins for ${name}` : 'Plugins';
+  });
 
   protected clusterStatus = signal<ClusterStatus>(ClusterStatus.UNSPECIFIED);
 

@@ -1,114 +1,126 @@
-<!-- Loading State -->
-@if (isLoading()) {
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Projects"
+    [attr.back-text]="pageNav.backText()"
+    collapse-anchor="projects-title"
+  ></nldd-top-title-bar>
+
   <nldd-simple-section>
-    <nldd-activity-indicator show-text text="Loading projects..."></nldd-activity-indicator>
-  </nldd-simple-section>
-}
+    <nldd-title id="projects-title" size="2">
+      <h1>Projects</h1>
+    </nldd-title>
+    <nldd-rich-text>
+      <p>Manage projects across your clusters.</p>
+    </nldd-rich-text>
 
-<!-- Content (only show when not loading) -->
-@if (!isLoading()) {
-  <div class="card">
-    <!-- Header -->
-    <div class="card-header">
-      <h1 class="text-3xl font-semibold">Projects</h1>
-      <p class="mt-1 text-gray-600 dark:text-gray-300">Manage projects across your clusters</p>
-
-      @if (clusters().length > 0) {
-        <nldd-button
-          routerLink="/projects/add"
-          text="Add project"
-          start-icon="plus-small"
-          variant="primary"
-          class="mt-4"
-        ></nldd-button>
-      }
-    </div>
-
-    <!-- Content -->
-    <div class="card-body-lg">
-      <!-- No clusters -->
-      @if (clusters().length === 0) {
-        <nldd-box>
-          <nldd-inline-dialog icon="ship-wheel" icon-color="secondary" text="No clusters found">
+    @if (isLoading()) {
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-activity-indicator show-text text="Loading projects..."></nldd-activity-indicator>
+    } @else {
+      @if (clusters().length > 0 && projects().length > 0) {
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-toolbar label="Project actions">
+          <nldd-toolbar-item slot="start">
             <nldd-button
-              routerLink="/clusters/add"
-              slot="actions"
-              text="Add cluster"
-              start-icon="plus-small"
-              variant="primary"
-            ></nldd-button>
-          </nldd-inline-dialog>
-        </nldd-box>
-      } @else if (projects().length === 0) {
-        <!-- No projects on any cluster -->
-        <nldd-box>
-          <nldd-inline-dialog icon="folder-on-folder" icon-color="secondary" text="No projects yet">
-            <nldd-button
-              slot="actions"
-              routerLink="/projects/add"
+              href="/projects/add"
               text="Add project"
               start-icon="plus-small"
               variant="primary"
+              (click)="pageNav.navigate($event, '/projects/add')"
             ></nldd-button>
-          </nldd-inline-dialog>
-        </nldd-box>
-      } @else {
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          @for (project of projects(); track project.id) {
-            <nldd-box>
-              <!-- Card header: project identity + the cluster it lives on -->
-              <div class="min-w-0 py-2">
-                <h2 class="truncate text-base font-semibold">
-                  {{ project.alias || project.name }}
-                </h2>
-                <a
-                  routerLink="/clusters/{{ project.clusterId }}"
-                  class="focus-visible:ring-accent-500 mt-1 inline-flex max-w-full items-center gap-1.5 rounded text-sm font-medium text-gray-500 hover:text-gray-700 focus-visible:ring-2 focus-visible:outline-none dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                  <nldd-icon name="ship-wheel" class="shrink-0" size="16"></nldd-icon>
-                  <span class="truncate">{{ project.clusterName }}</span>
-                </a>
-              </div>
-
-              <!-- Card content -->
-              <div class="flex flex-1 flex-col py-2">
-                <dl class="grid grid-cols-2 gap-x-6 gap-y-4">
-                  <div>
-                    <dt
-                      class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                    >
-                      Namespaces
-                    </dt>
-                    <dd class="mt-1 font-medium text-gray-700 dark:text-gray-200">
-                      {{ project.namespaceCount }}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt
-                      class="text-sm font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                    >
-                      Members
-                    </dt>
-                    <dd class="mt-1 font-medium text-gray-700 dark:text-gray-200">
-                      {{ project.memberCount }}
-                    </dd>
-                  </div>
-                </dl>
-
-                <!-- Card actions -->
-                <div class="mt-auto pt-5">
-                  <nldd-button
-                    [routerLink]="['/projects', project.id]"
-                    text="View project"
-                    start-icon="eye"
-                    variant="primary"
-                  ></nldd-button>
-                </div>
-              </div>
-            </nldd-box>
-          }
-        </div>
+          </nldd-toolbar-item>
+        </nldd-toolbar>
       }
-    </div>
-  </div>
-}
+
+      <nldd-spacer size="24"></nldd-spacer>
+
+      @if (clusters().length === 0) {
+        <!-- A project lives on a cluster, so without one there is nothing to add
+             it to; the empty state points at the cluster instead. -->
+        <nldd-inline-dialog
+          icon="ship-wheel"
+          icon-color="secondary"
+          text="No clusters yet"
+          supporting-text="A project runs on a cluster. Add one first."
+        >
+          <nldd-button
+            slot="actions"
+            href="/clusters/add"
+            text="Add cluster"
+            start-icon="plus-small"
+            variant="primary"
+            (click)="pageNav.navigate($event, '/clusters/add')"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      } @else if (projects().length === 0) {
+        <nldd-inline-dialog
+          icon="folder-on-folder"
+          icon-color="secondary"
+          text="No projects yet"
+          supporting-text="Add your first project to group namespaces and members."
+        >
+          <nldd-button
+            slot="actions"
+            href="/projects/add"
+            text="Add project"
+            start-icon="plus-small"
+            variant="primary"
+            (click)="pageNav.navigate($event, '/projects/add')"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      } @else {
+        <nldd-collection layout="grid" item-width="280px">
+          @for (project of projects(); track project.id) {
+            <!-- nldd-card leaves padding to nested containers, so the body gets one. -->
+            <nldd-card background="tinted">
+              <nldd-container padding="16">
+                <nldd-title size="4">
+                  <h2>{{ project.alias || project.name }}</h2>
+                  <nldd-tag
+                    slot="actions"
+                    icon="ship-wheel"
+                    [attr.text]="project.clusterName"
+                  ></nldd-tag>
+                </nldd-title>
+
+                <nldd-spacer size="16"></nldd-spacer>
+
+                <nldd-list variant="simple">
+                  <nldd-list-item size="sm">
+                    <nldd-text-cell text="Namespaces"></nldd-text-cell>
+                    <nldd-text-cell
+                      width="fit-content"
+                      horizontal-alignment="right"
+                      [attr.text]="project.namespaceCount"
+                    ></nldd-text-cell>
+                  </nldd-list-item>
+                  <nldd-list-item size="sm">
+                    <nldd-text-cell text="Members"></nldd-text-cell>
+                    <nldd-text-cell
+                      width="fit-content"
+                      horizontal-alignment="right"
+                      [attr.text]="project.memberCount"
+                    ></nldd-text-cell>
+                  </nldd-list-item>
+                </nldd-list>
+
+                <nldd-spacer size="16"></nldd-spacer>
+
+                <nldd-button
+                  [attr.href]="'/projects/' + project.id"
+                  text="View project"
+                  variant="primary"
+                  (click)="pageNav.navigate($event, '/projects/' + project.id)"
+                ></nldd-button>
+              </nldd-container>
+            </nldd-card>
+          }
+        </nldd-collection>
+      }
+    }
+  </nldd-simple-section>
+
+  <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>

@@ -1,51 +1,62 @@
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <h1 class="text-3xl font-semibold">Cluster plugins</h1>
-    <p class="mt-1 text-gray-600 dark:text-gray-300">Configure plugins for cluster 'cluster-1'.</p>
-  </div>
+<nldd-sheet
+  #sheet
+  appSheetSync
+  [show]="true"
+  placement="right"
+  width="640px"
+  accessible-label="Edit plugins"
+  (close)="onCancel()"
+>
+  <nldd-page sticky-header>
+    <!-- Same text as the heading below and anchored to it: the bar takes over as
+         soon as the heading scrolls away, so which cluster you are editing stays
+         on screen the whole time. -->
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="pageTitle()"
+      collapse-anchor="cluster-plugins-title"
+      dismiss-text="Cancel"
+      (dismiss)="onCancel()"
+    ></nldd-top-title-bar>
 
-  <!-- Form -->
-  <div class="px-6 py-6">
-    @if (!isClusterRunning()) {
-      <div
-        class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/30"
+    <nldd-simple-section>
+      <nldd-title id="cluster-plugins-title" size="2">
+        <h1>{{ pageTitle() }}</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
+      @if (!isClusterRunning()) {
+        <nldd-banner
+          variant="warning"
+          [attr.text]="
+            'Plugin management is only available when the cluster is running. Current status: ' +
+            getStatusLabel(clusterStatus()) +
+            '.'
+          "
+        ></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+
+      @if (errorMessage()) {
+        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+
+      <app-shared-plugins-form
+        (formSubmit)="onFormSubmit($event)"
+        [initialPluginIds]="currentPluginIds()"
       >
-        <p class="text-sm text-amber-800 dark:text-amber-200">
-          Plugin management is only available when the cluster is running. Current status:
-          <span class="font-medium">{{ getStatusLabel(clusterStatus()) }}</span
-          >.
-        </p>
-      </div>
-    }
-    @if (errorMessage()) {
-      <div
-        class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
-      >
-        <nldd-icon name="dismiss-circle" class="shrink-0" size="20" color="critical"></nldd-icon>
-        <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
-      </div>
-    }
-    <app-shared-plugins-form
-      (formSubmit)="onFormSubmit($event)"
-      [initialPluginIds]="currentPluginIds()"
-    >
-      <div class="flex space-x-3">
-        <nldd-button
-          type="button"
-          (click)="onCancel()"
-          [disabled]="isSubmitting()"
-          text="Cancel"
-          variant="secondary"
-        ></nldd-button>
+        <!-- No cancel button: the title bar's dismiss already covers leaving. -->
         <nldd-button
           type="button"
           (click)="pluginsForm.submit()"
           [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
           [disabled]="isSubmitting() || !isClusterRunning()"
+          width="full"
           variant="primary"
         ></nldd-button>
-      </div>
-    </app-shared-plugins-form>
-  </div>
-</div>
+      </app-shared-plugins-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

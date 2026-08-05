@@ -87,8 +87,37 @@ export class SharedPluginsFormComponent implements OnInit {
   }
 
   onPresetRadioChange(event: Event) {
-    this.selectedPreset = (event as CustomEvent<{ value: string }>).detail.value;
+    const detail = (event as CustomEvent<{ selected: boolean; value: string }>).detail;
+    // The group also reports the button it deselected. Acting on that would set
+    // the preset to the one the user just left.
+    if (!detail.selected) return;
+
+    this.selectedPreset = detail.value;
     this.onPresetChange();
+  }
+
+  /**
+   * A preset is a starting point, not a lock. Toggling a plugin therefore stays
+   * possible under any preset; which preset is shown follows from the selection
+   * rather than from what was clicked last, so undoing a change by hand puts the
+   * preset back instead of leaving you on 'custom' with a selection that is one.
+   */
+  onPluginToggle(plugin: Plugin, checked: boolean) {
+    const target = this.plugins.find((p) => p.id === plugin.id);
+    if (target) target.selected = checked;
+    this.selectedPreset = this.matchingPresetId();
+  }
+
+  /** The preset whose plugins are exactly the current selection, else 'custom'.
+   *  Two presets with the same set are indistinguishable here; the first wins. */
+  private matchingPresetId(): string {
+    const selected = new Set(this.plugins.filter((plugin) => plugin.selected).map((p) => p.id));
+    const match = this.presets.find(
+      (preset) =>
+        preset.pluginIds.length === selected.size &&
+        preset.pluginIds.every((id) => selected.has(id)),
+    );
+    return match ? match.id : 'custom';
   }
 
   onPresetChange() {
@@ -108,6 +137,13 @@ export class SharedPluginsFormComponent implements OnInit {
       ...plugin,
       selected: preset.pluginIds.includes(plugin.id),
     }));
+  }
+
+  onCustomPluginUploadToggle(enabled: boolean) {
+    this.customPluginUploadEnabled = enabled;
+    // Turning it off removes the file field from the page, so a file picked
+    // before that would sit in here without anything on screen showing it.
+    if (!enabled) this.selectedCustomPluginFile = null;
   }
 
   onCustomPluginFileChange(event: Event) {
