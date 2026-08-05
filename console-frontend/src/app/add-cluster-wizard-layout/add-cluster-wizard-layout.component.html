@@ -1,18 +1,45 @@
-<nldd-step-indicator
-  class="mb-6 block"
-  accessible-label="Cluster creation progress"
-  [current]="currentStepNumber()"
+<nldd-sheet
+  #sheet
+  appSheetSync
+  [show]="true"
+  placement="right"
+  width="640px"
+  accessible-label="Create a Kubernetes cluster"
+  (close)="onClose()"
 >
-  @for (step of steps; track step.route; let i = $index) {
-    <nldd-step-indicator-item
-      [text]="step.name"
-      [status]="stepStatus(i)"
-      [button]="canNavigate(i)"
-      (click)="goToStep(i)"
-    ></nldd-step-indicator-item>
-  }
-</nldd-step-indicator>
+  <nldd-page sticky-header>
+    <!-- The later steps show a back button to the step before them, so the wizard
+         needs no in-page "previous" button. `collapse-anchor` points at the step's
+         own heading: scroll it under the bar and the bar takes over the title. -->
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="currentStepTitle()"
+      [attr.back-text]="previousStepName()"
+      [attr.collapse-anchor]="currentStepIndex() > 0 ? 'wizard-step-title' : null"
+      dismiss-text="Cancel"
+      (back)="goToStep(currentStepIndex() - 1)"
+      (dismiss)="onClose()"
+    ></nldd-top-title-bar>
 
-<div class="card">
-  <router-outlet (activate)="onActivate()"></router-outlet>
-</div>
+    <nldd-simple-section>
+      <nldd-step-indicator
+        accessible-label="Cluster creation progress"
+        [current]="currentStepNumber()"
+        [translations]="stepIndicatorTranslations"
+      >
+        @for (step of steps; track step.route; let i = $index) {
+          <nldd-step-indicator-item
+            [text]="step.name"
+            [status]="stepStatus(i)"
+            [button]="canNavigate(i)"
+            (click)="goToStep(i)"
+          ></nldd-step-indicator-item>
+        }
+      </nldd-step-indicator>
+
+      <nldd-spacer size="24"></nldd-spacer>
+
+      <router-outlet (activate)="onActivate()"></router-outlet>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

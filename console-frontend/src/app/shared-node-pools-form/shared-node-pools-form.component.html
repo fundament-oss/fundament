@@ -1,34 +1,31 @@
-<nldd-form [formGroup]="nodePoolsForm" (submit)="onSubmit($event)" class="space-y-6">
-  <!-- Node Pools -->
-  <div formArrayName="nodePools" class="space-y-6">
-    @for (nodePoolControl of nodePools.controls; track nodePoolControl) {
-      @let nameControl = nodePoolControl.get('name');
-      <div
-        [formGroupName]="$index"
-        class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
-      >
-        <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-lg font-medium">Node pool {{ $index + 1 }}</h3>
-          @if (nodePools.length > 1) {
-            <nldd-button
-              type="button"
-              (click)="removeNodePool($index)"
-              text="Remove"
-              start-icon="trash"
-              size="sm"
-              variant="destructive"
-            ></nldd-button>
-          }
-        </div>
+<nldd-form [formGroup]="nodePoolsForm" (submit)="onSubmit($event)">
+  <div formArrayName="nodePools">
+    <nldd-collection layout="stack" gap="16px">
+      @for (nodePoolControl of nodePools.controls; track nodePoolControl) {
+        @let nameControl = nodePoolControl.get('name');
+        <nldd-box [formGroupName]="$index">
+          <nldd-title size="5">
+            <h3>Node pool {{ $index + 1 }}</h3>
+            @if (nodePools.length > 1) {
+              <nldd-button
+                slot="actions"
+                type="button"
+                (click)="removeNodePool($index)"
+                text="Remove"
+                start-icon="trash"
+                size="sm"
+                variant="destructive"
+              ></nldd-button>
+            }
+          </nldd-title>
 
-        <div class="space-y-4">
-          <!-- Node Pool Name -->
+          <nldd-spacer size="16"></nldd-spacer>
+
           <nldd-form-field label="Node pool name">
             <nldd-text-field
               [id]="'nodePoolName-' + $index"
               [value]="nameControl?.value ?? ''"
               [appAutofocus]="$first"
-              placeholder="E.g. my-pool-name"
               [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
               [attr.error-message]="'node-pool-name-error-' + $index"
               (input)="onNodePoolNameInput($index, $event)"
@@ -38,7 +35,6 @@
             </nldd-form-field-error-text>
           </nldd-form-field>
 
-          <!-- Machine Type -->
           <nldd-form-field label="Machine type">
             <nldd-dropdown>
               <select [id]="'machineType-' + $index" formControlName="machineType">
@@ -49,52 +45,52 @@
             </nldd-dropdown>
           </nldd-form-field>
 
-          <!-- Autoscaling -->
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <nldd-form-field label="Autoscale minimum">
-              <nldd-number-field
-                [id]="'autoscaleMin-' + $index"
-                [value]="nodePoolControl.get('autoscaleMin')?.value"
-                (input)="
-                  $any($event).detail &&
-                    nodePoolControl.get('autoscaleMin')?.setValue($any($event).detail.value)
-                "
-                min="1"
-                max="100"
-                step="1"
-              ></nldd-number-field>
-            </nldd-form-field>
+          <nldd-form-field label="Autoscale minimum">
+            <nldd-number-field
+              [id]="'autoscaleMin-' + $index"
+              [value]="nodePoolControl.get('autoscaleMin')?.value"
+              (input)="
+                $any($event).detail &&
+                  nodePoolControl.get('autoscaleMin')?.setValue($any($event).detail.value)
+              "
+              min="1"
+              max="100"
+              step="1"
+            ></nldd-number-field>
+          </nldd-form-field>
 
-            <nldd-form-field label="Autoscale maximum" style="margin-top: 0">
-              <nldd-number-field
-                [id]="'autoscaleMax-' + $index"
-                [value]="nodePoolControl.get('autoscaleMax')?.value"
-                (input)="
-                  $any($event).detail &&
-                    nodePoolControl.get('autoscaleMax')?.setValue($any($event).detail.value)
-                "
-                min="1"
-                max="100"
-                step="1"
-              ></nldd-number-field>
-            </nldd-form-field>
-          </div>
-        </div>
-      </div>
-    }
+          <nldd-form-field label="Autoscale maximum">
+            <nldd-number-field
+              [id]="'autoscaleMax-' + $index"
+              [value]="nodePoolControl.get('autoscaleMax')?.value"
+              (input)="
+                $any($event).detail &&
+                  nodePoolControl.get('autoscaleMax')?.setValue($any($event).detail.value)
+              "
+              min="1"
+              max="100"
+              step="1"
+            ></nldd-number-field>
+          </nldd-form-field>
+        </nldd-box>
+      }
+
+      <!-- Its own box, so it reads as the slot the next node pool will fill. -->
+      <nldd-box>
+        <nldd-button
+          type="button"
+          (click)="addNodePool()"
+          text="Add another node pool"
+          start-icon="plus-small"
+          variant="secondary"
+          size="md"
+          width="full"
+        ></nldd-button>
+      </nldd-box>
+    </nldd-collection>
   </div>
 
-  <nldd-button
-    type="button"
-    (click)="addNodePool()"
-    text="Add another node pool"
-    start-icon="plus-small"
-    variant="secondary"
-    size="sm"
-  ></nldd-button>
-
-  <!-- Form Actions slot -->
-  <div class="border-t border-gray-200 pt-6 dark:border-gray-800">
+  <nldd-form-actions>
     <ng-content></ng-content>
-  </div>
+  </nldd-form-actions>
 </nldd-form>

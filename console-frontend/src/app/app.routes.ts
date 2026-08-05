@@ -12,46 +12,59 @@ const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
-        path: 'clusters/add',
-        loadComponent: () =>
-          import('./add-cluster-wizard-layout/add-cluster-wizard-layout.component').then(
-            (m) => m.default,
-          ),
+        path: '',
+        loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
         data: {
-          breadcrumbs: [
-            { label: 'Clusters', route: '/' },
-            { label: 'Add cluster', route: '/clusters/add' },
-          ],
+          breadcrumbs: [{ label: 'Clusters' }],
         },
+        // The wizard is a child of the cluster list, so the list stays mounted
+        // behind the sheet it opens in.
         children: [
           {
-            path: '',
+            path: 'clusters/add',
             loadComponent: () =>
-              import('./add-cluster/add-cluster.component').then((m) => m.default),
-            canActivate: [clusterWizardGuard],
+              import('./add-cluster-wizard-layout/add-cluster-wizard-layout.component').then(
+                (m) => m.default,
+              ),
             data: {
-              breadcrumbs: [{ label: 'Basics' }],
+              breadcrumbs: [
+                { label: 'Clusters', route: '/' },
+                { label: 'Add cluster', route: '/clusters/add' },
+              ],
             },
+            children: [
+              {
+                path: '',
+                loadComponent: () =>
+                  import('./add-cluster/add-cluster.component').then((m) => m.default),
+                canActivate: [clusterWizardGuard],
+                data: {
+                  breadcrumbs: [{ label: 'Basics' }],
+                },
+              },
+              {
+                path: 'nodes',
+                loadComponent: () =>
+                  import('./add-cluster-nodes/add-cluster-nodes.component').then((m) => m.default),
+                canActivate: [clusterWizardGuard],
+                data: {
+                  breadcrumbs: [{ label: 'Node pools' }],
+                },
+              },
+              {
+                path: 'summary',
+                loadComponent: () =>
+                  import('./add-cluster-summary/add-cluster-summary.component').then(
+                    (m) => m.default,
+                  ),
+                canActivate: [clusterWizardGuard],
+                data: {
+                  breadcrumbs: [{ label: 'Summary' }],
+                },
+              },
+              { path: '**', redirectTo: '' },
+            ],
           },
-          {
-            path: 'nodes',
-            loadComponent: () =>
-              import('./add-cluster-nodes/add-cluster-nodes.component').then((m) => m.default),
-            canActivate: [clusterWizardGuard],
-            data: {
-              breadcrumbs: [{ label: 'Node pools' }],
-            },
-          },
-          {
-            path: 'summary',
-            loadComponent: () =>
-              import('./add-cluster-summary/add-cluster-summary.component').then((m) => m.default),
-            canActivate: [clusterWizardGuard],
-            data: {
-              breadcrumbs: [{ label: 'Summary' }],
-            },
-          },
-          { path: '**', redirectTo: '' },
         ],
       },
       {
@@ -330,13 +343,6 @@ const routes: Routes = [
             },
           },
         ],
-      },
-      {
-        path: '',
-        loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Clusters' }],
-        },
       },
     ],
   },

@@ -1,32 +1,19 @@
-<!-- Header -->
-<div class="card-header">
-  <h1 class="text-3xl font-semibold">Add cluster node pools</h1>
-  <p class="mt-1 text-gray-600 dark:text-gray-300">
-    Configure your cluster node pools with the settings below.
-    <a routerLink="/clusters/add/summary" class="link inline-flex items-center"
-      >Skip this step <nldd-icon name="arrow-right" class="ml-0.5 h-4 w-4"></nldd-icon
-    ></a>
-  </p>
-</div>
+<nldd-title id="wizard-step-title" size="4">
+  <h2>Configure your cluster node pools</h2>
+</nldd-title>
 
-<!-- Form -->
-<div class="px-6 py-6">
-  <app-shared-node-pools-form
-    [machineTypeOptions]="machineTypeOptions()"
-    (formSubmit)="onFormSubmit($event)"
-  >
-    <div class="flex space-x-3">
-      <nldd-button
-        routerLink="/clusters/add"
-        text="Previous step"
-        variant="secondary"
-      ></nldd-button>
-      <nldd-button
-        type="button"
-        (click)="nodePoolsForm.submit()"
-        text="Next step"
-        variant="primary"
-      ></nldd-button>
-    </div>
-  </app-shared-node-pools-form>
-</div>
+<nldd-spacer size="16"></nldd-spacer>
+
+<app-shared-node-pools-form
+  [machineTypeOptions]="machineTypeOptions()"
+  (formSubmit)="onFormSubmit($event)"
+>
+  <nldd-button
+    type="button"
+    (click)="nodePoolsForm.submit()"
+    text="Continue to Summary"
+    end-icon="chevron-right"
+    width="full"
+    variant="primary"
+  ></nldd-button>
+</app-shared-node-pools-form>

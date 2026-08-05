@@ -1,81 +1,98 @@
-<!-- Header -->
-<div class="card-header">
-  <h1 class="text-3xl font-semibold">Cluster summary</h1>
-  <p class="mt-1 text-gray-600 dark:text-gray-300">
-    Review your cluster configuration before creating it.
-  </p>
-</div>
+<nldd-title id="wizard-step-title" size="4">
+  <h2>Review your cluster configuration</h2>
+</nldd-title>
 
-<!-- Summary Content -->
-<div class="space-y-6 px-6 py-6">
-  <!-- Basics Block -->
-  <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-    <h3 class="mb-4 text-lg font-medium">Basics</h3>
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <dl>
-        <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster name</dt>
-        <dd class="mt-1">{{ state().clusterName || 'N/A' }}</dd>
-      </dl>
-      <dl>
-        <dt class="font-medium text-gray-500 dark:text-gray-400">Region</dt>
-        <dd class="mt-1">{{ state().region?.toUpperCase() || 'N/A' }}</dd>
-      </dl>
-      <dl>
-        <dt class="font-medium text-gray-500 dark:text-gray-400">Kubernetes version</dt>
-        <dd class="mt-1">
-          {{ state().kubernetesVersion || 'N/A' }}
-        </dd>
-      </dl>
-    </div>
-  </div>
+<nldd-spacer size="24"></nldd-spacer>
 
-  <!-- Node Pools Block -->
-  <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-    <h3 class="mb-4 text-lg font-medium">Node pools</h3>
-    @if (state().nodePools && state().nodePools!.length > 0) {
-      <div class="space-y-4">
-        @for (nodePool of state().nodePools; track nodePool.name) {
-          <div
-            class="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900"
-          >
-            <h4 class="mb-3 font-medium">{{ nodePool.name }}</h4>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <dl>
-                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Machine type</dt>
-                <dd class="mt-1">{{ nodePool.machineType }}</dd>
-              </dl>
-              <dl>
-                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Min autoscaling
-                </dt>
-                <dd class="mt-1">{{ nodePool.autoscaleMin }} nodes</dd>
-              </dl>
-              <dl>
-                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  Max autoscaling
-                </dt>
-                <dd class="mt-1">{{ nodePool.autoscaleMax }} nodes</dd>
-              </dl>
-            </div>
-          </div>
-        }
-      </div>
-    } @else {
-      <p class="text-gray-500 dark:text-gray-400">No node pools configured</p>
+<nldd-title size="5">
+  <h3>Basics</h3>
+</nldd-title>
+
+<nldd-spacer size="8"></nldd-spacer>
+
+<nldd-list variant="box" accessible-label="Basics">
+  <nldd-list-item>
+    <nldd-text-cell text="Cluster name"></nldd-text-cell>
+    <nldd-text-cell
+      width="fit-content"
+      horizontal-alignment="right"
+      [attr.text]="state().clusterName || 'N/A'"
+    ></nldd-text-cell>
+  </nldd-list-item>
+  <nldd-list-item>
+    <nldd-text-cell text="Region"></nldd-text-cell>
+    <nldd-text-cell
+      width="fit-content"
+      horizontal-alignment="right"
+      [attr.text]="state().region?.toUpperCase() || 'N/A'"
+    ></nldd-text-cell>
+  </nldd-list-item>
+  <nldd-list-item>
+    <nldd-text-cell text="Kubernetes version"></nldd-text-cell>
+    <nldd-text-cell
+      width="fit-content"
+      horizontal-alignment="right"
+      [attr.text]="state().kubernetesVersion || 'N/A'"
+    ></nldd-text-cell>
+  </nldd-list-item>
+</nldd-list>
+
+<nldd-spacer size="24"></nldd-spacer>
+
+<nldd-title size="5">
+  <h3>Node pools</h3>
+</nldd-title>
+
+<nldd-spacer size="8"></nldd-spacer>
+
+@if (state().nodePools && state().nodePools!.length > 0) {
+  <nldd-collection layout="stack" gap="16px">
+    @for (nodePool of state().nodePools; track nodePool.name) {
+      <nldd-list variant="box" [attr.accessible-label]="'Node pool ' + nodePool.name">
+        <nldd-list-item>
+          <nldd-text-cell text="Node pool"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            [attr.text]="nodePool.name"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell text="Machine type"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            [attr.text]="nodePool.machineType"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell text="Min autoscaling"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            [attr.text]="nodePool.autoscaleMin + ' nodes'"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell text="Max autoscaling"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            [attr.text]="nodePool.autoscaleMax + ' nodes'"
+          ></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
     }
-  </div>
+  </nldd-collection>
+} @else {
+  <nldd-inline-dialog icon="circle-dashed" icon-color="secondary" text="No node pools configured">
+  </nldd-inline-dialog>
+}
 
-  <!-- Error Message -->
+<div>
   @if (errorMessage()) {
-    <div
-      class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
-    >
-      <nldd-icon
-        name="dismiss-circle"
-        class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
-      ></nldd-icon>
-      <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
-    </div>
+    <nldd-spacer size="16"></nldd-spacer>
+    <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
   }
 
   <!-- Creation progress banner (shown after creation starts, when modal is dismissed) -->
@@ -100,18 +117,19 @@
         } @else if (bannerState() === 'ready') {
           <nldd-icon
             name="check-mark-circle"
-            class="h-5 w-5 shrink-0 text-green-500! dark:text-green-400!"
+            class="shrink-0"
+            size="20"
+            color="success"
           ></nldd-icon>
         } @else if (bannerState() === 'partial') {
           <nldd-icon
             name="exclamation-circle"
-            class="h-4.5 w-4.5 shrink-0 text-amber-500! dark:text-amber-400!"
+            class="shrink-0"
+            size="20"
+            color="warning"
           ></nldd-icon>
         } @else {
-          <nldd-icon
-            name="dismiss-circle"
-            class="text-danger-500! dark:text-danger-400! h-4.5 w-4.5 shrink-0"
-          ></nldd-icon>
+          <nldd-icon name="dismiss-circle" class="shrink-0" size="20" color="critical"></nldd-icon>
         }
         <div>
           <p
@@ -160,24 +178,18 @@
     </div>
   }
 
-  <!-- Form Actions (hidden once creation has started) -->
+  <!-- Form Actions (hidden once creation has started). No "previous step": the
+       title bar's back button covers going a step back. -->
   @if (!hasCreationStarted()) {
-    <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <nldd-button
-        routerLink="/clusters/add/nodes"
-        text="Previous step"
-        [class.pointer-events-none]="isCreating() || showModal()"
-        [class.opacity-50]="isCreating() || showModal()"
-        variant="secondary"
-      ></nldd-button>
-      <nldd-button
-        type="button"
-        (click)="onCreateCluster()"
-        [text]="isCreating() ? 'Creating...' : 'Create cluster'"
-        [disabled]="isCreating() || showModal()"
-        variant="primary"
-      ></nldd-button>
-    </div>
+    <nldd-spacer size="24"></nldd-spacer>
+    <nldd-button
+      type="button"
+      (click)="onCreateCluster()"
+      [text]="isCreating() ? 'Creating...' : 'Create cluster'"
+      [disabled]="isCreating() || showModal()"
+      width="full"
+      variant="primary"
+    ></nldd-button>
   }
 </div>
 
@@ -211,9 +223,19 @@
               class="fill-accent-600 dark:fill-accent-400 h-5 w-5 shrink-0 animate-spin text-gray-200 dark:text-gray-800"
             />
           } @else if (item.requestStatus === 'failed' || item.syncStatus === 'failed') {
-            <nldd-icon name="dismiss-circle" class="text-danger-500! h-5 w-5 shrink-0"></nldd-icon>
+            <nldd-icon
+              name="dismiss-circle"
+              class="shrink-0"
+              size="20"
+              color="critical"
+            ></nldd-icon>
           } @else {
-            <nldd-icon name="check-mark-circle" class="h-5 w-5 shrink-0 text-green-500"></nldd-icon>
+            <nldd-icon
+              name="check-mark-circle"
+              class="shrink-0"
+              size="20"
+              color="success"
+            ></nldd-icon>
           }
 
           <div>
