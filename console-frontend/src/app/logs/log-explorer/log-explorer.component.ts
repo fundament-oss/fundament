@@ -19,9 +19,11 @@ import { Subscription } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import type { LogEntry, LogLevel, HistogramBucket } from '../log.types';
 import { LogsApiService, type ClusterOption } from '../logs.service';
+import { ShootPodsService, type ShootPod } from '../shoot-pods.service';
 import { LogBackend } from '../../../generated/v1/logs_pb';
 import { TitleService } from '../../title.service';
 import { ToastService } from '../../toast.service';
+import PluginInstallationService from '../../plugin-installation/plugin-installation.service';
 
 Chart.register(...registerables);
 
@@ -118,6 +120,10 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
 
   private readonly logsApi = inject(LogsApiService);
 
+  private readonly pluginInstallations = inject(PluginInstallationService);
+
+  private readonly shootPods = inject(ShootPodsService);
+
   @ViewChild('histogramChart') private histogramCanvas!: ElementRef<HTMLCanvasElement>;
 
   @ViewChild('detailSheet') private detailSheetRef?: ElementRef<HTMLElement>;
@@ -138,6 +144,23 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   readonly ALL_LEVELS = ALL_LEVELS;
 
   readonly TIME_PRESETS = TIME_PRESETS;
+
+  // ── log source mode
+  //
+  // 'vali' reads the shoot's system logs from the Gardener logging stack
+  // (history, cross-pod search); 'live' reads a single plugin pod through the
+  // kube-api-proxy (live only, pod required, per-user access). The two behave
+  // differently by design — the mode switch makes that explicit up front.
+  //
+  // TODO(#978 follow-up): the switch and the live-mode hints are provisional
+  // (deliberately loud orange) — a proper UI design pass is still pending.
+  readonly sourceMode = signal<'vali' | 'live'>('vali');
+
+  readonly isLiveMode = computed(() => this.sourceMode() === 'live');
+
+  // Pods (with their containers) of the selected plugin namespace, listed
+  // through the kube-api-proxy in live mode.
+  private readonly livePods = signal<ShootPod[]>([]);
 
   // ── filter state
   readonly selectedCluster = signal('');
@@ -383,6 +406,11 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   private async onClusterSelected(): Promise<void> {
     const clusterId = this.selectedCluster();
     if (!clusterId) return;
+    if (this.isLiveMode()) {
+      await this.loadPluginNamespaces();
+      await this.loadLogs();
+      return;
+    }
     try {
       const { from, to } = this.timeRange();
       const labels = await this.logsApi.labels(clusterId, undefined, from, to);
@@ -394,6 +422,60 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       // Labels are best-effort; a failure should not block log loading.
     }
     await this.loadLogs();
+  }
+
+  // ── live mode (plugin pods through the kube-api-proxy)
+
+  onSourceModeChange(mode: 'vali' | 'live'): void {
+    if (mode === this.sourceMode()) return;
+    this.sourceMode.set(mode);
+    this.stopLiveTail();
+    this.selectedNamespace.set('');
+    this.selectedPod.set('');
+    this.selectedContainer.set('');
+    this.currentPage.set(0);
+    this.allLogs.set([]);
+    this.namespaces.set([]);
+    this.pods.set([]);
+    this.containers.set([]);
+    this.livePods.set([]);
+    void this.onClusterSelected();
+  }
+
+  // Plugin namespaces are derived, not listed: every PluginInstallation named
+  // <name> runs in namespace "plugin-<name>" (plugin-controller convention).
+  // Deriving from the installations the caller can see avoids listing all
+  // shoot namespaces, which would drag user workloads into the dropdown.
+  private async loadPluginNamespaces(): Promise<void> {
+    const clusterId = this.selectedCluster();
+    if (!clusterId) return;
+    try {
+      const installations = await this.pluginInstallations.listInstallations(clusterId);
+      this.namespaces.set(installations.map((i) => `plugin-${i.metadata.name}`));
+    } catch {
+      this.namespaces.set([]);
+    }
+  }
+
+  private async loadLivePods(): Promise<void> {
+    const clusterId = this.selectedCluster();
+    const namespace = this.selectedNamespace();
+    if (!clusterId || !namespace) {
+      this.livePods.set([]);
+      this.pods.set([]);
+      this.containers.set([]);
+      return;
+    }
+    try {
+      const pods = await this.shootPods.listPods(clusterId, namespace);
+      this.livePods.set(pods);
+      this.pods.set(pods.map((p) => p.name));
+      this.containers.set([]);
+    } catch {
+      this.livePods.set([]);
+      this.pods.set([]);
+      this.containers.set([]);
+    }
   }
 
   private async refineLabels(): Promise<void> {
@@ -420,6 +502,12 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   private async loadLogs(): Promise<void> {
     const clusterId = this.selectedCluster();
     if (!clusterId) {
+      this.allLogs.set([]);
+      return;
+    }
+    // Live mode reads one pod at a time (Kubernetes pod-log semantics), so a
+    // namespace + pod selection is a hard requirement before querying.
+    if (this.isLiveMode() && (!this.selectedNamespace() || !this.selectedPod())) {
       this.allLogs.set([]);
       return;
     }
@@ -603,7 +691,11 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.selectedPod.set('');
     this.selectedContainer.set('');
     this.currentPage.set(0);
-    void this.refineLabels();
+    if (this.isLiveMode()) {
+      void this.loadLivePods();
+    } else {
+      void this.refineLabels();
+    }
     void this.loadLogs();
   }
 
@@ -611,6 +703,10 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.selectedPod.set(value);
     this.selectedContainer.set('');
     this.currentPage.set(0);
+    if (this.isLiveMode()) {
+      const pod = this.livePods().find((p) => p.name === value);
+      this.containers.set(pod?.containers ?? []);
+    }
     void this.loadLogs();
   }
 
@@ -624,8 +720,11 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.timePreset.set(value);
     this.currentPage.set(0);
     // Label values are time-scoped in the backend, so the filter dropdowns
-    // must follow the active window.
-    void this.refineLabels();
+    // must follow the active window. Live-mode pods come from the cluster
+    // itself and are not time-scoped.
+    if (!this.isLiveMode()) {
+      void this.refineLabels();
+    }
     void this.loadLogs();
   }
 
@@ -643,7 +742,12 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.searchText.set('');
     this.selectedLevels.set(new Set(ALL_LEVELS));
     this.currentPage.set(0);
-    void this.refineLabels();
+    if (this.isLiveMode()) {
+      this.pods.set([]);
+      this.containers.set([]);
+    } else {
+      void this.refineLabels();
+    }
     void this.loadLogs();
   }
 
@@ -652,7 +756,12 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       this.selectedNamespace.set('');
       this.selectedPod.set('');
       this.selectedContainer.set('');
-      void this.refineLabels();
+      if (this.isLiveMode()) {
+        this.pods.set([]);
+        this.containers.set([]);
+      } else {
+        void this.refineLabels();
+      }
     } else if (key === 'pod') {
       this.selectedPod.set('');
       this.selectedContainer.set('');
