@@ -653,6 +653,24 @@
   (open)="onDeleteModalOpen()"
   (close)="showDeleteModal.set(false)"
 >
+  <p class="text-sm text-gray-600 dark:text-gray-400">
+    To confirm, type
+    <span
+      class="rounded-md bg-gray-50 px-1.5 py-0.5 font-mono text-gray-900 dark:bg-gray-900 dark:text-white"
+      >{{ deleteConfirmationSlug() }}</span
+    >
+    below.
+  </p>
+  <nldd-spacer size="12"></nldd-spacer>
+  <nldd-form-field label="Cluster to delete">
+    <nldd-text-field
+      id="deleteConfirmation"
+      [value]="deleteConfirmationInput()"
+      [attr.placeholder]="deleteConfirmationSlug()"
+      (input)="onDeleteConfirmationInput($event)"
+    ></nldd-text-field>
+  </nldd-form-field>
+
   @if (errorMessage()) {
     <nldd-spacer size="24"></nldd-spacer>
     <div
@@ -679,5 +697,6 @@
     (click)="deleteCluster()"
     text="Delete cluster"
     variant="destructive"
+    [disabled]="!isDeleteConfirmed()"
   ></nldd-button>
 </nldd-modal-dialog>

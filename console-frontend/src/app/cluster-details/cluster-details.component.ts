@@ -396,7 +396,32 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   getNodePoolStatusLabel = getNodePoolStatusLabel;
 
+  deleteConfirmationInput = signal<string>('');
+
+  /**
+   * The full slug ("orgname/clustername") the user must type to confirm deletion.
+   * Empty until both parts are known, so a partial slug can never be confirmed.
+   */
+  deleteConfirmationSlug(): string {
+    const orgName = this.organizationDataService.organizations()[0]?.name;
+    const clusterName = this.clusterData.basics.name;
+    if (!orgName || !clusterName) return '';
+    return `${orgName}/${clusterName}`;
+  }
+
+  isDeleteConfirmed(): boolean {
+    const slug = this.deleteConfirmationSlug();
+    return slug !== '' && this.deleteConfirmationInput().trim() === slug;
+  }
+
+  onDeleteConfirmationInput(event: Event): void {
+    this.deleteConfirmationInput.set((event as CustomEvent<{ value: string }>).detail.value);
+  }
+
   async deleteCluster(): Promise<void> {
+    if (!this.isDeleteConfirmed()) {
+      return;
+    }
     try {
       const request = create(DeleteClusterRequestSchema, {
         clusterId: this.clusterData.basics.id,
@@ -490,6 +515,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   onDeleteModalOpen(): void {
     this.errorMessage.set(null);
+    this.deleteConfirmationInput.set('');
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }
