@@ -1,87 +1,105 @@
-<nldd-modal-dialog
+<nldd-sheet
   #dialog
-  text="Select organization or project"
-  accessible-label="Select organization or project"
+  accessible-label="Organization or Project"
+  placement="right"
+  width="480px"
   (open)="onOpen()"
   (close)="onClose()"
 >
-  <nldd-spacer size="24"></nldd-spacer>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Organization or Project"
+      dismiss-text="Cancel"
+      (dismiss)="onClose()"
+    ></nldd-top-title-bar>
 
-  <!-- Filter Input -->
-  <div class="mb-4">
-    <nldd-search-field
-      #searchField
-      [value]="filterInputValue()"
-      placeholder="Search..."
-      accessible-label="Search"
-      size="sm"
-      name="filter"
-      (input)="updateFilter($event)"
-      (change)="updateFilter($event)"
-    ></nldd-search-field>
-  </div>
+    <nldd-container slot="header" padding-inline="16" padding-top="8">
+      <nldd-search-field
+        #searchField
+        [value]="filterInputValue()"
+        placeholder="Search"
+        accessible-label="Search"
+        name="filter"
+        (input)="updateFilter($event)"
+        (change)="updateFilter($event)"
+      ></nldd-search-field>
+    </nldd-container>
 
-  <!-- Nested Tree -->
-  <div class="-mx-2 -mb-2 max-h-96 space-y-1 overflow-y-auto px-2 pb-2">
-    @if (filteredOrganizations().length === 0) {
-      <div class="py-1 text-center text-gray-500 dark:text-gray-400">No results found.</div>
-    } @else {
-      @for (org of filteredOrganizations(); track org.id) {
-        <div>
-          <!-- Organization -->
-          <div class="mb-0.5 px-2">
-            <span
-              class="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
-              >Organization</span
+    <nldd-simple-section>
+      <nldd-list
+        type="tree"
+        no-dividers
+        accessible-label="Organizations and projects"
+        empty-text="No results found"
+      >
+        @for (org of filteredOrganizations(); track org.id) {
+          @if (org.projects.length === 0) {
+            <!-- No children, so not a branch: no chevron, and the row is its own control. -->
+            <nldd-list-item
+              button
+              [attr.selected]="isOrganizationSelected(org.id) ? '' : null"
+              (click)="onSelectOrganization(org.id)"
             >
-          </div>
-          <button
-            (click)="onSelectOrganization(org.id)"
-            [class]="
-              'ring-accent-500 flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left font-medium transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950 dark:hover:bg-gray-800 ' +
-              (isOrganizationSelected(org.id)
-                ? 'bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300'
-                : 'text-gray-700 dark:text-gray-300')
-            "
-          >
-            <nldd-icon name="apartment-building" class="mr-2 h-4 w-4 shrink-0"></nldd-icon>
-            <span class="truncate">{{ org.alias }}</span>
-          </button>
-
-          <!-- Projects (only shown for the selected organization) -->
-          <div class="ml-5 space-y-1">
-            @if (org.projects.length === 0) {
+              <!-- Takes the place of the chevron the branch rows have, so every
+                   organization's icon sits on the same line. -->
+              <nldd-spacer-cell size="44"></nldd-spacer-cell>
+              <nldd-icon-cell icon="apartment-building" size="20"></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell [attr.text]="org.alias"></nldd-text-cell>
               @if (isOrganizationSelected(org.id)) {
-                <div class="px-2 py-1.5 text-gray-500 dark:text-gray-400">No projects yet</div>
+                <nldd-icon-cell icon="check-mark" size="20"></nldd-icon-cell>
               }
-            } @else {
-              <!-- Projects -->
-              <div class="mb-0.5 px-2">
-                <span
-                  class="text-[0.625rem]/[0.875rem] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"
-                  >Projects</span
-                >
-              </div>
-              @for (project of org.projects; track project.id) {
-                <button
-                  (click)="onSelectProject(project.id)"
-                  [class]="
-                    'ring-accent-500 flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left font-medium transition-colors hover:bg-gray-100 focus:ring-2 focus:ring-offset-2 focus:outline-none dark:ring-offset-gray-950 dark:hover:bg-gray-800 ' +
-                    (isProjectSelected(project.id)
-                      ? 'bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300'
-                      : 'text-gray-700 dark:text-gray-300')
-                  "
-                >
-                  <nldd-icon name="folder" class="mr-2 h-4 w-4 shrink-0"></nldd-icon>
-                  <span class="truncate">{{ project.alias }}</span>
-                </button>
-              }
-            }
-          </div>
-        </div>
-      }
-    }
-  </div>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            </nldd-list-item>
+          } @else {
+            <nldd-list-item
+              [attr.expanded]="isExpanded(org.id) ? '' : null"
+              [attr.selected]="isOrganizationSelected(org.id) ? '' : null"
+            >
+              <!-- Chevron expands, the label selects: two segmented actions, so the
+                   row itself stays free of a control (a control in a control is invalid). -->
+              <nldd-list-item-action
+                button
+                disclosure
+                [attr.accessible-label]="'Show projects in ' + org.alias"
+                (click)="toggleExpanded(org.id)"
+              >
+                <nldd-icon-cell icon="chevron-right" size="20"></nldd-icon-cell>
+              </nldd-list-item-action>
+              <nldd-list-item-action button width="full" (click)="onSelectOrganization(org.id)">
+                <nldd-icon-cell icon="apartment-building" size="20"></nldd-icon-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-text-cell [attr.text]="org.alias"></nldd-text-cell>
+                @if (isOrganizationSelected(org.id)) {
+                  <nldd-icon-cell icon="check-mark" size="20"></nldd-icon-cell>
+                }
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              </nldd-list-item-action>
 
-  <nldd-button slot="actions" variant="secondary" text="Close" (click)="onClose()"></nldd-button>
-</nldd-modal-dialog>
+              @for (project of org.projects; track project.id) {
+                <nldd-list-item
+                  slot="children"
+                  button
+                  [attr.selected]="isProjectSelected(project.id) ? '' : null"
+                  (click)="onSelectProject(project.id)"
+                >
+                  <!-- One level in (16), then the width the parent's chevron takes (44). -->
+                  <nldd-spacer-cell size="16"></nldd-spacer-cell>
+                  <nldd-spacer-cell size="44"></nldd-spacer-cell>
+                  <nldd-icon-cell icon="folder" size="20"></nldd-icon-cell>
+                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                  <nldd-text-cell [attr.text]="project.alias"></nldd-text-cell>
+                  @if (isProjectSelected(project.id)) {
+                    <nldd-icon-cell icon="check-mark" size="20"></nldd-icon-cell>
+                  }
+                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                </nldd-list-item>
+              }
+            </nldd-list-item>
+          }
+        }
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

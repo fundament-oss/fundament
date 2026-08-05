@@ -13,10 +13,17 @@ import {
 } from '@angular/core';
 import '@nldd/design-system/icon';
 import '@nldd/design-system/icon-button';
+import '@nldd/design-system/banner';
 import '@nldd/design-system/box';
+import '@nldd/design-system/card';
+import '@nldd/design-system/collection';
+import '@nldd/design-system/rich-text';
 import '@nldd/design-system/button';
+import '@nldd/design-system/button-bar';
+import '@nldd/design-system/checkbox';
 import '@nldd/design-system/checkbox-field';
 import '@nldd/design-system/form';
+import '@nldd/design-system/form-actions';
 import '@nldd/design-system/form-field';
 import '@nldd/design-system/dropdown';
 import '@nldd/design-system/modal-dialog';
@@ -28,10 +35,16 @@ import '@nldd/design-system/search-field';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/switch-field';
 import '@nldd/design-system/text-field';
+import '@nldd/design-system/toggle-button';
+import '@nldd/design-system/toggle-button-group';
 import '@nldd/design-system/segmented-control';
+import '@nldd/design-system/app-view';
+import '@nldd/design-system/bar-split-view';
+import '@nldd/design-system/container';
+import '@nldd/design-system/toolbar';
 import '@nldd/design-system/navigation-split-view';
-// nldd-navigation-split-view does not pull in the panes it hosts, and app.html
-// places them itself.
+// The split views do not pull in the panes they host, and app.html places them
+// itself.
 import '@nldd/design-system/split-view-pane';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/sheet';
@@ -40,19 +53,18 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/top-title-bar';
 import '@nldd/design-system/table';
 import '@nldd/design-system/cell';
+import '@nldd/design-system/icon-cell';
+import '@nldd/design-system/list';
+import '@nldd/design-system/list-item';
+import '@nldd/design-system/list-item-action';
+import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/tag';
+import '@nldd/design-system/title';
+import '@nldd/design-system/byline';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/step-indicator';
-import {
-  RouterOutlet,
-  RouterLink,
-  RouterLinkActive,
-  Router,
-  NavigationEnd,
-  ActivatedRouteSnapshot,
-  type IsActiveMatchOptions,
-} from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd, ActivatedRouteSnapshot } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
@@ -65,7 +77,6 @@ import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
-import { FundamentLogoIconComponent } from './icons';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { fetchClusterName } from './utils/cluster-status';
@@ -81,19 +92,7 @@ const reloadApp = () => {
 
 @Component({
   selector: 'app-root',
-  imports: [
-    RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
-    SelectorModalComponent,
-    OrgPickerComponent,
-    FundamentLogoIconComponent,
-    BreadcrumbComponent,
-  ],
-  host: {
-    class: 'flex h-dvh flex-col',
-    '(document:click)': 'onDocumentClick($event)',
-  },
+  imports: [RouterOutlet, SelectorModalComponent, OrgPickerComponent, BreadcrumbComponent],
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -140,9 +139,6 @@ export default class App implements OnInit {
   // Version mismatch state
   apiVersionMismatch = signal(false);
 
-  // Dropdown states
-  userDropdownOpen = signal(false);
-
   selectorModalOpen = signal(false);
 
   // Multi-org picker state (shown after login for multi-org users)
@@ -151,8 +147,19 @@ export default class App implements OnInit {
   // Pending invitations for the current user
   pendingInvitations = signal<Invitation[]>([]);
 
-  // Theme state
-  isDarkMode = signal(false);
+  // Theme state. The user picks 'system', 'light' or 'dark'; 'system' follows
+  // the OS and keeps following it when the OS switches.
+  private readonly darkMq = window.matchMedia('(prefers-color-scheme: dark)');
+
+  private systemPrefersDark = signal(this.darkMq.matches);
+
+  themePreference = signal<'system' | 'light' | 'dark'>('system');
+
+  isDarkMode = computed(() =>
+    this.themePreference() === 'system'
+      ? this.systemPrefersDark()
+      : this.themePreference() === 'dark',
+  );
 
   // User state
   currentUser = signal<User | undefined>(undefined);
@@ -165,24 +172,17 @@ export default class App implements OnInit {
   // Route state
   isLoginPage = signal(window.location.pathname === '/login');
 
+  currentUrl = signal(window.location.pathname);
+
+  // Drives which pane wins in stacked (narrow) mode; see onPaneBack().
+  mainHasContent = signal(true);
+
   // Breadcrumb state
   breadcrumbSegments = signal<BreadcrumbSegment[]>([]);
 
   // Walkthrough (console-demo) URL; empty where the demo is not deployed, which
   // hides the header's "Take a tour" button.
   tourUrl = signal('');
-
-  // routerLinkActive options for the sidebar links that must not stay active on
-  // their sub-routes ("General", "Settings"). The shorthand `{ exact: true }`
-  // also demands an exact query-string match, so any link carrying query params
-  // — the walkthrough's ?present/?tour, a filter, a deep link — would leave
-  // these unhighlighted. Only the path decides.
-  readonly exactPath: IsActiveMatchOptions = {
-    paths: 'exact',
-    queryParams: 'ignored',
-    fragment: 'ignored',
-    matrixParams: 'ignored',
-  };
 
   constructor() {
     // Refresh breadcrumbs when organization data changes (e.g. after renaming)
@@ -251,6 +251,7 @@ export default class App implements OnInit {
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.isLoginPage.set(event.urlAfterRedirects === '/login');
+        this.currentUrl.set(event.urlAfterRedirects);
         this.updateSidebarStateFromRoute(event.url);
         this.updateBreadcrumbs();
       });
@@ -497,8 +498,38 @@ export default class App implements OnInit {
   // Check if current route is clusters or clusters/add
   isClustersActive(): boolean {
     // Compare on the path alone: the router url also carries the query string.
-    const path = this.router.url.split(/[?#]/)[0];
+    const path = this.currentUrl().split(/[?#]/)[0];
     return path === '/' || path.startsWith('/clusters/');
+  }
+
+  /** Marks a sidebar item as the current page. Reads `currentUrl` so the nav
+   *  re-renders on navigation; `router.url` alone is not a reactive source. */
+  isNavActive(path: string, exact = false): boolean {
+    const current = this.currentUrl().split(/[?#]/)[0];
+    return exact ? current === path : current === path || current.startsWith(`${path}/`);
+  }
+
+  /** Routes a sidebar link client-side while leaving it a real `<a href>`, so
+   *  middle-click and "open in new tab" keep working. */
+  navigateFromSidebar(event: MouseEvent, path: string): void {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    this.router.navigateByUrl(path);
+    this.mainHasContent.set(true);
+  }
+
+  /**
+   * A page's back button, bubbled up from its nldd-top-title-bar.
+   *
+   * Stacked (narrow) mode shows the deepest pane that carries `has-content`, so
+   * dropping it on main is what reveals the sidebar again. On wide screens the
+   * split view hides the button, so this never fires there.
+   */
+  onPaneBack(): void {
+    this.mainHasContent.set(false);
   }
 
   // Check if current route is project members or roles
@@ -532,41 +563,24 @@ export default class App implements OnInit {
   private initializeTheme() {
     const savedTheme = localStorage.getItem('theme');
 
-    if (savedTheme === 'dark' || savedTheme === 'light') {
-      this.isDarkMode.set(savedTheme === 'dark');
-    } else {
-      // Use system preference
-      this.isDarkMode.set(window.matchMedia('(prefers-color-scheme: dark)').matches);
-    }
+    this.themePreference.set(
+      savedTheme === 'dark' || savedTheme === 'light' ? savedTheme : 'system',
+    );
+    // Keep following the OS while the preference is 'system'.
+    this.darkMq.addEventListener('change', (e) => {
+      this.systemPrefersDark.set(e.matches);
+      this.applyTheme();
+    });
 
     this.applyTheme();
   }
 
   // Set theme explicitly in response to a user action, and persist the choice.
   setTheme(value: string) {
-    this.isDarkMode.set(value === 'dark');
+    const preference = value === 'dark' || value === 'light' ? value : 'system';
+    this.themePreference.set(preference);
     this.persistTheme();
-
-    if (document.startViewTransition) {
-      document.startViewTransition(this.applyTheme.bind(this));
-    } else {
-      this.applyTheme();
-    }
-  }
-
-  // Toggle theme in response to a user action, and persist the choice.
-  toggleTheme() {
-    this.isDarkMode.set(!this.isDarkMode());
-    this.persistTheme();
-
-    // Apply with view transition if supported. Use 80 ms delay to allow CSS transition on the switch to start
-    setTimeout(() => {
-      if (document.startViewTransition) {
-        document.startViewTransition(this.applyTheme.bind(this));
-      } else {
-        this.applyTheme();
-      }
-    }, 80);
+    this.applyTheme();
   }
 
   // Apply the active theme to the <html> element.
@@ -584,26 +598,20 @@ export default class App implements OnInit {
     htmlElement.dataset['scheme'] = this.isDarkMode() ? 'dark' : 'light';
   }
 
-  // Persist the user's explicit theme choice to localStorage.
+  // Persist the user's explicit theme choice to localStorage. 'system' clears the
+  // key, so the pre-paint script in index.html falls back to the OS preference.
   private persistTheme() {
-    localStorage.setItem('theme', this.isDarkMode() ? 'dark' : 'light');
-  }
+    const preference = this.themePreference();
 
-  onDocumentClick(event: Event) {
-    const target = event.target as HTMLElement;
-    // Shadow DOM events re-target to the host element, so treat clicks on the
-    // nav bar host (which contains the account button) the same as clicks inside
-    // the dropdown to avoid the dropdown being closed immediately on open.
-    const isInsideDropdown = !!target.closest('.user-dropdown');
-    const isNavBarHost = target.tagName?.toLowerCase() === 'nldd-top-navigation-bar';
-
-    if (!isInsideDropdown && !isNavBarHost) {
-      this.userDropdownOpen.set(false);
+    if (preference === 'system') {
+      localStorage.removeItem('theme');
+    } else {
+      localStorage.setItem('theme', preference);
     }
   }
 
-  toggleUserDropdown() {
-    this.userDropdownOpen.set(!this.userDropdownOpen());
+  navigateTo(path: string) {
+    this.router.navigate([path]);
   }
 
   openSelectorModal() {
@@ -623,7 +631,6 @@ export default class App implements OnInit {
       this.showOrgPicker.set(false);
       this.selectedOrgId.set(null);
       this.selectedProjectId.set(null);
-      this.userDropdownOpen.set(false);
       this.router.navigate(['/login']);
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -705,6 +712,25 @@ export default class App implements OnInit {
     if (this.selectedOrgId()) return 'organization';
     return null;
   });
+
+  /** The project sidebar, as data: the markup for each row is identical, so the
+   *  rows differ only in path, icon and label. */
+  projectNavItems = computed(() => {
+    const base = `/projects/${this.selectedProjectId()}`;
+
+    return [
+      { path: base, icon: 'folder', label: 'General', exact: true },
+      { path: `${base}/namespaces`, icon: 'brackets-ellipsis', label: 'Namespaces', exact: false },
+      { path: `${base}/members`, icon: 'person-2', label: 'Members', exact: false },
+      { path: `${base}/roles`, icon: 'person-badge-gear', label: 'Roles', exact: false },
+      { path: `${base}/metrics`, icon: 'chart-x-y-axis-line', label: 'Metrics', exact: false },
+      { path: `${base}/limits`, icon: 'circle-dashed', label: 'Limits', exact: false },
+    ];
+  });
+
+  pluginResourcePath(pluginName: string, crdPlural: string): string {
+    return `/projects/${this.selectedProjectId()}/plugin-resources/${pluginName}/${crdPlural}`;
+  }
 
   settingsHeader = computed(() => {
     const type = this.selectedType();

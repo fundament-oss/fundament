@@ -130,4 +130,22 @@ export default class SelectorModalComponent {
   isProjectSelected(projectId: string): boolean {
     return this.selectedProjectId() === projectId;
   }
+
+  // Tracks the collapsed branches rather than the expanded ones, so an organization
+  // that has not been touched shows its projects — the state the picker opens in.
+  private collapsedOrgIds = signal<ReadonlySet<string>>(new Set());
+
+  isExpanded(orgId: string): boolean {
+    return !this.collapsedOrgIds().has(orgId);
+  }
+
+  toggleExpanded(orgId: string): void {
+    const next = new Set(this.collapsedOrgIds());
+
+    if (!next.delete(orgId)) {
+      next.add(orgId);
+    }
+
+    this.collapsedOrgIds.set(next);
+  }
 }
