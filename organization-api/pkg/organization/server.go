@@ -18,6 +18,7 @@ import (
 	"github.com/fundament-oss/fundament/organization-api/pkg/clock"
 	db "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
+	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 	"github.com/rs/cors"
@@ -29,6 +30,7 @@ type Config struct {
 	CORSAllowedOrigins   []string
 	Clock                clock.Clock
 	MockPrometheusClient *prom.MockClient
+	MockLogsClient       *logs.MockClient
 	PrometheusURL        string // Prometheus URL for metrics; "mock" uses generated data
 	PrometheusCAFile     string // PEM bundle trusted for Prometheus/ingress TLS (e.g. Gardener seed CAs in local dev)
 	KubeAPIProxyURL      string // Base URL for the kube-api-proxy (e.g. "https://kube-proxy.fundament.example")
@@ -46,6 +48,7 @@ type Server struct {
 	clock          clock.Clock
 	handler        http.Handler
 	mockPromClient *prom.MockClient
+	mockLogsClient *logs.MockClient
 	prometheusURL  string
 	promOpts       []prom.Option
 	gardener       gardener.Client
@@ -91,6 +94,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		authz:          authzClient,
 		clock:          clk,
 		mockPromClient: cfg.MockPrometheusClient,
+		mockLogsClient: cfg.MockLogsClient,
 		prometheusURL:  cfg.PrometheusURL,
 		promOpts:       promOpts,
 		gardener:       gardenerClient,
@@ -152,6 +156,7 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 		"organization.v1.APIKeyService",
 		"organization.v1.NamespaceService",
 		"organization.v1.MetricsService",
+		"organization.v1.LogsService",
 	)
 	reflectPath, reflectHandler := grpcreflect.NewHandlerV1(reflector)
 	mux.Handle(reflectPath, reflectHandler)
@@ -175,6 +180,9 @@ func New(logger *slog.Logger, cfg *Config, database *psqldb.DB, authzClient *aut
 
 	metricsPath, metricsHandler := organizationv1connect.NewMetricsServiceHandler(s, interceptors)
 	mux.Handle(metricsPath, metricsHandler)
+
+	logsPath, logsHandler := organizationv1connect.NewLogsServiceHandler(s, interceptors)
+	mux.Handle(logsPath, logsHandler)
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,

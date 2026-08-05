@@ -22,6 +22,7 @@ import (
 	"github.com/fundament-oss/fundament/common/psqldb"
 	dbgen "github.com/fundament-oss/fundament/organization-api/pkg/db/gen"
 	"github.com/fundament-oss/fundament/organization-api/pkg/gardener"
+	"github.com/fundament-oss/fundament/organization-api/pkg/logs"
 	"github.com/fundament-oss/fundament/organization-api/pkg/organization"
 	prom "github.com/fundament-oss/fundament/organization-api/pkg/prometheus"
 )
@@ -159,6 +160,7 @@ func run() error {
 		CORSAllowedOrigins:   cfg.CORSAllowedOrigins,
 		Clock:                clock.New(),
 		MockPrometheusClient: mockClient,
+		MockLogsClient:       logs.NewMockClient(),
 		PrometheusURL:        cfg.PrometheusURL,
 		PrometheusCAFile:     cfg.PrometheusCAFile,
 		KubeAPIProxyURL:      cfg.KubeAPIProxyURL,
