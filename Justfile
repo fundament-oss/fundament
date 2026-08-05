@@ -160,8 +160,17 @@ plugin-sandbox-kubeconfig:
         --dry-run=client -o yaml | \
         kubectl --context k3d-fundament-plugin apply -f -
 
-    echo "plugin-sandbox-kubeconfig Secret updated. Restart plugin-proxy:"
-    echo "  kubectl --context k3d-fundament -n fundament rollout restart deployment/plugin-proxy"
+    # plugin-proxy reads PLUGIN_SANDBOX_KUBECONFIG once at startup, and its
+    # volume is optional, so a pod that started before this Secret existed
+    # silently serves a mock installation store instead — every plugin then
+    # 404s in the console as "plugin installation not found". Restart it here.
+    echo "- plugin-sandbox-kubeconfig Secret updated"
+    if kubectl --context k3d-fundament -n fundament get deployment plugin-proxy >/dev/null 2>&1; then
+        kubectl --context k3d-fundament -n fundament rollout restart deployment/plugin-proxy
+        kubectl --context k3d-fundament -n fundament rollout status deployment/plugin-proxy --timeout=120s
+    else
+        echo "- plugin-proxy is not deployed yet; it will read the Secret when it starts"
+    fi
 
 # Delete deployment, can also be used to remove the deployment created by `just dev`.
 undeploy env:

@@ -24,6 +24,10 @@ func RenderCephBlockPool(namespace, name string, replicas int, failureDomain str
 	// Set replicated size (must be int64)
 	replicated := make(map[string]any)
 	replicated["size"] = int64(replicas)
+	// Ceph refuses a size-1 pool unless the safety check is waived.
+	if replicas < 2 {
+		replicated["requireSafeReplicaSize"] = false
+	}
 	spec["replicated"] = replicated
 
 	u.Object["spec"] = spec

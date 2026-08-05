@@ -23,6 +23,9 @@ import (
 type DiskInventoryReconciler struct {
 	Client        client.Client
 	RookNamespace string
+	// LoopDevices restricts discovery to loop-backed partitions; see
+	// ParseDiscoveredDevices.
+	LoopDevices bool
 }
 
 // SetupWithManager registers the reconciler with the controller-runtime manager.
@@ -55,7 +58,7 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	node := nodeFromConfigMap(cm.Name, cm.Labels)
 	raw := cm.Data["devices"]
 
-	statuses, err := ParseDiscoveredDevices(node, raw)
+	statuses, err := ParseDiscoveredDevices(node, raw, r.LoopDevices)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("parse discovered devices for node %q: %w", node, err)
 	}
@@ -64,7 +67,7 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	claimedBy, err := r.buildClaimedByIndex(ctx)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("build claimed-by index: %w", err)
-	}
+	}can 
 
 	// Upsert a Disk CR for every discovered device.
 	seenNames := make(map[string]struct{}, len(statuses))

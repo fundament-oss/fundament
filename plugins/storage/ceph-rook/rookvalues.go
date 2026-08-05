@@ -6,10 +6,19 @@ import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 // The enableDiscoveryDaemon value causes the operator to deploy a DaemonSet
 // that discovers raw block devices on every node, making them available as
 // Disk objects.
-func RookValues() map[string]string {
-	return map[string]string{
+//
+// There is no device denylist here. Rook's discoverDaemonUdev setting filters
+// which udev events trigger a re-probe; probeDevices writes every device it
+// finds to the ConfigMap regardless, so it cannot keep a node's real disks out
+// of the disk inventory. ParseDiscoveredDevices is the only thing that does.
+func RookValues(cfg Config) map[string]string {
+	values := map[string]string{
 		"enableDiscoveryDaemon": "true",
 	}
+	if cfg.DevLoopDevices {
+		values["allowLoopDevices"] = "true"
+	}
+	return values
 }
 
 // BootstrapCephCluster returns an unstructured CephCluster resource that
@@ -17,7 +26,7 @@ func RookValues() map[string]string {
 // suitable for server-side apply: it pins the Ceph image, sets quorum counts,
 // disables the dashboard, and leaves storage.nodes empty so the reconciler
 // (Task 9/10) can manage disk assignments independently.
-func BootstrapCephCluster(namespace string) *unstructured.Unstructured {
+func BootstrapCephCluster(namespace string, cfg Config) *unstructured.Unstructured {
 	u := &unstructured.Unstructured{
 		Object: map[string]any{
 			"apiVersion": "ceph.rook.io/v1",
@@ -27,19 +36,25 @@ func BootstrapCephCluster(namespace string) *unstructured.Unstructured {
 				"namespace": namespace,
 			},
 			"spec": map[string]any{
+				// Mon databases, keyrings and config -- not OSD data. Rook has
+				// no default and rejects a non-external cluster without it.
+				"dataDirHostPath": "/var/lib/rook",
 				"cephVersion": map[string]any{
-					"image": "quay.io/ceph/ceph:v18.2.4",
+					"image": cfg.CephImage,
 				},
 				"mon": map[string]any{
-					"count": int64(3),
+					"count":                int64(cfg.MonCount),
+					"allowMultiplePerNode": cfg.AllowMultiplePerNode,
 				},
 				"mgr": map[string]any{
-					"count": int64(2),
+					"count":                int64(cfg.MgrCount),
+					"allowMultiplePerNode": cfg.AllowMultiplePerNode,
 				},
 				"dashboard": map[string]any{
 					"enabled": false,
 				},
 				"storage": map[string]any{
+					// A privileged node container enumerates the host's real disks.
 					"useAllDevices": false,
 					"nodes":         []any{},
 				},
