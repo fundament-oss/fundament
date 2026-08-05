@@ -29,22 +29,37 @@ type LokiClient struct {
 	httpClient *http.Client
 }
 
+// Option configures a LokiClient.
+type Option func(*LokiClient)
+
+// WithTransport replaces the HTTP transport, e.g. to trust a private CA for
+// the seed ingress (the same bundle the per-shoot Prometheus client uses).
+func WithTransport(rt http.RoundTripper) Option {
+	return func(c *LokiClient) {
+		c.httpClient.Transport = rt
+	}
+}
+
 // NewLokiClient returns a LokiClient targeting the given base URL with no
-// authentication (used for the LOKI_URL dev override).
-func NewLokiClient(baseURL string) *LokiClient {
-	return NewLokiClientWithAuth(baseURL, "", "")
+// authentication (used for the LOGS_URL dev override).
+func NewLokiClient(baseURL string, opts ...Option) *LokiClient {
+	return NewLokiClientWithAuth(baseURL, "", "", opts...)
 }
 
 // NewLokiClientWithAuth returns a LokiClient that sends HTTP basic-auth on every
 // request. Empty credentials disable the auth header. Used for the per-shoot
 // Vali endpoint, whose credentials come from the Gardener monitoring secret.
-func NewLokiClientWithAuth(baseURL, username, password string) *LokiClient {
-	return &LokiClient{
+func NewLokiClientWithAuth(baseURL, username, password string, opts ...Option) *LokiClient {
+	c := &LokiClient{
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		username:   username,
 		password:   password,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 // newRequest builds a GET request, applying basic-auth when credentials are set.
@@ -192,7 +207,7 @@ func (c *LokiClient) labelValues(ctx context.Context, name, query string) ([]str
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("loki label values: status %d", resp.StatusCode)
+		return nil, &StatusError{StatusCode: resp.StatusCode, Operation: "loki label values"}
 	}
 	var result struct {
 		Status string   `json:"status"`
@@ -215,7 +230,7 @@ func (c *LokiClient) fetchStreams(ctx context.Context, rawURL string) ([]lokiStr
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("loki query: status %d", resp.StatusCode)
+		return nil, &StatusError{StatusCode: resp.StatusCode, Operation: "loki query"}
 	}
 	var result lokiQueryResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
