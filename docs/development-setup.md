@@ -64,3 +64,8 @@ just dev
 ## Console Frontend
 
 See `console-frontend/README.md`.
+
+## Storage
+
+Working on the `ceph-rook` plugin needs raw block devices, which a k3d node does not have.
+See [Block devices for k3d](./k3d-block-devices.md).

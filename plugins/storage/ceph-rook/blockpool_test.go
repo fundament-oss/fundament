@@ -32,4 +32,19 @@ func TestRenderCephBlockPool(t *testing.T) {
 
 	fd, _, _ := unstructuredNestedString(u.Object, "spec", "failureDomain")
 	assert.Equal(t, "host", fd)
+
+	_, found, err = unstructured.NestedBool(u.Object, "spec", "replicated", "requireSafeReplicaSize")
+	require.NoError(t, err)
+	assert.False(t, found)
+}
+
+// Ceph rejects a size-1 pool unless the safe-replica check is waived, which is
+// what a single-node cluster gets from `replication: auto`.
+func TestRenderCephBlockPoolSingleReplica(t *testing.T) {
+	u := RenderCephBlockPool("rook-ceph", "pool-a", 1, "osd")
+
+	safe, found, err := unstructured.NestedBool(u.Object, "spec", "replicated", "requireSafeReplicaSize")
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.False(t, safe)
 }

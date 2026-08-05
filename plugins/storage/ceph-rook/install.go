@@ -14,8 +14,8 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/apimachinery/pkg/util/wait"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/helm"
@@ -46,7 +46,7 @@ var fundamentCRDNames = []string{
 func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	// Step 1: Install the rook-ceph operator via Helm.
 	if err := helm.NewClient(p.cfg.RookNamespace).InstallFromRepo(
-		ctx, rookReleaseName, rookChart, rookRepoURL, p.cfg.RookChartVersion, RookValues(),
+		ctx, rookReleaseName, rookChart, rookRepoURL, p.cfg.RookChartVersion, RookValues(p.cfg),
 	); err != nil {
 		return fmt.Errorf("install rook-ceph helm chart: %w", err)
 	}
@@ -62,7 +62,7 @@ func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	}
 
 	// Step 4: Bootstrap the CephCluster singleton.
-	if err := bootstrapCephCluster(ctx, kube, p.cfg.ClusterNamespace); err != nil {
+	if err := bootstrapCephCluster(ctx, kube, p.cfg.ClusterNamespace, p.cfg); err != nil {
 		return fmt.Errorf("bootstrap CephCluster: %w", err)
 	}
 
@@ -126,8 +126,8 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 // bootstrapCephCluster creates the singleton CephCluster if it does not exist.
 // If it already exists, it is left untouched so that spec.storage (disk
 // assignments) managed by the Task 9/10 reconciler are not overwritten.
-func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace string) error {
-	desired := BootstrapCephCluster(namespace)
+func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace string, cfg Config) error {
+	desired := BootstrapCephCluster(namespace, cfg)
 
 	existing := &unstructured.Unstructured{}
 	existing.SetGroupVersionKind(desired.GroupVersionKind())

@@ -69,8 +69,8 @@ This design supports:
 The `StoragePool` spec includes a `replication` field that controls how many copies Ceph maintains:
 
 - `"auto"` (default): Automatically selects the optimal replica count based on the number of nodes contributing disks:
-  - **2+ nodes**: Uses `host` failure domain (replicas equal the number of contributing nodes), tolerating a single node failure.
-  - **1 node**: Uses `osd` failure domain (replicas = 2), tolerating a single OSD/disk failure.
+  - **2+ nodes**: Uses `host` failure domain with one replica per contributing node, capped at 3, tolerating a single node failure.
+  - **1 node**: Uses `osd` failure domain with 1 replica, so a single-node cluster still provisions. There is no redundancy.
   - If this results in more replicas than available OSDs, the pool enters a degraded state until sufficient disks are added.
 
 - `"1"`, `"2"`, `"3"`: Explicit replica count. Operators may set this to override auto behavior (e.g., to sacrifice redundancy for capacity on test clusters).
