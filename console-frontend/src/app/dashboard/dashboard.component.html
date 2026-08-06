@@ -30,6 +30,13 @@
             variant="primary"
             (click)="pageNav.navigate($event, '/clusters/add')"
           ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="plus-small"
+            text="New cluster"
+            href="/clusters/add"
+            (select)="pageNav.navigate($event, '/clusters/add')"
+          ></nldd-menu-item>
         </nldd-toolbar-item>
       </nldd-toolbar>
     }

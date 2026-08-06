@@ -104,6 +104,12 @@
                 start-icon="plus-small"
                 variant="primary"
               ></nldd-button>
+              <nldd-menu-item
+                slot="overflow"
+                icon="plus-small"
+                text="New namespace"
+                (select)="openAddNamespaceStep()"
+              ></nldd-menu-item>
             </nldd-toolbar-item>
             @if (selection.count() > 0) {
               <nldd-toolbar-item slot="end">
@@ -204,7 +210,7 @@
     type="button"
     (click)="showDeleteNamespaceModal.set(false)"
     text="Keep namespace"
-    variant="secondary"
+    variant="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
@@ -235,7 +241,7 @@
     (click)="showBulkDeleteModal.set(false)"
     [disabled]="isBulkDeleting()"
     [text]="selection.count() === 1 ? 'Keep namespace' : 'Keep namespaces'"
-    variant="secondary"
+    variant="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"

@@ -17,6 +17,7 @@ import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
+import PageNavService from '../page-nav.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
@@ -108,16 +109,32 @@ const sampleMembers = (currentUserId?: string): OrganizationMember[] => {
   ].map((m) => ({ ...m, isCurrentUser: m.isCurrentUser && !!currentUserId }));
 };
 
+/** Name or email; a member without a name is only findable by their address. */
+const filterByQuery = (members: OrganizationMember[], query: string): OrganizationMember[] => {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return members;
+  return members.filter((member) =>
+    `${member.name} ${member.email}`.toLowerCase().includes(needle),
+  );
+};
+
 /** How long a retry shows as running before its result lands. */
 const MIN_RETRY_FEEDBACK_MS = 2000;
 
-type MemberSort = 'status' | 'role' | 'joined' | 'joined-oldest';
+type MemberSort = 'status' | 'permission' | 'joined' | 'joined-oldest';
 
 /** Only Joined needs its direction spelled out: with status and role you can
  *  see which way the list runs, with dates you cannot. */
+/** What the filter button says while its menu is closed. */
+const FILTER_LABELS: Record<string, string> = {
+  all: 'All',
+  invitations: 'Invitations',
+  members: 'Members',
+};
+
 const SORT_LABELS: Record<MemberSort, string> = {
   status: 'Status',
-  role: 'Role',
+  permission: 'Permission',
   joined: 'Joined (newest first)',
   'joined-oldest': 'Joined (oldest first)',
 };
@@ -143,7 +160,7 @@ const comparatorFor =
   (a: OrganizationMember, b: OrganizationMember): number => {
     if (sort === 'joined') return joinedDescending(a, b);
     if (sort === 'joined-oldest') return -joinedDescending(a, b);
-    if (sort === 'role' && a.permission !== b.permission) {
+    if (sort === 'permission' && a.permission !== b.permission) {
       return a.permission === 'admin' ? -1 : 1;
     }
     return statusRank(a) - statusRank(b) || joinedDescending(a, b);
@@ -166,6 +183,8 @@ export default class OrganizationMembersComponent implements OnInit {
   private router = inject(Router);
 
   private titleService = inject(TitleService);
+
+  protected pageNav = inject(PageNavService);
 
   private toastService = inject(ToastService);
 
@@ -230,11 +249,49 @@ export default class OrganizationMembersComponent implements OnInit {
    *  invitation is the row you still have to do something about. */
   allAccess = computed(() => [...this.pendingInvitations(), ...this.activeMembers()]);
 
+  memberQuery = signal('');
+
+  /** Everything the query leaves standing; the filter and the counts both work
+   *  on this, so the tabs describe what you would actually see. */
+  matching = computed(() => filterByQuery(this.allAccess(), this.memberQuery()));
+
+  matchingInvitations = computed(() =>
+    filterByQuery(this.pendingInvitations(), this.memberQuery()),
+  );
+
+  matchingMembers = computed(() => filterByQuery(this.activeMembers(), this.memberQuery()));
+
+  emptyStateText = computed(() => {
+    switch (this.memberFilter()) {
+      case 'invitations':
+        return 'No pending invitations';
+      case 'members':
+        return 'No members found';
+      default:
+        return 'Nobody has access yet';
+    }
+  });
+
   memberFilter = signal<'all' | 'invitations' | 'members'>('all');
+
+  permissionOptions = [
+    {
+      value: 'viewer',
+      label: 'Viewer',
+      description: 'Can look at the organization, its clusters and its members.',
+    },
+    {
+      value: 'admin',
+      label: 'Admin',
+      description: 'Can also create clusters, invite members and reach every project.',
+    },
+  ];
 
   memberSort = signal<MemberSort>('status');
 
   sortLabel = computed(() => SORT_LABELS[this.memberSort()]);
+
+  filterLabel = computed(() => FILTER_LABELS[this.memberFilter()]);
 
   visibleMembers = computed(() => {
     const base = this.filtered();
@@ -244,11 +301,11 @@ export default class OrganizationMembersComponent implements OnInit {
   private filtered = computed(() => {
     switch (this.memberFilter()) {
       case 'invitations':
-        return this.pendingInvitations();
+        return this.matchingInvitations();
       case 'members':
-        return this.activeMembers();
+        return this.matchingMembers();
       default:
-        return this.allAccess();
+        return this.matching();
     }
   });
 
@@ -449,9 +506,11 @@ export default class OrganizationMembersComponent implements OnInit {
 
   /** Routes client-side while leaving the control a real link, so middle-click
    *  and "open in new tab" keep working. */
-  openPermissions(event: MouseEvent): void {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-      return;
+  openPermissions(event: Event): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
     }
     event.preventDefault();
     this.router.navigateByUrl('/organization/members/permissions');

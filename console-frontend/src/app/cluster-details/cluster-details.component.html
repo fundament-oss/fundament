@@ -41,6 +41,12 @@
             variant="secondary"
             start-icon="terminal"
           ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="terminal"
+            text="Open terminal"
+            (select)="openTerminal()"
+          ></nldd-menu-item>
         </nldd-toolbar-item>
         <nldd-toolbar-item slot="start">
           <nldd-button
@@ -57,196 +63,200 @@
 
       <nldd-container gap="24">
         <nldd-box>
-          <nldd-list variant="simple" accessible-label="Cluster basics">
-            <nldd-list-item>
-              <nldd-text-cell text="Cluster name"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="clusterData.basics.name"
-              ></nldd-text-cell>
-            </nldd-list-item>
-            <nldd-list-item>
-              <nldd-text-cell text="Region"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="clusterData.basics.region.toUpperCase()"
-              ></nldd-text-cell>
-            </nldd-list-item>
-            <nldd-list-item>
-              <nldd-text-cell text="Status"></nldd-text-cell>
-              <nldd-cell width="fit-content">
-                <nldd-tag
-                  [attr.color]="getStatusTagColor(clusterData.status)"
-                  [attr.text]="getStatusLabel(clusterData.status)"
-                ></nldd-tag>
-              </nldd-cell>
-            </nldd-list-item>
-            <nldd-list-item>
-              <nldd-text-cell text="Kubernetes version"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="clusterData.basics.kubernetesVersion"
-              ></nldd-text-cell>
-              <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <nldd-cell width="fit-content">
-                <nldd-button
-                  text="Upgrade"
-                  start-icon="arrow-up"
-                  variant="secondary"
-                  size="sm"
-                ></nldd-button>
-              </nldd-cell>
-            </nldd-list-item>
-            <nldd-list-item>
-              <nldd-text-cell text="Created"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="formatDate(clusterData.creationDate)"
-              ></nldd-text-cell>
-            </nldd-list-item>
-          </nldd-list>
+          <nldd-container padding="16">
+            <nldd-list variant="simple" accessible-label="Cluster basics">
+              <nldd-list-item>
+                <nldd-text-cell text="Cluster name"></nldd-text-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  [attr.text]="clusterData.basics.name"
+                ></nldd-text-cell>
+              </nldd-list-item>
+              <nldd-list-item>
+                <nldd-text-cell text="Region"></nldd-text-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  [attr.text]="clusterData.basics.region.toUpperCase()"
+                ></nldd-text-cell>
+              </nldd-list-item>
+              <nldd-list-item>
+                <nldd-text-cell text="Status"></nldd-text-cell>
+                <nldd-cell width="fit-content">
+                  <nldd-tag
+                    [attr.color]="getStatusTagColor(clusterData.status)"
+                    [attr.text]="getStatusLabel(clusterData.status)"
+                  ></nldd-tag>
+                </nldd-cell>
+              </nldd-list-item>
+              <nldd-list-item>
+                <nldd-text-cell text="Kubernetes version"></nldd-text-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  [attr.text]="clusterData.basics.kubernetesVersion"
+                ></nldd-text-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-cell width="fit-content">
+                  <nldd-button
+                    text="Upgrade"
+                    start-icon="arrow-up"
+                    variant="secondary"
+                    size="sm"
+                  ></nldd-button>
+                </nldd-cell>
+              </nldd-list-item>
+              <nldd-list-item>
+                <nldd-text-cell text="Created"></nldd-text-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  [attr.text]="formatDate(clusterData.creationDate)"
+                ></nldd-text-cell>
+              </nldd-list-item>
+            </nldd-list>
+          </nldd-container>
         </nldd-box>
 
         <!-- Gardener Sync State Block -->
         <nldd-box>
-          <nldd-title size="5">
-            <h3>Provisioning status</h3>
-          </nldd-title>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h3>Provisioning status</h3>
+            </nldd-title>
 
-          <nldd-spacer size="16"></nldd-spacer>
-
-          <nldd-list variant="simple">
-            <nldd-list-item>
-              <nldd-text-cell text="Gardener status"></nldd-text-cell>
-              <nldd-cell width="fit-content">
-                <nldd-tag
-                  class="capitalize"
-                  [attr.color]="getSyncStatusTagColor(clusterData.syncState)"
-                  [attr.text]="getSyncStatusLabel(clusterData.syncState)"
-                ></nldd-tag>
-              </nldd-cell>
-            </nldd-list-item>
-            @if (clusterData.syncState?.shootMessage) {
-              <nldd-list-item>
-                <nldd-text-cell text="Message"></nldd-text-cell>
-                <nldd-text-cell
-                  width="fit-content"
-                  horizontal-alignment="right"
-                  [attr.text]="clusterData.syncState.shootMessage"
-                ></nldd-text-cell>
-              </nldd-list-item>
-            }
-            @if (clusterData.syncState?.outboxError) {
-              <nldd-list-item>
-                <nldd-text-cell text="Sync error"></nldd-text-cell>
-                <nldd-text-cell
-                  color="critical"
-                  width="fit-content"
-                  horizontal-alignment="right"
-                  [attr.text]="clusterData.syncState.outboxError"
-                ></nldd-text-cell>
-              </nldd-list-item>
-            }
-            @if (clusterData.syncState?.outboxStatus) {
-              <nldd-list-item>
-                <nldd-text-cell text="Outbox status"></nldd-text-cell>
-                <nldd-text-cell
-                  width="fit-content"
-                  horizontal-alignment="right"
-                  [attr.text]="clusterData.syncState!.outboxStatus"
-                ></nldd-text-cell>
-              </nldd-list-item>
-            }
-            @if (clusterData.syncState && clusterData.syncState.outboxRetries > 0) {
-              <nldd-list-item>
-                <nldd-text-cell text="Outbox retries"></nldd-text-cell>
-                <nldd-text-cell
-                  width="fit-content"
-                  horizontal-alignment="right"
-                  [attr.text]="clusterData.syncState.outboxRetries"
-                ></nldd-text-cell>
-              </nldd-list-item>
-            }
-          </nldd-list>
-
-          <!-- Collapsible Sync History -->
-          @if (clusterData.syncState) {
-            <nldd-spacer size="16"></nldd-spacer>
-            <nldd-divider></nldd-divider>
             <nldd-spacer size="16"></nldd-spacer>
 
-            <details class="group">
-              <summary class="inline-flex cursor-pointer items-center font-medium">
-                <nldd-icon
-                  name="caret-right"
-                  class="mr-1 transition-transform group-open:rotate-90"
-                  size="16"
-                  color="accent"
-                ></nldd-icon>
-                Sync details
-              </summary>
-
-              <nldd-spacer size="12"></nldd-spacer>
-
-              <nldd-table
-                accessible-label="Sync details"
-                columns="minmax(140px, 1fr) minmax(200px, 2fr)"
-              >
-                <nldd-table-row slot="header">
-                  <nldd-text-cell text="**Property**"></nldd-text-cell>
-                  <nldd-text-cell text="**Value**"></nldd-text-cell>
-                </nldd-table-row>
-
-                <nldd-table-row>
-                  <nldd-text-cell text="Shoot status"></nldd-text-cell>
+            <nldd-list variant="simple">
+              <nldd-list-item>
+                <nldd-text-cell text="Gardener status"></nldd-text-cell>
+                <nldd-cell width="fit-content">
+                  <nldd-tag
+                    class="capitalize"
+                    [attr.color]="getSyncStatusTagColor(clusterData.syncState)"
+                    [attr.text]="getSyncStatusLabel(clusterData.syncState)"
+                  ></nldd-tag>
+                </nldd-cell>
+              </nldd-list-item>
+              @if (clusterData.syncState?.shootMessage) {
+                <nldd-list-item>
+                  <nldd-text-cell text="Message"></nldd-text-cell>
                   <nldd-text-cell
-                    [attr.text]="clusterData.syncState.shootStatus || 'N/A'"
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    [attr.text]="clusterData.syncState.shootMessage"
                   ></nldd-text-cell>
-                </nldd-table-row>
-                <nldd-table-row>
-                  <nldd-text-cell text="Status message"></nldd-text-cell>
+                </nldd-list-item>
+              }
+              @if (clusterData.syncState?.outboxError) {
+                <nldd-list-item>
+                  <nldd-text-cell text="Sync error"></nldd-text-cell>
                   <nldd-text-cell
-                    [attr.text]="clusterData.syncState.shootMessage || 'N/A'"
+                    color="critical"
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    [attr.text]="clusterData.syncState.outboxError"
                   ></nldd-text-cell>
-                </nldd-table-row>
-                <nldd-table-row>
-                  <nldd-text-cell text="Status updated"></nldd-text-cell>
-                  <nldd-text-cell
-                    [attr.text]="
-                      clusterData.syncState.statusUpdatedAt
-                        ? formatDate(clusterData.syncState.statusUpdatedAt)
-                        : 'N/A'
-                    "
-                  ></nldd-text-cell>
-                </nldd-table-row>
-                <nldd-table-row>
+                </nldd-list-item>
+              }
+              @if (clusterData.syncState?.outboxStatus) {
+                <nldd-list-item>
                   <nldd-text-cell text="Outbox status"></nldd-text-cell>
                   <nldd-text-cell
-                    [attr.text]="clusterData.syncState.outboxStatus || 'N/A'"
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    [attr.text]="clusterData.syncState!.outboxStatus"
                   ></nldd-text-cell>
-                </nldd-table-row>
-                <nldd-table-row>
+                </nldd-list-item>
+              }
+              @if (clusterData.syncState && clusterData.syncState.outboxRetries > 0) {
+                <nldd-list-item>
                   <nldd-text-cell text="Outbox retries"></nldd-text-cell>
                   <nldd-text-cell
+                    width="fit-content"
+                    horizontal-alignment="right"
                     [attr.text]="clusterData.syncState.outboxRetries"
                   ></nldd-text-cell>
-                </nldd-table-row>
-                @if (clusterData.syncState.outboxError) {
+                </nldd-list-item>
+              }
+            </nldd-list>
+
+            <!-- Collapsible Sync History -->
+            @if (clusterData.syncState) {
+              <nldd-spacer size="16"></nldd-spacer>
+              <nldd-divider></nldd-divider>
+              <nldd-spacer size="16"></nldd-spacer>
+
+              <details class="group">
+                <summary class="inline-flex cursor-pointer items-center font-medium">
+                  <nldd-icon
+                    name="caret-right"
+                    class="mr-1 transition-transform group-open:rotate-90"
+                    size="16"
+                    color="accent"
+                  ></nldd-icon>
+                  Sync details
+                </summary>
+
+                <nldd-spacer size="12"></nldd-spacer>
+
+                <nldd-table
+                  accessible-label="Sync details"
+                  columns="minmax(140px, 1fr) minmax(200px, 2fr)"
+                >
+                  <nldd-table-row slot="header">
+                    <nldd-text-cell text="**Property**"></nldd-text-cell>
+                    <nldd-text-cell text="**Value**"></nldd-text-cell>
+                  </nldd-table-row>
+
                   <nldd-table-row>
-                    <nldd-text-cell text="Outbox error"></nldd-text-cell>
+                    <nldd-text-cell text="Shoot status"></nldd-text-cell>
                     <nldd-text-cell
-                      color="critical"
-                      [attr.text]="clusterData.syncState.outboxError"
+                      [attr.text]="clusterData.syncState.shootStatus || 'N/A'"
                     ></nldd-text-cell>
                   </nldd-table-row>
-                }
-              </nldd-table>
-            </details>
-          }
+                  <nldd-table-row>
+                    <nldd-text-cell text="Status message"></nldd-text-cell>
+                    <nldd-text-cell
+                      [attr.text]="clusterData.syncState.shootMessage || 'N/A'"
+                    ></nldd-text-cell>
+                  </nldd-table-row>
+                  <nldd-table-row>
+                    <nldd-text-cell text="Status updated"></nldd-text-cell>
+                    <nldd-text-cell
+                      [attr.text]="
+                        clusterData.syncState.statusUpdatedAt
+                          ? formatDate(clusterData.syncState.statusUpdatedAt)
+                          : 'N/A'
+                      "
+                    ></nldd-text-cell>
+                  </nldd-table-row>
+                  <nldd-table-row>
+                    <nldd-text-cell text="Outbox status"></nldd-text-cell>
+                    <nldd-text-cell
+                      [attr.text]="clusterData.syncState.outboxStatus || 'N/A'"
+                    ></nldd-text-cell>
+                  </nldd-table-row>
+                  <nldd-table-row>
+                    <nldd-text-cell text="Outbox retries"></nldd-text-cell>
+                    <nldd-text-cell
+                      [attr.text]="clusterData.syncState.outboxRetries"
+                    ></nldd-text-cell>
+                  </nldd-table-row>
+                  @if (clusterData.syncState.outboxError) {
+                    <nldd-table-row>
+                      <nldd-text-cell text="Outbox error"></nldd-text-cell>
+                      <nldd-text-cell
+                        color="critical"
+                        [attr.text]="clusterData.syncState.outboxError"
+                      ></nldd-text-cell>
+                    </nldd-table-row>
+                  }
+                </nldd-table>
+              </details>
+            }
+          </nldd-container>
         </nldd-box>
 
         <!-- Resource Usage Charts -->
@@ -272,45 +282,47 @@
 
         <!-- Event History -->
         <nldd-box>
-          <nldd-title size="5">
-            <h3>Event history</h3>
-          </nldd-title>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h3>Event history</h3>
+            </nldd-title>
 
-          <nldd-spacer size="16"></nldd-spacer>
-          @if (clusterEvents().length === 0) {
-            <nldd-inline-dialog
-              icon="clock"
-              icon-color="secondary"
-              text="No events recorded yet"
-            ></nldd-inline-dialog>
-          } @else {
-            <!-- Capped and scrollable: the history grows without bound. tabindex
-                 makes the region reachable for keyboard scrolling. -->
-            <div class="max-h-80 overflow-y-auto" tabindex="0">
-              <nldd-list no-dividers accessible-label="Event history">
-                @for (
-                  event of clusterEvents();
-                  track event.id;
-                  let isFirst = $first, isLast = $last
-                ) {
-                  <nldd-list-item>
-                    <nldd-timeline-track-cell
-                      status="past"
-                      [attr.position]="isLast ? 'last' : isFirst ? 'first' : 'between'"
-                    ></nldd-timeline-track-cell>
-                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                    <nldd-title-cell
-                      vertical-alignment="top"
-                      [attr.color]="getEventTypeColor(event.eventType)"
-                      [attr.overline]="event.createdAt ? formatDate(event.createdAt) : null"
-                      [attr.text]="getEventTypeLabel(event.eventType)"
-                      [attr.supporting-text]="getEventDetails(event)"
-                    ></nldd-title-cell>
-                  </nldd-list-item>
-                }
-              </nldd-list>
-            </div>
-          }
+            <nldd-spacer size="16"></nldd-spacer>
+            @if (clusterEvents().length === 0) {
+              <nldd-inline-dialog
+                icon="clock"
+                icon-color="secondary"
+                text="No events recorded yet"
+              ></nldd-inline-dialog>
+            } @else {
+              <!-- Capped and scrollable: the history grows without bound. tabindex
+                   makes the region reachable for keyboard scrolling. -->
+              <div class="max-h-80 overflow-y-auto" tabindex="0">
+                <nldd-list no-dividers accessible-label="Event history">
+                  @for (
+                    event of clusterEvents();
+                    track event.id;
+                    let isFirst = $first, isLast = $last
+                  ) {
+                    <nldd-list-item>
+                      <nldd-timeline-track-cell
+                        status="past"
+                        [attr.position]="isLast ? 'last' : isFirst ? 'first' : 'between'"
+                      ></nldd-timeline-track-cell>
+                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                      <nldd-title-cell
+                        vertical-alignment="top"
+                        [attr.color]="getEventTypeColor(event.eventType)"
+                        [attr.overline]="event.createdAt ? formatDate(event.createdAt) : null"
+                        [attr.text]="getEventTypeLabel(event.eventType)"
+                        [attr.supporting-text]="getEventDetails(event)"
+                      ></nldd-title-cell>
+                    </nldd-list-item>
+                  }
+                </nldd-list>
+              </div>
+            }
+          </nldd-container>
         </nldd-box>
 
         <!-- Node Pools -->
@@ -469,86 +481,90 @@
 
         <!-- Monitoring Block -->
         <nldd-box>
-          <nldd-title size="5">
-            <h3>Monitoring</h3>
-          </nldd-title>
-
-          <nldd-spacer size="16"></nldd-spacer>
-
-          @if (clusterData.observabilityUrl && clusterData.status === ClusterStatus.RUNNING) {
-            <nldd-rich-text>
-              <p>
-                Per-shoot Plutono dashboard with Prometheus metrics. Authenticate using the
-                Gardener-issued basic-auth credentials.
-              </p>
-            </nldd-rich-text>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h3>Monitoring</h3>
+            </nldd-title>
 
             <nldd-spacer size="16"></nldd-spacer>
 
-            <nldd-button-group orientation="horizontal">
-              <nldd-button
-                type="button"
-                (click)="openObservabilityDashboard()"
-                text="Open dashboard"
-                start-icon="chart-x-y-axis-line"
-                variant="primary"
-              ></nldd-button>
-              <nldd-button
-                type="button"
-                (click)="openCredentialsModal()"
-                text="Show credentials"
-                start-icon="lock-closed"
-                variant="secondary"
-              ></nldd-button>
-            </nldd-button-group>
-          } @else {
-            <nldd-rich-text>
-              <p>Metrics dashboard becomes available once the cluster is ready.</p>
-            </nldd-rich-text>
-          }
+            @if (clusterData.observabilityUrl && clusterData.status === ClusterStatus.RUNNING) {
+              <nldd-rich-text>
+                <p>
+                  Per-shoot Plutono dashboard with Prometheus metrics. Authenticate using the
+                  Gardener-issued basic-auth credentials.
+                </p>
+              </nldd-rich-text>
+
+              <nldd-spacer size="16"></nldd-spacer>
+
+              <nldd-button-group orientation="horizontal">
+                <nldd-button
+                  type="button"
+                  (click)="openObservabilityDashboard()"
+                  text="Open dashboard"
+                  start-icon="chart-x-y-axis-line"
+                  variant="primary"
+                ></nldd-button>
+                <nldd-button
+                  type="button"
+                  (click)="openCredentialsModal()"
+                  text="Show credentials"
+                  start-icon="lock-closed"
+                  variant="secondary"
+                ></nldd-button>
+              </nldd-button-group>
+            } @else {
+              <nldd-rich-text>
+                <p>Metrics dashboard becomes available once the cluster is ready.</p>
+              </nldd-rich-text>
+            }
+          </nldd-container>
         </nldd-box>
 
         <!-- Danger Zone -->
         <nldd-box variant="critical">
-          <nldd-title size="5">
-            <h3>Danger zone</h3>
-          </nldd-title>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h3>Danger zone</h3>
+            </nldd-title>
 
-          <nldd-spacer size="8"></nldd-spacer>
+            <nldd-spacer size="8"></nldd-spacer>
 
-          <nldd-rich-text spacing="flat">
-            <p>Deleting a cluster is permanent and cannot be undone.</p>
-            @if (namespaces().length > 0) {
-              <p>
-                This cluster still has {{ namespaces().length }} namespace{{
-                  namespaces().length === 1 ? '' : 's'
-                }}.
-                <nldd-link
-                  [attr.href]="'/clusters/' + clusterData.basics.id + '/namespaces'"
-                  (click)="
-                    pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/namespaces')
-                  "
-                  text="Delete all namespaces"
-                ></nldd-link>
-                before you can delete the cluster.
-              </p>
-            } @else if (namespacesLoadError()) {
-              <p>
-                Couldn't load this cluster's namespaces, so deletion is blocked until we can confirm
-                it is empty. Reload the page and try again.
-              </p>
-            }
-          </nldd-rich-text>
+            <nldd-rich-text spacing="flat">
+              <p>Deleting a cluster is permanent and cannot be undone.</p>
+              @if (namespaces().length > 0) {
+                <p>
+                  This cluster still has {{ namespaces().length }} namespace{{
+                    namespaces().length === 1 ? '' : 's'
+                  }}.
+                  <nldd-link
+                    [attr.href]="'/clusters/' + clusterData.basics.id + '/namespaces'"
+                    (click)="
+                      pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/namespaces')
+                    "
+                    text="Delete all namespaces"
+                  ></nldd-link>
+                  before you can delete the cluster.
+                </p>
+              } @else if (namespacesLoadError()) {
+                <p>
+                  Couldn't load this cluster's namespaces, so deletion is blocked until we can
+                  confirm it is empty. Reload the page and try again.
+                </p>
+              }
+            </nldd-rich-text>
 
-          <nldd-spacer size="16"></nldd-spacer>
+            <nldd-spacer size="16"></nldd-spacer>
 
-          <!-- Never disabled: a dead button leaves you guessing. Clicking while
-               deletion is blocked explains why, and offers the way forward. -->
-          <nldd-button
-            (click)="onDeleteClusterClick()"
-            text="Delete this cluster"
-            variant="destructive"
-          ></nldd-button>
+            <!-- Never disabled: a dead button leaves you guessing. Clicking while
+                 deletion is blocked explains why, and offers the way forward. -->
+            <nldd-button
+              (click)="onDeleteClusterClick()"
+              text="Delete this cluster"
+              variant="destructive"
+            ></nldd-button>
+          </nldd-container>
         </nldd-box>
       </nldd-container>
     }
@@ -664,7 +680,7 @@
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Keep cluster"
-    variant="secondary"
+    variant="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"

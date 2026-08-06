@@ -57,9 +57,13 @@ export default class PageNavService {
    * Routes client-side while leaving the element a real `<a href>`, so
    * middle-click and "open in new tab" keep working.
    */
-  navigate(event: MouseEvent, path: string): void {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-      return;
+  navigate(event: Event, path: string): void {
+    // A menu item reports a plain Event; only a real click carries the modifiers
+    // that mean "open this somewhere else".
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
     }
 
     event.preventDefault();
