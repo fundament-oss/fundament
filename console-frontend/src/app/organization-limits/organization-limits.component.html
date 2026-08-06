@@ -1,210 +1,286 @@
-<div class="space-y-6">
-  @if (initialLoading()) {
-    <div class="py-8 text-center">
-      <p class="text-gray-600 dark:text-gray-300">Loading limits…</p>
-    </div>
-  } @else {
-    <!-- Cluster Limits (Gardener) -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="text-xl font-semibold dark:text-white">Cluster limits</h2>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          Maximum resource quotas enforced by Gardener for shoot clusters in this organization.
-          Every quota is unlimited unless you set one.
-        </p>
-      </div>
+<!-- Same outer layout as the other organization pages: the pane owns the back
+     button, so the page does not force one. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Limits"
+    [attr.back-text]="pageNav.backText()"
+    collapse-anchor="organization-limits-title"
+  ></nldd-top-title-bar>
 
-      <div class="card-body-lg">
-        <nldd-form (submit)="saveClusterLimits($event)">
-          <div class="space-y-8">
-            <!-- Max nodes per cluster -->
-            <div>
-              <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
-                Nodes per cluster
-              </span>
-              <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
-                Caps the total number of nodes across all node pools in a shoot cluster.
-              </p>
-              <nldd-segmented-control
-                size="sm"
-                name="maxNodesPerClusterLimited"
-                accessible-label="Nodes per cluster"
-                [value]="maxNodesPerClusterLimited() ? 'limited' : 'unlimited'"
-                (change)="toggleMaxNodesPerCluster($any($event).detail.value === 'limited')"
-              >
-                <nldd-segmented-control-item
-                  value="unlimited"
-                  text="Unlimited"
-                ></nldd-segmented-control-item>
-                <nldd-segmented-control-item
-                  value="limited"
-                  text="Limited"
-                ></nldd-segmented-control-item>
-              </nldd-segmented-control>
-              @if (maxNodesPerClusterLimited()) {
-                <div class="mt-3 max-w-xs">
-                  <nldd-form-field label="Max nodes per cluster">
+  <nldd-simple-section>
+    <nldd-title id="organization-limits-title" size="2">
+      <h1>Limits</h1>
+    </nldd-title>
+
+    <nldd-spacer size="12"></nldd-spacer>
+
+    <nldd-rich-text spacing="flat">
+      <p>
+        What clusters in this organization may grow to, and what containers get when a workload does
+        not set its own resources.
+      </p>
+    </nldd-rich-text>
+
+    <nldd-spacer size="24"></nldd-spacer>
+
+    @if (initialLoading()) {
+      <nldd-activity-indicator show-text text="Loading limits..."></nldd-activity-indicator>
+    } @else {
+      <!-- What is stored, not a form: you come here to look, and a page full of
+           controls invites changes nobody meant to make. -->
+      <nldd-title size="4">
+        <h2>Cluster limits</h2>
+      </nldd-title>
+
+      <nldd-spacer size="8"></nldd-spacer>
+
+      <nldd-rich-text spacing="flat">
+        <p>Maximums Gardener enforces for shoot clusters in this organization.</p>
+      </nldd-rich-text>
+
+      <nldd-spacer size="12"></nldd-spacer>
+
+      <!-- The row opens the editor, and the icon says so. -->
+      <nldd-list variant="box" accessible-label="Cluster limits">
+        @for (row of clusterRows(); track row.label) {
+          <nldd-list-item button (click)="openClusterEdit()">
+            <nldd-text-cell width="full" [attr.text]="row.label"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="row.value === null ? 'Unlimited' : row.value"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-icon-cell icon="edit" size="20" color="secondary"></nldd-icon-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+
+      <nldd-spacer size="24"></nldd-spacer>
+
+      @for (summary of summaries(); track summary.copy.name) {
+        <nldd-title size="4">
+          <h2>{{ summary.copy.title }}</h2>
+        </nldd-title>
+
+        @if (summary.mode !== 'unlimited') {
+          <nldd-spacer size="8"></nldd-spacer>
+
+          <nldd-rich-text spacing="flat">
+            <p>{{ stateText(summary.mode) }}</p>
+          </nldd-rich-text>
+        }
+
+        <nldd-spacer size="12"></nldd-spacer>
+
+        <nldd-list variant="box" [attr.accessible-label]="summary.copy.title">
+          <nldd-list-item button (click)="openNamespaceEdit()">
+            <nldd-text-cell width="full" [attr.text]="summary.copy.requestName"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="valueText(summary.request, summary.copy.unit)"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-icon-cell icon="edit" size="20" color="secondary"></nldd-icon-cell>
+          </nldd-list-item>
+          <nldd-list-item button (click)="openNamespaceEdit()">
+            <nldd-text-cell width="full" [attr.text]="summary.copy.limitName"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="valueText(summary.limit, summary.copy.unit)"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-icon-cell icon="edit" size="20" color="secondary"></nldd-icon-cell>
+          </nldd-list-item>
+        </nldd-list>
+
+        @if (!$last) {
+          <nldd-spacer size="24"></nldd-spacer>
+        }
+      }
+    }
+  </nldd-simple-section>
+
+  <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
+
+<!-- Edit Cluster Limits Sheet -->
+<nldd-sheet
+  #clusterSheet
+  appSheetSync
+  [show]="showClusterEdit()"
+  accessible-label="Edit cluster limits"
+  placement="right"
+  (close)="showClusterEdit.set(false)"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit cluster limits"
+      dismiss-text="Cancel"
+      (dismiss)="showClusterEdit.set(false)"
+    ></nldd-top-title-bar>
+
+    <nldd-simple-section>
+      <!-- Here, not on the page behind it: this is where the changes are, and
+           closing the sheet now would lose them. -->
+      @if (clusterError(); as message) {
+        <nldd-banner
+          variant="critical"
+          text="Your changes are not saved"
+          [attr.supporting-text]="message"
+        ></nldd-banner>
+
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+
+      <nldd-form (submit)="saveClusterLimits($event)">
+        @for (field of clusterFields; track field.name) {
+          <div>
+            <nldd-title size="4">
+              <h2>{{ field.title }}</h2>
+            </nldd-title>
+
+            <nldd-spacer size="8"></nldd-spacer>
+
+            <nldd-rich-text spacing="flat">
+              <p>{{ field.description }}</p>
+            </nldd-rich-text>
+
+            <nldd-spacer size="12"></nldd-spacer>
+
+            <!-- The same three states as a namespace section: a cap has a
+                 platform value too, so "limited" would hide which one it is. -->
+            <nldd-toggle-button-group
+              type="radio"
+              [attr.name]="field.name"
+              [attr.accessible-label]="field.title"
+              (change)="
+                $any($event).detail.selected && setClusterMode(field.key, $any($event).detail.value)
+              "
+            >
+              <nldd-toggle-button
+                value="unlimited"
+                text="Unlimited"
+                [attr.selected]="clusterMode(field.key) === 'unlimited' ? '' : null"
+              ></nldd-toggle-button>
+              <nldd-toggle-button
+                value="defaults"
+                text="Platform defaults"
+                [attr.selected]="clusterMode(field.key) === 'defaults' ? '' : null"
+              ></nldd-toggle-button>
+              <nldd-toggle-button
+                value="custom"
+                text="Custom"
+                [attr.selected]="clusterMode(field.key) === 'custom' ? '' : null"
+              ></nldd-toggle-button>
+            </nldd-toggle-button-group>
+
+            @if (draftCluster()[field.key] !== null) {
+              <nldd-spacer size="16"></nldd-spacer>
+
+              <nldd-list variant="box" [attr.accessible-label]="field.title">
+                <nldd-list-item>
+                  <nldd-text-cell width="full" [attr.text]="field.label"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-cell width="fit-content">
                     <nldd-number-field
-                      id="maxNodesPerCluster"
-                      width="full"
+                      width="140px"
                       min="1"
                       step="1"
-                      [value]="maxNodesPerCluster()"
+                      [attr.id]="field.key"
+                      [attr.accessible-label]="field.label"
+                      [value]="draftCluster()[field.key]"
                       (input)="
                         $any($event).detail &&
-                          maxNodesPerCluster.set(toInt($any($event).detail.value))
+                          setClusterValue(field.key, toInt($any($event).detail.value))
                       "
                     ></nldd-number-field>
-                  </nldd-form-field>
-                </div>
-              }
-            </div>
-
-            <!-- Max node pools -->
-            <div>
-              <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
-                Node pools per cluster
-              </span>
-              <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
-                Caps how many node pools can be configured per shoot cluster.
-              </p>
-              <nldd-segmented-control
-                size="sm"
-                name="maxNodePoolsLimited"
-                accessible-label="Node pools per cluster"
-                [value]="maxNodePoolsLimited() ? 'limited' : 'unlimited'"
-                (change)="toggleMaxNodePools($any($event).detail.value === 'limited')"
-              >
-                <nldd-segmented-control-item
-                  value="unlimited"
-                  text="Unlimited"
-                ></nldd-segmented-control-item>
-                <nldd-segmented-control-item
-                  value="limited"
-                  text="Limited"
-                ></nldd-segmented-control-item>
-              </nldd-segmented-control>
-              @if (maxNodePoolsLimited()) {
-                <div class="mt-3 max-w-xs">
-                  <nldd-form-field label="Max node pools per cluster">
-                    <nldd-number-field
-                      id="maxNodePools"
-                      width="full"
-                      min="1"
-                      step="1"
-                      [value]="maxNodePools()"
-                      (input)="
-                        $any($event).detail && maxNodePools.set(toInt($any($event).detail.value))
-                      "
-                    ></nldd-number-field>
-                  </nldd-form-field>
-                </div>
-              }
-            </div>
-
-            <!-- Max nodes per node pool -->
-            <div>
-              <span class="mb-0.5 block leading-5 text-neutral-800 dark:text-neutral-200">
-                Nodes per node pool
-              </span>
-              <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
-                Caps how many nodes a single node pool may hold, including the autoscaler maximum.
-              </p>
-              <nldd-segmented-control
-                size="sm"
-                name="maxNodesPerNodePoolLimited"
-                accessible-label="Nodes per node pool"
-                [value]="maxNodesPerNodePoolLimited() ? 'limited' : 'unlimited'"
-                (change)="toggleMaxNodesPerNodePool($any($event).detail.value === 'limited')"
-              >
-                <nldd-segmented-control-item
-                  value="unlimited"
-                  text="Unlimited"
-                ></nldd-segmented-control-item>
-                <nldd-segmented-control-item
-                  value="limited"
-                  text="Limited"
-                ></nldd-segmented-control-item>
-              </nldd-segmented-control>
-              @if (maxNodesPerNodePoolLimited()) {
-                <div class="mt-3 max-w-xs">
-                  <nldd-form-field label="Max nodes per node pool">
-                    <nldd-number-field
-                      id="maxNodesPerNodePool"
-                      width="full"
-                      min="1"
-                      step="1"
-                      [value]="maxNodesPerNodePool()"
-                      (input)="
-                        $any($event).detail &&
-                          maxNodesPerNodePool.set(toInt($any($event).detail.value))
-                      "
-                    ></nldd-number-field>
-                  </nldd-form-field>
-                </div>
-              }
-            </div>
+                  </nldd-cell>
+                </nldd-list-item>
+              </nldd-list>
+            }
           </div>
+        }
 
-          <div class="mt-6 flex flex-wrap items-center gap-3">
-            <nldd-button
-              type="submit"
-              [disabled]="saving()"
-              [text]="clusterSaving() ? 'Saving…' : 'Save cluster limits'"
-              variant="primary"
-            ></nldd-button>
-            <nldd-button
-              type="button"
-              (click)="resetClusterLimits()"
-              [disabled]="saving()"
-              text="Reset to defaults"
-              variant="secondary"
-            ></nldd-button>
-          </div>
-        </nldd-form>
-      </div>
-    </div>
+        <nldd-form-actions>
+          <nldd-button
+            type="button"
+            (click)="saveClusterLimits()"
+            text="Save cluster limits"
+            [attr.loading]="clusterSaving() ? '' : null"
+            variant="primary"
+            width="full"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
 
-    <!-- Namespace Resource Defaults (Kubernetes) -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="text-xl font-semibold dark:text-white">Namespace resource defaults</h2>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-          Default resource requests and limits applied to containers in namespaces via a
-          <span class="font-mono text-xs">LimitRange</span>. These values are used when a workload
-          does not specify its own resource constraints.
-        </p>
-      </div>
+<!-- Edit Namespace Defaults Sheet -->
+<nldd-sheet
+  #namespaceSheet
+  appSheetSync
+  [show]="showNamespaceEdit()"
+  accessible-label="Edit namespace defaults"
+  placement="right"
+  (close)="showNamespaceEdit.set(false)"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit namespace defaults"
+      dismiss-text="Cancel"
+      (dismiss)="showNamespaceEdit.set(false)"
+    ></nldd-top-title-bar>
 
-      <div class="card-body-lg">
-        <nldd-form (submit)="saveNamespaceLimits($event)">
-          <app-namespace-resource-defaults
-            [defaults]="namespaceDefaults()"
-            [(memoryLimited)]="memoryLimited"
-            [(memoryRequestMi)]="defaultMemoryRequestMi"
-            [(memoryLimitMi)]="defaultMemoryLimitMi"
-            [(cpuLimited)]="cpuLimited"
-            [(cpuRequestM)]="defaultCpuRequestM"
-            [(cpuLimitM)]="defaultCpuLimitM"
-          ></app-namespace-resource-defaults>
+    <nldd-simple-section>
+      @if (namespaceError(); as message) {
+        <nldd-banner
+          variant="critical"
+          text="Your changes are not saved"
+          [attr.supporting-text]="message"
+        ></nldd-banner>
 
-          <div class="mt-6 flex flex-wrap items-center gap-3">
-            <nldd-button
-              type="submit"
-              [disabled]="saving()"
-              [text]="namespaceSaving() ? 'Saving…' : 'Save namespace defaults'"
-              variant="primary"
-            ></nldd-button>
-            <nldd-button
-              type="button"
-              (click)="resetNamespaceLimits()"
-              [disabled]="saving()"
-              text="Reset to defaults"
-              variant="secondary"
-            ></nldd-button>
-          </div>
-        </nldd-form>
-      </div>
-    </div>
-  }
-</div>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+
+      <nldd-form (submit)="saveNamespaceLimits($event)">
+        <app-resource-limit-section
+          [copy]="MEMORY_SECTION"
+          [seed]="memorySeed()"
+          [(mode)]="draftMemoryMode"
+          [(request)]="draftMemoryRequestMi"
+          [(limit)]="draftMemoryLimitMi"
+        ></app-resource-limit-section>
+
+        <app-resource-limit-section
+          [copy]="CPU_SECTION"
+          [seed]="cpuSeed()"
+          [(mode)]="draftCpuMode"
+          [(request)]="draftCpuRequestM"
+          [(limit)]="draftCpuLimitM"
+        ></app-resource-limit-section>
+
+        <nldd-form-actions>
+          <nldd-button
+            type="button"
+            (click)="saveNamespaceLimits()"
+            text="Save namespace defaults"
+            [attr.loading]="namespaceSaving() ? '' : null"
+            variant="primary"
+            width="full"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

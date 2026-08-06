@@ -1,0 +1,80 @@
+<nldd-title size="4">
+  <h2>{{ copy().title }}</h2>
+</nldd-title>
+
+<nldd-spacer size="8"></nldd-spacer>
+
+<nldd-rich-text spacing="flat">
+  <p>{{ copy().description }}</p>
+</nldd-rich-text>
+
+<nldd-spacer size="12"></nldd-spacer>
+
+<nldd-toggle-button-group
+  type="radio"
+  [attr.name]="copy().name"
+  [attr.accessible-label]="copy().title"
+  (change)="$any($event).detail.selected && select($any($event).detail.value)"
+>
+  <nldd-toggle-button
+    value="unlimited"
+    text="Unlimited"
+    [attr.selected]="mode() === 'unlimited' ? '' : null"
+  ></nldd-toggle-button>
+  <!-- Platform, not organization: the fallback is a constant in the API, the
+       same one for an organization and a project. -->
+  <nldd-toggle-button
+    value="defaults"
+    text="Platform defaults"
+    [attr.selected]="mode() === 'defaults' ? '' : null"
+  ></nldd-toggle-button>
+  <nldd-toggle-button
+    value="custom"
+    text="Custom"
+    [attr.selected]="mode() === 'custom' ? '' : null"
+  ></nldd-toggle-button>
+</nldd-toggle-button-group>
+
+<!-- Nothing to fill in when nothing is limited: the fields would only hold
+     numbers that are not applied.
+
+     A list rather than stacked fields: two numbers of the same kind read as a
+     pair when the labels line up on one side and the values on the other. The
+     row is the label, so each field carries its own accessible name. -->
+@if (mode() !== 'unlimited') {
+  <nldd-spacer size="16"></nldd-spacer>
+
+  <nldd-list variant="box" [attr.accessible-label]="copy().title">
+    <nldd-list-item>
+      <nldd-text-cell width="full" [attr.text]="requestLabel()"></nldd-text-cell>
+      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+      <nldd-cell width="fit-content">
+        <nldd-number-field
+          width="140px"
+          min="1"
+          step="1"
+          [attr.id]="copy().requestId"
+          [attr.accessible-label]="copy().requestAccessibleLabel"
+          [attr.max]="limit() ?? null"
+          [value]="request()"
+          (input)="$any($event).detail && edit(request, toInt($any($event).detail.value))"
+        ></nldd-number-field>
+      </nldd-cell>
+    </nldd-list-item>
+    <nldd-list-item>
+      <nldd-text-cell width="full" [attr.text]="limitLabel()"></nldd-text-cell>
+      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+      <nldd-cell width="fit-content">
+        <nldd-number-field
+          width="140px"
+          step="1"
+          [attr.id]="copy().limitId"
+          [attr.accessible-label]="copy().limitAccessibleLabel"
+          [min]="request() ?? 1"
+          [value]="limit()"
+          (input)="$any($event).detail && edit(limit, toInt($any($event).detail.value))"
+        ></nldd-number-field>
+      </nldd-cell>
+    </nldd-list-item>
+  </nldd-list>
+}
