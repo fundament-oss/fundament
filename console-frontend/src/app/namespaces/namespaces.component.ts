@@ -2,37 +2,43 @@ import {
   Component,
   inject,
   signal,
+  computed,
   OnInit,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
-  viewChild,
-  ElementRef,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
+import PageNavService from '../page-nav.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { NAMESPACE } from '../../connect/tokens';
 import {
   ListProjectNamespacesRequestSchema,
   CreateNamespaceRequestSchema,
-  DeleteNamespaceRequestSchema,
   Namespace,
 } from '../../generated/v1/namespace_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
-import focusFirstModalInput from '../modal-focus';
 import { formatDate as formatDateUtil } from '../utils/date-format';
-import NamespaceSelection from '../utils/namespace-selection';
+import { mockBindingsFor } from '../utils/mock-role-bindings';
+import { ALL_NAMESPACES } from '../utils/namespace-grants';
+import { NAMESPACE, PROJECT } from '../../connect/tokens';
+import type { ProjectMember } from '../../generated/v1/project_pb';
 
 @Component({
   selector: 'app-namespaces',
-  imports: [ReactiveFormsModule, DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
+  imports: [
+    ReactiveFormsModule,
+    DialogSyncDirective,
+    SheetSyncDirective,
+    AutofocusDirective,
+    RouterOutlet,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './namespaces.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,7 +46,13 @@ import NamespaceSelection from '../utils/namespace-selection';
 export default class NamespacesComponent implements OnInit {
   private titleService = inject(TitleService);
 
+  protected pageNav = inject(PageNavService);
+
   private route = inject(ActivatedRoute);
+
+  private router = inject(Router);
+
+  private projectClient = inject(PROJECT);
 
   private fb = inject(FormBuilder);
 
@@ -56,11 +68,13 @@ export default class NamespacesComponent implements OnInit {
 
   namespaces = signal<Namespace[]>([]);
 
-  protected selection = new NamespaceSelection(() => this.namespaces().map((n) => n.id));
+  /** True until the first load lands: an empty list and a list not yet loaded
+   *  look the same, and only one of them should offer to create something. */
+  isLoading = signal(true);
 
-  showBulkDeleteModal = signal<boolean>(false);
+  members = signal<ProjectMember[]>([]);
 
-  isBulkDeleting = signal<boolean>(false);
+  namespaceNames = computed(() => this.namespaces().map((namespace) => namespace.name));
 
   errorMessage = signal<string | null>(null);
 
@@ -70,12 +84,6 @@ export default class NamespacesComponent implements OnInit {
   showCreateNamespaceModal = signal<boolean>(false);
 
   isCreatingNamespace = signal<boolean>(false);
-
-  showDeleteNamespaceModal = signal<boolean>(false);
-
-  pendingNamespaceId = signal<string | null>(null);
-
-  pendingNamespaceName = signal<string | null>(null);
 
   namespaceForm = this.fb.group({
     name: [
@@ -96,7 +104,44 @@ export default class NamespacesComponent implements OnInit {
   async ngOnInit() {
     const projectId = this.route.snapshot.params['id'];
     this.projectId.set(projectId);
-    await this.loadNamespaces(projectId);
+    await Promise.all([this.loadNamespaces(projectId), this.loadMembers(projectId)]);
+  }
+
+  /** Only for the member summary on a row; the sheet has the detail. */
+  async loadMembers(projectId: string) {
+    try {
+      const response = await firstValueFrom(this.projectClient.listProjectMembers({ projectId }));
+      this.members.set(response.members);
+    } catch {
+      this.members.set([]);
+    }
+  }
+
+  /** Who works in this namespace. One of them is worth naming: the name says
+   *  more than the number does. */
+  memberSummary = (namespace: string): string => {
+    const names = this.members()
+      .filter((member) => {
+        const bindings = mockBindingsFor(member.id, this.namespaceNames());
+        return bindings.some(
+          (binding) => binding.namespace === namespace || binding.namespace === ALL_NAMESPACES,
+        );
+      })
+      .map((member) => member.userName);
+    if (names.length === 1) return names[0];
+    return `${names.length} members`;
+  };
+
+  /** Routes client-side while leaving the row a real link, so middle-click and
+   *  "open in new tab" keep working. */
+  openNamespace(event: Event, name: string): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+    event.preventDefault();
+    this.router.navigateByUrl(`/projects/${this.projectId()}/namespaces/${name}`);
   }
 
   async loadNamespaces(projectId: string) {
@@ -104,13 +149,14 @@ export default class NamespacesComponent implements OnInit {
       const request = create(ListProjectNamespacesRequestSchema, { projectId });
       const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
-      this.selection.retainVisible();
     } catch (error) {
       this.toastService.error(
         error instanceof Error
           ? `Failed to load namespaces: ${error.message}`
           : 'Failed to load namespaces',
       );
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
@@ -160,92 +206,7 @@ export default class NamespacesComponent implements OnInit {
     }
   }
 
-  openDeleteNamespaceModal(namespaceId: string, namespaceName: string) {
-    this.pendingNamespaceId.set(namespaceId);
-    this.pendingNamespaceName.set(namespaceName);
-    this.showDeleteNamespaceModal.set(true);
-  }
-
-  async confirmDeleteNamespace() {
-    const namespaceId = this.pendingNamespaceId();
-    const namespaceName = this.pendingNamespaceName();
-    if (!namespaceId) return;
-
-    this.errorMessage.set(null);
-    this.showDeleteNamespaceModal.set(false);
-
-    try {
-      const request = create(DeleteNamespaceRequestSchema, { namespaceId });
-      await firstValueFrom(this.namespaceClient.deleteNamespace(request));
-
-      this.toastService.success(`Namespace '${namespaceName}' deleted`);
-
-      // Reload organization data to update the selector modal
-      await Promise.all([
-        this.loadNamespaces(this.projectId()),
-        this.organizationDataService.loadOrganizationData(),
-      ]);
-    } catch (error) {
-      this.errorMessage.set(
-        error instanceof Error
-          ? `Failed to delete namespace: ${error.message}`
-          : 'Failed to delete namespace',
-      );
-    }
-  }
-
   readonly formatDate = formatDateUtil;
-
-  openBulkDeleteModal(): void {
-    if (this.selection.count() === 0) return;
-    this.showBulkDeleteModal.set(true);
-  }
-
-  async confirmBulkDelete(): Promise<void> {
-    const ids = this.selection.ids();
-    if (ids.length === 0) return;
-
-    this.errorMessage.set(null);
-    this.showBulkDeleteModal.set(false);
-    this.isBulkDeleting.set(true);
-
-    try {
-      const results = await Promise.allSettled(
-        ids.map((namespaceId) =>
-          firstValueFrom(
-            this.namespaceClient.deleteNamespace(
-              create(DeleteNamespaceRequestSchema, { namespaceId }),
-            ),
-          ),
-        ),
-      );
-
-      const failed = results.filter((r) => r.status === 'rejected').length;
-      const succeeded = ids.length - failed;
-
-      if (succeeded > 0) {
-        this.toastService.success(`${succeeded} namespace${succeeded === 1 ? '' : 's'} deleted`);
-      }
-      if (failed > 0) {
-        this.errorMessage.set(`Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`);
-      }
-
-      this.selection.clear();
-      await Promise.all([
-        this.loadNamespaces(this.projectId()),
-        this.organizationDataService.loadOrganizationData(),
-      ]);
-    } finally {
-      this.isBulkDeleting.set(false);
-    }
-  }
-
-  bulkDeleteDialogRef = viewChild<ElementRef<HTMLElement>>('bulkDeleteDialog');
-
-  onBulkDeleteModalOpen(): void {
-    const el = this.bulkDeleteDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
-  }
 
   onNameInput(event: Event) {
     const value = (event as CustomEvent<{ value: string }>).detail.value;
@@ -271,12 +232,5 @@ export default class NamespacesComponent implements OnInit {
       return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
     }
     return '';
-  }
-
-  deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');
-
-  onDeleteNamespaceModalOpen(): void {
-    const el = this.deleteNamespaceDialogRef()?.nativeElement;
-    if (el) focusFirstModalInput(el);
   }
 }
