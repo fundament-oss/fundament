@@ -21,6 +21,7 @@ import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/prot
 import { TitleService } from '../title.service';
 import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
 import { CLUSTER, METRICS } from '../../connect/tokens';
+import MetricsHealthService from '../metrics-health.service';
 import DropdownSyncDirective from '../dropdown-sync.directive';
 import {
   ListClustersRequestSchema,
@@ -190,6 +191,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   private clusterClient = inject(CLUSTER);
 
   private metricsClient = inject(METRICS);
+
+  private metricsHealth = inject(MetricsHealthService);
 
   @ViewChild('cpuChart') cpuChartCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -410,6 +413,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.isLoading.set(true);
     this.isLive.set(false);
     this.connectionError.set(false);
+    this.metricsHealth.report(true);
     this.errorMessage.set(null);
 
     // Destroy charts so they are recreated fresh for the new stream/filter.
@@ -449,6 +453,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         this.isLoading.set(false);
         this.isLive.set(false);
         this.connectionError.set(true);
+        this.metricsHealth.report(false);
         const delay = Math.min(5_000 * 2 ** this.reconnectAttempt, MAX_RECONNECT_DELAY_MS);
         this.reconnectAttempt += 1;
         this.reconnectTimeoutId = setTimeout(() => {
