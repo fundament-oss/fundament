@@ -187,9 +187,34 @@ export default class ProjectDetailComponent implements OnInit {
     }
   }
 
+  deleteConfirmationInput = signal<string>('');
+
+  /**
+   * The full slug ("orgname/clustername/projectname") the user must type to confirm deletion.
+   * Empty until all parts are known, so a partial slug can never be confirmed.
+   */
+  deleteConfirmationSlug(): string {
+    const orgName = this.organizationDataService.organizations()[0]?.name;
+    const currentProject = this.project();
+    if (!orgName || !currentProject) return '';
+    const clusterName = this.clusters().find((c) => c.id === currentProject.clusterId)?.name;
+    if (!clusterName) return '';
+    return `${orgName}/${clusterName}/${currentProject.name}`;
+  }
+
+  isDeleteConfirmed(): boolean {
+    const slug = this.deleteConfirmationSlug();
+    return slug !== '' && this.deleteConfirmationInput().trim() === slug;
+  }
+
+  onDeleteConfirmationInput(event: Event): void {
+    this.deleteConfirmationInput.set((event as CustomEvent<{ value: string }>).detail.value);
+  }
+
   async deleteProject() {
     const currentProject = this.project();
     if (!currentProject) return;
+    if (!this.isDeleteConfirmed()) return;
 
     try {
       const request = create(DeleteProjectRequestSchema, {
@@ -222,6 +247,7 @@ export default class ProjectDetailComponent implements OnInit {
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 
   onDeleteModalOpen(): void {
+    this.deleteConfirmationInput.set('');
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
   }
