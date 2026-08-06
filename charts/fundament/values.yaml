@@ -78,8 +78,14 @@ organizationApi:
   # prometheus-url annotation (requires the Gardener kubeconfig); any other
   # URL queries that single Prometheus.
   prometheusURL: mock
-  # Optional Secret (key ca.crt, PEM bundle) trusted for Prometheus/ingress
-  # TLS. Needed in local dev where seed ingress certs are shoot-CA-signed;
+  # Logs backend: "mock" uses generated data; "per-shoot" queries each
+  # cluster's per-shoot Gardener Vali through its Plutono datasource proxy,
+  # resolved from the monitoring secret (requires the Gardener kubeconfig);
+  # any other URL queries that single Loki-compatible backend.
+  logsURL: mock
+  # Optional Secret (key ca.crt, PEM bundle) trusted for the seed-ingress
+  # TLS (per-shoot Prometheus and Plutono/Vali share those certificates).
+  # Needed in local dev where seed ingress certs are shoot-CA-signed;
   # leave empty on landscapes with publicly trusted ingress certificates.
   prometheusCASecret: ""
   httproute:

@@ -28,6 +28,8 @@ import '@nldd/design-system/search-field';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/switch-field';
 import '@nldd/design-system/text-field';
+import '@nldd/design-system/toggle-button';
+import '@nldd/design-system/pagination';
 import '@nldd/design-system/segmented-control';
 import '@nldd/design-system/navigation-split-view';
 // nldd-navigation-split-view does not pull in the panes it hosts, and app.html
