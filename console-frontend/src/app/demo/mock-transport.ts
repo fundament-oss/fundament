@@ -74,7 +74,7 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(GetOrganizationLimitsResponseSchema, {
           limits: fx.organizationLimits,
-          defaults: fx.organizationLimits,
+          defaults: fx.platformOrganizationLimits,
         });
       },
     });
@@ -183,7 +183,7 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(GetProjectLimitsResponseSchema, {
           limits: fx.projectLimits,
-          defaults: fx.projectLimits,
+          defaults: fx.platformProjectLimits,
         });
       },
     });

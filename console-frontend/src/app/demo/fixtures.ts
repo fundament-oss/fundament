@@ -311,12 +311,76 @@ export const projectMembersByProject = new Map([
       }),
     ],
   ],
+  // The count on a project comes from its own memberCount, so a project with a
+  // count and no members shows "2 members" over an empty list.
+  [
+    'pr-belastingen',
+    [
+      create(ProjectMemberSchema, {
+        id: 'pm-4',
+        projectId: 'pr-belastingen',
+        userId: 'user-demo',
+        userName: 'Demi de Demonstratie',
+        role: ProjectMemberRole.ADMIN,
+        created: daysAgo(140),
+      }),
+      create(ProjectMemberSchema, {
+        id: 'pm-5',
+        projectId: 'pr-belastingen',
+        userId: 'user-omar',
+        userName: 'Omar El Amrani',
+        role: ProjectMemberRole.VIEWER,
+        created: daysAgo(20),
+      }),
+    ],
+  ],
+  [
+    'pr-burgerzaken-staging',
+    [
+      create(ProjectMemberSchema, {
+        id: 'pm-6',
+        projectId: 'pr-burgerzaken-staging',
+        userId: 'user-demo',
+        userName: 'Demi de Demonstratie',
+        role: ProjectMemberRole.ADMIN,
+        created: daysAgo(60),
+      }),
+      create(ProjectMemberSchema, {
+        id: 'pm-7',
+        projectId: 'pr-burgerzaken-staging',
+        userId: 'user-sanne',
+        userName: 'Sanne Bakker',
+        role: ProjectMemberRole.VIEWER,
+        created: daysAgo(45),
+      }),
+    ],
+  ],
 ]);
 
 export const projectLimits = create(ProjectLimitsSchema, {
   defaultMemoryRequestMi: 256,
   defaultMemoryLimitMi: 512,
   defaultCpuRequestM: 250,
+  defaultCpuLimitM: 500,
+});
+
+// The platform's starting values, hardcoded in organization-api's
+// limit_defaults.go. Handing back the saved limits instead would make every
+// project look like it is still on the platform's numbers.
+export const platformProjectLimits = create(ProjectLimitsSchema, {
+  defaultMemoryRequestMi: 256,
+  defaultMemoryLimitMi: 512,
+  defaultCpuRequestM: 100,
+  defaultCpuLimitM: 500,
+});
+
+export const platformOrganizationLimits = create(OrganizationLimitsSchema, {
+  maxNodesPerCluster: 10,
+  maxNodePoolsPerCluster: 5,
+  maxNodesPerNodePool: 5,
+  defaultMemoryRequestMi: 256,
+  defaultMemoryLimitMi: 512,
+  defaultCpuRequestM: 100,
   defaultCpuLimitM: 500,
 });
 
