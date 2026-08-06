@@ -125,24 +125,32 @@
         @if (resources().length === 0) {
           @if (clusterContext.clusters().length === 0) {
             <nldd-box>
-              <nldd-inline-dialog icon="ship-wheel" icon-color="secondary" text="No clusters found">
-                <nldd-button
-                  routerLink="/clusters/add"
-                  slot="actions"
-                  text="New cluster"
-                  start-icon="plus-small"
-                  variant="primary"
-                ></nldd-button>
-              </nldd-inline-dialog>
+              <nldd-container padding="16">
+                <nldd-inline-dialog
+                  icon="ship-wheel"
+                  icon-color="secondary"
+                  text="No clusters found"
+                >
+                  <nldd-button
+                    routerLink="/clusters/add"
+                    slot="actions"
+                    text="New cluster"
+                    start-icon="plus-small"
+                    variant="primary"
+                  ></nldd-button>
+                </nldd-inline-dialog>
+              </nldd-container>
             </nldd-box>
           } @else {
             <nldd-box>
-              <nldd-inline-dialog
-                icon="cylinder-split-slash"
-                icon-color="secondary"
-                [text]="'No ' + kindLabel().toLowerCase() + ' found'"
-              >
-              </nldd-inline-dialog>
+              <nldd-container padding="16">
+                <nldd-inline-dialog
+                  icon="cylinder-split-slash"
+                  icon-color="secondary"
+                  [text]="'No ' + kindLabel().toLowerCase() + ' found'"
+                >
+                </nldd-inline-dialog>
+              </nldd-container>
             </nldd-box>
           }
         }

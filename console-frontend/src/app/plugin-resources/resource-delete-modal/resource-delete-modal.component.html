@@ -15,11 +15,13 @@
 
   @if (errorMessage()) {
     <nldd-box class="mt-4 block">
-      <nldd-inline-dialog
-        icon="exclamation-triangle"
-        icon-color="critical"
-        [text]="errorMessage()!"
-      ></nldd-inline-dialog>
+      <nldd-container padding="16">
+        <nldd-inline-dialog
+          icon="exclamation-triangle"
+          icon-color="critical"
+          [text]="errorMessage()!"
+        ></nldd-inline-dialog>
+      </nldd-container>
     </nldd-box>
   }
 
@@ -36,7 +38,7 @@
     type="button"
     (click)="dismiss.emit()"
     text="Cancel"
-    variant="secondary"
+    variant="primary"
     [disabled]="deleting()"
   ></nldd-button>
 </nldd-modal-dialog>

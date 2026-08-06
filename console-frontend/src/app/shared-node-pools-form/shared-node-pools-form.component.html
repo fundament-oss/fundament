@@ -4,88 +4,92 @@
       @for (nodePoolControl of nodePools.controls; track nodePoolControl) {
         @let nameControl = nodePoolControl.get('name');
         <nldd-box [formGroupName]="$index">
-          <nldd-title size="5">
-            <h3>Node pool {{ $index + 1 }}</h3>
-            @if (nodePools.length > 1) {
-              <nldd-button
-                slot="actions"
-                type="button"
-                (click)="removeNodePool($index)"
-                text="Remove"
-                start-icon="trash"
-                size="sm"
-                variant="destructive"
-              ></nldd-button>
-            }
-          </nldd-title>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h3>Node pool {{ $index + 1 }}</h3>
+              @if (nodePools.length > 1) {
+                <nldd-button
+                  slot="actions"
+                  type="button"
+                  (click)="removeNodePool($index)"
+                  text="Remove"
+                  start-icon="trash"
+                  size="sm"
+                  variant="destructive"
+                ></nldd-button>
+              }
+            </nldd-title>
 
-          <nldd-spacer size="16"></nldd-spacer>
+            <nldd-spacer size="16"></nldd-spacer>
 
-          <nldd-form-field label="Node pool name">
-            <nldd-text-field
-              [id]="'nodePoolName-' + $index"
-              [value]="nameControl?.value ?? ''"
-              [appAutofocus]="$first"
-              [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
-              [attr.error-message]="'node-pool-name-error-' + $index"
-              (input)="onNodePoolNameInput($index, $event)"
-            ></nldd-text-field>
-            <nldd-form-field-error-text [id]="'node-pool-name-error-' + $index">
-              {{ getNodePoolNameError($index) }}
-            </nldd-form-field-error-text>
-          </nldd-form-field>
+            <nldd-form-field label="Node pool name">
+              <nldd-text-field
+                [id]="'nodePoolName-' + $index"
+                [value]="nameControl?.value ?? ''"
+                [appAutofocus]="$first"
+                [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
+                [attr.error-message]="'node-pool-name-error-' + $index"
+                (input)="onNodePoolNameInput($index, $event)"
+              ></nldd-text-field>
+              <nldd-form-field-error-text [id]="'node-pool-name-error-' + $index">
+                {{ getNodePoolNameError($index) }}
+              </nldd-form-field-error-text>
+            </nldd-form-field>
 
-          <nldd-form-field label="Machine type">
-            <nldd-dropdown>
-              <select [id]="'machineType-' + $index" formControlName="machineType">
-                @for (mt of machineTypes; track mt.value) {
-                  <option [value]="mt.value">{{ mt.label }}</option>
-                }
-              </select>
-            </nldd-dropdown>
-          </nldd-form-field>
+            <nldd-form-field label="Machine type">
+              <nldd-dropdown>
+                <select [id]="'machineType-' + $index" formControlName="machineType">
+                  @for (mt of machineTypes; track mt.value) {
+                    <option [value]="mt.value">{{ mt.label }}</option>
+                  }
+                </select>
+              </nldd-dropdown>
+            </nldd-form-field>
 
-          <nldd-form-field label="Autoscale minimum">
-            <nldd-number-field
-              [id]="'autoscaleMin-' + $index"
-              [value]="nodePoolControl.get('autoscaleMin')?.value"
-              (input)="
-                $any($event).detail &&
-                  nodePoolControl.get('autoscaleMin')?.setValue($any($event).detail.value)
-              "
-              min="1"
-              max="100"
-              step="1"
-            ></nldd-number-field>
-          </nldd-form-field>
+            <nldd-form-field label="Autoscale minimum">
+              <nldd-number-field
+                [id]="'autoscaleMin-' + $index"
+                [value]="nodePoolControl.get('autoscaleMin')?.value"
+                (input)="
+                  $any($event).detail &&
+                    nodePoolControl.get('autoscaleMin')?.setValue($any($event).detail.value)
+                "
+                min="1"
+                max="100"
+                step="1"
+              ></nldd-number-field>
+            </nldd-form-field>
 
-          <nldd-form-field label="Autoscale maximum">
-            <nldd-number-field
-              [id]="'autoscaleMax-' + $index"
-              [value]="nodePoolControl.get('autoscaleMax')?.value"
-              (input)="
-                $any($event).detail &&
-                  nodePoolControl.get('autoscaleMax')?.setValue($any($event).detail.value)
-              "
-              min="1"
-              max="100"
-              step="1"
-            ></nldd-number-field>
-          </nldd-form-field>
+            <nldd-form-field label="Autoscale maximum">
+              <nldd-number-field
+                [id]="'autoscaleMax-' + $index"
+                [value]="nodePoolControl.get('autoscaleMax')?.value"
+                (input)="
+                  $any($event).detail &&
+                    nodePoolControl.get('autoscaleMax')?.setValue($any($event).detail.value)
+                "
+                min="1"
+                max="100"
+                step="1"
+              ></nldd-number-field>
+            </nldd-form-field>
+          </nldd-container>
         </nldd-box>
       }
 
       <!-- Its own box, so it reads as the slot the next node pool will fill. -->
       <nldd-box>
-        <nldd-button
-          type="button"
-          (click)="addNodePool()"
-          text="New node pool"
-          start-icon="plus-small"
-          variant="secondary"
-          size="md"
-          width="full"
-        ></nldd-button>
+        <nldd-container padding="16">
+          <nldd-button
+            type="button"
+            (click)="addNodePool()"
+            text="New node pool"
+            start-icon="plus-small"
+            variant="secondary"
+            size="md"
+            width="full"
+          ></nldd-button>
+        </nldd-container>
       </nldd-box>
     </nldd-collection>
   </div>

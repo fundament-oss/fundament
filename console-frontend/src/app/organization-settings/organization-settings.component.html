@@ -106,12 +106,14 @@
     <!-- Empty State -->
     @if (!loading() && !organization() && !error()) {
       <nldd-box>
-        <nldd-inline-dialog
-          icon="gear"
-          icon-color="secondary"
-          text="No organization information available"
-        >
-        </nldd-inline-dialog>
+        <nldd-container padding="16">
+          <nldd-inline-dialog
+            icon="gear"
+            icon-color="secondary"
+            text="No organization information available"
+          >
+          </nldd-inline-dialog>
+        </nldd-container>
       </nldd-box>
     }
   </div>

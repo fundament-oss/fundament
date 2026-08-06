@@ -216,22 +216,24 @@
     <!-- Empty State -->
     @if (!loading() && apiKeys().length === 0 && !error() && !isCreating()) {
       <nldd-box>
-        <nldd-inline-dialog
-          icon="lock-closed"
-          icon-color="secondary"
-          text="No API keys found"
-          supporting-text="Create your first API key to authenticate with the API."
-        >
-          <nldd-button
-            slot="actions"
-            (click)="startCreating()"
-            type="button"
-            text="New API key"
-            start-icon="plus-small"
-            variant="primary"
-            class="mb-4"
-          ></nldd-button>
-        </nldd-inline-dialog>
+        <nldd-container padding="16">
+          <nldd-inline-dialog
+            icon="lock-closed"
+            icon-color="secondary"
+            text="No API keys found"
+            supporting-text="Create your first API key to authenticate with the API."
+          >
+            <nldd-button
+              slot="actions"
+              (click)="startCreating()"
+              type="button"
+              text="New API key"
+              start-icon="plus-small"
+              variant="primary"
+              class="mb-4"
+            ></nldd-button>
+          </nldd-inline-dialog>
+        </nldd-container>
       </nldd-box>
     }
   </div>
@@ -254,7 +256,7 @@
     type="button"
     (click)="showRevokeModal.set(false)"
     text="Keep key active"
-    variant="secondary"
+    variant="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"
@@ -282,7 +284,7 @@
     type="button"
     (click)="showDeleteModal.set(false)"
     text="Keep key"
-    variant="secondary"
+    variant="primary"
   ></nldd-button>
   <nldd-button
     slot="actions"

@@ -56,27 +56,31 @@
 
       <nldd-container gap="24">
         <nldd-box>
-          <nldd-rich-text [innerHTML]="getRenderedMarkdown()"></nldd-rich-text>
+          <nldd-container padding="16">
+            <nldd-rich-text [innerHTML]="getRenderedMarkdown()"></nldd-rich-text>
+          </nldd-container>
         </nldd-box>
 
         <nldd-box>
-          <nldd-list variant="simple" no-dividers accessible-label="What this plugin offers">
-            <nldd-list-item size="sm">
-              <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
-              <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <nldd-text-cell text="Community support"></nldd-text-cell>
-            </nldd-list-item>
-            <nldd-list-item size="sm">
-              <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
-              <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <nldd-text-cell text="Open source"></nldd-text-cell>
-            </nldd-list-item>
-            <nldd-list-item size="sm">
-              <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
-              <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <nldd-text-cell text="Regular updates"></nldd-text-cell>
-            </nldd-list-item>
-          </nldd-list>
+          <nldd-container padding="16">
+            <nldd-list variant="simple" no-dividers accessible-label="What this plugin offers">
+              <nldd-list-item size="sm">
+                <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-text-cell text="Community support"></nldd-text-cell>
+              </nldd-list-item>
+              <nldd-list-item size="sm">
+                <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-text-cell text="Open source"></nldd-text-cell>
+              </nldd-list-item>
+              <nldd-list-item size="sm">
+                <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-text-cell text="Regular updates"></nldd-text-cell>
+              </nldd-list-item>
+            </nldd-list>
+          </nldd-container>
         </nldd-box>
 
         @if (
