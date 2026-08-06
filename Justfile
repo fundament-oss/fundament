@@ -47,7 +47,7 @@ setup-certs:
     #!/usr/bin/env bash
     set -e
     which mkcert > /dev/null 2>&1 || { echo "mkcert not installed. Run: mise install"; exit 1; }
-    which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/development-setup.md for installation instructions."; exit 1; }
+    which certutil > /dev/null 2>&1 || { echo "certutil not installed. See docs/developer/fundament/getting-started.md for installation instructions."; exit 1; }
     TRUST_STORES=system,nss mkcert -install
     echo "Waiting for cert-manager to become available..."
     deadline=$(( $(date +%s) + 120 ))
@@ -102,6 +102,20 @@ dev-debug:
 # Deploy to an environment (e.g. local, production)
 deploy env:
     skaffold run --profile env-{{ env }}
+
+# --- Docs commands ---
+
+# Sync docs/ into docs-frontend and run the docs dev server
+docs-dev:
+    cd docs-frontend && bun install && node scripts/sync-docs.mjs && bun start
+
+# Sync docs/ and build the docs site; fails on broken links
+docs-build:
+    cd docs-frontend && bun install --frozen-lockfile && node scripts/sync-docs.mjs && bun run build
+
+# Build the docs site and additionally verify external http(s) links
+docs-build-external:
+    cd docs-frontend && bun install --frozen-lockfile && node scripts/sync-docs.mjs && DOCS_CHECK_EXTERNAL=1 bun run build
 
 # Create/update the Secret plugin-proxy uses to reach the k3d-fundament-plugin
 # sandbox cluster. Bridges the two k3d Docker networks (each cluster runs on
