@@ -1,304 +1,415 @@
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <h1 class="text-3xl font-semibold">Project members</h1>
-    <p class="mt-1 text-gray-600 dark:text-gray-300">
-      Manage members and their permissions for this project
-    </p>
-  </div>
+<!-- Same outer layout as the other project pages: the pane owns the back
+     button, so the page does not force one. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Project members"
+    [attr.back-text]="pageNav.backText()"
+    (back)="pageNav.goTo('/projects/' + projectId())"
+    collapse-anchor="project-members-title"
+  ></nldd-top-title-bar>
 
-  <div class="p-6">
-    <!-- Info banner -->
-    <div
-      class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
-    >
-      <nldd-icon name="info-circle" class="mt-0.5 shrink-0" size="20" color="accent"></nldd-icon>
-      <div class="text-accent-700 dark:text-accent-300">
-        <p class="mb-2">
-          Members marked with
-          <nldd-icon name="lock-closed" class="inline-block align-middle" size="16"></nldd-icon>
-          inherit their permission from the organization level and cannot be changed here. Modify
-          these in
-          <a
-            [routerLink]="['/organization/members']"
-            class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 font-medium underline hover:no-underline"
-            >Organization members</a
-          >. Organization viewers can be upgraded to admin at the project level.
-        </p>
-        <p>
-          Admin and Viewer apply to this project: an admin can edit it, manage its members and
-          create namespaces, a viewer can look. Access to what runs inside a namespace comes from
-          <a
-            [routerLink]="['/projects', projectId(), 'roles']"
-            class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 font-medium underline hover:no-underline"
-            >Roles</a
-          >.
-        </p>
-      </div>
-    </div>
+  <nldd-simple-section>
+    <nldd-title id="project-members-title" size="2">
+      <h1>Project members</h1>
+    </nldd-title>
 
-    @if (isLoading() || memberViews().length > 0) {
-      <nldd-button
-        type="button"
-        (click)="openAddMemberModal()"
-        text="New member"
-        start-icon="plus-small"
-        variant="primary"
-        class="mb-6"
-      ></nldd-button>
-    }
+    <nldd-spacer size="12"></nldd-spacer>
 
-    @if (error()) {
-      <div
-        class="bg-danger-50 dark:bg-danger-950 mb-5 flex items-start gap-3 rounded-md border border-rose-200 p-4 dark:border-rose-800"
-      >
-        <nldd-icon
-          name="exclamation-circle"
-          class="mt-0.5 shrink-0"
-          size="20"
-          color="critical"
-        ></nldd-icon>
-        <div class="flex-1">
-          <p class="text-danger-600 dark:text-danger-400">{{ error() }}</p>
-        </div>
+    <nldd-toolbar label="Member actions">
+      <nldd-toolbar-item slot="start">
+        <!-- Add, not New: the person already exists in the organization, this
+             puts them in the project. -->
         <nldd-button
           type="button"
-          (click)="error.set(null)"
-          text="Dismiss"
+          (click)="openAddMemberModal()"
+          text="Add member"
+          start-icon="plus-small"
           variant="primary"
         ></nldd-button>
-      </div>
-    }
+        <nldd-menu-item
+          slot="overflow"
+          icon="plus-small"
+          text="Add member"
+          (select)="openAddMemberModal()"
+        ></nldd-menu-item>
+      </nldd-toolbar-item>
+      <nldd-toolbar-item slot="start">
+        <nldd-button
+          [attr.href]="'/projects/' + projectId() + '/members/permissions'"
+          text="About permissions"
+          start-icon="info-circle"
+          variant="secondary"
+          (click)="openPermissions($event)"
+        ></nldd-button>
+        <nldd-menu-item
+          slot="overflow"
+          icon="info-circle"
+          text="About permissions"
+          [attr.href]="'/projects/' + projectId() + '/members/permissions'"
+          (select)="openPermissions($event)"
+        ></nldd-menu-item>
+      </nldd-toolbar-item>
+    </nldd-toolbar>
+
+    <nldd-spacer size="16"></nldd-spacer>
+
+    <nldd-rich-text spacing="flat">
+      <p>
+        Admin permissions are inherited from the organization and cannot be changed per project;
+        change those in <a [routerLink]="['/organization/members']">Organization members</a>. An
+        organization viewer can be made admin in this project.
+      </p>
+    </nldd-rich-text>
+
+    <nldd-spacer size="16"></nldd-spacer>
 
     @if (isLoading()) {
-      <nldd-simple-section>
-        <nldd-activity-indicator show-text text="Loading members..."></nldd-activity-indicator>
-      </nldd-simple-section>
-    } @else if (memberViews().length === 0) {
+      <nldd-activity-indicator show-text text="Loading members..."></nldd-activity-indicator>
+    } @else if (error()) {
       <nldd-box>
-        <nldd-inline-dialog
-          icon="person-2"
-          icon-color="secondary"
-          text="No members have been added to this project yet."
-          supporting-text="Add members to grant them access to this project's resources."
-        >
-          <nldd-button
-            slot="actions"
-            type="button"
-            (click)="openAddMemberModal()"
-            text="New member"
-            start-icon="plus-small"
-            variant="primary"
-          ></nldd-button>
-        </nldd-inline-dialog>
+        <nldd-container padding="16">
+          <nldd-inline-dialog
+            variant="alert"
+            text="Members not loaded"
+            [attr.supporting-text]="error()"
+          >
+            <nldd-button
+              slot="actions"
+              type="button"
+              (click)="loadMembers()"
+              text="Try again"
+              variant="primary"
+            ></nldd-button>
+          </nldd-inline-dialog>
+        </nldd-container>
       </nldd-box>
     } @else {
-      <nldd-table
-        accessible-label="Project members"
-        columns="minmax(200px, 1fr) 140px 160px 64px"
-        md-columns="minmax(200px, 1fr) 140px 64px"
-        sm-columns="minmax(200px, 1fr) 140px 64px"
-      >
-        <nldd-table-row slot="header">
-          <nldd-text-cell text="**Name**"></nldd-text-cell>
-          <nldd-text-cell text="**Permission**"></nldd-text-cell>
-          <nldd-text-cell text="**Source**" hide-below="lg"></nldd-text-cell>
-          <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
-        </nldd-table-row>
+      @if (visibleMembers().length === 0) {
+        <nldd-box>
+          <nldd-container padding="16">
+            <nldd-inline-dialog
+              icon="person-2"
+              icon-color="secondary"
+              text="Nobody in this project yet"
+              supporting-text="Add organization members to give them access to this project."
+            >
+              <nldd-button
+                slot="actions"
+                type="button"
+                (click)="openAddMemberModal()"
+                text="Add member"
+                start-icon="plus-small"
+                variant="primary"
+              ></nldd-button>
+            </nldd-inline-dialog>
+          </nldd-container>
+        </nldd-box>
+      } @else {
+        <nldd-list variant="box" accessible-label="Project members">
+          @for (view of visibleMembers(); track view.member.id) {
+            <!-- The whole row goes to the member: a real link, so it can be
+                 shared and opened in a new tab, and the chevron says so. The
+                 actions live in the sheet, because a control inside a row that
+                 is itself a control is a control inside a control. -->
+            <nldd-list-item
+              [attr.href]="'/projects/' + projectId() + '/members/' + view.member.id"
+              (click)="openMember($event, view.member.id)"
+            >
+              <nldd-cell width="fit-content">
+                <nldd-avatar
+                  decorative
+                  type="person"
+                  size="40"
+                  [attr.name]="view.member.userName"
+                ></nldd-avatar>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
 
-        @for (view of memberViews(); track view.member.id) {
-          <nldd-table-row>
-            <nldd-text-cell
-              [attr.text]="view.member.userName"
-              [attr.supporting-text]="'Added to project ' + formatMemberDate(view.member)"
-            ></nldd-text-cell>
-            <nldd-cell>
-              <nldd-tag
-                class="capitalize"
-                size="sm"
-                [attr.color]="view.member.role === ProjectMemberRole.ADMIN ? 'paars' : 'accent'"
-                [attr.text]="roleToString(view.member.role)"
-              ></nldd-tag>
-            </nldd-cell>
-            <nldd-cell hide-below="lg" width="full">
-              @if (view.source === 'org' && view.member.role === ProjectMemberRole.ADMIN) {
-                <span class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                  <nldd-icon name="lock-closed" size="16"></nldd-icon>
-                  Organization
-                </span>
-              } @else if (view.source === 'org') {
-                <span class="text-gray-600 dark:text-gray-400">Organization</span>
-              } @else {
-                <span class="text-gray-600 dark:text-gray-400">Project</span>
-              }
-            </nldd-cell>
-            <nldd-cell horizontal-alignment="right">
-              <!-- Org admins are locked: no actions. -->
-              @if (view.source !== 'org' || view.member.role !== ProjectMemberRole.ADMIN) {
-                <nldd-icon-button
-                  icon="ellipsis"
+              <nldd-text-cell
+                width="full"
+                [attr.supporting-text]="'Added to project ' + formatMemberDate(view.member)"
+              >
+                {{ view.member.userName }}&ngsp;
+                <nldd-tag
                   size="sm"
-                  variant="neutral-transparent"
-                  expandable
-                  popup-type="menu"
-                  [attr.accessible-label]="'Actions for ' + view.member.userName"
-                >
-                  <nldd-menu slot="popup">
-                    <nldd-menu-item
-                      text="Edit"
-                      icon="pencil"
-                      (select)="openEditMemberModal(view)"
-                    ></nldd-menu-item>
-                    @if (view.source === 'project' && view.orgPermission !== null) {
-                      <nldd-menu-divider></nldd-menu-divider>
-                      <nldd-menu-item
-                        text="Reset"
-                        icon="arrow-u-turn-backward"
-                        destructive
-                        (select)="resetToOrgDefault(view)"
-                      ></nldd-menu-item>
-                    } @else if (view.source === 'project') {
-                      <nldd-menu-divider></nldd-menu-divider>
-                      <nldd-menu-item
-                        text="Remove"
-                        icon="trash"
-                        destructive
-                        (select)="openRemoveMemberModal(view)"
-                      ></nldd-menu-item>
-                    }
-                  </nldd-menu>
-                </nldd-icon-button>
-              }
-            </nldd-cell>
-          </nldd-table-row>
-        }
-      </nldd-table>
-    }
-  </div>
-</div>
+                  [attr.color]="view.member.role === ProjectMemberRole.ADMIN ? 'paars' : 'accent'"
+                  [attr.text]="roleLabel(view.member.role)"
+                ></nldd-tag>
+              </nldd-text-cell>
 
-<!-- Add/Edit Member Sheet -->
+              <!-- Too wide next to a name on a phone; the sheet has the detail
+                   anyway. -->
+              <nldd-spacer-cell size="12" hide-below="md"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                hide-below="md"
+                [attr.text]="namespaceSummary(view.member.id)"
+                [attr.supporting-text]="namespaceRoles(view.member.id)"
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-icon-cell icon="chevron-right" size="20" color="secondary"></nldd-icon-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      }
+    }
+  </nldd-simple-section>
+
+  <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
+
+<!-- Action Error Modal -->
+<nldd-modal-dialog
+  #actionErrorDialog
+  appDialogSync
+  [show]="!!actionError()"
+  [attr.text]="actionError()?.title"
+  [attr.supporting-text]="actionErrorText()"
+  accessible-label="Action failed"
+  variant="alert"
+  (close)="actionError.set(null)"
+>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="retryAction()"
+    [attr.loading]="retrying() ? '' : null"
+    text="Try again"
+    variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="actionError.set(null)"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+</nldd-modal-dialog>
+
+<!-- Add Member Sheet -->
 <nldd-sheet
   #addMemberSheet
   appSheetSync
   [show]="showAddMemberModal()"
-  accessible-label="New or edit project member"
+  accessible-label="Add project member"
   placement="right"
   (close)="showAddMemberModal.set(false)"
 >
-  <nldd-page sticky-header sticky-footer>
+  <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
-      [attr.text]="editingMemberView() ? 'Edit member' : 'Add member to project'"
+      [attr.text]="'Add member to ' + projectName()"
       dismiss-text="Cancel"
       (dismiss)="showAddMemberModal.set(false)"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
-      <nldd-form
-        [formGroup]="memberForm"
-        (submit)="saveMember($event)"
-        (keydown.enter)="saveMember($event)"
-      >
-        @if (!editingMemberView()) {
-          <nldd-form-field label="User" class="mb-4">
-            <nldd-dropdown>
-              <select appAutofocus id="userId" formControlName="userId">
-                <option value="">Select a user</option>
+      <!-- Nothing to pick means nothing to fill in: the form would only offer an
+           empty list and a button that cannot do anything. -->
+      @if (availableUsers().length === 0) {
+        <!-- States how it works rather than telling the reader to invite
+             someone: inviting is an organization admin's right, and the reader
+             may not have it. -->
+        <nldd-inline-dialog
+          icon="person-2"
+          icon-color="secondary"
+          text="All organization members are already in this project"
+          supporting-text="Someone has to be a member of the organization before they can be added to a project."
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            (click)="showAddMemberModal.set(false)"
+            text="Close"
+            variant="primary"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      } @else {
+        <nldd-form
+          [formGroup]="memberForm"
+          (submit)="saveMember($event)"
+          (keydown.enter)="saveMember($event)"
+        >
+          <!-- Member, not user: you pick someone who is already in the
+               organization. -->
+          <nldd-form-field label="Member">
+            <nldd-combo-box
+              appAutofocus
+              accessible-label="Member"
+              [attr.text]="selectedUserName()"
+              [attr.invalid]="userFieldInvalid() ? '' : null"
+              (change)="onUserChange($event)"
+            >
+              <nldd-menu accessible-label="Organization members">
                 @for (user of availableUsers(); track user.id) {
-                  <option [value]="user.id">{{ user.name }}</option>
+                  <nldd-menu-item [attr.value]="user.id" [attr.text]="user.name"></nldd-menu-item>
                 }
-              </select>
-            </nldd-dropdown>
-            @if (availableUsers().length === 0) {
-              <p class="text-gray-600 dark:text-gray-400">No users available to add.</p>
-            }
+              </nldd-menu>
+            </nldd-combo-box>
             <nldd-form-field-error-text id="project-member-user-error">
-              @if (
-                memberForm.get('userId')?.invalid &&
-                (memberForm.get('userId')?.dirty || memberForm.get('userId')?.touched)
-              ) {
-                Please select a user.
+              @if (userFieldInvalid()) {
+                Please select a member.
               }
             </nldd-form-field-error-text>
           </nldd-form-field>
-        }
 
-        @if (editingMemberView()) {
-          <div class="mb-4">
-            <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
-            <p>{{ editingMemberView()?.member?.userName }}</p>
-          </div>
-        }
-
-        <div class="mb-4">
           <nldd-form-field label="Permission">
-            <nldd-radio-button-group name="permission" (change)="onPermissionChange($event)">
-              <div class="radio-option mb-2">
-                <nldd-radio-button-field
-                  value="viewer"
-                  label="Project viewer"
-                  [checked]="memberForm.get('permission')?.value === 'viewer'"
-                ></nldd-radio-button-field>
-                <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-                  >Read access to resources</span
-                >
-              </div>
-              <div class="radio-option">
-                <nldd-radio-button-field
-                  value="admin"
-                  label="Project admin"
-                  [checked]="memberForm.get('permission')?.value === 'admin'"
-                ></nldd-radio-button-field>
-                <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-                  >Full access to resources</span
-                >
-              </div>
-            </nldd-radio-button-group>
+            <nldd-list variant="box" accessible-label="Permission">
+              @for (option of permissionOptions; track option.value) {
+                <!-- The row is the control; the radio only shows which one it
+                     is. A real radio here would be an input inside the row's
+                     button. -->
+                <nldd-list-item button (click)="selectPermission(option.value)">
+                  <nldd-cell width="fit-content">
+                    <nldd-radio-button
+                      decorative
+                      [attr.checked]="
+                        memberForm.get('permission')?.value === option.value ? '' : null
+                      "
+                    ></nldd-radio-button>
+                  </nldd-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    width="full"
+                    [attr.text]="option.label"
+                    [attr.supporting-text]="option.description"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
+            </nldd-list>
           </nldd-form-field>
-        </div>
-      </nldd-form>
-    </nldd-simple-section>
 
-    <nldd-simple-section slot="footer">
-      <nldd-button
-        type="button"
-        (click)="saveMember()"
-        [text]="
-          isAddingMember() ? 'Saving...' : editingMemberView() ? 'Save changes' : 'Add member'
-        "
-        [disabled]="isAddingMember() || (!editingMemberView() && !memberForm.valid)"
-        variant="primary"
-        width="full"
-      ></nldd-button>
+          <!-- Optional, and here rather than only in the member sheet: giving
+               someone a place to work is part of putting them in the project. -->
+          <nldd-form-field
+            label="Namespace access"
+            optional
+            optional-label="Optional"
+            supporting-label="You can also arrange this later."
+          >
+            <nldd-list variant="box" accessible-label="Namespaces">
+              <!-- Not a shortcut for ticking the rest: it also covers namespaces
+                   made later, so it excludes the others. -->
+              <nldd-list-item
+                checkbox
+                [attr.checked]="draftNamespaces().includes(ALL_NAMESPACES) ? '' : null"
+                (click)="toggleDraftNamespace(ALL_NAMESPACES)"
+              >
+                <nldd-cell width="fit-content">
+                  <nldd-checkbox
+                    decorative
+                    [attr.checked]="draftNamespaces().includes(ALL_NAMESPACES) ? '' : null"
+                  ></nldd-checkbox>
+                </nldd-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="full"
+                  text="All namespaces (also future ones)"
+                ></nldd-text-cell>
+              </nldd-list-item>
+              @for (namespace of projectNamespaces(); track namespace) {
+                <nldd-list-item
+                  checkbox
+                  [attr.checked]="draftNamespaces().includes(namespace) ? '' : null"
+                  (click)="toggleDraftNamespace(namespace)"
+                >
+                  <nldd-cell width="fit-content">
+                    <nldd-checkbox
+                      decorative
+                      [attr.checked]="draftNamespaces().includes(namespace) ? '' : null"
+                    ></nldd-checkbox>
+                  </nldd-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell width="full" [attr.text]="namespace"></nldd-text-cell>
+                </nldd-list-item>
+              }
+              <!-- The ellipsis warns that picking this asks for more before
+                   anything happens. -->
+              <nldd-list-item
+                checkbox
+                [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
+                (click)="toggleDraftNamespace(NEW_NAMESPACE)"
+              >
+                <nldd-cell width="fit-content">
+                  <nldd-checkbox
+                    decorative
+                    [attr.checked]="draftNamespaces().includes(NEW_NAMESPACE) ? '' : null"
+                  ></nldd-checkbox>
+                </nldd-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell width="full" text="New namespace…"></nldd-text-cell>
+              </nldd-list-item>
+            </nldd-list>
+          </nldd-form-field>
+
+          @if (draftNamespaces().includes(NEW_NAMESPACE)) {
+            <nldd-form-field label="New namespace name">
+              <nldd-text-field
+                [value]="newNamespaceName()"
+                [invalid]="newNamespaceInvalid()"
+                error-message="add-member-new-namespace-error"
+                (input)="newNamespaceName.set($any($event.target).value)"
+              ></nldd-text-field>
+              <nldd-form-field-help-text>
+                Lowercase letters, numbers and hyphens; it will be created in this project.
+              </nldd-form-field-help-text>
+              <nldd-form-field-error-text id="add-member-new-namespace-error">
+                {{ newNamespaceError() }}
+              </nldd-form-field-error-text>
+            </nldd-form-field>
+          }
+
+          <!-- Only once there is a namespace to hold them: a role on nothing is
+               not a choice anyone can act on. -->
+          @if (draftNamespaces().length > 0) {
+            <nldd-form-field label="Roles">
+              <nldd-list variant="box" accessible-label="Roles">
+                @for (role of allRoles; track role) {
+                  <nldd-list-item
+                    checkbox
+                    [attr.checked]="draftRoles().includes(role) ? '' : null"
+                    (click)="toggleDraftRole(role)"
+                  >
+                    <nldd-cell width="fit-content">
+                      <nldd-checkbox
+                        decorative
+                        [attr.checked]="draftRoles().includes(role) ? '' : null"
+                      ></nldd-checkbox>
+                    </nldd-cell>
+                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                    <nldd-text-cell width="full" [attr.text]="role"></nldd-text-cell>
+                  </nldd-list-item>
+                }
+              </nldd-list>
+              <nldd-form-field-help-text>
+                Without a role they can see the namespace, but do nothing in it.
+              </nldd-form-field-help-text>
+            </nldd-form-field>
+          }
+
+          <!-- Under the form, not stuck to the bottom of the sheet: the sheet is
+               short enough that a sticky footer only pushes the button away from
+               what it submits. -->
+          <nldd-form-actions>
+            <!-- Never disabled: a disabled button says nothing about what is
+                 missing. Pressing it points at the field instead. -->
+            <nldd-button
+              type="button"
+              (click)="saveMember()"
+              text="Add member to project"
+              [attr.loading]="isAddingMember() ? '' : null"
+              variant="primary"
+              width="full"
+            ></nldd-button>
+          </nldd-form-actions>
+        </nldd-form>
+      }
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
 
-<!-- Remove Member Modal -->
-<nldd-modal-dialog
-  #removeMemberDialog
-  appDialogSync
-  [show]="showRemoveMemberModal()"
-  [attr.text]="'Remove ' + pendingRemoveView()?.member?.userName + ' from this project?'"
-  supporting-text="They immediately lose access to this project and its resources. You can add them again later."
-  accessible-label="Confirm member removal"
-  variant="alert"
-  (open)="onRemoveMemberModalOpen()"
-  (close)="showRemoveMemberModal.set(false)"
->
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="showRemoveMemberModal.set(false)"
-    text="Keep member"
-    variant="secondary"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="confirmRemoveMember()"
-    text="Remove member"
-    variant="destructive"
-  ></nldd-button>
-</nldd-modal-dialog>
+<router-outlet />

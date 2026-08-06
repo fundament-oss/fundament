@@ -1,5 +1,5 @@
 import { Component, inject, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import SheetSyncDirective from '../sheet-sync.directive';
 
 /**
@@ -17,7 +17,11 @@ import SheetSyncDirective from '../sheet-sync.directive';
 export default class PermissionsSheetComponent {
   private router = inject(Router);
 
+  private route = inject(ActivatedRoute);
+
+  /** Back to the members list it was opened from — the organization one or a
+   *  project one, depending on where this route is mounted. */
   onClose(): void {
-    this.router.navigateByUrl('/organization/members');
+    this.router.navigate(['..'], { relativeTo: this.route });
   }
 }
