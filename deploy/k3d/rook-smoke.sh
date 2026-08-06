@@ -155,6 +155,50 @@ parameters:
   csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
   csi.storage.k8s.io/node-stage-secret-namespace: $NS
   csi.storage.k8s.io/fstype: ext4
+  # krbd retries OSD requests forever by default, so if the cluster goes away
+  # while a volume is mounted the filesystem's journal thread blocks
+  # uninterruptibly and the device can never be unmapped -- on bare metal that
+  # costs a reboot. A timeout turns that into an I/O error the filesystem can
+  # fail on. Dev only: it aborts all requests, not just at unmap time.
+  mapOptions: "krbd:osd_request_timeout=90"
+  unmapOptions: "krbd:force"
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+YAML
+
+    log "creating the myfs filesystem + the rook-cephfs StorageClass"
+    "${KUBECTL[@]}" apply -f - <<YAML
+apiVersion: ceph.rook.io/v1
+kind: CephFilesystem
+metadata:
+  name: myfs
+  namespace: $NS
+spec:
+  metadataPool:
+    replicated: { size: 1, requireSafeReplicaSize: false }
+  dataPools:
+    - name: replicated
+      replicated: { size: 1, requireSafeReplicaSize: false }
+  preserveFilesystemOnDelete: false
+  metadataServer:
+    activeCount: 1
+    activeStandby: false
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rook-cephfs
+provisioner: ${NS}.cephfs.csi.ceph.com
+parameters:
+  clusterID: $NS
+  fsName: myfs
+  pool: myfs-replicated
+  csi.storage.k8s.io/provisioner-secret-name: rook-csi-cephfs-provisioner
+  csi.storage.k8s.io/provisioner-secret-namespace: $NS
+  csi.storage.k8s.io/controller-expand-secret-name: rook-csi-cephfs-provisioner
+  csi.storage.k8s.io/controller-expand-secret-namespace: $NS
+  csi.storage.k8s.io/node-stage-secret-name: rook-csi-cephfs-node
+  csi.storage.k8s.io/node-stage-secret-namespace: $NS
 allowVolumeExpansion: true
 reclaimPolicy: Delete
 YAML
@@ -172,15 +216,24 @@ status() {
 }
 
 smoke() {
-    log "provisioning a 1Gi PVC from rook-ceph-block and writing to it"
+    log "provisioning an RBD and a CephFS volume, then verifying what was written"
     "${KUBECTL[@]}" apply -f - <<'YAML'
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: rook-smoke
+  name: rook-smoke-rbd
 spec:
   accessModes: [ReadWriteOnce]
   storageClassName: rook-ceph-block
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rook-smoke-cephfs
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: rook-cephfs
   resources: { requests: { storage: 1Gi } }
 ---
 apiVersion: v1
@@ -191,12 +244,25 @@ spec:
   restartPolicy: Never
   containers:
     - name: w
-      image: busybox:1.36
-      command: ["sh","-c","dd if=/dev/zero of=/data/f bs=1M count=64 && df -h /data && echo SMOKE-OK"]
-      volumeMounts: [{ name: v, mountPath: /data }]
+      image: alpine:3.21
+      command: ["sh","-c"]
+      args:
+        - |
+          for v in /rbd /cephfs; do
+            dd if=/dev/urandom of=$v/data.bin bs=1M count=64 2>/dev/null
+            sha256sum $v/data.bin | cut -d' ' -f1 > $v/data.sha256
+            sync
+            want=$(cat $v/data.sha256); have=$(sha256sum $v/data.bin | cut -d' ' -f1)
+            [ "$want" = "$have" ] || { echo "MISMATCH on $v"; exit 1; }
+            df -h $v | tail -1
+          done
+          echo SMOKE-OK
+      volumeMounts:
+        - { name: rbd, mountPath: /rbd }
+        - { name: cephfs, mountPath: /cephfs }
   volumes:
-    - name: v
-      persistentVolumeClaim: { claimName: rook-smoke }
+    - { name: rbd, persistentVolumeClaim: { claimName: rook-smoke-rbd } }
+    - { name: cephfs, persistentVolumeClaim: { claimName: rook-smoke-cephfs } }
 YAML
     # The pod runs to completion, so it never reports Ready.
     if ! "${KUBECTL[@]}" wait --for=jsonpath='{.status.phase}'=Succeeded \
@@ -206,7 +272,84 @@ YAML
         return 1
     fi
     "${KUBECTL[@]}" logs pod/rook-smoke
-    "${KUBECTL[@]}" delete pod/rook-smoke pvc/rook-smoke --ignore-not-found
+    "${KUBECTL[@]}" delete pod/rook-smoke pvc/rook-smoke-rbd pvc/rook-smoke-cephfs --ignore-not-found
+}
+
+# Long-running counterpart to `test`: keeps volumes bound and re-verifies a
+# checksum, so restarts of the cluster, the Docker VM or the machine can be
+# checked for data loss. Survives restarts by being a Deployment.
+soak() {
+    log "starting the soak workload on an RBD and a CephFS volume"
+    "${KUBECTL[@]}" apply -f - <<'YAML'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: rook-soak-rbd }
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: rook-ceph-block
+  resources: { requests: { storage: 2Gi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: rook-soak-cephfs }
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: rook-cephfs
+  resources: { requests: { storage: 2Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: rook-soak }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: rook-soak } }
+  template:
+    metadata: { labels: { app: rook-soak } }
+    spec:
+      containers:
+        - name: worker
+          image: alpine:3.21
+          command: ["sh","-c"]
+          args:
+            - |
+              for v in /rbd /cephfs; do
+                if [ ! -f $v/data.bin ]; then
+                  dd if=/dev/urandom of=$v/data.bin bs=1M count=100 2>/dev/null
+                  sha256sum $v/data.bin | cut -d' ' -f1 > $v/data.sha256
+                  sync
+                  echo "INIT $v sha=$(cat $v/data.sha256)"
+                fi
+              done
+              n=0
+              while true; do
+                n=$((n+1))
+                for v in /rbd /cephfs; do
+                  want=$(cat $v/data.sha256 2>/dev/null)
+                  have=$(sha256sum $v/data.bin 2>/dev/null | cut -d' ' -f1)
+                  if [ -z "$have" ]; then echo "READFAIL $v pass=$n"
+                  elif [ "$want" = "$have" ]; then echo "OK $v pass=$n"
+                  else echo "MISMATCH $v pass=$n want=$want have=$have"; fi
+                  echo "pass $n $(date -u +%FT%TZ)" >> $v/writes.log
+                done
+                sleep 20
+              done
+          volumeMounts:
+            - { name: rbd, mountPath: /rbd }
+            - { name: cephfs, mountPath: /cephfs }
+      volumes:
+        - { name: rbd, persistentVolumeClaim: { claimName: rook-soak-rbd } }
+        - { name: cephfs, persistentVolumeClaim: { claimName: rook-soak-cephfs } }
+YAML
+    "${KUBECTL[@]}" rollout status deploy/rook-soak --timeout=5m
+    log "watch it with: $0 soak-log"
+}
+
+soak_log() {
+    "${KUBECTL[@]}" logs deploy/rook-soak --tail=20
+    echo
+    log "any failure so far:"
+    "${KUBECTL[@]}" logs deploy/rook-soak 2>/dev/null | grep -cE 'MISMATCH|READFAIL' | sed 's/^/  failures: /'
 }
 
 # Takes one resource/name argument, so it accepts `kubectl get -o name` output
@@ -221,8 +364,11 @@ unfinalize() {
 # Rook's finalizers are cleared by the operator, so anything still holding one
 # once the operator is gone strands the namespace in Terminating.
 down() {
-    "${KUBECTL[@]}" delete pod/rook-smoke pvc/rook-smoke --ignore-not-found >/dev/null 2>&1 || true
-    "${KUBECTL[@]}" delete storageclass rook-ceph-block --ignore-not-found
+    "${KUBECTL[@]}" delete deploy/rook-soak --ignore-not-found >/dev/null 2>&1 || true
+    "${KUBECTL[@]}" delete pod/rook-smoke --ignore-not-found >/dev/null 2>&1 || true
+    "${KUBECTL[@]}" delete pvc/rook-smoke-rbd pvc/rook-smoke-cephfs pvc/rook-soak-rbd pvc/rook-soak-cephfs \
+        --ignore-not-found >/dev/null 2>&1 || true
+    "${KUBECTL[@]}" delete storageclass rook-ceph-block rook-cephfs --ignore-not-found
     log "deleting the CephCluster so Rook can clean up"
     if ! "${KUBECTL[@]}" -n "$NS" delete cephcluster rook-ceph --ignore-not-found --timeout=2m; then
         warn "delete timed out (no OSD ever came up?), clearing the finalizer"
@@ -247,10 +393,12 @@ Rook Ceph on the loop devices from storage-disks.sh, using the upstream chart
 and a hand-written CephCluster. No fundament plugin involved, so it separates
 "the environment is broken" from "the plugin is broken".
 
-  up      install the operator and a single-node CephCluster
-  status  ceph -s
-  test    provision a 1Gi PVC and write to it
-  down    remove everything (leaves the disks alone)
+  up        install the operator, a single-node CephCluster and both StorageClasses
+  status    ceph -s
+  test      provision an RBD and a CephFS volume, write and verify a checksum
+  soak      run a workload that keeps re-verifying both volumes, for restart testing
+  soak-log  recent soak output plus a failure count
+  down      remove everything (leaves the disks alone)
 
 Environment: CLUSTER=$CLUSTER NS=$NS ROOK_VERSION=$ROOK_VERSION
              CEPH_IMAGE=$CEPH_IMAGE
@@ -262,8 +410,10 @@ EOF
 case "${1:-}" in
     up)     up ;;
     status) status ;;
-    test)   smoke ;;
-    down)   down ;;
+    test)     smoke ;;
+    soak)     soak ;;
+    soak-log) soak_log ;;
+    down)     down ;;
     "")     usage ;;
     *)      printf 'unknown command: %s\n\n' "$1" >&2; usage >&2; exit 1 ;;
 esac

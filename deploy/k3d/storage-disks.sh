@@ -35,6 +35,8 @@ HELPER_IMAGE="${HELPER_IMAGE:-alpine:3.21}"
 
 NODE="k3d-${CLUSTER}-server-0"
 NATIVE="${NATIVE:-0}"
+ALLOW_BARE_METAL="${ALLOW_BARE_METAL:-0}"
+ROOK_NS="${ROOK_NS:-rook-ceph}"
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m /!\\\033[0m %s\n' "$*" >&2; }
@@ -66,6 +68,66 @@ require_docker() {
     docker info >/dev/null 2>&1 || die "Docker daemon not reachable"
 }
 
+# The virtualisation technology the Docker host runs on, or "none" for bare
+# metal, or "unknown" when neither probe answers.
+host_virt() {
+    printf '%s\n' '
+        if command -v systemd-detect-virt >/dev/null 2>&1; then
+            systemd-detect-virt 2>/dev/null || echo none
+        elif [ -r /sys/class/dmi/id/product_name ]; then
+            case "$(cat /sys/class/dmi/id/product_name)" in
+                *Virtual*|*VMware*|*KVM*|*QEMU*|*Hyper-V*) echo vm ;;
+                *) echo none ;;
+            esac
+        else
+            echo unknown
+        fi
+    ' | host_exec | tr -d '[:space:]'
+}
+
+# Ceph in k3d puts block devices, filesystems and their kernel threads in the
+# Docker host's kernel. On a VM a mistake costs a VM restart; on a workstation an
+# RBD mapping can wedge unkillably (only a reboot clears it) and the privileged
+# node enumerates the real drives. Rook says the same: "Always use a virtual
+# machine when testing Rook. Never use your host system where local devices may
+# mistakenly be consumed."
+require_vm() {
+    local virt; virt="$(host_virt)"
+    case "$virt" in
+        none|unknown) ;;
+        *) log "Docker host is a VM ($virt) -- mistakes are contained to it"; return 0 ;;
+    esac
+    [ "$ALLOW_BARE_METAL" = 1 ] && {
+        warn "bare-metal Docker host, continuing because ALLOW_BARE_METAL is set"
+        return 0
+    }
+    cat >&2 <<EOF
+
+  ####################################################################
+  #  REFUSING: the Docker host is not a virtual machine              #
+  ####################################################################
+
+  Detected: $virt. Every device, filesystem and kernel thread Ceph
+  creates lands in THIS machine's kernel.
+
+    * a stuck RBD mapping is an unkillable kernel thread, and unless
+      the StorageClass bounds its I/O the only recovery is a reboot
+    * the k3d node is privileged and sees your real disks
+
+  Rook's own guidance: "Always use a virtual machine when testing
+  Rook. Never use your host system where local devices may mistakenly
+  be consumed."
+
+  Run Docker inside a VM, which is what macOS already does. If you
+  accept the risk on this machine:
+
+      ALLOW_BARE_METAL=1 $0 ${args[*]}
+      just storage-disks --allow-bare-metal <command>
+
+EOF
+    exit 1
+}
+
 doctor() {
     require_docker
     local dir; dir="$(disk_dir)"
@@ -88,12 +150,19 @@ doctor() {
     " | host_exec)"
     printf '%s\n' "$kernel"
 
+    local virt; virt="$(host_virt)"
+    case "$virt" in
+        none)    echo "  host:    BARE METAL -- attach refuses; see docs/k3d-block-devices.md" ;;
+        unknown) echo "  host:    could not determine whether this is a VM" ;;
+        *)       echo "  host:    virtual machine ($virt)" ;;
+    esac
+
     log "cluster $CLUSTER"
     if docker inspect "$NODE" >/dev/null 2>&1; then
         if docker exec "$NODE" test -d /run/udev; then
             echo "  /run/udev bound into the node: yes"
         else
-            echo "  /run/udev bound into the node: NO -- add the volume to the k3d config"
+            echo "  /run/udev bound into the node: NO"
         fi
         local devs; devs="$(docker exec "$NODE" sh -c 'ls /dev/loop* 2>/dev/null | tr "\n" " "' || true)"
         echo "  loop devices visible in the node: ${devs:-none}"
@@ -138,6 +207,7 @@ partition() {
 # upstream allowance does not fix this.
 attach() {
     require_docker
+    require_vm
     local dir; dir="$(disk_dir)"
     log "backing files in $DISK_VOLUME ($DISK_COUNT x $DISK_SIZE, sparse)"
 
@@ -159,6 +229,11 @@ attach() {
                 losetup -d \"\$dev\" 2>/dev/null && dev=''
             fi
             [ -n \"\$dev\" ] || dev=\$(losetup -P -f --show \"\$img\")
+            # The kernel creates partition devices asynchronously after losetup
+            # -P. Deciding too early reports an already-partitioned image as raw
+            # and rewrites its GPT over live OSD data.
+            n=0
+            while [ ! -b \"\${dev}p1\" ] && [ \$n -lt 5 ]; do sleep 1; n=\$((n+1)); done
             if [ -b \"\${dev}p1\" ]; then echo \"\$dev ready\"; else echo \"\$dev raw\"; fi
             i=\$((i+1))
         done
@@ -172,11 +247,25 @@ attach() {
     done <<<"$loops"
 
     while read -r dev state; do
-        if docker inspect "$NODE" >/dev/null 2>&1 && ! docker exec "$NODE" test -b "${dev}p1"; then
-            warn "${dev}p1 is not visible in $NODE -- is /dev bound in the k3d config?"
-        fi
         echo "  ${dev}p1"
     done <<<"$loops"
+
+    require_node_bind
+}
+
+# Without the bind a node's /dev is a tmpfs snapshot taken at container start.
+# Testing for a device is not enough: the snapshot may already hold one from
+# before, and Ceph CSI would still fail later because it creates /dev/rbdN only
+# when a volume is mounted. The mount type is the honest predicate.
+require_node_bind() {
+    docker inspect "$NODE" >/dev/null 2>&1 || return 0
+    # Read the bind from the container definition rather than from inside it:
+    # a stopped node cannot be exec'd into, and that is not the same as a node
+    # without the bind.
+    docker inspect "$NODE" --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' 2>/dev/null \
+        | grep -qx '/dev' && return 0
+    die "$NODE has no /dev bind, so the cluster cannot use these disks.
+      Recreate it: cd plugins && just cluster-delete && just cluster-create-storage"
 }
 
 # Short kernel names of the OSD partitions, one per line. Rook must name devices
@@ -259,6 +348,87 @@ detach() {
     fi
 }
 
+# Ceph consumers must let go of their volumes while Ceph is still running to
+# service the unmounts -- Rook's documented order. kubectl drain waits for the
+# pods to actually be gone, which is what forces the teardown, and cordons so
+# nothing reschedules onto a cluster that is about to stop. The selector keeps
+# the Ceph daemons; the CSI pods carry no rook_cluster label, so what keeps
+# csi-rbdplugin -- which has to be there to do NodeUnstageVolume -- is
+# --ignore-daemonsets.
+# Safe to call on any cluster: a mapped device is the only thing that makes
+# stopping dangerous, so with none the drain is skipped entirely rather than
+# evicting the workloads of a cluster that never used storage.
+drain() {
+    command -v docker >/dev/null && docker info >/dev/null 2>&1 || return 0
+    local ctx="k3d-$CLUSTER" mapped
+    mapped="$(printf '%s\n' "ls /dev/rbd[0-9]* 2>/dev/null | tr '\\n' ' '" | host_exec 2>/dev/null)" || return 0
+    [ -n "$mapped" ] || return 0
+
+    kubectl --context "$ctx" get node "$NODE" >/dev/null 2>&1 || {
+        warn "$mapped still mapped but $CLUSTER is unreachable, so nothing can unmount it.
+      The node will not stop until you run: just storage-disks unmap-stale"
+        return 0
+    }
+    log "draining Ceph consumers from $NODE"
+    kubectl --context "$ctx" drain "$NODE" \
+        --pod-selector="rook_cluster!=$ROOK_NS" \
+        --ignore-daemonsets --delete-emptydir-data --force --timeout=2m \
+        || warn "drain reported errors; the device check below is what decides"
+
+    local left
+    left="$(printf '%s\n' "ls /dev/rbd[0-9]* 2>/dev/null | tr '\\n' ' '" | host_exec)"
+    [ -z "$left" ] || die "still mapped after draining: $left
+      Something outside this cluster holds a Ceph volume. Stopping now would
+      wedge the Docker host (see docs/k3d-block-devices.md)."
+    log "no Ceph volumes are mapped; safe to stop"
+}
+
+# After a stop that bypassed the drain, the mapping is what keeps the node
+# container from exiting: rbd retries re-registering its watch, a wait with no
+# timeout of its own. Removing the device ends it, and the container then stops
+# at once. The write blocks until teardown finishes, so it runs detached and the
+# device list is what we poll.
+# Requires the workload's I/O to have already been aborted -- see the StorageClass
+# mapOptions in rook-smoke.sh; without that the freeze never completes.
+unmap_stale() {
+    require_docker
+    # A wedged node stays Status=running and refuses to stop, so that flag cannot
+    # tell "live" from "stuck". Entering it can: the stuck mapping pins the dead
+    # container's namespaces, so exec fails where a healthy node answers.
+    if docker inspect -f '{{.State.Running}}' "$NODE" 2>/dev/null | grep -qx true &&
+       docker exec "$NODE" true >/dev/null 2>&1; then
+        die "$NODE is live -- unmapping now would pull the device out from
+      under a running workload. Use: just cluster-stop"
+    fi
+    local left
+    left="$(printf '%s\n' "ls /sys/bus/rbd/devices/ 2>/dev/null | tr '\\n' ' '" | host_exec)"
+    [ -n "$left" ] || { log "no stale rbd mappings"; return 0; }
+    log "removing stale rbd mappings: $left"
+    printf '%s\n' '
+        for d in /sys/bus/rbd/devices/*/; do
+            [ -e "$d" ] || continue
+            (echo "${d%/}" | sed "s#.*/##" > /sys/bus/rbd/remove_single_major) &
+        done
+        i=0
+        while [ -n "$(ls /sys/bus/rbd/devices/ 2>/dev/null)" ] && [ $i -lt 60 ]; do
+            sleep 1; i=$((i+1))
+        done
+        echo "  remaining after ${i}s: [$(ls /sys/bus/rbd/devices/ 2>/dev/null | tr "\n" " ")]"
+    ' | host_exec
+    left="$(printf '%s\n' "ls /sys/bus/rbd/devices/ 2>/dev/null | tr '\\n' ' '" | host_exec)"
+    [ -z "$left" ] || die "still mapped: $left
+      Restart the Docker host to clear it (on macOS: colima restart)."
+}
+
+# A k3d restart clears the cordon on its own, so this covers a drain that was
+# not followed by one: an aborted stop, a failed delete, or a manual drain.
+uncordon() {
+    require_docker
+    local ctx="k3d-$CLUSTER"
+    kubectl --context "$ctx" get node "$NODE" >/dev/null 2>&1 || return 0
+    kubectl --context "$ctx" uncordon "$NODE"
+}
+
 # Removes the disks for good, which nothing else does: reset recreates them and
 # detach keeps the files. Detaching first is not optional -- deleting an image
 # while its loop device is still attached frees no space, because the kernel
@@ -296,6 +466,11 @@ Loop-backed block devices for the k3d cluster '$CLUSTER'.
   devices   short kernel names, one per line, for scripts
   status    what is attached, and what the node can see
   detach    detach, keep the backing files
+  drain     evict Ceph consumers so the cluster can be stopped safely;
+            does nothing unless a volume is mapped
+  uncordon  undo the cordon that drain leaves
+  unmap-stale
+            drop rbd mappings left by a stop that bypassed the drain
   reset     wipe the disks and Rook's on-node state, reattach
   purge     detach and delete the disks for good, freeing the space
 
@@ -303,6 +478,10 @@ All commands are idempotent.
 
   --native  run host commands via sudo instead of a helper container
             (rootless Docker, where the container's PID 1 is not the host's)
+  --allow-bare-metal
+            proceed when the Docker host is not a VM. Ceph then runs against
+            this machine's kernel: a stuck RBD mapping needs a reboot, and the
+            privileged node sees your real disks.
 
 Environment: CLUSTER=$CLUSTER DISK_COUNT=$DISK_COUNT DISK_SIZE=$DISK_SIZE
              DISK_VOLUME=$DISK_VOLUME NATIVE=$NATIVE
@@ -313,6 +492,7 @@ args=()
 for a in "$@"; do
     case "$a" in
         --native) NATIVE=1 ;;
+        --allow-bare-metal) ALLOW_BARE_METAL=1 ;;
         *) args+=("$a") ;;
     esac
 done
@@ -323,6 +503,9 @@ case "${args[0]:-}" in
     devices) devices ;;
     status)  status ;;
     detach)  detach ;;
+    drain)     drain ;;
+    uncordon) uncordon ;;
+    unmap-stale) unmap_stale ;;
     reset)   reset ;;
     purge)   purge ;;
     "")      usage ;;
