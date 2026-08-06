@@ -93,75 +93,81 @@
                say they belong together, and "Additional information" says nothing
                the rows do not. -->
           <nldd-box>
-            <!-- The labels carry a minimum: a URL wraps by itself (browsers
-                 break after a slash), but a one-word label has nowhere to break
-                 and would collapse into "Repo / sitor / y". -->
-            <nldd-list variant="simple" accessible-label="Plugin information">
-              <!-- First row: the only one about your own clusters rather than
-                   about the plugin. -->
-              @if (hasInstalledClusters()) {
-                <nldd-list-item>
-                  <nldd-text-cell min-width="120px" text="Usage"></nldd-text-cell>
-                  <nldd-text-cell
-                    width="fit-content"
-                    horizontal-alignment="right"
-                    [attr.text]="
-                      'Installed on ' +
-                      getInstalledClusterCount() +
-                      (getInstalledClusterCount() > 1 ? ' clusters' : ' cluster')
-                    "
-                  ></nldd-text-cell>
-                </nldd-list-item>
-              }
-              @if (p.categories.length > 0) {
-                <nldd-list-item>
-                  <nldd-text-cell min-width="120px" text="Categories"></nldd-text-cell>
-                  <nldd-cell horizontal-alignment="right">
-                    <nldd-container layout="wrap" gap="8" horizontal-alignment="right">
-                      @for (category of p.categories; track category.id) {
-                        <nldd-tag color="neutral" size="sm" [attr.text]="category.name"></nldd-tag>
-                      }
-                    </nldd-container>
-                  </nldd-cell>
-                </nldd-list-item>
-              }
-              @if (p.repositoryUrl) {
-                <nldd-list-item>
-                  <nldd-text-cell min-width="120px" text="Repository"></nldd-text-cell>
-                  <nldd-cell horizontal-alignment="right">
-                    <nldd-link
-                      target="_blank"
-                      [attr.href]="p.repositoryUrl"
-                      [attr.text]="p.repositoryUrl"
-                    ></nldd-link>
-                  </nldd-cell>
-                </nldd-list-item>
-              }
-              @for (link of p.documentationLinks; track link.id) {
-                <nldd-list-item>
-                  <nldd-text-cell min-width="120px" text="Documentation"></nldd-text-cell>
-                  <nldd-cell horizontal-alignment="right">
-                    <nldd-link
-                      target="_blank"
-                      [attr.href]="link.url"
-                      [attr.text]="link.title"
-                    ></nldd-link>
-                  </nldd-cell>
-                </nldd-list-item>
-              }
-              @if (p.author?.url) {
-                <nldd-list-item>
-                  <nldd-text-cell min-width="120px" text="Author website"></nldd-text-cell>
-                  <nldd-cell horizontal-alignment="right">
-                    <nldd-link
-                      target="_blank"
-                      [attr.href]="p.author!.url"
-                      [attr.text]="p.author!.url"
-                    ></nldd-link>
-                  </nldd-cell>
-                </nldd-list-item>
-              }
-            </nldd-list>
+            <nldd-container padding="16">
+              <!-- The labels carry a minimum: a URL wraps by itself (browsers
+                   break after a slash), but a one-word label has nowhere to break
+                   and would collapse into "Repo / sitor / y". -->
+              <nldd-list variant="simple" accessible-label="Plugin information">
+                <!-- First row: the only one about your own clusters rather than
+                     about the plugin. -->
+                @if (hasInstalledClusters()) {
+                  <nldd-list-item>
+                    <nldd-text-cell min-width="120px" text="Usage"></nldd-text-cell>
+                    <nldd-text-cell
+                      width="fit-content"
+                      horizontal-alignment="right"
+                      [attr.text]="
+                        'Installed on ' +
+                        getInstalledClusterCount() +
+                        (getInstalledClusterCount() > 1 ? ' clusters' : ' cluster')
+                      "
+                    ></nldd-text-cell>
+                  </nldd-list-item>
+                }
+                @if (p.categories.length > 0) {
+                  <nldd-list-item>
+                    <nldd-text-cell min-width="120px" text="Categories"></nldd-text-cell>
+                    <nldd-cell horizontal-alignment="right">
+                      <nldd-container layout="wrap" gap="8" horizontal-alignment="right">
+                        @for (category of p.categories; track category.id) {
+                          <nldd-tag
+                            color="neutral"
+                            size="sm"
+                            [attr.text]="category.name"
+                          ></nldd-tag>
+                        }
+                      </nldd-container>
+                    </nldd-cell>
+                  </nldd-list-item>
+                }
+                @if (p.repositoryUrl) {
+                  <nldd-list-item>
+                    <nldd-text-cell min-width="120px" text="Repository"></nldd-text-cell>
+                    <nldd-cell horizontal-alignment="right">
+                      <nldd-link
+                        target="_blank"
+                        [attr.href]="p.repositoryUrl"
+                        [attr.text]="p.repositoryUrl"
+                      ></nldd-link>
+                    </nldd-cell>
+                  </nldd-list-item>
+                }
+                @for (link of p.documentationLinks; track link.id) {
+                  <nldd-list-item>
+                    <nldd-text-cell min-width="120px" text="Documentation"></nldd-text-cell>
+                    <nldd-cell horizontal-alignment="right">
+                      <nldd-link
+                        target="_blank"
+                        [attr.href]="link.url"
+                        [attr.text]="link.title"
+                      ></nldd-link>
+                    </nldd-cell>
+                  </nldd-list-item>
+                }
+                @if (p.author?.url) {
+                  <nldd-list-item>
+                    <nldd-text-cell min-width="120px" text="Author website"></nldd-text-cell>
+                    <nldd-cell horizontal-alignment="right">
+                      <nldd-link
+                        target="_blank"
+                        [attr.href]="p.author!.url"
+                        [attr.text]="p.author!.url"
+                      ></nldd-link>
+                    </nldd-cell>
+                  </nldd-list-item>
+                }
+              </nldd-list>
+            </nldd-container>
           </nldd-box>
         }
       </nldd-container>

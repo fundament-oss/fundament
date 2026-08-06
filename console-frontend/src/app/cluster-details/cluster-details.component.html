@@ -261,22 +261,24 @@
 
         <!-- Resource Usage Charts -->
         <nldd-box>
-          <nldd-title size="5">
-            <h3>Resource usage</h3>
-          </nldd-title>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h3>Resource usage</h3>
+            </nldd-title>
 
-          <nldd-spacer size="16"></nldd-spacer>
-          <nldd-container layout="stack" gap="16">
-            @for (metric of resourceMetrics; track metric.label) {
-              <nldd-progress-bar
-                [attr.text]="metric.label"
-                [attr.value]="metric.used"
-                [attr.max]="metric.limit"
-                [attr.color]="metric.color"
-                [attr.value-text]="metric.valueText"
-                [attr.accessible-label]="metric.accessibleLabel"
-              ></nldd-progress-bar>
-            }
+            <nldd-spacer size="16"></nldd-spacer>
+            <nldd-container layout="stack" gap="16">
+              @for (metric of resourceMetrics; track metric.label) {
+                <nldd-progress-bar
+                  [attr.text]="metric.label"
+                  [attr.value]="metric.used"
+                  [attr.max]="metric.limit"
+                  [attr.color]="metric.color"
+                  [attr.value-text]="metric.valueText"
+                  [attr.accessible-label]="metric.accessibleLabel"
+                ></nldd-progress-bar>
+              }
+            </nldd-container>
           </nldd-container>
         </nldd-box>
 
@@ -327,156 +329,168 @@
 
         <!-- Node Pools -->
         <nldd-box>
-          <nldd-title size="5">
-            <h3>Node pools</h3>
-            <nldd-button
-              slot="actions"
-              [attr.href]="'/clusters/' + clusterData.basics.id + '/nodes'"
-              (click)="pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/nodes')"
-              text="Edit"
-              start-icon="pencil"
-              variant="secondary"
-              size="sm"
-            ></nldd-button>
-          </nldd-title>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h3>Node pools</h3>
+              <nldd-button
+                slot="actions"
+                [attr.href]="'/clusters/' + clusterData.basics.id + '/nodes'"
+                (click)="pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/nodes')"
+                text="Edit"
+                start-icon="pencil"
+                variant="secondary"
+                size="sm"
+              ></nldd-button>
+            </nldd-title>
 
-          <nldd-spacer size="16"></nldd-spacer>
+            <nldd-spacer size="16"></nldd-spacer>
 
-          @if (clusterData.nodePools.length === 0) {
-            <nldd-inline-dialog
-              icon="circle-dashed"
-              icon-color="secondary"
-              text="No node pools are configured yet."
-            ></nldd-inline-dialog>
-          } @else {
-            <nldd-collection layout="grid" item-width="320px" gap="16px">
-              @for (pool of clusterData.nodePools; track pool.name) {
-                <nldd-card>
-                  <nldd-container padding="16">
-                    <nldd-title size="6">
-                      <h4>{{ pool.name }}</h4>
-                      <nldd-tag
-                        slot="actions"
-                        size="sm"
-                        [attr.color]="
-                          pool.status === NodePoolStatus.HEALTHY
-                            ? 'success'
-                            : pool.status === NodePoolStatus.UNHEALTHY
-                              ? 'critical'
-                              : pool.status === NodePoolStatus.DEGRADED
-                                ? 'warning'
-                                : 'neutral'
-                        "
-                        [attr.text]="getNodePoolStatusLabel(pool.status)"
-                      ></nldd-tag>
-                    </nldd-title>
-
-                    <nldd-spacer size="8"></nldd-spacer>
-
-                    <nldd-list variant="simple" no-dividers>
-                      <nldd-list-item size="sm">
-                        <nldd-text-cell text="Type"></nldd-text-cell>
-                        <nldd-text-cell
-                          width="fit-content"
-                          horizontal-alignment="right"
-                          [attr.text]="pool.machineType"
-                        ></nldd-text-cell>
-                      </nldd-list-item>
-                      <nldd-list-item size="sm">
-                        <nldd-text-cell text="Nodes"></nldd-text-cell>
-                        <nldd-text-cell
-                          width="fit-content"
-                          horizontal-alignment="right"
-                          [attr.text]="
-                            pool.currentNodes +
-                            ' (min: ' +
-                            pool.minNodes +
-                            ' - max: ' +
-                            pool.maxNodes +
-                            ')'
+            @if (clusterData.nodePools.length === 0) {
+              <nldd-inline-dialog
+                icon="circle-dashed"
+                icon-color="secondary"
+                text="No node pools are configured yet."
+              ></nldd-inline-dialog>
+            } @else {
+              <nldd-collection layout="grid" item-width="320px" gap="16px">
+                @for (pool of clusterData.nodePools; track pool.name) {
+                  <nldd-card>
+                    <nldd-container padding="16">
+                      <nldd-title size="6">
+                        <h4>{{ pool.name }}</h4>
+                        <nldd-tag
+                          slot="actions"
+                          size="sm"
+                          [attr.color]="
+                            pool.status === NodePoolStatus.HEALTHY
+                              ? 'success'
+                              : pool.status === NodePoolStatus.UNHEALTHY
+                                ? 'critical'
+                                : pool.status === NodePoolStatus.DEGRADED
+                                  ? 'warning'
+                                  : 'neutral'
                           "
-                        ></nldd-text-cell>
-                      </nldd-list-item>
-                      @if (pool.version) {
+                          [attr.text]="getNodePoolStatusLabel(pool.status)"
+                        ></nldd-tag>
+                      </nldd-title>
+
+                      <nldd-spacer size="8"></nldd-spacer>
+
+                      <nldd-list variant="simple" no-dividers>
                         <nldd-list-item size="sm">
-                          <nldd-text-cell text="Version"></nldd-text-cell>
+                          <nldd-text-cell text="Type"></nldd-text-cell>
                           <nldd-text-cell
                             width="fit-content"
                             horizontal-alignment="right"
-                            [attr.text]="pool.version"
+                            [attr.text]="pool.machineType"
                           ></nldd-text-cell>
                         </nldd-list-item>
-                      }
-                    </nldd-list>
-                  </nldd-container>
-                </nldd-card>
-              }
-            </nldd-collection>
-          }
+                        <nldd-list-item size="sm">
+                          <nldd-text-cell text="Nodes"></nldd-text-cell>
+                          <nldd-text-cell
+                            width="fit-content"
+                            horizontal-alignment="right"
+                            [attr.text]="
+                              pool.currentNodes +
+                              ' (min: ' +
+                              pool.minNodes +
+                              ' - max: ' +
+                              pool.maxNodes +
+                              ')'
+                            "
+                          ></nldd-text-cell>
+                        </nldd-list-item>
+                        @if (pool.version) {
+                          <nldd-list-item size="sm">
+                            <nldd-text-cell text="Version"></nldd-text-cell>
+                            <nldd-text-cell
+                              width="fit-content"
+                              horizontal-alignment="right"
+                              [attr.text]="pool.version"
+                            ></nldd-text-cell>
+                          </nldd-list-item>
+                        }
+                      </nldd-list>
+                    </nldd-container>
+                  </nldd-card>
+                }
+              </nldd-collection>
+            }
+          </nldd-container>
         </nldd-box>
 
         <!-- Plugins Block -->
         <nldd-box>
-          <nldd-title size="5">
-            <h3>
-              Plugins
-              @if (installedPlugins().length > 0) {
-                <nldd-badge color="neutral" [attr.number]="installedPlugins().length"></nldd-badge>
-              }
-            </h3>
-            <nldd-button
-              slot="actions"
-              [attr.href]="'/clusters/' + clusterData.basics.id + '/plugins'"
-              (click)="pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/plugins')"
-              text="Edit"
-              start-icon="pencil"
-              variant="secondary"
-              size="sm"
-            ></nldd-button>
-          </nldd-title>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h3>
+                Plugins
+                @if (installedPlugins().length > 0) {
+                  <nldd-badge
+                    color="neutral"
+                    [attr.number]="installedPlugins().length"
+                  ></nldd-badge>
+                }
+              </h3>
+              <nldd-button
+                slot="actions"
+                [attr.href]="'/clusters/' + clusterData.basics.id + '/plugins'"
+                (click)="
+                  pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/plugins')
+                "
+                text="Edit"
+                start-icon="pencil"
+                variant="secondary"
+                size="sm"
+              ></nldd-button>
+            </nldd-title>
 
-          <nldd-spacer size="16"></nldd-spacer>
+            <nldd-spacer size="16"></nldd-spacer>
 
-          @if (isLoadingPlugins()) {
-            <nldd-activity-indicator show-text text="Loading plugins..."></nldd-activity-indicator>
-          } @else if (installedPlugins().length > 0) {
-            <!-- Informational only: these cards report what is installed, editing
-                 runs through the Edit button above. So no href and no button. -->
-            <nldd-collection layout="grid" item-width="320px" gap="16px">
-              @for (plugin of installedPlugins(); track plugin.id) {
-                <nldd-card>
-                  <nldd-container padding="16">
-                    <nldd-avatar
-                      decorative
-                      type="organization"
-                      size="40"
-                      [attr.src]="pluginIconSrc(plugin)"
-                      [attr.name]="pluginDisplayName(plugin)"
-                    ></nldd-avatar>
+            @if (isLoadingPlugins()) {
+              <nldd-activity-indicator
+                show-text
+                text="Loading plugins..."
+              ></nldd-activity-indicator>
+            } @else if (installedPlugins().length > 0) {
+              <!-- Informational only: these cards report what is installed, editing
+                   runs through the Edit button above. So no href and no button. -->
+              <nldd-collection layout="grid" item-width="320px" gap="16px">
+                @for (plugin of installedPlugins(); track plugin.id) {
+                  <nldd-card>
+                    <nldd-container padding="16">
+                      <nldd-avatar
+                        decorative
+                        type="organization"
+                        size="40"
+                        [attr.src]="pluginIconSrc(plugin)"
+                        [attr.name]="pluginDisplayName(plugin)"
+                      ></nldd-avatar>
 
-                    <nldd-spacer size="12"></nldd-spacer>
+                      <nldd-spacer size="12"></nldd-spacer>
 
-                    <nldd-title size="6">
-                      <h4>{{ pluginDisplayName(plugin) }}</h4>
-                    </nldd-title>
+                      <nldd-title size="6">
+                        <h4>{{ pluginDisplayName(plugin) }}</h4>
+                      </nldd-title>
 
-                    @if (plugin.descriptionShort) {
-                      <nldd-spacer size="4"></nldd-spacer>
-                      <nldd-rich-text>
-                        <p>{{ plugin.descriptionShort }}</p>
-                      </nldd-rich-text>
-                    }
-                  </nldd-container>
-                </nldd-card>
-              }
-            </nldd-collection>
-          } @else {
-            <nldd-inline-dialog
-              icon="puzzle-piece"
-              icon-color="secondary"
-              text="No plugins installed"
-            ></nldd-inline-dialog>
-          }
+                      @if (plugin.descriptionShort) {
+                        <nldd-spacer size="4"></nldd-spacer>
+                        <nldd-rich-text>
+                          <p>{{ plugin.descriptionShort }}</p>
+                        </nldd-rich-text>
+                      }
+                    </nldd-container>
+                  </nldd-card>
+                }
+              </nldd-collection>
+            } @else {
+              <nldd-inline-dialog
+                icon="puzzle-piece"
+                icon-color="secondary"
+                text="No plugins installed"
+              ></nldd-inline-dialog>
+            }
+          </nldd-container>
         </nldd-box>
 
         <!-- Monitoring Block -->
