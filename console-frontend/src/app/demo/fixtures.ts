@@ -9,7 +9,6 @@ import {
   ClusterDetailsSchema,
   NodePoolSchema,
   ClusterEventSchema,
-  ResourceUsageInfoSchema,
   RegionSchema,
   RegionMachineTypeSchema,
   type NodePool,
@@ -34,7 +33,7 @@ import {
   type PluginDetail,
   type PluginDefinitionVersion,
 } from '../../generated/v1/plugin_pb';
-import { ClusterStatus, NodePoolStatus, ResourceUsageSchema } from '../../generated/v1/common_pb';
+import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { UserSchema } from '../../generated/authn/v1/authn_pb';
 import type { KubeResource, ParsedCrd, PluginDefinition } from '../plugin-resources/types';
 
@@ -88,9 +87,6 @@ export const clusterSummaries = [
   }),
 ];
 
-const usage = (used: number, total: number, unit: string) =>
-  create(ResourceUsageSchema, { used, total, unit });
-
 export const clusterDetails = new Map(
   [
     create(ClusterDetailsSchema, {
@@ -100,13 +96,6 @@ export const clusterDetails = new Map(
       kubernetesVersion: '1.34.0',
       status: ClusterStatus.RUNNING,
       created: daysAgo(180),
-      observabilityUrl: 'https://grafana.fundament.example/d/production',
-      resourceUsage: create(ResourceUsageInfoSchema, {
-        cpu: usage(5200, 16000, 'm'),
-        memory: usage(11, 32, 'Gi'),
-        pods: usage(48, 330, 'pods'),
-        disk: usage(120, 500, 'Gi'),
-      }),
     }),
     create(ClusterDetailsSchema, {
       id: 'cl-staging',
@@ -115,13 +104,6 @@ export const clusterDetails = new Map(
       kubernetesVersion: '1.33.0',
       status: ClusterStatus.RUNNING,
       created: daysAgo(90),
-      observabilityUrl: 'https://grafana.fundament.example/d/staging',
-      resourceUsage: create(ResourceUsageInfoSchema, {
-        cpu: usage(1800, 8000, 'm'),
-        memory: usage(4, 16, 'Gi'),
-        pods: usage(17, 220, 'pods'),
-        disk: usage(40, 250, 'Gi'),
-      }),
     }),
   ].map((c) => [c.id, c] as const),
 );

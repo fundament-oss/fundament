@@ -2,11 +2,17 @@ package prometheus
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -40,7 +46,20 @@ type DataPoint struct {
 // Prometheus HTTP API (/api/v1/query and /api/v1/query_range).
 type HTTPClient struct {
 	baseURL    string
+	username   string
+	password   string
 	httpClient *http.Client
+}
+
+// Option configures an HTTPClient.
+type Option func(*HTTPClient)
+
+// WithTransport sets a custom transport, e.g. to trust a private CA on the
+// path to a shoot's Plutono ingress in local development.
+func WithTransport(rt http.RoundTripper) Option {
+	return func(c *HTTPClient) {
+		c.httpClient.Transport = rt
+	}
 }
 
 // NewHTTPClient returns an HTTPClient targeting the given Prometheus base URL.
@@ -49,6 +68,29 @@ func NewHTTPClient(baseURL string) *HTTPClient {
 		baseURL:    baseURL,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
+}
+
+// NewHTTPClientWithAuth returns an HTTPClient that sends HTTP basic auth on
+// every request. baseURL may include a path prefix (e.g. a Plutono
+// datasource-proxy route); the /api/v1/* query paths are appended to it.
+func NewHTTPClientWithAuth(baseURL, username, password string, opts ...Option) *HTTPClient {
+	c := NewHTTPClient(baseURL)
+	c.username = username
+	c.password = password
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
+}
+
+// StatusError is returned for non-2xx responses from the Prometheus API, so
+// callers can react to specific codes (e.g. re-resolve credentials on 401).
+type StatusError struct {
+	StatusCode int
+}
+
+func (e *StatusError) Error() string {
+	return fmt.Sprintf("http error: status %d", e.StatusCode)
 }
 
 func (c *HTTPClient) Query(ctx context.Context, query string, t time.Time) ([]Sample, error) {
@@ -61,29 +103,10 @@ func (c *HTTPClient) Query(ctx context.Context, query string, t time.Time) ([]Sa
 	q.Set("time", strconv.FormatInt(t.Unix(), 10))
 	u.RawQuery = q.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	result, err := c.do(ctx, u.String())
 	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
+		return nil, err
 	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("http get: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("http error: status %d", resp.StatusCode)
-	}
-
-	var result apiResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
-	}
-	if result.Status != "success" {
-		return nil, fmt.Errorf("prometheus error: %s", result.Error)
-	}
-
 	return result.Data.toSamples()
 }
 
@@ -99,30 +122,48 @@ func (c *HTTPClient) QueryRange(ctx context.Context, query string, start, end ti
 	q.Set("step", strconv.FormatInt(int64(step.Seconds()), 10))
 	u.RawQuery = q.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	result, err := c.do(ctx, u.String())
+	if err != nil {
+		return nil, err
+	}
+	return result.Data.toTimeSeries()
+}
+
+// do executes a GET against the Prometheus API, attaching basic auth when
+// configured, and decodes the standard response envelope. Queries are
+// idempotent GETs, so a connection torn down mid-flight (ingress or proxy
+// hiccup, stale keep-alive) is retried once before giving up.
+func (c *HTTPClient) do(ctx context.Context, url string) (*apiResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
+	if c.username != "" || c.password != "" {
+		req.SetBasicAuth(c.username, c.password)
+	}
 
 	resp, err := c.httpClient.Do(req)
+	if err != nil && isTransientNetErr(err) && ctx.Err() == nil {
+		resp, err = c.httpClient.Do(req.Clone(ctx))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("http get: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("http error: status %d", resp.StatusCode)
+		return nil, &StatusError{StatusCode: resp.StatusCode}
 	}
 
 	var result apiResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 	if result.Status != "success" {
 		return nil, fmt.Errorf("prometheus error: %s", result.Error)
 	}
-
-	return result.Data.toTimeSeries()
+	return &result, nil
 }
 
 // Internal types for decoding the Prometheus HTTP API JSON response envelope.
@@ -196,4 +237,31 @@ func (d apiDataBody) toTimeSeries() ([]TimeSeries, error) {
 		out = append(out, TimeSeries{Labels: item.Metric, Samples: points})
 	}
 	return out, nil
+}
+
+// isTransientNetErr reports whether err looks like a connection torn down
+// underneath us rather than a semantic failure.
+func isTransientNetErr(err error) bool {
+	return errors.Is(err, syscall.ECONNRESET) ||
+		errors.Is(err, io.EOF) ||
+		errors.Is(err, io.ErrUnexpectedEOF)
+}
+
+// TransportWithCA returns a clone of http.DefaultTransport (keeping its
+// proxy, dialer, and idle-connection settings) that trusts the PEM CA bundle
+// at path in addition to nothing else — the bundle fully replaces the system
+// pool, which is what a private-ingress deployment (e.g. Gardener seed CAs in
+// local dev) wants. Multiple CA certificates may be concatenated.
+func TransportWithCA(path string) (*http.Transport, error) {
+	pem, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read ca bundle: %w", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(pem) {
+		return nil, fmt.Errorf("no certificates parsed from %s", path)
+	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{RootCAs: pool}
+	return transport, nil
 }
