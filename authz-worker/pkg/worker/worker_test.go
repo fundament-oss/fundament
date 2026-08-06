@@ -16,6 +16,74 @@ import (
 	db "github.com/fundament-oss/fundament/authz-worker/pkg/db/gen"
 )
 
+// TestProcessesRetryingRowOnPollTimeoutWithoutNotify verifies the worker drains
+// due 'retrying' rows on its poll-interval timeout, not only when a NOTIFY
+// arrives. The outbox_notify trigger fires AFTER INSERT only, so a row a prior
+// worker instance left in 'retrying' emits no notification when its retry_after
+// elapses. If the worker processed exclusively on NOTIFY, such a row would lag
+// forever and trip organization-api's circuit breaker.
+func TestProcessesRetryingRowOnPollTimeoutWithoutNotify(t *testing.T) {
+	pool := createTestDB(t)
+
+	// Start from an empty outbox so the worker's initial batch has nothing to do
+	// and it parks in waitForNotification.
+	_, err := pool.Exec(t.Context(), `DELETE FROM authz.outbox`)
+	require.NoError(t, err)
+
+	w := &Worker{
+		pool:    pool,
+		queries: db.New(pool),
+		logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+		cfg:     applyDefaults(Config{PollInterval: 50 * time.Millisecond}),
+	}
+	// Dispatch stub that succeeds, so a processed row is marked completed.
+	w.dispatch = func(context.Context, pgx.Tx, *db.Queries, *db.GetAndLockNextOutboxRowRow) error {
+		return nil
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() { done <- w.runWithConnection(ctx) }()
+
+	require.Eventually(t, w.IsReady, 2*time.Second, 10*time.Millisecond)
+
+	// Insert the row as 'retrying' but not yet due (retry_after far in the
+	// future). The AFTER INSERT notify wakes the worker, but GetAndLockNextOutboxRow
+	// skips it (retry_after > now), so it is not processed yet.
+	var itemID uuid.UUID
+	err = pool.QueryRow(t.Context(),
+		`INSERT INTO authz.outbox (cluster_id, status, retries, retry_after)
+		 VALUES ($1, 'retrying', 1, now() + interval '1 hour') RETURNING id`,
+		seededClusterID,
+	).Scan(&itemID)
+	require.NoError(t, err)
+
+	// Let the insert-triggered batch run and find nothing due, then park again.
+	time.Sleep(150 * time.Millisecond)
+
+	// Make the row due via UPDATE — the outbox_notify trigger is INSERT-only, so
+	// this fires NO notification. The row is now reachable only via the
+	// poll-timeout code path.
+	_, err = pool.Exec(t.Context(),
+		`UPDATE authz.outbox SET retry_after = now() WHERE id = $1`, itemID)
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		var status string
+		if err := pool.QueryRow(t.Context(),
+			`SELECT status FROM authz.outbox WHERE id = $1`, itemID,
+		).Scan(&status); err != nil {
+			return false
+		}
+		return status == "completed"
+	}, 3*time.Second, 20*time.Millisecond, "due retrying row must be processed on the poll timeout without a NOTIFY")
+
+	cancel()
+	<-done
+}
+
 // clusterID is seeded by db/testdata/001_0101-content.sql. The outbox row needs
 // a valid FK target; the entity type itself is irrelevant here because dispatch
 // is stubbed out.
