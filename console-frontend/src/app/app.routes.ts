@@ -73,13 +73,17 @@ const routes: Routes = [
         data: {
           breadcrumbs: [{ label: 'Projects', route: '/projects' }],
         },
-      },
-      {
-        path: 'projects/add',
-        loadComponent: () => import('./add-project/add-project.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Projects', route: '/projects' }, { label: 'Add project' }],
-        },
+        // Opens as a sheet over the list, so the list stays mounted behind it.
+        children: [
+          {
+            path: 'add',
+            loadComponent: () =>
+              import('./add-project/add-project.component').then((m) => m.default),
+            data: {
+              breadcrumbs: [{ label: 'Projects', route: '/projects' }, { label: 'Add project' }],
+            },
+          },
+        ],
       },
       {
         path: 'projects/:id',

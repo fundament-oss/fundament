@@ -6,6 +6,7 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 import { TitleService } from '../title.service';
 import { OrganizationDataService } from '../organization-data.service';
 import PageNavService from '../page-nav.service';
@@ -13,6 +14,7 @@ import { formatDate as formatDateUtil } from '../utils/date-format';
 
 @Component({
   selector: 'app-projects',
+  imports: [RouterOutlet],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './projects.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

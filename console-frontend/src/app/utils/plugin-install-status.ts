@@ -38,6 +38,12 @@ export function isInstallRunning(phase: string): boolean {
   return phase === 'Running';
 }
 
+/** True while the installation is being torn down, as opposed to created. Both
+ *  are "in progress", but they belong to opposite buttons. */
+export function isInstallTerminating(phase: string): boolean {
+  return phase === 'Terminating';
+}
+
 export function isInstallFailed(phase: string): boolean {
   return phase === 'Failed';
 }

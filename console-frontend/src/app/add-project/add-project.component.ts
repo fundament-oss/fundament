@@ -6,12 +6,11 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
-import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -23,16 +22,11 @@ import {
 } from '../../generated/v1/cluster_pb';
 import AutofocusDirective from '../autofocus.directive';
 import DropdownSyncDirective from '../dropdown-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
 
 @Component({
   selector: 'app-add-project',
-  imports: [
-    RouterLink,
-    ReactiveFormsModule,
-    LoadingIndicatorComponent,
-    AutofocusDirective,
-    DropdownSyncDirective,
-  ],
+  imports: [ReactiveFormsModule, AutofocusDirective, DropdownSyncDirective, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -100,6 +94,20 @@ export default class AddProjectComponent implements OnInit {
       );
     } finally {
       this.isLoadingClusters.set(false);
+    }
+  }
+
+  onClusterChange(event: Event): void {
+    const { value } = (event as CustomEvent<{ value: string }>).detail;
+    this.projectForm.get('clusterId')?.setValue(value);
+    this.projectForm.get('clusterId')?.markAsDirty();
+  }
+
+  /** Dismissing the sheet leaves the flow, which unmounts this route and reveals
+   *  the project list the sheet was covering. */
+  onCancel(): void {
+    if (this.router.url.startsWith('/projects/add')) {
+      this.router.navigate(['/projects']);
     }
   }
 

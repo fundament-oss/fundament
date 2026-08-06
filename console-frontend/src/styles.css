@@ -150,12 +150,6 @@ input.validate-on-touch.ng-invalid.ng-touched {
   @apply p-3;
 }
 
-/* Action bar of an nldd-sheet, for the element in its `footer` slot. */
-
-.sheet-footer {
-  @apply border-t border-gray-200 px-6 py-4 dark:border-gray-800;
-}
-
 .live-dot {
   @apply inline-block h-2 w-2 shrink-0 rounded-full bg-current;
   animation: live-pulse 2s ease-in-out infinite;

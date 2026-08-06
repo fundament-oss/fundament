@@ -12,13 +12,13 @@ import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
+import PageNavService from '../page-nav.service';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent, {
   type PluginVersionOption,
   type InstallSelection,
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
-import { LoadingIndicatorComponent } from '../icons';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
   GetPluginDetailRequestSchema,
@@ -39,6 +39,8 @@ import PluginInstallationService from '../plugin-installation/plugin-installatio
 // installed on the cluster, otherwise the PluginInstallation status phase.
 interface ClusterWithState extends ClusterSummary {
   phase: string | null;
+  // The version pinned on this cluster; empty when not installed.
+  version: string;
   running: boolean;
 }
 
@@ -48,15 +50,33 @@ interface ClusterWithState extends ClusterSummary {
 const displayNameOf = (plugin: { name: string; displayName: string }): string =>
   plugin.displayName || plugin.name;
 
+/** Same derivation the catalogue uses, so a plugin keeps its logo between the
+ *  card and this page. */
+function pluginIconSrc(plugin: { name: string }): string {
+  return `/img/plugins/${plugin.name.toLowerCase().replace(/[^a-z]+/g, '-')}.svg`;
+}
+
+/** The "official" marker reads as a property of the name, not as one entry in a
+ *  tag row. */
+function isOfficialPlugin(plugin: { tags: { name: string }[] }): boolean {
+  return plugin.tags.some((tag) => tag.name.toLowerCase() === 'official');
+}
+
 @Component({
   selector: 'app-plugin-details',
-  imports: [InstallPluginModalComponent, LoadingIndicatorComponent],
+  imports: [InstallPluginModalComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugin-details.component.html',
 })
 export default class PluginDetailsComponent implements OnInit, OnDestroy {
+  protected pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
+
+  pluginIconSrc = pluginIconSrc;
+
+  isOfficial = isOfficialPlugin;
 
   private installPollingTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -135,6 +155,9 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
           phase:
             installResults[i].find((item) => item.metadata.name === pluginName)?.status?.phase ??
             null,
+          version:
+            installResults[i].find((item) => item.metadata.name === pluginName)?.spec?.definitionRef
+              ?.pluginVersion ?? '',
           running: cluster.status === ClusterStatus.RUNNING,
         })),
       );

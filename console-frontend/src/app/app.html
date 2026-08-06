@@ -205,118 +205,122 @@
                   <nldd-spacer size="4"></nldd-spacer>
                 }
 
-                <nldd-list type="navigation" no-dividers [attr.aria-label]="settingsHeader()">
-                  @if (selectedType() === 'organization') {
-                    <nldd-list-item
-                      href="/"
-                      [attr.selected]="isClustersActive() ? '' : null"
-                      (click)="navigateFromSidebar($event, '/')"
-                    >
-                      <nldd-icon-cell icon="ship-wheel" size="20"></nldd-icon-cell>
-                      <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                      <nldd-text-cell text="Clusters"></nldd-text-cell>
-                    </nldd-list-item>
-                    <nldd-list-item
-                      href="/projects"
-                      [attr.selected]="isNavActive('/projects') ? '' : null"
-                      (click)="navigateFromSidebar($event, '/projects')"
-                    >
-                      <nldd-icon-cell icon="folder-on-folder" size="20"></nldd-icon-cell>
-                      <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                      <nldd-text-cell text="Projects"></nldd-text-cell>
-                    </nldd-list-item>
-                    <nldd-list-item
-                      href="/plugins"
-                      [attr.selected]="isNavActive('/plugins') ? '' : null"
-                      (click)="navigateFromSidebar($event, '/plugins')"
-                    >
-                      <nldd-icon-cell icon="puzzle-piece" size="20"></nldd-icon-cell>
-                      <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                      <nldd-text-cell text="Plugins"></nldd-text-cell>
-                    </nldd-list-item>
-                    <nldd-list-item
-                      href="/organization/members"
-                      [attr.selected]="isNavActive('/organization/members') ? '' : null"
-                      (click)="navigateFromSidebar($event, '/organization/members')"
-                    >
-                      <nldd-icon-cell icon="person-2" size="20"></nldd-icon-cell>
-                      <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                      <nldd-text-cell text="Members"></nldd-text-cell>
-                    </nldd-list-item>
-                    <nldd-list-item
-                      href="/metrics"
-                      [attr.selected]="isNavActive('/metrics') ? '' : null"
-                      (click)="navigateFromSidebar($event, '/metrics')"
-                    >
-                      <nldd-icon-cell icon="chart-x-y-axis-line" size="20"></nldd-icon-cell>
-                      <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                      <nldd-text-cell text="Metrics"></nldd-text-cell>
-                    </nldd-list-item>
-                    <nldd-list-item
-                      href="/organization/limits"
-                      [attr.selected]="isNavActive('/organization/limits') ? '' : null"
-                      (click)="navigateFromSidebar($event, '/organization/limits')"
-                    >
-                      <nldd-icon-cell icon="circle-dashed" size="20"></nldd-icon-cell>
-                      <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                      <nldd-text-cell text="Limits"></nldd-text-cell>
-                    </nldd-list-item>
-                    <nldd-list-item
-                      href="/organization"
-                      [attr.selected]="isNavActive('/organization', true) ? '' : null"
-                      (click)="navigateFromSidebar($event, '/organization')"
-                    >
-                      <nldd-icon-cell icon="gear" size="20"></nldd-icon-cell>
-                      <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                      <nldd-text-cell text="Settings"></nldd-text-cell>
-                    </nldd-list-item>
-                  } @else if (selectedType() === 'project') {
-                    @for (item of projectNavItems(); track item.path) {
+                <!-- Held back until the context is known: an nldd-list with no children
+                     shows its empty state, which would flash "no items" on every load. -->
+                @if (selectedType()) {
+                  <nldd-list type="navigation" no-dividers [attr.aria-label]="settingsHeader()">
+                    @if (selectedType() === 'organization') {
                       <nldd-list-item
-                        [attr.href]="item.path"
-                        [attr.selected]="isNavActive(item.path, item.exact) ? '' : null"
-                        (click)="navigateFromSidebar($event, item.path)"
+                        href="/"
+                        [attr.selected]="isClustersActive() ? '' : null"
+                        (click)="navigateFromSidebar($event, '/')"
                       >
-                        <nldd-icon-cell [attr.icon]="item.icon" size="20"></nldd-icon-cell>
+                        <nldd-icon-cell icon="ship-wheel" size="20"></nldd-icon-cell>
                         <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                        <nldd-text-cell [attr.text]="item.label"></nldd-text-cell>
+                        <nldd-text-cell text="Clusters"></nldd-text-cell>
                       </nldd-list-item>
-                    }
-
-                    @for (group of pluginNavService.projectNav(); track group.pluginName) {
-                      <nldd-list-item>
-                        <nldd-text-cell
-                          size="sm"
-                          color="secondary"
-                          [attr.text]="group.label"
-                        ></nldd-text-cell>
+                      <nldd-list-item
+                        href="/projects"
+                        [attr.selected]="isNavActive('/projects') ? '' : null"
+                        (click)="navigateFromSidebar($event, '/projects')"
+                      >
+                        <nldd-icon-cell icon="folder-on-folder" size="20"></nldd-icon-cell>
+                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                        <nldd-text-cell text="Projects"></nldd-text-cell>
                       </nldd-list-item>
-                      @for (item of group.items; track item.crdPlural) {
+                      <nldd-list-item
+                        href="/plugins"
+                        [attr.selected]="isNavActive('/plugins') ? '' : null"
+                        (click)="navigateFromSidebar($event, '/plugins')"
+                      >
+                        <nldd-icon-cell icon="puzzle-piece" size="20"></nldd-icon-cell>
+                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                        <nldd-text-cell text="Plugins"></nldd-text-cell>
+                      </nldd-list-item>
+                      <nldd-list-item
+                        href="/organization/members"
+                        [attr.selected]="isNavActive('/organization/members') ? '' : null"
+                        (click)="navigateFromSidebar($event, '/organization/members')"
+                      >
+                        <nldd-icon-cell icon="person-2" size="20"></nldd-icon-cell>
+                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                        <nldd-text-cell text="Members"></nldd-text-cell>
+                      </nldd-list-item>
+                      <nldd-list-item
+                        href="/metrics"
+                        [attr.selected]="isNavActive('/metrics') ? '' : null"
+                        (click)="navigateFromSidebar($event, '/metrics')"
+                      >
+                        <nldd-icon-cell icon="chart-x-y-axis-line" size="20"></nldd-icon-cell>
+                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                        <nldd-text-cell text="Metrics"></nldd-text-cell>
+                      </nldd-list-item>
+                      <nldd-list-item
+                        href="/organization/limits"
+                        [attr.selected]="isNavActive('/organization/limits') ? '' : null"
+                        (click)="navigateFromSidebar($event, '/organization/limits')"
+                      >
+                        <nldd-icon-cell icon="circle-dashed" size="20"></nldd-icon-cell>
+                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                        <nldd-text-cell text="Limits"></nldd-text-cell>
+                      </nldd-list-item>
+                      <nldd-list-item
+                        href="/organization"
+                        [attr.selected]="isNavActive('/organization', true) ? '' : null"
+                        (click)="navigateFromSidebar($event, '/organization')"
+                      >
+                        <nldd-icon-cell icon="gear" size="20"></nldd-icon-cell>
+                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                        <nldd-text-cell text="Settings"></nldd-text-cell>
+                      </nldd-list-item>
+                    } @else if (selectedType() === 'project') {
+                      @for (item of projectNavItems(); track item.path) {
                         <nldd-list-item
-                          [attr.href]="pluginResourcePath(group.pluginName, item.crdPlural)"
-                          [attr.selected]="
-                            isNavActive(pluginResourcePath(group.pluginName, item.crdPlural))
-                              ? ''
-                              : null
-                          "
-                          (click)="
-                            navigateFromSidebar(
-                              $event,
-                              pluginResourcePath(group.pluginName, item.crdPlural)
-                            )
-                          "
+                          [attr.href]="item.path"
+                          [attr.selected]="isNavActive(item.path, item.exact) ? '' : null"
+                          (click)="navigateFromSidebar($event, item.path)"
                         >
-                          <nldd-icon-cell
-                            [attr.icon]="item.icon || 'circle-dashed'"
-                            size="20"
-                          ></nldd-icon-cell>
+                          <nldd-icon-cell [attr.icon]="item.icon" size="20"></nldd-icon-cell>
                           <nldd-spacer-cell size="8"></nldd-spacer-cell>
                           <nldd-text-cell [attr.text]="item.label"></nldd-text-cell>
                         </nldd-list-item>
                       }
+
+                      @for (group of pluginNavService.projectNav(); track group.pluginName) {
+                        <nldd-list-item>
+                          <nldd-text-cell
+                            size="sm"
+                            color="secondary"
+                            [attr.text]="group.label"
+                          ></nldd-text-cell>
+                        </nldd-list-item>
+                        @for (item of group.items; track item.crdPlural) {
+                          <nldd-list-item
+                            [attr.href]="pluginResourcePath(group.pluginName, item.crdPlural)"
+                            [attr.selected]="
+                              isNavActive(pluginResourcePath(group.pluginName, item.crdPlural))
+                                ? ''
+                                : null
+                            "
+                            (click)="
+                              navigateFromSidebar(
+                                $event,
+                                pluginResourcePath(group.pluginName, item.crdPlural)
+                              )
+                            "
+                          >
+                            <nldd-icon-cell
+                              [attr.icon]="item.icon || 'circle-dashed'"
+                              size="20"
+                            ></nldd-icon-cell>
+                            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                            <nldd-text-cell [attr.text]="item.label"></nldd-text-cell>
+                          </nldd-list-item>
+                        }
+                      }
                     }
-                  }
-                </nldd-list>
+                  </nldd-list>
+                }
               </nldd-simple-section>
             </nldd-split-view-pane>
           }

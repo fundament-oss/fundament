@@ -1,96 +1,135 @@
-<!-- Error Message -->
-@if (errorMessage()) {
-  <div
-    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
-  >
-    <nldd-icon name="dismiss-circle" class="shrink-0" size="20" color="critical"></nldd-icon>
-    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
-  </div>
-}
+<!-- Same outer layout as the project list it belongs to. -->
+<nldd-page sticky-header style="--context-back-button-display: flex">
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="project()?.alias || project()?.name || 'Project'"
+    back-text="Projects"
+    collapse-anchor="project-title"
+    (back)="pageNav.goTo('/projects')"
+  ></nldd-top-title-bar>
 
-<!-- Loading State -->
-@if (isLoading()) {
   <nldd-simple-section>
-    <nldd-activity-indicator show-text text="Loading project details..."></nldd-activity-indicator>
-  </nldd-simple-section>
-}
+    @if (errorMessage()) {
+      <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+      <nldd-spacer size="16"></nldd-spacer>
+    }
 
-<!-- Content (only show when not loading) -->
-@if (!isLoading() && project()) {
-  <div class="card">
-    <!-- Header -->
-    <div class="card-header">
-      <h1 class="text-3xl font-semibold">
-        {{ project()?.alias || project()?.name || 'Unknown project' }}
-      </h1>
-      <p class="mt-1 text-gray-600 dark:text-gray-300">
-        Created {{ formatDate(project()?.created) }}
-      </p>
-    </div>
+    @if (isLoading()) {
+      <nldd-activity-indicator
+        show-text
+        text="Loading project details..."
+      ></nldd-activity-indicator>
+    }
 
-    <div class="space-y-6 p-6">
-      <!-- Basics Block -->
-      <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
-        <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-xl font-medium">Project details</h3>
+    @if (!isLoading() && project()) {
+      <nldd-title id="project-title" size="2">
+        <h1>{{ project()?.alias || project()?.name || 'Unknown project' }}</h1>
+      </nldd-title>
+
+      <nldd-spacer size="8"></nldd-spacer>
+
+      <nldd-rich-text>
+        <p>Created {{ formatDate(project()?.created) }}</p>
+      </nldd-rich-text>
+
+      <nldd-spacer size="24"></nldd-spacer>
+
+      <nldd-container gap="24">
+        <nldd-box>
+          <nldd-title size="5">
+            <h3>Project details</h3>
+            <nldd-button
+              slot="actions"
+              type="button"
+              (click)="openEditModal()"
+              text="Edit"
+              start-icon="pencil"
+              variant="secondary"
+              size="sm"
+            ></nldd-button>
+          </nldd-title>
+
+          <nldd-spacer size="16"></nldd-spacer>
+
+          <nldd-list variant="simple" accessible-label="Project details">
+            <nldd-list-item>
+              <nldd-text-cell text="Project alias"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="project()?.alias"
+              ></nldd-text-cell>
+            </nldd-list-item>
+            <nldd-list-item>
+              <nldd-text-cell text="Project name"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="project()?.name"
+              ></nldd-text-cell>
+            </nldd-list-item>
+            <nldd-list-item>
+              <nldd-text-cell text="Project ID"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="project()?.id"
+              ></nldd-text-cell>
+            </nldd-list-item>
+            <nldd-list-item>
+              <nldd-text-cell text="Created"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="formatDate(project()?.created)"
+              ></nldd-text-cell>
+            </nldd-list-item>
+            <nldd-list-item>
+              <nldd-text-cell text="Cluster"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="getClusterName(project()?.clusterId ?? '')"
+              ></nldd-text-cell>
+            </nldd-list-item>
+            <nldd-list-item>
+              <nldd-text-cell text="Namespaces"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="namespaces().length"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          </nldd-list>
+        </nldd-box>
+
+        <!-- Danger Zone -->
+        <nldd-box variant="critical">
+          <nldd-title size="5">
+            <h3>Danger zone</h3>
+          </nldd-title>
+
+          <nldd-spacer size="8"></nldd-spacer>
+
+          <nldd-rich-text spacing="flat">
+            <p>Deleting a project is permanent and cannot be undone.</p>
+          </nldd-rich-text>
+
+          <nldd-spacer size="16"></nldd-spacer>
+
           <nldd-button
-            type="button"
-            (click)="openEditModal()"
-            text="Edit"
-            start-icon="pencil"
-            variant="secondary"
-            size="sm"
+            (click)="showDeleteModal.set(true)"
+            text="Delete this project"
+            variant="destructive"
           ></nldd-button>
-        </div>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Project alias</dt>
-            <dd class="mt-1">{{ project()?.alias }}</dd>
-          </dl>
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Project name</dt>
-            <dd class="mt-1 font-mono text-sm">{{ project()?.name }}</dd>
-          </dl>
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Project ID</dt>
-            <dd class="mt-1 font-mono text-sm">{{ project()?.id }}</dd>
-          </dl>
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Created</dt>
-            <dd class="mt-1">
-              {{ formatDate(project()?.created) }}
-            </dd>
-          </dl>
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Cluster</dt>
-            <dd class="mt-1">
-              {{ getClusterName(project()?.clusterId ?? '') }}
-            </dd>
-          </dl>
-          <dl>
-            <dt class="font-medium text-gray-500 dark:text-gray-400">Namespaces</dt>
-            <dd class="mt-1">{{ namespaces().length }}</dd>
-          </dl>
-        </div>
-      </div>
+        </nldd-box>
+      </nldd-container>
+    }
+  </nldd-simple-section>
 
-      <!-- Danger Zone -->
-      <div
-        class="bg-danger-50 dark:bg-danger-900/20 rounded-md border border-rose-200 p-4 dark:border-rose-900"
-      >
-        <h3 class="text-danger-800 dark:text-danger-200 mb-2 text-lg font-medium">Danger zone</h3>
-        <p class="text-danger-700 dark:text-danger-300 mb-4">
-          Deleting a project is permanent and cannot be undone.
-        </p>
-        <nldd-button
-          (click)="showDeleteModal.set(true)"
-          text="Delete this project"
-          variant="destructive"
-        ></nldd-button>
-      </div>
-    </div>
-  </div>
-}
+  <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
 
 <!-- Edit Project Sheet -->
 <nldd-sheet
@@ -123,7 +162,7 @@
       </nldd-form>
     </nldd-simple-section>
 
-    <div slot="footer" class="sheet-footer">
+    <nldd-simple-section slot="footer">
       <nldd-button
         type="button"
         (click)="saveEdit()"
@@ -133,7 +172,7 @@
         variant="primary"
         width="full"
       ></nldd-button>
-    </div>
+    </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
 

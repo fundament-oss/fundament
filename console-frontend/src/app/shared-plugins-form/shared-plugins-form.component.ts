@@ -146,13 +146,16 @@ export class SharedPluginsFormComponent implements OnInit {
     if (!enabled) this.selectedCustomPluginFile = null;
   }
 
+  // The design system ships Dutch defaults; the console is in US English.
+  readonly fileFieldTranslations = {
+    'components.file-field.to-choose-file-action': 'Choose file',
+    'components.file-field.no-file-chosen-text': 'No file chosen',
+    'components.file-field.clear-action': 'Clear selection',
+  };
+
   onCustomPluginFileChange(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.selectedCustomPluginFile = input.files[0];
-    } else {
-      this.selectedCustomPluginFile = null;
-    }
+    const { files } = (event as CustomEvent<{ files: File[] }>).detail;
+    this.selectedCustomPluginFile = files.length > 0 ? files[0] : null;
   }
 
   submit() {

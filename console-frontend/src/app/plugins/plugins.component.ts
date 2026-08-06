@@ -7,16 +7,15 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
+import PageNavService from '../page-nav.service';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent, {
   type PluginVersionOption,
   type InstallSelection,
   type RetrySelection,
 } from '../install-plugin-modal/install-plugin-modal';
-import { LoadingIndicatorComponent } from '../icons';
 import { OrganizationDataService } from '../organization-data.service';
 import { PLUGIN, CLUSTER } from '../../connect/tokens';
 import {
@@ -73,6 +72,8 @@ interface ClusterModalRow {
   // null when the plugin is not installed on this cluster; otherwise the
   // PluginInstallation status phase.
   phase: string | null;
+  // The version pinned on this cluster; empty when not installed.
+  version: string;
   running: boolean;
 }
 
@@ -82,6 +83,9 @@ interface InstallWithCluster {
   pluginName: string;
   phase: string;
   ready: boolean;
+  // The version pinned on this cluster. A plugin is installed per cluster, so
+  // two clusters can run different versions of the same plugin.
+  version: string;
 }
 
 // Extended category type with count for filtering
@@ -94,14 +98,22 @@ interface PresetWithCount extends Pick<Preset, 'id' | 'name' | 'description'> {
   count: number;
 }
 
+/** The "official" marker is a tag on the plugin; on a card it reads better as a
+ *  property of the name than as one entry in a tag row. */
+function isOfficialPlugin(plugin: { tags: { name: string }[] }): boolean {
+  return plugin.tags.some((tag) => tag.name.toLowerCase() === 'official');
+}
+
 @Component({
   selector: 'app-plugins',
-  imports: [RouterLink, InstallPluginModalComponent, LoadingIndicatorComponent],
+  imports: [InstallPluginModalComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plugins.component.html',
 })
 export default class PluginsComponent implements OnInit, OnDestroy {
+  protected pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
 
   private pluginClient = inject(PLUGIN);
@@ -313,6 +325,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
               pluginName: item.metadata.name,
               phase: item.status?.phase ?? 'Pending',
               ready: item.status?.ready ?? false,
+              version: item.spec?.definitionRef?.pluginVersion ?? '',
             })),
           )
           .catch((): InstallWithCluster[] | null => null),
@@ -484,9 +497,22 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     this.selectedPreset = presetId;
   }
 
+  isOfficial = isOfficialPlugin;
+
   getSelectedCategoryName(): string {
     const category = this.categories.find((c) => c.id === this.selectedCategory);
     return category?.name || '';
+  }
+
+  /** Labels for the filter buttons, so the active filter is readable without
+   *  opening the menu. */
+  getSelectedPresetLabel(): string {
+    const preset = this.presets.find((p) => p.id === this.selectedPreset);
+    return preset && preset.id !== 'all' ? preset.name : 'All presets';
+  }
+
+  getSelectedCategoryLabel(): string {
+    return this.getSelectedCategoryName() || 'All categories';
   }
 
   // Get clusters with install state for the selected plugin
@@ -504,6 +530,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         id: cluster.id,
         name: cluster.name,
         phase: install?.phase ?? null,
+        version: install?.version ?? '',
         running: cluster.status === ClusterStatus.RUNNING,
       };
     });
@@ -607,6 +634,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         pluginName: plugin.name,
         phase: 'Pending',
         ready: false,
+        version: selection.version,
       })),
     ]);
 
@@ -640,12 +668,19 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     const plugin = this.selectedPlugin;
     if (!plugin) return;
 
+    // Marked before the request, like installing: the row's button carries the
+    // progress, and waiting for the round trip would leave the press unanswered.
+    const previous = this.installs().find(
+      (install) => install.clusterId === clusterId && install.pluginName === plugin.name,
+    )?.phase;
+    this.setInstallPhase(clusterId, plugin.name, 'Terminating');
+
     try {
       await this.pluginInstallationService.uninstallPlugin(clusterId, plugin.name);
-      // Optimistically mark as terminating; the poll removes it once gone.
-      this.setInstallPhase(clusterId, plugin.name, 'Terminating');
       this.startInstallPollingIfNeeded();
     } catch {
+      // Roll back to the phase it had, so the row stops claiming it is going away.
+      if (previous) this.setInstallPhase(clusterId, plugin.name, previous);
       this.toastService.error(
         `Failed to remove ${displayNameOf(plugin)} from ${this.clusterName(clusterId)}`,
       );

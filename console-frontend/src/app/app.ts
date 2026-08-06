@@ -39,6 +39,7 @@ import '@nldd/design-system/radio-button-group';
 import '@nldd/design-system/search-field';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/switch-field';
+import '@nldd/design-system/file-field';
 import '@nldd/design-system/text-field';
 import '@nldd/design-system/toggle-button';
 import '@nldd/design-system/toggle-button-group';

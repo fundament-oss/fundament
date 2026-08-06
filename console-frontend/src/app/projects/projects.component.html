@@ -77,16 +77,21 @@
               <nldd-container padding="16">
                 <nldd-title size="4">
                   <h2>{{ project.alias || project.name }}</h2>
-                  <nldd-tag
-                    slot="actions"
-                    icon="ship-wheel"
-                    [attr.text]="project.clusterName"
-                  ></nldd-tag>
                 </nldd-title>
 
                 <nldd-spacer size="16"></nldd-spacer>
 
                 <nldd-list variant="simple">
+                  <!-- The cluster is a fact about the project like the counts
+                       below it, not a badge on the name. -->
+                  <nldd-list-item size="sm">
+                    <nldd-text-cell text="Cluster"></nldd-text-cell>
+                    <nldd-text-cell
+                      width="fit-content"
+                      horizontal-alignment="right"
+                      [attr.text]="project.clusterName"
+                    ></nldd-text-cell>
+                  </nldd-list-item>
                   <nldd-list-item size="sm">
                     <nldd-text-cell text="Namespaces"></nldd-text-cell>
                     <nldd-text-cell
@@ -104,9 +109,12 @@
                     ></nldd-text-cell>
                   </nldd-list-item>
                 </nldd-list>
+              </nldd-container>
 
-                <nldd-spacer size="16"></nldd-spacer>
-
+              <!-- In the footer slot rather than the body: the card keeps that
+                   slot at the bottom, so the buttons line up across a row of
+                   cards however tall each one's title and list turn out. -->
+              <nldd-container slot="footer" padding-inline="16" padding-bottom="16">
                 <nldd-button
                   [attr.href]="'/projects/' + project.id"
                   text="View project"
@@ -120,6 +128,10 @@
       }
     }
   </nldd-simple-section>
+
+  <!-- The add-project form is a child route, so it renders as a sheet over this
+       list instead of replacing it. -->
+  <router-outlet />
 
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>

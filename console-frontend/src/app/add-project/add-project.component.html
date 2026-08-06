@@ -1,89 +1,103 @@
-<!-- Error Message -->
-@if (errorMessage()) {
-  <div
-    class="bg-danger-50 dark:bg-danger-950/30 mb-6 flex items-center gap-3 rounded-lg border border-rose-200 px-4 py-3 dark:border-rose-900/40"
-  >
-    <nldd-icon name="dismiss-circle" class="shrink-0" size="20" color="critical"></nldd-icon>
-    <p class="text-danger-700 dark:text-danger-300">{{ errorMessage() }}</p>
-  </div>
-}
+<nldd-sheet
+  #sheet
+  appSheetSync
+  [show]="true"
+  placement="right"
+  width="480px"
+  accessible-label="Add project"
+  (close)="onCancel()"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Add project"
+      dismiss-text="Cancel"
+      (dismiss)="onCancel()"
+    ></nldd-top-title-bar>
 
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <h1 class="text-3xl font-semibold">Add project</h1>
-    <p class="mt-1 text-gray-600 dark:text-gray-300">
-      Create a new project to organize your namespaces and resources.
-    </p>
-  </div>
-
-  <!-- Form -->
-  <nldd-form
-    [formGroup]="projectForm"
-    (submit)="onSubmit($event)"
-    (keydown.enter)="onSubmit($event)"
-    class="space-y-6 px-6 py-6"
-  >
-    <nldd-form-field
-      label="Cluster"
-      supporting-label="Select the cluster this project will belong to"
-    >
-      @if (isLoadingClusters()) {
-        <nldd-simple-section>
-          <nldd-activity-indicator show-text text="Loading clusters..."></nldd-activity-indicator>
-        </nldd-simple-section>
-      } @else if (clusters().length === 0) {
-        <p class="text-danger-600 dark:text-danger-400">
-          No clusters available. <a routerLink="/clusters/add" class="link">Add a cluster first</a>.
-        </p>
-      } @else {
-        <nldd-dropdown
-          [attr.invalid]="
-            projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty
-              ? true
-              : null
-          "
-        >
-          <select id="clusterId" formControlName="clusterId">
-            @for (cluster of clusters(); track cluster.id) {
-              <option [value]="cluster.id">{{ cluster.name }} ({{ cluster.region }})</option>
-            }
-          </select>
-        </nldd-dropdown>
-        <nldd-form-field-error-text id="add-project-cluster-error">
-          @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
-            {{ getClusterError() }}
-          }
-        </nldd-form-field-error-text>
+    <nldd-simple-section>
+      @if (errorMessage()) {
+        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+        <nldd-spacer size="16"></nldd-spacer>
       }
-    </nldd-form-field>
 
-    <nldd-form-field label="Project name">
-      <nldd-text-field
-        id="name"
-        appAutofocus
-        [value]="projectForm.get('name')?.value ?? ''"
-        placeholder="E.g. my-project"
-        [invalid]="!!(projectForm.get('name')?.invalid && projectForm.get('name')?.dirty)"
-        error-message="add-project-name-error"
-        (input)="onNameInput($event)"
-      ></nldd-text-field>
-      <nldd-form-field-error-text id="add-project-name-error">
-        {{ getNameError() }}
-      </nldd-form-field-error-text>
-      <nldd-form-field-help-text>
-        Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
-      </nldd-form-field-help-text>
-    </nldd-form-field>
+      <nldd-rich-text>
+        <p>Create a new project to organize your namespaces and resources.</p>
+      </nldd-rich-text>
 
-    <div class="flex space-x-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-      <nldd-button routerLink="/projects" text="Cancel" variant="secondary"></nldd-button>
-      <nldd-button
-        type="submit"
-        [text]="isSubmitting() ? 'Creating...' : 'Create project'"
-        [disabled]="isSubmitting()"
-        variant="primary"
-      ></nldd-button>
-    </div>
-  </nldd-form>
-</div>
+      <nldd-spacer size="12"></nldd-spacer>
+
+      <nldd-form
+        [formGroup]="projectForm"
+        (submit)="onSubmit($event)"
+        (keydown.enter)="onSubmit($event)"
+      >
+        <nldd-form-field label="Project name">
+          <nldd-text-field
+            id="name"
+            appAutofocus
+            [value]="projectForm.get('name')?.value ?? ''"
+            placeholder="E.g. my-project"
+            [invalid]="!!(projectForm.get('name')?.invalid && projectForm.get('name')?.dirty)"
+            error-message="add-project-name-error"
+            (input)="onNameInput($event)"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="add-project-name-error">
+            {{ getNameError() }}
+          </nldd-form-field-error-text>
+          <nldd-form-field-help-text>
+            Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
+          </nldd-form-field-help-text>
+        </nldd-form-field>
+
+        <nldd-form-field
+          label="Cluster"
+          supporting-label="Select the cluster this project will belong to"
+        >
+          @if (isLoadingClusters()) {
+            <nldd-activity-indicator show-text text="Loading clusters..."></nldd-activity-indicator>
+          } @else if (clusters().length === 0) {
+            <nldd-rich-text>
+              <p>
+                No clusters available.
+                <nldd-link href="/clusters/add" text="Add a cluster first"></nldd-link>.
+              </p>
+            </nldd-rich-text>
+          } @else {
+            <nldd-toggle-button-group
+              type="radio"
+              name="clusterId"
+              accessible-label="Cluster"
+              (change)="onClusterChange($event)"
+            >
+              @for (cluster of clusters(); track cluster.id) {
+                <nldd-toggle-button
+                  type="radio"
+                  [value]="cluster.id"
+                  [text]="cluster.name + ' (' + cluster.region + ')'"
+                  [selected]="projectForm.get('clusterId')?.value === cluster.id"
+                ></nldd-toggle-button>
+              }
+            </nldd-toggle-button-group>
+            <nldd-form-field-error-text id="add-project-cluster-error">
+              @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
+                {{ getClusterError() }}
+              }
+            </nldd-form-field-error-text>
+          }
+        </nldd-form-field>
+
+        <!-- No cancel button: the title bar's dismiss already covers leaving. -->
+        <nldd-form-actions>
+          <nldd-button
+            type="submit"
+            [text]="isSubmitting() ? 'Creating...' : 'Create project'"
+            [disabled]="isSubmitting()"
+            width="full"
+            variant="primary"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

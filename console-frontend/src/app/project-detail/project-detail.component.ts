@@ -31,17 +31,19 @@ import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
-import { LoadingIndicatorComponent } from '../icons';
 import { formatDate as formatDateUtil } from '../utils/date-format';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-project-detail',
-  imports: [LoadingIndicatorComponent, DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
+  imports: [DialogSyncDirective, SheetSyncDirective, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './project-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ProjectDetailComponent implements OnInit {
+  protected pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);

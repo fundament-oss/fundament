@@ -1,6 +1,9 @@
 <nldd-form (submit)="onSubmit($event)">
   @if (isLoading()) {
-    <nldd-activity-indicator show-text text="Loading plugins and presets..."></nldd-activity-indicator>
+    <nldd-activity-indicator
+      show-text
+      text="Loading plugins and presets..."
+    ></nldd-activity-indicator>
   } @else if (errorMessage()) {
     <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
   } @else {
@@ -83,15 +86,11 @@
         <nldd-form-field-help-text>
           A custom plugin goes up as a ZIP file. Other file types are rejected.
         </nldd-form-field-help-text>
-        <!-- Native file input: the design system has no file field, so this one
-             keeps its own styling. -->
-        <input
-          id="customPluginFile"
-          type="file"
+        <nldd-file-field
           accept=".zip"
+          [translations]="fileFieldTranslations"
           (change)="onCustomPluginFileChange($event)"
-          class="ring-accent-500 file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100 block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 file:mr-4 file:rounded-l-lg file:border-0 file:px-4 file:py-2 file:text-sm file:font-semibold focus:ring-2 focus:ring-offset-2 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:ring-offset-gray-950 dark:file:bg-gray-700 dark:file:text-gray-300 dark:hover:file:bg-gray-600"
-        />
+        ></nldd-file-field>
       </nldd-form-field>
     }
 
