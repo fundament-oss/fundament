@@ -92,14 +92,6 @@ const routes: Routes = [
         },
       },
       {
-        path: 'projects/:id/roles',
-        loadComponent: () =>
-          import('./project-roles/project-roles.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Roles' }],
-        },
-      },
-      {
         path: 'clusters/:id',
         loadComponent: () =>
           import('./cluster-details/cluster-details.component').then((m) => m.default),
@@ -153,6 +145,22 @@ const routes: Routes = [
         data: {
           breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Namespaces' }],
         },
+        children: [
+          {
+            // Everything about one namespace, the other way round from the member
+            // sheet: who has access here. A route, so the row is a real link.
+            path: ':name',
+            loadComponent: () =>
+              import('./namespace-sheet/namespace-sheet.component').then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: 'Namespaces', route: '/projects/:id/namespaces' },
+                { label: 'Namespace' },
+              ],
+            },
+          },
+        ],
       },
       {
         path: 'projects/:id/members',
@@ -161,6 +169,38 @@ const routes: Routes = [
         data: {
           breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Members' }],
         },
+        // The same reference as under organization members: a route of its own,
+        // so the control that opens it can be a real link.
+        children: [
+          {
+            path: 'permissions',
+            loadComponent: () =>
+              import('./permissions-sheet/permissions-sheet.component').then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: 'Members', route: '/projects/:id/members' },
+                { label: 'About permissions' },
+              ],
+            },
+          },
+          {
+            // Everything one member has here. A route, so the row that opens it
+            // can be a real link.
+            path: ':memberId',
+            loadComponent: () =>
+              import('./project-member-sheet/project-member-sheet.component').then(
+                (m) => m.default,
+              ),
+            data: {
+              breadcrumbs: [
+                { label: ':projectName', route: '/projects/:id' },
+                { label: 'Members', route: '/projects/:id/members' },
+                { label: 'Member' },
+              ],
+            },
+          },
+        ],
       },
       {
         path: 'projects/:id/limits',
