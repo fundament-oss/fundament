@@ -27,7 +27,7 @@
             slot="actions"
             type="button"
             (click)="openCreateNamespaceModal()"
-            text="Create namespace"
+            text="New namespace"
             start-icon="plus-small"
             variant="primary"
           ></nldd-button>
@@ -38,7 +38,7 @@
         <nldd-button
           type="button"
           (click)="openCreateNamespaceModal()"
-          text="Create namespace"
+          text="New namespace"
           start-icon="plus-small"
           variant="primary"
         ></nldd-button>
@@ -103,15 +103,14 @@
   #createNamespaceSheet
   appSheetSync
   [show]="showCreateNamespaceModal()"
-  accessible-label="Create namespace"
+  accessible-label="New namespace"
   placement="right"
-  width="480px"
   (close)="showCreateNamespaceModal.set(false)"
 >
   <nldd-page sticky-header sticky-footer>
     <nldd-top-title-bar
       slot="header"
-      text="Create namespace"
+      text="New namespace"
       dismiss-text="Cancel"
       (dismiss)="showCreateNamespaceModal.set(false)"
     ></nldd-top-title-bar>

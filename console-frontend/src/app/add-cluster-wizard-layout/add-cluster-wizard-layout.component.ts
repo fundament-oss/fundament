@@ -91,7 +91,7 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
    *  collapse into the bar; the later steps name themselves. */
   currentStepTitle = computed(() => {
     const index = this.currentStepIndex();
-    return index > 0 ? this.steps[index].name : 'Create a Kubernetes cluster';
+    return index > 0 ? this.steps[index].name : 'New Kubernetes cluster';
   });
 
   // Set per item rather than left to `current`: the wizard can be stepped back

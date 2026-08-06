@@ -54,7 +54,7 @@ export default class AddClusterComponent implements OnInit {
   catalogError = signal<string | null>(null);
 
   constructor() {
-    this.titleService.setTitle('Add a cluster');
+    this.titleService.setTitle('New cluster');
 
     this.clusterForm = this.fb.group({
       clusterName: [

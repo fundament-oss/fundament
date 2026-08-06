@@ -1,0 +1,135 @@
+<nldd-sheet
+  #permissionsSheet
+  appSheetSync
+  [show]="true"
+  accessible-label="About permissions"
+  placement="right"
+  (close)="onClose()"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="About permissions"
+      dismiss-text="Close"
+      (dismiss)="onClose()"
+    ></nldd-top-title-bar>
+
+    <nldd-simple-section>
+      <nldd-rich-text spacing="flat">
+        <p>
+          What each permission covers in the console. What someone may do inside a namespace is set
+          per project, with roles.
+        </p>
+      </nldd-rich-text>
+
+      <nldd-spacer size="24"></nldd-spacer>
+
+      <nldd-title size="5"><h2>Organization admin</h2></nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list variant="box" accessible-label="Organization admin">
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Invite, edit and remove organization members"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Create clusters"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell
+            text="Admin access to every project, without being added"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Manage members in every project"></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+
+      <nldd-spacer size="24"></nldd-spacer>
+
+      <nldd-title size="5"><h2>Organization viewer</h2></nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list variant="box" accessible-label="Organization viewer">
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="View the organization and its members"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="View clusters, and see which projects exist"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Create API keys"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="slash-circle" size="20" color="secondary"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Cannot open a project until added to it"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="slash-circle" size="20" color="secondary"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Cannot invite or manage organization members"></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+
+      <nldd-spacer size="24"></nldd-spacer>
+
+      <nldd-title size="5"><h2>Project admin</h2></nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list variant="box" accessible-label="Project admin">
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell
+            text="Edit and delete their project, and create namespaces in it"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Add organization members to their project"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="slash-circle" size="20" color="secondary"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Cannot invite new people to the organization"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="slash-circle" size="20" color="secondary"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Cannot manage organization members"></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+
+      <nldd-spacer size="24"></nldd-spacer>
+
+      <nldd-title size="5"><h2>Project viewer</h2></nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list variant="box" accessible-label="Project viewer">
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell
+            text="See a project they were added to, with its members and namespaces"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item size="sm">
+          <nldd-icon-cell icon="slash-circle" size="20" color="secondary"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Cannot manage project members"></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

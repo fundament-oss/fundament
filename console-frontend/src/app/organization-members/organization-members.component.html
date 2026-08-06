@@ -1,207 +1,247 @@
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <div class="grid items-center gap-3 sm:grid-cols-2">
-      <div>
-        <h1 class="text-3xl font-semibold">Organization members</h1>
-        <p class="mt-1 text-gray-600 dark:text-gray-300">
-          Manage who has access to your organization
-        </p>
-      </div>
-    </div>
-  </div>
+<!-- Same outer layout as the other organization pages: the pane owns the back
+     button, so the page does not force one. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="Organization members"
+    collapse-anchor="members-title"
+  ></nldd-top-title-bar>
 
-  <div class="p-6">
-    <!-- Info banner -->
-    <div
-      class="border-accent-200 bg-accent-50 dark:border-accent-800 dark:bg-accent-950 mb-6 flex items-start gap-3 rounded-md border p-4"
-    >
-      <nldd-icon name="info-circle" class="mt-0.5 shrink-0" size="20" color="accent"></nldd-icon>
-      <div class="text-accent-700 dark:text-accent-300">
-        <p class="mb-2">
-          Organization admins can manage members across all projects. This permission overrides
-          project-level permissions.
-        </p>
+  <nldd-simple-section>
+    <nldd-title id="members-title" size="2">
+      <h1>Organization members</h1>
+    </nldd-title>
 
-        <p>
-          Permissions only give access to manage members. To control access to project resources,
-          configure <strong class="font-semibold">roles</strong> on project level.
-        </p>
-      </div>
-    </div>
+    <nldd-spacer size="12"></nldd-spacer>
 
-    @if (isLoading() || pendingInvitations().length > 0) {
-      <nldd-button
-        type="button"
-        (click)="openModal()"
-        text="Invite member"
-        start-icon="plus-small"
-        variant="primary"
-        class="mb-4"
-      ></nldd-button>
-    }
+    <!-- The page actions in a toolbar of their own rather than in the title's
+         actions slot: a toolbar takes a second and a third action without the
+         title growing a row of controls. -->
+    <nldd-toolbar label="Member actions">
+      <nldd-toolbar-item slot="start">
+        <nldd-button
+          type="button"
+          (click)="openModal()"
+          text="Invite member"
+          start-icon="plus-small"
+          variant="primary"
+        ></nldd-button>
+      </nldd-toolbar-item>
+      <nldd-toolbar-item slot="start">
+        <!-- Carries a real href: the sheet has its own URL, so this can be
+             opened in a new tab and closed with the back button. In a toolbar it
+             reads as a control, so it wears the control's affordance. -->
+        <nldd-button
+          href="/organization/members/permissions"
+          text="About permissions"
+          start-icon="info-circle"
+          variant="secondary"
+          (click)="openPermissions($event)"
+        ></nldd-button>
+      </nldd-toolbar-item>
+    </nldd-toolbar>
 
-    <!-- Pending Invitations Section -->
-    <div class="mb-8">
-      <h2 class="mb-4 text-lg font-semibold">Pending invitations</h2>
-      <p class="mb-4 text-gray-500 dark:text-gray-400">
-        Users who have been invited but haven't accepted yet
+    <nldd-spacer size="16"></nldd-spacer>
+
+    <!-- Standing explanation, not a notice: a banner would claim this is
+         something that just happened and can be dismissed. The detail sits in a
+         sheet, so the page opens with the part everyone needs. -->
+    <nldd-rich-text spacing="flat">
+      <p>
+        Admin and Viewer decide what someone can do in this organization. An admin also reaches
+        every project; a viewer has to be added to a project first.
       </p>
+    </nldd-rich-text>
 
-      @if (isLoading()) {
-        <nldd-simple-section>
-          <nldd-activity-indicator
-            show-text
-            text="Loading invitations..."
-          ></nldd-activity-indicator>
-        </nldd-simple-section>
-      } @else if (pendingInvitations().length > 0) {
-        <nldd-table accessible-label="Pending invitations" columns="minmax(200px, 1fr) 140px 120px">
-          <nldd-table-row slot="header">
-            <nldd-text-cell text="**Email**"></nldd-text-cell>
-            <nldd-text-cell text="**Permission**"></nldd-text-cell>
-            <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
-          </nldd-table-row>
+    <nldd-spacer size="24"></nldd-spacer>
 
-          @for (invitation of pendingInvitations(); track invitation.id) {
-            <nldd-table-row>
-              <nldd-text-cell
-                [attr.text]="invitation.email || invitation.name"
-                [attr.supporting-text]="'Invited ' + formatTimeAgo(invitation.created)"
-              ></nldd-text-cell>
-              <nldd-cell>
-                <nldd-tag
-                  class="capitalize"
-                  size="sm"
-                  [attr.color]="invitation.permission === 'admin' ? 'paars' : 'accent'"
-                  [attr.text]="invitation.permission"
-                ></nldd-tag>
-              </nldd-cell>
-              <nldd-cell horizontal-alignment="right">
-                <nldd-button
-                  type="button"
-                  text="Cancel"
-                  start-icon="trash"
-                  size="sm"
-                  variant="destructive"
-                  [attr.accessible-label]="
-                    'Cancel invitation for ' + (invitation.email || invitation.name)
-                  "
-                  (click)="cancelInvitation(invitation.id)"
-                ></nldd-button>
-              </nldd-cell>
-            </nldd-table-row>
-          }
-        </nldd-table>
-      } @else {
-        <nldd-box>
-          <nldd-inline-dialog icon="envelope" icon-color="secondary" text="No pending invitations">
-            <nldd-button
-              (click)="openModal()"
-              type="button"
-              slot="actions"
-              text="Invite member"
-              start-icon="plus-small"
-              variant="primary"
-            ></nldd-button>
-          </nldd-inline-dialog>
-        </nldd-box>
-      }
-    </div>
-
-    <!-- Active Members Section -->
-    <div>
-      <h2 class="mb-4 text-lg font-semibold">Active members</h2>
-      <p class="mb-4 text-gray-500 dark:text-gray-400">
-        Users who have signed in to the organization
-      </p>
-
-      @if (isLoading()) {
-        <nldd-simple-section>
-          <nldd-activity-indicator show-text text="Loading members..."></nldd-activity-indicator>
-        </nldd-simple-section>
-      } @else if (error()) {
-        <div
-          class="bg-danger-50 dark:bg-danger-950 rounded-md border border-rose-200 p-8 text-center dark:border-rose-800"
+    @if (isLoading()) {
+      <nldd-activity-indicator show-text text="Loading members..."></nldd-activity-indicator>
+    } @else if (error()) {
+      <nldd-box>
+        <nldd-inline-dialog
+          variant="alert"
+          text="Members not loaded"
+          [attr.supporting-text]="error()"
         >
-          <nldd-icon
-            name="exclamation-circle"
-            class="mx-auto"
-            size="48"
-            color="critical"
-          ></nldd-icon>
-          <p class="text-danger-600 dark:text-danger-400 mt-2">{{ error() }}</p>
           <nldd-button
+            slot="actions"
             type="button"
             (click)="loadMembers()"
             text="Try again"
             variant="primary"
           ></nldd-button>
-        </div>
-      } @else if (activeMembers().length === 0) {
+        </nldd-inline-dialog>
+      </nldd-box>
+    } @else {
+      <!-- One list: an invitation and a member are the same person at a
+           different stage, so the state belongs on the row rather than in a
+           heading above a separate list. -->
+      <nldd-toolbar label="Member filters">
+        <nldd-toolbar-item slot="start">
+          <!-- One control rather than three buttons: in a toolbar that runs out
+               of room it collapses as a single item. -->
+          <nldd-segmented-control
+            type="radio"
+            width="fit-content"
+            name="memberFilter"
+            accessible-label="Show"
+            [attr.value]="memberFilter()"
+            (change)="memberFilter.set($any($event).detail.value)"
+          >
+            <nldd-segmented-control-item
+              value="all"
+              [attr.text]="'All (' + allAccess().length + ')'"
+            ></nldd-segmented-control-item>
+            <nldd-segmented-control-item
+              value="invitations"
+              [attr.text]="'Invitations (' + pendingInvitations().length + ')'"
+            ></nldd-segmented-control-item>
+            <nldd-segmented-control-item
+              value="members"
+              [attr.text]="'Members (' + activeMembers().length + ')'"
+            ></nldd-segmented-control-item>
+          </nldd-segmented-control>
+        </nldd-toolbar-item>
+
+        <!-- Sorting is not filtering, so it sits on the other side of the bar. -->
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            expandable
+            popup-type="menu"
+            variant="secondary"
+            start-icon="arrow-up-arrow-down"
+            [attr.text]="sortLabel()"
+          >
+            <nldd-menu slot="popup" accessible-label="Sort by">
+              <nldd-menu-item
+                type="radio"
+                text="Status"
+                [attr.selected]="memberSort() === 'status' ? '' : null"
+                (select)="memberSort.set('status')"
+              ></nldd-menu-item>
+              <nldd-menu-item
+                type="radio"
+                text="Role"
+                [attr.selected]="memberSort() === 'role' ? '' : null"
+                (select)="memberSort.set('role')"
+              ></nldd-menu-item>
+              <nldd-menu-item
+                type="radio"
+                text="Joined (newest first)"
+                [attr.selected]="memberSort() === 'joined' ? '' : null"
+                (select)="memberSort.set('joined')"
+              ></nldd-menu-item>
+              <nldd-menu-item
+                type="radio"
+                text="Joined (oldest first)"
+                [attr.selected]="memberSort() === 'joined-oldest' ? '' : null"
+                (select)="memberSort.set('joined-oldest')"
+              ></nldd-menu-item>
+            </nldd-menu>
+          </nldd-button>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
+      @if (visibleMembers().length === 0) {
         <nldd-box>
           <nldd-inline-dialog
             icon="person-2"
             icon-color="secondary"
-            text="No members found"
+            [attr.text]="
+              memberFilter() === 'invitations'
+                ? 'No pending invitations'
+                : memberFilter() === 'members'
+                  ? 'No members found'
+                  : 'Nobody has access yet'
+            "
             supporting-text="Members who sign in via SSO will appear here."
-          >
-          </nldd-inline-dialog>
+          ></nldd-inline-dialog>
         </nldd-box>
       } @else {
-        <nldd-table accessible-label="Active members" columns="minmax(200px, 1fr) 140px 64px">
-          <nldd-table-row slot="header">
-            <nldd-text-cell text="**Name**"></nldd-text-cell>
-            <nldd-text-cell text="**Permission**"></nldd-text-cell>
-            <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
-          </nldd-table-row>
-
-          @for (member of activeMembers(); track member.id) {
-            <nldd-table-row>
-              <nldd-cell width="full">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-medium text-white"
-                    [class]="getAvatarColor(member.name)"
-                  >
-                    {{ getInitials(member.name) }}
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <span class="font-medium">{{ member.name }}</span>
-                      @if (member.isCurrentUser) {
-                        <nldd-tag color="neutral" size="sm" text="You"></nldd-tag>
-                      }
-                    </div>
-                    <p class="text-gray-500 dark:text-gray-400">
-                      Joined {{ formatTimeAgo(member.created) }}
-                    </p>
-                  </div>
-                </div>
+        <nldd-list variant="box" accessible-label="Members">
+          @for (member of visibleMembers(); track member.id) {
+            <nldd-list-item>
+              <nldd-cell width="fit-content">
+                <nldd-avatar
+                  decorative
+                  type="person"
+                  size="40"
+                  [attr.name]="member.name || member.email"
+                ></nldd-avatar>
               </nldd-cell>
-              <nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+
+              <!-- The tags sit in the cell's own text line, so they read as part
+                   of the name rather than as a column of their own. -->
+              <!-- Plain inline flow, no wrapping container: a container's gap
+                   applies to both axes, so a wrapped row would grow a gap
+                   between its lines too. &ngsp; is Angular's own keep-this-space
+                   entity — a plain space between elements gets stripped. -->
+              <nldd-text-cell
+                width="full"
+                [attr.supporting-text]="
+                  (member.status === 'pending' ? 'Invited ' : 'Joined ') +
+                  formatTimeAgo(member.created)
+                "
+              >
+                {{ member.name || member.email }}&ngsp;
                 <nldd-tag
-                  class="capitalize"
                   size="sm"
                   [attr.color]="member.permission === 'admin' ? 'paars' : 'accent'"
-                  [attr.text]="member.permission"
+                  [attr.text]="permissionLabel(member.permission)"
                 ></nldd-tag>
-              </nldd-cell>
-              <nldd-cell horizontal-alignment="right">
-                @if (!member.isCurrentUser) {
+                @if (member.status === 'pending') {
+                  &ngsp;<nldd-tag color="warning" size="sm" text="Invited"></nldd-tag>
+                }
+              </nldd-text-cell>
+
+              <!-- An invitation can only be withdrawn, so it gets the one
+                   action rather than a menu of things that do not apply. -->
+              @if (member.status === 'pending') {
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-cell width="fit-content">
+                  <nldd-button
+                    type="button"
+                    text="Cancel invite"
+                    size="sm"
+                    variant="destructive"
+                    [attr.accessible-label]="
+                      'Cancel invitation for ' + (member.email || member.name)
+                    "
+                    (click)="cancelInvitation(member.id)"
+                  ></nldd-button>
+                </nldd-cell>
+              } @else if (member.isCurrentUser) {
+                <!-- Where the actions would be, saying why there are none. -->
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  color="secondary"
+                  text="You"
+                ></nldd-text-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              } @else {
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-cell width="fit-content">
+                  <!-- No chevron: the ellipsis already says a menu opens. -->
                   <nldd-icon-button
                     icon="ellipsis"
                     size="sm"
-                    variant="neutral-transparent"
-                    expandable
+                    variant="secondary"
                     popup-type="menu"
                     [attr.accessible-label]="'Actions for ' + member.name"
                   >
                     <nldd-menu slot="popup">
+                      <!-- Names the result, not the form: one click instead of
+                           a sheet holding a single radio group. -->
                       <nldd-menu-item
-                        text="Edit"
-                        icon="pencil"
-                        (select)="openEditModal(member)"
+                        icon="person-badge-gear"
+                        [attr.text]="member.permission === 'admin' ? 'Make viewer' : 'Make admin'"
+                        (select)="setPermission(member)"
                       ></nldd-menu-item>
                       <nldd-menu-divider></nldd-menu-divider>
                       <nldd-menu-item
@@ -212,15 +252,46 @@
                       ></nldd-menu-item>
                     </nldd-menu>
                   </nldd-icon-button>
-                }
-              </nldd-cell>
-            </nldd-table-row>
+                </nldd-cell>
+              }
+            </nldd-list-item>
           }
-        </nldd-table>
+        </nldd-list>
       }
-    </div>
-  </div>
-</div>
+    }
+  </nldd-simple-section>
+
+  <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
+
+<!-- Action Error Modal -->
+<nldd-modal-dialog
+  #actionErrorDialog
+  appDialogSync
+  [show]="!!actionError()"
+  [attr.text]="actionError()?.title"
+  [attr.supporting-text]="actionErrorText()"
+  accessible-label="Action failed"
+  variant="alert"
+  (close)="actionError.set(null)"
+>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="retryAction()"
+    [attr.loading]="retrying() ? '' : null"
+    text="Try again"
+    variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="actionError.set(null)"
+    text="Cancel"
+    variant="secondary"
+  ></nldd-button>
+</nldd-modal-dialog>
 
 <!-- Delete Member Modal -->
 <nldd-modal-dialog
@@ -250,75 +321,6 @@
   ></nldd-button>
 </nldd-modal-dialog>
 
-<!-- Edit Member Sheet -->
-<nldd-sheet
-  #editSheet
-  appSheetSync
-  [show]="showEditModal()"
-  accessible-label="Edit member"
-  placement="right"
-  width="480px"
-  (close)="showEditModal.set(false)"
->
-  <nldd-page sticky-header sticky-footer>
-    <nldd-top-title-bar
-      slot="header"
-      text="Edit member"
-      dismiss-text="Cancel"
-      (dismiss)="showEditModal.set(false)"
-    ></nldd-top-title-bar>
-
-    <nldd-simple-section>
-      <div class="mb-4">
-        <span class="mb-2 block text-neutral-800 dark:text-neutral-200">Member</span>
-        <p>{{ editingMember()?.name }}</p>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          {{ editingMember()?.email || editingMember()?.externalRef }}
-        </p>
-      </div>
-
-      <nldd-form-field label="Permission">
-        <nldd-radio-button-group
-          name="editPermission"
-          (change)="editPermission.set($any($event).detail.value)"
-        >
-          <div class="radio-option mb-2">
-            <nldd-radio-button-field
-              value="viewer"
-              label="Viewer"
-              [checked]="editPermission() === 'viewer'"
-            ></nldd-radio-button-field>
-            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-              >Read access to resources</span
-            >
-          </div>
-          <div class="radio-option">
-            <nldd-radio-button-field
-              value="admin"
-              label="Admin"
-              [checked]="editPermission() === 'admin'"
-            ></nldd-radio-button-field>
-            <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-              >Full access to resources</span
-            >
-          </div>
-        </nldd-radio-button-group>
-      </nldd-form-field>
-    </nldd-simple-section>
-
-    <nldd-simple-section slot="footer">
-      <nldd-button
-        type="button"
-        (click)="confirmEditMember()"
-        [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
-        [disabled]="isSubmitting()"
-        variant="primary"
-        width="full"
-      ></nldd-button>
-    </nldd-simple-section>
-  </nldd-page>
-</nldd-sheet>
-
 <!-- Invite Sheet -->
 <nldd-sheet
   #inviteSheet
@@ -326,7 +328,6 @@
   [show]="isModalOpen()"
   accessible-label="Invite user"
   placement="right"
-  width="480px"
   (close)="closeModal()"
 >
   <nldd-page sticky-header sticky-footer>
@@ -338,18 +339,22 @@
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
-      <p class="mb-6 text-gray-600 dark:text-gray-400">
-        Enter the email address of the user you want to invite. They will be able to sign in via SSO
-        once added. No invitation email is sent yet, let the user know they should sign in
-        themselves.
-      </p>
+      <nldd-rich-text spacing="flat">
+        <p>
+          Enter the email address of the user you want to invite. They will be able to sign in via
+          SSO once added. No invitation email is sent yet, let the user know they should sign in
+          themselves.
+        </p>
+      </nldd-rich-text>
+
+      <nldd-spacer size="16"></nldd-spacer>
 
       <nldd-form
         (submit)="submitInvitation($event)"
         (keydown.enter)="submitInvitation($event)"
         novalidate
       >
-        <nldd-form-field label="Email address" class="mb-4">
+        <nldd-form-field label="Email address">
           <nldd-text-field
             appAutofocus
             type="email"
@@ -370,36 +375,27 @@
           </nldd-form-field-error-text>
         </nldd-form-field>
 
-        <div class="mb-6">
-          <nldd-form-field label="Permission">
-            <nldd-radio-button-group
-              name="permission"
-              (change)="invitePermission.set($any($event).detail.value)"
-              [disabled]="isSubmitting()"
-            >
-              <div class="radio-option mb-2">
-                <nldd-radio-button-field
-                  value="viewer"
-                  label="Viewer"
-                  [checked]="invitePermission() === 'viewer'"
-                ></nldd-radio-button-field>
-                <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-                  >Read access to resources</span
-                >
-              </div>
-              <div class="radio-option">
-                <nldd-radio-button-field
-                  value="admin"
-                  label="Admin"
-                  [checked]="invitePermission() === 'admin'"
-                ></nldd-radio-button-field>
-                <span class="-mt-2 mb-2 ml-8 block text-sm text-gray-600 dark:text-gray-300"
-                  >Full access to resources</span
-                >
-              </div>
-            </nldd-radio-button-group>
-          </nldd-form-field>
-        </div>
+        <nldd-form-field
+          label="Permission"
+          supporting-label="Viewer has read access to resources, admin has full access."
+        >
+          <nldd-radio-button-group
+            name="permission"
+            (change)="invitePermission.set($any($event).detail.value)"
+            [disabled]="isSubmitting()"
+          >
+            <nldd-radio-button-field
+              value="viewer"
+              label="Viewer"
+              [checked]="invitePermission() === 'viewer'"
+            ></nldd-radio-button-field>
+            <nldd-radio-button-field
+              value="admin"
+              label="Admin"
+              [checked]="invitePermission() === 'admin'"
+            ></nldd-radio-button-field>
+          </nldd-radio-button-group>
+        </nldd-form-field>
       </nldd-form>
     </nldd-simple-section>
 
@@ -415,3 +411,5 @@
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
+
+<router-outlet />

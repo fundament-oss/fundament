@@ -5,10 +5,12 @@ import {
   signal,
   computed,
   ChangeDetectionStrategy,
+  isDevMode,
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
 } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
@@ -24,27 +26,6 @@ import focusFirstModalInput from '../modal-focus';
 import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
 
-const getInitials = (name: string): string =>
-  name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    'bg-accent-600',
-    'bg-emerald-600',
-    'bg-purple-600',
-    'bg-danger-600',
-    'bg-amber-600',
-    'bg-cyan-600',
-  ];
-  const index = name.charCodeAt(0) % colors.length;
-  return colors[index];
-};
-
 interface OrganizationMember {
   id: string;
   name: string;
@@ -56,14 +37,134 @@ interface OrganizationMember {
   created?: Date;
 }
 
+/** 'admin' reads as a value, 'Admin' as a label. The tag shows the label. */
+const permissionLabel = (permission: string): string =>
+  permission ? permission[0].toUpperCase() + permission.slice(1) : permission;
+
+/** TEMPORARY, dev only. Delete together with the branch in loadMembers(). */
+const sampleMembers = (currentUserId?: string): OrganizationMember[] => {
+  const daysAgo = (days: number) => new Date(Date.now() - days * 86400000);
+  return [
+    {
+      id: 'sample-1',
+      name: '',
+      email: 'nieuw.medewerker@example.com',
+      externalRef: '',
+      permission: 'viewer',
+      status: 'pending',
+      isCurrentUser: false,
+      created: daysAgo(0.2),
+    },
+    {
+      id: 'sample-2',
+      name: '',
+      email: 'a.de.jong@example.com',
+      externalRef: '',
+      permission: 'admin',
+      status: 'pending',
+      isCurrentUser: false,
+      created: daysAgo(4),
+    },
+    {
+      id: 'sample-3',
+      name: 'Bart van de Biezen',
+      email: 'bart@example.com',
+      externalRef: 'sso|bart',
+      permission: 'admin',
+      status: 'accepted',
+      isCurrentUser: true,
+      created: daysAgo(420),
+    },
+    {
+      id: 'sample-4',
+      name: 'Nadia el Amrani',
+      email: 'nadia.el.amrani@example.com',
+      externalRef: 'sso|nadia',
+      permission: 'viewer',
+      status: 'accepted',
+      isCurrentUser: false,
+      created: daysAgo(3),
+    },
+    {
+      id: 'sample-5',
+      name: 'Jean-Pierre van der Meer-Bakhuizen',
+      email: 'jp.vandermeer.bakhuizen@een-hele-lange-domeinnaam.example.com',
+      externalRef: 'sso|jp',
+      permission: 'admin',
+      status: 'accepted',
+      isCurrentUser: false,
+      created: daysAgo(96),
+    },
+    {
+      id: 'sample-6',
+      name: 'Li Wei',
+      email: 'li.wei@example.com',
+      externalRef: 'sso|liwei',
+      permission: 'viewer',
+      status: 'accepted',
+      isCurrentUser: false,
+      created: daysAgo(1),
+    },
+  ].map((m) => ({ ...m, isCurrentUser: m.isCurrentUser && !!currentUserId }));
+};
+
+/** How long a retry shows as running before its result lands. */
+const MIN_RETRY_FEEDBACK_MS = 2000;
+
+type MemberSort = 'status' | 'role' | 'joined' | 'joined-oldest';
+
+/** Only Joined needs its direction spelled out: with status and role you can
+ *  see which way the list runs, with dates you cannot. */
+const SORT_LABELS: Record<MemberSort, string> = {
+  status: 'Status',
+  role: 'Role',
+  joined: 'Joined (newest first)',
+  'joined-oldest': 'Joined (oldest first)',
+};
+
+/** Invitations are the rows you still have to act on, your own row explains
+ *  itself, the rest are members. */
+const statusRank = (member: OrganizationMember): number => {
+  if (member.status === 'pending') return 0;
+  if (member.isCurrentUser) return 1;
+  return 2;
+};
+
+const joinedDescending = (a: OrganizationMember, b: OrganizationMember): number =>
+  (b.created?.getTime() ?? 0) - (a.created?.getTime() ?? 0);
+
+/**
+ * Sorting by role keeps the status order inside each role rather than
+ * interleaving the two: admins first, and within them the invitation you still
+ * have to act on. One axis at a time stays predictable.
+ */
+const comparatorFor =
+  (sort: MemberSort) =>
+  (a: OrganizationMember, b: OrganizationMember): number => {
+    if (sort === 'joined') return joinedDescending(a, b);
+    if (sort === 'joined-oldest') return -joinedDescending(a, b);
+    if (sort === 'role' && a.permission !== b.permission) {
+      return a.permission === 'admin' ? -1 : 1;
+    }
+    return statusRank(a) - statusRank(b) || joinedDescending(a, b);
+  };
+
 @Component({
   selector: 'app-organization-members',
-  imports: [DialogSyncDirective, SheetSyncDirective, LoadingIndicatorComponent, AutofocusDirective],
+  imports: [
+    RouterOutlet,
+    DialogSyncDirective,
+    SheetSyncDirective,
+    LoadingIndicatorComponent,
+    AutofocusDirective,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './organization-members.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class OrganizationMembersComponent implements OnInit {
+  private router = inject(Router);
+
   private titleService = inject(TitleService);
 
   private toastService = inject(ToastService);
@@ -99,12 +200,24 @@ export default class OrganizationMembersComponent implements OnInit {
 
   deletingMember = signal<OrganizationMember | null>(null);
 
-  // Edit modal state
-  showEditModal = signal(false);
+  /** A failed action, reported over the list instead of in place of it: the
+   *  list is still valid, only the action was not. */
+  actionError = signal<{
+    title: string;
+    message: string;
+    attempts: number;
+    retry: () => Promise<void>;
+  } | null>(null);
 
-  editingMember = signal<OrganizationMember | null>(null);
-
-  editPermission = signal('viewer');
+  /** The attempt count is what makes a second failure legible: without it the
+   *  dialog comes back identical and the retry looks like it never ran. */
+  actionErrorText = computed(() => {
+    const failed = this.actionError();
+    if (!failed) return null;
+    return failed.attempts > 1
+      ? `Tried ${failed.attempts} times. ${failed.message}`
+      : failed.message;
+  });
 
   // All members loaded from API (includes pending, active, declined and revoked)
   allMembers = signal<OrganizationMember[]>([]);
@@ -112,6 +225,32 @@ export default class OrganizationMembersComponent implements OnInit {
   activeMembers = computed(() => this.allMembers().filter((m) => m.status === 'accepted'));
 
   pendingInvitations = computed(() => this.allMembers().filter((m) => m.status === 'pending'));
+
+  /** Everyone with access or on their way to it, invitations first: an
+   *  invitation is the row you still have to do something about. */
+  allAccess = computed(() => [...this.pendingInvitations(), ...this.activeMembers()]);
+
+  memberFilter = signal<'all' | 'invitations' | 'members'>('all');
+
+  memberSort = signal<MemberSort>('status');
+
+  sortLabel = computed(() => SORT_LABELS[this.memberSort()]);
+
+  visibleMembers = computed(() => {
+    const base = this.filtered();
+    return [...base].sort(comparatorFor(this.memberSort()));
+  });
+
+  private filtered = computed(() => {
+    switch (this.memberFilter()) {
+      case 'invitations':
+        return this.pendingInvitations();
+      case 'members':
+        return this.activeMembers();
+      default:
+        return this.allAccess();
+    }
+  });
 
   constructor() {
     this.titleService.setTitle('Organization members');
@@ -140,7 +279,13 @@ export default class OrganizationMembersComponent implements OnInit {
         created: member.created ? timestampDate(member.created) : undefined,
       }));
 
-      this.allMembers.set(members);
+      // TEMPORARY, dev only: this environment returns members, but none with a
+      // status the page shows, so the list layout can never be seen. Delete
+      // before merging.
+      const shown = members.filter((m) => m.status === 'accepted' || m.status === 'pending');
+      this.allMembers.set(
+        shown.length === 0 && isDevMode() ? sampleMembers(currentUser?.id) : members,
+      );
     } catch (err) {
       this.error.set(
         err instanceof Error ? `Failed to load members: ${err.message}` : 'Failed to load members',
@@ -210,11 +355,12 @@ export default class OrganizationMembersComponent implements OnInit {
       );
       await this.loadMembers();
     } catch (err) {
-      this.error.set(
-        err instanceof Error
-          ? `Failed to cancel invitation: ${err.message}`
-          : 'Failed to cancel invitation',
-      );
+      this.actionError.set({
+        title: 'Invitation not cancelled',
+        message: err instanceof Error ? err.message : 'The request failed.',
+        attempts: 1,
+        retry: () => this.cancelInvitation(id),
+      });
     }
   }
 
@@ -234,58 +380,86 @@ export default class OrganizationMembersComponent implements OnInit {
       this.toastService.success(`'${member.name}' removed from the organization`);
       await this.loadMembers();
     } catch (err) {
-      this.error.set(
-        err instanceof Error
-          ? `Failed to remove member: ${err.message}`
-          : 'Failed to remove member',
-      );
       this.showDeleteModal.set(false);
+      this.actionError.set({
+        title: 'Member not removed',
+        message: err instanceof Error ? err.message : 'The request failed.',
+        attempts: 1,
+        retry: () => this.confirmDeleteMember(),
+      });
     }
   }
 
-  openEditModal(member: OrganizationMember) {
-    this.editingMember.set(member);
-    this.editPermission.set(member.permission);
-    this.showEditModal.set(true);
-  }
-
-  async confirmEditMember() {
-    const member = this.editingMember();
-    if (!member) return;
-
-    const newPermission = this.editPermission();
-    if (newPermission === member.permission) {
-      this.showEditModal.set(false);
-      return;
-    }
-
+  /** Permission is the only thing that can be edited, and it has two values, so
+   *  the menu flips it directly instead of opening a sheet to hold one radio
+   *  group. Reversible in one click, so no confirmation. */
+  async setPermission(member: OrganizationMember) {
+    const permission = member.permission === 'admin' ? 'viewer' : 'admin';
     this.isSubmitting.set(true);
 
     try {
-      await firstValueFrom(
-        this.memberClient.updateMemberPermission({ id: member.id, permission: newPermission }),
-      );
-      this.showEditModal.set(false);
-      this.editingMember.set(null);
-      this.toastService.success(`Permission for '${member.name}' changed to ${newPermission}`);
+      await firstValueFrom(this.memberClient.updateMemberPermission({ id: member.id, permission }));
+      this.toastService.success(`${member.name} is now ${permission}`);
       await this.loadMembers();
     } catch (err) {
-      this.error.set(
-        err instanceof Error
-          ? `Failed to update member: ${err.message}`
-          : 'Failed to update member',
-      );
-      this.showEditModal.set(false);
+      this.actionError.set({
+        title: `${member.name} is still ${member.permission}`,
+        message: err instanceof Error ? err.message : 'The request failed.',
+        attempts: 1,
+        retry: () => this.setPermission(member),
+      });
     } finally {
       this.isSubmitting.set(false);
     }
   }
 
+  retrying = signal(false);
+
+  /**
+   * The button reports the retry, and for long enough to be seen: a failure that
+   * comes back instantly would otherwise leave the dialog looking untouched, as
+   * if the click had missed. The wait is a floor, not a delay on top — a request
+   * slower than this is not held back.
+   */
+  async retryAction() {
+    const failed = this.actionError();
+    if (!failed) return;
+
+    this.retrying.set(true);
+    try {
+      await Promise.all([
+        failed.retry(),
+        new Promise((resolve) => {
+          setTimeout(resolve, MIN_RETRY_FEEDBACK_MS);
+        }),
+      ]);
+    } finally {
+      this.retrying.set(false);
+    }
+
+    // The action writes a fresh object when it fails again, so an untouched one
+    // means it went through this time.
+    const next = this.actionError();
+    if (next === failed) {
+      this.actionError.set(null);
+      return;
+    }
+    if (next) this.actionError.set({ ...next, attempts: failed.attempts + 1 });
+  }
+
+  /** Routes client-side while leaving the control a real link, so middle-click
+   *  and "open in new tab" keep working. */
+  openPermissions(event: MouseEvent): void {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    this.router.navigateByUrl('/organization/members/permissions');
+  }
+
+  permissionLabel = permissionLabel;
+
   formatTimeAgo = formatTimeAgo;
-
-  getInitials = getInitials;
-
-  getAvatarColor = getAvatarColor;
 
   deleteDialogRef = viewChild<ElementRef<HTMLElement>>('deleteDialog');
 

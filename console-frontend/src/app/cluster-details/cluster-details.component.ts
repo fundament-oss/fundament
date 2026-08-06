@@ -75,7 +75,12 @@ const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   return labels[status];
 };
 
-const getSyncStatusTagColor = (status: string | undefined): string => {
+/** Takes the whole syncState, not just the shoot status: "Unknown" means we have
+ *  no sync record at all, and not knowing whether a cluster is reconciling is a
+ *  warning rather than a neutral fact. */
+const getSyncStatusTagColor = (syncState: SyncState | null): string => {
+  if (!syncState) return 'warning';
+
   const colors: Record<string, string> = {
     ready: 'success',
     progressing: 'mintgroen',
@@ -83,7 +88,7 @@ const getSyncStatusTagColor = (status: string | undefined): string => {
     error: 'critical',
     deleting: 'oranje',
   };
-  return colors[status ?? ''] || 'neutral';
+  return colors[syncState.shootStatus ?? ''] || 'neutral';
 };
 
 const getSyncStatusLabel = (syncState: SyncState | null): string => {

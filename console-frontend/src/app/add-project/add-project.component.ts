@@ -70,7 +70,7 @@ export default class AddProjectComponent implements OnInit {
   });
 
   constructor() {
-    this.titleService.setTitle('Add a project');
+    this.titleService.setTitle('New project');
   }
 
   async ngOnInit() {

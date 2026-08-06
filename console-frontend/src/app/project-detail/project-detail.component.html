@@ -1,11 +1,14 @@
-<!-- Same outer layout as the project list it belongs to. -->
-<nldd-page sticky-header style="--context-back-button-display: flex">
+<!-- No forced back button, unlike the cluster and plugin detail pages: the way
+     up is the project menu, and on a wide screen that menu is the pane right
+     next to this one. The split view hides the button there and shows it when
+     the panes stack. -->
+<nldd-page sticky-header>
   <nldd-top-title-bar
     slot="header"
     [attr.text]="project()?.alias || project()?.name || 'Project'"
-    back-text="Projects"
+    [attr.back-text]="project()?.alias || project()?.name || 'Project'"
     collapse-anchor="project-title"
-    (back)="pageNav.goTo('/projects')"
+    (back)="pageNav.goTo('/projects/' + (project()?.id || ''))"
   ></nldd-top-title-bar>
 
   <nldd-simple-section>
@@ -26,82 +29,72 @@
         <h1>{{ project()?.alias || project()?.name || 'Unknown project' }}</h1>
       </nldd-title>
 
-      <nldd-spacer size="8"></nldd-spacer>
-
-      <nldd-rich-text>
-        <p>Created {{ formatDate(project()?.created) }}</p>
-      </nldd-rich-text>
-
-      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-spacer size="12"></nldd-spacer>
 
       <nldd-container gap="24">
-        <nldd-box>
-          <nldd-title size="5">
-            <h3>Project details</h3>
-            <nldd-button
-              slot="actions"
-              type="button"
-              (click)="openEditModal()"
-              text="Edit"
-              start-icon="pencil"
-              variant="secondary"
-              size="sm"
-            ></nldd-button>
-          </nldd-title>
-
-          <nldd-spacer size="16"></nldd-spacer>
-
-          <nldd-list variant="simple" accessible-label="Project details">
-            <nldd-list-item>
-              <nldd-text-cell text="Project alias"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="project()?.alias"
-              ></nldd-text-cell>
-            </nldd-list-item>
-            <nldd-list-item>
-              <nldd-text-cell text="Project name"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="project()?.name"
-              ></nldd-text-cell>
-            </nldd-list-item>
-            <nldd-list-item>
-              <nldd-text-cell text="Project ID"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="project()?.id"
-              ></nldd-text-cell>
-            </nldd-list-item>
-            <nldd-list-item>
-              <nldd-text-cell text="Created"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="formatDate(project()?.created)"
-              ></nldd-text-cell>
-            </nldd-list-item>
-            <nldd-list-item>
-              <nldd-text-cell text="Cluster"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="getClusterName(project()?.clusterId ?? '')"
-              ></nldd-text-cell>
-            </nldd-list-item>
-            <nldd-list-item>
-              <nldd-text-cell text="Namespaces"></nldd-text-cell>
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                [attr.text]="namespaces().length"
-              ></nldd-text-cell>
-            </nldd-list-item>
-          </nldd-list>
-        </nldd-box>
+        <nldd-list variant="box" accessible-label="Project details">
+          <!-- The alias is the only editable field, so the control sits on that
+               row rather than on the page as a whole. -->
+          <nldd-list-item>
+            <nldd-text-cell text="Project alias"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="project()?.alias"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-cell width="fit-content">
+              <nldd-icon-button
+                type="button"
+                (click)="openEditModal()"
+                icon="pencil"
+                size="sm"
+                variant="secondary"
+                accessible-label="Edit project alias"
+              ></nldd-icon-button>
+            </nldd-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Project name"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="project()?.name"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Project ID"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="project()?.id"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Created"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="formatDate(project()?.created)"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Cluster"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="getClusterName(project()?.clusterId ?? '')"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Namespaces"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="namespaces().length"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        </nldd-list>
 
         <!-- Danger Zone -->
         <nldd-box variant="critical">
@@ -119,7 +112,7 @@
 
           <nldd-button
             (click)="showDeleteModal.set(true)"
-            text="Delete this project"
+            [attr.text]="'Delete ' + (project()?.alias || project()?.name)"
             variant="destructive"
           ></nldd-button>
         </nldd-box>
@@ -138,7 +131,6 @@
   [show]="showEditModal()"
   accessible-label="Edit project"
   placement="right"
-  width="480px"
   (close)="showEditModal.set(false)"
 >
   <nldd-page sticky-header sticky-footer>

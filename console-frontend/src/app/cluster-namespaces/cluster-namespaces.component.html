@@ -3,7 +3,6 @@
   appSheetSync
   [show]="true"
   placement="right"
-  width="640px"
   accessible-label="Cluster namespaces"
   (close)="onCancel()"
 >
@@ -50,7 +49,7 @@
                 <nldd-rich-text>
                   <p>
                     No projects available.
-                    <nldd-link href="/projects/add" text="Add a project first"></nldd-link>.
+                    <nldd-link href="/projects/add" text="Create a project first"></nldd-link>.
                   </p>
                 </nldd-rich-text>
               }
@@ -90,7 +89,7 @@
               slot="actions"
               type="button"
               (click)="openAddNamespaceStep()"
-              text="Add namespace"
+              text="New namespace"
               start-icon="plus-small"
               variant="primary"
             ></nldd-button>
@@ -101,7 +100,7 @@
               <nldd-button
                 type="button"
                 (click)="openAddNamespaceStep()"
-                text="Add namespace"
+                text="New namespace"
                 start-icon="plus-small"
                 variant="primary"
               ></nldd-button>

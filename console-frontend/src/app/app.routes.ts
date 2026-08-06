@@ -29,7 +29,7 @@ const routes: Routes = [
             data: {
               breadcrumbs: [
                 { label: 'Clusters', route: '/' },
-                { label: 'Add cluster', route: '/clusters/add' },
+                { label: 'New cluster', route: '/clusters/add' },
               ],
             },
             children: [
@@ -68,25 +68,23 @@ const routes: Routes = [
         ],
       },
       {
-        path: 'projects',
-        loadComponent: () => import('./projects/projects.component').then((m) => m.default),
+        // A sheet with nothing behind it: the projects live in the sidebar now,
+        // so there is no list page for it to open over.
+        path: 'projects/add',
+        loadComponent: () => import('./add-project/add-project.component').then((m) => m.default),
         data: {
-          breadcrumbs: [{ label: 'Projects', route: '/projects' }],
+          breadcrumbs: [{ label: 'New project' }],
         },
-        // Opens as a sheet over the list, so the list stays mounted behind it.
-        children: [
-          {
-            path: 'add',
-            loadComponent: () =>
-              import('./add-project/add-project.component').then((m) => m.default),
-            data: {
-              breadcrumbs: [{ label: 'Projects', route: '/projects' }, { label: 'Add project' }],
-            },
-          },
-        ],
       },
       {
+        // Nothing in the main pane: the secondary sidebar is the project, and
+        // you pick what to open from there. A componentless route so the URL
+        // still matches while the outlet stays empty.
         path: 'projects/:id',
+        children: [],
+      },
+      {
+        path: 'projects/:id/general',
         loadComponent: () =>
           import('./project-detail/project-detail.component').then((m) => m.default),
         data: {
@@ -228,6 +226,22 @@ const routes: Routes = [
         data: {
           breadcrumbs: [{ label: 'Organization members' }],
         },
+        // A route of its own so the reference can be linked to, shared and
+        // closed with the back button; a child so the list stays mounted behind
+        // the sheet.
+        children: [
+          {
+            path: 'permissions',
+            loadComponent: () =>
+              import('./permissions-sheet/permissions-sheet.component').then((m) => m.default),
+            data: {
+              breadcrumbs: [
+                { label: 'Organization members', route: '/organization/members' },
+                { label: 'About permissions' },
+              ],
+            },
+          },
+        ],
       },
       {
         path: 'organization/limits',

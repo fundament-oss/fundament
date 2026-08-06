@@ -2,15 +2,14 @@
   #sheet
   appSheetSync
   [show]="show()"
-  [attr.accessible-label]="'Install ' + pluginDisplayName()"
+  [attr.accessible-label]="'Plugin ' + pluginDisplayName()"
   placement="right"
-  width="480px"
   (close)="onClose()"
 >
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
-      [attr.text]="'Install ' + pluginDisplayName()"
+      [attr.text]="'Plugin ' + pluginDisplayName()"
       dismiss-text="Cancel"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>

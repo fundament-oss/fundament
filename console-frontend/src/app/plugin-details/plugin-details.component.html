@@ -113,9 +113,11 @@
                 <nldd-list-item>
                   <nldd-text-cell min-width="120px" text="Categories"></nldd-text-cell>
                   <nldd-cell horizontal-alignment="right">
-                    @for (category of p.categories; track category.id) {
-                      <nldd-tag color="neutral" size="sm" [attr.text]="category.name"></nldd-tag>
-                    }
+                    <nldd-container layout="wrap" gap="8" horizontal-alignment="right">
+                      @for (category of p.categories; track category.id) {
+                        <nldd-tag color="neutral" size="sm" [attr.text]="category.name"></nldd-tag>
+                      }
+                    </nldd-container>
                   </nldd-cell>
                 </nldd-list-item>
               }

@@ -38,7 +38,7 @@ export default class AddClusterNodesComponent implements OnInit {
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
 
   constructor() {
-    this.titleService.setTitle('Add cluster nodes');
+    this.titleService.setTitle('New cluster nodes');
   }
 
   async ngOnInit() {

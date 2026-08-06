@@ -83,14 +83,14 @@ import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
 import { ConfigService } from './config.service';
-import SelectorModalComponent from './selector-modal/selector-modal.component';
 import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
-import { fetchClusterName } from './utils/cluster-status';
+import { ClusterStatus } from '../generated/v1/common_pb';
+import { fetchClusterName, getStatusTagColor, getStatusLabel } from './utils/cluster-status';
 import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
@@ -101,9 +101,18 @@ const reloadApp = () => {
   window.location.reload();
 };
 
+/**
+ * How deep the stacked (narrow) view is for a path: the project menu on
+ * `/projects/:id`, the page on anything below or beside it. Level 0 (the
+ * organization) is not a route, it is what stepping back from the menu shows.
+ */
+function depthForPath(url: string): number {
+  return /^\/projects\/[^/]+$/.test(url.split(/[?#]/)[0]) ? 1 : 2;
+}
+
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, SelectorModalComponent, OrgPickerComponent, BreadcrumbComponent],
+  imports: [RouterOutlet, OrgPickerComponent, BreadcrumbComponent],
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -150,8 +159,6 @@ export default class App implements OnInit {
   // Version mismatch state
   apiVersionMismatch = signal(false);
 
-  selectorModalOpen = signal(false);
-
   // Multi-org picker state (shown after login for multi-org users)
   showOrgPicker = signal(false);
 
@@ -178,15 +185,19 @@ export default class App implements OnInit {
   // Nested selector state
   selectedOrgId = signal<string | null>(null);
 
-  selectedProjectId = signal<string | null>(null);
-
   // Route state
   isLoginPage = signal(window.location.pathname === '/login');
 
   currentUrl = signal(window.location.pathname);
 
-  // Drives which pane wins in stacked (narrow) mode; see onPaneBack().
-  mainHasContent = signal(true);
+  /**
+   * How deep the stacked (narrow) view is: 0 shows the organization, 1 the
+   * project menu, 2 the page. The split view picks the deepest pane that
+   * carries `has-content` (main > secondary sidebar > primary sidebar), so
+   * stepping back is a matter of taking content away rather than of routing.
+   * On wide screens every pane shows regardless and this is inert.
+   */
+  stackDepth = signal(2);
 
   // Breadcrumb state
   breadcrumbSegments = signal<BreadcrumbSegment[]>([]);
@@ -202,8 +213,17 @@ export default class App implements OnInit {
       untracked(() => this.updateBreadcrumbs());
     });
 
+    // The projects are part of the organization's navigation now, so they load
+    // with the organization rather than when one of them is opened.
     effect(() => {
-      const projectId = this.selectedProjectId();
+      if (!this.selectedOrgId()) return;
+      untracked(() => {
+        this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
+      });
+    });
+
+    effect(() => {
+      const projectId = this.activeProjectId();
 
       if (projectId) {
         untracked(() => this.loadPluginsForProject(projectId));
@@ -263,12 +283,13 @@ export default class App implements OnInit {
       .subscribe((event: NavigationEnd) => {
         this.isLoginPage.set(event.urlAfterRedirects === '/login');
         this.currentUrl.set(event.urlAfterRedirects);
-        this.updateSidebarStateFromRoute(event.url);
+        this.stackDepth.set(depthForPath(event.urlAfterRedirects));
+        this.updateSidebarStateFromRoute();
         this.updateBreadcrumbs();
       });
 
     // Initialize sidebar state and breadcrumbs from current route
-    this.updateSidebarStateFromRoute(this.router.url);
+    this.updateSidebarStateFromRoute();
     this.updateBreadcrumbs();
   }
 
@@ -336,7 +357,7 @@ export default class App implements OnInit {
     // Render child routes only after cluster data is ready, so the dashboard can
     // use the pre-fetched clusterSummaries instead of making a duplicate API call.
     this.selectedOrgId.set(orgId);
-    this.updateSidebarStateFromRoute(this.router.url);
+    this.updateSidebarStateFromRoute();
   }
 
   /**
@@ -380,35 +401,12 @@ export default class App implements OnInit {
     }
   }
 
-  // Update sidebar state based on current route
-  private updateSidebarStateFromRoute(url: string) {
-    // Match project routes: /projects/:projectId or /projects/:projectId/...
-    // Exclude /projects/add which is the add-project page (not a project detail)
-    // The router url carries the query string and fragment, so stop the id at
-    // `?`/`#` too — otherwise /projects/:id?foo=bar yields an id that matches no
-    // project and the sidebar falls back to "Select...".
-    const projectRouteMatch = url.match(/^\/projects\/([^/?#]+)/);
-
-    if (projectRouteMatch && projectRouteMatch[1] !== 'add') {
-      const projectId = projectRouteMatch[1];
-      // Project route
-      this.selectedProjectId.set(projectId);
-      this.selectedOrgId.set(null);
-      return;
-    }
-
-    // Organization routes or other routes
-    // Only update if we currently have a project selected
-    const hasProjectSelection = !!this.selectedProjectId();
-    if (!hasProjectSelection) {
-      return;
-    }
-
-    // We're on an organization (or other non-project) route, so select the current org
+  /** The organization is the only selection left; a project follows from the
+   *  URL (see activeProjectId) and needs nothing stored. */
+  private updateSidebarStateFromRoute() {
     const currentOrgId = this.organizationContextService.currentOrganizationId();
-    if (currentOrgId) {
+    if (currentOrgId && this.selectedOrgId() !== currentOrgId) {
       this.selectedOrgId.set(currentOrgId);
-      this.selectedProjectId.set(null);
     }
   }
 
@@ -529,7 +527,11 @@ export default class App implements OnInit {
 
     event.preventDefault();
     this.router.navigateByUrl(path);
-    this.mainHasContent.set(true);
+    // Picking a project lands on its menu, not on a page: /projects/:id has an
+    // empty main by design, so stopping at depth 1 is what the user sees.
+    // Set here too: clicking the project you are already on does not navigate,
+    // so no NavigationEnd would arrive to derive the depth from.
+    this.stackDepth.set(depthForPath(path));
   }
 
   /**
@@ -540,12 +542,12 @@ export default class App implements OnInit {
    * split view hides the button, so this never fires there.
    */
   onPaneBack(): void {
-    this.mainHasContent.set(false);
+    this.stackDepth.update((depth) => Math.max(depth - 1, 0));
   }
 
   // Check if current route is project members or roles
   isMembersActive(): boolean {
-    const projectId = this.selectedProjectId();
+    const projectId = this.activeProjectId();
     if (!projectId) return false;
     return (
       this.router.url.startsWith(`/projects/${projectId}/members`) ||
@@ -625,15 +627,6 @@ export default class App implements OnInit {
     this.router.navigate([path]);
   }
 
-  openSelectorModal() {
-    this.selectorModalOpen.set(true);
-    this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
-  }
-
-  closeSelectorModal() {
-    this.selectorModalOpen.set(false);
-  }
-
   async handleLogout() {
     try {
       await this.apiService.logout();
@@ -641,7 +634,6 @@ export default class App implements OnInit {
       this.organizationDataService.clearAll();
       this.showOrgPicker.set(false);
       this.selectedOrgId.set(null);
-      this.selectedProjectId.set(null);
       this.router.navigate(['/login']);
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -657,12 +649,10 @@ export default class App implements OnInit {
     this.splitViewRef?.nativeElement.hideSidebarSheet();
   }
 
-  // Nested selector methods
   async selectOrganization(orgId: string) {
     // Temporarily clear selection to destroy the router outlet, so that
     // child components are recreated (and re-fetch data) after the switch.
     this.selectedOrgId.set(null);
-    this.selectedProjectId.set(null);
 
     // Refresh the JWT so the token includes up-to-date organization memberships
     await this.apiService.refreshToken();
@@ -676,24 +666,11 @@ export default class App implements OnInit {
     // Restore selection — recreates the router outlet, triggering ngOnInit in child components
     this.selectedOrgId.set(orgId);
 
-    // Close modal
-    this.selectorModalOpen.set(false);
-
     // Stay on org-level pages, navigate to dashboard for project routes
     const url = this.router.url;
     if (url.match(/^\/projects\/[^/]+/)) {
       this.router.navigate(['/']);
     }
-  }
-
-  selectProjectItem(projectId: string) {
-    // Select project and navigate to project general page
-    this.selectedProjectId.set(projectId);
-    this.selectedOrgId.set(null);
-
-    // Close modal and navigate
-    this.selectorModalOpen.set(false);
-    this.router.navigate(['/projects', projectId]);
   }
 
   /**
@@ -718,58 +695,98 @@ export default class App implements OnInit {
       });
   });
 
-  selectedType = computed<'organization' | 'project' | null>(() => {
-    if (this.selectedProjectId()) return 'project';
-    if (this.selectedOrgId()) return 'organization';
-    return null;
-  });
-
   /** The project sidebar, as data: the markup for each row is identical, so the
    *  rows differ only in path, icon and label. */
+  /** The project the URL is in, or null. Derived rather than stored: the
+   *  secondary sidebar follows where you are, it is not a mode you switch into. */
+  activeProjectId = computed(() => this.currentUrl().match(/^\/projects\/([^/?#]+)/)?.[1] ?? null);
+
+  /** Every project in the organization, for the primary sidebar. Carries the
+   *  status of the cluster it runs on, so one glance over the list tells you
+   *  what is up. */
+  organizationProjects = computed(() => {
+    const status = new Map(
+      this.organizationDataService.clusterSummaries().map((c) => [c.id, c.status]),
+    );
+
+    return this.organizationDataService.organizations().flatMap((org) =>
+      org.clusters.flatMap((cluster) =>
+        cluster.projects.map((project) => ({
+          id: project.id,
+          name: project.alias || project.name,
+          clusterName: cluster.name,
+          namespaceCount: project.namespaceCount,
+          memberCount: project.memberCount,
+          status: status.get(cluster.id) ?? ClusterStatus.UNSPECIFIED,
+        })),
+      ),
+    );
+  });
+
+  /** The project whose menu fills the secondary sidebar. */
+  activeProject = computed(() => {
+    const id = this.activeProjectId();
+    return id ? (this.organizationProjects().find((p) => p.id === id) ?? null) : null;
+  });
+
+  getStatusTagColor = getStatusTagColor;
+
+  getStatusLabel = getStatusLabel;
+
+  /** The project menu. The counts ride along so the menu itself says how much
+   *  is behind each item; Roles has none because the project summary the API
+   *  returns does not carry one. */
   projectNavItems = computed(() => {
-    const base = `/projects/${this.selectedProjectId()}`;
+    const base = `/projects/${this.activeProjectId()}`;
+    const project = this.activeProject();
 
     return [
-      { path: base, icon: 'folder', label: 'General', exact: true },
-      { path: `${base}/namespaces`, icon: 'brackets-ellipsis', label: 'Namespaces', exact: false },
-      { path: `${base}/members`, icon: 'person-2', label: 'Members', exact: false },
-      { path: `${base}/roles`, icon: 'person-badge-gear', label: 'Roles', exact: false },
-      { path: `${base}/metrics`, icon: 'chart-x-y-axis-line', label: 'Metrics', exact: false },
-      { path: `${base}/limits`, icon: 'circle-dashed', label: 'Limits', exact: false },
+      { path: `${base}/general`, icon: 'folder', label: 'General', exact: false, count: null },
+      {
+        path: `${base}/namespaces`,
+        icon: 'brackets-ellipsis',
+        label: 'Namespaces',
+        exact: false,
+        count: project?.namespaceCount ?? null,
+      },
+      {
+        path: `${base}/members`,
+        icon: 'person-2',
+        label: 'Members',
+        exact: false,
+        count: project?.memberCount ?? null,
+      },
+      {
+        path: `${base}/roles`,
+        icon: 'person-badge-gear',
+        label: 'Roles',
+        exact: false,
+        count: null,
+      },
+      {
+        path: `${base}/metrics`,
+        icon: 'chart-x-y-axis-line',
+        label: 'Metrics',
+        exact: false,
+        count: null,
+      },
+      { path: `${base}/limits`, icon: 'hand', label: 'Limits', exact: false, count: null },
     ];
   });
 
   pluginResourcePath(pluginName: string, crdPlural: string): string {
-    return `/projects/${this.selectedProjectId()}/plugin-resources/${pluginName}/${crdPlural}`;
+    return `/projects/${this.activeProjectId()}/plugin-resources/${pluginName}/${crdPlural}`;
   }
 
-  settingsHeader = computed(() => {
-    const type = this.selectedType();
-    if (type === 'organization') return 'Organization-specific';
-    if (type === 'project') return 'Project-specific';
-    return '';
-  });
+  /** The project menu route carries no page of its own, so the main pane would
+   *  slot an outlet with nothing in it. */
+  isProjectRoot = computed(() => /^\/projects\/[^/]+$/.test(this.currentUrl().split(/[?#]/)[0]));
 
-  selectedItemDisplay = computed<{ type: 'organization' | 'project'; name: string } | null>(() => {
-    const type = this.selectedType();
-    if (type === 'project') {
-      const projectId = this.selectedProjectId();
-      if (projectId) {
-        const projectData = this.organizationDataService.getProjectById(projectId);
-        if (projectData) {
-          return { type: 'project', name: projectData.project.alias ?? projectData.project.name };
-        }
-      }
-    } else if (type === 'organization') {
-      const orgId = this.selectedOrgId();
-      if (orgId) {
-        const org = this.organizationDataService.getOrganizationById(orgId);
-        if (org) {
-          return { type: 'organization', name: org.alias };
-        }
-      }
-    }
-    return null;
+  /** The organization the sidebar and the header button name. The project no
+   *  longer takes this over: it has its own pane. */
+  currentOrganization = computed(() => {
+    const orgId = this.organizationContextService.currentOrganizationId() ?? this.selectedOrgId();
+    return orgId ? (this.organizationDataService.getOrganizationById(orgId) ?? null) : null;
   });
 
   isOrganizationSelected(orgId: string): boolean {
@@ -777,6 +794,6 @@ export default class App implements OnInit {
   }
 
   isProjectSelected(projectId: string): boolean {
-    return this.selectedProjectId() === projectId;
+    return this.activeProjectId() === projectId;
   }
 }

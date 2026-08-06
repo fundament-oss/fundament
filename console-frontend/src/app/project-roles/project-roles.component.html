@@ -22,7 +22,7 @@
         <nldd-button
           type="button"
           (click)="openCreateModal()"
-          text="Create role binding"
+          text="New role binding"
           start-icon="plus-small"
           variant="primary"
         ></nldd-button>
@@ -48,7 +48,7 @@
             slot="actions"
             type="button"
             (click)="openCreateModal()"
-            text="Create role binding"
+            text="New role binding"
             start-icon="plus-small"
             variant="primary"
           ></nldd-button>
@@ -121,9 +121,8 @@
   #createSheet
   appSheetSync
   [show]="showCreateModal()"
-  accessible-label="Create or edit role binding"
+  accessible-label="New or edit role binding"
   placement="right"
-  width="480px"
   (open)="onCreateSheetOpen()"
   (close)="showCreateModal.set(false)"
 >

@@ -26,8 +26,8 @@
           >. Organization viewers can be upgraded to admin at the project level.
         </p>
         <p>
-          Permissions only give access to manage members. To control access to project resources,
-          configure
+          Admin and Viewer apply to this project: an admin can edit it, manage its members and
+          create namespaces, a viewer can look. Access to what runs inside a namespace comes from
           <a
             [routerLink]="['/projects', projectId(), 'roles']"
             class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 font-medium underline hover:no-underline"
@@ -41,7 +41,7 @@
       <nldd-button
         type="button"
         (click)="openAddMemberModal()"
-        text="Add a member"
+        text="New member"
         start-icon="plus-small"
         variant="primary"
         class="mb-6"
@@ -86,7 +86,7 @@
             slot="actions"
             type="button"
             (click)="openAddMemberModal()"
-            text="Add a member"
+            text="New member"
             start-icon="plus-small"
             variant="primary"
           ></nldd-button>
@@ -182,9 +182,8 @@
   #addMemberSheet
   appSheetSync
   [show]="showAddMemberModal()"
-  accessible-label="Add or edit project member"
+  accessible-label="New or edit project member"
   placement="right"
-  width="480px"
   (close)="showAddMemberModal.set(false)"
 >
   <nldd-page sticky-header sticky-footer>
