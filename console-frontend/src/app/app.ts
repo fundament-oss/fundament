@@ -34,6 +34,8 @@ import '@nldd/design-system/dropdown';
 import '@nldd/design-system/modal-dialog';
 import '@nldd/design-system/number-field';
 import '@nldd/design-system/password-field';
+import '@nldd/design-system/combo-box';
+import '@nldd/design-system/radio-button';
 import '@nldd/design-system/radio-button-field';
 import '@nldd/design-system/radio-button-group';
 import '@nldd/design-system/search-field';
@@ -41,6 +43,7 @@ import '@nldd/design-system/spacer';
 import '@nldd/design-system/switch-field';
 import '@nldd/design-system/file-field';
 import '@nldd/design-system/text-field';
+import '@nldd/design-system/token-field';
 import '@nldd/design-system/toggle-button';
 import '@nldd/design-system/toggle-button-group';
 import '@nldd/design-system/segmented-control';
@@ -72,6 +75,7 @@ import '@nldd/design-system/badge';
 import '@nldd/design-system/text-cell';
 import '@nldd/design-system/tag';
 import '@nldd/design-system/title';
+import '@nldd/design-system/tooltip';
 import '@nldd/design-system/byline';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/step-indicator';
@@ -93,6 +97,7 @@ import { ClusterStatus } from '../generated/v1/common_pb';
 import { fetchClusterName, getStatusTagColor, getStatusLabel } from './utils/cluster-status';
 import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
 import PluginNavService from './plugin-resources/plugin-nav.service';
+import MetricsHealthService from './metrics-health.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
 import { crdRefToLabel } from './plugin-resources/crd-schema.utils';
@@ -121,6 +126,10 @@ export default class App implements OnInit {
   protected readonly title = signal('fundament-console');
 
   private router = inject(Router);
+
+  /** The metrics backend, watched from outside the metrics page so the menu can
+   *  say when it is unreachable. */
+  protected metricsHealth = inject(MetricsHealthService);
 
   private apiService = inject(AuthnApiService);
 
@@ -262,6 +271,8 @@ export default class App implements OnInit {
     this.currentUser.set(initialUser);
     if (initialUser) {
       await this.loadUserOrganizations();
+      // Only once signed in: the check is an authenticated call.
+      this.metricsHealth.start();
     }
 
     // Subscribe to future user state changes (login/logout)
@@ -520,9 +531,13 @@ export default class App implements OnInit {
 
   /** Routes a sidebar link client-side while leaving it a real `<a href>`, so
    *  middle-click and "open in new tab" keep working. */
-  navigateFromSidebar(event: MouseEvent, path: string): void {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-      return;
+  /** A menu item reports a plain Event; only a real click carries the modifiers
+   *  that mean "open this somewhere else". */
+  navigateFromSidebar(event: Event, path: string): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
     }
 
     event.preventDefault();
@@ -545,14 +560,10 @@ export default class App implements OnInit {
     this.stackDepth.update((depth) => Math.max(depth - 1, 0));
   }
 
-  // Check if current route is project members or roles
   isMembersActive(): boolean {
     const projectId = this.activeProjectId();
     if (!projectId) return false;
-    return (
-      this.router.url.startsWith(`/projects/${projectId}/members`) ||
-      this.router.url.startsWith(`/projects/${projectId}/roles`)
-    );
+    return this.router.url.startsWith(`/projects/${projectId}/members`);
   }
 
   // The walkthrough resolves its narration language from `?lang`, defaulting to
@@ -757,13 +768,6 @@ export default class App implements OnInit {
         count: project?.memberCount ?? null,
       },
       {
-        path: `${base}/roles`,
-        icon: 'person-badge-gear',
-        label: 'Roles',
-        exact: false,
-        count: null,
-      },
-      {
         path: `${base}/metrics`,
         icon: 'chart-x-y-axis-line',
         label: 'Metrics',
@@ -780,7 +784,13 @@ export default class App implements OnInit {
 
   /** The project menu route carries no page of its own, so the main pane would
    *  slot an outlet with nothing in it. */
-  isProjectRoot = computed(() => /^\/projects\/[^/]+$/.test(this.currentUrl().split(/[?#]/)[0]));
+  /** A project with nothing open under it. `/projects/add` looks the same to a
+   *  pattern but is a page of its own, and swallowing it left the new-project
+   *  sheet unmounted behind an empty pane. */
+  isProjectRoot = computed(() => {
+    const path = this.currentUrl().split(/[?#]/)[0];
+    return path !== '/projects/add' && /^\/projects\/[^/]+$/.test(path);
+  });
 
   /** The organization the sidebar and the header button name. The project no
    *  longer takes this over: it has its own pane. */

@@ -82,36 +82,47 @@
                 variant="secondary"
                 accessible-label="Take a tour"
               ></nldd-icon-button>
+              <nldd-menu-item
+                slot="overflow"
+                icon="play"
+                text="Take a tour"
+                [attr.href]="tourUrl()"
+              ></nldd-menu-item>
             </nldd-toolbar-item>
           }
 
           @if (!isLoginPage()) {
             <nldd-toolbar-item slot="end">
               <nldd-button-bar size="md" variant="secondary">
-                <nldd-button
-                  type="button"
-                  [attr.text]="currentOrganization()?.alias || 'Select organization'"
-                  start-icon="apartment-building"
-                  max-width="200px"
-                  single-line
-                  expandable
-                  popup-type="menu"
-                >
-                  <!-- Organizations only. Projects moved to the sidebar, and with
-                       one level left the tree in a sheet became a plain menu. -->
-                  <nldd-menu slot="popup" placement="bottom-end" accessible-label="Organization">
-                    @for (org of selectorOrganizations(); track org.id) {
-                      <nldd-menu-item
-                        type="radio"
-                        icon="apartment-building"
-                        [attr.text]="org.alias || org.name"
-                        [attr.selected]="currentOrganization()?.id === org.id ? '' : null"
-                        (click)="selectOrganization(org.id)"
-                      ></nldd-menu-item>
-                    }
-                  </nldd-menu>
-                </nldd-button>
-                <nldd-button-bar-divider></nldd-button-bar-divider>
+                <!-- A switcher with nothing to switch to is a control that never
+                     does anything; the sidebar already names the organization. -->
+                @if (selectorOrganizations().length > 1) {
+                  <nldd-button
+                    type="button"
+                    [attr.text]="currentOrganization()?.alias || 'Select organization'"
+                    start-icon="apartment-building"
+                    max-width="200px"
+                    single-line
+                    expandable
+                    popup-type="menu"
+                  >
+                    <!-- Organizations only. Projects moved to the sidebar, and
+                         with one level left the tree in a sheet became a plain
+                         menu. -->
+                    <nldd-menu slot="popup" placement="bottom-end" accessible-label="Organization">
+                      @for (org of selectorOrganizations(); track org.id) {
+                        <nldd-menu-item
+                          type="radio"
+                          icon="apartment-building"
+                          [attr.text]="org.alias || org.name"
+                          [attr.selected]="currentOrganization()?.id === org.id ? '' : null"
+                          (click)="selectOrganization(org.id)"
+                        ></nldd-menu-item>
+                      }
+                    </nldd-menu>
+                  </nldd-button>
+                  <nldd-button-bar-divider></nldd-button-bar-divider>
+                }
                 <nldd-icon-button
                   icon="account"
                   accessible-label="User menu"
@@ -223,6 +234,7 @@
                       color="secondary"
                       [attr.text]="organizationDataService.clusterSummaries().length"
                     ></nldd-text-cell>
+                    <nldd-spacer-cell size="4"></nldd-spacer-cell>
                   </nldd-list-item>
                   <nldd-list-item
                     href="/plugins"
@@ -250,6 +262,20 @@
                     <nldd-icon-cell icon="chart-x-y-axis-line" size="20"></nldd-icon-cell>
                     <nldd-spacer-cell size="8"></nldd-spacer-cell>
                     <nldd-text-cell text="Metrics"></nldd-text-cell>
+                    <!-- Only when it is unreachable: a dot that is always on
+                         says nothing, and the count column next to it is
+                         information rather than alarm. -->
+                    @if (metricsHealth.state() === 'down') {
+                      <nldd-cell width="fit-content">
+                        <nldd-tooltip text="Metrics connection lost">
+                          <nldd-badge
+                            color="warning"
+                            accessible-label="Metrics connection lost"
+                          ></nldd-badge>
+                        </nldd-tooltip>
+                      </nldd-cell>
+                      <nldd-spacer-cell size="4"></nldd-spacer-cell>
+                    }
                   </nldd-list-item>
                   <nldd-list-item
                     href="/organization/limits"
@@ -279,18 +305,32 @@
 
                   <nldd-title size="5">
                     <h3>Projects</h3>
-                    <nldd-icon-button
-                      slot="actions"
-                      size="sm"
-                      variant="neutral-base"
-                      icon="plus-small"
-                      accessible-label="New project"
-                      href="/projects/add"
-                      (click)="navigateFromSidebar($event, '/projects/add')"
-                    ></nldd-icon-button>
                   </nldd-title>
 
-                  <nldd-spacer size="4"></nldd-spacer>
+                  <nldd-spacer size="8"></nldd-spacer>
+
+                  <!-- Under the heading rather than beside it: a named button
+                       says what it makes, where an icon in the corner only
+                       says "plus". -->
+                  <nldd-toolbar label="Project actions" size="sm">
+                    <nldd-toolbar-item slot="start">
+                      <nldd-button
+                        text="New project"
+                        start-icon="plus-small"
+                        href="/projects/add"
+                        (click)="navigateFromSidebar($event, '/projects/add')"
+                      ></nldd-button>
+                      <nldd-menu-item
+                        slot="overflow"
+                        icon="plus-small"
+                        text="New project"
+                        href="/projects/add"
+                        (select)="navigateFromSidebar($event, '/projects/add')"
+                      ></nldd-menu-item>
+                    </nldd-toolbar-item>
+                  </nldd-toolbar>
+
+                  <nldd-spacer size="8"></nldd-spacer>
 
                   <nldd-list type="navigation" no-dividers aria-label="Projects">
                     @for (project of organizationProjects(); track project.id) {
@@ -303,12 +343,14 @@
                         <nldd-spacer-cell size="8"></nldd-spacer-cell>
                         <nldd-text-cell [attr.text]="project.name"></nldd-text-cell>
                         <nldd-cell width="fit-content">
-                          <nldd-badge
-                            [attr.color]="getStatusTagColor(project.status)"
-                            [attr.accessible-label]="getStatusLabel(project.status)"
-                          ></nldd-badge>
+                          <nldd-tooltip [attr.text]="getStatusLabel(project.status)">
+                            <nldd-badge
+                              [attr.color]="getStatusTagColor(project.status)"
+                              [attr.accessible-label]="getStatusLabel(project.status)"
+                            ></nldd-badge>
+                          </nldd-tooltip>
                         </nldd-cell>
-                        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                        <nldd-spacer-cell size="4"></nldd-spacer-cell>
                       </nldd-list-item>
                     }
                   </nldd-list>
@@ -362,6 +404,18 @@
                             color="secondary"
                             [attr.text]="item.count"
                           ></nldd-text-cell>
+                          <nldd-spacer-cell size="4"></nldd-spacer-cell>
+                        }
+                        @if (item.path.endsWith('/metrics') && metricsHealth.state() === 'down') {
+                          <nldd-cell width="fit-content">
+                            <nldd-tooltip text="Metrics connection lost">
+                              <nldd-badge
+                                color="warning"
+                                accessible-label="Metrics connection lost"
+                              ></nldd-badge>
+                            </nldd-tooltip>
+                          </nldd-cell>
+                          <nldd-spacer-cell size="4"></nldd-spacer-cell>
                         }
                       </nldd-list-item>
                     }
