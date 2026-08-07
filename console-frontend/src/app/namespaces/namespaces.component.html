@@ -156,6 +156,68 @@
           </nldd-form-field-error-text>
         </nldd-form-field>
 
+        <!-- A namespace is made to work in, so the people come with it. Optional:
+             creating one without anyone in it is a normal thing to do. -->
+        @if (memberCandidates().length > 0) {
+          <nldd-form-field label="Members" optional optional-label="Optional">
+            <nldd-token-field
+              accessible-label="Members"
+              [attr.values]="draftMemberIds().join(',')"
+              (change)="onMembersChange($event)"
+            >
+              <nldd-menu accessible-label="Project members">
+                @for (member of memberCandidates(); track member.id) {
+                  <nldd-menu-item
+                    [attr.value]="member.id"
+                    [attr.text]="member.userName"
+                  ></nldd-menu-item>
+                }
+              </nldd-menu>
+            </nldd-token-field>
+            <nldd-form-field-help-text>
+              @if (coveredMemberCount() > 0) {
+                {{
+                  coveredMemberCount() === 1
+                    ? '1 member has access to all namespaces and reaches this one already.'
+                    : coveredMemberCount() +
+                      ' members have access to all namespaces and reach this one already.'
+                }}
+              } @else {
+                Everyone else keeps the access they have.
+              }
+            </nldd-form-field-help-text>
+          </nldd-form-field>
+        }
+
+        <!-- Only once someone is picked: roles for nobody decide nothing, and an
+             empty role list next to an empty member field reads as a step you
+             skipped rather than one that does not apply yet. -->
+        @if (draftMemberIds().length > 0) {
+          <nldd-form-field label="Roles">
+            <nldd-list variant="box" accessible-label="Roles">
+              @for (role of allRoles; track role) {
+                <nldd-list-item
+                  checkbox
+                  [attr.checked]="draftRoles().includes(role) ? '' : null"
+                  (click)="toggleDraftRole(role)"
+                >
+                  <nldd-cell width="fit-content">
+                    <nldd-checkbox
+                      decorative
+                      [attr.checked]="draftRoles().includes(role) ? '' : null"
+                    ></nldd-checkbox>
+                  </nldd-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <nldd-text-cell width="full" [attr.text]="role"></nldd-text-cell>
+                </nldd-list-item>
+              }
+            </nldd-list>
+            <nldd-form-field-help-text>
+              Without a role they can see the namespace, but do nothing in it.
+            </nldd-form-field-help-text>
+          </nldd-form-field>
+        }
+
         <nldd-form-actions>
           <nldd-button
             type="button"

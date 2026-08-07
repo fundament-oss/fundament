@@ -33,7 +33,7 @@
 
         <nldd-spacer size="16"></nldd-spacer>
 
-        <nldd-form (submit)="saveRoles()" (keydown.enter)="saveRoles()">
+        <nldd-form (submit)="saveRoles()" (keydown.enter)="saveRoles($event)">
           @if (!editingMemberId()) {
             <nldd-form-field label="Members">
               @if (candidates().length === 0) {

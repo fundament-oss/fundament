@@ -221,7 +221,11 @@ export default class NamespaceSheetComponent implements OnInit {
     );
   }
 
-  saveRoles() {
+  saveRoles(event?: Event) {
+    // See createNamespace: Enter picking an option in the token field is not a
+    // submit, and the DS says so by marking the event handled.
+    if (event?.defaultPrevented) return;
+
     this.rolesSubmitted.set(true);
     const memberIds = this.editingMemberId() ? [this.editingMemberId()] : this.draftMemberIds();
     if (memberIds.length === 0) return;

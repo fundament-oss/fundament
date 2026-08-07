@@ -1,6 +1,7 @@
 // Demo-only in-memory ConnectRPC transport for the static walkthrough build.
 // Redirects every RPC to handwritten fixtures — no network, no backend.
 import { create } from '@bufbuild/protobuf';
+import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { Transport, createRouterTransport } from '@connectrpc/connect';
 import {
   OrganizationService,
@@ -23,6 +24,8 @@ import {
   NamespaceService,
   ListClusterNamespacesResponseSchema,
   ListProjectNamespacesResponseSchema,
+  CreateNamespaceResponseSchema,
+  NamespaceSchema,
 } from '../../generated/v1/namespace_pb';
 import {
   ProjectService,
@@ -42,6 +45,14 @@ import {
 } from '../../generated/v1/plugin_pb';
 import { APIKeyService, ListAPIKeysResponseSchema } from '../../generated/v1/apikey_pb';
 import { AuthnService, GetUserInfoResponseSchema } from '../../generated/authn/v1/authn_pb';
+import {
+  MetricsService,
+  GetOrgWorkloadMetricsResponseSchema,
+  GetProjectWorkloadMetricsResponseSchema,
+  GetClusterWorkloadMetricsResponseSchema,
+  GetWorkloadTimeSeriesResponseSchema,
+  StreamWorkloadMetricsResponseSchema,
+} from '../../generated/v1/metrics_pb';
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import * as fx from './fixtures';
 
@@ -108,8 +119,11 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(GetClusterActivityResponseSchema, { events: fx.clusterActivity });
       },
-      createCluster: async (req) => {
+      createCluster: async (req, ctx) => {
         await delay(500);
+        // Same as createNamespace: the caller polls until this header says the
+        // work is done, so without it the wizard sits on a cluster that exists.
+        ctx.responseHeader.set('Idempotency-Status', 'completed');
         const id = `cl-${req.name}`;
         // Append so the cluster list reflects the wizard result on the next visit.
         if (!fx.clusterSummaries.some((c) => c.id === id)) {
@@ -150,6 +164,30 @@ export default function createDemoTransport(): Transport {
         return create(ListProjectNamespacesResponseSchema, {
           namespaces: fx.namespaces.filter((n) => n.projectId === req.projectId),
         });
+      },
+      createNamespace: async (req, ctx) => {
+        await delay();
+        // The caller polls until this header says the work is done (see
+        // withIdempotency). Without it a create in the demo never resolves and
+        // the sheet stays open on something that already happened.
+        ctx.responseHeader.set('Idempotency-Status', 'completed');
+        const id = `ns-${req.name}`;
+        // Append so the list shows what was just created, the way the cluster
+        // wizard does. The access handed out with it lives in the mock role
+        // bindings and needs the namespace to exist to be visible at all.
+        if (!fx.namespaces.some((n) => n.id === id)) {
+          const project = fx.projects.find((p) => p.id === req.projectId);
+          fx.namespaces.push(
+            create(NamespaceSchema, {
+              id,
+              name: req.name,
+              projectId: req.projectId,
+              clusterId: project?.clusterId ?? 'cl-production',
+              created: timestampFromDate(new Date()),
+            }),
+          );
+        }
+        return create(CreateNamespaceResponseSchema, { namespaceId: id });
       },
     });
 
@@ -222,6 +260,95 @@ export default function createDemoTransport(): Transport {
         return create(ListPluginDefinitionsResponseSchema, {
           definitions: fx.pluginDefinitionVersions(req.pluginId),
         });
+      },
+    });
+
+    // Metrics, so the charts have something to draw. One snapshot per stream:
+    // the demo is about the shape of the page, not about watching it tick.
+    const timeSeries = (windowSeconds: number, stepSeconds: number) => {
+      const step = stepSeconds || 300;
+      const span = windowSeconds || 7 * 24 * 3600;
+      const count = Math.min(240, Math.max(12, Math.round(span / step)));
+      const now = Date.now();
+      const toSamples = (points: { timestamp: Date; value: number }[]) =>
+        points.map((point) => ({
+          timestamp: timestampFromDate(point.timestamp),
+          value: point.value,
+        }));
+      return create(GetWorkloadTimeSeriesResponseSchema, {
+        cpuCores: toSamples(fx.metricSeries(count, step, 2.4, 0.6, 0.1, now)),
+        memoryGib: toSamples(fx.metricSeries(count, step, 12.8, 2.4, 0.4, now)),
+        podCount: toSamples(fx.metricSeries(count, step, 28, 4, 0.7, now)),
+        networkReceiveMbS: toSamples(fx.metricSeries(count, step, 1.8, 0.7, 0.2, now)),
+        networkTransmitMbS: toSamples(fx.metricSeries(count, step, 0.9, 0.4, 0.9, now)),
+      });
+    };
+
+    const snapshot = (level: 'org' | 'cluster' | 'project', windowSeconds = 0, stepSeconds = 0) =>
+      create(StreamWorkloadMetricsResponseSchema, {
+        totals:
+          level === 'project'
+            ? {
+                cpu: { used: 1.4, total: 4, unit: 'cores' },
+                memory: { used: 6.1, total: 16, unit: 'GiB' },
+                pods: { used: 14, total: 55, unit: 'pods' },
+              }
+            : {
+                cpu: { used: 3.3, total: 12, unit: 'cores' },
+                memory: { used: 16.4, total: 48, unit: 'GiB' },
+                pods: { used: 37, total: 165, unit: 'pods' },
+              },
+        clusters: level === 'org' ? fx.clusterUsage : [],
+        nodes: level === 'cluster' ? fx.nodeUsage : [],
+        namespaces: level === 'project' ? fx.namespaceMetrics.slice(0, 1) : fx.namespaceMetrics,
+        timeSeries: timeSeries(windowSeconds, stepSeconds),
+        refreshedAt: timestampFromDate(new Date()),
+      });
+
+    router.service(MetricsService, {
+      getOrgWorkloadMetrics: async () => {
+        await delay(80);
+        return create(GetOrgWorkloadMetricsResponseSchema, {
+          clusters: fx.clusterUsage,
+          namespaces: fx.namespaceMetrics,
+        });
+      },
+      getClusterWorkloadMetrics: async () => {
+        await delay();
+        return create(GetClusterWorkloadMetricsResponseSchema, {
+          nodes: fx.nodeUsage,
+          namespaces: fx.namespaceMetrics,
+        });
+      },
+      getProjectWorkloadMetrics: async () => {
+        await delay();
+        return create(GetProjectWorkloadMetricsResponseSchema, {
+          namespaces: fx.namespaceMetrics.slice(0, 1),
+        });
+      },
+      getOrgWorkloadTimeSeries: async () => {
+        await delay();
+        return timeSeries(0, 0);
+      },
+      getClusterWorkloadTimeSeries: async () => {
+        await delay();
+        return timeSeries(0, 0);
+      },
+      getProjectWorkloadTimeSeries: async () => {
+        await delay();
+        return timeSeries(0, 0);
+      },
+      async *streamOrgWorkloadMetrics(req) {
+        await delay();
+        yield snapshot('org', req.windowSeconds, req.stepSeconds);
+      },
+      async *streamClusterWorkloadMetrics(req) {
+        await delay();
+        yield snapshot('cluster', req.windowSeconds, req.stepSeconds);
+      },
+      async *streamProjectWorkloadMetrics(req) {
+        await delay();
+        yield snapshot('project', req.windowSeconds, req.stepSeconds);
       },
     });
 

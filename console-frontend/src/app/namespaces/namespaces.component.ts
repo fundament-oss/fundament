@@ -25,7 +25,7 @@ import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
 import { formatDate as formatDateUtil } from '../utils/date-format';
-import { mockBindingsFor } from '../utils/mock-role-bindings';
+import { ALL_ROLES, mockBindingsFor, setMockBindings } from '../utils/mock-role-bindings';
 import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import { NAMESPACE, PROJECT } from '../../connect/tokens';
 import type { ProjectMember } from '../../generated/v1/project_pb';
@@ -84,6 +84,29 @@ export default class NamespacesComponent implements OnInit {
   showCreateNamespaceModal = signal<boolean>(false);
 
   isCreatingNamespace = signal<boolean>(false);
+
+  /** Who gets access to the namespace being created, and with which roles. A
+   *  namespace is made to work in, so the people come with it rather than in a
+   *  second visit to the sheet. */
+  draftMemberIds = signal<string[]>([]);
+
+  draftRoles = signal<string[]>([]);
+
+  readonly allRoles = ALL_ROLES;
+
+  /** Members with an all-namespaces grant are left out: they reach the new one
+   *  the moment it exists, so offering them here would promise a change that
+   *  does not happen. */
+  memberCandidates = computed(() =>
+    this.members().filter(
+      (member) =>
+        !mockBindingsFor(member.id, this.namespaceNames()).some(
+          (binding) => binding.namespace === ALL_NAMESPACES,
+        ),
+    ),
+  );
+
+  coveredMemberCount = computed(() => this.members().length - this.memberCandidates().length);
 
   namespaceForm = this.fb.group({
     name: [
@@ -163,10 +186,27 @@ export default class NamespacesComponent implements OnInit {
   openCreateNamespaceModal() {
     this.namespaceForm.reset();
     this.createErrorMessage.set(null);
+    this.draftMemberIds.set([]);
+    this.draftRoles.set([]);
     this.showCreateNamespaceModal.set(true);
   }
 
+  onMembersChange(event: Event): void {
+    this.draftMemberIds.set((event as CustomEvent<{ values: string[] }>).detail.values);
+  }
+
+  toggleDraftRole(role: string): void {
+    this.draftRoles.update((current) =>
+      current.includes(role) ? current.filter((entry) => entry !== role) : [...current, role],
+    );
+  }
+
   async createNamespace(event?: Event) {
+    // A control that acts on Enter itself, like picking an option in the token
+    // field, marks the event handled. Submitting on that Enter would put the
+    // form in error while the user is still filling it in.
+    if (event?.defaultPrevented) return;
+
     event?.preventDefault();
     this.createErrorMessage.set(null);
 
@@ -187,8 +227,15 @@ export default class NamespacesComponent implements OnInit {
         signal: this.idempotency.reset(),
       });
 
+      const name = this.namespaceForm.value.name!;
+      const granted = this.grantDraftAccess(name);
+
       this.showCreateNamespaceModal.set(false);
-      this.toastService.success(`Namespace '${this.namespaceForm.value.name}' created`);
+      this.toastService.success(
+        granted === 0
+          ? `Namespace '${name}' created`
+          : `Namespace '${name}' created, ${granted === 1 ? '1 member has' : `${granted} members have`} access`,
+      );
 
       // Reload organization data to update the selector modal
       await Promise.all([
@@ -204,6 +251,20 @@ export default class NamespacesComponent implements OnInit {
     } finally {
       this.isCreatingNamespace.set(false);
     }
+  }
+
+  /** TEMPORARY, dev only: roles have no API, so the grant goes into the mock
+   *  store the rest of the screens read from. Delete with the mock bindings. */
+  private grantDraftAccess(namespace: string): number {
+    const memberIds = this.draftMemberIds();
+    if (memberIds.length === 0) return 0;
+
+    const roles = ALL_ROLES.filter((role) => this.draftRoles().includes(role));
+    memberIds.forEach((memberId) => {
+      const existing = mockBindingsFor(memberId, this.namespaceNames());
+      setMockBindings(memberId, [...existing, { namespace, roles }]);
+    });
+    return memberIds.length;
   }
 
   readonly formatDate = formatDateUtil;
