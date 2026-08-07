@@ -77,7 +77,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/tag';
 import '@nldd/design-system/title';
 import '@nldd/design-system/tooltip';
-import '@nldd/design-system/byline';
+import '@nldd/design-system/identity';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/step-indicator';
 import { RouterOutlet, Router, NavigationEnd, ActivatedRouteSnapshot } from '@angular/router';

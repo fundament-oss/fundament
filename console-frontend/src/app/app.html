@@ -131,21 +131,34 @@
                     <nldd-button-bar-divider></nldd-button-bar-divider>
                   }
                   <nldd-icon-button
-                    icon="account"
                     accessible-label="User menu"
                     expandable
                     popup-type="menu"
                     type="button"
                     tooltip-timing="never"
                   >
+                    <!-- The avatar replaces the account glyph: the button says
+                         whose account it opens. icon-aligned keeps the disc on
+                         the same optical grid as the icons around it, and
+                         decorative keeps it out of the button's own label. -->
+                    <nldd-avatar
+                      slot="icon"
+                      [attr.name]="currentUser()?.name || 'Unknown'"
+                      color="inherit"
+                      icon-aligned
+                      decorative
+                    ></nldd-avatar>
                     <nldd-menu slot="popup" placement="bottom-end">
                       <!-- The menu's header slot is unpadded on purpose, so the
                          container supplies the spacing. -->
                       <nldd-container slot="header" padding-inline="16" padding-block="12">
-                        <nldd-byline
-                          supporting-text="Logged in as"
+                        <!-- The id rather than "Logged in as": the menu already
+                             says whose account this is, and the id is what you
+                             would otherwise open the profile for. -->
+                        <nldd-identity
                           [attr.text]="currentUser()?.name || 'Unknown'"
-                        ></nldd-byline>
+                          [attr.supporting-text]="currentUser()?.id || null"
+                        ></nldd-identity>
                       </nldd-container>
                       <nldd-menu-item
                         text="My profile"
