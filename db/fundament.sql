@@ -1111,15 +1111,6 @@ CREATE POLICY plugins_update_owner ON appstore.plugins
 	WITH CHECK (organization_id = authn.current_organization_id());
 -- ddl-end --
 
--- object: plugins_delete_owner | type: POLICY --
--- DROP POLICY IF EXISTS plugins_delete_owner ON appstore.plugins CASCADE;
-CREATE POLICY plugins_delete_owner ON appstore.plugins
-	AS PERMISSIVE
-	FOR DELETE
-	TO fun_fundament_api
-	USING (organization_id = authn.current_organization_id());
--- ddl-end --
-
 -- object: appstore.plugin_definitions | type: TABLE --
 -- DROP TABLE IF EXISTS appstore.plugin_definitions CASCADE;
 CREATE TABLE appstore.plugin_definitions (
@@ -1162,15 +1153,6 @@ CREATE POLICY plugin_definitions_insert_owner ON appstore.plugin_definitions
 CREATE POLICY plugin_definitions_update_owner ON appstore.plugin_definitions
 	AS PERMISSIVE
 	FOR UPDATE
-	TO fun_fundament_api
-	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
--- ddl-end --
-
--- object: plugin_definitions_delete_owner | type: POLICY --
--- DROP POLICY IF EXISTS plugin_definitions_delete_owner ON appstore.plugin_definitions CASCADE;
-CREATE POLICY plugin_definitions_delete_owner ON appstore.plugin_definitions
-	AS PERMISSIVE
-	FOR DELETE
 	TO fun_fundament_api
 	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
 -- ddl-end --
@@ -3796,6 +3778,14 @@ GRANT SELECT
 -- object: "grant_U_19fbeed564" | type: PERMISSION --
 GRANT USAGE
    ON SCHEMA appstore
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_1e94bded2d | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins
    TO fun_authz_worker;
 
 -- ddl-end --

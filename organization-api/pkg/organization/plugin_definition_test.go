@@ -629,8 +629,9 @@ func TestGetPluginDefinition_NotFound(t *testing.T) {
 }
 
 // TestPutPluginDefinition_NonOwnerDenied verifies a plugin owned by one org
-// cannot have a definition published from another org's context. The gate is
-// pure RLS; the handler only maps the DB rejection to PermissionDenied.
+// cannot have a definition published from another org's context. The test server
+// has no OpenFGA client (nil authz.Client), so checkPermission is a no-op and
+// this exercises the RLS layer alone; in production OpenFGA denies it first.
 func TestPutPluginDefinition_NonOwnerDenied(t *testing.T) {
 	t.Parallel()
 

@@ -79,7 +79,6 @@ type api_key
 type plugin
   relations
     define owner: [organization]
-    define can_view: viewer from owner or admin from owner
     define can_edit: admin from owner
     define can_delete: admin from owner
 

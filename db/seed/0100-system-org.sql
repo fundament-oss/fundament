@@ -6,5 +6,5 @@
 -- users never see it while the plugins it owns stay globally visible.
 
 INSERT INTO tenant.organizations (id, name, alias) VALUES
-    ('019b4000-1000-7000-8000-000000000001', 'system', 'System')
+    ('019b4000-0000-7000-8000-000000000000', 'system', 'System')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, alias = EXCLUDED.alias;

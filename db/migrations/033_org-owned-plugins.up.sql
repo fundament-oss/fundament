@@ -4,7 +4,7 @@ SET SESSION lock_timeout = 3000;
 -- System organization owns first-party (seeded) plugins. Idempotent; the same
 -- fixed UUID is (re)asserted by db/seed/0100-system-org.sql for fresh installs.
 INSERT INTO "tenant"."organizations" ("id", "name", "alias")
-VALUES ('019b4000-1000-7000-8000-000000000001', 'system', 'System')
+VALUES ('019b4000-0000-7000-8000-000000000000', 'system', 'System')
 ON CONFLICT ("id") DO NOTHING;
 
 -- Add the owner column nullable first so existing rows can be backfilled.
@@ -68,7 +68,7 @@ CREATE OR REPLACE TRIGGER plugins_outbox
 -- empty here (seeded afterwards), so this is a no-op and the 0101 seed INSERTs
 -- enqueue via the trigger instead.
 UPDATE "appstore"."plugins"
-SET "organization_id" = '019b4000-1000-7000-8000-000000000001'
+SET "organization_id" = '019b4000-0000-7000-8000-000000000000'
 WHERE "organization_id" IS NULL;
 
 -- Enforce NOT NULL and the FK now that every row has an owner.
@@ -79,6 +79,8 @@ ALTER TABLE "appstore"."plugins" ADD CONSTRAINT "plugins_fk_organization" FOREIG
 -- RLS on appstore.plugins: catalog reads stay GLOBAL (SELECT USING (true));
 -- writes are gated to the owning organization. The UPDATE WITH CHECK also
 -- prevents reassigning a plugin to another org (no ownership transfer).
+-- No DELETE policy on either table: fun_fundament_api has no DELETE grant and
+-- the project soft-deletes throughout.
 CREATE POLICY "plugins_select_all" ON "appstore"."plugins"
 	AS PERMISSIVE
 	FOR SELECT
@@ -97,12 +99,6 @@ CREATE POLICY "plugins_update_owner" ON "appstore"."plugins"
 	TO fun_fundament_api
 	USING ((organization_id = authn.current_organization_id()))
 	WITH CHECK ((organization_id = authn.current_organization_id()));
-
-CREATE POLICY "plugins_delete_owner" ON "appstore"."plugins"
-	AS PERMISSIVE
-	FOR DELETE
-	TO fun_fundament_api
-	USING ((organization_id = authn.current_organization_id()));
 
 ALTER TABLE "appstore"."plugins" ENABLE ROW LEVEL SECURITY;
 
@@ -129,12 +125,6 @@ CREATE POLICY "plugin_definitions_insert_owner" ON "appstore"."plugin_definition
 CREATE POLICY "plugin_definitions_update_owner" ON "appstore"."plugin_definitions"
 	AS PERMISSIVE
 	FOR UPDATE
-	TO fun_fundament_api
-	USING ((EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())));
-
-CREATE POLICY "plugin_definitions_delete_owner" ON "appstore"."plugin_definitions"
-	AS PERMISSIVE
-	FOR DELETE
 	TO fun_fundament_api
 	USING ((EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())));
 

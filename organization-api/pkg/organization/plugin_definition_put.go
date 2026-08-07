@@ -50,8 +50,8 @@ func (s *Server) PutPluginDefinition(
 	// pre-existing catalog entry, not a resource this caller just created, so
 	// there is no ownership-sync race to absorb. PutPluginDefinition is
 	// idempotent, so a caller that races a fresh ownership sync can simply retry.
-	// RLS on appstore.plugin_definitions is the backstop (see the insert-error
-	// mapping below); this is the primary gate.
+	// RLS on appstore.plugin_definitions independently enforces the same rule
+	// (see the insert-error mapping below).
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Plugin(pluginID)); err != nil {
 		return nil, err
 	}
@@ -153,8 +153,9 @@ func (s *Server) PutPluginDefinition(
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok &&
 			pgErr.Code == pgerrcode.InsufficientPrivilege {
 			// RLS rejected the write: the caller's organization does not own this
-			// plugin. The gate is enforced entirely in the database (row-level
-			// security); we only translate the rejection into a clean API error.
+			// plugin. The OpenFGA check above normally catches this first; reaching
+			// here means the ownership tuple has not synced yet. We only translate
+			// the rejection into a clean API error.
 			return nil, connect.NewError(connect.CodePermissionDenied,
 				fmt.Errorf("organization is not the owner of plugin %s", catalogRow.Name))
 		}
