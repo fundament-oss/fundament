@@ -1,120 +1,158 @@
-<div class="card">
-  <!-- Header -->
-  <div class="card-header">
-    <h1 class="text-3xl font-semibold">Organization</h1>
-    <p class="mt-1 text-gray-600 dark:text-gray-300">Manage your organization's information</p>
-  </div>
+<!-- Same outer layout as the other organization pages: the pane owns the back
+     button, so the page does not force one. -->
+<nldd-page sticky-header>
+  <nldd-top-title-bar
+    slot="header"
+    text="General"
+    [attr.back-text]="pageNav.backText()"
+    collapse-anchor="organization-settings-title"
+  ></nldd-top-title-bar>
 
-  <div class="p-6">
-    <!-- Error Message -->
-    @if (error()) {
-      <div class="bg-danger-50 dark:bg-danger-950 mb-4 rounded-md p-4">
-        <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
-      </div>
-    }
+  <nldd-simple-section>
+    <nldd-title id="organization-settings-title" size="2">
+      <h1>General</h1>
+    </nldd-title>
 
-    <!-- Loading State -->
+    <nldd-spacer size="12"></nldd-spacer>
+
+    <!-- Says which of the two names people actually see, rather than hanging
+         that explanation off the labels. -->
+    <nldd-rich-text spacing="flat">
+      <p>
+        The alias is the name shown throughout the console. The name is the one this organization
+        was created with and cannot be changed.
+      </p>
+    </nldd-rich-text>
+
+    <nldd-spacer size="12"></nldd-spacer>
+
     @if (loading()) {
-      <div class="py-8 text-center">
-        <p class="text-gray-600 dark:text-gray-300">Loading organization...</p>
-      </div>
-    }
-
-    <!-- Organization Information -->
-    @if (organization()) {
-      <div class="space-y-6">
-        <!-- Organization ID -->
-        <div>
-          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Organization ID</div>
-          <p
-            class="rounded-md bg-gray-50 px-4 py-2 font-mono text-sm text-gray-900 dark:bg-gray-900 dark:text-white"
-          >
-            {{ organization()!.id }}
-          </p>
-        </div>
-
-        <!-- Organization Name -->
-        <div>
-          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
-            Name <span class="font-normal text-gray-500">(cannot be changed)</span>
-          </div>
-          <p
-            class="rounded-md bg-gray-50 px-4 py-2 font-mono text-sm text-gray-900 dark:bg-gray-900 dark:text-white"
-          >
-            {{ organization()!.name }}
-          </p>
-        </div>
-
-        <!-- Organization Alias -->
-        <div>
-          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">
-            Alias <span class="font-normal text-gray-500">(name that is displayed)</span>
-          </div>
-          @if (isEditing()) {
-            <div class="flex gap-2">
-              <nldd-text-field
-                appAutofocus
-                [value]="editingName()"
-                (input)="editingName.set($any($event.target).value)"
-                (keyup.enter)="saveEdit()"
-                (keyup.escape)="cancelEdit()"
-                class="flex-1"
-              ></nldd-text-field>
-              <nldd-button
-                type="button"
-                (click)="saveEdit()"
-                [disabled]="loading()"
-                text="Save"
-                start-icon="check-mark"
-                variant="primary"
-              ></nldd-button>
-              <nldd-button
-                type="button"
-                (click)="cancelEdit()"
-                [disabled]="loading()"
-                text="Cancel"
-                start-icon="dismiss-small"
-                variant="secondary"
-              ></nldd-button>
-            </div>
-          } @else {
-            <div class="flex items-center gap-3">
-              <p>{{ organization()!.alias }}</p>
-              <nldd-button
-                type="button"
-                (click)="startEdit()"
-                [disabled]="loading()"
-                text="Rename"
-                start-icon="pencil"
-                variant="secondary"
-                size="sm"
-              ></nldd-button>
-            </div>
-          }
-        </div>
-
-        <!-- Created Date -->
-        <div>
-          <div class="mb-2 block font-medium text-gray-700 dark:text-gray-300">Created</div>
-          <p>
-            {{ formatDate(organization()!.created) }}
-          </p>
-        </div>
-      </div>
-    }
-
-    <!-- Empty State -->
-    @if (!loading() && !organization() && !error()) {
+      <nldd-activity-indicator show-text text="Loading organization..."></nldd-activity-indicator>
+    } @else if (organization(); as organization) {
+      <nldd-list variant="box" accessible-label="Organization details">
+        <!-- The alias is the only editable field, so the control sits on that
+             row rather than on the page as a whole. -->
+        <nldd-list-item>
+          <nldd-text-cell text="Organization alias"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            [attr.text]="organization.alias"
+          ></nldd-text-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-cell width="fit-content">
+            <nldd-icon-button
+              type="button"
+              (click)="startEdit()"
+              icon="edit"
+              size="sm"
+              variant="secondary"
+              accessible-label="Edit organization alias"
+            ></nldd-icon-button>
+          </nldd-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell text="Organization name"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            [attr.text]="organization.name"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell text="Organization ID"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            [attr.text]="organization.id"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell text="Created"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            [attr.text]="formatDate(organization.created)"
+          ></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+    } @else {
       <nldd-box>
         <nldd-container padding="16">
           <nldd-inline-dialog
             icon="gear"
             icon-color="secondary"
             text="No organization information available"
-          >
-          </nldd-inline-dialog>
+          ></nldd-inline-dialog>
         </nldd-container>
       </nldd-box>
     }
-  </div>
-</div>
+  </nldd-simple-section>
+
+  <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
+
+<!-- Edit Alias Sheet -->
+<nldd-sheet
+  #editSheet
+  appSheetSync
+  [show]="isEditing()"
+  accessible-label="Edit organization alias"
+  placement="right"
+  (close)="cancelEdit()"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Edit organization alias"
+      dismiss-text="Cancel"
+      (dismiss)="cancelEdit()"
+    ></nldd-top-title-bar>
+
+    <nldd-simple-section>
+      <!-- Here, not on the page behind it: this is where the change is, and
+           closing the sheet now would lose it. -->
+      @if (error(); as message) {
+        <nldd-banner
+          variant="critical"
+          text="Your change is not saved"
+          [attr.supporting-text]="message"
+        ></nldd-banner>
+
+        <nldd-spacer size="16"></nldd-spacer>
+      }
+
+      <nldd-form (submit)="saveEdit()" (keydown.enter)="saveEdit()" novalidate>
+        <nldd-form-field label="Alias">
+          <nldd-text-field
+            appAutofocus
+            [value]="editingName()"
+            [invalid]="aliasInvalid()"
+            error-message="organization-alias-error"
+            (input)="editingName.set($any($event.target).value)"
+            (keyup.escape)="cancelEdit()"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="organization-alias-error">
+            @if (aliasInvalid()) {
+              An alias is required.
+            }
+          </nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <nldd-form-actions>
+          <!-- Never disabled: a disabled button says nothing about what is
+               missing. Pressing it points at the field instead. -->
+          <nldd-button
+            type="button"
+            (click)="saveEdit()"
+            text="Save"
+            [attr.loading]="loading() ? '' : null"
+            variant="primary"
+            width="full"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

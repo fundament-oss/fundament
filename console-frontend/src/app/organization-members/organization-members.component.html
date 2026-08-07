@@ -119,19 +119,22 @@
             <nldd-menu slot="popup" accessible-label="Show">
               <nldd-menu-item
                 type="radio"
-                [attr.text]="'All (' + matching().length + ')'"
+                text="All"
+                [attr.details]="matching().length"
                 [attr.selected]="memberFilter() === 'all' ? '' : null"
                 (select)="memberFilter.set('all')"
               ></nldd-menu-item>
               <nldd-menu-item
                 type="radio"
-                [attr.text]="'Invitations (' + matchingInvitations().length + ')'"
+                text="Invitations"
+                [attr.details]="matchingInvitations().length"
                 [attr.selected]="memberFilter() === 'invitations' ? '' : null"
                 (select)="memberFilter.set('invitations')"
               ></nldd-menu-item>
               <nldd-menu-item
                 type="radio"
-                [attr.text]="'Members (' + matchingMembers().length + ')'"
+                text="Members"
+                [attr.details]="matchingMembers().length"
                 [attr.selected]="memberFilter() === 'members' ? '' : null"
                 (select)="memberFilter.set('members')"
               ></nldd-menu-item>
@@ -140,19 +143,22 @@
           <nldd-menu-group slot="overflow" label="Show">
             <nldd-menu-item
               type="radio"
-              [attr.text]="'All (' + matching().length + ')'"
+              text="All"
+              [attr.details]="matching().length"
               [attr.selected]="memberFilter() === 'all' ? '' : null"
               (select)="memberFilter.set('all')"
             ></nldd-menu-item>
             <nldd-menu-item
               type="radio"
-              [attr.text]="'Invitations (' + matchingInvitations().length + ')'"
+              text="Invitations"
+              [attr.details]="matchingInvitations().length"
               [attr.selected]="memberFilter() === 'invitations' ? '' : null"
               (select)="memberFilter.set('invitations')"
             ></nldd-menu-item>
             <nldd-menu-item
               type="radio"
-              [attr.text]="'Members (' + matchingMembers().length + ')'"
+              text="Members"
+              [attr.details]="matchingMembers().length"
               [attr.selected]="memberFilter() === 'members' ? '' : null"
               (select)="memberFilter.set('members')"
             ></nldd-menu-item>
