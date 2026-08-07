@@ -7,7 +7,7 @@
     [attr.text]="clusterData.basics.name || 'Cluster'"
     back-text="Clusters"
     collapse-anchor="cluster-title"
-    (back)="pageNav.goTo('/')"
+    (back)="pageNav.goTo('/clusters')"
   ></nldd-top-title-bar>
 
   <nldd-simple-section>
@@ -267,16 +267,24 @@
             </nldd-title>
 
             <nldd-spacer size="16"></nldd-spacer>
-            <nldd-container layout="stack" gap="16">
-              @for (metric of resourceMetrics; track metric.label) {
-                <nldd-progress-bar
-                  [attr.text]="metric.label"
-                  [attr.value]="metric.used"
-                  [attr.max]="metric.limit"
-                  [attr.color]="metric.color"
-                  [attr.value-text]="metric.valueText"
-                  [attr.accessible-label]="metric.accessibleLabel"
-                ></nldd-progress-bar>
+            <!-- Two per column: four bars in one stack leave the right half of a
+                 wide box empty, and a bar that wide reads as a page divider. The
+                 grid keeps its own 280px minimum, so the pairs sit side by side
+                 where there is room and stack where there is not. -->
+            <nldd-container layout="grid" gap="16">
+              @for (pair of resourceMetricPairs; track $index) {
+                <nldd-container layout="stack" gap="16">
+                  @for (metric of pair; track metric.label) {
+                    <nldd-progress-bar
+                      [attr.text]="metric.label"
+                      [attr.value]="metric.used"
+                      [attr.max]="metric.limit"
+                      [attr.color]="metric.color"
+                      [attr.value-text]="metric.valueText"
+                      [attr.accessible-label]="metric.accessibleLabel"
+                    ></nldd-progress-bar>
+                  }
+                </nldd-container>
               }
             </nldd-container>
           </nldd-container>

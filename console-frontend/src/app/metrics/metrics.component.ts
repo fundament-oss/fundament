@@ -19,9 +19,9 @@ import { Chart, ChartConfiguration, ChartDataset, registerables } from 'chart.js
 import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
-import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
 import { CLUSTER, METRICS } from '../../connect/tokens';
 import MetricsHealthService from '../metrics-health.service';
+import PageNavService from '../page-nav.service';
 import DropdownSyncDirective from '../dropdown-sync.directive';
 import {
   ListClustersRequestSchema,
@@ -102,11 +102,34 @@ function getUsagePercentage(used: number, total: number): number {
   return Math.round((used / total) * 100);
 }
 
-function getUsageColor(percentage: number): string {
-  if (percentage >= 90) return 'bg-danger-500';
-  if (percentage >= 75) return 'bg-yellow-500';
-  return 'bg-green-500';
+/** The DS progress bar takes a colour name, not a utility class. */
+function usageColor(used: number, total: number): string {
+  const percentage = getUsagePercentage(used, total);
+  if (percentage >= 90) return 'critical';
+  if (percentage >= 75) return 'warning';
+  return 'success';
 }
+
+/** "2.4 / 8 cores (30%)": the numbers and what they add up to, in one line. */
+function usageText(used: number, total: number, unit: string): string {
+  const round = (value: number) => (Number.isInteger(value) ? value : Number(value.toFixed(1)));
+  const suffix = unit ? ` ${unit}` : '';
+  return `${round(used)} / ${round(total)}${suffix} (${getUsagePercentage(used, total)}%)`;
+}
+
+/** The same three bars as the totals, for one cluster or one node. */
+const usageBars = (entry: ClusterSummaryData | NodeUsageData) =>
+  [
+    { label: 'CPU', usage: entry.cpu, unit: 'cores' },
+    { label: 'Memory', usage: entry.memory, unit: 'GiB' },
+    { label: 'Pods', usage: entry.pods, unit: '' },
+  ].map(({ label, usage, unit }) => ({
+    label,
+    used: usage.used,
+    total: usage.total,
+    color: usageColor(usage.used, usage.total),
+    valueText: usageText(usage.used, usage.total, unit),
+  }));
 
 function formatTimestamp(ts: Timestamp | undefined, includeTime: boolean): string {
   if (!ts) return '';
@@ -178,7 +201,7 @@ function lineDataset(
 
 @Component({
   selector: 'app-metrics',
-  imports: [FormsModule, DateRangePickerComponent, DecimalPipe, DropdownSyncDirective],
+  imports: [FormsModule, DecimalPipe, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './metrics.component.html',
@@ -193,6 +216,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   private metricsClient = inject(METRICS);
 
   private metricsHealth = inject(MetricsHealthService);
+
+  protected pageNav = inject(PageNavService);
 
   @ViewChild('cpuChart') cpuChartCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -330,7 +355,58 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   getUsagePercentage = getUsagePercentage;
 
-  getUsageColor = getUsageColor;
+  usageColor = usageColor;
+
+  usageText = usageText;
+
+  usageBars = usageBars;
+
+  /** The four charts, so the template does not repeat a box four times. */
+  readonly charts = [
+    { key: 'cpu', title: 'CPU usage over time' },
+    { key: 'memory', title: 'Memory usage over time' },
+    { key: 'pods', title: 'Pod count over time' },
+    { key: 'network', title: 'Network I/O over time' },
+  ];
+
+  hasChartData(key: string): boolean {
+    if (key === 'cpu') return this.hasCpuData;
+    if (key === 'memory') return this.hasMemoryData;
+    if (key === 'pods') return this.hasPodData;
+    return this.hasNetworkData;
+  }
+
+  /** The totals as progress bars: same shape as the cluster page uses. */
+  totalBars = computed(() => {
+    const totals = this.currentTotals();
+    if (!totals) return [];
+    return [
+      { label: 'CPU', ...totals.cpu },
+      { label: 'Memory', ...totals.memory },
+      { label: 'Pods', ...totals.pods },
+    ].map((metric) => ({
+      label: metric.label,
+      used: metric.used,
+      total: metric.total,
+      color: usageColor(metric.used, metric.total),
+      valueText: usageText(metric.used, metric.total, metric.unit),
+      accessibleLabel: `${metric.label} used`,
+    }));
+  });
+
+  /** What the filter buttons say while their menu is closed. */
+  clusterLabel = computed(() => {
+    const id = this.selectedClusterId();
+    return this.clusters().find((cluster) => cluster.id === id)?.name ?? 'All clusters';
+  });
+
+  namespaceLabel = computed(() => this.selectedNamespace() || 'All namespaces');
+
+  /** Picking from the menu goes through the same path the select used. */
+  selectCluster(id: string): void {
+    this.selectedClusterId.set(id);
+    this.onClusterChange();
+  }
 
   private onChartZoom(source: Chart): void {
     const { min, max } = source.scales['x'];
@@ -382,6 +458,20 @@ export default class MetricsComponent implements OnInit, OnDestroy {
       this.nodeUsage.set([]);
     }
     this.startStream();
+  }
+
+  /** The two ends as one ISO interval, which is what the range field takes. */
+  dateRange(): string {
+    return this.dateFrom && this.dateTo ? `${this.dateFrom}/${this.dateTo}` : '';
+  }
+
+  onRangeChange(event: Event): void {
+    const value = (event as CustomEvent<{ value: string }>).detail?.value ?? '';
+    const [from, to] = value.split('/');
+    if (!from || !to) return;
+    this.dateFrom = from;
+    this.dateTo = to;
+    this.onDateChange();
   }
 
   onDateChange(): void {

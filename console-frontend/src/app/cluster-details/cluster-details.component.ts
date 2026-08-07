@@ -381,7 +381,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         // Cluster has been deleted
         this.stopPolling();
         this.toastService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
-        this.router.navigate(['/']);
+        this.router.navigate(['/clusters']);
         return;
       }
 
@@ -394,7 +394,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       // If the request fails with a not-found-like error, the cluster was deleted
       this.stopPolling();
       this.toastService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
-      this.router.navigate(['/']);
+      this.router.navigate(['/clusters']);
     }
   }
 
@@ -419,6 +419,16 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   /** The four usage bars, each carrying its own display and ARIA text. A getter
    *  rather than a computed: `clusterData` is a plain object the polling code
    *  mutates in place, so there is no signal to derive from. */
+  /** The same bars, in twos, so the grid can put a pair in each column. */
+  get resourceMetricPairs(): ResourceMetric[][] {
+    const metrics = this.resourceMetrics;
+    return metrics.reduce<ResourceMetric[][]>((pairs, metric, index) => {
+      if (index % 2 === 0) pairs.push([metric]);
+      else pairs[pairs.length - 1].push(metric);
+      return pairs;
+    }, []);
+  }
+
   get resourceMetrics(): ResourceMetric[] {
     const usage = this.clusterData.resourceUsage;
 
@@ -518,7 +528,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.organizationDataService.removeCluster(this.clusterData.basics.id);
       this.showDeleteModal.set(false);
       this.toastService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
-      this.router.navigate(['/']);
+      this.router.navigate(['/clusters']);
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error
