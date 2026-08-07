@@ -42,6 +42,7 @@ import '@nldd/design-system/search-field';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/switch-field';
 import '@nldd/design-system/file-field';
+import '@nldd/design-system/date-field';
 import '@nldd/design-system/text-field';
 import '@nldd/design-system/token-field';
 import '@nldd/design-system/toggle-button';
@@ -92,6 +93,10 @@ import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
 import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
+import ProfileComponent from './profile/profile.component';
+import ApiKeysComponent from './api-keys/api-keys.component';
+import AddProjectComponent from './add-project/add-project.component';
+import { OverlayService } from './overlay.service';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { ClusterStatus } from '../generated/v1/common_pb';
 import { fetchClusterName, getStatusTagColor, getStatusLabel } from './utils/cluster-status';
@@ -112,13 +117,29 @@ const reloadApp = () => {
  * organization) is not a route, it is what stepping back from the menu shows.
  */
 function depthForPath(url: string): number {
-  return /^\/projects\/[^/]+$/.test(url.split(/[?#]/)[0]) ? 1 : 2;
+  const path = url.split(/[?#]/)[0];
+  // Nothing chosen yet: the organization menu is the whole screen, not an empty
+  // pane beside it.
+  if (path === '/') return 0;
+  return /^\/projects\/[^/]+$/.test(path) ? 1 : 2;
 }
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, OrgPickerComponent, BreadcrumbComponent],
+  imports: [
+    RouterOutlet,
+    OrgPickerComponent,
+    BreadcrumbComponent,
+    ProfileComponent,
+    ApiKeysComponent,
+    AddProjectComponent,
+  ],
   templateUrl: './app.html',
+  // The outlet is an empty element that still counts as a flex item of
+  // nldd-app-view: it took a share of the height and pushed the page it renders
+  // off the top. Angular puts the component beside it, so hiding it costs
+  // nothing.
+  styles: 'router-outlet { display: none; }',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
@@ -156,12 +177,26 @@ export default class App implements OnInit {
   private inviteClient = inject(INVITE);
 
   @ViewChild('splitView') private splitViewRef?: ElementRef<
-    HTMLElement & { showSidebarSheet(): Promise<void>; hideSidebarSheet(): void }
+    HTMLElement & {
+      showSidebarSheet(): Promise<void>;
+      hideSidebarSheet(): void;
+      isSingleColumn: boolean;
+    }
   >;
 
   private readonly mobileMq = window.matchMedia('(max-width: 1023px)');
 
   isMobile = signal(this.mobileMq.matches);
+
+  /** Whether the split view has collapsed to one visible pane. The split view
+   *  measures itself, so this is not a viewport width: a narrow window can
+   *  still show the menu beside the page. */
+  isSingleColumn = signal(false);
+
+  /** The sheets the shell owns, not routes: navigating to them would unmount
+   *  the page underneath and leave an empty pane behind the sheet. Their
+   *  addresses still work; a guard opens the sheet over the home pane. */
+  protected overlays = inject(OverlayService);
 
   private clusterNameCache = new Map<string, string>();
 
@@ -206,7 +241,7 @@ export default class App implements OnInit {
    * stepping back is a matter of taking content away rather than of routing.
    * On wide screens every pane shows regardless and this is inert.
    */
-  stackDepth = signal(2);
+  stackDepth = signal(depthForPath(window.location.pathname));
 
   // Breadcrumb state
   breadcrumbSegments = signal<BreadcrumbSegment[]>([]);
@@ -298,6 +333,14 @@ export default class App implements OnInit {
         this.updateSidebarStateFromRoute();
         this.updateBreadcrumbs();
       });
+
+    // The initial navigation can finish before this component exists, and a
+    // guard may have redirected on the way (an overlay address lands on '/').
+    // Reading the router rather than the address bar we started from keeps the
+    // pane behind the sheet from rendering the URL we no longer are at.
+    this.isLoginPage.set(this.router.url === '/login');
+    this.currentUrl.set(this.router.url);
+    this.stackDepth.set(depthForPath(this.router.url));
 
     // Initialize sidebar state and breadcrumbs from current route
     this.updateSidebarStateFromRoute();
@@ -517,14 +560,29 @@ export default class App implements OnInit {
 
   // Check if current route is clusters or clusters/add
   isClustersActive(): boolean {
+    if (!this.marksCurrent()) return false;
     // Compare on the path alone: the router url also carries the query string.
     const path = this.currentUrl().split(/[?#]/)[0];
-    return path === '/' || path.startsWith('/clusters/');
+    return path === '/clusters' || path.startsWith('/clusters/');
+  }
+
+  /** The selected row says what the pane beside it holds. Collapsed to a single
+   *  pane there is no such pane: the menu is a page you leave, and a highlight
+   *  would point at something that is not on screen. */
+  marksCurrent(): boolean {
+    return !this.isSingleColumn();
+  }
+
+  /** The split view fires this whenever it collapses or expands, and once when
+   *  it first measures itself. */
+  onSingleColumnChange(event: Event): void {
+    this.isSingleColumn.set((event as CustomEvent<{ singleColumn: boolean }>).detail.singleColumn);
   }
 
   /** Marks a sidebar item as the current page. Reads `currentUrl` so the nav
    *  re-renders on navigation; `router.url` alone is not a reactive source. */
   isNavActive(path: string, exact = false): boolean {
+    if (!this.marksCurrent()) return false;
     const current = this.currentUrl().split(/[?#]/)[0];
     return exact ? current === path : current === path || current.startsWith(`${path}/`);
   }
@@ -533,6 +591,19 @@ export default class App implements OnInit {
    *  middle-click and "open in new tab" keep working. */
   /** A menu item reports a plain Event; only a real click carries the modifiers
    *  that mean "open this somewhere else". */
+  /** Keeps `/projects/add` a real address for middle-click and "open in new
+   *  tab", while a plain click opens the sheet over the page you are on. */
+  openNewProject(event: Event): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.overlays.newProject.set(true);
+  }
+
   navigateFromSidebar(event: Event, path: string): void {
     if (event instanceof MouseEvent) {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
@@ -761,18 +832,18 @@ export default class App implements OnInit {
         count: project?.namespaceCount ?? null,
       },
       {
-        path: `${base}/members`,
-        icon: 'person-2',
-        label: 'Members',
-        exact: false,
-        count: project?.memberCount ?? null,
-      },
-      {
         path: `${base}/metrics`,
         icon: 'chart-x-y-axis-line',
         label: 'Metrics',
         exact: false,
         count: null,
+      },
+      {
+        path: `${base}/members`,
+        icon: 'person-2',
+        label: 'Members',
+        exact: false,
+        count: project?.memberCount ?? null,
       },
       { path: `${base}/limits`, icon: 'hand', label: 'Limits', exact: false, count: null },
     ];
@@ -789,6 +860,8 @@ export default class App implements OnInit {
    *  sheet unmounted behind an empty pane. */
   isProjectRoot = computed(() => {
     const path = this.currentUrl().split(/[?#]/)[0];
+    // The app starts with nothing open, so '/' is the same empty pane.
+    if (path === '/') return true;
     return path !== '/projects/add' && /^\/projects\/[^/]+$/.test(path);
   });
 

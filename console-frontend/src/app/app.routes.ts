@@ -1,6 +1,20 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, type CanActivateFn, type Routes } from '@angular/router';
 import authGuard from './auth.guard';
 import clusterWizardGuard from './add-cluster-wizard-layout/cluster-wizard.guard';
+import { OverlayService } from './overlay.service';
+
+/**
+ * Keeps an address for a sheet the shell owns. The sheet is not a page, so the
+ * route has nothing to render: it opens the sheet and sends you home, and the
+ * sheet appears over the home pane.
+ */
+const opensOverlay =
+  (sheet: 'profile' | 'apiKeys' | 'newProject'): CanActivateFn =>
+  () => {
+    inject(OverlayService)[sheet].set(true);
+    return inject(Router).parseUrl('/');
+  };
 
 const routes: Routes = [
   {
@@ -12,7 +26,14 @@ const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        // Nothing in the main pane: the app opens on a choice, not on a list it
+        // picked for you. A componentless route so the URL still matches while
+        // the outlet stays empty.
         path: '',
+        children: [],
+      },
+      {
+        path: 'clusters',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
         data: {
           breadcrumbs: [{ label: 'Clusters' }],
@@ -21,14 +42,14 @@ const routes: Routes = [
         // behind the sheet it opens in.
         children: [
           {
-            path: 'clusters/add',
+            path: 'add',
             loadComponent: () =>
               import('./add-cluster-wizard-layout/add-cluster-wizard-layout.component').then(
                 (m) => m.default,
               ),
             data: {
               breadcrumbs: [
-                { label: 'Clusters', route: '/' },
+                { label: 'Clusters', route: '/clusters' },
                 { label: 'New cluster', route: '/clusters/add' },
               ],
             },
@@ -68,13 +89,19 @@ const routes: Routes = [
         ],
       },
       {
-        // A sheet with nothing behind it: the projects live in the sidebar now,
-        // so there is no list page for it to open over.
         path: 'projects/add',
-        loadComponent: () => import('./add-project/add-project.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'New project' }],
-        },
+        canActivate: [opensOverlay('newProject')],
+        children: [],
+      },
+      {
+        path: 'profile',
+        canActivate: [opensOverlay('profile')],
+        children: [],
+      },
+      {
+        path: 'api-keys',
+        canActivate: [opensOverlay('apiKeys')],
+        children: [],
       },
       {
         // Nothing in the main pane: the secondary sidebar is the project, and
@@ -96,7 +123,7 @@ const routes: Routes = [
         loadComponent: () =>
           import('./cluster-details/cluster-details.component').then((m) => m.default),
         data: {
-          breadcrumbs: [{ label: 'Clusters', route: '/' }, { label: ':clusterName' }],
+          breadcrumbs: [{ label: 'Clusters', route: '/clusters' }, { label: ':clusterName' }],
         },
         // Both editors open as a sheet over the detail page, so they are children
         // of it: the page behind the sheet stays mounted and keeps its scroll.
@@ -107,7 +134,7 @@ const routes: Routes = [
               import('./cluster-nodes/cluster-nodes.component').then((m) => m.default),
             data: {
               breadcrumbs: [
-                { label: 'Clusters', route: '/' },
+                { label: 'Clusters', route: '/clusters' },
                 { label: ':clusterName', route: '/clusters/:id' },
                 { label: 'Nodes' },
               ],
@@ -119,7 +146,7 @@ const routes: Routes = [
               import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
             data: {
               breadcrumbs: [
-                { label: 'Clusters', route: '/' },
+                { label: 'Clusters', route: '/clusters' },
                 { label: ':clusterName', route: '/clusters/:id' },
                 { label: 'Namespaces' },
               ],
@@ -131,7 +158,7 @@ const routes: Routes = [
               import('./cluster-plugins/cluster-plugins.component').then((m) => m.default),
             data: {
               breadcrumbs: [
-                { label: 'Clusters', route: '/' },
+                { label: 'Clusters', route: '/clusters' },
                 { label: ':clusterName', route: '/clusters/:id' },
                 { label: 'Plugins' },
               ],
@@ -223,13 +250,6 @@ const routes: Routes = [
         },
       },
       {
-        path: 'profile',
-        loadComponent: () => import('./profile/profile.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Profile' }],
-        },
-      },
-      {
         path: 'plugins/:id',
         loadComponent: () =>
           import('./plugin-details/plugin-details.component').then((m) => m.default),
@@ -256,7 +276,7 @@ const routes: Routes = [
         loadComponent: () =>
           import('./organization-settings/organization-settings.component').then((m) => m.default),
         data: {
-          breadcrumbs: [{ label: 'Settings' }],
+          breadcrumbs: [{ label: 'General' }],
         },
       },
       {
@@ -289,13 +309,6 @@ const routes: Routes = [
           import('./organization-limits/organization-limits.component').then((m) => m.default),
         data: {
           breadcrumbs: [{ label: 'Limits' }],
-        },
-      },
-      {
-        path: 'api-keys',
-        loadComponent: () => import('./api-keys/api-keys.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'API keys' }],
         },
       },
       // Plugin resource routes (organization-level)

@@ -1,6 +1,9 @@
 import {
   Component,
   OnInit,
+  Input,
+  Output,
+  EventEmitter,
   inject,
   signal,
   ChangeDetectionStrategy,
@@ -11,7 +14,6 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
-import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
@@ -32,7 +34,11 @@ import SheetSyncDirective from '../sheet-sync.directive';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class AddProjectComponent implements OnInit {
-  private titleService = inject(TitleService);
+  /** Owned by the shell: the sheet opens over the page you were on, and that
+   *  page stays mounted behind it. */
+  @Input() show = false;
+
+  @Output() closed = new EventEmitter<void>();
 
   private router = inject(Router);
 
@@ -69,10 +75,6 @@ export default class AddProjectComponent implements OnInit {
     ],
   });
 
-  constructor() {
-    this.titleService.setTitle('New project');
-  }
-
   async ngOnInit() {
     await this.loadClusters();
   }
@@ -106,9 +108,7 @@ export default class AddProjectComponent implements OnInit {
   /** Dismissing the sheet leaves the flow, which unmounts this route and reveals
    *  the project list the sheet was covering. */
   onCancel(): void {
-    if (this.router.url.startsWith('/projects/add')) {
-      this.router.navigate(['/projects']);
-    }
+    this.closed.emit();
   }
 
   async onSubmit(event?: Event) {
@@ -137,6 +137,7 @@ export default class AddProjectComponent implements OnInit {
       // Reload project data to update the selector modal and breadcrumbs
       await this.organizationDataService.reloadProjectsAndNamespaces();
 
+      this.closed.emit();
       this.router.navigate(['/projects', response.projectId]);
     } catch (error) {
       this.errorMessage.set(
