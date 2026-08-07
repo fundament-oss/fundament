@@ -87,6 +87,21 @@ spec:
           - create
           - update
           - patch
+      # --- Rook operator install (cluster-admin-equivalent) ---
+      # The plugin's ServiceAccount runs `helm install` of the full Rook-Ceph
+      # operator, which creates privileged, host-networked device-discovery
+      # DaemonSets, the Ceph CSI driver, and its own cluster-wide RBAC
+      # (ClusterRoles/Bindings with escalate+bind) across namespaces. There is
+      # no meaningfully narrower stable rule set for that, and the platform has
+      # no cluster-admin escalation field (spec.clusterRoles no longer exists).
+      # The plugin-controller materialises the rule below into a ClusterRole
+      # bound to this plugin's SA, intersected with the installing admin's own
+      # permissions (FUN-17). This wildcard is the honest representation of what
+      # a node-level storage operator requires. The specific rules above are
+      # retained to document the plugin binary's own direct API usage.
+      - apiGroups: ["*"]
+        resources: ["*"]
+        verbs: ["*"]
   menu:
     organization:
       - crd: storagepools.storage.fundament.io
@@ -132,13 +147,10 @@ spec:
       version: v1
       resource: cephclusters
       verbs: [get]
-# NOTE: PluginInstallation requirement
-# The Rook operator requires cluster-admin level permissions to manage
-# storage resources across the entire cluster (nodes, PersistentVolumes,
-# StorageClasses, etc.). The PluginInstallation CR MUST set:
-#
-#   spec.clusterRoles:
-#     - cluster-admin
-#
-# The spec.permissions.rbac rules above cover only what this plugin binary
-# itself needs; the broad Rook operator RBAC is satisfied by cluster-admin.
+# NOTE: cluster-admin-equivalent RBAC
+# The Rook operator install requires broad cluster permissions — see the
+# wildcard rule under spec.permissions.rbac above. The plugin-controller
+# materialises that into a ClusterRole bound to this plugin's ServiceAccount
+# (intersected with the installing admin's permissions, FUN-17). The
+# PluginInstallation CR needs no extra RBAC fields; the current CRD has no
+# spec.clusterRoles.

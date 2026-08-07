@@ -24,8 +24,10 @@ type rawDevice struct {
 }
 
 // ParseDiscoveredDevices converts a rook discover ConfigMap's device JSON into
-// candidate Disk statuses. Only whole disks (type=="disk") are returned.
-func ParseDiscoveredDevices(node string, raw string) ([]v1alpha1.DiskStatus, error) {
+// candidate Disk statuses. Only whole disks (type=="disk") are returned; when
+// allowLoopDevices is set, loop-backed devices (type=="loop") are also included
+// for local/dev/CI clusters that have no real disks.
+func ParseDiscoveredDevices(node string, raw string, allowLoopDevices bool) ([]v1alpha1.DiskStatus, error) {
 	if strings.TrimSpace(raw) == "" {
 		return nil, nil
 	}
@@ -35,7 +37,7 @@ func ParseDiscoveredDevices(node string, raw string) ([]v1alpha1.DiskStatus, err
 	}
 	out := make([]v1alpha1.DiskStatus, 0, len(devs))
 	for _, d := range devs {
-		if d.Type != "disk" {
+		if d.Type != "disk" && !(allowLoopDevices && d.Type == "loop") {
 			continue
 		}
 		path := d.ByID

@@ -12,6 +12,10 @@ type Config struct {
 	RookChartVersion string `env:"ROOK_CHART_VERSION" envDefault:"v1.16.0"`
 	RookNamespace    string `env:"ROOK_NAMESPACE" envDefault:"rook-ceph"`
 	ClusterNamespace string `env:"CLUSTER_NAMESPACE" envDefault:"rook-ceph"`
+	// AllowLoopDevices lets Ceph use loop-backed devices as OSDs and surfaces
+	// them in the Disk inventory. For local/dev/CI clusters only (there are no
+	// real disks); mirrors Rook's own allowLoopDevices/ROOK_ALLOW_LOOP_DEVICES.
+	AllowLoopDevices bool `env:"ALLOW_LOOP_DEVICES" envDefault:"false"`
 }
 
 // LoadConfig parses the plugin configuration from the environment.

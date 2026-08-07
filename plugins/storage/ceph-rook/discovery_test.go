@@ -15,8 +15,13 @@ const sampleDevices = `[
  {"name":"sda1","size":500,"rotational":1,"type":"part","empty":false}
 ]`
 
+const sampleWithLoop = `[
+ {"name":"sdb","size":1073741824,"rotational":1,"type":"disk","empty":true,"filesystem":""},
+ {"name":"loop0","size":8589934592,"rotational":0,"type":"loop","empty":true,"filesystem":""}
+]`
+
 func TestParseDiscoveredDevices(t *testing.T) {
-	got, err := ParseDiscoveredDevices("node-1", sampleDevices)
+	got, err := ParseDiscoveredDevices("node-1", sampleDevices, false)
 	require.NoError(t, err)
 	require.Len(t, got, 2) // the "part" entry is skipped
 
@@ -29,6 +34,22 @@ func TestParseDiscoveredDevices(t *testing.T) {
 
 	assert.Equal(t, v1alpha1.DiskTypeSSD, got[1].Type) // rotational=0
 	assert.False(t, got[1].Available)                  // has filesystem
+}
+
+func TestParseDiscoveredDevicesLoop(t *testing.T) {
+	// Loop devices are excluded by default...
+	got, err := ParseDiscoveredDevices("node-1", sampleWithLoop, false)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "/dev/sdb", got[0].Path)
+
+	// ...and included when loop devices are allowed (dev/CI).
+	got, err = ParseDiscoveredDevices("node-1", sampleWithLoop, true)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, "/dev/loop0", got[1].Path)
+	assert.Equal(t, int64(8589934592), got[1].SizeBytes)
+	assert.True(t, got[1].Available)
 }
 
 func TestDiskNameIsDeterministicAndDNSSafe(t *testing.T) {

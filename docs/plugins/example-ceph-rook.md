@@ -77,27 +77,30 @@ The `StoragePool` spec includes a `replication` field that controls how many cop
 
 The resulting replica count and failure domain are recorded in the `StoragePool` status.
 
-## Why it needs `cluster-admin`
+## Why it needs cluster-admin-equivalent RBAC
 
-The Rook-Ceph operator requires cluster-admin level permissions to:
+The Rook-Ceph operator requires broad, cluster-admin-level permissions to:
 - Discover and manage block devices at the node/host level (privileged kernel access)
-- Create and update Kubernetes resources across all namespaces (`StorageClass`, `PersistentVolumes`, etc.)
-- Manage node labels and taints for scheduling OSDs
-- Access host-level logs and diagnostics
+- Create and update Kubernetes resources across all namespaces (`StorageClass`, `PersistentVolume`, etc.)
+- Install its own cluster-wide RBAC (ClusterRoles/Bindings with escalate+bind) and the Ceph CSI driver
 
-The default namespace-admin RoleBinding only covers the plugin's own namespace. The `clusterRoles: [cluster-admin]` field in the PluginInstallation grants the additional access needed by Rook.
+The plugin declares this in its `definition.yaml` under `spec.permissions.rbac` (a
+cluster-admin-equivalent wildcard rule). The plugin-controller materialises those rules into a
+`ClusterRole` bound to the plugin's `ServiceAccount`, intersected with the installing admin's own
+permissions (FUN-17). There is no separate `clusterRoles` field on the `PluginInstallation` — it
+references a published definition:
 
 ```yaml
-# Example PluginInstallation
+# Example PluginInstallation (references a published plugin version; see FUN-19)
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
   name: ceph-rook
 spec:
-  image: localhost:5111/ceph-rook-plugin:latest
-  pluginName: ceph-rook
-  clusterRoles:
-    - cluster-admin  # Required: Rook needs host-level device access and cross-namespace management
+  definitionRef:
+    pluginName: ceph-rook
+    pluginVersion: v0.1.0
+    definitionHash: sha256:<hash printed by `just plugin-publish storage/ceph-rook`>
 ```
 
 ## Host prerequisites

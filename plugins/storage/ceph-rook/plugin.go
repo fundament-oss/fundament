@@ -12,10 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 	pluginerrors "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/errors"
 	crhelper "github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/controllerruntime"
+	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
 // Plugin is the Ceph/Rook storage plugin.
@@ -109,8 +109,9 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	//   }
 	// ----
 	if err := (&DiskInventoryReconciler{
-		Client:        mgr.GetClient(),
-		RookNamespace: p.cfg.RookNamespace,
+		Client:           mgr.GetClient(),
+		RookNamespace:    p.cfg.RookNamespace,
+		AllowLoopDevices: p.cfg.AllowLoopDevices,
 	}).SetupWithManager(mgr); err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("setup disk inventory reconciler: %w", pluginerrors.NewPermanent(err))

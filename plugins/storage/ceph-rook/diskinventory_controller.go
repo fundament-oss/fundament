@@ -21,8 +21,9 @@ import (
 // DiskInventoryReconciler watches Rook device-discovery ConfigMaps and
 // reconciles them into cluster-scoped Disk custom resources.
 type DiskInventoryReconciler struct {
-	Client        client.Client
-	RookNamespace string
+	Client           client.Client
+	RookNamespace    string
+	AllowLoopDevices bool
 }
 
 // SetupWithManager registers the reconciler with the controller-runtime manager.
@@ -55,7 +56,7 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	node := nodeFromConfigMap(cm.Name, cm.Labels)
 	raw := cm.Data["devices"]
 
-	statuses, err := ParseDiscoveredDevices(node, raw)
+	statuses, err := ParseDiscoveredDevices(node, raw, r.AllowLoopDevices)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("parse discovered devices for node %q: %w", node, err)
 	}
