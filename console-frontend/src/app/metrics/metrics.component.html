@@ -15,10 +15,14 @@
       <h1>
         Metrics&ngsp;
         @if (isLive()) {
-          <nldd-tag color="success" accessible-label="Data is updating live">
-            <span slot="icon" class="live-dot" aria-hidden="true"></span>
-            Live
-          </nldd-tag>
+          <!-- The badge pulses itself; the hand-rolled dot and its keyframes
+               are gone with it. -->
+          <nldd-badge
+            color="success"
+            text="Live"
+            pulse
+            accessible-label="Data is updating live"
+          ></nldd-badge>
         }
         @if (connectionError()) {
           <nldd-tag
