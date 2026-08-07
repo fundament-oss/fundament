@@ -8,6 +8,10 @@ registry := "plugin-registry.localhost"
 registry_port := "5112"
 export kube_context := "k3d-" + cluster
 
+# Both binds are required; see docs/k3d-block-devices.md. Off by default because
+# they expose the host's devices and only storage work needs them.
+storage_volumes := "--volume /dev:/dev@server:0 --volume /run/udev:/run/udev:ro@server:0"
+
 _default:
     @just --list
 
@@ -17,18 +21,30 @@ _default:
 cluster-create:
     k3d cluster create --config=sandbox/k3d-config.yaml
 
-# Start the cluster (creates if it doesn't exist)
+# Create the cluster with the host's block devices bound in (storage plugin work)
+cluster-create-storage:
+    k3d cluster create --config=sandbox/k3d-config.yaml {{ storage_volumes }}
+
+# Start the cluster (creates if it doesn't exist), clearing any leftover cordon
 cluster-start:
     @k3d cluster list {{ cluster }} > /dev/null 2>&1 && k3d cluster start {{ cluster }} || just cluster-create
+    kubectl --context {{ kube_context }} wait --for=condition=Ready node --all --timeout=300s
+    CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh uncordon
 
-# Stop the cluster without deleting it
+# Stop the cluster without deleting it, evicting Ceph consumers first if any
 cluster-stop:
+    CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     k3d cluster stop {{ cluster }}
 
 # Delete the local K3D cluster and registry
 cluster-delete:
+    -@CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     k3d cluster delete {{ cluster }}
     @k3d registry delete {{ registry }} 2>/dev/null || true
+
+# Loop-backed block devices for a storage plugin; run without arguments for usage
+storage-disks *args:
+    CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh {{ args }}
 
 # --- Deployment commands ---
 
