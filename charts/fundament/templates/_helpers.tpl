@@ -48,6 +48,20 @@ Database superuser secret name
 {{- end }}
 
 {{/*
+Name of the db-migrations Job for THIS release.
+
+The revision suffix lets openfga's wait-for-reset block on this upgrade's run
+rather than the previous deploy's completed one. It also lands in that init
+container's command, so a new Job always rolls the openfga pod — without that,
+a reset can drop the schema under a server that never restarts.
+
+Usage: include "fundament.dbMigrationsJobName" $
+*/}}
+{{- define "fundament.dbMigrationsJobName" -}}
+db-migrations-{{ .Release.Revision }}
+{{- end }}
+
+{{/*
 JWT Secret environment variable - supports both direct value and secretRef
 */}}
 {{- define "fundament.jwtSecretEnv" -}}

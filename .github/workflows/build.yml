@@ -135,6 +135,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    outputs:
+      image_tag: ${{ steps.image_tag.outputs.image_tag }}
     env:
       PR_BRANCH: ${{ github.event.pull_request.head.ref }}
       JWT_SECRET: ${{ secrets.PR_JWT_SECRET }}
@@ -142,9 +144,13 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Compute image tag
+        id: image_tag
         run: |
           REF_NAME=$(echo '${{ github.ref_name }}' | tr '/' '-')
-          echo "IMAGE_TAG=${{ github.sha }}-${REF_NAME}-${{ github.run_number }}" >> $GITHUB_ENV
+          IMAGE_TAG="${{ github.sha }}-${REF_NAME}-${{ github.run_number }}"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          # Exported so the test jobs can wait for this release specifically.
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Clone Flux repo
         run: |
@@ -299,9 +305,15 @@ jobs:
             kubectl -n $NS get cluster.postgresql.cnpg.io/db
             kubectl -n $NS describe cluster.postgresql.cnpg.io/db
 
-            # Migrations run as a Job named db-migrations with a 5m TTL after success.
-            # If the Job is gone, migrations almost certainly succeeded.
-            kubectl -n $NS logs job/db-migrations -c migrations
+            # Migrations run as a Job named db-migrations-<helm-revision>, with a
+            # 5m TTL after success. If the Job is gone, migrations almost
+            # certainly succeeded.
+            kubectl -n $NS get jobs -l app.kubernetes.io/name=db-migrations
+            kubectl -n $NS logs -l app.kubernetes.io/name=db-migrations -c migrations
+
+            # OpenFGA blocks on that Job before migrating its schema. If openfga
+            # is stuck in Init, this is why:
+            kubectl -n $NS logs -l app.kubernetes.io/name=openfga -c wait-for-reset
             ```
 
             **6. Routes & TLS**
@@ -333,33 +345,11 @@ jobs:
         with:
           tofu_wrapper: false
 
-      - name: Wait for APIs
+      - name: Wait for this commit to be deployed
         run: |
-          wait_for_api() {
-            local NAME=$1
-            local URL=$2
-            echo "Waiting for ${NAME} at ${URL} to be ready..."
-            for i in $(seq 1 30); do
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
-              if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
-                echo "${NAME} is ready (HTTP ${STATUS})"
-                return 0
-              fi
-              if [ "${STATUS}" = "000" ] || [ "${STATUS}" = "502" ] || [ "${STATUS}" = "503" ] || [ "${STATUS}" = "504" ]; then
-                echo "${NAME}: attempt ${i}/30, not ready yet (HTTP ${STATUS}), retrying in 30s..."
-              else
-                echo "${NAME} responded with unexpected status (HTTP ${STATUS}), failing."
-                return 1
-              fi
-              sleep 30
-            done
-            echo "Timed out waiting for ${NAME} to be ready"
-            return 1
-          }
-
-          BASE="pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
-          wait_for_api "organization-api" "https://organization.${BASE}" && \
-          wait_for_api "authn-api" "https://authn.${BASE}"
+          .github/scripts/wait-for-deployment.sh \
+            "https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+            "${{ needs.deploy.outputs.image_tag }}"
 
       - name: Run Terraform acceptance tests
         run: |
@@ -387,35 +377,11 @@ jobs:
       - name: Install Playwright browsers
         run: cd e2e && bunx playwright install chromium --with-deps
 
-      - name: Wait for APIs
+      - name: Wait for this commit to be deployed
         run: |
-          wait_for_api() {
-            local NAME=$1
-            local URL=$2
-            echo "Waiting for ${NAME} at ${URL} to be ready..."
-            for i in $(seq 1 30); do
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${URL}" || true)
-              if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "401" ] || [ "${STATUS}" = "404" ]; then
-                echo "${NAME} is ready (HTTP ${STATUS})"
-                return 0
-              fi
-              if [ "${STATUS}" = "000" ] || [ "${STATUS}" = "502" ] || [ "${STATUS}" = "503" ] || [ "${STATUS}" = "504" ]; then
-                echo "${NAME}: attempt ${i}/30, not ready yet (HTTP ${STATUS}), retrying in 30s..."
-              else
-                echo "${NAME} responded with unexpected status (HTTP ${STATUS}), failing."
-                return 1
-              fi
-              sleep 30
-            done
-            echo "Timed out waiting for ${NAME} to be ready"
-            return 1
-          }
-
-          BASE="pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}"
-          wait_for_api "console" "https://console.${BASE}" && \
-          wait_for_api "authn-api" "https://authn.${BASE}" && \
-          wait_for_api "organization-api" "https://organization.${BASE}" && \
-          wait_for_api "plugin-proxy" "https://plugin-proxy.${BASE}"
+          .github/scripts/wait-for-deployment.sh \
+            "https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+            "${{ needs.deploy.outputs.image_tag }}"
 
       - name: Run E2E tests
         run: |

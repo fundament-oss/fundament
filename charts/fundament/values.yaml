@@ -7,6 +7,11 @@
 hotreload:
   enabled: false
 
+# Identifies the deployed release, served by organization-api on /version.
+# PR environments set this to the image tag so CI can wait for its own commit
+# to be live. Empty means the endpoint reports "unknown".
+deploymentVersion: ""
+
 # JWT Secret - required for token signing/validation across services
 jwtSecret: ""
 jwtSecretRef:
