@@ -1,6 +1,7 @@
 mod cert-manager
 mod openfsc
 mod envoy-gateway 'gateway-api/envoy-gateway'
+mod ceph-rook 'storage/ceph-rook'
 
 cluster := "fundament-plugin"
 registry := "plugin-registry.localhost"

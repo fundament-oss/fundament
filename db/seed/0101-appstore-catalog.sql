@@ -23,7 +23,8 @@ INSERT INTO appstore.categories (id, name) VALUES
     ('019b4000-4000-7000-8000-000000000002', 'Security'),
     ('019b4000-4000-7000-8000-000000000003', 'Networking'),
     ('019b4000-4000-7000-8000-000000000004', 'Database'),
-    ('019b4000-4000-7000-8000-000000000005', 'Identity')
+    ('019b4000-4000-7000-8000-000000000005', 'Identity'),
+    ('019b4000-4000-7000-8000-000000000006', 'Storage')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
 -- Tags
@@ -291,7 +292,23 @@ The Gateway API plugin powered by Envoy Gateway installs the Envoy Gateway contr
 
 - Ingress for Kubernetes workloads via the Gateway API
 - Advanced traffic management with Envoy
-- Per-Gateway security and traffic policies', 'Fundament', 'https://gateway.envoyproxy.io', 'https://github.com/envoyproxy/gateway', '')
+- Per-Gateway security and traffic policies', 'Fundament', 'https://gateway.envoyproxy.io', 'https://github.com/envoyproxy/gateway', ''),
+    ('019b4000-3000-7000-8000-000000000011', 'ceph-rook', 'Ceph Storage (Rook)', 'Block storage for in-cluster workloads, backed by Ceph and Rook', '## Overview
+
+The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes nodes, exposing discovered raw disks as block storage. Once installed, create a StoragePool to provision a StorageClass that any PersistentVolumeClaim can reference.
+
+## Key Features
+
+- **Automatic Disk Discovery**: Rook scans nodes for raw block devices and publishes them as Disk CRs
+- **Declarative Storage Pools**: A single StoragePool CR configures OSDs, replication, and produces a ready-to-use StorageClass
+- **Tunable Replication**: Set replication to auto, 1, 2, or 3 — auto derives the replica count from the number of available nodes
+- **In-Cluster Block Storage**: No external storage backend required; data stays within the cluster
+
+## Use Cases
+
+- Persistent block volumes for stateful workloads (databases, message queues)
+- ReadWriteOnce volumes for single-node workloads on bare-metal or VM clusters
+- Cost-effective in-cluster storage using spare raw disks', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     display_name = EXCLUDED.display_name,
@@ -333,7 +350,9 @@ INSERT INTO appstore.categories_plugins (plugin_id, category_id) VALUES
     -- OpenFSC -> Networking
     ('019b4000-3000-7000-8000-00000000000e', '019b4000-4000-7000-8000-000000000003'),
     -- Gateway API (Envoy Gateway) -> Networking
-    ('019b4000-3000-7000-8000-000000000010', '019b4000-4000-7000-8000-000000000003')
+    ('019b4000-3000-7000-8000-000000000010', '019b4000-4000-7000-8000-000000000003'),
+    -- Ceph Storage (Rook) -> Storage
+    ('019b4000-3000-7000-8000-000000000011', '019b4000-4000-7000-8000-000000000006')
 ON CONFLICT (plugin_id, category_id) DO NOTHING;
 
 -- Plugin-Tag associations
