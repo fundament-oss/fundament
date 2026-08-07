@@ -218,6 +218,6 @@ export default class AddClusterComponent implements OnInit {
   }
 
   onCancel() {
-    this.router.navigate(['/']);
+    this.router.navigate(['/clusters']);
   }
 }

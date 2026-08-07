@@ -1,3 +1,4 @@
+import '@nldd/design-system/top-navigation-bar';
 import {
   Component,
   inject,
@@ -18,6 +19,9 @@ import AuthnApiService from '../authn-api.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  // The host is a flex item of nldd-app-view, so it needs a display and a share
+  // of the height, or the page inside it collapses to its content.
+  styles: ':host { display: block; flex: 1; min-height: 0; }',
 })
 export default class LoginComponent implements OnInit {
   private titleService = inject(TitleService);

@@ -39,7 +39,7 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
    *  reveals the cluster list the sheet was covering. */
   onClose(): void {
     if (this.router.url.startsWith('/clusters/add')) {
-      this.router.navigate(['/']);
+      this.router.navigate(['/clusters']);
     }
   }
 
@@ -170,7 +170,7 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
   }
 
   onCancel() {
-    this.router.navigate(['/']);
+    this.router.navigate(['/clusters']);
   }
 
   // Steps render as a button rather than a link: the anchor would live inside
