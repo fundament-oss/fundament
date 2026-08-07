@@ -23,6 +23,7 @@ SELECT
     namespace_id,
     api_key_id,
     organization_user_id,
+    plugin_id,
     created,
     retries
 FROM authz.outbox
@@ -42,6 +43,7 @@ type GetAndLockNextOutboxRowRow struct {
 	NamespaceID        pgtype.UUID
 	ApiKeyID           pgtype.UUID
 	OrganizationUserID pgtype.UUID
+	PluginID           pgtype.UUID
 	Created            pgtype.Timestamptz
 	Retries            int32
 }
@@ -60,6 +62,7 @@ func (q *Queries) GetAndLockNextOutboxRow(ctx context.Context) (GetAndLockNextOu
 		&i.NamespaceID,
 		&i.ApiKeyID,
 		&i.OrganizationUserID,
+		&i.PluginID,
 		&i.Created,
 		&i.Retries,
 	)
@@ -198,6 +201,29 @@ func (q *Queries) GetOrganizationUserByID(ctx context.Context, arg GetOrganizati
 		&i.Status,
 		&i.Deleted,
 	)
+	return i, err
+}
+
+const getPluginByID = `-- name: GetPluginByID :one
+SELECT id, organization_id, deleted
+FROM appstore.plugins
+WHERE id = $1
+`
+
+type GetPluginByIDParams struct {
+	ID uuid.UUID
+}
+
+type GetPluginByIDRow struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Deleted        pgtype.Timestamptz
+}
+
+func (q *Queries) GetPluginByID(ctx context.Context, arg GetPluginByIDParams) (GetPluginByIDRow, error) {
+	row := q.db.QueryRow(ctx, getPluginByID, arg.ID)
+	var i GetPluginByIDRow
+	err := row.Scan(&i.ID, &i.OrganizationID, &i.Deleted)
 	return i, err
 }
 

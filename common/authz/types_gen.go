@@ -15,6 +15,7 @@ const (
 	ObjectTypeNodePool      ObjectType = "node_pool"
 	ObjectTypeNamespace     ObjectType = "namespace"
 	ObjectTypeApiKey        ObjectType = "api_key"
+	ObjectTypePlugin        ObjectType = "plugin"
 )
 
 // ActionName identifies the operation being performed.
@@ -183,6 +184,14 @@ func Namespace(id uuid.UUID) Object {
 func ApiKey(id uuid.UUID) Object {
 	return Object{
 		Type: ObjectTypeApiKey,
+		ID:   id.String(),
+	}
+}
+
+// Plugin creates an Object of type plugin.
+func Plugin(id uuid.UUID) Object {
+	return Object{
+		Type: ObjectTypePlugin,
 		ID:   id.String(),
 	}
 }

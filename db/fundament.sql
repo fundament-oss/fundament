@@ -1057,6 +1057,7 @@ CREATE POLICY node_pools_cluster_worker_read ON tenant.node_pools
 -- DROP TABLE IF EXISTS appstore.plugins CASCADE;
 CREATE TABLE appstore.plugins (
 	id uuid NOT NULL DEFAULT uuidv7(),
+	organization_id uuid NOT NULL,
 	name text NOT NULL,
 	display_name text NOT NULL DEFAULT '',
 	description_short text NOT NULL DEFAULT '',
@@ -1071,11 +1072,43 @@ CREATE TABLE appstore.plugins (
 	CONSTRAINT plugins_pk PRIMARY KEY (id)
 );
 -- ddl-end --
+COMMENT ON COLUMN appstore.plugins.organization_id IS E'Owning organization. Gates who may publish/edit this plugin (RLS). Catalog visibility is NOT org-scoped — reads stay global.';
+-- ddl-end --
 COMMENT ON COLUMN appstore.plugins.name IS E'Stable identifier, matching the plugin''s definition.yaml metadata.name (e.g. "openfsc"). Used as the PluginInstallation resource name in the cluster — not for display.';
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugins.display_name IS E'Human-readable name shown in the Console, matching the plugin''s definition.yaml metadata.displayName (e.g. "OpenFSC").';
 -- ddl-end --
 ALTER TABLE appstore.plugins OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.plugins ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: plugins_select_all | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_select_all ON appstore.plugins CASCADE;
+CREATE POLICY plugins_select_all ON appstore.plugins
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugins_insert_owner | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_insert_owner ON appstore.plugins CASCADE;
+CREATE POLICY plugins_insert_owner ON appstore.plugins
+	AS PERMISSIVE
+	FOR INSERT
+	TO fun_fundament_api
+	WITH CHECK (organization_id = authn.current_organization_id());
+-- ddl-end --
+
+-- object: plugins_update_owner | type: POLICY --
+-- DROP POLICY IF EXISTS plugins_update_owner ON appstore.plugins CASCADE;
+CREATE POLICY plugins_update_owner ON appstore.plugins
+	AS PERMISSIVE
+	FOR UPDATE
+	TO fun_fundament_api
+	USING (organization_id = authn.current_organization_id())
+	WITH CHECK (organization_id = authn.current_organization_id());
 -- ddl-end --
 
 -- object: appstore.plugin_definitions | type: TABLE --
@@ -1093,6 +1126,35 @@ CREATE TABLE appstore.plugin_definitions (
 );
 -- ddl-end --
 ALTER TABLE appstore.plugin_definitions OWNER TO fun_owner;
+-- ddl-end --
+ALTER TABLE appstore.plugin_definitions ENABLE ROW LEVEL SECURITY;
+-- ddl-end --
+
+-- object: plugin_definitions_select_all | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_select_all ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_select_all ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (true);
+-- ddl-end --
+
+-- object: plugin_definitions_insert_owner | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_insert_owner ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_insert_owner ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR INSERT
+	TO fun_fundament_api
+	WITH CHECK (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
+-- ddl-end --
+
+-- object: plugin_definitions_update_owner | type: POLICY --
+-- DROP POLICY IF EXISTS plugin_definitions_update_owner ON appstore.plugin_definitions CASCADE;
+CREATE POLICY plugin_definitions_update_owner ON appstore.plugin_definitions
+	AS PERMISSIVE
+	FOR UPDATE
+	TO fun_fundament_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id()));
 -- ddl-end --
 
 -- object: appstore.presets | type: TABLE --
@@ -1527,6 +1589,7 @@ CREATE TABLE authz.outbox (
 	namespace_id uuid,
 	api_key_id uuid,
 	organization_user_id uuid,
+	plugin_id uuid,
 	created timestamptz NOT NULL DEFAULT now(),
 	processed timestamptz,
 	retries integer NOT NULL DEFAULT 0,
@@ -1542,7 +1605,8 @@ CREATE TABLE authz.outbox (
 	node_pool_id,
 	namespace_id,
 	api_key_id,
-	organization_user_id
+	organization_user_id,
+	plugin_id
 ) = 1),
 	CONSTRAINT outbox_ck_status CHECK (status IN ('pending', 'completed', 'retrying', 'failed'))
 );
@@ -1710,6 +1774,31 @@ $function$;
 ALTER FUNCTION authz.api_keys_sync_trigger() OWNER TO fun_owner;
 -- ddl-end --
 
+-- object: authz.plugins_sync_trigger | type: FUNCTION --
+-- DROP FUNCTION IF EXISTS authz.plugins_sync_trigger() CASCADE;
+CREATE OR REPLACE FUNCTION authz.plugins_sync_trigger ()
+	RETURNS trigger
+	LANGUAGE plpgsql
+	VOLATILE 
+	CALLED ON NULL INPUT
+	SECURITY INVOKER
+	PARALLEL UNSAFE
+	COST 1
+	AS 
+$function$
+BEGIN
+    -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (plugin_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;
+$function$;
+-- ddl-end --
+ALTER FUNCTION authz.plugins_sync_trigger() OWNER TO fun_owner;
+-- ddl-end --
+
 -- object: authz.organizations_users_sync_trigger | type: FUNCTION --
 -- DROP FUNCTION IF EXISTS authz.organizations_users_sync_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION authz.organizations_users_sync_trigger ()
@@ -1864,6 +1953,15 @@ CREATE OR REPLACE TRIGGER api_keys_outbox
 	ON authn.api_keys
 	FOR EACH ROW
 	EXECUTE PROCEDURE authz.api_keys_sync_trigger();
+-- ddl-end --
+
+-- object: plugins_outbox | type: TRIGGER --
+-- DROP TRIGGER IF EXISTS plugins_outbox ON appstore.plugins CASCADE;
+CREATE OR REPLACE TRIGGER plugins_outbox
+	AFTER INSERT OR UPDATE
+	ON appstore.plugins
+	FOR EACH ROW
+	EXECUTE PROCEDURE authz.plugins_sync_trigger();
 -- ddl-end --
 
 -- object: outbox_notify | type: TRIGGER --
@@ -2613,6 +2711,13 @@ ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ALTER TABLE tenant.node_pools DROP CONSTRAINT IF EXISTS node_pools_fk_cluster CASCADE;
 ALTER TABLE tenant.node_pools ADD CONSTRAINT node_pools_fk_cluster FOREIGN KEY (cluster_id)
 REFERENCES tenant.clusters (id) MATCH SIMPLE
+ON DELETE NO ACTION ON UPDATE NO ACTION;
+-- ddl-end --
+
+-- object: plugins_fk_organization | type: CONSTRAINT --
+-- ALTER TABLE appstore.plugins DROP CONSTRAINT IF EXISTS plugins_fk_organization CASCADE;
+ALTER TABLE appstore.plugins ADD CONSTRAINT plugins_fk_organization FOREIGN KEY (organization_id)
+REFERENCES tenant.organizations (id) MATCH SIMPLE
 ON DELETE NO ACTION ON UPDATE NO ACTION;
 -- ddl-end --
 
@@ -3673,6 +3778,14 @@ GRANT SELECT
 -- object: "grant_U_19fbeed564" | type: PERMISSION --
 GRANT USAGE
    ON SCHEMA appstore
+   TO fun_authz_worker;
+
+-- ddl-end --
+
+
+-- object: grant_r_1e94bded2d | type: PERMISSION --
+GRANT SELECT
+   ON TABLE appstore.plugins
    TO fun_authz_worker;
 
 -- ddl-end --

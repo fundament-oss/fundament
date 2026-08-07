@@ -10,6 +10,7 @@ SELECT
     namespace_id,
     api_key_id,
     organization_user_id,
+    plugin_id,
     created,
     retries
 FROM authz.outbox
@@ -86,5 +87,10 @@ WHERE id = @id;
 -- name: GetApiKeyByID :one
 SELECT id, organization_id, user_id, expires, revoked, deleted
 FROM authn.api_keys
+WHERE id = @id;
+
+-- name: GetPluginByID :one
+SELECT id, organization_id, deleted
+FROM appstore.plugins
 WHERE id = @id;
 
