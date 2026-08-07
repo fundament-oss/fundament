@@ -1377,10 +1377,6 @@ END;]]> </definition>
 	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
 </policy>
 
-<policy name="plugins_delete_owner" table="appstore.plugins" command="DELETE" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
-</policy>
-
 <table name="plugin_definitions" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
@@ -1423,10 +1419,6 @@ END;]]> </definition>
 </policy>
 
 <policy name="plugin_definitions_update_owner" table="appstore.plugin_definitions" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
-	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
-</policy>
-
-<policy name="plugin_definitions_delete_owner" table="appstore.plugin_definitions" command="DELETE" permissive="true">	<roles names="fun_fundament_api"/>
 	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
 </policy>
 
