@@ -230,12 +230,18 @@
             (back)="onPaneBack()"
             (nldd-single-column-change)="onSingleColumnChange($event)"
           >
+            <!-- Every pane opens with its own h1. Collapsed to one column each
+                 pane is a view of its own, so each needs a heading of its own;
+                 side by side they are three regions, not nested sections, and
+                 several h1s say exactly that. A pane out of the stack is not
+                 slotted, so it draws no box and stays out of the reading order
+                 either way. -->
             @if (true) {
               <nldd-split-view-pane slot="sidebar" background="base" has-content>
                 <nldd-simple-section>
                   @if (currentOrganization(); as org) {
                     <nldd-title size="3">
-                      <h2>{{ org.alias || org.name }}</h2>
+                      <h1>{{ org.alias || org.name }}</h1>
                     </nldd-title>
                     <nldd-spacer size="4"></nldd-spacer>
                   }
@@ -329,7 +335,7 @@
                     <nldd-spacer size="24"></nldd-spacer>
 
                     <nldd-title size="5">
-                      <h3>Projects</h3>
+                      <h2>Projects</h2>
                     </nldd-title>
 
                     <nldd-spacer size="8"></nldd-spacer>
@@ -412,7 +418,7 @@
                        its own: it is what the project is, not something you can
                        open. The counts moved into the menu items they describe. -->
                     <nldd-title size="3">
-                      <h2>{{ project.name }}</h2>
+                      <h1>{{ project.name }}</h1>
                       <span slot="subtitle">Cluster {{ project.clusterName }}</span>
                     </nldd-title>
 
