@@ -21,7 +21,7 @@
 
     <nldd-simple-section>
       @if (showAddNamespaceStep()) {
-        <nldd-title id="new-namespace-title" size="4">
+        <nldd-title id="new-namespace-title" size="3">
           <h2>New namespace</h2>
         </nldd-title>
 
@@ -42,11 +42,13 @@
               appAutofocus
               id="namespaceName"
               [value]="namespaceForm.get('name')?.value ?? ''"
-              placeholder="E.g. my-namespace"
               [invalid]="isNamespaceNameInvalid()"
               error-message="cluster-namespace-name-error"
               (input)="onNamespaceNameInput($event)"
             ></nldd-text-field>
+            <nldd-form-field-help-text>
+              Lowercase letters, numbers and hyphens.
+            </nldd-form-field-help-text>
             <nldd-form-field-error-text id="cluster-namespace-name-error">
               {{ getNamespaceNameError() }}
             </nldd-form-field-error-text>
@@ -66,6 +68,8 @@
                 id="projectId"
                 accessible-label="Project"
                 [attr.text]="selectedProjectName()"
+                [attr.invalid]="isProjectInvalid() ? '' : null"
+                error-message="cluster-namespace-project-error"
                 (change)="onProjectChange($event)"
               >
                 <nldd-menu accessible-label="Projects">
@@ -77,6 +81,11 @@
                   }
                 </nldd-menu>
               </nldd-combo-box>
+              <nldd-form-field-error-text id="cluster-namespace-project-error">
+                @if (isProjectInvalid()) {
+                  Project is required.
+                }
+              </nldd-form-field-error-text>
               @if (projects().length === 0) {
                 <nldd-rich-text>
                   <p>
@@ -97,7 +106,7 @@
             <nldd-button
               type="button"
               (click)="createNamespace()"
-              [text]="isCreatingNamespace() ? 'Creating...' : 'Add namespace'"
+              [text]="isCreatingNamespace() ? 'Creating...' : 'Create namespace'"
               [attr.loading]="isCreatingNamespace() ? '' : null"
               variant="primary"
               width="full"
@@ -105,7 +114,7 @@
           </nldd-form-actions>
         </nldd-form>
       } @else {
-        <nldd-title id="namespaces-title" size="4">
+        <nldd-title id="namespaces-title" size="3">
           <h2>Namespaces</h2>
         </nldd-title>
 
@@ -150,47 +159,13 @@
                 (select)="openAddNamespaceStep()"
               ></nldd-menu-item>
             </nldd-toolbar-item>
-            @if (selection.count() > 0) {
-              <nldd-toolbar-item slot="end">
-                <nldd-button
-                  type="button"
-                  (click)="openBulkDeleteModal()"
-                  [text]="'Delete selected (' + selection.count() + ')'"
-                  start-icon="trash"
-                  variant="destructive"
-                  [disabled]="isBulkDeleting()"
-                ></nldd-button>
-              </nldd-toolbar-item>
-            }
           </nldd-toolbar>
 
           <nldd-spacer size="16"></nldd-spacer>
 
           <nldd-list variant="box" accessible-label="Namespaces">
-            <nldd-list-item>
-              <nldd-cell width="fit-content">
-                <nldd-checkbox
-                  [checked]="selection.allSelected()"
-                  [indeterminate]="selection.someSelected()"
-                  accessible-label="Select all namespaces"
-                  (change)="selection.toggleAll($any($event).detail.checked)"
-                ></nldd-checkbox>
-              </nldd-cell>
-              <nldd-spacer-cell size="12"></nldd-spacer-cell>
-              <nldd-text-cell color="secondary" text="Select all"></nldd-text-cell>
-            </nldd-list-item>
-
             @for (namespace of namespaces(); track namespace.id) {
               <nldd-list-item>
-                <nldd-cell width="fit-content">
-                  <nldd-checkbox
-                    [checked]="selection.has(namespace.id)"
-                    [value]="namespace.id"
-                    accessible-label="Select namespace {{ namespace.name }}"
-                    (change)="selection.set(namespace.id, $any($event).detail.checked)"
-                  ></nldd-checkbox>
-                </nldd-cell>
-                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-title-cell
                   [attr.text]="namespace.name"
                   [attr.supporting-text]="
@@ -213,6 +188,43 @@
               </nldd-list-item>
             }
           </nldd-list>
+
+          <nldd-spacer size="24"></nldd-spacer>
+
+          <!-- Not a bulk selection in the list: picking every row one by one to
+               empty a cluster is work, and a checkbox column that is only there
+               for that case makes every row heavier. One box, one door, and the
+               dialog after it still asks. -->
+          <nldd-box variant="critical">
+            <nldd-container padding="16">
+              <nldd-title size="5">
+                <h3>Danger zone</h3>
+              </nldd-title>
+
+              <nldd-spacer size="8"></nldd-spacer>
+
+              <nldd-rich-text spacing="flat">
+                <p>
+                  Deleting a namespace removes every resource running in it. This
+                  cannot be undone.
+                </p>
+              </nldd-rich-text>
+
+              <nldd-spacer size="16"></nldd-spacer>
+
+              <nldd-button
+                type="button"
+                (click)="openBulkDeleteModal()"
+                [text]="
+                  'Delete all ' + namespaces().length + ' namespace' +
+                  (namespaces().length === 1 ? '' : 's')
+                "
+                start-icon="trash"
+                variant="destructive"
+                [attr.loading]="isBulkDeleting() ? '' : null"
+              ></nldd-button>
+            </nldd-container>
+          </nldd-box>
         }
       }
     </nldd-simple-section>

@@ -92,6 +92,10 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   isCreatingNamespace = signal<boolean>(false);
 
+  /** Errors wait for the button. While you are still filling the form in, a
+   *  field that is not done yet is not a mistake. */
+  namespaceSubmitted = signal(false);
+
   showDeleteNamespaceModal = signal<boolean>(false);
 
   pendingNamespaceId = signal<string | null>(null);
@@ -164,6 +168,11 @@ export default class ClusterNamespacesComponent implements OnInit {
     }
   }
 
+  /** Same treatment as the name: required, so it has to be able to say so. */
+  isProjectInvalid(): boolean {
+    return this.namespaceSubmitted() && !!this.namespaceForm.get('projectId')?.invalid;
+  }
+
   /** What the combo box shows while its menu is closed. */
   selectedProjectName(): string {
     const id = this.namespaceForm.get('projectId')?.value ?? '';
@@ -183,6 +192,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   openAddNamespaceStep(): void {
     this.namespaceForm.reset();
+    this.namespaceSubmitted.set(false);
     this.createErrorMessage.set(null);
     this.showAddNamespaceStep.set(true);
     this.loadProjects();
@@ -191,6 +201,7 @@ export default class ClusterNamespacesComponent implements OnInit {
   async createNamespace(event?: Event): Promise<void> {
     event?.preventDefault();
     this.createErrorMessage.set(null);
+    this.namespaceSubmitted.set(true);
 
     if (this.namespaceForm.invalid) {
       this.namespaceForm.markAllAsTouched();
@@ -321,8 +332,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   /** Also covers `touched`, so submitting an untouched empty field shows the error. */
   isNamespaceNameInvalid(): boolean {
-    const nameControl = this.namespaceForm.get('name');
-    return !!nameControl?.invalid && (nameControl.dirty || nameControl.touched);
+    return this.namespaceSubmitted() && !!this.namespaceForm.get('name')?.invalid;
   }
 
   getNamespaceNameError(): string {

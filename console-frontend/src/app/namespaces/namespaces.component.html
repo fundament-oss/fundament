@@ -139,10 +139,11 @@
         (submit)="createNamespace($event)"
         (keydown.enter)="createNamespace($event)"
       >
-        <nldd-form-field
-          label="Namespace name"
-          supporting-label="Lowercase letters, numbers and hyphens."
-        >
+        <!-- The rule as help text, not as a supporting label: it tells you how to
+             fill the field in, which is what help text is for. And no
+             placeholder: it disappears the moment you start typing, exactly when
+             you would want to check the rule again. -->
+        <nldd-form-field label="Namespace name">
           <nldd-text-field
             appAutofocus
             id="namespaceName"
@@ -151,6 +152,9 @@
             error-message="namespace-name-error"
             (input)="onNameInput($event)"
           ></nldd-text-field>
+          <nldd-form-field-help-text>
+            Lowercase letters, numbers and hyphens.
+          </nldd-form-field-help-text>
           <nldd-form-field-error-text id="namespace-name-error">
             {{ getNameError() }}
           </nldd-form-field-error-text>
