@@ -823,7 +823,7 @@ export default class App implements OnInit {
     const project = this.activeProject();
 
     return [
-      { path: `${base}/general`, icon: 'folder', label: 'General', exact: false, count: null },
+      { path: `${base}/general`, icon: 'paper-roll-horizontal', label: 'General', exact: false, count: null },
       {
         path: `${base}/namespaces`,
         icon: 'brackets-ellipsis',
