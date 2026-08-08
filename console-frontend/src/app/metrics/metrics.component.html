@@ -237,122 +237,172 @@
       <nldd-spacer size="16"></nldd-spacer>
     }
 
-    @if (isLoading()) {
-      <nldd-activity-indicator show-text text="Loading metrics..."></nldd-activity-indicator>
-    } @else {
+    <!-- No page-wide swap while loading: the boxes and their titles stay put,
+         only what is inside them goes empty. Switching a filter otherwise
+         blanks the page and drops everything back a moment later. -->
+    <nldd-container layout="stack" gap="24">
+      <!-- Totals (all views) -->
+      @if (currentTotals() || isLoading()) {
+        <nldd-box>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h2>
+                @if (selectedClusterId()) {
+                  Cluster totals
+                } @else if (viewMode() === 'project') {
+                  Project totals
+                } @else {
+                  Organisation totals
+                }
+              </h2>
+            </nldd-title>
+
+            <nldd-spacer size="16"></nldd-spacer>
+
+            <!-- No spinner here: the bars themselves are the loading state. They
+                 keep their labels, drain to zero and drop their value text, so
+                 nothing moves and the refill is the data arriving. -->
+            <nldd-container layout="stack" gap="16">
+              @for (metric of totalBars(); track metric.label) {
+                <nldd-progress-bar
+                  [attr.text]="metric.label"
+                  [attr.value]="metric.used"
+                  [attr.max]="metric.total"
+                  [attr.color]="metric.color"
+                  [attr.value-display]="metric.valueText ? null : 'none'"
+                  [attr.value-text]="metric.valueText || null"
+                  [attr.accessible-label]="metric.accessibleLabel"
+                ></nldd-progress-bar>
+              }
+            </nldd-container>
+          </nldd-container>
+        </nldd-box>
+      }
+
+      <!-- Time-series charts (all views) -->
+      <!-- Under each other, not side by side: a chart at half width buys
+           nothing, and reading them in one column keeps the time axis the
+           same width everywhere. -->
       <nldd-container layout="stack" gap="24">
-        <!-- Totals (all views) -->
-        @if (currentTotals(); as totals) {
+        @for (chart of charts; track chart.title) {
           <nldd-box>
             <nldd-container padding="16">
               <nldd-title size="5">
-                <h2>
-                  @if (selectedClusterId()) {
-                    Cluster totals
-                  } @else if (viewMode() === 'project') {
-                    Project totals
-                  } @else {
-                    Organisation totals
-                  }
-                </h2>
+                <h2>{{ chart.title }}</h2>
               </nldd-title>
 
               <nldd-spacer size="16"></nldd-spacer>
 
-              <nldd-container layout="stack" gap="16">
-                @for (metric of totalBars(); track metric.label) {
-                  <nldd-progress-bar
-                    [attr.text]="metric.label"
-                    [attr.value]="metric.used"
-                    [attr.max]="metric.total"
-                    [attr.color]="metric.color"
-                    [attr.value-text]="metric.valueText"
-                    [attr.accessible-label]="metric.accessibleLabel"
-                  ></nldd-progress-bar>
+              <div class="chart-frame">
+                @switch (chart.key) {
+                  @case ('cpu') {
+                    @if (hasCpuData) {
+                      <canvas #cpuChart></canvas>
+                    }
+                  }
+                  @case ('memory') {
+                    @if (hasMemoryData) {
+                      <canvas #memoryChart></canvas>
+                    }
+                  }
+                  @case ('pods') {
+                    @if (hasPodData) {
+                      <canvas #podChart></canvas>
+                    }
+                  }
+                  @default {
+                    @if (hasNetworkData) {
+                      <canvas #networkChart></canvas>
+                    }
+                  }
                 }
-              </nldd-container>
+                @if (showBusy()) {
+                  <nldd-activity-indicator
+                    show-text
+                    text="Loading metrics…"
+                  ></nldd-activity-indicator>
+                } @else if (!hasChartData(chart.key)) {
+                  <nldd-inline-dialog text="No data available"></nldd-inline-dialog>
+                }
+              </div>
             </nldd-container>
           </nldd-box>
         }
+      </nldd-container>
 
-        <!-- Time-series charts (all views) -->
-        <!-- Under each other, not side by side: a chart at half width buys
-             nothing, and reading them in one column keeps the time axis the
-             same width everywhere. -->
-        <nldd-container layout="stack" gap="24">
-          @for (chart of charts; track chart.title) {
-            <nldd-box>
-              <nldd-container padding="16">
-                <nldd-title size="5">
-                  <h2>{{ chart.title }}</h2>
-                </nldd-title>
+      <!-- Per-cluster breakdown — org-level, no cluster selected -->
+      @if (viewMode() === 'org' && !selectedClusterId() && clusterSummaries().length > 0) {
+        <nldd-box>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h2>Per cluster</h2>
+            </nldd-title>
 
-                <nldd-spacer size="16"></nldd-spacer>
+            <nldd-spacer size="16"></nldd-spacer>
 
-                <div class="chart-frame">
-                  @switch (chart.key) {
-                    @case ('cpu') {
-                      @if (hasCpuData) {
-                        <canvas #cpuChart></canvas>
+            <!-- Cards rather than a table: three bars per cluster read as
+                 three bars, where a table row turns them into cells that
+                 happen to hold a bar. -->
+            <nldd-collection layout="grid" item-width="280px" gap="16px">
+              @for (c of clusterSummaries(); track c.id) {
+                <nldd-card background="base">
+                  <nldd-container padding="16">
+                    <nldd-title size="5">
+                      <h3>{{ c.name }}</h3>
+                    </nldd-title>
+
+                    <nldd-spacer size="16"></nldd-spacer>
+
+                    <nldd-container layout="stack" gap="16">
+                      @for (metric of usageBars(c); track metric.label) {
+                        <nldd-progress-bar
+                          [attr.text]="metric.label"
+                          [attr.value]="metric.used"
+                          [attr.max]="metric.total"
+                          [attr.color]="metric.color"
+                          [attr.value-text]="metric.valueText"
+                          [attr.accessible-label]="metric.label + ' used in ' + c.name"
+                        ></nldd-progress-bar>
                       }
-                    }
-                    @case ('memory') {
-                      @if (hasMemoryData) {
-                        <canvas #memoryChart></canvas>
-                      }
-                    }
-                    @case ('pods') {
-                      @if (hasPodData) {
-                        <canvas #podChart></canvas>
-                      }
-                    }
-                    @default {
-                      @if (hasNetworkData) {
-                        <canvas #networkChart></canvas>
-                      }
-                    }
-                  }
-                  @if (!hasChartData(chart.key)) {
-                    <nldd-inline-dialog text="No data available"></nldd-inline-dialog>
-                  }
-                </div>
-              </nldd-container>
-            </nldd-box>
-          }
-        </nldd-container>
+                    </nldd-container>
+                  </nldd-container>
+                </nldd-card>
+              }
+            </nldd-collection>
+          </nldd-container>
+        </nldd-box>
+      }
 
-        <!-- Per-cluster breakdown — org-level, no cluster selected -->
-        @if (viewMode() === 'org' && !selectedClusterId() && clusterSummaries().length > 0) {
-          <nldd-box>
-            <nldd-container padding="16">
-              <nldd-title size="5">
-                <h2>Per cluster</h2>
-              </nldd-title>
+      <!-- Per-node breakdown — cluster-level only -->
+      @if (selectedClusterId()) {
+        <nldd-box>
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h2>Per node</h2>
+            </nldd-title>
 
-              <nldd-spacer size="16"></nldd-spacer>
+            <nldd-spacer size="16"></nldd-spacer>
 
-              <!-- Cards rather than a table: three bars per cluster read as
-                   three bars, where a table row turns them into cells that
-                   happen to hold a bar. -->
+            @if (nodeUsage().length > 0) {
               <nldd-collection layout="grid" item-width="280px" gap="16px">
-                @for (c of clusterSummaries(); track c.id) {
+                @for (node of nodeUsage(); track node.name) {
                   <nldd-card background="base">
                     <nldd-container padding="16">
                       <nldd-title size="5">
-                        <h3>{{ c.name }}</h3>
+                        <h3>{{ node.name }}</h3>
                       </nldd-title>
 
                       <nldd-spacer size="16"></nldd-spacer>
 
                       <nldd-container layout="stack" gap="16">
-                        @for (metric of usageBars(c); track metric.label) {
+                        @for (metric of usageBars(node); track metric.label) {
                           <nldd-progress-bar
                             [attr.text]="metric.label"
                             [attr.value]="metric.used"
                             [attr.max]="metric.total"
                             [attr.color]="metric.color"
                             [attr.value-text]="metric.valueText"
-                            [attr.accessible-label]="metric.label + ' used in ' + c.name"
+                            [attr.accessible-label]="metric.label + ' used on ' + node.name"
                           ></nldd-progress-bar>
                         }
                       </nldd-container>
@@ -360,128 +410,86 @@
                   </nldd-card>
                 }
               </nldd-collection>
-            </nldd-container>
-          </nldd-box>
-        }
-
-        <!-- Per-node breakdown — cluster-level only -->
-        @if (selectedClusterId()) {
-          <nldd-box>
-            <nldd-container padding="16">
-              <nldd-title size="5">
-                <h2>Per node</h2>
-              </nldd-title>
-
-              <nldd-spacer size="16"></nldd-spacer>
-
-              @if (nodeUsage().length > 0) {
-                <nldd-collection layout="grid" item-width="280px" gap="16px">
-                  @for (node of nodeUsage(); track node.name) {
-                    <nldd-card background="base">
-                      <nldd-container padding="16">
-                        <nldd-title size="5">
-                          <h3>{{ node.name }}</h3>
-                        </nldd-title>
-
-                        <nldd-spacer size="16"></nldd-spacer>
-
-                        <nldd-container layout="stack" gap="16">
-                          @for (metric of usageBars(node); track metric.label) {
-                            <nldd-progress-bar
-                              [attr.text]="metric.label"
-                              [attr.value]="metric.used"
-                              [attr.max]="metric.total"
-                              [attr.color]="metric.color"
-                              [attr.value-text]="metric.valueText"
-                              [attr.accessible-label]="metric.label + ' used on ' + node.name"
-                            ></nldd-progress-bar>
-                          }
-                        </nldd-container>
-                      </nldd-container>
-                    </nldd-card>
-                  }
-                </nldd-collection>
-              } @else {
-                <nldd-inline-dialog text="No data available"></nldd-inline-dialog>
-              }
-            </nldd-container>
-          </nldd-box>
-        }
-
-        <!-- Per-namespace breakdown (all views) -->
-        <nldd-box>
-          <nldd-container padding="16">
-            <nldd-title size="5">
-              <h2>Per namespace</h2>
-            </nldd-title>
-
-            <nldd-spacer size="16"></nldd-spacer>
-
-            @if (namespaceUsage().length > 0) {
-              <nldd-table
-                accessible-label="Per namespace usage"
-                columns="minmax(160px, 1fr) 110px 120px 110px 140px 70px 110px 110px"
-                md-columns="minmax(160px, 1fr) 110px 110px 70px"
-                sm-columns="minmax(160px, 1fr) 110px 110px 70px"
-              >
-                <nldd-table-row slot="header">
-                  <nldd-text-cell text="**Namespace**"></nldd-text-cell>
-                  <nldd-text-cell text="**CPU used**"></nldd-text-cell>
-                  <nldd-text-cell text="**CPU req / lim**" hide-below="lg"></nldd-text-cell>
-                  <nldd-text-cell text="**Mem used**"></nldd-text-cell>
-                  <nldd-text-cell text="**Mem req / lim**" hide-below="lg"></nldd-text-cell>
-                  <nldd-text-cell text="**Pods**"></nldd-text-cell>
-                  <nldd-text-cell text="**Net Rx**" hide-below="lg"></nldd-text-cell>
-                  <nldd-text-cell text="**Net Tx**" hide-below="lg"></nldd-text-cell>
-                </nldd-table-row>
-
-                @for (ns of filteredNamespaceUsage(); track ns.name) {
-                  <nldd-table-row>
-                    <nldd-text-cell [attr.text]="ns.name"></nldd-text-cell>
-                    <nldd-text-cell
-                      [attr.text]="(ns.cpu | number: '1.2-2') + ' cores'"
-                    ></nldd-text-cell>
-                    <nldd-text-cell
-                      color="secondary"
-                      hide-below="lg"
-                      [attr.text]="
-                        (ns.cpuRequests | number: '1.1-1') +
-                        ' / ' +
-                        (ns.cpuLimits | number: '1.1-1')
-                      "
-                    ></nldd-text-cell>
-                    <nldd-text-cell
-                      [attr.text]="(ns.memory | number: '1.1-1') + ' GiB'"
-                    ></nldd-text-cell>
-                    <nldd-text-cell
-                      color="secondary"
-                      hide-below="lg"
-                      [attr.text]="
-                        (ns.memoryRequests | number: '1.1-1') +
-                        ' / ' +
-                        (ns.memoryLimits | number: '1.1-1') +
-                        ' GiB'
-                      "
-                    ></nldd-text-cell>
-                    <nldd-text-cell [attr.text]="ns.pods"></nldd-text-cell>
-                    <nldd-text-cell
-                      hide-below="lg"
-                      [attr.text]="(ns.networkReceiveMbs | number: '1.2-2') + ' MB/s'"
-                    ></nldd-text-cell>
-                    <nldd-text-cell
-                      hide-below="lg"
-                      [attr.text]="(ns.networkTransmitMbs | number: '1.2-2') + ' MB/s'"
-                    ></nldd-text-cell>
-                  </nldd-table-row>
-                }
-              </nldd-table>
             } @else {
               <nldd-inline-dialog text="No data available"></nldd-inline-dialog>
             }
           </nldd-container>
         </nldd-box>
-      </nldd-container>
-    }
+      }
+
+      <!-- Per-namespace breakdown (all views) -->
+      <nldd-box>
+        <nldd-container padding="16">
+          <nldd-title size="5">
+            <h2>Per namespace</h2>
+          </nldd-title>
+
+          <nldd-spacer size="16"></nldd-spacer>
+
+          @if (namespaceUsage().length > 0) {
+            <nldd-table
+              accessible-label="Per namespace usage"
+              columns="minmax(160px, 1fr) 110px 120px 110px 140px 70px 110px 110px"
+              md-columns="minmax(160px, 1fr) 110px 110px 70px"
+              sm-columns="minmax(160px, 1fr) 110px 110px 70px"
+            >
+              <nldd-table-row slot="header">
+                <nldd-text-cell text="**Namespace**"></nldd-text-cell>
+                <nldd-text-cell text="**CPU used**"></nldd-text-cell>
+                <nldd-text-cell text="**CPU req / lim**" hide-below="lg"></nldd-text-cell>
+                <nldd-text-cell text="**Mem used**"></nldd-text-cell>
+                <nldd-text-cell text="**Mem req / lim**" hide-below="lg"></nldd-text-cell>
+                <nldd-text-cell text="**Pods**"></nldd-text-cell>
+                <nldd-text-cell text="**Net Rx**" hide-below="lg"></nldd-text-cell>
+                <nldd-text-cell text="**Net Tx**" hide-below="lg"></nldd-text-cell>
+              </nldd-table-row>
+
+              @for (ns of filteredNamespaceUsage(); track ns.name) {
+                <nldd-table-row>
+                  <nldd-text-cell [attr.text]="ns.name"></nldd-text-cell>
+                  <nldd-text-cell
+                    [attr.text]="(ns.cpu | number: '1.2-2') + ' cores'"
+                  ></nldd-text-cell>
+                  <nldd-text-cell
+                    color="secondary"
+                    hide-below="lg"
+                    [attr.text]="
+                      (ns.cpuRequests | number: '1.1-1') +
+                      ' / ' +
+                      (ns.cpuLimits | number: '1.1-1')
+                    "
+                  ></nldd-text-cell>
+                  <nldd-text-cell
+                    [attr.text]="(ns.memory | number: '1.1-1') + ' GiB'"
+                  ></nldd-text-cell>
+                  <nldd-text-cell
+                    color="secondary"
+                    hide-below="lg"
+                    [attr.text]="
+                      (ns.memoryRequests | number: '1.1-1') +
+                      ' / ' +
+                      (ns.memoryLimits | number: '1.1-1') +
+                      ' GiB'
+                    "
+                  ></nldd-text-cell>
+                  <nldd-text-cell [attr.text]="ns.pods"></nldd-text-cell>
+                  <nldd-text-cell
+                    hide-below="lg"
+                    [attr.text]="(ns.networkReceiveMbs | number: '1.2-2') + ' MB/s'"
+                  ></nldd-text-cell>
+                  <nldd-text-cell
+                    hide-below="lg"
+                    [attr.text]="(ns.networkTransmitMbs | number: '1.2-2') + ' MB/s'"
+                  ></nldd-text-cell>
+                </nldd-table-row>
+              }
+            </nldd-table>
+          } @else {
+            <nldd-inline-dialog text="No data available"></nldd-inline-dialog>
+          }
+        </nldd-container>
+      </nldd-box>
+    </nldd-container>
   </nldd-simple-section>
 
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->

@@ -294,6 +294,12 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   isLoading = signal(false);
 
+  /** Loading that has lasted long enough to be worth a spinner. Under a second
+   *  the data is simply there, and an indicator that flashes by is noise. */
+  showBusy = signal(false);
+
+  private busyTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
   isLive = signal(false);
 
   connectionError = signal(false);
@@ -406,7 +412,19 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   /** The totals as progress bars: same shape as the cluster page uses. */
   totalBars = computed(() => {
     const totals = this.currentTotals();
-    if (!totals) return [];
+    // Loading keeps the same three bars, drained: no jump in height, and the
+    // refill is the arrival. An empty bar says "measuring" better than a
+    // spinner in the place where the measurement belongs.
+    if (!totals) {
+      return ['CPU', 'Memory', 'Pods'].map((label) => ({
+        label,
+        used: 0,
+        total: 100,
+        color: 'neutral',
+        valueText: '',
+        accessibleLabel: `${label} used`,
+      }));
+    }
     return [
       { label: 'CPU', ...totals.cpu },
       { label: 'Memory', ...totals.memory },
@@ -543,6 +561,15 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.dateTo = to;
   }
 
+  private clearData(): void {
+    this.orgTotals.set(null);
+    this.projectTotals.set(null);
+    this.clusterTotals.set(null);
+    this.clusterSummaries.set([]);
+    this.nodeUsage.set([]);
+    this.namespaceUsage.set([]);
+  }
+
   private cancelStream(): void {
     this.streamSub?.unsubscribe();
     this.streamSub = null;
@@ -556,10 +583,31 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Flips the busy flag a second late, so a quick reload never blinks. */
+  private setLoading(loading: boolean): void {
+    this.isLoading.set(loading);
+    if (this.busyTimeoutId !== null) {
+      clearTimeout(this.busyTimeoutId);
+      this.busyTimeoutId = null;
+    }
+    if (!loading) {
+      this.showBusy.set(false);
+      return;
+    }
+    this.busyTimeoutId = setTimeout(() => {
+      this.busyTimeoutId = null;
+      if (this.isLoading()) this.showBusy.set(true);
+    }, 1000);
+  }
+
   private startStream(fromReconnect = false): void {
     if (!fromReconnect) this.reconnectAttempt = 0;
     this.cancelStream();
-    this.isLoading.set(true);
+    this.setLoading(true);
+    // Drop the old numbers on a real switch, not on a reconnect. Keeping them
+    // would put 7d figures under a 30d button for as long as the load takes;
+    // empty bars and an empty frame say "not measured yet", which is true.
+    if (!fromReconnect) this.clearData();
     this.isLive.set(false);
     this.connectionError.set(false);
     this.metricsHealth.report(true);
@@ -573,7 +621,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     try {
       obs = this.buildStreamObservable();
     } catch (err) {
-      this.isLoading.set(false);
+      this.setLoading(false);
       this.errorMessage.set(err instanceof Error ? err.message : 'Failed to start stream');
       return;
     }
@@ -581,7 +629,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.streamSub = obs.subscribe({
       next: (response) => {
         this.applyStreamResponse(response);
-        this.isLoading.set(false);
+        this.setLoading(false);
         this.isLive.set(true);
         this.reconnectAttempt = 0;
         if (response.refreshedAt) {
@@ -599,7 +647,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
         }
       },
       error: () => {
-        this.isLoading.set(false);
+        this.setLoading(false);
         this.isLive.set(false);
         this.connectionError.set(true);
         this.metricsHealth.report(false);
