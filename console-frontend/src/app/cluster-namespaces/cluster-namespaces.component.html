@@ -12,8 +12,8 @@
          out of it — the same shape as the cluster wizard. -->
     <nldd-top-title-bar
       slot="header"
-      [attr.text]="showAddNamespaceStep() ? 'Add namespace' : 'Namespaces'"
       [attr.back-text]="showAddNamespaceStep() ? 'Namespaces' : null"
+      [attr.collapse-anchor]="showAddNamespaceStep() ? 'new-namespace-title' : 'namespaces-title'"
       dismiss-text="Close"
       (back)="showAddNamespaceStep.set(false)"
       (dismiss)="onCancel()"
@@ -21,6 +21,12 @@
 
     <nldd-simple-section>
       @if (showAddNamespaceStep()) {
+        <nldd-title id="new-namespace-title" size="4">
+          <h2>New namespace</h2>
+        </nldd-title>
+
+        <nldd-spacer size="16"></nldd-spacer>
+
         @if (createErrorMessage()) {
           <nldd-banner variant="critical" [attr.text]="createErrorMessage()"></nldd-banner>
           <nldd-spacer size="16"></nldd-spacer>
@@ -31,31 +37,6 @@
           (submit)="createNamespace($event)"
           (keydown.enter)="createNamespace($event)"
         >
-          <nldd-form-field label="Project" class="mb-4">
-            @if (isLoadingProjects()) {
-              <nldd-activity-indicator
-                show-text
-                text="Loading projects..."
-              ></nldd-activity-indicator>
-            } @else {
-              <nldd-dropdown>
-                <select id="projectId" formControlName="projectId">
-                  @for (project of projects(); track project.id) {
-                    <option [value]="project.id">{{ project.alias || project.name }}</option>
-                  }
-                </select>
-              </nldd-dropdown>
-              @if (projects().length === 0) {
-                <nldd-rich-text>
-                  <p>
-                    No projects available.
-                    <nldd-link href="/projects/add" text="Create a project first"></nldd-link>.
-                  </p>
-                </nldd-rich-text>
-              }
-            }
-          </nldd-form-field>
-
           <nldd-form-field label="Namespace name" class="mb-4">
             <nldd-text-field
               appAutofocus
@@ -70,8 +51,66 @@
               {{ getNamespaceNameError() }}
             </nldd-form-field-error-text>
           </nldd-form-field>
+
+          <nldd-form-field label="Project" class="mb-4">
+            @if (isLoadingProjects()) {
+              <nldd-activity-indicator
+                show-text
+                text="Loading projects..."
+              ></nldd-activity-indicator>
+            } @else {
+              <!-- A combo box, not a native select: the same control as every
+                   other choice in the console, instead of the operating
+                   system's own popup. -->
+              <nldd-combo-box
+                id="projectId"
+                accessible-label="Project"
+                [attr.text]="selectedProjectName()"
+                (change)="onProjectChange($event)"
+              >
+                <nldd-menu accessible-label="Projects">
+                  @for (project of projects(); track project.id) {
+                    <nldd-menu-item
+                      [attr.value]="project.id"
+                      [attr.text]="project.alias || project.name"
+                    ></nldd-menu-item>
+                  }
+                </nldd-menu>
+              </nldd-combo-box>
+              @if (projects().length === 0) {
+                <nldd-rich-text>
+                  <p>
+                    No projects available.
+                    <nldd-link href="/projects/add" text="Create a project first"></nldd-link>.
+                  </p>
+                </nldd-rich-text>
+              }
+            }
+          </nldd-form-field>
+
+          <!-- Under the form, not stuck to the bottom of the sheet: the sheet is
+               short enough that a sticky footer only pushes the button away from
+               what it submits. -->
+          <nldd-form-actions>
+            <!-- Never disabled: a disabled button says nothing about what is
+                 missing. Pressing it points at the field instead. -->
+            <nldd-button
+              type="button"
+              (click)="createNamespace()"
+              [text]="isCreatingNamespace() ? 'Creating...' : 'Add namespace'"
+              [attr.loading]="isCreatingNamespace() ? '' : null"
+              variant="primary"
+              width="full"
+            ></nldd-button>
+          </nldd-form-actions>
         </nldd-form>
       } @else {
+        <nldd-title id="namespaces-title" size="4">
+          <h2>Namespaces</h2>
+        </nldd-title>
+
+        <nldd-spacer size="16"></nldd-spacer>
+
         @if (errorMessage()) {
           <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
           <nldd-spacer size="16"></nldd-spacer>
@@ -177,19 +216,6 @@
         }
       }
     </nldd-simple-section>
-
-    @if (showAddNamespaceStep()) {
-      <nldd-simple-section slot="footer">
-        <nldd-button
-          type="button"
-          (click)="createNamespace()"
-          [text]="isCreatingNamespace() ? 'Creating...' : 'Add namespace'"
-          [disabled]="isCreatingNamespace() || !namespaceForm.valid"
-          variant="primary"
-          width="full"
-        ></nldd-button>
-      </nldd-simple-section>
-    }
   </nldd-page>
 </nldd-sheet>
 

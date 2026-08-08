@@ -164,6 +164,18 @@ export default class ClusterNamespacesComponent implements OnInit {
     }
   }
 
+  /** What the combo box shows while its menu is closed. */
+  selectedProjectName(): string {
+    const id = this.namespaceForm.get('projectId')?.value ?? '';
+    return id ? this.getProjectName(id) : '';
+  }
+
+  onProjectChange(event: Event): void {
+    const value = (event as CustomEvent<{ value: string }>).detail?.value ?? '';
+    this.namespaceForm.get('projectId')?.setValue(value);
+    this.namespaceForm.get('projectId')?.markAsDirty();
+  }
+
   getProjectName(projectId: string): string {
     const project = this.projects().find((p) => p.id === projectId);
     return project?.alias || projectId;
