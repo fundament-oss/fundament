@@ -23,6 +23,7 @@ import { CLUSTER, METRICS } from '../../connect/tokens';
 import MetricsHealthService from '../metrics-health.service';
 import PageNavService from '../page-nav.service';
 import DropdownSyncDirective from '../dropdown-sync.directive';
+import { datePickerTranslations } from '../utils/nldd-translations';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary,
@@ -84,7 +85,9 @@ export const TIME_RANGE_PRESETS: { value: TimeRangePreset; label: string }[] = [
   { value: '24h', label: '24h' },
   { value: '7d', label: '7d' },
   { value: '30d', label: '30d' },
-  { value: 'custom', label: 'Custom' },
+  // The ellipsis promises a next step: this one opens a calendar rather than
+  // switching the range on the spot, like every other segment does.
+  { value: 'custom', label: 'Custom…' },
 ];
 
 const PRESET_WINDOW_SECONDS: Record<Exclude<TimeRangePreset, 'custom'>, number> = {
@@ -265,7 +268,27 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 
   showCustomRange = computed(() => this.selectedPreset() === 'custom');
 
+  /** What you are looking at, and how fresh it is, in that order: the period is
+   *  the subject, the refresh time is a footnote to it. */
+  rangeSummary = computed(() => {
+    const delen: string[] = [];
+    const bereik = this.customRange();
+    if (bereik) delen.push(`Showing ${formatRange(bereik.start, bereik.end)}.`);
+    const ververst = this.lastRefreshedAt();
+    if (ververst) {
+      const tijd = ververst.toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      delen.push(`Last update ${tijd}.`);
+    }
+    return delen.join(' ');
+  });
+
   readonly presets = TIME_RANGE_PRESETS;
+
+  readonly datePickerTranslations = datePickerTranslations;
 
   clusters = signal<ClusterOption[]>([]);
 
@@ -276,6 +299,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   connectionError = signal(false);
 
   lastRefreshedAt = signal<Date | null>(null);
+
+  /** Only set when you picked a period yourself; a preset reads off its own
+   *  button, so repeating it under the toolbar would say the same thing twice. */
+  customRange = signal<{ start: string; end: string } | null>(null);
 
   errorMessage = signal<string | null>(null);
 
@@ -441,12 +468,31 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.onPresetChange((event as CustomEvent<{ value: TimeRangePreset }>).detail.value);
   }
 
+  /** Same choice from the overflow menu. There the Custom segment is off screen,
+   *  so the calendar arrives as a sheet instead of a popover with no anchor. */
+  onPresetChangeFromMenu(preset: TimeRangePreset): void {
+    this.selectedPreset.set(preset);
+    if (preset === 'custom') {
+      this.cancelStream();
+      this.isLive.set(false);
+      queueMicrotask(() => this.customRangeSheet()?.show());
+      return;
+    }
+    this.customRange.set(null);
+    this.applyPreset(preset);
+    this.startStream();
+  }
+
   onPresetChange(preset: TimeRangePreset): void {
     this.selectedPreset.set(preset);
     if (preset === 'custom') {
       this.cancelStream();
       this.isLive.set(false);
+      // After the click has settled, so the popover positions against a segment
+      // that has finished moving its selection.
+      queueMicrotask(() => this.customRangePopover()?.show());
     } else {
+      this.customRange.set(null);
       this.applyPreset(preset);
       this.startStream();
     }
@@ -460,18 +506,31 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.startStream();
   }
 
-  /** The two ends as one ISO interval, which is what the range field takes. */
-  dateRange(): string {
-    return this.dateFrom && this.dateTo ? `${this.dateFrom}/${this.dateTo}` : '';
+  onRangeChange(event: Event): void {
+    const { start, end } = (event as CustomEvent<{ start?: string; end?: string }>).detail ?? {};
+    // The picker also fires halfway through a range, with only a start. Wait for
+    // both ends before reloading, otherwise the charts flash a one-day window.
+    if (!start || !end) return;
+    this.dateFrom = start;
+    this.dateTo = end;
+    this.customRange.set({ start, end });
+    this.closeCustomRange();
+    this.onDateChange();
   }
 
-  onRangeChange(event: Event): void {
-    const value = (event as CustomEvent<{ value: string }>).detail?.value ?? '';
-    const [from, to] = value.split('/');
-    if (!from || !to) return;
-    this.dateFrom = from;
-    this.dateTo = to;
-    this.onDateChange();
+  private customRangePopover(): (HTMLElement & { show(): void; hide(): void }) | null {
+    return document.getElementById('metrics-custom-range') as
+      (HTMLElement & { show(): void; hide(): void }) | null;
+  }
+
+  private customRangeSheet(): (HTMLElement & { show(): void; hide(): void }) | null {
+    return document.getElementById('metrics-custom-range-sheet') as
+      (HTMLElement & { show(): void; hide(): void }) | null;
+  }
+
+  private closeCustomRange(): void {
+    this.customRangePopover()?.hide();
+    this.customRangeSheet()?.hide();
   }
 
   onDateChange(): void {
@@ -850,4 +909,16 @@ export default class MetricsComponent implements OnInit, OnDestroy {
       ),
     );
   }
+}
+
+/** "Aug 1 – Aug 8, 2026", with the year once at the end when both ends share it.
+ *  An en dash between two dates reads as inclusive, which is what the picker
+ *  means; "until" would leave you guessing about the last day. */
+function formatRange(start: string, end: string): string {
+  const van = new Date(`${start}T00:00:00`);
+  const tot = new Date(`${end}T00:00:00`);
+  const zelfdeJaar = van.getFullYear() === tot.getFullYear();
+  const kort: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  const lang: Intl.DateTimeFormatOptions = { ...kort, year: 'numeric' };
+  return `${van.toLocaleDateString('en-US', zelfdeJaar ? kort : lang)} – ${tot.toLocaleDateString('en-US', lang)}`;
 }

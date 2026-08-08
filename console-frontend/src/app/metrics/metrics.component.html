@@ -36,76 +36,10 @@
 
     <nldd-spacer size="12"></nldd-spacer>
 
-    <nldd-toolbar label="Metrics actions">
-      <nldd-toolbar-item slot="start">
-        <nldd-button
-          type="button"
-          text="Download CSV"
-          start-icon="rectangle-split-2x3-badge-arrow-down"
-          variant="primary"
-        ></nldd-button>
-        <nldd-menu-item
-          slot="overflow"
-          icon="rectangle-split-2x3-badge-arrow-down"
-          text="Download CSV"
-        ></nldd-menu-item>
-      </nldd-toolbar-item>
-    </nldd-toolbar>
-
-    <nldd-spacer size="16"></nldd-spacer>
-
-    <nldd-rich-text spacing="flat">
-      <p>
-        @if (viewMode() === 'project') {
-          Resource metrics for this project.
-        } @else {
-          Resource metrics across your clusters.
-        }
-        @if (lastRefreshedAt(); as refreshed) {
-          Last update:
-          {{
-            refreshed.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            })
-          }}.
-        }
-      </p>
-    </nldd-rich-text>
-
-    <nldd-spacer size="12"></nldd-spacer>
-
-    <nldd-toolbar label="Metrics filters">
-      <nldd-toolbar-item slot="start">
-        <nldd-segmented-control
-          width="fit-content"
-          accessible-label="Time range"
-          [value]="selectedPreset()"
-          (change)="onPresetChangeEvent($event)"
-        >
-          @for (preset of presets; track preset.value) {
-            <nldd-segmented-control-item
-              [value]="preset.value"
-              [text]="preset.label"
-            ></nldd-segmented-control-item>
-          }
-        </nldd-segmented-control>
-        <nldd-menu-group slot="overflow" label="Time range">
-          @for (preset of presets; track preset.value) {
-            <nldd-menu-item
-              type="radio"
-              [attr.text]="preset.label"
-              [attr.selected]="selectedPreset() === preset.value ? '' : null"
-              (select)="onPresetChange(preset.value)"
-            ></nldd-menu-item>
-          }
-        </nldd-menu-group>
-      </nldd-toolbar-item>
-
+    <nldd-toolbar label="Metrics">
       <!-- Cluster filter — only shown in org-level view -->
       @if (viewMode() === 'org') {
-        <nldd-toolbar-item slot="end">
+        <nldd-toolbar-item slot="start">
           <!-- A menu, not a native select: the same control as every other
                filter, instead of the operating system's own popup. -->
           <nldd-button
@@ -132,7 +66,7 @@
               }
             </nldd-menu>
           </nldd-button>
-          <nldd-menu-group slot="overflow" label="Cluster">
+          <nldd-menu-group slot="overflow" text="Cluster">
             <nldd-menu-item
               type="radio"
               text="All clusters"
@@ -153,7 +87,7 @@
 
       <!-- Namespace filter — only shown in project-level view -->
       @if (viewMode() === 'project') {
-        <nldd-toolbar-item slot="end">
+        <nldd-toolbar-item slot="start">
           <nldd-button
             expandable
             popup-type="menu"
@@ -178,7 +112,7 @@
               }
             </nldd-menu>
           </nldd-button>
-          <nldd-menu-group slot="overflow" label="Namespace">
+          <nldd-menu-group slot="overflow" text="Namespace">
             <nldd-menu-item
               type="radio"
               text="All namespaces"
@@ -196,23 +130,105 @@
           </nldd-menu-group>
         </nldd-toolbar-item>
       }
+
+      <nldd-toolbar-item slot="start">
+        <nldd-segmented-control
+          width="fit-content"
+          accessible-label="Time range"
+          [value]="selectedPreset()"
+          (change)="onPresetChangeEvent($event)"
+        >
+          @for (preset of presets; track preset.value) {
+            <nldd-segmented-control-item
+              [attr.id]="preset.value === 'custom' ? 'metrics-custom' : null"
+              [value]="preset.value"
+              [text]="preset.label"
+            ></nldd-segmented-control-item>
+          }
+        </nldd-segmented-control>
+        <nldd-menu-group slot="overflow" text="Time range">
+          @for (preset of presets; track preset.value) {
+            <nldd-menu-item
+              type="radio"
+              [attr.text]="preset.label"
+              [attr.selected]="selectedPreset() === preset.value ? '' : null"
+              (select)="onPresetChangeFromMenu(preset.value)"
+            ></nldd-menu-item>
+          }
+        </nldd-menu-group>
+      </nldd-toolbar-item>
+
+      <nldd-toolbar-item slot="end">
+        <nldd-button
+          type="button"
+          text="Download CSV"
+          start-icon="rectangle-split-2x3-badge-arrow-down"
+        ></nldd-button>
+        <nldd-menu-item
+          slot="overflow"
+          icon="rectangle-split-2x3-badge-arrow-down"
+          text="Download CSV"
+        ></nldd-menu-item>
+      </nldd-toolbar-item>
     </nldd-toolbar>
 
-    @if (showCustomRange()) {
-      <nldd-spacer size="16"></nldd-spacer>
+    <!-- Anchored to the Custom segment rather than opened as a row of its own:
+         a row that appears and disappears shoves the whole page down, and it
+         splits "which period am I looking at" over two places. -->
+    <nldd-popover
+      id="metrics-custom-range"
+      anchor="metrics-custom"
+      placement="bottom-start"
+      width="380px"
+      accessible-label="Custom time range"
+    >
+      <nldd-container padding="16">
+        <nldd-date-picker
+          range
+          width="full"
+          [translations]="datePickerTranslations"
+          [attr.start]="dateFrom"
+          [attr.end]="dateTo"
+          accessible-label="Custom time range"
+          (change)="onRangeChange($event)"
+        ></nldd-date-picker>
+      </nldd-container>
+    </nldd-popover>
 
-      <!-- One field in range mode rather than a hand-built pair: the DS date
-           field already parses, validates and pickers a period. -->
-      <nldd-date-field
-        range
-        width="320px"
-        accessible-label="Custom time range"
-        [attr.value]="dateRange()"
-        (change)="onRangeChange($event)"
-      ></nldd-date-field>
-    }
+    <!-- Same picker, other door: from the overflow menu the Custom segment is
+         not on screen, so there is nothing for a popover to point at. A sheet
+         hangs off the edge, which is always there. -->
+    <nldd-sheet
+      id="metrics-custom-range-sheet"
+      placement="right"
+      accessible-label="Custom time range"
+    >
+      <nldd-page>
+        <nldd-top-title-bar slot="header" text="Custom time range" dismiss-text="Close">
+        </nldd-top-title-bar>
+        <nldd-simple-section>
+          <nldd-date-picker
+            range
+            width="full"
+            [translations]="datePickerTranslations"
+            [attr.start]="dateFrom"
+            [attr.end]="dateTo"
+            accessible-label="Custom time range"
+            (change)="onRangeChange($event)"
+          ></nldd-date-picker>
+        </nldd-simple-section>
+      </nldd-page>
+    </nldd-sheet>
 
-    <nldd-spacer size="24"></nldd-spacer>
+    <nldd-spacer size="16"></nldd-spacer>
+
+    <!-- What you are looking at, and how fresh it is. The period only shows when
+         you picked one yourself; a preset already reads it off its own button. -->
+    <nldd-rich-text spacing="flat">
+      <p>{{ rangeSummary() }}</p>
+    </nldd-rich-text>
+
+    <nldd-spacer size="16"></nldd-spacer>
 
     @if (errorMessage(); as message) {
       <nldd-banner variant="critical" text="Metrics not loaded" [attr.supporting-text]="message">
