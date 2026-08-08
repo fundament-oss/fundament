@@ -72,6 +72,10 @@ export default class ClusterPluginsComponent implements OnInit {
 
   protected isClusterRunning = computed(() => this.clusterStatus() === ClusterStatus.RUNNING);
 
+  /** The state where this sheet has nothing to offer: the status is in, and it
+   *  is not running. Not while loading, when the status is still UNSPECIFIED. */
+  protected notRunning = computed(() => !this.isLoading() && !this.isClusterRunning());
+
   protected readonly getStatusLabel = getStatusLabel;
 
   constructor() {

@@ -7,23 +7,32 @@
   (close)="onCancel()"
 >
   <nldd-page sticky-header>
-    <!-- Same text as the heading below and anchored to it: the bar takes over as
-         soon as the heading scrolls away, so which cluster you are editing stays
-         on screen the whole time. -->
-    <nldd-top-title-bar
-      slot="header"
-      [attr.text]="pageTitle()"
-      collapse-anchor="cluster-plugins-title"
-      dismiss-text="Cancel"
-      (dismiss)="onCancel()"
-    ></nldd-top-title-bar>
+    <!-- Bar and heading only where there is something to do. A state that says
+         "come back later" has one thing to say and one way out, and its own
+         Close button is that way out; a bar and a heading above it would make
+         you read the cluster's name twice before reaching the one line that
+         matters. Escape still closes the sheet either way. -->
+    @if (!notRunning()) {
+      <!-- Same text as the heading below and anchored to it: the bar takes over
+           as soon as the heading scrolls away, so which cluster you are editing
+           stays on screen the whole time. -->
+      <nldd-top-title-bar
+        slot="header"
+        [attr.text]="pageTitle()"
+        collapse-anchor="cluster-plugins-title"
+        dismiss-text="Cancel"
+        (dismiss)="onCancel()"
+      ></nldd-top-title-bar>
+    }
 
     <nldd-simple-section>
-      <nldd-title id="cluster-plugins-title" size="3">
-        <h1>{{ pageTitle() }}</h1>
-      </nldd-title>
+      @if (!notRunning()) {
+        <nldd-title id="cluster-plugins-title" size="3">
+          <h1>{{ pageTitle() }}</h1>
+        </nldd-title>
 
-      <nldd-spacer size="16"></nldd-spacer>
+        <nldd-spacer size="16"></nldd-spacer>
+      }
 
       @if (loadFailed()) {
         <!-- A dialog rather than a banner: a banner sits above a form you can
@@ -40,21 +49,24 @@
             (click)="load()"
           ></nldd-button>
         </nldd-inline-dialog>
+      } @else if (notRunning()) {
+        <!-- Held back until the status is in: drawn on the UNSPECIFIED it starts
+             on, this would turn away someone whose cluster runs fine. And in
+             place of the form, not above it, because there is nothing to fill in
+             until the cluster runs. -->
+        <nldd-inline-dialog
+          variant="alert"
+          text="Plugins can only be managed while the cluster is running"
+          [attr.supporting-text]="'Current status: ' + getStatusLabel(clusterStatus()) + '. Come back once the cluster is running.'"
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            text="Close"
+            (click)="onCancel()"
+          ></nldd-button>
+        </nldd-inline-dialog>
       } @else {
-        <!-- Held back until the status is in. Drawn on the UNSPECIFIED it starts
-             on, this warns about a cluster that turns out to be running fine. -->
-        @if (!isLoading() && !isClusterRunning()) {
-          <nldd-banner
-            variant="warning"
-            [attr.text]="
-              'Plugin management is only available when the cluster is running. Current status: ' +
-              getStatusLabel(clusterStatus()) +
-              '.'
-            "
-          ></nldd-banner>
-          <nldd-spacer size="16"></nldd-spacer>
-        }
-
         @if (errorMessage()) {
           <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
           <nldd-spacer size="16"></nldd-spacer>
@@ -70,7 +82,7 @@
             (click)="pluginsForm.submit()"
             text="Save changes"
             [loading]="isSubmitting()"
-            [disabled]="isLoading() || !isClusterRunning()"
+            [disabled]="isLoading()"
             width="full"
             variant="primary"
           ></nldd-button>

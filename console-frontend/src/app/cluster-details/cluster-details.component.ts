@@ -12,6 +12,7 @@ import {
   ElementRef,
   effect,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -38,6 +39,7 @@ import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
 import pluginIconSrc from '../utils/plugin-icon';
 import DialogSyncDirective from '../dialog-sync.directive';
+import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 
@@ -134,7 +136,7 @@ const getEventDetails = (event: ClusterEvent): string => {
 
 @Component({
   selector: 'app-cluster-details',
-  imports: [RouterOutlet, DialogSyncDirective],
+  imports: [RouterOutlet, NgTemplateOutlet, DialogSyncDirective, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cluster-details.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -274,6 +276,17 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   // Activity/Events data
   clusterEvents = signal<ClusterEvent[]>([]);
+
+  /** How many fit on the page before the history starts to dominate it. The
+   *  rest live one click away, in a sheet, rather than in a scroll region
+   *  nested inside a page that already scrolls. */
+  private static readonly EVENTS_ON_PAGE = 6;
+
+  eventsOnPage = computed(() => this.clusterEvents().slice(0, ClusterDetailsComponent.EVENTS_ON_PAGE));
+
+  hasMoreEvents = computed(() => this.clusterEvents().length > ClusterDetailsComponent.EVENTS_ON_PAGE);
+
+  showAllEventsSheet = signal(false);
 
   isLoadingEvents = signal<boolean>(true);
 

@@ -319,32 +319,23 @@
               ></nldd-inline-dialog>
               <nldd-spacer size="16"></nldd-spacer>
             } @else {
-              <!-- Capped and scrollable: the history grows without bound. tabindex
-                   makes the region reachable for keyboard scrolling. -->
-              <div class="max-h-80 overflow-y-auto" tabindex="0">
-                <nldd-list no-dividers accessible-label="Event history">
-                  @for (
-                    event of clusterEvents();
-                    track event.id;
-                    let isFirst = $first, isLast = $last
-                  ) {
-                    <nldd-list-item>
-                      <nldd-timeline-track-cell
-                        status="past"
-                        [attr.position]="isLast ? 'last' : isFirst ? 'first' : 'between'"
-                      ></nldd-timeline-track-cell>
-                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                      <nldd-title-cell
-                        vertical-alignment="top"
-                        [attr.color]="getEventTypeColor(event.eventType)"
-                        [attr.overline]="event.createdAt ? formatDate(event.createdAt) : null"
-                        [attr.text]="getEventTypeLabel(event.eventType)"
-                        [attr.supporting-text]="getEventDetails(event)"
-                      ></nldd-title-cell>
-                    </nldd-list-item>
-                  }
-                </nldd-list>
-              </div>
+              <ng-container
+                [ngTemplateOutlet]="eventList"
+                [ngTemplateOutletContext]="{ $implicit: eventsOnPage() }"
+              ></ng-container>
+
+              <!-- The rest one click away instead of in a scroll region nested
+                   inside a page that already scrolls. -->
+              @if (hasMoreEvents()) {
+                <nldd-spacer size="12"></nldd-spacer>
+                <nldd-button
+                  type="button"
+                  (click)="showAllEventsSheet.set(true)"
+                  [attr.text]="'Show all ' + clusterEvents().length + ' events'"
+                  variant="secondary"
+                  width="full"
+                ></nldd-button>
+              }
             }
           </nldd-container>
         </nldd-box>
@@ -792,3 +783,63 @@
     variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
+
+<!-- One list, drawn twice: on the page it gets the first few, in the sheet all
+     of them. -->
+<ng-template #eventList let-events>
+  <nldd-list no-dividers accessible-label="Event history">
+    @for (
+      event of events;
+      track event.id;
+      let isFirst = $first, isLast = $last
+    ) {
+      <nldd-list-item>
+        <nldd-timeline-track-cell
+          status="past"
+          [attr.position]="
+            isFirst && isLast ? 'only' : isLast ? 'last' : isFirst ? 'first' : 'between'
+          "
+        ></nldd-timeline-track-cell>
+        <nldd-spacer-cell size="12"></nldd-spacer-cell>
+        <nldd-title-cell
+          vertical-alignment="top"
+          [attr.color]="getEventTypeColor(event.eventType)"
+          [attr.overline]="event.createdAt ? formatDate(event.createdAt) : null"
+          [attr.text]="getEventTypeLabel(event.eventType)"
+          [attr.supporting-text]="getEventDetails(event)"
+        ></nldd-title-cell>
+      </nldd-list-item>
+    }
+  </nldd-list>
+</ng-template>
+
+<nldd-sheet
+  appSheetSync
+  [show]="showAllEventsSheet()"
+  placement="right"
+  accessible-label="Event history"
+  (close)="showAllEventsSheet.set(false)"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Event history"
+      collapse-anchor="event-history-title"
+      dismiss-text="Close"
+      (dismiss)="showAllEventsSheet.set(false)"
+    ></nldd-top-title-bar>
+
+    <nldd-simple-section>
+      <nldd-title id="event-history-title" size="3">
+        <h1>Event history</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
+      <ng-container
+        [ngTemplateOutlet]="eventList"
+        [ngTemplateOutletContext]="{ $implicit: clusterEvents() }"
+      ></ng-container>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
