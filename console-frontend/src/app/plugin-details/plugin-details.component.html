@@ -21,9 +21,7 @@
     }
 
     @if (!isLoading() && !errorMessage() && plugin(); as p) {
-      <div class="plugin-icon plugin-icon--lg">
-        <img alt="" [src]="pluginIconSrc(p)">
-      </div>
+      <img alt="" width="56" height="56" [src]="pluginIconSrc(p)">
 
       <nldd-spacer size="12"></nldd-spacer>
 
