@@ -10,11 +10,18 @@
     <nldd-top-title-bar
       slot="header"
       [attr.text]="'Plugin ' + pluginDisplayName()"
+      collapse-anchor="plugin-title"
       dismiss-text="Cancel"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="plugin-title" size="3">
+        <h1>Plugin {{ pluginDisplayName() }}</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       @if (versions().length === 0) {
         @if (versionsError()) {
           <nldd-inline-dialog

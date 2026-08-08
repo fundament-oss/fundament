@@ -11,9 +11,15 @@
          borrows that step's heading once it scrolls out of view. -->
     <nldd-top-title-bar
       slot="header"
-      [attr.text]="step() === 'roles' ? null : namespaceName()"
+      [attr.text]="
+        step() === 'roles'
+          ? editingMember()
+            ? 'Roles for ' + editingMember()!.member.userName
+            : 'Add member access'
+          : namespaceName()
+      "
       [attr.back-text]="step() === 'roles' ? namespaceName() : null"
-      [attr.collapse-anchor]="step() === 'roles' ? 'roles-title' : null"
+      [attr.collapse-anchor]="step() === 'roles' ? 'roles-title' : 'namespace-title'"
       dismiss-text="Close"
       (back)="step.set('overview')"
       (dismiss)="onClose()"
@@ -22,13 +28,13 @@
     <nldd-simple-section>
       @if (step() === 'roles') {
         <nldd-title id="roles-title" size="3">
-          <h2>
+          <h1>
             {{
               editingMember()
                 ? 'Roles for ' + editingMember()!.member.userName
                 : 'Add member access'
             }}
-          </h2>
+          </h1>
         </nldd-title>
 
         <nldd-spacer size="16"></nldd-spacer>
@@ -128,6 +134,12 @@
           ></nldd-button>
         </nldd-inline-dialog>
       } @else {
+        <nldd-title id="namespace-title" size="3">
+          <h1>{{ namespaceName() }}</h1>
+        </nldd-title>
+
+        <nldd-spacer size="16"></nldd-spacer>
+
         <nldd-list variant="box" accessible-label="Namespace details">
           <!-- Names the project: the sheet can be opened from a link, with no
                list behind it to say where you are. -->

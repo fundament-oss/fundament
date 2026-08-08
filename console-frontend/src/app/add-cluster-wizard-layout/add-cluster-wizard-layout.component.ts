@@ -87,12 +87,9 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
     return index > 0 ? this.steps[index - 1].name : null;
   });
 
-  /** Step one names the whole flow, since it has no heading of its own to
-   *  collapse into the bar; the later steps name themselves. */
-  currentStepTitle = computed(() => {
-    const index = this.currentStepIndex();
-    return index > 0 ? this.steps[index].name : 'New Kubernetes cluster';
-  });
+  /** Every step names itself, short where its own heading is a full sentence:
+   *  the bar stands in for that heading once you scroll past it. */
+  currentStepTitle = computed(() => this.steps[this.currentStepIndex()].name);
 
   // Set per item rather than left to `current`: the wizard can be stepped back
   // into, and a step that is already filled in stays ticked when it does.

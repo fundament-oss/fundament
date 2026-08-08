@@ -14,7 +14,7 @@
       slot="header"
       [attr.text]="currentStepTitle()"
       [attr.back-text]="previousStepName()"
-      [attr.collapse-anchor]="currentStepIndex() > 0 ? 'wizard-step-title' : null"
+      collapse-anchor="wizard-step-title"
       dismiss-text="Cancel"
       (back)="goToStep(currentStepIndex() - 1)"
       (dismiss)="onClose()"

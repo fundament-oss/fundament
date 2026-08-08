@@ -139,11 +139,18 @@
     <nldd-top-title-bar
       slot="header"
       text="Edit project alias"
+      collapse-anchor="edit-alias-title"
       dismiss-text="Cancel"
       (dismiss)="showEditModal.set(false)"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="edit-alias-title" size="3">
+        <h1>Edit project alias</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       <nldd-form (submit)="saveEdit()" (keydown.enter)="saveEdit()" novalidate>
         <nldd-form-field label="Alias">
           <nldd-text-field

@@ -10,11 +10,18 @@
     <nldd-top-title-bar
       slot="header"
       text="Node pools"
+      collapse-anchor="node-pools-title"
       dismiss-text="Cancel"
       (dismiss)="onCancel()"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="node-pools-title" size="3">
+        <h1>Node pools</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       @if (errorMessage()) {
         <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>

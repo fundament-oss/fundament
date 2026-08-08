@@ -96,11 +96,18 @@
     <nldd-top-title-bar
       slot="header"
       text="Edit limits"
+      collapse-anchor="edit-limits-title"
       dismiss-text="Cancel"
       (dismiss)="showEdit.set(false)"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="edit-limits-title" size="3">
+        <h1>Edit limits</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       <!-- Here, not on the page behind it: this is where the changes are, and
            closing the sheet now would lose them. -->
       @if (saveError(); as message) {

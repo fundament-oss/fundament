@@ -10,11 +10,18 @@
     <nldd-top-title-bar
       slot="header"
       text="About permissions"
+      collapse-anchor="permissions-title"
       dismiss-text="Close"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="permissions-title" size="3">
+        <h1>About permissions</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       <nldd-rich-text spacing="flat">
         <p>
           What each permission covers in the console. What someone may do inside a namespace is set

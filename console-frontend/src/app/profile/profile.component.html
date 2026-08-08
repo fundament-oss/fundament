@@ -13,11 +13,18 @@
     <nldd-top-title-bar
       slot="header"
       text="My profile"
+      collapse-anchor="profile-title"
       dismiss-text="Close"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="profile-title" size="3">
+        <h1>My profile</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       <nldd-rich-text spacing="flat">
         <p>Your name and password come from your login provider and cannot be changed here.</p>
       </nldd-rich-text>

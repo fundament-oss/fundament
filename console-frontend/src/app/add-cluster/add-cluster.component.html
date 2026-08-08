@@ -1,3 +1,9 @@
+<nldd-title id="wizard-step-title" size="3">
+  <h1>Name your cluster and pick a region</h1>
+</nldd-title>
+
+<nldd-spacer size="16"></nldd-spacer>
+
 <nldd-form [formGroup]="clusterForm" (submit)="onSubmit($event)" (keydown.enter)="onSubmit($event)">
   <nldd-form-field label="Cluster name">
     <nldd-text-field

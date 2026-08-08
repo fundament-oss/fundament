@@ -12,8 +12,9 @@
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
-      [attr.text]="isCreating() ? null : 'API keys'"
+      [attr.text]="isCreating() ? 'New API key' : 'API keys'"
       [attr.back-text]="isCreating() ? 'API keys' : null"
+      [attr.collapse-anchor]="isCreating() ? 'new-api-key-title' : 'api-keys-title'"
       dismiss-text="Close"
       (back)="cancelCreating()"
       (dismiss)="onClose()"
@@ -21,8 +22,8 @@
 
     <nldd-simple-section>
       @if (isCreating()) {
-        <nldd-title size="3">
-          <h2>New API key</h2>
+        <nldd-title id="new-api-key-title" size="3">
+          <h1>New API key</h1>
         </nldd-title>
 
         <nldd-spacer size="16"></nldd-spacer>
@@ -67,6 +68,12 @@
           </nldd-form-actions>
         </nldd-form>
       } @else {
+        <nldd-title id="api-keys-title" size="3">
+          <h1>API keys</h1>
+        </nldd-title>
+
+        <nldd-spacer size="16"></nldd-spacer>
+
         <!-- Shown once and never again, so it says so and offers the copy. -->
         @if (createdToken(); as token) {
           <nldd-banner

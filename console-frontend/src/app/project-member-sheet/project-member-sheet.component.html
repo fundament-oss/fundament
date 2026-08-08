@@ -20,7 +20,7 @@
           : member()?.member?.userName || 'Member'
       "
       [attr.back-text]="step() === 'access' ? member()?.member?.userName || 'Member' : null"
-      [attr.collapse-anchor]="step() === 'access' ? 'access-title' : null"
+      [attr.collapse-anchor]="step() === 'access' ? 'access-title' : 'member-title'"
       dismiss-text="Close"
       (back)="step.set('overview')"
       (dismiss)="onClose()"
@@ -31,13 +31,13 @@
         <!-- The heading lives in the body and the bar borrows it while scrolling:
              until you scroll, the bar carries only the way back to the member. -->
         <nldd-title id="access-title" size="3">
-          <h2>
+          <h1>
             {{
               editingNamespace()
                 ? 'Access to ' + namespaceLabel(editingNamespace())
                 : 'Add namespace access'
             }}
-          </h2>
+          </h1>
         </nldd-title>
 
         <!-- Under the heading, not inside the field: what it says holds for the
@@ -195,6 +195,12 @@
           ></nldd-button>
         </nldd-inline-dialog>
       } @else if (member(); as view) {
+        <nldd-title id="member-title" size="3">
+          <h1>{{ view.member?.userName || 'Member' }}</h1>
+        </nldd-title>
+
+        <nldd-spacer size="16"></nldd-spacer>
+
         <nldd-list variant="box" accessible-label="Member details">
           <!-- Names the project: the sheet can be opened from a link, with no
                list behind it to say where you are. -->

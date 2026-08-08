@@ -124,11 +124,18 @@
     <nldd-top-title-bar
       slot="header"
       text="Edit cluster limits"
+      collapse-anchor="edit-cluster-limits-title"
       dismiss-text="Cancel"
       (dismiss)="showClusterEdit.set(false)"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="edit-cluster-limits-title" size="3">
+        <h1>Edit cluster limits</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       <!-- Here, not on the page behind it: this is where the changes are, and
            closing the sheet now would lose them. -->
       @if (clusterError(); as message) {
@@ -238,11 +245,18 @@
     <nldd-top-title-bar
       slot="header"
       text="Edit namespace defaults"
+      collapse-anchor="edit-namespace-defaults-title"
       dismiss-text="Cancel"
       (dismiss)="showNamespaceEdit.set(false)"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="edit-namespace-defaults-title" size="3">
+        <h1>Edit namespace defaults</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       @if (namespaceError(); as message) {
         <nldd-banner
           variant="critical"

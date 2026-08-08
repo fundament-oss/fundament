@@ -204,9 +204,19 @@
       accessible-label="Custom time range"
     >
       <nldd-page>
-        <nldd-top-title-bar slot="header" text="Custom time range" dismiss-text="Close">
-        </nldd-top-title-bar>
+        <nldd-top-title-bar
+          slot="header"
+          text="Custom time range"
+          collapse-anchor="custom-range-title"
+          dismiss-text="Close"
+        ></nldd-top-title-bar>
         <nldd-simple-section>
+          <nldd-title id="custom-range-title" size="3">
+            <h1>Custom time range</h1>
+          </nldd-title>
+
+          <nldd-spacer size="16"></nldd-spacer>
+
           <nldd-date-picker
             range
             width="full"

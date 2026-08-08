@@ -106,11 +106,18 @@
     <nldd-top-title-bar
       slot="header"
       text="Edit organization alias"
+      collapse-anchor="edit-alias-title"
       dismiss-text="Cancel"
       (dismiss)="cancelEdit()"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="edit-alias-title" size="3">
+        <h1>Edit organization alias</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       <!-- Here, not on the page behind it: this is where the change is, and
            closing the sheet now would lose it. -->
       @if (error(); as message) {

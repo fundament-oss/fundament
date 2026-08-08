@@ -203,11 +203,18 @@
     <nldd-top-title-bar
       slot="header"
       [attr.text]="'Add member to ' + projectName()"
+      collapse-anchor="add-member-title"
       dismiss-text="Cancel"
       (dismiss)="showAddMemberModal.set(false)"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="add-member-title" size="3">
+        <h1>Add member to {{ projectName() }}</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       <!-- Nothing to pick means nothing to fill in: the form would only offer an
            empty list and a button that cannot do anything. -->
       @if (availableUsers().length === 0) {
