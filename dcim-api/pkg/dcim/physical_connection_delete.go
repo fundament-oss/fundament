@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeletePhysicalConnection(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeletePhysicalConnectionRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	connID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeletePhysicalConnectionRequest,
+) (*emptypb.Empty, error) {
+	connID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.PhysicalConnectionDelete(ctx, db.PhysicalConnectionDeleteParams{ID: connID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeletePhysicalConnection(
 
 	s.logger.InfoContext(ctx, "physical connection deleted", "connection_id", connID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

@@ -18,20 +18,20 @@ import (
 
 func (s *Server) CreatePlacement(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreatePlacementRequest],
-) (*connect.Response[dcimv1.CreatePlacementResponse], error) {
+	req *dcimv1.CreatePlacementRequest,
+) (*dcimv1.CreatePlacementResponse, error) {
 	params := db.PlacementCreateParams{
-		AssetID: uuid.MustParse(req.Msg.GetAssetId()),
+		AssetID: uuid.MustParse(req.GetAssetId()),
 	}
 
-	switch loc := req.Msg.WhichLocation(); loc {
+	switch loc := req.WhichLocation(); loc {
 	case dcimv1.CreatePlacementRequest_Rack_case:
-		rack := req.Msg.GetRack()
+		rack := req.GetRack()
 		params.RackID = pgtype.UUID{Bytes: uuid.MustParse(rack.GetRackId()), Valid: true}
 		params.StartUnit = pgtype.Int4{Int32: rack.GetRackUnitStart(), Valid: true}
 		params.SlotType = pgtype.Text{String: rackSlotTypeToDB(rack.GetRackSlotType()), Valid: true}
 	case dcimv1.CreatePlacementRequest_SubComponent_case:
-		sub := req.Msg.GetSubComponent()
+		sub := req.GetSubComponent()
 		params.ParentPlacementID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPlacementId()), Valid: true}
 		params.PortDefinitionID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPortDefinitionId()), Valid: true}
 	case dcimv1.CreatePlacementRequest_Location_not_set_case:
@@ -40,12 +40,12 @@ func (s *Server) CreatePlacement(
 		panic("unhandled placement location case")
 	}
 
-	if req.Msg.HasLogicalDeviceId() {
-		params.LogicalDeviceID = pgtype.UUID{Bytes: uuid.MustParse(req.Msg.GetLogicalDeviceId()), Valid: true}
+	if req.HasLogicalDeviceId() {
+		params.LogicalDeviceID = pgtype.UUID{Bytes: uuid.MustParse(req.GetLogicalDeviceId()), Valid: true}
 	}
 
-	if req.Msg.HasNotes() {
-		params.Notes = pgtype.Text{String: req.Msg.GetNotes(), Valid: true}
+	if req.HasNotes() {
+		params.Notes = pgtype.Text{String: req.GetNotes(), Valid: true}
 	}
 
 	id, err := s.queries.PlacementCreate(ctx, params)
@@ -70,7 +70,7 @@ func (s *Server) CreatePlacement(
 
 	s.logger.InfoContext(ctx, "placement created", "placement_id", id)
 
-	return connect.NewResponse(dcimv1.CreatePlacementResponse_builder{
+	return dcimv1.CreatePlacementResponse_builder{
 		PlacementId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

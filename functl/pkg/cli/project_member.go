@@ -7,8 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"connectrpc.com/connect"
-
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1/organizationv1connect"
 )
@@ -33,14 +31,14 @@ func (c *ProjectMemberListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Projects().ListProjectMembers(context.Background(), connect.NewRequest(organizationv1.ListProjectMembersRequest_builder{
+	resp, err := apiClient.Projects().ListProjectMembers(context.Background(), organizationv1.ListProjectMembersRequest_builder{
 		ProjectId: c.ProjectID,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to list project members: %w", err)
 	}
 
-	members := resp.Msg.GetMembers()
+	members := resp.GetMembers()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(members)
@@ -87,16 +85,16 @@ func (c *ProjectMemberAddCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Projects().AddProjectMember(context.Background(), connect.NewRequest(organizationv1.AddProjectMemberRequest_builder{
+	resp, err := apiClient.Projects().AddProjectMember(context.Background(), organizationv1.AddProjectMemberRequest_builder{
 		ProjectId: c.ProjectID,
 		UserId:    c.UserID,
 		Role:      role,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to add project member: %w", err)
 	}
 
-	memberID := resp.Msg.GetMemberId()
+	memberID := resp.GetMemberId()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]string{
@@ -137,10 +135,10 @@ func (c *ProjectMemberUpdateRoleCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = projectsClient.UpdateProjectMemberRole(context.Background(), connect.NewRequest(organizationv1.UpdateProjectMemberRoleRequest_builder{
+	_, err = projectsClient.UpdateProjectMemberRole(context.Background(), organizationv1.UpdateProjectMemberRoleRequest_builder{
 		MemberId: member.GetId(),
 		Role:     role,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to update project member role: %w", err)
 	}
@@ -191,9 +189,9 @@ func (c *ProjectMemberRemoveCmd) Run(ctx *Context) error {
 		}
 	}
 
-	_, err = projectsClient.RemoveProjectMember(context.Background(), connect.NewRequest(organizationv1.RemoveProjectMemberRequest_builder{
+	_, err = projectsClient.RemoveProjectMember(context.Background(), organizationv1.RemoveProjectMemberRequest_builder{
 		MemberId: member.GetId(),
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to remove project member: %w", err)
 	}
@@ -211,14 +209,14 @@ func (c *ProjectMemberRemoveCmd) Run(ctx *Context) error {
 
 // findProjectMember resolves a project member from a project ID and user ID.
 func findProjectMember(ctx context.Context, client organizationv1connect.ProjectServiceClient, projectID, userID string) (*organizationv1.ProjectMember, error) {
-	resp, err := client.ListProjectMembers(ctx, connect.NewRequest(organizationv1.ListProjectMembersRequest_builder{
+	resp, err := client.ListProjectMembers(ctx, organizationv1.ListProjectMembersRequest_builder{
 		ProjectId: projectID,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list project members: %w", err)
 	}
 
-	for _, member := range resp.Msg.GetMembers() {
+	for _, member := range resp.GetMembers() {
 		if member.GetUserId() == userID {
 			return member, nil
 		}

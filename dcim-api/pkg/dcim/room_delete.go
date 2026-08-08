@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteRoom(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteRoomRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	roomID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteRoomRequest,
+) (*emptypb.Empty, error) {
+	roomID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.RoomDelete(ctx, db.RoomDeleteParams{ID: roomID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteRoom(
 
 	s.logger.InfoContext(ctx, "room deleted", "room_id", roomID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

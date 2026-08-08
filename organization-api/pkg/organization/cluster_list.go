@@ -13,8 +13,8 @@ import (
 
 func (s *Server) ListClusters(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListClustersRequest],
-) (*connect.Response[organizationv1.ListClustersResponse], error) {
+	req *organizationv1.ListClustersRequest,
+) (*organizationv1.ListClustersResponse, error) {
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
@@ -34,9 +34,9 @@ func (s *Server) ListClusters(
 		summaries = append(summaries, clusterSummaryFromListRow(&clusters[i]))
 	}
 
-	return connect.NewResponse(organizationv1.ListClustersResponse_builder{
+	return organizationv1.ListClustersResponse_builder{
 		Clusters: summaries,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func clusterSummaryFromListRow(row *db.ClusterListRow) *organizationv1.ListClustersResponse_ClusterSummary {

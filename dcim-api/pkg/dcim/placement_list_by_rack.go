@@ -14,9 +14,9 @@ import (
 
 func (s *Server) ListPlacementsByRack(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListPlacementsByRackRequest],
-) (*connect.Response[dcimv1.ListPlacementsByRackResponse], error) {
-	rackID := uuid.MustParse(req.Msg.GetRackId())
+	req *dcimv1.ListPlacementsByRackRequest,
+) (*dcimv1.ListPlacementsByRackResponse, error) {
+	rackID := uuid.MustParse(req.GetRackId())
 
 	rows, err := s.queries.PlacementListByRack(ctx, db.PlacementListByRackParams{
 		RackID: pgtype.UUID{Bytes: rackID, Valid: true},
@@ -30,7 +30,7 @@ func (s *Server) ListPlacementsByRack(
 		placements = append(placements, placementFromRackListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListPlacementsByRackResponse_builder{
+	return dcimv1.ListPlacementsByRackResponse_builder{
 		Placements: placements,
-	}.Build()), nil
+	}.Build(), nil
 }

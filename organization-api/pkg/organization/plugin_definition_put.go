@@ -27,11 +27,11 @@ const maxManifestBytes = 1 << 20
 
 func (s *Server) PutPluginDefinition(
 	ctx context.Context,
-	req *connect.Request[organizationv1.PutPluginDefinitionRequest],
-) (*connect.Response[organizationv1.PutPluginDefinitionResponse], error) {
-	pluginIDStr := req.Msg.GetPluginId()
-	version := req.Msg.GetPluginVersion()
-	manifest := req.Msg.GetManifest()
+	req *organizationv1.PutPluginDefinitionRequest,
+) (*organizationv1.PutPluginDefinitionResponse, error) {
+	pluginIDStr := req.GetPluginId()
+	version := req.GetPluginVersion()
+	manifest := req.GetManifest()
 	if pluginIDStr == "" || version == "" || len(manifest) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("plugin_id, plugin_version and manifest are required"))
 	}
@@ -83,14 +83,14 @@ func (s *Server) PutPluginDefinition(
 	if existing, err := s.queries.PluginDefinitionGetByPluginVersionHash(ctx, db.PluginDefinitionGetByPluginVersionHashParams{
 		PluginID: pluginID, PluginVersion: version, Hash: hash,
 	}); err == nil {
-		return connect.NewResponse(organizationv1.PutPluginDefinitionResponse_builder{
+		return organizationv1.PutPluginDefinitionResponse_builder{
 			Id: existing.ID.String(), PluginId: pluginID.String(), PluginVersion: version, Hash: hash,
-		}.Build()), nil
+		}.Build(), nil
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("lookup plugin definition: %w", err))
 	}
 
-	replace := req.Msg.GetReplace()
+	replace := req.GetReplace()
 
 	// An active definition for (plugin_id, version) with a different hash already
 	// exists. Reject it unless the caller asked to replace — a pinned definition
@@ -145,7 +145,7 @@ func (s *Server) PutPluginDefinition(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("commit transaction: %w", err))
 	}
 
-	return connect.NewResponse(organizationv1.PutPluginDefinitionResponse_builder{
+	return organizationv1.PutPluginDefinitionResponse_builder{
 		Id: inserted.ID.String(), PluginId: pluginID.String(), PluginVersion: version, Hash: hash,
-	}.Build()), nil
+	}.Build(), nil
 }

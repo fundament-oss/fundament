@@ -56,32 +56,34 @@ var errIdempotencyFailed = errors.New("server reported idempotent operation fail
 // resource reaches a terminal outbox state.
 func createIdempotent[Req, Resp any](
 	ctx context.Context,
-	call func(ctx context.Context, req *connect.Request[Req]) (*connect.Response[Resp], error),
-	req *connect.Request[Req],
-) (*connect.Response[Resp], error) {
+	call func(ctx context.Context, req *Req) (*Resp, error),
+	req *Req,
+) (*Resp, error) {
 	return createIdempotentWithClock(ctx, defaultClock, call, req)
 }
 
 func createIdempotentWithClock[Req, Resp any](
 	ctx context.Context,
 	clk clock,
-	call func(ctx context.Context, req *connect.Request[Req]) (*connect.Response[Resp], error),
-	req *connect.Request[Req],
-) (*connect.Response[Resp], error) {
+	call func(ctx context.Context, req *Req) (*Resp, error),
+	req *Req,
+) (*Resp, error) {
 	key := uuid.New().String()
-	req.Header().Set(idempotencyHeaderKey, key)
 
 	deadlineCtx, cancel := context.WithTimeout(ctx, idempotencyTotalBudget)
 	defer cancel()
 
 	backoff := idempotencyInitialBackoff
 	for {
-		resp, err := call(deadlineCtx, req)
+		callCtx, callInfo := connect.NewClientContext(deadlineCtx)
+		callInfo.RequestHeader().Set(idempotencyHeaderKey, key)
+
+		resp, err := call(callCtx, req)
 		if err != nil {
 			return nil, err
 		}
 
-		switch resp.Header().Get(idempotencyHeaderStatus) {
+		switch callInfo.ResponseHeader().Get(idempotencyHeaderStatus) {
 		case statusCompleted:
 			return resp, nil
 		case statusFailed:

@@ -52,15 +52,15 @@ const (
 // APIKeyServiceClient is a client for the organization.v1.APIKeyService service.
 type APIKeyServiceClient interface {
 	// Create a new API key
-	CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error)
+	CreateAPIKey(context.Context, *v1.CreateAPIKeyRequest) (*v1.CreateAPIKeyResponse, error)
 	// List all API keys for the current organization
-	ListAPIKeys(context.Context, *connect.Request[v1.ListAPIKeysRequest]) (*connect.Response[v1.ListAPIKeysResponse], error)
+	ListAPIKeys(context.Context, *v1.ListAPIKeysRequest) (*v1.ListAPIKeysResponse, error)
 	// Get a specific API key by ID
-	GetAPIKey(context.Context, *connect.Request[v1.GetAPIKeyRequest]) (*connect.Response[v1.GetAPIKeyResponse], error)
+	GetAPIKey(context.Context, *v1.GetAPIKeyRequest) (*v1.GetAPIKeyResponse, error)
 	// Revoke an API key
-	RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[v1.RevokeAPIKeyResponse], error)
+	RevokeAPIKey(context.Context, *v1.RevokeAPIKeyRequest) (*v1.RevokeAPIKeyResponse, error)
 	// Delete an API key
-	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error)
+	DeleteAPIKey(context.Context, *v1.DeleteAPIKeyRequest) (*v1.DeleteAPIKeyResponse, error)
 }
 
 // NewAPIKeyServiceClient constructs a client for the organization.v1.APIKeyService service. By
@@ -117,42 +117,62 @@ type aPIKeyServiceClient struct {
 }
 
 // CreateAPIKey calls organization.v1.APIKeyService.CreateAPIKey.
-func (c *aPIKeyServiceClient) CreateAPIKey(ctx context.Context, req *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error) {
-	return c.createAPIKey.CallUnary(ctx, req)
+func (c *aPIKeyServiceClient) CreateAPIKey(ctx context.Context, req *v1.CreateAPIKeyRequest) (*v1.CreateAPIKeyResponse, error) {
+	response, err := c.createAPIKey.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // ListAPIKeys calls organization.v1.APIKeyService.ListAPIKeys.
-func (c *aPIKeyServiceClient) ListAPIKeys(ctx context.Context, req *connect.Request[v1.ListAPIKeysRequest]) (*connect.Response[v1.ListAPIKeysResponse], error) {
-	return c.listAPIKeys.CallUnary(ctx, req)
+func (c *aPIKeyServiceClient) ListAPIKeys(ctx context.Context, req *v1.ListAPIKeysRequest) (*v1.ListAPIKeysResponse, error) {
+	response, err := c.listAPIKeys.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetAPIKey calls organization.v1.APIKeyService.GetAPIKey.
-func (c *aPIKeyServiceClient) GetAPIKey(ctx context.Context, req *connect.Request[v1.GetAPIKeyRequest]) (*connect.Response[v1.GetAPIKeyResponse], error) {
-	return c.getAPIKey.CallUnary(ctx, req)
+func (c *aPIKeyServiceClient) GetAPIKey(ctx context.Context, req *v1.GetAPIKeyRequest) (*v1.GetAPIKeyResponse, error) {
+	response, err := c.getAPIKey.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // RevokeAPIKey calls organization.v1.APIKeyService.RevokeAPIKey.
-func (c *aPIKeyServiceClient) RevokeAPIKey(ctx context.Context, req *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[v1.RevokeAPIKeyResponse], error) {
-	return c.revokeAPIKey.CallUnary(ctx, req)
+func (c *aPIKeyServiceClient) RevokeAPIKey(ctx context.Context, req *v1.RevokeAPIKeyRequest) (*v1.RevokeAPIKeyResponse, error) {
+	response, err := c.revokeAPIKey.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteAPIKey calls organization.v1.APIKeyService.DeleteAPIKey.
-func (c *aPIKeyServiceClient) DeleteAPIKey(ctx context.Context, req *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error) {
-	return c.deleteAPIKey.CallUnary(ctx, req)
+func (c *aPIKeyServiceClient) DeleteAPIKey(ctx context.Context, req *v1.DeleteAPIKeyRequest) (*v1.DeleteAPIKeyResponse, error) {
+	response, err := c.deleteAPIKey.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // APIKeyServiceHandler is an implementation of the organization.v1.APIKeyService service.
 type APIKeyServiceHandler interface {
 	// Create a new API key
-	CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error)
+	CreateAPIKey(context.Context, *v1.CreateAPIKeyRequest) (*v1.CreateAPIKeyResponse, error)
 	// List all API keys for the current organization
-	ListAPIKeys(context.Context, *connect.Request[v1.ListAPIKeysRequest]) (*connect.Response[v1.ListAPIKeysResponse], error)
+	ListAPIKeys(context.Context, *v1.ListAPIKeysRequest) (*v1.ListAPIKeysResponse, error)
 	// Get a specific API key by ID
-	GetAPIKey(context.Context, *connect.Request[v1.GetAPIKeyRequest]) (*connect.Response[v1.GetAPIKeyResponse], error)
+	GetAPIKey(context.Context, *v1.GetAPIKeyRequest) (*v1.GetAPIKeyResponse, error)
 	// Revoke an API key
-	RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[v1.RevokeAPIKeyResponse], error)
+	RevokeAPIKey(context.Context, *v1.RevokeAPIKeyRequest) (*v1.RevokeAPIKeyResponse, error)
 	// Delete an API key
-	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error)
+	DeleteAPIKey(context.Context, *v1.DeleteAPIKeyRequest) (*v1.DeleteAPIKeyResponse, error)
 }
 
 // NewAPIKeyServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -162,31 +182,31 @@ type APIKeyServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewAPIKeyServiceHandler(svc APIKeyServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	aPIKeyServiceMethods := v1.File_v1_apikey_proto.Services().ByName("APIKeyService").Methods()
-	aPIKeyServiceCreateAPIKeyHandler := connect.NewUnaryHandler(
+	aPIKeyServiceCreateAPIKeyHandler := connect.NewUnaryHandlerSimple(
 		APIKeyServiceCreateAPIKeyProcedure,
 		svc.CreateAPIKey,
 		connect.WithSchema(aPIKeyServiceMethods.ByName("CreateAPIKey")),
 		connect.WithHandlerOptions(opts...),
 	)
-	aPIKeyServiceListAPIKeysHandler := connect.NewUnaryHandler(
+	aPIKeyServiceListAPIKeysHandler := connect.NewUnaryHandlerSimple(
 		APIKeyServiceListAPIKeysProcedure,
 		svc.ListAPIKeys,
 		connect.WithSchema(aPIKeyServiceMethods.ByName("ListAPIKeys")),
 		connect.WithHandlerOptions(opts...),
 	)
-	aPIKeyServiceGetAPIKeyHandler := connect.NewUnaryHandler(
+	aPIKeyServiceGetAPIKeyHandler := connect.NewUnaryHandlerSimple(
 		APIKeyServiceGetAPIKeyProcedure,
 		svc.GetAPIKey,
 		connect.WithSchema(aPIKeyServiceMethods.ByName("GetAPIKey")),
 		connect.WithHandlerOptions(opts...),
 	)
-	aPIKeyServiceRevokeAPIKeyHandler := connect.NewUnaryHandler(
+	aPIKeyServiceRevokeAPIKeyHandler := connect.NewUnaryHandlerSimple(
 		APIKeyServiceRevokeAPIKeyProcedure,
 		svc.RevokeAPIKey,
 		connect.WithSchema(aPIKeyServiceMethods.ByName("RevokeAPIKey")),
 		connect.WithHandlerOptions(opts...),
 	)
-	aPIKeyServiceDeleteAPIKeyHandler := connect.NewUnaryHandler(
+	aPIKeyServiceDeleteAPIKeyHandler := connect.NewUnaryHandlerSimple(
 		APIKeyServiceDeleteAPIKeyProcedure,
 		svc.DeleteAPIKey,
 		connect.WithSchema(aPIKeyServiceMethods.ByName("DeleteAPIKey")),
@@ -213,22 +233,22 @@ func NewAPIKeyServiceHandler(svc APIKeyServiceHandler, opts ...connect.HandlerOp
 // UnimplementedAPIKeyServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAPIKeyServiceHandler struct{}
 
-func (UnimplementedAPIKeyServiceHandler) CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error) {
+func (UnimplementedAPIKeyServiceHandler) CreateAPIKey(context.Context, *v1.CreateAPIKeyRequest) (*v1.CreateAPIKeyResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.APIKeyService.CreateAPIKey is not implemented"))
 }
 
-func (UnimplementedAPIKeyServiceHandler) ListAPIKeys(context.Context, *connect.Request[v1.ListAPIKeysRequest]) (*connect.Response[v1.ListAPIKeysResponse], error) {
+func (UnimplementedAPIKeyServiceHandler) ListAPIKeys(context.Context, *v1.ListAPIKeysRequest) (*v1.ListAPIKeysResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.APIKeyService.ListAPIKeys is not implemented"))
 }
 
-func (UnimplementedAPIKeyServiceHandler) GetAPIKey(context.Context, *connect.Request[v1.GetAPIKeyRequest]) (*connect.Response[v1.GetAPIKeyResponse], error) {
+func (UnimplementedAPIKeyServiceHandler) GetAPIKey(context.Context, *v1.GetAPIKeyRequest) (*v1.GetAPIKeyResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.APIKeyService.GetAPIKey is not implemented"))
 }
 
-func (UnimplementedAPIKeyServiceHandler) RevokeAPIKey(context.Context, *connect.Request[v1.RevokeAPIKeyRequest]) (*connect.Response[v1.RevokeAPIKeyResponse], error) {
+func (UnimplementedAPIKeyServiceHandler) RevokeAPIKey(context.Context, *v1.RevokeAPIKeyRequest) (*v1.RevokeAPIKeyResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.APIKeyService.RevokeAPIKey is not implemented"))
 }
 
-func (UnimplementedAPIKeyServiceHandler) DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error) {
+func (UnimplementedAPIKeyServiceHandler) DeleteAPIKey(context.Context, *v1.DeleteAPIKeyRequest) (*v1.DeleteAPIKeyResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organization.v1.APIKeyService.DeleteAPIKey is not implemented"))
 }

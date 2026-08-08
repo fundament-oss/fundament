@@ -17,14 +17,14 @@ import (
 
 func (s *Server) CreateSite(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateSiteRequest],
-) (*connect.Response[dcimv1.CreateSiteResponse], error) {
+	req *dcimv1.CreateSiteRequest,
+) (*dcimv1.CreateSiteResponse, error) {
 	params := db.SiteCreateParams{
-		Name: req.Msg.GetName(),
+		Name: req.GetName(),
 	}
 
-	if req.Msg.HasAddress() {
-		params.Address = pgtype.Text{String: req.Msg.GetAddress(), Valid: true}
+	if req.HasAddress() {
+		params.Address = pgtype.Text{String: req.GetAddress(), Valid: true}
 	}
 
 	id, err := s.queries.SiteCreate(ctx, params)
@@ -38,7 +38,7 @@ func (s *Server) CreateSite(
 
 	s.logger.InfoContext(ctx, "site created", "site_id", id)
 
-	return connect.NewResponse(dcimv1.CreateSiteResponse_builder{
+	return dcimv1.CreateSiteResponse_builder{
 		SiteId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

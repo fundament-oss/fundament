@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteDesign(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteDesignRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	designID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteDesignRequest,
+) (*emptypb.Empty, error) {
+	designID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.LogicalDesignDelete(ctx, db.LogicalDesignDeleteParams{ID: designID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteDesign(
 
 	s.logger.InfoContext(ctx, "design deleted", "design_id", designID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

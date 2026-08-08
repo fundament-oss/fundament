@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetAsset(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetAssetRequest],
-) (*connect.Response[dcimv1.GetAssetResponse], error) {
-	assetID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetAssetRequest,
+) (*dcimv1.GetAssetResponse, error) {
+	assetID := uuid.MustParse(req.GetId())
 
 	row, err := s.queries.AssetGetByID(ctx, db.AssetGetByIDParams{ID: assetID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetAsset(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get asset: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetAssetResponse_builder{
+	return dcimv1.GetAssetResponse_builder{
 		Asset: assetFromGetRow(&row),
-	}.Build()), nil
+	}.Build(), nil
 }

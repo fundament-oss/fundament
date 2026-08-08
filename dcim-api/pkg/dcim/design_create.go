@@ -17,14 +17,14 @@ import (
 
 func (s *Server) CreateDesign(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateDesignRequest],
-) (*connect.Response[dcimv1.CreateDesignResponse], error) {
+	req *dcimv1.CreateDesignRequest,
+) (*dcimv1.CreateDesignResponse, error) {
 	params := db.LogicalDesignCreateParams{
-		Name: req.Msg.GetName(),
+		Name: req.GetName(),
 	}
 
-	if req.Msg.HasDescription() {
-		params.Description = pgtype.Text{String: req.Msg.GetDescription(), Valid: true}
+	if req.HasDescription() {
+		params.Description = pgtype.Text{String: req.GetDescription(), Valid: true}
 	}
 
 	id, err := s.queries.LogicalDesignCreate(ctx, params)
@@ -38,7 +38,7 @@ func (s *Server) CreateDesign(
 
 	s.logger.InfoContext(ctx, "design created", "design_id", id)
 
-	return connect.NewResponse(dcimv1.CreateDesignResponse_builder{
+	return dcimv1.CreateDesignResponse_builder{
 		DesignId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

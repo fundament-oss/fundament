@@ -19,32 +19,32 @@ import (
 
 func (s *Server) UpdateConnection(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateConnectionRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	connID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateConnectionRequest,
+) (*emptypb.Empty, error) {
+	connID := uuid.MustParse(req.GetId())
 
 	params := db.LogicalConnectionUpdateParams{
 		ID: connID,
 	}
 
-	if req.Msg.HasSourcePortRole() {
-		params.APortRole = pgtype.Text{String: req.Msg.GetSourcePortRole(), Valid: true}
+	if req.HasSourcePortRole() {
+		params.APortRole = pgtype.Text{String: req.GetSourcePortRole(), Valid: true}
 	}
 
-	if req.Msg.HasTargetPortRole() {
-		params.BPortRole = pgtype.Text{String: req.Msg.GetTargetPortRole(), Valid: true}
+	if req.HasTargetPortRole() {
+		params.BPortRole = pgtype.Text{String: req.GetTargetPortRole(), Valid: true}
 	}
 
-	if req.Msg.HasConnectionType() {
-		params.ConnectionType = pgtype.Text{String: logicalConnectionTypeToDB(req.Msg.GetConnectionType()), Valid: true}
+	if req.HasConnectionType() {
+		params.ConnectionType = pgtype.Text{String: logicalConnectionTypeToDB(req.GetConnectionType()), Valid: true}
 	}
 
-	if req.Msg.HasRequirements() {
-		params.Requirements = pgtype.Text{String: req.Msg.GetRequirements(), Valid: true}
+	if req.HasRequirements() {
+		params.Requirements = pgtype.Text{String: req.GetRequirements(), Valid: true}
 	}
 
-	if req.Msg.HasLabel() {
-		params.Label = pgtype.Text{String: req.Msg.GetLabel(), Valid: true}
+	if req.HasLabel() {
+		params.Label = pgtype.Text{String: req.GetLabel(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.LogicalConnectionUpdate(ctx, params)
@@ -62,5 +62,5 @@ func (s *Server) UpdateConnection(
 
 	s.logger.InfoContext(ctx, "connection updated", "connection_id", connID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

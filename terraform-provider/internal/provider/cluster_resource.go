@@ -124,11 +124,11 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	})
 
 	// Create the cluster
-	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createReq := organizationv1.CreateClusterRequest_builder{
 		Name:              plan.Name.ValueString(),
 		Region:            plan.Region.ValueString(),
 		KubernetesVersion: plan.KubernetesVersion.ValueString(),
-	}.Build())
+	}.Build()
 
 	createResp, err := createIdempotent(ctx, r.client.ClusterService.CreateCluster, createReq)
 	if err != nil {
@@ -140,13 +140,13 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Set the ID from the response
-	plan.ID = types.StringValue(createResp.Msg.GetClusterId())
+	plan.ID = types.StringValue(createResp.GetClusterId())
 
 	// Read the cluster to get the full state including status.
 	// Retry on permission_denied, OpenFGA needs time to sync
-	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
-		ClusterId: createResp.Msg.GetClusterId(),
-	}.Build())
+	getReq := organizationv1.GetClusterRequest_builder{
+		ClusterId: createResp.GetClusterId(),
+	}.Build()
 
 	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
@@ -158,7 +158,7 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Map response to state
-	plan.Status = types.StringValue(clusterStatusToString(getResp.Msg.GetCluster().GetStatus()))
+	plan.Status = types.StringValue(clusterStatusToString(getResp.GetCluster().GetStatus()))
 
 	tflog.Info(ctx, "Created cluster", map[string]any{
 		"id":     plan.ID.ValueString(),
@@ -189,9 +189,9 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		"id": state.ID.ValueString(),
 	})
 
-	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	getReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: state.ID.ValueString(),
-	}.Build())
+	}.Build()
 
 	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
@@ -212,7 +212,7 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	cluster := getResp.Msg.GetCluster()
+	cluster := getResp.GetCluster()
 
 	// Map response to state
 	state.ID = types.StringValue(cluster.GetId())
@@ -256,10 +256,10 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	// Only kubernetes_version can be updated
 	kubernetesVersion := plan.KubernetesVersion.ValueString()
-	updateReq := connect.NewRequest(organizationv1.UpdateClusterRequest_builder{
+	updateReq := organizationv1.UpdateClusterRequest_builder{
 		ClusterId:         state.ID.ValueString(),
 		KubernetesVersion: &kubernetesVersion,
-	}.Build())
+	}.Build()
 
 	_, err := r.client.ClusterService.UpdateCluster(ctx, updateReq)
 	if err != nil {
@@ -290,9 +290,9 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	// Read the cluster to get the updated state.
 	// Retry on permission_denied, OpenFGA needs time to sync.
-	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	getReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: state.ID.ValueString(),
-	}.Build())
+	}.Build()
 
 	getResp, err := r.client.ClusterService.GetCluster(ctx, getReq)
 	if err != nil {
@@ -311,7 +311,7 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	cluster := getResp.Msg.GetCluster()
+	cluster := getResp.GetCluster()
 
 	// Update the plan with the server response
 	plan.ID = types.StringValue(cluster.GetId())
@@ -349,9 +349,9 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 		"id": state.ID.ValueString(),
 	})
 
-	deleteReq := connect.NewRequest(organizationv1.DeleteClusterRequest_builder{
+	deleteReq := organizationv1.DeleteClusterRequest_builder{
 		ClusterId: state.ID.ValueString(),
-	}.Build())
+	}.Build()
 
 	_, err := r.client.ClusterService.DeleteCluster(ctx, deleteReq)
 	if err != nil {

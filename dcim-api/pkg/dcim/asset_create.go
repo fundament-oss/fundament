@@ -17,41 +17,41 @@ import (
 
 func (s *Server) CreateAsset(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateAssetRequest],
-) (*connect.Response[dcimv1.CreateAssetResponse], error) {
+	req *dcimv1.CreateAssetRequest,
+) (*dcimv1.CreateAssetResponse, error) {
 	params := db.AssetCreateParams{
-		DeviceCatalogID: uuid.MustParse(req.Msg.GetDeviceCatalogId()),
-		Status:          assetStatusToDB(req.Msg.GetStatus()),
+		DeviceCatalogID: uuid.MustParse(req.GetDeviceCatalogId()),
+		Status:          assetStatusToDB(req.GetStatus()),
 	}
 
-	if req.Msg.HasSerialNumber() {
-		params.SerialNumber = pgtype.Text{String: req.Msg.GetSerialNumber(), Valid: true}
+	if req.HasSerialNumber() {
+		params.SerialNumber = pgtype.Text{String: req.GetSerialNumber(), Valid: true}
 	}
 
-	if req.Msg.HasAssetTag() {
-		params.AssetTag = pgtype.Text{String: req.Msg.GetAssetTag(), Valid: true}
+	if req.HasAssetTag() {
+		params.AssetTag = pgtype.Text{String: req.GetAssetTag(), Valid: true}
 	}
 
-	if req.Msg.HasPurchaseDate() {
+	if req.HasPurchaseDate() {
 		params.PurchaseDate = pgtype.Date{
-			Time:  req.Msg.GetPurchaseDate().AsTime(),
+			Time:  req.GetPurchaseDate().AsTime(),
 			Valid: true,
 		}
 	}
 
-	if req.Msg.HasPurchaseOrder() {
-		params.PurchaseOrder = pgtype.Text{String: req.Msg.GetPurchaseOrder(), Valid: true}
+	if req.HasPurchaseOrder() {
+		params.PurchaseOrder = pgtype.Text{String: req.GetPurchaseOrder(), Valid: true}
 	}
 
-	if req.Msg.HasWarrantyExpiry() {
+	if req.HasWarrantyExpiry() {
 		params.WarrantyExpiry = pgtype.Date{
-			Time:  req.Msg.GetWarrantyExpiry().AsTime(),
+			Time:  req.GetWarrantyExpiry().AsTime(),
 			Valid: true,
 		}
 	}
 
-	if req.Msg.HasNotes() {
-		params.Notes = pgtype.Text{String: req.Msg.GetNotes(), Valid: true}
+	if req.HasNotes() {
+		params.Notes = pgtype.Text{String: req.GetNotes(), Valid: true}
 	}
 
 	id, err := s.queries.AssetCreate(ctx, params)
@@ -72,7 +72,7 @@ func (s *Server) CreateAsset(
 
 	s.logger.InfoContext(ctx, "asset created", "asset_id", id)
 
-	return connect.NewResponse(dcimv1.CreateAssetResponse_builder{
+	return dcimv1.CreateAssetResponse_builder{
 		AssetId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

@@ -19,9 +19,9 @@ import (
 
 func (s *Server) UpdateProject(
 	ctx context.Context,
-	req *connect.Request[organizationv1.UpdateProjectRequest],
-) (*connect.Response[organizationv1.UpdateProjectResponse], error) {
-	projectID := uuid.MustParse(req.Msg.GetProjectId())
+	req *organizationv1.UpdateProjectRequest,
+) (*organizationv1.UpdateProjectResponse, error) {
+	projectID := uuid.MustParse(req.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -31,8 +31,8 @@ func (s *Server) UpdateProject(
 		ID: projectID,
 	}
 
-	if req.Msg.HasAlias() {
-		params.Alias = pgtype.Text{String: req.Msg.GetAlias(), Valid: true}
+	if req.HasAlias() {
+		params.Alias = pgtype.Text{String: req.GetAlias(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.ProjectUpdate(ctx, params)
@@ -51,5 +51,5 @@ func (s *Server) UpdateProject(
 
 	s.logger.InfoContext(ctx, "project updated", "project_id", projectID)
 
-	return connect.NewResponse(organizationv1.UpdateProjectResponse_builder{}.Build()), nil
+	return organizationv1.UpdateProjectResponse_builder{}.Build(), nil
 }

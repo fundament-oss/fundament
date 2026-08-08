@@ -57,12 +57,12 @@ const (
 
 // PhysicalConnectionServiceClient is a client for the dcim.v1.PhysicalConnectionService service.
 type PhysicalConnectionServiceClient interface {
-	CreatePhysicalConnection(context.Context, *connect.Request[v1.CreatePhysicalConnectionRequest]) (*connect.Response[v1.CreatePhysicalConnectionResponse], error)
-	GetPhysicalConnection(context.Context, *connect.Request[v1.GetPhysicalConnectionRequest]) (*connect.Response[v1.GetPhysicalConnectionResponse], error)
-	UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
-	DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
-	ListConnectionsByPlacement(context.Context, *connect.Request[v1.ListConnectionsByPlacementRequest]) (*connect.Response[v1.ListConnectionsByPlacementResponse], error)
-	ListConnectionsBySite(context.Context, *connect.Request[v1.ListConnectionsBySiteRequest]) (*connect.Response[v1.ListConnectionsBySiteResponse], error)
+	CreatePhysicalConnection(context.Context, *v1.CreatePhysicalConnectionRequest) (*v1.CreatePhysicalConnectionResponse, error)
+	GetPhysicalConnection(context.Context, *v1.GetPhysicalConnectionRequest) (*v1.GetPhysicalConnectionResponse, error)
+	UpdatePhysicalConnection(context.Context, *v1.UpdatePhysicalConnectionRequest) (*emptypb.Empty, error)
+	DeletePhysicalConnection(context.Context, *v1.DeletePhysicalConnectionRequest) (*emptypb.Empty, error)
+	ListConnectionsByPlacement(context.Context, *v1.ListConnectionsByPlacementRequest) (*v1.ListConnectionsByPlacementResponse, error)
+	ListConnectionsBySite(context.Context, *v1.ListConnectionsBySiteRequest) (*v1.ListConnectionsBySiteResponse, error)
 }
 
 // NewPhysicalConnectionServiceClient constructs a client for the dcim.v1.PhysicalConnectionService
@@ -126,44 +126,68 @@ type physicalConnectionServiceClient struct {
 }
 
 // CreatePhysicalConnection calls dcim.v1.PhysicalConnectionService.CreatePhysicalConnection.
-func (c *physicalConnectionServiceClient) CreatePhysicalConnection(ctx context.Context, req *connect.Request[v1.CreatePhysicalConnectionRequest]) (*connect.Response[v1.CreatePhysicalConnectionResponse], error) {
-	return c.createPhysicalConnection.CallUnary(ctx, req)
+func (c *physicalConnectionServiceClient) CreatePhysicalConnection(ctx context.Context, req *v1.CreatePhysicalConnectionRequest) (*v1.CreatePhysicalConnectionResponse, error) {
+	response, err := c.createPhysicalConnection.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetPhysicalConnection calls dcim.v1.PhysicalConnectionService.GetPhysicalConnection.
-func (c *physicalConnectionServiceClient) GetPhysicalConnection(ctx context.Context, req *connect.Request[v1.GetPhysicalConnectionRequest]) (*connect.Response[v1.GetPhysicalConnectionResponse], error) {
-	return c.getPhysicalConnection.CallUnary(ctx, req)
+func (c *physicalConnectionServiceClient) GetPhysicalConnection(ctx context.Context, req *v1.GetPhysicalConnectionRequest) (*v1.GetPhysicalConnectionResponse, error) {
+	response, err := c.getPhysicalConnection.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdatePhysicalConnection calls dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection.
-func (c *physicalConnectionServiceClient) UpdatePhysicalConnection(ctx context.Context, req *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.updatePhysicalConnection.CallUnary(ctx, req)
+func (c *physicalConnectionServiceClient) UpdatePhysicalConnection(ctx context.Context, req *v1.UpdatePhysicalConnectionRequest) (*emptypb.Empty, error) {
+	response, err := c.updatePhysicalConnection.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeletePhysicalConnection calls dcim.v1.PhysicalConnectionService.DeletePhysicalConnection.
-func (c *physicalConnectionServiceClient) DeletePhysicalConnection(ctx context.Context, req *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.deletePhysicalConnection.CallUnary(ctx, req)
+func (c *physicalConnectionServiceClient) DeletePhysicalConnection(ctx context.Context, req *v1.DeletePhysicalConnectionRequest) (*emptypb.Empty, error) {
+	response, err := c.deletePhysicalConnection.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // ListConnectionsByPlacement calls dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement.
-func (c *physicalConnectionServiceClient) ListConnectionsByPlacement(ctx context.Context, req *connect.Request[v1.ListConnectionsByPlacementRequest]) (*connect.Response[v1.ListConnectionsByPlacementResponse], error) {
-	return c.listConnectionsByPlacement.CallUnary(ctx, req)
+func (c *physicalConnectionServiceClient) ListConnectionsByPlacement(ctx context.Context, req *v1.ListConnectionsByPlacementRequest) (*v1.ListConnectionsByPlacementResponse, error) {
+	response, err := c.listConnectionsByPlacement.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // ListConnectionsBySite calls dcim.v1.PhysicalConnectionService.ListConnectionsBySite.
-func (c *physicalConnectionServiceClient) ListConnectionsBySite(ctx context.Context, req *connect.Request[v1.ListConnectionsBySiteRequest]) (*connect.Response[v1.ListConnectionsBySiteResponse], error) {
-	return c.listConnectionsBySite.CallUnary(ctx, req)
+func (c *physicalConnectionServiceClient) ListConnectionsBySite(ctx context.Context, req *v1.ListConnectionsBySiteRequest) (*v1.ListConnectionsBySiteResponse, error) {
+	response, err := c.listConnectionsBySite.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // PhysicalConnectionServiceHandler is an implementation of the dcim.v1.PhysicalConnectionService
 // service.
 type PhysicalConnectionServiceHandler interface {
-	CreatePhysicalConnection(context.Context, *connect.Request[v1.CreatePhysicalConnectionRequest]) (*connect.Response[v1.CreatePhysicalConnectionResponse], error)
-	GetPhysicalConnection(context.Context, *connect.Request[v1.GetPhysicalConnectionRequest]) (*connect.Response[v1.GetPhysicalConnectionResponse], error)
-	UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
-	DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error)
-	ListConnectionsByPlacement(context.Context, *connect.Request[v1.ListConnectionsByPlacementRequest]) (*connect.Response[v1.ListConnectionsByPlacementResponse], error)
-	ListConnectionsBySite(context.Context, *connect.Request[v1.ListConnectionsBySiteRequest]) (*connect.Response[v1.ListConnectionsBySiteResponse], error)
+	CreatePhysicalConnection(context.Context, *v1.CreatePhysicalConnectionRequest) (*v1.CreatePhysicalConnectionResponse, error)
+	GetPhysicalConnection(context.Context, *v1.GetPhysicalConnectionRequest) (*v1.GetPhysicalConnectionResponse, error)
+	UpdatePhysicalConnection(context.Context, *v1.UpdatePhysicalConnectionRequest) (*emptypb.Empty, error)
+	DeletePhysicalConnection(context.Context, *v1.DeletePhysicalConnectionRequest) (*emptypb.Empty, error)
+	ListConnectionsByPlacement(context.Context, *v1.ListConnectionsByPlacementRequest) (*v1.ListConnectionsByPlacementResponse, error)
+	ListConnectionsBySite(context.Context, *v1.ListConnectionsBySiteRequest) (*v1.ListConnectionsBySiteResponse, error)
 }
 
 // NewPhysicalConnectionServiceHandler builds an HTTP handler from the service implementation. It
@@ -173,37 +197,37 @@ type PhysicalConnectionServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewPhysicalConnectionServiceHandler(svc PhysicalConnectionServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	physicalConnectionServiceMethods := v1.File_v1_connection_proto.Services().ByName("PhysicalConnectionService").Methods()
-	physicalConnectionServiceCreatePhysicalConnectionHandler := connect.NewUnaryHandler(
+	physicalConnectionServiceCreatePhysicalConnectionHandler := connect.NewUnaryHandlerSimple(
 		PhysicalConnectionServiceCreatePhysicalConnectionProcedure,
 		svc.CreatePhysicalConnection,
 		connect.WithSchema(physicalConnectionServiceMethods.ByName("CreatePhysicalConnection")),
 		connect.WithHandlerOptions(opts...),
 	)
-	physicalConnectionServiceGetPhysicalConnectionHandler := connect.NewUnaryHandler(
+	physicalConnectionServiceGetPhysicalConnectionHandler := connect.NewUnaryHandlerSimple(
 		PhysicalConnectionServiceGetPhysicalConnectionProcedure,
 		svc.GetPhysicalConnection,
 		connect.WithSchema(physicalConnectionServiceMethods.ByName("GetPhysicalConnection")),
 		connect.WithHandlerOptions(opts...),
 	)
-	physicalConnectionServiceUpdatePhysicalConnectionHandler := connect.NewUnaryHandler(
+	physicalConnectionServiceUpdatePhysicalConnectionHandler := connect.NewUnaryHandlerSimple(
 		PhysicalConnectionServiceUpdatePhysicalConnectionProcedure,
 		svc.UpdatePhysicalConnection,
 		connect.WithSchema(physicalConnectionServiceMethods.ByName("UpdatePhysicalConnection")),
 		connect.WithHandlerOptions(opts...),
 	)
-	physicalConnectionServiceDeletePhysicalConnectionHandler := connect.NewUnaryHandler(
+	physicalConnectionServiceDeletePhysicalConnectionHandler := connect.NewUnaryHandlerSimple(
 		PhysicalConnectionServiceDeletePhysicalConnectionProcedure,
 		svc.DeletePhysicalConnection,
 		connect.WithSchema(physicalConnectionServiceMethods.ByName("DeletePhysicalConnection")),
 		connect.WithHandlerOptions(opts...),
 	)
-	physicalConnectionServiceListConnectionsByPlacementHandler := connect.NewUnaryHandler(
+	physicalConnectionServiceListConnectionsByPlacementHandler := connect.NewUnaryHandlerSimple(
 		PhysicalConnectionServiceListConnectionsByPlacementProcedure,
 		svc.ListConnectionsByPlacement,
 		connect.WithSchema(physicalConnectionServiceMethods.ByName("ListConnectionsByPlacement")),
 		connect.WithHandlerOptions(opts...),
 	)
-	physicalConnectionServiceListConnectionsBySiteHandler := connect.NewUnaryHandler(
+	physicalConnectionServiceListConnectionsBySiteHandler := connect.NewUnaryHandlerSimple(
 		PhysicalConnectionServiceListConnectionsBySiteProcedure,
 		svc.ListConnectionsBySite,
 		connect.WithSchema(physicalConnectionServiceMethods.ByName("ListConnectionsBySite")),
@@ -232,26 +256,26 @@ func NewPhysicalConnectionServiceHandler(svc PhysicalConnectionServiceHandler, o
 // UnimplementedPhysicalConnectionServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPhysicalConnectionServiceHandler struct{}
 
-func (UnimplementedPhysicalConnectionServiceHandler) CreatePhysicalConnection(context.Context, *connect.Request[v1.CreatePhysicalConnectionRequest]) (*connect.Response[v1.CreatePhysicalConnectionResponse], error) {
+func (UnimplementedPhysicalConnectionServiceHandler) CreatePhysicalConnection(context.Context, *v1.CreatePhysicalConnectionRequest) (*v1.CreatePhysicalConnectionResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.CreatePhysicalConnection is not implemented"))
 }
 
-func (UnimplementedPhysicalConnectionServiceHandler) GetPhysicalConnection(context.Context, *connect.Request[v1.GetPhysicalConnectionRequest]) (*connect.Response[v1.GetPhysicalConnectionResponse], error) {
+func (UnimplementedPhysicalConnectionServiceHandler) GetPhysicalConnection(context.Context, *v1.GetPhysicalConnectionRequest) (*v1.GetPhysicalConnectionResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.GetPhysicalConnection is not implemented"))
 }
 
-func (UnimplementedPhysicalConnectionServiceHandler) UpdatePhysicalConnection(context.Context, *connect.Request[v1.UpdatePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedPhysicalConnectionServiceHandler) UpdatePhysicalConnection(context.Context, *v1.UpdatePhysicalConnectionRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.UpdatePhysicalConnection is not implemented"))
 }
 
-func (UnimplementedPhysicalConnectionServiceHandler) DeletePhysicalConnection(context.Context, *connect.Request[v1.DeletePhysicalConnectionRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedPhysicalConnectionServiceHandler) DeletePhysicalConnection(context.Context, *v1.DeletePhysicalConnectionRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.DeletePhysicalConnection is not implemented"))
 }
 
-func (UnimplementedPhysicalConnectionServiceHandler) ListConnectionsByPlacement(context.Context, *connect.Request[v1.ListConnectionsByPlacementRequest]) (*connect.Response[v1.ListConnectionsByPlacementResponse], error) {
+func (UnimplementedPhysicalConnectionServiceHandler) ListConnectionsByPlacement(context.Context, *v1.ListConnectionsByPlacementRequest) (*v1.ListConnectionsByPlacementResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.ListConnectionsByPlacement is not implemented"))
 }
 
-func (UnimplementedPhysicalConnectionServiceHandler) ListConnectionsBySite(context.Context, *connect.Request[v1.ListConnectionsBySiteRequest]) (*connect.Response[v1.ListConnectionsBySiteResponse], error) {
+func (UnimplementedPhysicalConnectionServiceHandler) ListConnectionsBySite(context.Context, *v1.ListConnectionsBySiteRequest) (*v1.ListConnectionsBySiteResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.PhysicalConnectionService.ListConnectionsBySite is not implemented"))
 }

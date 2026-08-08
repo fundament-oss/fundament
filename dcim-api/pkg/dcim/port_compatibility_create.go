@@ -18,10 +18,10 @@ import (
 
 func (s *Server) CreatePortCompatibility(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreatePortCompatibilityRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	portDefID := uuid.MustParse(req.Msg.GetPortDefinitionId())
-	compatCatalogID := uuid.MustParse(req.Msg.GetCompatibleCatalogId())
+	req *dcimv1.CreatePortCompatibilityRequest,
+) (*emptypb.Empty, error) {
+	portDefID := uuid.MustParse(req.GetPortDefinitionId())
+	compatCatalogID := uuid.MustParse(req.GetCompatibleCatalogId())
 
 	_, err := s.queries.PortCompatibilityCreate(ctx, db.PortCompatibilityCreateParams{
 		PortDefinitionID:    portDefID,
@@ -45,5 +45,5 @@ func (s *Server) CreatePortCompatibility(
 
 	s.logger.InfoContext(ctx, "port compatibility created", "port_definition_id", portDefID, "compatible_catalog_id", compatCatalogID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

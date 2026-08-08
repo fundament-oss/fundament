@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetPlacement(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetPlacementRequest],
-) (*connect.Response[dcimv1.GetPlacementResponse], error) {
-	placementID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetPlacementRequest,
+) (*dcimv1.GetPlacementResponse, error) {
+	placementID := uuid.MustParse(req.GetId())
 
 	placement, err := s.queries.PlacementGetByID(ctx, db.PlacementGetByIDParams{ID: placementID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetPlacement(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get placement: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetPlacementResponse_builder{
+	return dcimv1.GetPlacementResponse_builder{
 		Placement: placementFromGetRow(&placement),
-	}.Build()), nil
+	}.Build(), nil
 }

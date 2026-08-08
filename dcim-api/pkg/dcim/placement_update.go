@@ -19,22 +19,22 @@ import (
 
 func (s *Server) UpdatePlacement(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdatePlacementRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	placementID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdatePlacementRequest,
+) (*emptypb.Empty, error) {
+	placementID := uuid.MustParse(req.GetId())
 
 	params := db.PlacementUpdateParams{
 		ID: placementID,
 	}
 
-	switch loc := req.Msg.WhichLocation(); loc {
+	switch loc := req.WhichLocation(); loc {
 	case dcimv1.UpdatePlacementRequest_Rack_case:
-		rack := req.Msg.GetRack()
+		rack := req.GetRack()
 		params.RackID = pgtype.UUID{Bytes: uuid.MustParse(rack.GetRackId()), Valid: true}
 		params.StartUnit = pgtype.Int4{Int32: rack.GetRackUnitStart(), Valid: true}
 		params.SlotType = pgtype.Text{String: rackSlotTypeToDB(rack.GetRackSlotType()), Valid: true}
 	case dcimv1.UpdatePlacementRequest_SubComponent_case:
-		sub := req.Msg.GetSubComponent()
+		sub := req.GetSubComponent()
 		params.ParentPlacementID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPlacementId()), Valid: true}
 		params.PortDefinitionID = pgtype.UUID{Bytes: uuid.MustParse(sub.GetParentPortDefinitionId()), Valid: true}
 	case dcimv1.UpdatePlacementRequest_Location_not_set_case:
@@ -43,16 +43,16 @@ func (s *Server) UpdatePlacement(
 		panic("unhandled placement location case")
 	}
 
-	if req.Msg.HasLogicalDeviceId() {
-		if v := req.Msg.GetLogicalDeviceId(); v == "" {
+	if req.HasLogicalDeviceId() {
+		if v := req.GetLogicalDeviceId(); v == "" {
 			params.ClearLogicalDeviceID = true
 		} else {
 			params.LogicalDeviceID = pgtype.UUID{Bytes: uuid.MustParse(v), Valid: true}
 		}
 	}
 
-	if req.Msg.HasNotes() {
-		params.Notes = pgtype.Text{String: req.Msg.GetNotes(), Valid: true}
+	if req.HasNotes() {
+		params.Notes = pgtype.Text{String: req.GetNotes(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.PlacementUpdate(ctx, params)
@@ -79,5 +79,5 @@ func (s *Server) UpdatePlacement(
 
 	s.logger.InfoContext(ctx, "placement updated", "placement_id", placementID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

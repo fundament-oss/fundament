@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 	"github.com/stretchr/testify/assert"
@@ -22,11 +21,11 @@ func TestSiteService_ListSites_Populated(t *testing.T) {
 		createSite(t, env, name)
 	}
 
-	resp, err := client.ListSites(context.Background(), connect.NewRequest(&dcimv1.ListSitesRequest{}))
+	resp, err := client.ListSites(context.Background(), &dcimv1.ListSitesRequest{})
 	require.NoError(t, err)
 
-	got := make([]string, 0, len(resp.Msg.GetSites()))
-	for _, s := range resp.Msg.GetSites() {
+	got := make([]string, 0, len(resp.GetSites()))
+	for _, s := range resp.GetSites() {
 		got = append(got, s.GetName())
 	}
 	// ListSites is unfiltered, so the response also includes seeded sites

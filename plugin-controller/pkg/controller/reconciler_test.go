@@ -726,7 +726,7 @@ func TestPluginServiceURL(t *testing.T) {
 // stub every method. Unset handlers fall through to the connect-provided
 // "unimplemented" default.
 type mockPluginHandlers struct {
-	requestUninstall func(context.Context, *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error)
+	requestUninstall func(context.Context, *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error)
 }
 
 // startMockPluginServer boots an HTTP server that speaks the
@@ -757,7 +757,7 @@ type mockPluginHandler struct {
 	handlers mockPluginHandlers
 }
 
-func (m *mockPluginHandler) RequestUninstall(ctx context.Context, req *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+func (m *mockPluginHandler) RequestUninstall(ctx context.Context, req *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error) {
 	if m.handlers.requestUninstall == nil {
 		return m.UnimplementedPluginMetadataServiceHandler.RequestUninstall(ctx, req)
 	}
@@ -787,9 +787,9 @@ func TestHandleDeletion_CallsUninstall(t *testing.T) {
 
 	uninstallCalled := false
 	httpClient, baseURL := startMockPluginServer(t, mockPluginHandlers{
-		requestUninstall: func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+		requestUninstall: func(_ context.Context, _ *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error) {
 			uninstallCalled = true
-			return connect.NewResponse(&pb.RequestUninstallResponse{}), nil
+			return &pb.RequestUninstallResponse{}, nil
 		},
 	})
 
@@ -809,7 +809,7 @@ func TestHandleDeletion_CallsUninstall(t *testing.T) {
 	// We need to call requestPluginUninstall directly since handleDeletion
 	// builds the URL from the CR's pluginName which won't match our server.
 	rpcClient := pluginmetadatav1connect.NewPluginMetadataServiceClient(httpClient, baseURL)
-	_, err := rpcClient.RequestUninstall(context.Background(), connect.NewRequest(&pb.RequestUninstallRequest{}))
+	_, err := rpcClient.RequestUninstall(context.Background(), &pb.RequestUninstallRequest{})
 	require.NoError(t, err)
 	assert.True(t, uninstallCalled, "uninstall RPC should have been called")
 
@@ -859,7 +859,7 @@ func TestHandleDeletion_UninstallError_Requeues(t *testing.T) {
 	cr, ns := deletionTestCR(t)
 
 	httpClient, baseURL := startMockPluginServer(t, mockPluginHandlers{
-		requestUninstall: func(_ context.Context, _ *connect.Request[pb.RequestUninstallRequest]) (*connect.Response[pb.RequestUninstallResponse], error) {
+		requestUninstall: func(_ context.Context, _ *pb.RequestUninstallRequest) (*pb.RequestUninstallResponse, error) {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("helm uninstall failed"))
 		},
 	})

@@ -48,11 +48,11 @@ func NewPluginProxyLookup(client pluginproxyv1connect.PluginInstallationServiceC
 func (l *pluginProxyLookup) GetInstallationManifest(
 	ctx context.Context, clusterID, installationID uuid.UUID,
 ) (*InstallationManifest, error) {
-	resp, err := l.client.GetInstallationManifest(ctx, connect.NewRequest(
+	resp, err := l.client.GetInstallationManifest(ctx,
 		pluginproxyv1.GetInstallationManifestRequest_builder{
 			ClusterId:      clusterID.String(),
 			InstallationId: installationID.String(),
-		}.Build()))
+		}.Build())
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeNotFound {
 			return nil, ErrInstallationNotFound
@@ -60,11 +60,10 @@ func (l *pluginProxyLookup) GetInstallationManifest(
 		return nil, fmt.Errorf("plugin-proxy get installation manifest: %w", err)
 	}
 
-	msg := resp.Msg
 	return &InstallationManifest{
-		InstallationName: msg.GetInstallationName(),
-		PluginName:       msg.GetPluginName(),
-		PluginVersion:    msg.GetPluginVersion(),
-		DefinitionHash:   msg.GetDefinitionHash(),
+		InstallationName: resp.GetInstallationName(),
+		PluginName:       resp.GetPluginName(),
+		PluginVersion:    resp.GetPluginVersion(),
+		DefinitionHash:   resp.GetDefinitionHash(),
 	}, nil
 }

@@ -23,10 +23,10 @@ const shootStatusReady = "ready"
 
 func (s *Server) GetClusterByName(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetClusterByNameRequest],
-) (*connect.Response[organizationv1.GetClusterResponse], error) {
+	req *organizationv1.GetClusterByNameRequest,
+) (*organizationv1.GetClusterResponse, error) {
 	cluster, err := s.queries.ClusterGetByName(ctx, db.ClusterGetByNameParams{
-		Name: req.Msg.GetName(),
+		Name: req.GetName(),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -60,16 +60,16 @@ func (s *Server) GetClusterByName(
 	details := clusterDetailsFromRow(row)
 	details.SetObservabilityUrl(s.lookupObservabilityURL(ctx, row.ID, row.ShootStatus))
 
-	return connect.NewResponse(organizationv1.GetClusterResponse_builder{
+	return organizationv1.GetClusterResponse_builder{
 		Cluster: details,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func (s *Server) GetCluster(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetClusterRequest],
-) (*connect.Response[organizationv1.GetClusterResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.GetClusterRequest,
+) (*organizationv1.GetClusterResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -92,16 +92,16 @@ func (s *Server) GetCluster(
 	details := clusterDetailsFromRow(&cluster)
 	details.SetObservabilityUrl(s.lookupObservabilityURL(ctx, cluster.ID, cluster.ShootStatus))
 
-	return connect.NewResponse(organizationv1.GetClusterResponse_builder{
+	return organizationv1.GetClusterResponse_builder{
 		Cluster: details,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func (s *Server) GetClusterActivity(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetClusterActivityRequest],
-) (*connect.Response[organizationv1.GetClusterActivityResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.GetClusterActivityRequest,
+) (*organizationv1.GetClusterActivityResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (s *Server) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster: %w", err))
 	}
 
-	limit := req.Msg.GetLimit()
+	limit := req.GetLimit()
 	if limit <= 0 {
 		limit = 50
 	}
@@ -130,16 +130,16 @@ func (s *Server) GetClusterActivity(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get cluster events: %w", err))
 	}
 
-	return connect.NewResponse(organizationv1.GetClusterActivityResponse_builder{
+	return organizationv1.GetClusterActivityResponse_builder{
 		Events: clusterEventsFromRows(events),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func (s *Server) GetClusterMetricsCredentials(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetClusterMetricsCredentialsRequest],
-) (*connect.Response[organizationv1.GetClusterMetricsCredentialsResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.GetClusterMetricsCredentialsRequest,
+) (*organizationv1.GetClusterMetricsCredentialsResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -173,17 +173,17 @@ func (s *Server) GetClusterMetricsCredentials(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to fetch metrics credentials"))
 	}
 
-	return connect.NewResponse(organizationv1.GetClusterMetricsCredentialsResponse_builder{
+	return organizationv1.GetClusterMetricsCredentialsResponse_builder{
 		Username: info.Username,
 		Password: info.Password,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func (s *Server) GetKubeconfig(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetKubeconfigRequest],
-) (*connect.Response[organizationv1.GetKubeconfigResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.GetKubeconfigRequest,
+) (*organizationv1.GetKubeconfigResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanView(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -210,9 +210,9 @@ func (s *Server) GetKubeconfig(
 
 	kubeconfig := buildKubeconfig(clusterID.String(), proxyURL)
 
-	return connect.NewResponse(organizationv1.GetKubeconfigResponse_builder{
+	return organizationv1.GetKubeconfigResponse_builder{
 		KubeconfigContent: kubeconfig,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 // lookupObservabilityURL fetches the per-shoot Plutono URL for clusters that

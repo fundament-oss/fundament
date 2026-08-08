@@ -327,12 +327,12 @@ func (r *PluginInstallationResource) Create(ctx context.Context, req resource.Cr
 // headers are added by the client transport). It errors when the plugin is not
 // in the catalog or has no published definition to pin.
 func (r *PluginInstallationResource) resolveLatestDefinition(ctx context.Context, pluginName string) (string, string, error) {
-	listReq := connect.NewRequest(organizationv1.ListPluginsRequest_builder{}.Build())
+	listReq := organizationv1.ListPluginsRequest_builder{}.Build()
 	listResp, err := r.client.PluginService.ListPlugins(ctx, listReq)
 	if err != nil {
 		return "", "", fmt.Errorf("list plugins: %w", err)
 	}
-	for _, p := range listResp.Msg.GetPlugins() {
+	for _, p := range listResp.GetPlugins() {
 		if p.GetName() != pluginName {
 			continue
 		}
@@ -370,9 +370,9 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 	defer cancel()
 
 	// Check whether the cluster's Kubernetes API is reachable before hitting the proxy.
-	getClusterReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	getClusterReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
+	}.Build()
 
 	clusterResp, err := r.client.ClusterService.GetCluster(ctx, getClusterReq)
 	if err != nil {
@@ -385,7 +385,7 @@ func (r *PluginInstallationResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	clusterStatus := clusterResp.Msg.GetCluster().GetStatus()
+	clusterStatus := clusterResp.GetCluster().GetStatus()
 	switch clusterStatus {
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING,
 		organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING:
@@ -479,9 +479,9 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 	defer cancel()
 
 	// Check whether the cluster is in a state where its Kubernetes API is reachable.
-	getClusterReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	getClusterReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
+	}.Build()
 
 	clusterResp, err := r.client.ClusterService.GetCluster(ctx, getClusterReq)
 	if err != nil {
@@ -493,7 +493,7 @@ func (r *PluginInstallationResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	clusterStatus := clusterResp.Msg.GetCluster().GetStatus()
+	clusterStatus := clusterResp.GetCluster().GetStatus()
 	switch clusterStatus {
 	case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING,
 		organizationv1.ClusterStatus_CLUSTER_STATUS_UPGRADING:

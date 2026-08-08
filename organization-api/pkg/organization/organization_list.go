@@ -13,8 +13,8 @@ import (
 
 func (s *Server) ListOrganizations(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListOrganizationsRequest],
-) (*connect.Response[organizationv1.ListOrganizationsResponse], error) {
+	req *organizationv1.ListOrganizationsRequest,
+) (*organizationv1.ListOrganizationsResponse, error) {
 	orgs, err := s.queries.OrganizationList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list organizations: %w", err))
@@ -25,9 +25,9 @@ func (s *Server) ListOrganizations(
 		result = append(result, toOrg(org))
 	}
 
-	return connect.NewResponse(organizationv1.ListOrganizationsResponse_builder{
+	return organizationv1.ListOrganizationsResponse_builder{
 		Organizations: result,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func toOrg(org db.OrganizationListRow) *organizationv1.Organization {

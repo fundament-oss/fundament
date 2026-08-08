@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 	"github.com/stretchr/testify/assert"
@@ -24,13 +23,13 @@ func TestRackService_ListRacks_HappyFlow(t *testing.T) {
 		createRack(t, env, rowID, name, 42)
 	}
 
-	resp, err := client.ListRacks(context.Background(), connect.NewRequest(
+	resp, err := client.ListRacks(context.Background(),
 		(&dcimv1.ListRacksRequest_builder{RowId: &rowID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	got := make([]string, 0, len(resp.Msg.GetRacks()))
-	for _, summary := range resp.Msg.GetRacks() {
+	got := make([]string, 0, len(resp.GetRacks()))
+	for _, summary := range resp.GetRacks() {
 		got = append(got, summary.GetRack().GetName())
 	}
 
@@ -58,13 +57,13 @@ func TestRackService_ListRacks_FilterBySite(t *testing.T) {
 	otherRow := createRackRow(t, env, otherRoom, "Other row")
 	createRack(t, env, otherRow, "Other rack", 42)
 
-	resp, err := client.ListRacks(context.Background(), connect.NewRequest(
+	resp, err := client.ListRacks(context.Background(),
 		(&dcimv1.ListRacksRequest_builder{SiteId: &siteID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	got := make([]string, 0, len(resp.Msg.GetRacks()))
-	for _, summary := range resp.Msg.GetRacks() {
+	got := make([]string, 0, len(resp.GetRacks()))
+	for _, summary := range resp.GetRacks() {
 		got = append(got, summary.GetRack().GetName())
 	}
 

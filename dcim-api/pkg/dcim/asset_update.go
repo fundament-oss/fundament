@@ -18,35 +18,35 @@ import (
 
 func (s *Server) UpdateAsset(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateAssetRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	assetID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateAssetRequest,
+) (*emptypb.Empty, error) {
+	assetID := uuid.MustParse(req.GetId())
 
 	params := db.AssetUpdateParams{
 		ID: assetID,
 	}
 
-	if req.Msg.HasStatus() {
-		params.Status = pgtype.Text{String: assetStatusToDB(req.Msg.GetStatus()), Valid: true}
+	if req.HasStatus() {
+		params.Status = pgtype.Text{String: assetStatusToDB(req.GetStatus()), Valid: true}
 	}
 
-	if req.Msg.HasSerialNumber() {
-		params.SerialNumber = pgtype.Text{String: req.Msg.GetSerialNumber(), Valid: true}
+	if req.HasSerialNumber() {
+		params.SerialNumber = pgtype.Text{String: req.GetSerialNumber(), Valid: true}
 	}
 
-	if req.Msg.HasAssetTag() {
-		params.AssetTag = pgtype.Text{String: req.Msg.GetAssetTag(), Valid: true}
+	if req.HasAssetTag() {
+		params.AssetTag = pgtype.Text{String: req.GetAssetTag(), Valid: true}
 	}
 
-	if req.Msg.HasWarrantyExpiry() {
+	if req.HasWarrantyExpiry() {
 		params.WarrantyExpiry = pgtype.Date{
-			Time:  req.Msg.GetWarrantyExpiry().AsTime(),
+			Time:  req.GetWarrantyExpiry().AsTime(),
 			Valid: true,
 		}
 	}
 
-	if req.Msg.HasNotes() {
-		params.Notes = pgtype.Text{String: req.Msg.GetNotes(), Valid: true}
+	if req.HasNotes() {
+		params.Notes = pgtype.Text{String: req.GetNotes(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.AssetUpdate(ctx, params)
@@ -69,5 +69,5 @@ func (s *Server) UpdateAsset(
 
 	s.logger.InfoContext(ctx, "asset updated", "asset_id", assetID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

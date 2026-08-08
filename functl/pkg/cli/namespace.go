@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
-
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -32,14 +30,14 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 	}
 
 	if c.Cluster != "" {
-		resp, err := apiClient.Namespaces().ListClusterNamespaces(context.Background(), connect.NewRequest(organizationv1.ListClusterNamespacesRequest_builder{
+		resp, err := apiClient.Namespaces().ListClusterNamespaces(context.Background(), organizationv1.ListClusterNamespacesRequest_builder{
 			ClusterId: c.Cluster,
-		}.Build()))
+		}.Build())
 		if err != nil {
 			return fmt.Errorf("failed to list namespaces: %w", err)
 		}
 
-		namespaces := resp.Msg.GetNamespaces()
+		namespaces := resp.GetNamespaces()
 
 		if ctx.Output == OutputJSON {
 			return PrintJSON(namespaces)
@@ -69,14 +67,14 @@ func (c *NamespaceListCmd) Run(ctx *Context) error {
 	}
 
 	// List by project
-	resp, err := apiClient.Namespaces().ListProjectNamespaces(context.Background(), connect.NewRequest(organizationv1.ListProjectNamespacesRequest_builder{
+	resp, err := apiClient.Namespaces().ListProjectNamespaces(context.Background(), organizationv1.ListProjectNamespacesRequest_builder{
 		ProjectId: c.Project,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to list namespaces: %w", err)
 	}
 
-	namespaces := resp.Msg.GetNamespaces()
+	namespaces := resp.GetNamespaces()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(namespaces)
@@ -117,15 +115,15 @@ func (c *NamespaceCreateCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Namespaces().CreateNamespace(context.Background(), connect.NewRequest(organizationv1.CreateNamespaceRequest_builder{
+	resp, err := apiClient.Namespaces().CreateNamespace(context.Background(), organizationv1.CreateNamespaceRequest_builder{
 		ProjectId: c.Project,
 		Name:      c.Name,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to create namespace: %w", err)
 	}
 
-	namespaceID := resp.Msg.GetNamespaceId()
+	namespaceID := resp.GetNamespaceId()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]string{
@@ -151,9 +149,9 @@ func (c *NamespaceDeleteCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = apiClient.Namespaces().DeleteNamespace(context.Background(), connect.NewRequest(organizationv1.DeleteNamespaceRequest_builder{
+	_, err = apiClient.Namespaces().DeleteNamespace(context.Background(), organizationv1.DeleteNamespaceRequest_builder{
 		NamespaceId: c.NamespaceID,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to delete namespace: %w", err)
 	}

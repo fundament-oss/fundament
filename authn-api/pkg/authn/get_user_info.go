@@ -2,6 +2,7 @@ package authn
 
 import (
 	"context"
+	"errors"
 
 	"connectrpc.com/connect"
 
@@ -12,16 +13,21 @@ import (
 // GetUserInfo is the RPC handler for getting user information from a valid JWT.
 func (s *AuthnServer) GetUserInfo(
 	ctx context.Context,
-	req *connect.Request[authnv1.GetUserInfoRequest],
-) (*connect.Response[authnv1.GetUserInfoResponse], error) {
-	claims, err := s.validator.Validate(req.Header())
+	_ *authnv1.GetUserInfoRequest,
+) (*authnv1.GetUserInfoResponse, error) {
+	callInfo, ok := connect.CallInfoForHandlerContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("missing call info in context"))
+	}
+
+	claims, err := s.validator.Validate(callInfo.RequestHeader())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
-	return connect.NewResponse(authnv1.GetUserInfoResponse_builder{
+	return authnv1.GetUserInfoResponse_builder{
 		User: protoUserFromClaims(claims),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 // protoUserFromClaims converts JWT claims to a proto User.

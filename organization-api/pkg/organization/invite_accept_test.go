@@ -19,9 +19,9 @@ func Test_AcceptInvitation_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.AcceptInvitation(context.Background(), connect.NewRequest(organizationv1.AcceptInvitationRequest_builder{
+	_, err := client.AcceptInvitation(context.Background(), organizationv1.AcceptInvitationRequest_builder{
 		Id: "arbitrary",
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -47,13 +47,14 @@ func Test_AcceptInvitation_DoesNotExist(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.AcceptInvitationRequest_builder{
+	req := organizationv1.AcceptInvitationRequest_builder{
 		Id: uuid.New().String(),
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.AcceptInvitation(context.Background(), req)
+	_, err := client.AcceptInvitation(ctx, req)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -85,41 +86,44 @@ func Test_AcceptInvitation_HappyFlow(t *testing.T) {
 
 	client := organizationv1connect.NewInviteServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.InviteMemberRequest_builder{
+	req := organizationv1.InviteMemberRequest_builder{
 		Email:      "foo@bar.baz",
 		Permission: "viewer",
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.InviteMember(context.Background(), req)
+	_, err := client.InviteMember(ctx, req)
 	require.NoError(t, err)
 
 	userToInviteToken := env.createAuthnToken(t, userToInviteUUID)
 
-	listReq := connect.NewRequest(&organizationv1.ListInvitationsRequest{})
-	listReq.Header().Set("Authorization", "Bearer "+userToInviteToken)
-	listReq.Header().Set("Fun-Organization", orgID.String())
+	listReq := &organizationv1.ListInvitationsRequest{}
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+userToInviteToken)
+	listCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	invitationsRes, err := client.ListInvitations(context.Background(), listReq)
+	invitationsRes, err := client.ListInvitations(listCtx, listReq)
 	require.NoError(t, err)
 
 	require.NotNil(t, invitationsRes)
-	require.Len(t, invitationsRes.Msg.GetInvitations(), 1)
+	require.Len(t, invitationsRes.GetInvitations(), 1)
 
-	acceptInvitationReq := connect.NewRequest(organizationv1.AcceptInvitationRequest_builder{
-		Id: invitationsRes.Msg.GetInvitations()[0].GetId(),
-	}.Build())
-	acceptInvitationReq.Header().Set("Authorization", "Bearer "+userToInviteToken)
-	acceptInvitationReq.Header().Set("Fun-Organization", orgID.String())
+	acceptInvitationReq := organizationv1.AcceptInvitationRequest_builder{
+		Id: invitationsRes.GetInvitations()[0].GetId(),
+	}.Build()
+	acceptInvitationCtx, acceptInvitationCallInfo := connect.NewClientContext(context.Background())
+	acceptInvitationCallInfo.RequestHeader().Set("Authorization", "Bearer "+userToInviteToken)
+	acceptInvitationCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.AcceptInvitation(context.Background(), acceptInvitationReq)
+	res, err := client.AcceptInvitation(acceptInvitationCtx, acceptInvitationReq)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	invitationsRes, err = client.ListInvitations(context.Background(), listReq)
+	invitationsRes, err = client.ListInvitations(listCtx, listReq)
 	require.NoError(t, err)
 
 	require.NotNil(t, invitationsRes)
-	require.Len(t, invitationsRes.Msg.GetInvitations(), 0)
+	require.Len(t, invitationsRes.GetInvitations(), 0)
 }

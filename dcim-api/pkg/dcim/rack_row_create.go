@@ -17,19 +17,19 @@ import (
 
 func (s *Server) CreateRackRow(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateRackRowRequest],
-) (*connect.Response[dcimv1.CreateRackRowResponse], error) {
+	req *dcimv1.CreateRackRowRequest,
+) (*dcimv1.CreateRackRowResponse, error) {
 	params := db.RackRowCreateParams{
-		RoomID: uuid.MustParse(req.Msg.GetRoomId()),
-		Name:   req.Msg.GetName(),
+		RoomID: uuid.MustParse(req.GetRoomId()),
+		Name:   req.GetName(),
 	}
 
-	if req.Msg.HasPositionX() {
-		params.PositionX = pgtype.Float8{Float64: req.Msg.GetPositionX(), Valid: true}
+	if req.HasPositionX() {
+		params.PositionX = pgtype.Float8{Float64: req.GetPositionX(), Valid: true}
 	}
 
-	if req.Msg.HasPositionY() {
-		params.PositionY = pgtype.Float8{Float64: req.Msg.GetPositionY(), Valid: true}
+	if req.HasPositionY() {
+		params.PositionY = pgtype.Float8{Float64: req.GetPositionY(), Valid: true}
 	}
 
 	id, err := s.queries.RackRowCreate(ctx, params)
@@ -48,7 +48,7 @@ func (s *Server) CreateRackRow(
 
 	s.logger.InfoContext(ctx, "rack row created", "rack_row_id", id)
 
-	return connect.NewResponse(dcimv1.CreateRackRowResponse_builder{
+	return dcimv1.CreateRackRowResponse_builder{
 		RackRowId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

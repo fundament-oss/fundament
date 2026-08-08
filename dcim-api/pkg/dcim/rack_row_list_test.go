@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 	"github.com/stretchr/testify/assert"
@@ -29,13 +28,13 @@ func TestRackRowService_ListRackRows_FilterBySite(t *testing.T) {
 	otherRoom := createRoom(t, env, otherSite, "Other room")
 	createRackRow(t, env, otherRoom, "Other row")
 
-	resp, err := client.ListRackRows(context.Background(), connect.NewRequest(
+	resp, err := client.ListRackRows(context.Background(),
 		(&dcimv1.ListRackRowsRequest_builder{SiteId: &siteID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	got := make([]string, 0, len(resp.Msg.GetRackRows()))
-	for _, row := range resp.Msg.GetRackRows() {
+	got := make([]string, 0, len(resp.GetRackRows()))
+	for _, row := range resp.GetRackRows() {
 		got = append(got, row.GetName())
 	}
 

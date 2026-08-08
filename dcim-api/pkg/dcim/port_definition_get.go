@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetPortDefinition(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetPortDefinitionRequest],
-) (*connect.Response[dcimv1.GetPortDefinitionResponse], error) {
-	portDefID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetPortDefinitionRequest,
+) (*dcimv1.GetPortDefinitionResponse, error) {
+	portDefID := uuid.MustParse(req.GetId())
 
 	row, err := s.queries.PortDefinitionGetByID(ctx, db.PortDefinitionGetByIDParams{ID: portDefID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetPortDefinition(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get port definition: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetPortDefinitionResponse_builder{
+	return dcimv1.GetPortDefinitionResponse_builder{
 		PortDefinition: portDefinitionFromGetRow(&row),
-	}.Build()), nil
+	}.Build(), nil
 }

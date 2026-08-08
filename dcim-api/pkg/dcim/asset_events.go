@@ -13,9 +13,9 @@ import (
 
 func (s *Server) GetAssetEvents(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetAssetEventsRequest],
-) (*connect.Response[dcimv1.GetAssetEventsResponse], error) {
-	assetID := uuid.MustParse(req.Msg.GetAssetId())
+	req *dcimv1.GetAssetEventsRequest,
+) (*dcimv1.GetAssetEventsResponse, error) {
+	assetID := uuid.MustParse(req.GetAssetId())
 
 	rows, err := s.queries.AssetEventList(ctx, db.AssetEventListParams{AssetID: assetID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetAssetEvents(
 		events = append(events, assetEventFromRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.GetAssetEventsResponse_builder{
+	return dcimv1.GetAssetEventsResponse_builder{
 		Events: events,
-	}.Build()), nil
+	}.Build(), nil
 }

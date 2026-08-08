@@ -13,9 +13,9 @@ import (
 
 func (s *Server) ListAssetsByCatalogEntry(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListAssetsByCatalogEntryRequest],
-) (*connect.Response[dcimv1.ListAssetsByCatalogEntryResponse], error) {
-	catalogID := uuid.MustParse(req.Msg.GetDeviceCatalogId())
+	req *dcimv1.ListAssetsByCatalogEntryRequest,
+) (*dcimv1.ListAssetsByCatalogEntryResponse, error) {
+	catalogID := uuid.MustParse(req.GetDeviceCatalogId())
 
 	rows, err := s.queries.AssetListByCatalogID(ctx, db.AssetListByCatalogIDParams{DeviceCatalogID: catalogID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) ListAssetsByCatalogEntry(
 		assets = append(assets, assetFromListByCatalogRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListAssetsByCatalogEntryResponse_builder{
+	return dcimv1.ListAssetsByCatalogEntryResponse_builder{
 		Assets: assets,
-	}.Build()), nil
+	}.Build(), nil
 }

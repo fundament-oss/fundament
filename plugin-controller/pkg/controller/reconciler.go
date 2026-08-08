@@ -245,7 +245,7 @@ func (r *Reconciler) requestPluginUninstall(ctx context.Context, log *slog.Logge
 	url := pluginServiceURL(cr.Name)
 	rpcClient := pluginmetadatav1connect.NewPluginMetadataServiceClient(r.uninstallHTTPClient, url)
 
-	_, err := rpcClient.RequestUninstall(ctx, connect.NewRequest(&pluginmetadatav1.RequestUninstallRequest{}))
+	_, err := rpcClient.RequestUninstall(ctx, &pluginmetadatav1.RequestUninstallRequest{})
 	if err != nil {
 		// If the plugin is unreachable, proceed with cleanup
 		if connect.CodeOf(err) == connect.CodeUnavailable || connect.CodeOf(err) == connect.CodeUnimplemented {

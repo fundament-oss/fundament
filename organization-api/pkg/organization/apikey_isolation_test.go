@@ -38,22 +38,24 @@ func Test_APIKey_Isolation_List(t *testing.T) {
 	client := organizationv1connect.NewAPIKeyServiceClient(env.server.Client(), env.server.URL)
 
 	createKey := func(token, name string) {
-		req := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+		req := organizationv1.CreateAPIKeyRequest_builder{
 			Name: name,
-		}.Build())
-		req.Header().Set("Authorization", "Bearer "+token)
-		req.Header().Set("Fun-Organization", orgID.String())
-		_, err := client.CreateAPIKey(context.Background(), req)
+		}.Build()
+		ctx, callInfo := connect.NewClientContext(context.Background())
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+		_, err := client.CreateAPIKey(ctx, req)
 		require.NoError(t, err)
 	}
 
 	listKeys := func(token string) []*organizationv1.APIKey {
-		req := connect.NewRequest(organizationv1.ListAPIKeysRequest_builder{}.Build())
-		req.Header().Set("Authorization", "Bearer "+token)
-		req.Header().Set("Fun-Organization", orgID.String())
-		res, err := client.ListAPIKeys(context.Background(), req)
+		req := organizationv1.ListAPIKeysRequest_builder{}.Build()
+		ctx, callInfo := connect.NewClientContext(context.Background())
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+		callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+		res, err := client.ListAPIKeys(ctx, req)
 		require.NoError(t, err)
-		return res.Msg.GetApiKeys()
+		return res.GetApiKeys()
 	}
 
 	createKey(tokenA, "key-a-1")

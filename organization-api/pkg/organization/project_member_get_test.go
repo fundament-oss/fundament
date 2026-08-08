@@ -19,7 +19,7 @@ func Test_ProjectMember_Get_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.GetProjectMember(context.Background(), connect.NewRequest(organizationv1.GetProjectMemberRequest_builder{}.Build()))
+	_, err := client.GetProjectMember(context.Background(), organizationv1.GetProjectMemberRequest_builder{}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -51,38 +51,41 @@ func Test_ProjectMember_Get(t *testing.T) {
 
 	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	createClusterReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createClusterReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "test-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createClusterReq.Header().Set("Authorization", "Bearer "+token)
-	createClusterReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createClusterCtx, createClusterCallInfo := connect.NewClientContext(context.Background())
+	createClusterCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createClusterCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createClusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	createClusterRes, err := clusterClient.CreateCluster(createClusterCtx, createClusterReq)
 	require.NoError(t, err)
 
 	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	createProjectReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
-		ClusterId: createClusterRes.Msg.GetClusterId(),
+	createProjectReq := organizationv1.CreateProjectRequest_builder{
+		ClusterId: createClusterRes.GetClusterId(),
 		Name:      "arbitrary",
-	}.Build())
-	createProjectReq.Header().Set("Authorization", "Bearer "+token)
-	createProjectReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createProjectCtx, createProjectCallInfo := connect.NewClientContext(context.Background())
+	createProjectCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createProjectCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createProjectRes, err := client.CreateProject(context.Background(), createProjectReq)
+	createProjectRes, err := client.CreateProject(createProjectCtx, createProjectReq)
 	require.NoError(t, err)
 
-	addProjectMemberReq := connect.NewRequest(organizationv1.AddProjectMemberRequest_builder{
-		ProjectId: createProjectRes.Msg.GetProjectId(),
+	addProjectMemberReq := organizationv1.AddProjectMemberRequest_builder{
+		ProjectId: createProjectRes.GetProjectId(),
 		UserId:    projectMemberUserID.String(),
 		Role:      organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER,
-	}.Build())
-	addProjectMemberReq.Header().Set("Authorization", "Bearer "+token)
-	addProjectMemberReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	addProjectMemberCtx, addProjectMemberCallInfo := connect.NewClientContext(context.Background())
+	addProjectMemberCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	addProjectMemberCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	addMemberRes, err := client.AddProjectMember(context.Background(), addProjectMemberReq)
+	addMemberRes, err := client.AddProjectMember(addProjectMemberCtx, addProjectMemberReq)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
@@ -99,12 +102,12 @@ func Test_ProjectMember_Get(t *testing.T) {
 		},
 		"happy_flow": {
 			Request: organizationv1.GetProjectMemberRequest_builder{
-				MemberId: addMemberRes.Msg.GetMemberId(),
+				MemberId: addMemberRes.GetMemberId(),
 			}.Build(),
 			ExpectedResponse: organizationv1.GetProjectMemberResponse_builder{
 				Member: organizationv1.ProjectMember_builder{
-					Id:        addMemberRes.Msg.GetMemberId(),
-					ProjectId: createProjectRes.Msg.GetProjectId(),
+					Id:        addMemberRes.GetMemberId(),
+					ProjectId: createProjectRes.GetProjectId(),
 					UserId:    projectMemberUserID.String(),
 					UserName:  "project-member-name",
 					Role:      organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER,
@@ -117,23 +120,24 @@ func Test_ProjectMember_Get(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			getProjectMemberReq := connect.NewRequest(tc.Request)
-			getProjectMemberReq.Header().Set("Authorization", "Bearer "+token)
-			getProjectMemberReq.Header().Set("Fun-Organization", orgID.String())
+			getProjectMemberReq := tc.Request
+			getProjectMemberCtx, getProjectMemberCallInfo := connect.NewClientContext(context.Background())
+			getProjectMemberCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+			getProjectMemberCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-			res, err := client.GetProjectMember(context.Background(), getProjectMemberReq)
+			res, err := client.GetProjectMember(getProjectMemberCtx, getProjectMemberReq)
 
 			if tc.ExpectedErrorCode != 0 {
 				var connectErr *connect.Error
 				require.ErrorAs(t, err, &connectErr)
 				assert.Equal(t, tc.ExpectedErrorCode, connectErr.Code())
 			} else {
-				assert.True(t, res.Msg.HasMember())
-				assert.Equal(t, tc.ExpectedResponse.GetMember().GetProjectId(), res.Msg.GetMember().GetProjectId())
-				assert.Equal(t, tc.ExpectedResponse.GetMember().GetId(), res.Msg.GetMember().GetId())
-				assert.Equal(t, tc.ExpectedResponse.GetMember().GetUserId(), res.Msg.GetMember().GetUserId())
-				assert.Equal(t, tc.ExpectedResponse.GetMember().GetRole().String(), res.Msg.GetMember().GetRole().String())
-				assert.Equal(t, tc.ExpectedResponse.GetMember().GetUserName(), res.Msg.GetMember().GetUserName())
+				assert.True(t, res.HasMember())
+				assert.Equal(t, tc.ExpectedResponse.GetMember().GetProjectId(), res.GetMember().GetProjectId())
+				assert.Equal(t, tc.ExpectedResponse.GetMember().GetId(), res.GetMember().GetId())
+				assert.Equal(t, tc.ExpectedResponse.GetMember().GetUserId(), res.GetMember().GetUserId())
+				assert.Equal(t, tc.ExpectedResponse.GetMember().GetRole().String(), res.GetMember().GetRole().String())
+				assert.Equal(t, tc.ExpectedResponse.GetMember().GetUserName(), res.GetMember().GetUserName())
 			}
 		})
 	}

@@ -33,27 +33,29 @@ func Test_GetKubeconfig_ClusterNotReady(t *testing.T) {
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
 	// Create a cluster (shoot fields are not populated yet).
-	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "not-ready-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createRes, err := client.CreateCluster(context.Background(), createReq)
+	createRes, err := client.CreateCluster(createCtx, createReq)
 	require.NoError(t, err)
 
-	clusterID := createRes.Msg.GetClusterId()
+	clusterID := createRes.GetClusterId()
 
 	// GetKubeconfig should fail because shoot fields are not populated.
-	kcReq := connect.NewRequest(organizationv1.GetKubeconfigRequest_builder{
+	kcReq := organizationv1.GetKubeconfigRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
-	kcReq.Header().Set("Authorization", "Bearer "+token)
-	kcReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	kcCtx, kcCallInfo := connect.NewClientContext(context.Background())
+	kcCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	kcCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.GetKubeconfig(context.Background(), kcReq)
+	_, err = client.GetKubeconfig(kcCtx, kcReq)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -82,18 +84,19 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
 	// Create a cluster.
-	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "ready-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createRes, err := client.CreateCluster(context.Background(), createReq)
+	createRes, err := client.CreateCluster(createCtx, createReq)
 	require.NoError(t, err)
 
-	clusterID := createRes.Msg.GetClusterId()
+	clusterID := createRes.GetClusterId()
 
 	// Simulate shoot becoming ready.
 	_, err = env.adminPool.Exec(t.Context(),
@@ -103,16 +106,17 @@ func Test_GetKubeconfig_Ready(t *testing.T) {
 	require.NoError(t, err)
 
 	// Now GetKubeconfig should succeed.
-	kcReq := connect.NewRequest(organizationv1.GetKubeconfigRequest_builder{
+	kcReq := organizationv1.GetKubeconfigRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
-	kcReq.Header().Set("Authorization", "Bearer "+token)
-	kcReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	kcCtx, kcCallInfo := connect.NewClientContext(context.Background())
+	kcCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	kcCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.GetKubeconfig(context.Background(), kcReq)
+	res, err := client.GetKubeconfig(kcCtx, kcReq)
 	require.NoError(t, err)
 
-	kc := res.Msg.GetKubeconfigContent()
+	kc := res.GetKubeconfigContent()
 
 	// Kubeconfig should point at the proxy.
 	assert.Contains(t, kc, "server: https://k8s-api.example.com/clusters/"+clusterID)

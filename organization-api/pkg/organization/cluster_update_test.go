@@ -19,10 +19,10 @@ func Test_Cluster_Update_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.UpdateCluster(context.Background(), connect.NewRequest(organizationv1.UpdateClusterRequest_builder{
+	_, err := client.UpdateCluster(context.Background(), organizationv1.UpdateClusterRequest_builder{
 		ClusterId:         uuid.New().String(),
 		KubernetesVersion: proto.String("1.29"),
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -47,38 +47,41 @@ func Test_Cluster_Update(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "test-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createRes, err := client.CreateCluster(context.Background(), createReq)
+	createRes, err := client.CreateCluster(createCtx, createReq)
 	require.NoError(t, err)
 
-	clusterID := createRes.Msg.GetClusterId()
+	clusterID := createRes.GetClusterId()
 
-	updateReq := connect.NewRequest(organizationv1.UpdateClusterRequest_builder{
+	updateReq := organizationv1.UpdateClusterRequest_builder{
 		ClusterId:         clusterID,
 		KubernetesVersion: proto.String("1.29"),
-	}.Build())
-	updateReq.Header().Set("Authorization", "Bearer "+token)
-	updateReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	updateCtx, updateCallInfo := connect.NewClientContext(context.Background())
+	updateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	updateCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.UpdateCluster(context.Background(), updateReq)
+	_, err = client.UpdateCluster(updateCtx, updateReq)
 	require.NoError(t, err)
 
-	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	getReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	getRes, err := client.GetCluster(context.Background(), getReq)
+	getRes, err := client.GetCluster(getCtx, getReq)
 	require.NoError(t, err)
-	assert.Equal(t, "1.29", getRes.Msg.GetCluster().GetKubernetesVersion())
+	assert.Equal(t, "1.29", getRes.GetCluster().GetKubernetesVersion())
 }
 
 func Test_Cluster_Update_NotFound(t *testing.T) {
@@ -99,14 +102,15 @@ func Test_Cluster_Update_NotFound(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	req := connect.NewRequest(organizationv1.UpdateClusterRequest_builder{
+	req := organizationv1.UpdateClusterRequest_builder{
 		ClusterId:         uuid.New().String(),
 		KubernetesVersion: proto.String("1.29"),
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err := client.UpdateCluster(context.Background(), req)
+	_, err := client.UpdateCluster(ctx, req)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)

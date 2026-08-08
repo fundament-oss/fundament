@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetTask(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetTaskRequest],
-) (*connect.Response[dcimv1.GetTaskResponse], error) {
-	taskID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetTaskRequest,
+) (*dcimv1.GetTaskResponse, error) {
+	taskID := uuid.MustParse(req.GetId())
 
 	task, err := s.queries.TaskGetByID(ctx, db.TaskGetByIDParams{ID: taskID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetTask(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get task: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetTaskResponse_builder{
+	return dcimv1.GetTaskResponse_builder{
 		Task: taskFromRow(&task),
-	}.Build()), nil
+	}.Build(), nil
 }

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -60,9 +59,9 @@ func TestRunInProcess(t *testing.T) {
 	}
 
 	// Test GetStatus
-	statusResp, err := ip.MetadataClient.GetStatus(context.Background(), connect.NewRequest(&pb.GetStatusRequest{}))
+	statusResp, err := ip.MetadataClient.GetStatus(context.Background(), &pb.GetStatusRequest{})
 	require.NoError(t, err)
-	assert.Equal(t, string(pluginruntime.PhaseRunning), statusResp.Msg.GetPhase())
+	assert.Equal(t, string(pluginruntime.PhaseRunning), statusResp.GetPhase())
 
 	// Stop
 	require.NoError(t, ip.Stop())

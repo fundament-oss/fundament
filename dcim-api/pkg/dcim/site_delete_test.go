@@ -18,14 +18,14 @@ func TestSiteService_DeleteSite_HappyFlow(t *testing.T) {
 
 	siteID := createSite(t, env, "Site To Delete")
 
-	_, err := client.DeleteSite(context.Background(), connect.NewRequest(
+	_, err := client.DeleteSite(context.Background(),
 		(&dcimv1.DeleteSiteRequest_builder{Id: siteID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	_, err = client.GetSite(context.Background(), connect.NewRequest(
+	_, err = client.GetSite(context.Background(),
 		(&dcimv1.GetSiteRequest_builder{Id: siteID}).Build(),
-	))
+	)
 	requireCode(t, err, connect.CodeNotFound)
 }
 
@@ -47,9 +47,9 @@ func TestSiteService_DeleteSite(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := client.DeleteSite(context.Background(), connect.NewRequest(
+			_, err := client.DeleteSite(context.Background(),
 				(&dcimv1.DeleteSiteRequest_builder{Id: tc.id}).Build(),
-			))
+			)
 			requireCode(t, err, tc.want)
 		})
 	}

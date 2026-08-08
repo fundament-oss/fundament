@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"connectrpc.com/connect"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -20,16 +19,16 @@ func waitForClusterRunning(ctx context.Context, client *FundamentClient, cluster
 	lastStatus := organizationv1.ClusterStatus_CLUSTER_STATUS_UNSPECIFIED
 
 	err := pollWithBackoff(ctx, 10*time.Second, maxConsecutiveErrors, func(ctx context.Context) (done bool, fatal bool, err error) {
-		req := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+		req := organizationv1.GetClusterRequest_builder{
 			ClusterId: clusterID,
-		}.Build())
+		}.Build()
 
 		resp, err := client.ClusterService.GetCluster(ctx, req)
 		if err != nil {
 			return false, false, fmt.Errorf("polling cluster status: %w", err)
 		}
 
-		lastStatus = resp.Msg.GetCluster().GetStatus()
+		lastStatus = resp.GetCluster().GetStatus()
 		switch lastStatus {
 		case organizationv1.ClusterStatus_CLUSTER_STATUS_RUNNING:
 			return true, false, nil

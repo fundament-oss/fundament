@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteAsset(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteAssetRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	assetID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteAssetRequest,
+) (*emptypb.Empty, error) {
+	assetID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.AssetDelete(ctx, db.AssetDeleteParams{ID: assetID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteAsset(
 
 	s.logger.InfoContext(ctx, "asset deleted", "asset_id", assetID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

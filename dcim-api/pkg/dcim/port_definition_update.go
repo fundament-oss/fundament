@@ -18,40 +18,40 @@ import (
 
 func (s *Server) UpdatePortDefinition(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdatePortDefinitionRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	portDefID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdatePortDefinitionRequest,
+) (*emptypb.Empty, error) {
+	portDefID := uuid.MustParse(req.GetId())
 
 	params := db.PortDefinitionUpdateParams{
 		ID: portDefID,
 	}
 
-	if req.Msg.HasName() {
-		params.Name = pgtype.Text{String: req.Msg.GetName(), Valid: true}
+	if req.HasName() {
+		params.Name = pgtype.Text{String: req.GetName(), Valid: true}
 	}
 
-	if req.Msg.HasPortType() {
-		params.PortType = pgtype.Text{String: portTypeToDB(req.Msg.GetPortType()), Valid: true}
+	if req.HasPortType() {
+		params.PortType = pgtype.Text{String: portTypeToDB(req.GetPortType()), Valid: true}
 	}
 
-	if req.Msg.HasMediaType() {
-		params.MediaType = pgtype.Text{String: req.Msg.GetMediaType(), Valid: true}
+	if req.HasMediaType() {
+		params.MediaType = pgtype.Text{String: req.GetMediaType(), Valid: true}
 	}
 
-	if req.Msg.HasSpeed() {
-		params.Speed = pgtype.Text{String: req.Msg.GetSpeed(), Valid: true}
+	if req.HasSpeed() {
+		params.Speed = pgtype.Text{String: req.GetSpeed(), Valid: true}
 	}
 
-	if req.Msg.HasMaxPowerW() {
-		params.MaxPowerW = float64ToNumeric(req.Msg.GetMaxPowerW())
+	if req.HasMaxPowerW() {
+		params.MaxPowerW = float64ToNumeric(req.GetMaxPowerW())
 	}
 
-	if req.Msg.HasDirection() {
-		params.Direction = pgtype.Text{String: portDirectionToDB(req.Msg.GetDirection()), Valid: true}
+	if req.HasDirection() {
+		params.Direction = pgtype.Text{String: portDirectionToDB(req.GetDirection()), Valid: true}
 	}
 
-	if req.Msg.HasOrdinal() {
-		params.Ordinal = pgtype.Int4{Int32: req.Msg.GetOrdinal(), Valid: true}
+	if req.HasOrdinal() {
+		params.Ordinal = pgtype.Int4{Int32: req.GetOrdinal(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.PortDefinitionUpdate(ctx, params)
@@ -69,5 +69,5 @@ func (s *Server) UpdatePortDefinition(
 
 	s.logger.InfoContext(ctx, "port definition updated", "port_definition_id", portDefID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

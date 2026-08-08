@@ -19,9 +19,9 @@ import (
 
 func (s *Server) UpdateProjectLimits(
 	ctx context.Context,
-	req *connect.Request[organizationv1.UpdateProjectLimitsRequest],
-) (*connect.Response[organizationv1.UpdateProjectLimitsResponse], error) {
-	projectID := uuid.MustParse(req.Msg.GetProjectId())
+	req *organizationv1.UpdateProjectLimitsRequest,
+) (*organizationv1.UpdateProjectLimitsResponse, error) {
+	projectID := uuid.MustParse(req.GetProjectId())
 
 	if err := s.checkPermission(ctx, authz.CanEdit(), authz.Project(projectID)); err != nil {
 		return nil, err
@@ -29,10 +29,10 @@ func (s *Server) UpdateProjectLimits(
 
 	params := db.ProjectLimitsUpsertParams{
 		ProjectID:              projectID,
-		DefaultMemoryRequestMi: pgtype.Int4{Int32: req.Msg.GetDefaultMemoryRequestMi(), Valid: req.Msg.HasDefaultMemoryRequestMi()},
-		DefaultMemoryLimitMi:   pgtype.Int4{Int32: req.Msg.GetDefaultMemoryLimitMi(), Valid: req.Msg.HasDefaultMemoryLimitMi()},
-		DefaultCpuRequestM:     pgtype.Int4{Int32: req.Msg.GetDefaultCpuRequestM(), Valid: req.Msg.HasDefaultCpuRequestM()},
-		DefaultCpuLimitM:       pgtype.Int4{Int32: req.Msg.GetDefaultCpuLimitM(), Valid: req.Msg.HasDefaultCpuLimitM()},
+		DefaultMemoryRequestMi: pgtype.Int4{Int32: req.GetDefaultMemoryRequestMi(), Valid: req.HasDefaultMemoryRequestMi()},
+		DefaultMemoryLimitMi:   pgtype.Int4{Int32: req.GetDefaultMemoryLimitMi(), Valid: req.HasDefaultMemoryLimitMi()},
+		DefaultCpuRequestM:     pgtype.Int4{Int32: req.GetDefaultCpuRequestM(), Valid: req.HasDefaultCpuRequestM()},
+		DefaultCpuLimitM:       pgtype.Int4{Int32: req.GetDefaultCpuLimitM(), Valid: req.HasDefaultCpuLimitM()},
 	}
 
 	if _, err := s.queries.ProjectLimitsUpsert(ctx, params); err != nil {
@@ -49,5 +49,5 @@ func (s *Server) UpdateProjectLimits(
 
 	s.logger.InfoContext(ctx, "project limits updated", "project_id", projectID)
 
-	return connect.NewResponse(organizationv1.UpdateProjectLimitsResponse_builder{}.Build()), nil
+	return organizationv1.UpdateProjectLimitsResponse_builder{}.Build(), nil
 }

@@ -24,9 +24,14 @@ const (
 // ExchangeToken exchanges an API token for a short-lived JWT.
 func (s *AuthnServer) ExchangeToken(
 	ctx context.Context,
-	req *connect.Request[authnv1.ExchangeTokenRequest],
-) (*connect.Response[authnv1.ExchangeTokenResponse], error) {
-	token, err := extractBearerToken(req.Header().Get("Authorization"))
+	_ *authnv1.ExchangeTokenRequest,
+) (*authnv1.ExchangeTokenResponse, error) {
+	callInfo, ok := connect.CallInfoForHandlerContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("missing call info in context"))
+	}
+
+	token, err := extractBearerToken(callInfo.RequestHeader().Get("Authorization"))
 	if err != nil {
 		s.logger.Debug("missing or invalid authorization header")
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
@@ -80,11 +85,11 @@ func (s *AuthnServer) ExchangeToken(
 		"organization_ids", u.OrganizationIDs,
 	)
 
-	return connect.NewResponse(authnv1.ExchangeTokenResponse_builder{
+	return authnv1.ExchangeTokenResponse_builder{
 		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		ExpiresIn:   int64(APITokenExpiry.Seconds()),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 // extractBearerToken extracts the token from a Bearer authorization header.

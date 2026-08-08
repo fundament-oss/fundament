@@ -18,11 +18,11 @@ func Test_ProjectMember_Add_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.AddProjectMember(context.Background(), connect.NewRequest(organizationv1.AddProjectMemberRequest_builder{
+	_, err := client.AddProjectMember(context.Background(), organizationv1.AddProjectMemberRequest_builder{
 		ProjectId: uuid.New().String(),
 		UserId:    uuid.New().String(),
 		Role:      organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER,
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -53,58 +53,62 @@ func Test_ProjectMember_Add(t *testing.T) {
 	token := env.createAuthnToken(t, callerUserID)
 
 	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
-	createClusterReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createClusterReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "test-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createClusterReq.Header().Set("Authorization", "Bearer "+token)
-	createClusterReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createClusterCtx, createClusterCallInfo := connect.NewClientContext(context.Background())
+	createClusterCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createClusterCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createClusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	createClusterRes, err := clusterClient.CreateCluster(createClusterCtx, createClusterReq)
 	require.NoError(t, err)
 
 	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	createProjectReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
-		ClusterId: createClusterRes.Msg.GetClusterId(),
+	createProjectReq := organizationv1.CreateProjectRequest_builder{
+		ClusterId: createClusterRes.GetClusterId(),
 		Name:      "test-project",
-	}.Build())
-	createProjectReq.Header().Set("Authorization", "Bearer "+token)
-	createProjectReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createProjectCtx, createProjectCallInfo := connect.NewClientContext(context.Background())
+	createProjectCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createProjectCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createProjectRes, err := client.CreateProject(context.Background(), createProjectReq)
+	createProjectRes, err := client.CreateProject(createProjectCtx, createProjectReq)
 	require.NoError(t, err)
 
-	projectID := createProjectRes.Msg.GetProjectId()
+	projectID := createProjectRes.GetProjectId()
 
-	addReq := connect.NewRequest(organizationv1.AddProjectMemberRequest_builder{
+	addReq := organizationv1.AddProjectMemberRequest_builder{
 		ProjectId: projectID,
 		UserId:    newMemberUserID.String(),
 		Role:      organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_VIEWER,
-	}.Build())
-	addReq.Header().Set("Authorization", "Bearer "+token)
-	addReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	addCtx, addCallInfo := connect.NewClientContext(context.Background())
+	addCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	addCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	res, err := client.AddProjectMember(context.Background(), addReq)
+	res, err := client.AddProjectMember(addCtx, addReq)
 	require.NoError(t, err)
-	assert.NotEmpty(t, res.Msg.GetMemberId())
+	assert.NotEmpty(t, res.GetMemberId())
 
 	// Adding the same user a second time must fail.
-	_, err = client.AddProjectMember(context.Background(), addReq)
+	_, err = client.AddProjectMember(addCtx, addReq)
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeAlreadyExists, connectErr.Code())
 
-	invalidRoleReq := connect.NewRequest(organizationv1.AddProjectMemberRequest_builder{
+	invalidRoleReq := organizationv1.AddProjectMemberRequest_builder{
 		ProjectId: projectID,
 		UserId:    uuid.New().String(),
 		Role:      organizationv1.ProjectMemberRole_PROJECT_MEMBER_ROLE_UNSPECIFIED,
-	}.Build())
-	invalidRoleReq.Header().Set("Authorization", "Bearer "+token)
-	invalidRoleReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	invalidRoleCtx, invalidRoleCallInfo := connect.NewClientContext(context.Background())
+	invalidRoleCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	invalidRoleCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.AddProjectMember(context.Background(), invalidRoleReq)
+	_, err = client.AddProjectMember(invalidRoleCtx, invalidRoleReq)
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeInvalidArgument, connectErr.Code())
 }

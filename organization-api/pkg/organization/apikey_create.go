@@ -20,8 +20,8 @@ import (
 
 func (s *Server) CreateAPIKey(
 	ctx context.Context,
-	req *connect.Request[organizationv1.CreateAPIKeyRequest],
-) (*connect.Response[organizationv1.CreateAPIKeyResponse], error) {
+	req *organizationv1.CreateAPIKeyRequest,
+) (*organizationv1.CreateAPIKeyResponse, error) {
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
@@ -43,8 +43,8 @@ func (s *Server) CreateAPIKey(
 
 	expires := pgtype.Timestamptz{Valid: false}
 
-	if req.Msg.GetExpiresIn() != "" {
-		expiresIn, err := time.ParseDuration(req.Msg.GetExpiresIn())
+	if req.GetExpiresIn() != "" {
+		expiresIn, err := time.ParseDuration(req.GetExpiresIn())
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse expires_in: %w", err))
 		}
@@ -60,7 +60,7 @@ func (s *Server) CreateAPIKey(
 	params := db.APIKeyCreateParams{
 		OrganizationID: organizationID,
 		UserID:         userID,
-		Name:           req.Msg.GetName(),
+		Name:           req.GetName(),
 		TokenHash:      hash,
 		TokenPrefix:    prefix,
 		Expires:        expires,
@@ -81,12 +81,12 @@ func (s *Server) CreateAPIKey(
 		"api_key_id", id,
 		"organization_id", organizationID,
 		"user_id", userID,
-		"name", req.Msg.GetName(),
+		"name", req.GetName(),
 	)
 
-	return connect.NewResponse(organizationv1.CreateAPIKeyResponse_builder{
+	return organizationv1.CreateAPIKeyResponse_builder{
 		Id:          id.String(),
 		Token:       token,
 		TokenPrefix: prefix,
-	}.Build()), nil
+	}.Build(), nil
 }

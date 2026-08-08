@@ -25,12 +25,12 @@ var _ pluginproxyv1connect.PluginInstallationServiceClient = (*fakeProxyClient)(
 
 func (f *fakeProxyClient) GetInstallationManifest(
 	_ context.Context,
-	_ *connect.Request[pluginproxyv1.GetInstallationManifestRequest],
-) (*connect.Response[pluginproxyv1.GetInstallationManifestResponse], error) {
+	_ *pluginproxyv1.GetInstallationManifestRequest,
+) (*pluginproxyv1.GetInstallationManifestResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return connect.NewResponse(f.resp), nil
+	return f.resp, nil
 }
 
 func TestPluginProxyLookup_Success(t *testing.T) {
