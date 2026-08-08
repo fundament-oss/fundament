@@ -291,26 +291,40 @@
                   [attr.color]="member.permission === 'admin' ? 'paars' : 'accent'"
                   [attr.text]="permissionLabel(member.permission)"
                 ></nldd-tag>
-                @if (member.status === 'pending') {
-                  &ngsp;<nldd-badge color="warning" size="sm" text="Invited"></nldd-badge>
-                }
               </nldd-text-cell>
 
-              <!-- An invitation can only be withdrawn, so it gets the one
-                   action rather than a menu of things that do not apply. -->
+              <!-- The right-hand column says what this person is to you: "You" for
+                   yourself, "Invited" for someone who has not accepted yet. An
+                   invitation can only be withdrawn, so the menu holds that one
+                   thing, in the same place as every other row's menu. -->
               @if (member.status === 'pending') {
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  color="secondary"
+                  text="Invited"
+                ></nldd-text-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
                 <nldd-cell width="fit-content">
-                  <nldd-button
-                    type="button"
-                    text="Cancel invite"
+                  <nldd-icon-button
+                    icon="ellipsis"
                     size="sm"
-                    variant="destructive"
+                    variant="secondary"
+                    popup-type="menu"
                     [attr.accessible-label]="
-                      'Cancel invitation for ' + (member.email || member.name)
+                      'Actions for ' + (member.email || member.name)
                     "
-                    (click)="cancelInvitation(member.id)"
-                  ></nldd-button>
+                  >
+                    <nldd-menu slot="popup">
+                      <nldd-menu-item
+                        text="Cancel invitation"
+                        icon="trash"
+                        destructive
+                        (select)="cancelInvitation(member.id)"
+                      ></nldd-menu-item>
+                    </nldd-menu>
+                  </nldd-icon-button>
                 </nldd-cell>
               } @else if (member.isCurrentUser) {
                 <!-- Where the actions would be, saying why there are none. -->
