@@ -8,7 +8,7 @@
  * once instead of per template.
  */
 
-export const datePickerTranslations = {
+const datePickerTranslations = {
   'components.date-picker.view-previous-month-action': 'Previous month',
   'components.date-picker.view-next-month-action': 'Next month',
   'components.date-picker.view-today-action': 'Today',
@@ -67,3 +67,5 @@ export const datePickerTranslations = {
   'components.date-picker.range-selected-text': 'Selected: {start} through {end}.',
   'components.date-picker.range-blocked-text': 'That period contains a date that is unavailable. Choose another.',
 };
+
+export default datePickerTranslations;

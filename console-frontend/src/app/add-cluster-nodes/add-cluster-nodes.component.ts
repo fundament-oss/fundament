@@ -7,7 +7,7 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
 import {
   SharedNodePoolsFormComponent,
@@ -18,7 +18,7 @@ import { MachineTypeOption, RegionCatalogService } from '../region-catalog.servi
 
 @Component({
   selector: 'app-add-cluster-nodes',
-  imports: [SharedNodePoolsFormComponent, RouterLink],
+  imports: [SharedNodePoolsFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-nodes.component.html',

@@ -44,6 +44,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
 
   // Expose utility functions for template
   getStatusBadgeColor = getStatusBadgeColor;
+
   isTransitionalStatus = isTransitionalStatus;
 
   getStatusLabel = getStatusLabel;

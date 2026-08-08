@@ -24,7 +24,6 @@ import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
 import focusFirstModalInput from '../modal-focus';
-import LoadingIndicatorComponent from '../icons/loading-indicator.component';
 import { formatTimeAgo } from '../utils/date-format';
 
 interface OrganizationMember {
@@ -172,7 +171,6 @@ const comparatorFor =
     RouterOutlet,
     DialogSyncDirective,
     SheetSyncDirective,
-    LoadingIndicatorComponent,
     AutofocusDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

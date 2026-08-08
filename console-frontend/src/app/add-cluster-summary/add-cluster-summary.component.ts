@@ -8,7 +8,7 @@ import {
   viewChild,
   ElementRef,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
@@ -42,7 +42,7 @@ interface ProgressItem {
 
 @Component({
   selector: 'app-add-cluster-summary',
-  imports: [RouterLink, DialogSyncDirective, LoadingIndicatorComponent],
+  imports: [DialogSyncDirective, LoadingIndicatorComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-summary.component.html',

@@ -92,7 +92,7 @@ import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
-import { BreadcrumbComponent, type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
+import { type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import ProfileComponent from './profile/profile.component';
 import ApiKeysComponent from './api-keys/api-keys.component';
 import AddProjectComponent from './add-project/add-project.component';
@@ -129,7 +129,6 @@ function depthForPath(url: string): number {
   imports: [
     RouterOutlet,
     OrgPickerComponent,
-    BreadcrumbComponent,
     ProfileComponent,
     ApiKeysComponent,
     AddProjectComponent,

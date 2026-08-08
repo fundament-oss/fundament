@@ -23,12 +23,11 @@ import {
   type ListClustersResponse_ClusterSummary as ClusterSummary,
 } from '../../generated/v1/cluster_pb';
 import AutofocusDirective from '../autofocus.directive';
-import DropdownSyncDirective from '../dropdown-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 
 @Component({
   selector: 'app-add-project',
-  imports: [ReactiveFormsModule, AutofocusDirective, DropdownSyncDirective, SheetSyncDirective],
+  imports: [ReactiveFormsModule, AutofocusDirective, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './add-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -22,8 +22,7 @@ import { TitleService } from '../title.service';
 import { CLUSTER, METRICS } from '../../connect/tokens';
 import MetricsHealthService from '../metrics-health.service';
 import PageNavService from '../page-nav.service';
-import DropdownSyncDirective from '../dropdown-sync.directive';
-import { datePickerTranslations } from '../utils/nldd-translations';
+import datePickerTranslations from '../utils/nldd-translations';
 import {
   ListClustersRequestSchema,
   type ListClustersResponse_ClusterSummary,
@@ -202,9 +201,35 @@ function lineDataset(
   };
 }
 
+function formatRange(start: string, end: string): string {
+  const van = new Date(`${start}T00:00:00`);
+  const tot = new Date(`${end}T00:00:00`);
+  const zelfdeJaar = van.getFullYear() === tot.getFullYear();
+  const kort: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  const lang: Intl.DateTimeFormatOptions = { ...kort, year: 'numeric' };
+  return `${van.toLocaleDateString('en-US', zelfdeJaar ? kort : lang)} – ${tot.toLocaleDateString('en-US', lang)}`;
+}
+
+type Overlay = (HTMLElement & { show(): void; hide(): void }) | null;
+
+/** Both live outside this component's template (the sheet is teleported to the
+ *  body), so there is no ViewChild to hold them. */
+function customRangePopover(): Overlay {
+  return document.getElementById('metrics-custom-range') as Overlay;
+}
+
+function customRangeSheet(): Overlay {
+  return document.getElementById('metrics-custom-range-sheet') as Overlay;
+}
+
+function closeCustomRange(): void {
+  customRangePopover()?.hide();
+  customRangeSheet()?.hide();
+}
+
 @Component({
   selector: 'app-metrics',
-  imports: [FormsModule, DecimalPipe, DropdownSyncDirective],
+  imports: [FormsModule, DecimalPipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './metrics.component.html',
@@ -493,7 +518,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     if (preset === 'custom') {
       this.cancelStream();
       this.isLive.set(false);
-      queueMicrotask(() => this.customRangeSheet()?.show());
+      queueMicrotask(() => customRangeSheet()?.show());
       return;
     }
     this.customRange.set(null);
@@ -508,7 +533,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
       this.isLive.set(false);
       // After the click has settled, so the popover positions against a segment
       // that has finished moving its selection.
-      queueMicrotask(() => this.customRangePopover()?.show());
+      queueMicrotask(() => customRangePopover()?.show());
     } else {
       this.customRange.set(null);
       this.applyPreset(preset);
@@ -532,23 +557,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     this.dateFrom = start;
     this.dateTo = end;
     this.customRange.set({ start, end });
-    this.closeCustomRange();
+    closeCustomRange();
     this.onDateChange();
-  }
-
-  private customRangePopover(): (HTMLElement & { show(): void; hide(): void }) | null {
-    return document.getElementById('metrics-custom-range') as
-      (HTMLElement & { show(): void; hide(): void }) | null;
-  }
-
-  private customRangeSheet(): (HTMLElement & { show(): void; hide(): void }) | null {
-    return document.getElementById('metrics-custom-range-sheet') as
-      (HTMLElement & { show(): void; hide(): void }) | null;
-  }
-
-  private closeCustomRange(): void {
-    this.customRangePopover()?.hide();
-    this.customRangeSheet()?.hide();
   }
 
   onDateChange(): void {
@@ -965,11 +975,3 @@ export default class MetricsComponent implements OnInit, OnDestroy {
 /** "Aug 1 – Aug 8, 2026", with the year once at the end when both ends share it.
  *  An en dash between two dates reads as inclusive, which is what the picker
  *  means; "until" would leave you guessing about the last day. */
-function formatRange(start: string, end: string): string {
-  const van = new Date(`${start}T00:00:00`);
-  const tot = new Date(`${end}T00:00:00`);
-  const zelfdeJaar = van.getFullYear() === tot.getFullYear();
-  const kort: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-  const lang: Intl.DateTimeFormatOptions = { ...kort, year: 'numeric' };
-  return `${van.toLocaleDateString('en-US', zelfdeJaar ? kort : lang)} – ${tot.toLocaleDateString('en-US', lang)}`;
-}

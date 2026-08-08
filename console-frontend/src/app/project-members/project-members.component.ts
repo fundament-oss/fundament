@@ -20,7 +20,6 @@ import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
-import DropdownSyncDirective from '../dropdown-sync.directive';
 import { ToastService } from '../toast.service';
 import { formatTimeAgo } from '../utils/date-format';
 import { mockBindingsFor, setMockBindings, ALL_ROLES } from '../utils/mock-role-bindings';
@@ -124,7 +123,6 @@ const byPermissionThenAdded = (a: ProjectMemberView, b: ProjectMemberView): numb
     ReactiveFormsModule,
     DialogSyncDirective,
     SheetSyncDirective,
-    DropdownSyncDirective,
     RouterLink,
     AutofocusDirective,
   ],
