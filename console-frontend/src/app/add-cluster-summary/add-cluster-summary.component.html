@@ -65,19 +65,19 @@
           ></nldd-text-cell>
         </nldd-list-item>
         <nldd-list-item>
-          <nldd-text-cell text="Min autoscaling"></nldd-text-cell>
+          <nldd-text-cell text="Autoscale minimum"></nldd-text-cell>
           <nldd-text-cell
             width="fit-content"
             horizontal-alignment="right"
-            [attr.text]="nodePool.autoscaleMin + ' nodes'"
+            [attr.text]="nodePool.autoscaleMin + (nodePool.autoscaleMin === 1 ? ' node' : ' nodes')"
           ></nldd-text-cell>
         </nldd-list-item>
         <nldd-list-item>
-          <nldd-text-cell text="Max autoscaling"></nldd-text-cell>
+          <nldd-text-cell text="Autoscale maximum"></nldd-text-cell>
           <nldd-text-cell
             width="fit-content"
             horizontal-alignment="right"
-            [attr.text]="nodePool.autoscaleMax + ' nodes'"
+            [attr.text]="nodePool.autoscaleMax + (nodePool.autoscaleMax === 1 ? ' node' : ' nodes')"
           ></nldd-text-cell>
         </nldd-list-item>
       </nldd-list>
