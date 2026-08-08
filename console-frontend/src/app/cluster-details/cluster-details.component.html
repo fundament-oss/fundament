@@ -462,13 +462,9 @@
                 @for (plugin of installedPlugins(); track plugin.id) {
                   <nldd-card>
                     <nldd-container padding="16">
-                      <nldd-avatar
-                        decorative
-                        type="organization"
-                        size="40"
-                        [attr.src]="pluginIconSrc(plugin)"
-                        [attr.name]="pluginDisplayName(plugin)"
-                      ></nldd-avatar>
+                      <div class="plugin-icon">
+                        <img alt="" [src]="pluginIconSrc(plugin)">
+                      </div>
 
                       <nldd-spacer size="12"></nldd-spacer>
 

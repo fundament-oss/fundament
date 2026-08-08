@@ -80,13 +80,12 @@
           @for (plugin of filteredPlugins; track plugin.id) {
             <nldd-card background="tinted">
               <nldd-container padding="16">
-                <nldd-avatar
-                  decorative
-                  type="organization"
-                  size="40"
-                  [attr.src]="'/img/plugins/' + getPluginIconName(plugin.name) + '.svg'"
-                  [attr.name]="plugin.displayName || plugin.name"
-                ></nldd-avatar>
+                <div class="plugin-icon">
+                  <img
+                    alt=""
+                    [src]="'/img/plugins/' + getPluginIconName(plugin.name) + '.svg'"
+                  >
+                </div>
 
                 <nldd-spacer size="12"></nldd-spacer>
 

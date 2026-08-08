@@ -249,3 +249,36 @@ html.presenting {
 html.presenting-full {
   --fund-modal-inset-left: 0px;
 }
+
+/* Plugin icons are drawings of software, not of a person or an organisation, so
+   they are not avatars. They stay images: several carry a real brand colour
+   (Grafana orange, Istio blue) that a monochrome icon would throw away.
+
+   The tile is deliberately light in both themes. An SVG loaded through <img> is
+   its own document and cannot read the page's text colour, so the artwork has to
+   bring its own; a tile that flipped with the theme would leave every one of
+   them guessing which background they land on. The in-house glyphs carry
+   Fundament purple, the third-party marks their own colours, and both are drawn
+   for a light ground. */
+.plugin-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--fund-plugin-icon-size, 40px);
+  height: var(--fund-plugin-icon-size, 40px);
+  border-radius: var(--semantics-overlays-corner-radius, 8px);
+  background-color: light-dark(
+    var(--primitives-color-neutral-50),
+    var(--primitives-color-neutral-50)
+  );
+  color-scheme: light;
+}
+.plugin-icon img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+}
+.plugin-icon--lg {
+  --fund-plugin-icon-size: 56px;
+}

@@ -21,13 +21,9 @@
     }
 
     @if (!isLoading() && !errorMessage() && plugin(); as p) {
-      <nldd-avatar
-        decorative
-        type="organization"
-        size="56"
-        [attr.src]="pluginIconSrc(p)"
-        [attr.name]="p.displayName || p.name"
-      ></nldd-avatar>
+      <div class="plugin-icon plugin-icon--lg">
+        <img alt="" [src]="pluginIconSrc(p)">
+      </div>
 
       <nldd-spacer size="12"></nldd-spacer>
 
