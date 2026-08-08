@@ -100,8 +100,8 @@
   <nldd-button
     type="button"
     (click)="onCreateCluster()"
-    [text]="isCreating() ? 'Creating...' : 'Create cluster'"
-    [disabled]="isCreating()"
+    text="Create cluster"
+    [loading]="isCreating()"
     width="full"
     variant="primary"
   ></nldd-button>

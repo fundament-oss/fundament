@@ -39,8 +39,8 @@
           <nldd-button
             type="button"
             (click)="nodePoolsForm.submit()"
-            [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
-            [disabled]="isSubmitting()"
+            text="Save changes"
+            [loading]="isSubmitting()"
             width="full"
             variant="primary"
           ></nldd-button>

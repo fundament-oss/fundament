@@ -97,8 +97,8 @@
         <nldd-form-actions>
           <nldd-button
             type="submit"
-            [text]="isSubmitting() ? 'Creating...' : 'Create project'"
-            [disabled]="isSubmitting()"
+            text="Create project"
+            [loading]="isSubmitting()"
             width="full"
             variant="primary"
           ></nldd-button>

@@ -68,8 +68,9 @@
           <nldd-button
             type="button"
             (click)="pluginsForm.submit()"
-            [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
-            [disabled]="isSubmitting() || isLoading() || !isClusterRunning()"
+            text="Save changes"
+            [loading]="isSubmitting()"
+            [disabled]="isLoading() || !isClusterRunning()"
             width="full"
             variant="primary"
           ></nldd-button>
