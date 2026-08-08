@@ -37,13 +37,32 @@
             </nldd-form-field>
 
             <nldd-form-field label="Machine type">
-              <nldd-dropdown>
-                <select [id]="'machineType-' + $index" formControlName="machineType">
-                  @for (mt of machineTypes; track mt.value) {
-                    <option [value]="mt.value">{{ mt.label }}</option>
-                  }
-                </select>
-              </nldd-dropdown>
+              <!-- A list, not a menu: you pick a machine by comparing its specs,
+                   and a popup shows them one at a time. Same shape as choosing a
+                   role or a project. -->
+              <nldd-list variant="box" accessible-label="Machine type">
+                @for (mt of machineTypes; track mt.value) {
+                  <!-- The row is the control; the radio only shows which one it
+                       is. A real radio here would be an input inside the row's
+                       button. -->
+                  <nldd-list-item button (click)="selectMachineType($index, mt.value)">
+                    <nldd-cell width="fit-content">
+                      <nldd-radio-button
+                        decorative
+                        [attr.checked]="
+                          nodePoolControl.get('machineType')?.value === mt.value ? '' : null
+                        "
+                      ></nldd-radio-button>
+                    </nldd-cell>
+                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                    <nldd-text-cell
+                      width="full"
+                      [attr.text]="mt.value"
+                      [attr.supporting-text]="mt.specs"
+                    ></nldd-text-cell>
+                  </nldd-list-item>
+                }
+              </nldd-list>
             </nldd-form-field>
 
             <nldd-form-field label="Autoscale minimum">
