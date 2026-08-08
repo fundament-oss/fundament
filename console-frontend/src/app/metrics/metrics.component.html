@@ -240,7 +240,7 @@
     <!-- No page-wide swap while loading: the boxes and their titles stay put,
          only what is inside them goes empty. Switching a filter otherwise
          blanks the page and drops everything back a moment later. -->
-    <nldd-container layout="stack" gap="24">
+    <nldd-container layout="stack" gap="24" sm-gap="16">
       <!-- Totals (all views) -->
       @if (currentTotals() || isLoading()) {
         <nldd-box>
@@ -280,10 +280,17 @@
       }
 
       <!-- Time-series charts (all views) -->
-      <!-- Under each other, not side by side: a chart at half width buys
-           nothing, and reading them in one column keeps the time axis the
-           same width everywhere. -->
-      <nldd-container layout="stack" gap="24">
+      <!-- Two per row from md: four charts under each other is a lot of
+           scrolling for graphs you mostly compare with each other. On sm there
+           is only room for one, and then the time axis stays readable. -->
+      <nldd-container
+        layout="grid"
+        sm-column-count="1"
+        md-column-count="2"
+        lg-column-count="2"
+        gap="24"
+        sm-gap="16"
+      >
         @for (chart of charts; track chart.title) {
           <nldd-box>
             <nldd-container padding="16">

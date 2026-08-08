@@ -608,7 +608,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
     // would put 7d figures under a 30d button for as long as the load takes;
     // empty bars and an empty frame say "not measured yet", which is true.
     if (!fromReconnect) this.clearData();
-    this.isLive.set(false);
+    // The Live badge stays put across a switch. It says the data updates by
+    // itself, and that does not stop being true because you picked another
+    // period; blinking it off and on again only draws the eye to the switch.
+    // Custom, an error and teardown each turn it off where they happen.
     this.connectionError.set(false);
     this.metricsHealth.report(true);
     this.errorMessage.set(null);
