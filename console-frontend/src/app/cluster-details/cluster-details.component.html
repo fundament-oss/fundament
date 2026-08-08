@@ -27,7 +27,14 @@
 
     @if (!isLoading()) {
       <nldd-title id="cluster-title" size="2">
-        <h1>{{ clusterData.basics.name || 'Unknown cluster' }}</h1>
+        <h1>
+          {{ clusterData.basics.name || 'Unknown cluster' }}&ngsp;
+          <nldd-badge
+            [attr.color]="getStatusBadgeColor(clusterData.status)"
+            [attr.text]="getStatusLabel(clusterData.status)"
+            [attr.pulse]="isTransitionalStatus(clusterData.status) ? '' : null"
+          ></nldd-badge>
+        </h1>
       </nldd-title>
 
       <nldd-spacer size="8"></nldd-spacer>
@@ -82,15 +89,6 @@
                 ></nldd-text-cell>
               </nldd-list-item>
               <nldd-list-item>
-                <nldd-text-cell text="Status"></nldd-text-cell>
-                <nldd-cell width="fit-content">
-                  <nldd-tag
-                    [attr.color]="getStatusTagColor(clusterData.status)"
-                    [attr.text]="getStatusLabel(clusterData.status)"
-                  ></nldd-tag>
-                </nldd-cell>
-              </nldd-list-item>
-              <nldd-list-item>
                 <nldd-text-cell text="Kubernetes version"></nldd-text-cell>
                 <nldd-text-cell
                   width="fit-content"
@@ -132,12 +130,17 @@
               <nldd-list-item>
                 <nldd-text-cell text="Gardener status"></nldd-text-cell>
                 <nldd-cell width="fit-content">
-                  <nldd-tag
-                    class="capitalize"
-                    [attr.color]="getSyncStatusTagColor(clusterData.syncState)"
-                    [attr.text]="getSyncStatusLabel(clusterData.syncState)"
-                  ></nldd-tag>
+                  <nldd-badge
+                    decorative
+                    [attr.color]="getSyncStatusBadgeColor(clusterData.syncState)"
+                  ></nldd-badge>
                 </nldd-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-text-cell
+                  class="capitalize"
+                  width="fit-content"
+                  [attr.text]="getSyncStatusLabel(clusterData.syncState)"
+                ></nldd-text-cell>
               </nldd-list-item>
               @if (clusterData.syncState?.shootMessage) {
                 <nldd-list-item>
@@ -341,7 +344,7 @@
             <nldd-title size="5">
               <h3>Node pools</h3>
               <nldd-button
-                slot="actions"
+                slot="end"
                 [attr.href]="'/clusters/' + clusterData.basics.id + '/nodes'"
                 (click)="pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/nodes')"
                 text="Edit"
@@ -366,8 +369,8 @@
                     <nldd-container padding="16">
                       <nldd-title size="6">
                         <h4>{{ pool.name }}</h4>
-                        <nldd-tag
-                          slot="actions"
+                        <nldd-badge
+                          slot="end"
                           size="sm"
                           [attr.color]="
                             pool.status === NodePoolStatus.HEALTHY
@@ -379,7 +382,7 @@
                                   : 'neutral'
                           "
                           [attr.text]="getNodePoolStatusLabel(pool.status)"
-                        ></nldd-tag>
+                        ></nldd-badge>
                       </nldd-title>
 
                       <nldd-spacer size="8"></nldd-spacer>
@@ -441,7 +444,7 @@
                 }
               </h3>
               <nldd-button
-                slot="actions"
+                slot="end"
                 [attr.href]="'/clusters/' + clusterData.basics.id + '/plugins'"
                 (click)="
                   pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/plugins')

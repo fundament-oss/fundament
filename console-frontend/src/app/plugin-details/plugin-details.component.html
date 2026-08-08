@@ -44,7 +44,7 @@
           <span slot="subtitle">by {{ p.author!.name }}</span>
         }
         <nldd-button
-          slot="actions"
+          slot="end"
           type="button"
           (click)="openInstallModal()"
           [text]="hasInstalledClusters() ? 'Manage' : 'Install…'"

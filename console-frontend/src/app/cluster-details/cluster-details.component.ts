@@ -35,7 +35,7 @@ import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
-import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
@@ -78,7 +78,7 @@ const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
 /** Takes the whole syncState, not just the shoot status: "Unknown" means we have
  *  no sync record at all, and not knowing whether a cluster is reconciling is a
  *  warning rather than a neutral fact. */
-const getSyncStatusTagColor = (syncState: SyncState | null): string => {
+const getSyncStatusBadgeColor = (syncState: SyncState | null): string => {
   if (!syncState) return 'warning';
 
   const colors: Record<string, string> = {
@@ -192,7 +192,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   ClusterStatus = ClusterStatus;
 
   // Expose utility functions for template
-  getStatusTagColor = getStatusTagColor;
+  getStatusBadgeColor = getStatusBadgeColor;
+  isTransitionalStatus = isTransitionalStatus;
 
   getStatusLabel = getStatusLabel;
 
@@ -581,7 +582,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   // Sync status methods
-  getSyncStatusTagColor = getSyncStatusTagColor;
+  getSyncStatusBadgeColor = getSyncStatusBadgeColor;
 
   getSyncStatusLabel = getSyncStatusLabel;
 

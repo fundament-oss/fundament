@@ -96,11 +96,10 @@
       <nldd-toolbar label="Member filters">
         <!-- Highest priority: a search field has no menu form, so it is the
              last item to move into the overflow. -->
-        <nldd-toolbar-item slot="start" priority="2" min-width="180px">
+        <nldd-toolbar-item slot="start" priority="2" width="280px" min-width="180px">
           <!-- Filters while you type: with dozens of members, finding one is
                faster than narrowing a category. -->
           <nldd-search-field
-            width="280px"
             placeholder="Search members"
             [attr.value]="memberQuery()"
             (input)="memberQuery.set($any($event).detail.value)"
@@ -293,7 +292,7 @@
                   [attr.text]="permissionLabel(member.permission)"
                 ></nldd-tag>
                 @if (member.status === 'pending') {
-                  &ngsp;<nldd-tag color="warning" size="sm" text="Invited"></nldd-tag>
+                  &ngsp;<nldd-badge color="warning" size="sm" text="Invited"></nldd-badge>
                 }
               </nldd-text-cell>
 

@@ -85,13 +85,14 @@
                   !isRunning(cluster.phase) &&
                   !isInProgress(cluster.phase)
                 ) {
-                  <nldd-tag
+                  <nldd-badge
                     size="sm"
-                    [attr.color]="statusFor(cluster.phase).tagColor"
+                    [attr.color]="statusFor(cluster.phase).badgeColor"
                     [attr.text]="statusFor(cluster.phase).label"
-                  ></nldd-tag>
+                    [attr.pulse]="isInProgress(cluster.phase) ? '' : null"
+                  ></nldd-badge>
                 } @else if (cluster.phase === null && !cluster.running) {
-                  <nldd-tag color="neutral" size="sm" text="Not running"></nldd-tag>
+                  <nldd-badge color="neutral" size="sm" text="Not running"></nldd-badge>
                 }
               </nldd-cell>
 

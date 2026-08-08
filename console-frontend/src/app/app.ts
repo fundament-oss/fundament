@@ -99,7 +99,7 @@ import AddProjectComponent from './add-project/add-project.component';
 import { OverlayService } from './overlay.service';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { ClusterStatus } from '../generated/v1/common_pb';
-import { fetchClusterName, getStatusTagColor, getStatusLabel } from './utils/cluster-status';
+import { fetchClusterName, getStatusBadgeColor, getStatusLabel } from './utils/cluster-status';
 import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import MetricsHealthService from './metrics-health.service';
@@ -811,7 +811,7 @@ export default class App implements OnInit {
     return id ? (this.organizationProjects().find((p) => p.id === id) ?? null) : null;
   });
 
-  getStatusTagColor = getStatusTagColor;
+  getStatusBadgeColor = getStatusBadgeColor;
 
   getStatusLabel = getStatusLabel;
 

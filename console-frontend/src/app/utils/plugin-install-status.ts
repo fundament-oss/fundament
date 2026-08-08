@@ -4,25 +4,25 @@
 
 export interface InstallStatusDisplay {
   label: string;
-  /** `color` for an `nldd-tag`. */
-  tagColor: string;
+  /** `color` for the `nldd-badge` that shows this status. */
+  badgeColor: string;
   inProgress: boolean;
 }
 
 // In-progress phases get `mintgroen`, matching a provisioning cluster: work is
 // underway, nothing is wrong. `warning`/`critical` mark states needing attention.
 const STATUS_DISPLAY: Record<string, InstallStatusDisplay> = {
-  Pending: { label: 'Installing…', tagColor: 'mintgroen', inProgress: true },
-  Deploying: { label: 'Installing…', tagColor: 'mintgroen', inProgress: true },
-  Running: { label: 'Installed', tagColor: 'success', inProgress: false },
-  Degraded: { label: 'Degraded', tagColor: 'warning', inProgress: false },
-  Failed: { label: 'Failed', tagColor: 'critical', inProgress: false },
-  Terminating: { label: 'Removing…', tagColor: 'oranje', inProgress: true },
+  Pending: { label: 'Installing…', badgeColor: 'mintgroen', inProgress: true },
+  Deploying: { label: 'Installing…', badgeColor: 'mintgroen', inProgress: true },
+  Running: { label: 'Installed', badgeColor: 'success', inProgress: false },
+  Degraded: { label: 'Degraded', badgeColor: 'warning', inProgress: false },
+  Failed: { label: 'Failed', badgeColor: 'critical', inProgress: false },
+  Terminating: { label: 'Removing…', badgeColor: 'oranje', inProgress: true },
 };
 
 const UNKNOWN_DISPLAY: InstallStatusDisplay = {
   label: 'Installing…',
-  tagColor: 'mintgroen',
+  badgeColor: 'mintgroen',
   inProgress: true,
 };
 

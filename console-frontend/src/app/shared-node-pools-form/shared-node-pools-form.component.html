@@ -9,7 +9,7 @@
               <h3>Node pool {{ $index + 1 }}</h3>
               @if (nodePools.length > 1) {
                 <nldd-button
-                  slot="actions"
+                  slot="end"
                   type="button"
                   (click)="removeNodePool($index)"
                   text="Remove"

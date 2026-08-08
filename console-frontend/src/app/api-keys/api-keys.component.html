@@ -176,11 +176,11 @@
                 <nldd-text-cell width="full" [attr.supporting-text]="keyDetail(apiKey)">
                   {{ apiKey.name }}&ngsp;
                   @if (isRevoked(apiKey.revoked)) {
-                    <nldd-tag color="neutral" size="sm" text="Revoked"></nldd-tag>
+                    <nldd-badge color="neutral" size="sm" text="Revoked"></nldd-badge>
                   } @else if (isExpired(apiKey.expires)) {
-                    <nldd-tag color="warning" size="sm" text="Expired"></nldd-tag>
+                    <nldd-badge color="warning" size="sm" text="Expired"></nldd-badge>
                   } @else {
-                    <nldd-tag color="success" size="sm" text="Active"></nldd-tag>
+                    <nldd-badge color="success" size="sm" text="Active"></nldd-badge>
                   }
                 </nldd-text-cell>
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>

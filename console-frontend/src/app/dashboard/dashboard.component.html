@@ -51,11 +51,12 @@
             <nldd-container padding="16">
               <nldd-title size="4">
                 <h2>{{ cluster.name }}</h2>
-                <nldd-tag
-                  slot="actions"
-                  [attr.color]="getStatusTagColor(cluster.status)"
+                <nldd-badge
+                  slot="end"
+                  [attr.color]="getStatusBadgeColor(cluster.status)"
                   [attr.text]="getStatusLabel(cluster.status)"
-                ></nldd-tag>
+                  [attr.pulse]="isTransitionalStatus(cluster.status) ? '' : null"
+                ></nldd-badge>
               </nldd-title>
 
               <nldd-spacer size="16"></nldd-spacer>
