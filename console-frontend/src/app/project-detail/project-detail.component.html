@@ -113,7 +113,7 @@
 
             <nldd-button
               (click)="showDeleteModal.set(true)"
-              [attr.text]="'Delete ' + (project()?.alias || project()?.name)"
+              [attr.text]="'Delete ' + projectLabel()"
               variant="destructive"
             ></nldd-button>
           </nldd-container>
@@ -181,7 +181,7 @@
   #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
-  [attr.text]="'Delete project ' + (project()?.alias || project()?.name) + '?'"
+  [attr.text]="'Delete project ' + projectLabel() + '?'"
   supporting-text="This permanently removes the project and everything in it. This cannot be undone."
   accessible-label="Confirm project deletion"
   variant="alert"

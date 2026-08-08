@@ -420,7 +420,7 @@
   #removeMemberDialog
   appDialogSync
   [show]="showRemoveModal()"
-  [attr.text]="'Remove ' + member()?.member?.userName + ' from this project?'"
+  [attr.text]="removeMemberTitle()"
   supporting-text="They immediately lose access to this project and its resources. You can add them again later."
   accessible-label="Confirm member removal"
   variant="alert"

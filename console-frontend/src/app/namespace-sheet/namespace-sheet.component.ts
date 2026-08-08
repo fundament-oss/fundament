@@ -85,6 +85,14 @@ export default class NamespaceSheetComponent implements OnInit {
   /** The member waiting for a confirmed removal, or null when none is. */
   pendingRemove = signal<NamespaceMember | null>(null);
 
+  /** The dialog is in the DOM before anyone is picked, so this has to read as a
+   *  sentence with the blank still open. It said "Remove undefined". */
+  removeAccessTitle = computed(() => {
+    const naam = this.pendingRemove()?.member?.userName;
+    const waar = this.namespaceName();
+    return naam ? `Remove ${naam} from ${waar}?` : `Remove this member from ${waar}?`;
+  });
+
   step = signal<'overview' | 'roles'>('overview');
 
   /** The member the roles step is about, empty while adding someone new. */

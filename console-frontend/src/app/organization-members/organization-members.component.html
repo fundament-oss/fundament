@@ -419,7 +419,7 @@
   #deleteDialog
   appDialogSync
   [show]="showDeleteModal()"
-  [attr.text]="'Remove ' + deletingMember()?.name + ' from this organization?'"
+  [attr.text]="removeMemberTitle()"
   supporting-text="This revokes their access to all organization resources, including every project they are a member of."
   accessible-label="Confirm member removal"
   variant="alert"

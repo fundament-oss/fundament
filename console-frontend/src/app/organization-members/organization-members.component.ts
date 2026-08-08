@@ -217,6 +217,14 @@ export default class OrganizationMembersComponent implements OnInit {
 
   deletingMember = signal<OrganizationMember | null>(null);
 
+  /** The dialog sits in the DOM before anyone is picked, so this has to read as
+   *  a sentence with the blank still open. It said "Remove undefined". */
+  removeMemberTitle = computed(() => {
+    const wie = this.deletingMember();
+    const naam = wie?.name || wie?.email;
+    return naam ? `Remove ${naam} from this organization?` : 'Remove this member from this organization?';
+  });
+
   /** A failed action, reported over the list instead of in place of it: the
    *  list is still valid, only the action was not. */
   actionError = signal<{

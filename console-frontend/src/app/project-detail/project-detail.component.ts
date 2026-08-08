@@ -1,4 +1,5 @@
 import {
+  computed,
   Component,
   inject,
   signal,
@@ -61,6 +62,13 @@ export default class ProjectDetailComponent implements OnInit {
   private organizationDataService = inject(OrganizationDataService);
 
   project = signal<Project | null>(null);
+
+  /** Falls back to the bare noun while the project is still loading, so no
+   *  button or dialog ever says "Delete undefined". */
+  projectLabel = computed(() => {
+    const p = this.project();
+    return p?.alias || p?.name || 'this project';
+  });
 
   namespaces = signal<Namespace[]>([]);
 

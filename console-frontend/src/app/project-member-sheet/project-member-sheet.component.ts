@@ -78,6 +78,13 @@ export default class ProjectMemberSheetComponent implements OnInit {
 
   member = signal<ProjectMemberView | null>(null);
 
+  /** The dialog is in the DOM before the member is loaded, so this has to read
+   *  as a sentence with the blank still open. It said "Remove undefined". */
+  removeMemberTitle = computed(() => {
+    const naam = this.member()?.member?.userName;
+    return naam ? `Remove ${naam} from this project?` : 'Remove this member from this project?';
+  });
+
   isLoading = signal(true);
 
   saving = signal(false);

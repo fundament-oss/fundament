@@ -290,7 +290,7 @@
   #removeAccessDialog
   appDialogSync
   [show]="!!pendingRemove()"
-  [attr.text]="'Remove ' + pendingRemove()?.member?.userName + ' from ' + namespaceName() + '?'"
+  [attr.text]="removeAccessTitle()"
   supporting-text="They keep their project permission, but lose every role in this namespace."
   accessible-label="Confirm access removal"
   variant="alert"
