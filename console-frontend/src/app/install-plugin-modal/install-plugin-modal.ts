@@ -7,8 +7,6 @@ import {
   output,
 } from '@angular/core';
 import SheetSyncDirective from '../sheet-sync.directive';
-import DropdownSyncDirective from '../dropdown-sync.directive';
-import AutofocusDirective from '../autofocus.directive';
 import {
   getInstallStatusDisplay,
   isInstallInProgress,
@@ -60,7 +58,7 @@ function showsInstalledVersion(cluster: Cluster): boolean {
 
 @Component({
   selector: 'app-install-plugin-modal',
-  imports: [SheetSyncDirective, DropdownSyncDirective, AutofocusDirective],
+  imports: [SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './install-plugin-modal.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -48,8 +48,8 @@
         @if (versions().length > 0) {
           <nldd-rich-text>
             <p>
-              Available versions are: {{ versionList() }}. If you want to upgrade, remove the plugin
-              and install a newer version.
+              Available versions are: {{ versionList() }}. If you want to upgrade, uninstall the
+              plugin and install a newer version.
             </p>
           </nldd-rich-text>
 
@@ -79,7 +79,7 @@
               <nldd-cell width="full">
                 <!-- Only for states no button can express: progress lives in the
                      button's own loading state, and "installed" is already said
-                     by the version and the Remove button. -->
+                     by the version and the Uninstall button. -->
                 @if (
                   cluster.phase !== null &&
                   !isRunning(cluster.phase) &&
@@ -134,7 +134,7 @@
                     loading
                     type="button"
                     [attr.expandable]="isRemoving(cluster.phase) ? null : ''"
-                    [attr.text]="isRemoving(cluster.phase) ? 'Remove' : 'Install'"
+                    [attr.text]="isRemoving(cluster.phase) ? 'Uninstall' : 'Install'"
                     [attr.variant]="isRemoving(cluster.phase) ? 'destructive' : 'primary'"
                     size="sm"
                   ></nldd-button>
@@ -144,7 +144,7 @@
                   <nldd-button
                     type="button"
                     (click)="onUninstall(cluster.id)"
-                    text="Remove"
+                    text="Uninstall"
                     variant="destructive"
                     size="sm"
                   ></nldd-button>

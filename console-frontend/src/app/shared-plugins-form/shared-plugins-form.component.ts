@@ -4,6 +4,8 @@ import {
   EventEmitter,
   inject,
   OnInit,
+  OnChanges,
+  type SimpleChanges,
   signal,
   Input,
   ChangeDetectionStrategy,
@@ -12,6 +14,7 @@ import {
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { PLUGIN } from '../../connect/tokens';
+import pluginIconSrc from '../utils/plugin-icon';
 import {
   ListPluginsRequestSchema,
   ListPresetsRequestSchema,
@@ -20,7 +23,10 @@ import {
 
 export interface Plugin {
   id: string;
+  /** The install identifier ("openfsc"), which names the resource on the
+   *  cluster. Not for reading: `displayName` is what a plugin calls itself. */
   name: string;
+  displayName: string;
   description: string;
   descriptionShort: string;
   selected: boolean;
@@ -32,12 +38,14 @@ export interface Plugin {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-plugins-form.component.html',
 })
-export class SharedPluginsFormComponent implements OnInit {
+export class SharedPluginsFormComponent implements OnInit, OnChanges {
   private pluginClient = inject(PLUGIN);
 
   @Output() formSubmit = new EventEmitter<{ preset: string; plugins: string[] }>();
 
   @Input() initialPluginIds?: string[];
+
+  protected readonly pluginIconSrc = pluginIconSrc;
 
   selectedPreset = 'custom';
 
@@ -53,7 +61,13 @@ export class SharedPluginsFormComponent implements OnInit {
 
   presets: Preset[] = [];
 
-  async ngOnInit() {
+  ngOnInit() {
+    this.load();
+  }
+
+  async load() {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
     try {
       // Fetch plugins and presets from backend
       const [pluginsResponse, presetsResponse] = await Promise.all([
@@ -68,13 +82,17 @@ export class SharedPluginsFormComponent implements OnInit {
       this.plugins = pluginsResponse.plugins.map((backendPlugin) => ({
         id: backendPlugin.id,
         name: backendPlugin.name,
+        displayName: backendPlugin.displayName || backendPlugin.name,
         description: backendPlugin.description,
         descriptionShort: backendPlugin.descriptionShort,
-        selected: this.initialPluginIds?.includes(backendPlugin.id) ?? false,
+        selected: false,
       }));
 
-      // Set default preset if there are presets available
-      if (this.presets.length > 0 && !this.initialPluginIds) {
+      if (this.initialPluginIds) {
+        this.applyInitialSelection();
+      } else if (this.presets.length > 0) {
+        // Nothing to edit, so the form opens on the first preset rather than on
+        // an empty cluster nobody wants.
         this.selectedPreset = this.presets[0].id;
         this.onPresetChange();
       }
@@ -84,6 +102,25 @@ export class SharedPluginsFormComponent implements OnInit {
       this.errorMessage.set(`Failed to load plugins from server: ${error}`);
       this.isLoading.set(false);
     }
+  }
+
+  /** The ids come from a request the parent fires alongside ours, so they can
+   *  land before or after our plugin list. Applied from both sides: whichever
+   *  arrives last is the one holding both halves. Without this the edit sheet
+   *  opens with everything unchecked and saving strips the cluster bare. */
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['initialPluginIds'] && this.plugins.length > 0) this.applyInitialSelection();
+  }
+
+  private applyInitialSelection() {
+    const installed = new Set(this.initialPluginIds ?? []);
+    this.plugins = this.plugins.map((plugin) => ({
+      ...plugin,
+      selected: installed.has(plugin.id),
+    }));
+    // Shows 'Standard' rather than 'Custom' when the cluster happens to run
+    // exactly a preset, same rule as toggling a plugin by hand.
+    this.selectedPreset = this.matchingPresetId();
   }
 
   onPresetRadioChange(event: Event) {

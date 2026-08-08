@@ -25,37 +25,56 @@
 
       <nldd-spacer size="16"></nldd-spacer>
 
-      @if (!isClusterRunning()) {
-        <nldd-banner
-          variant="warning"
-          [attr.text]="
-            'Plugin management is only available when the cluster is running. Current status: ' +
-            getStatusLabel(clusterStatus()) +
-            '.'
-          "
-        ></nldd-banner>
-        <nldd-spacer size="16"></nldd-spacer>
-      }
+      @if (loadFailed()) {
+        <!-- A dialog rather than a banner: a banner sits above a form you can
+             still fill in, and there is no form here to fill in. -->
+        <nldd-inline-dialog
+          variant="alert"
+          text="This cluster could not be loaded"
+          supporting-text="Without it there is no telling which plugins are installed, so editing them is off the table for now."
+        >
+          <nldd-button
+            slot="actions"
+            type="button"
+            text="Try again"
+            (click)="load()"
+          ></nldd-button>
+        </nldd-inline-dialog>
+      } @else {
+        <!-- Held back until the status is in. Drawn on the UNSPECIFIED it starts
+             on, this warns about a cluster that turns out to be running fine. -->
+        @if (!isLoading() && !isClusterRunning()) {
+          <nldd-banner
+            variant="warning"
+            [attr.text]="
+              'Plugin management is only available when the cluster is running. Current status: ' +
+              getStatusLabel(clusterStatus()) +
+              '.'
+            "
+          ></nldd-banner>
+          <nldd-spacer size="16"></nldd-spacer>
+        }
 
-      @if (errorMessage()) {
-        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
-        <nldd-spacer size="16"></nldd-spacer>
-      }
+        @if (errorMessage()) {
+          <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+          <nldd-spacer size="16"></nldd-spacer>
+        }
 
-      <app-shared-plugins-form
-        (formSubmit)="onFormSubmit($event)"
-        [initialPluginIds]="currentPluginIds()"
-      >
-        <!-- No cancel button: the title bar's dismiss already covers leaving. -->
-        <nldd-button
-          type="button"
-          (click)="pluginsForm.submit()"
-          [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
-          [disabled]="isSubmitting() || !isClusterRunning()"
-          width="full"
-          variant="primary"
-        ></nldd-button>
-      </app-shared-plugins-form>
+        <app-shared-plugins-form
+          (formSubmit)="onFormSubmit($event)"
+          [initialPluginIds]="currentPluginIds()"
+        >
+          <!-- No cancel button: the title bar's dismiss already covers leaving. -->
+          <nldd-button
+            type="button"
+            (click)="pluginsForm.submit()"
+            [text]="isSubmitting() ? 'Saving...' : 'Save changes'"
+            [disabled]="isSubmitting() || isLoading() || !isClusterRunning()"
+            width="full"
+            variant="primary"
+          ></nldd-button>
+        </app-shared-plugins-form>
+      }
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>

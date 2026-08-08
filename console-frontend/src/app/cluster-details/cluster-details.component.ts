@@ -36,6 +36,7 @@ import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import { ClusterStatus, NodePoolStatus } from '../../generated/v1/common_pb';
 import { getStatusBadgeColor, getStatusLabel, isTransitionalStatus } from '../utils/cluster-status';
+import pluginIconSrc from '../utils/plugin-icon';
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
@@ -61,9 +62,6 @@ interface ResourceMetric {
 /** `plugin.name` is the install identifier (e.g. "openfsc") that names the
  *  PluginInstallation resource, so it is never what a user should read. */
 const pluginDisplayName = (plugin: PluginSummary): string => plugin.displayName || plugin.name;
-
-const pluginIconSrc = (plugin: PluginSummary): string =>
-  `/img/plugins/${plugin.name.toLowerCase().replace(/[^a-z]+/g, '-')}.svg`;
 
 const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   const labels: Record<NodePoolStatus, string> = {
@@ -193,6 +191,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   // Expose utility functions for template
   getStatusBadgeColor = getStatusBadgeColor;
+
   isTransitionalStatus = isTransitionalStatus;
 
   getStatusLabel = getStatusLabel;

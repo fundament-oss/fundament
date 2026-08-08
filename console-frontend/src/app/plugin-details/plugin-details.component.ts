@@ -12,6 +12,7 @@ import { ActivatedRoute } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
+import pluginIconSrc from '../utils/plugin-icon';
 import PageNavService from '../page-nav.service';
 import { TitleService } from '../title.service';
 import InstallPluginModalComponent, {
@@ -49,12 +50,6 @@ interface ClusterWithState extends ClusterSummary {
 // cluster — so it is never shown. Falls back to it when no display name is set.
 const displayNameOf = (plugin: { name: string; displayName: string }): string =>
   plugin.displayName || plugin.name;
-
-/** Same derivation the catalogue uses, so a plugin keeps its logo between the
- *  card and this page. */
-function pluginIconSrc(plugin: { name: string }): string {
-  return `/img/plugins/${plugin.name.toLowerCase().replace(/[^a-z]+/g, '-')}.svg`;
-}
 
 /** The "official" marker reads as a property of the name, not as one entry in a
  *  tag row. */

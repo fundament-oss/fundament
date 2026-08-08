@@ -5,16 +5,27 @@
       text="Loading plugins and presets..."
     ></nldd-activity-indicator>
   } @else if (errorMessage()) {
-    <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+    <!-- A dialog rather than a banner: a banner announces something about the
+         form below it, and a form that never loaded has nothing below it. -->
+    <nldd-inline-dialog
+      variant="alert"
+      text="Plugins could not be loaded"
+      supporting-text="The list of plugins and presets comes from the server, and the server did not answer."
+    >
+      <nldd-button
+        slot="actions"
+        type="button"
+        text="Try again"
+        (click)="load()"
+      ></nldd-button>
+    </nldd-inline-dialog>
   } @else {
     <nldd-form-field label="Plugins">
       <!-- The preset lives inside this field, above the list: it is a control
-           for that list, not a question of its own. Small, because it sets the
-           list rather than being the thing you came to fill in. -->
+           for that list, not a question of its own. -->
       <nldd-toggle-button-group
         type="radio"
         name="preset"
-        size="sm"
         accessible-label="Plugin preset"
         (change)="onPresetRadioChange($event)"
       >
@@ -64,8 +75,15 @@
                 <nldd-checkbox [checked]="plugin.selected"></nldd-checkbox>
               </nldd-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- The same logo the catalogue and the cluster page show, so a
+                   plugin stays recognizable by sight while you pick it. Empty
+                   alt: the name is right beside it. -->
+              <nldd-cell>
+                <img alt="" width="24" height="24" [src]="pluginIconSrc(plugin)">
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-text-cell
-                [attr.text]="plugin.name"
+                [attr.text]="plugin.displayName"
                 [attr.supporting-text]="plugin.descriptionShort"
               ></nldd-text-cell>
             </nldd-list-item>
@@ -74,29 +92,44 @@
       }
     </nldd-form-field>
 
-    <!-- No field label above this one: the checkbox says what it turns on, and a
-         label repeating that would be the third "plugin" heading in a row. -->
-    <nldd-checkbox-field
-      label="Custom plugins (warning: warranty on cluster void)"
-      [checked]="customPluginUploadEnabled"
-      name="customPluginUploadEnabled"
-      (change)="onCustomPluginUploadToggle($any($event).detail.checked)"
-    ></nldd-checkbox-field>
+    <!-- Switch and upload in one box: the upload only exists because the switch
+         is on, and loose in the form they read as two unrelated questions. -->
+    <nldd-box background="tinted">
+      <!-- Tight around the switch on its own, roomier once the upload is under
+           it: a field needs air below it, a lone checkbox row does not. -->
+      <nldd-container
+        padding-inline="16"
+        padding-top="6"
+        [attr.padding-bottom]="customPluginUploadEnabled ? '16' : '6'"
+      >
+        <!-- No field label above this one: the checkbox says what it turns on, and
+             a label repeating that would be the third "plugin" heading in a row. -->
+        <nldd-checkbox-field
+          label="Custom plugins (warning: warranty on cluster void)"
+          [checked]="customPluginUploadEnabled"
+          name="customPluginUploadEnabled"
+          (change)="onCustomPluginUploadToggle($any($event).detail.checked)"
+        ></nldd-checkbox-field>
 
-    <!-- The upload only appears once it is turned on. A disabled file field asks
-         to be read and then refuses to do anything; an absent one asks nothing. -->
-    @if (customPluginUploadEnabled) {
-      <nldd-form-field label="Plugin ZIP file">
-        <nldd-form-field-help-text>
-          A custom plugin goes up as a ZIP file. Other file types are rejected.
-        </nldd-form-field-help-text>
-        <nldd-file-field
-          accept=".zip"
-          [translations]="fileFieldTranslations"
-          (change)="onCustomPluginFileChange($event)"
-        ></nldd-file-field>
-      </nldd-form-field>
-    }
+        <!-- The upload only appears once it is turned on. A disabled file field
+             asks to be read and then refuses to do anything; an absent one asks
+             nothing. -->
+        @if (customPluginUploadEnabled) {
+          <nldd-spacer size="16"></nldd-spacer>
+
+          <nldd-form-field label="Plugin ZIP file">
+            <nldd-form-field-help-text>
+              A custom plugin goes up as a ZIP file. Other file types are rejected.
+            </nldd-form-field-help-text>
+            <nldd-file-field
+              accept=".zip"
+              [translations]="fileFieldTranslations"
+              (change)="onCustomPluginFileChange($event)"
+            ></nldd-file-field>
+          </nldd-form-field>
+        }
+      </nldd-container>
+    </nldd-box>
 
     <nldd-form-actions>
       <ng-content></ng-content>
