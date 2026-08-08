@@ -295,8 +295,8 @@
 
               <!-- The right-hand column says what this person is to you: "You" for
                    yourself, "Invited" for someone who has not accepted yet. An
-                   invitation can only be withdrawn, so the menu holds that one
-                   thing, in the same place as every other row's menu. -->
+                   invitation has no access to change yet, so the menu holds the
+                   role it carries and the way to withdraw it. -->
               @if (member.status === 'pending') {
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
@@ -317,6 +317,15 @@
                     "
                   >
                     <nldd-menu slot="popup">
+                      <!-- The role is part of the invitation, so it can still be
+                           corrected: without this a wrong one costs a cancel, a
+                           second invite and a second mail to the same person. -->
+                      <nldd-menu-item
+                        icon="person-badge-gear"
+                        [attr.text]="member.permission === 'admin' ? 'Switch to viewer' : 'Switch to admin'"
+                        (select)="setPermission(member)"
+                      ></nldd-menu-item>
+                      <nldd-menu-divider></nldd-menu-divider>
                       <nldd-menu-item
                         text="Cancel invitation"
                         icon="trash"
@@ -446,11 +455,18 @@
     <nldd-top-title-bar
       slot="header"
       text="Invite user"
+      collapse-anchor="invite-user-title"
       dismiss-text="Cancel"
       (dismiss)="closeModal()"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <nldd-title id="invite-user-title" size="3">
+        <h1>Invite user</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       <nldd-rich-text spacing="flat">
         <p>
           Enter the email address of the user you want to invite. They will be able to sign in via

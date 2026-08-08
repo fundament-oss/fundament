@@ -450,15 +450,20 @@ export default class OrganizationMembersComponent implements OnInit {
    *  group. Reversible in one click, so no confirmation. */
   async setPermission(member: OrganizationMember) {
     const permission = member.permission === 'admin' ? 'viewer' : 'admin';
+    // An invitation is a member record without a name yet, and nobody is
+    // anything until they accept: "will be admin", not "is admin".
+    const wie = member.status === 'pending' ? member.email || member.name : member.name;
+    const wordt = member.status === 'pending' ? 'is invited as' : 'is now';
+    const blijft = member.status === 'pending' ? 'is still invited as' : 'is still';
     this.isSubmitting.set(true);
 
     try {
       await firstValueFrom(this.memberClient.updateMemberPermission({ id: member.id, permission }));
-      this.toastService.success(`${member.name} is now ${permission}`);
+      this.toastService.success(`${wie} ${wordt} ${permission}`);
       await this.loadMembers();
     } catch (err) {
       this.actionError.set({
-        title: `${member.name} is still ${member.permission}`,
+        title: `${wie} ${blijft} ${member.permission}`,
         message: err instanceof Error ? err.message : 'The request failed.',
         attempts: 1,
         retry: () => this.setPermission(member),
