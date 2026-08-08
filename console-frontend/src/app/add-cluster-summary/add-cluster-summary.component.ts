@@ -13,6 +13,7 @@ import { create } from '@bufbuild/protobuf';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
+import { RegionCatalogService } from '../region-catalog.service';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { CLUSTER } from '../../connect/tokens';
 import {
@@ -58,7 +59,37 @@ export default class AddClusterSummaryComponent {
 
   private organizationDataService = inject(OrganizationDataService);
 
+  private regionCatalog = inject(RegionCatalogService);
+
   protected state = computed(() => this.stateService.getState());
+
+  /** Label per machine type name, e.g. "e2-standard-4 (4 lCPU, 16 GiB RAM)".
+   *  Empty until the catalog answers. */
+  private machineTypeLabels = signal<Record<string, string>>({});
+
+  /** The summary repeats what you picked, and what you picked was a machine with
+   *  those specs next to it. Dropping them here would make you go back a step to
+   *  check what "e2-standard-4" buys you. Falls back to the bare name, which is
+   *  what the pool carries and what the request sends. */
+  protected machineTypeLabel(name: string): string {
+    return this.machineTypeLabels()[name] || name;
+  }
+
+  private async loadMachineTypeLabels() {
+    const regionName = this.state().region;
+    if (!regionName) return;
+    try {
+      const region = await this.regionCatalog.getRegionByName(regionName);
+      if (!region) return;
+      const labels: Record<string, string> = {};
+      RegionCatalogService.machineTypeOptions(region).forEach((option) => {
+        labels[option.value] = option.label;
+      });
+      this.machineTypeLabels.set(labels);
+    } catch {
+      // The bare name still says which machine it is; only the specs go missing.
+    }
+  }
 
   protected errorMessage = signal<string | null>(null);
 
@@ -103,6 +134,7 @@ export default class AddClusterSummaryComponent {
 
   constructor() {
     this.titleService.setTitle('Cluster summary');
+    this.loadMachineTypeLabels();
   }
 
   private updateItem(key: string, updates: Partial<ProgressItem>) {

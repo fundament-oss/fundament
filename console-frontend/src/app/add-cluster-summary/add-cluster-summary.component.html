@@ -49,7 +49,7 @@
     @for (nodePool of state().nodePools; track nodePool.name) {
       <nldd-list variant="box" [attr.accessible-label]="'Node pool ' + nodePool.name">
         <nldd-list-item>
-          <nldd-text-cell text="Node pool"></nldd-text-cell>
+          <nldd-text-cell text="Node pool name"></nldd-text-cell>
           <nldd-text-cell
             width="fit-content"
             horizontal-alignment="right"
@@ -61,7 +61,7 @@
           <nldd-text-cell
             width="fit-content"
             horizontal-alignment="right"
-            [attr.text]="nodePool.machineType"
+            [attr.text]="machineTypeLabel(nodePool.machineType)"
           ></nldd-text-cell>
         </nldd-list-item>
         <nldd-list-item>
