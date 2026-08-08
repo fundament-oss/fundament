@@ -22,25 +22,11 @@
 
             <nldd-spacer size="16"></nldd-spacer>
 
-            <nldd-form-field label="Node pool name">
-              <nldd-text-field
-                [id]="'nodePoolName-' + $index"
-                [value]="nameControl?.value ?? ''"
-                [appAutofocus]="$first"
-                [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
-                [attr.error-message]="'node-pool-name-error-' + $index"
-                (input)="onNodePoolNameInput($index, $event)"
-              ></nldd-text-field>
-              <nldd-form-field-error-text [id]="'node-pool-name-error-' + $index">
-                {{ getNodePoolNameError($index) }}
-              </nldd-form-field-error-text>
-            </nldd-form-field>
-
             <nldd-form-field label="Machine type">
               <!-- A list, not a menu: you pick a machine by comparing its specs,
                    and a popup shows them one at a time. Same shape as choosing a
                    role or a project. -->
-              <nldd-list variant="box" accessible-label="Machine type">
+              <nldd-list variant="box" background="base" accessible-label="Machine type">
                 @for (mt of machineTypes; track mt.value) {
                   <!-- The row is the control; the radio only shows which one it
                        is. A real radio here would be an input inside the row's
@@ -55,14 +41,26 @@
                       ></nldd-radio-button>
                     </nldd-cell>
                     <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                    <nldd-text-cell
-                      width="full"
-                      [attr.text]="mt.value"
-                      [attr.supporting-text]="mt.specs"
-                    ></nldd-text-cell>
+                    <!-- Specs on the same line as the name, not under it: they are
+                         what you compare, so they belong in the reading size. -->
+                    <nldd-text-cell width="full" [attr.text]="mt.label"></nldd-text-cell>
                   </nldd-list-item>
                 }
               </nldd-list>
+            </nldd-form-field>
+
+            <nldd-form-field label="Node pool name">
+              <nldd-text-field
+                [id]="'nodePoolName-' + $index"
+                [value]="nameControl?.value ?? ''"
+                [appAutofocus]="$first"
+                [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
+                [attr.error-message]="'node-pool-name-error-' + $index"
+                (input)="onNodePoolNameInput($index, $event)"
+              ></nldd-text-field>
+              <nldd-form-field-error-text [id]="'node-pool-name-error-' + $index">
+                {{ getNodePoolNameError($index) }}
+              </nldd-form-field-error-text>
             </nldd-form-field>
 
             <nldd-form-field label="Autoscale minimum">

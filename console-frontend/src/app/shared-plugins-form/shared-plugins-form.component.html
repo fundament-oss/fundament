@@ -7,10 +7,14 @@
   } @else if (errorMessage()) {
     <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
   } @else {
-    <nldd-form-field label="Plugin preset">
+    <nldd-form-field label="Plugins">
+      <!-- The preset lives inside this field, above the list: it is a control
+           for that list, not a question of its own. Small, because it sets the
+           list rather than being the thing you came to fill in. -->
       <nldd-toggle-button-group
         type="radio"
         name="preset"
+        size="sm"
         accessible-label="Plugin preset"
         (change)="onPresetRadioChange($event)"
       >
@@ -27,9 +31,9 @@
           [selected]="selectedPreset === 'custom'"
         ></nldd-toggle-button>
       </nldd-toggle-button-group>
-    </nldd-form-field>
 
-    <nldd-form-field label="Plugins">
+      <nldd-spacer size="12"></nldd-spacer>
+
       @if (plugins.length === 0) {
         <nldd-inline-dialog
           icon="puzzle-piece"

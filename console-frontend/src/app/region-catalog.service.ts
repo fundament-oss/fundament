@@ -5,8 +5,6 @@ import { CLUSTER } from '../connect/tokens';
 import { ListRegionsRequestSchema, Region } from '../generated/v1/cluster_pb';
 
 export interface MachineTypeOption {
-  /** The specs on their own, for a two-line row. */
-  specs?: string;
   value: string; // machine type name - exactly what CreateNodePoolRequest.machineType accepts
   label: string;
 }
@@ -44,9 +42,6 @@ export class RegionCatalogService {
     return region.machineTypes.map((mt) => ({
       value: mt.name,
       label: `${mt.name} (${mt.lcpu} lCPU, ${RegionCatalogService.formatMemory(mt.memory)})`,
-      // Apart from the label, because a row shows the name and its specs on two
-      // lines instead of squeezing both into one.
-      specs: `${mt.lcpu} lCPU, ${RegionCatalogService.formatMemory(mt.memory)}`,
     }));
   }
 

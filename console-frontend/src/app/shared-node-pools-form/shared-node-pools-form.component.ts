@@ -76,12 +76,12 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
 
   // Fallback until the catalog options arrive.
   private static readonly legacyMachineTypes: MachineTypeOption[] = [
-    { value: 'n1-standard-1', label: 'n1-standard-1 (1 vCPU, 3.75 GB RAM)', specs: '1 vCPU, 3.75 GB RAM' },
-    { value: 'n1-standard-2', label: 'n1-standard-2 (2 vCPU, 7.5 GB RAM)', specs: '2 vCPU, 7.5 GB RAM' },
-    { value: 'n1-standard-4', label: 'n1-standard-4 (4 vCPU, 15 GB RAM)', specs: '4 vCPU, 15 GB RAM' },
-    { value: 'n1-standard-8', label: 'n1-standard-8 (8 vCPU, 30 GB RAM)', specs: '8 vCPU, 30 GB RAM' },
-    { value: 'n1-highmem-2', label: 'n1-highmem-2 (2 vCPU, 13 GB RAM)', specs: '2 vCPU, 13 GB RAM' },
-    { value: 'n1-highmem-4', label: 'n1-highmem-4 (4 vCPU, 26 GB RAM)', specs: '4 vCPU, 26 GB RAM' },
+    { value: 'n1-standard-1', label: 'n1-standard-1 (1 vCPU, 3.75 GB RAM)' },
+    { value: 'n1-standard-2', label: 'n1-standard-2 (2 vCPU, 7.5 GB RAM)' },
+    { value: 'n1-standard-4', label: 'n1-standard-4 (4 vCPU, 15 GB RAM)' },
+    { value: 'n1-standard-8', label: 'n1-standard-8 (8 vCPU, 30 GB RAM)' },
+    { value: 'n1-highmem-2', label: 'n1-highmem-2 (2 vCPU, 13 GB RAM)' },
+    { value: 'n1-highmem-4', label: 'n1-highmem-4 (4 vCPU, 26 GB RAM)' },
   ];
 
   selectMachineType(index: number, value: string): void {
