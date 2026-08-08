@@ -19,7 +19,6 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import AutofocusDirective from '../autofocus.directive';
-import DropdownSyncDirective from '../dropdown-sync.directive';
 import { MachineTypeOption } from '../region-catalog.service';
 
 export interface NodePoolData {
@@ -31,7 +30,7 @@ export interface NodePoolData {
 
 @Component({
   selector: 'app-shared-node-pools-form',
-  imports: [ReactiveFormsModule, AutofocusDirective, DropdownSyncDirective],
+  imports: [ReactiveFormsModule, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shared-node-pools-form.component.html',
@@ -46,13 +45,14 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   }
 
   // Region-scoped machine types from the catalog (names + display labels).
-  // An empty list normalizes to null: the fallback list stays in place until
-  // real options arrive.
+  // An empty list normalizes to null: which region you are in decides what a
+  // machine type even means, so there is nothing sensible to offer before it.
   @Input() set machineTypeOptions(options: MachineTypeOption[] | null) {
     this.catalogOptions = options && options.length > 0 ? options : null;
     if (this.catalogOptions) {
       const opts = this.catalogOptions;
-      // Re-anchor controls whose value is not an offered machine type.
+      // Re-anchor controls whose value is not an offered machine type. A pool
+      // that was created in another region can carry one this region lacks.
       this.nodePools.controls.forEach((control) => {
         const mt = control.get('machineType');
         if (!opts.some((o) => o.value === mt?.value)) {
@@ -74,16 +74,6 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
 
   private catalogOptions: MachineTypeOption[] | null = null;
 
-  // Fallback until the catalog options arrive.
-  private static readonly legacyMachineTypes: MachineTypeOption[] = [
-    { value: 'n1-standard-1', label: 'n1-standard-1 (1 vCPU, 3.75 GB RAM)' },
-    { value: 'n1-standard-2', label: 'n1-standard-2 (2 vCPU, 7.5 GB RAM)' },
-    { value: 'n1-standard-4', label: 'n1-standard-4 (4 vCPU, 15 GB RAM)' },
-    { value: 'n1-standard-8', label: 'n1-standard-8 (8 vCPU, 30 GB RAM)' },
-    { value: 'n1-highmem-2', label: 'n1-highmem-2 (2 vCPU, 13 GB RAM)' },
-    { value: 'n1-highmem-4', label: 'n1-highmem-4 (4 vCPU, 26 GB RAM)' },
-  ];
-
   selectMachineType(index: number, value: string): void {
     const control = this.nodePools.at(index).get('machineType');
     control?.setValue(value);
@@ -91,7 +81,16 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
   }
 
   get machineTypes(): MachineTypeOption[] {
-    return this.catalogOptions ?? SharedNodePoolsFormComponent.legacyMachineTypes;
+    return this.catalogOptions ?? [];
+  }
+
+  /** Nothing renders before the catalog is in. There used to be a list of n1-*
+   *  types to fall back on, and it did two kinds of damage: it flashed six
+   *  options that this region does not offer, and an existing pool's own type
+   *  was not among them, so the pool silently re-anchored to whatever came
+   *  first and saving would have resized a running pool. */
+  get isLoadingMachineTypes(): boolean {
+    return this.catalogOptions === null;
   }
 
   constructor() {
@@ -131,13 +130,12 @@ export class SharedNodePoolsFormComponent implements AfterViewInit {
     });
   }
 
-  // The machineType control holds the machine type name.
+  // The machineType control holds the machine type name. An existing pool keeps
+  // its own type on sight: whether this region still offers it is a question for
+  // the catalog, which answers in the machineTypeOptions setter.
   private initialMachineTypeValue(data?: NodePoolData): string {
-    const options = this.machineTypes;
-    if (data && options.some((o) => o.value === data.machineType)) {
-      return data.machineType;
-    }
-    return options[0]?.value ?? '';
+    if (data?.machineType) return data.machineType;
+    return this.machineTypes[0]?.value ?? '';
   }
 
   private loadInitialData(data: NodePoolData[]) {
