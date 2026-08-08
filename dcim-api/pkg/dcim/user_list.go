@@ -11,8 +11,8 @@ import (
 
 func (s *Server) ListUsers(
 	ctx context.Context,
-	_ *connect.Request[dcimv1.ListUsersRequest],
-) (*connect.Response[dcimv1.ListUsersResponse], error) {
+	_ *dcimv1.ListUsersRequest,
+) (*dcimv1.ListUsersResponse, error) {
 	rows, err := s.queries.UserList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list users: %w", err))
@@ -23,7 +23,7 @@ func (s *Server) ListUsers(
 		users = append(users, userToProto(row.ID, row.Name))
 	}
 
-	return connect.NewResponse(dcimv1.ListUsersResponse_builder{
+	return dcimv1.ListUsersResponse_builder{
 		Users: users,
-	}.Build()), nil
+	}.Build(), nil
 }

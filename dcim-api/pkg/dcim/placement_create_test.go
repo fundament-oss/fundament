@@ -23,7 +23,7 @@ func TestPlacementService_CreatePlacement_RejectsUnitBelowOne(t *testing.T) {
 	catalogID := createCatalogEntry(t, env, "Unit model")
 	assetID := createAsset(t, env, catalogID)
 
-	_, err := client.CreatePlacement(context.Background(), connect.NewRequest(
+	_, err := client.CreatePlacement(context.Background(),
 		(&dcimv1.CreatePlacementRequest_builder{
 			AssetId: assetID,
 			Rack: (&dcimv1.RackLocation_builder{
@@ -32,6 +32,6 @@ func TestPlacementService_CreatePlacement_RejectsUnitBelowOne(t *testing.T) {
 				RackSlotType:  dcimv1.RackSlotType_RACK_SLOT_TYPE_UNIT,
 			}).Build(),
 		}).Build(),
-	))
+	)
 	requireCode(t, err, connect.CodeInvalidArgument)
 }

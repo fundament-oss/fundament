@@ -119,7 +119,7 @@ func (d *ClustersDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	tflog.Debug(ctx, "Fetching clusters")
 
-	rpcReq := connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build())
+	rpcReq := organizationv1.ListClustersRequest_builder{}.Build()
 
 	// Call the API
 	rpcResp, err := d.client.ClusterService.ListClusters(ctx, rpcReq)
@@ -150,8 +150,8 @@ func (d *ClustersDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	// Map response to state
-	state.Clusters = make([]ClusterModel, len(rpcResp.Msg.GetClusters()))
-	for i, cluster := range rpcResp.Msg.GetClusters() {
+	state.Clusters = make([]ClusterModel, len(rpcResp.GetClusters()))
+	for i, cluster := range rpcResp.GetClusters() {
 		state.Clusters[i] = ClusterModel{
 			ID:     types.StringValue(cluster.GetId()),
 			Name:   types.StringValue(cluster.GetName()),

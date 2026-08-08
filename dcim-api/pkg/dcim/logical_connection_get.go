@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetConnection(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetConnectionRequest],
-) (*connect.Response[dcimv1.GetConnectionResponse], error) {
-	connID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetConnectionRequest,
+) (*dcimv1.GetConnectionResponse, error) {
+	connID := uuid.MustParse(req.GetId())
 
 	conn, err := s.queries.LogicalConnectionGetByID(ctx, db.LogicalConnectionGetByIDParams{ID: connID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetConnection(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get connection: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetConnectionResponse_builder{
+	return dcimv1.GetConnectionResponse_builder{
 		Connection: logicalConnectionFromRow(&conn),
-	}.Build()), nil
+	}.Build(), nil
 }

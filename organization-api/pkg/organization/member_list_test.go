@@ -19,7 +19,7 @@ func Test_Member_List_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.ListMembers(context.Background(), connect.NewRequest(&organizationv1.ListMembersRequest{}))
+	_, err := client.ListMembers(context.Background(), &organizationv1.ListMembersRequest{})
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -60,12 +60,13 @@ func Test_Member_List(t *testing.T) {
 
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
-	listReq := connect.NewRequest(&organizationv1.ListMembersRequest{})
-	listReq.Header().Set("Authorization", "Bearer "+token)
-	listReq.Header().Set("Fun-Organization", orgID.String())
+	listReq := &organizationv1.ListMembersRequest{}
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	listRes, err := client.ListMembers(context.Background(), listReq)
+	listRes, err := client.ListMembers(listCtx, listReq)
 	require.NoError(t, err)
 
-	require.Len(t, listRes.Msg.GetMembers(), 3)
+	require.Len(t, listRes.GetMembers(), 3)
 }

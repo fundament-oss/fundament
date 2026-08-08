@@ -14,8 +14,8 @@ import (
 
 func (s *Server) ListPlugins(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListPluginsRequest],
-) (*connect.Response[organizationv1.ListPluginsResponse], error) {
+	req *organizationv1.ListPluginsRequest,
+) (*organizationv1.ListPluginsResponse, error) {
 	var (
 		plugins    []db.PluginListRow
 		tags       []db.PluginTagsListRow
@@ -63,9 +63,9 @@ func (s *Server) ListPlugins(
 		result = append(result, pluginSummaryFromRow(&plugins[i], tagsByPlugin, categoriesByPlugin))
 	}
 
-	return connect.NewResponse(organizationv1.ListPluginsResponse_builder{
+	return organizationv1.ListPluginsResponse_builder{
 		Plugins: result,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func buildTagsByPlugin(tags []db.PluginTagsListRow) map[uuid.UUID][]*organizationv1.Tag {

@@ -18,9 +18,9 @@ func Test_Cluster_Delete_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.DeleteCluster(context.Background(), connect.NewRequest(organizationv1.DeleteClusterRequest_builder{
+	_, err := client.DeleteCluster(context.Background(), organizationv1.DeleteClusterRequest_builder{
 		ClusterId: uuid.New().String(),
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -45,42 +45,45 @@ func Test_Cluster_Delete(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 
-	createReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createReq := organizationv1.CreateClusterRequest_builder{
 		Name:              "test-cluster",
 		Region:            "eu-west-1",
 		KubernetesVersion: "1.28",
-	}.Build())
-	createReq.Header().Set("Authorization", "Bearer "+token)
-	createReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	createCtx, createCallInfo := connect.NewClientContext(context.Background())
+	createCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	createRes, err := client.CreateCluster(context.Background(), createReq)
+	createRes, err := client.CreateCluster(createCtx, createReq)
 	require.NoError(t, err)
 
-	clusterID := createRes.Msg.GetClusterId()
+	clusterID := createRes.GetClusterId()
 
-	deleteReq := connect.NewRequest(organizationv1.DeleteClusterRequest_builder{
+	deleteReq := organizationv1.DeleteClusterRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
-	deleteReq.Header().Set("Authorization", "Bearer "+token)
-	deleteReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	deleteCtx, deleteCallInfo := connect.NewClientContext(context.Background())
+	deleteCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	deleteCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.DeleteCluster(context.Background(), deleteReq)
+	_, err = client.DeleteCluster(deleteCtx, deleteReq)
 	require.NoError(t, err)
 
 	// Soft delete: the cluster must no longer be visible via GetCluster.
-	getReq := connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	getReq := organizationv1.GetClusterRequest_builder{
 		ClusterId: clusterID,
-	}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = client.GetCluster(context.Background(), getReq)
+	_, err = client.GetCluster(getCtx, getReq)
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
 
 	// Deleting the same cluster again must return not found.
-	_, err = client.DeleteCluster(context.Background(), deleteReq)
+	_, err = client.DeleteCluster(deleteCtx, deleteReq)
 	require.ErrorAs(t, err, &connectErr)
 	assert.Equal(t, connect.CodeNotFound, connectErr.Code())
 }

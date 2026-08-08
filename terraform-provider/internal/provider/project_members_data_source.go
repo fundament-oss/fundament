@@ -127,9 +127,9 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 		"project_id": state.ProjectID.ValueString(),
 	})
 
-	rpcReq := connect.NewRequest(organizationv1.ListProjectMembersRequest_builder{
+	rpcReq := organizationv1.ListProjectMembersRequest_builder{
 		ProjectId: state.ProjectID.ValueString(),
-	}.Build())
+	}.Build()
 
 	rpcResp, err := d.client.ProjectService.ListProjectMembers(ctx, rpcReq)
 	if err != nil {
@@ -154,7 +154,7 @@ func (d *ProjectMembersDataSource) Read(ctx context.Context, req datasource.Read
 	}
 
 	// Map response to state
-	members := rpcResp.Msg.GetMembers()
+	members := rpcResp.GetMembers()
 	state.Members = make([]ProjectMemberModel, len(members))
 	for i, member := range members {
 		var created types.String

@@ -15,8 +15,8 @@ import (
 
 func (s *Server) UpdateMemberPermission(
 	ctx context.Context,
-	req *connect.Request[organizationv1.UpdateMemberPermissionRequest],
-) (*connect.Response[organizationv1.UpdateMemberPermissionResponse], error) {
+	req *organizationv1.UpdateMemberPermissionRequest,
+) (*organizationv1.UpdateMemberPermissionResponse, error) {
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
@@ -27,7 +27,7 @@ func (s *Server) UpdateMemberPermission(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user_id missing from context"))
 	}
 
-	memberID := uuid.MustParse(req.Msg.GetId())
+	memberID := uuid.MustParse(req.GetId())
 	if err := s.checkPermission(ctx, authz.CanEditMember(), authz.Organization(organizationID)); err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (s *Server) UpdateMemberPermission(
 
 	rowsAffected, err := s.queries.MemberUpdatePermission(ctx, db.MemberUpdatePermissionParams{
 		ID:         memberID,
-		Permission: dbconst.OrganizationsUserPermission(req.Msg.GetPermission()),
+		Permission: dbconst.OrganizationsUserPermission(req.GetPermission()),
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update member permission: %w", err))
@@ -55,8 +55,8 @@ func (s *Server) UpdateMemberPermission(
 
 	s.logger.InfoContext(ctx, "organization member permission updated",
 		"member_id", memberID,
-		"permission", req.Msg.GetPermission(),
+		"permission", req.GetPermission(),
 	)
 
-	return connect.NewResponse(organizationv1.UpdateMemberPermissionResponse_builder{}.Build()), nil
+	return organizationv1.UpdateMemberPermissionResponse_builder{}.Build(), nil
 }

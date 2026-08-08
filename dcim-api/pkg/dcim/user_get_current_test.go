@@ -26,12 +26,12 @@ func TestUserService_GetCurrentUser_Found(t *testing.T) {
 	createUser(t, env, "Someone Else", "someone@example.com", "00000000-0000-0000-0000-0000000000ff")
 	userID := createUser(t, env, "Current User", "current@example.com", env.subject)
 
-	resp, err := client.GetCurrentUser(context.Background(), connect.NewRequest(
+	resp, err := client.GetCurrentUser(context.Background(),
 		&dcimv1.GetCurrentUserRequest{},
-	))
+	)
 	require.NoError(t, err)
 
-	user := resp.Msg.GetUser()
+	user := resp.GetUser()
 	require.NotNil(t, user)
 
 	assert.Equal(t, userID, user.GetId())
@@ -53,12 +53,12 @@ func TestUserService_GetCurrentUser_NullEmail(t *testing.T) {
 		`UPDATE dcim.users SET email = NULL WHERE id = $1`, userID)
 	require.NoError(t, err)
 
-	resp, err := client.GetCurrentUser(context.Background(), connect.NewRequest(
+	resp, err := client.GetCurrentUser(context.Background(),
 		&dcimv1.GetCurrentUserRequest{},
-	))
+	)
 	require.NoError(t, err)
 
-	user := resp.Msg.GetUser()
+	user := resp.GetUser()
 	require.NotNil(t, user)
 
 	assert.Equal(t, userID, user.GetId())
@@ -73,9 +73,9 @@ func TestUserService_GetCurrentUser_NotFound(t *testing.T) {
 	env := newTestAPI(t)
 	client := dcimv1connect.NewUserServiceClient(env.client(), env.server.URL)
 
-	_, err := client.GetCurrentUser(context.Background(), connect.NewRequest(
+	_, err := client.GetCurrentUser(context.Background(),
 		&dcimv1.GetCurrentUserRequest{},
-	))
+	)
 	requireCode(t, err, connect.CodeNotFound)
 }
 
@@ -93,8 +93,8 @@ func TestUserService_GetCurrentUser_SoftDeleted(t *testing.T) {
 		`UPDATE dcim.users SET deleted = now() WHERE id = $1`, userID)
 	require.NoError(t, err)
 
-	_, err = client.GetCurrentUser(context.Background(), connect.NewRequest(
+	_, err = client.GetCurrentUser(context.Background(),
 		&dcimv1.GetCurrentUserRequest{},
-	))
+	)
 	requireCode(t, err, connect.CodeNotFound)
 }

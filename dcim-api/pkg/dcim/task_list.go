@@ -14,24 +14,24 @@ import (
 
 func (s *Server) ListTasks(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListTasksRequest],
-) (*connect.Response[dcimv1.ListTasksResponse], error) {
+	req *dcimv1.ListTasksRequest,
+) (*dcimv1.ListTasksResponse, error) {
 	params := db.TaskListParams{}
 
-	if req.Msg.HasStatus() {
-		params.Status = pgtype.Text{String: taskStatusFromProto(req.Msg.GetStatus()), Valid: true}
+	if req.HasStatus() {
+		params.Status = pgtype.Text{String: taskStatusFromProto(req.GetStatus()), Valid: true}
 	}
 
-	if req.Msg.HasPriority() {
-		params.Priority = pgtype.Text{String: taskPriorityFromProto(req.Msg.GetPriority()), Valid: true}
+	if req.HasPriority() {
+		params.Priority = pgtype.Text{String: taskPriorityFromProto(req.GetPriority()), Valid: true}
 	}
 
-	if req.Msg.HasCategory() {
-		params.Category = pgtype.Text{String: taskCategoryFromProto(req.Msg.GetCategory()), Valid: true}
+	if req.HasCategory() {
+		params.Category = pgtype.Text{String: taskCategoryFromProto(req.GetCategory()), Valid: true}
 	}
 
-	if req.Msg.HasAssigneeId() {
-		assigneeID, err := uuid.Parse(req.Msg.GetAssigneeId())
+	if req.HasAssigneeId() {
+		assigneeID, err := uuid.Parse(req.GetAssigneeId())
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid assignee_id: %w", err))
 		}
@@ -49,7 +49,7 @@ func (s *Server) ListTasks(
 		tasks = append(tasks, taskFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListTasksResponse_builder{
+	return dcimv1.ListTasksResponse_builder{
 		Tasks: tasks,
-	}.Build()), nil
+	}.Build(), nil
 }

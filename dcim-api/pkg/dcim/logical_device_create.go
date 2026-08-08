@@ -18,24 +18,24 @@ import (
 
 func (s *Server) CreateDevice(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateDeviceRequest],
-) (*connect.Response[dcimv1.CreateDeviceResponse], error) {
+	req *dcimv1.CreateDeviceRequest,
+) (*dcimv1.CreateDeviceResponse, error) {
 	params := db.LogicalDeviceCreateParams{
-		LogicalDesignID: uuid.MustParse(req.Msg.GetDesignId()),
-		Label:           req.Msg.GetLabel(),
-		Role:            logicalDeviceRoleToDB(req.Msg.GetRole()),
+		LogicalDesignID: uuid.MustParse(req.GetDesignId()),
+		Label:           req.GetLabel(),
+		Role:            logicalDeviceRoleToDB(req.GetRole()),
 	}
 
-	if req.Msg.HasDeviceCatalogId() {
-		params.DeviceCatalogID = pgtype.UUID{Bytes: uuid.MustParse(req.Msg.GetDeviceCatalogId()), Valid: true}
+	if req.HasDeviceCatalogId() {
+		params.DeviceCatalogID = pgtype.UUID{Bytes: uuid.MustParse(req.GetDeviceCatalogId()), Valid: true}
 	}
 
-	if req.Msg.HasRequirements() {
-		params.Requirements = pgtype.Text{String: req.Msg.GetRequirements(), Valid: true}
+	if req.HasRequirements() {
+		params.Requirements = pgtype.Text{String: req.GetRequirements(), Valid: true}
 	}
 
-	if req.Msg.HasNotes() {
-		params.Notes = pgtype.Text{String: req.Msg.GetNotes(), Valid: true}
+	if req.HasNotes() {
+		params.Notes = pgtype.Text{String: req.GetNotes(), Valid: true}
 	}
 
 	id, err := s.queries.LogicalDeviceCreate(ctx, params)
@@ -58,7 +58,7 @@ func (s *Server) CreateDevice(
 
 	s.logger.InfoContext(ctx, "device created", "device_id", id)
 
-	return connect.NewResponse(dcimv1.CreateDeviceResponse_builder{
+	return dcimv1.CreateDeviceResponse_builder{
 		DeviceId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

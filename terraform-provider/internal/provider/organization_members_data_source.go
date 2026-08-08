@@ -116,7 +116,7 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 
 	tflog.Debug(ctx, "Fetching organization members")
 
-	rpcReq := connect.NewRequest(organizationv1.ListMembersRequest_builder{}.Build())
+	rpcReq := organizationv1.ListMembersRequest_builder{}.Build()
 
 	rpcResp, err := d.client.MemberService.ListMembers(ctx, rpcReq)
 	if err != nil {
@@ -135,8 +135,8 @@ func (d *OrganizationMembersDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
-	state.Members = make([]OrganizationMemberModel, len(rpcResp.Msg.GetMembers()))
-	for i, member := range rpcResp.Msg.GetMembers() {
+	state.Members = make([]OrganizationMemberModel, len(rpcResp.GetMembers()))
+	for i, member := range rpcResp.GetMembers() {
 		m := OrganizationMemberModel{
 			ID:         types.StringValue(member.GetId()),
 			UserID:     types.StringValue(member.GetUserId()),

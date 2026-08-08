@@ -48,11 +48,11 @@ const (
 
 // RackServiceClient is a client for the dcim.v1.RackService service.
 type RackServiceClient interface {
-	ListRacks(context.Context, *connect.Request[v1.ListRacksRequest]) (*connect.Response[v1.ListRacksResponse], error)
-	GetRack(context.Context, *connect.Request[v1.GetRackRequest]) (*connect.Response[v1.GetRackResponse], error)
-	CreateRack(context.Context, *connect.Request[v1.CreateRackRequest]) (*connect.Response[v1.CreateRackResponse], error)
-	UpdateRack(context.Context, *connect.Request[v1.UpdateRackRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteRack(context.Context, *connect.Request[v1.DeleteRackRequest]) (*connect.Response[emptypb.Empty], error)
+	ListRacks(context.Context, *v1.ListRacksRequest) (*v1.ListRacksResponse, error)
+	GetRack(context.Context, *v1.GetRackRequest) (*v1.GetRackResponse, error)
+	CreateRack(context.Context, *v1.CreateRackRequest) (*v1.CreateRackResponse, error)
+	UpdateRack(context.Context, *v1.UpdateRackRequest) (*emptypb.Empty, error)
+	DeleteRack(context.Context, *v1.DeleteRackRequest) (*emptypb.Empty, error)
 }
 
 // NewRackServiceClient constructs a client for the dcim.v1.RackService service. By default, it uses
@@ -109,37 +109,57 @@ type rackServiceClient struct {
 }
 
 // ListRacks calls dcim.v1.RackService.ListRacks.
-func (c *rackServiceClient) ListRacks(ctx context.Context, req *connect.Request[v1.ListRacksRequest]) (*connect.Response[v1.ListRacksResponse], error) {
-	return c.listRacks.CallUnary(ctx, req)
+func (c *rackServiceClient) ListRacks(ctx context.Context, req *v1.ListRacksRequest) (*v1.ListRacksResponse, error) {
+	response, err := c.listRacks.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetRack calls dcim.v1.RackService.GetRack.
-func (c *rackServiceClient) GetRack(ctx context.Context, req *connect.Request[v1.GetRackRequest]) (*connect.Response[v1.GetRackResponse], error) {
-	return c.getRack.CallUnary(ctx, req)
+func (c *rackServiceClient) GetRack(ctx context.Context, req *v1.GetRackRequest) (*v1.GetRackResponse, error) {
+	response, err := c.getRack.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // CreateRack calls dcim.v1.RackService.CreateRack.
-func (c *rackServiceClient) CreateRack(ctx context.Context, req *connect.Request[v1.CreateRackRequest]) (*connect.Response[v1.CreateRackResponse], error) {
-	return c.createRack.CallUnary(ctx, req)
+func (c *rackServiceClient) CreateRack(ctx context.Context, req *v1.CreateRackRequest) (*v1.CreateRackResponse, error) {
+	response, err := c.createRack.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateRack calls dcim.v1.RackService.UpdateRack.
-func (c *rackServiceClient) UpdateRack(ctx context.Context, req *connect.Request[v1.UpdateRackRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.updateRack.CallUnary(ctx, req)
+func (c *rackServiceClient) UpdateRack(ctx context.Context, req *v1.UpdateRackRequest) (*emptypb.Empty, error) {
+	response, err := c.updateRack.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteRack calls dcim.v1.RackService.DeleteRack.
-func (c *rackServiceClient) DeleteRack(ctx context.Context, req *connect.Request[v1.DeleteRackRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.deleteRack.CallUnary(ctx, req)
+func (c *rackServiceClient) DeleteRack(ctx context.Context, req *v1.DeleteRackRequest) (*emptypb.Empty, error) {
+	response, err := c.deleteRack.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // RackServiceHandler is an implementation of the dcim.v1.RackService service.
 type RackServiceHandler interface {
-	ListRacks(context.Context, *connect.Request[v1.ListRacksRequest]) (*connect.Response[v1.ListRacksResponse], error)
-	GetRack(context.Context, *connect.Request[v1.GetRackRequest]) (*connect.Response[v1.GetRackResponse], error)
-	CreateRack(context.Context, *connect.Request[v1.CreateRackRequest]) (*connect.Response[v1.CreateRackResponse], error)
-	UpdateRack(context.Context, *connect.Request[v1.UpdateRackRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteRack(context.Context, *connect.Request[v1.DeleteRackRequest]) (*connect.Response[emptypb.Empty], error)
+	ListRacks(context.Context, *v1.ListRacksRequest) (*v1.ListRacksResponse, error)
+	GetRack(context.Context, *v1.GetRackRequest) (*v1.GetRackResponse, error)
+	CreateRack(context.Context, *v1.CreateRackRequest) (*v1.CreateRackResponse, error)
+	UpdateRack(context.Context, *v1.UpdateRackRequest) (*emptypb.Empty, error)
+	DeleteRack(context.Context, *v1.DeleteRackRequest) (*emptypb.Empty, error)
 }
 
 // NewRackServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -149,31 +169,31 @@ type RackServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewRackServiceHandler(svc RackServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	rackServiceMethods := v1.File_v1_rack_proto.Services().ByName("RackService").Methods()
-	rackServiceListRacksHandler := connect.NewUnaryHandler(
+	rackServiceListRacksHandler := connect.NewUnaryHandlerSimple(
 		RackServiceListRacksProcedure,
 		svc.ListRacks,
 		connect.WithSchema(rackServiceMethods.ByName("ListRacks")),
 		connect.WithHandlerOptions(opts...),
 	)
-	rackServiceGetRackHandler := connect.NewUnaryHandler(
+	rackServiceGetRackHandler := connect.NewUnaryHandlerSimple(
 		RackServiceGetRackProcedure,
 		svc.GetRack,
 		connect.WithSchema(rackServiceMethods.ByName("GetRack")),
 		connect.WithHandlerOptions(opts...),
 	)
-	rackServiceCreateRackHandler := connect.NewUnaryHandler(
+	rackServiceCreateRackHandler := connect.NewUnaryHandlerSimple(
 		RackServiceCreateRackProcedure,
 		svc.CreateRack,
 		connect.WithSchema(rackServiceMethods.ByName("CreateRack")),
 		connect.WithHandlerOptions(opts...),
 	)
-	rackServiceUpdateRackHandler := connect.NewUnaryHandler(
+	rackServiceUpdateRackHandler := connect.NewUnaryHandlerSimple(
 		RackServiceUpdateRackProcedure,
 		svc.UpdateRack,
 		connect.WithSchema(rackServiceMethods.ByName("UpdateRack")),
 		connect.WithHandlerOptions(opts...),
 	)
-	rackServiceDeleteRackHandler := connect.NewUnaryHandler(
+	rackServiceDeleteRackHandler := connect.NewUnaryHandlerSimple(
 		RackServiceDeleteRackProcedure,
 		svc.DeleteRack,
 		connect.WithSchema(rackServiceMethods.ByName("DeleteRack")),
@@ -200,22 +220,22 @@ func NewRackServiceHandler(svc RackServiceHandler, opts ...connect.HandlerOption
 // UnimplementedRackServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedRackServiceHandler struct{}
 
-func (UnimplementedRackServiceHandler) ListRacks(context.Context, *connect.Request[v1.ListRacksRequest]) (*connect.Response[v1.ListRacksResponse], error) {
+func (UnimplementedRackServiceHandler) ListRacks(context.Context, *v1.ListRacksRequest) (*v1.ListRacksResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackService.ListRacks is not implemented"))
 }
 
-func (UnimplementedRackServiceHandler) GetRack(context.Context, *connect.Request[v1.GetRackRequest]) (*connect.Response[v1.GetRackResponse], error) {
+func (UnimplementedRackServiceHandler) GetRack(context.Context, *v1.GetRackRequest) (*v1.GetRackResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackService.GetRack is not implemented"))
 }
 
-func (UnimplementedRackServiceHandler) CreateRack(context.Context, *connect.Request[v1.CreateRackRequest]) (*connect.Response[v1.CreateRackResponse], error) {
+func (UnimplementedRackServiceHandler) CreateRack(context.Context, *v1.CreateRackRequest) (*v1.CreateRackResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackService.CreateRack is not implemented"))
 }
 
-func (UnimplementedRackServiceHandler) UpdateRack(context.Context, *connect.Request[v1.UpdateRackRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedRackServiceHandler) UpdateRack(context.Context, *v1.UpdateRackRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackService.UpdateRack is not implemented"))
 }
 
-func (UnimplementedRackServiceHandler) DeleteRack(context.Context, *connect.Request[v1.DeleteRackRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedRackServiceHandler) DeleteRack(context.Context, *v1.DeleteRackRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RackService.DeleteRack is not implemented"))
 }

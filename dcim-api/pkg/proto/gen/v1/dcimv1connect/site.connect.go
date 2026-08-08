@@ -48,11 +48,11 @@ const (
 
 // SiteServiceClient is a client for the dcim.v1.SiteService service.
 type SiteServiceClient interface {
-	ListSites(context.Context, *connect.Request[v1.ListSitesRequest]) (*connect.Response[v1.ListSitesResponse], error)
-	GetSite(context.Context, *connect.Request[v1.GetSiteRequest]) (*connect.Response[v1.GetSiteResponse], error)
-	CreateSite(context.Context, *connect.Request[v1.CreateSiteRequest]) (*connect.Response[v1.CreateSiteResponse], error)
-	UpdateSite(context.Context, *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteSite(context.Context, *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[emptypb.Empty], error)
+	ListSites(context.Context, *v1.ListSitesRequest) (*v1.ListSitesResponse, error)
+	GetSite(context.Context, *v1.GetSiteRequest) (*v1.GetSiteResponse, error)
+	CreateSite(context.Context, *v1.CreateSiteRequest) (*v1.CreateSiteResponse, error)
+	UpdateSite(context.Context, *v1.UpdateSiteRequest) (*emptypb.Empty, error)
+	DeleteSite(context.Context, *v1.DeleteSiteRequest) (*emptypb.Empty, error)
 }
 
 // NewSiteServiceClient constructs a client for the dcim.v1.SiteService service. By default, it uses
@@ -109,37 +109,57 @@ type siteServiceClient struct {
 }
 
 // ListSites calls dcim.v1.SiteService.ListSites.
-func (c *siteServiceClient) ListSites(ctx context.Context, req *connect.Request[v1.ListSitesRequest]) (*connect.Response[v1.ListSitesResponse], error) {
-	return c.listSites.CallUnary(ctx, req)
+func (c *siteServiceClient) ListSites(ctx context.Context, req *v1.ListSitesRequest) (*v1.ListSitesResponse, error) {
+	response, err := c.listSites.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetSite calls dcim.v1.SiteService.GetSite.
-func (c *siteServiceClient) GetSite(ctx context.Context, req *connect.Request[v1.GetSiteRequest]) (*connect.Response[v1.GetSiteResponse], error) {
-	return c.getSite.CallUnary(ctx, req)
+func (c *siteServiceClient) GetSite(ctx context.Context, req *v1.GetSiteRequest) (*v1.GetSiteResponse, error) {
+	response, err := c.getSite.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // CreateSite calls dcim.v1.SiteService.CreateSite.
-func (c *siteServiceClient) CreateSite(ctx context.Context, req *connect.Request[v1.CreateSiteRequest]) (*connect.Response[v1.CreateSiteResponse], error) {
-	return c.createSite.CallUnary(ctx, req)
+func (c *siteServiceClient) CreateSite(ctx context.Context, req *v1.CreateSiteRequest) (*v1.CreateSiteResponse, error) {
+	response, err := c.createSite.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateSite calls dcim.v1.SiteService.UpdateSite.
-func (c *siteServiceClient) UpdateSite(ctx context.Context, req *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.updateSite.CallUnary(ctx, req)
+func (c *siteServiceClient) UpdateSite(ctx context.Context, req *v1.UpdateSiteRequest) (*emptypb.Empty, error) {
+	response, err := c.updateSite.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteSite calls dcim.v1.SiteService.DeleteSite.
-func (c *siteServiceClient) DeleteSite(ctx context.Context, req *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.deleteSite.CallUnary(ctx, req)
+func (c *siteServiceClient) DeleteSite(ctx context.Context, req *v1.DeleteSiteRequest) (*emptypb.Empty, error) {
+	response, err := c.deleteSite.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // SiteServiceHandler is an implementation of the dcim.v1.SiteService service.
 type SiteServiceHandler interface {
-	ListSites(context.Context, *connect.Request[v1.ListSitesRequest]) (*connect.Response[v1.ListSitesResponse], error)
-	GetSite(context.Context, *connect.Request[v1.GetSiteRequest]) (*connect.Response[v1.GetSiteResponse], error)
-	CreateSite(context.Context, *connect.Request[v1.CreateSiteRequest]) (*connect.Response[v1.CreateSiteResponse], error)
-	UpdateSite(context.Context, *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteSite(context.Context, *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[emptypb.Empty], error)
+	ListSites(context.Context, *v1.ListSitesRequest) (*v1.ListSitesResponse, error)
+	GetSite(context.Context, *v1.GetSiteRequest) (*v1.GetSiteResponse, error)
+	CreateSite(context.Context, *v1.CreateSiteRequest) (*v1.CreateSiteResponse, error)
+	UpdateSite(context.Context, *v1.UpdateSiteRequest) (*emptypb.Empty, error)
+	DeleteSite(context.Context, *v1.DeleteSiteRequest) (*emptypb.Empty, error)
 }
 
 // NewSiteServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -149,31 +169,31 @@ type SiteServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewSiteServiceHandler(svc SiteServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	siteServiceMethods := v1.File_v1_site_proto.Services().ByName("SiteService").Methods()
-	siteServiceListSitesHandler := connect.NewUnaryHandler(
+	siteServiceListSitesHandler := connect.NewUnaryHandlerSimple(
 		SiteServiceListSitesProcedure,
 		svc.ListSites,
 		connect.WithSchema(siteServiceMethods.ByName("ListSites")),
 		connect.WithHandlerOptions(opts...),
 	)
-	siteServiceGetSiteHandler := connect.NewUnaryHandler(
+	siteServiceGetSiteHandler := connect.NewUnaryHandlerSimple(
 		SiteServiceGetSiteProcedure,
 		svc.GetSite,
 		connect.WithSchema(siteServiceMethods.ByName("GetSite")),
 		connect.WithHandlerOptions(opts...),
 	)
-	siteServiceCreateSiteHandler := connect.NewUnaryHandler(
+	siteServiceCreateSiteHandler := connect.NewUnaryHandlerSimple(
 		SiteServiceCreateSiteProcedure,
 		svc.CreateSite,
 		connect.WithSchema(siteServiceMethods.ByName("CreateSite")),
 		connect.WithHandlerOptions(opts...),
 	)
-	siteServiceUpdateSiteHandler := connect.NewUnaryHandler(
+	siteServiceUpdateSiteHandler := connect.NewUnaryHandlerSimple(
 		SiteServiceUpdateSiteProcedure,
 		svc.UpdateSite,
 		connect.WithSchema(siteServiceMethods.ByName("UpdateSite")),
 		connect.WithHandlerOptions(opts...),
 	)
-	siteServiceDeleteSiteHandler := connect.NewUnaryHandler(
+	siteServiceDeleteSiteHandler := connect.NewUnaryHandlerSimple(
 		SiteServiceDeleteSiteProcedure,
 		svc.DeleteSite,
 		connect.WithSchema(siteServiceMethods.ByName("DeleteSite")),
@@ -200,22 +220,22 @@ func NewSiteServiceHandler(svc SiteServiceHandler, opts ...connect.HandlerOption
 // UnimplementedSiteServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedSiteServiceHandler struct{}
 
-func (UnimplementedSiteServiceHandler) ListSites(context.Context, *connect.Request[v1.ListSitesRequest]) (*connect.Response[v1.ListSitesResponse], error) {
+func (UnimplementedSiteServiceHandler) ListSites(context.Context, *v1.ListSitesRequest) (*v1.ListSitesResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.SiteService.ListSites is not implemented"))
 }
 
-func (UnimplementedSiteServiceHandler) GetSite(context.Context, *connect.Request[v1.GetSiteRequest]) (*connect.Response[v1.GetSiteResponse], error) {
+func (UnimplementedSiteServiceHandler) GetSite(context.Context, *v1.GetSiteRequest) (*v1.GetSiteResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.SiteService.GetSite is not implemented"))
 }
 
-func (UnimplementedSiteServiceHandler) CreateSite(context.Context, *connect.Request[v1.CreateSiteRequest]) (*connect.Response[v1.CreateSiteResponse], error) {
+func (UnimplementedSiteServiceHandler) CreateSite(context.Context, *v1.CreateSiteRequest) (*v1.CreateSiteResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.SiteService.CreateSite is not implemented"))
 }
 
-func (UnimplementedSiteServiceHandler) UpdateSite(context.Context, *connect.Request[v1.UpdateSiteRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedSiteServiceHandler) UpdateSite(context.Context, *v1.UpdateSiteRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.SiteService.UpdateSite is not implemented"))
 }
 
-func (UnimplementedSiteServiceHandler) DeleteSite(context.Context, *connect.Request[v1.DeleteSiteRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedSiteServiceHandler) DeleteSite(context.Context, *v1.DeleteSiteRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.SiteService.DeleteSite is not implemented"))
 }

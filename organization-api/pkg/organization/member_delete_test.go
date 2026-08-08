@@ -19,9 +19,9 @@ func Test_MemberDelete_Unauthenticated(t *testing.T) {
 
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.DeleteMember(context.Background(), connect.NewRequest(organizationv1.DeleteMemberRequest_builder{
+	_, err := client.DeleteMember(context.Background(), organizationv1.DeleteMemberRequest_builder{
 		Id: "arbitrary",
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -54,15 +54,16 @@ func Test_MemberDelete(t *testing.T) {
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
 	// List members to discover the target member's membership ID
-	theReq := connect.NewRequest(&organizationv1.ListMembersRequest{})
-	theReq.Header().Set("Authorization", "Bearer "+token)
-	theReq.Header().Set("Fun-Organization", orgID.String())
+	theReq := &organizationv1.ListMembersRequest{}
+	theCtx, theCallInfo := connect.NewClientContext(context.Background())
+	theCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	theCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	listRes, err := client.ListMembers(context.Background(), theReq)
+	listRes, err := client.ListMembers(theCtx, theReq)
 	require.NoError(t, err)
 
 	var targetMemberID string
-	for _, m := range listRes.Msg.GetMembers() {
+	for _, m := range listRes.GetMembers() {
 		if m.GetUserId() == targetUserID.String() {
 			targetMemberID = m.GetId()
 			break
@@ -93,11 +94,12 @@ func Test_MemberDelete(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			req := connect.NewRequest(tc.Request)
-			req.Header().Set("Authorization", "Bearer "+token)
-			req.Header().Set("Fun-Organization", orgID.String())
+			req := tc.Request
+			ctx, callInfo := connect.NewClientContext(context.Background())
+			callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+			callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-			res, err := client.DeleteMember(context.Background(), req)
+			res, err := client.DeleteMember(ctx, req)
 
 			if tc.WantErr {
 				var connectErr *connect.Error
@@ -107,15 +109,16 @@ func Test_MemberDelete(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, "", res.Msg.String())
+			assert.Equal(t, "", res.String())
 
-			getReq := connect.NewRequest(organizationv1.GetMemberRequest_builder{
+			getReq := organizationv1.GetMemberRequest_builder{
 				UserId: new(targetUserID.String()),
-			}.Build())
-			getReq.Header().Set("Authorization", "Bearer "+token)
-			getReq.Header().Set("Fun-Organization", orgID.String())
+			}.Build()
+			getCtx, getCallInfo := connect.NewClientContext(context.Background())
+			getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+			getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-			_, err = client.GetMember(context.Background(), getReq)
+			_, err = client.GetMember(getCtx, getReq)
 
 			var connectErr *connect.Error
 			require.ErrorAs(t, err, &connectErr)

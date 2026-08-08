@@ -14,16 +14,16 @@ import (
 
 func (s *Server) ListRackRows(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListRackRowsRequest],
-) (*connect.Response[dcimv1.ListRackRowsResponse], error) {
+	req *dcimv1.ListRackRowsRequest,
+) (*dcimv1.ListRackRowsResponse, error) {
 	params := db.RackRowListParams{}
 
-	if req.Msg.HasRoomId() {
-		roomID := uuid.MustParse(req.Msg.GetRoomId())
+	if req.HasRoomId() {
+		roomID := uuid.MustParse(req.GetRoomId())
 		params.RoomID = pgtype.UUID{Bytes: roomID, Valid: true}
 	}
-	if req.Msg.HasSiteId() {
-		siteID := uuid.MustParse(req.Msg.GetSiteId())
+	if req.HasSiteId() {
+		siteID := uuid.MustParse(req.GetSiteId())
 		params.SiteID = pgtype.UUID{Bytes: siteID, Valid: true}
 	}
 
@@ -37,7 +37,7 @@ func (s *Server) ListRackRows(
 		rackRows = append(rackRows, rackRowFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListRackRowsResponse_builder{
+	return dcimv1.ListRackRowsResponse_builder{
 		RackRows: rackRows,
-	}.Build()), nil
+	}.Build(), nil
 }

@@ -32,12 +32,12 @@ func (c *OrgMemberListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Members().ListMembers(context.Background(), connect.NewRequest(organizationv1.ListMembersRequest_builder{}.Build()))
+	resp, err := apiClient.Members().ListMembers(context.Background(), organizationv1.ListMembersRequest_builder{}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to list members: %w", err)
 	}
 
-	members := resp.Msg.GetMembers()
+	members := resp.GetMembers()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(members)
@@ -80,17 +80,17 @@ func (c *OrgMemberInviteCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Invites().InviteMember(context.Background(), connect.NewRequest(organizationv1.InviteMemberRequest_builder{
+	resp, err := apiClient.Invites().InviteMember(context.Background(), organizationv1.InviteMemberRequest_builder{
 		Email:      c.Email,
 		Permission: c.Permission,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to invite member: %w", err)
 	}
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(map[string]string{
-			"invitation_id": resp.Msg.GetInvitationId(),
+			"invitation_id": resp.GetInvitationId(),
 		})
 	}
 
@@ -116,10 +116,10 @@ func (c *OrgMemberUpdatePermissionCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	_, err = apiClient.Members().UpdateMemberPermission(context.Background(), connect.NewRequest(organizationv1.UpdateMemberPermissionRequest_builder{
+	_, err = apiClient.Members().UpdateMemberPermission(context.Background(), organizationv1.UpdateMemberPermissionRequest_builder{
 		Id:         member.GetId(),
 		Permission: c.Permission,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to update member permission: %w", err)
 	}
@@ -166,9 +166,9 @@ func (c *OrgMemberRemoveCmd) Run(ctx *Context) error {
 		}
 	}
 
-	_, err = apiClient.Members().DeleteMember(context.Background(), connect.NewRequest(organizationv1.DeleteMemberRequest_builder{
+	_, err = apiClient.Members().DeleteMember(context.Background(), organizationv1.DeleteMemberRequest_builder{
 		Id: member.GetId(),
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to remove member: %w", err)
 	}
@@ -185,9 +185,9 @@ func (c *OrgMemberRemoveCmd) Run(ctx *Context) error {
 
 // findOrgMember resolves an org member from a user ID.
 func findOrgMember(apiClient *client.Client, userID string) (*organizationv1.Member, error) {
-	resp, err := apiClient.Members().GetMember(context.Background(), connect.NewRequest(organizationv1.GetMemberRequest_builder{
+	resp, err := apiClient.Members().GetMember(context.Background(), organizationv1.GetMemberRequest_builder{
 		UserId: proto.String(userID),
-	}.Build()))
+	}.Build())
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeNotFound {
 			return nil, fmt.Errorf("user %s is not a member of this organization", userID)
@@ -195,5 +195,5 @@ func findOrgMember(apiClient *client.Client, userID string) (*organizationv1.Mem
 		return nil, fmt.Errorf("failed to get member: %w", err)
 	}
 
-	return resp.Msg.GetMember(), nil
+	return resp.GetMember(), nil
 }

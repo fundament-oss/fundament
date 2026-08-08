@@ -18,12 +18,12 @@ import (
 
 func (s *Server) AddProjectMember(
 	ctx context.Context,
-	req *connect.Request[organizationv1.AddProjectMemberRequest],
-) (*connect.Response[organizationv1.AddProjectMemberResponse], error) {
-	projectID := uuid.MustParse(req.Msg.GetProjectId())
-	userID := uuid.MustParse(req.Msg.GetUserId())
+	req *organizationv1.AddProjectMemberRequest,
+) (*organizationv1.AddProjectMemberResponse, error) {
+	projectID := uuid.MustParse(req.GetProjectId())
+	userID := uuid.MustParse(req.GetUserId())
 
-	role := projectMemberRoleToDB(req.Msg.GetRole())
+	role := projectMemberRoleToDB(req.GetRole())
 	if role == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid role"))
 	}
@@ -55,7 +55,7 @@ func (s *Server) AddProjectMember(
 		"role", role,
 	)
 
-	return connect.NewResponse(organizationv1.AddProjectMemberResponse_builder{
+	return organizationv1.AddProjectMemberResponse_builder{
 		MemberId: memberID.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

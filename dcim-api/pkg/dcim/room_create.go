@@ -17,15 +17,15 @@ import (
 
 func (s *Server) CreateRoom(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateRoomRequest],
-) (*connect.Response[dcimv1.CreateRoomResponse], error) {
+	req *dcimv1.CreateRoomRequest,
+) (*dcimv1.CreateRoomResponse, error) {
 	params := db.RoomCreateParams{
-		SiteID: uuid.MustParse(req.Msg.GetSiteId()),
-		Name:   req.Msg.GetName(),
+		SiteID: uuid.MustParse(req.GetSiteId()),
+		Name:   req.GetName(),
 	}
 
-	if req.Msg.HasFloor() {
-		params.Floor = pgtype.Text{String: req.Msg.GetFloor(), Valid: true}
+	if req.HasFloor() {
+		params.Floor = pgtype.Text{String: req.GetFloor(), Valid: true}
 	}
 
 	id, err := s.queries.RoomCreate(ctx, params)
@@ -44,7 +44,7 @@ func (s *Server) CreateRoom(
 
 	s.logger.InfoContext(ctx, "room created", "room_id", id)
 
-	return connect.NewResponse(dcimv1.CreateRoomResponse_builder{
+	return dcimv1.CreateRoomResponse_builder{
 		RoomId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

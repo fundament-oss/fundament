@@ -14,12 +14,12 @@ import (
 
 func (s *Server) ListRooms(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListRoomsRequest],
-) (*connect.Response[dcimv1.ListRoomsResponse], error) {
+	req *dcimv1.ListRoomsRequest,
+) (*dcimv1.ListRoomsResponse, error) {
 	params := db.RoomListParams{}
 
-	if req.Msg.HasSiteId() {
-		siteID := uuid.MustParse(req.Msg.GetSiteId())
+	if req.HasSiteId() {
+		siteID := uuid.MustParse(req.GetSiteId())
 		params.SiteID = pgtype.UUID{Bytes: siteID, Valid: true}
 	}
 
@@ -33,7 +33,7 @@ func (s *Server) ListRooms(
 		rooms = append(rooms, roomFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListRoomsResponse_builder{
+	return dcimv1.ListRoomsResponse_builder{
 		Rooms: rooms,
-	}.Build()), nil
+	}.Build(), nil
 }

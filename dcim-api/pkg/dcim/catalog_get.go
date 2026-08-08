@@ -15,9 +15,9 @@ import (
 
 func (s *Server) GetCatalogEntry(
 	ctx context.Context,
-	req *connect.Request[dcimv1.GetCatalogEntryRequest],
-) (*connect.Response[dcimv1.GetCatalogEntryResponse], error) {
-	catalogID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.GetCatalogEntryRequest,
+) (*dcimv1.GetCatalogEntryResponse, error) {
+	catalogID := uuid.MustParse(req.GetId())
 
 	row, err := s.queries.DeviceCatalogGetByID(ctx, db.DeviceCatalogGetByIDParams{ID: catalogID})
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *Server) GetCatalogEntry(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get catalog entry: %w", err))
 	}
 
-	return connect.NewResponse(dcimv1.GetCatalogEntryResponse_builder{
+	return dcimv1.GetCatalogEntryResponse_builder{
 		Entry: catalogFromGetRow(&row),
-	}.Build()), nil
+	}.Build(), nil
 }

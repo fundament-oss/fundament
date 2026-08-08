@@ -12,10 +12,10 @@ import (
 
 func (s *Server) ListNotes(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListNotesRequest],
-) (*connect.Response[dcimv1.ListNotesResponse], error) {
-	entityID := uuid.MustParse(req.Msg.GetEntityId())
-	params, err := noteEntityToListParams(req.Msg.GetEntityType(), entityID)
+	req *dcimv1.ListNotesRequest,
+) (*dcimv1.ListNotesResponse, error) {
+	entityID := uuid.MustParse(req.GetEntityId())
+	params, err := noteEntityToListParams(req.GetEntityType(), entityID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -30,7 +30,7 @@ func (s *Server) ListNotes(
 		notes = append(notes, noteFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListNotesResponse_builder{
+	return dcimv1.ListNotesResponse_builder{
 		Notes: notes,
-	}.Build()), nil
+	}.Build(), nil
 }

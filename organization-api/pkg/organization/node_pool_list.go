@@ -16,9 +16,9 @@ import (
 
 func (s *Server) ListNodePools(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListNodePoolsRequest],
-) (*connect.Response[organizationv1.ListNodePoolsResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.ListNodePoolsRequest,
+) (*organizationv1.ListNodePoolsResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 
 	if err := s.checkPermission(ctx, authz.CanListNodePools(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
@@ -41,9 +41,9 @@ func (s *Server) ListNodePools(
 		result = append(result, nodePoolFromListRow(&nodePools[i]))
 	}
 
-	return connect.NewResponse(organizationv1.ListNodePoolsResponse_builder{
+	return organizationv1.ListNodePoolsResponse_builder{
 		NodePools: result,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func nodePoolFromListRow(row *db.TenantNodePool) *organizationv1.NodePool {

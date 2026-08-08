@@ -19,9 +19,9 @@ import (
 
 func (s *Server) CreateProject(
 	ctx context.Context,
-	req *connect.Request[organizationv1.CreateProjectRequest],
-) (*connect.Response[organizationv1.CreateProjectResponse], error) {
-	clusterID := uuid.MustParse(req.Msg.GetClusterId())
+	req *organizationv1.CreateProjectRequest,
+) (*organizationv1.CreateProjectResponse, error) {
+	clusterID := uuid.MustParse(req.GetClusterId())
 	if err := s.checkPermissionWithRetry(ctx, authz.CanCreateProject(), authz.Cluster(clusterID)); err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (s *Server) CreateProject(
 	s.logger.DebugContext(ctx, "creating project with member",
 		"cluster_id", clusterID,
 		"user_id", userID,
-		"name", req.Msg.GetName(),
+		"name", req.GetName(),
 	)
 
 	tx, err := s.db.Pool.Begin(ctx)
@@ -45,14 +45,14 @@ func (s *Server) CreateProject(
 
 	qtx := s.queries.WithTx(tx)
 
-	alias := req.Msg.GetName()
-	if req.Msg.HasAlias() {
-		alias = req.Msg.GetAlias()
+	alias := req.GetName()
+	if req.HasAlias() {
+		alias = req.GetAlias()
 	}
 
 	projectID, err := qtx.ProjectCreate(ctx, db.ProjectCreateParams{
 		ClusterID: clusterID,
-		Name:      req.Msg.GetName(),
+		Name:      req.GetName(),
 		Alias:     alias,
 	})
 	if err != nil {
@@ -81,10 +81,10 @@ func (s *Server) CreateProject(
 		"project_id", projectID,
 		"cluster_id", clusterID,
 		"user_id", userID,
-		"name", req.Msg.GetName(),
+		"name", req.GetName(),
 	)
 
-	return connect.NewResponse(organizationv1.CreateProjectResponse_builder{
+	return organizationv1.CreateProjectResponse_builder{
 		ProjectId: projectID.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

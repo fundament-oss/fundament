@@ -19,24 +19,24 @@ import (
 
 func (s *Server) UpdateDesign(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateDesignRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	designID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateDesignRequest,
+) (*emptypb.Empty, error) {
+	designID := uuid.MustParse(req.GetId())
 
 	params := db.LogicalDesignUpdateParams{
 		ID: designID,
 	}
 
-	if req.Msg.HasName() {
-		params.Name = pgtype.Text{String: req.Msg.GetName(), Valid: true}
+	if req.HasName() {
+		params.Name = pgtype.Text{String: req.GetName(), Valid: true}
 	}
 
-	if req.Msg.HasDescription() {
-		params.Description = pgtype.Text{String: req.Msg.GetDescription(), Valid: true}
+	if req.HasDescription() {
+		params.Description = pgtype.Text{String: req.GetDescription(), Valid: true}
 	}
 
-	if req.Msg.HasStatus() {
-		params.Status = pgtype.Text{String: logicalDesignStatusToDB(req.Msg.GetStatus()), Valid: true}
+	if req.HasStatus() {
+		params.Status = pgtype.Text{String: logicalDesignStatusToDB(req.GetStatus()), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.LogicalDesignUpdate(ctx, params)
@@ -59,5 +59,5 @@ func (s *Server) UpdateDesign(
 
 	s.logger.InfoContext(ctx, "design updated", "design_id", designID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

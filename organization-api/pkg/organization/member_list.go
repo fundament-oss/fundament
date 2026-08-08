@@ -14,8 +14,8 @@ import (
 
 func (s *Server) ListMembers(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListMembersRequest],
-) (*connect.Response[organizationv1.ListMembersResponse], error) {
+	req *organizationv1.ListMembersRequest,
+) (*organizationv1.ListMembersResponse, error) {
 	organizationID, ok := OrganizationIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("organization_id missing from context"))
@@ -35,9 +35,9 @@ func (s *Server) ListMembers(
 		result = append(result, memberFromListRow(&members[i]))
 	}
 
-	return connect.NewResponse(organizationv1.ListMembersResponse_builder{
+	return organizationv1.ListMembersResponse_builder{
 		Members: result,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func memberFromListRow(m *db.MemberListRow) *organizationv1.Member {

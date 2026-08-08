@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"connectrpc.com/connect"
-
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
 
@@ -27,12 +25,12 @@ func (c *ClusterListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Clusters().ListClusters(context.Background(), connect.NewRequest(organizationv1.ListClustersRequest_builder{}.Build()))
+	resp, err := apiClient.Clusters().ListClusters(context.Background(), organizationv1.ListClustersRequest_builder{}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to list clusters: %w", err)
 	}
 
-	clusters := resp.Msg.GetClusters()
+	clusters := resp.GetClusters()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(clusters)
@@ -68,14 +66,14 @@ func (c *ClusterGetCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Clusters().GetCluster(context.Background(), connect.NewRequest(organizationv1.GetClusterRequest_builder{
+	resp, err := apiClient.Clusters().GetCluster(context.Background(), organizationv1.GetClusterRequest_builder{
 		ClusterId: c.ClusterID,
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to get cluster: %w", err)
 	}
 
-	cluster := resp.Msg.GetCluster()
+	cluster := resp.GetCluster()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(cluster)

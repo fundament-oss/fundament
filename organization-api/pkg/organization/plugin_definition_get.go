@@ -15,10 +15,10 @@ import (
 
 func (s *Server) GetPluginDefinition(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetPluginDefinitionRequest],
-) (*connect.Response[organizationv1.GetPluginDefinitionResponse], error) {
-	name := req.Msg.GetPluginName()
-	version := req.Msg.GetPluginVersion()
+	req *organizationv1.GetPluginDefinitionRequest,
+) (*organizationv1.GetPluginDefinitionResponse, error) {
+	name := req.GetPluginName()
+	version := req.GetPluginVersion()
 	if name == "" || version == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("plugin_name and plugin_version are required"))
 	}
@@ -35,11 +35,11 @@ func (s *Server) GetPluginDefinition(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("parse stored manifest: %w", err))
 	}
-	return connect.NewResponse(organizationv1.GetPluginDefinitionResponse_builder{
+	return organizationv1.GetPluginDefinitionResponse_builder{
 		Manifest:   row.Manifest,
 		Hash:       row.Hash,
 		Definition: pluginDefinitionToProto(&parsed),
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func pluginDefinitionToProto(def *pluginruntime.PluginDefinition) *organizationv1.PluginDefinition {

@@ -14,16 +14,16 @@ import (
 
 func (s *Server) ListCatalog(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListCatalogRequest],
-) (*connect.Response[dcimv1.ListCatalogResponse], error) {
+	req *dcimv1.ListCatalogRequest,
+) (*dcimv1.ListCatalogResponse, error) {
 	params := db.DeviceCatalogListParams{}
 
-	if req.Msg.HasCategoryFilter() {
-		params.Category = pgtype.Text{String: assetCategoryToDB(req.Msg.GetCategoryFilter()), Valid: true}
+	if req.HasCategoryFilter() {
+		params.Category = pgtype.Text{String: assetCategoryToDB(req.GetCategoryFilter()), Valid: true}
 	}
 
-	if req.Msg.HasSearch() {
-		params.Search = pgtype.Text{String: req.Msg.GetSearch(), Valid: true}
+	if req.HasSearch() {
+		params.Search = pgtype.Text{String: req.GetSearch(), Valid: true}
 	}
 
 	rows, err := s.queries.DeviceCatalogList(ctx, params)
@@ -62,7 +62,7 @@ func (s *Server) ListCatalog(
 		entries = append(entries, summary.Build())
 	}
 
-	return connect.NewResponse(dcimv1.ListCatalogResponse_builder{
+	return dcimv1.ListCatalogResponse_builder{
 		Entries: entries,
-	}.Build()), nil
+	}.Build(), nil
 }

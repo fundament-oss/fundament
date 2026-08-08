@@ -17,9 +17,9 @@ func TestSiteService_CreateSite_InvalidInput(t *testing.T) {
 	env := newTestAPI(t)
 	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
-	_, err := client.CreateSite(context.Background(), connect.NewRequest(
+	_, err := client.CreateSite(context.Background(),
 		(&dcimv1.CreateSiteRequest_builder{Name: ""}).Build(),
-	))
+	)
 	requireCode(t, err, connect.CodeInvalidArgument)
 }
 
@@ -29,9 +29,9 @@ func TestSiteService_CreateSite(t *testing.T) {
 	env := newTestAPI(t)
 	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreateSite(context.Background(), connect.NewRequest(
+	resp, err := client.CreateSite(context.Background(),
 		(&dcimv1.CreateSiteRequest_builder{Name: "Site A"}).Build(),
-	))
+	)
 	require.NoError(t, err)
-	assert.NotEmpty(t, resp.Msg.GetSiteId())
+	assert.NotEmpty(t, resp.GetSiteId())
 }

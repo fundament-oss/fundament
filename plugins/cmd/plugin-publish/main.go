@@ -74,26 +74,26 @@ func injectImage(src []byte, image, pullPolicy string) ([]byte, error) {
 	return out, nil
 }
 
-// withAuth attaches the bearer token (FUNDAMENT_TOKEN) and organization context
-// to a Connect request. Every authenticated PluginService call needs these —
-// ListPlugins as much as PutPluginDefinition.
-func withAuth(req interface{ Header() http.Header }, orgID string) {
+// withAuth returns a context that attaches the bearer token (FUNDAMENT_TOKEN)
+// and organization context to the next Connect call. Every authenticated
+// PluginService call needs these — ListPlugins as much as PutPluginDefinition.
+// Call it once per request; the returned context carries call-specific state.
+func withAuth(ctx context.Context, orgID string) context.Context {
+	ctx, callInfo := connect.NewClientContext(ctx)
 	if tok := os.Getenv("FUNDAMENT_TOKEN"); tok != "" {
-		req.Header().Set("Authorization", "Bearer "+tok)
+		callInfo.RequestHeader().Set("Authorization", "Bearer "+tok)
 	}
-	req.Header().Set("Fun-Organization", orgID)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID)
+	return ctx
 }
 
 // resolvePluginID looks up the catalog plugin id by name via ListPlugins.
 func resolvePluginID(ctx context.Context, client organizationv1connect.PluginServiceClient, name, orgID string) (string, error) {
-	req := connect.NewRequest(organizationv1.ListPluginsRequest_builder{}.Build())
-	withAuth(req, orgID)
-
-	resp, err := client.ListPlugins(ctx, req)
+	resp, err := client.ListPlugins(withAuth(ctx, orgID), organizationv1.ListPluginsRequest_builder{}.Build())
 	if err != nil {
 		return "", fmt.Errorf("list plugins: %w", err)
 	}
-	for _, p := range resp.Msg.GetPlugins() {
+	for _, p := range resp.GetPlugins() {
 		if p.GetName() == name {
 			return p.GetId(), nil
 		}
@@ -157,21 +157,17 @@ func main() {
 		}
 	}
 
-	req := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	resp, err := client.PutPluginDefinition(withAuth(ctx, orgID), organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID,
 		PluginVersion: def.Metadata.Version,
 		Manifest:      published,
 		Replace:       replace,
 	}.Build())
-
-	withAuth(req, orgID)
-
-	resp, err := client.PutPluginDefinition(ctx, req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "publish failed: %v\n", err)
 		os.Exit(1)
 	}
 
 	fmt.Printf("published plugin=%s version=%s hash=%s id=%s definition_id=%s\n",
-		def.Metadata.Name, resp.Msg.GetPluginVersion(), resp.Msg.GetHash(), resp.Msg.GetPluginId(), resp.Msg.GetId())
+		def.Metadata.Name, resp.GetPluginVersion(), resp.GetHash(), resp.GetPluginId(), resp.GetId())
 }

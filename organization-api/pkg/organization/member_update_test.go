@@ -19,10 +19,10 @@ func Test_Member_Update_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.UpdateMemberPermission(context.Background(), connect.NewRequest(organizationv1.UpdateMemberPermissionRequest_builder{
+	_, err := client.UpdateMemberPermission(context.Background(), organizationv1.UpdateMemberPermissionRequest_builder{
 		Id:         uuid.New().String(),
 		Permission: "viewer",
-	}.Build()))
+	}.Build())
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -54,15 +54,16 @@ func Test_Member_Update(t *testing.T) {
 
 	client := organizationv1connect.NewMemberServiceClient(env.server.Client(), env.server.URL)
 
-	listReq := connect.NewRequest(organizationv1.ListMembersRequest_builder{}.Build())
-	listReq.Header().Set("Authorization", "Bearer "+token)
-	listReq.Header().Set("Fun-Organization", orgID.String())
+	listReq := organizationv1.ListMembersRequest_builder{}.Build()
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	listRes, err := client.ListMembers(context.Background(), listReq)
+	listRes, err := client.ListMembers(listCtx, listReq)
 	require.NoError(t, err)
 
 	var callerMemberID, targetMemberID string
-	for _, m := range listRes.Msg.GetMembers() {
+	for _, m := range listRes.GetMembers() {
 		switch m.GetUserId() {
 		case callerUserID.String():
 			callerMemberID = m.GetId()
@@ -101,14 +102,15 @@ func Test_Member_Update(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			req := connect.NewRequest(organizationv1.UpdateMemberPermissionRequest_builder{
+			req := organizationv1.UpdateMemberPermissionRequest_builder{
 				Id:         tc.id,
 				Permission: tc.permission,
-			}.Build())
-			req.Header().Set("Authorization", "Bearer "+token)
-			req.Header().Set("Fun-Organization", orgID.String())
+			}.Build()
+			ctx, callInfo := connect.NewClientContext(context.Background())
+			callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+			callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-			_, err := client.UpdateMemberPermission(context.Background(), req)
+			_, err := client.UpdateMemberPermission(ctx, req)
 
 			if tc.wantErr {
 				var connectErr *connect.Error
@@ -119,15 +121,16 @@ func Test_Member_Update(t *testing.T) {
 
 			require.NoError(t, err)
 
-			getReq := connect.NewRequest(organizationv1.GetMemberRequest_builder{
+			getReq := organizationv1.GetMemberRequest_builder{
 				Id: proto.String(tc.id),
-			}.Build())
-			getReq.Header().Set("Authorization", "Bearer "+token)
-			getReq.Header().Set("Fun-Organization", orgID.String())
+			}.Build()
+			getCtx, getCallInfo := connect.NewClientContext(context.Background())
+			getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+			getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-			getRes, err := client.GetMember(context.Background(), getReq)
+			getRes, err := client.GetMember(getCtx, getReq)
 			require.NoError(t, err)
-			assert.Equal(t, tc.permission, getRes.Msg.GetMember().GetPermission())
+			assert.Equal(t, tc.permission, getRes.GetMember().GetPermission())
 		})
 	}
 }

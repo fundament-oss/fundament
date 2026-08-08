@@ -168,14 +168,14 @@ func createSite(t *testing.T, env *testEnv, name string) string {
 
 	client := dcimv1connect.NewSiteServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreateSite(context.Background(), connect.NewRequest(
+	resp, err := client.CreateSite(context.Background(),
 		(&dcimv1.CreateSiteRequest_builder{Name: name}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetSiteId())
+	require.NotEmpty(t, resp.GetSiteId())
 
-	return resp.Msg.GetSiteId()
+	return resp.GetSiteId()
 }
 
 func createRoom(t *testing.T, env *testEnv, siteID, name string) string {
@@ -183,14 +183,14 @@ func createRoom(t *testing.T, env *testEnv, siteID, name string) string {
 
 	client := dcimv1connect.NewRoomServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreateRoom(context.Background(), connect.NewRequest(
+	resp, err := client.CreateRoom(context.Background(),
 		(&dcimv1.CreateRoomRequest_builder{SiteId: siteID, Name: name}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetRoomId())
+	require.NotEmpty(t, resp.GetRoomId())
 
-	return resp.Msg.GetRoomId()
+	return resp.GetRoomId()
 }
 
 func createRackRow(t *testing.T, env *testEnv, roomID, name string) string {
@@ -198,14 +198,14 @@ func createRackRow(t *testing.T, env *testEnv, roomID, name string) string {
 
 	client := dcimv1connect.NewRackRowServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreateRackRow(context.Background(), connect.NewRequest(
+	resp, err := client.CreateRackRow(context.Background(),
 		(&dcimv1.CreateRackRowRequest_builder{RoomId: roomID, Name: name}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetRackRowId())
+	require.NotEmpty(t, resp.GetRackRowId())
 
-	return resp.Msg.GetRackRowId()
+	return resp.GetRackRowId()
 }
 
 // createRackRowFixture bootstraps a site → room → rack row chain and returns
@@ -225,18 +225,18 @@ func createRack(t *testing.T, env *testEnv, rowID, name string, totalUnits int32
 
 	client := dcimv1connect.NewRackServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreateRack(context.Background(), connect.NewRequest(
+	resp, err := client.CreateRack(context.Background(),
 		(&dcimv1.CreateRackRequest_builder{
 			RowId:      rowID,
 			Name:       name,
 			TotalUnits: totalUnits,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetRackId())
+	require.NotEmpty(t, resp.GetRackId())
 
-	return resp.Msg.GetRackId()
+	return resp.GetRackId()
 }
 
 func createCatalogEntry(t *testing.T, env *testEnv, model string) string {
@@ -244,19 +244,19 @@ func createCatalogEntry(t *testing.T, env *testEnv, model string) string {
 
 	client := dcimv1connect.NewCatalogServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreateCatalogEntry(context.Background(), connect.NewRequest(
+	resp, err := client.CreateCatalogEntry(context.Background(),
 		(&dcimv1.CreateCatalogEntryRequest_builder{
 			Manufacturer: "Test Mfr",
 			Model:        model,
 			PartNumber:   model + "-PN",
 			Category:     dcimv1.AssetCategory_ASSET_CATEGORY_SERVER,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetCatalogEntryId())
+	require.NotEmpty(t, resp.GetCatalogEntryId())
 
-	return resp.Msg.GetCatalogEntryId()
+	return resp.GetCatalogEntryId()
 }
 
 func createAsset(t *testing.T, env *testEnv, catalogID string) string {
@@ -264,17 +264,17 @@ func createAsset(t *testing.T, env *testEnv, catalogID string) string {
 
 	client := dcimv1connect.NewAssetServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreateAsset(context.Background(), connect.NewRequest(
+	resp, err := client.CreateAsset(context.Background(),
 		(&dcimv1.CreateAssetRequest_builder{
 			DeviceCatalogId: catalogID,
 			Status:          dcimv1.AssetStatus_ASSET_STATUS_DEPLOYED,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetAssetId())
+	require.NotEmpty(t, resp.GetAssetId())
 
-	return resp.Msg.GetAssetId()
+	return resp.GetAssetId()
 }
 
 func placeAssetInRack(t *testing.T, env *testEnv, assetID, rackID string, unit int32) string {
@@ -282,7 +282,7 @@ func placeAssetInRack(t *testing.T, env *testEnv, assetID, rackID string, unit i
 
 	client := dcimv1connect.NewPlacementServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreatePlacement(context.Background(), connect.NewRequest(
+	resp, err := client.CreatePlacement(context.Background(),
 		(&dcimv1.CreatePlacementRequest_builder{
 			AssetId: assetID,
 			Rack: (&dcimv1.RackLocation_builder{
@@ -291,12 +291,12 @@ func placeAssetInRack(t *testing.T, env *testEnv, assetID, rackID string, unit i
 				RackSlotType:  dcimv1.RackSlotType_RACK_SLOT_TYPE_UNIT,
 			}).Build(),
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetPlacementId())
+	require.NotEmpty(t, resp.GetPlacementId())
 
-	return resp.Msg.GetPlacementId()
+	return resp.GetPlacementId()
 }
 
 // createUser seeds a directory entry. There is no CreateUser RPC — the DCIM API
@@ -325,12 +325,12 @@ func createTask(t *testing.T, env *testEnv, req *dcimv1.CreateTaskRequest) strin
 
 	client := dcimv1connect.NewTaskServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreateTask(context.Background(), connect.NewRequest(req))
+	resp, err := client.CreateTask(context.Background(), req)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetTaskId())
+	require.NotEmpty(t, resp.GetTaskId())
 
-	return resp.Msg.GetTaskId()
+	return resp.GetTaskId()
 }
 
 func placeAssetInSubComponent(t *testing.T, env *testEnv, assetID, parentPlacementID, parentPortDefinitionID string) string {
@@ -338,7 +338,7 @@ func placeAssetInSubComponent(t *testing.T, env *testEnv, assetID, parentPlaceme
 
 	client := dcimv1connect.NewPlacementServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.CreatePlacement(context.Background(), connect.NewRequest(
+	resp, err := client.CreatePlacement(context.Background(),
 		(&dcimv1.CreatePlacementRequest_builder{
 			AssetId: assetID,
 			SubComponent: (&dcimv1.SubComponentLocation_builder{
@@ -346,10 +346,10 @@ func placeAssetInSubComponent(t *testing.T, env *testEnv, assetID, parentPlaceme
 				ParentPortDefinitionId: parentPortDefinitionID,
 			}).Build(),
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, resp.Msg.GetPlacementId())
+	require.NotEmpty(t, resp.GetPlacementId())
 
-	return resp.Msg.GetPlacementId()
+	return resp.GetPlacementId()
 }

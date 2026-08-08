@@ -14,25 +14,25 @@ import (
 
 func (s *Server) ListAssets(
 	ctx context.Context,
-	req *connect.Request[dcimv1.ListAssetsRequest],
-) (*connect.Response[dcimv1.ListAssetsResponse], error) {
+	req *dcimv1.ListAssetsRequest,
+) (*dcimv1.ListAssetsResponse, error) {
 	params := db.AssetListParams{}
 
-	if req.Msg.GetIncludeDeleted() {
+	if req.GetIncludeDeleted() {
 		params.IncludeDeleted = pgtype.Bool{Bool: true, Valid: true}
 	}
 
-	if req.Msg.HasStatusFilter() {
-		params.Status = pgtype.Text{String: assetStatusToDB(req.Msg.GetStatusFilter()), Valid: true}
+	if req.HasStatusFilter() {
+		params.Status = pgtype.Text{String: assetStatusToDB(req.GetStatusFilter()), Valid: true}
 	}
 
-	if req.Msg.HasDeviceCatalogId() {
-		catalogID := uuid.MustParse(req.Msg.GetDeviceCatalogId())
+	if req.HasDeviceCatalogId() {
+		catalogID := uuid.MustParse(req.GetDeviceCatalogId())
 		params.DeviceCatalogID = pgtype.UUID{Bytes: catalogID, Valid: true}
 	}
 
-	if req.Msg.HasSearch() {
-		params.Search = pgtype.Text{String: req.Msg.GetSearch(), Valid: true}
+	if req.HasSearch() {
+		params.Search = pgtype.Text{String: req.GetSearch(), Valid: true}
 	}
 
 	rows, err := s.queries.AssetList(ctx, params)
@@ -45,7 +45,7 @@ func (s *Server) ListAssets(
 		assets = append(assets, assetFromListRow(&row))
 	}
 
-	return connect.NewResponse(dcimv1.ListAssetsResponse_builder{
+	return dcimv1.ListAssetsResponse_builder{
 		Assets: assets,
-	}.Build()), nil
+	}.Build(), nil
 }

@@ -82,10 +82,10 @@ func TestGetUserInfo_RejectsPluginToken(t *testing.T) {
 	require.NoError(t, err)
 
 	client := authnv1connect.NewAuthnServiceClient(ts.Client(), ts.URL)
-	req := connect.NewRequest(&authnv1.GetUserInfoRequest{})
-	req.Header().Set("Authorization", "Bearer "+tokenStr)
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+tokenStr)
 
-	_, err = client.GetUserInfo(context.Background(), req)
+	_, err = client.GetUserInfo(ctx, &authnv1.GetUserInfoRequest{})
 	require.Error(t, err)
 	require.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
 }

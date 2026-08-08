@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
 	dcimv1 "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1"
 	"github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v1/dcimv1connect"
 	"github.com/stretchr/testify/assert"
@@ -43,7 +42,7 @@ func TestPhysicalConnectionService_CableAttributesRoundTrip(t *testing.T) {
 
 	aPlacement, aPort, bPlacement, bPort := physicalConnectionFixture(t, env)
 
-	createResp, err := client.CreatePhysicalConnection(context.Background(), connect.NewRequest(
+	createResp, err := client.CreatePhysicalConnection(context.Background(),
 		(&dcimv1.CreatePhysicalConnectionRequest_builder{
 			SourcePlacementId:      aPlacement,
 			SourcePortDefinitionId: aPort,
@@ -54,18 +53,18 @@ func TestPhysicalConnectionService_CableAttributesRoundTrip(t *testing.T) {
 			Color:                  dcimv1.CableColor_CABLE_COLOR_BLUE,
 			Label:                  "srv01-data",
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
-	require.NotEmpty(t, createResp.Msg.GetConnectionId())
+	require.NotEmpty(t, createResp.GetConnectionId())
 
-	connID := createResp.Msg.GetConnectionId()
+	connID := createResp.GetConnectionId()
 
-	getResp, err := client.GetPhysicalConnection(context.Background(), connect.NewRequest(
+	getResp, err := client.GetPhysicalConnection(context.Background(),
 		(&dcimv1.GetPhysicalConnectionRequest_builder{Id: connID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	conn := getResp.Msg.GetConnection()
+	conn := getResp.GetConnection()
 	require.NotNil(t, conn)
 	assert.Equal(t, dcimv1.CableType_CABLE_TYPE_CAT6A, conn.GetCableType())
 	assert.Equal(t, dcimv1.CableStatus_CABLE_STATUS_CONNECTED, conn.GetStatus())
@@ -78,7 +77,7 @@ func TestPhysicalConnectionService_CableAttributesRoundTrip(t *testing.T) {
 	updatedStatus := dcimv1.CableStatus_CABLE_STATUS_PLANNED
 	updatedColor := dcimv1.CableColor_CABLE_COLOR_TEAL
 	updatedLabel := "spine-uplink"
-	_, err = client.UpdatePhysicalConnection(context.Background(), connect.NewRequest(
+	_, err = client.UpdatePhysicalConnection(context.Background(),
 		(&dcimv1.UpdatePhysicalConnectionRequest_builder{
 			Id:        connID,
 			CableType: &updatedType,
@@ -86,15 +85,15 @@ func TestPhysicalConnectionService_CableAttributesRoundTrip(t *testing.T) {
 			Color:     &updatedColor,
 			Label:     &updatedLabel,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	getResp, err = client.GetPhysicalConnection(context.Background(), connect.NewRequest(
+	getResp, err = client.GetPhysicalConnection(context.Background(),
 		(&dcimv1.GetPhysicalConnectionRequest_builder{Id: connID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	conn = getResp.Msg.GetConnection()
+	conn = getResp.GetConnection()
 	require.NotNil(t, conn)
 	assert.Equal(t, dcimv1.CableType_CABLE_TYPE_DAC, conn.GetCableType())
 	assert.Equal(t, dcimv1.CableStatus_CABLE_STATUS_PLANNED, conn.GetStatus())
@@ -114,24 +113,24 @@ func TestPhysicalConnectionService_CableAttributesOptional(t *testing.T) {
 
 	aPlacement, aPort, bPlacement, bPort := physicalConnectionFixture(t, env)
 
-	createResp, err := client.CreatePhysicalConnection(context.Background(), connect.NewRequest(
+	createResp, err := client.CreatePhysicalConnection(context.Background(),
 		(&dcimv1.CreatePhysicalConnectionRequest_builder{
 			SourcePlacementId:      aPlacement,
 			SourcePortDefinitionId: aPort,
 			TargetPlacementId:      bPlacement,
 			TargetPortDefinitionId: bPort,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	connID := createResp.Msg.GetConnectionId()
+	connID := createResp.GetConnectionId()
 
-	getResp, err := client.GetPhysicalConnection(context.Background(), connect.NewRequest(
+	getResp, err := client.GetPhysicalConnection(context.Background(),
 		(&dcimv1.GetPhysicalConnectionRequest_builder{Id: connID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	conn := getResp.Msg.GetConnection()
+	conn := getResp.GetConnection()
 	require.NotNil(t, conn)
 	assert.Equal(t, dcimv1.CableType_CABLE_TYPE_UNSPECIFIED, conn.GetCableType())
 	assert.Equal(t, dcimv1.CableStatus_CABLE_STATUS_UNSPECIFIED, conn.GetStatus())
@@ -140,20 +139,20 @@ func TestPhysicalConnectionService_CableAttributesOptional(t *testing.T) {
 
 	// Update only the status; the other attributes must stay unset.
 	updatedStatus := dcimv1.CableStatus_CABLE_STATUS_DECOMMISSIONED
-	_, err = client.UpdatePhysicalConnection(context.Background(), connect.NewRequest(
+	_, err = client.UpdatePhysicalConnection(context.Background(),
 		(&dcimv1.UpdatePhysicalConnectionRequest_builder{
 			Id:     connID,
 			Status: &updatedStatus,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	getResp, err = client.GetPhysicalConnection(context.Background(), connect.NewRequest(
+	getResp, err = client.GetPhysicalConnection(context.Background(),
 		(&dcimv1.GetPhysicalConnectionRequest_builder{Id: connID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	conn = getResp.Msg.GetConnection()
+	conn = getResp.GetConnection()
 	require.NotNil(t, conn)
 	assert.Equal(t, dcimv1.CableStatus_CABLE_STATUS_DECOMMISSIONED, conn.GetStatus())
 	assert.Equal(t, dcimv1.CableType_CABLE_TYPE_UNSPECIFIED, conn.GetCableType())
@@ -171,7 +170,7 @@ func TestPhysicalConnectionService_CableAttributesClear(t *testing.T) {
 
 	aPlacement, aPort, bPlacement, bPort := physicalConnectionFixture(t, env)
 
-	createResp, err := client.CreatePhysicalConnection(context.Background(), connect.NewRequest(
+	createResp, err := client.CreatePhysicalConnection(context.Background(),
 		(&dcimv1.CreatePhysicalConnectionRequest_builder{
 			SourcePlacementId:      aPlacement,
 			SourcePortDefinitionId: aPort,
@@ -182,10 +181,10 @@ func TestPhysicalConnectionService_CableAttributesClear(t *testing.T) {
 			Color:                  dcimv1.CableColor_CABLE_COLOR_RED,
 			Label:                  "to-clear",
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	connID := createResp.Msg.GetConnectionId()
+	connID := createResp.GetConnectionId()
 
 	// Explicitly set every attribute to its empty sentinel: this must null the
 	// columns rather than be ignored.
@@ -193,7 +192,7 @@ func TestPhysicalConnectionService_CableAttributesClear(t *testing.T) {
 	clearStatus := dcimv1.CableStatus_CABLE_STATUS_UNSPECIFIED
 	clearColor := dcimv1.CableColor_CABLE_COLOR_UNSPECIFIED
 	clearLabel := ""
-	_, err = client.UpdatePhysicalConnection(context.Background(), connect.NewRequest(
+	_, err = client.UpdatePhysicalConnection(context.Background(),
 		(&dcimv1.UpdatePhysicalConnectionRequest_builder{
 			Id:        connID,
 			CableType: &clearType,
@@ -201,15 +200,15 @@ func TestPhysicalConnectionService_CableAttributesClear(t *testing.T) {
 			Color:     &clearColor,
 			Label:     &clearLabel,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	getResp, err := client.GetPhysicalConnection(context.Background(), connect.NewRequest(
+	getResp, err := client.GetPhysicalConnection(context.Background(),
 		(&dcimv1.GetPhysicalConnectionRequest_builder{Id: connID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	conn := getResp.Msg.GetConnection()
+	conn := getResp.GetConnection()
 	require.NotNil(t, conn)
 	assert.Equal(t, dcimv1.CableType_CABLE_TYPE_UNSPECIFIED, conn.GetCableType())
 	assert.Equal(t, dcimv1.CableStatus_CABLE_STATUS_UNSPECIFIED, conn.GetStatus())
@@ -238,36 +237,36 @@ func TestPhysicalConnectionService_ListConnectionsBySite(t *testing.T) {
 	aPlacement := placeAssetInRack(t, env, createAsset(t, env, catalogID), rackID, 1)
 	bPlacement := placeAssetInRack(t, env, createAsset(t, env, catalogID), rackID, 2)
 
-	createResp, err := client.CreatePhysicalConnection(context.Background(), connect.NewRequest(
+	createResp, err := client.CreatePhysicalConnection(context.Background(),
 		(&dcimv1.CreatePhysicalConnectionRequest_builder{
 			SourcePlacementId:      aPlacement,
 			SourcePortDefinitionId: aPort,
 			TargetPlacementId:      bPlacement,
 			TargetPortDefinitionId: bPort,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
-	wantConnID := createResp.Msg.GetConnectionId()
+	wantConnID := createResp.GetConnectionId()
 
 	// A second site with its own connection that must not appear in the result.
 	otherPlacementA, otherPortA, otherPlacementB, otherPortB := physicalConnectionFixture(t, env)
-	_, err = client.CreatePhysicalConnection(context.Background(), connect.NewRequest(
+	_, err = client.CreatePhysicalConnection(context.Background(),
 		(&dcimv1.CreatePhysicalConnectionRequest_builder{
 			SourcePlacementId:      otherPlacementA,
 			SourcePortDefinitionId: otherPortA,
 			TargetPlacementId:      otherPlacementB,
 			TargetPortDefinitionId: otherPortB,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	resp, err := client.ListConnectionsBySite(context.Background(), connect.NewRequest(
+	resp, err := client.ListConnectionsBySite(context.Background(),
 		(&dcimv1.ListConnectionsBySiteRequest_builder{SiteId: siteID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	got := make([]string, 0, len(resp.Msg.GetConnections()))
-	for _, c := range resp.Msg.GetConnections() {
+	got := make([]string, 0, len(resp.GetConnections()))
+	for _, c := range resp.GetConnections() {
 		got = append(got, c.GetId())
 	}
 	assert.Equal(t, []string{wantConnID}, got)

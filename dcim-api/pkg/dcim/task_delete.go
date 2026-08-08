@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteTask(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteTaskRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	taskID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteTaskRequest,
+) (*emptypb.Empty, error) {
+	taskID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.TaskDelete(ctx, db.TaskDeleteParams{ID: taskID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteTask(
 
 	s.logger.InfoContext(ctx, "task deleted", "task_id", taskID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

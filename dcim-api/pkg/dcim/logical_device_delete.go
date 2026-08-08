@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeleteDevice(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeleteDeviceRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	deviceID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeleteDeviceRequest,
+) (*emptypb.Empty, error) {
+	deviceID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.LogicalDeviceDelete(ctx, db.LogicalDeviceDeleteParams{ID: deviceID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeleteDevice(
 
 	s.logger.InfoContext(ctx, "device deleted", "device_id", deviceID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

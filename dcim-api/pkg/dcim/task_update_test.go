@@ -44,12 +44,12 @@ func getTask(t *testing.T, env *testEnv, taskID string) *dcimv1.Task {
 
 	client := dcimv1connect.NewTaskServiceClient(env.client(), env.server.URL)
 
-	resp, err := client.GetTask(context.Background(), connect.NewRequest(
+	resp, err := client.GetTask(context.Background(),
 		(&dcimv1.GetTaskRequest_builder{Id: taskID}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	task := resp.Msg.GetTask()
+	task := resp.GetTask()
 	require.NotNil(t, task)
 
 	return task
@@ -73,7 +73,7 @@ func TestTaskService_UpdateTask_HappyFlow(t *testing.T) {
 	newLocation := "Room B"
 	newDueDate := dueDate.Add(48 * time.Hour)
 
-	_, err := client.UpdateTask(context.Background(), connect.NewRequest(
+	_, err := client.UpdateTask(context.Background(),
 		(&dcimv1.UpdateTaskRequest_builder{
 			Id:          taskID,
 			Title:       &newTitle,
@@ -85,7 +85,7 @@ func TestTaskService_UpdateTask_HappyFlow(t *testing.T) {
 			DueDate:     timestamppb.New(newDueDate),
 			Location:    &newLocation,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	task := getTask(t, env, taskID)
@@ -114,12 +114,12 @@ func TestTaskService_UpdateTask_UnsetFieldsAreKept(t *testing.T) {
 
 	// Patch only the title; everything else must survive untouched.
 	newTitle := "Only The Title Changed"
-	_, err := client.UpdateTask(context.Background(), connect.NewRequest(
+	_, err := client.UpdateTask(context.Background(),
 		(&dcimv1.UpdateTaskRequest_builder{
 			Id:    taskID,
 			Title: &newTitle,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	task := getTask(t, env, taskID)
@@ -149,7 +149,7 @@ func TestTaskService_UpdateTask_ClearsNullableFields(t *testing.T) {
 	emptyAssignee := ""
 	emptyLocation := ""
 	emptyDescription := ""
-	_, err := client.UpdateTask(context.Background(), connect.NewRequest(
+	_, err := client.UpdateTask(context.Background(),
 		(&dcimv1.UpdateTaskRequest_builder{
 			Id:          taskID,
 			Description: &emptyDescription,
@@ -157,7 +157,7 @@ func TestTaskService_UpdateTask_ClearsNullableFields(t *testing.T) {
 			DueDate:     timestamppb.New(time.Unix(0, 0).UTC()),
 			Location:    &emptyLocation,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	task := getTask(t, env, taskID)
@@ -186,12 +186,12 @@ func TestTaskService_UpdateTask_ClearedDescriptionIsNull(t *testing.T) {
 	taskID := createTaskFixture(t, env, "Task Clearing Description", assigneeID)
 
 	emptyDescription := ""
-	_, err := client.UpdateTask(context.Background(), connect.NewRequest(
+	_, err := client.UpdateTask(context.Background(),
 		(&dcimv1.UpdateTaskRequest_builder{
 			Id:          taskID,
 			Description: &emptyDescription,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	var description *string
@@ -215,13 +215,13 @@ func TestTaskService_UpdateTask_ClearIsIndependentPerField(t *testing.T) {
 	// Clear the assignee while overwriting the location in the same request.
 	emptyAssignee := ""
 	newLocation := "Room C"
-	_, err := client.UpdateTask(context.Background(), connect.NewRequest(
+	_, err := client.UpdateTask(context.Background(),
 		(&dcimv1.UpdateTaskRequest_builder{
 			Id:         taskID,
 			AssigneeId: &emptyAssignee,
 			Location:   &newLocation,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
 	task := getTask(t, env, taskID)
@@ -244,12 +244,12 @@ func TestTaskService_UpdateTask_UnknownAssignee(t *testing.T) {
 	assigneeID := createUser(t, env, "Real Assignee", "real@example.com", "")
 	taskID := createTaskFixture(t, env, "Task With Unknown Assignee", assigneeID)
 
-	_, err := client.UpdateTask(context.Background(), connect.NewRequest(
+	_, err := client.UpdateTask(context.Background(),
 		(&dcimv1.UpdateTaskRequest_builder{
 			Id:         taskID,
 			AssigneeId: ptr(validUUID),
 		}).Build(),
-	))
+	)
 	requireCode(t, err, connect.CodeNotFound)
 }
 
@@ -259,7 +259,7 @@ func TestTaskService_CreateTask_UnknownAssignee(t *testing.T) {
 	env := newTestAPI(t)
 	client := dcimv1connect.NewTaskServiceClient(env.client(), env.server.URL)
 
-	_, err := client.CreateTask(context.Background(), connect.NewRequest(
+	_, err := client.CreateTask(context.Background(),
 		(&dcimv1.CreateTaskRequest_builder{
 			Title:      "Task For A Ghost",
 			Status:     dcimv1.TaskStatus_TASK_STATUS_READY,
@@ -267,7 +267,7 @@ func TestTaskService_CreateTask_UnknownAssignee(t *testing.T) {
 			Category:   dcimv1.TaskCategory_TASK_CATEGORY_HARDWARE,
 			AssigneeId: ptr(validUUID),
 		}).Build(),
-	))
+	)
 	requireCode(t, err, connect.CodeNotFound)
 }
 
@@ -309,7 +309,7 @@ func TestTaskService_UpdateTask_Errors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := client.UpdateTask(context.Background(), connect.NewRequest(tc.req))
+			_, err := client.UpdateTask(context.Background(), tc.req)
 			requireCode(t, err, tc.want)
 		})
 	}

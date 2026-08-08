@@ -13,8 +13,8 @@ import (
 
 func (s *Server) ListPresets(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListPresetsRequest],
-) (*connect.Response[organizationv1.ListPresetsResponse], error) {
+	req *organizationv1.ListPresetsRequest,
+) (*organizationv1.ListPresetsResponse, error) {
 	presets, err := s.queries.PresetList(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list presets: %w", err))
@@ -32,9 +32,9 @@ func (s *Server) ListPresets(
 		result = append(result, presetFromRow(&presets[i], pluginsByPreset))
 	}
 
-	return connect.NewResponse(organizationv1.ListPresetsResponse_builder{
+	return organizationv1.ListPresetsResponse_builder{
 		Presets: result,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func buildPluginsByPreset(presetPlugins []db.AppstorePresetPlugin) map[uuid.UUID][]string {

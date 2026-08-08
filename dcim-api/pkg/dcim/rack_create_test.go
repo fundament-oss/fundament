@@ -19,16 +19,16 @@ func TestRackService_CreateRack_HappyFlow(t *testing.T) {
 
 	rowID := createRackRowFixture(t, env, "Rack Create")
 
-	resp, err := client.CreateRack(context.Background(), connect.NewRequest(
+	resp, err := client.CreateRack(context.Background(),
 		(&dcimv1.CreateRackRequest_builder{
 			RowId:      rowID,
 			Name:       "Rack A",
 			TotalUnits: 42,
 		}).Build(),
-	))
+	)
 	require.NoError(t, err)
 
-	assert.NotEmpty(t, resp.Msg.GetRackId())
+	assert.NotEmpty(t, resp.GetRackId())
 }
 
 func TestRackService_CreateRack_Errors(t *testing.T) {
@@ -54,13 +54,13 @@ func TestRackService_CreateRack_Errors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := client.CreateRack(context.Background(), connect.NewRequest(
+			_, err := client.CreateRack(context.Background(),
 				(&dcimv1.CreateRackRequest_builder{
 					RowId:      tc.rowID,
 					Name:       tc.rackName,
 					TotalUnits: tc.totalUnits,
 				}).Build(),
-			))
+			)
 			requireCode(t, err, tc.want)
 		})
 	}

@@ -48,11 +48,11 @@ const (
 
 // RoomServiceClient is a client for the dcim.v1.RoomService service.
 type RoomServiceClient interface {
-	ListRooms(context.Context, *connect.Request[v1.ListRoomsRequest]) (*connect.Response[v1.ListRoomsResponse], error)
-	GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error)
-	CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error)
-	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[emptypb.Empty], error)
+	ListRooms(context.Context, *v1.ListRoomsRequest) (*v1.ListRoomsResponse, error)
+	GetRoom(context.Context, *v1.GetRoomRequest) (*v1.GetRoomResponse, error)
+	CreateRoom(context.Context, *v1.CreateRoomRequest) (*v1.CreateRoomResponse, error)
+	UpdateRoom(context.Context, *v1.UpdateRoomRequest) (*emptypb.Empty, error)
+	DeleteRoom(context.Context, *v1.DeleteRoomRequest) (*emptypb.Empty, error)
 }
 
 // NewRoomServiceClient constructs a client for the dcim.v1.RoomService service. By default, it uses
@@ -109,37 +109,57 @@ type roomServiceClient struct {
 }
 
 // ListRooms calls dcim.v1.RoomService.ListRooms.
-func (c *roomServiceClient) ListRooms(ctx context.Context, req *connect.Request[v1.ListRoomsRequest]) (*connect.Response[v1.ListRoomsResponse], error) {
-	return c.listRooms.CallUnary(ctx, req)
+func (c *roomServiceClient) ListRooms(ctx context.Context, req *v1.ListRoomsRequest) (*v1.ListRoomsResponse, error) {
+	response, err := c.listRooms.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // GetRoom calls dcim.v1.RoomService.GetRoom.
-func (c *roomServiceClient) GetRoom(ctx context.Context, req *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error) {
-	return c.getRoom.CallUnary(ctx, req)
+func (c *roomServiceClient) GetRoom(ctx context.Context, req *v1.GetRoomRequest) (*v1.GetRoomResponse, error) {
+	response, err := c.getRoom.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // CreateRoom calls dcim.v1.RoomService.CreateRoom.
-func (c *roomServiceClient) CreateRoom(ctx context.Context, req *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error) {
-	return c.createRoom.CallUnary(ctx, req)
+func (c *roomServiceClient) CreateRoom(ctx context.Context, req *v1.CreateRoomRequest) (*v1.CreateRoomResponse, error) {
+	response, err := c.createRoom.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // UpdateRoom calls dcim.v1.RoomService.UpdateRoom.
-func (c *roomServiceClient) UpdateRoom(ctx context.Context, req *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.updateRoom.CallUnary(ctx, req)
+func (c *roomServiceClient) UpdateRoom(ctx context.Context, req *v1.UpdateRoomRequest) (*emptypb.Empty, error) {
+	response, err := c.updateRoom.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // DeleteRoom calls dcim.v1.RoomService.DeleteRoom.
-func (c *roomServiceClient) DeleteRoom(ctx context.Context, req *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.deleteRoom.CallUnary(ctx, req)
+func (c *roomServiceClient) DeleteRoom(ctx context.Context, req *v1.DeleteRoomRequest) (*emptypb.Empty, error) {
+	response, err := c.deleteRoom.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // RoomServiceHandler is an implementation of the dcim.v1.RoomService service.
 type RoomServiceHandler interface {
-	ListRooms(context.Context, *connect.Request[v1.ListRoomsRequest]) (*connect.Response[v1.ListRoomsResponse], error)
-	GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error)
-	CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error)
-	UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[emptypb.Empty], error)
-	DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[emptypb.Empty], error)
+	ListRooms(context.Context, *v1.ListRoomsRequest) (*v1.ListRoomsResponse, error)
+	GetRoom(context.Context, *v1.GetRoomRequest) (*v1.GetRoomResponse, error)
+	CreateRoom(context.Context, *v1.CreateRoomRequest) (*v1.CreateRoomResponse, error)
+	UpdateRoom(context.Context, *v1.UpdateRoomRequest) (*emptypb.Empty, error)
+	DeleteRoom(context.Context, *v1.DeleteRoomRequest) (*emptypb.Empty, error)
 }
 
 // NewRoomServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -149,31 +169,31 @@ type RoomServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewRoomServiceHandler(svc RoomServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	roomServiceMethods := v1.File_v1_room_proto.Services().ByName("RoomService").Methods()
-	roomServiceListRoomsHandler := connect.NewUnaryHandler(
+	roomServiceListRoomsHandler := connect.NewUnaryHandlerSimple(
 		RoomServiceListRoomsProcedure,
 		svc.ListRooms,
 		connect.WithSchema(roomServiceMethods.ByName("ListRooms")),
 		connect.WithHandlerOptions(opts...),
 	)
-	roomServiceGetRoomHandler := connect.NewUnaryHandler(
+	roomServiceGetRoomHandler := connect.NewUnaryHandlerSimple(
 		RoomServiceGetRoomProcedure,
 		svc.GetRoom,
 		connect.WithSchema(roomServiceMethods.ByName("GetRoom")),
 		connect.WithHandlerOptions(opts...),
 	)
-	roomServiceCreateRoomHandler := connect.NewUnaryHandler(
+	roomServiceCreateRoomHandler := connect.NewUnaryHandlerSimple(
 		RoomServiceCreateRoomProcedure,
 		svc.CreateRoom,
 		connect.WithSchema(roomServiceMethods.ByName("CreateRoom")),
 		connect.WithHandlerOptions(opts...),
 	)
-	roomServiceUpdateRoomHandler := connect.NewUnaryHandler(
+	roomServiceUpdateRoomHandler := connect.NewUnaryHandlerSimple(
 		RoomServiceUpdateRoomProcedure,
 		svc.UpdateRoom,
 		connect.WithSchema(roomServiceMethods.ByName("UpdateRoom")),
 		connect.WithHandlerOptions(opts...),
 	)
-	roomServiceDeleteRoomHandler := connect.NewUnaryHandler(
+	roomServiceDeleteRoomHandler := connect.NewUnaryHandlerSimple(
 		RoomServiceDeleteRoomProcedure,
 		svc.DeleteRoom,
 		connect.WithSchema(roomServiceMethods.ByName("DeleteRoom")),
@@ -200,22 +220,22 @@ func NewRoomServiceHandler(svc RoomServiceHandler, opts ...connect.HandlerOption
 // UnimplementedRoomServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedRoomServiceHandler struct{}
 
-func (UnimplementedRoomServiceHandler) ListRooms(context.Context, *connect.Request[v1.ListRoomsRequest]) (*connect.Response[v1.ListRoomsResponse], error) {
+func (UnimplementedRoomServiceHandler) ListRooms(context.Context, *v1.ListRoomsRequest) (*v1.ListRoomsResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RoomService.ListRooms is not implemented"))
 }
 
-func (UnimplementedRoomServiceHandler) GetRoom(context.Context, *connect.Request[v1.GetRoomRequest]) (*connect.Response[v1.GetRoomResponse], error) {
+func (UnimplementedRoomServiceHandler) GetRoom(context.Context, *v1.GetRoomRequest) (*v1.GetRoomResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RoomService.GetRoom is not implemented"))
 }
 
-func (UnimplementedRoomServiceHandler) CreateRoom(context.Context, *connect.Request[v1.CreateRoomRequest]) (*connect.Response[v1.CreateRoomResponse], error) {
+func (UnimplementedRoomServiceHandler) CreateRoom(context.Context, *v1.CreateRoomRequest) (*v1.CreateRoomResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RoomService.CreateRoom is not implemented"))
 }
 
-func (UnimplementedRoomServiceHandler) UpdateRoom(context.Context, *connect.Request[v1.UpdateRoomRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedRoomServiceHandler) UpdateRoom(context.Context, *v1.UpdateRoomRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RoomService.UpdateRoom is not implemented"))
 }
 
-func (UnimplementedRoomServiceHandler) DeleteRoom(context.Context, *connect.Request[v1.DeleteRoomRequest]) (*connect.Response[emptypb.Empty], error) {
+func (UnimplementedRoomServiceHandler) DeleteRoom(context.Context, *v1.DeleteRoomRequest) (*emptypb.Empty, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("dcim.v1.RoomService.DeleteRoom is not implemented"))
 }

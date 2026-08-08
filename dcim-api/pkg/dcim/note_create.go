@@ -13,10 +13,10 @@ import (
 
 func (s *Server) CreateNote(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateNoteRequest],
-) (*connect.Response[dcimv1.CreateNoteResponse], error) {
-	entityID := uuid.MustParse(req.Msg.GetEntityId())
-	params, err := noteEntityToCreateParams(req.Msg.GetEntityType(), entityID)
+	req *dcimv1.CreateNoteRequest,
+) (*dcimv1.CreateNoteResponse, error) {
+	entityID := uuid.MustParse(req.GetEntityId())
+	params, err := noteEntityToCreateParams(req.GetEntityType(), entityID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -30,7 +30,7 @@ func (s *Server) CreateNote(
 		return nil, err
 	}
 
-	params.Body = req.Msg.GetBody()
+	params.Body = req.GetBody()
 	if found {
 		params.CreatedByID = pgtype.UUID{Bytes: author.ID, Valid: true}
 	}
@@ -46,7 +46,7 @@ func (s *Server) CreateNote(
 
 	s.logger.InfoContext(ctx, "note created", "note_id", id)
 
-	return connect.NewResponse(dcimv1.CreateNoteResponse_builder{
+	return dcimv1.CreateNoteResponse_builder{
 		NoteId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

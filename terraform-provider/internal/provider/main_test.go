@@ -89,9 +89,9 @@ func TestMain(m *testing.M) {
 
 	ready := false
 	for i := range maxRetries {
-		exchangeReq := connect.NewRequest(&authnv1.ExchangeTokenRequest{})
-		exchangeReq.Header().Set("Authorization", "Bearer "+apiKeyToken)
-		exchangeResp, err := tokenClient.ExchangeToken(ctx, exchangeReq)
+		exchangeCtx, exchangeCallInfo := connect.NewClientContext(ctx)
+		exchangeCallInfo.RequestHeader().Set("Authorization", "Bearer "+apiKeyToken)
+		exchangeResp, err := tokenClient.ExchangeToken(exchangeCtx, &authnv1.ExchangeTokenRequest{})
 		if err != nil {
 			code := connect.CodeOf(err)
 			// For a pre-set key, unauthenticated/internal means the key is
@@ -107,10 +107,10 @@ func TestMain(m *testing.M) {
 			continue
 		}
 
-		listReq := connect.NewRequest(&organizationv1.ListClustersRequest{})
-		listReq.Header().Set("Authorization", "Bearer "+exchangeResp.Msg.GetAccessToken())
-		listReq.Header().Set(organization.OrganizationHeader, orgID)
-		_, err = clusterClient.ListClusters(ctx, listReq)
+		listCtx, listCallInfo := connect.NewClientContext(ctx)
+		listCallInfo.RequestHeader().Set("Authorization", "Bearer "+exchangeResp.GetAccessToken())
+		listCallInfo.RequestHeader().Set(organization.OrganizationHeader, orgID)
+		_, err = clusterClient.ListClusters(listCtx, &organizationv1.ListClustersRequest{})
 		if err != nil {
 			if connect.CodeOf(err) == connect.CodePermissionDenied {
 				fmt.Printf("TestMain: authz not ready yet, attempt %d/%d, retrying...\n", i+1, maxRetries)
@@ -140,12 +140,13 @@ func TestMain(m *testing.M) {
 			// Best-effort: a cleanup failure must not change the test exit code.
 			fmt.Fprintf(os.Stderr, "TestMain: failed to get cleanup JWT (best-effort): %v\n", err)
 		} else {
-			deleteReq := connect.NewRequest(organizationv1.DeleteAPIKeyRequest_builder{
+			deleteCtx, deleteCallInfo := connect.NewClientContext(ctx)
+			deleteCallInfo.RequestHeader().Set("Authorization", "Bearer "+cleanupLogin.accessToken)
+			deleteCallInfo.RequestHeader().Set(organization.OrganizationHeader, orgID)
+			deleteReq := organizationv1.DeleteAPIKeyRequest_builder{
 				ApiKeyId: apiKeyID,
-			}.Build())
-			deleteReq.Header().Set("Authorization", "Bearer "+cleanupLogin.accessToken)
-			deleteReq.Header().Set(organization.OrganizationHeader, orgID)
-			if _, err := apiKeyClient.DeleteAPIKey(ctx, deleteReq); err != nil {
+			}.Build()
+			if _, err := apiKeyClient.DeleteAPIKey(deleteCtx, deleteReq); err != nil {
 				fmt.Fprintf(os.Stderr, "TestMain: failed to delete API key (best-effort): %v\n", err)
 			}
 		}
@@ -163,13 +164,13 @@ func createDynamicAPIKey(ctx context.Context, endpoint, orgID, accessToken strin
 
 	fmt.Println("TestMain: creating dynamic test API key")
 	for i := range maxRetries {
-		createReq := connect.NewRequest(organizationv1.CreateAPIKeyRequest_builder{
+		createCtx, createCallInfo := connect.NewClientContext(ctx)
+		createCallInfo.RequestHeader().Set("Authorization", "Bearer "+accessToken)
+		createCallInfo.RequestHeader().Set(organization.OrganizationHeader, orgID)
+
+		createResp, err := apiKeyClient.CreateAPIKey(createCtx, organizationv1.CreateAPIKeyRequest_builder{
 			Name: "terraform-acc-test-" + acctest.RandString(6),
 		}.Build())
-		createReq.Header().Set("Authorization", "Bearer "+accessToken)
-		createReq.Header().Set(organization.OrganizationHeader, orgID)
-
-		createResp, err := apiKeyClient.CreateAPIKey(ctx, createReq)
 		if err != nil {
 			if connect.CodeOf(err) == connect.CodePermissionDenied {
 				fmt.Printf("TestMain: CreateAPIKey not authorized yet (authz-worker pending), attempt %d/%d, retrying...\n", i+1, maxRetries)
@@ -179,7 +180,7 @@ func createDynamicAPIKey(ctx context.Context, endpoint, orgID, accessToken strin
 			return "", "", fmt.Errorf("CreateAPIKey failed: %w", err)
 		}
 
-		return createResp.Msg.GetToken(), createResp.Msg.GetId(), nil
+		return createResp.GetToken(), createResp.GetId(), nil
 	}
 
 	return "", "", fmt.Errorf("could not create dynamic API key within timeout")

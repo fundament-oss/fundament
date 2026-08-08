@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -23,11 +22,11 @@ func TestUserService_ListUsers_Populated(t *testing.T) {
 		createUser(t, env, name, name+"@example.com", "")
 	}
 
-	resp, err := client.ListUsers(context.Background(), connect.NewRequest(&dcimv1.ListUsersRequest{}))
+	resp, err := client.ListUsers(context.Background(), &dcimv1.ListUsersRequest{})
 	require.NoError(t, err)
 
-	got := make([]string, 0, len(resp.Msg.GetUsers()))
-	for _, u := range resp.Msg.GetUsers() {
+	got := make([]string, 0, len(resp.GetUsers()))
+	for _, u := range resp.GetUsers() {
 		got = append(got, u.GetName())
 	}
 	// ListUsers is unfiltered, so the response also includes seeded users (the
@@ -47,11 +46,11 @@ func TestUserService_ListUsers_OmitsEmail(t *testing.T) {
 
 	userID := createUser(t, env, "Emailed User", "listed@example.com", "")
 
-	resp, err := client.ListUsers(context.Background(), connect.NewRequest(&dcimv1.ListUsersRequest{}))
+	resp, err := client.ListUsers(context.Background(), &dcimv1.ListUsersRequest{})
 	require.NoError(t, err)
 
 	var found *dcimv1.User
-	for _, u := range resp.Msg.GetUsers() {
+	for _, u := range resp.GetUsers() {
 		if u.GetId() == userID {
 			found = u
 			break
@@ -62,7 +61,7 @@ func TestUserService_ListUsers_OmitsEmail(t *testing.T) {
 	assert.Equal(t, "Emailed User", found.GetName())
 	assert.False(t, found.HasEmail(), "the roster listing must not expose email addresses")
 
-	for _, u := range resp.Msg.GetUsers() {
+	for _, u := range resp.GetUsers() {
 		assert.False(t, u.HasEmail(), "no roster entry may carry an email")
 	}
 }
@@ -80,10 +79,10 @@ func TestUserService_ListUsers_ExcludesSoftDeleted(t *testing.T) {
 		`UPDATE dcim.users SET deleted = now() WHERE id = $1`, userID)
 	require.NoError(t, err)
 
-	resp, err := client.ListUsers(context.Background(), connect.NewRequest(&dcimv1.ListUsersRequest{}))
+	resp, err := client.ListUsers(context.Background(), &dcimv1.ListUsersRequest{})
 	require.NoError(t, err)
 
-	for _, u := range resp.Msg.GetUsers() {
+	for _, u := range resp.GetUsers() {
 		assert.NotEqual(t, userID, u.GetId())
 	}
 }

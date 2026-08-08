@@ -14,9 +14,9 @@ import (
 
 func (s *Server) DeletePlacement(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeletePlacementRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	placementID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.DeletePlacementRequest,
+) (*emptypb.Empty, error) {
+	placementID := uuid.MustParse(req.GetId())
 
 	rowsAffected, err := s.queries.PlacementDelete(ctx, db.PlacementDeleteParams{ID: placementID})
 	if err != nil {
@@ -29,5 +29,5 @@ func (s *Server) DeletePlacement(
 
 	s.logger.InfoContext(ctx, "placement deleted", "placement_id", placementID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

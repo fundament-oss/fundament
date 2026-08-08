@@ -69,18 +69,18 @@ func (tm *TokenManager) refreshToken(ctx context.Context) (string, error) {
 		return tm.token, nil
 	}
 
-	// Create request with API key in Authorization header
-	req := connect.NewRequest(authnv1.ExchangeTokenRequest_builder{}.Build())
-	req.Header().Set("Authorization", "Bearer "+tm.apiKey)
+	// Send the API key in the Authorization header
+	ctx, callInfo := connect.NewClientContext(ctx)
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+tm.apiKey)
 
-	resp, err := tm.client.ExchangeToken(ctx, req)
+	resp, err := tm.client.ExchangeToken(ctx, authnv1.ExchangeTokenRequest_builder{}.Build())
 	if err != nil {
 		return "", fmt.Errorf("token exchange failed for API key %q at %s: %w", apitoken.GetPrefix(tm.apiKey), tm.authnEndpoint, err)
 	}
 
 	// Parse expiration from the JWT itself
 	parser := jwt.NewParser()
-	token, _, err := parser.ParseUnverified(resp.Msg.GetAccessToken(), jwt.MapClaims{})
+	token, _, err := parser.ParseUnverified(resp.GetAccessToken(), jwt.MapClaims{})
 	if err != nil {
 		return "", fmt.Errorf("failed to parse token: %w", err)
 	}

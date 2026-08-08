@@ -19,20 +19,20 @@ import (
 
 func (s *Server) UpdateSite(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateSiteRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	siteID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateSiteRequest,
+) (*emptypb.Empty, error) {
+	siteID := uuid.MustParse(req.GetId())
 
 	params := db.SiteUpdateParams{
 		ID: siteID,
 	}
 
-	if req.Msg.HasName() {
-		params.Name = pgtype.Text{String: req.Msg.GetName(), Valid: true}
+	if req.HasName() {
+		params.Name = pgtype.Text{String: req.GetName(), Valid: true}
 	}
 
-	if req.Msg.HasAddress() {
-		params.Address = pgtype.Text{String: req.Msg.GetAddress(), Valid: true}
+	if req.HasAddress() {
+		params.Address = pgtype.Text{String: req.GetAddress(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.SiteUpdate(ctx, params)
@@ -50,5 +50,5 @@ func (s *Server) UpdateSite(
 
 	s.logger.InfoContext(ctx, "site updated", "site_id", siteID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

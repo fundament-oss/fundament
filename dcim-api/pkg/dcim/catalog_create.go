@@ -16,30 +16,30 @@ import (
 
 func (s *Server) CreateCatalogEntry(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreateCatalogEntryRequest],
-) (*connect.Response[dcimv1.CreateCatalogEntryResponse], error) {
+	req *dcimv1.CreateCatalogEntryRequest,
+) (*dcimv1.CreateCatalogEntryResponse, error) {
 	params := db.DeviceCatalogCreateParams{
-		Manufacturer: req.Msg.GetManufacturer(),
-		Model:        req.Msg.GetModel(),
-		PartNumber:   pgtype.Text{String: req.Msg.GetPartNumber(), Valid: true},
-		Category:     assetCategoryToDB(req.Msg.GetCategory()),
-		Specs:        specsToDB(req.Msg.GetSpecs()),
+		Manufacturer: req.GetManufacturer(),
+		Model:        req.GetModel(),
+		PartNumber:   pgtype.Text{String: req.GetPartNumber(), Valid: true},
+		Category:     assetCategoryToDB(req.GetCategory()),
+		Specs:        specsToDB(req.GetSpecs()),
 	}
 
-	if req.Msg.HasFormFactor() {
-		params.FormFactor = pgtype.Text{String: req.Msg.GetFormFactor(), Valid: true}
+	if req.HasFormFactor() {
+		params.FormFactor = pgtype.Text{String: req.GetFormFactor(), Valid: true}
 	}
 
-	if req.Msg.HasRackUnits() {
-		params.RackUnits = pgtype.Int4{Int32: req.Msg.GetRackUnits(), Valid: true}
+	if req.HasRackUnits() {
+		params.RackUnits = pgtype.Int4{Int32: req.GetRackUnits(), Valid: true}
 	}
 
-	if req.Msg.GetWeightKg() != 0 {
-		params.WeightKg = float64ToNumeric(req.Msg.GetWeightKg())
+	if req.GetWeightKg() != 0 {
+		params.WeightKg = float64ToNumeric(req.GetWeightKg())
 	}
 
-	if req.Msg.GetPowerDrawW() != 0 {
-		params.PowerDrawW = float64ToNumeric(req.Msg.GetPowerDrawW())
+	if req.GetPowerDrawW() != 0 {
+		params.PowerDrawW = float64ToNumeric(req.GetPowerDrawW())
 	}
 
 	id, err := s.queries.DeviceCatalogCreate(ctx, params)
@@ -53,7 +53,7 @@ func (s *Server) CreateCatalogEntry(
 
 	s.logger.InfoContext(ctx, "catalog entry created", "catalog_entry_id", id)
 
-	return connect.NewResponse(dcimv1.CreateCatalogEntryResponse_builder{
+	return dcimv1.CreateCatalogEntryResponse_builder{
 		CatalogEntryId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

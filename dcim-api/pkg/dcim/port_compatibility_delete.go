@@ -15,10 +15,10 @@ import (
 
 func (s *Server) DeletePortCompatibility(
 	ctx context.Context,
-	req *connect.Request[dcimv1.DeletePortCompatibilityRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	portDefID := uuid.MustParse(req.Msg.GetPortDefinitionId())
-	compatCatalogID := uuid.MustParse(req.Msg.GetCompatibleCatalogId())
+	req *dcimv1.DeletePortCompatibilityRequest,
+) (*emptypb.Empty, error) {
+	portDefID := uuid.MustParse(req.GetPortDefinitionId())
+	compatCatalogID := uuid.MustParse(req.GetCompatibleCatalogId())
 
 	rowsAffected, err := s.queries.PortCompatibilityDelete(ctx, db.PortCompatibilityDeleteParams{
 		PortDefinitionID: portDefID,
@@ -37,5 +37,5 @@ func (s *Server) DeletePortCompatibility(
 
 	s.logger.InfoContext(ctx, "port compatibility deleted", "port_definition_id", portDefID, "compatible_catalog_id", compatCatalogID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

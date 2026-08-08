@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"connectrpc.com/connect"
-
 	"github.com/fundament-oss/fundament/functl/pkg/config"
 	organizationv1 "github.com/fundament-oss/fundament/organization-api/pkg/proto/gen/v1"
 )
@@ -28,12 +26,12 @@ func (c *OrgListCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Organizations().ListOrganizations(context.Background(), connect.NewRequest(organizationv1.ListOrganizationsRequest_builder{}.Build()))
+	resp, err := apiClient.Organizations().ListOrganizations(context.Background(), organizationv1.ListOrganizationsRequest_builder{}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to list organizations: %w", err)
 	}
 
-	orgs := resp.Msg.GetOrganizations()
+	orgs := resp.GetOrganizations()
 
 	if ctx.Output == OutputJSON {
 		return PrintJSON(orgs)
@@ -73,13 +71,13 @@ func (c *OrgSetCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	resp, err := apiClient.Organizations().ListOrganizations(context.Background(), connect.NewRequest(organizationv1.ListOrganizationsRequest_builder{}.Build()))
+	resp, err := apiClient.Organizations().ListOrganizations(context.Background(), organizationv1.ListOrganizationsRequest_builder{}.Build())
 	if err != nil {
 		return fmt.Errorf("failed to list organizations: %w", err)
 	}
 
 	var match *organizationv1.Organization
-	for _, org := range resp.Msg.GetOrganizations() {
+	for _, org := range resp.GetOrganizations() {
 		if org.GetId() == c.OrgID {
 			match = org
 			break

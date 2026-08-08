@@ -18,24 +18,24 @@ import (
 
 func (s *Server) UpdateRackRow(
 	ctx context.Context,
-	req *connect.Request[dcimv1.UpdateRackRowRequest],
-) (*connect.Response[emptypb.Empty], error) {
-	rackRowID := uuid.MustParse(req.Msg.GetId())
+	req *dcimv1.UpdateRackRowRequest,
+) (*emptypb.Empty, error) {
+	rackRowID := uuid.MustParse(req.GetId())
 
 	params := db.RackRowUpdateParams{
 		ID: rackRowID,
 	}
 
-	if req.Msg.HasName() {
-		params.Name = pgtype.Text{String: req.Msg.GetName(), Valid: true}
+	if req.HasName() {
+		params.Name = pgtype.Text{String: req.GetName(), Valid: true}
 	}
 
-	if req.Msg.HasPositionX() {
-		params.PositionX = pgtype.Float8{Float64: req.Msg.GetPositionX(), Valid: true}
+	if req.HasPositionX() {
+		params.PositionX = pgtype.Float8{Float64: req.GetPositionX(), Valid: true}
 	}
 
-	if req.Msg.HasPositionY() {
-		params.PositionY = pgtype.Float8{Float64: req.Msg.GetPositionY(), Valid: true}
+	if req.HasPositionY() {
+		params.PositionY = pgtype.Float8{Float64: req.GetPositionY(), Valid: true}
 	}
 
 	rowsAffected, err := s.queries.RackRowUpdate(ctx, params)
@@ -53,5 +53,5 @@ func (s *Server) UpdateRackRow(
 
 	s.logger.InfoContext(ctx, "rack row updated", "rack_row_id", rackRowID)
 
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return &emptypb.Empty{}, nil
 }

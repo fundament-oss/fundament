@@ -18,13 +18,13 @@ import (
 
 func (s *Server) GetMember(
 	ctx context.Context,
-	req *connect.Request[organizationv1.GetMemberRequest],
-) (*connect.Response[organizationv1.GetMemberResponse], error) {
+	req *organizationv1.GetMemberRequest,
+) (*organizationv1.GetMemberResponse, error) {
 	var member *organizationv1.Member
 
-	switch req.Msg.WhichLookup() {
+	switch req.WhichLookup() {
 	case organizationv1.GetMemberRequest_Id_case:
-		id := uuid.MustParse(req.Msg.GetId())
+		id := uuid.MustParse(req.GetId())
 		row, err := s.queries.MemberGetByID(ctx, db.MemberGetByIDParams{ID: id})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -35,7 +35,7 @@ func (s *Server) GetMember(
 		member = buildMember(row.ID, row.UserID, row.Name, row.ExternalRef, row.Email, row.Permission, row.Status, row.Created)
 
 	case organizationv1.GetMemberRequest_UserId_case:
-		userID := uuid.MustParse(req.Msg.GetUserId())
+		userID := uuid.MustParse(req.GetUserId())
 		row, err := s.queries.MemberGetByUserID(ctx, db.MemberGetByUserIDParams{UserID: userID})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -49,9 +49,9 @@ func (s *Server) GetMember(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("either id or user_id must be provided"))
 	}
 
-	return connect.NewResponse(organizationv1.GetMemberResponse_builder{
+	return organizationv1.GetMemberResponse_builder{
 		Member: member,
-	}.Build()), nil
+	}.Build(), nil
 }
 
 func buildMember(

@@ -16,9 +16,9 @@ import (
 // choices. An unknown plugin simply yields an empty list.
 func (s *Server) ListPluginDefinitions(
 	ctx context.Context,
-	req *connect.Request[organizationv1.ListPluginDefinitionsRequest],
-) (*connect.Response[organizationv1.ListPluginDefinitionsResponse], error) {
-	pluginID, err := uuid.Parse(req.Msg.GetPluginId())
+	req *organizationv1.ListPluginDefinitionsRequest,
+) (*organizationv1.ListPluginDefinitionsResponse, error) {
+	pluginID, err := uuid.Parse(req.GetPluginId())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("plugin_id must be a valid uuid: %w", err))
 	}
@@ -36,7 +36,7 @@ func (s *Server) ListPluginDefinitions(
 		}.Build())
 	}
 
-	return connect.NewResponse(organizationv1.ListPluginDefinitionsResponse_builder{
+	return organizationv1.ListPluginDefinitionsResponse_builder{
 		Definitions: defs,
-	}.Build()), nil
+	}.Build(), nil
 }

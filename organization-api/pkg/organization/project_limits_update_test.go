@@ -19,9 +19,9 @@ func Test_ProjectLimits_Update_Unauthenticated(t *testing.T) {
 	env := newTestAPI(t)
 	client := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	_, err := client.UpdateProjectLimits(context.Background(), connect.NewRequest(
+	_, err := client.UpdateProjectLimits(context.Background(),
 		organizationv1.UpdateProjectLimitsRequest_builder{ProjectId: uuid.New().String()}.Build(),
-	))
+	)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -43,44 +43,48 @@ func Test_ProjectLimits_Update(t *testing.T) {
 	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 	projectClient := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	createClusterReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createClusterReq := organizationv1.CreateClusterRequest_builder{
 		Name: "test-cluster", Region: "eu-west-1", KubernetesVersion: "1.28",
-	}.Build())
-	createClusterReq.Header().Set("Authorization", "Bearer "+token)
-	createClusterReq.Header().Set("Fun-Organization", orgID.String())
-	clusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	}.Build()
+	createClusterCtx, createClusterCallInfo := connect.NewClientContext(context.Background())
+	createClusterCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createClusterCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	clusterRes, err := clusterClient.CreateCluster(createClusterCtx, createClusterReq)
 	require.NoError(t, err)
 
-	createProjectReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
-		ClusterId: clusterRes.Msg.GetClusterId(), Name: "test-project",
-	}.Build())
-	createProjectReq.Header().Set("Authorization", "Bearer "+token)
-	createProjectReq.Header().Set("Fun-Organization", orgID.String())
-	projectRes, err := projectClient.CreateProject(context.Background(), createProjectReq)
+	createProjectReq := organizationv1.CreateProjectRequest_builder{
+		ClusterId: clusterRes.GetClusterId(), Name: "test-project",
+	}.Build()
+	createProjectCtx, createProjectCallInfo := connect.NewClientContext(context.Background())
+	createProjectCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createProjectCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	projectRes, err := projectClient.CreateProject(createProjectCtx, createProjectReq)
 	require.NoError(t, err)
-	projectID := projectRes.Msg.GetProjectId()
+	projectID := projectRes.GetProjectId()
 
-	updateReq := connect.NewRequest(organizationv1.UpdateProjectLimitsRequest_builder{
+	updateReq := organizationv1.UpdateProjectLimitsRequest_builder{
 		ProjectId:              projectID,
 		DefaultMemoryRequestMi: proto.Int32(128),
 		DefaultMemoryLimitMi:   proto.Int32(256),
 		DefaultCpuRequestM:     proto.Int32(100),
 		DefaultCpuLimitM:       proto.Int32(500),
-	}.Build())
-	updateReq.Header().Set("Authorization", "Bearer "+token)
-	updateReq.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	updateCtx, updateCallInfo := connect.NewClientContext(context.Background())
+	updateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	updateCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = projectClient.UpdateProjectLimits(context.Background(), updateReq)
+	_, err = projectClient.UpdateProjectLimits(updateCtx, updateReq)
 	require.NoError(t, err)
 
-	getReq := connect.NewRequest(organizationv1.GetProjectLimitsRequest_builder{ProjectId: projectID}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
+	getReq := organizationv1.GetProjectLimitsRequest_builder{ProjectId: projectID}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	getRes, err := projectClient.GetProjectLimits(context.Background(), getReq)
+	getRes, err := projectClient.GetProjectLimits(getCtx, getReq)
 	require.NoError(t, err)
 
-	limits := getRes.Msg.GetLimits()
+	limits := getRes.GetLimits()
 	require.NotNil(t, limits)
 	assert.EqualValues(t, 128, limits.GetDefaultMemoryRequestMi())
 	assert.EqualValues(t, 256, limits.GetDefaultMemoryLimitMi())
@@ -103,48 +107,53 @@ func Test_ProjectLimits_Update_Overwrites(t *testing.T) {
 	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 	projectClient := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	createClusterReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createClusterReq := organizationv1.CreateClusterRequest_builder{
 		Name: "test-cluster", Region: "eu-west-1", KubernetesVersion: "1.28",
-	}.Build())
-	createClusterReq.Header().Set("Authorization", "Bearer "+token)
-	createClusterReq.Header().Set("Fun-Organization", orgID.String())
-	clusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	}.Build()
+	createClusterCtx, createClusterCallInfo := connect.NewClientContext(context.Background())
+	createClusterCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createClusterCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	clusterRes, err := clusterClient.CreateCluster(createClusterCtx, createClusterReq)
 	require.NoError(t, err)
 
-	createProjectReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
-		ClusterId: clusterRes.Msg.GetClusterId(), Name: "test-project",
-	}.Build())
-	createProjectReq.Header().Set("Authorization", "Bearer "+token)
-	createProjectReq.Header().Set("Fun-Organization", orgID.String())
-	projectRes, err := projectClient.CreateProject(context.Background(), createProjectReq)
+	createProjectReq := organizationv1.CreateProjectRequest_builder{
+		ClusterId: clusterRes.GetClusterId(), Name: "test-project",
+	}.Build()
+	createProjectCtx, createProjectCallInfo := connect.NewClientContext(context.Background())
+	createProjectCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createProjectCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	projectRes, err := projectClient.CreateProject(createProjectCtx, createProjectReq)
 	require.NoError(t, err)
-	projectID := projectRes.Msg.GetProjectId()
+	projectID := projectRes.GetProjectId()
 
-	firstUpdate := connect.NewRequest(organizationv1.UpdateProjectLimitsRequest_builder{
+	firstUpdate := organizationv1.UpdateProjectLimitsRequest_builder{
 		ProjectId:            projectID,
 		DefaultMemoryLimitMi: proto.Int32(256),
-	}.Build())
-	firstUpdate.Header().Set("Authorization", "Bearer "+token)
-	firstUpdate.Header().Set("Fun-Organization", orgID.String())
-	_, err = projectClient.UpdateProjectLimits(context.Background(), firstUpdate)
+	}.Build()
+	firstUpdateCtx, firstUpdateCallInfo := connect.NewClientContext(context.Background())
+	firstUpdateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	firstUpdateCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	_, err = projectClient.UpdateProjectLimits(firstUpdateCtx, firstUpdate)
 	require.NoError(t, err)
 
-	secondUpdate := connect.NewRequest(organizationv1.UpdateProjectLimitsRequest_builder{
+	secondUpdate := organizationv1.UpdateProjectLimitsRequest_builder{
 		ProjectId:            projectID,
 		DefaultMemoryLimitMi: proto.Int32(512),
-	}.Build())
-	secondUpdate.Header().Set("Authorization", "Bearer "+token)
-	secondUpdate.Header().Set("Fun-Organization", orgID.String())
-	_, err = projectClient.UpdateProjectLimits(context.Background(), secondUpdate)
+	}.Build()
+	secondUpdateCtx, secondUpdateCallInfo := connect.NewClientContext(context.Background())
+	secondUpdateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	secondUpdateCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	_, err = projectClient.UpdateProjectLimits(secondUpdateCtx, secondUpdate)
 	require.NoError(t, err)
 
-	getReq := connect.NewRequest(organizationv1.GetProjectLimitsRequest_builder{ProjectId: projectID}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
-	getRes, err := projectClient.GetProjectLimits(context.Background(), getReq)
+	getReq := organizationv1.GetProjectLimitsRequest_builder{ProjectId: projectID}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	getRes, err := projectClient.GetProjectLimits(getCtx, getReq)
 	require.NoError(t, err)
 
-	assert.EqualValues(t, 512, getRes.Msg.GetLimits().GetDefaultMemoryLimitMi())
+	assert.EqualValues(t, 512, getRes.GetLimits().GetDefaultMemoryLimitMi())
 }
 
 func Test_ProjectLimits_Update_IsolatedBetweenProjects(t *testing.T) {
@@ -162,50 +171,55 @@ func Test_ProjectLimits_Update_IsolatedBetweenProjects(t *testing.T) {
 	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 	projectClient := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	createClusterReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createClusterReq := organizationv1.CreateClusterRequest_builder{
 		Name: "test-cluster", Region: "eu-west-1", KubernetesVersion: "1.28",
-	}.Build())
-	createClusterReq.Header().Set("Authorization", "Bearer "+token)
-	createClusterReq.Header().Set("Fun-Organization", orgID.String())
-	clusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	}.Build()
+	createClusterCtx, createClusterCallInfo := connect.NewClientContext(context.Background())
+	createClusterCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createClusterCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	clusterRes, err := clusterClient.CreateCluster(createClusterCtx, createClusterReq)
 	require.NoError(t, err)
-	clusterID := clusterRes.Msg.GetClusterId()
+	clusterID := clusterRes.GetClusterId()
 
-	createProject1Req := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
+	createProject1Req := organizationv1.CreateProjectRequest_builder{
 		ClusterId: clusterID, Name: "project-one",
-	}.Build())
-	createProject1Req.Header().Set("Authorization", "Bearer "+token)
-	createProject1Req.Header().Set("Fun-Organization", orgID.String())
-	project1Res, err := projectClient.CreateProject(context.Background(), createProject1Req)
+	}.Build()
+	createProject1Ctx, createProject1CallInfo := connect.NewClientContext(context.Background())
+	createProject1CallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createProject1CallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	project1Res, err := projectClient.CreateProject(createProject1Ctx, createProject1Req)
 	require.NoError(t, err)
 
-	createProject2Req := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
+	createProject2Req := organizationv1.CreateProjectRequest_builder{
 		ClusterId: clusterID, Name: "project-two",
-	}.Build())
-	createProject2Req.Header().Set("Authorization", "Bearer "+token)
-	createProject2Req.Header().Set("Fun-Organization", orgID.String())
-	project2Res, err := projectClient.CreateProject(context.Background(), createProject2Req)
+	}.Build()
+	createProject2Ctx, createProject2CallInfo := connect.NewClientContext(context.Background())
+	createProject2CallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createProject2CallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	project2Res, err := projectClient.CreateProject(createProject2Ctx, createProject2Req)
 	require.NoError(t, err)
 
-	updateReq := connect.NewRequest(organizationv1.UpdateProjectLimitsRequest_builder{
-		ProjectId:            project1Res.Msg.GetProjectId(),
+	updateReq := organizationv1.UpdateProjectLimitsRequest_builder{
+		ProjectId:            project1Res.GetProjectId(),
 		DefaultMemoryLimitMi: proto.Int32(256),
-	}.Build())
-	updateReq.Header().Set("Authorization", "Bearer "+token)
-	updateReq.Header().Set("Fun-Organization", orgID.String())
-	_, err = projectClient.UpdateProjectLimits(context.Background(), updateReq)
+	}.Build()
+	updateCtx, updateCallInfo := connect.NewClientContext(context.Background())
+	updateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	updateCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	_, err = projectClient.UpdateProjectLimits(updateCtx, updateReq)
 	require.NoError(t, err)
 
 	// project2 should see no limits
-	getReq := connect.NewRequest(organizationv1.GetProjectLimitsRequest_builder{
-		ProjectId: project2Res.Msg.GetProjectId(),
-	}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token)
-	getReq.Header().Set("Fun-Organization", orgID.String())
-	getRes, err := projectClient.GetProjectLimits(context.Background(), getReq)
+	getReq := organizationv1.GetProjectLimitsRequest_builder{
+		ProjectId: project2Res.GetProjectId(),
+	}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	getCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	getRes, err := projectClient.GetProjectLimits(getCtx, getReq)
 	require.NoError(t, err)
 
-	assert.False(t, getRes.Msg.GetLimits().HasDefaultMemoryLimitMi())
+	assert.False(t, getRes.GetLimits().HasDefaultMemoryLimitMi())
 }
 
 func Test_ProjectLimits_Update_IsolatedBetweenOrgs(t *testing.T) {
@@ -229,40 +243,44 @@ func Test_ProjectLimits_Update_IsolatedBetweenOrgs(t *testing.T) {
 	projectClient := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
 	// Create a cluster and project in org1
-	createClusterReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createClusterReq := organizationv1.CreateClusterRequest_builder{
 		Name: "test-cluster", Region: "eu-west-1", KubernetesVersion: "1.28",
-	}.Build())
-	createClusterReq.Header().Set("Authorization", "Bearer "+token1)
-	createClusterReq.Header().Set("Fun-Organization", org1ID.String())
-	clusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	}.Build()
+	createClusterCtx, createClusterCallInfo := connect.NewClientContext(context.Background())
+	createClusterCallInfo.RequestHeader().Set("Authorization", "Bearer "+token1)
+	createClusterCallInfo.RequestHeader().Set("Fun-Organization", org1ID.String())
+	clusterRes, err := clusterClient.CreateCluster(createClusterCtx, createClusterReq)
 	require.NoError(t, err)
 
-	createProjectReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
-		ClusterId: clusterRes.Msg.GetClusterId(), Name: "test-project",
-	}.Build())
-	createProjectReq.Header().Set("Authorization", "Bearer "+token1)
-	createProjectReq.Header().Set("Fun-Organization", org1ID.String())
-	projectRes, err := projectClient.CreateProject(context.Background(), createProjectReq)
+	createProjectReq := organizationv1.CreateProjectRequest_builder{
+		ClusterId: clusterRes.GetClusterId(), Name: "test-project",
+	}.Build()
+	createProjectCtx, createProjectCallInfo := connect.NewClientContext(context.Background())
+	createProjectCallInfo.RequestHeader().Set("Authorization", "Bearer "+token1)
+	createProjectCallInfo.RequestHeader().Set("Fun-Organization", org1ID.String())
+	projectRes, err := projectClient.CreateProject(createProjectCtx, createProjectReq)
 	require.NoError(t, err)
-	projectID := projectRes.Msg.GetProjectId()
+	projectID := projectRes.GetProjectId()
 
 	// Set limits on org1's project
-	updateReq := connect.NewRequest(organizationv1.UpdateProjectLimitsRequest_builder{
+	updateReq := organizationv1.UpdateProjectLimitsRequest_builder{
 		ProjectId:            projectID,
 		DefaultMemoryLimitMi: proto.Int32(256),
-	}.Build())
-	updateReq.Header().Set("Authorization", "Bearer "+token1)
-	updateReq.Header().Set("Fun-Organization", org1ID.String())
-	_, err = projectClient.UpdateProjectLimits(context.Background(), updateReq)
+	}.Build()
+	updateCtx, updateCallInfo := connect.NewClientContext(context.Background())
+	updateCallInfo.RequestHeader().Set("Authorization", "Bearer "+token1)
+	updateCallInfo.RequestHeader().Set("Fun-Organization", org1ID.String())
+	_, err = projectClient.UpdateProjectLimits(updateCtx, updateReq)
 	require.NoError(t, err)
 
 	// user2 (org2) should not see org1's project limits
-	getReq := connect.NewRequest(organizationv1.GetProjectLimitsRequest_builder{ProjectId: projectID}.Build())
-	getReq.Header().Set("Authorization", "Bearer "+token2)
-	getReq.Header().Set("Fun-Organization", org2ID.String())
-	getRes, err := projectClient.GetProjectLimits(context.Background(), getReq)
+	getReq := organizationv1.GetProjectLimitsRequest_builder{ProjectId: projectID}.Build()
+	getCtx, getCallInfo := connect.NewClientContext(context.Background())
+	getCallInfo.RequestHeader().Set("Authorization", "Bearer "+token2)
+	getCallInfo.RequestHeader().Set("Fun-Organization", org2ID.String())
+	getRes, err := projectClient.GetProjectLimits(getCtx, getReq)
 	require.NoError(t, err)
-	assert.False(t, getRes.Msg.GetLimits().HasDefaultMemoryLimitMi())
+	assert.False(t, getRes.GetLimits().HasDefaultMemoryLimitMi())
 }
 
 func Test_ProjectLimits_Update_MemoryLimitLessThanRequest(t *testing.T) {
@@ -280,31 +298,34 @@ func Test_ProjectLimits_Update_MemoryLimitLessThanRequest(t *testing.T) {
 	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 	projectClient := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	createClusterReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createClusterReq := organizationv1.CreateClusterRequest_builder{
 		Name: "test-cluster", Region: "eu-west-1", KubernetesVersion: "1.28",
-	}.Build())
-	createClusterReq.Header().Set("Authorization", "Bearer "+token)
-	createClusterReq.Header().Set("Fun-Organization", orgID.String())
-	clusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	}.Build()
+	createClusterCtx, createClusterCallInfo := connect.NewClientContext(context.Background())
+	createClusterCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createClusterCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	clusterRes, err := clusterClient.CreateCluster(createClusterCtx, createClusterReq)
 	require.NoError(t, err)
 
-	createProjectReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
-		ClusterId: clusterRes.Msg.GetClusterId(), Name: "test-project",
-	}.Build())
-	createProjectReq.Header().Set("Authorization", "Bearer "+token)
-	createProjectReq.Header().Set("Fun-Organization", orgID.String())
-	projectRes, err := projectClient.CreateProject(context.Background(), createProjectReq)
+	createProjectReq := organizationv1.CreateProjectRequest_builder{
+		ClusterId: clusterRes.GetClusterId(), Name: "test-project",
+	}.Build()
+	createProjectCtx, createProjectCallInfo := connect.NewClientContext(context.Background())
+	createProjectCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createProjectCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	projectRes, err := projectClient.CreateProject(createProjectCtx, createProjectReq)
 	require.NoError(t, err)
 
-	req := connect.NewRequest(organizationv1.UpdateProjectLimitsRequest_builder{
-		ProjectId:              projectRes.Msg.GetProjectId(),
+	req := organizationv1.UpdateProjectLimitsRequest_builder{
+		ProjectId:              projectRes.GetProjectId(),
 		DefaultMemoryRequestMi: proto.Int32(256),
 		DefaultMemoryLimitMi:   proto.Int32(128),
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = projectClient.UpdateProjectLimits(context.Background(), req)
+	_, err = projectClient.UpdateProjectLimits(ctx, req)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)
@@ -326,31 +347,34 @@ func Test_ProjectLimits_Update_CpuLimitLessThanRequest(t *testing.T) {
 	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
 	projectClient := organizationv1connect.NewProjectServiceClient(env.server.Client(), env.server.URL)
 
-	createClusterReq := connect.NewRequest(organizationv1.CreateClusterRequest_builder{
+	createClusterReq := organizationv1.CreateClusterRequest_builder{
 		Name: "test-cluster", Region: "eu-west-1", KubernetesVersion: "1.28",
-	}.Build())
-	createClusterReq.Header().Set("Authorization", "Bearer "+token)
-	createClusterReq.Header().Set("Fun-Organization", orgID.String())
-	clusterRes, err := clusterClient.CreateCluster(context.Background(), createClusterReq)
+	}.Build()
+	createClusterCtx, createClusterCallInfo := connect.NewClientContext(context.Background())
+	createClusterCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createClusterCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	clusterRes, err := clusterClient.CreateCluster(createClusterCtx, createClusterReq)
 	require.NoError(t, err)
 
-	createProjectReq := connect.NewRequest(organizationv1.CreateProjectRequest_builder{
-		ClusterId: clusterRes.Msg.GetClusterId(), Name: "test-project",
-	}.Build())
-	createProjectReq.Header().Set("Authorization", "Bearer "+token)
-	createProjectReq.Header().Set("Fun-Organization", orgID.String())
-	projectRes, err := projectClient.CreateProject(context.Background(), createProjectReq)
+	createProjectReq := organizationv1.CreateProjectRequest_builder{
+		ClusterId: clusterRes.GetClusterId(), Name: "test-project",
+	}.Build()
+	createProjectCtx, createProjectCallInfo := connect.NewClientContext(context.Background())
+	createProjectCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	createProjectCallInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	projectRes, err := projectClient.CreateProject(createProjectCtx, createProjectReq)
 	require.NoError(t, err)
 
-	req := connect.NewRequest(organizationv1.UpdateProjectLimitsRequest_builder{
-		ProjectId:          projectRes.Msg.GetProjectId(),
+	req := organizationv1.UpdateProjectLimitsRequest_builder{
+		ProjectId:          projectRes.GetProjectId(),
 		DefaultCpuRequestM: proto.Int32(500),
 		DefaultCpuLimitM:   proto.Int32(100),
-	}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", orgID.String())
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
 
-	_, err = projectClient.UpdateProjectLimits(context.Background(), req)
+	_, err = projectClient.UpdateProjectLimits(ctx, req)
 
 	var connectErr *connect.Error
 	require.ErrorAs(t, err, &connectErr)

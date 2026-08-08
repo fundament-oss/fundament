@@ -17,26 +17,26 @@ import (
 
 func (s *Server) CreatePortDefinition(
 	ctx context.Context,
-	req *connect.Request[dcimv1.CreatePortDefinitionRequest],
-) (*connect.Response[dcimv1.CreatePortDefinitionResponse], error) {
+	req *dcimv1.CreatePortDefinitionRequest,
+) (*dcimv1.CreatePortDefinitionResponse, error) {
 	params := db.PortDefinitionCreateParams{
-		DeviceCatalogID: uuid.MustParse(req.Msg.GetDeviceCatalogId()),
-		Name:            req.Msg.GetName(),
-		PortType:        portTypeToDB(req.Msg.GetPortType()),
-		Direction:       portDirectionToDB(req.Msg.GetDirection()),
-		Ordinal:         req.Msg.GetOrdinal(),
+		DeviceCatalogID: uuid.MustParse(req.GetDeviceCatalogId()),
+		Name:            req.GetName(),
+		PortType:        portTypeToDB(req.GetPortType()),
+		Direction:       portDirectionToDB(req.GetDirection()),
+		Ordinal:         req.GetOrdinal(),
 	}
 
-	if req.Msg.HasMediaType() {
-		params.MediaType = pgtype.Text{String: req.Msg.GetMediaType(), Valid: true}
+	if req.HasMediaType() {
+		params.MediaType = pgtype.Text{String: req.GetMediaType(), Valid: true}
 	}
 
-	if req.Msg.HasSpeed() {
-		params.Speed = pgtype.Text{String: req.Msg.GetSpeed(), Valid: true}
+	if req.HasSpeed() {
+		params.Speed = pgtype.Text{String: req.GetSpeed(), Valid: true}
 	}
 
-	if req.Msg.HasMaxPowerW() {
-		params.MaxPowerW = float64ToNumeric(req.Msg.GetMaxPowerW())
+	if req.HasMaxPowerW() {
+		params.MaxPowerW = float64ToNumeric(req.GetMaxPowerW())
 	}
 
 	id, err := s.queries.PortDefinitionCreate(ctx, params)
@@ -55,7 +55,7 @@ func (s *Server) CreatePortDefinition(
 
 	s.logger.InfoContext(ctx, "port definition created", "port_definition_id", id)
 
-	return connect.NewResponse(dcimv1.CreatePortDefinitionResponse_builder{
+	return dcimv1.CreatePortDefinitionResponse_builder{
 		PortDefinitionId: id.String(),
-	}.Build()), nil
+	}.Build(), nil
 }

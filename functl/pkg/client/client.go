@@ -63,17 +63,20 @@ func (c *Client) ensureToken(ctx context.Context) (string, error) {
 		return c.jwt, nil
 	}
 
-	// Exchange API key for JWT
-	req := connect.NewRequest(&authnv1.ExchangeTokenRequest{})
-	req.Header().Set("Authorization", "Bearer "+c.apiKey)
+	// Exchange API key for JWT. The client context created here must only be
+	// used for the nested ExchangeToken call and never flow into next() when
+	// ensureToken runs inside an interceptor: connect prohibits changing call
+	// info mid-flight and fails such requests.
+	ctx, callInfo := connect.NewClientContext(ctx)
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+c.apiKey)
 
-	resp, err := c.tokenClient.ExchangeToken(ctx, req)
+	resp, err := c.tokenClient.ExchangeToken(ctx, &authnv1.ExchangeTokenRequest{})
 	if err != nil {
 		return "", fmt.Errorf("failed to exchange API key for token: %w", err)
 	}
 
-	c.jwt = resp.Msg.GetAccessToken()
-	c.expiry = time.Now().Add(time.Duration(resp.Msg.GetExpiresIn()) * time.Second)
+	c.jwt = resp.GetAccessToken()
+	c.expiry = time.Now().Add(time.Duration(resp.GetExpiresIn()) * time.Second)
 
 	return c.jwt, nil
 }
