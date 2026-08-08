@@ -198,6 +198,21 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   errorMessage = signal<string | null>(null);
 
+  /** Pools the wizard asked for and did not get. Handed over as navigation state
+   *  by the summary, which cannot show it itself: it closes on the way here. */
+  nodePoolsNotCreated = signal<string[]>(
+    (window.history.state as { nodePoolsNotCreated?: string[] } | null)?.nodePoolsNotCreated ?? [],
+  );
+
+  /** The cluster is there, so this is not a failure of the page you are on: it
+   *  is one thing you asked for that is missing from it. */
+  nodePoolsNotCreatedText = computed(() => {
+    const namen = this.nodePoolsNotCreated();
+    if (namen.length === 0) return null;
+    if (namen.length === 1) return `Node pool '${namen[0]}' was not created`;
+    return `${namen.length} node pools were not created`;
+  });
+
   isLoading = signal<boolean>(true);
 
   showDeleteModal = signal<boolean>(false);
@@ -235,6 +250,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   credentialsLoading = signal<boolean>(false);
 
   credentialsError = signal<string | null>(null);
+
+  /** A download that produced no file leaves nothing on screen to show for it,
+   *  so this says so where it cannot be missed. */
+  kubeconfigError = signal<string | null>(null);
 
   credentials = signal<{ username: string; password: string } | null>(null);
 
@@ -480,10 +499,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      this.toastService.error(
-        error instanceof Error
-          ? `Failed to download kubeconfig: ${error.message}`
-          : 'Failed to download kubeconfig',
+      this.kubeconfigError.set(
+        error instanceof Error ? error.message : 'The request failed.',
       );
     } finally {
       this.isDownloadingKubeconfig.set(false);
@@ -652,6 +669,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     } finally {
       this.credentialsLoading.set(false);
     }
+  }
+
+  closeKubeconfigError(): void {
+    this.kubeconfigError.set(null);
   }
 
   closeCredentialsModal(): void {

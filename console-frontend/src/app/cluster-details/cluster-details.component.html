@@ -11,12 +11,6 @@
   ></nldd-top-title-bar>
 
   <nldd-simple-section>
-    <!-- Error Message -->
-    @if (errorMessage()) {
-      <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
-      <nldd-spacer size="16"></nldd-spacer>
-    }
-
     <!-- Loading State -->
     @if (isLoading()) {
       <nldd-activity-indicator
@@ -68,16 +62,36 @@
 
       <nldd-spacer size="24"></nldd-spacer>
 
+      <!-- Under the header, not above it: the title and its actions say which
+           cluster this is, and a message about that cluster reads as a remark on
+           it rather than as something in front of it. -->
+      @if (errorMessage()) {
+        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+        <nldd-spacer size="12"></nldd-spacer>
+      }
+
+      @if (nodePoolsNotCreatedText(); as message) {
+        <nldd-banner
+          variant="warning"
+          [attr.text]="message"
+          supporting-text="Add it again under Node pools."
+        ></nldd-banner>
+        <nldd-spacer size="24"></nldd-spacer>
+      }
+
       <nldd-container gap="24">
         <nldd-box>
           <nldd-container padding="16">
             <nldd-list variant="simple" accessible-label="Cluster basics">
+              <!-- An empty value reads as a row that forgot to fill itself in.
+                   "Unknown" says the same thing as the banner above does: we did
+                   not get this cluster. -->
               <nldd-list-item>
                 <nldd-text-cell text="Region"></nldd-text-cell>
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"
-                  [attr.text]="clusterData.basics.region.toUpperCase()"
+                  [attr.text]="clusterData.basics.region ? clusterData.basics.region.toUpperCase() : 'Unknown'"
                 ></nldd-text-cell>
               </nldd-list-item>
               <nldd-list-item>
@@ -85,17 +99,21 @@
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"
-                  [attr.text]="clusterData.basics.kubernetesVersion"
+                  [attr.text]="clusterData.basics.kubernetesVersion || 'Unknown'"
                 ></nldd-text-cell>
-                <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                <nldd-cell width="fit-content">
-                  <nldd-button
-                    text="Upgrade"
-                    start-icon="arrow-up"
-                    variant="secondary"
-                    size="sm"
-                  ></nldd-button>
-                </nldd-cell>
+                <!-- No upgrade offered from a version nobody knows: there is
+                     nothing to upgrade from. -->
+                @if (clusterData.basics.kubernetesVersion) {
+                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                  <nldd-cell width="fit-content">
+                    <nldd-button
+                      text="Upgrade"
+                      start-icon="arrow-up"
+                      variant="secondary"
+                      size="sm"
+                    ></nldd-button>
+                  </nldd-cell>
+                }
               </nldd-list-item>
               <nldd-list-item>
                 <nldd-text-cell text="Created"></nldd-text-cell>
@@ -299,6 +317,7 @@
                 icon-color="secondary"
                 text="No events recorded yet"
               ></nldd-inline-dialog>
+              <nldd-spacer size="16"></nldd-spacer>
             } @else {
               <!-- Capped and scrollable: the history grows without bound. tabindex
                    makes the region reachable for keyboard scrolling. -->
@@ -354,6 +373,7 @@
                 icon-color="secondary"
                 text="No node pools are configured yet."
               ></nldd-inline-dialog>
+              <nldd-spacer size="16"></nldd-spacer>
             } @else {
               <nldd-collection layout="grid" item-width="320px" gap="16px">
                 @for (pool of clusterData.nodePools; track pool.name) {
@@ -451,10 +471,13 @@
             <nldd-spacer size="16"></nldd-spacer>
 
             @if (isLoadingPlugins()) {
-              <nldd-activity-indicator
-                show-text
+              <!-- Same shape as the empty state it will turn into, so the box does
+                   not change height under you when the answer arrives. -->
+              <nldd-inline-dialog
+                variant="loading"
                 text="Loading plugins..."
-              ></nldd-activity-indicator>
+              ></nldd-inline-dialog>
+              <nldd-spacer size="16"></nldd-spacer>
             } @else if (installedPlugins().length > 0) {
               <!-- Informational only: these cards report what is installed, editing
                    runs through the Edit button above. So no href and no button. -->
@@ -486,6 +509,7 @@
                 icon-color="secondary"
                 text="No plugins installed"
               ></nldd-inline-dialog>
+              <nldd-spacer size="16"></nldd-spacer>
             }
           </nldd-container>
         </nldd-box>
@@ -592,6 +616,25 @@
 <!-- Two dialogs, because a failure is not the same screen with a red stripe in
      it. Nothing was fetched, so there is nothing to lay out: the alert says what
      went wrong and offers the way out. -->
+<nldd-modal-dialog
+  appDialogSync
+  [show]="!!kubeconfigError()"
+  variant="alert"
+  text="The kubeconfig could not be downloaded"
+  [attr.supporting-text]="kubeconfigError()"
+  accessible-label="Kubeconfig download error"
+  (close)="closeKubeconfigError()"
+>
+  <nldd-button
+    slot="actions"
+    type="button"
+    text="Close"
+    variant="primary"
+    width="full"
+    (click)="closeKubeconfigError()"
+  ></nldd-button>
+</nldd-modal-dialog>
+
 <nldd-modal-dialog
   appDialogSync
   [show]="showCredentialsModal() && !!credentialsError()"

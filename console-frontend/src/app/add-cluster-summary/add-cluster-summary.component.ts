@@ -13,7 +13,6 @@ import { create } from '@bufbuild/protobuf';
 import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
-import { ToastService } from '../toast.service';
 import { RegionCatalogService } from '../region-catalog.service';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { CLUSTER } from '../../connect/tokens';
@@ -41,8 +40,6 @@ export default class AddClusterSummaryComponent {
   private organizationDataService = inject(OrganizationDataService);
 
   private regionCatalog = inject(RegionCatalogService);
-
-  private toastService = inject(ToastService);
 
   protected state = computed(() => this.stateService.getState());
 
@@ -134,15 +131,12 @@ export default class AddClusterSummaryComponent {
     this.isCreating.set(false);
 
     // The cluster is there either way, so the road leads to it. A pool that did
-    // not make it is said out loud rather than left for you to spot: you asked
-    // for it and it is not on the page you are about to land on.
-    if (mislukt.length === 1) {
-      this.toastService.error(`Node pool '${mislukt[0]}' was not created`);
-    } else if (mislukt.length > 1) {
-      this.toastService.error(`${mislukt.length} node pools were not created`);
-    }
-
-    this.router.navigate(['/clusters', clusterId]);
+    // not make it travels along as navigation state: the cluster page says it
+    // where the missing pool is, next to the section that should have held it,
+    // and it stays there to be read instead of sliding away on its own.
+    this.router.navigate(['/clusters', clusterId], {
+      state: mislukt.length > 0 ? { nodePoolsNotCreated: mislukt } : undefined,
+    });
   }
 
   /** Returns the names of the pools that did not make it. */
