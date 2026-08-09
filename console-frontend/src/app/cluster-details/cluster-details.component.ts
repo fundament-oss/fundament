@@ -41,7 +41,12 @@ import pluginIconSrc from '../utils/plugin-icon';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
-import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
+import {
+  formatDate as formatDateUtil,
+  formatDateTime as formatDateTimeUtil,
+  formatShortDateTime as formatShortDateTimeUtil,
+  formatTime as formatTimeUtil,
+} from '../utils/date-format';
 
 const getUsagePercentage = (used: number, limit: number): number =>
   Math.round((used / limit) * 100);
@@ -148,6 +153,16 @@ const getEventDetails = (event: ClusterEvent): string => {
     return `Attempt ${event.attempt}`;
   }
   return '';
+};
+
+/** Label and detail on one line: "Sync completed: Shoot spec applied." The
+ *  detail is the part you actually read, and as supporting text under a bold
+ *  label it got the quieter of the two. Without a detail the label stands
+ *  alone, so no line ends on a dangling colon. */
+const getEventLine = (event: ClusterEvent): string => {
+  const detail = getEventDetails(event);
+  const label = getEventTypeLabel(event.eventType);
+  return detail ? `${label}: ${detail}` : label;
 };
 
 @Component({
@@ -464,6 +479,13 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   readonly formatDate = formatDateTimeUtil;
 
+  /** The timeline splits them: the day in its own column, the clock beneath it. */
+  readonly formatDay = formatDateUtil;
+
+  readonly formatTimestamp = formatShortDateTimeUtil;
+
+  readonly formatTime = formatTimeUtil;
+
   /** The four usage bars, each carrying its own display and ARIA text. A getter
    *  rather than a computed: `clusterData` is a plain object the polling code
    *  mutates in place, so there is no signal to derive from. */
@@ -633,6 +655,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   isSyncStatusMoving = isSyncStatusMoving;
 
+  /** Named like the other overlays that belong to one cluster: "Plugins for X",
+   *  "Metrics credentials for X". Three sheets, one way of saying it. */
+  eventHistoryTitle = (): string => (this.clusterData.basics.name
+    ? `Event history for ${this.clusterData.basics.name}`
+    : 'Event history');
+
   /** These credentials belong to one cluster, and the sheet can sit open beside
    *  another window, so it says which one. Falls back to the bare noun while the
    *  cluster is still loading. */
@@ -657,6 +685,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   }
 
   getEventTypeLabel = getEventTypeLabel;
+
+  getEventLine = getEventLine;
 
   getEventTypeColor = getEventTypeColor;
 

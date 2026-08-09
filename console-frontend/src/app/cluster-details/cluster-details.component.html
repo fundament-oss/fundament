@@ -255,23 +255,12 @@
               ></nldd-inline-dialog>
               <nldd-spacer size="16"></nldd-spacer>
             } @else {
-              <ng-container
-                [ngTemplateOutlet]="eventList"
-                [ngTemplateOutletContext]="{ $implicit: eventsOnPage() }"
-              ></ng-container>
-
               <!-- The rest one click away instead of in a scroll region nested
                    inside a page that already scrolls. -->
-              @if (hasMoreEvents()) {
-                <nldd-spacer size="12"></nldd-spacer>
-                <nldd-button
-                  type="button"
-                  (click)="showAllEventsSheet.set(true)"
-                  [attr.text]="'Show all ' + clusterEvents().length + ' events'"
-                  variant="secondary"
-                  width="full"
-                ></nldd-button>
-              }
+              <ng-container
+                [ngTemplateOutlet]="eventList"
+                [ngTemplateOutletContext]="{ $implicit: eventsOnPage(), metKnop: hasMoreEvents() }"
+              ></ng-container>
             }
           </nldd-container>
         </nldd-box>
@@ -746,8 +735,10 @@
 </nldd-modal-dialog>
 
 <!-- One list, drawn twice: on the page it gets the first few, in the sheet all
-     of them. -->
-<ng-template #eventList let-events>
+     of them. The sheet is one narrow column whatever the window does, so it
+     stacks; the page puts the moment in a column of its own from md, so the
+     titles line up and you read the timeline down one edge. -->
+<ng-template #eventList let-events let-metKnop="metKnop" let-inSheet="inSheet">
   <nldd-list no-dividers accessible-label="Event history">
     @for (
       event of events;
@@ -755,6 +746,18 @@
       let isFirst = $first, isLast = $last
     ) {
       <nldd-list-item>
+        @if (!inSheet) {
+          <nldd-text-cell
+            size="sm"
+            hide-below="md"
+            width="200px"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="event.createdAt ? formatTimestamp(event.createdAt) : null"
+          ></nldd-text-cell>
+          <nldd-spacer-cell size="16" hide-below="md"></nldd-spacer-cell>
+        }
+
         <nldd-timeline-track-cell
           status="past"
           [attr.position]="
@@ -762,13 +765,52 @@
           "
         ></nldd-timeline-track-cell>
         <nldd-spacer-cell size="12"></nldd-spacer-cell>
-        <nldd-title-cell
-          vertical-alignment="top"
-          [attr.color]="getEventTypeColor(event.eventType)"
-          [attr.overline]="event.createdAt ? formatDate(event.createdAt) : null"
-          [attr.text]="getEventTypeLabel(event.eventType)"
-          [attr.supporting-text]="getEventDetails(event)"
-        ></nldd-title-cell>
+
+        @if (inSheet) {
+          <!-- What kind of event it was in the overline, what it says as the
+               line you read, and when underneath. The moment is the least of
+               the three here: you are reading down a list, not looking one up
+               by time. Without a detail the label takes the main line, so no
+               row is left with an overline and nothing under it. -->
+          <nldd-text-cell
+            [attr.color]="getEventTypeColor(event.eventType)"
+            [attr.overline]="getEventDetails(event) ? getEventTypeLabel(event.eventType) : null"
+            [attr.text]="getEventDetails(event) || getEventTypeLabel(event.eventType)"
+            [attr.supporting-text]="event.createdAt ? formatTimestamp(event.createdAt) : null"
+          ></nldd-text-cell>
+        } @else {
+          <nldd-text-cell
+            hide-above="sm"
+            [attr.color]="getEventTypeColor(event.eventType)"
+            [attr.overline]="event.createdAt ? formatTimestamp(event.createdAt) : null"
+            [attr.text]="getEventLine(event)"
+          ></nldd-text-cell>
+          <nldd-text-cell
+            hide-below="md"
+            [attr.color]="getEventTypeColor(event.eventType)"
+            [attr.text]="getEventLine(event)"
+          ></nldd-text-cell>
+        }
+      </nldd-list-item>
+    }
+
+    @if (metKnop) {
+      <!-- Empty lead columns, the same ones a row has, so the button starts
+           where the titles start instead of against the edge of the box. -->
+      <nldd-list-item>
+        <nldd-cell hide-below="md" width="200px"></nldd-cell>
+        <nldd-spacer-cell size="16" hide-below="md"></nldd-spacer-cell>
+        <nldd-spacer-cell size="16"></nldd-spacer-cell>
+        <nldd-spacer-cell size="12"></nldd-spacer-cell>
+        <nldd-cell width="full">
+          <nldd-button
+            type="button"
+            (click)="showAllEventsSheet.set(true)"
+            text="Show all events"
+            end-icon="chevron-right"
+            variant="secondary"
+          ></nldd-button>
+        </nldd-cell>
       </nldd-list-item>
     }
   </nldd-list>
@@ -778,13 +820,13 @@
   appSheetSync
   [show]="showAllEventsSheet()"
   placement="right"
-  accessible-label="Event history"
+  [attr.accessible-label]="eventHistoryTitle()"
   (close)="showAllEventsSheet.set(false)"
 >
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
-      text="Event history"
+      [attr.text]="eventHistoryTitle()"
       collapse-anchor="event-history-title"
       dismiss-text="Close"
       (dismiss)="showAllEventsSheet.set(false)"
@@ -792,14 +834,14 @@
 
     <nldd-simple-section>
       <nldd-title id="event-history-title" size="3">
-        <h1>Event history</h1>
+        <h1>{{ eventHistoryTitle() }}</h1>
       </nldd-title>
 
       <nldd-spacer size="16"></nldd-spacer>
 
       <ng-container
         [ngTemplateOutlet]="eventList"
-        [ngTemplateOutletContext]="{ $implicit: clusterEvents() }"
+        [ngTemplateOutletContext]="{ $implicit: clusterEvents(), inSheet: true }"
       ></ng-container>
     </nldd-simple-section>
   </nldd-page>
