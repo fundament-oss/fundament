@@ -24,15 +24,7 @@ import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
 
-function checkIsWideField(schema: CrdPropertySchema): boolean {
-  return (
-    schema.type === 'array' || schema.type === 'object' || (schema.description?.length ?? 0) > 100
-  );
-}
 
-function checkIsWideStatusField(key: string, value: unknown): boolean {
-  return key === 'conditions' || Array.isArray(value) || typeof value === 'object';
-}
 
 function checkIsConditionsField(key: string, value: unknown): boolean {
   return key === 'conditions' && Array.isArray(value);
@@ -186,6 +178,21 @@ export default class ResourceDetailComponent implements OnInit {
 
   readonly listLink = ['..'];
 
+  /** The same destination as an href, so the back link is a real link: it can be
+   *  middle-clicked and copied. routerLink cannot reach the anchor, which lives
+   *  in nldd-link's shadow DOM. */
+  get listHref(): string {
+    return this.router.createUrlTree(this.listLink, { relativeTo: this.route }).toString();
+  }
+
+  onBackClick(event: Event) {
+    // Let the browser handle the modified clicks that mean "open elsewhere".
+    const e = event as MouseEvent;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    event.preventDefault();
+    this.router.navigate(this.listLink, { relativeTo: this.route });
+  }
+
   showDeleteModal = signal(false);
 
   deleting = signal(false);
@@ -240,10 +247,6 @@ export default class ResourceDetailComponent implements OnInit {
   formatDateValue = toDateValue;
 
   formatSimpleValue = toSimpleValue;
-
-  isWideField = checkIsWideField;
-
-  isWideStatusField = checkIsWideStatusField;
 
   isConditionsField = checkIsConditionsField;
 

@@ -38,27 +38,22 @@
   </div>
 }
 
-<!-- API Version Mismatch Banner -->
+<!-- Above the app, not in it: this says something about the page you are on
+     rather than about anything inside it. -->
 @if (apiVersionMismatch()) {
-  <div
-    class="flex items-center justify-between bg-amber-500 px-4 py-3 text-white shadow-md dark:bg-amber-600"
-    role="alert"
+  <nldd-banner
+    variant="warning"
+    text="New version available"
+    supporting-text="The API has been updated. Reload to use the latest version."
   >
-    <div class="flex items-center">
-      <nldd-icon name="exclamation-circle" class="mr-3 shrink-0" size="24"></nldd-icon>
-      <div>
-        <p class="font-semibold">New version available</p>
-        <p class="text-sm">The API has been updated. Please reload to use the latest version.</p>
-      </div>
-    </div>
-    <button
-      (click)="reloadApp()"
+    <nldd-button
+      slot="actions"
       type="button"
-      class="ml-4 shrink-0 cursor-pointer rounded-md bg-white px-4 py-2 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-50 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-amber-500 focus:outline-none dark:bg-gray-900 dark:text-amber-400 dark:hover:bg-gray-800"
-    >
-      Reload now
-    </button>
-  </div>
+      (click)="reloadApp()"
+      text="Reload now"
+      variant="secondary"
+    ></nldd-button>
+  </nldd-banner>
 }
 
 <nldd-app-view>

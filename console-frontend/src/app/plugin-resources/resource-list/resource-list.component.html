@@ -1,7 +1,6 @@
 @if (errorMessage()) {
-  <div class="bg-danger-50 dark:bg-danger-900/20 mb-6 flex items-center rounded-md p-4">
-    <p class="text-danger-800 dark:text-danger-200 font-medium">{{ errorMessage() }}</p>
-  </div>
+  <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+  <nldd-spacer size="24"></nldd-spacer>
 }
 
 @if (customUIUrl()) {
@@ -18,33 +17,30 @@
   />
 } @else {
   @if (canCreate()) {
-    <div class="mb-4 flex justify-end">
+    <nldd-container horizontal-alignment="right">
       <nldd-button
         [routerLink]="createLink"
         text="Create"
         start-icon="plus"
         variant="primary"
       ></nldd-button>
-    </div>
-  }
-  <div class="card">
-    <div class="card-header">
-      <h1 class="text-3xl font-semibold">{{ kindLabel() }}</h1>
-      @if (plugin()?.description) {
-        <p class="mt-1 text-gray-600 dark:text-gray-300">
-          {{ plugin()?.description }}
-        </p>
-      }
-    </div>
+    </nldd-container>
 
-    <div class="p-6">
+    <nldd-spacer size="16"></nldd-spacer>
+  }
+  <nldd-box>
+    <nldd-container padding="16" md-padding="24">
+      <nldd-title size="3">
+        <h1>{{ kindLabel() }}</h1>
+        @if (plugin()?.description) {
+          <span slot="subtitle">{{ plugin()?.description }}</span>
+        }
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
       @if (isLoading() || clusterContext.isLoadingClusters()) {
-        <div class="py-8 text-center">
-          <span
-            class="border-accent-500 inline-block h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
-          ></span>
-          <p class="mt-2 text-gray-500 dark:text-gray-400">Loading…</p>
-        </div>
+        <nldd-inline-dialog variant="loading" text="Loading..."></nldd-inline-dialog>
       } @else {
         <!-- Table -->
         @if (resources().length > 0) {
@@ -67,20 +63,22 @@
 
             @for (resource of resources(); track resource.metadata.uid) {
               <nldd-table-row>
-                <nldd-cell width="full" vertical-alignment="top">
-                  <div class="py-2">
-                    <a
-                      [routerLink]="detailLink(resource)"
-                      [queryParams]="detailQueryParams(resource)"
-                      class="font-medium hover:underline"
-                      >{{ resource.metadata.name }}</a
-                    >
+                <nldd-cell width="full">
+                  <nldd-container gap="2">
+                    <!-- href, not routerLink: the anchor lives in the link's
+                         shadow DOM, out of routerLink's reach. onDetailClick
+                         routes the plain clicks, the same way the menu does. -->
+                    <nldd-link
+                      [attr.href]="detailHref(resource)"
+                      [attr.text]="resource.metadata.name"
+                      (click)="onDetailClick($event, resource)"
+                    ></nldd-link>
                     @if (resource.metadata.namespace) {
-                      <div class="mt-0.5 font-mono text-sm text-gray-500 dark:text-gray-400">
-                        {{ resource.metadata.namespace }}
-                      </div>
+                      <nldd-rich-text spacing="flat" size="sm">
+                        <p>{{ resource.metadata.namespace }}</p>
+                      </nldd-rich-text>
                     }
-                  </div>
+                  </nldd-container>
                 </nldd-cell>
                 @for (col of columns(); track col.name) {
                   <nldd-text-cell
@@ -155,8 +153,8 @@
           }
         }
       }
-    </div>
-  </div>
+    </nldd-container>
+  </nldd-box>
 
   <app-resource-delete-modal
     [show]="pendingDelete() !== null"

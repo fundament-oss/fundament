@@ -9,12 +9,14 @@
 
   <p>
     Are you sure you want to delete
-    <strong class="font-semibold">{{ resourceName() }}</strong
+    <strong>{{ resourceName() }}</strong
     >? This cannot be undone.
   </p>
 
   @if (errorMessage()) {
-    <nldd-box class="mt-4 block">
+    <nldd-spacer size="16"></nldd-spacer>
+
+    <nldd-box>
       <nldd-container padding="16">
         <nldd-inline-dialog
           icon="exclamation-triangle"
