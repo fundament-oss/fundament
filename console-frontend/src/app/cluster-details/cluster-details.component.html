@@ -151,6 +151,16 @@
                   [attr.text]="getSyncStatusLabel(clusterData.syncState)"
                 ></nldd-text-cell>
               </nldd-list-item>
+              @if (clusterData.syncState?.statusUpdatedAt) {
+                <nldd-list-item>
+                  <nldd-text-cell text="Status updated"></nldd-text-cell>
+                  <nldd-text-cell
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    [attr.text]="formatDate(clusterData.syncState!.statusUpdatedAt)"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
               @if (clusterData.syncState?.shootMessage) {
                 <nldd-list-item>
                   <nldd-text-cell text="Message"></nldd-text-cell>
@@ -194,80 +204,6 @@
               }
             </nldd-list>
 
-            <!-- Collapsible Sync History -->
-            @if (clusterData.syncState) {
-              <nldd-spacer size="16"></nldd-spacer>
-              <nldd-divider></nldd-divider>
-              <nldd-spacer size="16"></nldd-spacer>
-
-              <details class="group">
-                <summary class="inline-flex cursor-pointer items-center font-medium">
-                  <nldd-icon
-                    name="caret-right"
-                    class="mr-1 transition-transform group-open:rotate-90"
-                    size="16"
-                    color="accent"
-                  ></nldd-icon>
-                  Sync details
-                </summary>
-
-                <nldd-spacer size="12"></nldd-spacer>
-
-                <nldd-table
-                  accessible-label="Sync details"
-                  columns="minmax(140px, 1fr) minmax(200px, 2fr)"
-                >
-                  <nldd-table-row slot="header">
-                    <nldd-text-cell text="**Property**"></nldd-text-cell>
-                    <nldd-text-cell text="**Value**"></nldd-text-cell>
-                  </nldd-table-row>
-
-                  <nldd-table-row>
-                    <nldd-text-cell text="Shoot status"></nldd-text-cell>
-                    <nldd-text-cell
-                      [attr.text]="clusterData.syncState.shootStatus || 'N/A'"
-                    ></nldd-text-cell>
-                  </nldd-table-row>
-                  <nldd-table-row>
-                    <nldd-text-cell text="Status message"></nldd-text-cell>
-                    <nldd-text-cell
-                      [attr.text]="clusterData.syncState.shootMessage || 'N/A'"
-                    ></nldd-text-cell>
-                  </nldd-table-row>
-                  <nldd-table-row>
-                    <nldd-text-cell text="Status updated"></nldd-text-cell>
-                    <nldd-text-cell
-                      [attr.text]="
-                        clusterData.syncState.statusUpdatedAt
-                          ? formatDate(clusterData.syncState.statusUpdatedAt)
-                          : 'N/A'
-                      "
-                    ></nldd-text-cell>
-                  </nldd-table-row>
-                  <nldd-table-row>
-                    <nldd-text-cell text="Outbox status"></nldd-text-cell>
-                    <nldd-text-cell
-                      [attr.text]="clusterData.syncState.outboxStatus || 'N/A'"
-                    ></nldd-text-cell>
-                  </nldd-table-row>
-                  <nldd-table-row>
-                    <nldd-text-cell text="Outbox retries"></nldd-text-cell>
-                    <nldd-text-cell
-                      [attr.text]="clusterData.syncState.outboxRetries"
-                    ></nldd-text-cell>
-                  </nldd-table-row>
-                  @if (clusterData.syncState.outboxError) {
-                    <nldd-table-row>
-                      <nldd-text-cell text="Outbox error"></nldd-text-cell>
-                      <nldd-text-cell
-                        color="critical"
-                        [attr.text]="clusterData.syncState.outboxError"
-                      ></nldd-text-cell>
-                    </nldd-table-row>
-                  }
-                </nldd-table>
-              </details>
-            }
           </nldd-container>
         </nldd-box>
 

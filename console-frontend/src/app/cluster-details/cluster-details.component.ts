@@ -93,7 +93,13 @@ const getSyncStatusBadgeColor = (syncState: SyncState | null): string => {
 
 const getSyncStatusLabel = (syncState: SyncState | null): string => {
   if (!syncState) return 'Unknown';
-  if (syncState.shootStatus) return syncState.shootStatus;
+  // Every other branch here hands back a label that reads as one; the shoot
+  // status comes straight from Gardener in lowercase. Capitalized here rather
+  // than in CSS, so the value is the label wherever it ends up: a tooltip, a
+  // screen reader, a copied line of text.
+  if (syncState.shootStatus) {
+    return syncState.shootStatus.charAt(0).toUpperCase() + syncState.shootStatus.slice(1);
+  }
   if (syncState.outboxError) return 'Error';
   if (syncState.outboxStatus === 'completed') return 'Synced';
   if (syncState.outboxStatus === 'failed') return 'Failed';
