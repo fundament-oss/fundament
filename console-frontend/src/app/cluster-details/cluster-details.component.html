@@ -612,41 +612,55 @@
           text="Loading credentials..."
         ></nldd-inline-dialog>
       } @else if (credentials(); as creds) {
+        <!-- The value gets the full width and wraps: a shoot name or a rotated
+             password is long, and cut off is worse than two lines. The button
+             sits under it rather than beside it, where it would squeeze the
+             value back into one truncated line. -->
         <nldd-form-field label="Username">
-          <nldd-container layout="row" gap="8">
-            <nldd-text-field
-              id="metricsUsername"
-              [value]="creds.username"
-              readonly
-            ></nldd-text-field>
-            <nldd-button
-              type="button"
-              (click)="copyCredential('username')"
-              [text]="copiedField() === 'username' ? 'Copied' : 'Copy'"
-              [attr.start-icon]="copiedField() === 'username' ? 'check-mark' : 'copy'"
-              variant="secondary"
-            ></nldd-button>
-          </nldd-container>
+          <nldd-multi-line-text-field
+            id="metricsUsername"
+            [value]="creds.username"
+            readonly
+            rows="1"
+            no-spellcheck
+          ></nldd-multi-line-text-field>
         </nldd-form-field>
 
-        <nldd-spacer size="12"></nldd-spacer>
+        <nldd-spacer size="8"></nldd-spacer>
 
+        <nldd-button
+          type="button"
+          (click)="copyCredential('username')"
+          [text]="copiedField() === 'username' ? 'Copied' : 'Copy'"
+          [attr.start-icon]="copiedField() === 'username' ? 'check-mark' : 'copy'"
+          variant="secondary"
+        ></nldd-button>
+
+        <nldd-spacer size="16"></nldd-spacer>
+
+        <!-- The value gets the full width and wraps: a shoot name or a rotated
+             password is long, and cut off is worse than two lines. The button
+             sits under it rather than beside it, where it would squeeze the
+             value back into one truncated line. -->
         <nldd-form-field label="Password">
-          <nldd-container layout="row" gap="8">
-            <nldd-text-field
-              id="metricsPassword"
-              [value]="creds.password"
-              readonly
-            ></nldd-text-field>
-            <nldd-button
-              type="button"
-              (click)="copyCredential('password')"
-              [text]="copiedField() === 'password' ? 'Copied' : 'Copy'"
-              [attr.start-icon]="copiedField() === 'password' ? 'check-mark' : 'copy'"
-              variant="secondary"
-            ></nldd-button>
-          </nldd-container>
+          <nldd-multi-line-text-field
+            id="metricsPassword"
+            [value]="creds.password"
+            readonly
+            rows="1"
+            no-spellcheck
+          ></nldd-multi-line-text-field>
         </nldd-form-field>
+
+        <nldd-spacer size="8"></nldd-spacer>
+
+        <nldd-button
+          type="button"
+          (click)="copyCredential('password')"
+          [text]="copiedField() === 'password' ? 'Copied' : 'Copy'"
+          [attr.start-icon]="copiedField() === 'password' ? 'check-mark' : 'copy'"
+          variant="secondary"
+        ></nldd-button>
       }
     </nldd-simple-section>
   </nldd-page>

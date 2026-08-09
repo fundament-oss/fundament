@@ -44,6 +44,7 @@ import '@nldd/design-system/switch-field';
 import '@nldd/design-system/file-field';
 import '@nldd/design-system/date-field';
 import '@nldd/design-system/text-field';
+import '@nldd/design-system/multi-line-text-field';
 import '@nldd/design-system/token-field';
 import '@nldd/design-system/toggle-button';
 import '@nldd/design-system/toggle-button-group';
