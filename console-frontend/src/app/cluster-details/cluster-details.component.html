@@ -143,6 +143,7 @@
                   <nldd-badge
                     decorative
                     [attr.color]="getSyncStatusBadgeColor(clusterData.syncState)"
+                    [attr.pulse]="isSyncStatusMoving(clusterData.syncState) ? '' : null"
                   ></nldd-badge>
                 </nldd-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
@@ -580,61 +581,76 @@
   ></nldd-button>
 </nldd-modal-dialog>
 
-<nldd-modal-dialog
-  appDialogSync
+<!-- A sheet, not a dialog: these are two values you copy into another window,
+     so it helps if this one can stay open beside it. -->
+<nldd-sheet
+  appSheetSync
   [show]="showCredentialsModal() && !credentialsError()"
-  text="Metrics dashboard credentials"
+  placement="right"
+  [attr.accessible-label]="metricsCredentialsTitle()"
   (close)="closeCredentialsModal()"
 >
-  @if (credentialsLoading()) {
-    <nldd-activity-indicator show-text text="Loading credentials..."></nldd-activity-indicator>
-  } @else if (credentials(); as creds) {
-    <nldd-spacer size="16"></nldd-spacer>
-    <nldd-form-field label="Username">
-      <div class="flex gap-2">
-        <nldd-text-field
-          id="metricsUsername"
-          [value]="creds.username"
-          readonly
-          class="flex-1"
-        ></nldd-text-field>
-        <nldd-button
-          type="button"
-          (click)="copyCredential('username')"
-          [text]="copiedField() === 'username' ? 'Copied' : 'Copy'"
-          [attr.start-icon]="copiedField() === 'username' ? 'check-mark' : 'rectangle-stack'"
-          variant="secondary"
-        ></nldd-button>
-      </div>
-    </nldd-form-field>
-    <nldd-spacer size="12"></nldd-spacer>
-    <nldd-form-field label="Password">
-      <div class="flex gap-2">
-        <nldd-text-field
-          id="metricsPassword"
-          [value]="creds.password"
-          readonly
-          class="flex-1"
-        ></nldd-text-field>
-        <nldd-button
-          type="button"
-          (click)="copyCredential('password')"
-          [text]="copiedField() === 'password' ? 'Copied' : 'Copy'"
-          [attr.start-icon]="copiedField() === 'password' ? 'check-mark' : 'rectangle-stack'"
-          variant="secondary"
-        ></nldd-button>
-      </div>
-    </nldd-form-field>
-  }
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="metricsCredentialsTitle()"
+      collapse-anchor="metrics-credentials-title"
+      dismiss-text="Close"
+      (dismiss)="closeCredentialsModal()"
+    ></nldd-top-title-bar>
 
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="closeCredentialsModal()"
-    text="Close"
-    variant="secondary"
-  ></nldd-button>
-</nldd-modal-dialog>
+    <nldd-simple-section>
+      <nldd-title id="metrics-credentials-title" size="3">
+        <h1>{{ metricsCredentialsTitle() }}</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
+      @if (credentialsLoading()) {
+        <nldd-inline-dialog
+          variant="loading"
+          text="Loading credentials..."
+        ></nldd-inline-dialog>
+      } @else if (credentials(); as creds) {
+        <nldd-form-field label="Username">
+          <nldd-container layout="row" gap="8">
+            <nldd-text-field
+              id="metricsUsername"
+              [value]="creds.username"
+              readonly
+            ></nldd-text-field>
+            <nldd-button
+              type="button"
+              (click)="copyCredential('username')"
+              [text]="copiedField() === 'username' ? 'Copied' : 'Copy'"
+              [attr.start-icon]="copiedField() === 'username' ? 'check-mark' : 'copy'"
+              variant="secondary"
+            ></nldd-button>
+          </nldd-container>
+        </nldd-form-field>
+
+        <nldd-spacer size="12"></nldd-spacer>
+
+        <nldd-form-field label="Password">
+          <nldd-container layout="row" gap="8">
+            <nldd-text-field
+              id="metricsPassword"
+              [value]="creds.password"
+              readonly
+            ></nldd-text-field>
+            <nldd-button
+              type="button"
+              (click)="copyCredential('password')"
+              [text]="copiedField() === 'password' ? 'Copied' : 'Copy'"
+              [attr.start-icon]="copiedField() === 'password' ? 'check-mark' : 'copy'"
+              variant="secondary"
+            ></nldd-button>
+          </nldd-container>
+        </nldd-form-field>
+      }
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
 
 <!-- Delete Cluster Modal -->
 <nldd-modal-dialog

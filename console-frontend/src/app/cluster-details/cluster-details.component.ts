@@ -91,6 +91,16 @@ const getSyncStatusBadgeColor = (syncState: SyncState | null): string => {
   return colors[syncState.shootStatus ?? ''] || 'neutral';
 };
 
+/** Shoot states in which something is moving without anyone doing anything.
+ *  The badge pulses for those, the same rule the cluster status above it
+ *  follows: a ring for what is happening now, a still dot for what simply is.
+ *  `pending` counts, because the work is queued and will start on its own;
+ *  `error` does not, because nothing is going to move until someone acts. */
+const MOVING_SHOOT_STATUSES: ReadonlySet<string> = new Set(['progressing', 'pending', 'deleting']);
+
+const isSyncStatusMoving = (syncState: SyncState | null): boolean =>
+  MOVING_SHOOT_STATUSES.has(syncState?.shootStatus ?? '');
+
 const getSyncStatusLabel = (syncState: SyncState | null): string => {
   if (!syncState) return 'Unknown';
   // Every other branch here hands back a label that reads as one; the shoot
@@ -620,6 +630,15 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   getSyncStatusBadgeColor = getSyncStatusBadgeColor;
 
   getSyncStatusLabel = getSyncStatusLabel;
+
+  isSyncStatusMoving = isSyncStatusMoving;
+
+  /** These credentials belong to one cluster, and the sheet can sit open beside
+   *  another window, so it says which one. Falls back to the bare noun while the
+   *  cluster is still loading. */
+  metricsCredentialsTitle = (): string => (this.clusterData.basics.name
+    ? `Metrics credentials for ${this.clusterData.basics.name}`
+    : 'Metrics credentials');
 
   // Load cluster activity/events
   async loadClusterEvents(clusterId: string): Promise<void> {
