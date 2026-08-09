@@ -310,7 +310,9 @@
 
               <nldd-spacer size="16"></nldd-spacer>
 
-              <div class="chart-frame">
+              <!-- The chart sizes itself to this box: responsive with
+                   maintainAspectRatio off means Chart.js reads the parent. -->
+              <nldd-container>
                 @switch (chart.key) {
                   @case ('cpu') {
                     @if (hasCpuData) {
@@ -341,7 +343,7 @@
                 } @else if (!hasChartData(chart.key)) {
                   <nldd-inline-dialog text="No data available"></nldd-inline-dialog>
                 }
-              </div>
+              </nldd-container>
             </nldd-container>
           </nldd-box>
         }
