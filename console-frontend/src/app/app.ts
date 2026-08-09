@@ -85,6 +85,7 @@ import { RouterOutlet, Router, NavigationEnd, ActivatedRouteSnapshot } from '@an
 import { filter, skip } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
+import DialogSyncDirective from './dialog-sync.directive';
 import type { User } from '../generated/authn/v1/authn_pb';
 import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
@@ -129,6 +130,7 @@ function depthForPath(url: string): number {
   selector: 'app-root',
   imports: [
     RouterOutlet,
+    DialogSyncDirective,
     OrgPickerComponent,
     ProfileComponent,
     ApiKeysComponent,
@@ -425,6 +427,27 @@ export default class App implements OnInit {
   /**
    * Handle accepting a pending invitation from the org picker.
    */
+  /** The invitation the menu opened, and so the dialog that answers it. */
+  invitationToAnswer = signal<Invitation | null>(null);
+
+  openInvitation(invitation: Invitation) {
+    this.invitationToAnswer.set(invitation);
+  }
+
+  async acceptInvitationFromMenu() {
+    const invitation = this.invitationToAnswer();
+    if (!invitation) return;
+    this.invitationToAnswer.set(null);
+    await this.handleAcceptInvitation(invitation);
+  }
+
+  async declineInvitationFromMenu() {
+    const invitation = this.invitationToAnswer();
+    if (!invitation) return;
+    this.invitationToAnswer.set(null);
+    await this.handleDeclineInvitation(invitation);
+  }
+
   async handleAcceptInvitation(invitation: Invitation) {
     try {
       await firstValueFrom(this.inviteClient.acceptInvitation({ id: invitation.id }));

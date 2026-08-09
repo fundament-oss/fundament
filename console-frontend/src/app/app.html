@@ -107,7 +107,7 @@
                   @if (selectorOrganizations().length > 1) {
                     <nldd-button
                       type="button"
-                      [attr.text]="currentOrganization()?.alias || 'Select organization'"
+                      [attr.text]="currentOrganization()?.alias || 'Organizations'"
                       start-icon="apartment-building"
                       max-width="200px"
                       single-line
@@ -130,6 +130,22 @@
                             [attr.selected]="currentOrganization()?.id === org.id ? '' : null"
                             (click)="selectOrganization(org.id)"
                           ></nldd-menu-item>
+                        }
+
+                        <!-- An invitation is an organization you could be in, so
+                             it belongs in the list of organizations rather than
+                             on a login screen you only see once. Without this it
+                             stays invisible until you log out and back in. -->
+                        @if (pendingInvitations().length > 0) {
+                          <nldd-menu-group text="Pending invitations">
+                            @for (invitation of pendingInvitations(); track invitation.id) {
+                              <nldd-menu-item
+                                icon="apartment-building"
+                                [attr.text]="invitation.organizationAlias"
+                                (click)="openInvitation(invitation)"
+                              ></nldd-menu-item>
+                            }
+                          </nldd-menu-group>
                         }
                       </nldd-menu>
                     </nldd-button>
@@ -544,3 +560,27 @@
     (closed)="overlays.newProject.set(false)"
   ></app-add-project>
 }
+
+<nldd-modal-dialog
+  appDialogSync
+  [show]="!!invitationToAnswer()"
+  [attr.text]="invitationToAnswer() ? 'Join ' + invitationToAnswer()!.organizationAlias + '?' : null"
+  supporting-text="You have been invited. Accepting adds it to your organizations, declining removes the invitation."
+  accessible-label="Answer invitation"
+  (close)="invitationToAnswer.set(null)"
+>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="acceptInvitationFromMenu()"
+    text="Accept"
+    variant="primary"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    type="button"
+    (click)="declineInvitationFromMenu()"
+    text="Decline"
+    variant="destructive"
+  ></nldd-button>
+</nldd-modal-dialog>
