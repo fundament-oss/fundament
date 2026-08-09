@@ -81,7 +81,7 @@ import '@nldd/design-system/tooltip';
 import '@nldd/design-system/identity';
 import '@nldd/design-system/menu';
 import '@nldd/design-system/step-indicator';
-import { RouterOutlet, Router, NavigationEnd, ActivatedRouteSnapshot } from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter, skip } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
@@ -94,20 +94,18 @@ import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
-import { type BreadcrumbSegment } from './breadcrumb/breadcrumb.component';
 import ProfileComponent from './profile/profile.component';
 import ApiKeysComponent from './api-keys/api-keys.component';
 import AddProjectComponent from './add-project/add-project.component';
 import { OverlayService } from './overlay.service';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { ClusterStatus } from '../generated/v1/common_pb';
-import { fetchClusterName, getStatusBadgeColor, getStatusLabel } from './utils/cluster-status';
+import { getStatusBadgeColor, getStatusLabel } from './utils/cluster-status';
 import KubeClusterContextService from './plugin-resources/kube-cluster-context.service';
 import PluginNavService from './plugin-resources/plugin-nav.service';
 import MetricsHealthService from './metrics-health.service';
 import PluginRegistryService from './plugin-resources/plugin-registry.service';
 import PluginResourceStoreService from './plugin-resources/plugin-resource-store.service';
-import { crdRefToLabel } from './plugin-resources/crd-schema.utils';
 
 const reloadApp = () => {
   window.location.reload();
@@ -245,20 +243,11 @@ export default class App implements OnInit {
    */
   stackDepth = signal(depthForPath(window.location.pathname));
 
-  // Breadcrumb state
-  breadcrumbSegments = signal<BreadcrumbSegment[]>([]);
-
   // Walkthrough (console-demo) URL; empty where the demo is not deployed, which
   // hides the header's "Take a tour" button.
   tourUrl = signal('');
 
   constructor() {
-    // Refresh breadcrumbs when organization data changes (e.g. after renaming)
-    effect(() => {
-      this.organizationDataService.organizations();
-      untracked(() => this.updateBreadcrumbs());
-    });
-
     // The projects are part of the organization's navigation now, so they load
     // with the organization rather than when one of them is opened.
     effect(() => {
@@ -333,7 +322,6 @@ export default class App implements OnInit {
         this.currentUrl.set(event.urlAfterRedirects);
         this.stackDepth.set(depthForPath(event.urlAfterRedirects));
         this.updateSidebarStateFromRoute();
-        this.updateBreadcrumbs();
       });
 
     // The initial navigation can finish before this component exists, and a
@@ -344,9 +332,8 @@ export default class App implements OnInit {
     this.currentUrl.set(this.router.url);
     this.stackDepth.set(depthForPath(this.router.url));
 
-    // Initialize sidebar state and breadcrumbs from current route
+    // Initialize sidebar state from current route
     this.updateSidebarStateFromRoute();
-    this.updateBreadcrumbs();
   }
 
   reloadApp = reloadApp;
@@ -488,98 +475,6 @@ export default class App implements OnInit {
   }
 
   // Update breadcrumbs based on current route data
-  private async updateBreadcrumbs() {
-    const configs: BreadcrumbSegment[] = [];
-    let allParams: Record<string, string> = {};
-    let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
-
-    while (route) {
-      allParams = { ...allParams, ...route.params };
-      const bc = route.data['breadcrumbs'] as BreadcrumbSegment[] | undefined;
-      if (bc) configs.push(...bc);
-      route = route.firstChild ?? null;
-    }
-
-    const resolved = await Promise.all(
-      configs.map((seg) => this.resolveBreadcrumb(seg, allParams)),
-    );
-    this.breadcrumbSegments.set(resolved);
-  }
-
-  private async resolveBreadcrumb(
-    segment: BreadcrumbSegment,
-    params: Record<string, string>,
-  ): Promise<BreadcrumbSegment> {
-    let label = segment.label;
-    let route = segment.route;
-
-    if (label === ':projectName') {
-      await this.organizationDataService.loadProjectsAndNamespaces().catch(() => {});
-      const projectData = this.organizationDataService.getProjectById(params['id']);
-      label = projectData?.project.alias ?? 'Project';
-    }
-
-    if (label === ':pluginAlias') {
-      const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
-      label = plugin?.label ?? params['pluginName'] ?? 'Plugin';
-    }
-
-    if (label === ':resourceKindLabel') {
-      const plugin = this.pluginRegistry.getPlugin(params['pluginName']);
-      const allMenuItems = [...(plugin?.menu.project ?? [])];
-      const menuItem = allMenuItems.find((m) => m.crd === params['resourceKind']);
-      // Same label the sidebar shows: the raw CRD reference is not presentable.
-      label = menuItem
-        ? (menuItem.label ?? crdRefToLabel(menuItem.crd))
-        : (params['resourceKind'] ?? 'Resources');
-    }
-
-    if (label === ':resourceName') {
-      const clusterId = this.clusterContext.selectedClusterId();
-      const crd = clusterId
-        ? this.pluginRegistry.getCrd(params['pluginName'], params['resourceKind'], clusterId)
-        : undefined;
-      const resource = crd
-        ? this.pluginStore.getResource(
-            params['pluginName'],
-            crd.kind,
-            params['resourceId'],
-            clusterId,
-          )
-        : undefined;
-      label = resource?.metadata.name ?? params['resourceId'] ?? 'Resource';
-    }
-
-    if (label === ':clusterName') {
-      const clusterId = params['id'];
-      if (clusterId) {
-        const cached = this.clusterNameCache.get(clusterId);
-        if (cached) {
-          label = cached;
-        } else {
-          const fromStore = this.organizationDataService.getClusterById(clusterId)?.cluster.name;
-          const name = fromStore ?? (await fetchClusterName(this.clusterClient, clusterId));
-          if (name) {
-            this.clusterNameCache.set(clusterId, name);
-            label = name;
-          } else {
-            label = 'Cluster';
-          }
-        }
-      } else {
-        label = 'Cluster';
-      }
-    }
-
-    if (route) {
-      route = Object.entries(params).reduce(
-        (current, [key, value]) => current.replace(`:${key}`, value),
-        route,
-      );
-    }
-
-    return { label, route };
-  }
 
   // Check if current route is clusters or clusters/add
   isClustersActive(): boolean {
