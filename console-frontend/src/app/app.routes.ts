@@ -35,9 +35,6 @@ const routes: Routes = [
       {
         path: 'clusters',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Clusters' }],
-        },
         // The wizard is a child of the cluster list, so the list stays mounted
         // behind the sheet it opens in.
         children: [
@@ -47,30 +44,18 @@ const routes: Routes = [
               import('./add-cluster-wizard-layout/add-cluster-wizard-layout.component').then(
                 (m) => m.default,
               ),
-            data: {
-              breadcrumbs: [
-                { label: 'Clusters', route: '/clusters' },
-                { label: 'New cluster', route: '/clusters/add' },
-              ],
-            },
             children: [
               {
                 path: '',
                 loadComponent: () =>
                   import('./add-cluster/add-cluster.component').then((m) => m.default),
                 canActivate: [clusterWizardGuard],
-                data: {
-                  breadcrumbs: [{ label: 'Basics' }],
-                },
               },
               {
                 path: 'nodes',
                 loadComponent: () =>
                   import('./add-cluster-nodes/add-cluster-nodes.component').then((m) => m.default),
                 canActivate: [clusterWizardGuard],
-                data: {
-                  breadcrumbs: [{ label: 'Node pools' }],
-                },
               },
               {
                 path: 'summary',
@@ -79,9 +64,6 @@ const routes: Routes = [
                     (m) => m.default,
                   ),
                 canActivate: [clusterWizardGuard],
-                data: {
-                  breadcrumbs: [{ label: 'Summary' }],
-                },
               },
               { path: '**', redirectTo: '' },
             ],
@@ -114,17 +96,11 @@ const routes: Routes = [
         path: 'projects/:id/general',
         loadComponent: () =>
           import('./project-detail/project-detail.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'General' }],
-        },
       },
       {
         path: 'clusters/:id',
         loadComponent: () =>
           import('./cluster-details/cluster-details.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Clusters', route: '/clusters' }, { label: ':clusterName' }],
-        },
         // Both editors open as a sheet over the detail page, so they are children
         // of it: the page behind the sheet stays mounted and keeps its scroll.
         children: [
@@ -132,46 +108,22 @@ const routes: Routes = [
             path: 'nodes',
             loadComponent: () =>
               import('./cluster-nodes/cluster-nodes.component').then((m) => m.default),
-            data: {
-              breadcrumbs: [
-                { label: 'Clusters', route: '/clusters' },
-                { label: ':clusterName', route: '/clusters/:id' },
-                { label: 'Nodes' },
-              ],
-            },
           },
           {
             path: 'namespaces',
             loadComponent: () =>
               import('./cluster-namespaces/cluster-namespaces.component').then((m) => m.default),
-            data: {
-              breadcrumbs: [
-                { label: 'Clusters', route: '/clusters' },
-                { label: ':clusterName', route: '/clusters/:id' },
-                { label: 'Namespaces' },
-              ],
-            },
           },
           {
             path: 'plugins',
             loadComponent: () =>
               import('./cluster-plugins/cluster-plugins.component').then((m) => m.default),
-            data: {
-              breadcrumbs: [
-                { label: 'Clusters', route: '/clusters' },
-                { label: ':clusterName', route: '/clusters/:id' },
-                { label: 'Plugins' },
-              ],
-            },
           },
         ],
       },
       {
         path: 'projects/:id/namespaces',
         loadComponent: () => import('./namespaces/namespaces.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Namespaces' }],
-        },
         children: [
           {
             // Everything about one namespace, the other way round from the member
@@ -179,13 +131,6 @@ const routes: Routes = [
             path: ':name',
             loadComponent: () =>
               import('./namespace-sheet/namespace-sheet.component').then((m) => m.default),
-            data: {
-              breadcrumbs: [
-                { label: ':projectName', route: '/projects/:id' },
-                { label: 'Namespaces', route: '/projects/:id/namespaces' },
-                { label: 'Namespace' },
-              ],
-            },
           },
         ],
       },
@@ -193,9 +138,6 @@ const routes: Routes = [
         path: 'projects/:id/members',
         loadComponent: () =>
           import('./project-members/project-members.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Members' }],
-        },
         // The same reference as under organization members: a route of its own,
         // so the control that opens it can be a real link.
         children: [
@@ -203,13 +145,6 @@ const routes: Routes = [
             path: 'permissions',
             loadComponent: () =>
               import('./permissions-sheet/permissions-sheet.component').then((m) => m.default),
-            data: {
-              breadcrumbs: [
-                { label: ':projectName', route: '/projects/:id' },
-                { label: 'Members', route: '/projects/:id/members' },
-                { label: 'About permissions' },
-              ],
-            },
           },
           {
             // Everything one member has here. A route, so the row that opens it
@@ -219,13 +154,6 @@ const routes: Routes = [
               import('./project-member-sheet/project-member-sheet.component').then(
                 (m) => m.default,
               ),
-            data: {
-              breadcrumbs: [
-                { label: ':projectName', route: '/projects/:id' },
-                { label: 'Members', route: '/projects/:id/members' },
-                { label: 'Member' },
-              ],
-            },
           },
         ],
       },
@@ -233,9 +161,6 @@ const routes: Routes = [
         path: 'projects/:id/limits',
         loadComponent: () =>
           import('./project-limits/project-limits.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Limits' }],
-        },
       },
       {
         path: 'projects/:id/settings',
@@ -245,47 +170,29 @@ const routes: Routes = [
       {
         path: 'plugins',
         loadComponent: () => import('./plugins/plugins.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Plugins' }],
-        },
       },
       {
         path: 'plugins/:id',
         loadComponent: () =>
           import('./plugin-details/plugin-details.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Plugins', route: '/plugins' }, { label: 'Plugin details' }],
-        },
       },
       {
         path: 'metrics',
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Metrics' }],
-        },
       },
       {
         path: 'projects/:id/metrics',
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: ':projectName', route: '/projects/:id' }, { label: 'Metrics' }],
-        },
       },
       {
         path: 'organization',
         loadComponent: () =>
           import('./organization-settings/organization-settings.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'General' }],
-        },
       },
       {
         path: 'organization/members',
         loadComponent: () =>
           import('./organization-members/organization-members.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Organization members' }],
-        },
         // A route of its own so the reference can be linked to, shared and
         // closed with the back button; a child so the list stays mounted behind
         // the sheet.
@@ -294,12 +201,6 @@ const routes: Routes = [
             path: 'permissions',
             loadComponent: () =>
               import('./permissions-sheet/permissions-sheet.component').then((m) => m.default),
-            data: {
-              breadcrumbs: [
-                { label: 'Organization members', route: '/organization/members' },
-                { label: 'About permissions' },
-              ],
-            },
           },
         ],
       },
@@ -307,9 +208,6 @@ const routes: Routes = [
         path: 'organization/limits',
         loadComponent: () =>
           import('./organization-limits/organization-limits.component').then((m) => m.default),
-        data: {
-          breadcrumbs: [{ label: 'Limits' }],
-        },
       },
       // Plugin resource routes (organization-level)
       {
@@ -321,9 +219,6 @@ const routes: Routes = [
               import('./plugin-resources/resource-list/resource-list.component').then(
                 (m) => m.default,
               ),
-            data: {
-              breadcrumbs: [{ label: ':pluginAlias' }, { label: ':resourceKindLabel' }],
-            },
           },
           {
             // Must precede :resourceKind/:resourceId so `create` is not parsed as an id.
@@ -332,16 +227,6 @@ const routes: Routes = [
               import('./plugin-resources/resource-create/resource-create.component').then(
                 (m) => m.default,
               ),
-            data: {
-              breadcrumbs: [
-                { label: ':pluginAlias' },
-                {
-                  label: ':resourceKindLabel',
-                  route: '/plugin-resources/:pluginName/:resourceKind',
-                },
-                { label: 'Create' },
-              ],
-            },
           },
           {
             path: ':resourceKind/:resourceId',
@@ -349,16 +234,6 @@ const routes: Routes = [
               import('./plugin-resources/resource-detail/resource-detail.component').then(
                 (m) => m.default,
               ),
-            data: {
-              breadcrumbs: [
-                { label: ':pluginAlias' },
-                {
-                  label: ':resourceKindLabel',
-                  route: '/plugin-resources/:pluginName/:resourceKind',
-                },
-                { label: ':resourceName' },
-              ],
-            },
           },
         ],
       },
@@ -372,13 +247,6 @@ const routes: Routes = [
               import('./plugin-resources/resource-list/resource-list.component').then(
                 (m) => m.default,
               ),
-            data: {
-              breadcrumbs: [
-                { label: ':projectName', route: '/projects/:id' },
-                { label: ':pluginAlias' },
-                { label: ':resourceKindLabel' },
-              ],
-            },
           },
           {
             // Must precede :resourceKind/:resourceId so `create` is not parsed as an id.
@@ -387,17 +255,6 @@ const routes: Routes = [
               import('./plugin-resources/resource-create/resource-create.component').then(
                 (m) => m.default,
               ),
-            data: {
-              breadcrumbs: [
-                { label: ':projectName', route: '/projects/:id' },
-                { label: ':pluginAlias' },
-                {
-                  label: ':resourceKindLabel',
-                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
-                },
-                { label: 'Create' },
-              ],
-            },
           },
           {
             path: ':resourceKind/:resourceId',
@@ -405,17 +262,6 @@ const routes: Routes = [
               import('./plugin-resources/resource-detail/resource-detail.component').then(
                 (m) => m.default,
               ),
-            data: {
-              breadcrumbs: [
-                { label: ':projectName', route: '/projects/:id' },
-                { label: ':pluginAlias' },
-                {
-                  label: ':resourceKindLabel',
-                  route: '/projects/:id/plugin-resources/:pluginName/:resourceKind',
-                },
-                { label: ':resourceName' },
-              ],
-            },
           },
         ],
       },
