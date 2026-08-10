@@ -76,6 +76,12 @@ type api_key
     define can_delete: creator or admin from owner
     define can_use: usable_by
 
+type plugin
+  relations
+    define owner: [organization]
+    define can_edit: admin from owner
+    define can_delete: admin from owner
+
 condition is_not_expired(current_time: timestamp, expiration: timestamp) {
   current_time < expiration
 }

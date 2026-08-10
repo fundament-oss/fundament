@@ -214,11 +214,6 @@ func setupTemplateDatabaseWithMigrations(pool *pgxpool.Pool) error {
 }
 
 func applyCatalogSeed(projectRoot string) error {
-	seedSQL, err := os.ReadFile(filepath.Join(projectRoot, "db", "seed", "0101-appstore-catalog.sql"))
-	if err != nil {
-		return fmt.Errorf("failed to read appstore catalog seed: %v", err)
-	}
-
 	conn, err := pgx.Connect(context.Background(),
 		fmt.Sprintf("postgres://postgres:postgres@localhost:%d/fundament?sslmode=disable", testDBPort))
 	if err != nil {
@@ -226,12 +221,16 @@ func applyCatalogSeed(projectRoot string) error {
 	}
 	defer conn.Close(context.Background())
 
-	// The simple protocol runs the whole multi-statement file in one implicit
-	// transaction, matching the Job's `psql --single-transaction`.
-	if _, err := conn.PgConn().Exec(context.Background(), string(seedSQL)).ReadAll(); err != nil {
-		return fmt.Errorf("failed to apply appstore catalog seed: %v", err)
+	for _, name := range []string{"0100-system-org.sql", "0101-appstore-catalog.sql"} {
+		seedSQL, err := os.ReadFile(filepath.Join(projectRoot, "db", "seed", name))
+		if err != nil {
+			return fmt.Errorf("failed to read seed %s: %v", name, err)
+		}
+		// Simple protocol: whole multi-statement file in one implicit transaction.
+		if _, err := conn.PgConn().Exec(context.Background(), string(seedSQL)).ReadAll(); err != nil {
+			return fmt.Errorf("failed to apply seed %s: %v", name, err)
+		}
 	}
-
 	return nil
 }
 

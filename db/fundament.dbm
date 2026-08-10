@@ -1313,12 +1313,16 @@ END;]]> </definition>
 	<expression type="using-exp"> <![CDATA[true]]> </expression>
 </policy>
 
-<table name="plugins" layers="0" collapse-mode="1" max-obj-count="13" z-value="0">
+<table name="plugins" layers="0" collapse-mode="1" rls-enabled="true" max-obj-count="13" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="840" y="1900"/>
 	<column name="id" not-null="true" default-value="uuidv7()">
 		<type name="uuid" length="0"/>
+	</column>
+	<column name="organization_id" not-null="true">
+		<type name="uuid" length="0"/>
+		<comment> <![CDATA[Owning organization. Gates who may publish/edit this plugin (RLS). Catalog visibility is NOT org-scoped — reads stay global.]]> </comment>
 	</column>
 	<column name="name" not-null="true">
 		<type name="text" length="0"/>
@@ -1360,7 +1364,20 @@ END;]]> </definition>
 	</constraint>
 </table>
 
-<table name="plugin_definitions" layers="0" collapse-mode="2" max-obj-count="7" z-value="0">
+<policy name="plugins_select_all" table="appstore.plugins" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugins_insert_owner" table="appstore.plugins" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<policy name="plugins_update_owner" table="appstore.plugins" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+	<expression type="check-exp"> <![CDATA[organization_id = authn.current_organization_id()]]> </expression>
+</policy>
+
+<table name="plugin_definitions" layers="0" collapse-mode="2" rls-enabled="true" max-obj-count="7" z-value="0">
 	<schema name="appstore"/>
 	<role name="fun_owner"/>
 	<position x="840" y="1620"/>
@@ -1392,6 +1409,18 @@ END;]]> </definition>
 		<columns names="id" ref-type="src-columns"/>
 	</constraint>
 </table>
+
+<policy name="plugin_definitions_select_all" table="appstore.plugin_definitions" command="SELECT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[true]]> </expression>
+</policy>
+
+<policy name="plugin_definitions_insert_owner" table="appstore.plugin_definitions" command="INSERT" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="check-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
+
+<policy name="plugin_definitions_update_owner" table="appstore.plugin_definitions" command="UPDATE" permissive="true">	<roles names="fun_fundament_api"/>
+	<expression type="using-exp"> <![CDATA[EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.id = appstore.plugin_definitions.plugin_id AND appstore.plugins.organization_id = authn.current_organization_id())]]> </expression>
+</policy>
 
 <table name="presets" layers="0" collapse-mode="1" max-obj-count="3" z-value="0">
 	<schema name="appstore"/>
@@ -1870,6 +1899,9 @@ END;]]> </definition>
 	<column name="organization_user_id">
 		<type name="uuid" length="0"/>
 	</column>
+	<column name="plugin_id">
+		<type name="uuid" length="0"/>
+	</column>
 	<column name="created" not-null="true" default-value="now()">
 		<type name="timestamptz" length="0"/>
 	</column>
@@ -1902,7 +1934,8 @@ END;]]> </definition>
 	node_pool_id,
 	namespace_id,
 	api_key_id,
-	organization_user_id
+	organization_user_id,
+	plugin_id
 ) = 1]]> </expression>
 	</constraint>
 	<constraint name="outbox_ck_status" type="ck-constr" table="authz.outbox">
@@ -2069,6 +2102,31 @@ END;]]> </definition>
 END;]]> </definition>
 </function>
 
+<function name="plugins_sync_trigger"
+		window-func="false"
+		returns-setof="false"
+		behavior-type="CALLED ON NULL INPUT"
+		function-type="VOLATILE"
+		security-type="SECURITY INVOKER"
+		parallel-type="PARALLEL UNSAFE"
+		execution-cost="1"
+		row-amount="0">
+	<schema name="authz"/>
+	<role name="fun_owner"/>
+	<language name="plpgsql"/>
+	<return-type>
+	<type name="trigger" length="0"/>
+	</return-type>
+	<definition> <![CDATA[BEGIN
+    -- Only insert into outbox if this is an INSERT, DELETE, or if data actually changed
+    IF TG_OP = 'INSERT' OR NEW IS DISTINCT FROM OLD THEN
+        INSERT INTO authz.outbox (plugin_id)
+        VALUES (COALESCE(NEW.id, OLD.id));
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;]]> </definition>
+</function>
+
 <function name="organizations_users_sync_trigger"
 		window-func="false"
 		returns-setof="false"
@@ -2190,6 +2248,12 @@ END;]]> </definition>
 	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
 	 table="authn.api_keys">
 		<function signature="authz.api_keys_sync_trigger()"/>
+</trigger>
+
+<trigger name="plugins_outbox" firing-type="AFTER" per-line="true" constraint="false"
+	 ins-event="true" del-event="false" upd-event="true" trunc-event="false"
+	 table="appstore.plugins">
+		<function signature="authz.plugins_sync_trigger()"/>
 </trigger>
 
 <trigger name="outbox_notify" firing-type="AFTER" per-line="true" constraint="false"
@@ -3239,6 +3303,12 @@ END;]]> </definition>
 	<columns names="id" ref-type="dst-columns"/>
 </constraint>
 
+<constraint name="plugins_fk_organization" type="fk-constr" comparison-type="MATCH SIMPLE"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.organizations" table="appstore.plugins">
+	<columns names="organization_id" ref-type="src-columns"/>
+	<columns names="id" ref-type="dst-columns"/>
+</constraint>
+
 <constraint name="api_keys_fk_user" type="fk-constr" comparison-type="MATCH SIMPLE"
 	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="tenant.users" table="authn.api_keys">
 	<columns names="user_id" ref-type="src-columns"/>
@@ -3798,6 +3868,11 @@ END;]]> </definition>
 	 custom-color="#f0f0f0"
 	 src-table="authn.api_keys"
 	 dst-table="tenant.organizations" reference-fk="api_keys_fk_organization"
+	 src-required="false" dst-required="true"/>
+
+<relationship name="rel_plugins_organizations" type="relfk" layers="0"
+	 src-table="appstore.plugins"
+	 dst-table="tenant.organizations" reference-fk="plugins_fk_organization"
 	 src-required="false" dst-required="true"/>
 
 <relationship name="rel_api_keys_users" type="relfk" layers="0"
@@ -4539,6 +4614,11 @@ END;]]> </definition>
 	<object name="appstore" type="schema"/>
 	<roles names="fun_authz_worker"/>
 	<privileges usage="true"/>
+</permission>
+<permission>
+	<object name="appstore.plugins" type="table"/>
+	<roles names="fun_authz_worker"/>
+	<privileges select="true"/>
 </permission>
 <permission>
 	<object name="tenant.organizations_users" type="table"/>

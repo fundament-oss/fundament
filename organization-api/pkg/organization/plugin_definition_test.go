@@ -23,13 +23,13 @@ func newPluginServiceClient(env *testEnv) organizationv1connect.PluginServiceCli
 	return organizationv1connect.NewPluginServiceClient(env.server.Client(), env.server.URL)
 }
 
-// seedCatalogPlugin inserts a row into appstore.plugins and returns its id.
-func seedCatalogPlugin(t *testing.T, env *testEnv, name string) uuid.UUID {
+// seedCatalogPlugin inserts a row into appstore.plugins owned by orgID and returns its id.
+func seedCatalogPlugin(t *testing.T, env *testEnv, name string, orgID uuid.UUID) uuid.UUID {
 	t.Helper()
 	id := uuid.New()
 	_, err := env.adminPool.Exec(t.Context(),
-		"INSERT INTO appstore.plugins (id, name, description) VALUES ($1, $2, $3)",
-		id, name, "test plugin",
+		"INSERT INTO appstore.plugins (id, organization_id, name, description) VALUES ($1, $2, $3, $4)",
+		id, orgID, name, "test plugin",
 	)
 	require.NoError(t, err)
 	return id
@@ -51,7 +51,7 @@ func TestPutPluginDefinition_IdempotentAndConflict(t *testing.T) {
 		}),
 	)
 
-	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
@@ -119,7 +119,7 @@ func TestPutPluginDefinition_RequiresOrganization(t *testing.T) {
 		}),
 	)
 
-	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 
@@ -155,7 +155,7 @@ func TestPutPluginDefinition_RejectsVersionMismatch(t *testing.T) {
 		}),
 	)
 
-	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 
@@ -190,7 +190,7 @@ func TestPutPluginDefinition_RejectsImagelessTemplate(t *testing.T) {
 		}),
 	)
 
-	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
@@ -300,7 +300,7 @@ func TestPutPluginDefinition_RejectsNameMismatch(t *testing.T) {
 	)
 
 	// Catalog plugin has a different name than the manifest's metadata.name.
-	pluginID := seedCatalogPlugin(t, env, "some-other-plugin")
+	pluginID := seedCatalogPlugin(t, env, "some-other-plugin", orgID)
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 
@@ -336,7 +336,7 @@ func TestPutPluginDefinition_RejectsOversizedManifest(t *testing.T) {
 		}),
 	)
 
-	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 
@@ -376,7 +376,7 @@ func TestPutPluginDefinition_Replace(t *testing.T) {
 		}),
 	)
 
-	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
@@ -433,7 +433,7 @@ func TestListPlugins_SurfacesLatestDefinition(t *testing.T) {
 		}),
 	)
 
-	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
@@ -516,7 +516,7 @@ func TestListPluginDefinitions_LatestFirst(t *testing.T) {
 		}),
 	)
 
-	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 	ctx := context.Background()
@@ -577,7 +577,7 @@ func TestGetPluginDefinition_ReturnsBytesHashAndProto(t *testing.T) {
 		}),
 	)
 
-	pluginID := seedCatalogPlugin(t, env, testPluginName)
+	pluginID := seedCatalogPlugin(t, env, testPluginName, orgID)
 
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
@@ -626,4 +626,85 @@ func TestGetPluginDefinition_NotFound(t *testing.T) {
 	_, err := client.GetPluginDefinition(ctx, getReq)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+}
+
+// TestPutPluginDefinition_NonOwnerDenied verifies a plugin owned by one org
+// cannot have a definition published from another org's context. The test server
+// has no OpenFGA client (nil authz.Client), so checkPermission is a no-op and
+// this exercises the RLS layer alone; in production OpenFGA denies it first.
+func TestPutPluginDefinition_NonOwnerDenied(t *testing.T) {
+	t.Parallel()
+
+	ownerOrgID := uuid.New()
+	otherOrgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(ownerOrgID, "owner-org"),
+		WithOrganization(otherOrgID, "other-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "other-user",
+			Email:  "other@example.com",
+			OrgIDs: []uuid.UUID{otherOrgID},
+		}),
+	)
+
+	// Plugin is owned by ownerOrg; caller acts as otherOrg.
+	pluginID := seedCatalogPlugin(t, env, testPluginName, ownerOrgID)
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
+		PluginId:      pluginID.String(),
+		PluginVersion: "v1",
+		Manifest:      testManifest,
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(context.Background())
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", otherOrgID.String())
+
+	_, err := client.PutPluginDefinition(putCtx, putReq)
+	require.Error(t, err)
+	assert.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
+}
+
+// TestListPlugins_GlobalVisibility verifies a plugin owned by one org is still
+// listed for a member of a different org (catalog visibility is not org-scoped).
+func TestListPlugins_GlobalVisibility(t *testing.T) {
+	t.Parallel()
+
+	ownerOrgID := uuid.New()
+	otherOrgID := uuid.New()
+	userID := uuid.New()
+
+	env := newTestAPI(t,
+		WithOrganization(ownerOrgID, "owner-org"),
+		WithOrganization(otherOrgID, "other-org"),
+		WithUser(&UserArgs{
+			ID:     userID,
+			Name:   "other-user",
+			Email:  "other@example.com",
+			OrgIDs: []uuid.UUID{otherOrgID},
+		}),
+	)
+
+	seedCatalogPlugin(t, env, testPluginName, ownerOrgID)
+	token := env.createAuthnToken(t, userID)
+	client := newPluginServiceClient(env)
+
+	req := organizationv1.ListPluginsRequest_builder{}.Build()
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listCallInfo.RequestHeader().Set("Fun-Organization", otherOrgID.String())
+	resp, err := client.ListPlugins(listCtx, req)
+	require.NoError(t, err)
+
+	var found bool
+	for _, p := range resp.GetPlugins() {
+		if p.GetName() == testPluginName {
+			found = true
+		}
+	}
+	assert.True(t, found, "plugin owned by another org must still be visible in the catalog")
 }

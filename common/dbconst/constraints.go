@@ -269,6 +269,8 @@ const (
 	ConstraintPluginsCategoriesCategoryId = "plugins_categories_category_id"
 	// ConstraintPluginsCategoriesPluginId is defined on appstore.categories_plugins.
 	ConstraintPluginsCategoriesPluginId = "plugins_categories_plugin_id"
+	// ConstraintPluginsFkOrganization is defined on appstore.plugins.
+	ConstraintPluginsFkOrganization = "plugins_fk_organization"
 	// ConstraintPluginsPresetsPluginId is defined on appstore.preset_plugins.
 	ConstraintPluginsPresetsPluginId = "plugins_presets_plugin_id"
 	// ConstraintPluginsPresetsPresetId is defined on appstore.preset_plugins.
