@@ -1,7 +1,7 @@
 ---
 title: Console integration
 sidebar:
-  order: 5
+  order: 6
 ---
 
 How a Fundament plugin renders inside the Console: the iframe boundary, the

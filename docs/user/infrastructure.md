@@ -4,9 +4,9 @@ sidebar:
   order: 2
 ---
 
-Unlike platforms such as OpenStack or CloudStack -which aim to deliver every conceivable service “out of the box” and end up being heavyweight and complex- Fundament takes the opposite approach. It is intentionally minimal at the lower layers of the stack, offering only the essentials by default. This simplicity keeps the foundation clean and reliable. From there, functionality grows on a per-cluster basis: each organization extends their environment with exactly the Tools they need, nothing more.
+Unlike platforms such as OpenStack or CloudStack -which aim to deliver every conceivable service “out of the box” and end up being heavyweight and complex- Fundament takes the opposite approach. It is intentionally minimal at the lower layers of the stack, offering only the essentials by default. This simplicity keeps the foundation clean and reliable. From there, functionality grows on a per-cluster basis: each organization extends their environment with exactly the Plugins they need, nothing more.
 
-![Infrastructure Stack](assets/infrastructure-stack.drawio.svg)
+![Infrastructure Stack](../assets/infrastructure-stack.drawio.svg)
 
 ### Why Gardener
 

@@ -1,7 +1,8 @@
 ---
-title: Development setup
+title: Getting started with Fundament development
 sidebar:
-  order: 10
+  label: Getting started
+  order: 1
 ---
 
 ## Prerequisites
@@ -61,6 +62,8 @@ just cluster-start
 just dev
 ```
 
-## Console Frontend
+## Console frontend
 
-See `console-frontend/README.md`.
+The Console frontend should now be available at https://console.fundament.localhost:8443/. See
+[`console-frontend/README.md`](https://github.com/fundament-oss/fundament/blob/master/console-frontend/README.md)
+for linting, formatting and the other frontend commands.
