@@ -325,9 +325,14 @@ export default class App implements OnInit {
       .subscribe((event: NavigationEnd) => {
         this.isLoginPage.set(event.urlAfterRedirects === '/login');
         // A sheet the shell owns stands over the page it was opened from, so
-        // arriving somewhere else takes it away. The addresses that open one do
-        // it after their redirect has landed, so this does not undo them.
-        if (event.urlAfterRedirects !== this.currentUrl()) this.overlays.closeAll();
+        // arriving somewhere else takes it away. One arrival is exempt: the
+        // redirect that an address like /clusters/add makes to bring its own
+        // sheet in.
+        const openedFor = this.overlays.openedFor();
+        this.overlays.openedFor.set(null);
+        if (event.urlAfterRedirects !== openedFor && event.urlAfterRedirects !== this.currentUrl()) {
+          this.overlays.closeAll();
+        }
         this.currentUrl.set(event.urlAfterRedirects);
         this.stackDepth.set(depthForPath(event.urlAfterRedirects));
         this.updateSidebarStateFromRoute();

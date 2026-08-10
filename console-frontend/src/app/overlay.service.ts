@@ -30,6 +30,11 @@ export class OverlayService {
 
   readonly addProjectMember = signal<string | null>(null);
 
+  /** The address a sheet was opened for. The shell takes its sheets away when
+   *  you navigate, and the redirect that comes with such an address must not
+   *  count as navigating away. */
+  readonly openedFor = signal<string | null>(null);
+
   /** A sheet the shell owns stands over the page you opened it from. Go
    *  somewhere else and it has nothing left to stand on, so it goes with you.
    *  The guards that open one from an address do so after their redirect has

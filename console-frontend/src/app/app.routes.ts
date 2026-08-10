@@ -1,12 +1,10 @@
 import { inject } from '@angular/core';
 import {
-  NavigationEnd,
   Router,
   type ActivatedRouteSnapshot,
   type CanActivateFn,
   type Routes,
 } from '@angular/router';
-import { filter, take } from 'rxjs/operators';
 import authGuard from './auth.guard';
 import { OverlayService } from './overlay.service';
 
@@ -24,16 +22,15 @@ const opensSheet =
   ): CanActivateFn =>
   (route) => {
     const overlays = inject(OverlayService);
-    const router = inject(Router);
-    // After the redirect, not before: the shell closes its sheets when you
-    // navigate, and this navigation is the one that brings the sheet in.
-    router.events
-      .pipe(
-        filter((event) => event instanceof NavigationEnd),
-        take(1),
-      )
-      .subscribe(() => open(overlays, route));
-    return router.parseUrl(to(route));
+    const target = to(route);
+    open(overlays, route);
+    // The shell closes its sheets on arrival somewhere else, so it has to know
+    // that this one arrival belongs to the sheet. Waiting for the navigation
+    // instead would leave the sheet shut whenever the redirect lands on the
+    // page you are already on: Angular skips that navigation, so the event
+    // never comes and the sheet would open on whatever page you went to next.
+    overlays.openedFor.set(target);
+    return inject(Router).parseUrl(target);
   };
 
 /** The three that belong to no page at all: they open over the home pane. */
