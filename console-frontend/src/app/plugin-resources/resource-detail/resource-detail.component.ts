@@ -270,26 +270,46 @@ export default class ResourceDetailComponent implements OnInit {
 
   formatSimpleValue = toSimpleValue;
 
-  /** The condition that says whether the thing works, beside the title where a
-   *  cluster carries its status too. Ready if there is one, otherwise the first
-   *  the resource reports; the table below still holds them all. */
-  primaryCondition = computed<{ text: string; color: string } | null>(() => {
-    const conditions = this.statusFields()
-      .filter(([key, value]) => checkIsConditionsField(key, value))
-      .flatMap(([, value]) => toArray(value))
-      .map((entry) => toRecord(entry));
-    const ready = conditions.find((entry) => entry['type'] === 'Ready') ?? conditions[0];
-    if (!ready) return null;
-
-    const type = String(ready['type'] ?? '');
-    if (ready['status'] === 'True') return { text: type, color: 'success' };
-    if (ready['status'] === 'False') {
+  /**
+   * A condition as one badge: the type and its status in the same breath, so a
+   * row does not need a column that only ever says True or False. `status` is
+   * True, False or Unknown, and the type names what it is about.
+   */
+  // eslint-disable-next-line class-methods-use-this
+  conditionBadge(type: string, status: unknown): { text: string; color: string } {
+    if (status === 'True') return { text: type, color: 'success' };
+    if (status === 'False') {
       return { text: `Not ${type.charAt(0).toLowerCase()}${type.slice(1)}`, color: 'warning' };
     }
     return { text: `${type} unknown`, color: 'neutral' };
+  }
+
+  /** Every condition the resource reports, each with its own status, message and
+   *  the moment it last changed. Usually one, but a controller is free to keep
+   *  several apart, and then they each have their own history. */
+  conditions = computed(() =>
+    this.statusFields()
+      .filter(([key, value]) => checkIsConditionsField(key, value))
+      .flatMap(([, value]) => toArray(value))
+      .map((entry) => toRecord(entry)),
+  );
+
+  /** The one that says whether the thing works, beside the title where a cluster
+   *  carries its status too. Ready if there is one, otherwise the first. */
+  primaryCondition = computed<{ text: string; color: string } | null>(() => {
+    const all = this.conditions();
+    const ready = all.find((entry) => entry['type'] === 'Ready') ?? all[0];
+    return ready ? this.conditionBadge(String(ready['type'] ?? ''), ready['status']) : null;
   });
 
   isConditionsField = checkIsConditionsField;
+
+  /** A field off a condition as a plain string, for the template. */
+  // eslint-disable-next-line class-methods-use-this
+  asRecordValue(entry: Record<string, unknown>, key: string): string {
+    const value = entry[key];
+    return value == null ? '' : String(value);
+  }
 
   asArray = toArray;
 
