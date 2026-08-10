@@ -110,12 +110,32 @@
                  the plugin, and a full-width row fits a table as well as a word. -->
             <nldd-list variant="simple" [attr.accessible-label]="group.name">
               @for (field of group.fields; track field[0]) {
-                <nldd-list-item>
-                  <nldd-text-cell [attr.text]="formatLabel(field[0])"></nldd-text-cell>
-                  <nldd-cell width="full" horizontal-alignment="right">
-                    <app-field-renderer [schema]="field[1]" [value]="getSpecValue(field[0])" />
-                  </nldd-cell>
-                </nldd-list-item>
+                @if (flatObjectEntries(getSpecValue(field[0])); as entries) {
+                  <!-- De veldnaam als kopregel met zijn sleutels eronder
+                       ingesprongen: zo staat "Issuer ref" er één keer in plaats
+                       van aan het begin van elke regel. -->
+                  <nldd-list-item>
+                    <nldd-text-cell width="full" [attr.text]="formatLabel(field[0])"></nldd-text-cell>
+                  </nldd-list-item>
+                  @for (entry of entries; track entry[0]) {
+                    <nldd-list-item>
+                      <nldd-spacer-cell size="16"></nldd-spacer-cell>
+                      <nldd-text-cell [attr.text]="formatLabel(entry[0])"></nldd-text-cell>
+                      <nldd-text-cell
+                        width="full"
+                        horizontal-alignment="right"
+                        [attr.text]="formatSimpleValue(entry[1])"
+                      ></nldd-text-cell>
+                    </nldd-list-item>
+                  }
+                } @else {
+                  <nldd-list-item>
+                    <nldd-text-cell [attr.text]="formatLabel(field[0])"></nldd-text-cell>
+                    <nldd-cell width="full" horizontal-alignment="right">
+                      <app-field-renderer [schema]="field[1]" [value]="getSpecValue(field[0])" />
+                    </nldd-cell>
+                  </nldd-list-item>
+                }
               }
             </nldd-list>
           </nldd-container>

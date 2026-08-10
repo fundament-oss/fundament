@@ -332,6 +332,21 @@ export default class ResourceDetailComponent implements OnInit {
 
   isConditionsField = checkIsConditionsField;
 
+  /**
+   * An object whose values are all scalars reads as rows of its own: the field
+   * name as a heading and one indented row per key, so the name is said once
+   * instead of at the start of every line. Anything deeper stays with the field
+   * renderer, which knows how to fold it into a single cell.
+   */
+  // eslint-disable-next-line class-methods-use-this
+  flatObjectEntries(value: unknown): [string, unknown][] | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (entries.length === 0) return null;
+    if (entries.some(([, entry]) => entry !== null && typeof entry === 'object')) return null;
+    return entries;
+  }
+
   /** A field off a condition as a plain string, for the template. */
   // eslint-disable-next-line class-methods-use-this
   asRecordValue(entry: Record<string, unknown>, key: string): string {
