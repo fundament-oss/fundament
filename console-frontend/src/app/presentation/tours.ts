@@ -60,19 +60,23 @@ const installedPluginDrive: DriveStep[] = [{ emit: PLUGIN_INSTALLS_ENSURE_EVENT 
  * reshuffled (a grid rewritten to container queries, a `space-y-2` list turned
  * into `flex gap-2`) without anyone realising the walkthrough hung on them.
  * `querySelector` returns the first match, which is the first catalog card —
- * cert-manager, which fixtures.ts deliberately lists first. Inside the modal the
- * first `nldd-checkbox-field` under `install-clusters` is a per-cluster box; the
- * "select all" checkbox sits outside that list, so exactly one cluster is ticked.
- * The reset event first clears any earlier install, so the slide can be replayed.
+ * cert-manager, which fixtures.ts deliberately lists first, and inside the sheet
+ * the first cluster row. Its install button opens the versions that stand ready;
+ * that menu is the point of the slide, so it is left up for a moment before a
+ * version is picked out of it. The reset event first clears any earlier install,
+ * so the slide can be replayed.
  */
 const installPluginDrive: DriveStep[] = [
   { emit: PLUGIN_INSTALLS_RESET_EVENT },
   { wait: 1400 },
   { click: '[data-tour="plugin-install"]' },
   { wait: 1000 },
-  { set: '[data-tour="install-clusters"] nldd-checkbox-field', check: true },
-  { wait: 800 },
+  // De installatieknop opent een menu met de versies die klaarstaan. Dat menu is
+  // het punt van de slide, dus het blijft even staan voor er een versie uit
+  // gekozen wordt.
   { click: '[data-tour="install-confirm"]' },
+  { wait: 1600 },
+  { click: '[data-tour="install-confirm"] nldd-menu nldd-menu-item' },
 ];
 
 const closing = (nl: string, en: string): Slide => ({
@@ -218,7 +222,7 @@ const intro: Tour = {
           'Each project shows its cluster, its namespaces and its members.',
         ),
       ],
-      route: '/projects',
+      route: '/projects/pr-burgerzaken/general',
     },
     {
       id: 'project-members',
@@ -293,7 +297,9 @@ const intro: Tour = {
           'The plugin brings its own menu along; the team has nothing to set up.',
         ),
       ],
-      route: '/projects/pr-burgerzaken/general',
+      // Het project zonder pagina erbij: deze slide gaat over de zijbalk, en
+      // een projectpagina ernaast trekt de aandacht weg van het menu.
+      route: '/projects/pr-burgerzaken',
       drive: installedPluginDrive,
     },
     {
@@ -401,7 +407,7 @@ const developer: Tour = {
           'A project bundles your namespaces, your teammates and your limits.',
         ),
       ],
-      route: '/projects',
+      route: '/projects/pr-burgerzaken/general',
     },
     {
       id: 'project',
@@ -840,7 +846,7 @@ const policyMaker: Tour = {
         'Elk project is een team met een eigen plek op het platform.',
         'Each project is a team with its own place on the platform.',
       ),
-      route: '/projects',
+      route: '/projects/pr-burgerzaken/general',
     },
     {
       id: 'plugins',
