@@ -98,6 +98,7 @@ import ProfileComponent from './profile/profile.component';
 import ApiKeysComponent from './api-keys/api-keys.component';
 import AddProjectComponent from './add-project/add-project.component';
 import AddClusterWizardLayoutComponent from './add-cluster-wizard-layout/add-cluster-wizard-layout.component';
+import NewNamespaceSheetComponent from './new-namespace-sheet/new-namespace-sheet.component';
 import { OverlayService } from './overlay.service';
 import PageNavService from './page-nav.service';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
@@ -136,6 +137,7 @@ function depthForPath(url: string): number {
     ApiKeysComponent,
     AddProjectComponent,
     AddClusterWizardLayoutComponent,
+    NewNamespaceSheetComponent,
   ],
   templateUrl: './app.html',
   // The outlet is an empty element that still counts as a flex item of
@@ -318,6 +320,10 @@ export default class App implements OnInit {
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.isLoginPage.set(event.urlAfterRedirects === '/login');
+        // A sheet the shell owns stands over the page it was opened from, so
+        // arriving somewhere else takes it away. The addresses that open one do
+        // it after their redirect has landed, so this does not undo them.
+        if (event.urlAfterRedirects !== this.currentUrl()) this.overlays.closeAll();
         this.currentUrl.set(event.urlAfterRedirects);
         this.stackDepth.set(depthForPath(event.urlAfterRedirects));
         this.updateSidebarStateFromRoute();

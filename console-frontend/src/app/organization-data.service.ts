@@ -38,6 +38,10 @@ export interface OrganizationData {
   providedIn: 'root',
 })
 export class OrganizationDataService {
+  /** Bumped when a namespace is created somewhere other than the list that
+   *  shows them: that sheet belongs to the shell now, not to the page. */
+  readonly namespacesChanged = signal(0);
+
   private organizationClient = inject(ORGANIZATION);
 
   private clusterClient = inject(CLUSTER);

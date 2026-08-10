@@ -9,25 +9,24 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
-import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
+import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import { NotificationService } from '../notification.service';
 import PageNavService from '../page-nav.service';
+import { OverlayService } from '../overlay.service';
 import { OrganizationDataService } from '../organization-data.service';
 import {
   ListProjectNamespacesRequestSchema,
-  CreateNamespaceRequestSchema,
   Namespace,
 } from '../../generated/v1/namespace_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
 import { formatDate as formatDateUtil } from '../utils/date-format';
-import { ALL_ROLES, mockBindingsFor, setMockBindings } from '../utils/mock-role-bindings';
+import { mockBindingsFor } from '../utils/mock-role-bindings';
 import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import { NAMESPACE, PROJECT } from '../../connect/tokens';
 import type { ProjectMember } from '../../generated/v1/project_pb';
@@ -50,18 +49,9 @@ export default class NamespacesComponent implements OnInit {
 
   protected pageNav = inject(PageNavService);
 
+  protected overlays = inject(OverlayService);
+
   private route = inject(ActivatedRoute);
-
-  private routeQuery = toSignal(this.route.queryParamMap, {
-    initialValue: this.route.snapshot.queryParamMap,
-  });
-
-  /** Opened from the URL as well as from the button, so a control elsewhere in
-   *  the app can send you straight here. Closing takes the parameter off again,
-   *  or the back button would land on something you just finished. */
-  private readonly openFromUrl = effect(() => {
-    if (this.routeQuery().get('add') !== null && !this.showCreateNamespaceModal()) this.openCreateNamespaceModal();
-  });
 
   private router = inject(Router);
 
@@ -98,48 +88,6 @@ export default class NamespacesComponent implements OnInit {
 
   errorMessage = signal<string | null>(null);
 
-  /** Kept apart from errorMessage: a failed create belongs in the sheet the user is still in. */
-  createErrorMessage = signal<string | null>(null);
-
-  showCreateNamespaceModal = signal<boolean>(false);
-
-  isCreatingNamespace = signal<boolean>(false);
-
-  /** Who gets access to the namespace being created, and with which roles. A
-   *  namespace is made to work in, so the people come with it rather than in a
-   *  second visit to the sheet. */
-  draftMemberIds = signal<string[]>([]);
-
-  draftRoles = signal<string[]>([]);
-
-  readonly allRoles = ALL_ROLES;
-
-  /** Members with an all-namespaces grant are left out: they reach the new one
-   *  the moment it exists, so offering them here would promise a change that
-   *  does not happen. */
-  memberCandidates = computed(() =>
-    this.members().filter(
-      (member) =>
-        !mockBindingsFor(member.id, this.namespaceNames()).some(
-          (binding) => binding.namespace === ALL_NAMESPACES,
-        ),
-    ),
-  );
-
-  coveredMemberCount = computed(() => this.members().length - this.memberCandidates().length);
-
-  namespaceForm = this.fb.group({
-    name: [
-      '',
-      [
-        Validators.required,
-        Validators.minLength(1),
-        Validators.maxLength(63),
-        Validators.pattern(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
-      ],
-    ],
-  });
-
   constructor() {
     this.titleService.setTitle('Namespaces');
   }
@@ -149,6 +97,14 @@ export default class NamespacesComponent implements OnInit {
     this.projectId.set(projectId);
     await Promise.all([this.loadNamespaces(projectId), this.loadMembers(projectId)]);
   }
+
+  /** The sheet that creates one lives in the shell and may well be standing
+   *  over this very list, so the list hears about a new namespace from there. */
+  private readonly reloadOnCreate = effect(() => {
+    this.organizationDataService.namespacesChanged();
+    const projectId = this.projectId();
+    if (projectId) this.loadNamespaces(projectId);
+  });
 
   /** Only for the member summary on a row; the sheet has the detail. */
   async loadMembers(projectId: string) {
@@ -203,127 +159,6 @@ export default class NamespacesComponent implements OnInit {
     }
   }
 
-  closeCreateNamespaceModal() {
-    this.showCreateNamespaceModal.set(false);
-    if (this.route.snapshot.queryParamMap.get('add') !== null) {
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { add: null },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
-    }
-  }
-
-  openCreateNamespaceModal() {
-    this.namespaceForm.reset();
-    this.createErrorMessage.set(null);
-    this.draftMemberIds.set([]);
-    this.draftRoles.set([]);
-    this.showCreateNamespaceModal.set(true);
-  }
-
-  onMembersChange(event: Event): void {
-    this.draftMemberIds.set((event as CustomEvent<{ values: string[] }>).detail.values);
-  }
-
-  toggleDraftRole(role: string): void {
-    this.draftRoles.update((current) =>
-      current.includes(role) ? current.filter((entry) => entry !== role) : [...current, role],
-    );
-  }
-
-  async createNamespace(event?: Event) {
-    // A control that acts on Enter itself, like picking an option in the token
-    // field, marks the event handled. Submitting on that Enter would put the
-    // form in error while the user is still filling it in.
-    if (event?.defaultPrevented) return;
-
-    event?.preventDefault();
-    this.createErrorMessage.set(null);
-
-    if (this.namespaceForm.invalid) {
-      this.namespaceForm.markAllAsTouched();
-      return;
-    }
-
-    try {
-      this.isCreatingNamespace.set(true);
-
-      const request = create(CreateNamespaceRequestSchema, {
-        projectId: this.projectId(),
-        name: this.namespaceForm.value.name!,
-      });
-
-      await withIdempotency((opts) => this.namespaceClient.createNamespace(request, opts), {
-        signal: this.idempotency.reset(),
-      });
-
-      const name = this.namespaceForm.value.name!;
-      const granted = this.grantDraftAccess(name);
-
-      this.showCreateNamespaceModal.set(false);
-      this.notificationService.success(
-        granted === 0
-          ? `Namespace '${name}' created`
-          : `Namespace '${name}' created, ${granted === 1 ? '1 member has' : `${granted} members have`} access`,
-      );
-
-      // Reload organization data to update the selector modal
-      await Promise.all([
-        this.loadNamespaces(this.projectId()),
-        this.organizationDataService.loadOrganizationData(),
-      ]);
-    } catch (error) {
-      this.createErrorMessage.set(
-        error instanceof Error
-          ? `Failed to create namespace: ${error.message}`
-          : 'Failed to create namespace',
-      );
-    } finally {
-      this.isCreatingNamespace.set(false);
-    }
-  }
-
-  /** TEMPORARY, dev only: roles have no API, so the grant goes into the mock
-   *  store the rest of the screens read from. Delete with the mock bindings. */
-  private grantDraftAccess(namespace: string): number {
-    const memberIds = this.draftMemberIds();
-    if (memberIds.length === 0) return 0;
-
-    const roles = ALL_ROLES.filter((role) => this.draftRoles().includes(role));
-    memberIds.forEach((memberId) => {
-      const existing = mockBindingsFor(memberId, this.namespaceNames());
-      setMockBindings(memberId, [...existing, { namespace, roles }]);
-    });
-    return memberIds.length;
-  }
-
   readonly formatDate = formatDateUtil;
 
-  onNameInput(event: Event) {
-    const value = (event as CustomEvent<{ value: string }>).detail.value;
-    this.namespaceForm.get('name')?.setValue(value);
-    this.namespaceForm.get('name')?.markAsDirty();
-  }
-
-  /** Also covers `touched`, so submitting an untouched empty field shows the error. */
-  isNameInvalid(): boolean {
-    const nameControl = this.namespaceForm.get('name');
-    return !!nameControl?.invalid && (nameControl.dirty || nameControl.touched);
-  }
-
-  getNameError(): string {
-    const nameControl = this.namespaceForm.get('name');
-    if (nameControl?.hasError('required')) {
-      return 'Namespace name is required.';
-    }
-    if (nameControl?.hasError('maxlength')) {
-      return 'Namespace name must not exceed 63 characters.';
-    }
-    if (nameControl?.hasError('pattern')) {
-      return 'Namespace name must start with a lowercase letter, end with a letter or number, and contain only lowercase letters, numbers, and hyphens.';
-    }
-    return '';
-  }
 }

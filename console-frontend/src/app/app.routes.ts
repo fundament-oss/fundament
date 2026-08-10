@@ -1,10 +1,12 @@
 import { inject } from '@angular/core';
 import {
+  NavigationEnd,
   Router,
   type ActivatedRouteSnapshot,
   type CanActivateFn,
   type Routes,
 } from '@angular/router';
+import { filter, take } from 'rxjs/operators';
 import authGuard from './auth.guard';
 import { OverlayService } from './overlay.service';
 
@@ -21,8 +23,17 @@ const opensSheet =
     to: (route: ActivatedRouteSnapshot) => string,
   ): CanActivateFn =>
   (route) => {
-    open(inject(OverlayService), route);
-    return inject(Router).parseUrl(to(route));
+    const overlays = inject(OverlayService);
+    const router = inject(Router);
+    // After the redirect, not before: the shell closes its sheets when you
+    // navigate, and this navigation is the one that brings the sheet in.
+    router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        take(1),
+      )
+      .subscribe(() => open(overlays, route));
+    return router.parseUrl(to(route));
   };
 
 /** The three that belong to no page at all: they open over the home pane. */
@@ -113,6 +124,17 @@ const routes: Routes = [
         path: 'projects/:id/namespaces',
         loadComponent: () => import('./namespaces/namespaces.component').then((m) => m.default),
         children: [
+          {
+            // Before `:name`, or a namespace called "add" would swallow it.
+            path: 'add',
+            canActivate: [
+              opensSheet(
+                (o, route) => o.newNamespace.set(route.parent?.params['id'] ?? null),
+                (route) => `/projects/${route.parent?.params['id']}/namespaces`,
+              ),
+            ],
+            children: [],
+          },
           {
             // Everything about one namespace, the other way round from the member
             // sheet: who has access here. A route, so the row is a real link.

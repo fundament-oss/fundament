@@ -29,6 +29,20 @@ export class OverlayService {
   readonly newNamespace = signal<string | null>(null);
 
   readonly addProjectMember = signal<string | null>(null);
+
+  /** A sheet the shell owns stands over the page you opened it from. Go
+   *  somewhere else and it has nothing left to stand on, so it goes with you.
+   *  The guards that open one from an address do so after their redirect has
+   *  landed, or this would close what they just opened. */
+  closeAll(): void {
+    this.profile.set(false);
+    this.apiKeys.set(false);
+    this.newProject.set(false);
+    this.newCluster.set(false);
+    this.inviteMember.set(false);
+    this.newNamespace.set(null);
+    this.addProjectMember.set(null);
+  }
 }
 
 export default OverlayService;

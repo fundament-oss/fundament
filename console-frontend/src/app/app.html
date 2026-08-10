@@ -105,7 +105,8 @@
                           <nldd-menu-item
                             icon="add-namespace"
                             text="New namespace…"
-                            [attr.href]="'/projects/' + project.id + '/namespaces?add=1'"
+                            [attr.href]="'/projects/' + project.id + '/namespaces/add'"
+                            (click)="pageNav.openHere($event, overlays.newNamespace, project.id)"
                           ></nldd-menu-item>
                           <nldd-menu-item
                             icon="add-user"
@@ -585,6 +586,14 @@
 
 @defer (when overlays.apiKeys()) {
   <app-api-keys [show]="overlays.apiKeys()" (closed)="overlays.apiKeys.set(false)"></app-api-keys>
+}
+
+@if (overlays.newNamespace(); as projectId) {
+  <app-new-namespace-sheet
+    [projectId]="projectId"
+    [show]="true"
+    (closed)="overlays.newNamespace.set(null)"
+  ></app-new-namespace-sheet>
 }
 
 @defer (when overlays.newCluster()) {

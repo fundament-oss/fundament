@@ -20,7 +20,7 @@
       <nldd-toolbar-item slot="start">
         <nldd-button
           type="button"
-          (click)="openCreateNamespaceModal()"
+          (click)="overlays.newNamespace.set(projectId())"
           text="New namespace…"
           start-icon="plus-small"
           variant="primary"
@@ -29,7 +29,7 @@
           slot="overflow"
           icon="plus-small"
           text="New namespace…"
-          (select)="openCreateNamespaceModal()"
+          (select)="overlays.newNamespace.set(projectId())"
         ></nldd-menu-item>
       </nldd-toolbar-item>
     </nldd-toolbar>
@@ -48,7 +48,7 @@
         <nldd-button
           slot="actions"
           type="button"
-          (click)="openCreateNamespaceModal()"
+          (click)="overlays.newNamespace.set(projectId())"
           text="New namespace…"
           start-icon="plus-small"
           variant="primary"
@@ -111,139 +111,5 @@
   ></nldd-button>
 </nldd-modal-dialog>
 
-<!-- Create Namespace Sheet -->
-<nldd-sheet
-  #createNamespaceSheet
-  appSheetSync
-  [show]="showCreateNamespaceModal()"
-  [attr.accessible-label]="'New namespace for ' + projectName()"
-  placement="right"
-  (close)="closeCreateNamespaceModal()"
->
-  <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      [attr.text]="'New namespace for ' + projectName()"
-      collapse-anchor="new-namespace-title"
-      dismiss-text="Cancel"
-      (dismiss)="showCreateNamespaceModal.set(false)"
-    ></nldd-top-title-bar>
-
-    <nldd-simple-section>
-      <nldd-title id="new-namespace-title" size="3">
-        <h1>New namespace for {{ projectName() }}</h1>
-      </nldd-title>
-
-      <nldd-spacer size="16"></nldd-spacer>
-
-      @if (createErrorMessage()) {
-        <nldd-banner variant="critical" [attr.text]="createErrorMessage()"></nldd-banner>
-        <nldd-spacer size="16"></nldd-spacer>
-      }
-
-      <nldd-form
-        [formGroup]="namespaceForm"
-        (submit)="createNamespace($event)"
-        (keydown.enter)="createNamespace($event)"
-      >
-        <!-- The rule as help text, not as a supporting label: it tells you how to
-             fill the field in, which is what help text is for. And no
-             placeholder: it disappears the moment you start typing, exactly when
-             you would want to check the rule again. -->
-        <nldd-form-field label="Namespace name">
-          <nldd-text-field
-            appAutofocus
-            id="namespaceName"
-            [value]="namespaceForm.get('name')?.value ?? ''"
-            [invalid]="isNameInvalid()"
-            error-message="namespace-name-error"
-            (input)="onNameInput($event)"
-          ></nldd-text-field>
-          <nldd-form-field-help-text>
-            Lowercase letters, numbers and hyphens.
-          </nldd-form-field-help-text>
-          <nldd-form-field-error-text id="namespace-name-error">
-            {{ getNameError() }}
-          </nldd-form-field-error-text>
-        </nldd-form-field>
-
-        <!-- A namespace is made to work in, so the people come with it. Optional:
-             creating one without anyone in it is a normal thing to do. -->
-        @if (memberCandidates().length > 0) {
-          <nldd-form-field label="Members" optional optional-label="Optional">
-            <nldd-token-field
-              accessible-label="Members"
-              [attr.values]="draftMemberIds().join(',')"
-              (change)="onMembersChange($event)"
-            >
-              <nldd-menu accessible-label="Project members">
-                @for (member of memberCandidates(); track member.id) {
-                  <nldd-menu-item
-                    [attr.value]="member.id"
-                    [attr.text]="member.userName"
-                  ></nldd-menu-item>
-                }
-              </nldd-menu>
-            </nldd-token-field>
-            <nldd-form-field-help-text>
-              Only project members can be added to a project namespace.
-              @if (coveredMemberCount() > 0) {
-                {{
-                  coveredMemberCount() === 1
-                    ? '1 of them has access to all namespaces and reaches this one already.'
-                    : coveredMemberCount() +
-                      ' of them have access to all namespaces and reach this one already.'
-                }}
-              }
-            </nldd-form-field-help-text>
-          </nldd-form-field>
-        }
-
-        <!-- Only once someone is picked: roles for nobody decide nothing, and an
-             empty role list next to an empty member field reads as a step you
-             skipped rather than one that does not apply yet. -->
-        @if (draftMemberIds().length > 0) {
-          <nldd-form-field label="Roles">
-            <nldd-list variant="box-tinted" accessible-label="Roles">
-              @for (role of allRoles; track role) {
-                <nldd-list-item
-                  checkbox
-                  [attr.checked]="draftRoles().includes(role) ? '' : null"
-                  (click)="toggleDraftRole(role)"
-                >
-                  <nldd-cell width="fit-content">
-                    <nldd-checkbox
-                      decorative
-                      [attr.checked]="draftRoles().includes(role) ? '' : null"
-                    ></nldd-checkbox>
-                  </nldd-cell>
-                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-text-cell width="full" [attr.text]="role"></nldd-text-cell>
-                </nldd-list-item>
-              }
-            </nldd-list>
-            <!-- Says who the roles land on: the field above takes several
-                 people at once and they all get this same set. -->
-            <nldd-form-field-help-text>
-              Everyone you add gets these roles, and without one they can see the namespace but do
-              nothing in it. You can change them per person later under Members.
-            </nldd-form-field-help-text>
-          </nldd-form-field>
-        }
-
-        <nldd-form-actions>
-          <nldd-button
-            type="button"
-            (click)="createNamespace()"
-            text="Create namespace"
-            [attr.loading]="isCreatingNamespace() ? '' : null"
-            variant="primary"
-            width="full"
-          ></nldd-button>
-        </nldd-form-actions>
-      </nldd-form>
-    </nldd-simple-section>
-  </nldd-page>
-</nldd-sheet>
 
 <router-outlet />
