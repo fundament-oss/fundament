@@ -233,6 +233,16 @@ export default class ResourceListComponent implements OnInit {
 
   formatCell = buildCellValue;
 
+  /** A printer column that says True or False is a condition, not a word: the
+   *  CRD hands us the raw status string, and the same column in the detail is
+   *  already a tag. Anything else stays text, whatever the plugin puts there. */
+  // eslint-disable-next-line class-methods-use-this
+  conditionValue(value: string): 'True' | 'False' | null {
+    if (value === 'True') return 'True';
+    if (value === 'False') return 'False';
+    return null;
+  }
+
   // --- Per-row delete ---
 
   pendingDelete = signal<KubeResource | null>(null);
