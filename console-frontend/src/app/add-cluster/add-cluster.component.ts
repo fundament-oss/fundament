@@ -7,7 +7,6 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
 import AutofocusDirective from '../autofocus.directive';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
@@ -24,8 +23,6 @@ import { Region } from '../../generated/v1/cluster_pb';
 })
 export default class AddClusterComponent implements OnInit {
   private titleService = inject(TitleService);
-
-  private router = inject(Router);
 
   private fb = inject(FormBuilder);
 
@@ -188,8 +185,7 @@ export default class AddClusterComponent implements OnInit {
     });
     this.stateService.markStepCompleted(0);
 
-    // Navigate to the next step
-    this.router.navigate(['/clusters/add/nodes']);
+    this.stateService.goToStep(1);
   }
 
   private static scrollToFirstError() {
@@ -216,7 +212,4 @@ export default class AddClusterComponent implements OnInit {
     }
   }
 
-  onCancel() {
-    this.router.navigate(['/clusters']);
-  }
 }

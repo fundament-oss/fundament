@@ -1,7 +1,7 @@
 <nldd-sheet
   #sheet
   appSheetSync
-  [show]="true"
+  [show]="show"
   placement="right"
   accessible-label="New Kubernetes cluster"
   (close)="onClose()"
@@ -26,7 +26,7 @@
         [current]="currentStepNumber()"
         [translations]="stepIndicatorTranslations"
       >
-        @for (step of steps; track step.route; let i = $index) {
+        @for (step of steps; track step.name; let i = $index) {
           <nldd-step-indicator-item
             [text]="step.name"
             [status]="stepStatus(i)"
@@ -38,7 +38,17 @@
 
       <nldd-spacer size="24"></nldd-spacer>
 
-      <router-outlet (activate)="onActivate()"></router-outlet>
+      @switch (currentStepIndex()) {
+        @case (0) {
+          <app-add-cluster />
+        }
+        @case (1) {
+          <app-add-cluster-nodes />
+        }
+        @case (2) {
+          <app-add-cluster-summary />
+        }
+      }
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>

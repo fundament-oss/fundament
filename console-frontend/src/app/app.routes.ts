@@ -1,20 +1,33 @@
 import { inject } from '@angular/core';
-import { Router, type CanActivateFn, type Routes } from '@angular/router';
+import {
+  Router,
+  type ActivatedRouteSnapshot,
+  type CanActivateFn,
+  type Routes,
+} from '@angular/router';
 import authGuard from './auth.guard';
-import clusterWizardGuard from './add-cluster-wizard-layout/cluster-wizard.guard';
 import { OverlayService } from './overlay.service';
 
 /**
  * Keeps an address for a sheet the shell owns. The sheet is not a page, so the
- * route has nothing to render: it opens the sheet and sends you home, and the
- * sheet appears over the home pane.
+ * route has nothing to render: it opens the sheet and sends you to the page the
+ * thing lands on, with the sheet already over it. Opened from the toolbar
+ * instead, the same sheet appears over whatever page you were reading, and no
+ * address is involved at all.
  */
-const opensOverlay =
-  (sheet: 'profile' | 'apiKeys' | 'newProject'): CanActivateFn =>
-  () => {
-    inject(OverlayService)[sheet].set(true);
-    return inject(Router).parseUrl('/');
+const opensSheet =
+  (
+    open: (overlays: OverlayService, route: ActivatedRouteSnapshot) => void,
+    to: (route: ActivatedRouteSnapshot) => string,
+  ): CanActivateFn =>
+  (route) => {
+    open(inject(OverlayService), route);
+    return inject(Router).parseUrl(to(route));
   };
+
+/** The three that belong to no page at all: they open over the home pane. */
+const opensOverlay = (sheet: 'profile' | 'apiKeys' | 'newProject'): CanActivateFn =>
+  opensSheet((overlays) => overlays[sheet].set(true), () => '/');
 
 const routes: Routes = [
   {
@@ -35,39 +48,14 @@ const routes: Routes = [
       {
         path: 'clusters',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
-        // The wizard is a child of the cluster list, so the list stays mounted
-        // behind the sheet it opens in.
+        // The wizard is a sheet the shell owns, so the address only opens it.
         children: [
           {
             path: 'add',
-            loadComponent: () =>
-              import('./add-cluster-wizard-layout/add-cluster-wizard-layout.component').then(
-                (m) => m.default,
-              ),
-            children: [
-              {
-                path: '',
-                loadComponent: () =>
-                  import('./add-cluster/add-cluster.component').then((m) => m.default),
-                canActivate: [clusterWizardGuard],
-              },
-              {
-                path: 'nodes',
-                loadComponent: () =>
-                  import('./add-cluster-nodes/add-cluster-nodes.component').then((m) => m.default),
-                canActivate: [clusterWizardGuard],
-              },
-              {
-                path: 'summary',
-                loadComponent: () =>
-                  import('./add-cluster-summary/add-cluster-summary.component').then(
-                    (m) => m.default,
-                  ),
-                canActivate: [clusterWizardGuard],
-              },
-              { path: '**', redirectTo: '' },
-            ],
+            canActivate: [opensSheet((o) => o.newCluster.set(true), () => '/clusters')],
+            children: [],
           },
+          { path: 'add/**', redirectTo: 'add' },
         ],
       },
       {

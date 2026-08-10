@@ -27,6 +27,15 @@ export class ClusterWizardStateService {
     completedSteps: new Set<number>(),
   });
 
+  /** Which step is showing. The wizard sits in a sheet over whatever page you
+   *  were on, so a step cannot be a route of its own: routing would unmount
+   *  that page and leave an empty pane behind the sheet. */
+  readonly stepIndex = signal(0);
+
+  goToStep(index: number) {
+    this.stepIndex.set(index);
+  }
+
   getState() {
     return this.state();
   }
@@ -74,5 +83,6 @@ export class ClusterWizardStateService {
     this.state.set({
       completedSteps: new Set<number>(),
     });
+    this.stepIndex.set(0);
   }
 }

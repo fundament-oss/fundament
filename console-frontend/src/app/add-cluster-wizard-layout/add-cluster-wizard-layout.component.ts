@@ -2,48 +2,66 @@ import {
   Component,
   inject,
   computed,
-  signal,
+  effect,
   viewChild,
   ElementRef,
   afterNextRender,
   Injector,
+  Input,
+  Output,
+  EventEmitter,
   OnDestroy,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
 import type { StepIndicatorStatus } from '@nldd/design-system/step-indicator';
 import { ClusterWizardStateService } from './cluster-wizard-state.service';
 import SheetSyncDirective, { rewireFormFields } from '../sheet-sync.directive';
+import AddClusterComponent from '../add-cluster/add-cluster.component';
+import AddClusterNodesComponent from '../add-cluster-nodes/add-cluster-nodes.component';
+import AddClusterSummaryComponent from '../add-cluster-summary/add-cluster-summary.component';
 
 interface ProgressStep {
   name: string;
-  route: string;
 }
 
 @Component({
   selector: 'app-add-cluster-wizard-layout',
-  imports: [RouterOutlet, SheetSyncDirective],
+  imports: [
+    SheetSyncDirective,
+    AddClusterComponent,
+    AddClusterNodesComponent,
+    AddClusterSummaryComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './add-cluster-wizard-layout.component.html',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class AddClusterWizardLayoutComponent implements OnDestroy {
-  private router = inject(Router);
+  @Input() show = false;
+
+  @Output() closed = new EventEmitter<void>();
 
   private sheetRef = viewChild<ElementRef<HTMLElement>>('sheet');
 
   private injector = inject(Injector);
 
-  /** Dismissing the sheet leaves the wizard, which unmounts this route and
-   *  reveals the cluster list the sheet was covering. */
-  onClose(): void {
-    if (this.router.url.startsWith('/clusters/add')) {
-      this.router.navigate(['/clusters']);
-    }
+  protected stateService = inject(ClusterWizardStateService);
+
+  constructor() {
+    // Every step arrives in a sheet that is already open, where the two things
+    // below used to be handled by the router activating a step component.
+    effect(() => {
+      this.stateService.stepIndex();
+      this.afterStepRendered();
+    });
   }
 
-  protected stateService = inject(ClusterWizardStateService);
+  /** Dismissing the sheet takes the wizard away and reveals the page it was
+   *  covering, whichever page that is. */
+  onClose(): void {
+    this.closed.emit();
+  }
 
   // The design system ships Dutch defaults; the console is in US English.
   readonly stepIndicatorTranslations = {
@@ -54,31 +72,13 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
     'components.step-indicator.compact-text': 'Step {current} of {total}',
   };
 
-  steps: ProgressStep[] = [
-    { name: 'Basics', route: '/clusters/add' },
-    { name: 'Node pools', route: '/clusters/add/nodes' },
-    { name: 'Summary', route: '/clusters/add/summary' },
-  ];
+  steps: ProgressStep[] = [{ name: 'Basics' }, { name: 'Node pools' }, { name: 'Summary' }];
 
-  // Signal to track route changes
-  private routeSignal = signal(this.router.url);
-
-  // Computed signal for current step index
-  currentStepIndex = computed(() => {
-    const currentRoute = this.routeSignal();
-    // Find the last matching step (most specific route)
-    // e.g., /clusters/add/nodes should match /clusters/add/nodes, not /clusters/add
-    for (let i = this.steps.length - 1; i >= 0; i -= 1) {
-      if (currentRoute.startsWith(this.steps[i].route)) {
-        return i;
-      }
-    }
-    return -1;
-  });
+  currentStepIndex = this.stateService.stepIndex;
 
   // nldd-step-indicator is 1-based; it drives the collapsed "step x of y" line
   // and is the fallback for items that carry no status of their own.
-  currentStepNumber = computed(() => Math.max(this.currentStepIndex() + 1, 1));
+  currentStepNumber = computed(() => this.currentStepIndex() + 1);
 
   /** Names the step the back button returns to; empty on step one, where the
    *  title bar shows the flow's own title instead. */
@@ -99,14 +99,10 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Reset state when leaving the wizard
     this.stateService.reset();
   }
 
-  onActivate() {
-    // Update the route signal when a new route is activated
-    this.routeSignal.set(this.router.url);
-
+  private afterStepRendered() {
     // The sheet is portaled to document.body, which disconnects every
     // nldd-form-field in it and kills the MutationObserver that watches its
     // input's `invalid` attribute — the error text would stay hidden forever.
@@ -119,9 +115,9 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
         rewireFormFields(sheet);
 
         // nldd-top-title-bar resolves `collapse-anchor` once, when the attribute
-        // changes. That happens while the step is still being routed in, so the
+        // changes. That happens while the step is still being rendered, so the
         // heading it points at does not exist yet and the bar silently falls back
-        // to its static state. Re-set the attribute now that the step has rendered.
+        // to its static state. Re-set the attribute now that the step is there.
         const bar = sheet.querySelector('nldd-top-title-bar');
         const anchor = bar?.getAttribute('collapse-anchor');
         if (bar && anchor) {
@@ -135,46 +131,11 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
     );
   }
 
-  // Computed signals for derived state
-  currentStep = computed(() => this.steps[this.currentStepIndex()]);
-
-  isFirstStep = computed(() => this.currentStepIndex() === 0);
-
-  isLastStep = computed(() => this.currentStepIndex() === this.steps.length - 1);
-
-  previousRoute = computed(() => {
-    if (this.isFirstStep()) return null;
-    return this.steps[this.currentStepIndex() - 1].route;
-  });
-
-  nextRoute = computed(() => {
-    if (this.isLastStep()) return null;
-    return this.steps[this.currentStepIndex() + 1].route;
-  });
-
-  onPrevious() {
-    const prev = this.previousRoute();
-    if (prev) {
-      this.router.navigate([prev]);
-    }
-  }
-
-  onNext() {
-    const next = this.nextRoute();
-    if (next) {
-      this.router.navigate([next]);
-    }
-  }
-
-  onCancel() {
-    this.router.navigate(['/clusters']);
-  }
-
   // Steps render as a button rather than a link: the anchor would live inside
   // the element's shadow DOM, out of routerLink's reach.
   goToStep(index: number) {
     if (!this.canNavigate(index)) return;
-    this.router.navigate([this.steps[index].route]);
+    this.stateService.goToStep(index);
   }
 
   canNavigate(index: number): boolean {

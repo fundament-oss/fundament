@@ -299,6 +299,13 @@
                    role it carries and the way to withdraw it. -->
               @if (member.status === 'pending') {
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <!-- The dot is decorative: the word beside it already says
+                     "Invited", and a badge that names itself would say it twice
+                     to anyone listening. -->
+                <nldd-cell width="fit-content">
+                  <nldd-badge color="warning" decorative></nldd-badge>
+                </nldd-cell>
+                <nldd-spacer-cell size="6"></nldd-spacer-cell>
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"

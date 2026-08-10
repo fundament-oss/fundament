@@ -82,6 +82,7 @@
                     icon="add-kubernetes"
                     text="New cluster…"
                     href="/clusters/add"
+                    (click)="pageNav.openHere($event, overlays.newCluster, true)"
                   ></nldd-menu-item>
                   <nldd-menu-item
                     icon="add-plugin"
@@ -584,6 +585,13 @@
 
 @defer (when overlays.apiKeys()) {
   <app-api-keys [show]="overlays.apiKeys()" (closed)="overlays.apiKeys.set(false)"></app-api-keys>
+}
+
+@defer (when overlays.newCluster()) {
+  <app-add-cluster-wizard-layout
+    [show]="overlays.newCluster()"
+    (closed)="overlays.newCluster.set(false)"
+  ></app-add-cluster-wizard-layout>
 }
 
 @defer (when overlays.newProject()) {

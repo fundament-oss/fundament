@@ -97,7 +97,9 @@ import type { Invitation } from '../generated/v1/invite_pb';
 import ProfileComponent from './profile/profile.component';
 import ApiKeysComponent from './api-keys/api-keys.component';
 import AddProjectComponent from './add-project/add-project.component';
+import AddClusterWizardLayoutComponent from './add-cluster-wizard-layout/add-cluster-wizard-layout.component';
 import { OverlayService } from './overlay.service';
+import PageNavService from './page-nav.service';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
 import { ClusterStatus } from '../generated/v1/common_pb';
 import { getStatusBadgeColor, getStatusLabel } from './utils/cluster-status';
@@ -133,6 +135,7 @@ function depthForPath(url: string): number {
     ProfileComponent,
     ApiKeysComponent,
     AddProjectComponent,
+    AddClusterWizardLayoutComponent,
   ],
   templateUrl: './app.html',
   // The outlet is an empty element that still counts as a flex item of
@@ -192,6 +195,8 @@ export default class App implements OnInit {
    *  the page underneath and leave an empty pane behind the sheet. Their
    *  addresses still work; a guard opens the sheet over the home pane. */
   protected overlays = inject(OverlayService);
+
+  protected pageNav = inject(PageNavService);
 
   private clusterNameCache = new Map<string, string>();
 

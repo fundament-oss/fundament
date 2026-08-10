@@ -7,7 +7,6 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import { TitleService } from '../title.service';
 import {
   SharedNodePoolsFormComponent,
@@ -27,8 +26,6 @@ export default class AddClusterNodesComponent implements OnInit {
   @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
 
   private titleService = inject(TitleService);
-
-  private router = inject(Router);
 
   private stateService = inject(ClusterWizardStateService);
 
@@ -61,7 +58,6 @@ export default class AddClusterNodesComponent implements OnInit {
     this.stateService.updateNodePools(data.nodePools);
     this.stateService.markStepCompleted(1);
 
-    // Navigate to the next step
-    this.router.navigate(['/clusters/add/summary']);
+    this.stateService.goToStep(2);
   }
 }

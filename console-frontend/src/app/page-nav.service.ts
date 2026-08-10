@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal, type WritableSignal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { OrganizationDataService } from './organization-data.service';
@@ -68,5 +68,24 @@ export default class PageNavService {
 
     event.preventDefault();
     this.router.navigateByUrl(path);
+  }
+
+  /**
+   * Opens a sheet the shell owns instead of following the link, so it lands
+   * over the page you are on rather than sending you somewhere first. The
+   * element stays a real `<a href>`: middle-click and "open in new tab" go to
+   * the address, which lands on the page the thing belongs to with the same
+   * sheet already over it.
+   */
+  // eslint-disable-next-line class-methods-use-this
+  openHere<T>(event: Event, sheet: WritableSignal<T>, value: T): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    sheet.set(value);
   }
 }

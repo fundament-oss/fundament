@@ -16,6 +16,19 @@ export class OverlayService {
   readonly apiKeys = signal(false);
 
   readonly newProject = signal(false);
+
+  /** The create flows from the toolbar. They belong to no page, so opening one
+   *  from there must not send you to a page first: the sheet floats over
+   *  whatever you were reading. Their addresses still exist, and a guard sends
+   *  you to the page the thing lands on with the sheet already open. */
+  readonly newCluster = signal(false);
+
+  readonly inviteMember = signal(false);
+
+  /** Project-scoped, so these hold the project id rather than a flag. */
+  readonly newNamespace = signal<string | null>(null);
+
+  readonly addProjectMember = signal<string | null>(null);
 }
 
 export default OverlayService;
