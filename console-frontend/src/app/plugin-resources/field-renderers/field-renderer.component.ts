@@ -21,19 +21,13 @@ function toObjectEntries(val: unknown): [string, unknown][] {
         <span>{{ formatDateValue(value()) }}</span>
       }
       @case ('boolean') {
-        @if (value()) {
-          <nldd-tag color="success" size="sm" text="Yes"></nldd-tag>
-        } @else {
-          <nldd-tag color="neutral" size="sm" text="No"></nldd-tag>
-        }
+        <span>{{ value() ? 'Yes' : 'No' }}</span>
       }
       @case ('string-array') {
         @if (asArray(value()).length > 0) {
-          <div class="flex flex-wrap gap-1">
-            @for (item of asArray(value()); track item) {
-              <nldd-tag color="accent" size="sm" [attr.text]="item"></nldd-tag>
-            }
-          </div>
+          <!-- Tekst, geen tags: een domeinnaam is de waarde van het veld en geen
+               etiket dat iemand eraan hing. -->
+          <span>{{ asArray(value()).join(', ') }}</span>
         } @else {
           <span class="text-gray-500 dark:text-gray-400">&mdash;</span>
         }

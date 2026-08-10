@@ -25,15 +25,19 @@
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
+      <!-- De badge staat in de h1 zelf: hij hoort bij de naam, niet aan het eind
+           van de regel. Daarmee leest de kop ook voor wie hem hoort als
+           "burgerzaken-afspraken, Not ready". -->
       <nldd-title id="resource-detail-title" size="2">
-        <h1>{{ resource()!.metadata.name }}</h1>
-        @if (primaryCondition(); as condition) {
-          <nldd-badge
-            slot="end"
-            [attr.color]="condition.color"
-            [attr.text]="condition.text"
-          ></nldd-badge>
-        }
+        <h1>
+          {{ resource()!.metadata.name }}
+          @if (primaryCondition(); as condition) {
+            <nldd-badge
+              [attr.color]="condition.color"
+              [attr.text]="condition.text"
+            ></nldd-badge>
+          }
+        </h1>
       </nldd-title>
 
       <nldd-spacer size="16"></nldd-spacer>
