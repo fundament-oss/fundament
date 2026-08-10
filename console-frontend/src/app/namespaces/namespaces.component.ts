@@ -4,10 +4,12 @@ import {
   signal,
   computed,
   OnInit,
+  effect,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
@@ -50,6 +52,17 @@ export default class NamespacesComponent implements OnInit {
 
   private route = inject(ActivatedRoute);
 
+  private routeQuery = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
+
+  /** Opened from the URL as well as from the button, so a control elsewhere in
+   *  the app can send you straight here. Closing takes the parameter off again,
+   *  or the back button would land on something you just finished. */
+  private readonly openFromUrl = effect(() => {
+    if (this.routeQuery().get('add') !== null && !this.showCreateNamespaceModal()) this.openCreateNamespaceModal();
+  });
+
   private router = inject(Router);
 
   private projectClient = inject(PROJECT);
@@ -65,6 +78,13 @@ export default class NamespacesComponent implements OnInit {
   private organizationDataService = inject(OrganizationDataService);
 
   projectId = signal<string>('');
+
+  /** Named in the sheet title, so it says which project the namespace lands in;
+   *  the page header is behind the sheet while it is open. */
+  projectName = computed(() => {
+    const gevonden = this.organizationDataService.getProjectById(this.projectId())?.project;
+    return gevonden?.alias || gevonden?.name || 'this project';
+  });
 
   namespaces = signal<Namespace[]>([]);
 
@@ -180,6 +200,18 @@ export default class NamespacesComponent implements OnInit {
       );
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  closeCreateNamespaceModal() {
+    this.showCreateNamespaceModal.set(false);
+    if (this.route.snapshot.queryParamMap.get('add') !== null) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { add: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
     }
   }
 

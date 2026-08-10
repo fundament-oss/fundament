@@ -197,7 +197,7 @@
   [show]="showAddMemberModal()"
   accessible-label="Add project member"
   placement="right"
-  (close)="showAddMemberModal.set(false)"
+  (close)="closeAddMemberModal()"
 >
   <nldd-page sticky-header>
     <nldd-top-title-bar
@@ -257,6 +257,10 @@
                 }
               </nldd-menu>
             </nldd-combo-box>
+            <nldd-form-field-help-text>
+              The person must first be added to the organization by an organization admin before
+              they can become a project member.
+            </nldd-form-field-help-text>
             <nldd-form-field-error-text id="project-member-user-error">
               @if (userFieldInvalid()) {
                 Please select a member.

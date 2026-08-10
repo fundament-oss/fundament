@@ -116,14 +116,14 @@
   #createNamespaceSheet
   appSheetSync
   [show]="showCreateNamespaceModal()"
-  accessible-label="New namespace"
+  [attr.accessible-label]="'New namespace for ' + projectName()"
   placement="right"
-  (close)="showCreateNamespaceModal.set(false)"
+  (close)="closeCreateNamespaceModal()"
 >
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
-      text="New namespace"
+      [attr.text]="'New namespace for ' + projectName()"
       collapse-anchor="new-namespace-title"
       dismiss-text="Cancel"
       (dismiss)="showCreateNamespaceModal.set(false)"
@@ -131,7 +131,7 @@
 
     <nldd-simple-section>
       <nldd-title id="new-namespace-title" size="3">
-        <h1>New namespace</h1>
+        <h1>New namespace for {{ projectName() }}</h1>
       </nldd-title>
 
       <nldd-spacer size="16"></nldd-spacer>
@@ -186,15 +186,14 @@
               </nldd-menu>
             </nldd-token-field>
             <nldd-form-field-help-text>
+              Only project members can be added to a project namespace.
               @if (coveredMemberCount() > 0) {
                 {{
                   coveredMemberCount() === 1
-                    ? '1 member has access to all namespaces and reaches this one already.'
+                    ? '1 of them has access to all namespaces and reaches this one already.'
                     : coveredMemberCount() +
-                      ' members have access to all namespaces and reach this one already.'
+                      ' of them have access to all namespaces and reach this one already.'
                 }}
-              } @else {
-                Everyone else keeps the access they have.
               }
             </nldd-form-field-help-text>
           </nldd-form-field>

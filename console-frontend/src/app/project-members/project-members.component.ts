@@ -3,12 +3,14 @@ import {
   inject,
   signal,
   OnInit,
+  effect,
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
   computed,
   isDevMode,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
@@ -136,6 +138,17 @@ export default class ProjectMembersComponent implements OnInit {
   protected pageNav = inject(PageNavService);
 
   private route = inject(ActivatedRoute);
+
+  private routeQuery = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
+
+  /** Opened from the URL as well as from the button, so a control elsewhere in
+   *  the app can send you straight here. Closing takes the parameter off again,
+   *  or the back button would land on something you just finished. */
+  private readonly openFromUrl = effect(() => {
+    if (this.routeQuery().get('add') !== null && !this.showAddMemberModal()) this.openAddMemberModal();
+  });
 
   private router = inject(Router);
 
@@ -352,6 +365,18 @@ export default class ProjectMembersComponent implements OnInit {
       );
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  closeAddMemberModal() {
+    this.showAddMemberModal.set(false);
+    if (this.route.snapshot.queryParamMap.get('add') !== null) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { add: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
     }
   }
 

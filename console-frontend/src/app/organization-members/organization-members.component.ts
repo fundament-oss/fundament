@@ -4,13 +4,15 @@ import {
   OnInit,
   signal,
   computed,
+  effect,
   ChangeDetectionStrategy,
   isDevMode,
   CUSTOM_ELEMENTS_SCHEMA,
   viewChild,
   ElementRef,
 } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
@@ -179,6 +181,19 @@ const comparatorFor =
 })
 export default class OrganizationMembersComponent implements OnInit {
   private router = inject(Router);
+
+  private route = inject(ActivatedRoute);
+
+  private routeQuery = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
+
+  /** Opened from the URL as well as from the button, so a control elsewhere in
+   *  the app can send you straight here. Closing takes the parameter off again,
+   *  or the back button would land on an invitation you just finished. */
+  private readonly openFromUrl = effect(() => {
+    if (this.routeQuery().get('invite') !== null && !this.isModalOpen()) this.openModal();
+  });
 
   private titleService = inject(TitleService);
 
@@ -358,6 +373,9 @@ export default class OrganizationMembersComponent implements OnInit {
     }
   }
 
+  /** Opened from the URL as well as from the button, so a menu elsewhere in the
+   *  app can send you straight here. Closing takes the parameter back off, or
+   *  the back button would land on an invitation you just finished. */
   openModal() {
     this.inviteEmail.set('');
     this.inviteEmailDirty.set(false);
@@ -368,6 +386,14 @@ export default class OrganizationMembersComponent implements OnInit {
 
   closeModal() {
     this.isModalOpen.set(false);
+    if (this.route.snapshot.queryParamMap.get('invite') !== null) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { invite: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   async submitInvitation(event?: Event) {
