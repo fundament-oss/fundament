@@ -19,6 +19,7 @@ import { deleteErrorMessage } from '../kube-api-error';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import { TitleService } from '../../title.service';
+import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, KubeResource, CrdPropertySchema } from '../types';
 import { toDateValue, toSimpleValue, fieldNameToLabel } from '../crd-schema.utils';
@@ -51,6 +52,8 @@ function toRecord(val: unknown): Record<string, unknown> {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ResourceDetailComponent implements OnInit {
+  protected pageNav = inject(PageNavService);
+
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
@@ -190,6 +193,14 @@ export default class ResourceDetailComponent implements OnInit {
   kindLabel = computed(() => {
     const plural = this.crdDef()?.plural;
     return plural ? plural[0].toUpperCase() + plural.slice(1) : this.kind() || 'list';
+  });
+
+  /** Where the title bar's back button leads: the project this resource belongs
+   *  to, or the organization when the plugin is installed there. The way back to
+   *  the list is a link in the page itself. */
+  backPath = computed(() => {
+    const projectId = this.route.snapshot.parent?.parent?.parent?.params['id'];
+    return projectId ? `/projects/${projectId}` : '/';
   });
 
   goToList() {

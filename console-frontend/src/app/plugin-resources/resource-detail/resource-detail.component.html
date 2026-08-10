@@ -11,9 +11,11 @@
     [resourceNamespace]="resourceNamespace()"
   />
 } @else if (resource()) {
-  <!-- Same outer layout as the other pages: the title bar carries the way back
-       to the list, so the page needs no link of its own for it. -->
-  <nldd-page sticky-header>
+  <!-- Same outer layout as the other pages. The back button leads to the list
+       this resource came from rather than to the menu, so it stays put when the
+       menu is already in view: the same override the cluster and plugin detail
+       pages use. -->
+  <nldd-page sticky-header style="--context-back-button-display: flex">
     <nldd-top-title-bar
       slot="header"
       [attr.text]="resource()!.metadata.name"

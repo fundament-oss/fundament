@@ -40,9 +40,6 @@
 
       <nldd-title id="resource-list-title" size="2">
         <h1>{{ kindLabel() }}</h1>
-        @if (plugin()?.description) {
-          <span slot="subtitle">{{ plugin()?.description }}</span>
-        }
       </nldd-title>
 
       @if (canCreate()) {
@@ -67,6 +64,16 @@
       }
 
       <nldd-spacer size="16"></nldd-spacer>
+
+      <!-- Standing explanation, the same shape as on the other pages: what the
+           plugin says about itself, not a notice about something that happened. -->
+      @if (plugin()?.description) {
+        <nldd-rich-text spacing="flat">
+          <p>{{ plugin()?.description }}</p>
+        </nldd-rich-text>
+
+        <nldd-spacer size="24"></nldd-spacer>
+      }
 
       @if (isLoading() || clusterContext.isLoadingClusters()) {
         <nldd-activity-indicator
