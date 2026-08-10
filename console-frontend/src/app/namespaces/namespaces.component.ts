@@ -23,8 +23,6 @@ import {
   Namespace,
 } from '../../generated/v1/namespace_pb';
 import DialogSyncDirective from '../dialog-sync.directive';
-import SheetSyncDirective from '../sheet-sync.directive';
-import AutofocusDirective from '../autofocus.directive';
 import { formatDate as formatDateUtil } from '../utils/date-format';
 import { mockBindingsFor } from '../utils/mock-role-bindings';
 import { ALL_NAMESPACES } from '../utils/namespace-grants';
@@ -36,8 +34,6 @@ import type { ProjectMember } from '../../generated/v1/project_pb';
   imports: [
     ReactiveFormsModule,
     DialogSyncDirective,
-    SheetSyncDirective,
-    AutofocusDirective,
     RouterOutlet,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

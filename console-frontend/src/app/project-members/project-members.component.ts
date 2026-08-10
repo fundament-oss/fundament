@@ -20,8 +20,6 @@ import { OverlayService } from '../overlay.service';
 import { PROJECT, MEMBER, NAMESPACE } from '../../connect/tokens';
 import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
-import SheetSyncDirective from '../sheet-sync.directive';
-import AutofocusDirective from '../autofocus.directive';
 import { NotificationService } from '../notification.service';
 import { formatTimeAgo } from '../utils/date-format';
 import { mockBindingsFor, setMockBindings } from '../utils/mock-role-bindings';
@@ -117,9 +115,7 @@ const byPermissionThenAdded = (a: ProjectMemberView, b: ProjectMemberView): numb
     RouterOutlet,
     ReactiveFormsModule,
     DialogSyncDirective,
-    SheetSyncDirective,
     RouterLink,
-    AutofocusDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,

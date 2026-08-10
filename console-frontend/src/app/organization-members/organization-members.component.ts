@@ -23,8 +23,6 @@ import { OrganizationDataService } from '../organization-data.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
-import SheetSyncDirective from '../sheet-sync.directive';
-import AutofocusDirective from '../autofocus.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatTimeAgo } from '../utils/date-format';
 
@@ -172,8 +170,6 @@ const comparatorFor =
   imports: [
     RouterOutlet,
     DialogSyncDirective,
-    SheetSyncDirective,
-    AutofocusDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './organization-members.component.html',

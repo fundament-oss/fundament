@@ -12,7 +12,6 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import PluginIframeComponent from '../iframe/plugin-iframe.component';
-import ResourceDeleteModalComponent from '../resource-delete-modal/resource-delete-modal.component';
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
@@ -49,7 +48,7 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
 
 @Component({
   selector: 'app-resource-list',
-  imports: [RouterLink, PluginIframeComponent, ResourceDeleteModalComponent],
+  imports: [RouterLink, PluginIframeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './resource-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
