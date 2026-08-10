@@ -4,7 +4,6 @@ import {
   OnInit,
   signal,
   computed,
-  effect,
   ChangeDetectionStrategy,
   isDevMode,
   CUSTOM_ELEMENTS_SCHEMA,
@@ -14,12 +13,13 @@ import {
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
-import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
+import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import { NotificationService } from '../notification.service';
 import PageNavService from '../page-nav.service';
+import { OverlayService } from '../overlay.service';
+import { OrganizationDataService } from '../organization-data.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
@@ -188,16 +188,13 @@ export default class OrganizationMembersComponent implements OnInit {
     initialValue: this.route.snapshot.queryParamMap,
   });
 
-  /** Opened from the URL as well as from the button, so a control elsewhere in
-   *  the app can send you straight here. Closing takes the parameter off again,
-   *  or the back button would land on an invitation you just finished. */
-  private readonly openFromUrl = effect(() => {
-    if (this.routeQuery().get('invite') !== null && !this.isModalOpen()) this.openModal();
-  });
-
   private titleService = inject(TitleService);
 
   protected pageNav = inject(PageNavService);
+
+  protected overlays = inject(OverlayService);
+
+  private organizationDataService = inject(OrganizationDataService);
 
   private notificationService = inject(NotificationService);
 
@@ -215,17 +212,6 @@ export default class OrganizationMembersComponent implements OnInit {
   error = signal<string | null>(null);
 
   isSubmitting = signal(false);
-
-  // Invite modal state
-  isModalOpen = signal(false);
-
-  inviteEmail = signal('');
-
-  inviteEmailDirty = signal(false);
-
-  invitePermission = signal('viewer');
-
-  inviteError = signal<string | null>(null);
 
   // Delete modal state
   showDeleteModal = signal(false);
@@ -295,19 +281,6 @@ export default class OrganizationMembersComponent implements OnInit {
 
   memberFilter = signal<'all' | 'invitations' | 'members'>('all');
 
-  permissionOptions = [
-    {
-      value: 'viewer',
-      label: 'Viewer',
-      description: 'Can look at the organization, its clusters and its members.',
-    },
-    {
-      value: 'admin',
-      label: 'Admin',
-      description: 'Can also create clusters, invite members and reach every project.',
-    },
-  ];
-
   memberSort = signal<MemberSort>('status');
 
   sortLabel = computed(() => SORT_LABELS[this.memberSort()]);
@@ -373,65 +346,6 @@ export default class OrganizationMembersComponent implements OnInit {
     }
   }
 
-  /** Opened from the URL as well as from the button, so a menu elsewhere in the
-   *  app can send you straight here. Closing takes the parameter back off, or
-   *  the back button would land on an invitation you just finished. */
-  openModal() {
-    this.inviteEmail.set('');
-    this.inviteEmailDirty.set(false);
-    this.invitePermission.set('viewer');
-    this.inviteError.set(null);
-    this.isModalOpen.set(true);
-  }
-
-  closeModal() {
-    this.isModalOpen.set(false);
-    if (this.route.snapshot.queryParamMap.get('invite') !== null) {
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { invite: null },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
-    }
-  }
-
-  async submitInvitation(event?: Event) {
-    event?.preventDefault();
-
-    const email = this.inviteEmail().trim();
-    const permission = this.invitePermission();
-
-    if (!email) {
-      return;
-    }
-
-    this.isSubmitting.set(true);
-    this.inviteError.set(null);
-
-    try {
-      await withIdempotency((opts) => this.inviteClient.inviteMember({ email, permission }, opts), {
-        signal: this.idempotency.reset(),
-      });
-      this.closeModal();
-      this.notificationService.success(`'${email}' invited as ${permission}`);
-      await this.loadMembers();
-    } catch (err: unknown) {
-      if (err instanceof ConnectError) {
-        if (err.code === Code.AlreadyExists) {
-          this.inviteError.set('This email address is already in use.');
-        } else if (err.code === Code.InvalidArgument) {
-          this.inviteError.set('Please enter a valid email address.');
-        } else {
-          this.inviteError.set('Failed to invite member. Please try again.');
-        }
-      } else {
-        this.inviteError.set('Failed to invite member. Please try again.');
-      }
-    } finally {
-      this.isSubmitting.set(false);
-    }
-  }
 
   async cancelInvitation(id: string) {
     const invitation = this.pendingInvitations().find((m) => m.id === id);

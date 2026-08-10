@@ -99,6 +99,8 @@ import ApiKeysComponent from './api-keys/api-keys.component';
 import AddProjectComponent from './add-project/add-project.component';
 import AddClusterWizardLayoutComponent from './add-cluster-wizard-layout/add-cluster-wizard-layout.component';
 import NewNamespaceSheetComponent from './new-namespace-sheet/new-namespace-sheet.component';
+import InviteMemberSheetComponent from './invite-member-sheet/invite-member-sheet.component';
+import AddProjectMemberSheetComponent from './add-project-member-sheet/add-project-member-sheet.component';
 import { OverlayService } from './overlay.service';
 import PageNavService from './page-nav.service';
 import { CLUSTER, INVITE, ORGANIZATION } from '../connect/tokens';
@@ -138,6 +140,8 @@ function depthForPath(url: string): number {
     AddProjectComponent,
     AddClusterWizardLayoutComponent,
     NewNamespaceSheetComponent,
+    InviteMemberSheetComponent,
+    AddProjectMemberSheetComponent,
   ],
   templateUrl: './app.html',
   // The outlet is an empty element that still counts as a flex item of

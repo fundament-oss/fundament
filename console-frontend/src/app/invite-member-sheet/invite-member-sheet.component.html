@@ -1,0 +1,94 @@
+<nldd-sheet
+  #inviteSheet
+  appSheetSync
+  [show]="show()"
+  accessible-label="Invite user"
+  placement="right"
+  (close)="onClose()"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Invite user"
+      collapse-anchor="invite-user-title"
+      dismiss-text="Cancel"
+      (dismiss)="onClose()"
+    ></nldd-top-title-bar>
+
+    <nldd-simple-section>
+      <nldd-title id="invite-user-title" size="3">
+        <h1>Invite user</h1>
+      </nldd-title>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
+      <nldd-rich-text spacing="flat">
+        <p>
+          Enter the email address of the user you want to invite. They will be able to sign in via
+          SSO once added. No invitation email is sent yet, let the user know they should sign in
+          themselves.
+        </p>
+      </nldd-rich-text>
+
+      <nldd-spacer size="16"></nldd-spacer>
+
+      <nldd-form
+        (submit)="submitInvitation($event)"
+        (keydown.enter)="submitInvitation($event)"
+        novalidate
+      >
+        <nldd-form-field label="Email address">
+          <nldd-text-field
+            appAutofocus
+            type="email"
+            id="email"
+            [value]="inviteEmail()"
+            (input)="
+              inviteEmail.set($any($event.target).value);
+              inviteEmailDirty.set(true);
+              inviteError.set(null)
+            "
+            [invalid]="!!(inviteError() || (inviteEmailDirty() && !inviteEmail().trim()))"
+            error-message="org-invite-email-error"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="org-invite-email-error">
+            {{ inviteError() || 'The user email is required' }}
+          </nldd-form-field-error-text>
+        </nldd-form-field>
+
+        <nldd-form-field label="Permission">
+          <nldd-list variant="box-tinted" accessible-label="Permission">
+            @for (option of permissionOptions; track option.value) {
+              <!-- The row is the control; the radio only shows which one it is. -->
+              <nldd-list-item button (click)="invitePermission.set(option.value)">
+                <nldd-cell width="fit-content">
+                  <nldd-radio-button
+                    decorative
+                    [attr.checked]="invitePermission() === option.value ? '' : null"
+                  ></nldd-radio-button>
+                </nldd-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="full"
+                  [attr.text]="option.label"
+                  [attr.supporting-text]="option.description"
+                ></nldd-text-cell>
+              </nldd-list-item>
+            }
+          </nldd-list>
+        </nldd-form-field>
+
+        <nldd-form-actions>
+          <nldd-button
+            type="button"
+            (click)="submitInvitation()"
+            text="Send invitation"
+            [attr.loading]="isSubmitting() ? '' : null"
+            variant="primary"
+            width="full"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>

@@ -92,7 +92,8 @@
                   <nldd-menu-item
                     icon="add-user"
                     text="Invite member…"
-                    href="/organization/members?invite=1"
+                    href="/organization/members/invite"
+                    (click)="pageNav.openHere($event, overlays.inviteMember, true)"
                   ></nldd-menu-item>
 
                   <!-- A project has two things you can add to it, so each one
@@ -111,7 +112,8 @@
                           <nldd-menu-item
                             icon="add-user"
                             text="Add project member…"
-                            [attr.href]="'/projects/' + project.id + '/members?add=1'"
+                            [attr.href]="'/projects/' + project.id + '/members/add'"
+                            (click)="pageNav.openHere($event, overlays.addProjectMember, project.id)"
                           ></nldd-menu-item>
                         </nldd-menu>
                       </nldd-menu-item>
@@ -586,6 +588,21 @@
 
 @defer (when overlays.apiKeys()) {
   <app-api-keys [show]="overlays.apiKeys()" (closed)="overlays.apiKeys.set(false)"></app-api-keys>
+}
+
+@if (overlays.addProjectMember(); as projectId) {
+  <app-add-project-member-sheet
+    [projectId]="projectId"
+    [show]="true"
+    (closed)="overlays.addProjectMember.set(null)"
+  ></app-add-project-member-sheet>
+}
+
+@defer (when overlays.inviteMember()) {
+  <app-invite-member-sheet
+    [show]="overlays.inviteMember()"
+    (closed)="overlays.inviteMember.set(false)"
+  ></app-invite-member-sheet>
 }
 
 @if (overlays.newNamespace(); as projectId) {

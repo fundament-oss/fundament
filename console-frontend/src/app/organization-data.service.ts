@@ -3,6 +3,7 @@ import { create } from '@bufbuild/protobuf';
 import { type Timestamp } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
 import { ORGANIZATION, CLUSTER, PROJECT } from '../connect/tokens';
+import type { RoleBinding } from './utils/mock-role-bindings';
 import { GetOrganizationRequestSchema, type Organization } from '../generated/v1/organization_pb';
 import {
   ListClustersRequestSchema,
@@ -41,6 +42,16 @@ export class OrganizationDataService {
   /** Bumped when a namespace is created somewhere other than the list that
    *  shows them: that sheet belongs to the shell now, not to the page. */
   readonly namespacesChanged = signal(0);
+
+  /** The same, for members: inviting someone and adding someone to a project
+   *  both happen in a sheet the shell owns. */
+  readonly membersChanged = signal(0);
+
+  /** TEMPORARY, dev only: roles have no API, so a fresh grant waits here for the
+   *  member id the list assigns. The sheet that hands it out belongs to the
+   *  shell, so it cannot park it on the list itself. Delete with the mock
+   *  bindings. */
+  readonly pendingProjectGrant = signal<{ userId: string; bindings: RoleBinding[] } | null>(null);
 
   private organizationClient = inject(ORGANIZATION);
 

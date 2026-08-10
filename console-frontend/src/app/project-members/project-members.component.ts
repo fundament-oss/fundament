@@ -10,13 +10,13 @@ import {
   isDevMode,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
-import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
+import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
 import PageNavService from '../page-nav.service';
+import { OverlayService } from '../overlay.service';
 import { PROJECT, MEMBER, NAMESPACE } from '../../connect/tokens';
 import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
@@ -24,15 +24,8 @@ import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
 import { NotificationService } from '../notification.service';
 import { formatTimeAgo } from '../utils/date-format';
-import { mockBindingsFor, setMockBindings, ALL_ROLES } from '../utils/mock-role-bindings';
-import {
-  NEW_NAMESPACE,
-  ALL_NAMESPACES,
-  NAMESPACE_NAME,
-  namespaceLabel,
-  toggleNamespace,
-} from '../utils/namespace-grants';
-import type { RoleBinding } from '../utils/mock-role-bindings';
+import { mockBindingsFor, setMockBindings } from '../utils/mock-role-bindings';
+import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 
@@ -137,18 +130,9 @@ export default class ProjectMembersComponent implements OnInit {
 
   protected pageNav = inject(PageNavService);
 
+  protected overlays = inject(OverlayService);
+
   private route = inject(ActivatedRoute);
-
-  private routeQuery = toSignal(this.route.queryParamMap, {
-    initialValue: this.route.snapshot.queryParamMap,
-  });
-
-  /** Opened from the URL as well as from the button, so a control elsewhere in
-   *  the app can send you straight here. Closing takes the parameter off again,
-   *  or the back button would land on something you just finished. */
-  private readonly openFromUrl = effect(() => {
-    if (this.routeQuery().get('add') !== null && !this.showAddMemberModal()) this.openAddMemberModal();
-  });
 
   private router = inject(Router);
 
@@ -176,10 +160,6 @@ export default class ProjectMembersComponent implements OnInit {
 
   error = signal<string | null>(null);
 
-  showAddMemberModal = signal<boolean>(false);
-
-  isAddingMember = signal<boolean>(false);
-
   /** A fixed order, now that there is nothing to sort by: admins first, and the
    *  most recently added first within a permission. */
   visibleMembers = computed(() => [...this.memberViews()].sort(byPermissionThenAdded));
@@ -204,56 +184,7 @@ export default class ProjectMembersComponent implements OnInit {
 
   isLocked = isLocked;
 
-  memberForm = this.fb.group({
-    userId: ['', Validators.required],
-    permission: ['viewer', Validators.required],
-  });
-
   ProjectMemberRole = ProjectMemberRole;
-
-  /** Namespace access, handed out while adding: giving someone a place to work
-   *  is the same intention as putting them in the project, so it does not need a
-   *  second trip through the member sheet. Empty is fine, nothing is granted. */
-  draftNamespaces = signal<string[]>([]);
-
-  draftRoles = signal<string[]>([]);
-
-  newNamespaceName = signal('');
-
-  /** Set by pressing the button: it is never disabled, so the fields are what
-   *  say what is missing. */
-  private addSubmitted = signal(false);
-
-  newNamespaceInvalid = computed(() => {
-    if (!this.draftNamespaces().includes(NEW_NAMESPACE)) return false;
-    const name = this.newNamespaceName();
-    if (name.trim() === '') return this.addSubmitted();
-    return !NAMESPACE_NAME.test(name);
-  });
-
-  newNamespaceError = computed(() =>
-    this.newNamespaceName().trim() === ''
-      ? 'A namespace name is required.'
-      : 'Use lowercase letters, numbers and hyphens, starting with a letter.',
-  );
-
-  allRoles = ALL_ROLES;
-
-  NEW_NAMESPACE = NEW_NAMESPACE;
-
-  ALL_NAMESPACES = ALL_NAMESPACES;
-
-  namespaceLabel = namespaceLabel;
-
-  toggleDraftNamespace(namespace: string) {
-    this.draftNamespaces.update((current) => toggleNamespace(current, namespace));
-  }
-
-  toggleDraftRole(role: string) {
-    this.draftRoles.update((roles) =>
-      roles.includes(role) ? roles.filter((current) => current !== role) : [...roles, role],
-    );
-  }
 
   /** Falls back to the neutral word while the organization data is still
    *  loading, so the sheet title never reads "Add member to undefined". */
@@ -261,32 +192,6 @@ export default class ProjectMembersComponent implements OnInit {
     const found = this.organizationData.getProjectById(this.projectId())?.project;
     return found?.alias || found?.name || 'this project';
   });
-
-  selectedUserName = computed(() => {
-    const id = this.selectedUserId();
-    return this.availableUsers().find((user) => user.id === id)?.name ?? '';
-  });
-
-  private selectedUserId = signal('');
-
-  /** Set by pressing Add member without a choice: the button stays enabled, so
-   *  the field is what says what is missing. */
-  private userFieldTouched = signal(false);
-
-  userFieldInvalid = computed(() => this.userFieldTouched() && !this.selectedUserId());
-
-  permissionOptions = [
-    {
-      value: 'viewer',
-      label: 'Project viewer',
-      description: 'Can see the project, its members and its namespaces.',
-    },
-    {
-      value: 'admin',
-      label: 'Project admin',
-      description: 'Can also edit the project, manage its members and create namespaces.',
-    },
-  ];
 
   constructor() {
     this.titleService.setTitle('Project members');
@@ -298,6 +203,13 @@ export default class ProjectMembersComponent implements OnInit {
     this.loadMembers();
     this.loadNamespaces();
   }
+
+  /** The sheet that adds one lives in the shell and may well be standing over
+   *  this very list, so the list hears about a new member from there. */
+  private readonly reloadOnAdd = effect(() => {
+    this.organizationData.membersChanged();
+    if (this.projectId()) this.loadMembers();
+  });
 
   /** Only for the namespace count on a row; the sheet has the detail. */
   async loadNamespaces() {
@@ -343,11 +255,11 @@ export default class ProjectMembersComponent implements OnInit {
       });
       this.memberViews.set(views);
 
-      const pending = this.pendingGrant;
+      const pending = this.organizationData.pendingProjectGrant();
       const granted = pending && views.find((view) => view.member.userId === pending.userId);
       if (pending && granted) {
         setMockBindings(granted.member.id, pending.bindings);
-        this.pendingGrant = null;
+        this.organizationData.pendingProjectGrant.set(null);
       }
 
       // Available users for "add member": org members not yet in project
@@ -367,123 +279,6 @@ export default class ProjectMembersComponent implements OnInit {
       this.isLoading.set(false);
     }
   }
-
-  closeAddMemberModal() {
-    this.showAddMemberModal.set(false);
-    if (this.route.snapshot.queryParamMap.get('add') !== null) {
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { add: null },
-        queryParamsHandling: 'merge',
-        replaceUrl: true,
-      });
-    }
-  }
-
-  openAddMemberModal() {
-    this.selectedUserId.set('');
-    this.userFieldTouched.set(false);
-    this.addSubmitted.set(false);
-    this.draftNamespaces.set([]);
-    this.draftRoles.set([]);
-    this.newNamespaceName.set('');
-    this.memberForm.reset({ userId: '', permission: 'viewer' });
-    this.showAddMemberModal.set(true);
-  }
-
-  onPermissionChange(event: Event) {
-    const value = (event as CustomEvent<{ value: string }>).detail.value;
-    this.memberForm.get('permission')?.setValue(value);
-  }
-
-  /** The row is the target, the radio is the control. */
-  selectPermission(value: string) {
-    this.memberForm.get('permission')?.setValue(value);
-  }
-
-  onUserChange(event: Event) {
-    const { value } = (event as CustomEvent<{ value: string }>).detail;
-    this.selectedUserId.set(value);
-    this.userFieldTouched.set(false);
-    this.memberForm.get('userId')?.setValue(value);
-    this.memberForm.get('userId')?.markAsDirty();
-  }
-
-  async saveMember(event?: Event) {
-    event?.preventDefault();
-
-    this.addSubmitted.set(true);
-    if (!this.selectedUserId()) this.userFieldTouched.set(true);
-    // Both fields report at once: fixing one and being sent back for the other
-    // reads as a second failure.
-    if (!this.selectedUserId() || this.newNamespaceInvalid()) return;
-
-    this.isAddingMember.set(true);
-    const role = stringToRole(this.memberForm.value.permission!);
-    const userId = this.memberForm.value.userId!;
-
-    try {
-      await withIdempotency(
-        (opts) =>
-          this.projectClient.addProjectMember({ projectId: this.projectId(), userId, role }, opts),
-        { signal: this.idempotency.reset() },
-      );
-      this.showAddMemberModal.set(false);
-      await this.grantDraftAccess(userId);
-      await this.loadMembers();
-    } catch (err) {
-      this.showAddMemberModal.set(false);
-      this.actionError.set({
-        title: 'Member not added',
-        message: err instanceof Error ? err.message : 'The request failed.',
-        attempts: 1,
-        retry: () => this.saveMember(),
-      });
-    } finally {
-      this.isAddingMember.set(false);
-    }
-  }
-
-  /**
-   * The access picked in the add form, handed out once the member exists. The
-   * member is already in the project by now, so a namespace that cannot be
-   * created is reported and the rest still goes through.
-   */
-  private async grantDraftAccess(userId: string) {
-    let namespaces = [...this.draftNamespaces()];
-    if (namespaces.length === 0) return;
-
-    if (namespaces.includes(NEW_NAMESPACE)) {
-      const name = this.newNamespaceName();
-      try {
-        await firstValueFrom(
-          this.namespaceClient.createNamespace({ projectId: this.projectId(), name }),
-        );
-        this.projectNamespaces.update((names) => [...names, name]);
-        this.notificationService.success(`Namespace '${name}' created`);
-        // Under an all-namespaces grant the new one is covered already.
-        namespaces = namespaces.includes(ALL_NAMESPACES)
-          ? namespaces.filter((entry) => entry !== NEW_NAMESPACE)
-          : namespaces.map((entry) => (entry === NEW_NAMESPACE ? name : entry));
-      } catch (err) {
-        this.notificationService.error(
-          err instanceof Error ? `Namespace not created: ${err.message}` : 'Namespace not created',
-        );
-        namespaces = namespaces.filter((entry) => entry !== NEW_NAMESPACE);
-      }
-    }
-
-    if (namespaces.length === 0) return;
-
-    // The member id only exists once the list comes back, so the roles are
-    // parked against the user and attached in loadMembers().
-    const roles = ALL_ROLES.filter((role) => this.draftRoles().includes(role));
-    this.pendingGrant = { userId, bindings: namespaces.map((namespace) => ({ namespace, roles })) };
-  }
-
-  /** TEMPORARY, dev only: roles have no API, so a fresh grant waits here for the
-   *  member id the list assigns. Delete with the mock bindings. */
-  private pendingGrant: { userId: string; bindings: RoleBinding[] } | null = null;
 
   /**
    * The button reports the retry, and for long enough to be seen: a failure that

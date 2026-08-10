@@ -152,6 +152,17 @@ const routes: Routes = [
         // so the control that opens it can be a real link.
         children: [
           {
+            // Before `:memberId`, or a member called "add" would swallow it.
+            path: 'add',
+            canActivate: [
+              opensSheet(
+                (o, route) => o.addProjectMember.set(route.parent?.params['id'] ?? null),
+                (route) => `/projects/${route.parent?.params['id']}/members`,
+              ),
+            ],
+            children: [],
+          },
+          {
             path: 'permissions',
             loadComponent: () =>
               import('./permissions-sheet/permissions-sheet.component').then((m) => m.default),
@@ -207,6 +218,16 @@ const routes: Routes = [
         // closed with the back button; a child so the list stays mounted behind
         // the sheet.
         children: [
+          {
+            path: 'invite',
+            canActivate: [
+              opensSheet(
+                (o) => o.inviteMember.set(true),
+                () => '/organization/members',
+              ),
+            ],
+            children: [],
+          },
           {
             path: 'permissions',
             loadComponent: () =>
