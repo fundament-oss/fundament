@@ -233,6 +233,16 @@ export default class ResourceListComponent implements OnInit {
 
   formatCell = buildCellValue;
 
+  /** The first column that reads as a condition carries the card's badge, the
+   *  way a cluster's status does; the rest become rows in the card's list. */
+  conditionColumn = computed(() =>
+    this.columns().find((col) =>
+      this.resources().some((resource) => this.conditionBadge(col.name, buildCellValue(resource, col))),
+    ),
+  );
+
+  detailColumns = computed(() => this.columns().filter((col) => col !== this.conditionColumn()));
+
   /** A printer column that says True or False is a condition the platform keeps,
    *  not a word: it gets a badge, the same as a cluster's status. The column
    *  names it, so "Ready" reads as Ready and Not ready rather than as True and
