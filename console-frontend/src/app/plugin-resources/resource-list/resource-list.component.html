@@ -120,13 +120,9 @@
                 </nldd-container>
               </nldd-cell>
               @for (col of columns(); track col.name) {
-                @if (conditionValue(formatCell(resource, col)); as status) {
+                @if (conditionBadge(col.name, formatCell(resource, col)); as badge) {
                   <nldd-cell [attr.hide-below]="isDroppedWhenNarrow(col) ? 'lg' : null">
-                    <nldd-tag
-                      size="sm"
-                      [attr.color]="status === 'True' ? 'success' : 'warning'"
-                      [attr.text]="status"
-                    ></nldd-tag>
+                    <nldd-badge [attr.color]="badge.color" [attr.text]="badge.text"></nldd-badge>
                   </nldd-cell>
                 } @else {
                   <nldd-text-cell

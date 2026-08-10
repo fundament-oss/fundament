@@ -233,13 +233,17 @@ export default class ResourceListComponent implements OnInit {
 
   formatCell = buildCellValue;
 
-  /** A printer column that says True or False is a condition, not a word: the
-   *  CRD hands us the raw status string, and the same column in the detail is
-   *  already a tag. Anything else stays text, whatever the plugin puts there. */
+  /** A printer column that says True or False is a condition the platform keeps,
+   *  not a word: it gets a badge, the same as a cluster's status. The column
+   *  names it, so "Ready" reads as Ready and Not ready rather than as True and
+   *  False, and a column called something else follows along. Anything that is
+   *  not exactly True or False stays text, whatever the plugin puts there. */
   // eslint-disable-next-line class-methods-use-this
-  conditionValue(value: string): 'True' | 'False' | null {
-    if (value === 'True') return 'True';
-    if (value === 'False') return 'False';
+  conditionBadge(column: string, value: string): { text: string; color: string } | null {
+    if (value === 'True') return { text: column, color: 'success' };
+    if (value === 'False') {
+      return { text: `Not ${column.charAt(0).toLowerCase()}${column.slice(1)}`, color: 'warning' };
+    }
     return null;
   }
 
