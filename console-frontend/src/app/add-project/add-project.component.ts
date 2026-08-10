@@ -14,7 +14,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { PROJECT, CLUSTER } from '../../connect/tokens';
 import { CreateProjectRequestSchema } from '../../generated/v1/project_pb';
@@ -49,7 +49,7 @@ export default class AddProjectComponent implements OnInit {
 
   private clusterClient = inject(CLUSTER);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -88,7 +88,7 @@ export default class AddProjectComponent implements OnInit {
         this.projectForm.patchValue({ clusterId: response.clusters[0].id });
       }
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load clusters: ${error.message}`
           : 'Failed to load clusters',
@@ -131,7 +131,7 @@ export default class AddProjectComponent implements OnInit {
         signal: this.idempotency.reset(),
       });
 
-      this.toastService.success(`Project '${this.projectForm.value.name}' created successfully`);
+      this.notificationService.success(`Project '${this.projectForm.value.name}' created successfully`);
 
       // Reload project data to update the selector modal and breadcrumbs
       await this.organizationDataService.reloadProjectsAndNamespaces();

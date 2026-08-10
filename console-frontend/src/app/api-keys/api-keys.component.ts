@@ -26,7 +26,7 @@ import {
   RevokeAPIKeyRequestSchema,
 } from '../../generated/v1/apikey_pb';
 import { APIKEY } from '../../connect/tokens';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import {
   formatDate as formatDateUtil,
   formatDateTime as formatDateTimeUtil,
@@ -79,7 +79,7 @@ export default class ApiKeysComponent implements OnInit {
 
   @Output() closed = new EventEmitter<void>();
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private apiKeyClient = inject(APIKEY);
 
@@ -284,7 +284,7 @@ export default class ApiKeysComponent implements OnInit {
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
-      this.toastService.success('API key copied to clipboard');
+      this.notificationService.success('API key copied to clipboard');
     } catch {
       this.error.set('Failed to copy token to clipboard. Please copy it manually.');
     }

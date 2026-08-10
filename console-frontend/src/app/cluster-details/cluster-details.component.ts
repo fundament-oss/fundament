@@ -18,7 +18,7 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import PageNavService from '../page-nav.service';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { CLUSTER, NAMESPACE, PLUGIN } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
@@ -209,7 +209,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private pluginClient = inject(PLUGIN);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private pluginInstallationService = inject(PluginInstallationService);
 
@@ -443,7 +443,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       if (!response.cluster) {
         // Cluster has been deleted
         this.stopPolling();
-        this.toastService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+        this.notificationService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
         this.router.navigate(['/clusters']);
         return;
       }
@@ -456,7 +456,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     } catch {
       // If the request fails with a not-found-like error, the cluster was deleted
       this.stopPolling();
-      this.toastService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
+      this.notificationService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
       this.router.navigate(['/clusters']);
     }
   }
@@ -595,7 +595,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       this.organizationDataService.removeCluster(this.clusterData.basics.id);
       this.showDeleteModal.set(false);
-      this.toastService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
+      this.notificationService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
       this.router.navigate(['/clusters']);
     } catch (error) {
       this.errorMessage.set(
@@ -615,7 +615,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.namespacesLoadError.set(false);
     } catch (error) {
       this.namespacesLoadError.set(true);
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load namespaces: ${error.message}`
           : 'Failed to load namespaces',
@@ -638,7 +638,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       );
       this.installedPlugins.set(pluginsResponse.plugins.filter((p) => installedNames.has(p.name)));
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load installed plugins: ${error.message}`
           : 'Failed to load installed plugins',
@@ -759,7 +759,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         }
       }, 1500);
     } catch {
-      this.toastService.error('Failed to copy to clipboard');
+      this.notificationService.error('Failed to copy to clipboard');
     }
   }
 }

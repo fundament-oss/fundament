@@ -14,7 +14,7 @@ import { ConnectError, Code } from '@connectrpc/connect';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
@@ -57,7 +57,7 @@ export default class ProjectDetailComponent implements OnInit {
 
   private clusterClient = inject(CLUSTER);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -125,7 +125,7 @@ export default class ProjectDetailComponent implements OnInit {
       const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load namespaces: ${error.message}`
           : 'Failed to load namespaces',
@@ -139,7 +139,7 @@ export default class ProjectDetailComponent implements OnInit {
       const response = await firstValueFrom(this.clusterClient.listClusters(request));
       this.clusters.set(response.clusters);
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load clusters: ${error.message}`
           : 'Failed to load clusters',
@@ -234,7 +234,7 @@ export default class ProjectDetailComponent implements OnInit {
       await firstValueFrom(this.projectClient.deleteProject(request));
 
       this.showDeleteModal.set(false);
-      this.toastService.success(`Project '${currentProject.name}' deleted`);
+      this.notificationService.success(`Project '${currentProject.name}' deleted`);
 
       // Reload project data to update the selector modal
       await this.organizationDataService.reloadProjectsAndNamespaces();

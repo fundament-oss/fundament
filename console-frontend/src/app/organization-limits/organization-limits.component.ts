@@ -19,7 +19,7 @@ import PageNavService from '../page-nav.service';
 import SheetSyncDirective from '../sheet-sync.directive';
 import OrganizationContextService from '../organization-context.service';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { positive, toInt } from '../utils/limits';
 import ResourceLimitSectionComponent, {
   modeFor,
@@ -105,7 +105,7 @@ const valueText = (value: number | null, unit: string): string =>
 export default class OrganizationLimitsComponent implements OnInit {
   private titleService = inject(TitleService);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationClient = inject(ORGANIZATION);
 
@@ -342,7 +342,7 @@ export default class OrganizationLimitsComponent implements OnInit {
       this.defaultCpuLimitM.set(savedNamespace.defaultCpuLimitM);
       this.syncNamespaceToggles();
     } catch {
-      this.toastService.error('Failed to load organization limits');
+      this.notificationService.error('Failed to load organization limits');
     } finally {
       this.initialLoading.set(false);
     }
@@ -380,7 +380,7 @@ export default class OrganizationLimitsComponent implements OnInit {
       this.maxNodePools.set(maxNodePools);
       this.maxNodesPerNodePool.set(maxNodesPerNodePool);
       this.showClusterEdit.set(false);
-      this.toastService.success('Cluster limits saved');
+      this.notificationService.success('Cluster limits saved');
     } catch (err) {
       this.clusterError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {
@@ -456,7 +456,7 @@ export default class OrganizationLimitsComponent implements OnInit {
       this.memoryMode.set(this.draftMemoryMode());
       this.cpuMode.set(this.draftCpuMode());
       this.showNamespaceEdit.set(false);
-      this.toastService.success('Namespace defaults saved');
+      this.notificationService.success('Namespace defaults saved');
     } catch (err) {
       this.namespaceError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {

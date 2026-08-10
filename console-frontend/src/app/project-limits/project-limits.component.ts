@@ -17,7 +17,7 @@ import {
 } from '../../generated/v1/project_pb';
 import { PROJECT } from '../../connect/tokens';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import PageNavService from '../page-nav.service';
 import SheetSyncDirective from '../sheet-sync.directive';
 import { positive } from '../utils/limits';
@@ -55,7 +55,7 @@ interface NamespaceDefaults {
 export default class ProjectLimitsComponent implements OnInit {
   private titleService = inject(TitleService);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private projectClient = inject(PROJECT);
 
@@ -190,7 +190,7 @@ export default class ProjectLimitsComponent implements OnInit {
       this.defaultCpuLimitM.set(positive(limits?.defaultCpuLimitM));
       this.syncModes();
     } catch {
-      this.toastService.error('Failed to load project limits');
+      this.notificationService.error('Failed to load project limits');
     } finally {
       this.initialLoading.set(false);
     }
@@ -234,7 +234,7 @@ export default class ProjectLimitsComponent implements OnInit {
       this.memoryMode.set(this.draftMemoryMode());
       this.cpuMode.set(this.draftCpuMode());
       this.showEdit.set(false);
-      this.toastService.success('Namespace defaults saved');
+      this.notificationService.success('Namespace defaults saved');
     } catch (err) {
       this.saveError.set(err instanceof Error ? err.message : 'The request failed.');
     } finally {

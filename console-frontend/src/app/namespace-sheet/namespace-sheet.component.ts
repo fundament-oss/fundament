@@ -12,7 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { PROJECT, NAMESPACE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { formatDate } from '../utils/date-format';
 import { mockBindingsFor, setMockBindings, ALL_ROLES } from '../utils/mock-role-bindings';
@@ -58,7 +58,7 @@ export default class NamespaceSheetComponent implements OnInit {
 
   private namespaceClient = inject(NAMESPACE);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationData = inject(OrganizationDataService);
 
@@ -257,11 +257,11 @@ export default class NamespaceSheetComponent implements OnInit {
       await firstValueFrom(
         this.namespaceClient.deleteNamespace({ namespaceId: this.namespaceId() }),
       );
-      this.toastService.success(`Namespace '${this.namespaceName()}' deleted`);
+      this.notificationService.success(`Namespace '${this.namespaceName()}' deleted`);
       await this.organizationData.loadOrganizationData();
       this.onClose();
     } catch (err) {
-      this.toastService.error(
+      this.notificationService.error(
         err instanceof Error ? `Namespace not deleted: ${err.message}` : 'Namespace not deleted',
       );
     }

@@ -14,7 +14,7 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER, NAMESPACE, PROJECT } from '../../connect/tokens';
 import {
@@ -56,7 +56,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
   private projectClient = inject(PROJECT);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -117,7 +117,7 @@ export default class ClusterNamespacesComponent implements OnInit {
       this.namespaces.set(response.namespaces);
       this.selection.retainVisible();
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load namespaces: ${error.message}`
           : 'Failed to load namespaces',
@@ -132,7 +132,7 @@ export default class ClusterNamespacesComponent implements OnInit {
       const response = await firstValueFrom(this.projectClient.listProjects(request));
       this.projects.set(response.projects);
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load projects: ${error.message}`
           : 'Failed to load projects',
@@ -169,7 +169,7 @@ export default class ClusterNamespacesComponent implements OnInit {
       const request = create(DeleteNamespaceRequestSchema, { namespaceId });
       await firstValueFrom(this.namespaceClient.deleteNamespace(request));
 
-      this.toastService.success(`Namespace '${namespaceName}' deleted`);
+      this.notificationService.success(`Namespace '${namespaceName}' deleted`);
 
       // Reload namespaces and organization data
       await Promise.all([
@@ -213,7 +213,7 @@ export default class ClusterNamespacesComponent implements OnInit {
       const succeeded = ids.length - failed;
 
       if (succeeded > 0) {
-        this.toastService.success(`${succeeded} namespace${succeeded === 1 ? '' : 's'} deleted`);
+        this.notificationService.success(`${succeeded} namespace${succeeded === 1 ? '' : 's'} deleted`);
       }
       if (failed > 0) {
         this.errorMessage.set(`Failed to delete ${failed} namespace${failed === 1 ? '' : 's'}.`);

@@ -13,7 +13,7 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import PageNavService from '../page-nav.service';
 import { OrganizationDataService } from '../organization-data.service';
 import {
@@ -60,7 +60,7 @@ export default class NamespacesComponent implements OnInit {
 
   private idempotency = createIdempotencyRef();
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -173,7 +173,7 @@ export default class NamespacesComponent implements OnInit {
       const response = await firstValueFrom(this.namespaceClient.listProjectNamespaces(request));
       this.namespaces.set(response.namespaces);
     } catch (error) {
-      this.toastService.error(
+      this.notificationService.error(
         error instanceof Error
           ? `Failed to load namespaces: ${error.message}`
           : 'Failed to load namespaces',
@@ -231,7 +231,7 @@ export default class NamespacesComponent implements OnInit {
       const granted = this.grantDraftAccess(name);
 
       this.showCreateNamespaceModal.set(false);
-      this.toastService.success(
+      this.notificationService.success(
         granted === 0
           ? `Namespace '${name}' created`
           : `Namespace '${name}' created, ${granted === 1 ? '1 member has' : `${granted} members have`} access`,

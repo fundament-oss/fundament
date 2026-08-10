@@ -10,7 +10,7 @@ import {
 import { RouterOutlet } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { CLUSTER } from '../../connect/tokens';
 import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../../generated/v1/cluster_pb';
@@ -30,7 +30,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
 
   private titleService = inject(TitleService);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -85,7 +85,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
             !response.clusters.some((c) => c.id === prev.id),
         )
         .forEach((prev) => {
-          this.toastService.success(`Cluster '${prev.name}' has been deleted`);
+          this.notificationService.success(`Cluster '${prev.name}' has been deleted`);
         });
 
       const needsPolling = response.clusters.some((c) => isTransitionalStatus(c.status));

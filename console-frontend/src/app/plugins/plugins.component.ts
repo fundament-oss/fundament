@@ -34,7 +34,7 @@ import { type ListClustersResponse_ClusterSummary as ClusterSummary } from '../.
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isTransitionalStatus } from '../utils/cluster-status';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 
 const getPluginIconName = (pluginName: string): string =>
@@ -126,7 +126,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
 
   private organizationDataService = inject(OrganizationDataService);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private pluginInstallationService = inject(PluginInstallationService);
 
@@ -380,11 +380,11 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       );
       if (!prev) return;
       if (!isInstallRunning(prev.phase) && isInstallRunning(next.phase)) {
-        this.toastService.success(
+        this.notificationService.success(
           `Plugin ${this.pluginDisplayName(next.pluginName)} installed on cluster ${this.clusterName(next.clusterId)}`,
         );
       } else if (prev.phase !== 'Failed' && next.phase === 'Failed') {
-        this.toastService.error(
+        this.notificationService.error(
           `Failed to install plugin ${this.pluginDisplayName(next.pluginName)} on cluster ${this.clusterName(next.clusterId)}`,
         );
       }
@@ -405,7 +405,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         preserved.push(prev);
         return;
       }
-      this.toastService.success(
+      this.notificationService.success(
         `Plugin ${this.pluginDisplayName(prev.pluginName)} removed from ${this.clusterName(prev.clusterId)}`,
       );
     });
@@ -658,7 +658,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
         ),
       );
       const names = failed.map((id) => this.clusterName(id)).join(', ');
-      this.toastService.error(`Failed to install ${displayNameOf(plugin)} on ${names}`);
+      this.notificationService.error(`Failed to install ${displayNameOf(plugin)} on ${names}`);
     }
 
     this.startInstallPollingIfNeeded();
@@ -681,7 +681,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
     } catch {
       // Roll back to the phase it had, so the row stops claiming it is going away.
       if (previous) this.setInstallPhase(clusterId, plugin.name, previous);
-      this.toastService.error(
+      this.notificationService.error(
         `Failed to remove ${displayNameOf(plugin)} from ${this.clusterName(clusterId)}`,
       );
     }
@@ -706,7 +706,7 @@ export default class PluginsComponent implements OnInit, OnDestroy {
       );
       this.startInstallPollingIfNeeded();
     } catch {
-      this.toastService.error(
+      this.notificationService.error(
         `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
       );
     }

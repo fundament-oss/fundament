@@ -33,7 +33,7 @@ import {
 import { ClusterStatus } from '../../generated/v1/common_pb';
 import { isInstallInProgress, isInstallRunning } from '../utils/plugin-install-status';
 import { type PluginInstallationItem } from '../plugin-resources/types';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 
 // Extended cluster type for UI state. `phase` is null when the plugin is not
@@ -83,7 +83,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
 
   private clusterClient = inject(CLUSTER);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private pluginInstallationService = inject(PluginInstallationService);
 
@@ -284,13 +284,13 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       const prevPhase = clusters[i].phase;
       if (prevPhase === null || n.phase === prevPhase) return;
       if (!isInstallRunning(prevPhase) && n.phase === 'Running') {
-        this.toastService.success(`Plugin ${displayNameOf(plugin)} installed on cluster ${n.name}`);
+        this.notificationService.success(`Plugin ${displayNameOf(plugin)} installed on cluster ${n.name}`);
       } else if (prevPhase !== 'Failed' && n.phase === 'Failed') {
-        this.toastService.error(
+        this.notificationService.error(
           `Failed to install plugin ${displayNameOf(plugin)} on cluster ${n.name}`,
         );
       } else if (n.phase === null) {
-        this.toastService.success(`Plugin ${displayNameOf(plugin)} removed from ${n.name}`);
+        this.notificationService.success(`Plugin ${displayNameOf(plugin)} removed from ${n.name}`);
       }
     });
 
@@ -326,7 +326,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
     const failed = targets.filter((_, i) => results[i].status === 'rejected');
     if (failed.length > 0) {
       failed.forEach((id) => this.setPhase(id, null));
-      this.toastService.error(
+      this.notificationService.error(
         `Failed to install ${displayNameOf(plugin)} on ${failed.map((id) => this.clusterName(id)).join(', ')}`,
       );
     }
@@ -343,7 +343,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       this.setPhase(clusterId, 'Terminating');
       this.startInstallPollingIfNeeded();
     } catch {
-      this.toastService.error(
+      this.notificationService.error(
         `Failed to remove ${displayNameOf(plugin)} from ${this.clusterName(clusterId)}`,
       );
     }
@@ -366,7 +366,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       );
       this.startInstallPollingIfNeeded();
     } catch {
-      this.toastService.error(
+      this.notificationService.error(
         `Failed to install ${displayNameOf(plugin)} on ${this.clusterName(clusterId)}`,
       );
     }

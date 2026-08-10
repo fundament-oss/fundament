@@ -16,7 +16,7 @@ import { ConnectError, Code } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
 import { TitleService } from '../title.service';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import PageNavService from '../page-nav.service';
 import AuthnApiService from '../authn-api.service';
 import { MEMBER, INVITE } from '../../connect/tokens';
@@ -184,7 +184,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
   protected pageNav = inject(PageNavService);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private memberClient = inject(MEMBER);
 
@@ -388,7 +388,7 @@ export default class OrganizationMembersComponent implements OnInit {
         signal: this.idempotency.reset(),
       });
       this.closeModal();
-      this.toastService.success(`'${email}' invited as ${permission}`);
+      this.notificationService.success(`'${email}' invited as ${permission}`);
       await this.loadMembers();
     } catch (err: unknown) {
       if (err instanceof ConnectError) {
@@ -413,7 +413,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
     try {
       await firstValueFrom(this.memberClient.deleteMember({ id }));
-      this.toastService.success(
+      this.notificationService.success(
         invitee ? `Invitation for '${invitee}' cancelled` : 'Invitation cancelled',
       );
       await this.loadMembers();
@@ -440,7 +440,7 @@ export default class OrganizationMembersComponent implements OnInit {
       await firstValueFrom(this.memberClient.deleteMember({ id: member.id }));
       this.showDeleteModal.set(false);
       this.deletingMember.set(null);
-      this.toastService.success(`'${member.name}' removed from the organization`);
+      this.notificationService.success(`'${member.name}' removed from the organization`);
       await this.loadMembers();
     } catch (err) {
       this.showDeleteModal.set(false);
@@ -467,7 +467,7 @@ export default class OrganizationMembersComponent implements OnInit {
 
     try {
       await firstValueFrom(this.memberClient.updateMemberPermission({ id: member.id, permission }));
-      this.toastService.success(`${wie} ${wordt} ${permission}`);
+      this.notificationService.success(`${wie} ${wordt} ${permission}`);
       await this.loadMembers();
     } catch (err) {
       this.actionError.set({

@@ -20,7 +20,7 @@ import { OrganizationDataService } from '../organization-data.service';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { formatTimeAgo } from '../utils/date-format';
 import { mockBindingsFor, setMockBindings, ALL_ROLES } from '../utils/mock-role-bindings';
 import {
@@ -151,7 +151,7 @@ export default class ProjectMembersComponent implements OnInit {
 
   private namespaceClient = inject(NAMESPACE);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   projectId = signal<string>('');
 
@@ -435,13 +435,13 @@ export default class ProjectMembersComponent implements OnInit {
           this.namespaceClient.createNamespace({ projectId: this.projectId(), name }),
         );
         this.projectNamespaces.update((names) => [...names, name]);
-        this.toastService.success(`Namespace '${name}' created`);
+        this.notificationService.success(`Namespace '${name}' created`);
         // Under an all-namespaces grant the new one is covered already.
         namespaces = namespaces.includes(ALL_NAMESPACES)
           ? namespaces.filter((entry) => entry !== NEW_NAMESPACE)
           : namespaces.map((entry) => (entry === NEW_NAMESPACE ? name : entry));
       } catch (err) {
-        this.toastService.error(
+        this.notificationService.error(
           err instanceof Error ? `Namespace not created: ${err.message}` : 'Namespace not created',
         );
         namespaces = namespaces.filter((entry) => entry !== NEW_NAMESPACE);

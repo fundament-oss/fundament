@@ -87,7 +87,6 @@ import { firstValueFrom } from 'rxjs';
 import AuthnApiService from './authn-api.service';
 import DialogSyncDirective from './dialog-sync.directive';
 import type { User } from '../generated/authn/v1/authn_pb';
-import { ToastService } from './toast.service';
 import { versionMismatch$ } from './app.config';
 import { ConfigService } from './config.service';
 import OrgPickerComponent from './org-picker/org-picker.component';
@@ -156,7 +155,6 @@ export default class App implements OnInit {
 
   private configService = inject(ConfigService);
 
-  protected toastService = inject(ToastService);
 
   protected organizationDataService = inject(OrganizationDataService);
 

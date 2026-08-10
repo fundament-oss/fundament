@@ -14,7 +14,7 @@ import { PROJECT, MEMBER, NAMESPACE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
 import AutofocusDirective from '../autofocus.directive';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { formatTimeAgo } from '../utils/date-format';
 import { mockBindingsFor, setMockBindings, ALL_ROLES } from '../utils/mock-role-bindings';
@@ -68,7 +68,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
 
   private namespaceClient = inject(NAMESPACE);
 
-  private toastService = inject(ToastService);
+  private notificationService = inject(NotificationService);
 
   private organizationData = inject(OrganizationDataService);
 
@@ -296,14 +296,14 @@ export default class ProjectMemberSheetComponent implements OnInit {
           this.namespaceClient.createNamespace({ projectId: this.projectId(), name }),
         );
         this.projectNamespaces.update((names) => [...names, name]);
-        this.toastService.success(`Namespace '${name}' created`);
+        this.notificationService.success(`Namespace '${name}' created`);
         // Under an all-namespaces grant the new one is covered already, so it
         // does not need a grant of its own.
         namespaces = namespaces.includes(ALL_NAMESPACES)
           ? namespaces.filter((entry) => entry !== NEW_NAMESPACE)
           : namespaces.map((entry) => (entry === NEW_NAMESPACE ? name : entry));
       } catch (err) {
-        this.toastService.error(
+        this.notificationService.error(
           err instanceof Error ? `Namespace not created: ${err.message}` : 'Namespace not created',
         );
         return;
@@ -353,10 +353,10 @@ export default class ProjectMemberSheetComponent implements OnInit {
       await firstValueFrom(
         this.projectClient.updateProjectMemberRole({ memberId: view.member.id, role }),
       );
-      this.toastService.success(`${view.member.userName} is now ${roleLabel(role).toLowerCase()}`);
+      this.notificationService.success(`${view.member.userName} is now ${roleLabel(role).toLowerCase()}`);
       await this.load();
     } catch (err) {
-      this.toastService.error(
+      this.notificationService.error(
         err instanceof Error ? `Permission not changed: ${err.message}` : 'Permission not changed',
       );
     } finally {
@@ -370,12 +370,12 @@ export default class ProjectMemberSheetComponent implements OnInit {
 
     try {
       await firstValueFrom(this.projectClient.removeProjectMember({ memberId: view.member.id }));
-      this.toastService.success(`${view.member.userName} removed from the project`);
+      this.notificationService.success(`${view.member.userName} removed from the project`);
       this.showRemoveModal.set(false);
       this.onClose();
     } catch (err) {
       this.showRemoveModal.set(false);
-      this.toastService.error(
+      this.notificationService.error(
         err instanceof Error ? `Member not removed: ${err.message}` : 'Member not removed',
       );
     }

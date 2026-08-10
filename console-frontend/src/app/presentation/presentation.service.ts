@@ -15,7 +15,7 @@ import {
 import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
 import runDrive from './drive-runner';
 import { closeOpenAppDialogs } from './app-dialogs';
-import { ToastService } from '../toast.service';
+import { NotificationService } from '../notification.service';
 
 /** `?lang` wins (shareable deep links), then the last choice, then Dutch. */
 function resolveLocale(fromUrl: string | null): Locale {
@@ -35,7 +35,7 @@ export default class PresentationService {
 
   private readonly title = inject(Title);
 
-  private readonly toasts = inject(ToastService);
+  private readonly notifications = inject(NotificationService);
 
   readonly active = signal(false);
 
@@ -178,7 +178,7 @@ export default class PresentationService {
 
   private showChooser(): void {
     closeOpenAppDialogs();
-    this.toasts.dismiss();
+    this.notifications.dismissAll();
     this.active.set(true);
     this.mode.set('chooser');
     this.applyClasses();
@@ -193,10 +193,9 @@ export default class PresentationService {
     // An open app modal (native <dialog>) traps focus and makes the deck inert, so
     // close it before moving on — otherwise the presenter is stuck on the slide.
     closeOpenAppDialogs();
-    // A toast raised by the previous slide's drive script belongs to that slide.
-    // ToastService only clears on navigation, and its set-then-navigate grace
-    // period is spent by the slide's own navigation, so drop it explicitly.
-    this.toasts.dismiss();
+    // A notification raised by the previous slide's drive script belongs to that
+    // slide, and a critical one waits to be dismissed by hand, so drop it here.
+    this.notifications.dismissAll();
     const clamped = Math.min(Math.max(0, index), this.total() - 1);
     this.index.set(clamped);
     this.applyClasses();
@@ -292,7 +291,7 @@ export default class PresentationService {
     this.cancelDrive();
     this.stopAutoplay();
     closeOpenAppDialogs();
-    this.toasts.dismiss();
+    this.notifications.dismissAll();
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
     this.active.set(false);
     this.mode.set('chooser');
