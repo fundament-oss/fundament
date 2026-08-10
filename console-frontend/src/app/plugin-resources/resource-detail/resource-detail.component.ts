@@ -185,6 +185,17 @@ export default class ResourceDetailComponent implements OnInit {
     return this.router.createUrlTree(this.listLink, { relativeTo: this.route }).toString();
   }
 
+  /** Names the list the back button returns to: the plural the plugin's own
+   *  schema uses, so the button says where it goes. */
+  kindLabel = computed(() => {
+    const plural = this.crdDef()?.plural;
+    return plural ? plural[0].toUpperCase() + plural.slice(1) : this.kind() || 'list';
+  });
+
+  goToList() {
+    this.router.navigate(this.listLink, { relativeTo: this.route });
+  }
+
   onBackClick(event: Event) {
     // Let the browser handle the modified clicks that mean "open elsewhere".
     const e = event as MouseEvent;

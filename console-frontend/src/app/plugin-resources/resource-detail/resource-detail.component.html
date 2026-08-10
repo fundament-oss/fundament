@@ -11,190 +11,215 @@
     [resourceNamespace]="resourceNamespace()"
   />
 } @else if (resource()) {
-  <nldd-container gap="24">
-    <nldd-box>
-      <nldd-container padding="16" md-padding="24">
-        <!-- href, not routerLink: the anchor lives in the link's shadow DOM,
-             out of routerLink's reach. -->
-        <nldd-link
-          [attr.href]="listHref"
-          text="Back to list"
-          start-icon="arrow-left"
-          size="sm"
-          (click)="onBackClick($event)"
-        ></nldd-link>
+  <!-- Same outer layout as the other pages: the title bar carries the way back
+       to the list, so the page needs no link of its own for it. -->
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      [attr.text]="resource()!.metadata.name"
+      [attr.back-text]="kindLabel()"
+      (back)="goToList()"
+      collapse-anchor="resource-detail-title"
+    ></nldd-top-title-bar>
 
-        <nldd-spacer size="8"></nldd-spacer>
+    <nldd-simple-section>
+      <nldd-title id="resource-detail-title" size="2">
+        <h1>{{ resource()!.metadata.name }}</h1>
+        @if (resource()!.metadata.namespace) {
+          <span slot="subtitle">Namespace: {{ resource()!.metadata.namespace }}</span>
+        }
+      </nldd-title>
 
-        <nldd-title size="3">
-          <h1>{{ resource()!.metadata.name }}</h1>
-          @if (resource()!.metadata.namespace) {
-            <span slot="subtitle">Namespace: {{ resource()!.metadata.namespace }}</span>
-          }
-          @if (canDelete()) {
-            <nldd-button
-              slot="end"
-              type="button"
-              text="Delete"
-              start-icon="trash"
-              variant="destructive"
-              size="sm"
-              (click)="openDeleteModal()"
-            ></nldd-button>
-          }
-        </nldd-title>
+      <nldd-spacer size="16"></nldd-spacer>
 
-        <nldd-spacer size="16"></nldd-spacer>
-
-        <nldd-list variant="simple" accessible-label="Resource details">
-          <nldd-list-item>
-            <nldd-text-cell text="Kind"></nldd-text-cell>
-            <nldd-text-cell
-              width="fit-content"
-              horizontal-alignment="right"
-              [attr.text]="kind()"
-            ></nldd-text-cell>
-          </nldd-list-item>
-          <nldd-list-item>
-            <nldd-text-cell text="API version"></nldd-text-cell>
-            <nldd-text-cell
-              width="fit-content"
-              horizontal-alignment="right"
-              [attr.text]="apiVersion()"
-            ></nldd-text-cell>
-          </nldd-list-item>
-          <nldd-list-item>
-            <nldd-text-cell text="Created"></nldd-text-cell>
-            <nldd-text-cell
-              width="fit-content"
-              horizontal-alignment="right"
-              [attr.text]="formatDateValue(resource()!.metadata.creationTimestamp)"
-            ></nldd-text-cell>
-          </nldd-list-item>
-        </nldd-list>
-      </nldd-container>
-    </nldd-box>
-
-    @for (group of specSections(); track group.name) {
       <nldd-box>
         <nldd-container padding="16" md-padding="24">
-          <nldd-title size="5">
-            <h2>{{ group.name }}</h2>
-          </nldd-title>
-
-          <nldd-spacer size="16"></nldd-spacer>
-
-          <!-- A row per field rather than a grid: what a field renders is up to
-               the plugin, and a full-width row fits a table as well as a word. -->
-          <nldd-list variant="simple" [attr.accessible-label]="group.name">
-            @for (field of group.fields; track field[0]) {
-              <nldd-list-item>
-                <nldd-text-cell [attr.text]="formatLabel(field[0])"></nldd-text-cell>
-                <nldd-cell width="full" horizontal-alignment="right">
-                  <app-field-renderer [schema]="field[1]" [value]="getSpecValue(field[0])" />
-                </nldd-cell>
-              </nldd-list-item>
-            }
+          <nldd-list variant="simple" accessible-label="Resource details">
+            <nldd-list-item>
+              <nldd-text-cell text="Kind"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="kind()"
+              ></nldd-text-cell>
+            </nldd-list-item>
+            <nldd-list-item>
+              <nldd-text-cell text="API version"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="apiVersion()"
+              ></nldd-text-cell>
+            </nldd-list-item>
+            <nldd-list-item>
+              <nldd-text-cell text="Created"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="formatDateValue(resource()!.metadata.creationTimestamp)"
+              ></nldd-text-cell>
+            </nldd-list-item>
           </nldd-list>
         </nldd-container>
       </nldd-box>
-    }
 
-    @if (resource()!.status && statusFields().length > 0) {
-      <nldd-box>
-        <nldd-container padding="16" md-padding="24">
-          <nldd-title size="5">
-            <h2>Status</h2>
-          </nldd-title>
+      @for (group of specSections(); track group.name) {
+        <nldd-spacer size="24"></nldd-spacer>
 
-          <nldd-spacer size="16"></nldd-spacer>
+        <nldd-box>
+          <nldd-container padding="16" md-padding="24">
+            <nldd-title size="5">
+              <h2>{{ group.name }}</h2>
+            </nldd-title>
 
-          @for (entry of statusFields(); track entry[0]) {
-            @if (isConditionsField(entry[0], entry[1])) {
-              <nldd-title size="6">
-                <h3>{{ formatLabel(entry[0]) }}</h3>
-              </nldd-title>
+            <nldd-spacer size="16"></nldd-spacer>
 
-              <nldd-spacer size="8"></nldd-spacer>
-
-              @if (asArray(entry[1]).length > 0) {
-                <nldd-table
-                  accessible-label="Conditions"
-                  columns="minmax(140px, 1fr) 90px minmax(200px, 2fr) 160px"
-                >
-                  <nldd-table-row slot="header">
-                    <nldd-text-cell text="**Type**"></nldd-text-cell>
-                    <nldd-text-cell text="**Status**"></nldd-text-cell>
-                    <nldd-text-cell text="**Message**"></nldd-text-cell>
-                    <nldd-text-cell text="**Last transition**"></nldd-text-cell>
-                  </nldd-table-row>
-
-                  @for (cond of asArray(entry[1]); track $index) {
-                    <nldd-table-row>
-                      <nldd-text-cell [attr.text]="asRecord(cond)['type']"></nldd-text-cell>
-                      <nldd-cell>
-                        @if (asRecord(cond)['status'] === 'True') {
-                          <nldd-tag color="success" size="sm" text="True"></nldd-tag>
-                        } @else if (asRecord(cond)['status'] === 'False') {
-                          <nldd-tag color="warning" size="sm" text="False"></nldd-tag>
-                        } @else {
-                          <nldd-tag
-                            color="neutral"
-                            size="sm"
-                            [attr.text]="asRecord(cond)['status']"
-                          ></nldd-tag>
-                        }
-                      </nldd-cell>
-                      <nldd-text-cell
-                        color="secondary"
-                        [attr.text]="asRecord(cond)['message'] || '—'"
-                      ></nldd-text-cell>
-                      <nldd-text-cell
-                        [attr.text]="formatDateValue(asRecord(cond)['lastTransitionTime'])"
-                      ></nldd-text-cell>
-                    </nldd-table-row>
-                  }
-                </nldd-table>
-              } @else {
-                <nldd-inline-dialog
-                  icon="circle-dashed"
-                  icon-color="secondary"
-                  text="No conditions reported"
-                ></nldd-inline-dialog>
-              }
-
-              <nldd-spacer size="16"></nldd-spacer>
-            }
-          }
-
-          <nldd-list variant="simple" accessible-label="Status">
-            @for (entry of statusFields(); track entry[0]) {
-              @if (!isConditionsField(entry[0], entry[1])) {
+            <!-- A row per field rather than a grid: what a field renders is up to
+                 the plugin, and a full-width row fits a table as well as a word. -->
+            <nldd-list variant="simple" [attr.accessible-label]="group.name">
+              @for (field of group.fields; track field[0]) {
                 <nldd-list-item>
-                  <nldd-text-cell [attr.text]="formatLabel(entry[0])"></nldd-text-cell>
-                  <nldd-text-cell
-                    width="fit-content"
-                    horizontal-alignment="right"
-                    [attr.text]="formatSimpleValue(entry[1])"
-                  ></nldd-text-cell>
+                  <nldd-text-cell [attr.text]="formatLabel(field[0])"></nldd-text-cell>
+                  <nldd-cell width="full" horizontal-alignment="right">
+                    <app-field-renderer [schema]="field[1]" [value]="getSpecValue(field[0])" />
+                  </nldd-cell>
                 </nldd-list-item>
               }
-            }
-          </nldd-list>
-        </nldd-container>
-      </nldd-box>
-    }
+            </nldd-list>
+          </nldd-container>
+        </nldd-box>
+      }
 
-    <app-resource-delete-modal
-      [show]="showDeleteModal()"
-      [resourceKind]="kind()"
-      [resourceName]="resource()!.metadata.name"
-      [deleting]="deleting()"
-      [errorMessage]="deleteError()"
-      (confirm)="confirmDelete()"
-      (dismiss)="closeDeleteModal()"
-    />
-  </nldd-container>
+      @if (resource()!.status && statusFields().length > 0) {
+        <nldd-spacer size="24"></nldd-spacer>
+
+        <nldd-box>
+          <nldd-container padding="16" md-padding="24">
+            <nldd-title size="5">
+              <h2>Status</h2>
+            </nldd-title>
+
+            <nldd-spacer size="16"></nldd-spacer>
+
+            @for (entry of statusFields(); track entry[0]) {
+              @if (isConditionsField(entry[0], entry[1])) {
+                <nldd-title size="6">
+                  <h3>{{ formatLabel(entry[0]) }}</h3>
+                </nldd-title>
+
+                <nldd-spacer size="8"></nldd-spacer>
+
+                @if (asArray(entry[1]).length > 0) {
+                  <nldd-table
+                    accessible-label="Conditions"
+                    columns="minmax(140px, 1fr) 90px minmax(200px, 2fr) 160px"
+                  >
+                    <nldd-table-row slot="header">
+                      <nldd-text-cell text="**Type**"></nldd-text-cell>
+                      <nldd-text-cell text="**Status**"></nldd-text-cell>
+                      <nldd-text-cell text="**Message**"></nldd-text-cell>
+                      <nldd-text-cell text="**Last transition**"></nldd-text-cell>
+                    </nldd-table-row>
+
+                    @for (cond of asArray(entry[1]); track $index) {
+                      <nldd-table-row>
+                        <nldd-text-cell [attr.text]="asRecord(cond)['type']"></nldd-text-cell>
+                        <nldd-cell>
+                          @if (asRecord(cond)['status'] === 'True') {
+                            <nldd-tag color="success" size="sm" text="True"></nldd-tag>
+                          } @else if (asRecord(cond)['status'] === 'False') {
+                            <nldd-tag color="warning" size="sm" text="False"></nldd-tag>
+                          } @else {
+                            <nldd-tag
+                              color="neutral"
+                              size="sm"
+                              [attr.text]="asRecord(cond)['status']"
+                            ></nldd-tag>
+                          }
+                        </nldd-cell>
+                        <nldd-text-cell
+                          color="secondary"
+                          [attr.text]="asRecord(cond)['message'] || '—'"
+                        ></nldd-text-cell>
+                        <nldd-text-cell
+                          [attr.text]="formatDateValue(asRecord(cond)['lastTransitionTime'])"
+                        ></nldd-text-cell>
+                      </nldd-table-row>
+                    }
+                  </nldd-table>
+                } @else {
+                  <nldd-inline-dialog
+                    icon="circle-dashed"
+                    icon-color="secondary"
+                    text="No conditions reported"
+                  ></nldd-inline-dialog>
+                }
+
+                <nldd-spacer size="16"></nldd-spacer>
+              }
+            }
+
+            <nldd-list variant="simple" accessible-label="Status">
+              @for (entry of statusFields(); track entry[0]) {
+                @if (!isConditionsField(entry[0], entry[1])) {
+                  <nldd-list-item>
+                    <nldd-text-cell [attr.text]="formatLabel(entry[0])"></nldd-text-cell>
+                    <nldd-text-cell
+                      width="fit-content"
+                      horizontal-alignment="right"
+                      [attr.text]="formatSimpleValue(entry[1])"
+                    ></nldd-text-cell>
+                  </nldd-list-item>
+                }
+              }
+            </nldd-list>
+          </nldd-container>
+        </nldd-box>
+      }
+
+      <!-- Deleting at the bottom, out of the way of everything you came to
+           read, and in the same red box as the one under a project. Next to the
+           title it sat where the eye lands first, which is not where an action
+           belongs that cannot be undone. -->
+      @if (canDelete()) {
+        <nldd-spacer size="24"></nldd-spacer>
+
+        <nldd-box variant="critical">
+          <nldd-container padding="16">
+            <nldd-title size="5">
+              <h2>Danger zone</h2>
+            </nldd-title>
+
+            <nldd-spacer size="8"></nldd-spacer>
+
+            <nldd-rich-text spacing="flat">
+              <p>Deleting {{ kind() }} '{{ resource()!.metadata.name }}' is permanent and cannot be undone.</p>
+            </nldd-rich-text>
+
+            <nldd-spacer size="16"></nldd-spacer>
+
+            <nldd-button
+              type="button"
+              [attr.text]="'Delete ' + resource()!.metadata.name + '…'"
+              start-icon="trash"
+              variant="destructive"
+              (click)="openDeleteModal()"
+            ></nldd-button>
+          </nldd-container>
+        </nldd-box>
+      }
+    </nldd-simple-section>
+  </nldd-page>
+
+  <app-resource-delete-modal
+    [show]="showDeleteModal()"
+    [resourceKind]="kind()"
+    [resourceName]="resource()!.metadata.name"
+    [deleting]="deleting()"
+    [errorMessage]="deleteError()"
+    (confirm)="confirmDelete()"
+    (dismiss)="closeDeleteModal()"
+  />
 } @else {
   <nldd-inline-dialog
     variant="alert"

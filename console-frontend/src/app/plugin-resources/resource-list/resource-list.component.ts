@@ -18,6 +18,7 @@ import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
 import { deleteErrorMessage } from '../kube-api-error';
 import { TitleService } from '../../title.service';
+import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
 import type { ParsedCrd, AdditionalPrinterColumn, KubeResource } from '../types';
 import { buildCustomUIUrl } from '../plugin-console-url.utils';
@@ -55,6 +56,8 @@ function buildCellValue(resource: KubeResource, col: AdditionalPrinterColumn): s
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ResourceListComponent implements OnInit {
+  protected pageNav = inject(PageNavService);
+
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
@@ -108,6 +111,13 @@ export default class ResourceListComponent implements OnInit {
   });
 
   readonly createLink = ['create'];
+
+  /** Where the back button leads: the project these resources belong to, or the
+   *  organization when the plugin is installed there rather than in a project. */
+  backPath = computed(() => {
+    const projectId = this.route.snapshot.parent?.parent?.params['id'];
+    return projectId ? `/projects/${projectId}` : '/';
+  });
 
   columns = computed<AdditionalPrinterColumn[]>(() => {
     const crd = this.crdDef();
