@@ -655,15 +655,16 @@ func TestPutPluginDefinition_NonOwnerDenied(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 
-	putReq := connect.NewRequest(organizationv1.PutPluginDefinitionRequest_builder{
+	putReq := organizationv1.PutPluginDefinitionRequest_builder{
 		PluginId:      pluginID.String(),
 		PluginVersion: "v1",
 		Manifest:      testManifest,
-	}.Build())
-	putReq.Header().Set("Authorization", "Bearer "+token)
-	putReq.Header().Set("Fun-Organization", otherOrgID.String())
+	}.Build()
+	putCtx, putCallInfo := connect.NewClientContext(context.Background())
+	putCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	putCallInfo.RequestHeader().Set("Fun-Organization", otherOrgID.String())
 
-	_, err := client.PutPluginDefinition(context.Background(), putReq)
+	_, err := client.PutPluginDefinition(putCtx, putReq)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
 }
@@ -692,14 +693,15 @@ func TestListPlugins_GlobalVisibility(t *testing.T) {
 	token := env.createAuthnToken(t, userID)
 	client := newPluginServiceClient(env)
 
-	req := connect.NewRequest(organizationv1.ListPluginsRequest_builder{}.Build())
-	req.Header().Set("Authorization", "Bearer "+token)
-	req.Header().Set("Fun-Organization", otherOrgID.String())
-	resp, err := client.ListPlugins(context.Background(), req)
+	req := organizationv1.ListPluginsRequest_builder{}.Build()
+	listCtx, listCallInfo := connect.NewClientContext(context.Background())
+	listCallInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	listCallInfo.RequestHeader().Set("Fun-Organization", otherOrgID.String())
+	resp, err := client.ListPlugins(listCtx, req)
 	require.NoError(t, err)
 
 	var found bool
-	for _, p := range resp.Msg.GetPlugins() {
+	for _, p := range resp.GetPlugins() {
 		if p.GetName() == testPluginName {
 			found = true
 		}
