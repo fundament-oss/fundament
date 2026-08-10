@@ -83,7 +83,7 @@
                  het Status-blok eronder puur de condities houdt. -->
             @for (entry of flatStatusFields(); track entry[0]) {
               <nldd-list-item>
-                <nldd-text-cell [attr.text]="formatLabel(entry[0])"></nldd-text-cell>
+                <nldd-text-cell [attr.text]="statusLabel(entry[0])"></nldd-text-cell>
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"
@@ -122,7 +122,7 @@
         </nldd-box>
       }
 
-      @if (resource()!.status && statusFields().length > 0) {
+      @if (conditions().length > 0) {
         <nldd-spacer size="24"></nldd-spacer>
 
         <nldd-box>
@@ -135,40 +135,36 @@
 
             <!-- Een regel per conditie in plaats van een tabel met een kolom die
                  alleen True of False zegt: de badge draagt het type én de status,
-                 de melding staat eronder en het tijdstip is het moment waarop
-                 deze conditie voor het laatst omsloeg. Meestal is er één, maar
-                 een controller mag er meer bijhouden en die hebben dan elk hun
-                 eigen geschiedenis. -->
-            @if (conditions().length > 0) {
-              <nldd-list variant="simple" accessible-label="Conditions">
-                @for (cond of conditions(); track $index) {
-                  <nldd-list-item>
-                    <nldd-cell width="fit-content">
-                      <nldd-badge
-                        [attr.color]="conditionBadge(asRecordValue(cond, 'type'), cond['status']).color"
-                        [attr.text]="conditionBadge(asRecordValue(cond, 'type'), cond['status']).text"
-                      ></nldd-badge>
-                    </nldd-cell>
-                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                    <nldd-text-cell
-                      width="full"
-                      color="secondary"
-                      [attr.text]="asRecordValue(cond, 'message') || '—'"
-                    ></nldd-text-cell>
-                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                    <nldd-text-cell
-                      width="fit-content"
-                      horizontal-alignment="right"
-                      color="secondary"
-                      [attr.text]="formatDateValue(cond['lastTransitionTime'])"
-                    ></nldd-text-cell>
-                  </nldd-list-item>
-                }
-              </nldd-list>
-
-              <nldd-spacer size="16"></nldd-spacer>
-            }
-
+                 de melding staat erin en het tijdstip is het moment waarop deze
+                 conditie voor het laatst omsloeg. Meestal is er één, maar een
+                 controller mag er meer bijhouden en die hebben dan elk hun eigen
+                 geschiedenis. -->
+            <nldd-list variant="simple" accessible-label="Conditions">
+              @for (cond of conditions(); track $index) {
+                <nldd-list-item>
+                  <nldd-text-cell
+                    width="full"
+                    [attr.text]="asRecordValue(cond, 'message') || '—'"
+                    [attr.supporting-text]="formatDateValue(cond['lastTransitionTime'])"
+                  ></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                  <!-- Een stip en het woord ernaast: de stip is decoratief, want
+                       het woord zegt het al. -->
+                  <nldd-cell width="fit-content">
+                    <nldd-badge
+                      decorative
+                      [attr.color]="conditionBadge(asRecordValue(cond, 'type'), cond['status']).color"
+                    ></nldd-badge>
+                  </nldd-cell>
+                  <nldd-spacer-cell size="6"></nldd-spacer-cell>
+                  <nldd-text-cell
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    [attr.text]="conditionBadge(asRecordValue(cond, 'type'), cond['status']).text"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
+            </nldd-list>
           </nldd-container>
         </nldd-box>
       }

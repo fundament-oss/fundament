@@ -294,6 +294,27 @@ export default class ResourceDetailComponent implements OnInit {
       .map((entry) => toRecord(entry)),
   );
 
+  /**
+   * Better words for status fields whose own name reads like schema. The console
+   * knows nothing about a plugin, so this stays a short list of names we can
+   * improve on rather than a place to describe a plugin's whole vocabulary; a
+   * field that is not in it keeps the name the CRD gave it.
+   *
+   * `notAfter` is the moment the certificate stops being valid, and
+   * `renewalTime` the moment the platform renews it. That second one lies in
+   * the future, hence "Renews on" and not "Renewed on".
+   */
+  private static readonly STATUS_LABELS: Record<string, string> = {
+    notAfter: 'Valid until',
+    notBefore: 'Valid from',
+    renewalTime: 'Renews on',
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  statusLabel(key: string): string {
+    return ResourceDetailComponent.STATUS_LABELS[key] ?? fieldNameToLabel(key);
+  }
+
   /** What the status reports outside its conditions: single values like a
    *  certificate's expiry. They read as facts about the resource, so they join
    *  the list at the top and leave the status block to the conditions. */
