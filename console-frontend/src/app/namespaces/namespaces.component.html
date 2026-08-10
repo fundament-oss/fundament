@@ -21,14 +21,14 @@
         <nldd-button
           type="button"
           (click)="openCreateNamespaceModal()"
-          text="New namespace"
+          text="New namespace…"
           start-icon="plus-small"
           variant="primary"
         ></nldd-button>
         <nldd-menu-item
           slot="overflow"
           icon="plus-small"
-          text="New namespace"
+          text="New namespace…"
           (select)="openCreateNamespaceModal()"
         ></nldd-menu-item>
       </nldd-toolbar-item>
@@ -49,13 +49,13 @@
           slot="actions"
           type="button"
           (click)="openCreateNamespaceModal()"
-          text="New namespace"
+          text="New namespace…"
           start-icon="plus-small"
           variant="primary"
         ></nldd-button>
       </nldd-inline-dialog>
     } @else {
-      <nldd-list variant="box" accessible-label="Namespaces">
+      <nldd-list variant="box-tinted" accessible-label="Namespaces">
         @for (namespace of namespaces(); track namespace.id) {
           <!-- The whole row goes to the namespace: a real link, so it can be
                shared and opened in a new tab, and the chevron says so. Deleting
@@ -204,7 +204,7 @@
              skipped rather than one that does not apply yet. -->
         @if (draftMemberIds().length > 0) {
           <nldd-form-field label="Roles">
-            <nldd-list variant="box" accessible-label="Roles">
+            <nldd-list variant="box-tinted" accessible-label="Roles">
               @for (role of allRoles; track role) {
                 <nldd-list-item
                   checkbox

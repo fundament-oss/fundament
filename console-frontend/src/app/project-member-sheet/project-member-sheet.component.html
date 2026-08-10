@@ -63,7 +63,7 @@
           @if (!editingNamespace()) {
             @if (!impliedNew()) {
               <nldd-form-field label="Namespaces">
-                <nldd-list variant="box" accessible-label="Namespaces">
+                <nldd-list variant="box-tinted" accessible-label="Namespaces">
                   <!-- Not a shortcut for ticking the rest: it also covers
                        namespaces made later, so it excludes the others. -->
                   <nldd-list-item
@@ -144,7 +144,7 @@
           }
 
           <nldd-form-field label="Roles">
-            <nldd-list variant="box" accessible-label="Roles">
+            <nldd-list variant="box-tinted" accessible-label="Roles">
               @for (role of allRoles; track role) {
                 <nldd-list-item
                   checkbox
@@ -201,7 +201,7 @@
 
         <nldd-spacer size="16"></nldd-spacer>
 
-        <nldd-list variant="box" accessible-label="Member details">
+        <nldd-list variant="box-tinted" accessible-label="Member details">
           <!-- Names the project: the sheet can be opened from a link, with no
                list behind it to say where you are. -->
           <nldd-list-item>
@@ -317,7 +317,7 @@
             </nldd-container>
           </nldd-box>
         } @else {
-          <nldd-list variant="box" accessible-label="Namespace access">
+          <nldd-list variant="box-tinted" accessible-label="Namespace access">
             @for (binding of bindings(); track binding.namespace) {
               <nldd-list-item>
                 <!-- The roles read under the namespace, not opposite it: a

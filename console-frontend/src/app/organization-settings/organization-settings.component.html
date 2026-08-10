@@ -29,7 +29,7 @@
     @if (loading()) {
       <nldd-activity-indicator show-text text="Loading organization..."></nldd-activity-indicator>
     } @else if (organization(); as organization) {
-      <nldd-list variant="box" accessible-label="Organization details">
+      <nldd-list variant="box-tinted" accessible-label="Organization details">
         <!-- The alias is the only editable field, so the control sits on that
              row rather than on the page as a whole. -->
         <nldd-list-item>

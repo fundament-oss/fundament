@@ -79,7 +79,7 @@
           }
 
           <nldd-form-field label="Roles">
-            <nldd-list variant="box" accessible-label="Roles">
+            <nldd-list variant="box-tinted" accessible-label="Roles">
               @for (role of allRoles; track role) {
                 <nldd-list-item
                   checkbox
@@ -140,7 +140,7 @@
 
         <nldd-spacer size="16"></nldd-spacer>
 
-        <nldd-list variant="box" accessible-label="Namespace details">
+        <nldd-list variant="box-tinted" accessible-label="Namespace details">
           <!-- Names the project: the sheet can be opened from a link, with no
                list behind it to say where you are. -->
           <nldd-list-item>
@@ -204,7 +204,7 @@
             </nldd-container>
           </nldd-box>
         } @else {
-          <nldd-list variant="box" accessible-label="Member access">
+          <nldd-list variant="box-tinted" accessible-label="Member access">
             @for (entry of members(); track entry.member.id) {
               <nldd-list-item>
                 <!-- The roles read under the name, not opposite it: a handful

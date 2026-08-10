@@ -23,14 +23,14 @@
         <nldd-button
           type="button"
           (click)="openAddMemberModal()"
-          text="Add member"
+          text="Add member…"
           start-icon="plus-small"
           variant="primary"
         ></nldd-button>
         <nldd-menu-item
           slot="overflow"
           icon="plus-small"
-          text="Add member"
+          text="Add member…"
           (select)="openAddMemberModal()"
         ></nldd-menu-item>
       </nldd-toolbar-item>
@@ -98,7 +98,7 @@
                 slot="actions"
                 type="button"
                 (click)="openAddMemberModal()"
-                text="Add member"
+                text="Add member…"
                 start-icon="plus-small"
                 variant="primary"
               ></nldd-button>
@@ -106,7 +106,7 @@
           </nldd-container>
         </nldd-box>
       } @else {
-        <nldd-list variant="box" accessible-label="Project members">
+        <nldd-list variant="box-tinted" accessible-label="Project members">
           @for (view of visibleMembers(); track view.member.id) {
             <!-- The whole row goes to the member: a real link, so it can be
                  shared and opened in a new tab, and the chevron says so. The
@@ -269,7 +269,7 @@
           </nldd-form-field>
 
           <nldd-form-field label="Permission">
-            <nldd-list variant="box" background="base" accessible-label="Permission">
+            <nldd-list variant="box-base" accessible-label="Permission">
               @for (option of permissionOptions; track option.value) {
                 <!-- The row is the control; the radio only shows which one it
                      is. A real radio here would be an input inside the row's
@@ -302,7 +302,7 @@
             optional-label="Optional"
             supporting-label="You can also arrange this later."
           >
-            <nldd-list variant="box" accessible-label="Namespaces">
+            <nldd-list variant="box-tinted" accessible-label="Namespaces">
               <!-- Not a shortcut for ticking the rest: it also covers namespaces
                    made later, so it excludes the others. -->
               <nldd-list-item
@@ -378,7 +378,7 @@
                not a choice anyone can act on. -->
           @if (draftNamespaces().length > 0) {
             <nldd-form-field label="Roles">
-              <nldd-list variant="box" accessible-label="Roles">
+              <nldd-list variant="box-tinted" accessible-label="Roles">
                 @for (role of allRoles; track role) {
                   <nldd-list-item
                     checkbox

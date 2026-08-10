@@ -65,7 +65,7 @@
 
         <!-- data-tour: the per-cluster list the walkthrough installs from
              (src/app/presentation/tours.ts). Keep the attribute. -->
-        <nldd-list variant="box" accessible-label="Clusters" data-tour="install-clusters">
+        <nldd-list variant="box-tinted" accessible-label="Clusters" data-tour="install-clusters">
           @for (cluster of clusters(); track cluster.id) {
             <nldd-list-item>
               <nldd-icon-cell

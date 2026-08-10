@@ -23,14 +23,14 @@
         <nldd-button
           type="button"
           (click)="openModal()"
-          text="Invite member"
+          text="Invite member…"
           start-icon="plus-small"
           variant="primary"
         ></nldd-button>
         <nldd-menu-item
           slot="overflow"
           icon="plus-small"
-          text="Invite member"
+          text="Invite member…"
           (select)="openModal()"
         ></nldd-menu-item>
       </nldd-toolbar-item>
@@ -259,7 +259,7 @@
           </nldd-container>
         </nldd-box>
       } @else {
-        <nldd-list variant="box" accessible-label="Members">
+        <nldd-list variant="box-tinted" accessible-label="Members">
           @for (member of visibleMembers(); track member.id) {
             <nldd-list-item>
               <nldd-cell width="fit-content">
@@ -502,7 +502,7 @@
         </nldd-form-field>
 
         <nldd-form-field label="Permission">
-          <nldd-list variant="box" accessible-label="Permission">
+          <nldd-list variant="box-tinted" accessible-label="Permission">
             @for (option of permissionOptions; track option.value) {
               <!-- The row is the control; the radio only shows which one it is. -->
               <nldd-list-item button (click)="invitePermission.set(option.value)">

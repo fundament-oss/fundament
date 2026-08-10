@@ -47,7 +47,7 @@
 
         <!-- The row opens the editor, and the icon says so. One sheet for both
              sections: they are saved together anyway. -->
-        <nldd-list variant="box" [attr.accessible-label]="summary.copy.title">
+        <nldd-list variant="box-tinted" [attr.accessible-label]="summary.copy.title">
           <nldd-list-item button (click)="openEdit()">
             <nldd-text-cell width="full" [attr.text]="summary.copy.requestName"></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>

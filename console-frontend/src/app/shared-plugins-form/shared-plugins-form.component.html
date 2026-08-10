@@ -64,7 +64,7 @@
              of the accessibility tree, which the row already covers. A second
              focusable control would double the tab stops and announce the state
              twice. -->
-        <nldd-list variant="box" accessible-label="Plugins">
+        <nldd-list variant="box-tinted" accessible-label="Plugins">
           @for (plugin of plugins; track plugin.id) {
             <nldd-list-item
               checkbox
@@ -94,7 +94,7 @@
 
     <!-- Switch and upload in one box: the upload only exists because the switch
          is on, and loose in the form they read as two unrelated questions. -->
-    <nldd-box background="tinted">
+    <nldd-box>
       <!-- Tight around the switch on its own, roomier once the upload is under
            it: a field needs air below it, a lone checkbox row does not. -->
       <nldd-container

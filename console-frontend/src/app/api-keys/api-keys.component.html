@@ -177,7 +177,7 @@
             </nldd-container>
           </nldd-box>
         } @else {
-          <nldd-list variant="box" accessible-label="API keys">
+          <nldd-list variant="box-tinted" accessible-label="API keys">
             @for (apiKey of apiKeys(); track apiKey.id) {
               <nldd-list-item>
                 <nldd-text-cell width="full" [attr.supporting-text]="keyDetail(apiKey)">

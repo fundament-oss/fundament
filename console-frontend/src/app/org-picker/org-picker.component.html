@@ -22,7 +22,7 @@
         <nldd-spacer size="24"></nldd-spacer>
 
         @if (acceptedOrganizations().length > 0) {
-          <nldd-list variant="box" type="navigation" accessible-label="Organizations">
+          <nldd-list variant="box-tinted" type="navigation" accessible-label="Organizations">
             @for (org of acceptedOrganizations(); track org.id) {
               <nldd-list-item button (click)="onSelect(org.id)">
                 <nldd-icon-cell icon="apartment-building"></nldd-icon-cell>
@@ -46,7 +46,7 @@
 
           <nldd-spacer size="8"></nldd-spacer>
 
-          <nldd-list variant="box" accessible-label="Pending invitations">
+          <nldd-list variant="box-tinted" accessible-label="Pending invitations">
             @for (invitation of pendingInvitationList(); track invitation.id) {
               <nldd-list-item>
                 <nldd-icon-cell icon="apartment-building" color="secondary"></nldd-icon-cell>

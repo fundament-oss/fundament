@@ -9,7 +9,7 @@
      label themselves. Node pools below does earn a heading, because it groups
      repeated cards that would otherwise run together. The list keeps its
      accessible name so assistive software still hears the grouping. -->
-<nldd-list variant="box" accessible-label="Basics">
+<nldd-list variant="box-tinted" accessible-label="Basics">
   <nldd-list-item>
     <nldd-text-cell text="Cluster name"></nldd-text-cell>
     <nldd-text-cell
@@ -47,7 +47,7 @@
 @if (state().nodePools && state().nodePools!.length > 0) {
   <nldd-collection layout="stack" gap="16px">
     @for (nodePool of state().nodePools; track nodePool.name) {
-      <nldd-list variant="box" [attr.accessible-label]="'Node pool ' + nodePool.name">
+      <nldd-list variant="box-tinted" [attr.accessible-label]="'Node pool ' + nodePool.name">
         <nldd-list-item>
           <nldd-text-cell text="Node pool name"></nldd-text-cell>
           <nldd-text-cell

@@ -315,7 +315,7 @@
 
                       <nldd-spacer size="8"></nldd-spacer>
 
-                      <nldd-list variant="simple" no-dividers>
+                      <nldd-list variant="simple" dividers="never">
                         <nldd-list-item size="sm">
                           <nldd-text-cell text="Type"></nldd-text-cell>
                           <nldd-text-cell
@@ -739,7 +739,7 @@
      stacks; the page puts the moment in a column of its own from md, so the
      titles line up and you read the timeline down one edge. -->
 <ng-template #eventList let-events let-metKnop="metKnop" let-inSheet="inSheet">
-  <nldd-list no-dividers accessible-label="Event history">
+  <nldd-list dividers="never" accessible-label="Event history">
     @for (
       event of events;
       track event.id;

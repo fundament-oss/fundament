@@ -42,7 +42,7 @@
       <nldd-spacer size="12"></nldd-spacer>
 
       <!-- The row opens the editor, and the icon says so. -->
-      <nldd-list variant="box" accessible-label="Cluster limits">
+      <nldd-list variant="box-tinted" accessible-label="Cluster limits">
         @for (row of clusterRows(); track row.label) {
           <nldd-list-item button (click)="openClusterEdit()">
             <nldd-text-cell width="full" [attr.text]="row.label"></nldd-text-cell>
@@ -75,7 +75,7 @@
 
         <nldd-spacer size="12"></nldd-spacer>
 
-        <nldd-list variant="box" [attr.accessible-label]="summary.copy.title">
+        <nldd-list variant="box-tinted" [attr.accessible-label]="summary.copy.title">
           <nldd-list-item button (click)="openNamespaceEdit()">
             <nldd-text-cell width="full" [attr.text]="summary.copy.requestName"></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -193,7 +193,7 @@
             @if (draftCluster()[field.key] !== null) {
               <nldd-spacer size="16"></nldd-spacer>
 
-              <nldd-list variant="box" [attr.accessible-label]="field.title">
+              <nldd-list variant="box-tinted" [attr.accessible-label]="field.title">
                 <nldd-list-item>
                   <nldd-text-cell width="full" [attr.text]="field.label"></nldd-text-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
