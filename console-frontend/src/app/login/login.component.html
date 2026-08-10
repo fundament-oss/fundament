@@ -5,8 +5,9 @@
 
   <!-- Centered rather than top-aligned: the page holds one thing, and a form of
        two fields hanging under the header reads as an afterthought. -->
-  <nldd-simple-section width="480px" height="100%">
-    <nldd-container vertical-alignment="center">
+  <nldd-simple-section horizontal-alignment="center" vertical-alignment="center">
+    <!-- The panel carries its own width; the section only says where it sits. -->
+    <nldd-container max-width="480px">
       <!-- Everything in one box: the heading says what you are logging in to,
            so it belongs to the form rather than floating above it. -->
       <nldd-box>
