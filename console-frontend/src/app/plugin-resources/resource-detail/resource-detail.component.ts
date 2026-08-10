@@ -294,6 +294,13 @@ export default class ResourceDetailComponent implements OnInit {
       .map((entry) => toRecord(entry)),
   );
 
+  /** What the status reports outside its conditions: single values like a
+   *  certificate's expiry. They read as facts about the resource, so they join
+   *  the list at the top and leave the status block to the conditions. */
+  flatStatusFields = computed(() =>
+    this.statusFields().filter(([key, value]) => !checkIsConditionsField(key, value)),
+  );
+
   /** The one that says whether the thing works, beside the title where a cluster
    *  carries its status too. Ready if there is one, otherwise the first. */
   primaryCondition = computed<{ text: string; color: string } | null>(() => {
