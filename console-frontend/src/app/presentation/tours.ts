@@ -142,7 +142,7 @@ const intro: Tour = {
           'On the right is the real console, running on sample data.',
         ),
       ],
-      route: '/',
+      route: '/clusters',
     },
     {
       id: 'cluster-detail',
@@ -293,7 +293,7 @@ const intro: Tour = {
           'The plugin brings its own menu along; the team has nothing to set up.',
         ),
       ],
-      route: '/projects/pr-burgerzaken',
+      route: '/projects/pr-burgerzaken/general',
       drive: installedPluginDrive,
     },
     {
@@ -410,7 +410,7 @@ const developer: Tour = {
         'Alles wat je team nodig heeft, op één plek.',
         'Everything your team needs, in one place.',
       ),
-      route: '/projects/pr-burgerzaken',
+      route: '/projects/pr-burgerzaken/general',
     },
     {
       id: 'namespaces',
@@ -529,7 +529,7 @@ const platformEngineer: Tour = {
         'Status, regio, projecten en node pools van de hele organisatie.',
         'Status, region, projects and node pools across the whole organisation.',
       ),
-      route: '/',
+      route: '/clusters',
     },
     {
       id: 'cluster-detail',
@@ -831,7 +831,7 @@ const policyMaker: Tour = {
       bullets: [
         loc('Geen schaduw-IT: je ziet waar wat draait.', 'No shadow IT: you see what runs where.'),
       ],
-      route: '/',
+      route: '/clusters',
     },
     {
       id: 'projects',
