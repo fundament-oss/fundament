@@ -54,6 +54,83 @@
               </nldd-toolbar-item>
             }
 
+            <!-- One place to start something, wherever you are: the pages that
+                 own these actions each have their own button, but you have to be
+                 on them first. Left of the organization and account controls,
+                 because this is about the work and those are about who and
+                 where you are. -->
+            <nldd-toolbar-item slot="end">
+              <nldd-just-in-time-education
+                [attr.active]="showCreateEducation() ? '' : null"
+                text="Start with a cluster"
+                supporting-text="Everything else lives on one: projects, namespaces and plugins. This is where you add your first."
+                placement="bottom"
+                dismissable
+                (nldd-close)="dismissCreateEducation()"
+              >
+              <nldd-icon-button
+                icon="plus"
+                size="md"
+                variant="secondary"
+                accessible-label="Create"
+                expandable
+                popup-type="menu"
+                type="button"
+              >
+                <nldd-menu slot="popup" placement="bottom-end" accessible-label="Create">
+                  <nldd-menu-item
+                    icon="add-kubernetes"
+                    text="New cluster…"
+                    href="/clusters/add"
+                  ></nldd-menu-item>
+                  <nldd-menu-item
+                    icon="add-plugin"
+                    text="Install plugins…"
+                    href="/plugins"
+                  ></nldd-menu-item>
+                  <nldd-menu-item
+                    icon="add-user"
+                    text="Invite member…"
+                    href="/organization/members?invite=1"
+                  ></nldd-menu-item>
+
+                  <!-- A project has two things you can add to it, so each one
+                       carries its own submenu rather than a flat list that
+                       repeats every project name twice. -->
+                  <nldd-menu-group text="Projects">
+                    @for (project of organizationProjects(); track project.id) {
+                      <nldd-menu-item icon="folder" [attr.text]="project.name">
+                        <nldd-menu [attr.accessible-label]="project.name">
+                          <nldd-menu-item
+                            icon="module"
+                            text="New namespace…"
+                            [attr.href]="'/projects/' + project.id + '/namespaces?add=1'"
+                          ></nldd-menu-item>
+                          <nldd-menu-item
+                            icon="add-user"
+                            text="Add project member…"
+                            [attr.href]="'/projects/' + project.id + '/members?add=1'"
+                          ></nldd-menu-item>
+                        </nldd-menu>
+                      </nldd-menu-item>
+                    }
+                    <nldd-menu-item
+                      icon="new-folder"
+                      text="New project…"
+                      href="/projects/add"
+                    ></nldd-menu-item>
+                  </nldd-menu-group>
+                </nldd-menu>
+              </nldd-icon-button>
+              </nldd-just-in-time-education>
+              <nldd-menu-item
+                slot="overflow"
+                icon="plus"
+                text="Create"
+                href="/clusters/add"
+              ></nldd-menu-item>
+            </nldd-toolbar-item>
+
             @if (true) {
               <nldd-toolbar-item slot="end">
                 <nldd-button-bar size="md" variant="secondary">
@@ -224,7 +301,7 @@
 
                   <nldd-list
                     type="navigation"
-                    [attr.no-dividers]="isMobile() ? null : ''"
+                    dividers="on-touch"
                     aria-label="Organization"
                   >
                     <nldd-list-item
@@ -322,7 +399,7 @@
                     <nldd-toolbar label="Project actions" size="sm">
                       <nldd-toolbar-item slot="start">
                         <nldd-button
-                          text="New project"
+                          text="New project…"
                           start-icon="plus-small"
                           href="/projects/add"
                           (click)="openNewProject($event)"
@@ -330,7 +407,7 @@
                         <nldd-menu-item
                           slot="overflow"
                           icon="plus-small"
-                          text="New project"
+                          text="New project…"
                           href="/projects/add"
                           (select)="openNewProject($event)"
                         ></nldd-menu-item>
@@ -341,7 +418,7 @@
 
                     <nldd-list
                       type="navigation"
-                      [attr.no-dividers]="isMobile() ? null : ''"
+                      dividers="on-touch"
                       aria-label="Projects"
                     >
                       @for (project of organizationProjects(); track project.id) {
@@ -402,7 +479,7 @@
 
                     <nldd-list
                       type="navigation"
-                      [attr.no-dividers]="isMobile() ? null : ''"
+                      dividers="on-touch"
                       aria-label="Project"
                     >
                       @for (item of projectNavItems(); track item.path) {

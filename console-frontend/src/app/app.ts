@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import '@nldd/design-system/icon';
 import '@nldd/design-system/icon-button';
+import '@nldd/design-system/just-in-time-education';
 import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/progress-bar';
 import '@nldd/design-system/banner';
@@ -182,10 +183,6 @@ export default class App implements OnInit {
     }
   >;
 
-  private readonly mobileMq = window.matchMedia('(max-width: 1023px)');
-
-  isMobile = signal(this.mobileMq.matches);
-
   /** Whether the split view has collapsed to one visible pane. The split view
    *  measures itself, so this is not a viewport width: a narrow window can
    *  still show the menu beside the page. */
@@ -283,7 +280,6 @@ export default class App implements OnInit {
   }
 
   async ngOnInit() {
-    this.mobileMq.addEventListener('change', (e) => this.isMobile.set(e.matches));
     this.initializeTheme();
     this.tourUrl.set(App.tourUrlInEnglish(this.configService.getConfig().consoleDemoUrl));
 
@@ -774,6 +770,31 @@ export default class App implements OnInit {
   /** A project with nothing open under it. `/projects/add` looks the same to a
    *  pattern but is a page of its own, and swallowing it left the new-project
    *  sheet unmounted behind an empty pane. */
+  /** Dismissed for good once you close it, so a coach-mark never becomes
+   *  furniture. Stored per browser rather than per account: it is about knowing
+   *  where the button is, not about anything on the server. */
+  private educationDismissed = signal(
+    localStorage.getItem('fundament.create-education-dismissed') === '1',
+  );
+
+  /**
+   * The first cluster is the thing everything else hangs off, and the button
+   * that starts one is an icon in a corner. Only with nothing to show for it
+   * yet and nothing open: once a page is in view the coach-mark would point
+   * across whatever you came to read.
+   */
+  showCreateEducation = computed(
+    () =>
+      !this.educationDismissed() &&
+      this.isProjectRoot() &&
+      this.organizationDataService.clusterSummaries().length === 0,
+  );
+
+  dismissCreateEducation(): void {
+    localStorage.setItem('fundament.create-education-dismissed', '1');
+    this.educationDismissed.set(true);
+  }
+
   isProjectRoot = computed(() => {
     const path = this.currentUrl().split(/[?#]/)[0];
     // The app starts with nothing open, so '/' is the same empty pane.
