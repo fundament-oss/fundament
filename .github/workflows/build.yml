@@ -328,8 +328,26 @@ jobs:
             If the namespace is missing, the PR overlay never reached the cluster. Check the [PR overlay in the Flux repo](https://${{ vars.GITLAB_REPO_HOST }}/${{ vars.GITLAB_REPO_PATH }}/-/tree/master/apps/fundament/overlays/pr/pr-${{ env.PR_NUMBER }}) — if it's not there, the CI push to the Flux repo failed; if it is, the cluster-level Flux reconciliation is stuck.
             </details>
 
-  terraform-acc-tests:
+  # Owns the wait for Flux to roll out this commit, so the test jobs below start
+  # against a settled environment instead of each polling for it themselves.
+  # A failure here means the deployment never landed — the tests are skipped
+  # rather than reporting it as a test failure.
+  environment-ready:
     needs: deploy
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Wait for this commit to be deployed
+        run: |
+          .github/scripts/wait-for-deployment.sh \
+            "https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
+            "${{ needs.deploy.outputs.image_tag }}"
+
+  terraform-acc-tests:
+    needs: environment-ready
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -345,12 +363,6 @@ jobs:
         with:
           tofu_wrapper: false
 
-      - name: Wait for this commit to be deployed
-        run: |
-          .github/scripts/wait-for-deployment.sh \
-            "https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
-            "${{ needs.deploy.outputs.image_tag }}"
-
       - name: Run Terraform acceptance tests
         run: |
           cd terraform-provider
@@ -361,7 +373,7 @@ jobs:
           go test -v ./...
 
   e2e-tests:
-    needs: deploy
+    needs: environment-ready
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -376,12 +388,6 @@ jobs:
 
       - name: Install Playwright browsers
         run: cd e2e && bunx playwright install chromium --with-deps
-
-      - name: Wait for this commit to be deployed
-        run: |
-          .github/scripts/wait-for-deployment.sh \
-            "https://organization.pr${{ env.PR_NUMBER }}.${{ env.DOMAIN }}" \
-            "${{ needs.deploy.outputs.image_tag }}"
 
       - name: Run E2E tests
         run: |
