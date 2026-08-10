@@ -3,7 +3,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: db-migrations
+  # Per-release name: a Job's pod template is immutable, and openfga's
+  # wait-for-reset needs to identify this upgrade's run.
+  name: {{ include "fundament.dbMigrationsJobName" $ }}
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 4 }}
 spec:

@@ -87,6 +87,8 @@ spec:
       dcimAuthn: https://dcim-authn.pr${PR_NUM}.${DOMAIN}
       corsAllowedOrigins: "https://console.pr${PR_NUM}.${DOMAIN},https://dcim.pr${PR_NUM}.${DOMAIN},https://plugin-proxy.pr${PR_NUM}.${DOMAIN}"
 
+    deploymentVersion: ${IMAGE_TAG}
+
     images:
       dbMigrations: ${IMAGE_PREFIX}/db-migrations:${IMAGE_TAG}
       authnApi: ${IMAGE_PREFIX}/authn-api:${IMAGE_TAG}

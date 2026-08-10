@@ -154,21 +154,43 @@ spec:
         {{- if $.Values.db.reset }}
         # Local/dev only. The OpenFGA datastore reset is owned by the db-migrations
         # Job (coupled with the app-DB reset) — NOT here — so a plain openfga
-        # rollout never wipes the store. Wait for that reset to finish before
-        # migrating, so openfga recreates its schema against the freshly-reset
-        # datastore. If db-migrations isn't running (a non-reset rollout), the
-        # wait returns immediately and the existing store is preserved.
+        # rollout never wipes the store. Block until this release's Job has
+        # completed, so `migrate` below rebuilds the schema after the reset.
+        #
+        # Failures are fatal on purpose: proceeding early means migrating first
+        # and having the schema dropped underneath us, leaving a live server that
+        # 500s with 42P01 until it is restarted by hand.
         - name: wait-for-reset
           image: {{ $.Values.images.openfgaSetup }}
           command:
             - bash
             - -c
             - |
-              set -uo pipefail
-              echo "Waiting for db-migrations (owns the OpenFGA reset) to complete..."
-              kubectl wait --for=condition=complete job/db-migrations \
-                -n {{ $.Release.Namespace }} --timeout=600s \
-                || echo "db-migrations not running; proceeding without a reset."
+              set -euo pipefail
+
+              JOB="{{ include "fundament.dbMigrationsJobName" $ }}"
+              NS="{{ $.Release.Namespace }}"
+
+              # Helm applies Deployments before Jobs, so the Job usually does not
+              # exist yet, and `kubectl wait` errors immediately on a missing
+              # resource instead of polling. Wait for it to appear first.
+              echo "Waiting for job/${JOB} to appear..."
+              for i in $(seq 1 60); do
+                if kubectl get job "${JOB}" -n "${NS}" >/dev/null 2>&1; then
+                  echo "job/${JOB} exists"
+                  break
+                fi
+                if [ "${i}" -eq 60 ]; then
+                  echo "job/${JOB} never appeared after 5m."
+                  echo "Refusing to start: the datastore is about to be reset by a Job we cannot see."
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              echo "Waiting for job/${JOB} to complete..."
+              kubectl wait --for=condition=complete "job/${JOB}" \
+                -n "${NS}" --timeout=600s
         {{- end }}
         - name: migrate
           image: {{ $.Values.openfga.image }}

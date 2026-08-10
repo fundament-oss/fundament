@@ -38,6 +38,9 @@ type config struct {
 	GardenerKubeconfig         string        `env:"GARDENER_KUBECONFIG"`
 	CircuitBreakerThreshold    time.Duration `env:"CIRCUIT_BREAKER_THRESHOLD" envDefault:"5s"`
 	CircuitBreakerPollInterval time.Duration `env:"CIRCUIT_BREAKER_POLL_INTERVAL" envDefault:"2s"`
+	// Served on /version so callers outside the cluster can tell which release
+	// is answering; the previous one keeps serving until Flux reconciles.
+	DeploymentVersion string `env:"DEPLOYMENT_VERSION" envDefault:"unknown"`
 }
 
 func main() {
@@ -174,6 +177,11 @@ func run() error {
 	outerMux.HandleFunc("/livez", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
+	})
+	outerMux.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(cfg.DeploymentVersion))
 	})
 	outerMux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)

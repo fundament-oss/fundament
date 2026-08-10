@@ -33,6 +33,11 @@ spec:
             {{- include "fundament.jwtSecretEnv" . | nindent 12 }}
             - name: LOG_LEVEL
               value: {{ .Values.organizationApi.logLevel }}
+            {{- if $.Values.deploymentVersion }}
+            # Served on /version so CI can tell which release is answering.
+            - name: DEPLOYMENT_VERSION
+              value: {{ $.Values.deploymentVersion | quote }}
+            {{- end }}
             - name: PROMETHEUS_URL
               value: {{ $.Values.organizationApi.prometheusURL }}
             {{- if $.Values.externalUrls.corsAllowedOrigins }}
