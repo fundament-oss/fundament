@@ -270,6 +270,25 @@ export default class ResourceDetailComponent implements OnInit {
 
   formatSimpleValue = toSimpleValue;
 
+  /** The condition that says whether the thing works, beside the title where a
+   *  cluster carries its status too. Ready if there is one, otherwise the first
+   *  the resource reports; the table below still holds them all. */
+  primaryCondition = computed<{ text: string; color: string } | null>(() => {
+    const conditions = this.statusFields()
+      .filter(([key, value]) => checkIsConditionsField(key, value))
+      .flatMap(([, value]) => toArray(value))
+      .map((entry) => toRecord(entry));
+    const ready = conditions.find((entry) => entry['type'] === 'Ready') ?? conditions[0];
+    if (!ready) return null;
+
+    const type = String(ready['type'] ?? '');
+    if (ready['status'] === 'True') return { text: type, color: 'success' };
+    if (ready['status'] === 'False') {
+      return { text: `Not ${type.charAt(0).toLowerCase()}${type.slice(1)}`, color: 'warning' };
+    }
+    return { text: `${type} unknown`, color: 'neutral' };
+  });
+
   isConditionsField = checkIsConditionsField;
 
   asArray = toArray;

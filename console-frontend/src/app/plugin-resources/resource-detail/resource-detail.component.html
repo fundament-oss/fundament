@@ -27,8 +27,12 @@
     <nldd-simple-section>
       <nldd-title id="resource-detail-title" size="2">
         <h1>{{ resource()!.metadata.name }}</h1>
-        @if (resource()!.metadata.namespace) {
-          <span slot="subtitle">Namespace: {{ resource()!.metadata.namespace }}</span>
+        @if (primaryCondition(); as condition) {
+          <nldd-badge
+            slot="end"
+            [attr.color]="condition.color"
+            [attr.text]="condition.text"
+          ></nldd-badge>
         }
       </nldd-title>
 
@@ -37,6 +41,16 @@
       <nldd-box>
         <nldd-container padding="16" md-padding="24">
           <nldd-list variant="simple" accessible-label="Resource details">
+            @if (resource()!.metadata.namespace) {
+              <nldd-list-item>
+                <nldd-text-cell text="Namespace"></nldd-text-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  [attr.text]="resource()!.metadata.namespace"
+                ></nldd-text-cell>
+              </nldd-list-item>
+            }
             <nldd-list-item>
               <nldd-text-cell text="Kind"></nldd-text-cell>
               <nldd-text-cell

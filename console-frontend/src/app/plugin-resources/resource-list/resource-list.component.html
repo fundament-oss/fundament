@@ -131,13 +131,7 @@
               <!-- In the footer slot rather than the body: the card keeps that
                    slot at the bottom, so the buttons line up across a row of
                    cards however tall each one's list turns out. -->
-              <nldd-container
-                slot="footer"
-                layout="row"
-                gap="8"
-                padding-inline="16"
-                padding-bottom="16"
-              >
+              <nldd-container slot="footer" padding-inline="16" padding-bottom="16">
                 <!-- href, not routerLink: the anchor lives in the link's shadow
                      DOM, out of routerLink's reach. -->
                 <nldd-button
@@ -146,22 +140,6 @@
                   variant="primary"
                   (click)="onDetailClick($event, resource)"
                 ></nldd-button>
-                <nldd-icon-button
-                  icon="ellipsis"
-                  variant="secondary"
-                  expandable
-                  popup-type="menu"
-                  [attr.accessible-label]="'Actions for ' + resource.metadata.name"
-                >
-                  <nldd-menu slot="popup">
-                    <nldd-menu-item
-                      text="Delete…"
-                      icon="trash"
-                      destructive
-                      (select)="openDelete(resource)"
-                    ></nldd-menu-item>
-                  </nldd-menu>
-                </nldd-icon-button>
               </nldd-container>
             </nldd-card>
           }
@@ -185,14 +163,4 @@
       }
     </nldd-simple-section>
   </nldd-page>
-
-  <app-resource-delete-modal
-    [show]="pendingDelete() !== null"
-    [resourceKind]="crdDef()?.kind ?? ''"
-    [resourceName]="pendingDelete()?.metadata?.name ?? ''"
-    [deleting]="deleting()"
-    [errorMessage]="deleteError()"
-    (confirm)="confirmDelete()"
-    (dismiss)="closeDelete()"
-  />
 }

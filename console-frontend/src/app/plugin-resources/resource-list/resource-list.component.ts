@@ -16,7 +16,6 @@ import ResourceDeleteModalComponent from '../resource-delete-modal/resource-dele
 import KubeClusterContextService from '../kube-cluster-context.service';
 import KubePluginLoaderService from '../kube-plugin-loader.service';
 import PluginRegistryService from '../plugin-registry.service';
-import { deleteErrorMessage } from '../kube-api-error';
 import { TitleService } from '../../title.service';
 import PageNavService from '../../page-nav.service';
 import { ConfigService } from '../../config.service';
@@ -255,50 +254,6 @@ export default class ResourceListComponent implements OnInit {
       return { text: `Not ${column.charAt(0).toLowerCase()}${column.slice(1)}`, color: 'warning' };
     }
     return null;
-  }
-
-  // --- Per-row delete ---
-
-  pendingDelete = signal<KubeResource | null>(null);
-
-  deleting = signal(false);
-
-  deleteError = signal<string | null>(null);
-
-  openDelete(resource: KubeResource): void {
-    this.deleteError.set(null);
-    this.pendingDelete.set(resource);
-  }
-
-  closeDelete(): void {
-    if (!this.deleting()) this.pendingDelete.set(null);
-  }
-
-  async confirmDelete(): Promise<void> {
-    const crd = this.crdDef();
-    const clusterId = this.clusterContext.selectedClusterId();
-    const target = this.pendingDelete();
-    if (!crd || !clusterId || !target) return;
-
-    this.deleting.set(true);
-    this.deleteError.set(null);
-    try {
-      await this.loader.deleteResource(
-        this.pluginName(),
-        crd,
-        clusterId,
-        target.metadata.name,
-        target.metadata.namespace,
-      );
-      this.pendingDelete.set(null);
-      await this.reloadResources(crd, clusterId);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[ResourceList] Failed to delete resource:', err);
-      this.deleteError.set(deleteErrorMessage(err));
-    } finally {
-      this.deleting.set(false);
-    }
   }
 
   // Refreshes the list after a delete. The CRD schema and plugin registry are
