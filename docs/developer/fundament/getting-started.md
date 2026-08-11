@@ -67,3 +67,8 @@ just dev
 The Console frontend should now be available at https://console.fundament.localhost:8443/. See
 [`console-frontend/README.md`](https://github.com/fundament-oss/fundament/blob/master/console-frontend/README.md)
 for linting, formatting and the other frontend commands.
+
+## Storage
+
+Working on the `ceph-rook` plugin needs raw block devices, which a k3d node does not have.
+See [Block devices for k3d](./k3d-block-devices.md).
