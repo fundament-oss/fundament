@@ -124,8 +124,8 @@ const reloadApp = () => {
 function depthForPath(url: string): number {
   const path = url.split(/[?#]/)[0];
   // Nothing chosen yet: the organization menu is the whole screen, not an empty
-  // pane beside it.
-  if (path === '/') return 0;
+  // pane beside it. The organization's own address says the same thing.
+  if (path === '/' || path === '/organization') return 0;
   return /^\/projects\/[^/]+$/.test(path) ? 1 : 2;
 }
 
@@ -817,8 +817,9 @@ export default class App implements OnInit {
 
   isProjectRoot = computed(() => {
     const path = this.currentUrl().split(/[?#]/)[0];
-    // The app starts with nothing open, so '/' is the same empty pane.
-    if (path === '/') return true;
+    // The app starts with nothing open, so '/' is the same empty pane, and so is
+    // the organization's own address: both say "pick something from the menu".
+    if (path === '/' || path === '/organization') return true;
     return path !== '/projects/add' && /^\/projects\/[^/]+$/.test(path);
   });
 

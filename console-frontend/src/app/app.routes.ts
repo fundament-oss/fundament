@@ -203,7 +203,14 @@ const routes: Routes = [
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
       },
       {
+        // The organization itself, the way a project is: the sidebar is the
+        // organization and you pick what to open from there. A componentless
+        // route so the URL still matches while the outlet stays empty.
         path: 'organization',
+        children: [],
+      },
+      {
+        path: 'organization/general',
         loadComponent: () =>
           import('./organization-settings/organization-settings.component').then((m) => m.default),
       },
