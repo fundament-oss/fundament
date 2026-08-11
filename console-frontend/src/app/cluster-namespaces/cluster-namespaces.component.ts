@@ -95,7 +95,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
 
   constructor() {
-    this.titleService.setTitle('Cluster namespaces');
+    this.titleService.setTitle('Namespaces');
     this.clusterId = this.route.snapshot.paramMap.get('id') || '';
   }
 

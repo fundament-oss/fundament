@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
-import { TitleService } from '../title.service';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
@@ -29,7 +28,6 @@ import focusFirstModalInput from '../modal-focus';
   templateUrl: './add-cluster-summary.component.html',
 })
 export default class AddClusterSummaryComponent {
-  private titleService = inject(TitleService);
 
   private router = inject(Router);
 
@@ -80,7 +78,6 @@ export default class AddClusterSummaryComponent {
   private idempotency = createIdempotencyRef();
 
   constructor() {
-    this.titleService.setTitle('Cluster summary');
     this.loadMachineTypeLabels();
   }
 

@@ -7,7 +7,6 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { TitleService } from '../title.service';
 import AutofocusDirective from '../autofocus.directive';
 import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
 import { OrganizationDataService } from '../organization-data.service';
@@ -22,7 +21,6 @@ import { Region } from '../../generated/v1/cluster_pb';
   templateUrl: './add-cluster.component.html',
 })
 export default class AddClusterComponent implements OnInit {
-  private titleService = inject(TitleService);
 
   private fb = inject(FormBuilder);
 
@@ -50,7 +48,6 @@ export default class AddClusterComponent implements OnInit {
   catalogError = signal<string | null>(null);
 
   constructor() {
-    this.titleService.setTitle('New cluster');
 
     this.clusterForm = this.fb.group({
       clusterName: [

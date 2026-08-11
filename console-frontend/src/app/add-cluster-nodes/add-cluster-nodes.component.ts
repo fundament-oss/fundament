@@ -7,7 +7,6 @@ import {
   ChangeDetectionStrategy,
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
-import { TitleService } from '../title.service';
 import {
   SharedNodePoolsFormComponent,
   NodePoolData,
@@ -25,7 +24,6 @@ import { MachineTypeOption, RegionCatalogService } from '../region-catalog.servi
 export default class AddClusterNodesComponent implements OnInit {
   @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
 
-  private titleService = inject(TitleService);
 
   private stateService = inject(ClusterWizardStateService);
 
@@ -34,9 +32,6 @@ export default class AddClusterNodesComponent implements OnInit {
   // Machine types offered by the region chosen in step 1.
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
 
-  constructor() {
-    this.titleService.setTitle('New cluster nodes');
-  }
 
   async ngOnInit() {
     const { region: regionName } = this.stateService.getState();

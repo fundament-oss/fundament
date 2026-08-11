@@ -50,7 +50,7 @@ export default class DashboardComponent implements OnInit, OnDestroy {
   getStatusLabel = getStatusLabel;
 
   constructor() {
-    this.titleService.setTitle('Dashboard');
+    this.titleService.setTitle('Clusters');
   }
 
   ngOnDestroy() {

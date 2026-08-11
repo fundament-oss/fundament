@@ -79,7 +79,7 @@ export default class ClusterPluginsComponent implements OnInit {
   protected readonly getStatusLabel = getStatusLabel;
 
   constructor() {
-    this.titleService.setTitle('Cluster plugins');
+    this.titleService.setTitle('Plugins');
     this.clusterId = this.route.snapshot.paramMap.get('id') || '';
   }
 

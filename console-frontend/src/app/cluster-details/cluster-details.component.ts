@@ -17,7 +17,6 @@ import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import PageNavService from '../page-nav.service';
-import { TitleService } from '../title.service';
 import { NotificationService } from '../notification.service';
 import { CLUSTER, NAMESPACE, PLUGIN } from '../../connect/tokens';
 import {
@@ -195,7 +194,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     });
   });
 
-  private titleService = inject(TitleService);
 
   private route = inject(ActivatedRoute);
 
@@ -413,7 +411,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.clusterData.observabilityUrl = response.cluster.observabilityUrl;
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
-      this.titleService.setTitle(response.cluster.name);
 
       // Fetch namespaces, plugins, and events in parallel
       await Promise.all([

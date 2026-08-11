@@ -134,7 +134,7 @@ export default class PluginDetailsComponent implements OnInit, OnDestroy {
       }
 
       this.plugin.set(pluginResponse.plugin);
-      this.titleService.setTitle(`${displayNameOf(pluginResponse.plugin)} — Plugins`);
+      this.titleService.setTitle(displayNameOf(pluginResponse.plugin));
 
       const pluginName = pluginResponse.plugin.name;
 

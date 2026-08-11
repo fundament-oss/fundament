@@ -70,7 +70,7 @@ export default class ClusterNodesComponent implements OnInit {
   machineTypeOptions = signal<MachineTypeOption[] | null>(null);
 
   constructor() {
-    this.titleService.setTitle('Cluster nodes');
+    this.titleService.setTitle('Node pools');
     this.clusterId = this.route.snapshot.paramMap.get('id') || '';
   }
 

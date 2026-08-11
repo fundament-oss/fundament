@@ -219,12 +219,13 @@ export default class PresentationService {
 
   /**
    * Slide titles are suffixed with the demo name, except on the opening slide of
-   * the intro tour, whose title is the product name itself — "Fundament —
-   * Fundament demo" would read as a mistake.
+   * the intro tour, whose title is the product name itself — "Fundament ·
+   * Fundament demo" would read as a mistake. The middot is the separator the
+   * design guidelines ask for, the same one the console's own titles use.
    */
   private documentTitle(slideTitle: string): string {
     const demo = this.ui().demoTitle;
-    return slideTitle === DECK_NAME ? demo : `${slideTitle} — ${demo}`;
+    return slideTitle === DECK_NAME ? demo : `${slideTitle} · ${demo}`;
   }
 
   next(): void {
