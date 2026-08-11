@@ -10,13 +10,13 @@
     <nldd-top-title-bar
       slot="header"
       [attr.text]="'Plugin ' + pluginDisplayName()"
-      collapse-anchor="plugin-title"
+      collapse-anchor="install-plugin-title"
       dismiss-text="Cancel"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
-      <nldd-title id="plugin-title" size="3">
+      <nldd-title id="install-plugin-title" size="3">
         <h1>Plugin {{ pluginDisplayName() }}</h1>
       </nldd-title>
 
