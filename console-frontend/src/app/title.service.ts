@@ -12,6 +12,7 @@ import OrganizationContextService from './organization-context.service';
  *
  *     Clusters · Fundament
  *     Limits · burgerzaken · Fundament
+ *     Node pools · production · Clusters · Fundament
  *     Limits · burgerzaken · Gemeente Delft · Fundament
  *
  * Each step in between only joins when it tells two pages apart. A project or a
@@ -51,16 +52,19 @@ export class TitleService {
     { initialValue: this.router.url },
   );
 
-  /** The project or cluster the page belongs to, read from the address rather
-   *  than passed down: every page under it would otherwise have to name it
-   *  again, and the one that loads last would win. */
-  private ownerName = computed(() => {
+  /**
+   * What the page hangs under, read from the address rather than passed down:
+   * every page below would otherwise have to name it again, and the one that
+   * loads last would win. From near to far, so the chain keeps running from the
+   * specific to the general.
+   */
+  private ownerNames = computed<string[]>(() => {
     const url = this.url();
 
     const projectId = url.match(/^\/projects\/([^/?#]+)/)?.[1];
     if (projectId) {
       const project = this.organizationData.getProjectById(projectId)?.project;
-      return project?.alias || project?.name || null;
+      return [project?.alias || project?.name].filter((name): name is string => !!name);
     }
 
     const clusterId = url.match(/^\/clusters\/([^/?#]+)/)?.[1];
@@ -71,10 +75,14 @@ export class TitleService {
       const summary = this.organizationData
         .clusterSummaries()
         .find((cluster) => cluster.id === clusterId);
-      return summary?.name || this.organizationData.getClusterById(clusterId)?.cluster.name || null;
+      const name = summary?.name || this.organizationData.getClusterById(clusterId)?.cluster.name;
+      return [name, 'Clusters'].filter((part): part is string => !!part);
     }
 
-    return null;
+    // The catalogue a plugin came from: "Cert Manager · Plugins · Fundament".
+    if (/^\/plugins\/[^/?#]+/.test(url)) return ['Plugins'];
+
+    return [];
   });
 
   /** Empty until there is a second organization: see the class comment. */
@@ -87,19 +95,29 @@ export class TitleService {
     return organization?.alias || organization?.name || null;
   });
 
+  /** Whether a page named itself during the navigation that is running. */
+  private named = false;
+
   constructor() {
-    // Leaving drops the page name, so a route without a component of its own
-    // does not keep wearing the title of wherever you came from. On the way out
-    // rather than on arrival: a page names itself while it is being activated,
-    // which is before the navigation ends.
-    this.router.events
-      .pipe(filter((event) => event instanceof NavigationStart))
-      .subscribe(() => this.pageTitle.set(undefined));
+    // A page names itself while it is being activated, so by the time the
+    // navigation ends we know whether anybody did. Nobody means a route without
+    // a component of its own, and then the previous name is let go rather than
+    // worn by the next address.
+    //
+    // A navigation that never ends leaves the title alone, and that is what
+    // makes a sheet harmless: its address is a redirect back to the page you
+    // are on, which Angular skips.
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationStart) this.named = false;
+      if (event instanceof NavigationEnd && !this.named) this.pageTitle.set(undefined);
+    });
 
     // The project and the organizations arrive after the page has already named
     // itself, so the title is written from what is known now rather than once.
     effect(() => {
-      const parts = [this.pageTitle(), this.ownerName(), this.organizationName()].filter(Boolean);
+      const parts = [this.pageTitle(), ...this.ownerNames(), this.organizationName()].filter(
+        Boolean,
+      );
       this.title.setTitle(
         parts.length === 0 ? this.DEFAULT_TITLE : [...parts, this.PRODUCT].join(this.SEPARATOR),
       );
@@ -107,6 +125,7 @@ export class TitleService {
   }
 
   setTitle(pageTitle?: string): void {
+    this.named = true;
     this.pageTitle.set(pageTitle);
   }
 

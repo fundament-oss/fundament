@@ -24,7 +24,7 @@ function opzetten(
         provide: OrganizationDataService,
         useValue: {
           organizations: signal(organizations),
-          clusterSummaries: signal([]),
+          clusterSummaries: signal([{ id: 'cl-production', name: 'production' }]),
           getOrganizationById: (id: string) => organizations.find((org) => org.id === id),
           getProjectById: (id: string) => (id === PROJECT.id ? { project: PROJECT } : undefined),
           getClusterById: () => undefined,
@@ -86,6 +86,20 @@ describe('TitleService', () => {
     service.setTitle();
     TestBed.tick();
     expect(title.getTitle()).toBe('burgerzaken · Fundament');
+  });
+
+  it('noemt het cluster en de clusterlijst waar het onder hangt', () => {
+    const { service, title } = opzetten(EEN, 'org-1', '/clusters/cl-production/nodes');
+    service.setTitle('Node pools');
+    TestBed.tick();
+    expect(title.getTitle()).toBe('Node pools · production · Clusters · Fundament');
+  });
+
+  it('noemt de catalogus waar een plugin uit komt', () => {
+    const { service, title } = opzetten(EEN, 'org-1', '/plugins/pl-cert-manager');
+    service.setTitle('Cert Manager');
+    TestBed.tick();
+    expect(title.getTitle()).toBe('Cert Manager · Plugins · Fundament');
   });
 
   it('valt terug op de console zelf voor een pagina zonder eigen naam', () => {
