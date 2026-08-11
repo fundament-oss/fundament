@@ -1,22 +1,29 @@
 # Sample StoragePool for sandbox verification.
 #
-# Before applying, check available Disk CRs:
+# Prerequisite: the sandbox cluster needs raw block devices. k3d nodes have none,
+# so provide loop-backed ones (see docs/developer/fundament/k3d-block-devices.md):
+#
+#   just storage-disks doctor      # check the kernel Docker runs on
+#   just storage-disks attach      # creates /dev/loop0p1 .. /dev/loop2p1
+#
+# The PluginInstallation must then carry the local-development config (see
+# docs/developer/fundament/k3d-block-devices.md for what each key is for):
+#
+#   spec:
+#     config:
+#       DEV_LOOP_DEVICES: "true"
+#       MON_COUNT: "1"
+#       MGR_COUNT: "1"
+#       ALLOW_MULTIPLE_PER_NODE: "true"
+#       CEPH_IMAGE: quay.io/ceph/ceph:v19.2.5
+#
+# Then check which Disk CRs were discovered and put their names below. Disk names
+# are cluster-specific (node name + a hash of the device path), so they cannot be
+# hard-coded:
+#
 #   kubectl get disks
-#
-# The spec.disks names below MUST match Disk CR names discovered on your cluster.
-# Disk names are cluster-specific (derived from node name + device path by the
-# disk-inventory controller). Replace the placeholder below with the actual names
-# from your cluster's Disk inventory.
-#
-# Example discovery check:
-#   kubectl get disks -o wide
-#   # NAME                         NODE          SIZE          AVAILABLE
-#   # worker-0-sdb                 worker-0      107374182400  true
-#
-# NOTE: k3d nodes typically do not have spare raw (unformatted) block devices.
-# This test-resources.yaml is intended for clusters with genuine bare-metal or
-# VM nodes that have unformatted disks attached. On a plain k3d cluster the
-# StoragePool will remain in a non-Ready phase because no Disks will be discovered.
+#   # NAME                                 NODE                             SIZE          AVAILABLE
+#   # k3d-fundament-plugin-server-0-1a2b3c  k3d-fundament-plugin-server-0   21472739328   true
 apiVersion: storage.fundament.io/v1alpha1
 kind: StoragePool
 metadata:
@@ -24,5 +31,5 @@ metadata:
 spec:
   # Replace with actual Disk CR names from `kubectl get disks`:
   disks:
-    - placeholder-node-sdb
+    - placeholder-node-loop0p1
   replication: auto

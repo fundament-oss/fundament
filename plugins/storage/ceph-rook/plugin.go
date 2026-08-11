@@ -109,9 +109,9 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	//   }
 	// ----
 	if err := (&DiskInventoryReconciler{
-		Client:           mgr.GetClient(),
-		RookNamespace:    p.cfg.RookNamespace,
-		AllowLoopDevices: p.cfg.AllowLoopDevices,
+		Client:        mgr.GetClient(),
+		RookNamespace: p.cfg.RookNamespace,
+		LoopDevices:   p.cfg.DevLoopDevices,
 	}).SetupWithManager(mgr); err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("setup disk inventory reconciler: %w", pluginerrors.NewPermanent(err))

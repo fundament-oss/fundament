@@ -9,7 +9,6 @@ import (
 	"io"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -47,7 +46,7 @@ var fundamentCRDNames = []string{
 func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	// Step 1: Install the rook-ceph operator via Helm.
 	if err := helm.NewClient(p.cfg.RookNamespace).InstallFromRepo(
-		ctx, rookReleaseName, rookChart, rookRepoURL, p.cfg.RookChartVersion, RookValues(p.cfg.AllowLoopDevices),
+		ctx, rookReleaseName, rookChart, rookRepoURL, p.cfg.RookChartVersion, RookValues(p.cfg),
 	); err != nil {
 		return fmt.Errorf("install rook-ceph helm chart: %w", err)
 	}
@@ -63,7 +62,7 @@ func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	}
 
 	// Step 4: Bootstrap the CephCluster singleton.
-	if err := bootstrapCephCluster(ctx, kube, p.cfg.ClusterNamespace); err != nil {
+	if err := bootstrapCephCluster(ctx, kube, p.cfg.ClusterNamespace, p.cfg); err != nil {
 		return fmt.Errorf("bootstrap CephCluster: %w", err)
 	}
 
@@ -127,16 +126,12 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 // bootstrapCephCluster creates the singleton CephCluster if it does not exist.
 // If it already exists, it is left untouched so that spec.storage (disk
 // assignments) managed by the Task 9/10 reconciler are not overwritten.
-func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace string) error {
-	nodeCount, err := countNodes(ctx, kube)
-	if err != nil {
-		return err
-	}
-	desired := BootstrapCephCluster(namespace, nodeCount)
+func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace string, cfg Config) error {
+	desired := BootstrapCephCluster(namespace, cfg)
 
 	existing := &unstructured.Unstructured{}
 	existing.SetGroupVersionKind(desired.GroupVersionKind())
-	err = kube.Get(ctx, types.NamespacedName{Name: desired.GetName(), Namespace: desired.GetNamespace()}, existing)
+	err := kube.Get(ctx, types.NamespacedName{Name: desired.GetName(), Namespace: desired.GetNamespace()}, existing)
 	if err == nil {
 		// Already exists — do not overwrite spec.storage.
 		return nil
@@ -155,16 +150,6 @@ func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace str
 		return fmt.Errorf("create CephCluster: %w", err)
 	}
 	return nil
-}
-
-// countNodes returns the number of nodes in the cluster, used to size the mon
-// and mgr counts so the Ceph control plane schedules on small clusters.
-func countNodes(ctx context.Context, kube client.Client) (int, error) {
-	var nodes corev1.NodeList
-	if err := kube.List(ctx, &nodes); err != nil {
-		return 0, fmt.Errorf("list nodes: %w", err)
-	}
-	return len(nodes.Items), nil
 }
 
 // waitEstablished polls until every named CRD reports Established=True.
