@@ -64,18 +64,26 @@ spec:
           status:
             description: StoragePoolStatus is the observed state.
             properties:
-              capacityBytes:
-                format: int64
-                type: integer
               failureDomain:
                 type: string
               message:
                 type: string
-              osdCount:
-                type: integer
               phase:
                 type: string
+              rawCapacityBytes:
+                description: |-
+                  RawCapacityBytes is the summed size of the selected disks, before
+                  replication. Usable capacity is roughly this divided by replicas.
+                format: int64
+                type: integer
               replicas:
+                type: integer
+              selectedDiskCount:
+                description: |-
+                  SelectedDiskCount is how many of spec.disks resolved to a usable Disk.
+                  It is not the number of OSDs Ceph currently has running: Rook creates
+                  those asynchronously, and removing a disk from spec never removes its
+                  OSD (that needs a Ceph purge).
                 type: integer
               storageClassName:
                 type: string

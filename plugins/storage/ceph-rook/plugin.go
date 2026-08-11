@@ -9,7 +9,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
@@ -21,16 +20,6 @@ import (
 // Plugin is the Ceph/Rook storage plugin.
 type Plugin struct {
 	cfg Config
-	// mgr is exposed so Tasks 9/10 can register reconcilers via
-	// SetupWithManager before Start calls mgr.Start. To add a reconciler:
-	//
-	//   func (r *MyReconciler) SetupWithManager(mgr manager.Manager) error {
-	//       return ctrl.NewControllerManagedBy(mgr).For(&v1alpha1.Disk{}).Complete(r)
-	//   }
-	//
-	// and call r.SetupWithManager(p.mgr) before the blocking mgr.Start call
-	// in plugin.go Start.
-	mgr manager.Manager
 }
 
 // NewPlugin loads config and returns the plugin.
@@ -89,8 +78,8 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 		return fmt.Errorf("install: %w", pluginerrors.NewTransient(err))
 	}
 
-	// Create the controller-runtime manager. Tasks 9/10 register their
-	// reconcilers by calling SetupWithManager(p.mgr) here, before mgr.Start.
+	// Create the controller-runtime manager. Reconcilers register against it
+	// below, before the blocking mgr.Start call.
 	mgr, err := crhelper.SetupManager(scheme, &ctrl.Options{
 		// Disable the default metrics and health-probe listeners; the plugin
 		// host manages the plugin lifecycle.
@@ -101,13 +90,6 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("setup controller manager: %w", pluginerrors.NewPermanent(err))
 	}
-	p.mgr = mgr
-
-	// ---- Tasks 9/10: register reconcilers here, e.g.:
-	//   if err := (&DiskReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
-	//       return fmt.Errorf("setup disk reconciler: %w", pluginerrors.NewPermanent(err))
-	//   }
-	// ----
 	if err := (&DiskInventoryReconciler{
 		Client:        mgr.GetClient(),
 		RookNamespace: p.cfg.RookNamespace,

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -78,8 +78,10 @@ func ParseDiscoveredDevices(node string, raw string, loopDevices bool) ([]v1alph
 }
 
 // DiskName is a deterministic, DNS-1123-safe name for a (node, path) pair.
+// The digest is a naming device, not a security control; sha256 is used anyway
+// so the file needs no linter exemption for sha1.
 func DiskName(node, path string) string {
-	sum := sha1.Sum([]byte(path))
+	sum := sha256.Sum256([]byte(path))
 	short := hex.EncodeToString(sum[:])[:10]
 	base := strings.ToLower(node)
 	base = strings.Map(func(r rune) rune {

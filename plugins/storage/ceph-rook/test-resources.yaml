@@ -15,7 +15,10 @@
 #       MON_COUNT: "1"
 #       MGR_COUNT: "1"
 #       ALLOW_MULTIPLE_PER_NODE: "true"
-#       CEPH_IMAGE: quay.io/ceph/ceph:v19.2.5
+#
+# CEPH_IMAGE and ALLOW_UNSUPPORTED_CEPH already default to the pair
+# deploy/k3d/rook-smoke.sh validates, so they only need setting to test a
+# different Ceph build.
 #
 # Then check which Disk CRs were discovered and put their names below. Disk names
 # are cluster-specific (node name + a hash of the device path), so they cannot be

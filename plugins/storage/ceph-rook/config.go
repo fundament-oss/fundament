@@ -14,8 +14,15 @@ type Config struct {
 	ClusterNamespace string `env:"CLUSTER_NAMESPACE" envDefault:"rook-ceph"`
 
 	// Reef (v18.x) arm64 images segfault on startup; v19+ is required on Apple
-	// Silicon.
-	CephImage string `env:"CEPH_IMAGE" envDefault:"quay.io/ceph/ceph:v19.2.5"`
+	// Silicon. Kept in step with deploy/k3d/rook-smoke.sh, which is the script
+	// that proves the environment works — a plugin pinned to a different Ceph
+	// build than the one validated there tests nothing.
+	CephImage string `env:"CEPH_IMAGE" envDefault:"quay.io/ceph/ceph:v19.2.3"`
+
+	// AllowUnsupportedCeph sets CephCluster.spec.cephVersion.allowUnsupported.
+	// Rook v1.16 refuses a Ceph release outside its supported table, and v19 on
+	// arm64 is exactly that pairing; rook-smoke.sh sets the same flag.
+	AllowUnsupportedCeph bool `env:"ALLOW_UNSUPPORTED_CEPH" envDefault:"true"`
 
 	// Quorum sizing. A single-node cluster needs count 1 and
 	// AllowMultiplePerNode, or mons never reach quorum.

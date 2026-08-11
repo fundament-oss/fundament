@@ -7,17 +7,14 @@ import (
 	"embed"
 	"fmt"
 	"io"
-	"time"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/crd"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/helm"
 )
 
@@ -29,7 +26,9 @@ const (
 	rookChart       = "rook-ceph"
 	rookRepoURL     = "https://charts.rook.io/release"
 
-	cephClusterFieldOwner = "fundament-storage-plugin"
+	// fieldOwner identifies this plugin in server-side-apply managedFields for
+	// everything it applies, not just the CephCluster.
+	fieldOwner = "fundament-storage-plugin"
 )
 
 var fundamentCRDNames = []string{
@@ -57,7 +56,7 @@ func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	}
 
 	// Step 3: Wait for the CRDs to be established.
-	if err := waitEstablished(ctx, kube, fundamentCRDNames); err != nil {
+	if err := crd.WaitEstablished(ctx, kube, fundamentCRDNames); err != nil {
 		return fmt.Errorf("wait for CRDs to be established: %w", err)
 	}
 
@@ -116,7 +115,7 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 			continue
 		}
 
-		if err := kube.Apply(ctx, client.ApplyConfigurationFromUnstructured(obj), client.ForceOwnership, client.FieldOwner(cephClusterFieldOwner)); err != nil {
+		if err := kube.Apply(ctx, client.ApplyConfigurationFromUnstructured(obj), client.ForceOwnership, client.FieldOwner(fieldOwner)); err != nil {
 			return fmt.Errorf("server-side apply %s/%s: %w", obj.GetKind(), obj.GetName(), err)
 		}
 	}
@@ -124,8 +123,9 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 }
 
 // bootstrapCephCluster creates the singleton CephCluster if it does not exist.
-// If it already exists, it is left untouched so that spec.storage (disk
-// assignments) managed by the Task 9/10 reconciler are not overwritten.
+// If it already exists, it is left untouched so that spec.storage (the disk
+// assignments StoragePoolReconciler maintains) is not overwritten — install
+// runs on every plugin start, not just the first.
 func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace string, cfg Config) error {
 	desired := BootstrapCephCluster(namespace, cfg)
 
@@ -148,36 +148,6 @@ func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace str
 			return nil // created concurrently — do not touch its spec.storage
 		}
 		return fmt.Errorf("create CephCluster: %w", err)
-	}
-	return nil
-}
-
-// waitEstablished polls until every named CRD reports Established=True.
-// Copied from plugins/openfsc/installer.go.
-func waitEstablished(ctx context.Context, c client.Client, names []string) error {
-	err := wait.PollUntilContextTimeout(ctx, 2*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
-		for _, name := range names {
-			var crd apiextensionsv1.CustomResourceDefinition
-			if err := c.Get(ctx, types.NamespacedName{Name: name}, &crd); err != nil {
-				if apierrors.IsNotFound(err) || apimeta.IsNoMatchError(err) {
-					return false, nil // not yet visible; keep polling
-				}
-				return false, err
-			}
-			established := false
-			for _, cond := range crd.Status.Conditions {
-				if cond.Type == apiextensionsv1.Established && cond.Status == apiextensionsv1.ConditionTrue {
-					established = true
-				}
-			}
-			if !established {
-				return false, nil
-			}
-		}
-		return true, nil
-	})
-	if err != nil {
-		return fmt.Errorf("wait for established CRDs: %w", err)
 	}
 	return nil
 }

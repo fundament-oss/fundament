@@ -10,10 +10,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
@@ -29,20 +32,54 @@ type DiskInventoryReconciler struct {
 }
 
 // SetupWithManager registers the reconciler with the controller-runtime manager.
-// It watches ConfigMaps in all namespaces but filters to only those in the Rook
-// namespace with the label app=rook-discover.
+//
+// The ConfigMap watch is filtered to the Rook namespace's discovery ConfigMaps.
+// StoragePools are watched too, mapped back to every discovery ConfigMap: a pool
+// being created or deleted changes which disks are claimed, and claimedBy is
+// what the console's disk picker filters on. Without this watch a disk stays
+// "unclaimed" in the UI until the discovery daemon happens to rewrite its
+// ConfigMap (default interval: 60m), long enough for an operator to hand the
+// same disk to a second pool.
 func (r *DiskInventoryReconciler) SetupWithManager(mgr manager.Manager) error {
 	discoverPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if obj.GetNamespace() != r.RookNamespace {
 			return false
 		}
-		return obj.GetLabels()["app"] == "rook-discover"
+		return obj.GetLabels()["app"] == discoverAppLabel
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.ConfigMap{}).
-		WithEventFilter(discoverPredicate).
+		For(&corev1.ConfigMap{}, builder.WithPredicates(discoverPredicate)).
+		Watches(
+			&v1alpha1.StoragePool{},
+			handler.EnqueueRequestsFromMapFunc(r.poolToDiscoveryConfigMaps),
+		).
 		Complete(r)
+}
+
+// discoverAppLabel is the label rook-discover puts on the per-node ConfigMaps
+// it writes its probe results to.
+const discoverAppLabel = "rook-discover"
+
+// poolToDiscoveryConfigMaps maps a StoragePool event onto every discovery
+// ConfigMap, so each node's Disk CRs get their claimedBy recomputed.
+func (r *DiskInventoryReconciler) poolToDiscoveryConfigMaps(ctx context.Context, _ client.Object) []reconcile.Request {
+	var cms corev1.ConfigMapList
+	err := r.Client.List(ctx, &cms,
+		client.InNamespace(r.RookNamespace),
+		client.MatchingLabels{"app": discoverAppLabel},
+	)
+	if err != nil {
+		// Return empty; the reconciler will retry on the next event.
+		return nil
+	}
+	reqs := make([]reconcile.Request, 0, len(cms.Items))
+	for _, cm := range cms.Items {
+		reqs = append(reqs, reconcile.Request{
+			NamespacedName: types.NamespacedName{Namespace: cm.Namespace, Name: cm.Name},
+		})
+	}
+	return reqs
 }
 
 // Reconcile processes a Rook device-discovery ConfigMap and upserts Disk CRs.
@@ -99,21 +136,15 @@ func nodeFromConfigMap(name string, labels map[string]string) string {
 }
 
 // buildClaimedByIndex lists all StoragePools and returns a map from disk name
-// to the name of the first StoragePool that references it.
+// to the StoragePool entitled to it. Precedence when several pools list the
+// same disk is decided by BuildClaimIndex, so the inventory and the StoragePool
+// reconciler always agree on who owns what.
 func (r *DiskInventoryReconciler) buildClaimedByIndex(ctx context.Context) (map[string]string, error) {
 	var pools v1alpha1.StoragePoolList
 	if err := r.Client.List(ctx, &pools); err != nil {
 		return nil, fmt.Errorf("list StoragePools: %w", err)
 	}
-	index := make(map[string]string)
-	for _, pool := range pools.Items {
-		for _, diskName := range pool.Spec.Disks {
-			if _, alreadyClaimed := index[diskName]; !alreadyClaimed {
-				index[diskName] = pool.Name
-			}
-		}
-	}
-	return index, nil
+	return BuildClaimIndex(pools.Items), nil
 }
 
 // upsertDisk creates or updates the Disk object and then writes the status via
@@ -137,6 +168,9 @@ func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, s
 	var current v1alpha1.Disk
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, &current); err != nil {
 		return fmt.Errorf("get Disk %q for status update: %w", name, err)
+	}
+	if current.Status == st {
+		return nil // nothing changed; skip the write
 	}
 	current.Status = st
 	if err := r.Client.Status().Update(ctx, &current); err != nil {

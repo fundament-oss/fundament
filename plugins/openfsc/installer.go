@@ -5,17 +5,14 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	openfscv1 "github.com/fundament-oss/fundament/openfsc-operator/api/v1"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
+	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/crd"
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime/helpers/helm"
 )
 
@@ -67,7 +64,7 @@ func (i *installer) install(ctx context.Context, host pluginruntime.Host) error 
 	if err := i.installOperator(ctx); err != nil {
 		return fmt.Errorf("install openfsc-operator: %w", err)
 	}
-	if err := waitEstablished(ctx, i.kube, crdNames); err != nil {
+	if err := crd.WaitEstablished(ctx, i.kube, crdNames); err != nil {
 		return fmt.Errorf("wait for CRDs to be established: %w", err)
 	}
 	return nil
@@ -111,34 +108,6 @@ func splitImageRef(ref string) (repository, tag string) {
 		return ref, ""
 	}
 	return ref[:idx], ref[idx+1:]
-}
-
-func waitEstablished(ctx context.Context, c client.Client, names []string) error {
-	err := wait.PollUntilContextTimeout(ctx, 2*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
-		for _, name := range names {
-			var crd apiextensionsv1.CustomResourceDefinition
-			if err := c.Get(ctx, types.NamespacedName{Name: name}, &crd); err != nil {
-				if apierrors.IsNotFound(err) || apimeta.IsNoMatchError(err) {
-					return false, nil // not yet visible; keep polling
-				}
-				return false, err
-			}
-			established := false
-			for _, cond := range crd.Status.Conditions {
-				if cond.Type == apiextensionsv1.Established && cond.Status == apiextensionsv1.ConditionTrue {
-					established = true
-				}
-			}
-			if !established {
-				return false, nil
-			}
-		}
-		return true, nil
-	})
-	if err != nil {
-		return fmt.Errorf("wait for established CRDs: %w", err)
-	}
-	return nil
 }
 
 // uninstall removes the openfsc-operator release, but refuses while

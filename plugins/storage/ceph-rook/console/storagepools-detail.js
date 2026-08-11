@@ -1,4 +1,4 @@
-import { loadSdk, escapeHtml, humanizeBytes, emptyRow, errorRow } from './_shared.js';
+import { loadSdk, escapeHtml, humanizeBytes, renderDefList } from './_shared.js';
 
 await loadSdk();
 const ctx = await fundament.init;
@@ -21,48 +21,36 @@ if (!ctx.resource?.name) {
     const status = item.status ?? {};
     const spec = item.spec ?? {};
 
-    // Render status information.
-    const statusHtml = `
+    const pairs = [
+      ['Phase', status.phase ?? 'Unknown'],
+      ['Storage Class', status.storageClassName ?? '—'],
+      ['Replicas', String(status.replicas ?? '—')],
+      ['Failure Domain', status.failureDomain ?? '—'],
+      // Both counts describe the pool's selection, not what Ceph currently has
+      // running — the labels say so rather than implying live cluster state.
+      ['Selected disks', String(status.selectedDiskCount ?? '—')],
+      ['Raw capacity (before replication)', humanizeBytes(status.rawCapacityBytes ?? 0)],
+    ];
+    if (status.replicas > 0 && status.rawCapacityBytes > 0) {
+      pairs.push([
+        'Usable capacity (approx.)',
+        humanizeBytes(Math.floor(status.rawCapacityBytes / status.replicas)),
+      ]);
+    }
+    if (status.message) pairs.push(['Message', status.message]);
+
+    const disks =
+      spec.disks && spec.disks.length > 0
+        ? `<ul>${spec.disks.map((d) => `<li>${escapeHtml(d)}</li>`).join('')}</ul>`
+        : '<p class="plugin-text">No disks selected.</p>';
+
+    content.innerHTML = `
       <h2 class="plugin-heading">Status</h2>
-      <div style="margin-bottom: 1.5rem;">
-        <div style="margin-bottom: 0.75rem;">
-          <strong>Phase:</strong> <span class="plugin-badge" data-phase="${escapeHtml(status.phase?.toLowerCase() ?? 'unknown')}">${escapeHtml(status.phase ?? 'Unknown')}</span>
-        </div>
-        <div style="margin-bottom: 0.75rem;">
-          <strong>Storage Class:</strong> ${escapeHtml(status.storageClassName ?? '—')}
-        </div>
-        <div style="margin-bottom: 0.75rem;">
-          <strong>Replicas:</strong> ${escapeHtml(String(status.replicas ?? '—'))}
-        </div>
-        <div style="margin-bottom: 0.75rem;">
-          <strong>Failure Domain:</strong> ${escapeHtml(status.failureDomain ?? '—')}
-        </div>
-        <div style="margin-bottom: 0.75rem;">
-          <strong>OSD Count:</strong> ${escapeHtml(String(status.osdCount ?? '—'))}
-        </div>
-        <div style="margin-bottom: 0.75rem;">
-          <strong>Capacity:</strong> ${escapeHtml(humanizeBytes(status.capacityBytes ?? 0))}
-        </div>
-        ${status.message ? `<div style="margin-bottom: 0.75rem;"><strong>Message:</strong> ${escapeHtml(status.message)}</div>` : ''}
-      </div>
-    `;
-
-    // Render selected disks.
-    const disksHtml = `
+      ${renderDefList(pairs)}
       <h2 class="plugin-heading">Selected Disks</h2>
-      <div style="margin-bottom: 1.5rem;">
-        ${
-          spec.disks && spec.disks.length > 0
-            ? `<ul style="list-style: disc; margin-left: 1.5rem;">
-                ${spec.disks.map((disk) => `<li>${escapeHtml(disk)}</li>`).join('')}
-              </ul>`
-            : '<p class="plugin-text">No disks selected.</p>'
-        }
-      </div>
+      ${disks}
     `;
-
-    content.innerHTML = statusHtml + disksHtml;
   } catch (err) {
-    content.innerHTML = `<div class="plugin-text">${escapeHtml(`Failed to load: ${err?.message ?? err}`)}</div>`;
+    content.innerHTML = `<div class="plugin-error">${escapeHtml(`Failed to load: ${err?.message ?? err}`)}</div>`;
   }
 }

@@ -13,14 +13,29 @@ type StoragePoolSpec struct {
 	Replication string `json:"replication,omitempty"`
 }
 
+// Pool phases. Provisioning and Ready track the backing CephBlockPool; Degraded
+// means this pool cannot be reconciled without operator action (a disk claimed
+// by another pool, or a derived object owned by someone else).
+const (
+	PhaseProvisioning = "Provisioning"
+	PhaseReady        = "Ready"
+	PhaseDegraded     = "Degraded"
+)
+
 // StoragePoolStatus is the observed state.
 type StoragePoolStatus struct {
 	Phase            string `json:"phase,omitempty"`
 	StorageClassName string `json:"storageClassName,omitempty"`
 	Replicas         int    `json:"replicas,omitempty"`
 	FailureDomain    string `json:"failureDomain,omitempty"`
-	OSDCount         int    `json:"osdCount,omitempty"`
-	CapacityBytes    int64  `json:"capacityBytes,omitempty"`
+	// SelectedDiskCount is how many of spec.disks resolved to a usable Disk.
+	// It is not the number of OSDs Ceph currently has running: Rook creates
+	// those asynchronously, and removing a disk from spec never removes its
+	// OSD (that needs a Ceph purge).
+	SelectedDiskCount int `json:"selectedDiskCount,omitempty"`
+	// RawCapacityBytes is the summed size of the selected disks, before
+	// replication. Usable capacity is roughly this divided by replicas.
+	RawCapacityBytes int64  `json:"rawCapacityBytes,omitempty"`
 	Message          string `json:"message,omitempty"`
 }
 

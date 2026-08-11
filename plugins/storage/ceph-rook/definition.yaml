@@ -118,6 +118,7 @@ spec:
     StoragePool:
       list: storagepools-list.html
       detail: storagepools-detail.html
+      create: storagepools-create.html
     Disk:
       list: disks-list.html
   uiHints:

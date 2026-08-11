@@ -16,32 +16,59 @@ The ceph-rook plugin provides block storage for in-cluster workloads by installi
 
 ## File structure
 
+Decision logic lives in its own file next to its test, so the parts worth getting
+right (replication, discovery parsing, claim precedence, rendering) are unit
+testable without a cluster. The reconcilers are glue over those functions.
+
 ```
 plugins/storage/ceph-rook/
-├── main.go             # Entry point: load definition, call pluginruntime.Run()
-├── plugin.go           # Plugin implementation (Start, Install, Reconcile, etc.)
-├── console.go          # Embeds console/ directory as http.FileSystem
-├── config.go           # Configuration loader
-├── definition.yaml     # Metadata, permissions, menu, customComponents, allowedResources
-├── install.go          # Helm install and CephCluster bootstrap logic
+├── main.go                  # Entry point: NewPlugin, call pluginruntime.Run()
+├── plugin.go                # Start: scheme, install, manager, reconciler registration
+├── console.go               # Embeds console/ as http.FileSystem (ConsoleProvider)
+├── config.go                # FUNP_-prefixed environment configuration
+├── install.go               # Helm install, CRD apply, CephCluster bootstrap
+├── definition.yaml          # Metadata, permissions, menu, customComponents, allowedResources
 ├── api/v1alpha1/
-│   ├── disk_types.go      # Disk CR: discovered block device inventory
-│   ├── storagepool_types.go  # StoragePool CR: operator's desired pool
-│   └── groupversion_info.go
-├── controllers/
-│   ├── disk_inventory_reconciler.go  # Publishes Disk CRs from Rook discovery
-│   └── storagepool_reconciler.go     # Manages CephBlockPool and StorageClass
-├── crds/                # Generated CRD YAML files
-├── console/
-│   ├── _shared.js              # SDK loader + shared helpers
-│   ├── disks-list.html
-│   └── storagepools-list.html
-│   └── storagepools-detail.html
-├── plugin_test.go      # Unit tests
-└── Dockerfile          # Multi-stage build (Go build + alpine with helm)
+│   ├── disk_types.go        # Disk CR: discovered block device inventory
+│   ├── storagepool_types.go # StoragePool CR: operator's desired pool
+│   ├── groupversion_info.go # Scheme registration + go:generate directives
+│   └── zz_generated.deepcopy.go
+├── crds/                    # Generated CRD YAML, embedded and applied at install
+├── diskinventory_controller.go  # Rook discovery ConfigMaps -> Disk CRs
+├── storagepool_controller.go    # StoragePool -> CephCluster OSDs, CephBlockPool, StorageClass
+├── claims.go                # Derived names + which pool owns a contested disk
+├── replication.go           # "auto" -> replica count and CRUSH failure domain
+├── discovery.go             # Parses Rook's device JSON; deterministic Disk names
+├── cephcluster.go           # Disk statuses -> spec.storage.nodes
+├── rookvalues.go            # Helm values + the CephCluster bootstrap object
+├── blockpool.go             # Renders CephBlockPool
+├── storageclass.go          # Renders the RBD StorageClass
+├── console/                 # Hand-written console pages (no build step)
+│   ├── _shared.js           # SDK loader, escaping, navigation helpers
+│   ├── disks-list.{html,js}
+│   ├── storagepools-list.{html,js}
+│   ├── storagepools-detail.{html,js}
+│   └── storagepools-create.{html,js}
+├── test-resources.yaml      # Sample StoragePool for sandbox verification
+└── Dockerfile               # Multi-stage build (Go build + alpine with helm)
 ```
 
-The Disk and StoragePool CRs are defined in `api/v1alpha1/`. `_shared.js` contains the SDK loader (`loadSdk()` reads `?host=` from the query string and injects the `plugin-sdk.js` / `.css` tags) plus rendering helpers.
+Every `*.go` above has a matching `*_test.go`.
+
+### Console pages
+
+`console.go` is what makes the pages reachable: `pluginruntime.Run` only serves
+`/console/` for a plugin that implements `ConsoleProvider`, and each page must
+also be named under `spec.customComponents` in `definition.yaml` or the host has
+no route to it. `definition_test.go` asserts both directions — every referenced
+file exists, and every `.html` file is referenced.
+
+Pages are served under the plugin CSP (`script-src 'self'; style-src 'self'`,
+no `unsafe-inline`), so they carry **no inline `onclick` handlers and no inline
+`style` attributes** — both are blocked. Events are wired with
+`addEventListener` and styling comes from the `.plugin-*` classes in
+`plugin-sdk.css`. Navigation goes through `_shared.js`'s `navigateToDetail()` /
+`navigateBack()`, which post to `window.fundament.parentOrigin` rather than `*`.
 
 ## Disk → StoragePool → StorageClass flow
 
@@ -54,6 +81,28 @@ The plugin follows a three-step workflow:
 3. **Storage Class** (`CephBlockPool` + `StorageClass`): For each `StoragePool`, the plugin:
    - Creates a `CephBlockPool` in the Rook namespace with the selected disks added as OSDs to the singleton `CephCluster`
    - Creates a `StorageClass` that in-cluster workloads can reference in their `PersistentVolumeClaim` spec, enabling dynamic RBD provisioning
+
+### Derived object names
+
+Both derived objects are named `ceph-<pool>`, not `<pool>`. A `StoragePool` name is
+operator-chosen and a `StorageClass` is cluster-scoped, so an unprefixed name
+would collide with whatever else is on the cluster — a pool called `local-path`
+would otherwise take over k3d's default `StorageClass` and garbage-collect it
+when the pool was deleted. `status.storageClassName` reports the real name, which
+is what a `PersistentVolumeClaim` should reference.
+
+The prefix reduces collisions; ownership is what prevents damage. Before writing
+either object the reconciler checks for a controller reference back to this pool,
+and refuses to adopt anything else — the pool goes `Degraded` with the conflicting
+object named, rather than silently taking it over.
+
+### Contested disks
+
+Nothing stops two `StoragePool`s from listing the same disk. When that happens the
+older pool keeps it (ties break on name), the younger pool skips it and says so in
+`status.message`, and the disk is counted once. The same precedence populates
+`Disk.status.claimedBy`, which is what the console's disk picker filters on, so the
+inventory and the reconciler never disagree about who owns what.
 
 ## Single CephCluster, multiple StoragePool model
 
@@ -68,14 +117,27 @@ This design supports:
 
 The `StoragePool` spec includes a `replication` field that controls how many copies Ceph maintains:
 
-- `"auto"` (default): Automatically selects the optimal replica count based on the number of nodes contributing disks:
-  - **2+ nodes**: Uses `host` failure domain (replicas equal the number of contributing nodes), tolerating a single node failure.
-  - **1 node**: Uses `osd` failure domain (replicas = 2), tolerating a single OSD/disk failure.
-  - If this results in more replicas than available OSDs, the pool enters a degraded state until sufficient disks are added.
+- `"auto"` (default): derives the replica count from the number of nodes contributing disks, capped at 3 — `min(3, nodes)`. Two nodes give 2 replicas, five nodes still give 3.
 
-- `"1"`, `"2"`, `"3"`: Explicit replica count. Operators may set this to override auto behavior (e.g., to sacrifice redundancy for capacity on test clusters).
+- `"1"`, `"2"`, `"3"`: explicit replica count, e.g. to sacrifice redundancy for capacity on a test cluster.
 
-The resulting replica count and failure domain are recorded in the `StoragePool` status.
+An explicit count is **clamped down** to the number of contributing nodes rather than leaving the pool unsatisfiable: asking for 3 replicas across 2 nodes yields 2, and the reason is recorded in `status.message`. The pool provisions either way; it does not sit degraded waiting for disks that may never arrive.
+
+The failure domain follows from the result: `host` when the pool ends up with 2 or more replicas across 2 or more nodes, otherwise `osd`. A single-node cluster therefore still provisions — with `osd` domain and, at 1 replica, `requireSafeReplicaSize: false`, which Ceph needs to accept a size-1 pool at all.
+
+The resulting replica count, failure domain and any clamping message are recorded in the `StoragePool` status.
+
+### Status fields
+
+`status` describes the pool's *selection*, not live Ceph state:
+
+- `selectedDiskCount` — how many of `spec.disks` resolved to a usable `Disk`. Not the number of OSDs Ceph is running; Rook creates those asynchronously.
+- `rawCapacityBytes` — the summed size of those disks, **before** replication. Usable capacity is roughly this divided by `replicas`; the console shows both.
+- `phase` — `Provisioning` until the backing `CephBlockPool` reports `Ready`, or `Degraded` when the pool cannot be reconciled without operator action (see below).
+
+### Removing disks
+
+Taking a disk out of `spec.disks` removes it from the `CephCluster`'s device list, but **does not remove the OSD**: Rook needs an explicit purge job for that. Deleting a `StoragePool` behaves the same way. Treat disk removal as a two-step operation — update the pool, then purge the OSD through Ceph.
 
 ## Why it needs cluster-admin-equivalent RBAC
 
@@ -150,15 +212,25 @@ Ensure these prerequisites are in place on all nodes before creating a `StorageP
               ▼
   Reconcile loops (event-driven)
        │
-       ├─ DiskInventoryReconciler: reacts to Disk/ConfigMap changes
-       ├─   → publish/update Disk CRs
+       ├─ DiskInventoryReconciler: reacts to rook-discover ConfigMaps
+       │   │                       AND to StoragePool changes
+       │   ├─ publish/update Disk CRs from the probed devices
+       │   ├─ recompute claimedBy from the current pools
+       │   └─ mark vanished disks unavailable (soft delete; never Delete)
        │
        └─ StoragePoolReconciler: reacts to StoragePool/Disk changes
-           └─ For each StoragePool:
-               ├─ Fold selected disks into CephCluster OSDs
-               ├─ Create CephBlockPool
-               ├─ Create StorageClass
-               ├─ Update StoragePool status (phase, replicas, capacity)
-               └─ Re-checks every 30 s while phase is Provisioning
+           ├─ On delete: recompute the CephCluster union without this pool
+           │             (owner refs GC the CephBlockPool and StorageClass)
+           └─ Otherwise, for the pool:
+               ├─ Resolve spec.disks, skipping missing and contested disks
+               ├─ Fold every live pool's disks into CephCluster OSDs (deduped)
+               ├─ Create/update CephBlockPool  ceph-<pool>  (refuse if not ours)
+               ├─ Create StorageClass          ceph-<pool>  (refuse if not ours)
+               ├─ Update status (phase, replicas, selected disks, raw capacity)
+               └─ Re-check every 30 s while phase is Provisioning
                   (until CephBlockPool reports Ready)
 ```
+
+A reconcile that fails writes `phase: Degraded` with the cause in
+`status.message` before returning the error, so the reason shows up in the
+console rather than only in the plugin's logs.

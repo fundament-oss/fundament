@@ -1,9 +1,20 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
 func TestNodeFromConfigMap(t *testing.T) {
@@ -51,4 +62,103 @@ func TestNodeFromConfigMap(t *testing.T) {
 			assert.Equal(t, tc.want, got)
 		})
 	}
+}
+
+// discoveryConfigMap builds the ConfigMap rook-discover writes per node.
+func discoveryConfigMap(t *testing.T, node string, devices ...rawDevice) *corev1.ConfigMap {
+	t.Helper()
+	raw, err := json.Marshal(devices)
+	require.NoError(t, err)
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "local-device-" + node,
+			Namespace: testNamespace,
+			Labels:    map[string]string{"app": discoverAppLabel, "rook.io/node": node},
+		},
+		Data: map[string]string{"devices": string(raw)},
+	}
+}
+
+func reconcileDiscovery(t *testing.T, r *DiskInventoryReconciler, node string) error {
+	t.Helper()
+	_, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Namespace: testNamespace, Name: "local-device-" + node},
+	})
+	return err
+}
+
+func getDisk(t *testing.T, c client.Client, name string) *v1alpha1.Disk {
+	t.Helper()
+	var disk v1alpha1.Disk
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: name}, &disk))
+	return &disk
+}
+
+// claimedBy is what the console's disk picker filters on. It has to reflect a
+// pool created a moment ago, not wait for rook-discover's next sweep (60m by
+// default) — otherwise an operator can hand the same disk to a second pool.
+func TestDiskInventorySetsClaimedByFromPools(t *testing.T) {
+	t.Parallel()
+	node := "node-a"
+	cm := discoveryConfigMap(t, node, rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true})
+	diskName := DiskName(node, "/dev/sdb")
+
+	c := newFakeClient(t, cm)
+	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	disk := getDisk(t, c, diskName)
+	assert.True(t, disk.Status.Available)
+	assert.Empty(t, disk.Status.ClaimedBy, "no pool exists yet")
+
+	// A pool takes the disk; the next reconcile must reflect the claim.
+	require.NoError(t, c.Create(context.Background(), testPool("pool", time.Now(), diskName)))
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	assert.Equal(t, "pool", getDisk(t, c, diskName).Status.ClaimedBy)
+}
+
+// The StoragePool watch exists so a pool event reaches every node's ConfigMap.
+func TestPoolToDiscoveryConfigMapsCoversEveryNode(t *testing.T) {
+	t.Parallel()
+	c := newFakeClient(t,
+		discoveryConfigMap(t, "node-a", rawDevice{Name: "sdb", Type: "disk", Empty: true}),
+		discoveryConfigMap(t, "node-b", rawDevice{Name: "sdb", Type: "disk", Empty: true}),
+		// Not a discovery ConfigMap: must not be enqueued.
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "unrelated", Namespace: testNamespace}},
+	)
+	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
+
+	reqs := r.poolToDiscoveryConfigMaps(context.Background(), testPool("pool", time.Now()))
+
+	names := make([]string, 0, len(reqs))
+	for _, req := range reqs {
+		names = append(names, req.Name)
+	}
+	assert.ElementsMatch(t, []string{"local-device-node-a", "local-device-node-b"}, names)
+}
+
+// A disk that disappears from discovery is marked unavailable, never deleted:
+// repo policy is soft deletes only.
+func TestDiskInventorySoftDeletesVanishedDisks(t *testing.T) {
+	t.Parallel()
+	node := "node-a"
+	diskName := DiskName(node, "/dev/sdb")
+
+	c := newFakeClient(t, discoveryConfigMap(t, node,
+		rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true}))
+	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	require.True(t, getDisk(t, c, diskName).Status.Available)
+
+	// The device stops being reported.
+	var cm corev1.ConfigMap
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "local-device-" + node}, &cm))
+	cm.Data["devices"] = "[]"
+	require.NoError(t, c.Update(context.Background(), &cm))
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	disk := getDisk(t, c, diskName)
+	assert.False(t, disk.Status.Available, "vanished disks are marked unavailable")
 }
