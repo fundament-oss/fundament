@@ -197,6 +197,10 @@ dexDcim:
       hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
       username: Grace
       userID: "019d0000-1000-7000-8000-000000000007"
+    - email: platform-admin@fundament.io
+      hash: "$2y$10$KdEtpACqX8Jh0AYF2n1sfeySkYkG8hRK6Tmn85/VpvaVVPgxL3Hsi"
+      username: Platform Admin
+      userID: "019b4000-1000-7000-8000-000000000008"
 
 dcimAuthnApi:
   enabled: true

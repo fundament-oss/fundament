@@ -215,8 +215,38 @@ status() {
         || { warn "toolbox not ready; pod status instead"; "${KUBECTL[@]}" -n "$NS" get pod; }
 }
 
+# Mounting CephFS needs the 'ceph' kernel module; mapping RBD needs 'rbd'. A
+# kernel can ship one without the other -- OrbStack has rbd but not ceph -- and
+# bundling both into one pod then fails the whole run over a limitation that
+# does not touch block storage at all. Since block is what the ceph-rook plugin
+# provides, CephFS is dropped rather than allowed to mask an RBD result.
+cephfs_supported() {
+    CLUSTER="$CLUSTER" "$HERE"/storage-disks.sh has-module ceph
+}
+
 smoke() {
-    log "provisioning an RBD and a CephFS volume, then verifying what was written"
+    local with_cephfs=1
+    cephfs_supported || with_cephfs=0
+
+    if [ "$with_cephfs" = 1 ]; then
+        log "provisioning an RBD and a CephFS volume, then verifying what was written"
+        "${KUBECTL[@]}" apply -f - <<'YAML'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rook-smoke-cephfs
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: rook-cephfs
+  resources: { requests: { storage: 1Gi } }
+YAML
+    else
+        warn "no 'ceph' kernel module on the Docker host: CephFS cannot mount here.
+      Testing RBD only. Block storage -- all the ceph-rook plugin provides -- is
+      unaffected, so this is not a failure of the environment."
+        log "provisioning an RBD volume, then verifying what was written"
+    fi
+
     "${KUBECTL[@]}" apply -f - <<'YAML'
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -226,16 +256,22 @@ spec:
   accessModes: [ReadWriteOnce]
   storageClassName: rook-ceph-block
   resources: { requests: { storage: 1Gi } }
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: rook-smoke-cephfs
-spec:
-  accessModes: [ReadWriteMany]
-  storageClassName: rook-cephfs
-  resources: { requests: { storage: 1Gi } }
----
+YAML
+
+    # The volume set is built here rather than in the container so a missing
+    # CephFS never reaches the pod spec at all.
+    local targets='/rbd' mounts volumes
+    mounts='        - { name: rbd, mountPath: /rbd }'
+    volumes='    - { name: rbd, persistentVolumeClaim: { claimName: rook-smoke-rbd } }'
+    if [ "$with_cephfs" = 1 ]; then
+        targets='/rbd /cephfs'
+        mounts="${mounts}
+        - { name: cephfs, mountPath: /cephfs }"
+        volumes="${volumes}
+    - { name: cephfs, persistentVolumeClaim: { claimName: rook-smoke-cephfs } }"
+    fi
+
+    "${KUBECTL[@]}" apply -f - <<YAML
 apiVersion: v1
 kind: Pod
 metadata:
@@ -248,21 +284,19 @@ spec:
       command: ["sh","-c"]
       args:
         - |
-          for v in /rbd /cephfs; do
-            dd if=/dev/urandom of=$v/data.bin bs=1M count=64 2>/dev/null
-            sha256sum $v/data.bin | cut -d' ' -f1 > $v/data.sha256
+          for v in $targets; do
+            dd if=/dev/urandom of=\$v/data.bin bs=1M count=64 2>/dev/null
+            sha256sum \$v/data.bin | cut -d' ' -f1 > \$v/data.sha256
             sync
-            want=$(cat $v/data.sha256); have=$(sha256sum $v/data.bin | cut -d' ' -f1)
-            [ "$want" = "$have" ] || { echo "MISMATCH on $v"; exit 1; }
-            df -h $v | tail -1
+            want=\$(cat \$v/data.sha256); have=\$(sha256sum \$v/data.bin | cut -d' ' -f1)
+            [ "\$want" = "\$have" ] || { echo "MISMATCH on \$v"; exit 1; }
+            df -h \$v | tail -1
           done
           echo SMOKE-OK
       volumeMounts:
-        - { name: rbd, mountPath: /rbd }
-        - { name: cephfs, mountPath: /cephfs }
+$mounts
   volumes:
-    - { name: rbd, persistentVolumeClaim: { claimName: rook-smoke-rbd } }
-    - { name: cephfs, persistentVolumeClaim: { claimName: rook-smoke-cephfs } }
+$volumes
 YAML
     # The pod runs to completion, so it never reports Ready.
     if ! "${KUBECTL[@]}" wait --for=jsonpath='{.status.phase}'=Succeeded \
@@ -360,25 +394,44 @@ unfinalize() {
         -p '{"metadata":{"finalizers":[]}}' >/dev/null 2>&1 || true
 }
 
+# Deletes every instance of a namespaced Rook kind, clearing the finalizer when
+# the delete does not complete. `get` fails when the CRD is absent -- a second
+# run, or a run after `up` failed before helm installed it -- and pipefail would
+# abort the teardown, hence the guards.
+delete_rook_kind() {
+    local kind="$1" r
+    "${KUBECTL[@]}" -n "$NS" get "$kind" -o name 2>/dev/null | while read -r r; do
+        [ -n "$r" ] || continue
+        "${KUBECTL[@]}" -n "$NS" delete "$r" --ignore-not-found --timeout=1m || unfinalize "$r"
+    done || true
+}
+
 # The CephCluster must go before the operator, or Rook's cleanup job never runs.
 # Rook's finalizers are cleared by the operator, so anything still holding one
-# once the operator is gone strands the namespace in Terminating.
+# once the operator is gone strands the namespace in Terminating -- with no way
+# back, because the thing that clears finalizers is the thing that just left.
+#
+# Every kind `up` creates has to be listed here. A CephFilesystem was missed once
+# and the namespace hung forever, which then blocks installing the ceph-rook
+# plugin: helm cannot create its release secret in a terminating namespace.
 down() {
     "${KUBECTL[@]}" delete deploy/rook-soak --ignore-not-found >/dev/null 2>&1 || true
     "${KUBECTL[@]}" delete pod/rook-smoke --ignore-not-found >/dev/null 2>&1 || true
     "${KUBECTL[@]}" delete pvc/rook-smoke-rbd pvc/rook-smoke-cephfs pvc/rook-soak-rbd pvc/rook-soak-cephfs \
         --ignore-not-found >/dev/null 2>&1 || true
     "${KUBECTL[@]}" delete storageclass rook-ceph-block rook-cephfs --ignore-not-found
+
+    # Both go before the CephCluster: they are its tenants, and Rook expects to
+    # tear them down while the cluster is still serving.
+    log "deleting the Rook CRs while the operator can still finalize them"
+    delete_rook_kind cephfilesystem
+    delete_rook_kind cephblockpool
+
     log "deleting the CephCluster so Rook can clean up"
     if ! "${KUBECTL[@]}" -n "$NS" delete cephcluster rook-ceph --ignore-not-found --timeout=2m; then
         warn "delete timed out (no OSD ever came up?), clearing the finalizer"
         unfinalize cephcluster/rook-ceph
     fi
-    # `get` fails when the CRD is absent -- a second run, or a run after `up`
-    # failed before helm installed it -- and pipefail would abort the teardown.
-    "${KUBECTL[@]}" -n "$NS" get cephblockpool -o name 2>/dev/null | while read -r p; do
-        "${KUBECTL[@]}" -n "$NS" delete "$p" --ignore-not-found --timeout=1m || unfinalize "$p"
-    done || true
     helm --kube-context "$KUBE_CONTEXT" -n "$NS" uninstall rook-ceph 2>/dev/null || true
 
     unfinalize configmap/rook-ceph-mon-endpoints

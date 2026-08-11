@@ -103,7 +103,7 @@ spec:
         resources: ["*"]
         verbs: ["*"]
   menu:
-    organization:
+    project:
       - crd: storagepools.storage.fundament.io
         list: true
         detail: true

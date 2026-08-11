@@ -6,6 +6,12 @@ sidebar:
 
 The ceph-rook plugin provides block storage for in-cluster workloads by installing and managing the Rook-Ceph operator and a singleton CephCluster.
 
+:::tip[Verifying it works]
+This page describes the design. To actually exercise the plugin against a local
+cluster — from empty machine to a pod writing to a Ceph-backed volume — follow the
+[verification runbook](./ceph-rook-runbook.md).
+:::
+
 ## What it does
 
 1. **Install**: Installs the Rook-Ceph operator via Helm (from `charts.rook.io/release`) and bootstraps a single `CephCluster` resource

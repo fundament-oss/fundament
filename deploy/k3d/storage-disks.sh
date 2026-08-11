@@ -68,10 +68,26 @@ require_docker() {
     docker info >/dev/null 2>&1 || die "Docker daemon not reachable"
 }
 
-# The virtualisation technology the Docker host runs on, or "none" for bare
-# metal, or "unknown" when neither probe answers.
+# True when the Docker endpoint is a local socket rather than a remote host.
+# DOCKER_HOST wins because it overrides the active context.
+docker_daemon_is_local() {
+    local ep="${DOCKER_HOST:-}"
+    [ -n "$ep" ] || ep="$(docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null || true)"
+    case "$ep" in
+        ""|unix://*|npipe://*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# The virtualisation technology the Docker host runs on, "none" for bare metal,
+# or "unknown" when nothing answers.
+#
+# Probed inside the Docker host rather than on this machine, because DOCKER_HOST
+# can point somewhere else entirely -- a Mac driving a remote bare-metal Linux
+# box must still refuse.
 host_virt() {
-    printf '%s\n' '
+    local virt
+    virt="$(printf '%s\n' '
         if command -v systemd-detect-virt >/dev/null 2>&1; then
             systemd-detect-virt 2>/dev/null || echo none
         elif [ -r /sys/class/dmi/id/product_name ]; then
@@ -79,10 +95,28 @@ host_virt() {
                 *Virtual*|*VMware*|*KVM*|*QEMU*|*Hyper-V*) echo vm ;;
                 *) echo none ;;
             esac
+        # Neither probe fires on an aarch64 guest: there is no SMBIOS/DMI to read,
+        # and the minimal guests these backends ship (OrbStack, colima) have no
+        # systemd. That is every Docker backend on Apple Silicon, so without the
+        # two below the normal macOS setup reports "unknown" and gets refused.
+        # The device tree names the hypervisor; a virtio bus only exists under
+        # paravirtualisation.
+        elif grep -qaiE "qemu|kvm|virt|apple|orbstack" /proc/device-tree/compatible 2>/dev/null; then
+            echo device-tree
+        elif [ -n "$(ls -A /sys/bus/virtio/devices 2>/dev/null)" ]; then
+            echo virtio
         else
             echo unknown
         fi
-    ' | host_exec | tr -d '[:space:]'
+    ' | host_exec | tr -d '[:space:]')"
+
+    # Last resort: macOS cannot run Linux containers without a VM, whatever the
+    # backend. Only trusted for a local daemon, and only once the in-guest
+    # probes have come back inconclusive.
+    if [ "$virt" = unknown ] && [ "$(uname -s)" = Darwin ] && docker_daemon_is_local; then
+        virt=macos
+    fi
+    printf '%s\n' "$virt"
 }
 
 # Ceph in k3d puts block devices, filesystems and their kernel threads in the
@@ -126,6 +160,15 @@ require_vm() {
 
 EOF
     exit 1
+}
+
+# Whether the Docker host's kernel has a module, loading it if it is not already
+# in. Exposed as a command so rook-smoke.sh can decide what it is able to test:
+# 'rbd' maps block devices and 'ceph' mounts CephFS, and a kernel can ship one
+# without the other (OrbStack has rbd but not ceph).
+has_module() {
+    [ -n "${1:-}" ] || die "usage: has-module <name>"
+    printf '%s\n' "[ -d /sys/module/$1 ] || modprobe $1 2>/dev/null" | host_exec >/dev/null 2>&1
 }
 
 doctor() {
@@ -219,16 +262,39 @@ attach() {
         modprobe rbd 2>/dev/null || true
         modprobe ceph 2>/dev/null || true
         mkdir -p '$dir'
+        # The Docker host may ship BusyBox losetup rather than util-linux --
+        # OrbStack and colima both do -- and BusyBox has neither -j nor --show.
+        # What both implementations agree on: -a prints one \"/dev/loopN: ...\"
+        # line per association ending in the backing file (util-linux wraps it
+        # in parens), -f prints the next free device, and -P takes -f. So the
+        # file is looked up by parsing -a, and the device the kernel picked is
+        # read back the same way after associating.
+        # 'if', not '[ ] && ...': a failing test as the loop body's last command
+        # makes the loop exit non-zero, which under set -e kills the script the
+        # moment a backing file is not in the list -- i.e. every new disk.
+        loop_for() {
+            losetup -a 2>/dev/null | while IFS= read -r line; do
+                d=\${line%%:*}
+                f=\${line##* }
+                f=\${f%\\)}
+                f=\${f#(}
+                if [ \"\$f\" = \"\$1\" ]; then echo \"\$d\"; break; fi
+            done
+        }
         i=0
         while [ \$i -lt '$DISK_COUNT' ]; do
             img='$dir'/osd\$i.img
             [ -f \"\$img\" ] || truncate -s '$DISK_SIZE' \"\$img\"
-            dev=\$(losetup -j \"\$img\" | cut -d: -f1 | head -1)
+            dev=\$(loop_for \"\$img\")
             # An association made without -P never surfaces partitions; redo it.
             if [ -n \"\$dev\" ] && [ ! -b \"\${dev}p1\" ]; then
                 losetup -d \"\$dev\" 2>/dev/null && dev=''
             fi
-            [ -n \"\$dev\" ] || dev=\$(losetup -P -f --show \"\$img\")
+            if [ -z \"\$dev\" ]; then
+                losetup -P -f \"\$img\"
+                dev=\$(loop_for \"\$img\")
+                [ -n \"\$dev\" ] || { echo \"could not associate \$img\" >&2; exit 1; }
+            fi
             # The kernel creates partition devices asynchronously after losetup
             # -P. Deciding too early reports an already-partitioned image as raw
             # and rewrites its GPT over live OSD data.
@@ -241,9 +307,12 @@ attach() {
     [ -n "$loops" ] || die "no loop devices were attached"
 
     # Herestring, not a pipe: this loop must run in the main shell so die works.
+    # 'if', not '[ ] && ...': the latter leaves the loop's exit status at 1 when
+    # the last device is already partitioned, and set -e then aborts a second
+    # (idempotent, no-op) attach with no message at all.
     local dev state
     while read -r dev state; do
-        [ "$state" = raw ] && partition "$dev"
+        if [ "$state" = raw ]; then partition "$dev"; fi
     done <<<"$loops"
 
     while read -r dev state; do
@@ -253,10 +322,15 @@ attach() {
     require_node_bind
 }
 
-# Without the bind a node's /dev is a tmpfs snapshot taken at container start.
-# Testing for a device is not enough: the snapshot may already hold one from
-# before, and Ceph CSI would still fail later because it creates /dev/rbdN only
-# when a volume is mounted. The mount type is the honest predicate.
+# Without the bind a node's /dev is a snapshot taken at container start. Testing
+# for a device inside the node is not enough: the snapshot may already hold one
+# from before, and Ceph CSI would still fail later because it creates /dev/rbdN
+# only when a volume is mounted.
+#
+# Nor is the mount type a usable signal. It looks like it should be -- devtmpfs
+# for the real thing, tmpfs for a snapshot -- but a backend whose own /dev is a
+# tmpfs (OrbStack) reports tmpfs inside the node either way. The bind list on
+# the container definition is what actually distinguishes them.
 require_node_bind() {
     docker inspect "$NODE" >/dev/null 2>&1 || return 0
     # Read the bind from the container definition rather than from inside it:
@@ -462,6 +536,9 @@ usage() {
 Loop-backed block devices for the k3d cluster '$CLUSTER'.
 
   doctor    check the kernel Docker actually runs on
+  has-module NAME
+            exit 0 if the Docker host's kernel has (or can load) a module;
+            'rbd' maps block devices, 'ceph' mounts CephFS
   attach    create + attach the disks (also the post-reboot fix)
   devices   short kernel names, one per line, for scripts
   status    what is attached, and what the node can see
@@ -499,6 +576,7 @@ done
 
 case "${args[0]:-}" in
     doctor)  doctor ;;
+    has-module) has_module "${args[1]:-}" ;;
     attach)  attach ;;
     devices) devices ;;
     status)  status ;;

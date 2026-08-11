@@ -40,7 +40,15 @@ Then verify the disks really work, independently of any plugin:
 
 The cluster must bind `/dev` and `/run/udev` into its node, which is off by default so a cluster only exposes the host's devices when someone is working on storage: use `just cluster-create-storage` instead of `just cluster-create`. Docker fixes a container's mounts at creation, so an existing cluster has to be recreated — `just cluster-delete && just cluster-create-storage`.
 
-Neither bind is optional. Without `/dev` the OSDs come up and Ceph reports `HEALTH_OK`, but no PVC can mount: a node container's `/dev` is a private tmpfs rather than the kernel's devtmpfs, so the `/dev/rbdN` that Ceph CSI creates when it maps a volume never appears there. Ceph checks for exactly this and says so — `rbd: mapping succeeded but /dev/rbd0 is not accessible, is host /dev mounted?` (`ceph/src/krbd.cc`, `do_map`). There is no way around it: rbd-nbd has the same dependency, and Rook's own RBD node plugin hardcodes a hostPath mount of `/dev`.
+Neither bind is optional. Without `/dev` the OSDs come up and Ceph reports `HEALTH_OK`, but no PVC can mount: a node container's `/dev` is then a private snapshot taken at container start rather than the host's live one, so the `/dev/rbdN` that Ceph CSI creates when it maps a volume never appears there.
+
+Do not try to tell the two apart by filesystem type. It is tempting — devtmpfs for the real thing, tmpfs for a snapshot — but some backends (OrbStack) use a tmpfs-backed `/dev` on the host itself, so a correctly bound node reports `tmpfs` too. The reliable checks are the container's bind list, or simply whether a device created on the host *after* the node started shows up inside it:
+
+```bash
+docker inspect k3d-fundament-plugin-server-0 \
+  --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' | grep -qx /dev && echo bound
+just storage-disks attach && docker exec k3d-fundament-plugin-server-0 ls /dev/loop0p1
+``` Ceph checks for exactly this and says so — `rbd: mapping succeeded but /dev/rbd0 is not accessible, is host /dev mounted?` (`ceph/src/krbd.cc`, `do_map`). There is no way around it: rbd-nbd has the same dependency, and Rook's own RBD node plugin hardcodes a hostPath mount of `/dev`.
 
 `/run/udev` is mounted because Rook mounts it into every OSD pod, the prepare job and the discover daemon, and it is a documented prerequisite from Rook v1.20 on. Running without it here wedged the prepare job with a process in uninterruptible I/O wait; the cause was not established, and the plausible explanations point at device probing rather than at udev itself.
 
