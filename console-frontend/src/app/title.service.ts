@@ -3,6 +3,7 @@ import { Title, Meta } from '@angular/platform-browser';
 import { NavigationEnd, NavigationStart, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs/operators';
+import { withinOrganization } from './address';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 
@@ -59,7 +60,10 @@ export class TitleService {
    * specific to the general.
    */
   private ownerNames = computed<string[]>(() => {
-    const url = this.url();
+    // What the address says about the page, with the organization taken off:
+    // that part is named separately, and only when there is another one to tell
+    // it apart from.
+    const url = withinOrganization(this.url());
 
     const projectId = url.match(/^\/projects\/([^/?#]+)/)?.[1];
     if (projectId) {

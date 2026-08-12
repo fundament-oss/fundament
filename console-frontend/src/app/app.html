@@ -30,7 +30,7 @@
             <!-- The mark before the name, not instead of it: it is the same
                  glyph as the favicon, so the tab and the toolbar say the same
                  thing. Empty alt because the name stands right beside it. -->
-            <nldd-toolbar-title slot="start" text="Fundament" href="/">
+            <nldd-toolbar-title slot="start" text="Fundament" [attr.href]="path()">
               <img slot="media" src="/img/fundament-logo.svg" alt="" height="32">
             </nldd-toolbar-title>
 
@@ -81,18 +81,18 @@
                   <nldd-menu-item
                     icon="add-kubernetes"
                     text="New cluster…"
-                    href="/clusters/add"
+                    [attr.href]="path('/clusters/add')"
                     (click)="pageNav.openHere($event, overlays.newCluster, true)"
                   ></nldd-menu-item>
                   <nldd-menu-item
                     icon="add-plugin"
                     text="Install plugins…"
-                    href="/plugins"
+                    [attr.href]="path('/plugins')"
                   ></nldd-menu-item>
                   <nldd-menu-item
                     icon="add-user"
                     text="Invite member…"
-                    href="/organization/members/invite"
+                    [attr.href]="path('/members/invite')"
                     (click)="pageNav.openHere($event, overlays.inviteMember, true)"
                   ></nldd-menu-item>
 
@@ -106,13 +106,13 @@
                           <nldd-menu-item
                             icon="add-namespace"
                             text="New namespace…"
-                            [attr.href]="'/projects/' + project.id + '/namespaces/add'"
+                            [attr.href]="path('/projects/' + project.id + '/namespaces/add')"
                             (click)="pageNav.openHere($event, overlays.newNamespace, project.id)"
                           ></nldd-menu-item>
                           <nldd-menu-item
                             icon="add-user"
                             text="Add project member…"
-                            [attr.href]="'/projects/' + project.id + '/members/add'"
+                            [attr.href]="path('/projects/' + project.id + '/members/add')"
                             (click)="pageNav.openHere($event, overlays.addProjectMember, project.id)"
                           ></nldd-menu-item>
                         </nldd-menu>
@@ -121,7 +121,7 @@
                     <nldd-menu-item
                       icon="new-folder"
                       text="New project…"
-                      href="/projects/add"
+                      [attr.href]="path('/projects/add')"
                       (click)="openNewProject($event)"
                     ></nldd-menu-item>
                   </nldd-menu-group>
@@ -132,7 +132,7 @@
                 slot="overflow"
                 icon="plus"
                 text="Create"
-                href="/clusters/add"
+                [attr.href]="path('/clusters/add')"
               ></nldd-menu-item>
             </nldd-toolbar-item>
 
@@ -310,16 +310,16 @@
                     aria-label="Organization"
                   >
                     <nldd-list-item
-                      href="/organization/general"
-                      [attr.selected]="isNavActive('/organization/general', true) ? '' : null"
-                      (click)="navigateFromSidebar($event, '/organization/general')"
+                      [attr.href]="path('/general')"
+                      [attr.selected]="isNavActive('/general', true) ? '' : null"
+                      (click)="navigateFromSidebar($event, '/general')"
                     >
                       <nldd-icon-cell icon="apartment-building" size="20"></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
                       <nldd-text-cell text="General"></nldd-text-cell>
                     </nldd-list-item>
                     <nldd-list-item
-                      href="/clusters"
+                      [attr.href]="path('/clusters')"
                       [attr.selected]="isClustersActive() ? '' : null"
                       (click)="navigateFromSidebar($event, '/clusters')"
                     >
@@ -335,7 +335,7 @@
                       <nldd-spacer-cell size="4"></nldd-spacer-cell>
                     </nldd-list-item>
                     <nldd-list-item
-                      href="/plugins"
+                      [attr.href]="path('/plugins')"
                       [attr.selected]="isNavActive('/plugins') ? '' : null"
                       (click)="navigateFromSidebar($event, '/plugins')"
                     >
@@ -344,7 +344,7 @@
                       <nldd-text-cell text="Plugins"></nldd-text-cell>
                     </nldd-list-item>
                     <nldd-list-item
-                      href="/metrics"
+                      [attr.href]="path('/metrics')"
                       [attr.selected]="isNavActive('/metrics') ? '' : null"
                       (click)="navigateFromSidebar($event, '/metrics')"
                     >
@@ -367,18 +367,18 @@
                       }
                     </nldd-list-item>
                     <nldd-list-item
-                      href="/organization/members"
-                      [attr.selected]="isNavActive('/organization/members') ? '' : null"
-                      (click)="navigateFromSidebar($event, '/organization/members')"
+                      [attr.href]="path('/members')"
+                      [attr.selected]="isNavActive('/members') ? '' : null"
+                      (click)="navigateFromSidebar($event, '/members')"
                     >
                       <nldd-icon-cell icon="person-2" size="20"></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
                       <nldd-text-cell text="Members"></nldd-text-cell>
                     </nldd-list-item>
                     <nldd-list-item
-                      href="/organization/limits"
-                      [attr.selected]="isNavActive('/organization/limits') ? '' : null"
-                      (click)="navigateFromSidebar($event, '/organization/limits')"
+                      [attr.href]="path('/limits')"
+                      [attr.selected]="isNavActive('/limits') ? '' : null"
+                      (click)="navigateFromSidebar($event, '/limits')"
                     >
                       <nldd-icon-cell icon="hand" size="20"></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
@@ -406,14 +406,14 @@
                         <nldd-button
                           text="New project…"
                           start-icon="plus-small"
-                          href="/projects/add"
+                          [attr.href]="path('/projects/add')"
                           (click)="openNewProject($event)"
                         ></nldd-button>
                         <nldd-menu-item
                           slot="overflow"
                           icon="plus-small"
                           text="New project…"
-                          href="/projects/add"
+                          [attr.href]="path('/projects/add')"
                           (select)="openNewProject($event)"
                         ></nldd-menu-item>
                       </nldd-toolbar-item>
@@ -428,7 +428,7 @@
                     >
                       @for (project of organizationProjects(); track project.id) {
                         <nldd-list-item
-                          [attr.href]="'/projects/' + project.id"
+                          [attr.href]="path('/projects/' + project.id)"
                           [attr.selected]="
                             marksCurrent() && activeProjectId() === project.id ? '' : null
                           "
@@ -489,7 +489,7 @@
                     >
                       @for (item of projectNavItems(); track item.path) {
                         <nldd-list-item
-                          [attr.href]="item.path"
+                          [attr.href]="path(item.path)"
                           [attr.selected]="isNavActive(item.path, item.exact) ? '' : null"
                           (click)="navigateFromSidebar($event, item.path)"
                         >
@@ -541,7 +541,7 @@
                       >
                         @for (item of group.items; track item.crdPlural) {
                           <nldd-list-item
-                            [attr.href]="pluginResourcePath(group.pluginName, item.crdPlural)"
+                            [attr.href]="path(pluginResourcePath(group.pluginName, item.crdPlural))"
                             [attr.selected]="
                               isNavActive(pluginResourcePath(group.pluginName, item.crdPlural))
                                 ? ''

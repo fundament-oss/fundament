@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal, type WritableSignal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { inOrganization, withinOrganization } from './address';
 import { OrganizationDataService } from './organization-data.service';
 import OrganizationContextService from './organization-context.service';
 
@@ -31,7 +32,7 @@ export default class PageNavService {
   /** Label of the back button: the sidebar's own heading, so the button names
    *  the place it returns to. */
   backText = computed(() => {
-    const projectId = this.currentUrl().match(/^\/projects\/([^/?#]+)/)?.[1];
+    const projectId = withinOrganization(this.currentUrl()).match(/^\/projects\/([^/?#]+)/)?.[1];
 
     if (projectId) {
       const project = this.organizationData.getProjectById(projectId);
@@ -47,10 +48,20 @@ export default class PageNavService {
     return 'Menu';
   });
 
+  /**
+   * An address inside the organization you are reading, from one written
+   * without it: `path('/clusters')` is where the sidebar's Clusters leads. Every
+   * address the console hands out goes through here, so there is one place that
+   * knows an address carries its organization.
+   */
+  path(within = '/'): string {
+    return inOrganization(this.organizationContext.currentOrganizationName(), within);
+  }
+
   /** Plain navigation, for controls that fire their own event rather than
    *  following a link — an nldd-top-title-bar's `back`, for instance. */
   goTo(path: string): void {
-    this.router.navigateByUrl(path);
+    this.router.navigateByUrl(this.path(path));
   }
 
   /**
@@ -67,7 +78,7 @@ export default class PageNavService {
     }
 
     event.preventDefault();
-    this.router.navigateByUrl(path);
+    this.router.navigateByUrl(this.path(path));
   }
 
   /**

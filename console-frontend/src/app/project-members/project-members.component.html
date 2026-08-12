@@ -36,7 +36,7 @@
       </nldd-toolbar-item>
       <nldd-toolbar-item slot="start">
         <nldd-button
-          [attr.href]="'/projects/' + projectId() + '/members/permissions'"
+          [attr.href]="pageNav.path('/projects/' + projectId() + '/members/permissions')"
           text="About permissions"
           start-icon="info-circle"
           variant="secondary"
@@ -46,7 +46,7 @@
           slot="overflow"
           icon="info-circle"
           text="About permissions"
-          [attr.href]="'/projects/' + projectId() + '/members/permissions'"
+          [attr.href]="pageNav.path('/projects/' + projectId() + '/members/permissions')"
           (select)="openPermissions($event)"
         ></nldd-menu-item>
       </nldd-toolbar-item>
@@ -57,7 +57,7 @@
     <nldd-rich-text spacing="flat">
       <p>
         Admin permissions are inherited from the organization and cannot be changed per project;
-        change those in <a [routerLink]="['/organization/members']">Organization members</a>. An
+        change those in <a [routerLink]="pageNav.path('/members')">Organization members</a>. An
         organization viewer can be made admin in this project.
       </p>
     </nldd-rich-text>
@@ -113,7 +113,7 @@
                  actions live in the sheet, because a control inside a row that
                  is itself a control is a control inside a control. -->
             <nldd-list-item
-              [attr.href]="'/projects/' + projectId() + '/members/' + view.member.id"
+              [attr.href]="pageNav.path('/projects/' + projectId() + '/members/' + view.member.id)"
               (click)="openMember($event, view.member.id)"
             >
               <nldd-cell width="fit-content">

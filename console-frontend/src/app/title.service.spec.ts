@@ -74,6 +74,17 @@ describe('TitleService', () => {
     expect(title.getTitle()).toBe('Limits · burgerzaken · Fundament');
   });
 
+  it('leest het project ook uit een adres met de organisatie erin', () => {
+    const { service, title } = opzetten(
+      EEN,
+      'org-1',
+      '/organizations/gemeente-fundament/projects/pr-burgerzaken/limits',
+    );
+    service.setTitle('Limits');
+    TestBed.tick();
+    expect(title.getTitle()).toBe('Limits · burgerzaken · Fundament');
+  });
+
   it('zet het project én de organisatie ertussen als er meer organisaties zijn', () => {
     const { service, title } = opzetten(TWEE, 'org-2', '/projects/pr-burgerzaken/limits');
     service.setTitle('Limits');

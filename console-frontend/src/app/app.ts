@@ -93,6 +93,7 @@ import { versionMismatch$ } from './app.config';
 import { ConfigService } from './config.service';
 import OrgPickerComponent from './org-picker/org-picker.component';
 import { OrganizationDataService } from './organization-data.service';
+import { inOrganization, organizationOf, withinOrganization } from './address';
 import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
 import ProfileComponent from './profile/profile.component';
@@ -118,15 +119,15 @@ const reloadApp = () => {
 };
 
 /**
- * How deep the stacked (narrow) view is for a path: the project menu on
- * `/projects/:id`, the page on anything below or beside it. Level 0 (the
- * organization) is not a route, it is what stepping back from the menu shows.
+ * How deep the stacked (narrow) view is for a path: the organization's own
+ * address is the menu, `/projects/:id` the project's menu, and anything below or
+ * beside those is a page.
  */
 function depthForPath(url: string): number {
-  const path = url.split(/[?#]/)[0];
+  const path = withinOrganization(url.split(/[?#]/)[0]);
   // Nothing chosen yet: the organization menu is the whole screen, not an empty
-  // pane beside it. The organization's own address says the same thing.
-  if (path === '/' || path === '/organization') return 0;
+  // pane beside it. That is what the organization's own address shows.
+  if (path === '/') return 0;
   return /^\/projects\/[^/]+$/.test(path) ? 1 : 2;
 }
 
@@ -384,12 +385,15 @@ export default class App implements OnInit {
       const pendingOrgIds = new Set(invitations.map((i) => i.organizationId));
       const acceptedOrgs = orgs.filter((o) => !pendingOrgIds.has(o.id));
 
-      // Try to restore previously selected org from localStorage
-      const storedOrgId = OrganizationContextService.getStoredOrganizationId();
-      const storedOrgValid = storedOrgId && acceptedOrgs.some((o) => o.id === storedOrgId);
+      // The address decides, so a link someone sent opens in the organization
+      // it was written in rather than in the one this browser was last in. It
+      // names it the way an address does, by name rather than by id.
+      const wanted =
+        organizationOf(this.router.url) ?? OrganizationContextService.getStoredOrganizationName();
+      const addressed = wanted ? acceptedOrgs.find((o) => o.name === wanted) : undefined;
 
-      if (storedOrgValid && invitations.length === 0) {
-        await this.selectAndLoadOrganization(storedOrgId);
+      if (addressed && invitations.length === 0) {
+        await this.selectAndLoadOrganization(addressed.id);
       } else if (acceptedOrgs.length === 1 && invitations.length === 0) {
         await this.selectAndLoadOrganization(acceptedOrgs[0].id);
       } else {
@@ -407,7 +411,9 @@ export default class App implements OnInit {
    * Projects and namespaces are loaded lazily on demand (selector open, project page visit).
    */
   private async selectAndLoadOrganization(orgId: string) {
+    const name = this.organizationNameOf(orgId);
     this.organizationContextService.setOrganizationId(orgId);
+    this.organizationContextService.setOrganizationName(name);
     this.showOrgPicker.set(false);
 
     await this.organizationDataService.loadOrganizationData(orgId);
@@ -416,14 +422,30 @@ export default class App implements OnInit {
     // use the pre-fetched clusterSummaries instead of making a duplicate API call.
     this.selectedOrgId.set(orgId);
     this.updateSidebarStateFromRoute();
+
+    // An arrival that named no organization, or named one you turned out not to
+    // be in: the address is written to say where you actually landed. Replacing
+    // it rather than adding to it, so the back button does not lead to an
+    // address that would only send you here again.
+    if (name && organizationOf(this.router.url) !== name) {
+      this.router.navigateByUrl(inOrganization(name, this.router.url), { replaceUrl: true });
+    }
+  }
+
+  /** The name an organization goes by in an address, from its id. */
+  private organizationNameOf(orgId: string): string | null {
+    return (
+      this.organizationDataService.userOrganizations().find((org) => org.id === orgId)?.name ?? null
+    );
   }
 
   /**
    * Handle org selection from the post-login org picker.
    */
   async handleOrgPickerSelection(orgId: string) {
+    // No navigation of its own: settling on an organization writes it into the
+    // address, and the rest of that address is the page you came in on.
     await this.selectAndLoadOrganization(orgId);
-    this.router.navigate(['/']);
   }
 
   /**
@@ -457,7 +479,9 @@ export default class App implements OnInit {
       // Refresh the JWT so the token includes the newly accepted membership
       await this.apiService.refreshToken();
       await this.selectAndLoadOrganization(invitation.organizationId);
-      this.router.navigate(['/']);
+      // To the front of the organization you just joined rather than to the page
+      // you were reading in another one.
+      this.router.navigateByUrl(inOrganization(this.organizationNameOf(invitation.organizationId)));
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to accept invitation:', error);
@@ -494,8 +518,9 @@ export default class App implements OnInit {
   // Check if current route is clusters or clusters/add
   isClustersActive(): boolean {
     if (!this.marksCurrent()) return false;
-    // Compare on the path alone: the router url also carries the query string.
-    const path = this.currentUrl().split(/[?#]/)[0];
+    // Compare on the path alone: the router url also carries the query string,
+    // and the organization is the same for the link and the page.
+    const path = withinOrganization(this.currentUrl().split(/[?#]/)[0]);
     return path === '/clusters' || path.startsWith('/clusters/');
   }
 
@@ -516,7 +541,7 @@ export default class App implements OnInit {
    *  re-renders on navigation; `router.url` alone is not a reactive source. */
   isNavActive(path: string, exact = false): boolean {
     if (!this.marksCurrent()) return false;
-    const current = this.currentUrl().split(/[?#]/)[0];
+    const current = withinOrganization(this.currentUrl().split(/[?#]/)[0]);
     return exact ? current === path : current === path || current.startsWith(`${path}/`);
   }
 
@@ -537,6 +562,15 @@ export default class App implements OnInit {
     this.overlays.newProject.set(true);
   }
 
+  /**
+   * An address inside the organization you are in, from one written without it.
+   * The sidebar writes its links the short way — `/clusters`, `/general` — and
+   * this is what turns them into the address the browser shows.
+   */
+  path(within = '/'): string {
+    return inOrganization(this.organizationContextService.currentOrganizationName(), within);
+  }
+
   navigateFromSidebar(event: Event, path: string): void {
     if (event instanceof MouseEvent) {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
@@ -545,7 +579,7 @@ export default class App implements OnInit {
     }
 
     event.preventDefault();
-    this.router.navigateByUrl(path);
+    this.router.navigateByUrl(this.path(path));
     // Picking a project lands on its menu, not on a page: /projects/:id has an
     // empty main by design, so stopping at depth 1 is what the user sees.
     // Set here too: clicking the project you are already on does not navigate,
@@ -567,7 +601,7 @@ export default class App implements OnInit {
   isMembersActive(): boolean {
     const projectId = this.activeProjectId();
     if (!projectId) return false;
-    return this.router.url.startsWith(`/projects/${projectId}/members`);
+    return withinOrganization(this.router.url).startsWith(`/projects/${projectId}/members`);
   }
 
   // The walkthrough resolves its narration language from `?lang`, defaulting to
@@ -639,7 +673,7 @@ export default class App implements OnInit {
   }
 
   navigateTo(path: string) {
-    this.router.navigate([path]);
+    this.router.navigateByUrl(this.path(path));
   }
 
   async handleLogout() {
@@ -674,6 +708,7 @@ export default class App implements OnInit {
 
     // Update the organization context for API requests
     this.organizationContextService.setOrganizationId(orgId);
+    this.organizationContextService.setOrganizationName(this.organizationNameOf(orgId));
 
     // Load the new org's cluster data
     await this.organizationDataService.loadOrganizationData(orgId);
@@ -681,11 +716,14 @@ export default class App implements OnInit {
     // Restore selection — recreates the router outlet, triggering ngOnInit in child components
     this.selectedOrgId.set(orgId);
 
-    // Stay on org-level pages, navigate to dashboard for project routes
-    const url = this.router.url;
-    if (url.match(/^\/projects\/[^/]+/)) {
-      this.router.navigate(['/']);
-    }
+    // The address carries the organization, so switching rewrites it. A project
+    // belongs to the one you are leaving and has no counterpart here, so that
+    // address is dropped; every other page has the same one in both.
+    const within = withinOrganization(this.router.url);
+    const belongsToProject = /^\/projects\/[^/]+/.test(within);
+    this.router.navigateByUrl(
+      inOrganization(this.organizationNameOf(orgId), belongsToProject ? '/' : within),
+    );
   }
 
   /**
@@ -714,7 +752,9 @@ export default class App implements OnInit {
    *  rows differ only in path, icon and label. */
   /** The project the URL is in, or null. Derived rather than stored: the
    *  secondary sidebar follows where you are, it is not a mode you switch into. */
-  activeProjectId = computed(() => this.currentUrl().match(/^\/projects\/([^/?#]+)/)?.[1] ?? null);
+  activeProjectId = computed(
+    () => withinOrganization(this.currentUrl()).match(/^\/projects\/([^/?#]+)/)?.[1] ?? null,
+  );
 
   /** Every project in the organization, for the primary sidebar. Carries the
    *  status of the cluster it runs on, so one glance over the list tells you
@@ -817,10 +857,10 @@ export default class App implements OnInit {
   }
 
   isProjectRoot = computed(() => {
-    const path = this.currentUrl().split(/[?#]/)[0];
-    // The app starts with nothing open, so '/' is the same empty pane, and so is
-    // the organization's own address: both say "pick something from the menu".
-    if (path === '/' || path === '/organization') return true;
+    const path = withinOrganization(this.currentUrl().split(/[?#]/)[0]);
+    // The app starts with nothing open: the organization's own address is that
+    // empty pane, and it says "pick something from the menu".
+    if (path === '/') return true;
     return path !== '/projects/add' && /^\/projects\/[^/]+$/.test(path);
   });
 

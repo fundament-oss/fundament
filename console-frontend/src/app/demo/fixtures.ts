@@ -51,7 +51,9 @@ export const demoUser = create(UserSchema, {
 
 export const organization = create(OrganizationSchema, {
   id: ORG_ID,
-  name: 'Gemeente Fundament',
+  // The name is the machine-readable one the address goes by; the alias is the
+  // label people read.
+  name: 'gemeente-fundament',
   alias: 'fundament',
   created: daysAgo(420),
 });

@@ -136,7 +136,7 @@ export default class NamespacesComponent implements OnInit {
       }
     }
     event.preventDefault();
-    this.router.navigateByUrl(`/projects/${this.projectId()}/namespaces/${name}`);
+    this.pageNav.goTo(`/projects/${this.projectId()}/namespaces/${name}`);
   }
 
   async loadNamespaces(projectId: string) {

@@ -39,7 +39,7 @@
              opened in a new tab and closed with the back button. In a toolbar it
              reads as a control, so it wears the control's affordance. -->
         <nldd-button
-          href="/organization/members/permissions"
+          [attr.href]="pageNav.path('/members/permissions')"
           text="About permissions"
           start-icon="info-circle"
           variant="secondary"
@@ -49,7 +49,7 @@
           slot="overflow"
           icon="info-circle"
           text="About permissions"
-          href="/organization/members/permissions"
+          [attr.href]="pageNav.path('/members/permissions')"
           (select)="openPermissions($event)"
         ></nldd-menu-item>
       </nldd-toolbar-item>

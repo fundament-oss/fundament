@@ -28,6 +28,7 @@ import {
 } from '../../generated/v1/cluster_pb';
 import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
 import { fetchClusterName } from '../utils/cluster-status';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-cluster-nodes',
@@ -37,6 +38,8 @@ import { fetchClusterName } from '../utils/cluster-status';
   templateUrl: './cluster-nodes.component.html',
 })
 export default class ClusterNodesComponent implements OnInit {
+  private pageNav = inject(PageNavService);
+
   @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
 
   private titleService = inject(TitleService);
@@ -192,7 +195,7 @@ export default class ClusterNodesComponent implements OnInit {
       );
 
       // Navigate back to cluster overview on success
-      this.router.navigate(['/clusters', this.clusterId]);
+      this.pageNav.goTo(`/clusters/${this.clusterId}`);
     } catch (error) {
       const message =
         error instanceof Error
@@ -205,6 +208,6 @@ export default class ClusterNodesComponent implements OnInit {
   }
 
   onCancel() {
-    this.router.navigate(['/clusters', this.clusterId]);
+    this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 }

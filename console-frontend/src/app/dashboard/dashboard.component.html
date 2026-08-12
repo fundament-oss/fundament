@@ -24,7 +24,7 @@
       <nldd-toolbar label="Cluster actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            href="/clusters/add"
+            [attr.href]="pageNav.path('/clusters/add')"
             text="New cluster…"
             start-icon="plus-small"
             variant="primary"
@@ -34,7 +34,7 @@
             slot="overflow"
             icon="plus-small"
             text="New cluster…"
-            href="/clusters/add"
+            [attr.href]="pageNav.path('/clusters/add')"
             (select)="pageNav.navigate($event, '/clusters/add')"
           ></nldd-menu-item>
         </nldd-toolbar-item>
@@ -86,7 +86,7 @@
                  however tall each one's title and list turn out. -->
             <nldd-container slot="footer" padding-inline="16" padding-bottom="16">
               <nldd-button
-                [attr.href]="'/clusters/' + cluster.id"
+                [attr.href]="pageNav.path('/clusters/' + cluster.id)"
                 text="View details"
                 variant="primary"
                 (click)="pageNav.navigate($event, '/clusters/' + cluster.id)"
@@ -104,7 +104,7 @@
       >
         <nldd-button
           slot="actions"
-          href="/clusters/add"
+          [attr.href]="pageNav.path('/clusters/add')"
           text="New cluster…"
           start-icon="plus-small"
           variant="primary"

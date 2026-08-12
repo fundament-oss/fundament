@@ -20,6 +20,7 @@ import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
 import type { PluginInstallationItem } from '../plugin-resources/types';
 import SheetSyncDirective from '../sheet-sync.directive';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-cluster-plugins',
@@ -29,6 +30,8 @@ import SheetSyncDirective from '../sheet-sync.directive';
   templateUrl: './cluster-plugins.component.html',
 })
 export default class ClusterPluginsComponent implements OnInit {
+  private pageNav = inject(PageNavService);
+
   @ViewChild(SharedPluginsFormComponent) pluginsForm!: SharedPluginsFormComponent;
 
   private titleService = inject(TitleService);
@@ -151,7 +154,7 @@ export default class ClusterPluginsComponent implements OnInit {
         ),
       ]);
 
-      this.router.navigate(['/clusters', this.clusterId]);
+      this.pageNav.goTo(`/clusters/${this.clusterId}`);
     } catch {
       this.errorMessage.set('Failed to update cluster plugins');
     } finally {
@@ -160,6 +163,6 @@ export default class ClusterPluginsComponent implements OnInit {
   }
 
   onCancel() {
-    this.router.navigate(['/clusters', this.clusterId]);
+    this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 }

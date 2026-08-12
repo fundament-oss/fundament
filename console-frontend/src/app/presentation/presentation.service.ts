@@ -16,6 +16,7 @@ import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
 import runDrive from './drive-runner';
 import { closeOpenAppDialogs } from './app-dialogs';
 import { NotificationService } from '../notification.service';
+import PageNavService from '../page-nav.service';
 
 /** `?lang` wins (shareable deep links), then the last choice, then Dutch. */
 function resolveLocale(fromUrl: string | null): Locale {
@@ -31,6 +32,8 @@ function resolveLocale(fromUrl: string | null): Locale {
  */
 @Injectable({ providedIn: 'root' })
 export default class PresentationService {
+  private pageNav = inject(PageNavService);
+
   private readonly router = inject(Router);
 
   private readonly title = inject(Title);
@@ -326,7 +329,9 @@ export default class PresentationService {
       slide: this.index() + 1,
       lang: this.locale(),
     };
-    const path = slide?.route ?? this.currentPath();
+    // A slide names the page and not the organization, so it plays in
+    // whichever one you are signed in to.
+    const path = this.pageNav.path(slide?.route ?? this.currentPath());
     this.router.navigate([path], { queryParams }).then(() => {
       // A navigation that a later goto() superseded still resolves (with false),
       // so without this guard holding down → would let the abandoned slide's

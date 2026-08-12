@@ -231,7 +231,7 @@
                         <nldd-menu-item
                           icon="person"
                           text="Open member"
-                          [attr.href]="'/projects/' + projectId() + '/members/' + entry.member.id"
+                          [attr.href]="pageNav.path('/projects/' + projectId() + '/members/' + entry.member.id)"
                           (select)="openMember($event, entry.member.id)"
                         ></nldd-menu-item>
                       } @else {

@@ -61,7 +61,7 @@
                shared and opened in a new tab, and the chevron says so. Deleting
                lives in the sheet, with everything else about it. -->
           <nldd-list-item
-            [attr.href]="'/projects/' + projectId() + '/namespaces/' + namespace.name"
+            [attr.href]="pageNav.path('/projects/' + projectId() + '/namespaces/' + namespace.name)"
             (click)="openNamespace($event, namespace.name)"
           >
             <nldd-text-cell

@@ -65,7 +65,7 @@
             <nldd-rich-text>
               <p>
                 No clusters available.
-                <nldd-link href="/clusters/add" text="Add a cluster first"></nldd-link>.
+                <nldd-link [attr.href]="pageNav.path('/clusters/add')" text="Add a cluster first"></nldd-link>.
               </p>
             </nldd-rich-text>
           } @else {

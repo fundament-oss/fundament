@@ -19,6 +19,7 @@ import { mockBindingsFor, setMockBindings, ALL_ROLES } from '../utils/mock-role-
 import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
+import PageNavService from '../page-nav.service';
 
 /** One member's standing in this namespace. */
 interface NamespaceMember {
@@ -50,6 +51,8 @@ const accessSummary = (entry: NamespaceMember): string => {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class NamespaceSheetComponent implements OnInit {
+  protected pageNav = inject(PageNavService);
+
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
@@ -275,7 +278,7 @@ export default class NamespaceSheetComponent implements OnInit {
       }
     }
     event.preventDefault();
-    this.router.navigateByUrl(`/projects/${this.projectId()}/members/${memberId}`);
+    this.pageNav.goTo(`/projects/${this.projectId()}/members/${memberId}`);
   }
 
   /** Back to the list this sheet was opened from. */

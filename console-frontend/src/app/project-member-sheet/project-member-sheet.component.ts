@@ -28,6 +28,7 @@ import {
 } from '../utils/namespace-grants';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
+import PageNavService from '../page-nav.service';
 
 interface ProjectMemberView {
   member: ProjectMember;
@@ -58,6 +59,8 @@ const formatMemberDate = (member: ProjectMember): string =>
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class ProjectMemberSheetComponent implements OnInit {
+  protected pageNav = inject(PageNavService);
+
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
@@ -388,7 +391,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
       }
     }
     event.preventDefault();
-    this.router.navigateByUrl(`/projects/${this.projectId()}/namespaces`);
+    this.pageNav.goTo(`/projects/${this.projectId()}/namespaces`);
   }
 
   openOrganizationMembers(event: Event): void {
@@ -398,7 +401,7 @@ export default class ProjectMemberSheetComponent implements OnInit {
       }
     }
     event.preventDefault();
-    this.router.navigateByUrl('/organization/members');
+    this.pageNav.goTo('/members');
   }
 
   /** Back to the list, which reloads and picks up whatever changed here. */

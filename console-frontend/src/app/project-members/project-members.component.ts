@@ -321,7 +321,7 @@ export default class ProjectMembersComponent implements OnInit {
       }
     }
     event.preventDefault();
-    this.router.navigateByUrl(`/projects/${this.projectId()}/members/${memberId}`);
+    this.pageNav.goTo(`/projects/${this.projectId()}/members/${memberId}`);
   }
 
   /** Routes client-side while leaving the control a real link. */
@@ -332,7 +332,7 @@ export default class ProjectMembersComponent implements OnInit {
       }
     }
     event.preventDefault();
-    this.router.navigateByUrl(`/projects/${this.projectId()}/members/permissions`);
+    this.pageNav.goTo(`/projects/${this.projectId()}/members/permissions`);
   }
 
   roleToString = roleToString;

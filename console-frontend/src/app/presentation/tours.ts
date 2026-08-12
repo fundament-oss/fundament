@@ -694,7 +694,7 @@ const securityOfficer: Tour = {
           'When someone leaves, you revoke it in one place.',
         ),
       ],
-      route: '/organization/members',
+      route: '/members',
     },
     {
       id: 'activity',
@@ -722,7 +722,7 @@ const securityOfficer: Tour = {
         'Maximale nodes en standaard resource limits gelden voor de hele organisatie.',
         'Maximum nodes and default resource limits apply across the whole organisation.',
       ),
-      route: '/organization/limits',
+      route: '/limits',
       skippable: true,
     },
     {

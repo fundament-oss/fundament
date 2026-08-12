@@ -267,7 +267,7 @@
           <nldd-rich-text spacing="flat">
             <p>
               This member is an organization admin, so cannot be removed from a project.
-              <a href="/organization/members" (click)="openOrganizationMembers($event)"
+              <a [href]="pageNav.path('/members')" (click)="openOrganizationMembers($event)"
                 >See organization members</a
               >.
             </p>

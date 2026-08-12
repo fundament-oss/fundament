@@ -147,7 +147,7 @@
       } @else if (clusterContext.clusters().length === 0) {
         <nldd-inline-dialog icon="ship-wheel" icon-color="secondary" text="No clusters found">
           <nldd-button
-            routerLink="/clusters/add"
+            [routerLink]="pageNav.path('/clusters/add')"
             slot="actions"
             text="New cluster…"
             start-icon="plus-small"

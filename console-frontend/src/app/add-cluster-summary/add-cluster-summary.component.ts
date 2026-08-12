@@ -20,6 +20,7 @@ import {
   CreateNodePoolRequestSchema,
 } from '../../generated/v1/cluster_pb';
 import focusFirstModalInput from '../modal-focus';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-add-cluster-summary',
@@ -28,6 +29,8 @@ import focusFirstModalInput from '../modal-focus';
   templateUrl: './add-cluster-summary.component.html',
 })
 export default class AddClusterSummaryComponent {
+  private pageNav = inject(PageNavService);
+
 
   private router = inject(Router);
 
@@ -131,7 +134,7 @@ export default class AddClusterSummaryComponent {
     // not make it travels along as navigation state: the cluster page says it
     // where the missing pool is, next to the section that should have held it,
     // and it stays there to be read instead of sliding away on its own.
-    this.router.navigate(['/clusters', clusterId], {
+    this.router.navigateByUrl(this.pageNav.path(`/clusters/${clusterId}`), {
       state: mislukt.length > 0 ? { nodePoolsNotCreated: mislukt } : undefined,
     });
   }

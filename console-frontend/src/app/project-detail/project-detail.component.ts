@@ -238,7 +238,7 @@ export default class ProjectDetailComponent implements OnInit {
       // Reload project data to update the selector modal
       await this.organizationDataService.reloadProjectsAndNamespaces();
 
-      this.router.navigate(['/projects']);
+      this.pageNav.goTo('/');
     } catch (err) {
       this.showDeleteModal.set(false);
       if (err instanceof ConnectError && err.code === Code.FailedPrecondition) {

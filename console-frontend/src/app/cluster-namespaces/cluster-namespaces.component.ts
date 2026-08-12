@@ -29,6 +29,7 @@ import SheetSyncDirective from '../sheet-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
 import NamespaceSelection from '../utils/namespace-selection';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-cluster-namespaces',
@@ -42,6 +43,8 @@ import NamespaceSelection from '../utils/namespace-selection';
   templateUrl: './cluster-namespaces.component.html',
 })
 export default class ClusterNamespacesComponent implements OnInit {
+  private pageNav = inject(PageNavService);
+
   private titleService = inject(TitleService);
 
   private router = inject(Router);
@@ -240,7 +243,7 @@ export default class ClusterNamespacesComponent implements OnInit {
 
 
   onCancel() {
-    this.router.navigate(['/clusters', this.clusterId]);
+    this.pageNav.goTo(`/clusters/${this.clusterId}`);
   }
 
   deleteNamespaceDialogRef = viewChild<ElementRef<HTMLElement>>('deleteNamespaceDialog');

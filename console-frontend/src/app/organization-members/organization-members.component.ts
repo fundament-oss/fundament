@@ -460,7 +460,7 @@ export default class OrganizationMembersComponent implements OnInit {
       }
     }
     event.preventDefault();
-    this.router.navigateByUrl('/organization/members/permissions');
+    this.pageNav.goTo('/members/permissions');
   }
 
   permissionLabel = permissionLabel;

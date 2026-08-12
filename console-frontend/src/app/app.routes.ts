@@ -6,7 +6,13 @@ import {
   type Routes,
 } from '@angular/router';
 import authGuard from './auth.guard';
+import { inOrganization, organizationOf } from './address';
+import OrganizationContextService from './organization-context.service';
 import { OverlayService } from './overlay.service';
+
+/** The organization the address names, read from wherever it sits above. */
+const organizationNameOf = (route: ActivatedRouteSnapshot): string | null =>
+  route.pathFromRoot.map((step) => step.params['organizationName']).find(Boolean) ?? null;
 
 /**
  * Keeps an address for a sheet the shell owns. The sheet is not a page, so the
@@ -22,7 +28,7 @@ const opensSheet =
   ): CanActivateFn =>
   (route) => {
     const overlays = inject(OverlayService);
-    const target = to(route);
+    const target = inOrganization(organizationNameOf(route), to(route));
     open(overlays, route);
     // The shell closes its sheets on arrival somewhere else, so it has to know
     // that this one arrival belongs to the sheet. Waiting for the navigation
@@ -37,14 +43,46 @@ const opensSheet =
 const opensOverlay = (sheet: 'profile' | 'apiKeys' | 'newProject'): CanActivateFn =>
   opensSheet((overlays) => overlays[sheet].set(true), () => '/');
 
+/**
+ * The address names the organization, so the console follows the address rather
+ * than the other way round. Its name is what stands there; the shell looks up
+ * which organization that is and sets the id the API knows it by.
+ */
+const organizationFromAddress: CanActivateFn = (route) => {
+  const name = route.paramMap.get('organizationName');
+  if (name) inject(OrganizationContextService).setOrganizationName(name);
+  return true;
+};
+
+/**
+ * An address without an organization: the bare root the browser opens on, or a
+ * link written before the organization was part of one. Both go into the
+ * organization this browser was last in.
+ *
+ * With none to go on the shell is still choosing, or asking which one, and it
+ * navigates as soon as it knows. An address that does name an organization and
+ * still ends up here matched nothing below it, and is left alone rather than
+ * prefixed a second time.
+ */
+const intoCurrentOrganization: CanActivateFn = (route, state) => {
+  if (organizationOf(state.url)) return true;
+
+  const last = OrganizationContextService.getStoredOrganizationName();
+  return last ? inject(Router).parseUrl(inOrganization(last, state.url)) : true;
+};
+
 const routes: Routes = [
   {
     path: 'login',
     loadComponent: () => import('./login/login.component').then((m) => m.default),
   },
   {
-    path: '',
-    canActivate: [authGuard],
+    // Everything below is read inside one organization, and says so. The pages
+    // that are about the organization itself sit here as well, next to the
+    // clusters and the projects rather than under a second word for the same
+    // thing: this address already names it.
+    path: 'organizations/:organizationName',
+    canActivate: [authGuard, organizationFromAddress],
     children: [
       {
         // Nothing in the main pane: the app opens on a choice, not on a list it
@@ -52,6 +90,41 @@ const routes: Routes = [
         // the outlet stays empty.
         path: '',
         children: [],
+      },
+      {
+        path: 'general',
+        loadComponent: () =>
+          import('./organization-settings/organization-settings.component').then((m) => m.default),
+      },
+      {
+        path: 'members',
+        loadComponent: () =>
+          import('./organization-members/organization-members.component').then((m) => m.default),
+        // A route of its own so the reference can be linked to, shared and
+        // closed with the back button; a child so the list stays mounted behind
+        // the sheet.
+        children: [
+          {
+            path: 'invite',
+            canActivate: [
+              opensSheet(
+                (o) => o.inviteMember.set(true),
+                () => '/members',
+              ),
+            ],
+            children: [],
+          },
+          {
+            path: 'permissions',
+            loadComponent: () =>
+              import('./permissions-sheet/permissions-sheet.component').then((m) => m.default),
+          },
+        ],
+      },
+      {
+        path: 'limits',
+        loadComponent: () =>
+          import('./organization-limits/organization-limits.component').then((m) => m.default),
       },
       {
         path: 'clusters',
@@ -202,48 +275,6 @@ const routes: Routes = [
         path: 'projects/:id/metrics',
         loadComponent: () => import('./metrics/metrics.component').then((m) => m.default),
       },
-      {
-        // The organization itself, the way a project is: the sidebar is the
-        // organization and you pick what to open from there. A componentless
-        // route so the URL still matches while the outlet stays empty.
-        path: 'organization',
-        children: [],
-      },
-      {
-        path: 'organization/general',
-        loadComponent: () =>
-          import('./organization-settings/organization-settings.component').then((m) => m.default),
-      },
-      {
-        path: 'organization/members',
-        loadComponent: () =>
-          import('./organization-members/organization-members.component').then((m) => m.default),
-        // A route of its own so the reference can be linked to, shared and
-        // closed with the back button; a child so the list stays mounted behind
-        // the sheet.
-        children: [
-          {
-            path: 'invite',
-            canActivate: [
-              opensSheet(
-                (o) => o.inviteMember.set(true),
-                () => '/organization/members',
-              ),
-            ],
-            children: [],
-          },
-          {
-            path: 'permissions',
-            loadComponent: () =>
-              import('./permissions-sheet/permissions-sheet.component').then((m) => m.default),
-          },
-        ],
-      },
-      {
-        path: 'organization/limits',
-        loadComponent: () =>
-          import('./organization-limits/organization-limits.component').then((m) => m.default),
-      },
       // Plugin resource routes (organization-level)
       {
         path: 'plugin-resources/:pluginName',
@@ -301,6 +332,11 @@ const routes: Routes = [
         ],
       },
     ],
+  },
+  {
+    path: '**',
+    canActivate: [intoCurrentOrganization],
+    children: [],
   },
 ];
 

@@ -24,6 +24,7 @@ import {
 } from '../../generated/v1/cluster_pb';
 import AutofocusDirective from '../autofocus.directive';
 import SheetSyncDirective from '../sheet-sync.directive';
+import PageNavService from '../page-nav.service';
 
 @Component({
   selector: 'app-add-project',
@@ -33,6 +34,8 @@ import SheetSyncDirective from '../sheet-sync.directive';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class AddProjectComponent implements OnInit {
+  protected pageNav = inject(PageNavService);
+
   /** Owned by the shell: the sheet opens over the page you were on, and that
    *  page stays mounted behind it. */
   @Input() show = false;
@@ -137,7 +140,7 @@ export default class AddProjectComponent implements OnInit {
       await this.organizationDataService.reloadProjectsAndNamespaces();
 
       this.closed.emit();
-      this.router.navigate(['/projects', response.projectId]);
+      this.pageNav.goTo(`/projects/${response.projectId}`);
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error

@@ -441,7 +441,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         // Cluster has been deleted
         this.stopPolling();
         this.notificationService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
-        this.router.navigate(['/clusters']);
+        this.pageNav.goTo('/clusters');
         return;
       }
 
@@ -454,7 +454,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       // If the request fails with a not-found-like error, the cluster was deleted
       this.stopPolling();
       this.notificationService.success(`Cluster '${this.clusterData.basics.name}' has been deleted`);
-      this.router.navigate(['/clusters']);
+      this.pageNav.goTo('/clusters');
     }
   }
 
@@ -593,7 +593,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       this.organizationDataService.removeCluster(this.clusterData.basics.id);
       this.showDeleteModal.set(false);
       this.notificationService.info(`The cluster '${this.clusterData.basics.name}' is being deleted`);
-      this.router.navigate(['/clusters']);
+      this.pageNav.goTo('/clusters');
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error
