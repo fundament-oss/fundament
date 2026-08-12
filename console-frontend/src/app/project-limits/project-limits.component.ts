@@ -99,8 +99,8 @@ export default class ProjectLimitsComponent implements OnInit {
 
   draftCpuLimitM = signal<number | undefined>(undefined);
 
-  /** A failed save, kept in view: a toast is gone before the reader has decided
-   *  what to do, and what is on screen is not what is stored. */
+  /** A failed save, kept in view: a notification is gone before the reader has
+   *  decided what to do, and what is on screen is not what is stored. */
   saveError = signal<string | null>(null);
 
   // Platform defaults returned by the API, used by the "Reset to defaults" action.

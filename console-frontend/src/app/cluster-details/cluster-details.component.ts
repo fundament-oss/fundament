@@ -675,7 +675,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load cluster events:', error);
-      // Don't show toast for events - it's not critical
+      // No notification for events - it's not critical
     } finally {
       this.isLoadingEvents.set(false);
     }
