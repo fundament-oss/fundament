@@ -16,21 +16,26 @@
       dismiss-text="Close"
       (dismiss)="onCancel()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="cluster-namespaces-title" size="3">
+      <nldd-title
+        id="cluster-namespaces-title"
+        size="3"
+      >
         <h1>Namespaces</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       @if (errorMessage()) {
-        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+        <nldd-banner
+          variant="critical"
+          [attr.text]="errorMessage()"
+        ></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>
       }
-
       @if (isLoading()) {
-        <nldd-activity-indicator show-text text="Loading namespaces..."></nldd-activity-indicator>
+        <nldd-activity-indicator
+          show-text
+          text="Loading namespaces..."
+        ></nldd-activity-indicator>
       } @else if (namespaces().length === 0) {
         <nldd-inline-dialog
           icon="brackets-ellipsis"
@@ -39,8 +44,10 @@
         >
         </nldd-inline-dialog>
       } @else {
-
-        <nldd-list variant="box-tinted" accessible-label="Namespaces">
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Namespaces"
+        >
           @for (namespace of namespaces(); track namespace.id) {
             <nldd-list-item>
               <!-- Two lines rather than one with a middot: at this width it wraps
@@ -49,7 +56,7 @@
                    carry the colon. -->
               <nldd-title-cell [attr.text]="namespace.name">
                 <span slot="supporting-text">
-                  Project: {{ getProjectName(namespace.projectId) }}<br>
+                  Project: {{ getProjectName(namespace.projectId) }}<br />
                   Created: {{ formatDate(namespace.created) }}
                 </span>
               </nldd-title-cell>
@@ -66,9 +73,7 @@
             </nldd-list-item>
           }
         </nldd-list>
-
         <nldd-spacer size="24"></nldd-spacer>
-
         <!-- Not a bulk selection in the list: picking every row one by one to
              empty a cluster is work, and a checkbox column that is only there
              for that case makes every row heavier. One box, one door, and the
@@ -78,23 +83,20 @@
             <nldd-title size="5">
               <h3>Danger zone</h3>
             </nldd-title>
-
             <nldd-spacer size="8"></nldd-spacer>
-
             <nldd-rich-text spacing="flat">
               <p>
-                Deleting a namespace removes every resource running in it. This
-                cannot be undone.
+                Deleting a namespace removes every resource running in it. This cannot be undone.
               </p>
             </nldd-rich-text>
-
             <nldd-spacer size="16"></nldd-spacer>
-
             <nldd-button
               type="button"
               (click)="openBulkDeleteModal()"
               [text]="
-                'Delete all ' + namespaces().length + ' namespace' +
+                'Delete all ' +
+                namespaces().length +
+                ' namespace' +
                 (namespaces().length === 1 ? '' : 's')
               "
               start-icon="trash"
@@ -107,7 +109,6 @@
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
-
 <!-- Delete Namespace Modal -->
 <nldd-modal-dialog
   #deleteNamespaceDialog
@@ -135,7 +136,6 @@
     variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
-
 <!-- Bulk Delete Namespaces Modal -->
 <nldd-modal-dialog
   #bulkDeleteDialog

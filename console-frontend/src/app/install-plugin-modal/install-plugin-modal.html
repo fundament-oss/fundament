@@ -14,14 +14,14 @@
       dismiss-text="Cancel"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="install-plugin-title" size="3">
+      <nldd-title
+        id="install-plugin-title"
+        size="3"
+      >
         <h1>Plugin {{ pluginDisplayName() }}</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       @if (versions().length === 0) {
         @if (versionsError()) {
           <nldd-inline-dialog
@@ -37,10 +37,8 @@
             supporting-text="This plugin has no published definition to install yet."
           ></nldd-inline-dialog>
         }
-
         <nldd-spacer size="16"></nldd-spacer>
       }
-
       @if (clusters().length === 0) {
         <nldd-inline-dialog
           icon="ship-wheel"
@@ -59,13 +57,15 @@
               plugin and install a newer version.
             </p>
           </nldd-rich-text>
-
           <nldd-spacer size="12"></nldd-spacer>
         }
-
         <!-- data-tour: the per-cluster list the walkthrough installs from
              (src/app/presentation/tours.ts). Keep the attribute. -->
-        <nldd-list variant="box-tinted" accessible-label="Clusters" data-tour="install-clusters">
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Clusters"
+          data-tour="install-clusters"
+        >
           @for (cluster of clusters(); track cluster.id) {
             <nldd-list-item>
               <nldd-icon-cell
@@ -80,7 +80,6 @@
                 [attr.text]="cluster.name"
               ></nldd-text-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
-
               <!-- The tag cell takes the slack, so the tag sits right behind the
                    name and the action stays pinned to the right. -->
               <nldd-cell width="full">
@@ -99,10 +98,13 @@
                     [attr.pulse]="isInProgress(cluster.phase) ? '' : null"
                   ></nldd-badge>
                 } @else if (cluster.phase === null && !cluster.running) {
-                  <nldd-badge color="neutral" size="sm" text="Not running"></nldd-badge>
+                  <nldd-badge
+                    color="neutral"
+                    size="sm"
+                    text="Not running"
+                  ></nldd-badge>
                 }
               </nldd-cell>
-
               @if (showsVersion(cluster)) {
                 <!-- Next to the action rather than the cluster name, where a bare
                      version number would read as the cluster's own Kubernetes
@@ -115,7 +117,6 @@
                 ></nldd-text-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
               }
-
               @if (cluster.phase !== null && isFailed(cluster.phase)) {
                 <nldd-cell width="fit-content">
                   <nldd-button
@@ -128,7 +129,6 @@
                 </nldd-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
               }
-
               @if (cluster.phase !== null && isInProgress(cluster.phase)) {
                 <!-- The button you pressed reports the work, rather than a tag
                      appearing somewhere else on the row. Which button depends on
@@ -176,7 +176,11 @@
                     <!-- Newest on its own at the top, the rest under a heading:
                          which one you get by default stays obvious however many
                          versions a plugin has published. -->
-                    <nldd-menu slot="popup" placement="bottom-end" accessible-label="Version">
+                    <nldd-menu
+                      slot="popup"
+                      placement="bottom-end"
+                      accessible-label="Version"
+                    >
                       <nldd-menu-item
                         [attr.text]="versions()[0].version"
                         (click)="onInstallOne(cluster.id, versions()[0])"

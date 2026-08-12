@@ -1,10 +1,15 @@
-<nldd-title id="new-cluster-form-step-title" size="3">
+<nldd-title
+  id="new-cluster-form-step-title"
+  size="3"
+>
   <h1>Name your cluster and pick a region</h1>
 </nldd-title>
-
 <nldd-spacer size="16"></nldd-spacer>
-
-<nldd-form [formGroup]="clusterForm" (submit)="onSubmit($event)" (keydown.enter)="onSubmit($event)">
+<nldd-form
+  [formGroup]="clusterForm"
+  (submit)="onSubmit($event)"
+  (keydown.enter)="onSubmit($event)"
+>
   <nldd-form-field label="Cluster name">
     <nldd-text-field
       id="clusterName"
@@ -27,11 +32,12 @@
       }
     </nldd-form-field-error-text>
   </nldd-form-field>
-
   @if (catalogError()) {
-    <nldd-banner variant="critical" [attr.text]="catalogError()"></nldd-banner>
+    <nldd-banner
+      variant="critical"
+      [attr.text]="catalogError()"
+    ></nldd-banner>
   }
-
   <nldd-form-field label="Region">
     <nldd-toggle-button-group
       type="radio"
@@ -49,7 +55,6 @@
       }
     </nldd-toggle-button-group>
   </nldd-form-field>
-
   <nldd-form-field label="Kubernetes version">
     <nldd-toggle-button-group
       type="radio"
@@ -67,7 +72,6 @@
       }
     </nldd-toggle-button-group>
   </nldd-form-field>
-
   <nldd-form-actions>
     <nldd-button
       type="submit"

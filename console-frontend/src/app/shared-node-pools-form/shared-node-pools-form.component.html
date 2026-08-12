@@ -1,4 +1,7 @@
-<nldd-form [formGroup]="nodePoolsForm" (submit)="onSubmit($event)">
+<nldd-form
+  [formGroup]="nodePoolsForm"
+  (submit)="onSubmit($event)"
+>
   @if (isLoadingMachineTypes) {
     <nldd-activity-indicator
       show-text
@@ -6,7 +9,10 @@
     ></nldd-activity-indicator>
   } @else {
     <div formArrayName="nodePools">
-      <nldd-collection layout="stack" gap="16px">
+      <nldd-collection
+        layout="stack"
+        gap="16px"
+      >
         @for (nodePoolControl of nodePools.controls; track nodePoolControl) {
           @let nameControl = nodePoolControl.get('name');
           <!-- Held here, because inside the machine-type loop below $index is that
@@ -29,19 +35,23 @@
                   ></nldd-button>
                 }
               </nldd-title>
-
               <nldd-spacer size="16"></nldd-spacer>
-
               <nldd-form-field label="Machine type">
                 <!-- A list, not a menu: you pick a machine by comparing its specs,
                      and a popup shows them one at a time. Same shape as choosing a
                      role or a project. -->
-                <nldd-list variant="box-base" accessible-label="Machine type">
+                <nldd-list
+                  variant="box-base"
+                  accessible-label="Machine type"
+                >
                   @for (mt of machineTypes; track mt.value) {
                     <!-- The row is the control; the radio only shows which one it
                          is. A real radio here would be an input inside the row's
                          button. -->
-                    <nldd-list-item button (click)="selectMachineType(poolIndex, mt.value)">
+                    <nldd-list-item
+                      button
+                      (click)="selectMachineType(poolIndex, mt.value)"
+                    >
                       <nldd-cell width="fit-content">
                         <nldd-radio-button
                           decorative
@@ -53,12 +63,14 @@
                       <nldd-spacer-cell size="12"></nldd-spacer-cell>
                       <!-- Specs on the same line as the name, not under it: they are
                            what you compare, so they belong in the reading size. -->
-                      <nldd-text-cell width="full" [attr.text]="mt.label"></nldd-text-cell>
+                      <nldd-text-cell
+                        width="full"
+                        [attr.text]="mt.label"
+                      ></nldd-text-cell>
                     </nldd-list-item>
                   }
                 </nldd-list>
               </nldd-form-field>
-
               <nldd-form-field label="Node pool name">
                 <nldd-text-field
                   [id]="'nodePoolName-' + $index"
@@ -72,7 +84,6 @@
                   {{ getNodePoolNameError($index) }}
                 </nldd-form-field-error-text>
               </nldd-form-field>
-
               <nldd-form-field label="Autoscale minimum">
                 <nldd-number-field
                   [id]="'autoscaleMin-' + $index"
@@ -86,7 +97,6 @@
                   step="1"
                 ></nldd-number-field>
               </nldd-form-field>
-
               <nldd-form-field label="Autoscale maximum">
                 <nldd-number-field
                   [id]="'autoscaleMax-' + $index"
@@ -103,7 +113,6 @@
             </nldd-container>
           </nldd-box>
         }
-
         <!-- Its own box, so it reads as the slot the next node pool will fill. -->
         <nldd-box>
           <nldd-container padding="16">
@@ -120,7 +129,6 @@
         </nldd-box>
       </nldd-collection>
     </div>
-
     <nldd-form-actions>
       <ng-content></ng-content>
     </nldd-form-actions>

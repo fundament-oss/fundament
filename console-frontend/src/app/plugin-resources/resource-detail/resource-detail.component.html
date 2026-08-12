@@ -15,7 +15,10 @@
        this resource came from rather than to the menu, so it stays put when the
        menu is already in view: the same override the cluster and plugin detail
        pages use. -->
-  <nldd-page sticky-header style="--context-back-button-display: flex">
+  <nldd-page
+    sticky-header
+    style="--context-back-button-display: flex"
+  >
     <nldd-top-title-bar
       slot="header"
       [attr.text]="resource()!.metadata.name"
@@ -23,12 +26,14 @@
       (back)="goToList()"
       collapse-anchor="resource-detail-title"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
       <!-- The badge sits inside the h1: it belongs to the name rather than to
            the end of the line. That way the heading also reads as
            "burgerzaken-afspraken, Not ready" to whoever hears it. -->
-      <nldd-title id="resource-detail-title" size="2">
+      <nldd-title
+        id="resource-detail-title"
+        size="2"
+      >
         <h1>
           {{ resource()!.metadata.name }}
           @if (primaryCondition(); as condition) {
@@ -39,12 +44,16 @@
           }
         </h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       <nldd-box>
-        <nldd-container padding="16" md-padding="24">
-          <nldd-list variant="simple" accessible-label="Resource details">
+        <nldd-container
+          padding="16"
+          md-padding="24"
+        >
+          <nldd-list
+            variant="simple"
+            accessible-label="Resource details"
+          >
             @if (resource()!.metadata.namespace) {
               <nldd-list-item>
                 <nldd-text-cell text="Namespace"></nldd-text-cell>
@@ -94,28 +103,33 @@
           </nldd-list>
         </nldd-container>
       </nldd-box>
-
       @for (group of specSections(); track group.name) {
         <nldd-spacer size="24"></nldd-spacer>
-
         <nldd-box>
-          <nldd-container padding="16" md-padding="24">
+          <nldd-container
+            padding="16"
+            md-padding="24"
+          >
             <nldd-title size="5">
               <h2>{{ group.name }}</h2>
             </nldd-title>
-
             <nldd-spacer size="16"></nldd-spacer>
-
             <!-- A row per field rather than a grid: what a field renders is up to
                  the plugin, and a full-width row fits a table as well as a word. -->
-            <nldd-list variant="simple" [attr.accessible-label]="group.name">
+            <nldd-list
+              variant="simple"
+              [attr.accessible-label]="group.name"
+            >
               @for (field of group.fields; track field[0]) {
                 @if (flatObjectEntries(getSpecValue(field[0])); as entries) {
                   <!-- The field name as a heading row with its keys indented
                        under it: that way "Issuer ref" is there once instead of at
                        the start of every line. -->
                   <nldd-list-item>
-                    <nldd-text-cell width="full" [attr.text]="formatLabel(field[0])"></nldd-text-cell>
+                    <nldd-text-cell
+                      width="full"
+                      [attr.text]="formatLabel(field[0])"
+                    ></nldd-text-cell>
                   </nldd-list-item>
                   @for (entry of entries; track entry[0]) {
                     <nldd-list-item>
@@ -131,8 +145,14 @@
                 } @else {
                   <nldd-list-item>
                     <nldd-text-cell [attr.text]="formatLabel(field[0])"></nldd-text-cell>
-                    <nldd-cell width="full" horizontal-alignment="right">
-                      <app-field-renderer [schema]="field[1]" [value]="getSpecValue(field[0])" />
+                    <nldd-cell
+                      width="full"
+                      horizontal-alignment="right"
+                    >
+                      <app-field-renderer
+                        [schema]="field[1]"
+                        [value]="getSpecValue(field[0])"
+                      />
                     </nldd-cell>
                   </nldd-list-item>
                 }
@@ -141,24 +161,26 @@
           </nldd-container>
         </nldd-box>
       }
-
       @if (conditions().length > 0) {
         <nldd-spacer size="24"></nldd-spacer>
-
         <nldd-box>
-          <nldd-container padding="16" md-padding="24">
+          <nldd-container
+            padding="16"
+            md-padding="24"
+          >
             <nldd-title size="5">
               <h2>Status</h2>
             </nldd-title>
-
             <nldd-spacer size="16"></nldd-spacer>
-
             <!-- A row per condition rather than a table with a column that only
                  says True or False: the badge carries both the type and the
                  status, the message is in the row, and the time is when this
                  condition last flipped. Usually there is one, but a controller
                  may keep more, and each of those has its own history. -->
-            <nldd-list variant="simple" accessible-label="Conditions">
+            <nldd-list
+              variant="simple"
+              accessible-label="Conditions"
+            >
               @for (cond of conditions(); track $index) {
                 <nldd-list-item>
                   <nldd-text-cell
@@ -172,7 +194,9 @@
                   <nldd-cell width="fit-content">
                     <nldd-badge
                       decorative
-                      [attr.color]="conditionBadge(asRecordValue(cond, 'type'), cond['status']).color"
+                      [attr.color]="
+                        conditionBadge(asRecordValue(cond, 'type'), cond['status']).color
+                      "
                     ></nldd-badge>
                   </nldd-cell>
                   <nldd-spacer-cell size="6"></nldd-spacer-cell>
@@ -187,28 +211,25 @@
           </nldd-container>
         </nldd-box>
       }
-
       <!-- Deleting at the bottom, out of the way of everything you came to
            read, and in the same red box as the one under a project. Next to the
            title it sat where the eye lands first, which is not where an action
            belongs that cannot be undone. -->
       @if (canDelete()) {
         <nldd-spacer size="24"></nldd-spacer>
-
         <nldd-box variant="critical">
           <nldd-container padding="16">
             <nldd-title size="5">
               <h2>Danger zone</h2>
             </nldd-title>
-
             <nldd-spacer size="8"></nldd-spacer>
-
             <nldd-rich-text spacing="flat">
-              <p>Deleting {{ kind() }} '{{ resource()!.metadata.name }}' is permanent and cannot be undone.</p>
+              <p>
+                Deleting {{ kind() }} '{{ resource()!.metadata.name }}' is permanent and cannot be
+                undone.
+              </p>
             </nldd-rich-text>
-
             <nldd-spacer size="16"></nldd-spacer>
-
             <nldd-button
               type="button"
               [attr.text]="'Delete ' + resource()!.metadata.name + '…'"
@@ -221,7 +242,6 @@
       }
     </nldd-simple-section>
   </nldd-page>
-
   <app-resource-delete-modal
     [show]="showDeleteModal()"
     [resourceKind]="kind()"

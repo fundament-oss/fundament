@@ -17,20 +17,18 @@
       dismiss-text="Close"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="profile-title" size="3">
+      <nldd-title
+        id="profile-title"
+        size="3"
+      >
         <h1>My profile</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       <nldd-rich-text spacing="flat">
         <p>Your name and password come from your login provider and cannot be changed here.</p>
       </nldd-rich-text>
-
       <nldd-spacer size="12"></nldd-spacer>
-
       @if (isLoading()) {
         <nldd-activity-indicator
           show-text
@@ -51,7 +49,10 @@
           ></nldd-button>
         </nldd-inline-dialog>
       } @else {
-        <nldd-list variant="box-tinted" accessible-label="Account details">
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Account details"
+        >
           <nldd-list-item>
             <nldd-text-cell text="Name"></nldd-text-cell>
             <nldd-text-cell

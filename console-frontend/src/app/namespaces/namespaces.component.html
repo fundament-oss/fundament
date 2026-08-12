@@ -8,14 +8,14 @@
     (back)="pageNav.goTo('/projects/' + projectId())"
     collapse-anchor="namespaces-title"
   ></nldd-top-title-bar>
-
   <nldd-simple-section>
-    <nldd-title id="namespaces-title" size="2">
+    <nldd-title
+      id="namespaces-title"
+      size="2"
+    >
       <h1>Namespaces</h1>
     </nldd-title>
-
     <nldd-spacer size="12"></nldd-spacer>
-
     <nldd-toolbar label="Namespace actions">
       <nldd-toolbar-item slot="start">
         <nldd-button
@@ -33,11 +33,12 @@
         ></nldd-menu-item>
       </nldd-toolbar-item>
     </nldd-toolbar>
-
     <nldd-spacer size="16"></nldd-spacer>
-
     @if (isLoading()) {
-      <nldd-activity-indicator show-text text="Loading namespaces..."></nldd-activity-indicator>
+      <nldd-activity-indicator
+        show-text
+        text="Loading namespaces..."
+      ></nldd-activity-indicator>
     } @else if (namespaces().length === 0) {
       <nldd-inline-dialog
         icon="brackets-ellipsis"
@@ -55,7 +56,10 @@
         ></nldd-button>
       </nldd-inline-dialog>
     } @else {
-      <nldd-list variant="box-tinted" accessible-label="Namespaces">
+      <nldd-list
+        variant="box-tinted"
+        accessible-label="Namespaces"
+      >
         @for (namespace of namespaces(); track namespace.id) {
           <!-- The whole row goes to the namespace: a real link, so it can be
                shared and opened in a new tab, and the chevron says so. Deleting
@@ -71,7 +75,10 @@
             ></nldd-text-cell>
             <!-- Too wide next to a name on a phone; the sheet has the detail
                  anyway. -->
-            <nldd-spacer-cell size="12" hide-below="md"></nldd-spacer-cell>
+            <nldd-spacer-cell
+              size="12"
+              hide-below="md"
+            ></nldd-spacer-cell>
             <nldd-text-cell
               width="fit-content"
               horizontal-alignment="right"
@@ -80,17 +87,19 @@
               [attr.text]="memberSummary(namespace.name)"
             ></nldd-text-cell>
             <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-icon-cell icon="chevron-right" size="20" color="secondary"></nldd-icon-cell>
+            <nldd-icon-cell
+              icon="chevron-right"
+              size="20"
+              color="secondary"
+            ></nldd-icon-cell>
           </nldd-list-item>
         }
       </nldd-list>
     }
   </nldd-simple-section>
-
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
-
 <!-- Action Error Modal -->
 <nldd-modal-dialog
   #actionErrorDialog
@@ -110,6 +119,4 @@
     variant="primary"
   ></nldd-button>
 </nldd-modal-dialog>
-
-
 <router-outlet />

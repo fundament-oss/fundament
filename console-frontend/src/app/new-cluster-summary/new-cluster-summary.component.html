@@ -1,15 +1,19 @@
-<nldd-title id="new-cluster-form-step-title" size="3">
+<nldd-title
+  id="new-cluster-form-step-title"
+  size="3"
+>
   <h1>Review your cluster configuration</h1>
 </nldd-title>
-
 <nldd-spacer size="24"></nldd-spacer>
-
 <!-- No heading above this one: "Review your cluster configuration" already says
      what you are looking at, and Cluster name, Region and Kubernetes version
      label themselves. Node pools below does earn a heading, because it groups
      repeated cards that would otherwise run together. The list keeps its
      accessible name so assistive software still hears the grouping. -->
-<nldd-list variant="box-tinted" accessible-label="Basics">
+<nldd-list
+  variant="box-tinted"
+  accessible-label="Basics"
+>
   <nldd-list-item>
     <nldd-text-cell text="Cluster name"></nldd-text-cell>
     <nldd-text-cell
@@ -35,19 +39,21 @@
     ></nldd-text-cell>
   </nldd-list-item>
 </nldd-list>
-
 <nldd-spacer size="24"></nldd-spacer>
-
 <nldd-title size="5">
   <h3>Node pools</h3>
 </nldd-title>
-
 <nldd-spacer size="8"></nldd-spacer>
-
 @if (state().nodePools && state().nodePools!.length > 0) {
-  <nldd-collection layout="stack" gap="16px">
+  <nldd-collection
+    layout="stack"
+    gap="16px"
+  >
     @for (nodePool of state().nodePools; track nodePool.name) {
-      <nldd-list variant="box-tinted" [attr.accessible-label]="'Node pool ' + nodePool.name">
+      <nldd-list
+        variant="box-tinted"
+        [attr.accessible-label]="'Node pool ' + nodePool.name"
+      >
         <nldd-list-item>
           <nldd-text-cell text="Node pool name"></nldd-text-cell>
           <nldd-text-cell
@@ -84,16 +90,21 @@
     }
   </nldd-collection>
 } @else {
-  <nldd-inline-dialog icon="circle-dashed" icon-color="secondary" text="No node pools configured">
+  <nldd-inline-dialog
+    icon="circle-dashed"
+    icon-color="secondary"
+    text="No node pools configured"
+  >
   </nldd-inline-dialog>
 }
-
 <div>
   @if (errorMessage()) {
     <nldd-spacer size="16"></nldd-spacer>
-    <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+    <nldd-banner
+      variant="critical"
+      [attr.text]="errorMessage()"
+    ></nldd-banner>
   }
-
   <!-- No "previous step": the title bar's back button covers going a step
        back. -->
   <nldd-spacer size="24"></nldd-spacer>
@@ -106,4 +117,3 @@
     variant="primary"
   ></nldd-button>
 </div>
-

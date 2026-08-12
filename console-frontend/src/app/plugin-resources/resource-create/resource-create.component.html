@@ -1,7 +1,13 @@
 @if (errorMessage()) {
-  <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+  <nldd-banner
+    variant="critical"
+    [attr.text]="errorMessage()"
+  ></nldd-banner>
 } @else if (loading()) {
-  <nldd-inline-dialog variant="loading" text="Loading..."></nldd-inline-dialog>
+  <nldd-inline-dialog
+    variant="loading"
+    text="Loading..."
+  ></nldd-inline-dialog>
 } @else if (customUIUrl()) {
   <app-plugin-iframe
     [src]="customUIUrl()!"

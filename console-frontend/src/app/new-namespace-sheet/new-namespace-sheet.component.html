@@ -14,19 +14,21 @@
       dismiss-text="Cancel"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="new-namespace-title" size="3">
+      <nldd-title
+        id="new-namespace-title"
+        size="3"
+      >
         <h1>New namespace for {{ projectName() }}</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       @if (createErrorMessage()) {
-        <nldd-banner variant="critical" [attr.text]="createErrorMessage()"></nldd-banner>
+        <nldd-banner
+          variant="critical"
+          [attr.text]="createErrorMessage()"
+        ></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>
       }
-
       <nldd-form
         [formGroup]="namespaceForm"
         (submit)="createNamespace($event)"
@@ -52,11 +54,14 @@
             {{ getNameError() }}
           </nldd-form-field-error-text>
         </nldd-form-field>
-
         <!-- A namespace is made to work in, so the people come with it. Optional:
              creating one without anyone in it is a normal thing to do. -->
         @if (memberCandidates().length > 0) {
-          <nldd-form-field label="Members" optional optional-label="Optional">
+          <nldd-form-field
+            label="Members"
+            optional
+            optional-label="Optional"
+          >
             <nldd-token-field
               accessible-label="Members"
               [attr.values]="draftMemberIds().join(',')"
@@ -84,13 +89,15 @@
             </nldd-form-field-help-text>
           </nldd-form-field>
         }
-
         <!-- Only once someone is picked: roles for nobody decide nothing, and an
              empty role list next to an empty member field reads as a step you
              skipped rather than one that does not apply yet. -->
         @if (draftMemberIds().length > 0) {
           <nldd-form-field label="Roles">
-            <nldd-list variant="box-tinted" accessible-label="Roles">
+            <nldd-list
+              variant="box-tinted"
+              accessible-label="Roles"
+            >
               @for (role of allRoles; track role) {
                 <nldd-list-item
                   checkbox
@@ -104,7 +111,10 @@
                     ></nldd-checkbox>
                   </nldd-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-text-cell width="full" [attr.text]="role"></nldd-text-cell>
+                  <nldd-text-cell
+                    width="full"
+                    [attr.text]="role"
+                  ></nldd-text-cell>
                 </nldd-list-item>
               }
             </nldd-list>
@@ -116,7 +126,6 @@
             </nldd-form-field-help-text>
           </nldd-form-field>
         }
-
         <nldd-form-actions>
           <nldd-button
             type="button"

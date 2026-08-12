@@ -14,14 +14,14 @@
       dismiss-text="Cancel"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="invite-user-title" size="3">
+      <nldd-title
+        id="invite-user-title"
+        size="3"
+      >
         <h1>Invite user</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       <nldd-rich-text spacing="flat">
         <p>
           Enter the email address of the user you want to invite. They will be able to sign in via
@@ -29,9 +29,7 @@
           themselves.
         </p>
       </nldd-rich-text>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       <nldd-form
         (submit)="submitInvitation($event)"
         (keydown.enter)="submitInvitation($event)"
@@ -55,12 +53,17 @@
             {{ inviteError() || 'The user email is required' }}
           </nldd-form-field-error-text>
         </nldd-form-field>
-
         <nldd-form-field label="Permission">
-          <nldd-list variant="box-tinted" accessible-label="Permission">
+          <nldd-list
+            variant="box-tinted"
+            accessible-label="Permission"
+          >
             @for (option of permissionOptions; track option.value) {
               <!-- The row is the control; the radio only shows which one it is. -->
-              <nldd-list-item button (click)="invitePermission.set(option.value)">
+              <nldd-list-item
+                button
+                (click)="invitePermission.set(option.value)"
+              >
                 <nldd-cell width="fit-content">
                   <nldd-radio-button
                     decorative
@@ -77,7 +80,6 @@
             }
           </nldd-list>
         </nldd-form-field>
-
         <nldd-form-actions>
           <nldd-button
             type="button"

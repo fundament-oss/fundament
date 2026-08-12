@@ -1,7 +1,10 @@
 <!-- Same outer layout as the plugin catalogue it belongs to. The back button is
      forced visible: the split view hides a pane's back button on wide screens,
      but on a detail page it is the way up to the parent. -->
-<nldd-page sticky-header style="--context-back-button-display: flex">
+<nldd-page
+  sticky-header
+  style="--context-back-button-display: flex"
+>
   <nldd-top-title-bar
     slot="header"
     [attr.text]="plugin()?.displayName || plugin()?.name || 'Plugin'"
@@ -9,17 +12,20 @@
     collapse-anchor="plugin-title"
     (back)="pageNav.goTo('/plugins')"
   ></nldd-top-title-bar>
-
   <nldd-simple-section>
     @if (errorMessage() && !isLoading()) {
-      <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+      <nldd-banner
+        variant="critical"
+        [attr.text]="errorMessage()"
+      ></nldd-banner>
       <nldd-spacer size="16"></nldd-spacer>
     }
-
     @if (isLoading()) {
-      <nldd-activity-indicator show-text text="Loading plugin details..."></nldd-activity-indicator>
+      <nldd-activity-indicator
+        show-text
+        text="Loading plugin details..."
+      ></nldd-activity-indicator>
     }
-
     @if (!isLoading() && !errorMessage() && plugin(); as p) {
       <nldd-image
         [attr.src]="pluginIconSrc(p)"
@@ -29,16 +35,20 @@
         loading="eager"
         decorative
       ></nldd-image>
-
       <nldd-spacer size="12"></nldd-spacer>
-
       <!-- Official and the install state sit with the name: they say what this
            plugin is and where it runs, unlike the keyword tags below. -->
-      <nldd-title id="plugin-title" size="2">
+      <nldd-title
+        id="plugin-title"
+        size="2"
+      >
         <h1>
           {{ p.displayName || p.name }}
           @if (isOfficial(p)) {
-            <nldd-tag color="success" text="Official"></nldd-tag>
+            <nldd-tag
+              color="success"
+              text="Official"
+            ></nldd-tag>
           }
         </h1>
         @if (p.author?.name) {
@@ -52,38 +62,50 @@
           variant="primary"
         ></nldd-button>
       </nldd-title>
-
       <nldd-spacer size="24"></nldd-spacer>
-
       <nldd-container gap="24">
         <nldd-box>
           <nldd-container padding="16">
             <nldd-rich-text [innerHTML]="getRenderedMarkdown()"></nldd-rich-text>
           </nldd-container>
         </nldd-box>
-
         <nldd-box>
           <nldd-container padding="16">
-            <nldd-list variant="simple" dividers="never" accessible-label="What this plugin offers">
+            <nldd-list
+              variant="simple"
+              dividers="never"
+              accessible-label="What this plugin offers"
+            >
               <nldd-list-item>
-                <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+                <nldd-icon-cell
+                  icon="check-mark"
+                  size="20"
+                  color="success"
+                ></nldd-icon-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
                 <nldd-text-cell text="Community support"></nldd-text-cell>
               </nldd-list-item>
               <nldd-list-item>
-                <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+                <nldd-icon-cell
+                  icon="check-mark"
+                  size="20"
+                  color="success"
+                ></nldd-icon-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
                 <nldd-text-cell text="Open source"></nldd-text-cell>
               </nldd-list-item>
               <nldd-list-item>
-                <nldd-icon-cell icon="check-mark" size="20" color="success"></nldd-icon-cell>
+                <nldd-icon-cell
+                  icon="check-mark"
+                  size="20"
+                  color="success"
+                ></nldd-icon-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
                 <nldd-text-cell text="Regular updates"></nldd-text-cell>
               </nldd-list-item>
             </nldd-list>
           </nldd-container>
         </nldd-box>
-
         @if (
           p.categories.length > 0 ||
           p.repositoryUrl ||
@@ -98,12 +120,18 @@
               <!-- The labels carry a minimum: a URL wraps by itself (browsers
                    break after a slash), but a one-word label has nowhere to break
                    and would collapse into "Repo / sitor / y". -->
-              <nldd-list variant="simple" accessible-label="Plugin information">
+              <nldd-list
+                variant="simple"
+                accessible-label="Plugin information"
+              >
                 <!-- First row: the only one about your own clusters rather than
                      about the plugin. -->
                 @if (hasInstalledClusters()) {
                   <nldd-list-item>
-                    <nldd-text-cell min-width="120px" text="Usage"></nldd-text-cell>
+                    <nldd-text-cell
+                      min-width="120px"
+                      text="Usage"
+                    ></nldd-text-cell>
                     <nldd-text-cell
                       width="fit-content"
                       horizontal-alignment="right"
@@ -117,11 +145,21 @@
                 }
                 @if (p.categories.length > 0) {
                   <nldd-list-item>
-                    <nldd-text-cell min-width="120px" text="Categories"></nldd-text-cell>
+                    <nldd-text-cell
+                      min-width="120px"
+                      text="Categories"
+                    ></nldd-text-cell>
                     <nldd-cell horizontal-alignment="right">
-                      <nldd-container layout="wrap" gap="8" horizontal-alignment="right">
+                      <nldd-container
+                        layout="wrap"
+                        gap="8"
+                        horizontal-alignment="right"
+                      >
                         @for (category of p.categories; track category.id) {
-                          <nldd-tag color="neutral" [attr.text]="category.name"></nldd-tag>
+                          <nldd-tag
+                            color="neutral"
+                            [attr.text]="category.name"
+                          ></nldd-tag>
                         }
                       </nldd-container>
                     </nldd-cell>
@@ -129,7 +167,10 @@
                 }
                 @if (p.repositoryUrl) {
                   <nldd-list-item>
-                    <nldd-text-cell min-width="120px" text="Repository"></nldd-text-cell>
+                    <nldd-text-cell
+                      min-width="120px"
+                      text="Repository"
+                    ></nldd-text-cell>
                     <nldd-cell horizontal-alignment="right">
                       <nldd-link
                         target="_blank"
@@ -141,7 +182,10 @@
                 }
                 @for (link of p.documentationLinks; track link.id) {
                   <nldd-list-item>
-                    <nldd-text-cell min-width="120px" text="Documentation"></nldd-text-cell>
+                    <nldd-text-cell
+                      min-width="120px"
+                      text="Documentation"
+                    ></nldd-text-cell>
                     <nldd-cell horizontal-alignment="right">
                       <nldd-link
                         target="_blank"
@@ -153,7 +197,10 @@
                 }
                 @if (p.author?.url) {
                   <nldd-list-item>
-                    <nldd-text-cell min-width="120px" text="Author website"></nldd-text-cell>
+                    <nldd-text-cell
+                      min-width="120px"
+                      text="Author website"
+                    ></nldd-text-cell>
                     <nldd-cell horizontal-alignment="right">
                       <nldd-link
                         target="_blank"
@@ -170,11 +217,9 @@
       </nldd-container>
     }
   </nldd-simple-section>
-
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
-
 <!-- Install Modal -->
 <app-install-plugin-modal
   [pluginDisplayName]="plugin()?.displayName || plugin()?.name || ''"

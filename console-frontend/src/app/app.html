@@ -15,25 +15,42 @@
     ></nldd-button>
   </nldd-banner>
 }
-
 <nldd-app-view>
   @if (isLoginPage()) {
     <router-outlet />
   } @else {
     <nldd-bar-split-view>
       <!-- Header: logo, dark/light mode toggle and user account -->
-      <nldd-split-view-pane slot="header" sm-order="1" md-order="1" lg-order="1" background="base">
+      <nldd-split-view-pane
+        slot="header"
+        sm-order="1"
+        md-order="1"
+        lg-order="1"
+        background="base"
+      >
         <!-- Right padding matches the block padding so the trailing button sits as
            far from the edge as it does from the top and bottom. -->
-        <nldd-container padding-left="16" padding-right="8" padding-block="8">
+        <nldd-container
+          padding-left="16"
+          padding-right="8"
+          padding-block="8"
+        >
           <nldd-toolbar label="Application">
             <!-- The mark before the name, not instead of it: it is the same
                  glyph as the favicon, so the tab and the toolbar say the same
                  thing. Empty alt because the name stands right beside it. -->
-            <nldd-toolbar-title slot="start" text="Fundament" [attr.href]="path()">
-              <img slot="media" src="/img/fundament-logo.svg" alt="" height="32">
+            <nldd-toolbar-title
+              slot="start"
+              text="Fundament"
+              [attr.href]="path()"
+            >
+              <img
+                slot="media"
+                src="/img/fundament-logo.svg"
+                alt=""
+                height="32"
+              />
             </nldd-toolbar-title>
-
             @if (tourUrl()) {
               <nldd-toolbar-item slot="end">
                 <nldd-icon-button
@@ -53,7 +70,6 @@
                 ></nldd-menu-item>
               </nldd-toolbar-item>
             }
-
             <!-- One place to start something, wherever you are: the pages that
                  own these actions each have their own button, but you have to be
                  on them first. Left of the organization and account controls,
@@ -68,65 +84,73 @@
                 dismissable
                 (nldd-close)="dismissCreateEducation()"
               >
-              <nldd-icon-button
-                icon="plus"
-                size="md"
-                variant="secondary"
-                accessible-label="Create"
-                expandable
-                popup-type="menu"
-                type="button"
-              >
-                <nldd-menu slot="popup" placement="bottom-end" accessible-label="Create">
-                  <nldd-menu-item
-                    icon="add-kubernetes"
-                    text="New cluster…"
-                    [attr.href]="path('/clusters/new')"
-                    (click)="pageNav.openHere($event, overlays.newCluster, true)"
-                  ></nldd-menu-item>
-                  <nldd-menu-item
-                    icon="add-plugin"
-                    text="Install plugins…"
-                    [attr.href]="path('/plugins')"
-                  ></nldd-menu-item>
-                  <nldd-menu-item
-                    icon="add-user"
-                    text="Invite member…"
-                    [attr.href]="path('/members/invite')"
-                    (click)="pageNav.openHere($event, overlays.inviteMember, true)"
-                  ></nldd-menu-item>
-
-                  <!-- A project has two things you can add to it, so each one
+                <nldd-icon-button
+                  icon="plus"
+                  size="md"
+                  variant="secondary"
+                  accessible-label="Create"
+                  expandable
+                  popup-type="menu"
+                  type="button"
+                >
+                  <nldd-menu
+                    slot="popup"
+                    placement="bottom-end"
+                    accessible-label="Create"
+                  >
+                    <nldd-menu-item
+                      icon="add-kubernetes"
+                      text="New cluster…"
+                      [attr.href]="path('/clusters/new')"
+                      (click)="pageNav.openHere($event, overlays.newCluster, true)"
+                    ></nldd-menu-item>
+                    <nldd-menu-item
+                      icon="add-plugin"
+                      text="Install plugins…"
+                      [attr.href]="path('/plugins')"
+                    ></nldd-menu-item>
+                    <nldd-menu-item
+                      icon="add-user"
+                      text="Invite member…"
+                      [attr.href]="path('/members/invite')"
+                      (click)="pageNav.openHere($event, overlays.inviteMember, true)"
+                    ></nldd-menu-item>
+                    <!-- A project has two things you can add to it, so each one
                        carries its own submenu rather than a flat list that
                        repeats every project name twice. -->
-                  <nldd-menu-group text="Projects">
-                    @for (project of organizationProjects(); track project.id) {
-                      <nldd-menu-item icon="folder" [attr.text]="project.name">
-                        <nldd-menu [attr.accessible-label]="project.name">
-                          <nldd-menu-item
-                            icon="add-namespace"
-                            text="New namespace…"
-                            [attr.href]="path('/projects/' + project.id + '/namespaces/new')"
-                            (click)="pageNav.openHere($event, overlays.newNamespace, project.id)"
-                          ></nldd-menu-item>
-                          <nldd-menu-item
-                            icon="add-user"
-                            text="Add project member…"
-                            [attr.href]="path('/projects/' + project.id + '/members/add')"
-                            (click)="pageNav.openHere($event, overlays.addProjectMember, project.id)"
-                          ></nldd-menu-item>
-                        </nldd-menu>
-                      </nldd-menu-item>
-                    }
-                    <nldd-menu-item
-                      icon="new-folder"
-                      text="New project…"
-                      [attr.href]="path('/projects/new')"
-                      (click)="openNewProject($event)"
-                    ></nldd-menu-item>
-                  </nldd-menu-group>
-                </nldd-menu>
-              </nldd-icon-button>
+                    <nldd-menu-group text="Projects">
+                      @for (project of organizationProjects(); track project.id) {
+                        <nldd-menu-item
+                          icon="folder"
+                          [attr.text]="project.name"
+                        >
+                          <nldd-menu [attr.accessible-label]="project.name">
+                            <nldd-menu-item
+                              icon="add-namespace"
+                              text="New namespace…"
+                              [attr.href]="path('/projects/' + project.id + '/namespaces/new')"
+                              (click)="pageNav.openHere($event, overlays.newNamespace, project.id)"
+                            ></nldd-menu-item>
+                            <nldd-menu-item
+                              icon="add-user"
+                              text="Add project member…"
+                              [attr.href]="path('/projects/' + project.id + '/members/add')"
+                              (click)="
+                                pageNav.openHere($event, overlays.addProjectMember, project.id)
+                              "
+                            ></nldd-menu-item>
+                          </nldd-menu>
+                        </nldd-menu-item>
+                      }
+                      <nldd-menu-item
+                        icon="new-folder"
+                        text="New project…"
+                        [attr.href]="path('/projects/new')"
+                        (click)="openNewProject($event)"
+                      ></nldd-menu-item>
+                    </nldd-menu-group>
+                  </nldd-menu>
+                </nldd-icon-button>
               </nldd-just-in-time-education>
               <nldd-menu-item
                 slot="overflow"
@@ -135,10 +159,12 @@
                 [attr.href]="path('/clusters/new')"
               ></nldd-menu-item>
             </nldd-toolbar-item>
-
             @if (true) {
               <nldd-toolbar-item slot="end">
-                <nldd-button-bar size="md" variant="secondary">
+                <nldd-button-bar
+                  size="md"
+                  variant="secondary"
+                >
                   <!-- A switcher with nothing to switch to is a control that never
                      does anything; the sidebar already names the organization. -->
                   @if (selectorOrganizations().length > 1) {
@@ -168,7 +194,6 @@
                             (click)="selectOrganization(org.id)"
                           ></nldd-menu-item>
                         }
-
                         <!-- An invitation is an organization you could be in, so
                              it belongs in the list of organizations rather than
                              on a login screen you only see once. Without this it
@@ -206,10 +231,17 @@
                       icon-aligned
                       decorative
                     ></nldd-avatar>
-                    <nldd-menu slot="popup" placement="bottom-end">
+                    <nldd-menu
+                      slot="popup"
+                      placement="bottom-end"
+                    >
                       <!-- The menu's header slot is unpadded on purpose, so the
                          container supplies the spacing. -->
-                      <nldd-container slot="header" padding-inline="16" padding-block="12">
+                      <nldd-container
+                        slot="header"
+                        padding-inline="16"
+                        padding-block="12"
+                      >
                         <!-- The id rather than "Logged in as": the menu already
                              says whose account this is, and the id is what you
                              would otherwise open the profile for. -->
@@ -229,7 +261,10 @@
                         (select)="overlays.apiKeys.set(true)"
                       ></nldd-menu-item>
                       <nldd-menu-divider></nldd-menu-divider>
-                      <nldd-menu-item text="Appearance" icon="appearance">
+                      <nldd-menu-item
+                        text="Appearance"
+                        icon="appearance"
+                      >
                         <nldd-menu>
                           <nldd-menu-item
                             text="System"
@@ -268,8 +303,12 @@
           </nldd-toolbar>
         </nldd-container>
       </nldd-split-view-pane>
-
-      <nldd-split-view-pane slot="main" sm-order="2" md-order="2" lg-order="2">
+      <nldd-split-view-pane
+        slot="main"
+        sm-order="2"
+        md-order="2"
+        lg-order="2"
+      >
         @if (showOrgPicker()) {
           <app-org-picker
             [organizations]="organizationDataService.userOrganizations()"
@@ -295,7 +334,11 @@
                  slotted, so it draws no box and stays out of the reading order
                  either way. -->
             @if (true) {
-              <nldd-split-view-pane slot="sidebar" background="base" has-content>
+              <nldd-split-view-pane
+                slot="sidebar"
+                background="base"
+                has-content
+              >
                 <nldd-simple-section>
                   @if (currentOrganization(); as org) {
                     <nldd-title size="3">
@@ -303,7 +346,6 @@
                     </nldd-title>
                     <nldd-spacer size="4"></nldd-spacer>
                   }
-
                   <nldd-list
                     type="navigation"
                     dividers="on-touch"
@@ -314,7 +356,10 @@
                       [attr.selected]="isNavActive('/general', true) ? '' : null"
                       (click)="navigateFromSidebar($event, '/general')"
                     >
-                      <nldd-icon-cell icon="apartment-building" size="20"></nldd-icon-cell>
+                      <nldd-icon-cell
+                        icon="apartment-building"
+                        size="20"
+                      ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
                       <nldd-text-cell text="General"></nldd-text-cell>
                     </nldd-list-item>
@@ -323,7 +368,10 @@
                       [attr.selected]="isClustersActive() ? '' : null"
                       (click)="navigateFromSidebar($event, '/clusters')"
                     >
-                      <nldd-icon-cell icon="ship-wheel" size="20"></nldd-icon-cell>
+                      <nldd-icon-cell
+                        icon="ship-wheel"
+                        size="20"
+                      ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
                       <nldd-text-cell text="Clusters"></nldd-text-cell>
                       <nldd-text-cell
@@ -339,7 +387,10 @@
                       [attr.selected]="isNavActive('/plugins') ? '' : null"
                       (click)="navigateFromSidebar($event, '/plugins')"
                     >
-                      <nldd-icon-cell icon="puzzle-piece" size="20"></nldd-icon-cell>
+                      <nldd-icon-cell
+                        icon="puzzle-piece"
+                        size="20"
+                      ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
                       <nldd-text-cell text="Plugins"></nldd-text-cell>
                     </nldd-list-item>
@@ -348,7 +399,10 @@
                       [attr.selected]="isNavActive('/metrics') ? '' : null"
                       (click)="navigateFromSidebar($event, '/metrics')"
                     >
-                      <nldd-icon-cell icon="chart-x-y-axis-line" size="20"></nldd-icon-cell>
+                      <nldd-icon-cell
+                        icon="chart-x-y-axis-line"
+                        size="20"
+                      ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
                       <nldd-text-cell text="Metrics"></nldd-text-cell>
                       <!-- Only when it is unreachable: a dot that is always on
@@ -371,7 +425,10 @@
                       [attr.selected]="isNavActive('/members') ? '' : null"
                       (click)="navigateFromSidebar($event, '/members')"
                     >
-                      <nldd-icon-cell icon="person-2" size="20"></nldd-icon-cell>
+                      <nldd-icon-cell
+                        icon="person-2"
+                        size="20"
+                      ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
                       <nldd-text-cell text="Members"></nldd-text-cell>
                     </nldd-list-item>
@@ -380,28 +437,30 @@
                       [attr.selected]="isNavActive('/limits') ? '' : null"
                       (click)="navigateFromSidebar($event, '/limits')"
                     >
-                      <nldd-icon-cell icon="hand" size="20"></nldd-icon-cell>
+                      <nldd-icon-cell
+                        icon="hand"
+                        size="20"
+                      ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
                       <nldd-text-cell text="Limits"></nldd-text-cell>
                     </nldd-list-item>
                   </nldd-list>
-
                   <!-- The projects themselves, not a link to a list of them: this
                      is where you pick one, and the status dot makes the whole
                      organization readable in one glance. -->
                   @if (organizationProjects().length > 0) {
                     <nldd-spacer size="24"></nldd-spacer>
-
                     <nldd-title size="5">
                       <h2>Projects</h2>
                     </nldd-title>
-
                     <nldd-spacer size="8"></nldd-spacer>
-
                     <!-- Under the heading rather than beside it: a named button
                        says what it makes, where an icon in the corner only
                        says "plus". -->
-                    <nldd-toolbar label="Project actions" size="sm">
+                    <nldd-toolbar
+                      label="Project actions"
+                      size="sm"
+                    >
                       <nldd-toolbar-item slot="start">
                         <nldd-button
                           text="New project…"
@@ -418,9 +477,7 @@
                         ></nldd-menu-item>
                       </nldd-toolbar-item>
                     </nldd-toolbar>
-
                     <nldd-spacer size="8"></nldd-spacer>
-
                     <nldd-list
                       type="navigation"
                       dividers="on-touch"
@@ -434,7 +491,10 @@
                           "
                           (click)="navigateFromSidebar($event, '/projects/' + project.id)"
                         >
-                          <nldd-icon-cell icon="folder" size="20"></nldd-icon-cell>
+                          <nldd-icon-cell
+                            icon="folder"
+                            size="20"
+                          ></nldd-icon-cell>
                           <nldd-spacer-cell size="8"></nldd-spacer-cell>
                           <nldd-text-cell [attr.text]="project.name"></nldd-text-cell>
                           <nldd-cell width="fit-content">
@@ -453,7 +513,6 @@
                 </nldd-simple-section>
               </nldd-split-view-pane>
             }
-
             @if (activeProject(); as project) {
               <nldd-split-view-pane
                 slot="secondary-sidebar"
@@ -470,7 +529,6 @@
                     [attr.back-text]="currentOrganization()?.alias || 'Menu'"
                     (back)="onPaneBack()"
                   ></nldd-top-title-bar>
-
                   <nldd-simple-section>
                     <!-- The cluster sits under the name rather than in a list of
                        its own: it is what the project is, not something you can
@@ -479,9 +537,7 @@
                       <h1>{{ project.name }}</h1>
                       <span slot="subtitle">Cluster {{ project.clusterName }}</span>
                     </nldd-title>
-
                     <nldd-spacer size="16"></nldd-spacer>
-
                     <nldd-list
                       type="navigation"
                       dividers="on-touch"
@@ -493,7 +549,10 @@
                           [attr.selected]="isNavActive(item.path, item.exact) ? '' : null"
                           (click)="navigateFromSidebar($event, item.path)"
                         >
-                          <nldd-icon-cell [attr.icon]="item.icon" size="20"></nldd-icon-cell>
+                          <nldd-icon-cell
+                            [attr.icon]="item.icon"
+                            size="20"
+                          ></nldd-icon-cell>
                           <nldd-spacer-cell size="8"></nldd-spacer-cell>
                           <nldd-text-cell [attr.text]="item.label"></nldd-text-cell>
                           @if (item.count !== null) {
@@ -518,22 +577,17 @@
                           }
                         </nldd-list-item>
                       }
-
                     </nldd-list>
-
                     <!-- A plugin's screens under the plugin's own name, as a
                        heading rather than as a row: it names where the items
                        below come from, and it is not somewhere you can go. Same
                        heading as "Projects" one pane to the left. -->
                     @for (group of pluginNavService.projectNav(); track group.pluginName) {
                       <nldd-spacer size="24"></nldd-spacer>
-
                       <nldd-title size="5">
                         <h2>{{ group.label }}</h2>
                       </nldd-title>
-
                       <nldd-spacer size="8"></nldd-spacer>
-
                       <nldd-list
                         type="navigation"
                         dividers="on-touch"
@@ -572,7 +626,10 @@
                owns the scrolling and the sticky nldd-top-title-bar. A pane
                flex-grows everything it slots, so a second child here would
                steal the page's height. -->
-            <nldd-split-view-pane slot="main" [attr.has-content]="stackDepth() >= 2 ? '' : null">
+            <nldd-split-view-pane
+              slot="main"
+              [attr.has-content]="stackDepth() >= 2 ? '' : null"
+            >
               @if (selectedOrgId()) {
                 @if (isProjectRoot()) {
                   <nldd-page>
@@ -591,18 +648,21 @@
     </nldd-bar-split-view>
   }
 </nldd-app-view>
-
 <!-- Your account and your keys sit above the app rather than in it: opening one
      leaves the page you were on mounted and untouched behind it. Deferred, so
      neither costs anything until you first open it. -->
 @defer (when overlays.profile()) {
-  <app-profile [show]="overlays.profile()" (closed)="overlays.profile.set(false)"></app-profile>
+  <app-profile
+    [show]="overlays.profile()"
+    (closed)="overlays.profile.set(false)"
+  ></app-profile>
 }
-
 @defer (when overlays.apiKeys()) {
-  <app-api-keys [show]="overlays.apiKeys()" (closed)="overlays.apiKeys.set(false)"></app-api-keys>
+  <app-api-keys
+    [show]="overlays.apiKeys()"
+    (closed)="overlays.apiKeys.set(false)"
+  ></app-api-keys>
 }
-
 @if (overlays.addProjectMember(); as projectId) {
   <app-add-project-member-sheet
     [projectId]="projectId"
@@ -610,14 +670,12 @@
     (closed)="overlays.addProjectMember.set(null)"
   ></app-add-project-member-sheet>
 }
-
 @defer (when overlays.inviteMember()) {
   <app-invite-member-sheet
     [show]="overlays.inviteMember()"
     (closed)="overlays.inviteMember.set(false)"
   ></app-invite-member-sheet>
 }
-
 @if (overlays.newNamespace(); as projectId) {
   <app-new-namespace-sheet
     [projectId]="projectId"
@@ -625,25 +683,24 @@
     (closed)="overlays.newNamespace.set(null)"
   ></app-new-namespace-sheet>
 }
-
 @defer (when overlays.newCluster()) {
   <app-new-cluster-form
     [show]="overlays.newCluster()"
     (closed)="overlays.newCluster.set(false)"
   ></app-new-cluster-form>
 }
-
 @defer (when overlays.newProject()) {
   <app-new-project
     [show]="overlays.newProject()"
     (closed)="overlays.newProject.set(false)"
   ></app-new-project>
 }
-
 <nldd-modal-dialog
   appDialogSync
   [show]="!!invitationToAnswer()"
-  [attr.text]="invitationToAnswer() ? 'Join ' + invitationToAnswer()!.organizationAlias + '?' : null"
+  [attr.text]="
+    invitationToAnswer() ? 'Join ' + invitationToAnswer()!.organizationAlias + '?' : null
+  "
   supporting-text="You have been invited. Accepting adds it to your organizations, declining removes the invitation."
   accessible-label="Answer invitation"
   (close)="invitationToAnswer.set(null)"

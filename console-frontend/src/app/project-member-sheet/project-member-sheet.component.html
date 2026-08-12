@@ -25,12 +25,14 @@
       (back)="step.set('overview')"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
       @if (step() === 'access') {
         <!-- The heading lives in the body and the bar borrows it while scrolling:
              until you scroll, the bar carries only the way back to the member. -->
-        <nldd-title id="access-title" size="3">
+        <nldd-title
+          id="access-title"
+          size="3"
+        >
           <h1>
             {{
               editingNamespace()
@@ -39,12 +41,10 @@
             }}
           </h1>
         </nldd-title>
-
         <!-- Under the heading, not inside the field: what it says holds for the
              whole step, and in the all-grant case there is no field left. -->
         @if (!editingNamespace() && (impliedNew() || coversEveryNamespace())) {
           <nldd-spacer size="12"></nldd-spacer>
-
           <nldd-banner
             variant="accent"
             [attr.text]="
@@ -53,17 +53,21 @@
                 : 'This member already has access to every namespace in this project. Picking “All namespaces” also covers the ones added later.'
             "
           ></nldd-banner>
-
           <nldd-spacer size="12"></nldd-spacer>
         } @else {
           <nldd-spacer size="16"></nldd-spacer>
         }
-
-        <nldd-form (submit)="saveAccess()" (keydown.enter)="saveAccess()">
+        <nldd-form
+          (submit)="saveAccess()"
+          (keydown.enter)="saveAccess()"
+        >
           @if (!editingNamespace()) {
             @if (!impliedNew()) {
               <nldd-form-field label="Namespaces">
-                <nldd-list variant="box-tinted" accessible-label="Namespaces">
+                <nldd-list
+                  variant="box-tinted"
+                  accessible-label="Namespaces"
+                >
                   <!-- Not a shortcut for ticking the rest: it also covers
                        namespaces made later, so it excludes the others. -->
                   <nldd-list-item
@@ -96,7 +100,10 @@
                         ></nldd-checkbox>
                       </nldd-cell>
                       <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                      <nldd-text-cell width="full" [attr.text]="namespace"></nldd-text-cell>
+                      <nldd-text-cell
+                        width="full"
+                        [attr.text]="namespace"
+                      ></nldd-text-cell>
                     </nldd-list-item>
                   }
                   <!-- The ellipsis warns that picking this asks for more
@@ -113,7 +120,10 @@
                       ></nldd-checkbox>
                     </nldd-cell>
                     <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                    <nldd-text-cell width="full" text="New namespace…"></nldd-text-cell>
+                    <nldd-text-cell
+                      width="full"
+                      text="New namespace…"
+                    ></nldd-text-cell>
                   </nldd-list-item>
                 </nldd-list>
                 <nldd-form-field-error-text id="member-namespaces-error">
@@ -123,7 +133,6 @@
                 </nldd-form-field-error-text>
               </nldd-form-field>
             }
-
             @if (draftNamespaces().includes(NEW_NAMESPACE) || impliedNew()) {
               <nldd-form-field label="New namespace name">
                 <nldd-text-field
@@ -142,9 +151,11 @@
               </nldd-form-field>
             }
           }
-
           <nldd-form-field label="Roles">
-            <nldd-list variant="box-tinted" accessible-label="Roles">
+            <nldd-list
+              variant="box-tinted"
+              accessible-label="Roles"
+            >
               @for (role of allRoles; track role) {
                 <nldd-list-item
                   checkbox
@@ -158,7 +169,10 @@
                     ></nldd-checkbox>
                   </nldd-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-text-cell width="full" [attr.text]="role"></nldd-text-cell>
+                  <nldd-text-cell
+                    width="full"
+                    [attr.text]="role"
+                  ></nldd-text-cell>
                 </nldd-list-item>
               }
             </nldd-list>
@@ -166,7 +180,6 @@
               Without a role they can see the namespace, but do nothing in it.
             </nldd-form-field-help-text>
           </nldd-form-field>
-
           <nldd-form-actions>
             <nldd-button
               type="button"
@@ -179,7 +192,10 @@
           </nldd-form-actions>
         </nldd-form>
       } @else if (isLoading()) {
-        <nldd-activity-indicator show-text text="Loading member..."></nldd-activity-indicator>
+        <nldd-activity-indicator
+          show-text
+          text="Loading member..."
+        ></nldd-activity-indicator>
       } @else if (!member()) {
         <nldd-inline-dialog
           variant="alert"
@@ -195,13 +211,17 @@
           ></nldd-button>
         </nldd-inline-dialog>
       } @else if (member(); as view) {
-        <nldd-title id="member-title" size="3">
+        <nldd-title
+          id="member-title"
+          size="3"
+        >
           <h1>{{ view.member.userName || 'Member' }}</h1>
         </nldd-title>
-
         <nldd-spacer size="16"></nldd-spacer>
-
-        <nldd-list variant="box-tinted" accessible-label="Member details">
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Member details"
+        >
           <!-- Names the project: the sheet can be opened from a link, with no
                list behind it to say where you are. -->
           <nldd-list-item>
@@ -258,30 +278,26 @@
             ></nldd-text-cell>
           </nldd-list-item>
         </nldd-list>
-
         @if (isLocked(view)) {
           <nldd-spacer size="12"></nldd-spacer>
-
           <!-- Under the permission it explains, rather than where an action
                would have been: there is no action to explain away. -->
           <nldd-rich-text spacing="flat">
             <p>
               This member is an organization admin, so cannot be removed from a project.
-              <a [href]="pageNav.path('/members')" (click)="openOrganizationMembers($event)"
+              <a
+                [href]="pageNav.path('/members')"
+                (click)="openOrganizationMembers($event)"
                 >See organization members</a
               >.
             </p>
           </nldd-rich-text>
         }
-
         <nldd-spacer size="24"></nldd-spacer>
-
         <nldd-title size="4">
           <h2>Namespaces</h2>
         </nldd-title>
-
         <nldd-spacer size="12"></nldd-spacer>
-
         <nldd-toolbar label="Namespace access">
           <nldd-toolbar-item slot="start">
             <nldd-button
@@ -299,9 +315,7 @@
             ></nldd-menu-item>
           </nldd-toolbar-item>
         </nldd-toolbar>
-
         <nldd-spacer size="12"></nldd-spacer>
-
         @if (bindings().length === 0) {
           <!-- In a box: an inline dialog fills the column it is given, which is
                right for a page's empty state and wrong for one block among
@@ -317,7 +331,10 @@
             </nldd-container>
           </nldd-box>
         } @else {
-          <nldd-list variant="box-tinted" accessible-label="Namespace access">
+          <nldd-list
+            variant="box-tinted"
+            accessible-label="Namespace access"
+          >
             @for (binding of bindings(); track binding.namespace) {
               <nldd-list-item>
                 <!-- The roles read under the namespace, not opposite it: a
@@ -356,24 +373,18 @@
             }
           </nldd-list>
         }
-
         <nldd-spacer size="24"></nldd-spacer>
-
         @if (!isLocked(view)) {
           <nldd-box variant="critical">
             <nldd-container padding="16">
               <nldd-title size="5">
                 <h2>Remove from project</h2>
               </nldd-title>
-
               <nldd-spacer size="8"></nldd-spacer>
-
               <nldd-rich-text spacing="flat">
                 <p>They immediately lose access to this project and its resources.</p>
               </nldd-rich-text>
-
               <nldd-spacer size="16"></nldd-spacer>
-
               <nldd-button
                 type="button"
                 (click)="showRemoveModal.set(true)"
@@ -387,7 +398,6 @@
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
-
 <!-- Remove Namespace Access Modal -->
 <nldd-modal-dialog
   #removeAccessDialog
@@ -414,7 +424,6 @@
     variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
-
 <!-- Remove Member Modal -->
 <nldd-modal-dialog
   #removeMemberDialog

@@ -1,9 +1,10 @@
-<nldd-title id="new-cluster-form-step-title" size="3">
+<nldd-title
+  id="new-cluster-form-step-title"
+  size="3"
+>
   <h1>Configure your cluster node pools</h1>
 </nldd-title>
-
 <nldd-spacer size="16"></nldd-spacer>
-
 <app-shared-node-pools-form
   [machineTypeOptions]="machineTypeOptions()"
   (formSubmit)="onFormSubmit($event)"

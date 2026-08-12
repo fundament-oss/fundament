@@ -7,14 +7,14 @@
     [attr.back-text]="pageNav.backText()"
     collapse-anchor="members-title"
   ></nldd-top-title-bar>
-
   <nldd-simple-section>
-    <nldd-title id="members-title" size="2">
+    <nldd-title
+      id="members-title"
+      size="2"
+    >
       <h1>Organization members</h1>
     </nldd-title>
-
     <nldd-spacer size="12"></nldd-spacer>
-
     <!-- The page actions in a toolbar of their own rather than in the title's
          actions slot: a toolbar takes a second and a third action without the
          title growing a row of controls. -->
@@ -54,9 +54,7 @@
         ></nldd-menu-item>
       </nldd-toolbar-item>
     </nldd-toolbar>
-
     <nldd-spacer size="16"></nldd-spacer>
-
     <!-- Standing explanation, not a notice: a banner would claim this is
          something that just happened and can be dismissed. The detail sits in a
          sheet, so the page opens with the part everyone needs. -->
@@ -66,11 +64,12 @@
         every project; a viewer has to be added to a project first.
       </p>
     </nldd-rich-text>
-
     <nldd-spacer size="24"></nldd-spacer>
-
     @if (isLoading()) {
-      <nldd-activity-indicator show-text text="Loading members..."></nldd-activity-indicator>
+      <nldd-activity-indicator
+        show-text
+        text="Loading members..."
+      ></nldd-activity-indicator>
     } @else if (error()) {
       <nldd-box>
         <nldd-container padding="16">
@@ -96,7 +95,12 @@
       <nldd-toolbar label="Member filters">
         <!-- Highest priority: a search field has no menu form, so it is the
              last item to move into the overflow. -->
-        <nldd-toolbar-item slot="start" priority="2" width="280px" min-width="180px">
+        <nldd-toolbar-item
+          slot="start"
+          priority="2"
+          width="280px"
+          min-width="180px"
+        >
           <!-- Filters while you type: with dozens of members, finding one is
                faster than narrowing a category. -->
           <nldd-search-field
@@ -115,7 +119,10 @@
             start-icon="filter"
             [attr.text]="filterLabel()"
           >
-            <nldd-menu slot="popup" accessible-label="Show">
+            <nldd-menu
+              slot="popup"
+              accessible-label="Show"
+            >
               <nldd-menu-item
                 type="radio"
                 text="All"
@@ -139,7 +146,10 @@
               ></nldd-menu-item>
             </nldd-menu>
           </nldd-button>
-          <nldd-menu-group slot="overflow" label="Show">
+          <nldd-menu-group
+            slot="overflow"
+            label="Show"
+          >
             <nldd-menu-item
               type="radio"
               text="All"
@@ -163,7 +173,6 @@
             ></nldd-menu-item>
           </nldd-menu-group>
         </nldd-toolbar-item>
-
         <!-- Sorting is not filtering, so it sits on the other side of the bar. -->
         <nldd-toolbar-item slot="end">
           <nldd-button
@@ -173,7 +182,10 @@
             start-icon="sort"
             [attr.text]="sortLabel()"
           >
-            <nldd-menu slot="popup" accessible-label="Sort by">
+            <nldd-menu
+              slot="popup"
+              accessible-label="Sort by"
+            >
               <nldd-menu-item
                 type="radio"
                 text="Status"
@@ -200,7 +212,10 @@
               ></nldd-menu-item>
             </nldd-menu>
           </nldd-button>
-          <nldd-menu-group slot="overflow" label="Sort by">
+          <nldd-menu-group
+            slot="overflow"
+            label="Sort by"
+          >
             <nldd-menu-item
               type="radio"
               text="Status"
@@ -228,9 +243,7 @@
           </nldd-menu-group>
         </nldd-toolbar-item>
       </nldd-toolbar>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       @if (visibleMembers().length === 0) {
         <nldd-box>
           <nldd-container padding="16">
@@ -259,7 +272,10 @@
           </nldd-container>
         </nldd-box>
       } @else {
-        <nldd-list variant="box-tinted" accessible-label="Members">
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Members"
+        >
           @for (member of visibleMembers(); track member.id) {
             <nldd-list-item>
               <nldd-cell width="fit-content">
@@ -271,7 +287,6 @@
                 ></nldd-avatar>
               </nldd-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
-
               <!-- The tags sit in the cell's own text line, so they read as part
                    of the name rather than as a column of their own. -->
               <!-- Plain inline flow, no wrapping container: a container's gap
@@ -292,7 +307,6 @@
                   [attr.text]="permissionLabel(member.permission)"
                 ></nldd-tag>
               </nldd-text-cell>
-
               <!-- The right-hand column says what this person is to you: "You" for
                    yourself, "Invited" for someone who has not accepted yet. An
                    invitation has no access to change yet, so the menu holds the
@@ -303,7 +317,10 @@
                      "Invited", and a badge that names itself would say it twice
                      to anyone listening. -->
                 <nldd-cell width="fit-content">
-                  <nldd-badge color="warning" decorative></nldd-badge>
+                  <nldd-badge
+                    color="warning"
+                    decorative
+                  ></nldd-badge>
                 </nldd-cell>
                 <nldd-spacer-cell size="6"></nldd-spacer-cell>
                 <nldd-text-cell
@@ -319,9 +336,7 @@
                     size="sm"
                     variant="secondary"
                     popup-type="menu"
-                    [attr.accessible-label]="
-                      'Actions for ' + (member.email || member.name)
-                    "
+                    [attr.accessible-label]="'Actions for ' + (member.email || member.name)"
                   >
                     <nldd-menu slot="popup">
                       <!-- The role is part of the invitation, so it can still be
@@ -329,7 +344,9 @@
                            second invite and a second mail to the same person. -->
                       <nldd-menu-item
                         icon="person-badge-gear"
-                        [attr.text]="member.permission === 'admin' ? 'Switch to viewer' : 'Switch to admin'"
+                        [attr.text]="
+                          member.permission === 'admin' ? 'Switch to viewer' : 'Switch to admin'
+                        "
                         (select)="setPermission(member)"
                       ></nldd-menu-item>
                       <nldd-menu-divider></nldd-menu-divider>
@@ -388,11 +405,9 @@
       }
     }
   </nldd-simple-section>
-
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
-
 <!-- Action Error Modal -->
 <nldd-modal-dialog
   #actionErrorDialog
@@ -420,7 +435,6 @@
     variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
-
 <!-- Delete Member Modal -->
 <nldd-modal-dialog
   #deleteDialog
@@ -448,8 +462,5 @@
     variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
-
 <!-- Invite Sheet -->
-
-
 <router-outlet />

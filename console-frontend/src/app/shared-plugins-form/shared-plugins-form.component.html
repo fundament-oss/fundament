@@ -42,9 +42,7 @@
           [selected]="selectedPreset === 'custom'"
         ></nldd-toggle-button>
       </nldd-toggle-button-group>
-
       <nldd-spacer size="12"></nldd-spacer>
-
       @if (plugins.length === 0) {
         <nldd-inline-dialog
           icon="puzzle-piece"
@@ -56,15 +54,16 @@
              toggles the plugin instead of only the box. That makes the
              description part of the hit area, which is where the reason to
              toggle actually is.
-
              A checkbox and not a switch: nothing happens until Save changes, and
              a switch promises an effect the moment you flip it.
-
              The box is decoration: `inert` keeps it out of the tab order and out
              of the accessibility tree, which the row already covers. A second
              focusable control would double the tab stops and announce the state
              twice. -->
-        <nldd-list variant="box-tinted" accessible-label="Plugins">
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Plugins"
+        >
           @for (plugin of plugins; track plugin.id) {
             <nldd-list-item
               checkbox
@@ -97,7 +96,6 @@
         </nldd-list>
       }
     </nldd-form-field>
-
     <!-- Switch and upload in one box: the upload only exists because the switch
          is on, and loose in the form they read as two unrelated questions. -->
     <nldd-box>
@@ -116,13 +114,11 @@
           name="customPluginUploadEnabled"
           (change)="onCustomPluginUploadToggle($any($event).detail.checked)"
         ></nldd-checkbox-field>
-
         <!-- The upload only appears once it is turned on. A disabled file field
              asks to be read and then refuses to do anything; an absent one asks
              nothing. -->
         @if (customPluginUploadEnabled) {
           <nldd-spacer size="16"></nldd-spacer>
-
           <nldd-form-field label="Plugin ZIP file">
             <nldd-form-field-help-text>
               A custom plugin goes up as a ZIP file. Other file types are rejected.
@@ -136,7 +132,6 @@
         }
       </nldd-container>
     </nldd-box>
-
     <nldd-form-actions>
       <ng-content></ng-content>
     </nldd-form-actions>

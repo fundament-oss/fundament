@@ -10,29 +10,33 @@
     collapse-anchor="project-title"
     (back)="pageNav.goTo('/projects/' + (project()?.id || ''))"
   ></nldd-top-title-bar>
-
   <nldd-simple-section>
     @if (errorMessage()) {
-      <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+      <nldd-banner
+        variant="critical"
+        [attr.text]="errorMessage()"
+      ></nldd-banner>
       <nldd-spacer size="16"></nldd-spacer>
     }
-
     @if (isLoading()) {
       <nldd-activity-indicator
         show-text
         text="Loading project details..."
       ></nldd-activity-indicator>
     }
-
     @if (!isLoading() && project()) {
-      <nldd-title id="project-title" size="2">
+      <nldd-title
+        id="project-title"
+        size="2"
+      >
         <h1>{{ project()?.alias || project()?.name || 'Unknown project' }}</h1>
       </nldd-title>
-
       <nldd-spacer size="12"></nldd-spacer>
-
       <nldd-container gap="24">
-        <nldd-list variant="box-tinted" accessible-label="Project details">
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Project details"
+        >
           <!-- The alias is the only editable field, so the control sits on that
                row rather than on the page as a whole. -->
           <nldd-list-item>
@@ -95,22 +99,17 @@
             ></nldd-text-cell>
           </nldd-list-item>
         </nldd-list>
-
         <!-- Danger Zone -->
         <nldd-box variant="critical">
           <nldd-container padding="16">
             <nldd-title size="5">
               <h3>Danger zone</h3>
             </nldd-title>
-
             <nldd-spacer size="8"></nldd-spacer>
-
             <nldd-rich-text spacing="flat">
               <p>Deleting a project is permanent and cannot be undone.</p>
             </nldd-rich-text>
-
             <nldd-spacer size="16"></nldd-spacer>
-
             <nldd-button
               (click)="showDeleteModal.set(true)"
               [attr.text]="'Delete ' + projectLabel()"
@@ -121,11 +120,9 @@
       </nldd-container>
     }
   </nldd-simple-section>
-
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
-
 <!-- Edit Project Sheet -->
 <nldd-sheet
   #editSheet
@@ -143,15 +140,19 @@
       dismiss-text="Cancel"
       (dismiss)="showEditModal.set(false)"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="edit-project-alias-title" size="3">
+      <nldd-title
+        id="edit-project-alias-title"
+        size="3"
+      >
         <h1>Edit project alias</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
-      <nldd-form (submit)="saveEdit()" (keydown.enter)="saveEdit()" novalidate>
+      <nldd-form
+        (submit)="saveEdit()"
+        (keydown.enter)="saveEdit()"
+        novalidate
+      >
         <nldd-form-field label="Alias">
           <nldd-text-field
             appAutofocus
@@ -160,7 +161,6 @@
             (keyup.escape)="showEditModal.set(false)"
           ></nldd-text-field>
         </nldd-form-field>
-
         <nldd-form-actions>
           <nldd-button
             type="button"
@@ -175,7 +175,6 @@
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
-
 <!-- Delete Project Modal -->
 <nldd-modal-dialog
   #deleteDialog
@@ -205,7 +204,6 @@
       (input)="onDeleteConfirmationInput($event)"
     ></nldd-text-field>
   </nldd-form-field>
-
   <nldd-button
     slot="actions"
     type="button"

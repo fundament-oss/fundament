@@ -14,25 +14,25 @@
       dismiss-text="Cancel"
       (dismiss)="onCancel()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="new-project-title" size="3">
+      <nldd-title
+        id="new-project-title"
+        size="3"
+      >
         <h1>New project</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       @if (errorMessage()) {
-        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+        <nldd-banner
+          variant="critical"
+          [attr.text]="errorMessage()"
+        ></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>
       }
-
       <nldd-rich-text>
         <p>Create a new project to organize your namespaces and resources.</p>
       </nldd-rich-text>
-
       <nldd-spacer size="12"></nldd-spacer>
-
       <nldd-form
         [formGroup]="projectForm"
         (submit)="onSubmit($event)"
@@ -54,18 +54,24 @@
             Must be lowercase, start with a letter, and contain only letters, numbers, and hyphens.
           </nldd-form-field-help-text>
         </nldd-form-field>
-
         <nldd-form-field
           label="Cluster"
           supporting-label="Select the cluster this project will belong to"
         >
           @if (isLoadingClusters()) {
-            <nldd-activity-indicator show-text text="Loading clusters..."></nldd-activity-indicator>
+            <nldd-activity-indicator
+              show-text
+              text="Loading clusters..."
+            ></nldd-activity-indicator>
           } @else if (clusters().length === 0) {
             <nldd-rich-text>
               <p>
                 No clusters available.
-                <nldd-link [attr.href]="pageNav.path('/clusters/new')" text="Add a cluster first"></nldd-link>.
+                <nldd-link
+                  [attr.href]="pageNav.path('/clusters/new')"
+                  text="Add a cluster first"
+                ></nldd-link
+                >.
               </p>
             </nldd-rich-text>
           } @else {
@@ -91,7 +97,6 @@
             </nldd-form-field-error-text>
           }
         </nldd-form-field>
-
         <!-- No cancel button: the title bar's dismiss already covers leaving. -->
         <nldd-form-actions>
           <nldd-button

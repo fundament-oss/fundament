@@ -19,7 +19,6 @@
       (back)="goToStep(currentStepIndex() - 1)"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
       <nldd-step-indicator
         accessible-label="Cluster creation progress"
@@ -35,9 +34,7 @@
           ></nldd-step-indicator-item>
         }
       </nldd-step-indicator>
-
       <nldd-spacer size="24"></nldd-spacer>
-
       @switch (currentStepIndex()) {
         @case (0) {
           <app-new-cluster />

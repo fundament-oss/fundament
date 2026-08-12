@@ -1,55 +1,71 @@
 <!-- Same container setup as the login screen, on purpose: both are a single
      card on an otherwise empty page, one before you are in and one before you
      have chosen where to be. Keep the two in sync. -->
-<nldd-simple-section horizontal-alignment="center" vertical-alignment="center">
+<nldd-simple-section
+  horizontal-alignment="center"
+  vertical-alignment="center"
+>
   <!-- The panel carries its own width; the section only says where it sits. -->
   <nldd-container max-width="480px">
     <nldd-box>
-      <nldd-container padding="16" md-padding="24" lg-padding="32">
+      <nldd-container
+        padding="16"
+        md-padding="24"
+        lg-padding="32"
+      >
         <nldd-title size="3">
           <h1>Select an organization</h1>
         </nldd-title>
-
         <nldd-spacer size="12"></nldd-spacer>
-
         <nldd-rich-text spacing="flat">
           <p>
-            Select the organization you want to start with. You can switch between them at any
-            time from the toolbar.
+            Select the organization you want to start with. You can switch between them at any time
+            from the toolbar.
           </p>
         </nldd-rich-text>
-
         <nldd-spacer size="24"></nldd-spacer>
-
         @if (acceptedOrganizations().length > 0) {
-          <nldd-list variant="box-tinted" type="navigation" accessible-label="Organizations">
+          <nldd-list
+            variant="box-tinted"
+            type="navigation"
+            accessible-label="Organizations"
+          >
             @for (org of acceptedOrganizations(); track org.id) {
-              <nldd-list-item button (click)="onSelect(org.id)">
+              <nldd-list-item
+                button
+                (click)="onSelect(org.id)"
+              >
                 <nldd-icon-cell icon="apartment-building"></nldd-icon-cell>
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell [attr.text]="org.alias || org.name"></nldd-text-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                <nldd-icon-cell icon="chevron-right" size="20" color="secondary"></nldd-icon-cell>
+                <nldd-icon-cell
+                  icon="chevron-right"
+                  size="20"
+                  color="secondary"
+                ></nldd-icon-cell>
               </nldd-list-item>
             }
           </nldd-list>
         }
-
         @if (pendingInvitationList().length > 0) {
           <nldd-spacer size="24"></nldd-spacer>
-
           <!-- A list of its own: these are not places you can go yet, they are
                offers to answer. -->
           <nldd-title size="5">
             <h2>Pending invitations</h2>
           </nldd-title>
-
           <nldd-spacer size="8"></nldd-spacer>
-
-          <nldd-list variant="box-tinted" accessible-label="Pending invitations">
+          <nldd-list
+            variant="box-tinted"
+            accessible-label="Pending invitations"
+          >
             @for (invitation of pendingInvitationList(); track invitation.id) {
               <nldd-list-item>
-                <nldd-icon-cell icon="apartment-building" color="secondary"></nldd-icon-cell>
+                <nldd-icon-cell
+                  icon="apartment-building"
+                  color="secondary"
+                ></nldd-icon-cell>
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell [attr.text]="invitation.organizationAlias"></nldd-text-cell>
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>

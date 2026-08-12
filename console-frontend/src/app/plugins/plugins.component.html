@@ -5,21 +5,24 @@
     [attr.back-text]="pageNav.backText()"
     collapse-anchor="plugins-title"
   ></nldd-top-title-bar>
-
   <nldd-simple-section>
-    <nldd-title id="plugins-title" size="2">
+    <nldd-title
+      id="plugins-title"
+      size="2"
+    >
       <h1>Plugins</h1>
     </nldd-title>
     <nldd-rich-text>
       <p>Discover and install plugins to expand your Kubernetes clusters.</p>
     </nldd-rich-text>
-
     @if (isLoading()) {
       <nldd-spacer size="24"></nldd-spacer>
-      <nldd-activity-indicator show-text text="Loading plugins..."></nldd-activity-indicator>
+      <nldd-activity-indicator
+        show-text
+        text="Loading plugins..."
+      ></nldd-activity-indicator>
     } @else {
       <nldd-spacer size="16"></nldd-spacer>
-
       <!-- The filters were a sidebar of two lists; as menus they stay out of the
            way until you need them, and the button label reports the active
            filter so the current selection is readable without opening one. -->
@@ -31,7 +34,10 @@
             variant="secondary"
             [attr.text]="getSelectedPresetLabel()"
           >
-            <nldd-menu slot="popup" accessible-label="Presets">
+            <nldd-menu
+              slot="popup"
+              accessible-label="Presets"
+            >
               @for (preset of presets; track preset.id) {
                 <nldd-menu-item
                   type="radio"
@@ -51,7 +57,10 @@
             variant="secondary"
             [attr.text]="getSelectedCategoryLabel()"
           >
-            <nldd-menu slot="popup" accessible-label="Categories">
+            <nldd-menu
+              slot="popup"
+              accessible-label="Categories"
+            >
               @for (category of categories; track category.id) {
                 <nldd-menu-item
                   type="radio"
@@ -65,9 +74,7 @@
           </nldd-button>
         </nldd-toolbar-item>
       </nldd-toolbar>
-
       <nldd-spacer size="24"></nldd-spacer>
-
       @if (filteredPlugins.length === 0) {
         <nldd-inline-dialog
           icon="puzzle-piece"
@@ -76,7 +83,11 @@
           supporting-text="Try a different preset or category."
         ></nldd-inline-dialog>
       } @else {
-        <nldd-collection layout="grid" item-width="320px" gap="16px">
+        <nldd-collection
+          layout="grid"
+          item-width="320px"
+          gap="16px"
+        >
           @for (plugin of filteredPlugins; track plugin.id) {
             <nldd-card background="tinted">
               <nldd-container padding="16">
@@ -87,9 +98,7 @@
                   object-fit="contain"
                   decorative
                 ></nldd-image>
-
                 <nldd-spacer size="12"></nldd-spacer>
-
                 <!-- Only the two tags that say something the description does
                      not: whether it is official, and where it runs. The keyword
                      tags repeat a word from the description and live on the
@@ -98,7 +107,11 @@
                   <h2>
                     {{ plugin.displayName || plugin.name }}
                     @if (isOfficial(plugin)) {
-                      <nldd-tag color="success" size="sm" text="Official"></nldd-tag>
+                      <nldd-tag
+                        color="success"
+                        size="sm"
+                        text="Official"
+                      ></nldd-tag>
                     }
                   </h2>
                   <!-- Not a second green tag beside "Official": that one says what
@@ -109,7 +122,6 @@
                     </span>
                   }
                 </nldd-title>
-
                 @if (plugin.descriptionShort) {
                   <nldd-spacer size="8"></nldd-spacer>
                   <nldd-rich-text>
@@ -117,10 +129,13 @@
                   </nldd-rich-text>
                 }
               </nldd-container>
-
               <!-- In the footer slot: the card keeps it at the bottom, so the
                    buttons line up across a row however tall each card's text is. -->
-              <nldd-container slot="footer" padding-inline="16" padding-bottom="16">
+              <nldd-container
+                slot="footer"
+                padding-inline="16"
+                padding-bottom="16"
+              >
                 <nldd-button-group orientation="horizontal">
                   <!-- Only Install gets the ellipsis: it reads as an immediate
                        action while it actually opens a dialog for picking the
@@ -148,11 +163,9 @@
       }
     }
   </nldd-simple-section>
-
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
-
 <!-- Install Modal -->
 <app-install-plugin-modal
   [pluginDisplayName]="selectedPlugin?.displayName || selectedPlugin?.name || ''"

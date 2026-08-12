@@ -8,14 +8,14 @@
     (back)="pageNav.goTo('/projects/' + projectId())"
     collapse-anchor="project-members-title"
   ></nldd-top-title-bar>
-
   <nldd-simple-section>
-    <nldd-title id="project-members-title" size="2">
+    <nldd-title
+      id="project-members-title"
+      size="2"
+    >
       <h1>Project members</h1>
     </nldd-title>
-
     <nldd-spacer size="12"></nldd-spacer>
-
     <nldd-toolbar label="Member actions">
       <nldd-toolbar-item slot="start">
         <!-- Add, not New: the person already exists in the organization, this
@@ -51,9 +51,7 @@
         ></nldd-menu-item>
       </nldd-toolbar-item>
     </nldd-toolbar>
-
     <nldd-spacer size="16"></nldd-spacer>
-
     <nldd-rich-text spacing="flat">
       <p>
         Admin permissions are inherited from the organization and cannot be changed per project;
@@ -61,11 +59,12 @@
         organization viewer can be made admin in this project.
       </p>
     </nldd-rich-text>
-
     <nldd-spacer size="16"></nldd-spacer>
-
     @if (isLoading()) {
-      <nldd-activity-indicator show-text text="Loading members..."></nldd-activity-indicator>
+      <nldd-activity-indicator
+        show-text
+        text="Loading members..."
+      ></nldd-activity-indicator>
     } @else if (error()) {
       <nldd-box>
         <nldd-container padding="16">
@@ -106,7 +105,10 @@
           </nldd-container>
         </nldd-box>
       } @else {
-        <nldd-list variant="box-tinted" accessible-label="Project members">
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Project members"
+        >
           @for (view of visibleMembers(); track view.member.id) {
             <!-- The whole row goes to the member: a real link, so it can be
                  shared and opened in a new tab, and the chevron says so. The
@@ -125,7 +127,6 @@
                 ></nldd-avatar>
               </nldd-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
-
               <nldd-text-cell
                 width="full"
                 [attr.supporting-text]="'Added to project ' + formatMemberDate(view.member)"
@@ -137,10 +138,12 @@
                   [attr.text]="roleLabel(view.member.role)"
                 ></nldd-tag>
               </nldd-text-cell>
-
               <!-- Too wide next to a name on a phone; the sheet has the detail
                    anyway. -->
-              <nldd-spacer-cell size="12" hide-below="md"></nldd-spacer-cell>
+              <nldd-spacer-cell
+                size="12"
+                hide-below="md"
+              ></nldd-spacer-cell>
               <nldd-text-cell
                 width="fit-content"
                 horizontal-alignment="right"
@@ -150,18 +153,20 @@
                 [attr.supporting-text]="namespaceRoles(view.member.id)"
               ></nldd-text-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
-              <nldd-icon-cell icon="chevron-right" size="20" color="secondary"></nldd-icon-cell>
+              <nldd-icon-cell
+                icon="chevron-right"
+                size="20"
+                color="secondary"
+              ></nldd-icon-cell>
             </nldd-list-item>
           }
         </nldd-list>
       }
     }
   </nldd-simple-section>
-
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
-
 <!-- Action Error Modal -->
 <nldd-modal-dialog
   #actionErrorDialog
@@ -189,8 +194,5 @@
     variant="secondary"
   ></nldd-button>
 </nldd-modal-dialog>
-
 <!-- Add Member Sheet -->
-
-
 <router-outlet />

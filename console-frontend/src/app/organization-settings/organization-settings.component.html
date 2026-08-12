@@ -7,14 +7,14 @@
     [attr.back-text]="pageNav.backText()"
     collapse-anchor="organization-settings-title"
   ></nldd-top-title-bar>
-
   <nldd-simple-section>
-    <nldd-title id="organization-settings-title" size="2">
+    <nldd-title
+      id="organization-settings-title"
+      size="2"
+    >
       <h1>General</h1>
     </nldd-title>
-
     <nldd-spacer size="12"></nldd-spacer>
-
     <!-- Says which of the two names people actually see, rather than hanging
          that explanation off the labels. -->
     <nldd-rich-text spacing="flat">
@@ -23,13 +23,17 @@
         was created with and cannot be changed.
       </p>
     </nldd-rich-text>
-
     <nldd-spacer size="12"></nldd-spacer>
-
     @if (loading()) {
-      <nldd-activity-indicator show-text text="Loading organization..."></nldd-activity-indicator>
+      <nldd-activity-indicator
+        show-text
+        text="Loading organization..."
+      ></nldd-activity-indicator>
     } @else if (organization(); as organization) {
-      <nldd-list variant="box-tinted" accessible-label="Organization details">
+      <nldd-list
+        variant="box-tinted"
+        accessible-label="Organization details"
+      >
         <!-- The alias is the only editable field, so the control sits on that
              row rather than on the page as a whole. -->
         <nldd-list-item>
@@ -88,11 +92,9 @@
       </nldd-box>
     }
   </nldd-simple-section>
-
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
-
 <!-- Edit Alias Sheet -->
 <nldd-sheet
   #editSheet
@@ -110,14 +112,14 @@
       dismiss-text="Cancel"
       (dismiss)="cancelEdit()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="edit-alias-title" size="3">
+      <nldd-title
+        id="edit-alias-title"
+        size="3"
+      >
         <h1>Edit organization alias</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       <!-- Here, not on the page behind it: this is where the change is, and
            closing the sheet now would lose it. -->
       @if (error(); as message) {
@@ -126,11 +128,13 @@
           text="Your change is not saved"
           [attr.supporting-text]="message"
         ></nldd-banner>
-
         <nldd-spacer size="16"></nldd-spacer>
       }
-
-      <nldd-form (submit)="saveEdit()" (keydown.enter)="saveEdit()" novalidate>
+      <nldd-form
+        (submit)="saveEdit()"
+        (keydown.enter)="saveEdit()"
+        novalidate
+      >
         <nldd-form-field label="Alias">
           <nldd-text-field
             appAutofocus
@@ -146,7 +150,6 @@
             }
           </nldd-form-field-error-text>
         </nldd-form-field>
-
         <nldd-form-actions>
           <!-- Never disabled: a disabled button says nothing about what is
                missing. Pressing it points at the field instead. -->

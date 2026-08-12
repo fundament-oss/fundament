@@ -9,7 +9,6 @@
       [attr.back-text]="pageNav.backText()"
       (back)="pageNav.goTo(backPath())"
     ></nldd-top-title-bar>
-
     <app-plugin-iframe
       [src]="customUIUrl()!"
       [pluginName]="pluginName()"
@@ -31,20 +30,22 @@
       (back)="pageNav.goTo(backPath())"
       collapse-anchor="resource-list-title"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
       @if (errorMessage()) {
-        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+        <nldd-banner
+          variant="critical"
+          [attr.text]="errorMessage()"
+        ></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>
       }
-
-      <nldd-title id="resource-list-title" size="2">
+      <nldd-title
+        id="resource-list-title"
+        size="2"
+      >
         <h1>{{ kindLabel() }}</h1>
       </nldd-title>
-
       @if (canCreate()) {
         <nldd-spacer size="12"></nldd-spacer>
-
         <nldd-toolbar [attr.label]="kindLabel() + ' actions'">
           <nldd-toolbar-item slot="start">
             <nldd-button
@@ -62,19 +63,15 @@
           </nldd-toolbar-item>
         </nldd-toolbar>
       }
-
       <nldd-spacer size="16"></nldd-spacer>
-
       <!-- Standing explanation, the same shape as on the other pages: what the
            plugin says about itself, not a notice about something that happened. -->
       @if (plugin()?.description) {
         <nldd-rich-text spacing="flat">
           <p>{{ plugin()?.description }}</p>
         </nldd-rich-text>
-
         <nldd-spacer size="24"></nldd-spacer>
       }
-
       @if (isLoading() || clusterContext.isLoadingClusters()) {
         <nldd-activity-indicator
           show-text
@@ -84,7 +81,10 @@
         <!-- A card per resource rather than a table: how many columns a plugin
              ships is its own business, and in a card every value keeps its label
              beside it however many there turn out to be. -->
-        <nldd-collection layout="grid" item-width="280px">
+        <nldd-collection
+          layout="grid"
+          item-width="280px"
+        >
           @for (resource of resources(); track resource.metadata.uid) {
             <!-- nldd-card leaves padding to nested containers, so the body gets one. -->
             <nldd-card background="tinted">
@@ -101,9 +101,7 @@
                     }
                   }
                 </nldd-title>
-
                 <nldd-spacer size="16"></nldd-spacer>
-
                 <nldd-list variant="simple">
                   @if (resource.metadata.namespace) {
                     <nldd-list-item size="sm">
@@ -127,11 +125,14 @@
                   }
                 </nldd-list>
               </nldd-container>
-
               <!-- In the footer slot rather than the body: the card keeps that
                    slot at the bottom, so the buttons line up across a row of
                    cards however tall each one's list turns out. -->
-              <nldd-container slot="footer" padding-inline="16" padding-bottom="16">
+              <nldd-container
+                slot="footer"
+                padding-inline="16"
+                padding-bottom="16"
+              >
                 <!-- href, not routerLink: the anchor lives in the link's shadow
                      DOM, out of routerLink's reach. -->
                 <nldd-button
@@ -145,7 +146,11 @@
           }
         </nldd-collection>
       } @else if (clusterContext.clusters().length === 0) {
-        <nldd-inline-dialog icon="ship-wheel" icon-color="secondary" text="No clusters found">
+        <nldd-inline-dialog
+          icon="ship-wheel"
+          icon-color="secondary"
+          text="No clusters found"
+        >
           <nldd-button
             [routerLink]="pageNav.path('/clusters/new')"
             slot="actions"

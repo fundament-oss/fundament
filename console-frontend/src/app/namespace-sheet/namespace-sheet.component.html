@@ -24,10 +24,12 @@
       (back)="step.set('overview')"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
       @if (step() === 'roles') {
-        <nldd-title id="roles-title" size="3">
+        <nldd-title
+          id="roles-title"
+          size="3"
+        >
           <h1>
             {{
               editingMember()
@@ -36,10 +38,11 @@
             }}
           </h1>
         </nldd-title>
-
         <nldd-spacer size="16"></nldd-spacer>
-
-        <nldd-form (submit)="saveRoles()" (keydown.enter)="saveRoles($event)">
+        <nldd-form
+          (submit)="saveRoles()"
+          (keydown.enter)="saveRoles($event)"
+        >
           @if (!editingMemberId()) {
             <nldd-form-field label="Members">
               @if (candidates().length === 0) {
@@ -77,9 +80,11 @@
               }
             </nldd-form-field>
           }
-
           <nldd-form-field label="Roles">
-            <nldd-list variant="box-tinted" accessible-label="Roles">
+            <nldd-list
+              variant="box-tinted"
+              accessible-label="Roles"
+            >
               @for (role of allRoles; track role) {
                 <nldd-list-item
                   checkbox
@@ -93,7 +98,10 @@
                     ></nldd-checkbox>
                   </nldd-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-text-cell width="full" [attr.text]="role"></nldd-text-cell>
+                  <nldd-text-cell
+                    width="full"
+                    [attr.text]="role"
+                  ></nldd-text-cell>
                 </nldd-list-item>
               }
             </nldd-list>
@@ -104,7 +112,6 @@
               nothing in it. You can change them per person later under Members.
             </nldd-form-field-help-text>
           </nldd-form-field>
-
           <nldd-form-actions>
             <!-- Never disabled: a disabled button says nothing about what is
                  missing. Pressing it points at the field instead. -->
@@ -118,7 +125,10 @@
           </nldd-form-actions>
         </nldd-form>
       } @else if (isLoading()) {
-        <nldd-activity-indicator show-text text="Loading namespace..."></nldd-activity-indicator>
+        <nldd-activity-indicator
+          show-text
+          text="Loading namespace..."
+        ></nldd-activity-indicator>
       } @else if (found() === false) {
         <nldd-inline-dialog
           variant="alert"
@@ -134,13 +144,17 @@
           ></nldd-button>
         </nldd-inline-dialog>
       } @else {
-        <nldd-title id="namespace-title" size="3">
+        <nldd-title
+          id="namespace-title"
+          size="3"
+        >
           <h1>{{ namespaceName() }}</h1>
         </nldd-title>
-
         <nldd-spacer size="16"></nldd-spacer>
-
-        <nldd-list variant="box-tinted" accessible-label="Namespace details">
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Namespace details"
+        >
           <!-- Names the project: the sheet can be opened from a link, with no
                list behind it to say where you are. -->
           <nldd-list-item>
@@ -160,15 +174,11 @@
             ></nldd-text-cell>
           </nldd-list-item>
         </nldd-list>
-
         <nldd-spacer size="24"></nldd-spacer>
-
         <nldd-title size="4">
           <h2>Members</h2>
         </nldd-title>
-
         <nldd-spacer size="12"></nldd-spacer>
-
         <nldd-toolbar label="Member access">
           <nldd-toolbar-item slot="start">
             <nldd-button
@@ -186,9 +196,7 @@
             ></nldd-menu-item>
           </nldd-toolbar-item>
         </nldd-toolbar>
-
         <nldd-spacer size="12"></nldd-spacer>
-
         @if (members().length === 0) {
           <!-- In a box: an inline dialog fills the column it is given, which is
                right for a page's empty state and wrong for one block among
@@ -204,7 +212,10 @@
             </nldd-container>
           </nldd-box>
         } @else {
-          <nldd-list variant="box-tinted" accessible-label="Member access">
+          <nldd-list
+            variant="box-tinted"
+            accessible-label="Member access"
+          >
             @for (entry of members(); track entry.member.id) {
               <nldd-list-item>
                 <!-- The roles read under the name, not opposite it: a handful
@@ -231,7 +242,9 @@
                         <nldd-menu-item
                           icon="person"
                           text="Open member"
-                          [attr.href]="pageNav.path('/projects/' + projectId() + '/members/' + entry.member.id)"
+                          [attr.href]="
+                            pageNav.path('/projects/' + projectId() + '/members/' + entry.member.id)
+                          "
                           (select)="openMember($event, entry.member.id)"
                         ></nldd-menu-item>
                       } @else {
@@ -255,23 +268,17 @@
             }
           </nldd-list>
         }
-
         <nldd-spacer size="24"></nldd-spacer>
-
         <nldd-box variant="critical">
           <nldd-container padding="16">
             <nldd-title size="5">
               <h2>Delete namespace</h2>
             </nldd-title>
-
             <nldd-spacer size="8"></nldd-spacer>
-
             <nldd-rich-text spacing="flat">
               <p>This removes the namespace and every resource running in it.</p>
             </nldd-rich-text>
-
             <nldd-spacer size="16"></nldd-spacer>
-
             <nldd-button
               type="button"
               (click)="showDeleteModal.set(true)"
@@ -284,7 +291,6 @@
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
-
 <!-- Remove Member Access Modal -->
 <nldd-modal-dialog
   #removeAccessDialog
@@ -311,7 +317,6 @@
     variant="destructive"
   ></nldd-button>
 </nldd-modal-dialog>
-
 <!-- Delete Namespace Modal -->
 <nldd-modal-dialog
   #deleteNamespaceDialog

@@ -24,16 +24,16 @@
         (dismiss)="onCancel()"
       ></nldd-top-title-bar>
     }
-
     <nldd-simple-section>
       @if (!notRunning()) {
-        <nldd-title id="cluster-plugins-title" size="3">
+        <nldd-title
+          id="cluster-plugins-title"
+          size="3"
+        >
           <h1>{{ pageTitle() }}</h1>
         </nldd-title>
-
         <nldd-spacer size="16"></nldd-spacer>
       }
-
       @if (loadFailed()) {
         <!-- A dialog rather than a banner: a banner sits above a form you can
              still fill in, and there is no form here to fill in. -->
@@ -57,7 +57,11 @@
         <nldd-inline-dialog
           variant="alert"
           text="Plugins can only be managed while the cluster is running"
-          [attr.supporting-text]="'Current status: ' + getStatusLabel(clusterStatus()) + '. Come back once the cluster is running.'"
+          [attr.supporting-text]="
+            'Current status: ' +
+            getStatusLabel(clusterStatus()) +
+            '. Come back once the cluster is running.'
+          "
         >
           <nldd-button
             slot="actions"
@@ -68,10 +72,12 @@
         </nldd-inline-dialog>
       } @else {
         @if (errorMessage()) {
-          <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+          <nldd-banner
+            variant="critical"
+            [attr.text]="errorMessage()"
+          ></nldd-banner>
           <nldd-spacer size="16"></nldd-spacer>
         }
-
         <app-shared-plugins-form
           (formSubmit)="onFormSubmit($event)"
           [initialPluginIds]="currentPluginIds()"

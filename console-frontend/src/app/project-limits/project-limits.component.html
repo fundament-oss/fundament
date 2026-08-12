@@ -8,25 +8,26 @@
     (back)="pageNav.goTo('/projects/' + projectId())"
     collapse-anchor="project-limits-title"
   ></nldd-top-title-bar>
-
   <nldd-simple-section>
-    <nldd-title id="project-limits-title" size="2">
+    <nldd-title
+      id="project-limits-title"
+      size="2"
+    >
       <h1>Limits</h1>
     </nldd-title>
-
     <nldd-spacer size="12"></nldd-spacer>
-
     <nldd-rich-text spacing="flat">
       <p>
         Default resource requests and limits for containers in every namespace of this project,
         applied through a LimitRange. They are used when a workload does not set its own.
       </p>
     </nldd-rich-text>
-
     <nldd-spacer size="24"></nldd-spacer>
-
     @if (initialLoading()) {
-      <nldd-activity-indicator show-text text="Loading limits..."></nldd-activity-indicator>
+      <nldd-activity-indicator
+        show-text
+        text="Loading limits..."
+      ></nldd-activity-indicator>
     } @else {
       <!-- What is stored, not a form: you come here to look, and a page full of
            controls invites changes nobody meant to make. -->
@@ -34,22 +35,27 @@
         <nldd-title size="4">
           <h2>{{ summary.copy.title }}</h2>
         </nldd-title>
-
         @if (summary.mode !== 'unlimited') {
           <nldd-spacer size="8"></nldd-spacer>
-
           <nldd-rich-text spacing="flat">
             <p>{{ stateText(summary.mode) }}</p>
           </nldd-rich-text>
         }
-
         <nldd-spacer size="12"></nldd-spacer>
-
         <!-- The row opens the editor, and the icon says so. One sheet for both
              sections: they are saved together anyway. -->
-        <nldd-list variant="box-tinted" [attr.accessible-label]="summary.copy.title">
-          <nldd-list-item button (click)="openEdit()">
-            <nldd-text-cell width="full" [attr.text]="summary.copy.requestName"></nldd-text-cell>
+        <nldd-list
+          variant="box-tinted"
+          [attr.accessible-label]="summary.copy.title"
+        >
+          <nldd-list-item
+            button
+            (click)="openEdit()"
+          >
+            <nldd-text-cell
+              width="full"
+              [attr.text]="summary.copy.requestName"
+            ></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               width="fit-content"
@@ -57,10 +63,19 @@
               [attr.text]="valueText(summary.request, summary.copy.unit)"
             ></nldd-text-cell>
             <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-icon-cell icon="edit" size="20"></nldd-icon-cell>
+            <nldd-icon-cell
+              icon="edit"
+              size="20"
+            ></nldd-icon-cell>
           </nldd-list-item>
-          <nldd-list-item button (click)="openEdit()">
-            <nldd-text-cell width="full" [attr.text]="summary.copy.limitName"></nldd-text-cell>
+          <nldd-list-item
+            button
+            (click)="openEdit()"
+          >
+            <nldd-text-cell
+              width="full"
+              [attr.text]="summary.copy.limitName"
+            ></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               width="fit-content"
@@ -68,21 +83,21 @@
               [attr.text]="valueText(summary.limit, summary.copy.unit)"
             ></nldd-text-cell>
             <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-icon-cell icon="edit" size="20"></nldd-icon-cell>
+            <nldd-icon-cell
+              icon="edit"
+              size="20"
+            ></nldd-icon-cell>
           </nldd-list-item>
         </nldd-list>
-
         @if (!$last) {
           <nldd-spacer size="24"></nldd-spacer>
         }
       }
     }
   </nldd-simple-section>
-
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
-
 <!-- Edit Limits Sheet -->
 <nldd-sheet
   #editSheet
@@ -100,14 +115,14 @@
       dismiss-text="Cancel"
       (dismiss)="showEdit.set(false)"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="edit-limits-title" size="3">
+      <nldd-title
+        id="edit-limits-title"
+        size="3"
+      >
         <h1>Edit limits</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       <!-- Here, not on the page behind it: this is where the changes are, and
            closing the sheet now would lose them. -->
       @if (saveError(); as message) {
@@ -116,10 +131,8 @@
           text="Your changes are not saved"
           [attr.supporting-text]="message"
         ></nldd-banner>
-
         <nldd-spacer size="16"></nldd-spacer>
       }
-
       <nldd-form (submit)="save($event)">
         <app-resource-limit-section
           [copy]="MEMORY_SECTION"
@@ -128,7 +141,6 @@
           [(request)]="draftMemoryRequestMi"
           [(limit)]="draftMemoryLimitMi"
         ></app-resource-limit-section>
-
         <app-resource-limit-section
           [copy]="CPU_SECTION"
           [seed]="cpuSeed()"
@@ -136,7 +148,6 @@
           [(request)]="draftCpuRequestM"
           [(limit)]="draftCpuLimitM"
         ></app-resource-limit-section>
-
         <nldd-form-actions>
           <nldd-button
             type="button"

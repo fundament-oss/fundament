@@ -5,20 +5,23 @@
     [attr.back-text]="pageNav.backText()"
     collapse-anchor="clusters-title"
   ></nldd-top-title-bar>
-
   <nldd-simple-section>
-    <nldd-title id="clusters-title" size="2">
+    <nldd-title
+      id="clusters-title"
+      size="2"
+    >
       <h1>Clusters</h1>
     </nldd-title>
     <nldd-rich-text>
       <p>Discover and manage your Kubernetes clusters.</p>
     </nldd-rich-text>
-
     @if (errorMessage()) {
       <nldd-spacer size="16"></nldd-spacer>
-      <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+      <nldd-banner
+        variant="critical"
+        [attr.text]="errorMessage()"
+      ></nldd-banner>
     }
-
     @if (clusters().length > 0) {
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-toolbar label="Cluster actions">
@@ -40,11 +43,12 @@
         </nldd-toolbar-item>
       </nldd-toolbar>
     }
-
     <nldd-spacer size="24"></nldd-spacer>
-
     @if (clusters().length > 0) {
-      <nldd-collection layout="grid" item-width="280px">
+      <nldd-collection
+        layout="grid"
+        item-width="280px"
+      >
         @for (cluster of clusters(); track cluster.id) {
           <!-- nldd-card leaves padding to nested containers, so the body gets one. -->
           <nldd-card background="tinted">
@@ -58,9 +62,7 @@
                   [attr.pulse]="isTransitionalStatus(cluster.status) ? '' : null"
                 ></nldd-badge>
               </nldd-title>
-
               <nldd-spacer size="16"></nldd-spacer>
-
               <nldd-list variant="simple">
                 <nldd-list-item size="sm">
                   <nldd-text-cell text="Region"></nldd-text-cell>
@@ -80,11 +82,14 @@
                 </nldd-list-item>
               </nldd-list>
             </nldd-container>
-
             <!-- In the footer slot rather than the body: the card keeps that slot
                  at the bottom, so the buttons line up across a row of cards
                  however tall each one's title and list turn out. -->
-            <nldd-container slot="footer" padding-inline="16" padding-bottom="16">
+            <nldd-container
+              slot="footer"
+              padding-inline="16"
+              padding-bottom="16"
+            >
               <nldd-button
                 [attr.href]="pageNav.path('/clusters/' + cluster.id)"
                 text="View details"
@@ -113,11 +118,9 @@
       </nldd-inline-dialog>
     }
   </nldd-simple-section>
-
   <!-- The new-cluster form is a child route, so it renders as a sheet over
        this list instead of replacing it. -->
   <router-outlet />
-
   <!-- Empty on purpose: the footer band carries the Rijksoverheid lintje. -->
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>

@@ -14,21 +14,26 @@
       dismiss-text="Cancel"
       (dismiss)="onCancel()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="node-pools-title" size="3">
+      <nldd-title
+        id="node-pools-title"
+        size="3"
+      >
         <h1>Node pools</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       @if (errorMessage()) {
-        <nldd-banner variant="critical" [attr.text]="errorMessage()"></nldd-banner>
+        <nldd-banner
+          variant="critical"
+          [attr.text]="errorMessage()"
+        ></nldd-banner>
         <nldd-spacer size="16"></nldd-spacer>
       }
-
       @if (isLoading()) {
-        <nldd-activity-indicator show-text text="Loading node pools..."></nldd-activity-indicator>
+        <nldd-activity-indicator
+          show-text
+          text="Loading node pools..."
+        ></nldd-activity-indicator>
       } @else {
         <app-shared-node-pools-form
           [initialData]="initialNodePools()"

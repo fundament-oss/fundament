@@ -14,14 +14,14 @@
       dismiss-text="Cancel"
       (dismiss)="onClose()"
     ></nldd-top-title-bar>
-
     <nldd-simple-section>
-      <nldd-title id="add-member-title" size="3">
+      <nldd-title
+        id="add-member-title"
+        size="3"
+      >
         <h1>Add member to {{ projectName() }}</h1>
       </nldd-title>
-
       <nldd-spacer size="16"></nldd-spacer>
-
       <!-- Nothing to pick means nothing to fill in: the form would only offer an
            empty list and a button that cannot do anything. -->
       @if (availableUsers().length === 0) {
@@ -60,7 +60,10 @@
             >
               <nldd-menu accessible-label="Organization members">
                 @for (user of availableUsers(); track user.id) {
-                  <nldd-menu-item [attr.value]="user.id" [attr.text]="user.name"></nldd-menu-item>
+                  <nldd-menu-item
+                    [attr.value]="user.id"
+                    [attr.text]="user.name"
+                  ></nldd-menu-item>
                 }
               </nldd-menu>
             </nldd-combo-box>
@@ -74,14 +77,19 @@
               }
             </nldd-form-field-error-text>
           </nldd-form-field>
-
           <nldd-form-field label="Permission">
-            <nldd-list variant="box-base" accessible-label="Permission">
+            <nldd-list
+              variant="box-base"
+              accessible-label="Permission"
+            >
               @for (option of permissionOptions; track option.value) {
                 <!-- The row is the control; the radio only shows which one it
                      is. A real radio here would be an input inside the row's
                      button. -->
-                <nldd-list-item button (click)="selectPermission(option.value)">
+                <nldd-list-item
+                  button
+                  (click)="selectPermission(option.value)"
+                >
                   <nldd-cell width="fit-content">
                     <nldd-radio-button
                       decorative
@@ -100,7 +108,6 @@
               }
             </nldd-list>
           </nldd-form-field>
-
           <!-- Optional, and here rather than only in the member sheet: giving
                someone a place to work is part of putting them in the project. -->
           <nldd-form-field
@@ -109,7 +116,10 @@
             optional-label="Optional"
             supporting-label="You can also arrange this later."
           >
-            <nldd-list variant="box-tinted" accessible-label="Namespaces">
+            <nldd-list
+              variant="box-tinted"
+              accessible-label="Namespaces"
+            >
               <!-- Not a shortcut for ticking the rest: it also covers namespaces
                    made later, so it excludes the others. -->
               <nldd-list-item
@@ -142,7 +152,10 @@
                     ></nldd-checkbox>
                   </nldd-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <nldd-text-cell width="full" [attr.text]="namespace"></nldd-text-cell>
+                  <nldd-text-cell
+                    width="full"
+                    [attr.text]="namespace"
+                  ></nldd-text-cell>
                 </nldd-list-item>
               }
               <!-- The ellipsis warns that picking this asks for more before
@@ -159,11 +172,13 @@
                   ></nldd-checkbox>
                 </nldd-cell>
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                <nldd-text-cell width="full" text="New namespace…"></nldd-text-cell>
+                <nldd-text-cell
+                  width="full"
+                  text="New namespace…"
+                ></nldd-text-cell>
               </nldd-list-item>
             </nldd-list>
           </nldd-form-field>
-
           @if (draftNamespaces().includes(NEW_NAMESPACE)) {
             <nldd-form-field label="New namespace name">
               <nldd-text-field
@@ -180,12 +195,14 @@
               </nldd-form-field-error-text>
             </nldd-form-field>
           }
-
           <!-- Only once there is a namespace to hold them: a role on nothing is
                not a choice anyone can act on. -->
           @if (draftNamespaces().length > 0) {
             <nldd-form-field label="Roles">
-              <nldd-list variant="box-tinted" accessible-label="Roles">
+              <nldd-list
+                variant="box-tinted"
+                accessible-label="Roles"
+              >
                 @for (role of allRoles; track role) {
                   <nldd-list-item
                     checkbox
@@ -199,7 +216,10 @@
                       ></nldd-checkbox>
                     </nldd-cell>
                     <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                    <nldd-text-cell width="full" [attr.text]="role"></nldd-text-cell>
+                    <nldd-text-cell
+                      width="full"
+                      [attr.text]="role"
+                    ></nldd-text-cell>
                   </nldd-list-item>
                 }
               </nldd-list>
@@ -208,7 +228,6 @@
               </nldd-form-field-help-text>
             </nldd-form-field>
           }
-
           <!-- Under the form, not stuck to the bottom of the sheet: the sheet is
                short enough that a sticky footer only pushes the button away from
                what it submits. -->

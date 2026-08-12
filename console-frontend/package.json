@@ -33,6 +33,12 @@
         "options": {
           "parser": "angular"
         }
+      },
+      {
+        "files": "src/app/**/*.html",
+        "options": {
+          "singleAttributePerLine": true
+        }
       }
     ]
   },
