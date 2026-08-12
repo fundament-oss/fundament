@@ -82,10 +82,7 @@ const apiPrefix = "/vali/api/v1"
 func (*LokiClient) Backend() Backend { return BackendLoki }
 
 func (c *LokiClient) Query(ctx context.Context, p *QueryParams) ([]Entry, error) {
-	limit := p.Limit
-	if limit <= 0 {
-		limit = defaultLimit
-	}
+	limit := EffectiveLimit(p.Limit)
 	end := p.End
 	if end.IsZero() {
 		end = time.Now()

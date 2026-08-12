@@ -2,12 +2,29 @@ package logs
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// The mock preallocates on the limit, so an unbounded caller-supplied value
+// used to be an out-of-memory vector rather than a big response.
+func TestMockClientQueryClampsLimit(t *testing.T) {
+	fixed := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
+	m := &MockClient{now: func() time.Time { return fixed }}
+
+	entries, err := m.Query(context.Background(), &QueryParams{
+		ClusterID: "cluster-1",
+		Start:     fixed.Add(-30 * 24 * time.Hour),
+		End:       fixed,
+		Limit:     math.MaxInt32,
+	})
+	require.NoError(t, err)
+	assert.LessOrEqual(t, len(entries), MaxLimit)
+}
 
 func TestMockClientQueryDeterministic(t *testing.T) {
 	fixed := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)

@@ -61,10 +61,7 @@ func (m *MockClient) Query(_ context.Context, p *QueryParams) ([]Entry, error) {
 	if start.IsZero() {
 		start = end.Add(-time.Hour)
 	}
-	limit := p.Limit
-	if limit <= 0 {
-		limit = defaultLimit
-	}
+	limit := EffectiveLimit(p.Limit)
 
 	streams := matchingStreams(p)
 	if len(streams) == 0 {

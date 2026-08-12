@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -62,4 +63,38 @@ func TestKubeClient_QueryHTTPError(t *testing.T) {
 	c := NewKubeClient(srv.URL, nil)
 	_, err := c.Query(context.Background(), &QueryParams{ClusterID: "c", Namespace: "prod", Pod: "api-1"})
 	require.Error(t, err, "expected error on 403")
+}
+
+// A follow stream is long-lived by design, so it must not run on the client
+// whose Timeout also bounds body reads — that cut every tail at 30s.
+func TestKubeClient_TailOutlivesQueryTimeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		require.True(t, ok)
+		w.WriteHeader(http.StatusOK)
+		flusher.Flush()
+		time.Sleep(200 * time.Millisecond)
+		_, _ = w.Write([]byte("2023-11-14T22:13:20.000000000Z late line\n"))
+		flusher.Flush()
+	}))
+	defer srv.Close()
+
+	c := NewKubeClient(srv.URL, nil)
+	require.Zero(t, c.followClient.Timeout, "follow client must not carry a whole-response deadline")
+	// Shrink the one-shot budget far below the server's write delay: if the
+	// follow path used that client, the read would be cut before the line lands.
+	c.httpClient.Timeout = 20 * time.Millisecond
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ch, err := c.Tail(ctx, &QueryParams{ClusterID: "c", Namespace: "prod", Pod: "api-1"})
+	require.NoError(t, err)
+
+	select {
+	case entry, ok := <-ch:
+		require.True(t, ok, "stream closed before delivering the line")
+		assert.Equal(t, "late line", entry.Message)
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for the tailed line")
+	}
 }

@@ -71,6 +71,24 @@ type Client interface {
 
 const defaultLimit = 1000
 
+// MaxLimit caps a caller-supplied entry limit. Backends preallocate on the
+// limit, so an unbounded value from the wire is an out-of-memory vector — the
+// proto carries the same ceiling, and this clamp guards every other path.
+const MaxLimit = 5000
+
+// EffectiveLimit normalizes a caller-supplied limit into [1, MaxLimit],
+// falling back to the default when unset.
+func EffectiveLimit(limit int) int {
+	switch {
+	case limit <= 0:
+		return defaultLimit
+	case limit > MaxLimit:
+		return MaxLimit
+	default:
+		return limit
+	}
+}
+
 // normalizeLevel maps a free-form severity string onto one of the four levels
 // the UI understands, returning "" when it can't be classified.
 func normalizeLevel(raw string) string {

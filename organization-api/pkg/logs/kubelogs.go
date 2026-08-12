@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -26,9 +27,15 @@ var ErrPodRequired = errors.New("kubernetes log backend requires a namespace and
 // This backend is narrower than Loki: it needs a specific pod, cannot search
 // across pods, and only sees logs the node still retains.
 type KubeClient struct {
-	proxyURL   string      // base kube-api-proxy URL (e.g. http://kube-api-proxy:8081)
-	auth       http.Header // caller's auth headers (Authorization and/or Cookie), forwarded verbatim
+	proxyURL string      // base kube-api-proxy URL (e.g. http://kube-api-proxy:8081)
+	auth     http.Header // caller's auth headers (Authorization and/or Cookie), forwarded verbatim
+	// httpClient bounds one-shot reads. Its Timeout also covers reading the
+	// response body, which is why the follow path cannot use it.
 	httpClient *http.Client
+	// followClient serves ?follow=true streams, which are long-lived by
+	// design: a Client.Timeout would cut the body read mid-stream (30s in,
+	// every time). Cancellation comes from the request context instead.
+	followClient *http.Client
 }
 
 // NewKubeClient returns a KubeClient. auth carries the caller's credential
@@ -36,9 +43,10 @@ type KubeClient struct {
 // and is forwarded on every request.
 func NewKubeClient(proxyURL string, auth http.Header) *KubeClient {
 	return &KubeClient{
-		proxyURL:   strings.TrimRight(proxyURL, "/"),
-		auth:       auth,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		proxyURL:     strings.TrimRight(proxyURL, "/"),
+		auth:         auth,
+		httpClient:   &http.Client{Timeout: 30 * time.Second},
+		followClient: &http.Client{},
 	}
 }
 
@@ -48,10 +56,7 @@ func (c *KubeClient) Query(ctx context.Context, p *QueryParams) ([]Entry, error)
 	if p.Namespace == "" || p.Pod == "" {
 		return nil, ErrPodRequired
 	}
-	limit := p.Limit
-	if limit <= 0 {
-		limit = defaultLimit
-	}
+	limit := EffectiveLimit(p.Limit)
 
 	resp, err := c.openLogStream(ctx, p, false, limit)
 	if err != nil {
@@ -101,6 +106,12 @@ func (c *KubeClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 				return
 			}
 		}
+		// A read failure ends the tail exactly like a clean EOF does (the
+		// channel closes), so without this the cause is lost entirely.
+		if err := scanner.Err(); err != nil && ctx.Err() == nil {
+			slog.Default().WarnContext(ctx, "pod log tail ended on read error",
+				"cluster_id", p.ClusterID, "namespace", p.Namespace, "pod", p.Pod, "error", err)
+		}
 	}()
 	return out, nil
 }
@@ -143,7 +154,11 @@ func (c *KubeClient) openLogStream(ctx context.Context, p *QueryParams, follow b
 		req.Header[name] = values
 	}
 
-	resp, err := c.httpClient.Do(req)
+	client := c.httpClient
+	if follow {
+		client = c.followClient
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http get: %w", err)
 	}
