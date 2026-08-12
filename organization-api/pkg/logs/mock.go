@@ -85,9 +85,9 @@ func (m *MockClient) Query(_ context.Context, p *QueryParams) ([]Entry, error) {
 }
 
 // Tail emits one synthetic entry per mockInterval until ctx is cancelled.
-func (m *MockClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, error) {
+func (m *MockClient) Tail(ctx context.Context, p *QueryParams) (<-chan TailEvent, error) {
 	streams := matchingStreams(p)
-	ch := make(chan Entry)
+	ch := make(chan TailEvent)
 	go func() {
 		defer close(ch)
 		if len(streams) == 0 {
@@ -110,7 +110,7 @@ func (m *MockClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 				select {
 				case <-ctx.Done():
 					return
-				case ch <- e:
+				case ch <- TailEvent{Entry: e}:
 				}
 			}
 		}

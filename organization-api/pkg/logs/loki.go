@@ -3,6 +3,7 @@ package logs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -27,6 +28,9 @@ type LokiClient struct {
 	username   string
 	password   string
 	httpClient *http.Client
+	// pollInterval paces Tail's query_range polling; a seam for tests, which
+	// would otherwise wait whole seconds per poll.
+	pollInterval time.Duration
 }
 
 // Option configures a LokiClient.
@@ -37,6 +41,14 @@ type Option func(*LokiClient)
 func WithTransport(rt http.RoundTripper) Option {
 	return func(c *LokiClient) {
 		c.httpClient.Transport = rt
+	}
+}
+
+// WithPollInterval overrides how often Tail polls query_range for new entries.
+// Mainly a test seam; the default paces a live tail at 2s.
+func WithPollInterval(d time.Duration) Option {
+	return func(c *LokiClient) {
+		c.pollInterval = d
 	}
 }
 
@@ -51,10 +63,11 @@ func NewLokiClient(baseURL string, opts ...Option) *LokiClient {
 // Vali endpoint, whose credentials come from the Gardener monitoring secret.
 func NewLokiClientWithAuth(baseURL, username, password string, opts ...Option) *LokiClient {
 	c := &LokiClient{
-		baseURL:    strings.TrimRight(baseURL, "/"),
-		username:   username,
-		password:   password,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		username:     username,
+		password:     password,
+		httpClient:   &http.Client{Timeout: 30 * time.Second},
+		pollInterval: 2 * time.Second,
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -119,14 +132,29 @@ func (c *LokiClient) Query(ctx context.Context, p *QueryParams) ([]Entry, error)
 // Tail implements a dependency-free live tail by polling query_range for new
 // entries. Loki's native /tail endpoint is a websocket; polling keeps the
 // client free of a websocket dependency at the cost of ~poll-interval latency.
-func (c *LokiClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, error) {
-	const pollInterval = 2 * time.Second
-	out := make(chan Entry)
+func (c *LokiClient) Tail(ctx context.Context, p *QueryParams) (<-chan TailEvent, error) {
+	pollInterval := c.pollInterval
+	if pollInterval <= 0 {
+		pollInterval = 2 * time.Second
+	}
+	// A single failed poll is usually a blip (a restarting Plutono, a dropped
+	// connection); a run of them is not. Tolerating a few keeps transient
+	// noise from tearing down the stream, while a persistent failure still
+	// terminates it instead of leaving a silent, permanently empty tail.
+	const maxConsecutiveFailures = 3
+	out := make(chan TailEvent)
 	go func() {
 		defer close(out)
 		last := time.Now()
+		failures := 0
 		ticker := time.NewTicker(pollInterval)
 		defer ticker.Stop()
+		fail := func(err error) {
+			select {
+			case out <- TailEvent{Err: err}:
+			case <-ctx.Done():
+			}
+		}
 		for {
 			select {
 			case <-ctx.Done():
@@ -138,8 +166,19 @@ func (c *LokiClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 				qp.Limit = 500
 				entries, err := c.Query(ctx, &qp)
 				if err != nil {
+					failures++
+					// 401 means the monitoring credentials rotated under us.
+					// Polling will never recover from that, so surface it at
+					// once and let the caller re-resolve.
+					var statusErr *StatusError
+					unauthorized := errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusUnauthorized
+					if unauthorized || failures >= maxConsecutiveFailures {
+						fail(fmt.Errorf("tail poll: %w", err))
+						return
+					}
 					continue
 				}
+				failures = 0
 				// Emit oldest-first so the UI appends in chronological order.
 				for i := len(entries) - 1; i >= 0; i-- {
 					e := entries[i]
@@ -147,7 +186,7 @@ func (c *LokiClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 						continue
 					}
 					select {
-					case out <- e:
+					case out <- TailEvent{Entry: e}:
 					case <-ctx.Done():
 						return
 					}

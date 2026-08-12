@@ -210,11 +210,19 @@ func (s *Server) TailLogs(
 		select {
 		case <-ctx.Done():
 			return nil
-		case entry, ok := <-ch:
+		case ev, ok := <-ch:
 			if !ok {
 				return nil
 			}
-			if err := stream.Send(toProtoEntry(&entry)); err != nil {
+			// A failed tail must not look like a quiet cluster: end the stream
+			// with an error so the client stops claiming to be live and can
+			// reconnect.
+			if ev.Err != nil {
+				s.logger.WarnContext(ctx, "log tail ended on backend error",
+					"cluster_id", clusterID, "error", ev.Err)
+				return mapLogError(ev.Err)
+			}
+			if err := stream.Send(toProtoEntry(&ev.Entry)); err != nil {
 				return fmt.Errorf("send log entry: %w", err)
 			}
 		}

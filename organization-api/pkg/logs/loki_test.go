@@ -5,12 +5,80 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// A tail that polls into a 401 must end with an error: the credentials rotated,
+// no further poll can succeed, and the caller needs the signal to re-resolve.
+// Silently continuing left the stream open and permanently empty.
+func TestLokiClient_TailSurfacesUnauthorized(t *testing.T) {
+	var polls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		polls++
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	c := NewLokiClientWithAuth(srv.URL, "user", "stale-password")
+	c.pollInterval = 10 * time.Millisecond
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ch, err := c.Tail(ctx, &QueryParams{ClusterID: "c"})
+	require.NoError(t, err)
+
+	select {
+	case ev, ok := <-ch:
+		require.True(t, ok, "stream closed without reporting the failure")
+		require.Error(t, ev.Err)
+		var statusErr *StatusError
+		require.ErrorAs(t, ev.Err, &statusErr)
+		assert.Equal(t, http.StatusUnauthorized, statusErr.StatusCode)
+		assert.Equal(t, 1, polls, "401 should terminate on the first poll, not after retries")
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for the terminal error event")
+	}
+}
+
+// Transient failures must not tear down the tail — only a persistent run does.
+func TestLokiClient_TailToleratesTransientFailure(t *testing.T) {
+	var polls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		polls++
+		if polls == 1 {
+			w.WriteHeader(http.StatusBadGateway)
+			return
+		}
+		ts := time.Now().Add(time.Second).UnixNano()
+		_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"streams","result":[{"stream":{"` +
+			labelNamespace + `":"kube-system","` + labelPod + `":"api-1"},"values":[["` +
+			strconv.FormatInt(ts, 10) + `","hello"]]}]}}`))
+		_ = r
+	}))
+	defer srv.Close()
+
+	c := NewLokiClient(srv.URL)
+	c.pollInterval = 10 * time.Millisecond
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ch, err := c.Tail(ctx, &QueryParams{ClusterID: "c"})
+	require.NoError(t, err)
+
+	select {
+	case ev, ok := <-ch:
+		require.True(t, ok, "stream closed instead of recovering from one 502")
+		require.NoError(t, ev.Err, "a single failed poll should not end the tail")
+		assert.Equal(t, "hello", ev.Entry.Message)
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for an entry after the transient failure")
+	}
+}
 
 func TestBuildLogQL(t *testing.T) {
 	tests := []struct {

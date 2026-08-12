@@ -95,10 +95,75 @@ func (p *perShootLogsClient) Query(ctx context.Context, params *logs.QueryParams
 	})
 }
 
-func (p *perShootLogsClient) Tail(ctx context.Context, params *logs.QueryParams) (<-chan logs.Entry, error) {
-	return callWithReResolve(ctx, p, func(inner logs.Client) (<-chan logs.Entry, error) {
+// Tail cannot lean on callWithReResolve the way the request/response calls do:
+// Tail returns before the stream fails, so a stale resolution shows up as a
+// terminal TailEvent minutes later. The retry therefore lives in the forwarding
+// goroutine — on the first such failure the entry is invalidated, the client
+// re-resolved, and a fresh inner tail spliced onto the same output channel, so
+// credential rotation heals mid-stream instead of ending the tail.
+func (p *perShootLogsClient) Tail(ctx context.Context, params *logs.QueryParams) (<-chan logs.TailEvent, error) {
+	inner, err := callWithReResolve(ctx, p, func(inner logs.Client) (<-chan logs.TailEvent, error) {
 		return inner.Tail(ctx, params)
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := make(chan logs.TailEvent)
+	go func() {
+		defer close(out)
+		current := inner
+		retried := false
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case ev, ok := <-current:
+				if !ok {
+					return
+				}
+				if ev.Err != nil && !retried && isStaleResolution(ev.Err) {
+					retried = true
+					p.cache.cache.invalidate(p.clusterID)
+					p.cache.logger.InfoContext(ctx, "per-shoot vali tail hit a stale-resolution status, re-resolving",
+						"cluster_id", p.clusterID, "error", ev.Err)
+					next, rerr := p.restartTail(ctx, params)
+					if rerr != nil {
+						p.forward(ctx, out, &ev)
+						return
+					}
+					// The new tail starts at "now", so the few seconds spent
+					// re-resolving are not backfilled.
+					current = next
+					continue
+				}
+				p.forward(ctx, out, &ev)
+				if ev.Err != nil {
+					return
+				}
+			}
+		}
+	}()
+	return out, nil
+}
+
+func (p *perShootLogsClient) restartTail(ctx context.Context, params *logs.QueryParams) (<-chan logs.TailEvent, error) {
+	inner, err := p.cache.cache.get(ctx, p.clusterID)
+	if err != nil {
+		return nil, err
+	}
+	ch, err := inner.Tail(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("restart tail: %w", err)
+	}
+	return ch, nil
+}
+
+func (*perShootLogsClient) forward(ctx context.Context, out chan<- logs.TailEvent, ev *logs.TailEvent) {
+	select {
+	case out <- *ev:
+	case <-ctx.Done():
+	}
 }
 
 func (p *perShootLogsClient) Labels(ctx context.Context, clusterID, namespace string, start, end time.Time) (logs.Labels, error) {

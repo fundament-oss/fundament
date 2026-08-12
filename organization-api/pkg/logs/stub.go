@@ -15,8 +15,8 @@ func (StubClient) Query(_ context.Context, _ *QueryParams) ([]Entry, error) {
 	return nil, nil
 }
 
-func (StubClient) Tail(_ context.Context, _ *QueryParams) (<-chan Entry, error) {
-	ch := make(chan Entry)
+func (StubClient) Tail(_ context.Context, _ *QueryParams) (<-chan TailEvent, error) {
+	ch := make(chan TailEvent)
 	close(ch)
 	return ch, nil
 }
