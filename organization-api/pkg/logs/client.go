@@ -53,15 +53,28 @@ type Labels struct {
 	Containers []string
 }
 
+// TailEvent is one item of a tail stream: either an entry, or the terminal
+// error that ended it. A tail cannot report failure through its return value —
+// it fails long after Tail returned — and a bare channel close is
+// indistinguishable from a healthy end of stream, which left rotated
+// credentials and dead backends looking like a quiet cluster.
+type TailEvent struct {
+	Entry Entry
+	// Err, when non-nil, is the reason the stream ended. It is the last event
+	// on the channel; no entry accompanies it.
+	Err error
+}
+
 // Client queries logs from a backend.
 type Client interface {
 	// Backend reports which concrete source this client targets.
 	Backend() Backend
 	// Query returns a bounded set of entries, newest first.
 	Query(ctx context.Context, p *QueryParams) ([]Entry, error)
-	// Tail streams new entries until ctx is cancelled. The returned channel is
-	// closed when the stream ends.
-	Tail(ctx context.Context, p *QueryParams) (<-chan Entry, error)
+	// Tail streams new entries until ctx is cancelled or the stream fails. The
+	// returned channel is closed when the stream ends; a failure arrives as a
+	// final TailEvent carrying Err.
+	Tail(ctx context.Context, p *QueryParams) (<-chan TailEvent, error)
 	// Labels returns distinct label values for filter dropdowns. namespace, when
 	// non-empty, scopes pod/container results. start/end bound the window the
 	// values are observed in (label values are time-scoped in Vali); zero

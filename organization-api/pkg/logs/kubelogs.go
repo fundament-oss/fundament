@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -81,7 +80,7 @@ func (c *KubeClient) Query(ctx context.Context, p *QueryParams) ([]Entry, error)
 	return entries, nil
 }
 
-func (c *KubeClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, error) {
+func (c *KubeClient) Tail(ctx context.Context, p *QueryParams) (<-chan TailEvent, error) {
 	if p.Namespace == "" || p.Pod == "" {
 		return nil, ErrPodRequired
 	}
@@ -93,7 +92,7 @@ func (c *KubeClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 		return nil, err
 	}
 
-	out := make(chan Entry)
+	out := make(chan TailEvent)
 	go func() {
 		defer close(out)
 		defer func() { _ = resp.Body.Close() }()
@@ -101,16 +100,18 @@ func (c *KubeClient) Tail(ctx context.Context, p *QueryParams) (<-chan Entry, er
 		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 		for scanner.Scan() {
 			select {
-			case out <- c.lineToEntry(scanner.Text(), p):
+			case out <- TailEvent{Entry: c.lineToEntry(scanner.Text(), p)}:
 			case <-ctx.Done():
 				return
 			}
 		}
-		// A read failure ends the tail exactly like a clean EOF does (the
-		// channel closes), so without this the cause is lost entirely.
+		// Without this, a read failure ends the tail exactly like a clean EOF
+		// does — the channel closes and the cause is lost.
 		if err := scanner.Err(); err != nil && ctx.Err() == nil {
-			slog.Default().WarnContext(ctx, "pod log tail ended on read error",
-				"cluster_id", p.ClusterID, "namespace", p.Namespace, "pod", p.Pod, "error", err)
+			select {
+			case out <- TailEvent{Err: fmt.Errorf("read pod log stream: %w", err)}:
+			case <-ctx.Done():
+			}
 		}
 	}()
 	return out, nil

@@ -91,10 +91,41 @@ func TestKubeClient_TailOutlivesQueryTimeout(t *testing.T) {
 	require.NoError(t, err)
 
 	select {
-	case entry, ok := <-ch:
+	case ev, ok := <-ch:
 		require.True(t, ok, "stream closed before delivering the line")
-		assert.Equal(t, "late line", entry.Message)
+		require.NoError(t, ev.Err)
+		assert.Equal(t, "late line", ev.Entry.Message)
 	case <-ctx.Done():
 		t.Fatal("timed out waiting for the tailed line")
 	}
+}
+
+// A truncated stream must arrive as a terminal error, not as a bare channel
+// close that the RPC would report as a healthy end of stream.
+func TestKubeClient_TailSurfacesReadError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		require.True(t, ok)
+		// Announce more body than we send, then cut the connection: the
+		// scanner fails mid-read instead of seeing a clean EOF.
+		w.Header().Set("Content-Length", "512")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("2023-11-14T22:13:20.000000000Z first line\n"))
+		flusher.Flush()
+	}))
+	defer srv.Close()
+
+	c := NewKubeClient(srv.URL, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ch, err := c.Tail(ctx, &QueryParams{ClusterID: "c", Namespace: "prod", Pod: "api-1"})
+	require.NoError(t, err)
+
+	var got []TailEvent
+	for ev := range ch {
+		got = append(got, ev)
+	}
+	require.NotEmpty(t, got)
+	last := got[len(got)-1]
+	require.Error(t, last.Err, "expected the truncated stream to end with an error event")
 }
