@@ -70,6 +70,10 @@ interface K8sGetArgs extends K8sListArgs {
 
 type K8sCreateArgs = K8sListArgs;
 
+/** Patch and delete both address one named object, so they take K8sGetArgs. */
+type K8sPatchArgs = K8sGetArgs;
+type K8sDeleteArgs = K8sGetArgs;
+
 interface KubeListResult<T = unknown> {
   items: T[];
 }
@@ -102,6 +106,8 @@ interface FundamentSdk {
     list<T = unknown>(args: K8sListArgs): Promise<KubeListResult<T>>;
     get<T = unknown>(args: K8sGetArgs): Promise<T>;
     create<T = unknown>(args: K8sCreateArgs, body: unknown): Promise<T>;
+    patch<T = unknown>(args: K8sPatchArgs, body: unknown): Promise<T>;
+    delete<T = unknown>(args: K8sDeleteArgs): Promise<T>;
   };
   onThemeChange(cb: (theme: Theme) => void): () => void;
 }
@@ -383,9 +389,12 @@ async function readK8sError(response: Response): Promise<string> {
 }
 
 async function k8sRequest<T>(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   args: K8sListArgs & { name?: string },
   body?: unknown,
+  // The apiserver rejects a PATCH sent as application/json, so the caller picks
+  // the media type. Everything else keeps the plain JSON default.
+  contentType = 'application/json',
 ): Promise<T> {
   const ctx = await initPromise;
   const url = buildKubeUrl(ctx, args);
@@ -394,7 +403,7 @@ async function k8sRequest<T>(
     res = await fetchImpl(url, {
       method,
       ...(body !== undefined
-        ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+        ? { headers: { 'Content-Type': contentType }, body: JSON.stringify(body) }
         : {}),
     });
   } catch (err) {
@@ -440,6 +449,15 @@ const sdk: FundamentSdk = {
     },
     create<T = unknown>(args: K8sCreateArgs, body: unknown): Promise<T> {
       return k8sRequest<T>('POST', args, body);
+    },
+    // Merge-patch, not PUT: a plugin form edits spec and must not clobber
+    // status or fields it does not model. Merge semantics also replace arrays
+    // wholesale, which is what a disk selection wants.
+    patch<T = unknown>(args: K8sPatchArgs, body: unknown): Promise<T> {
+      return k8sRequest<T>('PATCH', args, body, 'application/merge-patch+json');
+    },
+    delete<T = unknown>(args: K8sDeleteArgs): Promise<T> {
+      return k8sRequest<T>('DELETE', args);
     },
   },
   onThemeChange(cb) {
