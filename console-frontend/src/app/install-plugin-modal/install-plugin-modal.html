@@ -41,7 +41,7 @@
       }
       @if (clusters().length === 0) {
         <nldd-inline-dialog
-          icon="ship-wheel"
+          icon="kubernetes"
           icon-color="secondary"
           text="No clusters found"
           supporting-text="Create a cluster first to install plugins on it."
@@ -69,7 +69,7 @@
           @for (cluster of clusters(); track cluster.id) {
             <nldd-list-item>
               <nldd-icon-cell
-                icon="ship-wheel"
+                icon="kubernetes"
                 size="24"
                 [attr.color]="cluster.running ? null : 'secondary'"
               ></nldd-icon-cell>

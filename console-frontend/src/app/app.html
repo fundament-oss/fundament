@@ -252,7 +252,7 @@
                       </nldd-container>
                       <nldd-menu-item
                         text="My profile"
-                        icon="person"
+                        icon="user"
                         (select)="overlays.profile.set(true)"
                       ></nldd-menu-item>
                       <nldd-menu-item
@@ -275,14 +275,14 @@
                           ></nldd-menu-item>
                           <nldd-menu-item
                             text="Light"
-                            icon="sun"
+                            icon="light-mode"
                             type="radio"
                             [attr.selected]="themePreference() === 'light' ? '' : null"
                             (select)="setTheme('light')"
                           ></nldd-menu-item>
                           <nldd-menu-item
                             text="Dark"
-                            icon="moon"
+                            icon="dark-mode"
                             type="radio"
                             [attr.selected]="themePreference() === 'dark' ? '' : null"
                             (select)="setTheme('dark')"
@@ -369,7 +369,7 @@
                       (click)="navigateFromSidebar($event, '/clusters')"
                     >
                       <nldd-icon-cell
-                        icon="ship-wheel"
+                        icon="kubernetes"
                         size="20"
                       ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
@@ -388,7 +388,7 @@
                       (click)="navigateFromSidebar($event, '/plugins')"
                     >
                       <nldd-icon-cell
-                        icon="puzzle-piece"
+                        icon="plugin"
                         size="20"
                       ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
@@ -400,7 +400,7 @@
                       (click)="navigateFromSidebar($event, '/metrics')"
                     >
                       <nldd-icon-cell
-                        icon="chart-x-y-axis-line"
+                        icon="analytics"
                         size="20"
                       ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>
@@ -426,7 +426,7 @@
                       (click)="navigateFromSidebar($event, '/members')"
                     >
                       <nldd-icon-cell
-                        icon="person-2"
+                        icon="users"
                         size="20"
                       ></nldd-icon-cell>
                       <nldd-spacer-cell size="8"></nldd-spacer-cell>

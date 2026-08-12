@@ -46,6 +46,7 @@ import {
   formatShortDateTime as formatShortDateTimeUtil,
   formatTime as formatTimeUtil,
 } from '../utils/date-format';
+import '@nldd/design-system/multi-line-text-field';
 
 const getUsagePercentage = (used: number, limit: number): number =>
   Math.round((used / limit) * 100);

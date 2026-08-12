@@ -30,6 +30,7 @@ import {
   toggleNamespace,
 } from '../utils/namespace-grants';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
+import '@nldd/design-system/combo-box';
 
 const stringToRole = (value: string): ProjectMemberRole =>
   value === 'admin' ? ProjectMemberRole.ADMIN : ProjectMemberRole.VIEWER;

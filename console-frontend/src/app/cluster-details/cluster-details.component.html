@@ -42,11 +42,11 @@
             (click)="openTerminal()"
             text="Open terminal"
             variant="secondary"
-            start-icon="terminal"
+            start-icon="cli"
           ></nldd-button>
           <nldd-menu-item
             slot="overflow"
-            icon="terminal"
+            icon="cli"
             text="Open terminal"
             (select)="openTerminal()"
           ></nldd-menu-item>
@@ -57,7 +57,7 @@
             (click)="downloadKubeconfig()"
             [disabled]="isDownloadingKubeconfig()"
             [text]="isDownloadingKubeconfig() ? 'Downloading…' : 'Download kubeconfig'"
-            start-icon="arrow-down-in-bucket"
+            start-icon="download"
           ></nldd-button>
         </nldd-toolbar-item>
       </nldd-toolbar>
@@ -253,7 +253,7 @@
             <nldd-spacer size="16"></nldd-spacer>
             @if (clusterEvents().length === 0) {
               <nldd-inline-dialog
-                icon="clock"
+                icon="time"
                 icon-color="secondary"
                 text="No events recorded yet"
               ></nldd-inline-dialog>
@@ -431,7 +431,7 @@
               </nldd-collection>
             } @else {
               <nldd-inline-dialog
-                icon="puzzle-piece"
+                icon="plugin"
                 icon-color="secondary"
                 text="No plugins installed"
               ></nldd-inline-dialog>
@@ -459,14 +459,14 @@
                   type="button"
                   (click)="openObservabilityDashboard()"
                   text="Open dashboard"
-                  start-icon="chart-x-y-axis-line"
+                  start-icon="analytics"
                   variant="primary"
                 ></nldd-button>
                 <nldd-button
                   type="button"
                   (click)="openCredentialsModal()"
                   text="Show credentials"
-                  start-icon="lock-closed"
+                  start-icon="secure"
                   variant="secondary"
                 ></nldd-button>
               </nldd-button-group>

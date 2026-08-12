@@ -26,6 +26,7 @@ import { ALL_ROLES, mockBindingsFor, setMockBindings } from '../utils/mock-role-
 import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import { NAMESPACE, PROJECT } from '../../connect/tokens';
 import type { ProjectMember } from '../../generated/v1/project_pb';
+import '@nldd/design-system/token-field';
 
 /**
  * Making a namespace, from wherever you were. The shell owns this sheet rather

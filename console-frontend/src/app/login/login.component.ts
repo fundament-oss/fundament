@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import AutofocusDirective from '../autofocus.directive';
 import { TitleService } from '../title.service';
 import AuthnApiService from '../authn-api.service';
+import '@nldd/design-system/password-field';
 
 @Component({
   selector: 'app-login',

@@ -247,7 +247,7 @@
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <nldd-cell width="fit-content">
                 <nldd-icon-button
-                  icon="ellipsis"
+                  icon="more"
                   size="sm"
                   variant="secondary"
                   popup-type="menu"
@@ -256,7 +256,7 @@
                 >
                   <nldd-menu slot="popup">
                     <nldd-menu-item
-                      icon="person-badge-gear"
+                      icon="user-admin"
                       [attr.text]="
                         view.member.role === ProjectMemberRole.ADMIN
                           ? 'Make project viewer'
@@ -347,7 +347,7 @@
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-cell width="fit-content">
                   <nldd-icon-button
-                    icon="ellipsis"
+                    icon="more"
                     size="sm"
                     variant="secondary"
                     popup-type="menu"
@@ -361,7 +361,7 @@
                       ></nldd-menu-item>
                       <nldd-menu-divider></nldd-menu-divider>
                       <nldd-menu-item
-                        icon="trash"
+                        icon="delete"
                         text="Remove from namespace"
                         destructive
                         (select)="askRemoveAccess(binding.namespace)"

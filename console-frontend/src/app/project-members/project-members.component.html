@@ -38,13 +38,13 @@
         <nldd-button
           [attr.href]="pageNav.path('/projects/' + projectId() + '/members/permissions')"
           text="About permissions"
-          start-icon="info-circle"
+          start-icon="info"
           variant="secondary"
           (click)="openPermissions($event)"
         ></nldd-button>
         <nldd-menu-item
           slot="overflow"
-          icon="info-circle"
+          icon="info"
           text="About permissions"
           [attr.href]="pageNav.path('/projects/' + projectId() + '/members/permissions')"
           (select)="openPermissions($event)"
@@ -88,7 +88,7 @@
         <nldd-box>
           <nldd-container padding="16">
             <nldd-inline-dialog
-              icon="person-2"
+              icon="users"
               icon-color="secondary"
               text="Nobody in this project yet"
               supporting-text="Add organization members to give them access to this project."

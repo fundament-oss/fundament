@@ -41,13 +41,13 @@
         <nldd-button
           [attr.href]="pageNav.path('/members/permissions')"
           text="About permissions"
-          start-icon="info-circle"
+          start-icon="info"
           variant="secondary"
           (click)="openPermissions($event)"
         ></nldd-button>
         <nldd-menu-item
           slot="overflow"
-          icon="info-circle"
+          icon="info"
           text="About permissions"
           [attr.href]="pageNav.path('/members/permissions')"
           (select)="openPermissions($event)"
@@ -249,7 +249,7 @@
           <nldd-container padding="16">
             @if (memberQuery().trim()) {
               <nldd-inline-dialog
-                icon="magnifier"
+                icon="search"
                 icon-color="secondary"
                 text="Nobody matches your search"
               >
@@ -263,7 +263,7 @@
               </nldd-inline-dialog>
             } @else {
               <nldd-inline-dialog
-                icon="person-2"
+                icon="users"
                 icon-color="secondary"
                 [attr.text]="emptyStateText()"
                 supporting-text="Members who sign in via SSO will appear here."
@@ -332,7 +332,7 @@
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
                 <nldd-cell width="fit-content">
                   <nldd-icon-button
-                    icon="ellipsis"
+                    icon="more"
                     size="sm"
                     variant="secondary"
                     popup-type="menu"
@@ -343,7 +343,7 @@
                            corrected: without this a wrong one costs a cancel, a
                            second invite and a second mail to the same person. -->
                       <nldd-menu-item
-                        icon="person-badge-gear"
+                        icon="user-admin"
                         [attr.text]="
                           member.permission === 'admin' ? 'Switch to viewer' : 'Switch to admin'
                         "
@@ -352,7 +352,7 @@
                       <nldd-menu-divider></nldd-menu-divider>
                       <nldd-menu-item
                         text="Cancel invitation"
-                        icon="trash"
+                        icon="delete"
                         destructive
                         (select)="cancelInvitation(member.id)"
                       ></nldd-menu-item>
@@ -374,7 +374,7 @@
                 <nldd-cell width="fit-content">
                   <!-- No chevron: the ellipsis already says a menu opens. -->
                   <nldd-icon-button
-                    icon="ellipsis"
+                    icon="more"
                     size="sm"
                     variant="secondary"
                     popup-type="menu"
@@ -384,14 +384,14 @@
                       <!-- Names the result, not the form: one click instead of
                            a sheet holding a single radio group. -->
                       <nldd-menu-item
-                        icon="person-badge-gear"
+                        icon="user-admin"
                         [attr.text]="member.permission === 'admin' ? 'Make viewer' : 'Make admin'"
                         (select)="setPermission(member)"
                       ></nldd-menu-item>
                       <nldd-menu-divider></nldd-menu-divider>
                       <nldd-menu-item
                         text="Remove"
-                        icon="trash"
+                        icon="delete"
                         destructive
                         (select)="openDeleteModal(member)"
                       ></nldd-menu-item>

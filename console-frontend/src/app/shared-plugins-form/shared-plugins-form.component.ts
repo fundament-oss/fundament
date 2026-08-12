@@ -20,6 +20,8 @@ import {
   ListPresetsRequestSchema,
   type Preset,
 } from '../../generated/v1/plugin_pb';
+import '@nldd/design-system/checkbox-field';
+import '@nldd/design-system/file-field';
 
 export interface Plugin {
   id: string;

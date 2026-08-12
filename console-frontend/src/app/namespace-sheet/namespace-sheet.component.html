@@ -47,7 +47,7 @@
             <nldd-form-field label="Members">
               @if (candidates().length === 0) {
                 <nldd-inline-dialog
-                  icon="person-2"
+                  icon="users"
                   icon-color="secondary"
                   text="Everyone in this project already has access"
                   supporting-text="Add someone to the project first to give them a role here."
@@ -204,7 +204,7 @@
           <nldd-box>
             <nldd-container padding="16">
               <nldd-inline-dialog
-                icon="person-2"
+                icon="users"
                 icon-color="secondary"
                 text="Nobody works in this namespace yet"
                 supporting-text="Project members can see it, but do nothing in it until they have a role."
@@ -228,7 +228,7 @@
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-cell width="fit-content">
                   <nldd-icon-button
-                    icon="ellipsis"
+                    icon="more"
                     size="sm"
                     variant="secondary"
                     popup-type="menu"
@@ -240,7 +240,7 @@
                            given. -->
                       @if (entry.viaAll) {
                         <nldd-menu-item
-                          icon="person"
+                          icon="user"
                           text="Open member"
                           [attr.href]="
                             pageNav.path('/projects/' + projectId() + '/members/' + entry.member.id)
@@ -255,7 +255,7 @@
                         ></nldd-menu-item>
                         <nldd-menu-divider></nldd-menu-divider>
                         <nldd-menu-item
-                          icon="trash"
+                          icon="delete"
                           text="Remove from namespace"
                           destructive
                           (select)="pendingRemove.set(entry)"

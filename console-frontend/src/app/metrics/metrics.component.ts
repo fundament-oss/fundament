@@ -34,6 +34,10 @@ import {
   type StreamWorkloadMetricsResponse,
   type NamespaceWorkloadMetrics,
 } from '../../generated/v1/metrics_pb';
+import '@nldd/design-system/table';
+import '@nldd/design-system/segmented-control';
+import '@nldd/design-system/date-picker';
+import '@nldd/design-system/popover';
 
 Chart.register(...registerables, ZoomPlugin);
 

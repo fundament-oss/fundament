@@ -25,6 +25,7 @@ import { MEMBER, INVITE } from '../../connect/tokens';
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatTimeAgo } from '../utils/date-format';
+import '@nldd/design-system/search-field';
 
 interface OrganizationMember {
   id: string;

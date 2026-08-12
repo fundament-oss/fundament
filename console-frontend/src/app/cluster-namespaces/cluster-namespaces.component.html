@@ -65,7 +65,7 @@
                   type="button"
                   (click)="openDeleteNamespaceModal(namespace.id, namespace.name)"
                   text="Delete"
-                  start-icon="trash"
+                  start-icon="delete"
                   size="sm"
                   variant="destructive"
                 ></nldd-button>
@@ -99,7 +99,7 @@
                 ' namespace' +
                 (namespaces().length === 1 ? '' : 's')
               "
-              start-icon="trash"
+              start-icon="delete"
               variant="destructive"
               [attr.loading]="isBulkDeleting() ? '' : null"
             ></nldd-button>

@@ -20,6 +20,7 @@ import { ALL_NAMESPACES } from '../utils/namespace-grants';
 import type { ProjectMember } from '../../generated/v1/project_pb';
 import { ProjectMemberRole } from '../../generated/v1/project_pb';
 import PageNavService from '../page-nav.service';
+import '@nldd/design-system/token-field';
 
 /** One member's standing in this namespace. */
 interface NamespaceMember {

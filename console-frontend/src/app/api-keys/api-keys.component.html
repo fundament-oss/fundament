@@ -170,7 +170,7 @@
           <nldd-box>
             <nldd-container padding="16">
               <nldd-inline-dialog
-                icon="lock-closed"
+                icon="secure"
                 icon-color="secondary"
                 text="No API keys yet"
                 supporting-text="A key lets a script or tool talk to the API on your behalf."
@@ -212,7 +212,7 @@
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-cell width="fit-content">
                   <nldd-icon-button
-                    icon="ellipsis"
+                    icon="more"
                     size="sm"
                     variant="secondary"
                     popup-type="menu"
@@ -223,14 +223,14 @@
                       @if (!isRevoked(apiKey.revoked) && !isExpired(apiKey.expires)) {
                         <nldd-menu-item
                           text="Revoke"
-                          icon="slash-circle"
+                          icon="forbidden"
                           (select)="openRevokeModal(apiKey.id, apiKey.name)"
                         ></nldd-menu-item>
                         <nldd-menu-divider></nldd-menu-divider>
                       }
                       <nldd-menu-item
                         text="Delete"
-                        icon="trash"
+                        icon="delete"
                         destructive
                         (select)="openDeleteModal(apiKey.id, apiKey.name)"
                       ></nldd-menu-item>
