@@ -73,6 +73,9 @@ interface ClusterSummaryData {
   cpu: { used: number; total: number };
   memory: { used: number; total: number };
   pods: { used: number; total: number };
+  // The backend could not reach this cluster's Prometheus (provisioning,
+  // hibernated, ingress down). Its zeros are placeholders, not measurements.
+  unavailable: boolean;
 }
 
 export type TimeRangePreset = '1h' | '6h' | '24h' | '7d' | '30d' | 'custom';
@@ -561,6 +564,7 @@ export default class MetricsComponent implements OnInit, OnDestroy {
           cpu: { used: c.cpu?.used ?? 0, total: c.cpu?.total ?? 0 },
           memory: { used: c.memory?.used ?? 0, total: c.memory?.total ?? 0 },
           pods: { used: c.pods?.used ?? 0, total: c.pods?.total ?? 0 },
+          unavailable: c.metricsUnavailable,
         })),
       );
     }

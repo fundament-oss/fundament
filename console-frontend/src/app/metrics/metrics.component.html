@@ -297,43 +297,57 @@
             @for (c of clusterSummaries(); track c.id) {
               <nldd-table-row>
                 <nldd-text-cell class="font-mono" [attr.text]="c.name"></nldd-text-cell>
-                <nldd-cell width="full">
-                  <div class="w-full">
-                    {{ c.cpu.used | number: '1.1-1' }} / {{ c.cpu.total | number: '1.0-0' }} cores
-                    <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
-                      <div
-                        class="h-1.5 rounded-full"
-                        [class]="getUsageColor(getUsagePercentage(c.cpu.used, c.cpu.total))"
-                        [style.width.%]="getUsagePercentage(c.cpu.used, c.cpu.total)"
-                      ></div>
+                @if (c.unavailable) {
+                  <!-- Zeros here are placeholders for an unreachable backend, so
+                       they must not render as a real (green, 0%) measurement. -->
+                  <nldd-cell width="full">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Unavailable</span>
+                  </nldd-cell>
+                  <nldd-cell width="full">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Unavailable</span>
+                  </nldd-cell>
+                  <nldd-cell width="full">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Unavailable</span>
+                  </nldd-cell>
+                } @else {
+                  <nldd-cell width="full">
+                    <div class="w-full">
+                      {{ c.cpu.used | number: '1.1-1' }} / {{ c.cpu.total | number: '1.0-0' }} cores
+                      <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                          class="h-1.5 rounded-full"
+                          [class]="getUsageColor(getUsagePercentage(c.cpu.used, c.cpu.total))"
+                          [style.width.%]="getUsagePercentage(c.cpu.used, c.cpu.total)"
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                </nldd-cell>
-                <nldd-cell width="full">
-                  <div class="w-full">
-                    {{ c.memory.used | number: '1.1-1' }} /
-                    {{ c.memory.total | number: '1.0-0' }} GiB
-                    <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
-                      <div
-                        class="h-1.5 rounded-full"
-                        [class]="getUsageColor(getUsagePercentage(c.memory.used, c.memory.total))"
-                        [style.width.%]="getUsagePercentage(c.memory.used, c.memory.total)"
-                      ></div>
+                  </nldd-cell>
+                  <nldd-cell width="full">
+                    <div class="w-full">
+                      {{ c.memory.used | number: '1.1-1' }} /
+                      {{ c.memory.total | number: '1.0-0' }} GiB
+                      <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                          class="h-1.5 rounded-full"
+                          [class]="getUsageColor(getUsagePercentage(c.memory.used, c.memory.total))"
+                          [style.width.%]="getUsagePercentage(c.memory.used, c.memory.total)"
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                </nldd-cell>
-                <nldd-cell width="full">
-                  <div class="w-full">
-                    {{ c.pods.used | number: '1.0-0' }} / {{ c.pods.total | number: '1.0-0' }}
-                    <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
-                      <div
-                        class="h-1.5 rounded-full"
-                        [class]="getUsageColor(getUsagePercentage(c.pods.used, c.pods.total))"
-                        [style.width.%]="getUsagePercentage(c.pods.used, c.pods.total)"
-                      ></div>
+                  </nldd-cell>
+                  <nldd-cell width="full">
+                    <div class="w-full">
+                      {{ c.pods.used | number: '1.0-0' }} / {{ c.pods.total | number: '1.0-0' }}
+                      <div class="mt-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div
+                          class="h-1.5 rounded-full"
+                          [class]="getUsageColor(getUsagePercentage(c.pods.used, c.pods.total))"
+                          [style.width.%]="getUsagePercentage(c.pods.used, c.pods.total)"
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                </nldd-cell>
+                  </nldd-cell>
+                }
               </nldd-table-row>
             }
           </nldd-table>
