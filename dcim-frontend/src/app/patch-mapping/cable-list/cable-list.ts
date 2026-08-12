@@ -6,6 +6,11 @@ import {
   input,
   output,
   signal,
+  inject,
+  viewChild,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
 import {
   Cable,
@@ -19,6 +24,7 @@ import {
   cableTypeLabel,
   PORT_TYPE_LABEL,
 } from '../cable.model';
+import SecondaryNavService from '../../shell/secondary-nav.service';
 
 type SortField = 'label' | 'aSide' | 'bSide' | 'status' | 'type' | null;
 
@@ -39,7 +45,20 @@ interface SiteOption {
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './cable-list.html',
 })
-export default class CableListComponent {
+export default class CableListComponent implements AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   readonly cables = input.required<Cable[]>();
 
   readonly dcId = input.required<string>();
@@ -265,6 +284,12 @@ export default class CableListComponent {
   readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
 
   readonly CABLE_COLOR_HEX = CABLE_COLOR_HEX;
+
+  /** "light-blue" is how the color is stored; "Light blue" is how you read it. */
+  readonly colorLabel = (color: string): string => {
+    const words = color.replace(/-/g, ' ');
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  };
 
   readonly PORT_TYPE_LABEL = PORT_TYPE_LABEL;
 

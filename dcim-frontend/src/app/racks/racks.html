@@ -1,4 +1,4 @@
-<div class="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-950">
+<div class="flex flex-col h-full overflow-hidden bg-white dark:bg-gray-950">
   <!-- ══════════════════════════════════════════════════════════════
        SUBBAR
        ══════════════════════════════════════════════════════════════ -->
@@ -64,94 +64,9 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════
-       BODY ROW (sidebar + main + info panel)
+       BODY ROW (rack diagram + info panel)
        ══════════════════════════════════════════════════════════════ -->
   <div class="flex flex-1 min-h-0 overflow-hidden">
-    <!-- ── SIDEBAR: Rack list ──────────────────────────────────── -->
-    <aside
-      class="w-56 shrink-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col"
-      aria-label="Rack list"
-    >
-      <!-- Search -->
-      <div class="shrink-0 px-3 py-2.5 border-b border-slate-100 dark:border-gray-800">
-        <nldd-text-field
-          accessible-label="Search racks"
-          placeholder="Search…"
-          start-icon="magnifier"
-          [value]="searchQuery()"
-          (input)="searchQuery.set($any($event.target).value)"
-          class="w-full block"
-          size="sm"
-        >
-        </nldd-text-field>
-      </div>
-
-      <div class="flex-1 overflow-y-auto">
-        <ul role="listbox" [attr.aria-label]="'Racks in ' + currentDC()">
-          @for (rack of filteredRacks(); track rack.id) {
-            <li role="presentation">
-              <button
-                role="option"
-                (click)="selectRack(rack.id)"
-                class="relative w-full px-3 py-2.5 text-left transition-colors border-b border-slate-100 dark:border-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-                [class]="
-                  currentRackId() === rack.id
-                    ? 'bg-accent-50 dark:bg-accent-950'
-                    : 'hover:bg-slate-50 dark:hover:bg-gray-900'
-                "
-                [attr.aria-selected]="currentRackId() === rack.id"
-              >
-                @if (currentRackId() === rack.id) {
-                  <span
-                    class="absolute left-0 inset-y-0 w-0.5 bg-accent-500 rounded-r"
-                    aria-hidden="true"
-                  ></span>
-                }
-
-                <div class="pl-1.5">
-                  <div class="flex items-center gap-1.5 mb-1.5">
-                    <span
-                      class="text-sm font-medium text-slate-900 dark:text-white font-mono truncate"
-                      >{{ rack.name }}</span
-                    >
-                  </div>
-                  <div
-                    class="h-1.5 rounded-full bg-slate-200 dark:bg-gray-800 overflow-hidden"
-                    role="progressbar"
-                    [attr.aria-valuenow]="rackUsedU(rack)"
-                    [attr.aria-valuemax]="rack.totalU"
-                    [attr.aria-label]="rackUsedU(rack) + ' of ' + rack.totalU + ' U used'"
-                  >
-                    <div
-                      class="h-full rounded-full bg-accent-500 transition-all"
-                      [style.width.%]="(rackUsedU(rack) / rack.totalU) * 100"
-                    ></div>
-                  </div>
-                  <p class="mt-1 text-xs text-slate-400 dark:text-gray-500 font-mono">
-                    {{ rackUsedU(rack) }}/{{ rack.totalU }}U
-                  </p>
-                </div>
-              </button>
-            </li>
-          }
-
-          @if (filteredRacks().length === 0) {
-            <li
-              class="px-4 py-8 text-center text-xs text-slate-400 dark:text-gray-500"
-              role="status"
-            >
-              <nldd-icon
-                name="cylinder-split-slash"
-                style="width: 24px; height: 24px; display: block; margin: 0 auto 8px"
-                aria-hidden="true"
-              ></nldd-icon>
-              No racks found
-            </li>
-          }
-        </ul>
-      </div>
-    </aside>
-
     <!-- ── MAIN: Rack diagram ──────────────────────────────────── -->
     <main
       class="flex-1 min-w-0 overflow-y-auto bg-slate-50 dark:bg-gray-900"
@@ -628,3 +543,62 @@
     (click)="confirmDeleteRack()"
   ></nldd-button>
 </nldd-modal-dialog>
+<!-- The rack list is the menu of this section, so the shell shows it in the
+     second sidebar, beside the sections themselves. It is declared here because
+     the racks and their filling are this page's data. -->
+<ng-template #secondaryNav>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      back-text="Sections"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title size="3">
+        <h1>Racks</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-search-field
+        accessible-label="Search racks"
+        placeholder="Search…"
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value)"
+      ></nldd-search-field>
+      <nldd-spacer size="12"></nldd-spacer>
+      @if (filteredRacks().length === 0) {
+        <nldd-inline-dialog
+          icon="cylinder-split-slash"
+          icon-color="secondary"
+          text="No racks found"
+        ></nldd-inline-dialog>
+      } @else {
+        <nldd-list
+          type="navigation"
+          dividers="on-touch"
+          [attr.accessible-label]="'Racks in ' + currentDC()"
+        >
+          @for (rack of filteredRacks(); track rack.id) {
+            <nldd-list-item
+              button
+              [attr.selected]="currentRackId() === rack.id ? '' : null"
+              (click)="selectRack(rack.id)"
+            >
+              <nldd-text-cell
+                width="full"
+                [attr.text]="rack.name"
+                [attr.supporting-text]="rackUsedU(rack) + '/' + rack.totalU + 'U'"
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="fit-content">
+                <nldd-progress-bar
+                  [attr.value]="rackUsedU(rack)"
+                  [attr.max]="rack.totalU"
+                  [attr.accessible-label]="rackUsedU(rack) + ' of ' + rack.totalU + ' U used'"
+                ></nldd-progress-bar>
+              </nldd-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      }
+    </nldd-simple-section>
+  </nldd-page>
+</ng-template>

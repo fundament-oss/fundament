@@ -73,14 +73,6 @@
 <!-- ══════════════════════════════════════════════════════════════
      DC SELECTOR TOOLBAR
      ══════════════════════════════════════════════════════════════ -->
-<div class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6">
-  <app-dc-selector
-    [datacenters]="mutableDcs()"
-    [selectedId]="selectedDcId()"
-    (dcSelected)="selectDc($event)"
-  />
-</div>
-
 <!-- ══════════════════════════════════════════════════════════════
      MAIN CONTENT
      ══════════════════════════════════════════════════════════════ -->
@@ -406,7 +398,7 @@
                 Open in Rack View
               </a>
               <a
-                routerLink="/task-management-admin"
+                routerLink="/tasks"
                 class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors w-full text-left"
               >
                 <nldd-icon
@@ -761,3 +753,45 @@
     </div>
   </div>
 }
+<!-- The data centers are the menu of this section, so the shell shows them in the
+     second sidebar instead of as a strip of tabs above the page. -->
+<ng-template #secondaryNav>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      back-text="Sections"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title size="3">
+        <h1>Data centers</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="Data centers"
+      >
+        @for (dc of mutableDcs(); track dc.id) {
+          <nldd-list-item
+            button
+            [attr.selected]="selectedDcId() === dc.id ? '' : null"
+            (click)="selectDc(dc.id)"
+          >
+            <nldd-text-cell
+              width="full"
+              [attr.text]="dc.name"
+              [attr.supporting-text]="dc.city"
+            ></nldd-text-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-cell width="fit-content">
+              <nldd-badge
+                decorative
+                [attr.color]="statusTagColor(dc.status)"
+              ></nldd-badge>
+            </nldd-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</ng-template>

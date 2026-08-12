@@ -3,223 +3,6 @@
      ══════════════════════════════════════════════════════════════ -->
 <div class="flex">
   <!-- ── LEFT SIDEBAR ─────────────────────────────────────────── -->
-  <aside
-    class="w-60 shrink-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex-col hidden sm:flex"
-    aria-label="Filters"
-  >
-    <!-- Search -->
-    <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
-      <nldd-search-field
-        accessible-label="Search cables"
-        placeholder="Search cables…"
-        start-icon="magnifier"
-        [value]="searchText()"
-        (input)="searchText.set($any($event.target).value)"
-        class="block w-full"
-        size="sm"
-      ></nldd-search-field>
-    </div>
-
-    <!-- Datacenter -->
-    <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
-      <p
-        class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-      >
-        Datacenter
-      </p>
-      <nav aria-label="Datacenter selection">
-        @for (dc of sites(); track dc.id) {
-          <button
-            (click)="dcSelected.emit(dc.id)"
-            class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-            [class]="
-              dcId() === dc.id
-                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-                : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-            "
-            [attr.aria-pressed]="dcId() === dc.id"
-          >
-            <span
-              class="h-2 w-2 rounded-full shrink-0 bg-slate-300 dark:bg-gray-700"
-              aria-hidden="true"
-            ></span>
-            <span class="flex-1 text-left">{{ dc.name }}</span>
-          </button>
-        }
-      </nav>
-    </div>
-
-    <!-- Status -->
-    <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
-      <p
-        class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-      >
-        Status
-      </p>
-
-      <button
-        (click)="filterStatus.set('')"
-        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-        [class]="
-          filterStatus() === ''
-            ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-            : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-        "
-      >
-        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
-        <span class="flex-1 text-left">All statuses</span>
-        <span class="text-xs text-slate-400 dark:text-gray-500">{{ statusCounts()['all'] }}</span>
-      </button>
-
-      @for (s of CABLE_STATUSES; track s.value) {
-        <button
-          (click)="filterStatus.set(s.value)"
-          class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-          [class]="
-            filterStatus() === s.value
-              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-          "
-        >
-          <span
-            class="h-2 w-2 rounded-full shrink-0"
-            [class]="statusDotClass(s.value)"
-            aria-hidden="true"
-          ></span>
-          <span class="flex-1 text-left">{{ s.label }}</span>
-          @if (statusCounts()[s.value]) {
-            <span class="text-xs text-slate-400 dark:text-gray-500">{{
-              statusCounts()[s.value]
-            }}</span>
-          }
-        </button>
-      }
-    </div>
-
-    <!-- Type -->
-    <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
-      <p
-        class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-      >
-        Type
-      </p>
-
-      <button
-        (click)="filterType.set('')"
-        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-        [class]="
-          filterType() === ''
-            ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-            : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-        "
-      >
-        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
-        <span class="flex-1 text-left">All types</span>
-        <span class="text-xs text-slate-400 dark:text-gray-500">{{ statusCounts()['all'] }}</span>
-      </button>
-
-      @for (t of CABLE_TYPES; track t) {
-        @if (typeCounts()[t]) {
-          <button
-            (click)="filterType.set(t)"
-            class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-            [class]="
-              filterType() === t
-                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-                : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-            "
-          >
-            <span class="flex-1 text-left">{{ CABLE_TYPE_LABEL[t] }}</span>
-            <span class="text-xs text-slate-400 dark:text-gray-500">{{ typeCounts()[t] }}</span>
-          </button>
-        }
-      }
-    </div>
-
-    <!-- Color -->
-    <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
-      <p
-        class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-      >
-        Color
-      </p>
-
-      <button
-        (click)="filterColor.set('')"
-        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-        [class]="
-          filterColor() === ''
-            ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-            : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-        "
-      >
-        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
-        <span class="flex-1 text-left">All colors</span>
-      </button>
-
-      @for (color of CABLE_COLORS; track color) {
-        @if (colorCounts()[color]) {
-          <button
-            (click)="filterColor.set(color)"
-            class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-            [class]="
-              filterColor() === color
-                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-                : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-            "
-          >
-            <span
-              class="h-3 w-3 rounded-full shrink-0 border border-slate-200 dark:border-gray-800"
-              [style.background]="CABLE_COLOR_HEX[color]"
-              aria-hidden="true"
-            ></span>
-            <span class="flex-1 text-left capitalize">{{ color.replace('-', ' ') }}</span>
-            <span class="text-xs text-slate-400 dark:text-gray-500">{{
-              colorCounts()[color]
-            }}</span>
-          </button>
-        }
-      }
-    </div>
-
-    <!-- Device -->
-    <div class="px-4 py-3">
-      <p
-        class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-      >
-        Device
-      </p>
-
-      <button
-        (click)="filterDeviceId.set('')"
-        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-        [class]="
-          filterDeviceId() === ''
-            ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-            : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-        "
-      >
-        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
-        <span class="flex-1 text-left">All devices</span>
-        <span class="text-xs text-slate-400 dark:text-gray-500">{{ statusCounts()['all'] }}</span>
-      </button>
-
-      @for (dev of dcDevices(); track dev.id) {
-        <button
-          (click)="filterDeviceId.set(dev.id)"
-          class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-          [class]="
-            filterDeviceId() === dev.id
-              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-          "
-        >
-          <nldd-icon name="cylinder-split" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
-          <span class="flex-1 text-left text-sm truncate">{{ dev.name }}</span>
-        </button>
-      }
-    </div>
-  </aside>
 
   <!-- ── MAIN ───────────────────────────────────────────────────── -->
   <main class="flex-1 min-w-0" aria-label="Cable list">
@@ -446,3 +229,212 @@
     </div>
   </main>
 </div>
+<!-- The filters are the menu of this section, so the shell shows them in the
+     second sidebar: which data center, and then what narrows the cables in it. -->
+<ng-template #secondaryNav>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      back-text="Sections"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title size="3">
+        <h1>Patch mapping</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-search-field
+        accessible-label="Search cables"
+        placeholder="Search cables…"
+        [value]="searchText()"
+        (input)="searchText.set($any($event.target).value)"
+      ></nldd-search-field>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Data center</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="Data center"
+      >
+        @for (dc of sites(); track dc.id) {
+          <nldd-list-item
+            button
+            [attr.selected]="dcId() === dc.id ? '' : null"
+            (click)="dcSelected.emit(dc.id)"
+          >
+            <nldd-text-cell [attr.text]="dc.name"></nldd-text-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Status</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="Status"
+      >
+        <nldd-list-item
+          button
+          [attr.selected]="filterStatus() === '' ? '' : null"
+          (click)="filterStatus.set('')"
+        >
+          <nldd-text-cell text="All statuses"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="statusCounts()['all']"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        @for (s of CABLE_STATUSES; track s.value) {
+          <nldd-list-item
+            button
+            [attr.selected]="filterStatus() === s.value ? '' : null"
+            (click)="filterStatus.set(s.value)"
+          >
+            <nldd-cell width="fit-content">
+              <nldd-badge
+                decorative
+                [attr.color]="cableStatusTagColor(s.value)"
+              ></nldd-badge>
+            </nldd-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="s.label"></nldd-text-cell>
+            @if (statusCounts()[s.value]) {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="statusCounts()[s.value]"
+              ></nldd-text-cell>
+            }
+          </nldd-list-item>
+        }
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Type</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="Type"
+      >
+        <nldd-list-item
+          button
+          [attr.selected]="filterType() === '' ? '' : null"
+          (click)="filterType.set('')"
+        >
+          <nldd-text-cell text="All types"></nldd-text-cell>
+        </nldd-list-item>
+        @for (t of CABLE_TYPES; track t) {
+          @if (typeCounts()[t]) {
+            <nldd-list-item
+              button
+              [attr.selected]="filterType() === t ? '' : null"
+              (click)="filterType.set(t)"
+            >
+              <nldd-text-cell [attr.text]="CABLE_TYPE_LABEL[t]"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="typeCounts()[t]"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        }
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Color</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="Color"
+      >
+        <nldd-list-item
+          button
+          [attr.selected]="filterColor() === '' ? '' : null"
+          (click)="filterColor.set('')"
+        >
+          <nldd-text-cell text="All colors"></nldd-text-cell>
+        </nldd-list-item>
+        @for (color of CABLE_COLORS; track color) {
+          @if (colorCounts()[color]) {
+            <nldd-list-item
+              button
+              [attr.selected]="filterColor() === color ? '' : null"
+              (click)="filterColor.set(color)"
+            >
+              <!-- The one swatch that stays hand-drawn: this is the literal color
+                   of the cable in the rack, not a meaning the design system has a
+                   token for. -->
+              <nldd-cell width="fit-content">
+                <span
+                  class="block h-3 w-3 rounded-full border border-slate-200 dark:border-gray-800"
+                  [style.background]="CABLE_COLOR_HEX[color]"
+                  aria-hidden="true"
+                ></span>
+              </nldd-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell [attr.text]="colorLabel(color)"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="colorCounts()[color]"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        }
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Device</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="Device"
+      >
+        <nldd-list-item
+          button
+          [attr.selected]="filterDeviceId() === '' ? '' : null"
+          (click)="filterDeviceId.set('')"
+        >
+          <nldd-text-cell text="All devices"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="statusCounts()['all']"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        @for (dev of dcDevices(); track dev.id) {
+          <nldd-list-item
+            button
+            [attr.selected]="filterDeviceId() === dev.id ? '' : null"
+            (click)="filterDeviceId.set(dev.id)"
+          >
+            <nldd-icon-cell
+              icon="cylinder-split"
+              size="20"
+            ></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="dev.name"></nldd-text-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</ng-template>

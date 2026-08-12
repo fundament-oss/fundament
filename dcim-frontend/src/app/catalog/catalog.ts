@@ -8,6 +8,9 @@ import {
   OnInit,
   signal,
   viewChild,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -21,6 +24,7 @@ import parseValidationError from '../../connect/validation';
 import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
+import SecondaryNavService from '../shell/secondary-nav.service';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -44,7 +48,20 @@ type InvalidFields = Record<string, string>;
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950' },
 })
-export default class CatalogComponent implements OnInit {
+export default class CatalogComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   private readonly catalogApi = inject(CatalogApiService);
 
   private readonly inventoryApi = inject(InventoryApiService);

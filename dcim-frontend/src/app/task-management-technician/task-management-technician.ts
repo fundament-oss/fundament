@@ -49,8 +49,8 @@ interface Step {
 interface Task {
   id: string;
   title: string;
-  priority: 'critical' | 'high' | 'normal';
-  category: string;
+  priority: 'urgent' | 'high' | 'normal';
+  tags: string[];
   location: string;
   steps: Step[];
 }
@@ -58,7 +58,7 @@ interface Task {
 type Phase = 'gather' | 'task';
 
 /** What the technician walks through: the statuses that still need work done. */
-const WALKTHROUGH_STATUSES: TaskStatusLabel[] = ['Ready', 'In Progress'];
+const WALKTHROUGH_STATUSES: TaskStatusLabel[] = ['To do', 'Doing'];
 
 // Ceiling on in-flight ListTaskSteps calls while the walkthrough loads, matching
 // the admin board's BULK_CONCURRENCY.
@@ -238,15 +238,24 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   readonly dcName = 'DC Amsterdam-West';
 
-  // Generic part label per task category, used to build the gather checklist.
-  private static readonly CATEGORY_PARTS: Record<string, string> = {
-    Hardware: 'Replacement hardware components',
-    Network: 'Replacement network device',
-    Cooling: 'Cooling spares & filters',
-    Power: 'Power components & fuses',
-    Security: 'Mounting hardware & cabling',
-    Other: 'Task-specific parts',
+  // Generic part label per tag, used to build the gather checklist.
+  private static readonly TAG_PARTS: Record<string, string> = {
+    hardware: 'Replacement hardware components',
+    network: 'Replacement network device',
+    cooling: 'Cooling spares & filters',
+    power: 'Power components & fuses',
+    security: 'Mounting hardware & cabling',
   };
+
+  /** The first tag we know a parts list for. A task tagged both network and
+   *  hardware is network work with a box of hardware, and the more specific
+   *  label is the useful one. */
+  private static partsLabelFor(tags: string[]): string {
+    const known = tags.find((tag) => tag in TaskManagementTechnicianComponent.TAG_PARTS);
+    return known
+      ? TaskManagementTechnicianComponent.TAG_PARTS[known]
+      : 'Task-specific parts';
+  }
 
   readonly tasks = signal<Task[]>([]);
 
@@ -259,7 +268,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     ];
     const parts = this.tasks().map((t) => ({
       key: `part:${t.id}`,
-      label: TaskManagementTechnicianComponent.CATEGORY_PARTS[t.category] ?? 'Task-specific parts',
+      label: TaskManagementTechnicianComponent.partsLabelFor(t.tags),
       taskFor: `${t.title} — ${TaskManagementTechnicianComponent.lastLocationSegment(t.location)}`,
     }));
     return [...tools, ...parts];
@@ -384,7 +393,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
           priority: TaskManagementTechnicianComponent.mapPriority(
             TaskApiService.fromProtoPriority(t.priority),
           ),
-          category: TaskApiService.fromProtoCategory(t.category),
+          tags: [...t.tags],
           location: t.location,
           steps,
         };
@@ -438,8 +447,8 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     return t.created ? timestampDate(t.created).getTime() : 0;
   }
 
-  private static mapPriority(p: TaskPriorityLabel): 'critical' | 'high' | 'normal' {
-    if (p === 'Critical') return 'critical';
+  private static mapPriority(p: TaskPriorityLabel): 'urgent' | 'high' | 'normal' {
+    if (p === 'Urgent') return 'urgent';
     if (p === 'High') return 'high';
     return 'normal';
   }

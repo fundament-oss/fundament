@@ -100,12 +100,12 @@
         {{ currentTask().title }}
       </h1>
       <div class="mt-2 flex flex-wrap items-center gap-2">
-        @if (currentTask().priority === 'critical') {
+        @if (currentTask().priority === 'urgent') {
           <nldd-tag
             color="critical"
             size="sm"
-            text="Critical"
-            accessible-label="Priority: Critical"
+            text="Urgent"
+            accessible-label="Priority: Urgent"
           ></nldd-tag>
         }
         @if (currentTask().priority === 'high') {
@@ -119,7 +119,7 @@
         <nldd-tag
           color="donkerblauw"
           size="sm"
-          text="In Progress"
+          text="Doing"
           accessible-label="Status: In progress"
         ></nldd-tag>
       </div>
@@ -305,12 +305,12 @@
                 "
                 >{{ task.title }}</span
               >
-              @if (task.priority === 'critical') {
+              @if (task.priority === 'urgent') {
                 <nldd-tag
                   color="critical"
                   size="sm"
-                  text="Critical"
-                  accessible-label="Priority: Critical"
+                  text="Urgent"
+                  accessible-label="Priority: Urgent"
                 ></nldd-tag>
               }
               @if (task.priority === 'high') {

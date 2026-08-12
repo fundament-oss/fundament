@@ -8,6 +8,9 @@ import {
   signal,
   viewChild,
   CUSTOM_ELEMENTS_SCHEMA,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -23,6 +26,7 @@ import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
 import { DatacenterInfo, DatacenterStatus, RackCell, statusTagColor } from './datacenter.model';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
+import SecondaryNavService from '../shell/secondary-nav.service';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -51,7 +55,20 @@ interface DcStats {
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
-export default class DatacentersComponent implements OnInit {
+export default class DatacentersComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   private readonly router = inject(Router);
 
   private readonly dcApi = inject(DatacenterApiService);

@@ -6,6 +6,9 @@ import {
   effect,
   inject,
   OnInit,
+  OnDestroy,
+  AfterViewInit,
+  TemplateRef,
   signal,
   untracked,
   viewChild,
@@ -14,6 +17,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
+import SecondaryNavService from '../shell/secondary-nav.service';
 import RackApiService from './rack-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
 import InventoryApiService from '../inventory/inventory-api.service';
@@ -232,7 +236,12 @@ interface NativeElementRef {
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export default class RacksComponent implements OnInit {
+export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** The rack list, handed to the shell for as long as this page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
   private readonly rackApi = inject(RackApiService);
 
   private readonly dcApi = inject(DatacenterApiService);
@@ -368,6 +377,14 @@ export default class RacksComponent implements OnInit {
       this.currentRackId();
       this.editMode.set(false);
     });
+  }
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
   }
 
   ngOnInit(): void {

@@ -1,206 +1,176 @@
-<!-- Identity strip (lintblauw) + topbar wrapped as single sticky unit -->
-<div class="sticky top-0 z-40">
-  <div class="h-1 bg-accent-750" aria-hidden="true"></div>
-
-  <header
-    class="flex h-16 bg-white dark:bg-gray-950 border-b border-slate-200 dark:border-gray-800"
-    role="banner"
-  >
-    <!-- Brand -->
-    <div class="flex items-center px-6 border-r border-slate-200 dark:border-gray-800 shrink-0">
-      <a
-        routerLink="/"
-        aria-label="Fundament DCIM home"
-        class="flex items-center leading-tight gap-2"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5.5 w-5.5 text-indigo-600 dark:text-indigo-400"
-          viewBox="0 0 24 24"
-        >
-          <path
-            fill="currentColor"
-            d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
-          />
-        </svg>
-        <span class="font-semibold tracking-tight text-slate-900 dark:text-white">
-          Fundament <span class="text-slate-400 dark:text-gray-500 font-normal ml-0.5">DCIM</span>
-        </span>
-      </a>
-    </div>
-
-    <!-- Primary navigation -->
-    <nav class="flex flex-1 items-stretch pl-1" aria-label="Main navigation">
-      <a
-        routerLink="/catalog"
-        routerLinkActive
-        #catalogLink="routerLinkActive"
-        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
-        [class]="
-          catalogLink.isActive
-            ? 'text-slate-900 dark:text-white font-medium border-accent-600'
-            : 'text-slate-500 dark:text-gray-400 border-transparent hover:text-slate-900 dark:hover:text-white'
-        "
-      >
-        <nldd-icon
-          name="folder-on-folder"
-          class="w-4.5 h-4.5 shrink-0"
-          aria-hidden="true"
-        ></nldd-icon>
-        Catalog
-      </a>
-
-      <a
-        routerLink="/inventory"
-        routerLinkActive
-        #inventoryLink="routerLinkActive"
-        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
-        [class]="
-          inventoryLink.isActive
-            ? 'text-slate-900 dark:text-white font-medium border-accent-600'
-            : 'text-slate-500 dark:text-gray-400 border-transparent hover:text-slate-900 dark:hover:text-white'
-        "
-      >
-        <nldd-icon
-          name="rectangle-stack"
-          class="w-4.5 h-4.5 shrink-0"
-          aria-hidden="true"
-        ></nldd-icon>
-        Inventory
-      </a>
-
-      <a
-        routerLink="/datacenters"
-        routerLinkActive
-        #dcLink="routerLinkActive"
-        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
-        [class]="
-          dcLink.isActive
-            ? 'text-slate-900 dark:text-white font-medium border-accent-600'
-            : 'text-slate-500 dark:text-gray-400 border-transparent hover:text-slate-900 dark:hover:text-white'
-        "
-      >
-        <nldd-icon
-          name="apartment-building"
-          class="w-4.5 h-4.5 shrink-0"
-          aria-hidden="true"
-        ></nldd-icon>
-        Data centers
-      </a>
-
-      <a
-        routerLink="/racks"
-        routerLinkActive
-        #racksLink="routerLinkActive"
-        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
-        [class]="
-          racksLink.isActive
-            ? 'text-slate-900 dark:text-white font-medium border-accent-600'
-            : 'text-slate-500 dark:text-gray-400 border-transparent hover:text-slate-900 dark:hover:text-white'
-        "
-      >
-        <nldd-icon
-          name="cylinder-split"
-          class="w-4.5 h-4.5 shrink-0"
-          aria-hidden="true"
-        ></nldd-icon>
-        Racks
-      </a>
-
-      <a
-        routerLink="/patch-mapping"
-        routerLinkActive
-        #patchLink="routerLinkActive"
-        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
-        [class]="
-          patchLink.isActive
-            ? 'text-slate-900 dark:text-white font-medium border-accent-600'
-            : 'text-slate-500 dark:text-gray-400 border-transparent hover:text-slate-900 dark:hover:text-white'
-        "
-      >
-        <nldd-icon name="list" class="w-4.5 h-4.5 shrink-0" aria-hidden="true"></nldd-icon>
-        Patch mapping
-      </a>
-
-      <a
-        routerLink="/task-management-admin"
-        routerLinkActive
-        #tasksLink="routerLinkActive"
-        class="inline-flex items-center gap-2 px-4 text-sm border-b-[3px] transition-colors"
-        [class]="
-          tasksLink.isActive
-            ? 'text-slate-900 dark:text-white font-medium border-accent-600'
-            : 'text-slate-500 dark:text-gray-400 border-transparent hover:text-slate-900 dark:hover:text-white'
-        "
-      >
-        <nldd-icon
-          name="check-mark-circle"
-          class="w-4.5 h-4.5 shrink-0"
-          aria-hidden="true"
-        ></nldd-icon>
-        Tasks
-      </a>
-    </nav>
-
-    <!-- User section -->
-    <div
-      class="flex items-center gap-3 px-6 border-l border-slate-200 dark:border-gray-800 shrink-0"
+<nldd-app-view>
+  <nldd-bar-split-view>
+    <!-- Header: the product, the theme and who you are. Everything about a
+         section moved into the sidebar, so this bar holds only what is true on
+         every screen. -->
+    <nldd-split-view-pane
+      slot="header"
+      sm-order="1"
+      md-order="1"
+      lg-order="1"
+      background="base"
     >
-      <app-theme-toggle />
-
-      <div class="text-right leading-tight hidden sm:block">
-        <div class="text-sm text-slate-900 dark:text-white">Piet Bakker</div>
-        <div class="text-xs text-slate-400 dark:text-gray-500">Admin</div>
-      </div>
-
-      <div class="user-dropdown relative">
-        <button
-          type="button"
-          (click)="toggleUserDropdown()"
-          [attr.aria-expanded]="userDropdownOpen()"
-          aria-haspopup="menu"
-          aria-label="User menu"
-          class="flex items-center gap-3 rounded-md cursor-pointer focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:outline-none dark:focus:ring-offset-gray-950"
-        >
-          <div class="text-right hidden sm:block">
-            <div class="text-sm text-slate-900 dark:text-gray-100">{{ userName() }}</div>
-          </div>
-
-          <div
-            class="h-8 w-8 rounded-full bg-[#154273] flex items-center justify-center text-white text-xs font-medium select-none shrink-0"
-            [attr.aria-label]="'User avatar: ' + userName()"
-            role="img"
+      <nldd-container
+        padding-left="16"
+        padding-right="8"
+        padding-block="8"
+      >
+        <nldd-toolbar label="Application">
+          <nldd-toolbar-title
+            slot="start"
+            text="Fundament DCIM"
+            href="/"
           >
-            {{ userInitials() }}
-          </div>
-        </button>
-
-        @if (userDropdownOpen()) {
-          <div
-            class="absolute right-0 z-10 mt-2 w-52 rounded-lg border border-slate-200 bg-white py-1 shadow-md dark:border-gray-800 dark:bg-gray-950"
-            role="menu"
-          >
-            <div class="border-b border-slate-100 px-4 py-2.5 dark:border-gray-800">
-              <p class="text-sm text-slate-500 dark:text-gray-400">Logged in as</p>
-              <p class="mt-1 truncate font-medium text-slate-700 dark:text-gray-200">
-                {{ userName() || 'Unknown' }}
-              </p>
-            </div>
-            <div class="pt-1">
-              <button
-                type="button"
-                role="menuitem"
-                (click)="handleLogout()"
-                class="block w-full cursor-pointer px-4 py-2 text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+            <!-- The same mark as the favicon, so the tab and the toolbar say the
+                 same thing. Empty alt because the name stands beside it. -->
+            <img
+              slot="media"
+              src="/img/favicon.svg"
+              alt=""
+              height="32"
+            />
+          </nldd-toolbar-title>
+          <!-- Everything about your own account in one place: who you are, how
+               the app looks and the way out. The theme was a control of its own
+               in the bar, which put a setting you touch twice a year next to the
+               things you use all day. -->
+          <nldd-toolbar-item slot="end">
+            <nldd-icon-button
+              icon="account"
+              [attr.accessible-label]="userName() || 'Account'"
+              variant="secondary"
+              expandable
+              popup-type="menu"
+            >
+              <nldd-avatar
+                slot="icon"
+                [attr.name]="userName() || 'Unknown'"
+                color="inherit"
+                icon-aligned
+                decorative
+              ></nldd-avatar>
+              <nldd-menu
+                slot="popup"
+                placement="bottom-end"
               >
-                Log out
-              </button>
-            </div>
-          </div>
+                <!-- The header slot is unpadded on purpose, so the container
+                     supplies the spacing. -->
+                <nldd-container
+                  slot="header"
+                  padding-inline="16"
+                  padding-block="12"
+                >
+                  <nldd-identity [attr.text]="userName() || 'Unknown'"></nldd-identity>
+                </nldd-container>
+                <nldd-menu-item
+                  text="Appearance"
+                  icon="appearance"
+                >
+                  <nldd-menu>
+                    <nldd-menu-item
+                      text="System"
+                      icon="display"
+                      type="radio"
+                      [attr.selected]="theme.themePreference() === 'system' ? '' : null"
+                      (select)="theme.setTheme('system')"
+                    ></nldd-menu-item>
+                    <nldd-menu-item
+                      text="Light"
+                      icon="light-mode"
+                      type="radio"
+                      [attr.selected]="theme.themePreference() === 'light' ? '' : null"
+                      (select)="theme.setTheme('light')"
+                    ></nldd-menu-item>
+                    <nldd-menu-item
+                      text="Dark"
+                      icon="dark-mode"
+                      type="radio"
+                      [attr.selected]="theme.themePreference() === 'dark' ? '' : null"
+                      (select)="theme.setTheme('dark')"
+                    ></nldd-menu-item>
+                  </nldd-menu>
+                </nldd-menu-item>
+                <nldd-menu-divider></nldd-menu-divider>
+                <nldd-menu-item
+                  text="Log out"
+                  icon="logout"
+                  (select)="handleLogout()"
+                ></nldd-menu-item>
+              </nldd-menu>
+            </nldd-icon-button>
+          </nldd-toolbar-item>
+        </nldd-toolbar>
+      </nldd-container>
+    </nldd-split-view-pane>
+    <nldd-split-view-pane
+      slot="main"
+      sm-order="2"
+      md-order="2"
+      lg-order="2"
+    >
+      <!-- No sidebar-as-sheet: collapsed to one column the split view drops
+           `hide-back` on the deeper panes, and each page's title bar carries the
+           way back. -->
+      <nldd-navigation-split-view
+        sidebar-accessible-label="Navigation"
+        (back)="onPaneBack()"
+      >
+        <!-- The sections, which were a row of tabs above the page. A menu that
+             stands beside what it opens can hold a count, a status dot and a
+             second level; a row of tabs runs out of room at six. -->
+        <nldd-split-view-pane
+          slot="sidebar"
+          background="base"
+          has-content
+        >
+          <nldd-simple-section>
+            <nldd-title size="3">
+              <h1>Data center</h1>
+            </nldd-title>
+            <nldd-spacer size="8"></nldd-spacer>
+            <nldd-list
+              type="navigation"
+              dividers="on-touch"
+              aria-label="Sections"
+            >
+              @for (item of sections; track item.path) {
+                <nldd-list-item
+                  [attr.href]="item.path"
+                  [attr.selected]="isCurrent(item.path) ? '' : null"
+                  (click)="navigate($event, item.path)"
+                >
+                  <nldd-icon-cell
+                    [attr.icon]="item.icon"
+                    size="20"
+                  ></nldd-icon-cell>
+                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                  <nldd-text-cell [attr.text]="item.text"></nldd-text-cell>
+                </nldd-list-item>
+              }
+            </nldd-list>
+          </nldd-simple-section>
+        </nldd-split-view-pane>
+        <!-- Filled by the page: the rack list, the categories, the filters. The
+             page knows that content and the data behind it. -->
+        @if (secondaryNav.content(); as menu) {
+          <nldd-split-view-pane
+            slot="secondary-sidebar"
+            background="base"
+            [attr.has-content]="stackDepth() >= 1 ? '' : null"
+          >
+            <ng-container [ngTemplateOutlet]="menu"></ng-container>
+          </nldd-split-view-pane>
         }
-      </div>
-    </div>
-  </header>
-</div>
-
-<router-outlet />
+        <!-- The outlet anchor and the routed component around it are plumbing,
+             and a pane grows everything it slots. Both are taken out of the
+             layout in styles.css, so the page inside is the pane's own child. -->
+        <nldd-split-view-pane
+          slot="main"
+          [attr.has-content]="stackDepth() >= 2 ? '' : null"
+        >
+          <router-outlet />
+        </nldd-split-view-pane>
+      </nldd-navigation-split-view>
+    </nldd-split-view-pane>
+  </nldd-bar-split-view>
+</nldd-app-view>

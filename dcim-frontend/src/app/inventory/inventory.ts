@@ -9,6 +9,9 @@ import {
   OnInit,
   signal,
   viewChild,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -23,6 +26,7 @@ import { ASSET_STATUS_TAG_COLOR } from './asset-status';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
+import SecondaryNavService from '../shell/secondary-nav.service';
 
 export type AssetStatus =
   'needs-repair' | 'decommissioned' | 'deployed' | 'available' | 'on-order' | 'requested';
@@ -139,7 +143,20 @@ export interface PortCompatibility {
     class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950',
   },
 })
-export default class InventoryComponent implements OnInit {
+export default class InventoryComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   private readonly inventoryApi = inject(InventoryApiService);
 
   private readonly catalogApi = inject(CatalogApiService);
@@ -545,6 +562,21 @@ export default class InventoryComponent implements OnInit {
       decommissioned: 'bg-slate-400',
       'on-order': 'bg-blue-400',
       requested: 'bg-purple-400',
+    };
+    return map[status];
+  };
+
+  /** The same six states in the design system's own colors, for the dot in the
+   *  filter menu. Neutral for what is out of service, so the eye goes to the
+   *  ones that need something. */
+  readonly statusBadgeColor = (status: AssetStatus): string => {
+    const map: Record<AssetStatus, string> = {
+      deployed: 'success',
+      available: 'accent',
+      'needs-repair': 'warning',
+      decommissioned: 'neutral',
+      'on-order': 'accent',
+      requested: 'neutral',
     };
     return map[status];
   };

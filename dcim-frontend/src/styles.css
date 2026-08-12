@@ -14,55 +14,6 @@
    work, and at specificity (0,2,0) they outrank anything we could hang off
    html.dark (0,1,1) — so do not add a local color-scheme rule here. */
 
-:root {
-  --primitives-font-size-100: theme('fontSize.base');
-
-  /* Custom focus ring, since the NLDD default is very dark */
-  --semantics-focus-ring-outline: none;
-  --semantics-focus-ring-box-shadow:
-    var(--semantics-surfaces-base-background-color) 0 0 0 2px,
-    var(--primitives-color-accent-200) 0 0 0 4px;
-}
-
-/* View transition styles for switching between light and dark mode, see https://theme-toggle.rdsx.dev/ */
-::view-transition-group(root) {
-  @apply animate-[700ms_ease-out];
-}
-
-::view-transition-new(root) {
-  animation-name: reveal-light;
-  animation-fill-mode: both;
-}
-
-::view-transition-old(root),
-.dark::view-transition-old(root) {
-  @apply -z-10 animate-none;
-  animation-fill-mode: both;
-}
-
-.dark::view-transition-new(root) {
-  animation-name: reveal-dark;
-  animation-fill-mode: both;
-}
-
-@keyframes reveal-light {
-  from {
-    clip-path: polygon(171% 50%, 50% 171%, 50% 171%, 171% 50%);
-  }
-  to {
-    clip-path: polygon(171% 50%, 50% 171%, -50% 71%, 50% -71%);
-  }
-}
-
-@keyframes reveal-dark {
-  from {
-    clip-path: polygon(50% -71%, -50% 71%, -50% 71%, 50% -71%);
-  }
-  to {
-    clip-path: polygon(50% -71%, -50% 71%, 50% 171%, 171% 50%);
-  }
-}
-
 @theme {
   /* The colour ramps are copied as literal values out of the design system
      (dist/css/palettes.generated.css: accent = lintblauw, neutral = coolgray,
@@ -192,8 +143,22 @@
   --font-mono: var(--primitives-font-family-monospace);
 }
 
+/* Angular puts two elements in the main pane that are pure plumbing: the
+   router-outlet anchor, and the routed component wrapping its nldd-page. The
+   pane flex-grows every slotted child, so both claim a share of the height and
+   a page shorter than the pane starts halfway down. `display: contents` takes
+   them out of the layout and leaves the nldd-page as the pane's own child. No
+   visual styling involved, and nothing for a page to have to undo. */
+nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > * {
+  display: contents;
+}
+
+/* No dark:text-white here. The design system's content color is deliberately a
+   notch softer than pure white, and text-content already carries it in both
+   schemes; the override only made light-DOM text brighter than every component
+   that colors itself, which showed up as icons glowing beside their neighbours. */
 body {
-  @apply text-content font-body bg-neutral-25 dark:bg-gray-900 dark:text-white;
+  @apply text-content font-body bg-neutral-25 dark:bg-gray-900;
 }
 
 button {

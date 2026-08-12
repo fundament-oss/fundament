@@ -22,114 +22,6 @@
      BODY (sidebar + main)
      ══════════════════════════════════════════════════════════════ -->
 <div class="flex flex-1 min-h-0">
-  <!-- ── LEFT SIDEBAR ─────────────────────────────────────────── -->
-  <aside
-    class="w-60 shrink-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex-col overflow-y-auto hidden sm:flex"
-    aria-label="Filters"
-  >
-    <!-- Search -->
-    <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
-      <nldd-search-field
-        accessible-label="Search assets"
-        placeholder="Search assets…"
-        start-icon="magnifier"
-        [value]="searchQuery()"
-        (input)="searchQuery.set($any($event.target).value)"
-        class="block w-full"
-        size="sm"
-      >
-      </nldd-search-field>
-    </div>
-
-    <!-- Status -->
-    <div class="px-4 py-3 border-b border-slate-100 dark:border-gray-800">
-      <p
-        class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-      >
-        Status
-      </p>
-
-      <button
-        (click)="selectStatus('all')"
-        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-        [class]="
-          statusFilter() === 'all'
-            ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-            : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-        "
-      >
-        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
-        <span class="flex-1 text-left">All assets</span>
-        <span class="text-xs text-slate-400 dark:text-gray-500">{{ statusCounts()['all'] }}</span>
-      </button>
-
-      @for (s of statuses; track s.value) {
-        <button
-          (click)="selectStatus(s.value)"
-          class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-          [class]="
-            statusFilter() === s.value
-              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-          "
-        >
-          <span
-            class="h-2 w-2 rounded-full shrink-0"
-            [class]="statusDotClass(s.value)"
-            aria-hidden="true"
-          ></span>
-          <span class="flex-1 text-left">{{ s.label }}</span>
-          @if (statusCounts()[s.value]) {
-            <span class="text-xs text-slate-400 dark:text-gray-500">{{
-              statusCounts()[s.value]
-            }}</span>
-          }
-        </button>
-      }
-    </div>
-
-    <!-- Categories -->
-    <div class="px-4 py-3">
-      <p
-        class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-      >
-        Category
-      </p>
-
-      <button
-        (click)="selectCategory('all')"
-        class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-        [class]="
-          categoryFilter() === 'all'
-            ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-            : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-        "
-      >
-        <nldd-icon name="rectangle-stack" class="w-4 h-4 shrink-0" aria-hidden="true"></nldd-icon>
-        <span class="flex-1 text-left">All categories</span>
-        <span class="text-xs text-slate-400 dark:text-gray-500">{{ statusCounts()['all'] }}</span>
-      </button>
-
-      @for (cat of categories; track cat) {
-        <button
-          (click)="selectCategory(cat)"
-          class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-          [class]="
-            categoryFilter() === cat
-              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-          "
-        >
-          <nldd-icon
-            [name]="categoryIcon(cat)"
-            class="w-4 h-4 shrink-0"
-            aria-hidden="true"
-          ></nldd-icon>
-          <span class="flex-1 text-left">{{ cat }}</span>
-        </button>
-      }
-    </div>
-  </aside>
 
   <!-- ── MAIN ───────────────────────────────────────────────────── -->
   <main class="flex-1 min-w-0 overflow-y-auto" aria-label="Asset inventory">
@@ -482,3 +374,122 @@
     (click)="confirmDeleteAsset()"
   ></nldd-button>
 </nldd-modal-dialog>
+<!-- The filters are the menu of this section: status first, because that is what
+     you come here to narrow, then category. Declared here because the counts are
+     this page's data. -->
+<ng-template #secondaryNav>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      back-text="Sections"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title size="3">
+        <h1>Inventory</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-search-field
+        accessible-label="Search assets"
+        placeholder="Search assets…"
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value)"
+      ></nldd-search-field>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Status</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="Status"
+      >
+        <nldd-list-item
+          button
+          [attr.selected]="statusFilter() === 'all' ? '' : null"
+          (click)="selectStatus('all')"
+        >
+          <nldd-icon-cell
+            icon="stack"
+            size="20"
+          ></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="All assets"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="statusCounts()['all']"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        @for (s of statuses; track s.value) {
+          <nldd-list-item
+            button
+            [attr.selected]="statusFilter() === s.value ? '' : null"
+            (click)="selectStatus(s.value)"
+          >
+            <nldd-cell width="fit-content">
+              <nldd-badge
+                decorative
+                [attr.color]="statusBadgeColor(s.value)"
+              ></nldd-badge>
+            </nldd-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="s.label"></nldd-text-cell>
+            @if (statusCounts()[s.value]) {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="statusCounts()[s.value]"
+              ></nldd-text-cell>
+            }
+          </nldd-list-item>
+        }
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Category</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="Category"
+      >
+        <nldd-list-item
+          button
+          [attr.selected]="categoryFilter() === 'all' ? '' : null"
+          (click)="selectCategory('all')"
+        >
+          <nldd-icon-cell
+            icon="stack"
+            size="20"
+          ></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="All categories"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="statusCounts()['all']"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        @for (cat of categories; track cat) {
+          <nldd-list-item
+            button
+            [attr.selected]="categoryFilter() === cat ? '' : null"
+            (click)="selectCategory(cat)"
+          >
+            <nldd-icon-cell
+              [attr.icon]="categoryIcon(cat)"
+              size="20"
+            ></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="cat"></nldd-text-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</ng-template>
