@@ -25,9 +25,9 @@
     ></nldd-top-title-bar>
 
     <nldd-simple-section>
-      <!-- De badge staat in de h1 zelf: hij hoort bij de naam, niet aan het eind
-           van de regel. Daarmee leest de kop ook voor wie hem hoort als
-           "burgerzaken-afspraken, Not ready". -->
+      <!-- The badge sits inside the h1: it belongs to the name rather than to
+           the end of the line. That way the heading also reads as
+           "burgerzaken-afspraken, Not ready" to whoever hears it. -->
       <nldd-title id="resource-detail-title" size="2">
         <h1>
           {{ resource()!.metadata.name }}
@@ -79,8 +79,8 @@
                 [attr.text]="formatDateValue(resource()!.metadata.creationTimestamp)"
               ></nldd-text-cell>
             </nldd-list-item>
-            <!-- Wat de status los meldt hoort bij de feiten over de resource, zodat
-                 het Status-blok eronder puur de condities houdt. -->
+            <!-- What the status reports on its own belongs with the facts about
+                 the resource, so the Status block below keeps to the conditions. -->
             @for (entry of flatStatusFields(); track entry[0]) {
               <nldd-list-item>
                 <nldd-text-cell [attr.text]="statusLabel(entry[0])"></nldd-text-cell>
@@ -111,9 +111,9 @@
             <nldd-list variant="simple" [attr.accessible-label]="group.name">
               @for (field of group.fields; track field[0]) {
                 @if (flatObjectEntries(getSpecValue(field[0])); as entries) {
-                  <!-- De veldnaam als kopregel met zijn sleutels eronder
-                       ingesprongen: zo staat "Issuer ref" er één keer in plaats
-                       van aan het begin van elke regel. -->
+                  <!-- The field name as a heading row with its keys indented
+                       under it: that way "Issuer ref" is there once instead of at
+                       the start of every line. -->
                   <nldd-list-item>
                     <nldd-text-cell width="full" [attr.text]="formatLabel(field[0])"></nldd-text-cell>
                   </nldd-list-item>
@@ -153,12 +153,11 @@
 
             <nldd-spacer size="16"></nldd-spacer>
 
-            <!-- Een regel per conditie in plaats van een tabel met een kolom die
-                 alleen True of False zegt: de badge draagt het type én de status,
-                 de melding staat erin en het tijdstip is het moment waarop deze
-                 conditie voor het laatst omsloeg. Meestal is er één, maar een
-                 controller mag er meer bijhouden en die hebben dan elk hun eigen
-                 geschiedenis. -->
+            <!-- A row per condition rather than a table with a column that only
+                 says True or False: the badge carries both the type and the
+                 status, the message is in the row, and the time is when this
+                 condition last flipped. Usually there is one, but a controller
+                 may keep more, and each of those has its own history. -->
             <nldd-list variant="simple" accessible-label="Conditions">
               @for (cond of conditions(); track $index) {
                 <nldd-list-item>
@@ -168,8 +167,8 @@
                     [attr.supporting-text]="formatDateValue(cond['lastTransitionTime'])"
                   ></nldd-text-cell>
                   <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                  <!-- Een stip en het woord ernaast: de stip is decoratief, want
-                       het woord zegt het al. -->
+                  <!-- A dot with the word beside it: the dot is decorative,
+                       because the word already says it. -->
                   <nldd-cell width="fit-content">
                     <nldd-badge
                       decorative

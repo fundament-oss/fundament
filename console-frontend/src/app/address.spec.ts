@@ -1,57 +1,57 @@
 import { inOrganization, organizationOf, withinOrganization } from './address';
 
 describe('address', () => {
-  it('leest de organisatie die een adres noemt', () => {
+  it('reads the organization an address names', () => {
     expect(organizationOf('/organizations/gemeente-fundament/clusters')).toBe('gemeente-fundament');
   });
 
-  it('noemt er geen bij een adres dat er geen draagt', () => {
+  it('names none for an address that carries none', () => {
     expect(organizationOf('/clusters')).toBeNull();
   });
 
-  it('houdt de pagina over als de organisatie eraf gaat', () => {
+  it('leaves the page behind once the organization comes off', () => {
     expect(
       withinOrganization('/organizations/gemeente-fundament/projects/pr-burgerzaken/limits'),
     ).toBe('/projects/pr-burgerzaken/limits');
   });
 
-  it('laat een adres zonder organisatie ongemoeid', () => {
+  it('leaves an address without an organization alone', () => {
     expect(withinOrganization('/clusters')).toBe('/clusters');
   });
 
-  it('leest de organisatie zelf als de lege pagina', () => {
+  it('reads the organization itself as the empty page', () => {
     expect(withinOrganization('/organizations/gemeente-fundament')).toBe('/');
   });
 
-  it('zet een adres in een organisatie', () => {
+  it('puts an address inside an organization', () => {
     expect(inOrganization('gemeente-fundament', '/clusters')).toBe(
       '/organizations/gemeente-fundament/clusters',
     );
   });
 
-  it('maakt van de lege pagina het adres van de organisatie zelf', () => {
+  it('turns the empty page into the address of the organization itself', () => {
     expect(inOrganization('gemeente-fundament', '/')).toBe('/organizations/gemeente-fundament');
   });
 
-  it('verhuist een adres dat al een andere organisatie noemt', () => {
+  it('moves an address that already names another organization', () => {
     expect(inOrganization('gemeente-delft', '/organizations/gemeente-fundament/clusters')).toBe(
       '/organizations/gemeente-delft/clusters',
     );
   });
 
-  it('houdt de queryparameters vast, waar de presentatie op draait', () => {
+  it('holds on to the query the presentation runs on', () => {
     expect(inOrganization('gemeente-fundament', '/clusters?present=1&slide=3')).toBe(
       '/organizations/gemeente-fundament/clusters?present=1&slide=3',
     );
   });
 
-  it('houdt de organisatie zelf zonder slash voor de queryparameters', () => {
+  it('keeps the organization itself without a slash before the query', () => {
     expect(inOrganization('gemeente-fundament', '/?present=1')).toBe(
       '/organizations/gemeente-fundament?present=1',
     );
   });
 
-  it('laat het adres staan zolang er nog geen organisatie bekend is', () => {
+  it('leaves the address as it is while no organization is known yet', () => {
     expect(inOrganization(null, '/clusters')).toBe('/clusters');
   });
 });

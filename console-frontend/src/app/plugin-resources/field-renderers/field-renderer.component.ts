@@ -25,8 +25,8 @@ function toObjectEntries(val: unknown): [string, unknown][] {
       }
       @case ('string-array') {
         @if (asArray(value()).length > 0) {
-          <!-- Tekst, geen tags: een domeinnaam is de waarde van het veld en geen
-               etiket dat iemand eraan hing. -->
+          <!-- Text rather than tags: a domain name is the value of the field,
+               not a label somebody hung on it. -->
           <span>{{ asArray(value()).join(', ') }}</span>
         } @else {
           <span class="text-gray-500 dark:text-gray-400">&mdash;</span>
