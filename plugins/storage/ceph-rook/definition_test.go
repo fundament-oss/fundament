@@ -123,6 +123,13 @@ func TestDefinition(t *testing.T) {
 		}
 	})
 
+	t.Run("customComponents/disk-has-detail", func(t *testing.T) {
+		t.Parallel()
+		mapping, ok := def.Spec.CustomComponents["Disk"]
+		require.True(t, ok, "Disk must declare custom components")
+		assert.NotEmpty(t, mapping.Detail, "Disk must have a detail page")
+	})
+
 	// The console files are useless unless the definition points the host at
 	// them. A page that exists on disk but is unreferenced here is unreachable.
 	t.Run("customComponents/every-page-is-referenced", func(t *testing.T) {

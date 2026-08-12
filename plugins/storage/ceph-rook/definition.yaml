@@ -110,6 +110,7 @@ spec:
         icon: circle-stack
       - crd: disks.storage.fundament.io
         list: true
+        detail: true
         icon: server-stack
   crds:
     - disks.storage.fundament.io
@@ -121,6 +122,7 @@ spec:
       create: storagepools-create.html
     Disk:
       list: disks-list.html
+      detail: disks-detail.html
   uiHints:
     storagepools.storage.fundament.io:
       statusMapping:
@@ -148,6 +150,12 @@ spec:
       version: v1
       resource: cephclusters
       verbs: [get]
+    # Deleting a StoragePool cascades to its StorageClass, so the console has to
+    # know whether any volume still binds it before offering the button.
+    - group: ""
+      version: v1
+      resource: persistentvolumes
+      verbs: [list]
 # NOTE: cluster-admin-equivalent RBAC
 # The Rook operator install requires broad cluster permissions — see the
 # wildcard rule under spec.permissions.rbac above. The plugin-controller

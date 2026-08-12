@@ -489,6 +489,32 @@ https://console.fundament.localhost:8443/
 
 Check the browser console for CSP violations. There should be none.
 
+### 8a-2 · Pool editing, deletion and disk details
+
+These exercise the console CRUD pages. Keep devtools open throughout — a CSP
+violation anywhere here is a failure, not cosmetic.
+
+1. Open a StoragePool → **Edit** → change replication → **Save**. The detail view
+   returns and `status.replicas` reflects the new value.
+2. **Edit** again → uncheck a disk. The OSD-retirement warning must be visible.
+   Save, then confirm `status.selectedDiskCount` drops and the device leaves
+   `spec.storage.nodes`:
+
+   ```bash
+   kubectl --context k3d-fundament-plugin -n rook-ceph get cephcluster rook-ceph \
+     -o jsonpath='{.spec.storage.nodes}' | jq .
+   ```
+
+   The OSD pod for that device is still `Running`. That is correct, not a bug.
+3. **Edit** → uncheck every disk → Save is refused with "Select at least one disk."
+4. Bind a PVC to the pool's StorageClass, then **Delete**. It must be refused,
+   naming the volume, with only a Close button.
+5. Delete the PVC, then **Delete** → type the pool name → confirm. The pool, its
+   StorageClass and its CephBlockPool all disappear.
+6. Open **Disks** → click a path. The detail page shows every field, and
+   `Claimed by` is set for a pooled disk (plain text — cross-kind links are not
+   expressible in the host contract).
+
 ### 8b · Foreign objects are not adopted
 
 The old code would adopt a same-named StorageClass and delete it when the pool went away.

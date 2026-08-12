@@ -1,4 +1,11 @@
-import { loadSdk, escapeHtml, humanizeBytes, emptyRow, errorRow } from './_shared.js';
+import {
+  loadSdk,
+  escapeHtml,
+  humanizeBytes,
+  emptyRow,
+  errorRow,
+  wireRowLinks,
+} from './_shared.js';
 
 await loadSdk();
 await fundament.init;
@@ -27,16 +34,18 @@ try {
     tbody.innerHTML = items
       .map((item) => {
         const s = item.status ?? {};
+        const name = item.metadata?.name ?? '';
         return `
-          <tr>
+          <tr data-name="${escapeHtml(name)}">
             <td>${escapeHtml(s.node ?? '(unknown node)')}</td>
-            <td>${escapeHtml(s.path ?? '')}</td>
+            <td><a href="#" class="row-link">${escapeHtml(s.path ?? name)}</a></td>
             <td>${escapeHtml(humanizeBytes(s.sizeBytes ?? 0))}</td>
             <td>${escapeHtml(s.type ?? '')}</td>
             <td>${escapeHtml(availabilityText(s))}</td>
           </tr>`;
       })
       .join('');
+    wireRowLinks(tbody);
   }
 } catch (err) {
   tbody.innerHTML = errorRow(5, err);

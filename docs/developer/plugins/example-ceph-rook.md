@@ -61,6 +61,35 @@ plugins/storage/ceph-rook/
 
 Every `*.go` above has a matching `*_test.go`.
 
+### What the console can do
+
+| Resource | Pages |
+|---|---|
+| `StoragePool` | list, detail, create, **edit**, **delete** |
+| `Disk` | list, **detail** |
+
+**Editing** lives on the StoragePool detail page rather than a page of its own:
+`ComponentMapping` has `list`, `detail` and `create` slots but no `edit`, so an
+Edit button swaps the read-only view for the same disk picker the create form
+uses. It saves a merge-patch of `spec` only, so `status` is never clobbered and
+the disk array is replaced wholesale rather than merged element-wise.
+
+Unchecking a disk warns what the reconciler will and will not do: the device
+leaves the CephCluster list, but **its OSD keeps running** until it is purged
+from Ceph manually, and data may rebalance in the meantime.
+
+**Deleting** is refused while any PersistentVolume still binds the pool's
+StorageClass — the pool's deletion cascades to that StorageClass through owner
+references, which would strand those volumes. The blocked view names each one.
+An unused pool goes through type-to-confirm, and the confirmation states that
+the CephBlockPool goes too and that OSDs survive.
+
+The host has its own delete for plugin resources, but
+`resource-detail.component.html` renders either a custom detail component **or**
+the generic view, never both — so a plugin with a custom detail page supplies its
+own. That is just as well here: the bound-volume guard is ceph-rook domain
+knowledge the generic modal has no way to express.
+
 ### Console pages
 
 `console.go` is what makes the pages reachable: `pluginruntime.Run` only serves
