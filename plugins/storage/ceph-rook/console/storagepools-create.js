@@ -1,4 +1,5 @@
-import { loadSdk, escapeHtml, humanizeBytes, navigateToDetail, navigateBack } from './_shared.js';
+import { loadSdk, escapeHtml, navigateToDetail, navigateBack } from './_shared.js';
+import { selectableDisks, renderDiskPicker, readSelectedDisks } from './disk-picker.js';
 
 await loadSdk();
 await fundament.init;
@@ -19,10 +20,9 @@ try {
 
   // Only unclaimed, available disks can be pooled. claimedBy is maintained by
   // the DiskInventory reconciler, which re-runs when a StoragePool changes, so
-  // a disk another pool just took disappears from this list.
-  availableDisks = (items ?? []).filter(
-    (item) => item.status?.available && !item.status?.claimedBy,
-  );
+  // a disk another pool just took disappears from this list. No pool exists
+  // yet at create time, hence the null.
+  availableDisks = selectableDisks(items, null);
 } catch (err) {
   loadError = err;
 }
@@ -45,35 +45,7 @@ if (loadError) {
   `;
   document.getElementById('back-btn').addEventListener('click', () => navigateBack());
 } else {
-  // Group disks by node so the operator can see the failure-domain spread.
-  const byNode = new Map();
-  for (const item of availableDisks) {
-    const node = item.status?.node ?? '(unknown node)';
-    if (!byNode.has(node)) byNode.set(node, []);
-    byNode.get(node).push(item);
-  }
-
-  const diskPicker = [...byNode.entries()]
-    .map(([node, disks]) => {
-      const boxes = disks
-        .map((disk) => {
-          const s = disk.status ?? {};
-          const diskName = disk.metadata?.name ?? '';
-          const label = `${s.path ?? diskName} — ${humanizeBytes(s.sizeBytes ?? 0)}`;
-          return `
-            <label class="plugin-checkbox">
-              <input type="checkbox" name="disk" value="${escapeHtml(diskName)}" />
-              <span>${escapeHtml(label)}</span>
-            </label>`;
-        })
-        .join('');
-      return `
-        <fieldset class="plugin-fieldset">
-          <legend class="plugin-legend">${escapeHtml(node)}</legend>
-          ${boxes}
-        </fieldset>`;
-    })
-    .join('');
+  const diskPicker = renderDiskPicker(availableDisks);
 
   content.innerHTML = `
     <p class="plugin-text">
@@ -144,9 +116,7 @@ if (loadError) {
       return;
     }
 
-    const checkedDisks = Array.from(form.querySelectorAll('[name="disk"]:checked')).map(
-      (cb) => cb.value,
-    );
+    const checkedDisks = readSelectedDisks(form);
     if (checkedDisks.length === 0) {
       showError('Please select at least one disk.');
       return;
