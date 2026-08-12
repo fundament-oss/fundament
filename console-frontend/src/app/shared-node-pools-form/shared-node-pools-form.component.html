@@ -8,127 +8,126 @@
       text="Loading machine types..."
     ></nldd-activity-indicator>
   } @else {
-    <div formArrayName="nodePools">
-      <nldd-collection
-        layout="stack"
-        gap="16px"
-      >
-        @for (nodePoolControl of nodePools.controls; track nodePoolControl) {
-          @let nameControl = nodePoolControl.get('name');
-          <!-- Held here, because inside the machine-type loop below $index is that
-               loop's index: a click on the second option wrote to the second node
-               pool instead of to the pool it sits in. -->
-          @let poolIndex = $index;
-          <nldd-box [formGroupName]="$index">
-            <nldd-container padding="16">
-              <nldd-title size="5">
-                <h3>Node pool {{ $index + 1 }}</h3>
-                @if (nodePools.length > 1) {
-                  <nldd-button
-                    slot="end"
-                    type="button"
-                    (click)="removeNodePool($index)"
-                    text="Remove"
-                    start-icon="trash"
-                    size="sm"
-                    variant="destructive"
-                  ></nldd-button>
-                }
-              </nldd-title>
-              <nldd-spacer size="16"></nldd-spacer>
-              <nldd-form-field label="Machine type">
-                <!-- A list, not a menu: you pick a machine by comparing its specs,
-                     and a popup shows them one at a time. Same shape as choosing a
-                     role or a project. -->
-                <nldd-list
-                  variant="box-base"
-                  accessible-label="Machine type"
-                >
-                  @for (mt of machineTypes; track mt.value) {
-                    <!-- The row is the control; the radio only shows which one it
-                         is. A real radio here would be an input inside the row's
-                         button. -->
-                    <nldd-list-item
-                      button
-                      (click)="selectMachineType(poolIndex, mt.value)"
-                    >
-                      <nldd-cell width="fit-content">
-                        <nldd-radio-button
-                          decorative
-                          [attr.checked]="
-                            nodePoolControl.get('machineType')?.value === mt.value ? '' : null
-                          "
-                        ></nldd-radio-button>
-                      </nldd-cell>
-                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
-                      <!-- Specs on the same line as the name, not under it: they are
-                           what you compare, so they belong in the reading size. -->
-                      <nldd-text-cell
-                        width="full"
-                        [attr.text]="mt.label"
-                      ></nldd-text-cell>
-                    </nldd-list-item>
-                  }
-                </nldd-list>
-              </nldd-form-field>
-              <nldd-form-field label="Node pool name">
-                <nldd-text-field
-                  [id]="'nodePoolName-' + $index"
-                  [value]="nameControl?.value ?? ''"
-                  [appAutofocus]="$first"
-                  [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
-                  [attr.error-message]="'node-pool-name-error-' + $index"
-                  (input)="onNodePoolNameInput($index, $event)"
-                ></nldd-text-field>
-                <nldd-form-field-error-text [id]="'node-pool-name-error-' + $index">
-                  {{ getNodePoolNameError($index) }}
-                </nldd-form-field-error-text>
-              </nldd-form-field>
-              <nldd-form-field label="Autoscale minimum">
-                <nldd-number-field
-                  [id]="'autoscaleMin-' + $index"
-                  [value]="nodePoolControl.get('autoscaleMin')?.value"
-                  (input)="
-                    $any($event).detail &&
-                      nodePoolControl.get('autoscaleMin')?.setValue($any($event).detail.value)
-                  "
-                  min="1"
-                  max="100"
-                  step="1"
-                ></nldd-number-field>
-              </nldd-form-field>
-              <nldd-form-field label="Autoscale maximum">
-                <nldd-number-field
-                  [id]="'autoscaleMax-' + $index"
-                  [value]="nodePoolControl.get('autoscaleMax')?.value"
-                  (input)="
-                    $any($event).detail &&
-                      nodePoolControl.get('autoscaleMax')?.setValue($any($event).detail.value)
-                  "
-                  min="1"
-                  max="100"
-                  step="1"
-                ></nldd-number-field>
-              </nldd-form-field>
-            </nldd-container>
-          </nldd-box>
-        }
-        <!-- Its own box, so it reads as the slot the next node pool will fill. -->
-        <nldd-box>
+    <nldd-collection
+      formArrayName="nodePools"
+      layout="stack"
+      gap="16px"
+    >
+      @for (nodePoolControl of nodePools.controls; track nodePoolControl) {
+        @let nameControl = nodePoolControl.get('name');
+        <!-- Held here, because inside the machine-type loop below $index is that
+             loop's index: a click on the second option wrote to the second node
+             pool instead of to the pool it sits in. -->
+        @let poolIndex = $index;
+        <nldd-box [formGroupName]="$index">
           <nldd-container padding="16">
-            <nldd-button
-              type="button"
-              (click)="addNodePool()"
-              text="New node pool"
-              start-icon="plus-small"
-              variant="secondary"
-              size="md"
-              width="full"
-            ></nldd-button>
+            <nldd-title size="5">
+              <h3>Node pool {{ $index + 1 }}</h3>
+              @if (nodePools.length > 1) {
+                <nldd-button
+                  slot="end"
+                  type="button"
+                  (click)="removeNodePool($index)"
+                  text="Remove"
+                  start-icon="trash"
+                  size="sm"
+                  variant="destructive"
+                ></nldd-button>
+              }
+            </nldd-title>
+            <nldd-spacer size="16"></nldd-spacer>
+            <nldd-form-field label="Machine type">
+              <!-- A list, not a menu: you pick a machine by comparing its specs,
+                   and a popup shows them one at a time. Same shape as choosing a
+                   role or a project. -->
+              <nldd-list
+                variant="box-base"
+                accessible-label="Machine type"
+              >
+                @for (mt of machineTypes; track mt.value) {
+                  <!-- The row is the control; the radio only shows which one it
+                       is. A real radio here would be an input inside the row's
+                       button. -->
+                  <nldd-list-item
+                    button
+                    (click)="selectMachineType(poolIndex, mt.value)"
+                  >
+                    <nldd-cell width="fit-content">
+                      <nldd-radio-button
+                        decorative
+                        [attr.checked]="
+                          nodePoolControl.get('machineType')?.value === mt.value ? '' : null
+                        "
+                      ></nldd-radio-button>
+                    </nldd-cell>
+                    <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                    <!-- Specs on the same line as the name, not under it: they are
+                         what you compare, so they belong in the reading size. -->
+                    <nldd-text-cell
+                      width="full"
+                      [attr.text]="mt.label"
+                    ></nldd-text-cell>
+                  </nldd-list-item>
+                }
+              </nldd-list>
+            </nldd-form-field>
+            <nldd-form-field label="Node pool name">
+              <nldd-text-field
+                [id]="'nodePoolName-' + $index"
+                [value]="nameControl?.value ?? ''"
+                [appAutofocus]="$first"
+                [invalid]="!!(nameControl?.invalid && nameControl?.dirty)"
+                [attr.error-message]="'node-pool-name-error-' + $index"
+                (input)="onNodePoolNameInput($index, $event)"
+              ></nldd-text-field>
+              <nldd-form-field-error-text [id]="'node-pool-name-error-' + $index">
+                {{ getNodePoolNameError($index) }}
+              </nldd-form-field-error-text>
+            </nldd-form-field>
+            <nldd-form-field label="Autoscale minimum">
+              <nldd-number-field
+                [id]="'autoscaleMin-' + $index"
+                [value]="nodePoolControl.get('autoscaleMin')?.value"
+                (input)="
+                  $any($event).detail &&
+                    nodePoolControl.get('autoscaleMin')?.setValue($any($event).detail.value)
+                "
+                min="1"
+                max="100"
+                step="1"
+              ></nldd-number-field>
+            </nldd-form-field>
+            <nldd-form-field label="Autoscale maximum">
+              <nldd-number-field
+                [id]="'autoscaleMax-' + $index"
+                [value]="nodePoolControl.get('autoscaleMax')?.value"
+                (input)="
+                  $any($event).detail &&
+                    nodePoolControl.get('autoscaleMax')?.setValue($any($event).detail.value)
+                "
+                min="1"
+                max="100"
+                step="1"
+              ></nldd-number-field>
+            </nldd-form-field>
           </nldd-container>
         </nldd-box>
-      </nldd-collection>
-    </div>
+      }
+      <!-- Its own box, so it reads as the slot the next node pool will fill. -->
+      <nldd-box>
+        <nldd-container padding="16">
+          <nldd-button
+            type="button"
+            (click)="addNodePool()"
+            text="New node pool"
+            start-icon="plus-small"
+            variant="secondary"
+            size="md"
+            width="full"
+          ></nldd-button>
+        </nldd-container>
+      </nldd-box>
+    </nldd-collection>
     <nldd-form-actions>
       <ng-content></ng-content>
     </nldd-form-actions>
