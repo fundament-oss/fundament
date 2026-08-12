@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
-import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
+import { NewNewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
@@ -23,12 +23,12 @@ import focusFirstModalInput from '../modal-focus';
 import PageNavService from '../page-nav.service';
 
 @Component({
-  selector: 'app-add-cluster-summary',
+  selector: 'app-new-cluster-summary',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './add-cluster-summary.component.html',
+  templateUrl: './new-cluster-summary.component.html',
 })
-export default class AddClusterSummaryComponent {
+export default class NewClusterSummaryComponent {
   private pageNav = inject(PageNavService);
 
 
@@ -36,7 +36,7 @@ export default class AddClusterSummaryComponent {
 
   private client = inject(CLUSTER);
 
-  protected stateService = inject(ClusterWizardStateService);
+  protected stateService = inject(NewNewClusterFormStateService);
 
   private organizationDataService = inject(OrganizationDataService);
 
@@ -94,8 +94,8 @@ export default class AddClusterSummaryComponent {
   async onCreateCluster() {
     if (this.isCreating()) return;
 
-    const wizardState = this.state();
-    if (!wizardState.clusterName || !wizardState.region || !wizardState.kubernetesVersion) {
+    const formState = this.state();
+    if (!formState.clusterName || !formState.region || !formState.kubernetesVersion) {
       this.errorMessage.set('Missing required cluster information');
       return;
     }
@@ -106,9 +106,9 @@ export default class AddClusterSummaryComponent {
     let clusterId: string;
     try {
       const request = create(CreateClusterRequestSchema, {
-        name: wizardState.clusterName,
-        region: wizardState.region,
-        kubernetesVersion: wizardState.kubernetesVersion,
+        name: formState.clusterName,
+        region: formState.region,
+        kubernetesVersion: formState.kubernetesVersion,
       });
       const response = await withIdempotency((opts) => this.client.createCluster(request, opts), {
         signal: this.idempotency.reset(),
@@ -123,9 +123,9 @@ export default class AddClusterSummaryComponent {
     }
 
     this.clusterId.set(clusterId);
-    this.organizationDataService.addCluster(clusterId, wizardState.clusterName);
+    this.organizationDataService.addCluster(clusterId, formState.clusterName);
 
-    const mislukt = await this.createNodePools(clusterId, wizardState.nodePools ?? []);
+    const notCreated = await this.createNodePools(clusterId, formState.nodePools ?? []);
 
     this.stateService.reset();
     this.isCreating.set(false);
@@ -135,7 +135,7 @@ export default class AddClusterSummaryComponent {
     // where the missing pool is, next to the section that should have held it,
     // and it stays there to be read instead of sliding away on its own.
     this.router.navigateByUrl(this.pageNav.path(`/clusters/${clusterId}`), {
-      state: mislukt.length > 0 ? { nodePoolsNotCreated: mislukt } : undefined,
+      state: notCreated.length > 0 ? { nodePoolsNotCreated: notCreated } : undefined,
     });
   }
 

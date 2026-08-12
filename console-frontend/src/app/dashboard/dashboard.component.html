@@ -24,18 +24,18 @@
       <nldd-toolbar label="Cluster actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
-            [attr.href]="pageNav.path('/clusters/add')"
+            [attr.href]="pageNav.path('/clusters/new')"
             text="New cluster…"
             start-icon="plus-small"
             variant="primary"
-            (click)="pageNav.navigate($event, '/clusters/add')"
+            (click)="pageNav.navigate($event, '/clusters/new')"
           ></nldd-button>
           <nldd-menu-item
             slot="overflow"
             icon="plus-small"
             text="New cluster…"
-            [attr.href]="pageNav.path('/clusters/add')"
-            (select)="pageNav.navigate($event, '/clusters/add')"
+            [attr.href]="pageNav.path('/clusters/new')"
+            (select)="pageNav.navigate($event, '/clusters/new')"
           ></nldd-menu-item>
         </nldd-toolbar-item>
       </nldd-toolbar>
@@ -104,17 +104,17 @@
       >
         <nldd-button
           slot="actions"
-          [attr.href]="pageNav.path('/clusters/add')"
+          [attr.href]="pageNav.path('/clusters/new')"
           text="New cluster…"
           start-icon="plus-small"
           variant="primary"
-          (click)="pageNav.navigate($event, '/clusters/add')"
+          (click)="pageNav.navigate($event, '/clusters/new')"
         ></nldd-button>
       </nldd-inline-dialog>
     }
   </nldd-simple-section>
 
-  <!-- The add-cluster wizard is a child route, so it renders as a sheet over
+  <!-- The new-cluster form is a child route, so it renders as a sheet over
        this list instead of replacing it. -->
   <router-outlet />
 

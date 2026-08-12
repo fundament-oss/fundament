@@ -27,13 +27,13 @@ import SheetSyncDirective from '../sheet-sync.directive';
 import PageNavService from '../page-nav.service';
 
 @Component({
-  selector: 'app-add-project',
+  selector: 'app-new-project',
   imports: [ReactiveFormsModule, AutofocusDirective, SheetSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  templateUrl: './add-project.component.html',
+  templateUrl: './new-project.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class AddProjectComponent implements OnInit {
+export default class NewProjectComponent implements OnInit {
   protected pageNav = inject(PageNavService);
 
   /** Owned by the shell: the sheet opens over the page you were on, and that

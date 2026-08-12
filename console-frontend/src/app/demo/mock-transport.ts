@@ -122,10 +122,10 @@ export default function createDemoTransport(): Transport {
       createCluster: async (req, ctx) => {
         await delay(500);
         // Same as createNamespace: the caller polls until this header says the
-        // work is done, so without it the wizard sits on a cluster that exists.
+        // work is done, so without it the form sits on a cluster that exists.
         ctx.responseHeader.set('Idempotency-Status', 'completed');
         const id = `cl-${req.name}`;
-        // Append so the cluster list reflects the wizard result on the next visit.
+        // Append so the cluster list reflects the form result on the next visit.
         if (!fx.clusterSummaries.some((c) => c.id === id)) {
           fx.clusterSummaries.push(
             create(ListClustersResponse_ClusterSummarySchema, {
@@ -173,7 +173,7 @@ export default function createDemoTransport(): Transport {
         ctx.responseHeader.set('Idempotency-Status', 'completed');
         const id = `ns-${req.name}`;
         // Append so the list shows what was just created, the way the cluster
-        // wizard does. The access handed out with it lives in the mock role
+        // form does. The access handed out with it lives in the mock role
         // bindings and needs the namespace to exist to be visible at all.
         if (!fx.namespaces.some((n) => n.id === id)) {
           const project = fx.projects.find((p) => p.id === req.projectId);

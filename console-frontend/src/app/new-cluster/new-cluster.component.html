@@ -1,4 +1,4 @@
-<nldd-title id="wizard-step-title" size="3">
+<nldd-title id="new-cluster-form-step-title" size="3">
   <h1>Name your cluster and pick a region</h1>
 </nldd-title>
 
@@ -15,10 +15,10 @@
       [invalid]="
         (clusterName?.invalid && (clusterName.dirty || formSubmitted())) || clusterNameExists()
       "
-      error-message="add-cluster-name-error"
+      error-message="new-cluster-name-error"
     ></nldd-text-field>
     <nldd-form-field-help-text>E.g. my-production-cluster</nldd-form-field-help-text>
-    <nldd-form-field-error-text id="add-cluster-name-error">
+    <nldd-form-field-error-text id="new-cluster-name-error">
       @if (clusterName?.invalid && (clusterName.dirty || formSubmitted())) {
         {{ getClusterNameError() }}
       }

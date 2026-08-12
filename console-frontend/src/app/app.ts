@@ -98,8 +98,8 @@ import OrganizationContextService from './organization-context.service';
 import type { Invitation } from '../generated/v1/invite_pb';
 import ProfileComponent from './profile/profile.component';
 import ApiKeysComponent from './api-keys/api-keys.component';
-import AddProjectComponent from './add-project/add-project.component';
-import AddClusterWizardLayoutComponent from './add-cluster-wizard-layout/add-cluster-wizard-layout.component';
+import NewProjectComponent from './new-project/new-project.component';
+import NewClusterFormComponent from './new-cluster-form/new-cluster-form.component';
 import NewNamespaceSheetComponent from './new-namespace-sheet/new-namespace-sheet.component';
 import InviteMemberSheetComponent from './invite-member-sheet/invite-member-sheet.component';
 import AddProjectMemberSheetComponent from './add-project-member-sheet/add-project-member-sheet.component';
@@ -139,8 +139,8 @@ function depthForPath(url: string): number {
     OrgPickerComponent,
     ProfileComponent,
     ApiKeysComponent,
-    AddProjectComponent,
-    AddClusterWizardLayoutComponent,
+    NewProjectComponent,
+    NewClusterFormComponent,
     NewNamespaceSheetComponent,
     InviteMemberSheetComponent,
     AddProjectMemberSheetComponent,
@@ -328,7 +328,7 @@ export default class App implements OnInit {
         this.isLoginPage.set(event.urlAfterRedirects === '/login');
         // A sheet the shell owns stands over the page it was opened from, so
         // arriving somewhere else takes it away. One arrival is exempt: the
-        // redirect that an address like /clusters/add makes to bring its own
+        // redirect that an address like /clusters/new makes to bring its own
         // sheet in.
         const openedFor = this.overlays.openedFor();
         this.overlays.openedFor.set(null);
@@ -515,7 +515,7 @@ export default class App implements OnInit {
 
   // Update breadcrumbs based on current route data
 
-  // Check if current route is clusters or clusters/add
+  // Check if current route is clusters or clusters/new
   isClustersActive(): boolean {
     if (!this.marksCurrent()) return false;
     // Compare on the path alone: the router url also carries the query string,
@@ -549,7 +549,7 @@ export default class App implements OnInit {
    *  middle-click and "open in new tab" keep working. */
   /** A menu item reports a plain Event; only a real click carries the modifiers
    *  that mean "open this somewhere else". */
-  /** Keeps `/projects/add` a real address for middle-click and "open in new
+  /** Keeps `/projects/new` a real address for middle-click and "open in new
    *  tab", while a plain click opens the sheet over the page you are on. */
   openNewProject(event: Event): void {
     if (event instanceof MouseEvent) {
@@ -828,7 +828,7 @@ export default class App implements OnInit {
 
   /** The project menu route carries no page of its own, so the main pane would
    *  slot an outlet with nothing in it. */
-  /** A project with nothing open under it. `/projects/add` looks the same to a
+  /** A project with nothing open under it. `/projects/new` looks the same to a
    *  pattern but is a page of its own, and swallowing it left the new-project
    *  sheet unmounted behind an empty pane. */
   /** Dismissed for good once you close it, so a coach-mark never becomes
@@ -861,7 +861,7 @@ export default class App implements OnInit {
     // The app starts with nothing open: the organization's own address is that
     // empty pane, and it says "pick something from the menu".
     if (path === '/') return true;
-    return path !== '/projects/add' && /^\/projects\/[^/]+$/.test(path);
+    return path !== '/projects/new' && /^\/projects\/[^/]+$/.test(path);
   });
 
   /** The organization the sidebar and the header button name. The project no

@@ -70,7 +70,7 @@ export const organizationLimits = create(OrganizationLimitsSchema, {
 
 // --- Clusters -------------------------------------------------------------
 
-// Mutable so the add-cluster wizard's createCluster can append a new one.
+// Mutable so the new-cluster form's createCluster can append a new one.
 export const clusterSummaries = [
   create(ListClustersResponse_ClusterSummarySchema, {
     id: 'cl-production',
@@ -173,11 +173,11 @@ export const nodePoolsByCluster = new Map<string, NodePool[]>([
 
 // --- Region catalog -------------------------------------------------------
 
-// Backs ClusterService.ListRegions, which the add-cluster wizard loads before it
+// Backs ClusterService.ListRegions, which the new-cluster form loads before it
 // renders (it shows an error instead of the form when the call fails) and which the
 // node pool pages use to fill the machine type dropdown.
 //
-// `local` must stay first: the wizard defaults to the first region, and it is the
+// `local` must stay first: the form defaults to the first region, and it is the
 // region the cluster fixtures above already use. Every machineType referenced by
 // nodePoolsByCluster must appear here, otherwise the node pool forms offer a list
 // that cannot reproduce the pools shown next to them.

@@ -28,7 +28,7 @@ const KEYS_ASIDE = loc(
 );
 
 /**
- * Walks the cluster wizard: types a name into step 1, then carries on through
+ * Walks the cluster form: types a name into step 1, then carries on through
  * step 2 to the summary. Step 2 (node pools) starts out valid — it seeds one
  * pool with a generated name, the first machine type and a 1–3 autoscale range —
  * so submitting its form as-is lands on the summary. The summary is where the
@@ -71,9 +71,9 @@ const installPluginDrive: DriveStep[] = [
   { wait: 1400 },
   { click: '[data-tour="plugin-install"]' },
   { wait: 1000 },
-  // De installatieknop opent een menu met de versies die klaarstaan. Dat menu is
-  // het punt van de slide, dus het blijft even staan voor er een versie uit
-  // gekozen wordt.
+  // The install button opens a menu of the versions on offer. That menu is the
+  // point of the slide, so it stays up for a moment before a version is picked
+  // out of it.
   { click: '[data-tour="install-confirm"]' },
   { wait: 1600 },
   { click: '[data-tour="install-confirm"] nldd-menu nldd-menu-item' },
@@ -193,11 +193,11 @@ const intro: Tour = {
       skippable: true,
     },
     {
-      id: 'add-cluster',
+      id: 'new-cluster',
       title: loc('Een nieuw cluster aanmaken', 'Creating a new cluster'),
       lead: loc(
-        'De wizard vult zichzelf: kijk hoe de clusternaam wordt ingetypt.',
-        'The wizard fills itself in: watch the cluster name being typed.',
+        'Het formulier vult zichzelf: kijk hoe de clusternaam wordt ingetypt.',
+        'The form fills itself in: watch the cluster name being typed.',
       ),
       bullets: [
         loc(
@@ -206,7 +206,7 @@ const intro: Tour = {
         ),
         loc('Daarna node pools en een samenvatting.', 'Then node pools and a summary.'),
       ],
-      route: '/clusters/add',
+      route: '/clusters/new',
       drive: addClusterDrive,
     },
     {
@@ -297,8 +297,8 @@ const intro: Tour = {
           'The plugin brings its own menu along; the team has nothing to set up.',
         ),
       ],
-      // Het project zonder pagina erbij: deze slide gaat over de zijbalk, en
-      // een projectpagina ernaast trekt de aandacht weg van het menu.
+      // The project with no page beside it: this slide is about the sidebar, and
+      // a project page next to it pulls the eye away from the menu.
       route: '/projects/pr-burgerzaken',
       drive: installedPluginDrive,
     },
@@ -578,7 +578,7 @@ const platformEngineer: Tour = {
       skippable: true,
     },
     {
-      id: 'add-cluster',
+      id: 'new-cluster',
       title: loc('Een nieuw cluster', 'A new cluster'),
       lead: loc(
         'Een acceptatiecluster erbij: naam, regio en versie. Kijk hoe de naam wordt ingetypt.',
@@ -590,11 +590,11 @@ const platformEngineer: Tour = {
           'Then node pools and a summary, and the platform reconciles the rest.',
         ),
         loc(
-          'Elk cluster komt uit dezelfde wizard, dus elk cluster ziet er hetzelfde uit.',
-          'Every cluster comes out of the same wizard, so every cluster looks the same.',
+          'Elk cluster komt uit hetzelfde formulier, dus elk cluster ziet er hetzelfde uit.',
+          'Every cluster comes out of the same form, so every cluster looks the same.',
         ),
       ],
-      route: '/clusters/add',
+      route: '/clusters/new',
       drive: addClusterDrive,
     },
     {

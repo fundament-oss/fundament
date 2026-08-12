@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export interface ClusterWizardState {
+export interface NewClusterFormState {
   // Basic cluster information (step 1). Names come from the region catalog
   // (ListRegions) and are exactly what the create request sends.
   clusterName?: string;
@@ -22,12 +22,12 @@ export interface ClusterWizardState {
 @Injectable({
   providedIn: 'root',
 })
-export class ClusterWizardStateService {
-  private state = signal<ClusterWizardState>({
+export class NewNewClusterFormStateService {
+  private state = signal<NewClusterFormState>({
     completedSteps: new Set<number>(),
   });
 
-  /** Which step is showing. The wizard sits in a sheet over whatever page you
+  /** Which step is showing. The form sits in a sheet over whatever page you
    *  were on, so a step cannot be a route of its own: routing would unmount
    *  that page and leave an empty pane behind the sheet. */
   readonly stepIndex = signal(0);
@@ -47,7 +47,7 @@ export class ClusterWizardStateService {
     }));
   }
 
-  updateNodePools(nodePools: ClusterWizardState['nodePools']) {
+  updateNodePools(nodePools: NewClusterFormState['nodePools']) {
     this.state.update((current) => ({
       ...current,
       nodePools,

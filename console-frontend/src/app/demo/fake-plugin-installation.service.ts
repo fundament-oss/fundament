@@ -95,7 +95,7 @@ export default class FakePluginInstallationService implements Pick<
    */
   private ensureUiPlugins(): void {
     // Every cluster the demo currently knows about, not just the ones with a
-    // seeded baseline: the add-cluster wizard appends to fx.clusterSummaries, and
+    // seeded baseline: the new-cluster form appends to fx.clusterSummaries, and
     // a cluster created during the walkthrough must get the UI plugins too.
     const clusterIds = new Set([
       ...fx.clusterSummaries.map((cluster) => cluster.id),

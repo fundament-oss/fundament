@@ -229,7 +229,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   errorMessage = signal<string | null>(null);
 
-  /** Pools the wizard asked for and did not get. Handed over as navigation state
+  /** Pools the form asked for and did not get. Handed over as navigation state
    *  by the summary, which cannot show it itself: it closes on the way here. */
   nodePoolsNotCreated = signal<string[]>(
     (window.history.state as { nodePoolsNotCreated?: string[] } | null)?.nodePoolsNotCreated ?? [],

@@ -11,21 +11,21 @@ import {
   SharedNodePoolsFormComponent,
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
-import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
+import { NewNewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
 
 @Component({
-  selector: 'app-add-cluster-nodes',
+  selector: 'app-new-cluster-nodes',
   imports: [SharedNodePoolsFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './add-cluster-nodes.component.html',
+  templateUrl: './new-cluster-nodes.component.html',
 })
-export default class AddClusterNodesComponent implements OnInit {
+export default class NewClusterNodesComponent implements OnInit {
   @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
 
 
-  private stateService = inject(ClusterWizardStateService);
+  private stateService = inject(NewNewClusterFormStateService);
 
   private regionCatalog = inject(RegionCatalogService);
 

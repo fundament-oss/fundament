@@ -129,18 +129,18 @@ const routes: Routes = [
       {
         path: 'clusters',
         loadComponent: () => import('./dashboard/dashboard.component').then((m) => m.default),
-        // The wizard is a sheet the shell owns, so the address only opens it.
+        // The form is a sheet the shell owns, so the address only opens it.
         children: [
           {
-            path: 'add',
+            path: 'new',
             canActivate: [opensSheet((o) => o.newCluster.set(true), () => '/clusters')],
             children: [],
           },
-          { path: 'add/**', redirectTo: 'add' },
+          { path: 'new/**', redirectTo: 'new' },
         ],
       },
       {
-        path: 'projects/add',
+        path: 'projects/new',
         canActivate: [opensOverlay('newProject')],
         children: [],
       },
@@ -195,8 +195,8 @@ const routes: Routes = [
         loadComponent: () => import('./namespaces/namespaces.component').then((m) => m.default),
         children: [
           {
-            // Before `:name`, or a namespace called "add" would swallow it.
-            path: 'add',
+            // Before `:name`, or a namespace called "new" would swallow it.
+            path: 'new',
             canActivate: [
               opensSheet(
                 (o, route) => o.newNamespace.set(route.parent?.params['id'] ?? null),

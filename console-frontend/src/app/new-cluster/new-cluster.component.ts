@@ -8,23 +8,23 @@ import {
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import AutofocusDirective from '../autofocus.directive';
-import { ClusterWizardStateService } from '../add-cluster-wizard-layout/cluster-wizard-state.service';
+import { NewNewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
 import { Region } from '../../generated/v1/cluster_pb';
 
 @Component({
-  selector: 'app-add-cluster',
+  selector: 'app-new-cluster',
   imports: [ReactiveFormsModule, AutofocusDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './add-cluster.component.html',
+  templateUrl: './new-cluster.component.html',
 })
-export default class AddClusterComponent implements OnInit {
+export default class NewClusterComponent implements OnInit {
 
   private fb = inject(FormBuilder);
 
-  private stateService = inject(ClusterWizardStateService);
+  private stateService = inject(NewNewClusterFormStateService);
 
   private orgDataService = inject(OrganizationDataService);
 
@@ -82,7 +82,7 @@ export default class AddClusterComponent implements OnInit {
 
     this.regions.set(this.catalogRegions.map((r) => ({ value: r.name, label: r.name })));
 
-    // Restore existing wizard state, else default to the first region.
+    // Restore existing form state, else default to the first region.
     const state = this.stateService.getState();
     const restoredRegion = state.region && this.catalogRegions.find((r) => r.name === state.region);
     const region = restoredRegion || this.catalogRegions[0];
@@ -102,13 +102,13 @@ export default class AddClusterComponent implements OnInit {
     this.clusterForm
       .get('kubernetesVersion')
       ?.setValue(
-        preferred ? preferredVersion : AddClusterComponent.newestVersion(region.kubernetesVersions),
+        preferred ? preferredVersion : NewClusterComponent.newestVersion(region.kubernetesVersions),
       );
   }
 
   private static newestVersion(versions: string[]): string {
     return versions.reduce(
-      (newest, v) => (AddClusterComponent.compareVersions(v, newest) > 0 ? v : newest),
+      (newest, v) => (NewClusterComponent.compareVersions(v, newest) > 0 ? v : newest),
       versions[0] ?? '',
     );
   }
@@ -168,7 +168,7 @@ export default class AddClusterComponent implements OnInit {
     this.onClusterNameBlur();
     if (this.clusterForm.invalid || this.clusterNameExists()) {
       this.clusterForm.markAllAsTouched();
-      AddClusterComponent.scrollToFirstError();
+      NewClusterComponent.scrollToFirstError();
       return;
     }
 

@@ -15,29 +15,29 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import type { StepIndicatorStatus } from '@nldd/design-system/step-indicator';
-import { ClusterWizardStateService } from './cluster-wizard-state.service';
+import { NewNewClusterFormStateService } from './new-cluster-form-state.service';
 import SheetSyncDirective, { rewireFormFields } from '../sheet-sync.directive';
-import AddClusterComponent from '../add-cluster/add-cluster.component';
-import AddClusterNodesComponent from '../add-cluster-nodes/add-cluster-nodes.component';
-import AddClusterSummaryComponent from '../add-cluster-summary/add-cluster-summary.component';
+import NewClusterComponent from '../new-cluster/new-cluster.component';
+import NewClusterNodesComponent from '../new-cluster-nodes/new-cluster-nodes.component';
+import NewClusterSummaryComponent from '../new-cluster-summary/new-cluster-summary.component';
 
 interface ProgressStep {
   name: string;
 }
 
 @Component({
-  selector: 'app-add-cluster-wizard-layout',
+  selector: 'app-new-cluster-form',
   imports: [
     SheetSyncDirective,
-    AddClusterComponent,
-    AddClusterNodesComponent,
-    AddClusterSummaryComponent,
+    NewClusterComponent,
+    NewClusterNodesComponent,
+    NewClusterSummaryComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './add-cluster-wizard-layout.component.html',
+  templateUrl: './new-cluster-form.component.html',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export default class AddClusterWizardLayoutComponent implements OnDestroy {
+export default class NewClusterFormComponent implements OnDestroy {
   @Input() show = false;
 
   @Output() closed = new EventEmitter<void>();
@@ -46,7 +46,7 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
 
   private injector = inject(Injector);
 
-  protected stateService = inject(ClusterWizardStateService);
+  protected stateService = inject(NewNewClusterFormStateService);
 
   constructor() {
     // Every step arrives in a sheet that is already open, where the two things
@@ -57,7 +57,7 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
     });
   }
 
-  /** Dismissing the sheet takes the wizard away and reveals the page it was
+  /** Dismissing the sheet takes the form away and reveals the page it was
    *  covering, whichever page that is. */
   onClose(): void {
     this.closed.emit();
@@ -91,7 +91,7 @@ export default class AddClusterWizardLayoutComponent implements OnDestroy {
    *  the bar stands in for that heading once you scroll past it. */
   currentStepTitle = computed(() => this.steps[this.currentStepIndex()].name);
 
-  // Set per item rather than left to `current`: the wizard can be stepped back
+  // Set per item rather than left to `current`: the form can be stepped back
   // into, and a step that is already filled in stays ticked when it does.
   stepStatus(index: number): StepIndicatorStatus {
     if (index === this.currentStepIndex()) return 'current';

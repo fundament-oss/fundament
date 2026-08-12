@@ -44,10 +44,10 @@
             appAutofocus
             [value]="projectForm.get('name')?.value ?? ''"
             [invalid]="!!(projectForm.get('name')?.invalid && projectForm.get('name')?.dirty)"
-            error-message="add-project-name-error"
+            error-message="new-project-name-error"
             (input)="onNameInput($event)"
           ></nldd-text-field>
-          <nldd-form-field-error-text id="add-project-name-error">
+          <nldd-form-field-error-text id="new-project-name-error">
             {{ getNameError() }}
           </nldd-form-field-error-text>
           <nldd-form-field-help-text>
@@ -65,7 +65,7 @@
             <nldd-rich-text>
               <p>
                 No clusters available.
-                <nldd-link [attr.href]="pageNav.path('/clusters/add')" text="Add a cluster first"></nldd-link>.
+                <nldd-link [attr.href]="pageNav.path('/clusters/new')" text="Add a cluster first"></nldd-link>.
               </p>
             </nldd-rich-text>
           } @else {
@@ -84,7 +84,7 @@
                 ></nldd-toggle-button>
               }
             </nldd-toggle-button-group>
-            <nldd-form-field-error-text id="add-project-cluster-error">
+            <nldd-form-field-error-text id="new-project-cluster-error">
               @if (projectForm.get('clusterId')?.invalid && projectForm.get('clusterId')?.dirty) {
                 {{ getClusterError() }}
               }
