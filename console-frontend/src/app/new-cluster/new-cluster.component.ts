@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import AutofocusDirective from '../autofocus.directive';
-import { NewNewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
+import { NewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
 import { Region } from '../../generated/v1/cluster_pb';
@@ -24,7 +24,7 @@ export default class NewClusterComponent implements OnInit {
 
   private fb = inject(FormBuilder);
 
-  private stateService = inject(NewNewClusterFormStateService);
+  private stateService = inject(NewClusterFormStateService);
 
   private orgDataService = inject(OrganizationDataService);
 

@@ -15,7 +15,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
 } from '@angular/core';
 import type { StepIndicatorStatus } from '@nldd/design-system/step-indicator';
-import { NewNewClusterFormStateService } from './new-cluster-form-state.service';
+import { NewClusterFormStateService } from './new-cluster-form-state.service';
 import SheetSyncDirective, { rewireFormFields } from '../sheet-sync.directive';
 import NewClusterComponent from '../new-cluster/new-cluster.component';
 import NewClusterNodesComponent from '../new-cluster-nodes/new-cluster-nodes.component';
@@ -46,7 +46,7 @@ export default class NewClusterFormComponent implements OnDestroy {
 
   private injector = inject(Injector);
 
-  protected stateService = inject(NewNewClusterFormStateService);
+  protected stateService = inject(NewClusterFormStateService);
 
   constructor() {
     // Every step arrives in a sheet that is already open, where the two things

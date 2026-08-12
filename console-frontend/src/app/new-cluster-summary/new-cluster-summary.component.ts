@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { create } from '@bufbuild/protobuf';
-import { NewNewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
+import { NewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { OrganizationDataService } from '../organization-data.service';
 import { RegionCatalogService } from '../region-catalog.service';
 import { createIdempotencyRef, withIdempotency } from '../../connect/idempotency';
@@ -36,7 +36,7 @@ export default class NewClusterSummaryComponent {
 
   private client = inject(CLUSTER);
 
-  protected stateService = inject(NewNewClusterFormStateService);
+  protected stateService = inject(NewClusterFormStateService);
 
   private organizationDataService = inject(OrganizationDataService);
 

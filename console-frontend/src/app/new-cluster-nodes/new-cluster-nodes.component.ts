@@ -11,7 +11,7 @@ import {
   SharedNodePoolsFormComponent,
   NodePoolData,
 } from '../shared-node-pools-form/shared-node-pools-form.component';
-import { NewNewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
+import { NewClusterFormStateService } from '../new-cluster-form/new-cluster-form-state.service';
 import { MachineTypeOption, RegionCatalogService } from '../region-catalog.service';
 
 @Component({
@@ -25,7 +25,7 @@ export default class NewClusterNodesComponent implements OnInit {
   @ViewChild(SharedNodePoolsFormComponent) nodePoolsForm!: SharedNodePoolsFormComponent;
 
 
-  private stateService = inject(NewNewClusterFormStateService);
+  private stateService = inject(NewClusterFormStateService);
 
   private regionCatalog = inject(RegionCatalogService);
 

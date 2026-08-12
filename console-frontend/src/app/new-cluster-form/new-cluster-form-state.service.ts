@@ -22,7 +22,7 @@ export interface NewClusterFormState {
 @Injectable({
   providedIn: 'root',
 })
-export class NewNewClusterFormStateService {
+export class NewClusterFormStateService {
   private state = signal<NewClusterFormState>({
     completedSteps: new Set<number>(),
   });
