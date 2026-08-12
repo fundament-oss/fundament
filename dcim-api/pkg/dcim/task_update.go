@@ -39,9 +39,7 @@ func (s *Server) UpdateTask(
 		params.Priority = pgtype.Text{String: taskPriorityFromProto(req.GetPriority()), Valid: true}
 	}
 
-	if req.HasCategory() {
-		params.Category = pgtype.Text{String: taskCategoryFromProto(req.GetCategory()), Valid: true}
-	}
+
 
 	// For the nullable columns, an explicitly-set field clears the column when it
 	// carries the "empty" sentinel (empty string / epoch timestamp) and otherwise
@@ -88,6 +86,12 @@ func (s *Server) UpdateTask(
 		}
 	}
 
+	if req.HasBlockedReason() {
+		params.BlockedReason = pgtype.Text{String: req.GetBlockedReason(), Valid: true}
+	}
+
+	params.ClearBlockedReason = req.GetClearBlockedReason()
+
 	rowsAffected, err := s.queries.TaskUpdate(ctx, params)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -99,6 +103,24 @@ func (s *Server) UpdateTask(
 
 	if rowsAffected != 1 {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("task not found"))
+	}
+
+	// Tags are replaced rather than merged: the request says what the task should
+	// carry, so an empty list means it carries none. Leaving the field out
+	// entirely leaves the tags alone, which is why this only runs when it is set.
+	if req.HasTags() || len(req.GetTags()) > 0 {
+		if err := s.queries.TaskTagsClear(ctx, taskID); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to clear task tags: %w", err))
+		}
+
+		if tags := req.GetTags(); len(tags) > 0 {
+			if err := s.queries.TaskTagsAdd(ctx, db.TaskTagsAddParams{
+				TaskID: taskID,
+				Tags:   tags,
+			}); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to tag task: %w", err))
+			}
+		}
 	}
 
 	s.logger.InfoContext(ctx, "task updated", "task_id", taskID)

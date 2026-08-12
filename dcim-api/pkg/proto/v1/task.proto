@@ -13,43 +13,56 @@ option go_package = "github.com/fundament-oss/fundament/dcim-api/pkg/proto/gen/v
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
+// How far the work has got, and nothing else. Two of the old values said
+// something different: "review" and "blocked" were about whose turn it is, not
+// about progress, and a task can be halfway and blocked at the same time.
+//
+// Whose turn it is now follows from the assignee — a task assigned to you is
+// yours to do, one assigned to somebody else is one you are waiting for — and
+// being stuck on something that is not a person is the blocked field below.
 enum TaskStatus {
+  reserved 30, 40;             // were review and blocked
+  reserved TASK_STATUS_REVIEW, TASK_STATUS_BLOCKED;
+
   TASK_STATUS_UNSPECIFIED = 0;
-  TASK_STATUS_READY       = 10;
-  TASK_STATUS_IN_PROGRESS = 20;
-  TASK_STATUS_REVIEW      = 30;
-  TASK_STATUS_BLOCKED     = 40;
+  TASK_STATUS_TODO        = 10;
+  TASK_STATUS_DOING       = 20;
   TASK_STATUS_DONE        = 50;
 }
 
+// Unspecified is the empty state you see on a task nobody has prioritized yet,
+// and it is a value you can store: the interface shows it as an empty circle in
+// the picker and as nothing at all on the task itself.
 enum TaskPriority {
   TASK_PRIORITY_UNSPECIFIED = 0;
   TASK_PRIORITY_LOW         = 10;
   TASK_PRIORITY_MEDIUM      = 20;
   TASK_PRIORITY_HIGH        = 30;
-  TASK_PRIORITY_CRITICAL    = 40;
+  // Urgent rather than critical: a priority says when to act, while critical
+  // describes the state of a thing — which a data center has plenty of.
+  TASK_PRIORITY_URGENT      = 40;
 }
 
-enum TaskCategory {
-  TASK_CATEGORY_UNSPECIFIED = 0;
-  TASK_CATEGORY_HARDWARE    = 10;
-  TASK_CATEGORY_NETWORK     = 20;
-  TASK_CATEGORY_COOLING     = 30;
-  TASK_CATEGORY_POWER       = 40;
-  TASK_CATEGORY_SECURITY    = 50;
-  TASK_CATEGORY_OTHER       = 60;
-}
 
 // ── Messages ──────────────────────────────────────────────────────────────────
 
 // Task is a standalone datacenter work order.
 message Task {
+  reserved 60;                 // was category, a single TaskCategory
+  reserved category;
+
   string                    id          = 10;
   string                    title       = 20;
   string                    description = 30;
   TaskStatus                status      = 40;
   TaskPriority              priority    = 50;
-  TaskCategory              category    = 60;
+  // Free text, and more than one: work on a switch is network work and hardware
+  // work at the same time, and a single category made you drop half of that.
+  repeated string           tags        = 65;
+  // Stuck on something that is not a person: a part on order, access to a room,
+  // a supplier. Waiting for a colleague needs no field — that is the assignee.
+  // Absent means the work can move.
+  string                    blocked_reason = 67 [features.field_presence = EXPLICIT];
   string                    assignee_id = 70  [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp due_date    = 80  [features.field_presence = EXPLICIT];
   string                    location    = 90;
@@ -80,9 +93,14 @@ service TaskService {
 }
 
 message ListTasksRequest {
+  reserved 30;                 // was category
+  reserved category;
+
   TaskStatus   status      = 10 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
   TaskPriority priority    = 20 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
-  TaskCategory category    = 30 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  // One tag at a time here: the menu navigates. Combining them is a filter and
+  // that lives above the list.
+  string       tag         = 35 [features.field_presence = EXPLICIT];
   string       assignee_id = 40 [features.field_presence = EXPLICIT];
 }
 
@@ -99,11 +117,16 @@ message GetTaskResponse {
 }
 
 message CreateTaskRequest {
+  reserved 50;                 // was category
+  reserved category;
+
   string                    title       = 10 [(buf.validate.field).string.min_len = 1];
   string                    description = 20 [features.field_presence = EXPLICIT];
   TaskStatus                status      = 30 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
-  TaskPriority              priority    = 40 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
-  TaskCategory              category    = 50 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  // No not_in: [0] — a task without a priority is a task nobody got to yet.
+  TaskPriority              priority    = 40 [(buf.validate.field).enum = {defined_only: true}];
+  repeated string           tags        = 55;
+  string                    blocked_reason = 57 [features.field_presence = EXPLICIT];
   string                    assignee_id = 60 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp due_date    = 70 [features.field_presence = EXPLICIT];
   string                    location    = 80 [features.field_presence = EXPLICIT];
@@ -119,12 +142,18 @@ message CreateTaskResponse {
 // string, or the epoch timestamp — clears the column, matching
 // UpdatePhysicalConnectionRequest.
 message UpdateTaskRequest {
+  reserved 60;                 // was category
+  reserved category;
+
   string                    id          = 10 [(buf.validate.field).string = {uuid: true}];
   string                    title       = 20 [features.field_presence = EXPLICIT];
   string                    description = 30 [features.field_presence = EXPLICIT];
   TaskStatus                status      = 40 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
-  TaskPriority              priority    = 50 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
-  TaskCategory              category    = 60 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  TaskPriority              priority    = 50 [features.field_presence = EXPLICIT, (buf.validate.field).enum = {defined_only: true}];
+  // Absent leaves the tags alone; an empty list clears them.
+  repeated string           tags        = 65;
+  string                    blocked_reason = 67 [features.field_presence = EXPLICIT];
+  bool                      clear_blocked_reason = 68;
   string                    assignee_id = 70 [features.field_presence = EXPLICIT];
   google.protobuf.Timestamp due_date    = 80 [features.field_presence = EXPLICIT];
   string                    location    = 90 [features.field_presence = EXPLICIT];

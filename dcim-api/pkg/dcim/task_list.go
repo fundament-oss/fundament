@@ -26,8 +26,10 @@ func (s *Server) ListTasks(
 		params.Priority = pgtype.Text{String: taskPriorityFromProto(req.GetPriority()), Valid: true}
 	}
 
-	if req.HasCategory() {
-		params.Category = pgtype.Text{String: taskCategoryFromProto(req.GetCategory()), Valid: true}
+	// One tag, because this is what the menu navigates by. Combining tags is a
+	// filter and that belongs above the list.
+	if req.HasTag() {
+		params.Tag = pgtype.Text{String: req.GetTag(), Valid: true}
 	}
 
 	if req.HasAssigneeId() {

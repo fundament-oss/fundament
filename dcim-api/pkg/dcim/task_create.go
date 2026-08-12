@@ -23,7 +23,10 @@ func (s *Server) CreateTask(
 		Title:    req.GetTitle(),
 		Status:   taskStatusFromProto(req.GetStatus()),
 		Priority: taskPriorityFromProto(req.GetPriority()),
-		Category: taskCategoryFromProto(req.GetCategory()),
+	}
+
+	if req.HasBlockedReason() {
+		params.BlockedReason = pgtype.Text{String: req.GetBlockedReason(), Valid: true}
 	}
 
 	if req.HasDescription() {
@@ -54,6 +57,18 @@ func (s *Server) CreateTask(
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("assignee not found"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create task: %w", err))
+	}
+
+	// The tags live in their own table, so they are written after the task
+	// exists. A task without tags is a normal task, so an empty list is not an
+	// error and simply writes nothing.
+	if tags := req.GetTags(); len(tags) > 0 {
+		if err := s.queries.TaskTagsAdd(ctx, db.TaskTagsAddParams{
+			TaskID: id,
+			Tags:   tags,
+		}); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to tag task: %w", err))
+		}
 	}
 
 	s.logger.InfoContext(ctx, "task created", "task_id", id)
