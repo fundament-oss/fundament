@@ -238,10 +238,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   /** The cluster is there, so this is not a failure of the page you are on: it
    *  is one thing you asked for that is missing from it. */
   nodePoolsNotCreatedText = computed(() => {
-    const namen = this.nodePoolsNotCreated();
-    if (namen.length === 0) return null;
-    if (namen.length === 1) return `Node pool '${namen[0]}' was not created`;
-    return `${namen.length} node pools were not created`;
+    const names = this.nodePoolsNotCreated();
+    if (names.length === 0) return null;
+    if (names.length === 1) return `Node pool '${names[0]}' was not created`;
+    return `${names.length} node pools were not created`;
   });
 
   isLoading = signal<boolean>(true);

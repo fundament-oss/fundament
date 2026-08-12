@@ -202,12 +202,12 @@ function lineDataset(
 }
 
 function formatRange(start: string, end: string): string {
-  const van = new Date(`${start}T00:00:00`);
-  const tot = new Date(`${end}T00:00:00`);
-  const zelfdeJaar = van.getFullYear() === tot.getFullYear();
-  const kort: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-  const lang: Intl.DateTimeFormatOptions = { ...kort, year: 'numeric' };
-  return `${van.toLocaleDateString('en-US', zelfdeJaar ? kort : lang)} – ${tot.toLocaleDateString('en-US', lang)}`;
+  const from = new Date(`${start}T00:00:00`);
+  const to = new Date(`${end}T00:00:00`);
+  const sameYear = from.getFullYear() === to.getFullYear();
+  const short: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  const long: Intl.DateTimeFormatOptions = { ...short, year: 'numeric' };
+  return `${from.toLocaleDateString('en-US', sameYear ? short : long)} – ${to.toLocaleDateString('en-US', long)}`;
 }
 
 type Overlay = (HTMLElement & { show(): void; hide(): void }) | null;
@@ -296,19 +296,19 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   /** What you are looking at, and how fresh it is, in that order: the period is
    *  the subject, the refresh time is a footnote to it. */
   rangeSummary = computed(() => {
-    const delen: string[] = [];
-    const bereik = this.customRange();
-    if (bereik) delen.push(`Showing ${formatRange(bereik.start, bereik.end)}.`);
-    const ververst = this.lastRefreshedAt();
-    if (ververst) {
-      const tijd = ververst.toLocaleTimeString([], {
+    const parts: string[] = [];
+    const range = this.customRange();
+    if (range) parts.push(`Showing ${formatRange(range.start, range.end)}.`);
+    const refreshedAt = this.lastRefreshedAt();
+    if (refreshedAt) {
+      const time = refreshedAt.toLocaleTimeString([], {
         hour: 'numeric',
         minute: '2-digit',
         second: '2-digit',
       });
-      delen.push(`Last update ${tijd}.`);
+      parts.push(`Last update ${time}.`);
     }
-    return delen.join(' ');
+    return parts.join(' ');
   });
 
   readonly presets = TIME_RANGE_PRESETS;

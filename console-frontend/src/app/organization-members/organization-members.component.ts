@@ -217,9 +217,9 @@ export default class OrganizationMembersComponent implements OnInit {
   /** The dialog sits in the DOM before anyone is picked, so this has to read as
    *  a sentence with the blank still open. It said "Remove undefined". */
   removeMemberTitle = computed(() => {
-    const wie = this.deletingMember();
-    const naam = wie?.name || wie?.email;
-    return naam ? `Remove ${naam} from this organization?` : 'Remove this member from this organization?';
+    const member = this.deletingMember();
+    const name = member?.name || member?.email;
+    return name ? `Remove ${name} from this organization?` : 'Remove this member from this organization?';
   });
 
   /** A failed action, reported over the list instead of in place of it: the
@@ -396,18 +396,18 @@ export default class OrganizationMembersComponent implements OnInit {
     const permission = member.permission === 'admin' ? 'viewer' : 'admin';
     // An invitation is a member record without a name yet, and nobody is
     // anything until they accept: "will be admin", not "is admin".
-    const wie = member.status === 'pending' ? member.email || member.name : member.name;
-    const wordt = member.status === 'pending' ? 'is invited as' : 'is now';
-    const blijft = member.status === 'pending' ? 'is still invited as' : 'is still';
+    const who = member.status === 'pending' ? member.email || member.name : member.name;
+    const becomes = member.status === 'pending' ? 'is invited as' : 'is now';
+    const stays = member.status === 'pending' ? 'is still invited as' : 'is still';
     this.isSubmitting.set(true);
 
     try {
       await firstValueFrom(this.memberClient.updateMemberPermission({ id: member.id, permission }));
-      this.notificationService.success(`${wie} ${wordt} ${permission}`);
+      this.notificationService.success(`${who} ${becomes} ${permission}`);
       await this.loadMembers();
     } catch (err) {
       this.actionError.set({
-        title: `${wie} ${blijft} ${member.permission}`,
+        title: `${who} ${stays} ${member.permission}`,
         message: err instanceof Error ? err.message : 'The request failed.',
         attempts: 1,
         retry: () => this.setPermission(member),

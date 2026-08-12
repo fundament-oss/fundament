@@ -91,9 +91,9 @@ export default class NamespaceSheetComponent implements OnInit {
   /** The dialog is in the DOM before anyone is picked, so this has to read as a
    *  sentence with the blank still open. It said "Remove undefined". */
   removeAccessTitle = computed(() => {
-    const naam = this.pendingRemove()?.member?.userName;
-    const waar = this.namespaceName();
-    return naam ? `Remove ${naam} from ${waar}?` : `Remove this member from ${waar}?`;
+    const name = this.pendingRemove()?.member?.userName;
+    const where = this.namespaceName();
+    return name ? `Remove ${name} from ${where}?` : `Remove this member from ${where}?`;
   });
 
   step = signal<'overview' | 'roles'>('overview');
