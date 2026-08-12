@@ -14,7 +14,7 @@ import {
 } from './i18n';
 import { DEFAULT_TOUR_ID, PERSONA_TOURS, STORY_TOURS, TOURS } from './tours';
 import runDrive from './drive-runner';
-import { closeOpenAppDialogs } from './app-dialogs';
+import { closeModalOverlays } from './modal-overlays';
 import { NotificationService } from '../notification.service';
 import PageNavService from '../page-nav.service';
 
@@ -180,7 +180,7 @@ export default class PresentationService {
   }
 
   private showChooser(): void {
-    closeOpenAppDialogs();
+    closeModalOverlays();
     this.notifications.dismissAll();
     this.active.set(true);
     this.mode.set('chooser');
@@ -195,7 +195,7 @@ export default class PresentationService {
   goto(index: number): void {
     // An open app modal (native <dialog>) traps focus and makes the deck inert, so
     // close it before moving on — otherwise the presenter is stuck on the slide.
-    closeOpenAppDialogs();
+    closeModalOverlays();
     // A notification raised by the previous slide's drive script belongs to that
     // slide, and a critical one waits to be dismissed by hand, so drop it here.
     this.notifications.dismissAll();
@@ -294,7 +294,7 @@ export default class PresentationService {
   stop(): void {
     this.cancelDrive();
     this.stopAutoplay();
-    closeOpenAppDialogs();
+    closeModalOverlays();
     this.notifications.dismissAll();
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
     this.active.set(false);

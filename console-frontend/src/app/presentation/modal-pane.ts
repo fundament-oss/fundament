@@ -6,7 +6,7 @@
 //    interactive. The trade-off is that a non-modal dialog has no dimmed ::backdrop.
 //
 // 2. The <dialog> lives inside the <nldd-modal-dialog> shadow DOM, so global page CSS
-//    can't reach it. We adopt a small stylesheet into each modal's shadow root that
+//    can't reach it. We adopt a small stylesheet into each dialog's shadow root that
 //    fixes the (now non-modal) dialog to the viewport and centers it in the right pane
 //    via --fund-modal-inset-left — a custom property that inherits in from :root (set
 //    in styles.css only while presenting, so it resolves to 0 elsewhere).
@@ -25,7 +25,7 @@ POSITION_SHEET.replaceSync(`
   }
 `);
 
-// Adopt the position sheet into a modal's shadow root. The root may not exist yet when
+// Adopt the position stylesheet into a dialog's shadow root. It may not exist yet when
 // the element is first added (upgrade + first render are async), so retry across a
 // few frames until it appears.
 function adopt(el: Element, attempts = 10): void {

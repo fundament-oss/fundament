@@ -10,7 +10,7 @@ import {
 import '@nldd/design-system/dropdown';
 import PresentationService from './presentation.service';
 import { isLocale, LOCALES } from './i18n';
-import { hasOpenAppDialog, closeOpenAppDialogs } from './app-dialogs';
+import { hasOpenModalOverlay, closeModalOverlays } from './modal-overlays';
 import DropdownSyncDirective from '../dropdown-sync.directive';
 
 type LitDropdown = HTMLElement & { updateComplete?: Promise<unknown> };
@@ -646,16 +646,16 @@ export default class PresentationOverlayComponent {
 
     // An open app modal moves focus into itself, so the deck keys must still drive
     // navigation from there (and navigating closes the modal).
-    const modalOpen = hasOpenAppDialog();
+    const overlayOpen = hasOpenModalOverlay();
 
     if (event.key === 'Escape') {
       // In native fullscreen the browser handles Esc by exiting fullscreen; don't
       // also close the presentation. A second Esc (no longer fullscreen) closes it.
       if (document.fullscreenElement) return;
       // Escape closes an open app modal first, before leaving the tour.
-      if (modalOpen) {
+      if (overlayOpen) {
         event.preventDefault();
-        closeOpenAppDialogs();
+        closeModalOverlays();
         return;
       }
       event.preventDefault();
@@ -667,9 +667,10 @@ export default class PresentationOverlayComponent {
       }
       return;
     }
-    // Fields own their keys while typing — except when a modal is open, where the
-    // focused control is a button/checkbox and the deck keys must still work.
-    if (inField && !modalOpen) return;
+    // Fields own their keys while typing — except when a modal dialog or sheet is
+    // open, where the focused control is a button/checkbox and the deck keys must
+    // still work.
+    if (inField && !overlayOpen) return;
 
     // Language applies to the chooser too, so handle it before the slide keys.
     if (event.key === 'l' || event.key === 'L') {
