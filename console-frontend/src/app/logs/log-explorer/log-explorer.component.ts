@@ -217,8 +217,13 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   readonly containers = signal<string[]>([]);
 
   // ── time range
+  // `new Date()` is not reactive, so the window has to hang off a signal:
+  // without this the range would freeze at first evaluation and every entry
+  // arriving later (tail, or a page left open) would fall outside it.
+  private readonly windowAnchor = signal(Date.now());
+
   private readonly timeRange = computed((): { from: Date; to: Date } => {
-    const now = new Date();
+    const now = new Date(this.windowAnchor());
     const preset = TIME_PRESETS.find((p) => p.value === this.timePreset());
     const minutes = preset?.minutes ?? 60;
     return { from: new Date(now.getTime() - minutes * 60 * 1000), to: now };
@@ -227,6 +232,10 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
   // ── filtered logs without level filter (used for counts + histogram)
   private readonly filteredLogsNoLevel = computed(() => {
     const { from, to } = this.timeRange();
+    // Tailed entries carry a server timestamp of "now", which is at or past
+    // the anchor (and past it outright under clock skew), so an upper bound
+    // would filter out exactly what the tail delivers.
+    const upper = this.liveTailEnabled() ? null : to;
     const cl = this.selectedCluster();
     const ns = this.selectedNamespace();
     const pod = this.selectedPod();
@@ -235,7 +244,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     return this.allLogs().filter(
       (l) =>
         l.timestamp >= from &&
-        l.timestamp <= to &&
+        (upper === null || l.timestamp <= upper) &&
         (!cl || l.cluster === cl) &&
         (!ns || l.namespace === ns) &&
         (!pod || l.pod === pod) &&
@@ -520,6 +529,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.isLoading.set(true);
     this.loadError.set(false);
     try {
+      // Re-anchor so a page left open queries "the last hour" from now, not
+      // from when it was opened.
+      this.windowAnchor.set(Date.now());
       const { from, to } = this.timeRange();
       const result = await this.logsApi.query({
         clusterId,
@@ -640,6 +652,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.liveTailRateInterval = setInterval(() => {
       this.liveTailRate.set(this.liveTailReceived);
       this.liveTailReceived = 0;
+      // Slide the window with the clock so the histogram and the lower bound
+      // keep up with a long-running tail.
+      this.windowAnchor.set(Date.now());
     }, 1000);
 
     this.liveTailSub = this.logsApi
@@ -659,6 +674,14 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
         error: () => {
           this.toastService.error('Live tail disconnected');
           this.stopLiveTail();
+        },
+        // A server-side stream that ends normally (pod gone, backend closed the
+        // follow) would otherwise leave the UI claiming it is still streaming.
+        complete: () => {
+          if (this.liveTailEnabled()) {
+            this.toastService.info('Live tail ended');
+            this.stopLiveTail();
+          }
         },
       });
   }

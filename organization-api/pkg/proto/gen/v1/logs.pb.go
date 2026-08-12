@@ -408,7 +408,9 @@ type QueryLogsRequest_builder struct {
 	// Optional time range. Defaults to the last hour when not set.
 	Start *timestamppb.Timestamp
 	End   *timestamppb.Timestamp
-	// Maximum number of entries to return. Defaults to 1000 when zero.
+	// Maximum number of entries to return. Defaults to 1000 when zero and is
+	// capped at 5000: backends preallocate on this value, so an unbounded limit
+	// is an out-of-memory vector.
 	Limit int32
 }
 
@@ -860,7 +862,7 @@ const file_v1_logs_proto_rawDesc = "" +
 	"\x06fields\x18P \x03(\v2%.organization.v1.LogEntry.FieldsEntryR\x06fields\x1a9\n" +
 	"\vFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa5\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb1\x02\n" +
 	"\x10QueryLogsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
@@ -870,8 +872,9 @@ const file_v1_logs_proto_rawDesc = "" +
 	"\tcontainer\x18( \x01(\tR\tcontainer\x12\x16\n" +
 	"\x06search\x18< \x01(\tR\x06search\x127\n" +
 	"\x05start\x18F \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
-	"\x03end\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12\x14\n" +
-	"\x05limit\x18Z \x01(\x05R\x05limit\"\x7f\n" +
+	"\x03end\x18P \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12 \n" +
+	"\x05limit\x18Z \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\x88'(\x00R\x05limit\"\x7f\n" +
 	"\x11QueryLogsResponse\x123\n" +
 	"\aentries\x18\n" +
 	" \x03(\v2\x19.organization.v1.LogEntryR\aentries\x125\n" +

@@ -132,7 +132,7 @@ func (s *Server) QueryLogs(
 		Pod:       req.GetPod(),
 		Container: req.GetContainer(),
 		Search:    req.GetSearch(),
-		Limit:     int(req.GetLimit()),
+		Limit:     logs.EffectiveLimit(int(req.GetLimit())),
 	}
 	if req.HasStart() {
 		params.Start = req.GetStart().AsTime()
