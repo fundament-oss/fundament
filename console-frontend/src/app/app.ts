@@ -24,6 +24,7 @@ import '@nldd/design-system/box';
 import '@nldd/design-system/card';
 import '@nldd/design-system/collection';
 import '@nldd/design-system/rich-text';
+import '@nldd/design-system/image';
 import '@nldd/design-system/button';
 import '@nldd/design-system/button-bar';
 import '@nldd/design-system/checkbox';

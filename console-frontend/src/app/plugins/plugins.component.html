@@ -80,12 +80,13 @@
           @for (plugin of filteredPlugins; track plugin.id) {
             <nldd-card background="tinted">
               <nldd-container padding="16">
-                <img
-                  alt=""
+                <nldd-image
+                  [attr.src]="'/img/plugins/' + getPluginIconName(plugin.name) + '.svg'"
                   width="40"
                   height="40"
-                  [src]="'/img/plugins/' + getPluginIconName(plugin.name) + '.svg'"
-                >
+                  object-fit="contain"
+                  decorative
+                ></nldd-image>
 
                 <nldd-spacer size="12"></nldd-spacer>
 
@@ -134,7 +135,7 @@
                     variant="primary"
                   ></nldd-button>
                   <nldd-button
-                    [attr.href]="'/plugins/' + plugin.id"
+                    [attr.href]="pageNav.path('/plugins/' + plugin.id)"
                     text="Details"
                     variant="secondary"
                     (click)="pageNav.navigate($event, '/plugins/' + plugin.id)"

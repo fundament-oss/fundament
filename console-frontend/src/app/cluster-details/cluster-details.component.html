@@ -272,7 +272,7 @@
               <h3>Node pools</h3>
               <nldd-button
                 slot="end"
-                [attr.href]="'/clusters/' + clusterData.basics.id + '/nodes'"
+                [attr.href]="pageNav.path('/clusters/' + clusterData.basics.id + '/nodes')"
                 (click)="pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/nodes')"
                 text="Edit"
                 start-icon="pencil"
@@ -373,7 +373,7 @@
               </h3>
               <nldd-button
                 slot="end"
-                [attr.href]="'/clusters/' + clusterData.basics.id + '/plugins'"
+                [attr.href]="pageNav.path('/clusters/' + clusterData.basics.id + '/plugins')"
                 (click)="
                   pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/plugins')
                 "
@@ -401,7 +401,13 @@
                 @for (plugin of installedPlugins(); track plugin.id) {
                   <nldd-card>
                     <nldd-container padding="16">
-                      <img alt="" width="40" height="40" [src]="pluginIconSrc(plugin)">
+                      <nldd-image
+                        [attr.src]="pluginIconSrc(plugin)"
+                        width="40"
+                        height="40"
+                        object-fit="contain"
+                        decorative
+                      ></nldd-image>
 
                       <nldd-spacer size="12"></nldd-spacer>
 
@@ -490,7 +496,7 @@
                     namespaces().length === 1 ? '' : 's'
                   }}.
                   <nldd-link
-                    [attr.href]="'/clusters/' + clusterData.basics.id + '/namespaces'"
+                    [attr.href]="pageNav.path('/clusters/' + clusterData.basics.id + '/namespaces')"
                     (click)="
                       pageNav.navigate($event, '/clusters/' + clusterData.basics.id + '/namespaces')
                     "

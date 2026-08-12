@@ -21,7 +21,14 @@
     }
 
     @if (!isLoading() && !errorMessage() && plugin(); as p) {
-      <img alt="" width="56" height="56" [src]="pluginIconSrc(p)">
+      <nldd-image
+        [attr.src]="pluginIconSrc(p)"
+        width="56"
+        height="56"
+        object-fit="contain"
+        loading="eager"
+        decorative
+      ></nldd-image>
 
       <nldd-spacer size="12"></nldd-spacer>
 

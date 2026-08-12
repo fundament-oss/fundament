@@ -76,10 +76,16 @@
               </nldd-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <!-- The same logo the catalogue and the cluster page show, so a
-                   plugin stays recognizable by sight while you pick it. Empty
-                   alt: the name is right beside it. -->
+                   plugin stays recognizable by sight while you pick it. Decorative:
+                   the name is right beside it. -->
               <nldd-cell>
-                <img alt="" width="24" height="24" [src]="pluginIconSrc(plugin)">
+                <nldd-image
+                  [attr.src]="pluginIconSrc(plugin)"
+                  width="24"
+                  height="24"
+                  object-fit="contain"
+                  decorative
+                ></nldd-image>
               </nldd-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-text-cell
