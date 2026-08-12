@@ -6,10 +6,17 @@ import {
   OnDestroy,
   signal,
   computed,
+  effect,
+  untracked,
   inject,
   viewChild,
   ElementRef,
+  TemplateRef,
+  AfterViewInit,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { firstValueFrom, Observable } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import {
@@ -25,7 +32,6 @@ import TaskApiService, {
   TaskData,
   TaskInput,
   TaskPatch,
-  TaskCategoryLabel,
   TaskPriorityLabel,
   TaskStatusLabel,
 } from '../task-management/task-api.service';
@@ -34,6 +40,8 @@ import NoteApiService from '../inventory/note-api.service';
 import settledPool from '../shared/settled-pool';
 import ToastService from '../shared/toast.service';
 import connectErrorMessage from '../../connect/error';
+import SecondaryNavService from '../shell/secondary-nav.service';
+import { TASKS_PATH, viewSlug } from './task-views';
 
 type Technician = RosterUser;
 
@@ -75,6 +83,14 @@ interface NlddSheet extends HTMLElement {
   hide(): void;
 }
 
+/**
+ * What a row in the menu points at. The first four are views: they cut across
+ * the board and answer a question ("what is not decided yet", "what has to
+ * happen today", "what is not mine to move"). The last three are the columns
+ * themselves.
+ */
+type MenuKind = 'all' | 'inbox' | 'today' | 'waiting' | 'status' | 'priority' | 'tag';
+
 // Half the width of the filters <aside> (w-60 = 240px), so the toast centers
 // over the main content area next to it instead of the full viewport.
 const TOAST_SIDEBAR_OFFSET_PX = 120;
@@ -84,17 +100,35 @@ const TOAST_SIDEBAR_OFFSET_PX = 120;
 const BULK_CONCURRENCY = 6;
 
 @Component({
-  selector: 'app-task-management-admin',
-  templateUrl: './task-management-admin.html',
+  selector: 'app-tasks',
+  templateUrl: './tasks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DropdownSyncDirective, CdkDropListGroup, CdkDropList, CdkDrag, CdkDragPlaceholder],
+  imports: [
+    NgTemplateOutlet,
+    DropdownSyncDirective,
+    CdkDropListGroup,
+    CdkDropList,
+    CdkDrag,
+    CdkDragPlaceholder,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
-    class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',
+    // No styling of its own. The page inside paints the surface and owns the
+    // layout, and styles.css takes this element out of the flow entirely
+    // (display: contents), so it cannot come between the pane and the page.
     '(document:keydown.escape)': 'onEscape()',
   },
 })
-export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
+export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
   private readonly taskApi = inject(TaskApiService);
 
   private readonly userApi = inject(UserApiService);
@@ -126,6 +160,38 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   // board still works, and any note they write comes out unattributed.
   readonly currentUser = signal<Technician | null>(null);
 
+  constructor() {
+    // A selection survives no further than the view it was made in. Half of it
+    // would be off screen after a move to another view, and the bulk actions
+    // act on the whole set: deleting six tasks of which you can see two is the
+    // kind of thing you only notice afterwards.
+    effect(() => {
+      this.menuSelection();
+      this.selectedTasks.set(new Set());
+    });
+
+    // Holds on to rows that stop belonging here while you are looking at them,
+    // and lets go of all of them the moment you go somewhere else. Leaving is
+    // the clean-up: that is why the view is compared as well as the ids, so
+    // arriving somewhere new never counts as "these rows just dropped out".
+    effect(() => {
+      const view = JSON.stringify(this.menuSelection());
+      const ids = new Set(this.matchingTasks().map((t) => t.id));
+      untracked(() => {
+        if (view === this.seenView()) {
+          const dropped = [...this.seenIds()].filter((id) => !ids.has(id));
+          if (dropped.length) {
+            this.heldIds.update((held) => new Set([...held, ...dropped]));
+          }
+        } else {
+          this.seenView.set(view);
+          this.heldIds.set(new Set());
+        }
+        this.seenIds.set(ids);
+      });
+    });
+  }
+
   ngOnInit(): void {
     this.toast.offsetPx.set(TOAST_SIDEBAR_OFFSET_PX);
     this.loadCurrentUser();
@@ -135,6 +201,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.toast.offsetPx.set(0);
+    this.secondaryNav.clear(this.secondaryNavTemplate());
   }
 
   private loadCurrentUser(): void {
@@ -201,7 +268,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   }
 
   readonly statusStyles: Record<string, StatusStyle> = {
-    Ready: {
+    'To do': {
       bg: 'bg-slate-100 dark:bg-gray-800',
       text: 'text-slate-600 dark:text-gray-300',
       dot: 'bg-slate-400',
@@ -209,29 +276,13 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       kanbanBorder: 'border-slate-200 dark:border-gray-800',
       tagColor: 'neutral',
     },
-    'In Progress': {
+    Doing: {
       bg: 'bg-indigo-50 dark:bg-indigo-950',
       text: 'text-indigo-700 dark:text-indigo-300',
       dot: 'bg-indigo-500',
       kanbanAccent: 'bg-indigo-500',
       kanbanBorder: 'border-indigo-200 dark:border-indigo-800',
       tagColor: 'donkerblauw',
-    },
-    Review: {
-      bg: 'bg-amber-50 dark:bg-amber-950',
-      text: 'text-amber-700 dark:text-amber-300',
-      dot: 'bg-amber-500',
-      kanbanAccent: 'bg-amber-500',
-      kanbanBorder: 'border-amber-200 dark:border-amber-800',
-      tagColor: 'donkergeel',
-    },
-    Blocked: {
-      bg: 'bg-red-50 dark:bg-red-950',
-      text: 'text-red-700 dark:text-red-300',
-      dot: 'bg-red-500',
-      kanbanAccent: 'bg-red-500',
-      kanbanBorder: 'border-red-200 dark:border-red-800',
-      tagColor: 'critical',
     },
     Done: {
       bg: 'bg-emerald-50 dark:bg-emerald-950',
@@ -244,7 +295,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   };
 
   readonly priorityStyles: Record<string, PriorityStyle> = {
-    Critical: {
+    Urgent: {
       bg: 'bg-red-50 dark:bg-red-950',
       text: 'text-red-700 dark:text-red-300',
       dot: 'bg-red-500',
@@ -274,27 +325,223 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     },
   };
 
-  readonly categoryIcons: Record<string, string> = {
-    Hardware: 'cylinder-split',
-    Network: 'list',
-    Cooling: 'cloud',
-    Power: 'lock-closed',
-    Security: 'shield-check-mark',
-    Other: 'ellipsis',
+  readonly kanbanColumns: TaskStatusLabel[] = ['To do', 'Doing', 'Done'];
+
+  readonly priorities: TaskPriorityLabel[] = ['Urgent', 'High', 'Medium', 'Low', 'None'];
+
+  /** The picker offers all five; the menu leaves None out. */
+  readonly menuPriorities: TaskPriorityLabel[] = ['Urgent', 'High', 'Medium', 'Low'];
+
+  /** Today's date as the ISO day the task dates are stored in. */
+  private readonly todayISO = () => new Date().toISOString().slice(0, 10);
+
+  /**
+   * What has to happen today: everything whose due date has passed or is today,
+   * plus everything urgent. The urgent half is a deliberate stretch — urgent
+   * says act now and that outranks a date further out — but it is also the half
+   * that can silently fill this view up: an urgent task without a date never
+   * leaves it. If that starts happening, give urgent a date instead of widening
+   * the view.
+   */
+  isToday(task: TaskData): boolean {
+    if (task.status === 'Done') return false;
+    return (task.due !== '' && task.due <= this.todayISO()) || task.priority === 'Urgent';
+  }
+
+  readonly todayCount = computed(() => this.tasks().filter((t) => this.isToday(t)).length);
+
+  /**
+   * What nobody has decided about yet. Without an assignee a task has no owner,
+   * without a due date it has no when, and either gap stops it from being work
+   * anybody can pick up. Both gaps at once is the classic case: something got
+   * reported and dropped here. Done tasks are out, there is nothing left to
+   * decide about them.
+   */
+  readonly isInbox = (task: TaskData): boolean => {
+    if (task.status === 'Done') return false;
+    return !task.assignee || task.due === '';
   };
 
-  readonly kanbanColumns: TaskStatusLabel[] = ['Ready', 'In Progress', 'Review', 'Blocked', 'Done'];
+  readonly inboxCount = computed(() => this.tasks().filter((t) => this.isInbox(t)).length);
 
-  readonly priorities: TaskPriorityLabel[] = ['Critical', 'High', 'Medium', 'Low'];
+  /**
+   * What is not yours to move. Somebody else's to-do is your waiting-for, and a
+   * task stuck on a part rather than a person waits just as hard. Same rule as
+   * the line under the title, so the view and the row can never disagree.
+   */
+  isWaiting(task: TaskData): boolean {
+    return this.holdReason(task) !== null;
+  }
 
-  readonly taskCategories: TaskCategoryLabel[] = [
-    'Hardware',
-    'Network',
-    'Cooling',
-    'Power',
-    'Security',
-    'Other',
-  ];
+  readonly waitingCount = computed(() => this.tasks().filter((t) => this.isWaiting(t)).length);
+
+  /**
+   * Whether a task is yours. An unknown current user is not the same fact as
+   * "assigned to somebody else": the answer is unavailable, so nothing is
+   * filtered out on it and you see a full list rather than a convincing empty
+   * one.
+   */
+  private isMine(task: TaskData): boolean {
+    const me = this.currentUser()?.id;
+    if (!me) return true;
+    return task.assignee === me;
+  }
+
+  /**
+   * Whether a task belongs under a status row in the menu. To do and Doing are
+   * your own queues: somebody else's to-do is your waiting-for, so it belongs
+   * under Waiting and would otherwise be counted twice, once in each. Done is
+   * everybody's, because finished work is finished whoever did it.
+   */
+  inStatusView(task: TaskData, status: TaskStatusLabel): boolean {
+    if (task.status !== status) return false;
+    if (status === 'Done') return true;
+    return this.isMine(task);
+  }
+
+  /**
+   * Why a task is not yours to move. Being stuck on something that is not a
+   * person is stored on the task; lying with a person is not stored at all but
+   * read off the assignee, because it depends on who is looking: the task you
+   * are waiting for is the task somebody else has to do. Returns nothing when
+   * the work is yours, or finished.
+   */
+  holdReason(task: TaskData): string | null {
+    if (task.status === 'Done') return null;
+
+    if (task.blockedReason !== null) {
+      return task.blockedReason ? `Blocked: ${task.blockedReason}` : 'Blocked';
+    }
+
+    if (!task.assignee) return null;
+
+    const me = this.currentUser()?.id;
+    if (me && task.assignee === me) return null;
+
+    const who = this.getTech(task.assignee);
+    if (!who) return null;
+
+    // Who has it, not what that means for you. Whether they have started is the
+    // icon's job now, so this line does not have to carry it in two phrasings.
+    return `Assigned to ${who.name}`;
+  }
+
+  /**
+   * Whose task it is, in words, under the title. It replaces a status column and
+   * a face that each said half a fact: "Doing" did not say by whom, and an avatar
+   * did not say what was being done. Now the icon in front says how far the work
+   * has got and this line says who has it, so neither repeats the other.
+   */
+  stateLine(task: TaskData): string {
+    const hold = this.holdReason(task);
+    if (hold) return hold;
+
+    const me = this.currentUser()?.id;
+    const who = this.getTech(task.assignee);
+
+    if (task.status === 'Done') {
+      return who && task.assignee !== me ? `Done by ${who.name}` : 'Done';
+    }
+
+    // Assigned to somebody the roster cannot name. Two different facts, and
+    // neither of them is "unassigned": the task is spoken for either way.
+    if (this.assigneeUnresolved(task)) return 'Assigned, directory unavailable';
+    if (this.assigneeMissing(task)) return 'Assigned, no longer in the directory';
+
+    if (!task.assignee) return 'Unassigned';
+
+    return task.status;
+  }
+
+  /**
+   * The design system draws priority as a count: one exclamation mark in a
+   * circle, then two, then three. Urgent is the same three, filled, so the
+   * column keeps reading as a count rather than switching shape at the top. An
+   * empty circle is the zero of that series. No color: the number of marks says
+   * the level, and coloring it too would say the same thing twice. Alias names,
+   * because they say what the icon is for.
+   */
+  readonly priorityIcon = (priority: TaskPriorityLabel): string => {
+    const map: Record<TaskPriorityLabel, string> = {
+      Urgent: 'high-priority-filled',
+      High: 'high-priority',
+      Medium: 'medium-priority',
+      Low: 'low-priority',
+      None: 'no-priority',
+    };
+    return map[priority];
+  };
+
+  /**
+   * Status as one ring three times over: empty, a second ring inside it, ticked.
+   * The three read as one series that way, which a set of unrelated pictures
+   * would not. Alias names, because those say what the row is rather than what
+   * the icon draws.
+   *
+   * Every name has a `-light` twin drawn for 32 pixels, which is what a row uses
+   * (see taskStateIcon). These are for the menu, at 20.
+   */
+  readonly statusIcon = (status: TaskStatusLabel): string => {
+    const map: Record<TaskStatusLabel, string> = {
+      'To do': 'to-do',
+      Doing: 'doing',
+      Done: 'done',
+    };
+    return map[status];
+  };
+
+  /** Stuck on something that is not a person, and not finished. */
+  private readonly isBlocked = (task: TaskData): boolean =>
+    task.status !== 'Done' && task.blockedReason !== null;
+
+  /**
+   * The icon in front of a row says how far the work has got, and nothing else.
+   * A task waiting on somebody is a to-do that happens to be theirs, and one
+   * they have started is under way whoever is doing it, so both keep the icon of
+   * the state they are in. Who is waited on is what the line under the title is
+   * for; saying it twice, in two channels, is how the two started to disagree.
+   *
+   * The exception is a task stuck on something that is not a person. There the
+   * state it is in says nothing useful — it is not moving at all — so it gets
+   * the barred circle instead. In the light weight, because a row draws these
+   * at 32.
+   */
+  readonly taskStateIcon = (task: TaskData): string =>
+    this.isBlocked(task) ? 'blocked-light' : `${this.statusIcon(task.status)}-light`;
+
+  /**
+   * The state line as a row shows it: nothing at all when the line would say no
+   * more than the icon in front of it. To do, Doing and Done are drawn there
+   * already, so writing them underneath adds a line without adding a fact.
+   *
+   * What stays is everything the icon cannot draw: who has it, that nobody has,
+   * that it is stuck and why, and who finished it.
+   */
+  rowStateLine(task: TaskData): string | null {
+    const line = this.stateLine(task);
+    return line === task.status ? null : line;
+  }
+
+  /**
+   * The tags a row shows: where the work is, then what kind of work it is. The
+   * place is stored as one string ("AMS1 · R02-2"), a site and a rack, so it
+   * reads as two tags rather than one long one. It sat above the title as an
+   * overline before, which said the same thing in a second shape: a rack is a
+   * property of the task like every other tag.
+   */
+  readonly tagCloud = (task: TaskData): string[] => {
+    const place = task.location
+      .split('·')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return [...place, ...task.tags];
+  };
+
+  /** The tags in use, in the order the menu shows them. Derived rather than
+   *  fixed, so a tag somebody adds turns up here on its own. */
+  readonly taskTags = computed(() =>
+    [...new Set(this.tasks().flatMap((t) => t.tags))].sort((a, b) => a.localeCompare(b)),
+  );
 
   private readonly dateLocale = 'en-US';
 
@@ -302,13 +549,124 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   searchQuery = signal('');
 
-  statusFilter = signal('all');
+  private readonly route = inject(ActivatedRoute);
 
-  priorityFilter = signal('all');
+  private readonly router = inject(Router);
 
-  categoryFilter = signal('all');
+  private readonly viewParams = toSignal(this.route.paramMap, {
+    initialValue: convertToParamMap({}),
+  });
+
+  /**
+   * What the menu points at, read from the address. One choice, not three: the
+   * menu is navigation, so picking a priority takes you to the priorities the
+   * way a link takes you to a page, instead of narrowing what a status already
+   * narrowed. Combining comes later, above the list, where a filter belongs.
+   *
+   * The address is where it lives rather than a signal, so a view can be linked
+   * to, opened in a second tab and reached with the browser's back button. A
+   * value that names nothing (a status that no longer exists, a typo) falls back
+   * to showing everything of that kind rather than an empty list with no way out.
+   */
+  readonly menuSelection = computed<{ kind: MenuKind; value: string }>(() => {
+    const params = this.viewParams();
+    const view = params.get('view');
+    const value = params.get('value') ?? '';
+    switch (view) {
+      case 'inbox':
+      case 'today':
+      case 'waiting':
+        return { kind: view, value: 'all' };
+      case 'status':
+        return {
+          kind: 'status',
+          value: this.kanbanColumns.find((s) => viewSlug(s) === value) ?? 'all',
+        };
+      case 'priority':
+        return {
+          kind: 'priority',
+          value: this.menuPriorities.find((p) => viewSlug(p) === value) ?? 'all',
+        };
+      case 'tag':
+        return { kind: 'tag', value };
+      default:
+        return { kind: 'all', value: 'all' };
+    }
+  });
+
+  /** The address of a view, so every row in the menu is a real link. */
+  readonly viewPath = (kind: MenuKind, value = ''): string => {
+    if (kind === 'all') return `${TASKS_PATH}/all`;
+    if (kind === 'status' || kind === 'priority') return `${TASKS_PATH}/${kind}/${viewSlug(value)}`;
+    if (kind === 'tag') return `${TASKS_PATH}/tag/${encodeURIComponent(value)}`;
+    return `${TASKS_PATH}/${kind}`;
+  };
+
+  /**
+   * Routes a click in-app while the row stays a real `<a href>`, so middle-click
+   * and "open in new tab" keep working. Anything with a modifier is left to the
+   * browser. The same trade the shell makes for the sections.
+   */
+  goToView(event: Event, kind: MenuKind, value = ''): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.router.navigateByUrl(this.viewPath(kind, value));
+  }
+
+  /**
+   * Back from the list is back to the menu, so the address says so too. Leave it
+   * naming a view and the panes and the URL disagree: picking that same view
+   * again would be a navigation to where you already are, which does nothing,
+   * and the list would stay out of reach.
+   */
+  goToMenu(): void {
+    this.router.navigateByUrl(TASKS_PATH);
+  }
+
+  private readonly selectionOf = (kind: 'status' | 'priority' | 'tag') =>
+    computed(() => (this.menuSelection().kind === kind ? this.menuSelection().value : 'all'));
+
+  readonly statusFilter = this.selectionOf('status');
+
+  readonly priorityFilter = this.selectionOf('priority');
+
+  readonly tagFilter = this.selectionOf('tag');
+
+  /** Whether this menu row is the one the list is showing. */
+  isMenuSelection(kind: MenuKind, value = 'all'): boolean {
+    return this.menuSelection().kind === kind && this.menuSelection().value === value;
+  }
 
   selectedTasks = signal<Set<string>>(new Set());
+
+  /**
+   * The state a click on the icon moves a task to: not started, under way,
+   * finished, and round again. The way back is the long way, which is the price
+   * of one click instead of a menu; the way forward is the one people take all
+   * day.
+   */
+  readonly nextStatus = (status: TaskStatusLabel): TaskStatusLabel => {
+    const order: TaskStatusLabel[] = ['To do', 'Doing', 'Done'];
+    return order[(order.indexOf(status) + 1) % order.length];
+  };
+
+  /**
+   * Whether the list is picking tasks rather than opening them. Off by default:
+   * a checkbox on every row is permanent furniture for something you do rarely,
+   * and it leaves the front of the row saying two things at once. In this mode
+   * the row itself is the checkbox, so a row has one job either way.
+   */
+  readonly selectionMode = signal(false);
+
+  setSelectionMode(on: boolean): void {
+    this.selectionMode.set(on);
+    if (!on) this.selectedTasks.set(new Set());
+  }
 
   detailTaskId = signal<string | null>(null);
 
@@ -319,11 +677,11 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   editFormDescription = signal('');
 
-  editFormStatus = signal<TaskStatusLabel>('Ready');
+  editFormStatus = signal<TaskStatusLabel>('To do');
 
   editFormPriority = signal<TaskPriorityLabel>('Medium');
 
-  editFormCategory = signal<TaskCategoryLabel>('Hardware');
+  editFormTags = signal<string[]>([]);
 
   editFormDue = signal('');
 
@@ -337,24 +695,67 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   newNoteText = signal('');
 
-  filteredTasks = computed(() => {
+  /** The tasks that belong in this view right now. */
+  private readonly matchingTasks = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
     const st = this.statusFilter();
     const pr = this.priorityFilter();
-    const cat = this.categoryFilter();
+    const cat = this.tagFilter();
+    const view = this.menuSelection().kind;
     return this.tasks().filter((t) => {
-      if (st !== 'all' && t.status !== st) return false;
+      if (st !== 'all' && !this.inStatusView(t, st as TaskStatusLabel)) return false;
       if (pr !== 'all' && t.priority !== pr) return false;
-      if (cat !== 'all' && t.category !== cat) return false;
+      if (cat !== 'all' && !t.tags.includes(cat)) return false;
+      if (view === 'inbox' && !this.isInbox(t)) return false;
+      if (view === 'today' && !this.isToday(t)) return false;
+      if (view === 'waiting' && !this.isWaiting(t)) return false;
       if (q && !t.title.toLowerCase().includes(q) && !t.description.toLowerCase().includes(q))
         return false;
       return true;
     });
   });
 
+  /**
+   * Ids that stopped matching while you were looking at them. Set a task in the
+   * To do view to Doing and it no longer belongs there, but taking it away under
+   * the pointer moves every row below it up, and the next click lands on
+   * something else. So it stays until you leave the view, which is the one moment
+   * you choose yourself: no timer, nothing creeping away mid-gesture. That the
+   * change landed is visible anyway — the icon changes, and the counts in the
+   * menu go with it.
+   */
+  private readonly heldIds = signal<Set<string>>(new Set());
+
+  private readonly seenView = signal('');
+
+  private readonly seenIds = signal<Set<string>>(new Set());
+
+  /** What the list shows: what belongs here, plus what is being held. */
+  readonly filteredTasks = computed(() => {
+    const matching = this.matchingTasks();
+    const held = this.heldIds();
+    const shown =
+      held.size === 0
+        ? matching
+        : [...matching, ...this.tasks().filter((t) => held.has(t.id) && !matching.includes(t))];
+
+    // Soonest first, and everything without a date after it: a task with no due
+    // date has no claim on today, so it cannot outrank one that has. The sort is
+    // stable, so within a date the order the server sent (newest first) stands.
+    return [...shown].sort((a, b) => {
+      if (a.due === b.due) return 0;
+      if (!a.due) return 1;
+      if (!b.due) return -1;
+      return a.due < b.due ? -1 : 1;
+    });
+  });
+
   statusCounts = computed(() =>
-    this.tasks().reduce<Record<string, number>>(
-      (acc, t) => ({ ...acc, [t.status]: (acc[t.status] ?? 0) + 1 }),
+    this.kanbanColumns.reduce<Record<string, number>>(
+      (counts, status) => ({
+        ...counts,
+        [status]: this.tasks().filter((t) => this.inStatusView(t, status)).length,
+      }),
       {},
     ),
   );
@@ -366,11 +767,13 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     ),
   );
 
-  categoryCounts = computed(() =>
-    this.tasks().reduce<Record<string, number>>(
-      (acc, t) => ({ ...acc, [t.category]: (acc[t.category] ?? 0) + 1 }),
-      {},
-    ),
+  tagCounts = computed(() =>
+    this.tasks().reduce<Record<string, number>>((acc, t) => {
+      t.tags.forEach((tag) => {
+        acc[tag] = (acc[tag] ?? 0) + 1;
+      });
+      return acc;
+    }, {}),
   );
 
   // Drives the header checkbox. Mirrors toggleSelectAll's scope (the filtered
@@ -380,6 +783,28 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     if (filtered.length === 0) return false;
     const selected = this.selectedTasks();
     return filtered.every((t) => selected.has(t.id));
+  });
+
+  /** Some but not all: the select-all box then shows the in-between state. */
+  readonly someFilteredSelected = computed(() => {
+    const selected = this.selectedTasks();
+    return !this.allFilteredSelected() && this.filteredTasks().some((t) => selected.has(t.id));
+  });
+
+  /** How much this view holds, above the list where the list is counted. */
+  readonly listSummary = computed(() => {
+    const total = this.filteredTasks().length;
+    return `${total} task${total === 1 ? '' : 's'}`;
+  });
+
+  /**
+   * What the bar at the bottom acts on. It says so itself rather than leaning on
+   * the count at the top of the list, because once you have scrolled the bar is
+   * the only part of the two you can still see.
+   */
+  readonly selectionSummary = computed(() => {
+    const selected = this.selectedTasks().size;
+    return selected === 0 ? 'Nothing selected' : `${selected} selected`;
   });
 
   detailTask = computed(() => {
@@ -436,10 +861,6 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     return this.priorityStyles[priority] ?? this.priorityStyles['Medium'];
   }
 
-  categoryIcon(category: string): string {
-    return this.categoryIcons[category] ?? 'ellipsis';
-  }
-
   // One pass over the filtered tasks per change, rather than one filter per call
   // site. The template reads each column three times (count, [cdkDropListData],
   // @for), so a plain method handed CDK a freshly allocated array — a new
@@ -456,17 +877,27 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   onKanbanDrop(event: CdkDragDrop<Task[]>, targetStatus: TaskStatusLabel): void {
     const task = event.item.data as Task;
-    if (!task || task.status === targetStatus) return;
+    if (!task) return;
+    this.setStatus(task, targetStatus);
+  }
+
+  /**
+   * Moves one task to another status, from the menu on its icon or from a drop
+   * on a kanban lane. The row changes first and rolls back if the write fails,
+   * because a status you set by clicking should land under the pointer rather
+   * than a round trip later.
+   *
+   * Only the status is sent. Sending the row's whole snapshot would write back
+   * every field as this board last saw it, silently reverting any edit another
+   * admin made since it loaded.
+   */
+  setStatus(task: TaskData, status: TaskStatusLabel): void {
+    if (task.status === status) return;
 
     const previousStatus = task.status;
-    this.tasks.update((list) =>
-      list.map((t) => (t.id === task.id ? { ...t, status: targetStatus } : t)),
-    );
+    this.tasks.update((list) => list.map((t) => (t.id === task.id ? { ...t, status } : t)));
 
-    // Only the status is sent. Sending the dragged card's whole snapshot would
-    // write back every field as this board last saw it, silently reverting any
-    // edit another admin made since the board loaded.
-    firstValueFrom(this.taskApi.updateTask(task.id, { status: targetStatus }))
+    firstValueFrom(this.taskApi.updateTask(task.id, { status }))
       .then(() => this.loadTasks())
       .catch((err) => {
         // eslint-disable-next-line no-console
@@ -515,7 +946,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     this.notesError.set(null);
     firstValueFrom(this.noteApi.listNotesForTask(id))
       .then((res) => {
-        const notes = res.notes.map((n) => TaskManagementAdminComponent.mapNote(n));
+        const notes = res.notes.map((n) => TasksComponent.mapNote(n));
         this.tasks.update((tasks) => tasks.map((t) => (t.id === id ? { ...t, notes } : t)));
       })
       .catch((err) => {
@@ -539,9 +970,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       author: n.createdBy,
       authorId: n.createdById ? n.createdById : null,
       text: n.body,
-      time: TaskManagementAdminComponent.relativeTime(
-        n.created ? timestampDate(n.created) : new Date(),
-      ),
+      time: TasksComponent.relativeTime(n.created ? timestampDate(n.created) : new Date()),
     };
   }
 
@@ -609,7 +1038,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
         this.loadTasks();
         // The pool settles rather than rejects, so surface partial failures
         // explicitly rather than reporting blanket success.
-        const failed = TaskManagementAdminComponent.countRejections(results);
+        const failed = TasksComponent.countRejections(results);
         this.toast.show(
           failed === 0
             ? `${ids.length} task(s) deleted`
@@ -653,7 +1082,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
         this.loadTasks();
         // The pool settles rather than rejects, so surface partial failures
         // explicitly rather than reporting blanket success.
-        const failed = TaskManagementAdminComponent.countRejections(results);
+        const failed = TasksComponent.countRejections(results);
         this.toast.show(
           failed === 0
             ? successMessage
@@ -680,9 +1109,9 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
     const task = taskId !== null ? this.tasks().find((t) => t.id === taskId) : null;
     this.editFormTitle.set(task?.title ?? '');
     this.editFormDescription.set(task?.description ?? '');
-    this.editFormStatus.set(task?.status ?? 'Ready');
+    this.editFormStatus.set(task?.status ?? 'To do');
     this.editFormPriority.set(task?.priority ?? 'Medium');
-    this.editFormCategory.set(task?.category ?? 'Hardware');
+    this.editFormTags.set(task ? [...task.tags] : []);
     this.editFormDue.set(task?.due ?? '');
     this.editFormLocation.set(task?.location ?? '');
     this.editFormAssignee.set(task?.assignee ?? null);
@@ -708,7 +1137,7 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
       description: this.editFormDescription().trim(),
       status: this.editFormStatus(),
       priority: this.editFormPriority(),
-      category: this.editFormCategory(),
+      tags: this.editFormTags(),
       due: this.editFormDue(),
       location: this.editFormLocation().trim(),
       assignee: this.editFormAssignee(),
@@ -786,14 +1215,14 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
   // assignee has left for as long as the roster is in flight — and permanently
   // if ListUsers fails, which is a statement about live data the board is in no
   // position to make.
-  assigneeMissing(task: Task): boolean {
+  assigneeMissing(task: TaskData): boolean {
     return this.rosterLoaded() && task.assignee !== null && this.getTech(task.assignee) === null;
   }
 
   // True when a task has an assignee the board cannot name yet, because the
   // roster is still loading or failed to load. Distinct from unassigned: the
   // task is spoken for, we just cannot say by whom.
-  assigneeUnresolved(task: Task): boolean {
+  assigneeUnresolved(task: TaskData): boolean {
     return !this.rosterLoaded() && task.assignee !== null;
   }
 
@@ -811,14 +1240,6 @@ export default class TaskManagementAdminComponent implements OnInit, OnDestroy {
 
   statusDotClass(status: string): string {
     return `h-1.5 w-1.5 rounded-full ${this.statusStyle(status).dot} shrink-0`;
-  }
-
-  priorityTextClass(priority: string): string {
-    return `inline-flex items-center gap-1.5 text-xs font-medium ${this.priorityStyle(priority).text}`;
-  }
-
-  priorityDotClass(priority: string): string {
-    return `h-2 w-2 rounded-full ${this.priorityStyle(priority).dot} shrink-0`;
   }
 
   priorityTagColor(priority: string): string {

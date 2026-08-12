@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import authGuard from './auth.guard';
+import { tasksMatcher } from './tasks/task-views';
 
 const routes: Routes = [
   {
@@ -59,9 +60,10 @@ const routes: Routes = [
         loadComponent: () => import('./patch-mapping/patch-mapping').then((m) => m.default),
       },
       {
-        path: 'task-management-admin',
-        loadComponent: () =>
-          import('./task-management-admin/task-management-admin').then((m) => m.default),
+        // A matcher instead of a path: every task view is one route, see
+        // task-views.ts.
+        matcher: tasksMatcher,
+        loadComponent: () => import('./tasks/tasks').then((m) => m.default),
       },
     ],
   },

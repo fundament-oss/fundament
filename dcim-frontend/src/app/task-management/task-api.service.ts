@@ -3,14 +3,16 @@ import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import {
   TaskStatus as ProtoStatus,
   TaskPriority as ProtoPriority,
-  TaskCategory as ProtoCategory,
 } from '../../generated/v1/task_pb';
 import type { Task as ProtoTask } from '../../generated/v1/task_pb';
 import { TASK_CLIENT } from '../../connect/tokens';
 
-export type TaskStatusLabel = 'Ready' | 'In Progress' | 'Review' | 'Blocked' | 'Done';
-export type TaskPriorityLabel = 'Critical' | 'High' | 'Medium' | 'Low';
-export type TaskCategoryLabel = 'Hardware' | 'Network' | 'Cooling' | 'Power' | 'Security' | 'Other';
+// How far the work has got. Whose turn it is follows from the assignee, and
+// being stuck on something that is not a person is blockedReason.
+export type TaskStatusLabel = 'To do' | 'Doing' | 'Done';
+// 'None' is what a task carries until somebody prioritizes it, and it reads as
+// an empty circle in a picker and as nothing at all on the task itself.
+export type TaskPriorityLabel = 'Urgent' | 'High' | 'Medium' | 'Low' | 'None';
 
 /** The admin/board view-model of a task (display strings, no proto enums). */
 export interface TaskData {
@@ -19,7 +21,9 @@ export interface TaskData {
   description: string;
   status: TaskStatusLabel;
   priority: TaskPriorityLabel;
-  category: TaskCategoryLabel;
+  tags: string[];
+  /** Stuck on something that is not a person; null when the work can move. */
+  blockedReason: string | null;
   location: string;
   assignee: string | null;
   due: string;
@@ -32,7 +36,7 @@ export interface TaskInput {
   description: string;
   status: TaskStatusLabel;
   priority: TaskPriorityLabel;
-  category: TaskCategoryLabel;
+  tags: string[];
   location: string;
   assignee: string | null;
   due: string;
@@ -97,7 +101,8 @@ export default class TaskApiService {
       description: t.description,
       status: TaskApiService.fromProtoStatus(t.status),
       priority: TaskApiService.fromProtoPriority(t.priority),
-      category: TaskApiService.fromProtoCategory(t.category),
+      tags: [...t.tags],
+      blockedReason: t.blockedReason || null,
       location: t.location,
       assignee: t.assigneeId ? t.assigneeId : null,
       due: t.dueDate ? timestampDate(t.dueDate).toISOString().slice(0, 10) : '',
@@ -107,29 +112,23 @@ export default class TaskApiService {
 
   static fromProtoStatus(s: ProtoStatus): TaskStatusLabel {
     switch (s) {
-      case ProtoStatus.READY:
-        return 'Ready';
-      case ProtoStatus.IN_PROGRESS:
-        return 'In Progress';
-      case ProtoStatus.REVIEW:
-        return 'Review';
-      case ProtoStatus.BLOCKED:
-        return 'Blocked';
+      case ProtoStatus.TODO:
+        return 'To do';
+      case ProtoStatus.DOING:
+        return 'Doing';
       case ProtoStatus.DONE:
         return 'Done';
       case ProtoStatus.UNSPECIFIED:
-        return 'Ready';
+        return 'To do';
       default:
-        return unknownEnum('Status', s, 'Ready');
+        return unknownEnum('Status', s, 'To do');
     }
   }
 
   private static toProtoStatus(s: TaskStatusLabel): ProtoStatus {
     const map: Record<TaskStatusLabel, ProtoStatus> = {
-      Ready: ProtoStatus.READY,
-      'In Progress': ProtoStatus.IN_PROGRESS,
-      Review: ProtoStatus.REVIEW,
-      Blocked: ProtoStatus.BLOCKED,
+      'To do': ProtoStatus.TODO,
+      Doing: ProtoStatus.DOING,
       Done: ProtoStatus.DONE,
     };
     return map[s];
@@ -143,57 +142,27 @@ export default class TaskApiService {
         return 'Medium';
       case ProtoPriority.HIGH:
         return 'High';
-      case ProtoPriority.CRITICAL:
-        return 'Critical';
+      case ProtoPriority.URGENT:
+        return 'Urgent';
       case ProtoPriority.UNSPECIFIED:
-        return 'Medium';
+        return 'None';
       default:
-        return unknownEnum('Priority', p, 'Medium');
+        return unknownEnum('Priority', p, 'None');
     }
   }
 
   private static toProtoPriority(p: TaskPriorityLabel): ProtoPriority {
     const map: Record<TaskPriorityLabel, ProtoPriority> = {
+      None: ProtoPriority.UNSPECIFIED,
       Low: ProtoPriority.LOW,
       Medium: ProtoPriority.MEDIUM,
       High: ProtoPriority.HIGH,
-      Critical: ProtoPriority.CRITICAL,
+      Urgent: ProtoPriority.URGENT,
     };
     return map[p];
   }
 
-  static fromProtoCategory(c: ProtoCategory): TaskCategoryLabel {
-    switch (c) {
-      case ProtoCategory.HARDWARE:
-        return 'Hardware';
-      case ProtoCategory.NETWORK:
-        return 'Network';
-      case ProtoCategory.COOLING:
-        return 'Cooling';
-      case ProtoCategory.POWER:
-        return 'Power';
-      case ProtoCategory.SECURITY:
-        return 'Security';
-      case ProtoCategory.OTHER:
-        return 'Other';
-      case ProtoCategory.UNSPECIFIED:
-        return 'Other';
-      default:
-        return unknownEnum('Category', c, 'Other');
-    }
-  }
 
-  private static toProtoCategory(c: TaskCategoryLabel): ProtoCategory {
-    const map: Record<TaskCategoryLabel, ProtoCategory> = {
-      Hardware: ProtoCategory.HARDWARE,
-      Network: ProtoCategory.NETWORK,
-      Cooling: ProtoCategory.COOLING,
-      Power: ProtoCategory.POWER,
-      Security: ProtoCategory.SECURITY,
-      Other: ProtoCategory.OTHER,
-    };
-    return map[c];
-  }
 
   listTasks(assigneeId?: string) {
     return this.client.listTasks(assigneeId ? { assigneeId } : {});
@@ -214,7 +183,7 @@ export default class TaskApiService {
       title: input.title,
       status: TaskApiService.toProtoStatus(input.status),
       priority: TaskApiService.toProtoPriority(input.priority),
-      category: TaskApiService.toProtoCategory(input.category),
+      tags: input.tags,
       ...(input.description ? { description: input.description } : {}),
       ...(input.location ? { location: input.location } : {}),
       ...(input.assignee ? { assigneeId: input.assignee } : {}),
@@ -233,7 +202,7 @@ export default class TaskApiService {
       ...('title' in patch ? { title: patch.title } : {}),
       ...('status' in patch ? { status: TaskApiService.toProtoStatus(patch.status!) } : {}),
       ...('priority' in patch ? { priority: TaskApiService.toProtoPriority(patch.priority!) } : {}),
-      ...('category' in patch ? { category: TaskApiService.toProtoCategory(patch.category!) } : {}),
+      ...('tags' in patch ? { tags: patch.tags! } : {}),
       // The empty value of a present field clears the column: the backend maps
       // an empty string / the epoch onto a NULL write.
       ...('description' in patch ? { description: patch.description ?? '' } : {}),

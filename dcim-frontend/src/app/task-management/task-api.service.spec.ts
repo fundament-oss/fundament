@@ -5,16 +5,16 @@ import {
   TaskSchema,
   TaskStatus as ProtoStatus,
   TaskPriority as ProtoPriority,
-  TaskCategory as ProtoCategory,
 } from '../../generated/v1/task_pb';
 
 const baseTask: TaskData = {
   id: '019dce10-0000-7000-8000-000000000001',
   title: 'Replace broken harddisk',
   description: 'Failed disk in Bay 3',
-  status: 'In Progress',
-  priority: 'Critical',
-  category: 'Hardware',
+  status: 'Doing',
+  priority: 'Urgent',
+  tags: ['hardware'],
+  blockedReason: null,
   location: 'Rack 123',
   assignee: '019dce30-0000-7000-8000-000000000001',
   due: '2026-03-20',
@@ -26,7 +26,7 @@ const inputFrom = (task: TaskData): TaskInput => ({
   description: task.description,
   status: task.status,
   priority: task.priority,
-  category: task.category,
+  tags: task.tags,
   location: task.location,
   assignee: task.assignee,
   due: task.due,
@@ -79,9 +79,9 @@ describe('TaskApiService.mapTask', () => {
         id: baseTask.id,
         title: 'Inspect PDU',
         description: 'Quarterly inspection',
-        status: ProtoStatus.READY,
+        status: ProtoStatus.TODO,
         priority: ProtoPriority.MEDIUM,
-        category: ProtoCategory.POWER,
+        tags: ['power', 'hardware'],
         location: 'Hall A',
         assigneeId: baseTask.assignee!,
         dueDate: timestampFromDate(new Date('2026-03-25T00:00:00Z')),
@@ -93,9 +93,10 @@ describe('TaskApiService.mapTask', () => {
       id: baseTask.id,
       title: 'Inspect PDU',
       description: 'Quarterly inspection',
-      status: 'Ready',
+      status: 'To do',
       priority: 'Medium',
-      category: 'Power',
+      tags: ['power', 'hardware'],
+      blockedReason: null,
       location: 'Hall A',
       assignee: baseTask.assignee,
       due: '2026-03-25',
@@ -127,17 +128,18 @@ describe('TaskApiService.mapTask', () => {
 
 describe('TaskApiService enum mapping', () => {
   it('maps every status the API can send', () => {
-    expect(TaskApiService.fromProtoStatus(ProtoStatus.READY)).toBe('Ready');
-    expect(TaskApiService.fromProtoStatus(ProtoStatus.IN_PROGRESS)).toBe('In Progress');
-    expect(TaskApiService.fromProtoStatus(ProtoStatus.REVIEW)).toBe('Review');
-    expect(TaskApiService.fromProtoStatus(ProtoStatus.BLOCKED)).toBe('Blocked');
+    expect(TaskApiService.fromProtoStatus(ProtoStatus.TODO)).toBe('To do');
+    expect(TaskApiService.fromProtoStatus(ProtoStatus.DOING)).toBe('Doing');
     expect(TaskApiService.fromProtoStatus(ProtoStatus.DONE)).toBe('Done');
   });
 
   it('falls back on UNSPECIFIED rather than rendering a blank column', () => {
-    expect(TaskApiService.fromProtoStatus(ProtoStatus.UNSPECIFIED)).toBe('Ready');
-    expect(TaskApiService.fromProtoPriority(ProtoPriority.UNSPECIFIED)).toBe('Medium');
-    expect(TaskApiService.fromProtoCategory(ProtoCategory.UNSPECIFIED)).toBe('Other');
+    expect(TaskApiService.fromProtoStatus(ProtoStatus.UNSPECIFIED)).toBe('To do');
+  });
+
+  it('reads an unset priority as None, because nobody has prioritized it yet', () => {
+    expect(TaskApiService.fromProtoPriority(ProtoPriority.UNSPECIFIED)).toBe('None');
+    expect(TaskApiService.fromProtoPriority(ProtoPriority.URGENT)).toBe('Urgent');
   });
 
   it('falls back and warns on a value this build has no label for', () => {
@@ -145,7 +147,7 @@ describe('TaskApiService enum mapping', () => {
     // the mismatch is logged rather than passed off as a legitimate value.
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    expect(TaskApiService.fromProtoStatus(99 as ProtoStatus)).toBe('Ready');
+    expect(TaskApiService.fromProtoStatus(99 as ProtoStatus)).toBe('To do');
     expect(warn).toHaveBeenCalledOnce();
 
     warn.mockRestore();

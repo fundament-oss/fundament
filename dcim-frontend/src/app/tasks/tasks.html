@@ -1,84 +1,3 @@
-<!-- ══════════════════════════════════════════════════════════════
-     PAGE HEADER (subbar)
-     ══════════════════════════════════════════════════════════════ -->
-<div
-  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
->
-  <div class="flex-1 min-w-0">
-    <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0">Tasks</h1>
-  </div>
-  <div class="flex items-center gap-4 shrink-0">
-    <!-- View toggle -->
-    <nldd-segmented-control
-      value="list"
-      size="sm"
-      type="radio"
-      variant="icon"
-      (change)="setView($any($event).detail.value)"
-    >
-      <nldd-segmented-control-item
-        value="list"
-        icon="list"
-        text="List view"
-      ></nldd-segmented-control-item>
-      <nldd-segmented-control-item
-        value="kanban"
-        icon="rectangle-stack"
-        text="Kanban view"
-      ></nldd-segmented-control-item>
-    </nldd-segmented-control>
-    <nldd-button
-      variant="primary"
-      text="New task"
-      start-icon="plus-small"
-      size="sm"
-      (click)="openEditModal(null)"
-    ></nldd-button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════
-     TOOLBAR
-     ══════════════════════════════════════════════════════════════ -->
-<div
-  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-2.5"
-  [class.hidden]="selectedTasks().size === 0"
->
-  <div class="flex items-center justify-between gap-2.5">
-    <span class="text-xs font-medium text-slate-600 dark:text-gray-300"
-      >{{ selectedTasks().size }} selected</span
-    >
-    <!-- Bulk actions -->
-    <div class="flex items-center gap-2.5">
-      <nldd-button
-        id="bulkStatusTrigger"
-        variant="neutral-transparent"
-        text="Status"
-        start-icon="pencil"
-        size="sm"
-        expandable
-        popup-type="menu"
-      ></nldd-button>
-      <nldd-button
-        id="bulkAssignTrigger"
-        variant="neutral-transparent"
-        text="Assign"
-        start-icon="person"
-        size="sm"
-        expandable
-        popup-type="menu"
-      ></nldd-button>
-      <nldd-button
-        variant="destructive"
-        start-icon="trash"
-        size="sm"
-        accessible-label="Delete selected"
-        (click)="openBulkDeleteDialog()"
-      ></nldd-button>
-    </div>
-  </div>
-</div>
-
 <nldd-popover
   id="bulkStatusPopover"
   #bulkStatusPopoverEl
@@ -135,352 +54,316 @@
 </nldd-popover>
 
 <!-- ══════════════════════════════════════════════════════════════
-     BODY (sidebar + main)
+     PAGE
      ══════════════════════════════════════════════════════════════ -->
-<div class="flex flex-1 min-h-0">
-  <!-- ── LEFT SIDEBAR: Filters ──────────────────────────────────── -->
-  <aside
-    class="w-60 shrink-0 border-r border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-y-auto"
-    aria-label="Task filters"
-  >
-    <div class="px-4 py-3 flex flex-col gap-5">
-      <!-- Search -->
-      <nldd-search-field
-        placeholder="Search tasks…"
-        accessible-label="Search tasks"
-        size="sm"
-        class="w-full"
-        [value]="searchQuery()"
-        (input)="searchQuery.set($any($event.target).value)"
-      ></nldd-search-field>
-
-      <!-- Status -->
-      <div>
-        <p
-          class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
+<nldd-page
+  sticky-header
+  [attr.sticky-footer]="selectionMode() ? '' : null"
+>
+  <!-- The bar carries the way back to the task menu once the panes collapse to
+       one column, which the old header could not do. Back also takes the address
+       back to the section, so the URL and the pane on screen agree. -->
+  <nldd-top-title-bar
+    slot="header"
+    text="Tasks"
+    back-text="Tasks"
+    collapse-anchor="tasks-title"
+    (back)="goToMenu()"
+  ></nldd-top-title-bar>
+  <!-- What you do with a selection, docked. Up in the list toolbar it went off
+       screen the moment you scrolled, so picking a row at the bottom of a long
+       list meant scrolling back up to act on it.
+       It arrives with the mode rather than with the first tick, with its buttons
+       disabled: that way the bar does not jump in and out of the layout, and it
+       says up front what the mode is for. -->
+  @if (selectionMode()) {
+    <nldd-simple-section
+      slot="footer"
+      padding-block="12"
+    >
+      <nldd-toolbar label="Bulk actions">
+        <nldd-toolbar-title
+          slot="start"
+          [attr.text]="selectionSummary()"
+        ></nldd-toolbar-title>
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            id="bulkStatusTrigger"
+            variant="secondary"
+            text="Status"
+            start-icon="pencil"
+            expandable
+            popup-type="menu"
+            [attr.disabled]="selectedTasks().size === 0 ? '' : null"
+          ></nldd-button>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            id="bulkAssignTrigger"
+            variant="secondary"
+            text="Assign"
+            start-icon="person"
+            expandable
+            popup-type="menu"
+            [attr.disabled]="selectedTasks().size === 0 ? '' : null"
+          ></nldd-button>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            variant="destructive"
+            start-icon="trash"
+            accessible-label="Delete selected"
+            [attr.disabled]="selectedTasks().size === 0 ? '' : null"
+            (click)="openBulkDeleteDialog()"
+          ></nldd-button>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+    </nldd-simple-section>
+  }
+  <nldd-simple-section>
+    <nldd-title id="tasks-title" size="2">
+      <h1>Tasks</h1>
+    </nldd-title>
+    <nldd-spacer size="12"></nldd-spacer>
+    <!-- The page actions in a toolbar rather than beside the title: a toolbar
+         takes a second and a third action without the title growing a row of
+         controls, and it moves what does not fit into its overflow menu. -->
+    <nldd-toolbar label="Task actions">
+      <nldd-toolbar-item slot="start">
+        <nldd-button
+          variant="primary"
+          text="New task"
+          start-icon="plus-small"
+          (click)="openEditModal(null)"
+        ></nldd-button>
+        <nldd-menu-item
+          slot="overflow"
+          icon="plus-small"
+          text="New task"
+          (select)="openEditModal(null)"
+        ></nldd-menu-item>
+      </nldd-toolbar-item>
+      <!-- Picking tasks is a mode, not a column of checkboxes standing by. -->
+      <nldd-toolbar-item slot="end">
+        <nldd-toggle-button
+          text="Select"
+          [attr.selected]="selectionMode() ? '' : null"
+          (change)="setSelectionMode($any($event).detail.selected)"
+        ></nldd-toggle-button>
+        <nldd-menu-item
+          slot="overflow"
+          type="checkbox"
+          text="Select"
+          [attr.selected]="selectionMode() ? '' : null"
+          (select)="setSelectionMode(!selectionMode())"
+        ></nldd-menu-item>
+      </nldd-toolbar-item>
+      <nldd-toolbar-item slot="end">
+        <nldd-segmented-control
+          value="list"
+          type="radio"
+          variant="icon"
+          (change)="setView($any($event).detail.value)"
         >
-          Status
-        </p>
-        <button
-          (click)="statusFilter.set('all')"
-          class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-          [class]="
-            statusFilter() === 'all'
-              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-          "
-        >
-          <span class="flex-1 text-left">All</span>
-          <span class="text-xs text-slate-400 dark:text-gray-500">{{ tasks().length }}</span>
-        </button>
-        @for (status of kanbanColumns; track status) {
-          <button
-            (click)="statusFilter.set(status)"
-            class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-            [class]="
-              statusFilter() === status
-                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-                : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-            "
-          >
-            <span
-              class="h-2 w-2 rounded-full shrink-0"
-              [class]="statusStyles[status].dot"
-              aria-hidden="true"
-            ></span>
-            <span class="flex-1 text-left">{{ status }}</span>
-            @if (statusCounts()[status]) {
-              <span class="text-xs text-slate-400 dark:text-gray-500">{{
-                statusCounts()[status]
-              }}</span>
-            }
-          </button>
-        }
-      </div>
-
-      <!-- Priority -->
-      <div>
-        <p
-          class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-        >
-          Priority
-        </p>
-        <button
-          (click)="priorityFilter.set('all')"
-          class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-          [class]="
-            priorityFilter() === 'all'
-              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-          "
-        >
-          <span class="flex-1 text-left">All</span>
-        </button>
-        @for (priority of priorities; track priority) {
-          <button
-            (click)="priorityFilter.set(priority)"
-            class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-            [class]="
-              priorityFilter() === priority
-                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-                : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-            "
-          >
-            <span
-              class="h-2 w-2 rounded-full shrink-0"
-              [class]="priorityStyles[priority].dot"
-              aria-hidden="true"
-            ></span>
-            <span class="flex-1 text-left">{{ priority }}</span>
-            @if (priorityCounts()[priority]) {
-              <span class="text-xs text-slate-400 dark:text-gray-500">{{
-                priorityCounts()[priority]
-              }}</span>
-            }
-          </button>
-        }
-      </div>
-
-      <!-- Category -->
-      <div>
-        <p
-          class="px-2 py-1.5 text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-        >
-          Category
-        </p>
-        <button
-          (click)="categoryFilter.set('all')"
-          class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-          [class]="
-            categoryFilter() === 'all'
-              ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-              : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-          "
-        >
-          <span class="flex-1 text-left">All</span>
-        </button>
-        @for (cat of taskCategories; track cat) {
-          <button
-            (click)="categoryFilter.set(cat)"
-            class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500"
-            [class]="
-              categoryFilter() === cat
-                ? 'bg-accent-50 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-medium'
-                : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900'
-            "
-          >
-            <nldd-icon
-              [name]="categoryIcon(cat)"
-              class="w-4 h-4 shrink-0 text-slate-400 dark:text-gray-500"
-              aria-hidden="true"
-            ></nldd-icon>
-            <span class="flex-1 text-left">{{ cat }}</span>
-            @if (categoryCounts()[cat]) {
-              <span class="text-xs text-slate-400 dark:text-gray-500">{{
-                categoryCounts()[cat]
-              }}</span>
-            }
-          </button>
-        }
-      </div>
-    </div>
-  </aside>
-
-  <!-- ── MAIN ───────────────────────────────────────────────────── -->
-  <main class="flex-1 min-w-0 overflow-y-auto px-6 pb-6">
+          <nldd-segmented-control-item
+            value="list"
+            icon="list"
+            text="List view"
+          ></nldd-segmented-control-item>
+          <nldd-segmented-control-item
+            value="kanban"
+            icon="rectangle-stack"
+            text="Kanban view"
+          ></nldd-segmented-control-item>
+        </nldd-segmented-control>
+      </nldd-toolbar-item>
+    </nldd-toolbar>
+    <nldd-spacer size="16"></nldd-spacer>
     @if (loadError()) {
-      <div
-        class="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950"
-        role="alert"
+      <nldd-inline-dialog
+        variant="alert"
+        text="Could not load tasks"
+        [attr.supporting-text]="loadError()"
       >
-        <p class="text-sm font-semibold text-red-800 dark:text-red-200">Could not load tasks</p>
-        <p class="mt-1 text-sm text-red-700 dark:text-red-300">{{ loadError() }}</p>
-        <button
-          type="button"
-          class="mt-2 text-sm font-medium text-red-800 underline dark:text-red-200"
+        <nldd-button
+          slot="actions"
+          variant="primary"
+          text="Try again"
           (click)="retryLoad()"
-        >
-          Try again
-        </button>
-      </div>
+        ></nldd-button>
+      </nldd-inline-dialog>
+      <nldd-spacer size="16"></nldd-spacer>
     }
 
     <!-- ── LIST VIEW ── -->
-    <div class="pt-2" [class.hidden]="currentView() === 'kanban'">
-      <div role="table" aria-label="Tasks">
-        <!-- Column headers -->
-        <div
-          role="row"
-          class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5"
-        >
-          <div role="columnheader" class="w-9 shrink-0 flex items-center justify-center">
-            <nldd-checkbox
-              accessible-label="Select all tasks"
-              [attr.checked]="allFilteredSelected() ? '' : null"
-              (change)="toggleSelectAll($any($event).detail.checked)"
-            ></nldd-checkbox>
-          </div>
-          <div
-            role="presentation"
-            class="flex-1 min-w-0 grid grid-cols-[1fr_130px_100px_52px] lg:grid-cols-[80px_1fr_130px_100px_120px_52px_110px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-          >
-            <span role="columnheader" class="hidden lg:block">ID</span>
-            <span role="columnheader">Task</span>
-            <span role="columnheader">Status</span>
-            <span role="columnheader">Priority</span>
-            <span role="columnheader" class="hidden lg:block">Category</span>
-            <span role="columnheader" class="text-center">Who</span>
-            <span role="columnheader" class="hidden lg:block">Due</span>
-          </div>
-        </div>
-
-        <!-- Task rows -->
+    <div [class.hidden]="currentView() === 'kanban'">
+      <!-- A list, not a table: every row says what its parts are (a status tag,
+           a priority, an avatar), so the column headers the old markup carried
+           had nothing left to explain. Which columns are on screen follows the
+           width of this list through hide-below, so the widest ones drop out in
+           a narrow pane instead of squeezing the title to nothing. -->
+      <nldd-list
+        accessible-label="Tasks"
+        empty-text="No tasks found"
+        empty-supporting-text="Try adjusting your search or filter criteria."
+      >
+        <!-- Above the rows, select-all and how many rows there are. What you do
+             with a selection sits in the footer, where it stays in reach after
+             you have scrolled. -->
+        <nldd-toolbar slot="toolbar" size="sm" label="Task selection">
+          <nldd-toolbar-item slot="start">
+            @if (selectionMode()) {
+              <nldd-checkbox-field
+                [attr.label]="listSummary()"
+                [attr.checked]="allFilteredSelected() ? '' : null"
+                [attr.indeterminate]="someFilteredSelected() ? '' : null"
+                (change)="toggleSelectAll($any($event).detail.checked)"
+              ></nldd-checkbox-field>
+            } @else {
+              <nldd-toolbar-title [attr.text]="listSummary()"></nldd-toolbar-title>
+            }
+          </nldd-toolbar-item>
+        </nldd-toolbar>
+        <!-- Outside selection mode the row is cut into two: the icon sets the
+             state, the rest opens the task. Inside it the row itself is the
+             checkbox and the icon goes back to being a picture, because a
+             control inside a control is invalid and a mode that changes what a
+             click does should say so.
+             Either way the state icon is on the left. It is what you pick rows
+             by: everything that waits, everything that is done. -->
         @for (task of filteredTasks(); track task.id) {
-          <div
-            role="row"
-            tabindex="0"
-            class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5 transition-colors group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-500"
-            [class]="
-              isSelected(task.id)
-                ? 'bg-accent-50 dark:bg-accent-950'
-                : 'hover:bg-slate-50 dark:hover:bg-gray-900'
-            "
-            (click)="openDetail(task.id)"
-            (keydown.enter)="openDetail(task.id)"
-          >
-            <!-- Selection -->
-            <div
-              role="cell"
-              class="w-9 shrink-0 flex items-center justify-center"
-              (click)="$event.stopPropagation()"
-              (keydown)="$event.stopPropagation()"
+          @if (selectionMode()) {
+            <nldd-list-item
+              checkbox
+              [attr.checked]="isSelected(task.id) ? '' : null"
+              (change)="toggleSelection(task.id, $any($event).detail.checked)"
             >
-              <nldd-checkbox
-                [attr.accessible-label]="'Select task ' + taskDisplayId(task)"
-                [attr.checked]="isSelected(task.id) ? '' : null"
-                (change)="toggleSelection(task.id, $any($event).detail.checked)"
-              ></nldd-checkbox>
-            </div>
-
-            <div
-              role="presentation"
-              class="flex-1 min-w-0 grid grid-cols-[1fr_130px_100px_52px] lg:grid-cols-[80px_1fr_130px_100px_120px_52px_110px] gap-3 lg:gap-4 items-center"
-            >
-              <!-- ID -->
-              <div
-                role="cell"
-                class="hidden lg:block font-mono text-xs text-slate-400 dark:text-gray-500"
+              <!-- The row carries the role and the state, so the box beside the
+                   text is a picture of it and nothing more. -->
+              <nldd-cell width="fit-content">
+                <nldd-checkbox
+                  decorative
+                  [attr.checked]="isSelected(task.id) ? '' : null"
+                ></nldd-checkbox>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- No state icon here. Outside this mode it opens a menu, and an
+                   icon that looks like a control but has stopped being one
+                   teaches people not to trust it. Picking rows by state is what
+                   the views in the menu are for: go to Done, then select all. -->
+              <ng-container
+                [ngTemplateOutlet]="taskCells"
+                [ngTemplateOutletContext]="{ $implicit: task }"
+              ></ng-container>
+            </nldd-list-item>
+          } @else {
+            <nldd-list-item>
+              <!-- One click moves the task on: not started, under way, finished,
+                   and round again. A menu would show where you are going, which
+                   a cycle cannot, so the label and the tooltip say it instead.
+                   Blocked is not in the round: it needs a reason, which is a text
+                   field and so a trip to the sheet. -->
+              <nldd-list-item-action
+                button
+                [attr.accessible-label]="task.status + '. Mark as ' + nextStatus(task.status)"
+                (click)="setStatus(task, nextStatus(task.status))"
               >
-                {{ taskDisplayId(task) }}
-              </div>
-
-              <!-- Title + location -->
-              <div role="cell" class="min-w-0">
-                <p class="truncate text-sm font-medium text-slate-900 dark:text-white leading-snug">
-                  {{ task.title }}
-                </p>
-                <p
-                  class="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400 dark:text-gray-500"
-                >
-                  <nldd-icon
-                    name="apartment-building"
-                    class="w-3 h-3 shrink-0"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  <span class="truncate">{{ task.location }}</span>
-                </p>
-              </div>
-
-              <!-- Status -->
-              <div role="cell">
-                <nldd-tag
-                  size="sm"
-                  [attr.color]="statusTagColor(task.status)"
-                  [attr.text]="task.status"
-                ></nldd-tag>
-              </div>
-
-              <!-- Priority -->
-              <div role="cell">
-                <span [class]="priorityTextClass(task.priority)">
-                  <span [class]="priorityDotClass(task.priority)" aria-hidden="true"></span
-                  >{{ task.priority }}
-                </span>
-              </div>
-
-              <!-- Category -->
-              <div role="cell" class="hidden lg:block">
-                <span
-                  class="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-gray-400"
-                >
-                  <nldd-icon
-                    [attr.name]="categoryIcon(task.category)"
-                    class="w-3.5 h-3.5 shrink-0 text-slate-400 dark:text-gray-500"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  {{ task.category }}
-                </span>
-              </div>
-
-              <!-- Assignee -->
-              <div role="cell" class="flex justify-center">
-                @if (getTech(task.assignee); as tech) {
-                  <span [class]="techInitialsClass(tech)" [title]="tech.name" aria-hidden="true">{{
-                    tech.initials
-                  }}</span>
-                } @else if (assigneeUnresolved(task)) {
-                  <span
-                    [class]="unassignedAvatarClass()"
-                    title="Assigned, but the directory could not be loaded"
-                    aria-hidden="true"
-                    >?</span
-                  >
-                } @else if (assigneeMissing(task)) {
-                  <span
-                    [class]="unknownAvatarClass()"
-                    title="Assigned to someone who is no longer in the directory"
-                    aria-hidden="true"
-                    >?</span
-                  >
-                } @else {
-                  <span [class]="unassignedAvatarClass()" aria-hidden="true">
-                    <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
-                  </span>
-                }
-              </div>
-
-              <!-- Due -->
-              <div role="cell" class="hidden lg:block text-xs text-slate-500 dark:text-gray-400">
-                @if (task.due) {
-                  {{ formatDate(task.due) }}
-                } @else {
-                  <span class="text-slate-300 dark:text-gray-600">—</span>
-                }
-              </div>
-            </div>
-          </div>
+                <nldd-tooltip [attr.text]="'Mark as ' + nextStatus(task.status)">
+                  <!-- Top-aligned: a row runs to two or three lines and the state
+                       belongs beside the title, not beside whatever happens to be
+                       halfway down. -->
+                  <nldd-icon-cell
+                    size="32"
+                    vertical-alignment="top"
+                    [attr.icon]="taskStateIcon(task)"
+                  ></nldd-icon-cell>
+                </nldd-tooltip>
+              </nldd-list-item-action>
+              <!-- No spacer between the two: a segmented action carries its own
+                   inline padding, so one here would set the gap twice. -->
+              <nldd-list-item-action
+                button
+                width="full"
+                [attr.accessible-label]="'Open ' + task.title"
+                (click)="openDetail(task.id)"
+              >
+                <ng-container
+                  [ngTemplateOutlet]="taskCells"
+                  [ngTemplateOutletContext]="{ $implicit: task }"
+                ></ng-container>
+              </nldd-list-item-action>
+            </nldd-list-item>
+          }
         }
-
-        <!-- Empty state -->
-        @if (filteredTasks().length === 0) {
-          <div class="flex flex-col items-center justify-center py-16 text-center">
-            <div
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-3"
-            >
-              <nldd-icon name="list" class="w-6 h-6" aria-hidden="true"></nldd-icon>
-            </div>
-            <p class="text-sm font-medium text-slate-600 dark:text-gray-300">No tasks found</p>
-            <p class="mt-1 text-xs text-slate-400 dark:text-gray-500">
-              Try adjusting your search or filter criteria.
-            </p>
-          </div>
-        }
-      </div>
-
-      <div class="py-3 text-xs text-slate-400 dark:text-gray-500">
-        {{ filteredTasks().length }} task{{ filteredTasks().length !== 1 ? 's' : '' }}
-      </div>
+      </nldd-list>
     </div>
+
+    <!-- The cells of a task row, shared by both shapes of row above. -->
+    <ng-template
+      #taskCells
+      let-task
+    >
+      <!-- Under the title first whose turn it is and how far the work has got,
+           then the tags with the place among them: where the work is, is as much
+           a property of it as what kind of work it is. Both belong to the task,
+           so both read after it.
+           Tags in inline flow rather than a flex container, so a second line does
+           not open a gap between the lines, and &ngsp; is Angular's own
+           keep-this-space entity. -->
+      <nldd-text-cell
+        width="full"
+        min-width="160px"
+        [attr.text]="task.title"
+      >
+        @if (rowStateLine(task) || tagCloud(task).length) {
+          <span slot="supporting-text">
+            <!-- One step up from what the cell gives its supporting region, which
+                 is drawn for a caption and reads small under a title of this
+                 size. The color is set to match the region it sits in, so this
+                 changes the size and nothing else. -->
+            @if (rowStateLine(task); as state) {
+              <nldd-text
+                size="sm"
+                color="secondary"
+                >{{ state }}</nldd-text
+              >
+            }
+            @if (tagCloud(task).length) {
+              <div>
+                @for (tag of tagCloud(task); track tag) {
+                  <nldd-tag size="sm" color="neutral" [attr.text]="tag"></nldd-tag>&ngsp;
+                }
+              </div>
+            }
+          </span>
+        }
+      </nldd-text-cell>
+      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+      <nldd-text-cell
+        width="110px"
+        horizontal-alignment="right"
+        hide-below="480px"
+        [attr.text]="task.due ? formatDate(task.due) : ''"
+      ></nldd-text-cell>
+      <!-- Priority last, on the edge, and only when there is one: the cell is
+           left out rather than left empty, so a task without a priority ends on
+           its date instead of on a gap. It survives every width, unlike the
+           date: 24 pixels is cheap and this is the mark you least want to lose.
+           The tooltip is for the eye. It never fires on touch and an icon takes
+           no focus, so the word is given to assistive software separately. -->
+      @if (task.priority !== 'None') {
+        <nldd-spacer-cell size="8"></nldd-spacer-cell>
+        <nldd-icon-cell size="24">
+          <nldd-tooltip [attr.text]="'Priority: ' + task.priority">
+            <nldd-icon
+              aria-hidden="false"
+              [attr.name]="priorityIcon(task.priority)"
+              [attr.aria-label]="'Priority: ' + task.priority"
+            ></nldd-icon>
+          </nldd-tooltip>
+        </nldd-icon-cell>
+      }
+    </ng-template>
 
     <!-- ── KANBAN VIEW ── -->
     <div class="pt-5 h-full" [class.hidden]="currentView() === 'list'">
@@ -535,21 +418,16 @@
                     {{ task.title }}
                   </h4>
                   <div class="mt-2 flex items-center gap-1.5">
-                    <nldd-tag
-                      size="sm"
-                      [attr.color]="priorityTagColor(task.priority)"
-                      [attr.text]="task.priority"
-                    ></nldd-tag>
-                    <span
-                      class="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500"
-                    >
-                      <nldd-icon
-                        [attr.name]="categoryIcon(task.category)"
-                        style="width: 13px; height: 13px"
-                        aria-hidden="true"
-                      ></nldd-icon
-                      >{{ task.category }}
-                    </span>
+                    @if (task.priority !== 'None') {
+                      <nldd-tag
+                        size="sm"
+                        [attr.color]="priorityTagColor(task.priority)"
+                        [attr.text]="task.priority"
+                      ></nldd-tag>
+                    }
+                    @for (tag of task.tags; track tag) {
+                      <nldd-tag size="sm" color="neutral" [attr.text]="tag"></nldd-tag>
+                    }
                   </div>
                   <div class="mt-3 flex items-center justify-between">
                     <span
@@ -616,8 +494,8 @@
         }
       </div>
     </div>
-  </main>
-</div>
+  </nldd-simple-section>
+</nldd-page>
 
 <!-- ══════════════════════════════════════════════════════════════
      TASK DETAIL SHEET
@@ -633,180 +511,220 @@
 
     <!-- Sheet body -->
     <nldd-simple-section>
-      <div class="space-y-5">
-        @if (detailTask(); as task) {
-          <!-- Properties -->
-          <div class="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
-            <div>
-              <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-1.5">Assignee</p>
-              <div class="flex items-center gap-2 text-slate-700 dark:text-gray-300 font-medium">
-                @if (getTech(task.assignee); as tech) {
-                  <span [class]="techInitialsClass(tech)" aria-hidden="true">{{
-                    tech.initials
-                  }}</span>
-                  <span>{{ tech.name }}</span>
-                } @else if (assigneeUnresolved(task)) {
-                  <span [class]="unassignedAvatarClass()" aria-hidden="true">?</span>
-                  <span class="text-slate-400 dark:text-gray-500 font-normal"
-                    >Assigned — directory unavailable</span
-                  >
-                } @else if (assigneeMissing(task)) {
-                  <span [class]="unknownAvatarClass()" aria-hidden="true">?</span>
-                  <span class="text-amber-700 dark:text-amber-300 font-normal"
-                    >No longer in the directory</span
-                  >
-                } @else {
-                  <span [class]="unassignedAvatarClass()" aria-hidden="true">
-                    <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
-                  </span>
-                  <span class="text-slate-400 dark:text-gray-500 font-normal">Unassigned</span>
-                }
-              </div>
-            </div>
-            <div>
-              <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-1.5">Due date</p>
-              <p class="text-slate-700 dark:text-gray-300">{{ formatDate(task.due) }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-1.5">Location</p>
-              <p class="text-slate-700 dark:text-gray-300">{{ task.location }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-1.5">Created</p>
-              <p class="text-slate-700 dark:text-gray-300">{{ formatDate(task.created) }}</p>
-            </div>
-          </div>
-
-          <!-- Description -->
-          <div class="rounded-xl bg-slate-50 dark:bg-gray-900 px-4 py-3.5">
-            <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-2">Description</p>
-            <p class="text-sm leading-relaxed text-slate-600 dark:text-gray-300">
-              {{ task.description }}
-            </p>
-          </div>
-
-          <!-- Actions -->
-          <div class="flex items-center gap-2">
+      @if (detailTask(); as task) {
+        <!-- What you can do with this task, directly under its title: the same
+             order as the page itself, where the actions sit under the heading
+             and the content follows. -->
+        <nldd-toolbar label="Task actions">
+          <nldd-toolbar-item slot="start">
             <nldd-button
               variant="secondary"
               text="Edit"
               start-icon="pencil"
-              size="sm"
               (click)="openEditFromDetail()"
             ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="pencil"
+              text="Edit"
+              (select)="openEditFromDetail()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+          <nldd-toolbar-item slot="start">
             <nldd-button
               variant="secondary"
               text="Technician view"
               start-icon="eye"
-              size="sm"
               href="/task-management-technician"
               target="_blank"
             ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="eye"
+              text="Technician view"
+              href="/task-management-technician"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+          <nldd-toolbar-item slot="end">
             <nldd-button
               variant="destructive"
               text="Delete task"
               start-icon="trash"
-              size="sm"
               (click)="openDeleteDialog()"
             ></nldd-button>
-          </div>
-
-          <!-- Notes -->
-          <div>
-            <p class="text-xs font-medium text-slate-400 dark:text-gray-500 mb-3">
-              Notes
-              <span class="text-slate-300 dark:text-gray-600 ml-0.5"
-                >({{ task.notes.length }})</span
-              >
-            </p>
-            <div class="space-y-3">
-              @if (notesError()) {
-                <div
-                  class="rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950"
-                  role="alert"
-                >
-                  <p class="text-sm font-semibold text-red-800 dark:text-red-200">
-                    Could not load notes
-                  </p>
-                  <p class="mt-1 text-sm text-red-700 dark:text-red-300">{{ notesError() }}</p>
-                  <button
-                    type="button"
-                    class="mt-2 text-sm font-medium text-red-800 underline dark:text-red-200"
-                    (click)="retryLoadNotes()"
-                  >
-                    Try again
-                  </button>
-                </div>
-              } @else if (task.notes.length === 0) {
-                <p class="text-sm text-slate-400 dark:text-gray-500 text-center py-4">
-                  No notes yet
-                </p>
-              }
-              @for (note of task.notes; track $index) {
-                @let author = noteAuthor(note);
-                <div class="flex gap-3">
-                  <div class="shrink-0 pt-0.5">
-                    @if (author.tech; as tech) {
-                      <span [class]="techInitialsClass(tech)" aria-hidden="true">{{
-                        tech.initials
-                      }}</span>
-                    } @else {
-                      <!-- No roster entry to take a colour from: either the note
-                           predates the directory or its author has left it. -->
-                      <span [class]="unassignedAvatarClass()" aria-hidden="true">?</span>
-                    }
-                  </div>
-                  <div class="flex-1 rounded-xl bg-slate-50 dark:bg-gray-900 px-3.5 py-3">
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                      <span class="text-xs font-semibold text-slate-700 dark:text-gray-300">{{
-                        author.name
-                      }}</span>
-                      <span class="text-xs text-slate-400 dark:text-gray-500 shrink-0">{{
-                        note.time
-                      }}</span>
-                    </div>
-                    <p class="text-sm text-slate-600 dark:text-gray-300 leading-relaxed">
-                      {{ note.text }}
-                    </p>
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        <!-- Add note -->
-        <div class="mt-4 flex gap-2.5">
-          <!-- The signed-in user, since that is who the backend attributes the
-               note to. A caller outside the directory gets the neutral avatar,
-               matching the unattributed note their write will produce. -->
-          @if (currentUser(); as me) {
-            <span [class]="techInitialsClass(me, 'h-8 w-8 text-xs')" [title]="me.name">{{
-              me.initials
-            }}</span>
-          } @else {
-            <span [class]="unassignedAvatarClass('h-8 w-8 text-xs')" aria-hidden="true">?</span>
+            <nldd-menu-item
+              slot="overflow"
+              icon="trash"
+              text="Delete task"
+              destructive
+              (select)="openDeleteDialog()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
+        </nldd-toolbar>
+        <nldd-spacer size="16"></nldd-spacer>
+        <!-- Properties. A list rather than a grid of labels: every row is the
+               same pair, a name and a value, and the id belongs here too. It
+               used to be a column in the task list, where it took the width of
+               a title to say something you only need once you are looking at
+               one task. -->
+        <nldd-list accessible-label="Task properties">
+          <nldd-list-item>
+            <nldd-text-cell text="ID"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="taskDisplayId(task)"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Assignee"></nldd-text-cell>
+            @if (getTech(task.assignee); as tech) {
+              <nldd-cell width="fit-content">
+                <nldd-avatar decorative size="24" [attr.name]="tech.name"></nldd-avatar>
+              </nldd-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                [attr.text]="tech.name"
+              ></nldd-text-cell>
+            } @else if (assigneeUnresolved(task)) {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                text="Assigned, directory unavailable"
+              ></nldd-text-cell>
+            } @else if (assigneeMissing(task)) {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="warning"
+                text="No longer in the directory"
+              ></nldd-text-cell>
+            } @else {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                text="Unassigned"
+              ></nldd-text-cell>
+            }
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Due date"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.color]="task.due ? null : 'secondary'"
+              [attr.text]="task.due ? formatDate(task.due) : 'None'"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Location"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="task.location"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="Created"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="formatDate(task.created)"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        </nldd-list>
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="5">
+          <h2>Description</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-text line-height="loose">{{ task.description }}</nldd-text>
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-title size="5">
+          <h2>Notes</h2>
+          <!-- A badge, not a tag: the number is the system's own count and
+               changes without anyone editing anything. Neutral, because a count
+               of notes is not a warning, and only once there is something to
+               count: saying "0" is the empty state's job. -->
+          @if (task.notes.length) {
+            <nldd-badge
+              slot="end"
+              color="neutral"
+              [attr.text]="task.notes.length"
+            ></nldd-badge>
           }
-          <div class="flex-1 relative">
-            <nldd-text-field
-              placeholder="Add a note…"
-              accessible-label="Add a note"
-              size="sm"
-              class="w-full"
-              [value]="newNoteText()"
-              (input)="newNoteText.set($any($event.target).value ?? '')"
-              (keydown.enter)="addNote()"
-            ></nldd-text-field>
-            <button
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
-              aria-label="Send note"
-              (click)="addNote()"
-            >
-              <nldd-icon name="arrow-right" class="w-4 h-4 block"></nldd-icon>
-            </button>
-          </div>
-        </div>
-      </div>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        @if (notesError()) {
+          <nldd-inline-dialog
+            variant="alert"
+            text="Could not load notes"
+            [attr.supporting-text]="notesError()"
+          >
+            <nldd-button
+              slot="actions"
+              variant="primary"
+              text="Try again"
+              (click)="retryLoadNotes()"
+            ></nldd-button>
+          </nldd-inline-dialog>
+        } @else {
+          <nldd-list accessible-label="Notes" empty-text="No notes yet">
+            @for (note of task.notes; track $index) {
+              @let author = noteAuthor(note);
+              <nldd-list-item>
+                <!-- Top-aligned: a note runs to several lines and its author
+                     belongs beside the first one, not beside the middle. -->
+                <nldd-cell width="fit-content" vertical-alignment="top">
+                  <!-- Without a roster entry the avatar falls back to its person
+                       icon: either the note predates the directory or its author
+                       has left it. -->
+                  <nldd-avatar decorative size="32" [attr.name]="author.tech?.name"></nldd-avatar>
+                </nldd-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="full"
+                  vertical-alignment="top"
+                  [attr.overline]="author.name"
+                  [attr.text]="note.text"
+                ></nldd-text-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  vertical-alignment="top"
+                  horizontal-alignment="right"
+                  color="secondary"
+                  [attr.text]="note.time"
+                ></nldd-text-cell>
+              </nldd-list-item>
+            }
+          </nldd-list>
+        }
+        <nldd-spacer size="16"></nldd-spacer>
+        <!-- The signed-in user, since that is who the backend attributes the
+             note to. A caller outside the directory gets the neutral avatar,
+             matching the unattributed note their write will produce. -->
+        <nldd-container layout="row" gap="8" vertical-alignment="center">
+          <nldd-avatar decorative size="32" [attr.name]="currentUser()?.name"></nldd-avatar>
+          <nldd-text-field
+            placeholder="Add a note…"
+            accessible-label="Add a note"
+            [value]="newNoteText()"
+            (input)="newNoteText.set($any($event.target).value ?? '')"
+            (keydown.enter)="addNote()"
+          ></nldd-text-field>
+          <nldd-icon-button
+            icon="arrow-right"
+            variant="secondary"
+            accessible-label="Send note"
+            (click)="addNote()"
+          ></nldd-icon-button>
+        </nldd-container>
+      }
     </nldd-simple-section>
   </nldd-page>
 </nldd-sheet>
@@ -922,10 +840,8 @@
             >
             <nldd-dropdown>
               <select id="editStatus" (change)="editFormStatus.set($any($event).target.value)">
-                <option [selected]="editFormStatus() === 'Ready'">Ready</option>
-                <option [selected]="editFormStatus() === 'In Progress'">In Progress</option>
-                <option [selected]="editFormStatus() === 'Review'">Review</option>
-                <option [selected]="editFormStatus() === 'Blocked'">Blocked</option>
+                <option [selected]="editFormStatus() === 'To do'">To do</option>
+                <option [selected]="editFormStatus() === 'Doing'">Doing</option>
                 <option [selected]="editFormStatus() === 'Done'">Done</option>
               </select>
             </nldd-dropdown>
@@ -938,10 +854,11 @@
             >
             <nldd-dropdown>
               <select id="editPriority" (change)="editFormPriority.set($any($event).target.value)">
-                <option [selected]="editFormPriority() === 'Critical'">Critical</option>
+                <option [selected]="editFormPriority() === 'Urgent'">Urgent</option>
                 <option [selected]="editFormPriority() === 'High'">High</option>
                 <option [selected]="editFormPriority() === 'Medium'">Medium</option>
                 <option [selected]="editFormPriority() === 'Low'">Low</option>
+                <option [selected]="editFormPriority() === 'None'">None</option>
               </select>
             </nldd-dropdown>
           </div>
@@ -950,19 +867,17 @@
           <div>
             <label
               class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
-              for="editCategory"
-              >Category</label
+              for="editTags"
+              >Tags</label
             >
-            <nldd-dropdown>
-              <select id="editCategory" (change)="editFormCategory.set($any($event).target.value)">
-                <option [selected]="editFormCategory() === 'Hardware'">Hardware</option>
-                <option [selected]="editFormCategory() === 'Network'">Network</option>
-                <option [selected]="editFormCategory() === 'Cooling'">Cooling</option>
-                <option [selected]="editFormCategory() === 'Power'">Power</option>
-                <option [selected]="editFormCategory() === 'Security'">Security</option>
-                <option [selected]="editFormCategory() === 'Other'">Other</option>
-              </select>
-            </nldd-dropdown>
+            <!-- A token field rather than a dropdown: a task carries more than
+                 one tag, and the ones in use are offered as you type. -->
+            <nldd-token-field
+              id="editTags"
+              accessible-label="Tags"
+              [attr.value]="editFormTags().join(',')"
+              (change)="editFormTags.set($any($event).detail.tokens ?? [])"
+            ></nldd-token-field>
           </div>
           <div>
             <label
@@ -1073,3 +988,167 @@
     </div>
   </nldd-page>
 </nldd-sheet>
+<!-- The filters are the menu of this section: what state a task is in, how urgent
+     it is and what kind of work it is. Declared here because the counts are this
+     page's data. -->
+<ng-template #secondaryNav>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar slot="header" back-text="Sections"></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-title size="3">
+        <h1>Tasks</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <!-- No heading over the first list: it sits right under "Tasks" and the
+           states name themselves. The order is the order you work in: what has
+           not been decided, what has to happen today, then the states, and All
+           at the bottom as the place to fall back to rather than the place to
+           start. -->
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Status">
+        <!-- Views, not statuses: these cut across the states below. A task can
+             be a to-do and sit in Waiting at the same time, because the state
+             says how far the work is and the view says whose move it is. -->
+        <nldd-list-item
+          [attr.href]="viewPath('inbox')"
+          [attr.selected]="isMenuSelection('inbox') ? '' : null"
+          (click)="goToView($event, 'inbox')"
+        >
+          <nldd-icon-cell icon="inbox" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Inbox"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="inboxCount()"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item
+          [attr.href]="viewPath('today')"
+          [attr.selected]="isMenuSelection('today') ? '' : null"
+          (click)="goToView($event, 'today')"
+        >
+          <nldd-icon-cell icon="calendar-event" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="Today"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="todayCount()"
+          ></nldd-text-cell>
+        </nldd-list-item>
+        @for (status of kanbanColumns; track status) {
+          <nldd-list-item
+            [attr.href]="viewPath('status', status)"
+            [attr.selected]="isMenuSelection('status', status) ? '' : null"
+            (click)="goToView($event, 'status', status)"
+          >
+            <nldd-icon-cell [attr.icon]="statusIcon(status)" size="20"></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="status"></nldd-text-cell>
+            @if (statusCounts()[status]) {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="statusCounts()[status]"
+              ></nldd-text-cell>
+            }
+          </nldd-list-item>
+          <!-- Waiting directly under To do, because that is what it is: a to-do
+               that is somebody else's. To do holds the ones you can start now,
+               Waiting the ones you cannot. -->
+          @if (status === 'To do') {
+            <nldd-list-item
+              [attr.href]="viewPath('waiting')"
+              [attr.selected]="isMenuSelection('waiting') ? '' : null"
+              (click)="goToView($event, 'waiting')"
+            >
+              <nldd-icon-cell icon="clock" size="20"></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell text="Waiting"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="waitingCount()"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
+        }
+        <nldd-list-item
+          [attr.href]="viewPath('all')"
+          [attr.selected]="isMenuSelection('all') ? '' : null"
+          (click)="goToView($event, 'all')"
+        >
+          <nldd-icon-cell icon="all-tasks" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="All"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="tasks().length"
+          ></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Priority</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Priority">
+        <!-- Without None: the menu navigates to a priority, and "no priority" is
+             not one. Those tasks live under All, and the picker in the form is
+             where you take a priority off again. -->
+        @for (priority of menuPriorities; track priority) {
+          <nldd-list-item
+            [attr.href]="viewPath('priority', priority)"
+            [attr.selected]="isMenuSelection('priority', priority) ? '' : null"
+            (click)="goToView($event, 'priority', priority)"
+          >
+            <nldd-icon-cell [attr.icon]="priorityIcon(priority)" size="20"></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="priority"></nldd-text-cell>
+            @if (priorityCounts()[priority]) {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="priorityCounts()[priority]"
+              ></nldd-text-cell>
+            }
+          </nldd-list-item>
+        }
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Tags</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Tags">
+        @for (tag of taskTags(); track tag) {
+          <nldd-list-item
+            [attr.href]="viewPath('tag', tag)"
+            [attr.selected]="isMenuSelection('tag', tag) ? '' : null"
+            (click)="goToView($event, 'tag', tag)"
+          >
+            <!-- One icon for every tag: which tag it is, is what the word says.
+                 A picture per tag would only be a second name for the same
+                 thing, and a wrong one as soon as somebody adds a tag. -->
+            <nldd-icon-cell icon="label" size="20"></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="tag"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              color="secondary"
+              [attr.text]="tagCounts()[tag]"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    </nldd-simple-section>
+  </nldd-page>
+</ng-template>
