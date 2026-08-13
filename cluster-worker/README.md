@@ -228,6 +228,59 @@ Write-time validation of limit values (rejecting e.g. an `autoscale_max` above
 the org cap when it is set) is an org-api concern and intentionally not handled
 here — the cluster-worker is the materialization/backstop layer.
 
+### Plugin Machinery Provisioning
+
+The console installs plugins by writing `PluginInstallation` CRs directly onto
+the target shoot (via kube-api-proxy). For those CRs to do anything, the shoot
+needs the plugin substrate: the CRD and a running plugin-controller. The
+`pluginmachinery` handler provisions both onto every ready shoot — triggered by
+the cluster-ready outbox event and re-asserted by the periodic reconcile loop,
+so hand-deleted resources heal within one reconcile interval.
+
+What lands on each shoot:
+
+| Resource | Name | Notes |
+|----------|------|-------|
+| CRD | `plugininstallations.plugins.fundament.io` | Embedded copy of `charts/fundament/crds/`, refreshed by `just generate`; updates in place, so this is also the CRD upgrade channel for shoots (Helm only applies `crds/` at install) |
+| Namespace | `fundament-system` | Shared with usersync |
+| ServiceAccount | `plugin-controller` | In `fundament-system` |
+| ClusterRole + Binding | `fundament:plugin-controller` | Rules mirror the chart's plugin-controller role; a unit test fails on drift |
+| Deployment | `plugin-controller` | Real per-shoot env: `FUNDAMENT_CLUSTER_ID` (cluster UUID, also stands in for `FUNDAMENT_INSTALL_ID`), `FUNDAMENT_ORGANIZATION_ID` (from `tenant.clusters`), `ORGANIZATION_API_URL` (external, FUN-19) |
+
+Configuration (all under the `PLUGIN_` env prefix; Helm wires them from
+`pluginController.shootImage` + `externalUrls.organization`):
+
+| Env | Meaning |
+|-----|---------|
+| `PLUGIN_CONTROLLER_IMAGE` | plugin-controller image, **pullable from shoot nodes** |
+| `PLUGIN_ORGANIZATION_API_URL` | externally routable organization-api base URL |
+| `PLUGIN_LOG_LEVEL` | shoot-side controller log level |
+| `PLUGIN_ALLOW_UNPINNED_HASH` | skip the definition-hash gate — local dev only |
+
+When image or URL is unset the handler no-ops (one log line per process), so
+mock-Gardener and PR environments need no configuration.
+
+#### Verifying on a real shoot
+
+Run this end-to-end check whenever the machinery or the CRD changes (it is
+deliberately not CI — see the repo's testing conventions):
+
+1. Deploy with real Gardener and set `pluginController.shootImage` to an image
+   the shoot nodes can pull, plus a shoot-reachable `externalUrls.organization`.
+   For local Gardener setups the plugin sandbox's NodePort/socat relay
+   (`just plugins sandbox-up`, `plugins/Justfile`) is the reference for making
+   org-api reachable from another cluster.
+2. Create a cluster in the console and wait until it is ready. Against the
+   shoot's admin kubeconfig:
+   `kubectl get crd plugininstallations.plugins.fundament.io` and
+   `kubectl -n fundament-system get deploy plugin-controller` — the Deployment
+   must become Ready and its env must carry the cluster's real UUIDs.
+3. Publish a plugin to a registry the shoot can pull from
+   (`PLUGIN_REGISTRY=… just plugins plugin-publish cert-manager`), install it
+   from the console, and confirm the `PluginInstallation` reaches `Running`.
+4. Heal check: `kubectl -n fundament-system delete deploy plugin-controller`
+   and confirm the reconcile loop (5 min) restores it.
+
 ## Quick Start: Full Local Development
 
 Run the complete stack with local Gardener (gardener-operator path):
