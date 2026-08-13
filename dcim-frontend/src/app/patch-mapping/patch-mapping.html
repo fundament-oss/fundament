@@ -103,7 +103,7 @@
 <!-- ══════════════════════════════════════════════════════════════
      ADD / EDIT CABLE SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #cableSheet accessible-label="Cable details" placement="right" width="480px">
+<nldd-sheet #cableSheet accessible-label="Cable details" placement="right">
   <app-cable-form
     [cable]="editCable()"
     [dcId]="selectedDcId()"
@@ -125,7 +125,6 @@
   #shoppingSheet
   accessible-label="Shopping list"
   placement="right"
-  width="480px"
   (close)="shoppingListOpen.set(false)"
 >
   <app-shopping-list [cables]="plannedCables()" [dcLabel]="selectedDcLabel()" />
