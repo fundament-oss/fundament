@@ -12,7 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import type { AssetCategory, CatalogEntry } from '../../inventory/inventory';
 import CatalogApiService from '../catalog-api.service';
 import parseValidationError from '../../../connect/validation';
-import { CATEGORIES } from '../../shared/asset-category';
+import categoryIcon, { CATEGORIES } from '../../shared/asset-category';
 import OverlayService from '../../shell/overlay.service';
 
 interface NativeElementRef {
@@ -49,6 +49,9 @@ export default class ProductSheetComponent {
 
   readonly categories = CATEGORIES;
 
+  /** The same icon a category wears in the menu and in a list row. */
+  readonly categoryIcon = categoryIcon;
+
   readonly category = signal<AssetCategory>('Server');
 
   readonly specRows = signal<{ key: string; value: string }[]>([]);
@@ -65,27 +68,64 @@ export default class ProductSheetComponent {
 
   private readonly fPartNumber = viewChild<NativeElementRef>('fPartNumber');
 
-  /** Whether the sheet was open on the previous run, so opening seeds the form
-   *  once instead of on every keystroke that touches a signal it reads. */
-  private wasOpen = false;
+  /**
+   * What the sheet is actually showing, kept in step with its own open and
+   * close events rather than counted from the signal. Signal changes coalesce:
+   * close the sheet with Escape and open it again before the effect flushes,
+   * and the effect sees one run with the new record and no run for the null in
+   * between. Counting transitions there leaves the sheet shut for good.
+   */
+  private isOpen = false;
+
+  /** The record the fields were filled from, so opening a different one seeds
+   *  the form and a re-render does not overwrite what is being typed. */
+  private seeded: Partial<CatalogEntry> | null = null;
 
   constructor() {
     effect(() => {
       const entry = this.entry();
       const el = this.sheetEl()?.nativeElement;
-      if (entry && !this.wasOpen) {
-        this.category.set((entry.category as AssetCategory) ?? 'Server');
-        this.specRows.set(
-          Object.entries(entry.specs ?? {}).map(([key, value]) => ({ key, value })),
-        );
-        if (this.specRows().length === 0) this.specRows.set([{ key: '', value: '' }]);
-        this.clearErrors();
-        el?.show?.();
-      } else if (!entry && this.wasOpen) {
-        el?.hide?.();
+      if (!el) return;
+      if (entry) {
+        if (entry !== this.seeded) {
+          this.seeded = entry;
+          this.category.set((entry.category as AssetCategory) ?? 'Server');
+          const rows = Object.entries(entry.specs ?? {}).map(([key, value]) => ({ key, value }));
+          this.specRows.set(rows.length > 0 ? rows : [{ key: '', value: '' }]);
+          this.clearErrors();
+          this.fillFields(entry);
+        }
+        if (!this.isOpen) el.show?.();
+      } else {
+        this.seeded = null;
+        if (this.isOpen) el.hide?.();
       }
-      this.wasOpen = entry !== null;
     });
+  }
+
+  /**
+   * Writes the record into the fields. They keep their own value once someone
+   * types in them, and an attribute binding that goes from empty to empty is no
+   * change at all, so a second New product would open on the last thing typed.
+   */
+  private fillFields(entry: Partial<CatalogEntry>): void {
+    const model = this.fModel()?.nativeElement;
+    const manufacturer = this.fManufacturer()?.nativeElement;
+    const partNumber = this.fPartNumber()?.nativeElement;
+    if (model) model.value = entry.model ?? '';
+    if (manufacturer) manufacturer.value = entry.manufacturer ?? '';
+    if (partNumber) partNumber.value = entry.partNumber ?? '';
+  }
+
+  /** The sheet says when it is open and when it is gone; Escape and a click
+   *  outside close it without passing the Cancel button. */
+  onSheetOpen(): void {
+    this.isOpen = true;
+  }
+
+  onSheetClose(): void {
+    this.isOpen = false;
+    this.overlays.productSheet.set(null);
   }
 
   close(): void {

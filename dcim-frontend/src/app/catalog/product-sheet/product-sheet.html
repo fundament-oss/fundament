@@ -1,4 +1,13 @@
-<nldd-sheet #sheet accessible-label="Product details" placement="right">
+<!-- (close) keeps the state honest whichever way the sheet goes away: Escape and
+     a click outside close it without passing the Cancel button, and a signal
+     that still says "open" makes the next Add product do nothing. -->
+<nldd-sheet
+  #sheet
+  accessible-label="Product details"
+  placement="right"
+  (open)="onSheetOpen()"
+  (close)="onSheetClose()"
+>
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
@@ -100,13 +109,17 @@
         </nldd-form-field>
         <!-- Fifteen categories as buttons rather than a dropdown: they all fit,
              and a product belongs to exactly one, so the choice is worth showing
-             rather than hiding behind a click. -->
+             rather than hiding behind a click. Elke knop draagt het icoon dat de
+             categorie ook in het menu en in een lijstregel heeft, behalve Other:
+             die drie puntjes staan voor "de rest" en zeggen naast het woord
+             niets meer. -->
         <nldd-form-field label="Category">
           <nldd-toggle-button-group type="radio" accessible-label="Category">
             @for (cat of categories; track cat) {
               <nldd-toggle-button
                 [attr.value]="cat"
                 [attr.text]="cat"
+                [attr.icon]="cat === 'Other' ? null : categoryIcon(cat)"
                 [attr.selected]="category() === cat ? '' : null"
                 (change)="onCategoryToggle(cat, $any($event).detail.selected)"
               ></nldd-toggle-button>
