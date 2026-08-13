@@ -554,8 +554,23 @@ export default function createDemoTransport(): Transport {
         store.catalog = [...store.catalog, entry];
         return create(CreateCatalogEntryResponseSchema, { catalogEntryId: entry.id });
       },
-      updateCatalogEntry: async () => {
+      updateCatalogEntry: async (request) => {
         await delay();
+        // Writes it back, like the real service: the pages read their product
+        // again after a write rather than patching it in place, so a no-op here
+        // shows up as an edit that did nothing.
+        store.catalog = store.catalog.map((entry) =>
+          entry.id === request.id
+            ? create(DeviceCatalogSchema, {
+                ...entry,
+                manufacturer: request.manufacturer,
+                model: request.model,
+                partNumber: request.partNumber,
+                category: request.category,
+                specs: request.specs,
+              })
+            : entry,
+        );
         return create(EmptySchema, {});
       },
       deleteCatalogEntry: async (request) => {

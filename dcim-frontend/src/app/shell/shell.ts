@@ -13,6 +13,8 @@ import { filter } from 'rxjs/operators';
 import AuthService from '../auth.service';
 import ThemeService from '../theme.service';
 import SecondaryNavService from './secondary-nav.service';
+import OverlayService from './overlay.service';
+import ProductSheetComponent from '../catalog/product-sheet/product-sheet';
 import InventoryStatsService from '../inventory/inventory-stats.service';
 import DatacenterHealthService from '../datacenters/datacenter-health.service';
 import TaskAttentionService from '../tasks/task-attention.service';
@@ -53,7 +55,7 @@ function depthForPath(url: string): number {
   selector: 'app-shell',
   templateUrl: './shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, NgTemplateOutlet],
+  imports: [RouterOutlet, NgTemplateOutlet, ProductSheetComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class ShellComponent implements OnInit {
@@ -64,6 +66,10 @@ export default class ShellComponent implements OnInit {
   private router = inject(Router);
 
   protected readonly secondaryNav = inject(SecondaryNavService);
+
+  /** The sheets the shell owns, so a form that makes something new outlives the
+   *  page it was opened from. */
+  protected readonly overlays = inject(OverlayService);
 
   private readonly stats = inject(InventoryStatsService);
 

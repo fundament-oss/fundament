@@ -168,3 +168,10 @@
     </nldd-split-view-pane>
   </nldd-bar-split-view>
 </nldd-app-view>
+
+<!-- Above the app, not in it: a form that makes something new belongs to no
+     page, so it must survive the page you opened it from and be reachable from
+     anywhere. Deferred, so it costs nothing until the first time you open it. -->
+@defer (when overlays.productSheet()) {
+  <app-product-sheet></app-product-sheet>
+}

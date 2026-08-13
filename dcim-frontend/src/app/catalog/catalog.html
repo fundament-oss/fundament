@@ -21,13 +21,13 @@
             variant="primary"
             text="Add product"
             start-icon="plus-small"
-            (click)="openCreateEntry()"
+            (click)="overlays.newProduct(categoryFilter())"
           ></nldd-button>
           <nldd-menu-item
             slot="overflow"
             icon="plus-small"
             text="Add product"
-            (select)="openCreateEntry()"
+            (select)="overlays.newProduct(categoryFilter())"
           ></nldd-menu-item>
         </nldd-toolbar-item>
       </nldd-toolbar>
@@ -141,136 +141,6 @@
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
 
-<!-- ══════════════════════════════════════════════════════════════
-     CATALOG ENTRY EDIT SHEET
-     ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #entrySheet accessible-label="Catalog entry details" placement="right" width="480px">
-  <nldd-page sticky-header sticky-footer>
-    <nldd-top-title-bar
-      slot="header"
-      [attr.text]="editEntry()?.id ? 'Edit product' : 'New product'"
-      dismiss-text="Cancel"
-      (dismiss)="closeEntryForm()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section class="space-y-4">
-      @if (entryErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ entryErrorMessage() }}
-          </p>
-        </div>
-      }
-
-      <nldd-form-field label="Model name">
-        <nldd-text-field
-          #fEntryModel
-          autofocus
-          [attr.value]="editEntry()?.model ?? ''"
-          placeholder="E.g. Dell PowerEdge R750"
-          [attr.invalid]="isFieldInvalid('model') ? '' : null"
-          error-message="error-model"
-          (keydown.enter)="saveEntry()"
-        ></nldd-text-field>
-        <nldd-form-field-error-text id="error-model">{{
-          fieldError('model')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      <nldd-form-field label="Manufacturer">
-        <nldd-text-field
-          #fEntryMfr
-          [attr.value]="editEntry()?.manufacturer ?? ''"
-          placeholder="E.g. Dell Technologies"
-          [attr.invalid]="isFieldInvalid('manufacturer') ? '' : null"
-          error-message="error-manufacturer"
-          (keydown.enter)="saveEntry()"
-        ></nldd-text-field>
-        <nldd-form-field-error-text id="error-manufacturer">{{
-          fieldError('manufacturer')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      @if (!editEntry()?.id) {
-        <nldd-form-field label="Part number">
-          <nldd-text-field
-            #fEntryPart
-            [attr.value]="editEntry()?.partNumber ?? ''"
-            placeholder="E.g. R750-2024"
-            [attr.invalid]="isFieldInvalid('part_number') ? '' : null"
-            error-message="error-part-number"
-            (keydown.enter)="saveEntry()"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="error-part-number">{{
-            fieldError('part_number')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-      }
-      <nldd-form-field label="Category">
-        <nldd-dropdown [attr.invalid]="isFieldInvalid('category') ? true : null">
-          <select
-            [ngModel]="entryCategory()"
-            (ngModelChange)="entryCategory.set($event)"
-            [attr.aria-invalid]="isFieldInvalid('category') ? 'true' : null"
-          >
-            @for (cat of categories; track cat) {
-              <option [value]="cat">{{ cat }}</option>
-            }
-          </select>
-        </nldd-dropdown>
-        @if (isFieldInvalid('category')) {
-          <nldd-form-field-error-text id="error-category">{{
-            fieldError('category')
-          }}</nldd-form-field-error-text>
-        }
-      </nldd-form-field>
-
-      <!-- Specs section -->
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <p class="text-sm font-medium text-slate-700 dark:text-gray-300">Specifications</p>
-          <nldd-button
-            variant="secondary"
-            text="Add spec"
-            start-icon="plus-small"
-            size="xs"
-            (click)="addSpecRow()"
-          ></nldd-button>
-        </div>
-        <div class="flex flex-col gap-2">
-          @for (spec of specRows(); track $index; let i = $index) {
-            <div class="flex items-center gap-2">
-              <nldd-text-field
-                [attr.value]="spec.key"
-                placeholder="Key"
-                (input)="updateSpecKey(i, $event)"
-                class="flex-1"
-              ></nldd-text-field>
-              <nldd-text-field
-                [attr.value]="spec.value"
-                placeholder="Value"
-                (input)="updateSpecVal(i, $event)"
-                class="flex-1"
-              ></nldd-text-field>
-              <nldd-icon-button
-                icon="dismiss"
-                variant="neutral-transparent"
-                size="sm"
-                text="Remove spec"
-                (click)="removeSpecRow(i)"
-              ></nldd-icon-button>
-            </div>
-          }
-          @if (specRows().length === 0) {
-            <p class="text-xs text-slate-400 dark:text-gray-500 italic">
-              No specifications. Click "Add spec" to add one.
-            </p>
-          }
-        </div>
-      </div>
-    </nldd-simple-section>
-    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
-      <nldd-button variant="primary" text="Save" width="full" (click)="saveEntry()"></nldd-button>
-    </div>
-  </nldd-page>
-</nldd-sheet>
 
 <!-- The categories are the menu of this section, so the shell shows them in the
      second sidebar. Declared here because the counts are this page's data. -->

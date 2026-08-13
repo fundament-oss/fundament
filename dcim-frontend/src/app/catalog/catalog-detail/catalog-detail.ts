@@ -7,13 +7,14 @@ import {
   inject,
   OnInit,
   signal,
+  untracked,
   viewChild,
   TemplateRef,
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
   Asset,
@@ -29,10 +30,11 @@ import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
-import categoryIcon, { AssetCategory, CATEGORIES } from '../../shared/asset-category';
+import categoryIcon, { AssetCategory } from '../../shared/asset-category';
 import CatalogNavComponent from '../catalog-nav';
 import { CATALOG_PATH, catalogViewTitle, isCatalogView } from '../catalog-views';
 import SecondaryNavService from '../../shell/secondary-nav.service';
+import OverlayService from '../../shell/overlay.service';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -42,7 +44,7 @@ interface NativeElementRef {
   selector: 'app-catalog-detail',
   templateUrl: './catalog-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, DropdownSyncDirective, CatalogNavComponent],
+  imports: [FormsModule, DropdownSyncDirective, CatalogNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
@@ -65,6 +67,9 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
   private readonly router = inject(Router);
 
   private readonly catalogApi = inject(CatalogApiService);
+
+  /** The product form is the shell's, so this page only asks it to open. */
+  private readonly overlays = inject(OverlayService);
 
   private readonly inventoryApi = inject(InventoryApiService);
 
@@ -191,10 +196,11 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
   });
 
   constructor() {
+    // The product form is the shell's now, so this page watches for a write
+    // and reads its product again rather than patching it in place.
     effect(() => {
-      const el = this.entrySheetEl()?.nativeElement;
-      if (this.editEntry() !== null) el?.show?.();
-      else el?.hide?.();
+      this.catalogApi.revision();
+      untracked(() => this.loadEntry());
     });
     effect(() => {
       const el = this.entryModalEl()?.nativeElement;
@@ -272,87 +278,23 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
 
   // ── Edit and delete this product ───────────────────────────────────────────
 
-  /** Holds the product being edited; non-null while the edit sheet is open. */
-  readonly editEntry = signal<Partial<CatalogEntry> | null>(null);
-
-  readonly entryCategory = signal<AssetCategory>('Server');
-
-  readonly entryErrorMessage = signal<string | null>(null);
-
-  readonly specRows = signal<{ key: string; value: string }[]>([]);
-
   readonly deleteEntry = signal<CatalogEntry | null>(null);
-
-  readonly categories = CATEGORIES;
-
-  private readonly entrySheetEl = viewChild<NativeElementRef>('entrySheet');
 
   private readonly entryModalEl = viewChild<NativeElementRef>('entryModal');
 
-  private readonly fEntryModel = viewChild<NativeElementRef>('fEntryModel');
-
-  private readonly fEntryMfr = viewChild<NativeElementRef>('fEntryMfr');
-
+  /** Editing opens the shell's product form on this product. */
   openEditEntry(): void {
     const entry = this.entry();
-    if (!entry) return;
-    this.clearEntryErrors();
-    this.editEntry.set({ ...entry });
-    this.entryCategory.set(entry.category);
-    this.specRows.set(Object.entries(entry.specs).map(([key, value]) => ({ key, value })));
+    if (entry) this.overlays.editProduct(entry);
   }
 
-  closeEntryForm(): void {
-    this.editEntry.set(null);
+  /** One value at a time: unpicking the current one leaves it as it was. */
+  onPortTypeToggle(value: string, selected: boolean): void {
+    if (selected) this.portType.set(value);
   }
 
-  addSpecRow(): void {
-    this.specRows.update((rows) => [...rows, { key: '', value: '' }]);
-  }
-
-  removeSpecRow(index: number): void {
-    this.specRows.update((rows) => rows.filter((_, i) => i !== index));
-  }
-
-  updateSpecKey(index: number, event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
-    this.specRows.update((rows) => rows.map((r, i) => (i === index ? { ...r, key: val } : r)));
-  }
-
-  updateSpecVal(index: number, event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
-    this.specRows.update((rows) => rows.map((r, i) => (i === index ? { ...r, value: val } : r)));
-  }
-
-  saveEntry(): void {
-    const form = this.editEntry();
-    if (!form?.id) return;
-    this.clearEntryErrors();
-
-    const specs: Record<string, string> = {};
-    this.specRows().forEach((row) => {
-      if (row.key.trim()) specs[row.key.trim()] = row.value;
-    });
-
-    const entry: CatalogEntry = {
-      id: form.id,
-      model: this.fEntryModel()?.nativeElement.value ?? '',
-      manufacturer: this.fEntryMfr()?.nativeElement.value ?? '',
-      partNumber: form.partNumber ?? '',
-      category: this.entryCategory(),
-      specs,
-    };
-
-    firstValueFrom(this.catalogApi.updateCatalogEntry(entry))
-      .then(() => {
-        this.entry.set(entry);
-        this.editEntry.set(null);
-      })
-      .catch((err) => {
-        const { fields, message } = parseValidationError(err);
-        this.invalidFields.set(fields);
-        this.entryErrorMessage.set(message);
-      });
+  onPortDirectionToggle(value: string, selected: boolean): void {
+    if (selected) this.portDirection.set(value);
   }
 
   openDeleteEntry(): void {
@@ -377,12 +319,9 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  private clearEntryErrors(): void {
-    this.invalidFields.set({});
-    this.entryErrorMessage.set(null);
-  }
-
-  ngOnInit(): void {
+  /** Reads this product from the API. Called on open and after every write,
+   *  wherever that write came from. */
+  private loadEntry(): void {
     firstValueFrom(this.catalogApi.getCatalogEntry(this.catalogId()))
       .then((res) => {
         if (res.entry) this.entry.set(CatalogApiService.mapCatalogEntry(res.entry));
@@ -390,7 +329,9 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)))
       .finally(() => this.entryLoaded.set(true));
+  }
 
+  ngOnInit(): void {
     firstValueFrom(this.catalogApi.listPortDefinitions(this.catalogId()))
       .then((res) => {
         const portDefs = res.portDefinitions.map((p) => CatalogApiService.mapPortDefinition(p));

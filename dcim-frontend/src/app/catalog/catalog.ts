@@ -7,32 +7,27 @@ import {
   inject,
   OnInit,
   signal,
+  untracked,
   viewChild,
   TemplateRef,
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import { AssetCategory, CatalogEntry } from '../inventory/inventory';
 import CatalogApiService from './catalog-api.service';
 import InventoryApiService from '../inventory/inventory-api.service';
 import connectErrorMessage from '../../connect/error';
-import parseValidationError from '../../connect/validation';
 import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import categoryIcon, { CATEGORIES } from '../shared/asset-category';
 import { viewSlug } from '../shared/section-views';
 import { CATALOG_PATH } from './catalog-views';
 import CatalogNavComponent from './catalog-nav';
-
-interface NativeElementRef {
-  nativeElement: { value: string; show?: () => void; hide?: () => void };
-}
+import OverlayService from '../shell/overlay.service';
 
 interface CatalogRow {
   entry: CatalogEntry;
@@ -42,13 +37,11 @@ interface CatalogRow {
   issues: number;
 }
 
-type InvalidFields = Record<string, string>;
-
 @Component({
   selector: 'app-catalog',
   templateUrl: './catalog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DropdownSyncDirective, CatalogNavComponent],
+  imports: [CatalogNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   // No styling of its own: the page inside paints the surface and owns the
   // layout, and styles.css takes this element out of the flow (display:
@@ -69,6 +62,9 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   private readonly catalogApi = inject(CatalogApiService);
+
+  /** The product form is the shell's, so this page only asks it to open. */
+  readonly overlays = inject(OverlayService);
 
   private readonly inventoryApi = inject(InventoryApiService);
 
@@ -124,25 +120,6 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
   // ── Mutable catalog list ───────────────────────────────────────────────────
   readonly mutableCatalog = signal<CatalogEntry[]>([]);
 
-  // ── CRUD state ─────────────────────────────────────────────────────────────
-  editEntry = signal<Partial<CatalogEntry> | null>(null);
-
-  entryCategory = signal<AssetCategory>('Server');
-
-  entryErrorMessage = signal<string | null>(null);
-
-  invalidFields = signal<InvalidFields>({});
-
-  specRows = signal<{ key: string; value: string }[]>([]);
-
-  private readonly entrySheetEl = viewChild<NativeElementRef>('entrySheet');
-
-  private readonly fEntryModel = viewChild<NativeElementRef>('fEntryModel');
-
-  private readonly fEntryMfr = viewChild<NativeElementRef>('fEntryMfr');
-
-  private readonly fEntryPart = viewChild<NativeElementRef>('fEntryPart');
-
   constructor() {
     toObservable(this.searchQuery)
       .pipe(
@@ -153,15 +130,15 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
       )
       .subscribe((search) => this.loadCatalog(search));
 
+    // The product form lives in the shell, so this page only has to notice that
+    // something was written and read the list again.
     effect(() => {
-      const el = this.entrySheetEl()?.nativeElement;
-      if (this.editEntry() !== null) el?.show?.();
-      else el?.hide?.();
+      this.catalogApi.revision();
+      untracked(() => this.loadCatalog(this.searchQuery().trim() || undefined));
     });
   }
 
   ngOnInit(): void {
-    this.loadCatalog();
     this.loadAssets();
   }
 
@@ -276,107 +253,6 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
 
     event.preventDefault();
     this.router.navigateByUrl(this.entryPath(id));
-  }
-
-  // ── CRUD actions ───────────────────────────────────────────────────────────
-
-  openCreateEntry(): void {
-    this.clearEntryErrors();
-    this.editEntry.set({
-      id: '',
-      model: '',
-      manufacturer: '',
-      partNumber: '',
-      category: 'Server',
-      specs: {},
-    });
-    this.entryCategory.set('Server');
-    this.specRows.set([{ key: '', value: '' }]);
-  }
-
-  closeEntryForm(): void {
-    this.editEntry.set(null);
-  }
-
-  addSpecRow(): void {
-    this.specRows.update((rows) => [...rows, { key: '', value: '' }]);
-  }
-
-  removeSpecRow(index: number): void {
-    this.specRows.update((rows) => rows.filter((_, i) => i !== index));
-  }
-
-  updateSpecKey(index: number, event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
-    this.specRows.update((rows) => rows.map((r, i) => (i === index ? { ...r, key: val } : r)));
-  }
-
-  updateSpecVal(index: number, event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
-    this.specRows.update((rows) => rows.map((r, i) => (i === index ? { ...r, value: val } : r)));
-  }
-
-  saveEntry(): void {
-    const form = this.editEntry();
-    if (!form) return;
-
-    this.clearEntryErrors();
-
-    const model = this.fEntryModel()?.nativeElement.value ?? '';
-    const manufacturer = this.fEntryMfr()?.nativeElement.value ?? '';
-    const partNumber = this.fEntryPart()?.nativeElement.value ?? form.partNumber ?? '';
-    const category = this.entryCategory();
-    const specs: Record<string, string> = {};
-
-    this.specRows().forEach((row) => {
-      if (row.key.trim()) specs[row.key.trim()] = row.value;
-    });
-
-    const entry: CatalogEntry = {
-      id: form.id || '',
-      model,
-      manufacturer,
-      partNumber,
-      category,
-      specs,
-    };
-
-    if (form.id) {
-      firstValueFrom(this.catalogApi.updateCatalogEntry(entry))
-        .then(() => {
-          this.mutableCatalog.update((list) => list.map((e) => (e.id === form.id ? entry : e)));
-          this.editEntry.set(null);
-        })
-        .catch((err) => this.handleEntryError(err));
-    } else {
-      firstValueFrom(this.catalogApi.createCatalogEntry(entry))
-        .then((res) => {
-          this.mutableCatalog.update((list) => [...list, { ...entry, id: res.catalogEntryId }]);
-          this.editEntry.set(null);
-        })
-        .catch((err) => this.handleEntryError(err));
-    }
-  }
-
-  /** Returns true when the given proto field name has a validation error. */
-  isFieldInvalid(field: string): boolean {
-    return field in this.invalidFields();
-  }
-
-  /** Returns the validation message for a proto field, or '' when valid. */
-  fieldError(field: string): string {
-    return this.invalidFields()[field] ?? '';
-  }
-
-  private clearEntryErrors(): void {
-    this.invalidFields.set({});
-    this.entryErrorMessage.set(null);
-  }
-
-  private handleEntryError(err: unknown): void {
-    const { fields, message } = parseValidationError(err);
-    this.invalidFields.set(fields);
-    this.entryErrorMessage.set(message);
   }
 
   readonly categoryIcon = categoryIcon;
