@@ -189,7 +189,7 @@
           <!-- eslint-disable @angular-eslint/template/no-autofocus -->
           <nldd-combo-box
             [attr.value]="assetDeviceId()"
-            [attr.disabled]="editAsset()?.id ? '' : null"
+            [attr.readonly]="editAsset()?.id ? '' : null"
             [attr.autofocus]="editAsset()?.id ? null : ''"
             [attr.invalid]="isFieldInvalid('device_catalog_id') ? '' : null"
             (change)="assetDeviceId.set($any($event).detail.value)"
@@ -220,18 +220,6 @@
         </nldd-form-field>
         <!-- Six states, all of them worth seeing: which one an asset is in is
              the thing this form says, so it is not worth hiding behind a click. -->
-        <nldd-form-field label="Status">
-          <nldd-toggle-button-group type="radio" accessible-label="Status">
-            @for (s of statuses; track s.value) {
-              <nldd-toggle-button
-                [attr.value]="s.value"
-                [attr.text]="s.label"
-                [attr.selected]="assetStatus() === s.value ? '' : null"
-                (change)="onStatusToggle(s.value, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
-        </nldd-form-field>
         <nldd-form-field label="Serial number">
           <nldd-text-field
             #fAssetSerial
@@ -249,6 +237,18 @@
             #fAssetWarranty
             [attr.value]="editAsset()?.warrantyExpiry ?? ''"
           ></nldd-date-field>
+        </nldd-form-field>
+        <nldd-form-field label="Status">
+          <nldd-toggle-button-group type="radio" accessible-label="Status">
+            @for (s of statuses; track s.value) {
+              <nldd-toggle-button
+                [attr.value]="s.value"
+                [attr.text]="s.label"
+                [attr.selected]="assetStatus() === s.value ? '' : null"
+                (change)="onStatusToggle(s.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
         </nldd-form-field>
         <!-- Where before which rack: every rack name in the company in one list
              is a list nobody can read. Picking a place cuts it down to the racks

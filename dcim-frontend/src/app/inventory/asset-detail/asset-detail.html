@@ -64,12 +64,10 @@
             <nldd-button
               variant="secondary"
               text="Decommission"
-              start-icon="slash-circle"
               (click)="openDecommissionAsset()"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
-              icon="slash-circle"
               text="Decommission"
               (select)="openDecommissionAsset()"
             ></nldd-menu-item>
@@ -263,7 +261,7 @@
         <nldd-form-field label="Device">
           <!-- What the asset is, so it cannot change: replacing the device makes
                it a different thing, not the same one edited. -->
-          <nldd-combo-box disabled [attr.text]="editAsset()?.model ?? ''"></nldd-combo-box>
+          <nldd-combo-box readonly [attr.text]="editAsset()?.model ?? ''"></nldd-combo-box>
         </nldd-form-field>
         <nldd-form-field label="Asset tag">
           <nldd-text-field
@@ -277,18 +275,6 @@
           <nldd-form-field-error-text id="error-ad-asset-tag">{{
             fieldError('asset_tag')
           }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <nldd-form-field label="Status">
-          <nldd-toggle-button-group type="radio" accessible-label="Status">
-            @for (s of statuses; track s.value) {
-              <nldd-toggle-button
-                [attr.value]="s.value"
-                [attr.text]="s.label"
-                [attr.selected]="assetStatus() === s.value ? '' : null"
-                (change)="onStatusToggle(s.value, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
         </nldd-form-field>
         <nldd-form-field label="Serial number">
           <nldd-text-field
@@ -307,6 +293,18 @@
             #fAssetWarranty
             [attr.value]="editAsset()?.warrantyExpiry ?? ''"
           ></nldd-date-field>
+        </nldd-form-field>
+        <nldd-form-field label="Status">
+          <nldd-toggle-button-group type="radio" accessible-label="Status">
+            @for (s of statuses; track s.value) {
+              <nldd-toggle-button
+                [attr.value]="s.value"
+                [attr.text]="s.label"
+                [attr.selected]="assetStatus() === s.value ? '' : null"
+                (change)="onStatusToggle(s.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
         </nldd-form-field>
         <!-- Where before which rack: the place cuts the rack list down to the
              racks that stand there, and opens them. -->
