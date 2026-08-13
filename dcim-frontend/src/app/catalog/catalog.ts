@@ -25,7 +25,7 @@ import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import SecondaryNavService from '../shell/secondary-nav.service';
-import categoryIcon from '../shared/asset-category';
+import categoryIcon, { CATEGORIES } from '../shared/asset-category';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -74,23 +74,7 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
 
   categoryFilter = signal<AssetCategory | 'all'>('all');
 
-  readonly categories: AssetCategory[] = [
-    'Server',
-    'Switch',
-    'Storage',
-    'Power',
-    'Firewall',
-    'Cooling',
-    'KVM',
-    'Memory',
-    'Disk',
-    'NIC',
-    'PSU',
-    'CPU',
-    'GPU',
-    'Transceiver',
-    'Other',
-  ];
+  readonly categories = CATEGORIES;
 
   // ── Mutable catalog list ───────────────────────────────────────────────────
   readonly mutableCatalog = signal<CatalogEntry[]>([]);

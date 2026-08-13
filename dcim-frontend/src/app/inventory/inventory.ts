@@ -27,7 +27,7 @@ import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import SecondaryNavService from '../shell/secondary-nav.service';
-import categoryIcon, { AssetCategory } from '../shared/asset-category';
+import categoryIcon, { AssetCategory, CATEGORIES } from '../shared/asset-category';
 
 export type { AssetCategory };
 
@@ -280,23 +280,7 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  readonly categories: AssetCategory[] = [
-    'Server',
-    'Switch',
-    'Storage',
-    'Power',
-    'Firewall',
-    'Cooling',
-    'KVM',
-    'Other',
-    'Memory',
-    'Disk',
-    'NIC',
-    'PSU',
-    'CPU',
-    'GPU',
-    'Transceiver',
-  ];
+  readonly categories = CATEGORIES;
 
   readonly statuses: { value: AssetStatus; label: string }[] = [
     { value: 'deployed', label: 'Deployed' },

@@ -777,6 +777,13 @@
             [attr.selected]="selectedDcId() === dc.id ? '' : null"
             (click)="selectDc(dc.id)"
           >
+            <!-- One building per row, where the section in the sidebar carries
+                 the plural. -->
+            <nldd-icon-cell
+              icon="building"
+              size="20"
+            ></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
             <nldd-text-cell
               width="full"
               [attr.text]="dc.name"

@@ -13,12 +13,22 @@ import AuthService from '../auth.service';
 import ThemeService from '../theme.service';
 import SecondaryNavService from './secondary-nav.service';
 
-/** The sections, in the order the sidebar shows them. */
+/**
+ * The sections, in the order the sidebar shows them.
+ *
+ * The icons say what the section holds, not what it is stored as: the catalog is
+ * the reference work of what exists, the data centers are buildings, the racks
+ * are racks. They used to be a stack of folders, a stack of layers and the
+ * database cylinder, which all said "files" about a hall full of hardware.
+ *
+ * Inventory borrows the box until it has an icon of its own, and patch mapping
+ * keeps the list it never fitted.
+ */
 const SECTIONS = [
-  { text: 'Catalog', icon: 'folder-on-folder', path: '/catalog' },
-  { text: 'Inventory', icon: 'rectangle-stack', path: '/inventory' },
-  { text: 'Data centers', icon: 'apartment-building', path: '/datacenters' },
-  { text: 'Racks', icon: 'cylinder-split', path: '/racks' },
+  { text: 'Catalog', icon: 'books', path: '/catalog' },
+  { text: 'Inventory', icon: 'file-box', path: '/inventory' },
+  { text: 'Data centers', icon: 'buildings', path: '/datacenters' },
+  { text: 'Racks', icon: 'rack-servers', path: '/racks' },
   { text: 'Patch mapping', icon: 'list', path: '/patch-mapping' },
   { text: 'Tasks', icon: 'tasks', path: '/tasks' },
 ];
