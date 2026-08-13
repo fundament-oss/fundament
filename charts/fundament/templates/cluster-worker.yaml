@@ -32,6 +32,23 @@ spec:
               value: {{ $.Values.clusterWorker.gardenerMode }}
             - name: LOG_LEVEL
               value: {{ $.Values.clusterWorker.logLevel }}
+            {{- if $.Values.pluginController.shootImage }}
+            # Shoot-side plugin machinery (PluginInstallation CRD + plugin-controller),
+            # provisioned onto every ready shoot by the pluginmachinery handler.
+            # Off unless pluginController.shootImage is set: the image must be
+            # pullable from shoot nodes, which local dev registries are not.
+            - name: PLUGIN_CONTROLLER_IMAGE
+              value: {{ $.Values.pluginController.shootImage }}
+            - name: PLUGIN_ORGANIZATION_API_URL
+              value: {{ required "externalUrls.organization must be set when pluginController.shootImage is set" $.Values.externalUrls.organization }}
+            - name: PLUGIN_LOG_LEVEL
+              value: {{ $.Values.pluginController.logLevel }}
+            {{- if $.Values.pluginController.allowUnpinnedHash }}
+            # Local dev only; see pluginController.allowUnpinnedHash.
+            - name: PLUGIN_ALLOW_UNPINNED_HASH
+              value: "true"
+            {{- end }}
+            {{- end }}
             {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
             - name: GARDENER_KUBECONFIG
               value: /etc/gardener/kubeconfig

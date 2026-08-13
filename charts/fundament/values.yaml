@@ -200,10 +200,17 @@ pluginController:
   # Skip the plugin definition-hash gate for installs with an empty
   # definitionHash. Local-dev convenience; keep false in production.
   allowUnpinnedHash: false
-  # organizationApiUrl: internal cluster URL for organization-api (gRPC/Connect).
-  # Defaults to http://organization-api:8080, matching the Service name in
-  # charts/fundament/templates/organization-api.yaml.
+  # organizationApiUrl: base URL the management/sandbox-cluster plugin-controller
+  # uses to reach organization-api. Defaults to the in-cluster
+  # http://organization-api:8080 (the Service in organization-api.yaml), which
+  # only works when the controller runs next to organization-api; a controller
+  # in another cluster needs an externally reachable URL (FUN-19).
   organizationApiUrl: ""
+  # shootImage: plugin-controller image for shoot clusters, provisioned onto
+  # every ready shoot by cluster-worker (with externalUrls.organization as the
+  # org-api URL). Must be pullable from shoot nodes — production registries
+  # qualify, local dev registries do not. Empty disables shoot provisioning.
+  shootImage: ""
 
 # Plugin Proxy. Runs in the main fundament cluster and dials out to plugin
 # clusters; not deployed inside the plugin sandbox.
