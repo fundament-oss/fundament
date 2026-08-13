@@ -545,8 +545,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   private readonly dateLocale = 'en-US';
 
-  currentView = signal<'list' | 'kanban'>('list');
-
   searchQuery = signal('');
 
   private readonly route = inject(ActivatedRoute);
@@ -556,6 +554,13 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   private readonly viewParams = toSignal(this.route.paramMap, {
     initialValue: convertToParamMap({}),
   });
+
+  /**
+   * Whether the address names a view. The section's own path (/tasks) means you
+   * have opened the section and picked nothing yet, and then the pane beside
+   * the menu says so rather than showing a list you did not ask for.
+   */
+  readonly hasSelection = computed(() => this.viewParams().get('view') !== null);
 
   /**
    * What the menu points at, read from the address. One choice, not three: the
@@ -591,6 +596,31 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
         return { kind: 'tag', value };
       default:
         return { kind: 'all', value: 'all' };
+    }
+  });
+
+  /**
+   * The title of the page is the row you picked in the menu. The section name
+   * is already in the menu's own heading and in the way back, so repeating it
+   * above the list would say "Tasks" three times and never say which tasks you
+   * are looking at.
+   */
+  readonly viewTitle = computed(() => {
+    const { kind, value } = this.menuSelection();
+    switch (kind) {
+      case 'inbox':
+        return 'Inbox';
+      case 'today':
+        return 'Today';
+      case 'waiting':
+        return 'Waiting';
+      case 'status':
+      case 'priority':
+        return value === 'all' ? 'All' : value;
+      case 'tag':
+        return value;
+      default:
+        return 'All';
     }
   });
 
@@ -639,6 +669,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   /** Whether this menu row is the one the list is showing. */
   isMenuSelection(kind: MenuKind, value = 'all'): boolean {
+    if (!this.hasSelection()) return false;
     return this.menuSelection().kind === kind && this.menuSelection().value === value;
   }
 
@@ -815,6 +846,8 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   editModalTitle = computed(() => (this.editingTaskId() ? 'Edit task' : 'New task'));
 
+  readonly kanbanSheetEl = viewChild<ElementRef<NlddSheet>>('kanbanSheetEl');
+
   readonly detailSheetEl = viewChild<ElementRef<NlddSheet>>('detailSheetEl');
 
   readonly editModalEl = viewChild<ElementRef<NlddSheet>>('editModalEl');
@@ -909,8 +942,12 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
       });
   }
 
-  setView(view: 'list' | 'kanban'): void {
-    this.currentView.set(view);
+  openKanban(): void {
+    this.kanbanSheetEl()?.nativeElement.show();
+  }
+
+  closeKanban(): void {
+    this.kanbanSheetEl()?.nativeElement.hide();
   }
 
   toggleSelection(id: string, checked: boolean): void {

@@ -4,6 +4,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   computed,
   inject,
+  OnInit,
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -12,6 +13,9 @@ import { filter } from 'rxjs/operators';
 import AuthService from '../auth.service';
 import ThemeService from '../theme.service';
 import SecondaryNavService from './secondary-nav.service';
+import InventoryStatsService from '../inventory/inventory-stats.service';
+import DatacenterHealthService from '../datacenters/datacenter-health.service';
+import TaskAttentionService from '../tasks/task-attention.service';
 
 /**
  * The sections, in the order the sidebar shows them.
@@ -29,7 +33,7 @@ const SECTIONS = [
   { text: 'Inventory', icon: 'file-box', path: '/inventory' },
   { text: 'Data centers', icon: 'buildings', path: '/datacenters' },
   { text: 'Racks', icon: 'rack-servers', path: '/racks' },
-  { text: 'Patch mapping', icon: 'list', path: '/patch-mapping' },
+  { text: 'Patch mapping', icon: 'network-patch-mapping', path: '/patch-mapping' },
   { text: 'Tasks', icon: 'tasks', path: '/tasks' },
 ];
 
@@ -52,7 +56,7 @@ function depthForPath(url: string): number {
   imports: [RouterOutlet, NgTemplateOutlet],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export default class ShellComponent {
+export default class ShellComponent implements OnInit {
   private authService = inject(AuthService);
 
   protected readonly theme = inject(ThemeService);
@@ -61,6 +65,28 @@ export default class ShellComponent {
 
   protected readonly secondaryNav = inject(SecondaryNavService);
 
+  private readonly stats = inject(InventoryStatsService);
+
+  protected readonly health = inject(DatacenterHealthService);
+
+  protected readonly taskAttention = inject(TaskAttentionService);
+
+  /**
+   * Assets somebody has to do something about: what is broken, and what has
+   * been asked for and still has to be ordered. Both are waiting on a person,
+   * which is what the badge on the section is for.
+   */
+  protected readonly attentionCount = computed(() => {
+    const s = this.stats.stats();
+    return s ? s.needsRepair + s.requested : 0;
+  });
+
+  ngOnInit(): void {
+    this.stats.refresh();
+    this.health.refresh();
+    this.taskAttention.refresh();
+  }
+
   protected readonly sections = SECTIONS;
 
   /** Read from the address rather than from routerLinkActive: the links live in
@@ -68,6 +94,9 @@ export default class ShellComponent {
   private readonly currentUrl = signal(this.router.url);
 
   protected readonly stackDepth = signal(depthForPath(this.router.url));
+
+  /** True while the split view shows one pane at a time. */
+  private readonly singleColumn = signal(false);
 
   readonly userName = computed(() => this.authService.user()?.name ?? '');
 
@@ -80,10 +109,23 @@ export default class ShellComponent {
       });
   }
 
-  /** Marks the section you are in, including the pages under it. */
+  /**
+   * Whether a row in the sections list is the one you are in, and whether that
+   * is worth showing. Collapsed to one column the sections list is the whole
+   * screen and nothing stands beside it, so marking a row would point at a pane
+   * that is not there. Same at depth 0, where the section's menu has been left
+   * behind.
+   */
   isCurrent(path: string): boolean {
+    if (this.singleColumn() || this.stackDepth() < 1) return false;
     const current = this.currentUrl().split(/[?#]/)[0];
     return current === path || current.startsWith(`${path}/`);
+  }
+
+  /** Set by the split view when it collapses to one visible pane. */
+  onSingleColumnChange(event: Event): void {
+    const detail = (event as CustomEvent<{ singleColumn: boolean }>).detail;
+    this.singleColumn.set(detail.singleColumn);
   }
 
   /**
@@ -106,12 +148,15 @@ export default class ShellComponent {
   }
 
   /**
-   * A page's back button, bubbled up from its title bar. Stacked (narrow) mode
-   * shows the deepest pane that carries `has-content`, so dropping it reveals
-   * the pane before it.
+   * A back button, bubbled up from the title bar of whichever pane it sits in.
+   * Which pane that is decides where you land: back from the page goes to the
+   * section's menu, back from that menu to the sections. Counting down one step
+   * from wherever the stack happens to be sent you to the menu you were already
+   * looking at.
    */
-  onPaneBack(): void {
-    this.stackDepth.update((depth) => Math.max(depth - 1, 0));
+  onPaneBack(event: Event): void {
+    const pane = (event.target as HTMLElement | null)?.closest?.('nldd-split-view-pane');
+    this.stackDepth.set(pane?.getAttribute('slot') === 'secondary-sidebar' ? 0 : 1);
   }
 
   async handleLogout(): Promise<void> {

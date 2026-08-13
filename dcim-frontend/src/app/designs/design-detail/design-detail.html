@@ -341,6 +341,7 @@
      DEVICE DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #deviceModal
   [attr.text]="'Delete device ' + (deleteDevice()?.name ?? '') + ' from this design?'"
   supporting-text="Every connection to and from this device is removed as well. This cannot be undone."
@@ -348,7 +349,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep device"
     (click)="cancelDeleteDevice()"
   ></nldd-button>
@@ -480,6 +481,7 @@
      CONNECTION DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #connModal
   [attr.text]="
     'Delete connection ' +
@@ -493,7 +495,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep connection"
     (click)="cancelDeleteConnection()"
   ></nldd-button>

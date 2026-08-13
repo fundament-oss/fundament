@@ -15,7 +15,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import type { AssetStats } from '../../generated/v1/asset_pb';
 import { RackSlotType } from '../../generated/v1/common_pb';
@@ -30,12 +30,12 @@ import SecondaryNavService from '../shell/secondary-nav.service';
 import categoryIcon, { AssetCategory, CATEGORIES } from '../shared/asset-category';
 import { viewSlug } from '../shared/section-views';
 import { INVENTORY_PATH } from './inventory-views';
+import InventoryNavComponent from './inventory-nav';
 
 export type { AssetCategory };
 
 export type AssetStatus =
   'needs-repair' | 'decommissioned' | 'deployed' | 'available' | 'on-order' | 'requested';
-
 
 /** Mirrors the proto AssetEventType enum (common.proto). */
 export type AssetEventAction =
@@ -133,11 +133,11 @@ type MenuKind = 'all' | 'status' | 'category';
   selector: 'app-inventory',
   templateUrl: './inventory.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, DropdownSyncDirective],
+  imports: [FormsModule, DropdownSyncDirective, InventoryNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: {
-    class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950',
-  },
+  // No styling of its own: the page inside paints the surface and owns the
+  // layout, and styles.css takes this element out of the flow (display:
+  // contents) so it cannot come between the pane and the page.
 })
 export default class InventoryComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly secondaryNav = inject(SecondaryNavService);
@@ -178,6 +178,17 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   });
 
   /**
+   * Whether the address names a view. The section's own path (/inventory) means you
+   * have opened the section and picked nothing yet, and then the pane beside
+   * the menu says so rather than showing a list you did not ask for.
+   */
+  readonly hasSelection = computed(() => this.viewParams().get('view') !== null);
+
+  private readonly queryParams = toSignal(this.route.queryParamMap, {
+    initialValue: convertToParamMap({}),
+  });
+
+  /**
    * What the menu points at, read from the address. One choice, not two: the
    * menu is navigation, so picking a category takes you to the categories the
    * way a link takes you to a page, instead of narrowing what a status already
@@ -205,6 +216,20 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     }
   });
 
+  /**
+   * The title of the page is the row you picked in the menu. The section name
+   * is already in the menu's own heading and in the way back, so repeating it
+   * above the list would say "Inventory" three times and never say which
+   * assets you are looking at.
+   */
+  readonly viewTitle = computed(() => {
+    const { kind, value } = this.menuSelection();
+    if (kind === 'status')
+      return this.statuses.find((s) => s.value === value)?.label ?? 'All assets';
+    if (kind === 'category') return value;
+    return 'All assets';
+  });
+
   /** The address of a view, so every row in the menu is a real link. */
   readonly viewPath = (kind: MenuKind, value = ''): string =>
     kind === 'all' ? `${INVENTORY_PATH}/all` : `${INVENTORY_PATH}/${kind}/${viewSlug(value)}`;
@@ -230,6 +255,21 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     this.router.navigateByUrl(INVENTORY_PATH);
   }
 
+  /** The address of one asset, so a row is a real link. */
+  readonly assetPath = (id: string): string => `${INVENTORY_PATH}/${id}`;
+
+  /** Same trade as the menu rows: a real link, routed in-app without modifiers. */
+  openAsset(event: Event, id: string): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.router.navigateByUrl(this.assetPath(id));
+  }
+
   readonly statusFilter = computed<AssetStatus | 'all'>(() => {
     const selection = this.menuSelection();
     return selection.kind === 'status' ? (selection.value as AssetStatus) : 'all';
@@ -240,7 +280,90 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     return selection.kind === 'category' ? (selection.value as AssetCategory) : 'all';
   });
 
-  sortDirection = signal<'asc' | 'desc'>('asc');
+  /**
+   * The status picked in the toolbar, as a query parameter rather than a signal.
+   * The menu is one choice, so "which servers are broken" had nowhere to live:
+   * you could pick the category or the status and never both. This is the
+   * second axis, and it sits in the address so it can be linked to and so it
+   * goes away by itself when you leave for another view.
+   */
+  readonly statusParam = computed<AssetStatus | 'all'>(() => {
+    const value = this.queryParams().get('status') ?? '';
+    return this.statuses.find((s) => viewSlug(s.value) === value)?.value ?? 'all';
+  });
+
+  /** What the list asks for: the status of the view, or the one in the toolbar. */
+  private readonly activeStatus = computed<AssetStatus | 'all'>(() => {
+    const view = this.statusFilter();
+    return view !== 'all' ? view : this.statusParam();
+  });
+
+  /** Nothing to narrow when the view already is one status. */
+  readonly showStatusFilter = computed(() => this.statusFilter() === 'all');
+
+  readonly statusFilterLabel = computed(() => {
+    const status = this.statusParam();
+    return status === 'all' ? 'Status' : this.statusLabel(status);
+  });
+
+  /** Puts the pick in the address, or takes it out again for "All". */
+  setStatusParam(status: AssetStatus | 'all'): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { status: status === 'all' ? null : viewSlug(status) },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  /**
+   * The states in the order they ask something of you: broken first, then what
+   * somebody asked for and still has to be ordered, then what is on its way and
+   * might need chasing, then what is ready to use, then what is quietly
+   * working, and what is written off last. Requested sits above On Order
+   * because it is still your move; once it is ordered the wait is the
+   * supplier's.
+   *
+   * Alphabetical order was what the API offered and it means nothing here:
+   * "Decommissioned" landing between "Available" and "Deployed" is a fact about
+   * spelling, not about the rack.
+   */
+  private readonly attentionOrder: AssetStatus[] = [
+    'needs-repair',
+    'requested',
+    'on-order',
+    'available',
+    'deployed',
+    'decommissioned',
+  ];
+
+  /**
+   * The rows in that order, then by model so identical machines sit together,
+   * then by asset number so nothing moves between two loads of the same data.
+   * Sorted here rather than server-side because the API has no field for it;
+   * that holds as long as a view fetches its whole list at once, and needs a
+   * sort field of its own once these lists start paginating.
+   */
+  readonly orderedAssets = computed(() => {
+    const rank = (status: AssetStatus): number => this.attentionOrder.indexOf(status);
+    return [...this.assets()].sort(
+      (a, b) =>
+        rank(a.status) - rank(b.status) ||
+        a.model.localeCompare(b.model) ||
+        a.assetTag.localeCompare(b.assetTag),
+    );
+  });
+
+  /**
+   * The menu in that same order, so the rows you pick from and the rows you get
+   * are sorted by the same idea. The form's own status list keeps its lifecycle
+   * order, which is what you want when you are setting a state rather than
+   * scanning for the one that needs you.
+   */
+  readonly menuStatuses = computed(() =>
+    [...this.statuses].sort(
+      (a, b) => this.attentionOrder.indexOf(a.value) - this.attentionOrder.indexOf(b.value),
+    ),
+  );
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editAsset = signal<Partial<Asset> | null>(null);
@@ -284,16 +407,12 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     { value: RackSlotType.ZERO_U, label: 'Zero-U' },
   ];
 
-  deleteAsset = signal<Asset | null>(null);
-
   // ── Validation feedback ──────────────────────────────────────────────────────
   readonly invalidFields = signal<Record<string, string>>({});
 
   readonly formErrorMessage = signal<string | null>(null);
 
   private readonly assetSheetEl = viewChild<ElementRef>('assetSheet');
-
-  private readonly assetModalEl = viewChild<ElementRef>('assetModal');
 
   private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
 
@@ -306,10 +425,12 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
   constructor() {
-    // The view lives in the address now, so the address is what asks for a new
-    // query. This runs on arrival too, which is where the first load comes from.
+    // The view and the status filter both live in the address now, so the
+    // address is what asks for a new query. This runs on arrival too, which is
+    // where the first load comes from.
     effect(() => {
       this.menuSelection();
+      this.statusParam();
       this.reload();
     });
 
@@ -325,11 +446,6 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     effect(() => {
       const el = this.assetSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editAsset() !== null) el?.show?.();
-      else el?.hide?.();
-    });
-    effect(() => {
-      const el = this.assetModalEl()?.nativeElement as { show?: () => void; hide?: () => void };
-      if (this.deleteAsset() !== null) el?.show?.();
       else el?.hide?.();
     });
   }
@@ -378,9 +494,11 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     firstValueFrom(
       this.inventoryApi.listAssets({
         search: this.searchQuery().trim(),
-        status: this.statusFilter(),
+        status: this.activeStatus(),
         category: this.categoryFilter(),
-        sortDirection: this.sortDirection(),
+        // The API needs a direction; which one does not matter, because the
+        // list is put in its own order here (see orderedAssets).
+        sortDirection: 'asc',
       }),
     )
       .then((res) =>
@@ -418,6 +536,33 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     };
   });
 
+  /**
+   * What an empty view says. Not "0 of 70": a view is not a filter over
+   * everything, it is a list of its own, and a search that finds nothing is a
+   * different sentence from a category nobody has put anything in yet.
+   */
+  readonly emptyText = computed(() => {
+    const query = this.searchQuery().trim();
+    if (query) return `No results for "${query}"`;
+    const { kind, value } = this.menuSelection();
+    if (kind === 'category') return `No ${value} assets`;
+    if (kind === 'status') return `No ${this.statusLabel(value as AssetStatus)} assets`;
+    return 'No assets';
+  });
+
+  /**
+   * How many rows this view holds. Not "7 of 70": the view is a list of its own,
+   * not a slice of everything, and the only place a denominator means something
+   * is a search, which narrows the view you are in.
+   */
+  readonly listSummary = computed(() => {
+    const shown = this.assets().length;
+    const noun = shown === 1 ? 'asset' : 'assets';
+    return this.searchQuery().trim()
+      ? `${shown} ${shown === 1 ? 'result' : 'results'}`
+      : `${shown} ${noun}`;
+  });
+
   readonly totalCount = computed(() => this.stats()?.total ?? 0);
 
   readonly deployedCount = computed(() => this.stats()?.deployed ?? 0);
@@ -434,11 +579,6 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   /** Whether this menu row is the one the list is showing. */
   isMenuSelection(kind: MenuKind, value = 'all'): boolean {
     return this.menuSelection().kind === kind && this.menuSelection().value === value;
-  }
-
-  toggleSort(): void {
-    this.sortDirection.update((d) => (d === 'asc' ? 'desc' : 'asc'));
-    this.reload();
   }
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
@@ -476,42 +616,6 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
       status: 'available',
       notes: '',
     });
-  }
-
-  openEditAsset(asset: Asset, event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.clearErrors();
-    // Resolve the existing placement before opening, so the location picker
-    // renders with the right rack pre-selected.
-    firstValueFrom(this.placementApi.getPlacementByAsset(asset.id))
-      .then((res) => {
-        const p = res.placement;
-        const placement =
-          p && p.location.case === 'rack'
-            ? {
-                id: p.id,
-                rackId: p.location.value.rackId,
-                unit: p.location.value.rackUnitStart,
-                slotType: p.location.value.rackSlotType,
-              }
-            : null;
-        this.editPlacement.set(placement);
-        this.assetRackId.set(placement?.rackId ?? '');
-        this.assetSlotType.set(placement?.slotType ? String(placement.slotType) : '');
-      })
-      .catch((err) => {
-        this.editPlacement.set(null);
-        this.assetRackId.set('');
-        this.assetSlotType.set('');
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-      })
-      .finally(() => {
-        this.assetDeviceId.set(asset.deviceCatalogId ?? '');
-        this.assetStatus.set(asset.status);
-        this.editAsset.set({ ...asset });
-      });
   }
 
   closeAssetForm(): void {
@@ -573,29 +677,6 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     });
   }
 
-  openDeleteAsset(asset: Asset, event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.deleteAsset.set(asset);
-  }
-
-  cancelDeleteAsset(): void {
-    this.deleteAsset.set(null);
-  }
-
-  confirmDeleteAsset(): void {
-    const target = this.deleteAsset();
-    if (!target) return;
-    firstValueFrom(this.inventoryApi.deleteAsset(target.id))
-      .then(() => {
-        this.assets.update((list) => list.filter((a) => a.id !== target.id));
-        this.loadStats();
-        this.deleteAsset.set(null);
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
-  }
-
   statusLabel(status: AssetStatus): string {
     return this.statuses.find((s) => s.value === status)?.label ?? status;
   }
@@ -611,21 +692,6 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
       decommissioned: 'bg-slate-400',
       'on-order': 'bg-blue-400',
       requested: 'bg-purple-400',
-    };
-    return map[status];
-  };
-
-  /** The same six states in the design system's own colors, for the dot in the
-   *  filter menu. Neutral for what is out of service, so the eye goes to the
-   *  ones that need something. */
-  readonly statusBadgeColor = (status: AssetStatus): string => {
-    const map: Record<AssetStatus, string> = {
-      deployed: 'success',
-      available: 'accent',
-      'needs-repair': 'warning',
-      decommissioned: 'neutral',
-      'on-order': 'accent',
-      requested: 'neutral',
     };
     return map[status];
   };

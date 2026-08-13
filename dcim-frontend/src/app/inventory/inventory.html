@@ -1,211 +1,165 @@
-<!-- ══════════════════════════════════════════════════════════════
-     SUBBAR
-     ══════════════════════════════════════════════════════════════ -->
-<div
-  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
->
-  <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0 flex-1">
-    Inventory
-  </h1>
-  <div class="flex items-center gap-2 shrink-0">
-    <nldd-button
-      variant="primary"
-      text="Add asset"
-      start-icon="plus-small"
-      size="sm"
-      (click)="openCreateAsset()"
-    ></nldd-button>
-  </div>
-</div>
+<!-- The status filter hangs off its button in the toolbar. A menu is a popover,
+     so it is declared at the root rather than inside the page's scroll. -->
+<nldd-menu anchor="statusFilterTrigger" accessible-label="Filter by status">
+  <nldd-menu-item
+    type="radio"
+    text="All"
+    [attr.selected]="statusParam() === 'all' ? '' : null"
+    (select)="setStatusParam('all')"
+  ></nldd-menu-item>
+  @for (s of menuStatuses(); track s.value) {
+    <nldd-menu-item
+      type="radio"
+      [attr.text]="s.label"
+      [attr.selected]="statusParam() === s.value ? '' : null"
+      (select)="setStatusParam(s.value)"
+    ></nldd-menu-item>
+  }
+</nldd-menu>
 
-<!-- ══════════════════════════════════════════════════════════════
-     BODY (sidebar + main)
-     ══════════════════════════════════════════════════════════════ -->
-<div class="flex flex-1 min-h-0">
-
-  <!-- ── MAIN ───────────────────────────────────────────────────── -->
-  <main class="flex-1 min-w-0 overflow-y-auto" aria-label="Asset inventory">
-    <div class="px-6 pb-6">
-      <!-- Stats row -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 pb-5">
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Total Assets
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ totalCount() }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">across all locations</p>
-        </div>
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-teal-600 px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Deployed
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ deployedCount() }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">in production</p>
-        </div>
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-emerald-600 px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Available
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ availableCount() }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">ready to deploy</p>
-        </div>
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Issues
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ issuesCount() }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">need attention</p>
-        </div>
-      </div>
-
-      <!-- ── TABLE ── -->
-      <div role="table" aria-label="Asset inventory">
-        <!-- Column headers -->
-        <div
-          role="row"
-          class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5"
-        >
-          <div class="w-9 shrink-0"></div>
-          <div
-            class="flex-1 min-w-0 grid grid-cols-[1fr_110px_148px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide mr-18"
-          >
-            <span role="columnheader" class="uppercase">Model</span>
-            <span role="columnheader" class="uppercase hidden sm:block">Category</span>
-            <button
-              role="columnheader"
-              (click)="toggleSort()"
-              class="uppercase cursor-pointer hidden sm:flex items-center gap-1 text-left hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
-              [attr.aria-sort]="sortDirection() === 'asc' ? 'ascending' : 'descending'"
+<nldd-page sticky-header>
+  <!-- The bar carries the way back to the asset menu once the panes collapse to
+       one column, and back takes the address to the section, so the URL and the
+       pane on screen agree. -->
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="viewTitle()"
+    back-text="Inventory"
+    collapse-anchor="inventory-title"
+    (back)="goToMenu()"
+  ></nldd-top-title-bar>
+  @if (hasSelection()) {
+    <nldd-simple-section>
+      <nldd-title id="inventory-title" size="2">
+        <h1>{{ viewTitle() }}</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-toolbar label="Inventory actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="primary"
+            text="Add asset"
+            start-icon="plus-small"
+            (click)="openCreateAsset()"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="plus-small"
+            text="Add asset"
+            (select)="openCreateAsset()"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- No figures above this list: the menu already carries them, one per row,
+           beside the view they belong to. A card repeating "Deployed 28" next to
+           a menu row that says "Deployed 28" is the same number twice.
+           What narrows the list down goes here instead. Searching is not
+           navigating: it cuts across whichever view you are in, so it belongs
+           with the rows and not in the menu.
+           No sort control: the order is fixed and says something on its own (see
+           orderedAssets), and the one thing you would sort an asset by — its
+           number on the sticker — is what the search box is for. -->
+      @if (orderedAssets().length > 0 || searchQuery().trim()) {
+        <nldd-toolbar label="Asset list">
+          <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
+            <nldd-search-field
+              accessible-label="Search assets"
+              placeholder="Search"
+              [value]="searchQuery()"
+              (input)="searchQuery.set($any($event.target).value)"
+            ></nldd-search-field>
+          </nldd-toolbar-item>
+          <!-- The second axis the menu cannot give you: which of these servers are
+             broken. Left out in a status view, where there is nothing to narrow. -->
+          @if (showStatusFilter()) {
+            <nldd-toolbar-item slot="end">
+              <nldd-button
+                id="statusFilterTrigger"
+                variant="secondary"
+                start-icon="filter"
+                expandable
+                popup-type="menu"
+                [attr.text]="statusFilterLabel()"
+                accessible-label="Filter by status"
+              ></nldd-button>
+            </nldd-toolbar-item>
+          }
+        </nldd-toolbar>
+      }
+      <nldd-spacer size="8"></nldd-spacer>
+      <!-- How many rows the view and the search left, right above them. Absent
+         when there are none: the empty state below says that already, and "0 of
+         70" reads as if this view were a filter over everything. -->
+      @if (orderedAssets().length > 0) {
+        <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
+        <nldd-spacer size="8"></nldd-spacer>
+      }
+      <!-- A list, not a table: the category is a tag and the status is a tag, so
+         the headers above them said nothing the cells did not. -->
+      @if (orderedAssets().length > 0) {
+        <nldd-list accessible-label="Asset inventory">
+          <!-- The whole row opens the asset. Editing and deleting live on the page
+           the row opens: they act on one asset, and that is where you can see
+           which one you are about to change. -->
+          @for (asset of orderedAssets(); track asset.id) {
+            <nldd-list-item
+              [attr.href]="assetPath(asset.id)"
+              [attr.accessible-label]="'Open ' + asset.model"
+              (click)="openAsset($event, asset.id)"
             >
-              Status
-              <nldd-icon
-                name="caret-down-small"
-                class="w-3.5 h-3.5"
-                [style.transform]="sortDirection() === 'asc' ? 'rotate(180deg)' : 'none'"
-                aria-hidden="true"
-              >
-              </nldd-icon>
-            </button>
-          </div>
-        </div>
-
-        <!-- Asset rows -->
-        @for (asset of assets(); track asset.id) {
-          <a
-            role="row"
-            [routerLink]="['/inventory', asset.id]"
-            class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group cursor-pointer"
-          >
-            <!-- Category icon -->
-            <div
-              role="cell"
-              class="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 group-hover:bg-slate-200 dark:group-hover:bg-gray-800 transition-colors"
-              [attr.aria-label]="asset.category"
-            >
-              <nldd-icon
-                [name]="categoryIcon(asset.category)"
-                class="w-4.5 h-4.5"
-                aria-hidden="true"
-              ></nldd-icon>
-            </div>
-
-            <div
-              class="flex-1 min-w-0 grid grid-cols-[1fr_110px_148px] gap-3 lg:gap-4 items-center"
-              role="presentation"
-            >
-              <!-- Model + asset tag -->
-              <div role="cell" class="min-w-0">
-                <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
-                  {{ asset.model }}
-                </p>
-                <p class="text-xs text-slate-400 dark:text-gray-500 font-mono">
-                  {{ asset.assetTag }}
-                </p>
-              </div>
-
-              <!-- Category badge -->
-              <div role="cell" class="hidden sm:block">
-                <nldd-tag color="neutral" size="sm" [attr.text]="asset.category"></nldd-tag>
-              </div>
-
-              <!-- Status badge -->
-              <div role="cell" class="hidden sm:block">
-                <nldd-tag
+              <nldd-icon-cell size="24" [attr.icon]="categoryIcon(asset.category)"></nldd-icon-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- The category right behind the name, and the asset tag under
+                   it: that tag is what somebody reads off the sticker on the
+                   front, so it belongs with the name. &ngsp; is Angular's own
+                   keep-this-space entity. -->
+              <nldd-text-cell width="full" min-width="140px" [attr.supporting-text]="asset.assetTag"
+                >{{ asset.model }}&ngsp;<nldd-tag
                   size="sm"
-                  [attr.color]="statusTagColor(asset.status)"
-                  [attr.text]="statusLabel(asset.status)"
-                  [attr.accessible-label]="'Status: ' + statusLabel(asset.status)"
-                ></nldd-tag>
-              </div>
-            </div>
-
-            <!-- Edit / Delete actions -->
-            <div
-              role="cell"
-              class="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity pr-3"
-              (click)="$event.stopPropagation()"
-              (keydown)="$event.stopPropagation()"
-            >
-              <nldd-icon-button
-                icon="pencil-on-square"
-                variant="neutral-transparent"
-                size="xs"
-                text="Edit asset"
-                (click)="openEditAsset(asset, $event)"
-              ></nldd-icon-button>
-              <nldd-icon-button
-                icon="trash"
-                variant="neutral-transparent"
-                size="xs"
-                text="Delete asset"
-                (click)="openDeleteAsset(asset, $event)"
-              ></nldd-icon-button>
-            </div>
-          </a>
-        }
-
-        <!-- Empty state -->
-        @if (assets().length === 0) {
-          <div class="flex flex-col items-center justify-center py-16 text-center">
-            <div
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-3"
-            >
-              <nldd-icon name="rectangle-stack" class="w-6 h-6" aria-hidden="true"></nldd-icon>
-            </div>
-            <p class="text-sm font-medium text-slate-600 dark:text-gray-300">No assets found</p>
-            <p class="mt-1 text-xs text-slate-400 dark:text-gray-500">
-              Try adjusting your search or filter criteria.
-            </p>
-          </div>
-        }
-      </div>
-    </div>
-  </main>
-</div>
+                  color="neutral"
+                  [attr.text]="asset.category"
+                ></nldd-tag
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- The status as a dot and a word rather than a tag: a tag is a
+                 property somebody assigns, and this one the system decides. It
+                 also puts the state in the same shape as the menu it was picked
+                 from.
+                 The cell is fit-content, so the pair sits against the chevron
+                 instead of starting at a fixed column. The dot stays glued to
+                 its word; what you give up is the straight line of dots down
+                 the list. -->
+              <nldd-text-cell width="fit-content" horizontal-alignment="right" hide-below="440px"
+                ><nldd-badge decorative [attr.color]="statusTagColor(asset.status)"></nldd-badge
+                >&ngsp;{{ statusLabel(asset.status) }}</nldd-text-cell
+              >
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-icon-cell size="20" icon="chevron-right" color="secondary"></nldd-icon-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      }
+    </nldd-simple-section>
+    <!-- Nothing to show is not a row in a list: the empty state replaces the list
+       and takes the room it leaves, so the message sits in the middle of the
+       screen rather than clinging to the toolbar. -->
+    @if (orderedAssets().length === 0) {
+      <nldd-simple-section height="40dvh" vertical-alignment="center" padding-block="0">
+        <nldd-inline-dialog [attr.text]="emptyText()"></nldd-inline-dialog>
+      </nldd-simple-section>
+    }
+  } @else {
+    <!-- The section is open and nothing is picked. The console says the same
+         thing in the same place: the menu beside this pane is the next move. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
+    </nldd-simple-section>
+  }
+  <!-- Empty, for the band it draws: the page ends on a line rather than on
+       whatever row happened to be last. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
 
 <!-- ══════════════════════════════════════════════════════════════
      ASSET EDIT SHEET
@@ -347,142 +301,9 @@
   </nldd-page>
 </nldd-sheet>
 
-<!-- ══════════════════════════════════════════════════════════════
-     ASSET DELETE MODAL
-     ══════════════════════════════════════════════════════════════ -->
-<nldd-modal-dialog
-  #assetModal
-  (close)="cancelDeleteAsset()"
-  [attr.text]="'Delete asset ' + (deleteAsset()?.assetTag ?? '') + '?'"
-  [attr.supporting-text]="
-    'This removes ' +
-    (deleteAsset()?.model ?? '') +
-    ' from the inventory, including its placement history. This cannot be undone.'
-  "
-  accessible-label="Confirm asset deletion"
->
-  <nldd-button
-    slot="actions"
-    variant="secondary"
-    text="Keep asset"
-    (click)="cancelDeleteAsset()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    variant="destructive"
-    text="Delete asset"
-    (click)="confirmDeleteAsset()"
-  ></nldd-button>
-</nldd-modal-dialog>
-<!-- The filters are the menu of this section: status first, because that is what
-     you come here to narrow, then category. Declared here because the counts are
-     this page's data. -->
+<!-- The menu of this section, in a component of its own: the page of one asset
+     shows the same one, and it is the list beside it that gets replaced when
+     you open a row, not the menu. -->
 <ng-template #secondaryNav>
-  <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      back-text="Sections"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      <nldd-title size="3">
-        <h1>Inventory</h1>
-      </nldd-title>
-      <nldd-spacer size="12"></nldd-spacer>
-      <nldd-search-field
-        accessible-label="Search assets"
-        placeholder="Search assets…"
-        [value]="searchQuery()"
-        (input)="searchQuery.set($any($event.target).value)"
-      ></nldd-search-field>
-      <nldd-spacer size="16"></nldd-spacer>
-      <!-- Everything, above both headings. It is not a status and not a
-           category, so it does not belong at the head of either list: the menu
-           navigates, and "all" is where you land when you have not chosen. -->
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="All assets"
-      >
-        <nldd-list-item
-          [attr.href]="viewPath('all')"
-          [attr.selected]="isMenuSelection('all') ? '' : null"
-          (click)="goToView($event, 'all')"
-        >
-          <nldd-icon-cell
-            icon="square-grid-2x2"
-            size="20"
-          ></nldd-icon-cell>
-          <nldd-spacer-cell size="8"></nldd-spacer-cell>
-          <nldd-text-cell text="All assets"></nldd-text-cell>
-          <nldd-text-cell
-            width="fit-content"
-            horizontal-alignment="right"
-            color="secondary"
-            [attr.text]="statusCounts()['all']"
-          ></nldd-text-cell>
-        </nldd-list-item>
-      </nldd-list>
-      <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="5">
-        <h2>Status</h2>
-      </nldd-title>
-      <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="Status"
-      >
-        @for (s of statuses; track s.value) {
-          <nldd-list-item
-            [attr.href]="viewPath('status', s.value)"
-            [attr.selected]="isMenuSelection('status', s.value) ? '' : null"
-            (click)="goToView($event, 'status', s.value)"
-          >
-            <nldd-cell width="fit-content">
-              <nldd-badge
-                decorative
-                [attr.color]="statusBadgeColor(s.value)"
-              ></nldd-badge>
-            </nldd-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-text-cell [attr.text]="s.label"></nldd-text-cell>
-            @if (statusCounts()[s.value]) {
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                color="secondary"
-                [attr.text]="statusCounts()[s.value]"
-              ></nldd-text-cell>
-            }
-          </nldd-list-item>
-        }
-      </nldd-list>
-      <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="5">
-        <h2>Category</h2>
-      </nldd-title>
-      <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="Category"
-      >
-        @for (cat of categories; track cat) {
-          <nldd-list-item
-            button
-            [attr.href]="viewPath('category', cat)"
-            [attr.selected]="isMenuSelection('category', cat) ? '' : null"
-            (click)="goToView($event, 'category', cat)"
-          >
-            <nldd-icon-cell
-              [attr.icon]="categoryIcon(cat)"
-              size="20"
-            ></nldd-icon-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-text-cell [attr.text]="cat"></nldd-text-cell>
-          </nldd-list-item>
-        }
-      </nldd-list>
-    </nldd-simple-section>
-  </nldd-page>
+  <app-inventory-nav></app-inventory-nav>
 </ng-template>

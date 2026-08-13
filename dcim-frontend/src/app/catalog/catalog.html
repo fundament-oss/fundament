@@ -1,218 +1,145 @@
-<!-- ══════════════════════════════════════════════════════════════
-     SUBBAR
-     ══════════════════════════════════════════════════════════════ -->
-<div
-  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
->
-  <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0 flex-1">
-    Catalog
-  </h1>
-  <div class="flex items-center gap-2 shrink-0">
-    <nldd-button
-      variant="primary"
-      text="Add product"
-      start-icon="plus-small"
-      size="sm"
-      (click)="openCreateEntry()"
-    ></nldd-button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════
-     BODY (sidebar + main)
-     ══════════════════════════════════════════════════════════════ -->
-<div class="flex flex-1 min-h-0">
-
-  <!-- ── MAIN ───────────────────────────────────────────────────── -->
-  <main class="flex-1 min-w-0 overflow-y-auto" aria-label="Product catalog">
-    <div class="px-6 pb-6">
-      <!-- Stats row -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 pb-5">
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-indigo-700 px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Product Models
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ totalProducts() }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">
-            across {{ categories.length }} categories
-          </p>
-        </div>
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Total Assets
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ totalAssets() }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">across all categories</p>
-        </div>
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-emerald-600 px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Available
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ totalAvailable() }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">ready to deploy</p>
-        </div>
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Open Issues
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ totalIssues() }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">need attention</p>
-        </div>
-      </div>
-
-      <!-- Table -->
-      <div role="table" aria-label="Product catalog">
-        <!-- Column headers -->
-        <div
-          role="row"
-          class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5"
-        >
-          <div class="w-9 shrink-0"></div>
-          <div
-            class="flex-1 min-w-0 grid grid-cols-[1fr_110px_60px_60px_60px_60px_56px] gap-3 lg:gap-4 items-center text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide"
-          >
-            <span role="columnheader">Model</span>
-            <span role="columnheader" class="hidden sm:block">Category</span>
-            <span role="columnheader" class="hidden md:block text-right">Total</span>
-            <span role="columnheader" class="hidden md:block text-right">Deployed</span>
-            <span role="columnheader" class="hidden md:block text-right">Available</span>
-            <span role="columnheader" class="hidden md:block text-right">Issues</span>
-            <span role="columnheader"></span>
-          </div>
-        </div>
-
-        <!-- Catalog rows -->
-        @for (row of rows(); track row.entry.id) {
-          <a
-            role="row"
-            [routerLink]="['/catalog', row.entry.id]"
-            class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group cursor-pointer"
-          >
-            <div
-              role="cell"
-              class="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 group-hover:bg-slate-200 dark:group-hover:bg-gray-800 transition-colors"
-              [attr.aria-label]="row.entry.category"
+<nldd-page sticky-header>
+  <!-- The bar carries the way back to the category menu once the panes collapse
+       to one column, and back takes the address to the section, so the URL and
+       the pane on screen agree. -->
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="viewTitle()"
+    back-text="Catalog"
+    collapse-anchor="catalog-title"
+    (back)="goToMenu()"
+  ></nldd-top-title-bar>
+  @if (hasSelection()) {
+    <nldd-simple-section>
+      <nldd-title id="catalog-title" size="2">
+        <h1>{{ viewTitle() }}</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-toolbar label="Catalog actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="primary"
+            text="Add product"
+            start-icon="plus-small"
+            (click)="openCreateEntry()"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="plus-small"
+            text="Add product"
+            (select)="openCreateEntry()"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- What narrows the list down, above the list itself. Searching is not
+           navigating: it cuts across whichever category you are in, so it belongs
+           with the rows and not in the menu. -->
+      @if (rows().length > 0 || searchQuery().trim()) {
+        <nldd-toolbar label="Product list">
+          <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
+            <nldd-search-field
+              accessible-label="Search catalog"
+              placeholder="Search"
+              [value]="searchQuery()"
+              (input)="searchQuery.set($any($event.target).value)"
+            ></nldd-search-field>
+          </nldd-toolbar-item>
+        </nldd-toolbar>
+      }
+      <nldd-spacer size="8"></nldd-spacer>
+      <!-- How many rows the view and the search left, right above them. Absent
+           when there are none: the empty state below says that already. -->
+      @if (rows().length > 0) {
+        <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
+        <nldd-spacer size="8"></nldd-spacer>
+      }
+      <!-- A list, not a table: every cell says what it is (a category tag, a
+             count in its own column), so the headers had nothing left to explain.
+             Which columns are on screen follows the width of this list through
+             hide-below, so the numbers drop out in a narrow pane instead of
+             squeezing the model name to nothing. -->
+      @if (rows().length > 0) {
+        <nldd-list accessible-label="Product catalog">
+          <!-- The whole row opens the product. Editing and deleting live on the
+               page the row opens: they act on one product, and that is where you
+               can see which one you are about to change. -->
+          @for (row of rows(); track row.entry.id) {
+            <nldd-list-item
+              [attr.href]="entryPath(row.entry.id)"
+              [attr.accessible-label]="'Open ' + row.entry.model"
+              (click)="openEntry($event, row.entry.id)"
             >
-              <nldd-icon
-                [name]="categoryIcon(row.entry.category)"
-                class="w-4.5 h-4.5"
-                aria-hidden="true"
-              ></nldd-icon>
-            </div>
-
-            <div
-              class="flex-1 min-w-0 grid grid-cols-[1fr_110px_60px_60px_60px_60px_56px] gap-3 lg:gap-4 items-center"
-            >
-              <div role="cell" class="min-w-0">
-                <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
-                  {{ row.entry.model }}
-                </p>
-                <p class="text-xs text-slate-400 dark:text-gray-500">
-                  {{ row.entry.manufacturer }}
-                </p>
-              </div>
-
-              <div role="cell" class="hidden sm:block">
-                <nldd-tag
+              <nldd-icon-cell
+                size="24"
+                [attr.icon]="categoryIcon(row.entry.category)"
+              ></nldd-icon-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- The category right behind the name, in the neutral tag every
+                   category wears: a color per category was a code to learn, and it
+                   competed with the status colors that do carry meaning. &ngsp; is
+                   Angular's own keep-this-space entity. -->
+              <nldd-text-cell
+                width="full"
+                min-width="140px"
+                [attr.supporting-text]="row.entry.manufacturer"
+                >{{ row.entry.model }}&ngsp;<nldd-tag
                   size="sm"
-                  [attr.color]="categoryTagColor(row.entry.category)"
+                  color="neutral"
                   [attr.text]="row.entry.category"
-                ></nldd-tag>
-              </div>
-
-              <div role="cell" class="hidden md:block text-right">
-                <span class="text-sm font-semibold text-slate-700 dark:text-gray-300">{{
-                  row.total
-                }}</span>
-              </div>
-              <div role="cell" class="hidden md:block text-right">
-                <span class="text-sm font-semibold text-teal-600 dark:text-teal-300">{{
-                  row.deployed
-                }}</span>
-              </div>
-              <div role="cell" class="hidden md:block text-right">
-                <span class="text-sm font-semibold text-green-600 dark:text-green-300">{{
-                  row.available
-                }}</span>
-              </div>
-              <div role="cell" class="hidden md:block text-right">
-                <span
-                  class="text-sm font-semibold"
-                  [class]="
-                    row.issues > 0
-                      ? 'text-amber-600 dark:text-amber-300'
-                      : 'text-slate-300 dark:text-gray-600'
-                  "
-                  >{{ row.issues }}</span
-                >
-              </div>
-
-              <!-- Row actions -->
-              <div
-                role="cell"
-                class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <nldd-icon-button
-                  icon="pencil-on-square"
-                  variant="neutral-transparent"
-                  size="xs"
-                  text="Edit entry"
-                  (click)="openEditEntry(row.entry, $event)"
-                ></nldd-icon-button>
-                <nldd-icon-button
-                  icon="trash"
-                  variant="neutral-transparent"
-                  size="xs"
-                  text="Delete entry"
-                  (click)="openDeleteEntry(row.entry, $event)"
-                ></nldd-icon-button>
-              </div>
-            </div>
-          </a>
-        }
-
-        <!-- Empty state -->
-        @if (rows().length === 0) {
-          <div class="flex flex-col items-center justify-center py-16 text-center">
-            <div
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-3"
-            >
-              <nldd-icon name="rectangle-stack" class="w-6 h-6" aria-hidden="true"></nldd-icon>
-            </div>
-            <p class="text-sm font-medium text-slate-600 dark:text-gray-300">No products found</p>
-            <p class="mt-1 text-xs text-slate-400 dark:text-gray-500">
-              Try adjusting your search or filter.
-            </p>
-          </div>
-        }
-      </div>
-    </div>
-  </main>
-</div>
+                ></nldd-tag
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- One sentence instead of three columns of numbers. Total,
+                   deployed and available were three headings to read before the
+                   figures meant anything; "7 of 7 deployed" needs none. -->
+              <nldd-text-cell
+                width="140px"
+                horizontal-alignment="right"
+                color="secondary"
+                hide-below="560px"
+                [attr.text]="row.deployed + ' of ' + row.total + ' deployed'"
+              ></nldd-text-cell>
+              <!-- Only when there are any: a zero in a critical badge reports a
+                   problem that is not there. Cell and spacer come with the
+                   badge, so a row without one lets its sentence run on to the
+                   chevron instead of stopping at a column that holds nothing. -->
+              @if (row.issues > 0) {
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                <nldd-cell width="fit-content">
+                  <nldd-badge
+                    color="critical"
+                    [attr.text]="row.issues"
+                    [attr.accessible-label]="row.issues + ' open issues'"
+                  ></nldd-badge>
+                </nldd-cell>
+              }
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-icon-cell size="20" icon="chevron-right" color="secondary"></nldd-icon-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      }
+    </nldd-simple-section>
+    <!-- Nothing to show is not a row in a list: the empty state replaces the list
+         and takes the room it leaves, so the message sits in the middle of the
+         screen rather than clinging to the toolbar. -->
+    @if (rows().length === 0) {
+      <nldd-simple-section height="40dvh" vertical-alignment="center" padding-block="0">
+        <nldd-inline-dialog [attr.text]="emptyText()"></nldd-inline-dialog>
+      </nldd-simple-section>
+    }
+  } @else {
+    <!-- The section is open and nothing is picked. The console says the same
+         thing in the same place: the menu beside this pane is the next move. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
+    </nldd-simple-section>
+  }
+  <!-- Empty, for the band it draws: the page ends on a line rather than on
+       whatever row happened to be last. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
 
 <!-- ══════════════════════════════════════════════════════════════
      CATALOG ENTRY EDIT SHEET
@@ -345,108 +272,8 @@
   </nldd-page>
 </nldd-sheet>
 
-<!-- ══════════════════════════════════════════════════════════════
-     CATALOG ENTRY DELETE MODAL
-     ══════════════════════════════════════════════════════════════ -->
-<nldd-modal-dialog
-  #entryModal
-  (close)="cancelDeleteEntry()"
-  [attr.text]="'Delete catalog entry ' + (deleteEntry()?.model ?? '') + '?'"
-  supporting-text="This removes the product from the catalog. Existing assets are not affected."
-  accessible-label="Confirm catalog entry deletion"
->
-  <nldd-button
-    slot="actions"
-    variant="secondary"
-    text="Keep entry"
-    (click)="cancelDeleteEntry()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    variant="destructive"
-    text="Delete entry"
-    (click)="confirmDeleteEntry()"
-  ></nldd-button>
-</nldd-modal-dialog>
 <!-- The categories are the menu of this section, so the shell shows them in the
      second sidebar. Declared here because the counts are this page's data. -->
 <ng-template #secondaryNav>
-  <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      back-text="Sections"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      <nldd-title size="3">
-        <h1>Catalog</h1>
-      </nldd-title>
-      <nldd-spacer size="12"></nldd-spacer>
-      <nldd-search-field
-        accessible-label="Search catalog"
-        placeholder="Search models…"
-        [value]="searchQuery()"
-        (input)="searchQuery.set($any($event.target).value)"
-      ></nldd-search-field>
-      <nldd-spacer size="16"></nldd-spacer>
-      <!-- Everything, above the heading. It is not a category with an "all" in
-           it, so it does not belong at the head of that list. -->
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="All products"
-      >
-        <nldd-list-item
-          [attr.href]="viewPath('all')"
-          [attr.selected]="categoryFilter() === 'all' ? '' : null"
-          (click)="selectCategory($event, 'all')"
-        >
-          <nldd-icon-cell
-            icon="square-grid-2x2"
-            size="20"
-          ></nldd-icon-cell>
-          <nldd-spacer-cell size="8"></nldd-spacer-cell>
-          <nldd-text-cell text="All products"></nldd-text-cell>
-          <nldd-text-cell
-            width="fit-content"
-            horizontal-alignment="right"
-            color="secondary"
-            [attr.text]="totalProducts()"
-          ></nldd-text-cell>
-        </nldd-list-item>
-      </nldd-list>
-      <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="5">
-        <h2>Categories</h2>
-      </nldd-title>
-      <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="Categories"
-      >
-        @for (cat of categories; track cat) {
-          <nldd-list-item
-            [attr.href]="viewPath(cat)"
-            [attr.selected]="categoryFilter() === cat ? '' : null"
-            (click)="selectCategory($event, cat)"
-          >
-            <nldd-icon-cell
-              [attr.icon]="categoryIcon(cat)"
-              size="20"
-            ></nldd-icon-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-text-cell [attr.text]="cat"></nldd-text-cell>
-            @if (categoryCounts()[cat]) {
-              <nldd-text-cell
-                width="fit-content"
-                horizontal-alignment="right"
-                color="secondary"
-                [attr.text]="categoryCounts()[cat]"
-              ></nldd-text-cell>
-            }
-          </nldd-list-item>
-        }
-      </nldd-list>
-    </nldd-simple-section>
-  </nldd-page>
+  <app-catalog-nav></app-catalog-nav>
 </ng-template>

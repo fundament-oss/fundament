@@ -8,9 +8,12 @@ import {
   OnInit,
   signal,
   viewChild,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
   Asset,
@@ -26,7 +29,10 @@ import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
-import categoryIcon from '../../shared/asset-category';
+import categoryIcon, { AssetCategory, CATEGORIES } from '../../shared/asset-category';
+import CatalogNavComponent from '../catalog-nav';
+import { CATALOG_PATH, catalogViewTitle, isCatalogView } from '../catalog-views';
+import SecondaryNavService from '../../shell/secondary-nav.service';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -36,12 +42,27 @@ interface NativeElementRef {
   selector: 'app-catalog-detail',
   templateUrl: './catalog-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, DropdownSyncDirective],
+  imports: [RouterLink, FormsModule, DropdownSyncDirective, CatalogNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
-export default class CatalogDetailComponent implements OnInit {
+export default class CatalogDetailComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   private readonly route = inject(ActivatedRoute);
+
+  private readonly router = inject(Router);
 
   private readonly catalogApi = inject(CatalogApiService);
 
@@ -171,6 +192,16 @@ export default class CatalogDetailComponent implements OnInit {
 
   constructor() {
     effect(() => {
+      const el = this.entrySheetEl()?.nativeElement;
+      if (this.editEntry() !== null) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
+      const el = this.entryModalEl()?.nativeElement;
+      if (this.deleteEntry() !== null) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
       const el = this.portSheetEl()?.nativeElement;
       if (this.editPortDef() !== null) el?.show?.();
       else el?.hide?.();
@@ -190,6 +221,165 @@ export default class CatalogDetailComponent implements OnInit {
       if (this.deleteCompat() !== null) el?.show?.();
       else el?.hide?.();
     });
+  }
+
+  /**
+   * The list this page was opened from, so the way back leads to it and says its
+   * name. Read once, while the navigation that brought us here is still in
+   * flight; a deep link has no previous page and falls back to everything.
+   */
+  private readonly cameFrom = ((): string => {
+    const previous = this.router.getCurrentNavigation()?.previousNavigation?.finalUrl?.toString();
+    return previous && isCatalogView(previous) ? previous : `${CATALOG_PATH}/all`;
+  })();
+
+  readonly backText = catalogViewTitle(this.cameFrom);
+
+  goToCatalog(): void {
+    this.router.navigateByUrl(this.cameFrom);
+  }
+
+  /** Same trade as the list rows: a real link, routed in-app without modifiers. */
+  openAsset(event: Event, id: string): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.router.navigateByUrl(`/inventory/${id}`);
+  }
+
+  /** Where an asset of this product stands, or nothing when it is unplaced. */
+  readonly assetLocationLine = (asset: Asset): string | null =>
+    asset.datacenter || asset.rack
+      ? [asset.datacenter, asset.rack].filter(Boolean).join(' · ')
+      : null;
+
+  /** The four figures the summary card carried, in one line above the rows. */
+  readonly assetSummary = computed(() => {
+    const total = this.assets().length;
+    if (total === 0) return 'No assets of this product yet';
+    const parts = [
+      `${total} ${total === 1 ? 'asset' : 'assets'}`,
+      `${this.deployedCount()} deployed`,
+      `${this.availableCount()} available`,
+    ];
+    if (this.issuesCount() > 0) parts.push(`${this.issuesCount()} with issues`);
+    return parts.join(' · ');
+  });
+
+  // ── Edit and delete this product ───────────────────────────────────────────
+
+  /** Holds the product being edited; non-null while the edit sheet is open. */
+  readonly editEntry = signal<Partial<CatalogEntry> | null>(null);
+
+  readonly entryCategory = signal<AssetCategory>('Server');
+
+  readonly entryErrorMessage = signal<string | null>(null);
+
+  readonly specRows = signal<{ key: string; value: string }[]>([]);
+
+  readonly deleteEntry = signal<CatalogEntry | null>(null);
+
+  readonly categories = CATEGORIES;
+
+  private readonly entrySheetEl = viewChild<NativeElementRef>('entrySheet');
+
+  private readonly entryModalEl = viewChild<NativeElementRef>('entryModal');
+
+  private readonly fEntryModel = viewChild<NativeElementRef>('fEntryModel');
+
+  private readonly fEntryMfr = viewChild<NativeElementRef>('fEntryMfr');
+
+  openEditEntry(): void {
+    const entry = this.entry();
+    if (!entry) return;
+    this.clearEntryErrors();
+    this.editEntry.set({ ...entry });
+    this.entryCategory.set(entry.category);
+    this.specRows.set(Object.entries(entry.specs).map(([key, value]) => ({ key, value })));
+  }
+
+  closeEntryForm(): void {
+    this.editEntry.set(null);
+  }
+
+  addSpecRow(): void {
+    this.specRows.update((rows) => [...rows, { key: '', value: '' }]);
+  }
+
+  removeSpecRow(index: number): void {
+    this.specRows.update((rows) => rows.filter((_, i) => i !== index));
+  }
+
+  updateSpecKey(index: number, event: Event): void {
+    const val = (event.target as HTMLInputElement).value;
+    this.specRows.update((rows) => rows.map((r, i) => (i === index ? { ...r, key: val } : r)));
+  }
+
+  updateSpecVal(index: number, event: Event): void {
+    const val = (event.target as HTMLInputElement).value;
+    this.specRows.update((rows) => rows.map((r, i) => (i === index ? { ...r, value: val } : r)));
+  }
+
+  saveEntry(): void {
+    const form = this.editEntry();
+    if (!form?.id) return;
+    this.clearEntryErrors();
+
+    const specs: Record<string, string> = {};
+    this.specRows().forEach((row) => {
+      if (row.key.trim()) specs[row.key.trim()] = row.value;
+    });
+
+    const entry: CatalogEntry = {
+      id: form.id,
+      model: this.fEntryModel()?.nativeElement.value ?? '',
+      manufacturer: this.fEntryMfr()?.nativeElement.value ?? '',
+      partNumber: form.partNumber ?? '',
+      category: this.entryCategory(),
+      specs,
+    };
+
+    firstValueFrom(this.catalogApi.updateCatalogEntry(entry))
+      .then(() => {
+        this.entry.set(entry);
+        this.editEntry.set(null);
+      })
+      .catch((err) => {
+        const { fields, message } = parseValidationError(err);
+        this.invalidFields.set(fields);
+        this.entryErrorMessage.set(message);
+      });
+  }
+
+  openDeleteEntry(): void {
+    const entry = this.entry();
+    if (entry) this.deleteEntry.set(entry);
+  }
+
+  cancelDeleteEntry(): void {
+    this.deleteEntry.set(null);
+  }
+
+  /** The product is gone, so the page that showed it is too: back to the list. */
+  confirmDeleteEntry(): void {
+    const target = this.deleteEntry();
+    if (!target) return;
+    firstValueFrom(this.catalogApi.deleteCatalogEntry(target.id))
+      .then(() => {
+        this.deleteEntry.set(null);
+        this.router.navigateByUrl(this.cameFrom);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private clearEntryErrors(): void {
+    this.invalidFields.set({});
+    this.entryErrorMessage.set(null);
   }
 
   ngOnInit(): void {

@@ -3,6 +3,7 @@ import authGuard from './auth.guard';
 import { tasksMatcher } from './tasks/task-views';
 import { catalogMatcher } from './catalog/catalog-views';
 import { inventoryMatcher } from './inventory/inventory-views';
+import { patchMappingMatcher } from './patch-mapping/patch-mapping-views';
 
 const routes: Routes = [
   {
@@ -62,7 +63,9 @@ const routes: Routes = [
         loadComponent: () => import('./racks/racks').then((m) => m.default),
       },
       {
-        path: 'patch-mapping',
+        // A matcher instead of a path, like the sections above: every cable view
+        // is one route, see patch-mapping-views.ts.
+        matcher: patchMappingMatcher,
         loadComponent: () => import('./patch-mapping/patch-mapping').then((m) => m.default),
       },
       {

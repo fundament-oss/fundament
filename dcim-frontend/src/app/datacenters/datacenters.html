@@ -564,6 +564,7 @@
      DELETE CONFIRMATION MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #deleteModal
   (close)="cancelDelete()"
   [attr.text]="'Delete datacenter ' + (deleteTarget()?.name ?? '') + '?'"
@@ -572,7 +573,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep datacenter"
     (click)="cancelDelete()"
   ></nldd-button>
@@ -757,20 +758,13 @@
      second sidebar instead of as a strip of tabs above the page. -->
 <ng-template #secondaryNav>
   <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      back-text="Sections"
-    ></nldd-top-title-bar>
+    <nldd-top-title-bar slot="header" back-text="Data center"></nldd-top-title-bar>
     <nldd-simple-section>
       <nldd-title size="3">
         <h1>Data centers</h1>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="Data centers"
-      >
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Data centers">
         @for (dc of mutableDcs(); track dc.id) {
           <nldd-list-item
             button
@@ -779,10 +773,7 @@
           >
             <!-- One building per row, where the section in the sidebar carries
                  the plural. -->
-            <nldd-icon-cell
-              icon="building"
-              size="20"
-            ></nldd-icon-cell>
+            <nldd-icon-cell icon="building" size="20"></nldd-icon-cell>
             <nldd-spacer-cell size="8"></nldd-spacer-cell>
             <nldd-text-cell
               width="full"
@@ -791,10 +782,7 @@
             ></nldd-text-cell>
             <nldd-spacer-cell size="8"></nldd-spacer-cell>
             <nldd-cell width="fit-content">
-              <nldd-badge
-                decorative
-                [attr.color]="statusTagColor(dc.status)"
-              ></nldd-badge>
+              <nldd-badge decorative [attr.color]="statusTagColor(dc.status)"></nldd-badge>
             </nldd-cell>
           </nldd-list-item>
         }

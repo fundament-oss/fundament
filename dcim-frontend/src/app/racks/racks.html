@@ -501,6 +501,7 @@
      DEVICE DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #deviceModal
   [attr.text]="'Delete device ' + (deleteDeviceTarget()?.name ?? '') + ' from this rack?'"
   supporting-text="The device is removed from the rack and its units become free again. This cannot be undone."
@@ -508,7 +509,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep device"
     (click)="cancelDeleteDevice()"
   ></nldd-button>
@@ -524,6 +525,7 @@
      RACK DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #rackModal
   (close)="cancelDeleteRack()"
   [attr.text]="'Delete rack ' + (deleteRack()?.name ?? '') + '?'"
@@ -532,7 +534,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep rack"
     (click)="cancelDeleteRack()"
   ></nldd-button>
@@ -548,10 +550,7 @@
      the racks and their filling are this page's data. -->
 <ng-template #secondaryNav>
   <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      back-text="Sections"
-    ></nldd-top-title-bar>
+    <nldd-top-title-bar slot="header" back-text="Data center"></nldd-top-title-bar>
     <nldd-simple-section>
       <nldd-title size="3">
         <h1>Racks</h1>
@@ -559,7 +558,7 @@
       <nldd-spacer size="12"></nldd-spacer>
       <nldd-search-field
         accessible-label="Search racks"
-        placeholder="Search…"
+        placeholder="Search"
         [value]="searchQuery()"
         (input)="searchQuery.set($any($event.target).value)"
       ></nldd-search-field>

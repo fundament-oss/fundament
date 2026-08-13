@@ -25,7 +25,7 @@
   <div class="max-w-xs w-full">
     <nldd-search-field
       accessible-label="Search designs"
-      placeholder="Search designs…"
+      placeholder="Search"
       start-icon="magnifier"
       [value]="searchQuery()"
       (input)="searchQuery.set($any($event.target).value)"
@@ -240,6 +240,7 @@
      DELETE DESIGN MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #deleteModal
   [attr.text]="'Delete design ' + (deleteDesign()?.name ?? '') + '?'"
   supporting-text="All devices and connections in this design are permanently removed. This cannot be undone."
@@ -247,7 +248,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep design"
     (click)="cancelDeleteDesign()"
   ></nldd-button>

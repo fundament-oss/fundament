@@ -1,269 +1,245 @@
-<!-- ══════════════════════════════════════════════════════════════
-     BODY (sidebar + main)
-     ══════════════════════════════════════════════════════════════ -->
-<div class="flex">
-  <!-- ── LEFT SIDEBAR ─────────────────────────────────────────── -->
-
-  <!-- ── MAIN ───────────────────────────────────────────────────── -->
-  <main class="flex-1 min-w-0" aria-label="Cable list">
-    <div class="px-6 pb-6">
-      <div role="table" aria-label="Cable list">
-        <!-- Column headers -->
-        <div
-          role="row"
-          class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5"
-        >
-          <div
-            class="flex-1 min-w-0 grid grid-cols-[120px_1fr_1fr_110px_80px_56px] gap-3 lg:gap-4 items-center"
-          >
-            <button
-              role="columnheader"
-              class="flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide hover:text-slate-600 dark:hover:text-gray-300 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
-              (click)="toggleSort('label')"
-              [attr.aria-sort]="
-                sortField() === 'label'
-                  ? sortDir() === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              "
-            >
-              Label
-              @if (sortField() === 'label') {
-                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
-              }
-            </button>
-            <button
-              role="columnheader"
-              class="flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide hover:text-slate-600 dark:hover:text-gray-300 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
-              (click)="toggleSort('aSide')"
-              [attr.aria-sort]="
-                sortField() === 'aSide'
-                  ? sortDir() === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              "
-            >
-              A side
-              @if (sortField() === 'aSide') {
-                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
-              }
-            </button>
-            <button
-              role="columnheader"
-              class="flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide hover:text-slate-600 dark:hover:text-gray-300 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
-              (click)="toggleSort('bSide')"
-              [attr.aria-sort]="
-                sortField() === 'bSide'
-                  ? sortDir() === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              "
-            >
-              B side
-              @if (sortField() === 'bSide') {
-                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
-              }
-            </button>
-            <button
-              role="columnheader"
-              class="flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide hover:text-slate-600 dark:hover:text-gray-300 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
-              (click)="toggleSort('status')"
-              [attr.aria-sort]="
-                sortField() === 'status'
-                  ? sortDir() === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              "
-            >
-              Status
-              @if (sortField() === 'status') {
-                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
-              }
-            </button>
-            <button
-              role="columnheader"
-              class="flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-gray-500 uppercase tracking-wide hover:text-slate-600 dark:hover:text-gray-300 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-500 rounded"
-              (click)="toggleSort('type')"
-              [attr.aria-sort]="
-                sortField() === 'type' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'
-              "
-            >
-              Type
-              @if (sortField() === 'type') {
-                <span aria-hidden="true">{{ sortDir() === 'asc' ? '▲' : '▼' }}</span>
-              }
-            </button>
-            <span role="columnheader"></span>
-          </div>
-        </div>
-
-        <!-- Cable rows -->
-        @for (cable of sortedFilteredCables(); track cable.id) {
-          <div
-            role="row"
-            class="flex items-center gap-3 border-b border-slate-100 dark:border-gray-800 py-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group cursor-pointer"
-            (click)="editCable.emit(cable)"
-            (keydown.enter)="editCable.emit(cable)"
-            tabindex="0"
-          >
-            <div
-              class="flex-1 min-w-0 grid grid-cols-[120px_1fr_1fr_110px_80px_56px] gap-3 lg:gap-4 items-center"
-              role="presentation"
-            >
-              <!-- Label -->
-              <div role="cell" class="min-w-0">
-                <p class="truncate text-sm font-medium text-slate-800 dark:text-gray-100">
-                  {{ cable.label ?? '—' }}
-                </p>
-                @if (cable.color) {
-                  <span
-                    class="inline-block w-3 h-3 rounded-full align-middle mt-0.5 border border-slate-200 dark:border-gray-700"
-                    [style.background]="CABLE_COLOR_HEX[cable.color]"
-                    [attr.aria-label]="'Color: ' + cable.color"
-                  ></span>
-                }
-              </div>
-
-              <!-- A side -->
-              <div role="cell" class="min-w-0">
-                <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
-                  {{ cable.aSide.deviceName }}
-                </p>
-                <p class="text-xs text-slate-400 dark:text-gray-500 font-mono">
-                  {{ cable.aSide.portName }}
-                  <span class="text-slate-300 dark:text-gray-600 mx-0.5" aria-hidden="true">·</span>
-                  {{ PORT_TYPE_LABEL[cable.aSide.portType] }}
-                </p>
-              </div>
-
-              <!-- B side -->
-              <div role="cell" class="min-w-0">
-                <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
-                  {{ cable.bSide.deviceName }}
-                </p>
-                <p class="text-xs text-slate-400 dark:text-gray-500">
-                  {{ cable.bSide.portName }}
-                  <span class="text-slate-300 dark:text-gray-600 mx-0.5" aria-hidden="true">·</span>
-                  {{ PORT_TYPE_LABEL[cable.bSide.portType] }}
-                </p>
-              </div>
-
-              <!-- Status -->
-              <div role="cell">
-                <nldd-tag
-                  size="sm"
-                  [attr.color]="cableStatusTagColor(cable.status)"
-                  [attr.text]="cableStatusLabel(cable.status)"
-                ></nldd-tag>
-              </div>
-
-              <!-- Type -->
-              <div role="cell">
-                <span class="text-sm text-slate-600 dark:text-gray-300">{{
-                  cableTypeLabel(cable.type)
-                }}</span>
-              </div>
-
-              <!-- Row actions -->
-              <div
-                role="cell"
-                class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                (click)="$event.stopPropagation()"
-                (keydown)="$event.stopPropagation()"
-              >
-                <nldd-icon-button
-                  icon="pencil-on-square"
-                  variant="neutral-transparent"
-                  size="xs"
-                  text="Edit cable"
-                  (click)="editCable.emit(cable)"
-                ></nldd-icon-button>
-                <nldd-icon-button
-                  icon="trash"
-                  variant="neutral-transparent"
-                  size="xs"
-                  text="Delete cable"
-                  (click)="deleteCable.emit(cable)"
-                ></nldd-icon-button>
-              </div>
-            </div>
-          </div>
+<nldd-page sticky-header>
+  <!-- The bar carries the way back to the cable menu once the panes collapse to
+       one column, and back takes the address to the section, so the URL and the
+       pane on screen agree. -->
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="viewTitle()"
+    back-text="Patch mapping"
+    collapse-anchor="cables-title"
+    (back)="goToMenu()"
+  ></nldd-top-title-bar>
+  @if (hasSelection()) {
+    <nldd-simple-section>
+      <nldd-title id="cables-title" size="2">
+        <h1>{{ viewTitle() }}</h1>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <!-- What this page can do, in one bar: add a cable, take the planned ones
+           shopping, or look at the same cables as a drawing. -->
+      <nldd-toolbar label="Cable actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="primary"
+            text="Add cable"
+            start-icon="plus-small"
+            (click)="addCable.emit()"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="plus-small"
+            text="Add cable"
+            (select)="addCable.emit()"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+        @if (plannedCount() > 0) {
+          <nldd-toolbar-item slot="start">
+            <nldd-button
+              variant="secondary"
+              start-icon="check-list"
+              [attr.text]="'Shopping list (' + plannedCount() + ')'"
+              (click)="showShoppingList.emit()"
+            ></nldd-button>
+            <nldd-menu-item
+              slot="overflow"
+              icon="check-list"
+              [attr.text]="'Shopping list (' + plannedCount() + ')'"
+              (select)="showShoppingList.emit()"
+            ></nldd-menu-item>
+          </nldd-toolbar-item>
         }
-
-        <!-- Empty state -->
-        @if (sortedFilteredCables().length === 0) {
-          <div class="flex flex-col items-center justify-center py-16 text-center">
-            <div
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-3"
-            >
-              <nldd-icon name="rectangle-stack" class="w-6 h-6" aria-hidden="true"></nldd-icon>
-            </div>
-            <p class="text-sm font-medium text-slate-600 dark:text-gray-300">No cables found</p>
-            <p class="mt-1 text-xs text-slate-400 dark:text-gray-500">
-              Try adjusting your search or filters.
-            </p>
-          </div>
-        }
-
-        <!-- Result count + export -->
-        @if (sortedFilteredCables().length > 0) {
-          <div class="pt-4 pb-2 flex items-center justify-between">
-            <p class="text-xs text-slate-400 dark:text-gray-500">
-              {{ sortedFilteredCables().length }} of {{ cables().length }} cables
-            </p>
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            variant="secondary"
+            text="Topology"
+            start-icon="network-structure"
+            (click)="showTopology.emit()"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="network-structure"
+            text="Topology"
+            (select)="showTopology.emit()"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- What narrows the list down and the way to take it with you. Searching is
+           not navigating: it cuts across whichever view you are in, so it belongs
+           with the rows and not in the menu. -->
+      <nldd-toolbar label="Cable list">
+        <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
+          <nldd-search-field
+            accessible-label="Search cables"
+            placeholder="Search"
+            [value]="searchText()"
+            (input)="searchText.set($any($event.target).value)"
+          ></nldd-search-field>
+        </nldd-toolbar-item>
+        @if (filteredCables().length > 0) {
+          <nldd-toolbar-item slot="end">
             <nldd-button
               variant="secondary"
               text="Download CSV"
               start-icon="arrow-down-in-bucket"
-              size="sm"
+              accessible-label="Export visible cables as CSV"
               (click)="exportCsv()"
-              aria-label="Export visible cables as CSV"
             ></nldd-button>
-          </div>
+          </nldd-toolbar-item>
         }
-      </div>
-    </div>
-  </main>
-</div>
-<!-- The filters are the menu of this section, so the shell shows them in the
-     second sidebar: which data center, and then what narrows the cables in it. -->
+      </nldd-toolbar>
+      <nldd-spacer size="8"></nldd-spacer>
+      <!-- How many rows the view and the search left, right above them. -->
+      <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
+      <nldd-spacer size="8"></nldd-spacer>
+      <!-- A list, not a table. A cable is two ends and what runs between them,
+           so each end is one cell with the device above its port: that pair is
+           read together, and a header row cannot say that. -->
+      <nldd-list
+        accessible-label="Cable list"
+        empty-text="No cables found"
+        empty-supporting-text="Try adjusting your search or filters."
+      >
+        @for (cable of filteredCables(); track cable.id) {
+          <nldd-list-item>
+            <nldd-list-item-action
+              button
+              width="full"
+              [attr.accessible-label]="'Edit cable ' + (cable.label ?? '')"
+              (click)="editCable.emit(cable)"
+            >
+              <!-- The color as a dot beside the label, because a cable is found
+                   by its color as often as by its name. -->
+              <nldd-cell width="fit-content" min-width="16px">
+                @if (cable.color) {
+                  <nldd-badge
+                    decorative
+                    [style.color]="CABLE_COLOR_HEX[cable.color]"
+                    color="inherit"
+                  ></nldd-badge>
+                }
+              </nldd-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="120px"
+                hide-below="560px"
+                [attr.text]="cable.label ?? '—'"
+              ></nldd-text-cell>
+              <nldd-text-cell
+                width="full"
+                min-width="120px"
+                [attr.text]="cable.aSide.deviceName"
+                [attr.supporting-text]="
+                  cable.aSide.portName + ' · ' + PORT_TYPE_LABEL[cable.aSide.portType]
+                "
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-icon-cell
+                size="20"
+                icon="arrow-right"
+                color="secondary"
+                hide-below="480px"
+              ></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="full"
+                min-width="120px"
+                [attr.text]="cable.bSide.deviceName"
+                [attr.supporting-text]="
+                  cable.bSide.portName + ' · ' + PORT_TYPE_LABEL[cable.bSide.portType]
+                "
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- The status as a dot and a word rather than a tag: a tag is a
+                   property somebody assigns, and this one the system decides. It
+                   also puts the state in the same shape as the menu it was picked
+                   from. -->
+              <nldd-text-cell width="160px" hide-below="700px"
+                ><nldd-badge
+                  decorative
+                  [attr.color]="cableStatusTagColor(cable.status)"
+                ></nldd-badge
+                >&ngsp;{{ cableStatusLabel(cable.status) }}</nldd-text-cell
+              >
+              <nldd-text-cell
+                width="80px"
+                color="secondary"
+                hide-below="860px"
+                [attr.text]="cableTypeLabel(cable.type)"
+              ></nldd-text-cell>
+            </nldd-list-item-action>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-cell width="fit-content">
+              <nldd-icon-button
+                icon="trash"
+                variant="neutral-transparent"
+                size="sm"
+                [attr.accessible-label]="'Delete cable ' + (cable.label ?? '')"
+                (click)="deleteCable.emit(cable)"
+              ></nldd-icon-button>
+            </nldd-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
+    </nldd-simple-section>
+  } @else {
+    <!-- The section is open and nothing is picked. The console says the same
+         thing in the same place: the menu beside this pane is the next move. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
+    </nldd-simple-section>
+  }
+  <!-- Empty, for the band it draws: the page ends on a line rather than on
+       whatever row happened to be last. -->
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
+
+<!-- The views of this section are the menu, so the shell shows them in the
+     second sidebar: which data center, and then which cables within it.
+     Declared here because the counts are this page's data. -->
 <ng-template #secondaryNav>
   <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      back-text="Sections"
-    ></nldd-top-title-bar>
+    <nldd-top-title-bar slot="header" back-text="Data center"></nldd-top-title-bar>
     <nldd-simple-section>
       <nldd-title size="3">
         <h1>Patch mapping</h1>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
-      <nldd-search-field
-        accessible-label="Search cables"
-        placeholder="Search cables…"
-        [value]="searchText()"
-        (input)="searchText.set($any($event.target).value)"
-      ></nldd-search-field>
+      <!-- Everything, above the headings. It is not a status or a type with an
+           "all" in it, so it does not belong at the head of either list. -->
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="All cables">
+        <nldd-list-item
+          [attr.href]="viewPath('all')"
+          [attr.selected]="hasSelection() && menuSelection().kind === 'all' ? '' : null"
+          (click)="selectView($event, viewPath('all'))"
+        >
+          <nldd-icon-cell icon="square-grid-2x2" size="20"></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="All cables"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="statusCounts()['all']"
+          ></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
       <nldd-spacer size="16"></nldd-spacer>
+      <!-- The data center is not one of the views: it is which building you are
+           standing in, and the views narrow the cables inside it. -->
       <nldd-title size="5">
         <h2>Data center</h2>
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="Data center"
-      >
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Data center">
         @for (dc of sites(); track dc.id) {
           <nldd-list-item
             button
             [attr.selected]="dcId() === dc.id ? '' : null"
             (click)="dcSelected.emit(dc.id)"
           >
+            <nldd-icon-cell icon="building" size="20"></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
             <nldd-text-cell [attr.text]="dc.name"></nldd-text-cell>
           </nldd-list-item>
         }
@@ -273,36 +249,21 @@
         <h2>Status</h2>
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="Status"
-      >
-        <nldd-list-item
-          button
-          [attr.selected]="filterStatus() === '' ? '' : null"
-          (click)="filterStatus.set('')"
-        >
-          <nldd-text-cell text="All statuses"></nldd-text-cell>
-          <nldd-text-cell
-            width="fit-content"
-            horizontal-alignment="right"
-            color="secondary"
-            [attr.text]="statusCounts()['all']"
-          ></nldd-text-cell>
-        </nldd-list-item>
+      <nldd-list type="navigation" dividers="on-touch" accessible-label="Status">
         @for (s of CABLE_STATUSES; track s.value) {
           <nldd-list-item
-            button
+            [attr.href]="viewPath('status', s.value)"
             [attr.selected]="filterStatus() === s.value ? '' : null"
-            (click)="filterStatus.set(s.value)"
+            (click)="selectView($event, viewPath('status', s.value))"
           >
+            <!-- The dot sits where an icon sits in the device rows: a spacer
+                 either side makes the badge take up the width of a 20px icon,
+                 so both lists start their text on the same line. -->
+            <nldd-spacer-cell size="4"></nldd-spacer-cell>
             <nldd-cell width="fit-content">
-              <nldd-badge
-                decorative
-                [attr.color]="cableStatusTagColor(s.value)"
-              ></nldd-badge>
+              <nldd-badge decorative [attr.color]="cableStatusTagColor(s.value)"></nldd-badge>
             </nldd-cell>
+            <nldd-spacer-cell size="4"></nldd-spacer-cell>
             <nldd-spacer-cell size="8"></nldd-spacer-cell>
             <nldd-text-cell [attr.text]="s.label"></nldd-text-cell>
             @if (statusCounts()[s.value]) {
@@ -316,29 +277,18 @@
           </nldd-list-item>
         }
       </nldd-list>
-      <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="5">
-        <h2>Type</h2>
-      </nldd-title>
-      <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="Type"
-      >
-        <nldd-list-item
-          button
-          [attr.selected]="filterType() === '' ? '' : null"
-          (click)="filterType.set('')"
-        >
-          <nldd-text-cell text="All types"></nldd-text-cell>
-        </nldd-list-item>
-        @for (t of CABLE_TYPES; track t) {
-          @if (typeCounts()[t]) {
+      @if (menuTypes().length > 0) {
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-title size="5">
+          <h2>Type</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list type="navigation" dividers="on-touch" accessible-label="Type">
+          @for (t of menuTypes(); track t) {
             <nldd-list-item
-              button
+              [attr.href]="viewPath('type', t)"
               [attr.selected]="filterType() === t ? '' : null"
-              (click)="filterType.set(t)"
+              (click)="selectView($event, viewPath('type', t))"
             >
               <nldd-text-cell [attr.text]="CABLE_TYPE_LABEL[t]"></nldd-text-cell>
               <nldd-text-cell
@@ -349,35 +299,25 @@
               ></nldd-text-cell>
             </nldd-list-item>
           }
-        }
-      </nldd-list>
-      <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="5">
-        <h2>Color</h2>
-      </nldd-title>
-      <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="Color"
-      >
-        <nldd-list-item
-          button
-          [attr.selected]="filterColor() === '' ? '' : null"
-          (click)="filterColor.set('')"
-        >
-          <nldd-text-cell text="All colors"></nldd-text-cell>
-        </nldd-list-item>
-        @for (color of CABLE_COLORS; track color) {
-          @if (colorCounts()[color]) {
+        </nldd-list>
+      }
+      @if (menuColors().length > 0) {
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-title size="5">
+          <h2>Color</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list type="navigation" dividers="on-touch" accessible-label="Color">
+          @for (color of menuColors(); track color) {
             <nldd-list-item
-              button
+              [attr.href]="viewPath('color', color)"
               [attr.selected]="filterColor() === color ? '' : null"
-              (click)="filterColor.set(color)"
+              (click)="selectView($event, viewPath('color', color))"
             >
               <!-- The one swatch that stays hand-drawn: this is the literal color
                    of the cable in the rack, not a meaning the design system has a
                    token for. -->
+              <nldd-spacer-cell size="4"></nldd-spacer-cell>
               <nldd-cell width="fit-content">
                 <span
                   class="block h-3 w-3 rounded-full border border-slate-200 dark:border-gray-800"
@@ -385,6 +325,7 @@
                   aria-hidden="true"
                 ></span>
               </nldd-cell>
+              <nldd-spacer-cell size="4"></nldd-spacer-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <nldd-text-cell [attr.text]="colorLabel(color)"></nldd-text-cell>
               <nldd-text-cell
@@ -395,46 +336,28 @@
               ></nldd-text-cell>
             </nldd-list-item>
           }
-        }
-      </nldd-list>
-      <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="5">
-        <h2>Device</h2>
-      </nldd-title>
-      <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        accessible-label="Device"
-      >
-        <nldd-list-item
-          button
-          [attr.selected]="filterDeviceId() === '' ? '' : null"
-          (click)="filterDeviceId.set('')"
-        >
-          <nldd-text-cell text="All devices"></nldd-text-cell>
-          <nldd-text-cell
-            width="fit-content"
-            horizontal-alignment="right"
-            color="secondary"
-            [attr.text]="statusCounts()['all']"
-          ></nldd-text-cell>
-        </nldd-list-item>
-        @for (dev of dcDevices(); track dev.id) {
-          <nldd-list-item
-            button
-            [attr.selected]="filterDeviceId() === dev.id ? '' : null"
-            (click)="filterDeviceId.set(dev.id)"
-          >
-            <nldd-icon-cell
-              icon="cylinder-split"
-              size="20"
-            ></nldd-icon-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-text-cell [attr.text]="dev.name"></nldd-text-cell>
-          </nldd-list-item>
-        }
-      </nldd-list>
+        </nldd-list>
+      }
+      @if (dcDevices().length > 0) {
+        <nldd-spacer size="16"></nldd-spacer>
+        <nldd-title size="5">
+          <h2>Device</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-list type="navigation" dividers="on-touch" accessible-label="Device">
+          @for (dev of dcDevices(); track dev.id) {
+            <nldd-list-item
+              [attr.href]="viewPath('device', dev.id)"
+              [attr.selected]="filterDeviceId() === dev.id ? '' : null"
+              (click)="selectView($event, viewPath('device', dev.id))"
+            >
+              <nldd-icon-cell icon="cylinder-split" size="20"></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell [attr.text]="dev.name"></nldd-text-cell>
+            </nldd-list-item>
+          }
+        </nldd-list>
+      }
     </nldd-simple-section>
   </nldd-page>
 </ng-template>

@@ -63,12 +63,6 @@ function toPortDefinition(port: Port, catalogId: string, ordinal?: number): Port
     DropdownSyncDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: {
-    class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white',
-    '[class.min-h-screen]': "activeView() === 'list'",
-    '[class.overflow-hidden]': "activeView() === 'topology'",
-    '[style.height]': "activeView() === 'topology' ? 'calc(100dvh - 4.25rem)' : null",
-  },
   templateUrl: './patch-mapping.html',
 })
 export default class PatchMappingComponent implements OnInit {
@@ -86,7 +80,7 @@ export default class PatchMappingComponent implements OnInit {
 
   readonly selectedDcId = signal('');
 
-  readonly activeView = signal<'list' | 'topology'>('list');
+  readonly topologyOpen = signal(false);
 
   // ── Cable state (cables of the selected datacenter) ─────────────────────────
   readonly mutableCables = signal<Cable[]>([]);
@@ -154,6 +148,8 @@ export default class PatchMappingComponent implements OnInit {
 
   private readonly shoppingSheetEl = viewChild<ElementRef>('shoppingSheet');
 
+  private readonly topologySheetEl = viewChild<ElementRef>('topologySheet');
+
   constructor() {
     effect(() => {
       const el = this.cableSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
@@ -168,6 +164,11 @@ export default class PatchMappingComponent implements OnInit {
     effect(() => {
       const el = this.shoppingSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.shoppingListOpen()) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
+      const el = this.topologySheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.topologyOpen()) el?.show?.();
       else el?.hide?.();
     });
   }

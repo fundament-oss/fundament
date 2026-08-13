@@ -12,6 +12,8 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   Cable,
   CableColor,
@@ -24,9 +26,8 @@ import {
   cableTypeLabel,
   PORT_TYPE_LABEL,
 } from '../cable.model';
+import { PATCH_MAPPING_PATH } from '../patch-mapping-views';
 import SecondaryNavService from '../../shell/secondary-nav.service';
-
-type SortField = 'label' | 'aSide' | 'bSide' | 'status' | 'type' | null;
 
 interface DeviceOption {
   id: string;
@@ -65,25 +66,124 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
 
   readonly sites = input<SiteOption[]>([]);
 
+  readonly plannedCount = input(0);
+
   readonly editCable = output<Cable>();
 
   readonly deleteCable = output<Cable>();
 
   readonly dcSelected = output<string>();
 
+  readonly addCable = output<void>();
+
+  readonly showShoppingList = output<void>();
+
+  readonly showTopology = output<void>();
+
   readonly searchText = signal('');
 
-  readonly filterDeviceId = signal('');
+  private readonly route = inject(ActivatedRoute);
 
-  readonly filterStatus = signal<CableStatus | ''>('');
+  private readonly router = inject(Router);
 
-  readonly filterType = signal<CableType | ''>('');
+  private readonly viewParams = toSignal(this.route.paramMap, {
+    initialValue: convertToParamMap({}),
+  });
 
-  readonly filterColor = signal<CableColor | ''>('');
+  /**
+   * Whether the address names a view. The section's own path (/patch-mapping) means you
+   * have opened the section and picked nothing yet, and then the pane beside
+   * the menu says so rather than showing a list you did not ask for.
+   */
+  readonly hasSelection = computed(() => this.viewParams().get('view') !== null);
 
-  readonly sortField = signal<SortField>(null);
+  /**
+   * Which cables the list is showing, read from the address. The menu is
+   * navigation, so a view can be linked to, opened in a second tab and reached
+   * with the browser's back button. Which data center you are in is not part of
+   * it: that is where you stand, not what you are looking at.
+   */
+  readonly menuSelection = computed<{ kind: string; value: string }>(() => {
+    const params = this.viewParams();
+    return { kind: params.get('view') ?? 'all', value: params.get('value') ?? '' };
+  });
 
-  readonly sortDir = signal<'asc' | 'desc'>('asc');
+  private readonly selectionOf = (kind: string) =>
+    computed(() => (this.menuSelection().kind === kind ? this.menuSelection().value : ''));
+
+  private readonly statusView = this.selectionOf('status');
+
+  private readonly typeView = this.selectionOf('type');
+
+  private readonly colorView = this.selectionOf('color');
+
+  private readonly deviceView = this.selectionOf('device');
+
+  readonly filterStatus = computed<CableStatus | ''>(
+    () => this.CABLE_STATUSES.find((s) => s.value === this.statusView())?.value ?? '',
+  );
+
+  readonly filterType = computed<CableType | ''>(
+    () => this.CABLE_TYPES.find((t) => t === this.typeView()) ?? '',
+  );
+
+  readonly filterColor = computed<CableColor | ''>(
+    () => this.CABLE_COLORS.find((c) => c === this.colorView()) ?? '',
+  );
+
+  readonly filterDeviceId = computed(() => this.deviceView());
+
+  /**
+   * The title of the page is the row you picked in the menu. The section name
+   * is already in the menu's own heading and in the way back, so repeating it
+   * above the list would say "Patch mapping" three times and never say which
+   * cables you are looking at.
+   */
+  readonly viewTitle = computed(() => {
+    const { kind, value } = this.menuSelection();
+    switch (kind) {
+      case 'status':
+        return this.CABLE_STATUSES.find((s) => s.value === value)?.label ?? 'All cables';
+      case 'type':
+        return this.CABLE_TYPE_LABEL[value as CableType] ?? 'All cables';
+      case 'color':
+        return this.CABLE_COLORS.includes(value as CableColor)
+          ? this.colorLabel(value)
+          : 'All cables';
+      case 'device':
+        return this.dcDevices().find((d) => d.id === value)?.name ?? 'All cables';
+      default:
+        return 'All cables';
+    }
+  });
+
+  /** The address of a view, so every row in the menu is a real link. */
+  readonly viewPath = (kind: string, value?: string): string =>
+    kind === 'all' ? `${PATCH_MAPPING_PATH}/all` : `${PATCH_MAPPING_PATH}/${kind}/${value}`;
+
+  /** A real link, routed in-app unless the click asks for a new tab or window. */
+  selectView(event: Event, path: string): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.router.navigateByUrl(path);
+  }
+
+  /** Back from the list is back to the menu, so the address says so too. */
+  goToMenu(): void {
+    this.router.navigateByUrl(PATCH_MAPPING_PATH);
+  }
+
+  readonly listSummary = computed(() => {
+    const shown = this.filteredCables().length;
+    const total = this.cables().length;
+    const noun = total === 1 ? 'cable' : 'cables';
+    return shown === total ? `${total} ${noun}` : `${shown} of ${total} ${noun}`;
+  });
 
   readonly dcDevices = computed<DeviceOption[]>(() => {
     const seen = new Set<string>();
@@ -128,44 +228,6 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     });
   });
 
-  readonly sortedFilteredCables = computed(() => {
-    const list = [...this.filteredCables()];
-    const field = this.sortField();
-    const dir = this.sortDir();
-    if (!field) return list;
-
-    return list.sort((a, b) => {
-      let valA: string;
-      let valB: string;
-      switch (field) {
-        case 'label':
-          valA = a.label ?? '';
-          valB = b.label ?? '';
-          break;
-        case 'aSide':
-          valA = a.aSide.deviceName;
-          valB = b.aSide.deviceName;
-          break;
-        case 'bSide':
-          valA = a.bSide.deviceName;
-          valB = b.bSide.deviceName;
-          break;
-        case 'status':
-          valA = a.status ?? '';
-          valB = b.status ?? '';
-          break;
-        case 'type':
-          valA = cableTypeLabel(a.type);
-          valB = cableTypeLabel(b.type);
-          break;
-        default:
-          return 0;
-      }
-      const cmp = valA.localeCompare(valB);
-      return dir === 'asc' ? cmp : -cmp;
-    });
-  });
-
   readonly statusCounts = computed(() => {
     const counts: Record<string, number> = { all: this.cables().length };
     this.cables().forEach((c) => {
@@ -184,6 +246,15 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     return counts;
   });
 
+  /**
+   * The types and colors that occur in this data center. A heading with an
+   * empty list under it is a group that says nothing, so the menu leaves both
+   * out until there is something to pick.
+   */
+  readonly menuTypes = computed(() => this.CABLE_TYPES.filter((t) => this.typeCounts()[t]));
+
+  readonly menuColors = computed(() => this.CABLE_COLORS.filter((c) => this.colorCounts()[c]));
+
   readonly colorCounts = computed(() => {
     const counts: Record<string, number> = {};
     this.cables().forEach((c) => {
@@ -192,36 +263,8 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     return counts;
   });
 
-  readonly hasActiveFilters = computed(
-    () =>
-      !!(
-        this.filterDeviceId() ||
-        this.filterStatus() ||
-        this.filterType() ||
-        this.filterColor() ||
-        this.searchText()
-      ),
-  );
-
-  clearFilters(): void {
-    this.filterDeviceId.set('');
-    this.filterStatus.set('');
-    this.filterType.set('');
-    this.filterColor.set('');
-    this.searchText.set('');
-  }
-
-  toggleSort(field: SortField): void {
-    if (this.sortField() === field) {
-      this.sortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      this.sortField.set(field);
-      this.sortDir.set('asc');
-    }
-  }
-
   exportCsv(): void {
-    const cables = this.sortedFilteredCables();
+    const cables = this.filteredCables();
     const dcId = this.dcId();
     const headers = [
       'ID',
@@ -266,16 +309,6 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
   }
 
   readonly cableStatusTagColor = cableStatusTagColor;
-
-  // A bare indicator dot in the status filter menu, not a tag.
-  readonly statusDotClass = (status: CableStatus | undefined): string => {
-    const map: Record<CableStatus, string> = {
-      planned: 'bg-amber-400',
-      connected: 'bg-teal-500',
-      decommissioned: 'bg-slate-400',
-    };
-    return status ? map[status] : 'bg-slate-300 dark:bg-gray-700';
-  };
 
   readonly cableStatusLabel = cableStatusLabel;
 
@@ -327,19 +360,4 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     'teal',
     'white',
   ];
-
-  readonly colorHex = (color: CableColor | undefined): string | null =>
-    color ? CABLE_COLOR_HEX[color] : null;
-
-  onDeviceFilterChange(event: Event): void {
-    this.filterDeviceId.set((event.target as HTMLSelectElement).value);
-  }
-
-  onStatusFilterChange(event: Event): void {
-    this.filterStatus.set((event.target as HTMLSelectElement).value as CableStatus | '');
-  }
-
-  onTypeFilterChange(event: Event): void {
-    this.filterType.set((event.target as HTMLSelectElement).value as CableType | '');
-  }
 }

@@ -9,18 +9,15 @@ import {
   OnInit,
   signal,
   viewChild,
+  TemplateRef,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { RackSlotType } from '../../../generated/v1/common_pb';
-import {
-  Asset,
-  AssetStatus,
-  CatalogEntry,
-  HistoryEntry,
-  NoteComment,
-} from '../inventory';
+import { Asset, AssetStatus, CatalogEntry, HistoryEntry, NoteComment } from '../inventory';
 import { ASSET_STATUS_TAG_COLOR, ASSET_STATUS_LABEL } from '../asset-status';
 import InventoryApiService from '../inventory-api.service';
 import CatalogApiService from '../../catalog/catalog-api.service';
@@ -30,16 +27,34 @@ import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 import categoryIcon from '../../shared/asset-category';
+import { INVENTORY_PATH, inventoryViewTitle, isInventoryView } from '../inventory-views';
+import InventoryNavComponent from '../inventory-nav';
+import SecondaryNavService from '../../shell/secondary-nav.service';
 
 @Component({
   selector: 'app-asset-detail',
   templateUrl: './asset-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, DropdownSyncDirective],
+  imports: [RouterLink, FormsModule, DropdownSyncDirective, InventoryNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
+  // No styling of its own: the page inside paints the surface and owns the
+  // layout, and styles.css takes this element out of the flow (display:
+  // contents) so it cannot come between the pane and the page.
 })
-export default class AssetDetailComponent implements OnInit {
+export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
@@ -128,6 +143,16 @@ export default class AssetDetailComponent implements OnInit {
 
   private readonly assetSheetEl = viewChild<ElementRef>('assetSheet');
 
+  /** Set while the delete confirmation is open. */
+  readonly confirmingDelete = signal(false);
+
+  /** Set while the decommission confirmation is open. */
+  readonly confirmingDecommission = signal(false);
+
+  private readonly deleteModalEl = viewChild<ElementRef>('deleteModal');
+
+  private readonly decommissionModalEl = viewChild<ElementRef>('decommissionModal');
+
   private readonly fAssetTag = viewChild<ElementRef>('fAssetTag');
 
   private readonly fAssetSerial = viewChild<ElementRef>('fAssetSerial');
@@ -138,12 +163,102 @@ export default class AssetDetailComponent implements OnInit {
 
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
+  /**
+   * The list this page was opened from, so the way back leads to it and says its
+   * name. Read once, while the navigation that brought us here is still in
+   * flight; a deep link has no previous page and falls back to everything.
+   */
+  private readonly cameFrom = ((): string => {
+    const previous = this.router.getCurrentNavigation()?.previousNavigation?.finalUrl?.toString();
+    return previous && isInventoryView(previous) ? previous : `${INVENTORY_PATH}/all`;
+  })();
+
+  readonly backText = inventoryViewTitle(this.cameFrom);
+
   constructor() {
     effect(() => {
       const el = this.assetSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editAsset() !== null) el?.show?.();
       else el?.hide?.();
     });
+    effect(() => {
+      const el = this.deleteModalEl()?.nativeElement as { show?: () => void; hide?: () => void };
+      if (this.confirmingDelete()) el?.show?.();
+      else el?.hide?.();
+    });
+    effect(() => {
+      const el = this.decommissionModalEl()?.nativeElement as {
+        show?: () => void;
+        hide?: () => void;
+      };
+      if (this.confirmingDecommission()) el?.show?.();
+      else el?.hide?.();
+    });
+  }
+
+  /** Back from this page is back to the list it was opened from. */
+  goToInventory(): void {
+    this.router.navigateByUrl(this.cameFrom);
+  }
+
+  /** Where a row sits in the track, so the line starts and stops in the right place. */
+  historyPosition(index: number): 'first' | 'between' | 'last' | 'only' {
+    const last = this.assetHistory().length - 1;
+    if (last === 0) return 'only';
+    if (index === 0) return 'first';
+    return index === last ? 'last' : 'between';
+  }
+
+  openDecommissionAsset(): void {
+    this.confirmingDecommission.set(true);
+  }
+
+  cancelDecommissionAsset(): void {
+    this.confirmingDecommission.set(false);
+  }
+
+  /**
+   * Out of service, not gone: the asset keeps its history and its place in the
+   * lists, and setting the status back undoes it. It asks first anyway, because
+   * it says a machine in a rack is done — but the question is a plain one, and
+   * the dialog does not look like the delete dialog, where the way out is the
+   * primary button.
+   */
+  confirmDecommissionAsset(): void {
+    const asset = this.asset();
+    if (!asset || asset.status === 'decommissioned') {
+      this.confirmingDecommission.set(false);
+      return;
+    }
+    const updated: Asset = { ...asset, status: 'decommissioned' };
+    firstValueFrom(this.inventoryApi.updateAsset(updated))
+      .then(() => {
+        this.asset.set(updated);
+        this.confirmingDecommission.set(false);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  openDeleteAsset(): void {
+    this.confirmingDelete.set(true);
+  }
+
+  cancelDeleteAsset(): void {
+    this.confirmingDelete.set(false);
+  }
+
+  /** The asset is gone, so the page that showed it is too: back to the list. */
+  confirmDeleteAsset(): void {
+    const id = this.assetId();
+    if (!id) return;
+    firstValueFrom(this.inventoryApi.deleteAsset(id))
+      .then(() => {
+        this.confirmingDelete.set(false);
+        this.router.navigateByUrl(INVENTORY_PATH);
+      })
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
   }
 
   ngOnInit(): void {
@@ -193,7 +308,13 @@ export default class AssetDetailComponent implements OnInit {
 
   private loadHistory(): void {
     firstValueFrom(this.inventoryApi.getAssetEvents(this.assetId()))
-      .then((res) => this.assetHistory.set(res.events.map(InventoryApiService.mapAssetEvent)))
+      // Newest first: what happened to this asset last is what you came to read,
+      // and it saves scrolling to the bottom of a long life.
+      .then((res) =>
+        this.assetHistory.set(
+          res.events.map(InventoryApiService.mapAssetEvent).sort((a, b) => a.daysAgo - b.daysAgo),
+        ),
+      )
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)));
   }

@@ -343,6 +343,7 @@
      ROOM DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #roomModal
   (close)="cancelDeleteRoom()"
   [attr.text]="'Delete room ' + (deleteRoom()?.name ?? '') + '?'"
@@ -351,7 +352,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep room"
     (click)="cancelDeleteRoom()"
   ></nldd-button>
@@ -439,6 +440,7 @@
      RACK ROW DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #rowModal
   (close)="cancelDeleteRackRow()"
   [attr.text]="'Delete rack row ' + (deleteRackRow()?.name ?? '') + '?'"
@@ -447,7 +449,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep rack row"
     (click)="cancelDeleteRackRow()"
   ></nldd-button>
@@ -520,6 +522,7 @@
      RACK DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->
 <nldd-modal-dialog
+  variant="alert"
   #rackModal
   (close)="cancelDeleteRack()"
   [attr.text]="'Delete rack ' + (deleteRack()?.name ?? '') + '?'"
@@ -528,7 +531,7 @@
 >
   <nldd-button
     slot="actions"
-    variant="secondary"
+    variant="primary"
     text="Keep rack"
     (click)="cancelDeleteRack()"
   ></nldd-button>
