@@ -1,0 +1,123 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: plugininstallations.plugins.fundament.io
+spec:
+  group: plugins.fundament.io
+  names:
+    kind: PluginInstallation
+    listKind: PluginInstallationList
+    plural: plugininstallations
+    singular: plugininstallation
+    shortNames:
+      - pi
+  scope: Cluster
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: Plugin
+          type: string
+          jsonPath: .spec.definitionRef.pluginName
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Ready
+          type: boolean
+          jsonPath: .status.ready
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - definitionRef
+              properties:
+                definitionRef:
+                  type: object
+                  required:
+                    - pluginName
+                    - pluginVersion
+                  properties:
+                    pluginName:
+                      type: string
+                    pluginVersion:
+                      type: string
+                    definitionHash:
+                      type: string
+                      description: >-
+                        SHA-256 hash of the published manifest bytes stored in
+                        organization-api (prefixed with "sha256:") — the admin's
+                        install-time consent record. May be omitted only when the
+                        plugin-controller Deployment sets
+                        PLUGIN_CONTROLLER_ALLOW_UNPINNED_HASH=true (local dev).
+                        Never enable in production.
+                  x-kubernetes-validations:
+                    - rule: "!has(self.definitionHash) || self.definitionHash == '' || self.definitionHash.startsWith('sha256:')"
+                      message: definitionHash must be empty or a sha256 content hash (prefixed with 'sha256:')
+                    - rule: self == oldSelf
+                      message: definitionRef is immutable once set
+                config:
+                  type: object
+                  additionalProperties:
+                    type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Deploying
+                    - Running
+                    - Degraded
+                    - Failed
+                    - Terminating
+                message:
+                  type: string
+                ready:
+                  type: boolean
+                observedGeneration:
+                  type: integer
+                  format: int64
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - "Unknown"
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
