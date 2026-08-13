@@ -25,6 +25,7 @@ import { AssetStatus as ProtoStatus } from '../../generated/v1/common_pb';
 import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import SecondaryNavService from '../shell/secondary-nav.service';
+import categoryIcon from '../shared/asset-category';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -340,26 +341,7 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  readonly categoryIcon = (category: AssetCategory): string => {
-    const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'cylinder-split',
-      Switch: 'list',
-      Storage: 'rectangle-stack',
-      Power: 'lock-closed',
-      Firewall: 'shield-check-mark',
-      Cooling: 'cloud',
-      KVM: 'puzzle-piece',
-      Other: 'ellipsis',
-      Memory: 'folder',
-      Disk: 'cylinder-split',
-      NIC: 'puzzle-piece',
-      PSU: 'lock-closed',
-      CPU: 'gear',
-      GPU: 'gear',
-      Transceiver: 'puzzle-piece',
-    };
-    return map[category] ?? 'rectangle-stack';
-  };
+  readonly categoryIcon = categoryIcon;
 
   /** `color` for an `nldd-tag` per asset category, drawn from the Rijkskleuren palette. */
   readonly categoryTagColor = (category: AssetCategory): string => {

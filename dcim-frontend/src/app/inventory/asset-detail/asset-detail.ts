@@ -16,7 +16,6 @@ import { firstValueFrom } from 'rxjs';
 import { RackSlotType } from '../../../generated/v1/common_pb';
 import {
   Asset,
-  AssetCategory,
   AssetStatus,
   CatalogEntry,
   HistoryEntry,
@@ -30,6 +29,7 @@ import PlacementApiService, { RackOption } from '../placement-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
+import categoryIcon from '../../shared/asset-category';
 
 @Component({
   selector: 'app-asset-detail',
@@ -424,24 +424,5 @@ export default class AssetDetailComponent implements OnInit {
     return classes[action];
   };
 
-  readonly categoryIcon = (category: AssetCategory): string => {
-    const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'cylinder-split',
-      Switch: 'list',
-      Storage: 'rectangle-stack',
-      Power: 'lock-closed',
-      Firewall: 'shield-check-mark',
-      Cooling: 'cloud',
-      KVM: 'puzzle-piece',
-      Other: 'ellipsis',
-      Memory: 'folder-on-folder',
-      Disk: 'cylinder-split',
-      NIC: 'puzzle-piece',
-      PSU: 'lock-closed',
-      CPU: 'gear',
-      GPU: 'gear',
-      Transceiver: 'puzzle-piece',
-    };
-    return map[category] ?? 'rectangle-stack';
-  };
+  readonly categoryIcon = categoryIcon;
 }

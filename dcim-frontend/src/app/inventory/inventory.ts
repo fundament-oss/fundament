@@ -27,26 +27,13 @@ import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import SecondaryNavService from '../shell/secondary-nav.service';
+import categoryIcon, { AssetCategory } from '../shared/asset-category';
+
+export type { AssetCategory };
 
 export type AssetStatus =
   'needs-repair' | 'decommissioned' | 'deployed' | 'available' | 'on-order' | 'requested';
 
-export type AssetCategory =
-  | 'Server'
-  | 'Switch'
-  | 'Storage'
-  | 'Power'
-  | 'Firewall'
-  | 'Cooling'
-  | 'KVM'
-  | 'Other'
-  | 'Memory'
-  | 'Disk'
-  | 'NIC'
-  | 'PSU'
-  | 'CPU'
-  | 'GPU'
-  | 'Transceiver';
 
 /** Mirrors the proto AssetEventType enum (common.proto). */
 export type AssetEventAction =
@@ -581,24 +568,5 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     return map[status];
   };
 
-  readonly categoryIcon = (category: AssetCategory): string => {
-    const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'cylinder-split',
-      Switch: 'list',
-      Storage: 'rectangle-stack',
-      Power: 'lock-closed',
-      Firewall: 'shield-check-mark',
-      Cooling: 'cloud',
-      KVM: 'puzzle-piece',
-      Other: 'ellipsis',
-      Memory: 'folder',
-      Disk: 'cylinder-split',
-      NIC: 'puzzle-piece',
-      PSU: 'lock-closed',
-      CPU: 'gear',
-      GPU: 'gear',
-      Transceiver: 'puzzle-piece',
-    };
-    return map[category] ?? 'rectangle-stack';
-  };
+  readonly categoryIcon = categoryIcon;
 }

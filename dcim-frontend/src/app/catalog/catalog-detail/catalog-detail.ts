@@ -14,7 +14,6 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
   Asset,
-  AssetCategory,
   AssetStatus,
   CatalogEntry,
   PortDefinition,
@@ -27,6 +26,7 @@ import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
 import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
+import categoryIcon from '../../shared/asset-category';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -429,26 +429,7 @@ export default class CatalogDetailComponent implements OnInit {
   readonly specEntries = (specs: Record<string, string>): { key: string; value: string }[] =>
     Object.entries(specs).map(([key, value]) => ({ key, value }));
 
-  readonly categoryIcon = (category: AssetCategory): string => {
-    const map: Partial<Record<AssetCategory, string>> = {
-      Server: 'cylinder-split',
-      Switch: 'list',
-      Storage: 'rectangle-stack',
-      Power: 'lock-closed',
-      Firewall: 'shield-check-mark',
-      Cooling: 'cloud',
-      KVM: 'puzzle-piece',
-      Other: 'ellipsis',
-      Memory: 'folder',
-      Disk: 'cylinder-split',
-      NIC: 'puzzle-piece',
-      PSU: 'lock-closed',
-      CPU: 'gear',
-      GPU: 'gear',
-      Transceiver: 'puzzle-piece',
-    };
-    return map[category] ?? 'rectangle-stack';
-  };
+  readonly categoryIcon = categoryIcon;
 
   readonly statusLabel = (status: AssetStatus): string => ASSET_STATUS_LABEL[status];
 
