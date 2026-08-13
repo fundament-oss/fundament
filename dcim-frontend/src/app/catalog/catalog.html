@@ -388,6 +388,33 @@
         (input)="searchQuery.set($any($event.target).value)"
       ></nldd-search-field>
       <nldd-spacer size="16"></nldd-spacer>
+      <!-- Everything, above the heading. It is not a category with an "all" in
+           it, so it does not belong at the head of that list. -->
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="All products"
+      >
+        <nldd-list-item
+          [attr.href]="viewPath('all')"
+          [attr.selected]="categoryFilter() === 'all' ? '' : null"
+          (click)="selectCategory($event, 'all')"
+        >
+          <nldd-icon-cell
+            icon="square-grid-2x2"
+            size="20"
+          ></nldd-icon-cell>
+          <nldd-spacer-cell size="8"></nldd-spacer-cell>
+          <nldd-text-cell text="All products"></nldd-text-cell>
+          <nldd-text-cell
+            width="fit-content"
+            horizontal-alignment="right"
+            color="secondary"
+            [attr.text]="totalProducts()"
+          ></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
       <nldd-title size="5">
         <h2>Categories</h2>
       </nldd-title>
@@ -397,29 +424,11 @@
         dividers="on-touch"
         accessible-label="Categories"
       >
-        <nldd-list-item
-          button
-          [attr.selected]="categoryFilter() === 'all' ? '' : null"
-          (click)="selectCategory('all')"
-        >
-          <nldd-icon-cell
-            icon="square-grid-2x2"
-            size="20"
-          ></nldd-icon-cell>
-          <nldd-spacer-cell size="8"></nldd-spacer-cell>
-          <nldd-text-cell text="All categories"></nldd-text-cell>
-          <nldd-text-cell
-            width="fit-content"
-            horizontal-alignment="right"
-            color="secondary"
-            [attr.text]="totalProducts()"
-          ></nldd-text-cell>
-        </nldd-list-item>
         @for (cat of categories; track cat) {
           <nldd-list-item
-            button
+            [attr.href]="viewPath(cat)"
             [attr.selected]="categoryFilter() === cat ? '' : null"
-            (click)="selectCategory(cat)"
+            (click)="selectCategory($event, cat)"
           >
             <nldd-icon-cell
               [attr.icon]="categoryIcon(cat)"

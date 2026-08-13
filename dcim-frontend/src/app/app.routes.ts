@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import authGuard from './auth.guard';
 import { tasksMatcher } from './tasks/task-views';
+import { catalogMatcher } from './catalog/catalog-views';
+import { inventoryMatcher } from './inventory/inventory-views';
 
 const routes: Routes = [
   {
@@ -18,21 +20,25 @@ const routes: Routes = [
         redirectTo: 'datacenters',
       },
       {
+        // Before the detail route, not after: /catalog/all is one segment and
+        // would otherwise be read as a product id. The matcher claims only the
+        // shapes the menu makes, so an id still falls through to the page below.
+        matcher: catalogMatcher,
+        loadComponent: () => import('./catalog/catalog').then((m) => m.default),
+      },
+      {
         path: 'catalog/:id',
         loadComponent: () =>
           import('./catalog/catalog-detail/catalog-detail').then((m) => m.default),
       },
       {
-        path: 'catalog',
-        loadComponent: () => import('./catalog/catalog').then((m) => m.default),
+        // Before the detail route, for the same reason as the catalog above.
+        matcher: inventoryMatcher,
+        loadComponent: () => import('./inventory/inventory').then((m) => m.default),
       },
       {
         path: 'inventory/:id',
         loadComponent: () => import('./inventory/asset-detail/asset-detail').then((m) => m.default),
-      },
-      {
-        path: 'inventory',
-        loadComponent: () => import('./inventory/inventory').then((m) => m.default),
       },
       {
         path: 'datacenters/:id',

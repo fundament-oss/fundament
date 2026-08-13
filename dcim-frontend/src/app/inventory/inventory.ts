@@ -13,9 +13,9 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import type { AssetStats } from '../../generated/v1/asset_pb';
 import { RackSlotType } from '../../generated/v1/common_pb';
@@ -28,6 +28,8 @@ import parseValidationError from '../../connect/validation';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import categoryIcon, { AssetCategory, CATEGORIES } from '../shared/asset-category';
+import { viewSlug } from '../shared/section-views';
+import { INVENTORY_PATH } from './inventory-views';
 
 export type { AssetCategory };
 
@@ -120,6 +122,13 @@ export interface PortCompatibility {
   compatibleCatalogEntryId: string;
 }
 
+/**
+ * What a row in the menu points at: everything, one status, or one category.
+ * The first is not a status or a category with an "all" in it, which is why it
+ * sits above both rather than at the head of each.
+ */
+type MenuKind = 'all' | 'status' | 'category';
+
 @Component({
   selector: 'app-inventory',
   templateUrl: './inventory.html',
@@ -160,9 +169,76 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
 
   searchQuery = signal('');
 
-  statusFilter = signal<AssetStatus | 'all'>('all');
+  private readonly route = inject(ActivatedRoute);
 
-  categoryFilter = signal<AssetCategory | 'all'>('all');
+  private readonly router = inject(Router);
+
+  private readonly viewParams = toSignal(this.route.paramMap, {
+    initialValue: convertToParamMap({}),
+  });
+
+  /**
+   * What the menu points at, read from the address. One choice, not two: the
+   * menu is navigation, so picking a category takes you to the categories the
+   * way a link takes you to a page, instead of narrowing what a status already
+   * narrowed. Combining is what a filter does, and that belongs above the list.
+   *
+   * The address is where it lives rather than a signal, so a view can be linked
+   * to, opened in a second tab and reached with the browser's back button.
+   */
+  readonly menuSelection = computed<{ kind: MenuKind; value: string }>(() => {
+    const params = this.viewParams();
+    const value = params.get('value') ?? '';
+    switch (params.get('view')) {
+      case 'status':
+        return {
+          kind: 'status',
+          value: this.statuses.find((s) => viewSlug(s.value) === value)?.value ?? 'all',
+        };
+      case 'category':
+        return {
+          kind: 'category',
+          value: this.categories.find((c) => viewSlug(c) === value) ?? 'all',
+        };
+      default:
+        return { kind: 'all', value: 'all' };
+    }
+  });
+
+  /** The address of a view, so every row in the menu is a real link. */
+  readonly viewPath = (kind: MenuKind, value = ''): string =>
+    kind === 'all' ? `${INVENTORY_PATH}/all` : `${INVENTORY_PATH}/${kind}/${viewSlug(value)}`;
+
+  /**
+   * Routes a click in-app while the row stays a real `<a href>`, so middle-click
+   * and "open in new tab" keep working. Anything with a modifier is left to the
+   * browser.
+   */
+  goToView(event: Event, kind: MenuKind, value = ''): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.router.navigateByUrl(this.viewPath(kind, value));
+  }
+
+  /** Back from the list is back to the menu, so the address says so too. */
+  goToMenu(): void {
+    this.router.navigateByUrl(INVENTORY_PATH);
+  }
+
+  readonly statusFilter = computed<AssetStatus | 'all'>(() => {
+    const selection = this.menuSelection();
+    return selection.kind === 'status' ? (selection.value as AssetStatus) : 'all';
+  });
+
+  readonly categoryFilter = computed<AssetCategory | 'all'>(() => {
+    const selection = this.menuSelection();
+    return selection.kind === 'category' ? (selection.value as AssetCategory) : 'all';
+  });
 
   sortDirection = signal<'asc' | 'desc'>('asc');
 
@@ -230,6 +306,13 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
   constructor() {
+    // The view lives in the address now, so the address is what asks for a new
+    // query. This runs on arrival too, which is where the first load comes from.
+    effect(() => {
+      this.menuSelection();
+      this.reload();
+    });
+
     toObservable(this.searchQuery)
       .pipe(
         skip(1),
@@ -348,14 +431,9 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
 
   // ── Filter / sort actions ──────────────────────────────────────────────────
 
-  selectStatus(status: AssetStatus | 'all'): void {
-    this.statusFilter.set(status);
-    this.reload();
-  }
-
-  selectCategory(category: AssetCategory | 'all'): void {
-    this.categoryFilter.set(category);
-    this.reload();
+  /** Whether this menu row is the one the list is showing. */
+  isMenuSelection(kind: MenuKind, value = 'all'): boolean {
+    return this.menuSelection().kind === kind && this.menuSelection().value === value;
   }
 
   toggleSort(): void {

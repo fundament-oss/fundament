@@ -12,9 +12,9 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import { AssetCategory, CatalogEntry } from '../inventory/inventory';
 import CatalogApiService from './catalog-api.service';
@@ -26,6 +26,8 @@ import type { Asset as ProtoAsset } from '../../generated/v1/asset_pb';
 import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import categoryIcon, { CATEGORIES } from '../shared/asset-category';
+import { viewSlug } from '../shared/section-views';
+import { CATALOG_PATH } from './catalog-views';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -72,7 +74,29 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
 
   searchQuery = signal('');
 
-  categoryFilter = signal<AssetCategory | 'all'>('all');
+  private readonly route = inject(ActivatedRoute);
+
+  private readonly router = inject(Router);
+
+  private readonly viewParams = toSignal(this.route.paramMap, {
+    initialValue: convertToParamMap({}),
+  });
+
+  /**
+   * Which category the list is showing, read from the address. The menu is
+   * navigation, so a category can be linked to, opened in a second tab and
+   * reached with the browser's back button.
+   */
+  readonly categoryFilter = computed<AssetCategory | 'all'>(() => {
+    const params = this.viewParams();
+    if (params.get('view') !== 'category') return 'all';
+    const value = params.get('value') ?? '';
+    return this.categories.find((c) => viewSlug(c) === value) ?? 'all';
+  });
+
+  /** The address of a view, so every row in the menu is a real link. */
+  readonly viewPath = (category: AssetCategory | 'all'): string =>
+    category === 'all' ? `${CATALOG_PATH}/all` : `${CATALOG_PATH}/category/${viewSlug(category)}`;
 
   readonly categories = CATEGORIES;
 
@@ -189,8 +213,25 @@ export default class CatalogComponent implements OnInit, AfterViewInit, OnDestro
     return counts;
   });
 
-  selectCategory(cat: AssetCategory | 'all'): void {
-    this.categoryFilter.set(cat);
+  /**
+   * Routes a click in-app while the row stays a real `<a href>`, so middle-click
+   * and "open in new tab" keep working. Anything with a modifier is left to the
+   * browser.
+   */
+  selectCategory(event: Event, category: AssetCategory | 'all'): void {
+    if (event instanceof MouseEvent) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    this.router.navigateByUrl(this.viewPath(category));
+  }
+
+  /** Back from the list is back to the menu, so the address says so too. */
+  goToMenu(): void {
+    this.router.navigateByUrl(CATALOG_PATH);
   }
 
   // ── CRUD actions ───────────────────────────────────────────────────────────

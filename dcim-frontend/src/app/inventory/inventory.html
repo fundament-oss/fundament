@@ -395,19 +395,18 @@
         (input)="searchQuery.set($any($event.target).value)"
       ></nldd-search-field>
       <nldd-spacer size="16"></nldd-spacer>
-      <nldd-title size="5">
-        <h2>Status</h2>
-      </nldd-title>
-      <nldd-spacer size="8"></nldd-spacer>
+      <!-- Everything, above both headings. It is not a status and not a
+           category, so it does not belong at the head of either list: the menu
+           navigates, and "all" is where you land when you have not chosen. -->
       <nldd-list
         type="navigation"
         dividers="on-touch"
-        accessible-label="Status"
+        accessible-label="All assets"
       >
         <nldd-list-item
-          button
-          [attr.selected]="statusFilter() === 'all' ? '' : null"
-          (click)="selectStatus('all')"
+          [attr.href]="viewPath('all')"
+          [attr.selected]="isMenuSelection('all') ? '' : null"
+          (click)="goToView($event, 'all')"
         >
           <nldd-icon-cell
             icon="square-grid-2x2"
@@ -422,11 +421,22 @@
             [attr.text]="statusCounts()['all']"
           ></nldd-text-cell>
         </nldd-list-item>
+      </nldd-list>
+      <nldd-spacer size="16"></nldd-spacer>
+      <nldd-title size="5">
+        <h2>Status</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        accessible-label="Status"
+      >
         @for (s of statuses; track s.value) {
           <nldd-list-item
-            button
-            [attr.selected]="statusFilter() === s.value ? '' : null"
-            (click)="selectStatus(s.value)"
+            [attr.href]="viewPath('status', s.value)"
+            [attr.selected]="isMenuSelection('status', s.value) ? '' : null"
+            (click)="goToView($event, 'status', s.value)"
           >
             <nldd-cell width="fit-content">
               <nldd-badge
@@ -457,29 +467,12 @@
         dividers="on-touch"
         accessible-label="Category"
       >
-        <nldd-list-item
-          button
-          [attr.selected]="categoryFilter() === 'all' ? '' : null"
-          (click)="selectCategory('all')"
-        >
-          <nldd-icon-cell
-            icon="square-grid-2x2"
-            size="20"
-          ></nldd-icon-cell>
-          <nldd-spacer-cell size="8"></nldd-spacer-cell>
-          <nldd-text-cell text="All categories"></nldd-text-cell>
-          <nldd-text-cell
-            width="fit-content"
-            horizontal-alignment="right"
-            color="secondary"
-            [attr.text]="statusCounts()['all']"
-          ></nldd-text-cell>
-        </nldd-list-item>
         @for (cat of categories; track cat) {
           <nldd-list-item
             button
-            [attr.selected]="categoryFilter() === cat ? '' : null"
-            (click)="selectCategory(cat)"
+            [attr.href]="viewPath('category', cat)"
+            [attr.selected]="isMenuSelection('category', cat) ? '' : null"
+            (click)="goToView($event, 'category', cat)"
           >
             <nldd-icon-cell
               [attr.icon]="categoryIcon(cat)"
