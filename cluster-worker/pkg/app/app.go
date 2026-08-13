@@ -18,6 +18,7 @@ import (
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler"
 	clusterhandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/cluster"
 	namespacehandler "github.com/fundament-oss/fundament/cluster-worker/pkg/handler/namespace"
+	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/pluginmachinery"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/handler/usersync"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/outbox"
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/reconcile"
@@ -32,10 +33,11 @@ type Config struct {
 
 	Gardener GardenerConfig `envPrefix:"GARDENER_"`
 
-	Outbox    outbox.Config         `envPrefix:"OUTBOX_"`
-	Status    status.Config         `envPrefix:"STATUS_"`
-	Reconcile reconcile.Config      `envPrefix:"RECONCILE_"`
-	Cluster   clusterhandler.Config `envPrefix:"CLUSTER_"`
+	Outbox    outbox.Config          `envPrefix:"OUTBOX_"`
+	Status    status.Config          `envPrefix:"STATUS_"`
+	Reconcile reconcile.Config       `envPrefix:"RECONCILE_"`
+	Cluster   clusterhandler.Config  `envPrefix:"CLUSTER_"`
+	Plugin    pluginmachinery.Config `envPrefix:"PLUGIN_"`
 }
 
 // GardenerConfig configures the Gardener client and the provider defaults the
@@ -128,6 +130,14 @@ func New(pool *pgxpool.Pool, logger *slog.Logger, cfg *Config) (*App, error) {
 	registry.RegisterSync(handler.EntityNamespace, nsh)
 	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, nsh)
 	registry.RegisterReconcile(nsh)
+
+	// Plugin machinery handler (PluginInstallation CRD + plugin-controller on
+	// shoots). Shares the ShootAccess instance; provisions on cluster-ready and
+	// re-asserts via the reconcile loop. No-ops unless PLUGIN_CONTROLLER_IMAGE
+	// and PLUGIN_ORGANIZATION_API_URL are configured.
+	pmh := pluginmachinery.New(pool, shootAccess, cfg.Plugin, logger)
+	registry.RegisterSyncForEvent(handler.EntityCluster, dbconst.ClusterOutboxEvent_Ready, pmh)
+	registry.RegisterReconcile(pmh)
 
 	// Workers
 	outboxWorker := outbox.New(pool, registry, logger, cfg.Outbox)
