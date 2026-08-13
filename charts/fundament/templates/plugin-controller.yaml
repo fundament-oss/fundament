@@ -12,6 +12,10 @@ metadata:
   name: {{ $.Release.Name }}-plugin-controller
   labels:
     {{- include "fundament.labels" (dict "root" $ "name" "plugin-controller" "component" "plugin-controller") | nindent 4 }}
+# KEEP IN SYNC with ClusterRoleRules() in
+# cluster-worker/pkg/handler/pluginmachinery/manifests/manifests.go — the
+# shoot-side copy of this role. TestClusterRoleRulesMatchChart parses this
+# rules block (it must stay plain YAML, no templating) and fails on drift.
 rules:
   - apiGroups:
       - plugins.fundament.io
