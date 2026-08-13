@@ -17,12 +17,7 @@ import { RackRowSchema } from '../../generated/v1/rack_row_pb';
 import { RoomSchema } from '../../generated/v1/room_pb';
 import { SiteSchema } from '../../generated/v1/site_pb';
 import { NoteSchema } from '../../generated/v1/note_pb';
-import {
-  TaskSchema,
-  TaskStepSchema,
-  TaskPriority,
-  TaskStatus,
-} from '../../generated/v1/task_pb';
+import { TaskSchema, TaskStepSchema, TaskPriority, TaskStatus } from '../../generated/v1/task_pb';
 import { UserSchema } from '../../generated/v1/user_pb';
 import { PhysicalConnectionSchema } from '../../generated/v1/connection_pb';
 import {
@@ -67,16 +62,96 @@ export const currentUser = users[0];
 // ── The catalog ──────────────────────────────────────────────────────────────
 
 const CATALOG = [
-  { manufacturer: 'Dell', model: 'PowerEdge R660', part: 'R660-2U', category: AssetCategory.SERVER, units: 2, weight: 21.5, power: 750 },
-  { manufacturer: 'Dell', model: 'PowerEdge R760', part: 'R760-2U', category: AssetCategory.SERVER, units: 2, weight: 24, power: 900 },
-  { manufacturer: 'HPE', model: 'ProLiant DL360', part: 'DL360-G11', category: AssetCategory.SERVER, units: 1, weight: 16.2, power: 500 },
-  { manufacturer: 'Arista', model: '7050SX3-48YC8', part: '7050SX3', category: AssetCategory.SWITCH, units: 1, weight: 9.1, power: 250 },
-  { manufacturer: 'Juniper', model: 'QFX5120-48Y', part: 'QFX5120', category: AssetCategory.SWITCH, units: 1, weight: 8.6, power: 230 },
-  { manufacturer: 'APC', model: 'Rack PDU 9000', part: 'AP9000', category: AssetCategory.PDU, units: 0, weight: 4.5, power: 0 },
-  { manufacturer: 'Panduit', model: 'Patchpaneel 24-poorts', part: 'PP24-LC', category: AssetCategory.PATCH_PANEL, units: 1, weight: 2.1, power: 0 },
-  { manufacturer: 'Finisar', model: 'SFP28 25G SR', part: 'FTLF8536', category: AssetCategory.SFP, units: 0, weight: 0.02, power: 1 },
-  { manufacturer: 'Samsung', model: 'PM9A3 3.84TB NVMe', part: 'MZQL23T8', category: AssetCategory.DISK, units: 0, weight: 0.15, power: 12 },
-  { manufacturer: 'Corning', model: 'LC-LC OM4 3m', part: 'LC-OM4-3', category: AssetCategory.CABLE, units: 0, weight: 0.1, power: 0 },
+  {
+    manufacturer: 'Dell',
+    model: 'PowerEdge R660',
+    part: 'R660-2U',
+    category: AssetCategory.SERVER,
+    units: 2,
+    weight: 21.5,
+    power: 750,
+  },
+  {
+    manufacturer: 'Dell',
+    model: 'PowerEdge R760',
+    part: 'R760-2U',
+    category: AssetCategory.SERVER,
+    units: 2,
+    weight: 24,
+    power: 900,
+  },
+  {
+    manufacturer: 'HPE',
+    model: 'ProLiant DL360',
+    part: 'DL360-G11',
+    category: AssetCategory.SERVER,
+    units: 1,
+    weight: 16.2,
+    power: 500,
+  },
+  {
+    manufacturer: 'Arista',
+    model: '7050SX3-48YC8',
+    part: '7050SX3',
+    category: AssetCategory.SWITCH,
+    units: 1,
+    weight: 9.1,
+    power: 250,
+  },
+  {
+    manufacturer: 'Juniper',
+    model: 'QFX5120-48Y',
+    part: 'QFX5120',
+    category: AssetCategory.SWITCH,
+    units: 1,
+    weight: 8.6,
+    power: 230,
+  },
+  {
+    manufacturer: 'APC',
+    model: 'Rack PDU 9000',
+    part: 'AP9000',
+    category: AssetCategory.PDU,
+    units: 0,
+    weight: 4.5,
+    power: 0,
+  },
+  {
+    manufacturer: 'Panduit',
+    model: 'Patchpaneel 24-poorts',
+    part: 'PP24-LC',
+    category: AssetCategory.PATCH_PANEL,
+    units: 1,
+    weight: 2.1,
+    power: 0,
+  },
+  {
+    manufacturer: 'Finisar',
+    model: 'SFP28 25G SR',
+    part: 'FTLF8536',
+    category: AssetCategory.SFP,
+    units: 0,
+    weight: 0.02,
+    power: 1,
+  },
+  {
+    manufacturer: 'Samsung',
+    model: 'PM9A3 3.84TB NVMe',
+    part: 'MZQL23T8',
+    category: AssetCategory.DISK,
+    units: 0,
+    weight: 0.15,
+    power: 12,
+  },
+  {
+    manufacturer: 'Corning',
+    model: 'LC-LC OM4 3m',
+    part: 'LC-OM4-3',
+    category: AssetCategory.CABLE,
+    units: 0,
+    weight: 0.1,
+    power: 0,
+  },
 ];
 
 export const catalog = CATALOG.map((entry, index) =>
@@ -123,8 +198,22 @@ export const portDefinitions = catalog.flatMap((entry) => {
 // ── The estate: sites, rooms, rows, racks ────────────────────────────────────
 
 const SITES = [
-  { name: 'AMS1', fullName: 'Amsterdam Zuidoost', city: 'Amsterdam', address: 'Paasheuvelweg 12', tier: 'Tier III', sqm: 1800 },
-  { name: 'GRN1', fullName: 'Groningen Noord', city: 'Groningen', address: 'Zernikelaan 40', tier: 'Tier II', sqm: 950 },
+  {
+    name: 'AMS1',
+    fullName: 'Amsterdam Zuidoost',
+    city: 'Amsterdam',
+    address: 'Paasheuvelweg 12',
+    tier: 'Tier III',
+    sqm: 1800,
+  },
+  {
+    name: 'GRN1',
+    fullName: 'Groningen Noord',
+    city: 'Groningen',
+    address: 'Zernikelaan 40',
+    tier: 'Tier II',
+    sqm: 950,
+  },
 ];
 
 export const sites = SITES.map((site, index) =>
@@ -291,7 +380,9 @@ export const connections = placements
   }))
   .filter(
     ({ source, target }) =>
-      source !== target && portsOfPlacement(source).length > 0 && portsOfPlacement(target).length > 0,
+      source !== target &&
+      portsOfPlacement(source).length > 0 &&
+      portsOfPlacement(target).length > 0,
   )
   .slice(0, 8)
   .map(({ source, target }, index) => {
@@ -318,16 +409,87 @@ export const connections = placements
 // one that sits with a colleague (Waiting) is a fact about that task, not about
 // where it happens to fall in the list.
 const TASKS = [
-  { title: 'Switch R01-2 vervangen', tags: ['network', 'hardware'], status: TaskStatus.DOING, priority: TaskPriority.HIGH, due: 2, assignee: 0 },
-  { title: 'Nieuwe servers uitpakken en inboeken', tags: ['hardware'], status: TaskStatus.TODO, priority: TaskPriority.MEDIUM, due: 5, assignee: 1 },
-  { title: 'Koeling Hal B nakijken', tags: ['cooling'], status: TaskStatus.DOING, blockedReason: 'Wacht op een onderdeel dat besteld is', priority: TaskPriority.URGENT, due: 1, assignee: 0 },
-  { title: 'PDU-belasting rij 2 meten', tags: ['power'], status: TaskStatus.TODO, priority: TaskPriority.LOW, due: 9, assignee: 3 },
-  { title: 'Toegangspassen controleren', tags: ['security', 'review'], status: TaskStatus.DOING, priority: TaskPriority.UNSPECIFIED, due: -1, assignee: 0 },
-  { title: 'Patchkabels opruimen R02-1', tags: [], status: TaskStatus.DONE, priority: TaskPriority.LOW, due: -3, assignee: 4 },
-  { title: 'Defecte disk vervangen in R01-3', tags: ['hardware'], status: TaskStatus.TODO, priority: TaskPriority.HIGH, due: 3, assignee: 0 },
-  { title: 'Uplink naar GRN1 testen', tags: ['network'], status: TaskStatus.DOING, priority: TaskPriority.HIGH, due: 6, assignee: 2 },
-  { title: 'Melding: brommend geluid bij R03', tags: [], status: TaskStatus.TODO, priority: TaskPriority.UNSPECIFIED, due: null, assignee: null },
-  { title: 'Reserveonderdelen bijbestellen', tags: ['hardware'], status: TaskStatus.TODO, priority: TaskPriority.LOW, due: null, assignee: 0 },
+  {
+    title: 'Switch R01-2 vervangen',
+    tags: ['network', 'hardware'],
+    status: TaskStatus.DOING,
+    priority: TaskPriority.HIGH,
+    due: 2,
+    assignee: 0,
+  },
+  {
+    title: 'Nieuwe servers uitpakken en inboeken',
+    tags: ['hardware'],
+    status: TaskStatus.TODO,
+    priority: TaskPriority.MEDIUM,
+    due: 5,
+    assignee: 1,
+  },
+  {
+    title: 'Koeling Hal B nakijken',
+    tags: ['cooling'],
+    status: TaskStatus.DOING,
+    blockedReason: 'Wacht op een onderdeel dat besteld is',
+    priority: TaskPriority.URGENT,
+    due: 1,
+    assignee: 0,
+  },
+  {
+    title: 'PDU-belasting rij 2 meten',
+    tags: ['power'],
+    status: TaskStatus.TODO,
+    priority: TaskPriority.LOW,
+    due: 9,
+    assignee: 3,
+  },
+  {
+    title: 'Toegangspassen controleren',
+    tags: ['security', 'review'],
+    status: TaskStatus.DOING,
+    priority: TaskPriority.UNSPECIFIED,
+    due: -1,
+    assignee: 0,
+  },
+  {
+    title: 'Patchkabels opruimen R02-1',
+    tags: [],
+    status: TaskStatus.DONE,
+    priority: TaskPriority.LOW,
+    due: -3,
+    assignee: 4,
+  },
+  {
+    title: 'Defecte disk vervangen in R01-3',
+    tags: ['hardware'],
+    status: TaskStatus.TODO,
+    priority: TaskPriority.HIGH,
+    due: 3,
+    assignee: 0,
+  },
+  {
+    title: 'Uplink naar GRN1 testen',
+    tags: ['network'],
+    status: TaskStatus.DOING,
+    priority: TaskPriority.HIGH,
+    due: 6,
+    assignee: 2,
+  },
+  {
+    title: 'Melding: brommend geluid bij R03',
+    tags: [],
+    status: TaskStatus.TODO,
+    priority: TaskPriority.UNSPECIFIED,
+    due: null,
+    assignee: null,
+  },
+  {
+    title: 'Reserveonderdelen bijbestellen',
+    tags: ['hardware'],
+    status: TaskStatus.TODO,
+    priority: TaskPriority.LOW,
+    due: null,
+    assignee: 0,
+  },
 ];
 
 export const tasks = TASKS.map((task, index) =>
@@ -364,8 +526,7 @@ export const taskSteps = tasks.flatMap((task, taskIndex) =>
       description: '',
       ordinal: stepIndex + 1,
       completed:
-        task.status === TaskStatus.DONE ||
-        (task.status === TaskStatus.DOING && stepIndex < 2),
+        task.status === TaskStatus.DONE || (task.status === TaskStatus.DOING && stepIndex < 2),
       created: daysAgo(20 - taskIndex),
     }),
   ),

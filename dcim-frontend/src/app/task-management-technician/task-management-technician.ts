@@ -252,9 +252,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
    *  label is the useful one. */
   private static partsLabelFor(tags: string[]): string {
     const known = tags.find((tag) => tag in TaskManagementTechnicianComponent.TAG_PARTS);
-    return known
-      ? TaskManagementTechnicianComponent.TAG_PARTS[known]
-      : 'Task-specific parts';
+    return known ? TaskManagementTechnicianComponent.TAG_PARTS[known] : 'Task-specific parts';
   }
 
   readonly tasks = signal<Task[]>([]);

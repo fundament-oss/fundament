@@ -10,6 +10,7 @@ import { Transport, createRouterTransport } from '@connectrpc/connect';
 import {
   AssetService,
   AssetSchema,
+  AssetSortField,
   ListAssetsResponseSchema,
   GetAssetResponseSchema,
   CreateAssetResponseSchema,
@@ -114,7 +115,7 @@ import {
   ListUsersResponseSchema,
   GetCurrentUserResponseSchema,
 } from '../../generated/v1/user_pb';
-import { AssetStatus } from '../../generated/v1/common_pb';
+import { AssetStatus, SortDirection } from '../../generated/v1/common_pb';
 import * as fx from './fixtures';
 
 /** Enough to see a loading state go by, not enough to sit and wait for it. */
@@ -149,6 +150,50 @@ const nextId = () => {
 
 const now = () => timestampFromDate(new Date());
 
+/**
+ * The status as it reads on screen, which is what "Status A–Z" sorts on. The
+ * enum's own order is a numbering of states, not an alphabet, so sorting on it
+ * would put Available before Deployed by accident and Decommissioned last for
+ * no reason a reader can see.
+ */
+const STATUS_SORT_LABEL: Record<number, string> = {
+  [AssetStatus.AVAILABLE]: 'Available',
+  [AssetStatus.DEPLOYED]: 'Deployed',
+  [AssetStatus.NEEDS_REPAIR]: 'Needs Repair',
+  [AssetStatus.ON_ORDER]: 'On Order',
+  [AssetStatus.REQUESTED]: 'Requested',
+  [AssetStatus.DECOMMISSIONED]: 'Decommissioned',
+};
+
+/**
+ * Sorts a list the way the API says it will. Ties fall back to the asset tag,
+ * so rows with the same status keep one fixed order instead of shuffling
+ * between requests.
+ */
+function sortAssets(
+  assets: (typeof store.assets)[number][],
+  sortBy: AssetSortField,
+  direction: SortDirection,
+) {
+  const key = (asset: (typeof store.assets)[number]): string => {
+    switch (sortBy) {
+      case AssetSortField.SERIAL_NUMBER:
+        return asset.serialNumber ?? '';
+      case AssetSortField.ASSET_TAG:
+        return asset.assetTag ?? '';
+      case AssetSortField.STATUS:
+        return STATUS_SORT_LABEL[asset.status] ?? '';
+      default:
+        return '';
+    }
+  };
+  const sign = direction === SortDirection.DESC ? -1 : 1;
+  return [...assets].sort((a, b) => {
+    const cmp = key(a).localeCompare(key(b));
+    return cmp !== 0 ? sign * cmp : (a.assetTag ?? '').localeCompare(b.assetTag ?? '');
+  });
+}
+
 /** Racks under a site, resolved through rooms and rows. */
 function racksOfSite(siteId: string) {
   const roomIds = new Set(store.rooms.filter((room) => room.siteId === siteId).map((r) => r.id));
@@ -161,7 +206,8 @@ function racksOfSite(siteId: string) {
 /** What a rack holds, which is what the rack lists report per rack. */
 function rackSummary(rack: (typeof store.racks)[number]) {
   const placements = store.placements.filter(
-    (placement) => placement.location.case === 'rack' && placement.location.value.rackId === rack.id,
+    (placement) =>
+      placement.location.case === 'rack' && placement.location.value.rackId === rack.id,
   );
   const entries = placements.map((placement) => {
     const asset = store.assets.find((a) => a.id === placement.assetId);
@@ -378,6 +424,7 @@ export default function createDemoTransport(): Transport {
               .some((value) => value!.toLowerCase().includes(needle));
           });
         }
+        assets = sortAssets(assets, request.sortBy, request.sortDirection);
         return create(ListAssetsResponseSchema, { assets });
       },
       getAsset: async (request) => {
@@ -477,7 +524,8 @@ export default function createDemoTransport(): Transport {
               total: owned.length,
               deployed: owned.filter((asset) => asset.status === AssetStatus.DEPLOYED).length,
               available: owned.filter((asset) => asset.status === AssetStatus.AVAILABLE).length,
-              needsRepair: owned.filter((asset) => asset.status === AssetStatus.NEEDS_REPAIR).length,
+              needsRepair: owned.filter((asset) => asset.status === AssetStatus.NEEDS_REPAIR)
+                .length,
             };
           }),
         });
@@ -518,9 +566,7 @@ export default function createDemoTransport(): Transport {
       listAssetsByCatalogEntry: async (request) => {
         await delay();
         return create(ListAssetsByCatalogEntryResponseSchema, {
-          assets: store.assets.filter(
-            (asset) => asset.deviceCatalogId === request.deviceCatalogId,
-          ),
+          assets: store.assets.filter((asset) => asset.deviceCatalogId === request.deviceCatalogId),
         });
       },
       listPortDefinitions: async (request) => {
@@ -652,9 +698,7 @@ export default function createDemoTransport(): Transport {
       },
       deletePhysicalConnection: async (request) => {
         await delay();
-        store.connections = store.connections.filter(
-          (connection) => connection.id !== request.id,
-        );
+        store.connections = store.connections.filter((connection) => connection.id !== request.id);
         return create(EmptySchema, {});
       },
       listConnectionsByPlacement: async (request) => {
@@ -795,8 +839,7 @@ export default function createDemoTransport(): Transport {
         await delay();
         return create(ListNotesResponseSchema, {
           notes: store.notes.filter(
-            (note) =>
-              note.entityType === request.entityType && note.entityId === request.entityId,
+            (note) => note.entityType === request.entityType && note.entityId === request.entityId,
           ),
         });
       },

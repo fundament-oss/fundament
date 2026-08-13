@@ -162,8 +162,6 @@ export default class TaskApiService {
     return map[p];
   }
 
-
-
   listTasks(assigneeId?: string) {
     return this.client.listTasks(assigneeId ? { assigneeId } : {});
   }
