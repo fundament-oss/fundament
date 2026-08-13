@@ -14,7 +14,6 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { debounce, distinctUntilChanged, firstValueFrom, skip, timer } from 'rxjs';
 import type { AssetStats } from '../../generated/v1/asset_pb';
@@ -25,7 +24,6 @@ import PlacementApiService, { RackOption } from './placement-api.service';
 import { ASSET_STATUS_TAG_COLOR } from './asset-status';
 import connectErrorMessage from '../../connect/error';
 import parseValidationError from '../../connect/validation';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import categoryIcon, { AssetCategory, CATEGORIES } from '../shared/asset-category';
 import { viewSlug } from '../shared/section-views';
@@ -133,7 +131,7 @@ type MenuKind = 'all' | 'status' | 'category';
   selector: 'app-inventory',
   templateUrl: './inventory.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DropdownSyncDirective, InventoryNavComponent],
+  imports: [InventoryNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   // No styling of its own: the page inside paints the surface and owns the
   // layout, and styles.css takes this element out of the flow (display:
@@ -375,7 +373,8 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
 
   readonly assetRackId = signal<string>('');
 
-  readonly assetSlotType = signal<string>('');
+  /** The slot type as the enum the API takes; empty until one is picked. */
+  readonly assetSlotType = signal<RackSlotType | ''>('');
 
   /** Rack placement of the asset being edited; null when adding or unplaced. */
   editPlacement = signal<{
@@ -384,6 +383,9 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     unit: number;
     slotType: RackSlotType;
   } | null>(null);
+
+  /** The place you picked for the rack list, empty until you touch it. */
+  readonly pickedLocation = signal<string>('');
 
   /** All racks, for the location picker. */
   readonly racks = signal<RackOption[]>([]);
@@ -400,6 +402,23 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
       .map(([datacenter, racks]) => ({ datacenter, racks }))
       .sort((a, b) => a.datacenter.localeCompare(b.datacenter));
   });
+
+  /** The places that have racks, in the order the groups come out. */
+  readonly locations = computed(() => this.racksByDatacenter().map((group) => group.datacenter));
+
+  /**
+   * The place the rack list is limited to. Falls back to the first one, so the
+   * rack picker always has something to show: a control you cannot use until
+   * you have used another one first reads as broken.
+   */
+  readonly rackLocation = computed(() => this.pickedLocation() || this.locations()[0] || '');
+
+  /** Only the racks that stand at the place you picked. */
+  readonly racksAtLocation = computed(
+    () =>
+      this.racksByDatacenter().find((group) => group.datacenter === this.rackLocation())?.racks ??
+      [],
+  );
 
   readonly slotTypes: { value: RackSlotType; label: string }[] = [
     { value: RackSlotType.UNIT, label: 'Unit' },
@@ -605,17 +624,41 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   openCreateAsset(): void {
     this.clearErrors();
     this.editPlacement.set(null);
-    this.assetDeviceId.set(this.catalog()[0]?.id ?? '');
+    this.pickedLocation.set('');
+    // No device to start with. The old dropdown always had one selected, which
+    // made the first product in the catalog the silent default answer to the
+    // one question this form cannot guess.
+    this.assetDeviceId.set('');
     this.assetStatus.set('available');
     this.assetRackId.set('');
     this.assetSlotType.set('');
     this.editAsset.set({
       id: '',
-      deviceCatalogId: this.catalog()[0]?.id ?? '',
+      deviceCatalogId: '',
       assetTag: '',
       status: 'available',
       notes: '',
     });
+  }
+
+  /** One status at a time: unpicking the current one leaves it as it was. */
+  onStatusToggle(status: AssetStatus, selected: boolean): void {
+    if (selected) this.assetStatus.set(status);
+  }
+
+  onSlotTypeToggle(slotType: RackSlotType, selected: boolean): void {
+    if (selected) this.assetSlotType.set(slotType);
+  }
+
+  /** One place at a time: unpicking the current one leaves it as it was. */
+  onLocationToggle(location: string, selected: boolean): void {
+    if (selected) this.onLocationChange(location);
+  }
+
+  /** Picking a place empties the rack: the rack you had stands somewhere else. */
+  private onLocationChange(location: string): void {
+    this.pickedLocation.set(location);
+    this.assetRackId.set('');
   }
 
   closeAssetForm(): void {
@@ -628,6 +671,13 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     if (!form) return;
     this.clearErrors();
     const deviceCatalogId = this.assetDeviceId() || (form.deviceCatalogId ?? '');
+    // An asset is an instance of a product, so without one there is nothing to
+    // create. Said here rather than left to the API, because the answer is in
+    // the field right above the button.
+    if (!deviceCatalogId) {
+      this.invalidFields.set({ device_catalog_id: 'Pick the device this asset is.' });
+      return;
+    }
     const entry = this.catalogById.get(deviceCatalogId);
     const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
     const updated: Asset = {
@@ -667,7 +717,7 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     const rackId = this.assetRackId();
     const unit =
       parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
-    const slotType = (Number(this.assetSlotType()) as RackSlotType) || RackSlotType.UNIT;
+    const slotType = this.assetSlotType() || RackSlotType.UNIT;
     return this.placementApi.reconcilePlacement({
       assetId,
       rackId,

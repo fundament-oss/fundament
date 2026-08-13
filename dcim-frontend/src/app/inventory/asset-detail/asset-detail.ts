@@ -13,7 +13,6 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { RackSlotType } from '../../../generated/v1/common_pb';
@@ -25,7 +24,6 @@ import NoteApiService from '../note-api.service';
 import PlacementApiService, { RackOption } from '../placement-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
-import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 import categoryIcon from '../../shared/asset-category';
 import { INVENTORY_PATH, inventoryViewTitle, isInventoryView } from '../inventory-views';
 import InventoryNavComponent from '../inventory-nav';
@@ -35,7 +33,7 @@ import SecondaryNavService from '../../shell/secondary-nav.service';
   selector: 'app-asset-detail',
   templateUrl: './asset-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, DropdownSyncDirective, InventoryNavComponent],
+  imports: [RouterLink, InventoryNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   // No styling of its own: the page inside paints the surface and owns the
   // layout, and styles.css takes this element out of the flow (display:
@@ -93,7 +91,11 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
 
   readonly assetRackId = signal<string>('');
 
-  readonly assetSlotType = signal<string>('');
+  /** The slot type as the enum the API takes; empty until one is picked. */
+  readonly assetSlotType = signal<RackSlotType | ''>('');
+
+  /** The place you picked for the rack list, empty until you touch it. */
+  readonly pickedLocation = signal<string>('');
 
   readonly invalidFields = signal<Record<string, string>>({});
 
@@ -131,6 +133,23 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
       .map(([datacenter, racks]) => ({ datacenter, racks }))
       .sort((a, b) => a.datacenter.localeCompare(b.datacenter));
   });
+
+  /** The places that have racks, in the order the groups come out. */
+  readonly locations = computed(() => this.racksByDatacenter().map((group) => group.datacenter));
+
+  /**
+   * The place the rack list is limited to. Falls back to the first one, so the
+   * rack picker always has something to show: a control you cannot use until
+   * you have used another one first reads as broken.
+   */
+  readonly rackLocation = computed(() => this.pickedLocation() || this.locations()[0] || '');
+
+  /** Only the racks that stand at the place you picked. */
+  readonly racksAtLocation = computed(
+    () =>
+      this.racksByDatacenter().find((group) => group.datacenter === this.rackLocation())?.racks ??
+      [],
+  );
 
   readonly slotTypes: { value: RackSlotType; label: string }[] = [
     { value: RackSlotType.UNIT, label: 'Unit' },
@@ -384,12 +403,18 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
             : null;
         this.editPlacement.set(placement);
         this.assetRackId.set(placement?.rackId ?? '');
-        this.assetSlotType.set(placement?.slotType ? String(placement.slotType) : '');
+        this.assetSlotType.set(placement?.slotType ?? '');
+        // The place comes from the rack it is in: the picker below it lists the
+        // racks that stand there, so it has to know where "there" is.
+        this.pickedLocation.set(
+          this.racks().find((rack) => rack.id === placement?.rackId)?.datacenter ?? '',
+        );
       })
       .catch((err) => {
         this.editPlacement.set(null);
         this.assetRackId.set('');
         this.assetSlotType.set('');
+        this.pickedLocation.set('');
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
       })
@@ -397,6 +422,26 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
         this.assetStatus.set(current.status);
         this.editAsset.set({ ...current });
       });
+  }
+
+  /** One status at a time: unpicking the current one leaves it as it was. */
+  onStatusToggle(status: AssetStatus, selected: boolean): void {
+    if (selected) this.assetStatus.set(status);
+  }
+
+  onSlotTypeToggle(slotType: RackSlotType, selected: boolean): void {
+    if (selected) this.assetSlotType.set(slotType);
+  }
+
+  /** One place at a time: unpicking the current one leaves it as it was. */
+  onLocationToggle(location: string, selected: boolean): void {
+    if (selected) this.onLocationChange(location);
+  }
+
+  /** Picking a place empties the rack: the rack you had stands somewhere else. */
+  private onLocationChange(location: string): void {
+    this.pickedLocation.set(location);
+    this.assetRackId.set('');
   }
 
   closeAssetForm(): void {
@@ -445,7 +490,7 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
     | { rackId: string; unit: number; slotType: RackSlotType; existingPlacementId: string | null }
     | 'invalid' {
     const rackId = this.assetRackId();
-    const slotType = (Number(this.assetSlotType()) as RackSlotType) || RackSlotType.UNIT;
+    const slotType = this.assetSlotType() || RackSlotType.UNIT;
     const existingPlacementId = this.editPlacement()?.id ?? null;
 
     if (!rackId) {
