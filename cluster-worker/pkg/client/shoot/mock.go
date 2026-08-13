@@ -2,14 +2,17 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"maps"
 	"sync"
 
 	"github.com/google/uuid"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/yaml"
 )
 
 // MockShootAccess implements ShootAccess with in-memory state for testing and mock mode.
@@ -25,6 +28,12 @@ type MockShootAccess struct {
 	Namespaces map[uuid.UUID]map[string]ResourceInfo
 	// LimitRanges: clusterID -> namespace name -> the managed fundament-defaults LimitRange
 	LimitRanges map[uuid.UUID]map[string]MockLimitRange
+	// CRDs: clusterID -> CRD name (metadata.name from the manifest) -> manifest bytes
+	CRDs map[uuid.UUID]map[string][]byte
+	// ClusterRoles: clusterID -> ClusterRole name -> rules + labels
+	ClusterRoles map[uuid.UUID]map[string]MockClusterRole
+	// Deployments: clusterID -> "namespace/name" -> the applied Deployment
+	Deployments map[uuid.UUID]map[string]*appsv1.Deployment
 
 	// Configurable errors for testing
 	EnsureNamespaceError          error
@@ -41,6 +50,15 @@ type MockShootAccess struct {
 	ListNamespacesError           error
 	EnsureLimitRangeError         error
 	DeleteLimitRangeError         error
+	EnsureCRDError                error
+	EnsureClusterRoleError        error
+	EnsureDeploymentError         error
+}
+
+// MockClusterRole is the in-memory representation of an applied ClusterRole.
+type MockClusterRole struct {
+	Rules  []rbacv1.PolicyRule
+	Labels map[string]string
 }
 
 // MockLimitRange is the in-memory representation of the managed LimitRange.
@@ -56,6 +74,9 @@ func NewMockShootAccess(logger *slog.Logger) *MockShootAccess {
 		ClusterRoleBindings: make(map[uuid.UUID]map[string]ResourceInfo),
 		Namespaces:          make(map[uuid.UUID]map[string]ResourceInfo),
 		LimitRanges:         make(map[uuid.UUID]map[string]MockLimitRange),
+		CRDs:                make(map[uuid.UUID]map[string][]byte),
+		ClusterRoles:        make(map[uuid.UUID]map[string]MockClusterRole),
+		Deployments:         make(map[uuid.UUID]map[string]*appsv1.Deployment),
 	}
 }
 
@@ -193,7 +214,7 @@ func (m *MockShootAccess) EnsureServiceAccount(_ context.Context, clusterID uuid
 	return nil
 }
 
-func (m *MockShootAccess) EnsureClusterRoleBinding(_ context.Context, clusterID uuid.UUID, name, saNamespace, saName string, labels, annotations map[string]string) error {
+func (m *MockShootAccess) EnsureClusterRoleBinding(_ context.Context, clusterID uuid.UUID, name, roleName, saNamespace, saName string, labels, annotations map[string]string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -211,7 +232,7 @@ func (m *MockShootAccess) EnsureClusterRoleBinding(_ context.Context, clusterID 
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "cluster-admin",
+			Name:     roleName,
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      "ServiceAccount",
@@ -220,6 +241,67 @@ func (m *MockShootAccess) EnsureClusterRoleBinding(_ context.Context, clusterID 
 		}},
 	}
 	m.logger.Debug("MOCK: ensured CRB", "cluster_id", clusterID, "name", name)
+	return nil
+}
+
+func (m *MockShootAccess) EnsureCRD(_ context.Context, clusterID uuid.UUID, manifest []byte) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.EnsureCRDError != nil {
+		return m.EnsureCRDError
+	}
+
+	var meta struct {
+		Metadata struct {
+			Name string `json:"name"`
+		} `json:"metadata"`
+	}
+	err := yaml.Unmarshal(manifest, &meta)
+	if err != nil {
+		return fmt.Errorf("unmarshal CRD manifest: %w", err)
+	}
+
+	if m.CRDs[clusterID] == nil {
+		m.CRDs[clusterID] = make(map[string][]byte)
+	}
+	m.CRDs[clusterID][meta.Metadata.Name] = append([]byte(nil), manifest...)
+	m.logger.Debug("MOCK: ensured CRD", "cluster_id", clusterID, "name", meta.Metadata.Name)
+	return nil
+}
+
+func (m *MockShootAccess) EnsureClusterRole(_ context.Context, clusterID uuid.UUID, name string, rules []rbacv1.PolicyRule, labels map[string]string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.EnsureClusterRoleError != nil {
+		return m.EnsureClusterRoleError
+	}
+
+	if m.ClusterRoles[clusterID] == nil {
+		m.ClusterRoles[clusterID] = make(map[string]MockClusterRole)
+	}
+	m.ClusterRoles[clusterID][name] = MockClusterRole{
+		Rules:  append([]rbacv1.PolicyRule(nil), rules...),
+		Labels: maps.Clone(labels),
+	}
+	m.logger.Debug("MOCK: ensured ClusterRole", "cluster_id", clusterID, "name", name)
+	return nil
+}
+
+func (m *MockShootAccess) EnsureDeployment(_ context.Context, clusterID uuid.UUID, deployment *appsv1.Deployment) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.EnsureDeploymentError != nil {
+		return m.EnsureDeploymentError
+	}
+
+	if m.Deployments[clusterID] == nil {
+		m.Deployments[clusterID] = make(map[string]*appsv1.Deployment)
+	}
+	m.Deployments[clusterID][deployment.Namespace+"/"+deployment.Name] = deployment.DeepCopy()
+	m.logger.Debug("MOCK: ensured Deployment", "cluster_id", clusterID, "namespace", deployment.Namespace, "name", deployment.Name)
 	return nil
 }
 
@@ -369,6 +451,9 @@ func (m *MockShootAccess) Reset() {
 	m.ClusterRoleBindings = make(map[uuid.UUID]map[string]ResourceInfo)
 	m.Namespaces = make(map[uuid.UUID]map[string]ResourceInfo)
 	m.LimitRanges = make(map[uuid.UUID]map[string]MockLimitRange)
+	m.CRDs = make(map[uuid.UUID]map[string][]byte)
+	m.ClusterRoles = make(map[uuid.UUID]map[string]MockClusterRole)
+	m.Deployments = make(map[uuid.UUID]map[string]*appsv1.Deployment)
 }
 
 var _ ShootAccess = (*MockShootAccess)(nil)
