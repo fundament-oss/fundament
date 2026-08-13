@@ -38,7 +38,10 @@ spec:
           image: {{ $.Values.images.consoleFrontend }}
           env:
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }}"
+              # pluginProxy is required: plugin console UIs are served from the
+              # FUN-17 dedicated plugin-proxy origin and embedded as iframes;
+              # without it the CSP frame-src blocks every plugin UI.
+              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }} {{ $.Values.externalUrls.pluginProxy }}"
           ports:
             - name: http
               containerPort: 80
