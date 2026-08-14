@@ -1,9 +1,18 @@
-import { loadSdk, escapeHtml, emptyRow, errorRow, wireRowLinks } from './_shared.js';
+import {
+  loadSdk,
+  escapeHtml,
+  emptyRow,
+  errorRow,
+  wireRowLinks,
+  navigateToCreate,
+} from './_shared.js';
 
 await loadSdk();
 await fundament.init;
 
 const tbody = document.getElementById('rows');
+
+document.getElementById('create-btn').addEventListener('click', () => navigateToCreate());
 
 try {
   const { items } = await fundament.k8s.list({

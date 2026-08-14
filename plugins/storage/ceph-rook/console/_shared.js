@@ -61,6 +61,19 @@ export function navigateToDetail(name, namespace) {
   );
 }
 
+// Asks the host to hop to this resource kind's create route. A custom list UI
+// has to provide its own "Add" affordance: the console only renders its built-in
+// Create button when the kind has no custom list component (see
+// resource-list.component.html), so without this the create view is unreachable.
+// Only meaningful from a list view, and only for a kind whose definition
+// declares a create component.
+export function navigateToCreate() {
+  window.parent.postMessage(
+    { type: 'plugin:create' },
+    window.fundament?.parentOrigin ?? '*',
+  );
+}
+
 // Returns to the resource-kind list. Only meaningful from a create or detail
 // view; the host ignores it on a list.
 export function navigateBack() {
