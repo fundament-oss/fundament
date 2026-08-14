@@ -26,12 +26,16 @@ cluster-create-storage:
     k3d cluster create --config=sandbox/k3d-config.yaml {{ storage_volumes }}
 
 # Start the cluster (creates if it doesn't exist), clearing any leftover cordon
+# uncordon is a no-op (and skips its node wait) unless storage disks were ever
+# attached on this machine, so this costs nothing for non-storage work.
 cluster-start:
     @k3d cluster list {{ cluster }} > /dev/null 2>&1 && k3d cluster start {{ cluster }} || just cluster-create
-    kubectl --context {{ kube_context }} wait --for=condition=Ready node --all --timeout=300s
     CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh uncordon
 
-# Stop the cluster without deleting it, evicting Ceph consumers first if any
+# Stop the cluster without deleting it, evicting Ceph consumers first if any.
+# drain returns immediately unless storage disks were ever attached; when they
+# were and a volume is still mapped it fails on purpose, because stopping then
+# wedges the Docker host. Do not add a `-` prefix here.
 cluster-stop:
     CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     k3d cluster stop {{ cluster }}

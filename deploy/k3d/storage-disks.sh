@@ -68,6 +68,18 @@ require_docker() {
     docker info >/dev/null 2>&1 || die "Docker daemon not reachable"
 }
 
+# True when this machine has ever had loop-backed disks attached. The backing
+# volume is created by `attach` and survives everything short of `purge`, so its
+# absence means no cluster here has ever run Ceph.
+#
+# The lifecycle hooks (drain, uncordon) run on every `just cluster-start` and
+# `just cluster-stop`, including for people who never touch storage. This is a
+# cheap local query; without it those hooks would spin up a privileged helper
+# container to inspect the host kernel on every start and stop.
+disks_present() {
+    docker volume inspect "$DISK_VOLUME" >/dev/null 2>&1
+}
+
 # True when the Docker endpoint is a local socket rather than a remote host.
 # DOCKER_HOST wins because it overrides the active context.
 docker_daemon_is_local() {
@@ -434,6 +446,7 @@ detach() {
 # evicting the workloads of a cluster that never used storage.
 drain() {
     command -v docker >/dev/null && docker info >/dev/null 2>&1 || return 0
+    disks_present || return 0
     local ctx="k3d-$CLUSTER" mapped
     mapped="$(printf '%s\n' "ls /dev/rbd[0-9]* 2>/dev/null | tr '\\n' ' '" | host_exec 2>/dev/null)" || return 0
     [ -n "$mapped" ] || return 0
@@ -497,8 +510,13 @@ unmap_stale() {
 # A k3d restart clears the cordon on its own, so this covers a drain that was
 # not followed by one: an aborted stop, a failed delete, or a manual drain.
 uncordon() {
-    require_docker
+    command -v docker >/dev/null && docker info >/dev/null 2>&1 || return 0
+    disks_present || return 0
     local ctx="k3d-$CLUSTER"
+    # Only this path waits for the node: nothing can be uncordoned before the
+    # API server answers, and a cluster that never had disks should not pay for
+    # the wait at all.
+    kubectl --context "$ctx" wait --for=condition=Ready node --all --timeout=300s >/dev/null 2>&1 || return 0
     kubectl --context "$ctx" get node "$NODE" >/dev/null 2>&1 || return 0
     kubectl --context "$ctx" uncordon "$NODE"
 }

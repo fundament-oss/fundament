@@ -4,8 +4,11 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // StoragePoolSpec is the operator's desired block storage.
 type StoragePoolSpec struct {
-	// Disks are the names of Disk objects to consume as OSDs.
+	// Disks are the names of Disk objects to consume as OSDs. A repeat would be
+	// counted twice in status.selectedDiskCount and status.rawCapacityBytes, so
+	// the API server rejects one.
 	// +optional
+	// +listType=set
 	Disks []string `json:"disks,omitempty"`
 	// Replication selects replica count; "auto" derives it from node count.
 	// +kubebuilder:validation:Enum=auto;"1";"2";"3"

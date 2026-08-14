@@ -46,10 +46,14 @@ spec:
             description: StoragePoolSpec is the operator's desired block storage.
             properties:
               disks:
-                description: Disks are the names of Disk objects to consume as OSDs.
+                description: |-
+                  Disks are the names of Disk objects to consume as OSDs. A repeat would be
+                  counted twice in status.selectedDiskCount and status.rawCapacityBytes, so
+                  the API server rejects one.
                 items:
                   type: string
                 type: array
+                x-kubernetes-list-type: set
               replication:
                 default: auto
                 description: Replication selects replica count; "auto" derives it

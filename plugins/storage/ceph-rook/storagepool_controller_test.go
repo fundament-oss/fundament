@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
@@ -52,7 +54,7 @@ func newFakeClient(t *testing.T, objs ...client.Object) client.Client {
 }
 
 func newReconciler(c client.Client, s *runtime.Scheme) *StoragePoolReconciler {
-	return &StoragePoolReconciler{Client: c, ClusterNamespace: testNamespace, Scheme: s}
+	return &StoragePoolReconciler{Client: c, ClusterNamespace: testNamespace, RookNamespace: testNamespace, Scheme: s}
 }
 
 func testDisk(name, node, path string, size int64, available bool) *v1alpha1.Disk {
@@ -420,7 +422,7 @@ func TestReconcileIsIdempotent(t *testing.T) {
 
 func TestImmutableStorageClassDrift(t *testing.T) {
 	t.Parallel()
-	desired := RenderStorageClass("ceph-pool", testNamespace, "ceph-pool")
+	desired := RenderStorageClass("ceph-pool", testNamespace, "ceph-pool", testNamespace)
 
 	assert.Empty(t, immutableStorageClassDrift(desired.DeepCopy(), desired))
 
@@ -443,7 +445,7 @@ func TestReconcileReportsImmutableStorageClassDrift(t *testing.T) {
 	pool := testPool("pool", time.Now(), "a")
 
 	yes := true
-	stale := RenderStorageClass("ceph-pool", "a-different-namespace", "ceph-pool")
+	stale := RenderStorageClass("ceph-pool", "a-different-namespace", "ceph-pool", testNamespace)
 	stale.OwnerReferences = []metav1.OwnerReference{{
 		APIVersion: v1alpha1.GroupVersion.String(), Kind: "StoragePool",
 		Name: pool.Name, UID: pool.UID, Controller: &yes,
@@ -462,4 +464,156 @@ func TestReconcileReportsImmutableStorageClassDrift(t *testing.T) {
 	assert.Contains(t, err.Error(), "immutable field(s) parameters")
 	assert.Contains(t, err.Error(), "Delete the StorageClass")
 	assert.Equal(t, v1alpha1.PhaseDegraded, getPool(t, c, "pool").Status.Phase)
+}
+
+// A disk repeated in spec.disks must not be counted twice: selectedDiskCount
+// and rawCapacityBytes are the numbers an operator sizes workloads against.
+// The CRD marks the field as a set, so this only bites an object written before
+// that marker existed -- but it bites silently.
+func TestReconcileDeduplicatesRepeatedDisksInSpec(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "a", "a", "a"),
+	)
+	r := newReconciler(c, s)
+
+	_, err := reconcilePool(t, r, "pool")
+	require.NoError(t, err)
+
+	pool := getPool(t, c, "pool")
+	assert.Equal(t, 1, pool.Status.SelectedDiskCount)
+	assert.Equal(t, int64(100), pool.Status.RawCapacityBytes)
+	assert.Equal(t, map[string][]string{"node-a": {"/dev/sdb"}}, cephClusterDevices(t, c))
+}
+
+// Two Disk CRs that resolve to the same physical device must collapse to one
+// entry, or Rook would be handed the same device twice.
+func TestReconcileDeduplicatesUnionByStablePath(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+
+	byID := func(name, node, kernelPath, stable string) *v1alpha1.Disk {
+		d := testDisk(name, node, kernelPath, 100, true)
+		d.Status.StablePath = stable
+		return d
+	}
+
+	c := newFakeClient(t,
+		cephCluster(),
+		// The same device, discovered before and after a kernel rename.
+		byID("a", "node-a", "/dev/sdb", "/dev/disk/by-id/wwn-0xABC"),
+		byID("b", "node-a", "/dev/sdc", "/dev/disk/by-id/wwn-0xABC"),
+		testPool("pool", time.Now(), "a", "b"),
+	)
+	r := newReconciler(c, s)
+
+	_, err := reconcilePool(t, r, "pool")
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string][]string{"node-a": {"/dev/disk/by-id/wwn-0xABC"}},
+		cephClusterDevices(t, c))
+}
+
+// The CephCluster must be pointed at the by-id path when the node reports one:
+// a kernel rename would otherwise take the OSD's device out of the cluster.
+func TestReconcileWritesStablePathsIntoCephCluster(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	stable := testDisk("a", "node-a", "/dev/sdb", 100, true)
+	stable.Status.StablePath = "/dev/disk/by-id/wwn-0xABC"
+
+	c := newFakeClient(t,
+		cephCluster(),
+		stable,
+		testDisk("b", "node-a", "/dev/loop0p1", 100, true), // no stable path
+		testPool("pool", time.Now(), "a", "b"),
+	)
+	r := newReconciler(c, s)
+
+	_, err := reconcilePool(t, r, "pool")
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string][]string{
+		"node-a": {"/dev/disk/by-id/wwn-0xABC", "/dev/loop0p1"},
+	}, cephClusterDevices(t, c))
+}
+
+// Neither an adoption conflict nor immutable drift can clear without operator
+// action, so requeueing them only burns backoff and fills the log. The pool is
+// left Degraded and waits for the watch event that actually fixes it.
+func TestUnresolvableConflictsAreTerminal(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	yes := true
+
+	t.Run("foreign StorageClass", func(t *testing.T) {
+		t.Parallel()
+		foreign := RenderStorageClass("ceph-pool", testNamespace, "ceph-pool", testNamespace)
+		c := newFakeClient(t,
+			cephCluster(),
+			testDisk("a", "node-a", "/dev/sdb", 100, true),
+			testPool("pool", time.Now(), "a"),
+			foreign,
+		)
+		_, err := reconcilePool(t, newReconciler(c, s), "pool")
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, reconcile.TerminalError(nil)),
+			"refusing to adopt a foreign object is not retryable")
+	})
+
+	t.Run("immutable drift", func(t *testing.T) {
+		t.Parallel()
+		pool := testPool("pool", time.Now(), "a")
+		stale := RenderStorageClass("ceph-pool", "a-different-namespace", "ceph-pool", testNamespace)
+		stale.OwnerReferences = []metav1.OwnerReference{{
+			APIVersion: v1alpha1.GroupVersion.String(), Kind: "StoragePool",
+			Name: pool.Name, UID: pool.UID, Controller: &yes,
+		}}
+		c := newFakeClient(t,
+			cephCluster(),
+			testDisk("a", "node-a", "/dev/sdb", 100, true),
+			pool,
+			stale,
+		)
+		_, err := reconcilePool(t, newReconciler(c, s), "pool")
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, reconcile.TerminalError(nil)),
+			"the API server will refuse this update every time")
+	})
+
+	// A transient failure must stay retryable, or a blip would strand the pool.
+	t.Run("a missing disk is not terminal", func(t *testing.T) {
+		t.Parallel()
+		c := newFakeClient(t, cephCluster(), testPool("pool", time.Now(), "gone"))
+		_, err := reconcilePool(t, newReconciler(c, s), "pool")
+		require.NoError(t, err, "a missing disk is reported in status, not as an error")
+	})
+}
+
+// Every Disk event in the cluster fans out to a reconcile of every pool, and the
+// status is identical almost every time. Rewriting it would bump the
+// resourceVersion and wake every watcher for nothing.
+func TestReconcileDoesNotRewriteUnchangedStatus(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "a"),
+	)
+	r := newReconciler(c, s)
+
+	_, err := reconcilePool(t, r, "pool")
+	require.NoError(t, err)
+	settled := getPool(t, c, "pool").ResourceVersion
+
+	for range 3 {
+		_, err := reconcilePool(t, r, "pool")
+		require.NoError(t, err)
+	}
+	assert.Equal(t, settled, getPool(t, c, "pool").ResourceVersion,
+		"a reconcile that changes nothing must not write")
 }

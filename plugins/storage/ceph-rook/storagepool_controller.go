@@ -32,9 +32,13 @@ const provisioningRequeue = 30 * time.Second
 // StorageClass resources, and keeps the singleton CephCluster's
 // spec.storage.nodes up to date with the union of all pools' disks.
 type StoragePoolReconciler struct {
-	Client           client.Client
+	Client client.Client
+	// ClusterNamespace is where the CephCluster and its CSI secrets live.
 	ClusterNamespace string
-	Scheme           *runtime.Scheme
+	// RookNamespace is where the rook operator runs. It names the CSI driver,
+	// so it has to reach the StorageClass even though nothing else here uses it.
+	RookNamespace string
+	Scheme        *runtime.Scheme
 }
 
 // SetupWithManager registers the controller with the manager. It watches
@@ -188,6 +192,12 @@ func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.
 		}
 		return fmt.Errorf("get StoragePool %s for status update: %w", pool.Name, err)
 	}
+	if current.Status == status {
+		// Every Disk event in the cluster fans out to a reconcile of every pool,
+		// and the status is identical almost every time. The API server would
+		// no-op the write, but not before it has been serialised and sent.
+		return nil
+	}
 	current.Status = status
 	if err := r.Client.Status().Update(ctx, &current); err != nil {
 		return fmt.Errorf("update StoragePool status %s: %w", pool.Name, err)
@@ -230,7 +240,16 @@ func (r *StoragePoolReconciler) resolveDisks(ctx context.Context, pool *v1alpha1
 		missing   []string
 		conflicts []string
 	)
+	// spec.disks is a set (x-kubernetes-list-type on the CRD), but an object
+	// written before that marker existed could still repeat a name, and a repeat
+	// would be counted twice in selectedDiskCount and rawCapacityBytes -- the
+	// two numbers an operator sizes workloads against.
+	seen := make(map[string]struct{}, len(pool.Spec.Disks))
 	for _, name := range pool.Spec.Disks {
+		if _, dup := seen[name]; dup {
+			continue
+		}
+		seen[name] = struct{}{}
 		if owner := ClaimOwner(pools.Items, name); owner != "" && owner != pool.Name {
 			conflicts = append(conflicts, fmt.Sprintf("%s (claimed by %s)", name, owner))
 			continue
@@ -283,7 +302,9 @@ func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) e
 			if err != nil {
 				return fmt.Errorf("get Disk %q: %w", name, err)
 			}
-			key := disk.Status.Node + "\x00" + disk.Status.Path
+			// Keyed on the same reference that goes into the CephCluster, so two
+			// Disk CRs that resolve to one device collapse to one entry.
+			key := disk.Status.Node + "\x00" + DeviceRef(disk.Status)
 			if _, ok := seen[key]; !ok {
 				seen[key] = struct{}{}
 				union = append(union, disk.Status)
@@ -378,12 +399,17 @@ func poolOwnerRef(pool *v1alpha1.StoragePool) metav1.OwnerReference {
 }
 
 // notOursError reports an existing object this pool is not allowed to touch.
+//
+// Terminal: no amount of retrying makes someone else's object ours. The pool is
+// left Degraded with this message, and the operator renaming the pool or
+// removing the conflicting object produces a watch event that reconciles it
+// again -- which is the only thing that can resolve it.
 func notOursError(kind, name string) error {
-	return fmt.Errorf(
+	return reconcile.TerminalError(fmt.Errorf(
 		"%s %q already exists and is not owned by this StoragePool; "+
 			"refusing to adopt it (deleting the pool would then delete that object). "+
 			"Rename the StoragePool or remove the conflicting %s",
-		kind, name, kind)
+		kind, name, kind))
 }
 
 // applyBlockPool creates or updates the CephBlockPool and sets the StoragePool
@@ -429,7 +455,7 @@ func (r *StoragePoolReconciler) applyBlockPool(ctx context.Context, pool *v1alph
 // update the API server will refuse forever, drift on those fields is reported
 // as Degraded with the one action that fixes it.
 func (r *StoragePoolReconciler) applyStorageClass(ctx context.Context, pool *v1alpha1.StoragePool, name string) error {
-	desired := RenderStorageClass(name, r.ClusterNamespace, name)
+	desired := RenderStorageClass(name, r.ClusterNamespace, name, r.RookNamespace)
 
 	var existing storagev1.StorageClass
 	err := r.Client.Get(ctx, types.NamespacedName{Name: name}, &existing)
@@ -450,12 +476,14 @@ func (r *StoragePoolReconciler) applyStorageClass(ctx context.Context, pool *v1a
 		return notOursError("StorageClass", name)
 	}
 
+	// Terminal for the same reason as notOursError: the API server will refuse
+	// this update every time, so retrying only burns backoff and fills the log.
 	if drift := immutableStorageClassDrift(&existing, desired); len(drift) > 0 {
-		return fmt.Errorf(
+		return reconcile.TerminalError(fmt.Errorf(
 			"StorageClass %q differs from the desired spec on immutable field(s) %s; "+
 				"Kubernetes does not allow updating these. Delete the StorageClass to have it recreated "+
 				"(existing PersistentVolumes keep working; only new provisioning uses it)",
-			name, strings.Join(drift, ", "))
+			name, strings.Join(drift, ", ")))
 	}
 
 	// Only the mutable fields, plus the owner reference so cascade deletion

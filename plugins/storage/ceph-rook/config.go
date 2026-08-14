@@ -10,7 +10,13 @@ import (
 // controller as FUNP_-prefixed environment variables.
 type Config struct {
 	RookChartVersion string `env:"ROOK_CHART_VERSION" envDefault:"v1.16.0"`
-	RookNamespace    string `env:"ROOK_NAMESPACE" envDefault:"rook-ceph"`
+	// RookNamespace is where the operator runs. Rook names its CSI drivers
+	// "<this namespace>.rbd.csi.ceph.com", so it reaches the rendered
+	// StorageClass too -- see RBDProvisioner.
+	RookNamespace string `env:"ROOK_NAMESPACE" envDefault:"rook-ceph"`
+	// ClusterNamespace is where the CephCluster and its CSI secrets live, and is
+	// the CSI clusterID. It defaults to the same value as RookNamespace but is
+	// configured separately; neither one may be derived from the other.
 	ClusterNamespace string `env:"CLUSTER_NAMESPACE" envDefault:"rook-ceph"`
 
 	// Reef (v18.x) arm64 images segfault on startup; v19+ is required on Apple

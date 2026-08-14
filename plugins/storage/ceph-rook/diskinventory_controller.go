@@ -87,6 +87,15 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	var cm corev1.ConfigMap
 	if err := r.Client.Get(ctx, req.NamespacedName, &cm); err != nil {
 		if apierrors.IsNotFound(err) {
+			// The node left the cluster, so rook deleted its discovery
+			// ConfigMap. Nothing will ever report those devices again; without
+			// this they would stay available=true forever and the console would
+			// keep offering disks on a node that no longer exists. The labels
+			// are gone with the object, but the name still carries the node.
+			node := nodeFromConfigMap(req.Name, nil)
+			if err := r.softDeleteStale(ctx, node, nil); err != nil {
+				return ctrl.Result{}, fmt.Errorf("soft-delete disks for departed node %q: %w", node, err)
+			}
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("get ConfigMap %s: %w", req.NamespacedName, err)
@@ -109,7 +118,7 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Upsert a Disk CR for every discovered device.
 	seenNames := make(map[string]struct{}, len(statuses))
 	for _, st := range statuses {
-		name := DiskName(node, st.Path)
+		name := DiskName(node, DeviceKey(st))
 		seenNames[name] = struct{}{}
 		st.ClaimedBy = claimedBy[name]
 
@@ -181,6 +190,8 @@ func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, s
 
 // softDeleteStale marks any Disk belonging to node that is no longer seen as
 // Available=false. It never calls Delete — repo policy is soft deletes only.
+// A nil seen set means nothing on the node is reported any more, which is what
+// a departed node looks like.
 func (r *DiskInventoryReconciler) softDeleteStale(ctx context.Context, node string, seen map[string]struct{}) error {
 	var allDisks v1alpha1.DiskList
 	if err := r.Client.List(ctx, &allDisks); err != nil {

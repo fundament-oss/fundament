@@ -21,7 +21,7 @@
 # different Ceph build.
 #
 # Then check which Disk CRs were discovered and put their names below. Disk names
-# are cluster-specific (node name + a hash of the device path), so they cannot be
+# are cluster-specific (node name + a hash of the device's stable identity), so they cannot be
 # hard-coded:
 #
 #   kubectl get disks

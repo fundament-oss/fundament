@@ -111,6 +111,26 @@ The plugin follows a three-step workflow:
 
 1. **Device Discovery** (`Disk` CR): Rook continually scans raw, unpartitioned disks on cluster nodes. The DiskInventoryReconciler publishes these as cluster-scoped `Disk` objects, annotated with node, device path, size, type (HDD/SSD/NVMe), and availability status.
 
+### Device identity
+
+A `Disk` reports two paths. `status.path` is the kernel name (`/dev/sdb`) — what an operator
+matches against `lsblk`, but the kernel is free to reassign it on the next boot.
+`status.stablePath` is the `/dev/disk/by-id/` link, picked from rook's `devLinks` in
+preference order (`wwn-`, `nvme-eui.`, `scsi-`, `ata-`, …); links naming a *logical* layer
+(`lvm-pv-uuid-`, `dm-`, `md-uuid-`) are ignored, because those can be rebuilt on top of a
+different physical device.
+
+The stable path is what goes into `CephCluster.spec.storage.nodes[].devices[].name` — Rook
+documents the by-id form there as the one that "will not change after reboots" — and it is
+what the Disk CR's name is hashed from (`DeviceKey`: stable path, else WWN, else serial,
+else kernel path). That matters because a `Disk` whose *name* moves drops out of every
+`StoragePool` that lists it: the old name resolves to nothing, and the device silently
+leaves the CephCluster.
+
+Loop devices, and some virtual disks, expose no stable identity at all. They fall back to
+the kernel path and are only as stable as the kernel's ordering — acceptable for the k3d
+dev flow, which is the only place they occur.
+
 2. **Pool Selection** (`StoragePool` CR): Operators use the console to select which disks to pool together. Creating a `StoragePool` specifies a list of disk names and a replication strategy (see [Replication](#replication-strategy) below). The StoragePoolReconciler watches the `StoragePool` and applies the changes.
 
 3. **Storage Class** (`CephBlockPool` + `StorageClass`): For each `StoragePool`, the plugin:

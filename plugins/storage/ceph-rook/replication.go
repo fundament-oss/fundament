@@ -17,13 +17,16 @@ func ComputeReplication(requested string, nodeCount int) (replicas int, failureD
 		nodes = 1
 	}
 
-	if requested == "" || requested == "auto" {
+	switch want, err := strconv.Atoi(requested); {
+	case requested == "" || requested == "auto":
 		replicas = min(3, nodes)
-	} else {
-		want, err := strconv.Atoi(requested)
-		if err != nil || want < 1 {
-			want = 1
-		}
+	case err != nil || want < 1:
+		// The CRD enum keeps this out of the API today. If it ever widens,
+		// falling back to auto beats falling back to 1: a typo would otherwise
+		// silently turn a pool into unreplicated storage.
+		message = fmt.Sprintf("unrecognised replication %q, using auto", requested)
+		replicas = min(3, nodes)
+	default:
 		replicas = want
 		if replicas > nodes {
 			message = fmt.Sprintf("requested %d, clamped to %d: only %d node(s) contribute disks", want, nodes, nodes)

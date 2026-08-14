@@ -20,14 +20,19 @@ if (!ctx.resource?.name) {
     heading.textContent = `Disk · ${item.metadata?.name ?? ctx.resource.name}`;
     const s = item.status ?? {};
 
+    // Two paths, because they answer different questions: the kernel path is
+    // what an operator matches against lsblk, the stable path is what the pool
+    // actually binds to and what survives a reboot renaming the first one.
     const device = [
-      ['Path', s.path ?? '—'],
+      ['Path (kernel)', s.path ?? '—'],
+      ['Path (stable)', s.stablePath || 'none reported — this device is tracked by its kernel path'],
       ['Node', s.node ?? '—'],
       ['Size', humanizeBytes(s.sizeBytes ?? 0)],
       ['Type', s.type ?? '—'],
       ['Rotational', s.rotational ? 'yes' : 'no'],
       ['Model', s.model || '—'],
       ['Serial', s.serial || '—'],
+      ['WWN', s.wwn || '—'],
     ];
 
     // claimedBy is text, not a link: plugin:navigate resolves relative to the

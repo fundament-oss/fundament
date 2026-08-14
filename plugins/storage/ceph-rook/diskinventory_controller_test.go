@@ -101,7 +101,7 @@ func TestDiskInventorySetsClaimedByFromPools(t *testing.T) {
 	t.Parallel()
 	node := "node-a"
 	cm := discoveryConfigMap(t, node, rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true})
-	diskName := DiskName(node, "/dev/sdb")
+	diskName := DiskName(node, "path:/dev/sdb")
 
 	c := newFakeClient(t, cm)
 	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
@@ -142,7 +142,7 @@ func TestPoolToDiscoveryConfigMapsCoversEveryNode(t *testing.T) {
 func TestDiskInventorySoftDeletesVanishedDisks(t *testing.T) {
 	t.Parallel()
 	node := "node-a"
-	diskName := DiskName(node, "/dev/sdb")
+	diskName := DiskName(node, "path:/dev/sdb")
 
 	c := newFakeClient(t, discoveryConfigMap(t, node,
 		rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true}))
@@ -161,4 +161,94 @@ func TestDiskInventorySoftDeletesVanishedDisks(t *testing.T) {
 	require.NoError(t, reconcileDiscovery(t, r, node))
 	disk := getDisk(t, c, diskName)
 	assert.False(t, disk.Status.Available, "vanished disks are marked unavailable")
+}
+
+// A node leaving takes its whole discovery ConfigMap with it, so there is no
+// device list left to diff against. Returning early on NotFound left those Disks
+// available=true forever and the picker kept offering disks on a node that no
+// longer existed.
+func TestDiskInventorySoftDeletesDisksOfDepartedNode(t *testing.T) {
+	t.Parallel()
+	node := "node-a"
+	diskName := DiskName(node, "path:/dev/sdb")
+
+	c := newFakeClient(t, discoveryConfigMap(t, node,
+		rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true}))
+	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	require.True(t, getDisk(t, c, diskName).Status.Available)
+
+	// The node leaves; rook deletes the ConfigMap.
+	var cm corev1.ConfigMap
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "local-device-" + node}, &cm))
+	require.NoError(t, c.Delete(context.Background(), &cm))
+
+	require.NoError(t, reconcileDiscovery(t, r, node))
+	assert.False(t, getDisk(t, c, diskName).Status.Available,
+		"disks on a departed node must stop being offered")
+}
+
+// The departed-node path derives the node from the request name, since the
+// labels went with the object. Disks on other nodes must be left alone.
+func TestDiskInventoryDepartedNodeLeavesOtherNodesAlone(t *testing.T) {
+	t.Parallel()
+	gone, staying := "node-a", "node-b"
+	goneDisk := DiskName(gone, "path:/dev/sdb")
+	stayingDisk := DiskName(staying, "path:/dev/sdb")
+
+	c := newFakeClient(t,
+		discoveryConfigMap(t, gone, rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true}),
+		discoveryConfigMap(t, staying, rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true}),
+	)
+	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
+	require.NoError(t, reconcileDiscovery(t, r, gone))
+	require.NoError(t, reconcileDiscovery(t, r, staying))
+
+	var cm corev1.ConfigMap
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "local-device-" + gone}, &cm))
+	require.NoError(t, c.Delete(context.Background(), &cm))
+	require.NoError(t, reconcileDiscovery(t, r, gone))
+
+	assert.False(t, getDisk(t, c, goneDisk).Status.Available)
+	assert.True(t, getDisk(t, c, stayingDisk).Status.Available, "node-b never went anywhere")
+}
+
+// A Disk CR is named after its stable identity, so a kernel rename must not
+// produce a second CR for the same physical device.
+func TestDiskInventoryKeepsDiskNameAcrossKernelRename(t *testing.T) {
+	t.Parallel()
+	node := "node-a"
+
+	c := newFakeClient(t, discoveryConfigMap(t, node,
+		rawDevice{Name: "sdb", Size: 100, Type: "disk", Empty: true, WWN: "0xABC",
+			DevLinks: "/dev/disk/by-id/wwn-0xABC"}))
+	r := &DiskInventoryReconciler{Client: c, RookNamespace: testNamespace}
+	require.NoError(t, reconcileDiscovery(t, r, node))
+
+	var before v1alpha1.DiskList
+	require.NoError(t, c.List(context.Background(), &before))
+	require.Len(t, before.Items, 1)
+
+	// Reboot: the same device comes back as /dev/sdc.
+	raw, err := json.Marshal([]rawDevice{{
+		Name: "sdc", Size: 100, Type: "disk", Empty: true, WWN: "0xABC",
+		DevLinks: "/dev/disk/by-id/wwn-0xABC",
+	}})
+	require.NoError(t, err)
+	var cm corev1.ConfigMap
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: "local-device-" + node}, &cm))
+	cm.Data["devices"] = string(raw)
+	require.NoError(t, c.Update(context.Background(), &cm))
+	require.NoError(t, reconcileDiscovery(t, r, node))
+
+	var after v1alpha1.DiskList
+	require.NoError(t, c.List(context.Background(), &after))
+	require.Len(t, after.Items, 1, "a rename must not fork the inventory")
+	assert.Equal(t, before.Items[0].Name, after.Items[0].Name)
+	assert.True(t, after.Items[0].Status.Available, "and must not soft-delete the survivor")
+	assert.Equal(t, "/dev/sdc", after.Items[0].Status.Path, "the kernel path still tracks reality")
 }

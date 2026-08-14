@@ -18,6 +18,9 @@ spec:
     - jsonPath: .status.node
       name: Node
       type: string
+    - jsonPath: .status.path
+      name: Path
+      type: string
     - jsonPath: .status.sizeBytes
       name: Size
       type: integer
@@ -62,6 +65,10 @@ spec:
               node:
                 type: string
               path:
+                description: |-
+                  Path is the kernel device name, e.g. /dev/sdb. It is what an operator
+                  recognises, but the kernel is free to reassign it across reboots, so it
+                  is not what this plugin identifies the device by.
                 type: string
               rotational:
                 type: boolean
@@ -70,12 +77,24 @@ spec:
               sizeBytes:
                 format: int64
                 type: integer
+              stablePath:
+                description: |-
+                  StablePath is the /dev/disk/by-id link for this device, empty when the
+                  node reports none (loop devices, some virtual disks). When set it is what
+                  goes into CephCluster.spec.storage.nodes, because it survives a reboot
+                  that renames Path.
+                type: string
               type:
                 description: DiskType classifies a block device.
                 enum:
                 - hdd
                 - ssd
                 - nvme
+                type: string
+              wwn:
+                description: |-
+                  WWN is the device's World Wide Name, a fallback stable identity when the
+                  node exposes no by-id link.
                 type: string
             type: object
         type: object

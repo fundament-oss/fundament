@@ -345,7 +345,7 @@ survive.
 
 ## Phase 6 · StoragePool → StorageClass
 
-Disk names are cluster-specific (node name + a hash of the device path), so they cannot be
+Disk names are cluster-specific (node name + a hash of the device's stable identity), so they cannot be
 hard-coded. Build the pool from whatever was discovered:
 
 ```bash
