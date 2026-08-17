@@ -156,74 +156,82 @@
               Organisation totals
             }
           </h3>
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <!-- CPU -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700 dark:text-white">CPU</span>
-                <span class="text-gray-500 dark:text-gray-400">
-                  {{ totals.cpu.used | number: '1.1-1' }} / {{ totals.cpu.total | number: '1.0-0' }}
-                  {{ totals.cpu.unit }}
-                </span>
+          @if (totalsUnavailable()) {
+            <p class="text-gray-500 dark:text-gray-400">
+              Metrics are currently unavailable for this view — the cluster may be provisioning or
+              its monitoring stack unreachable.
+            </p>
+          } @else {
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <!-- CPU -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700 dark:text-white">CPU</span>
+                  <span class="text-gray-500 dark:text-gray-400">
+                    {{ totals.cpu.used | number: '1.1-1' }} /
+                    {{ totals.cpu.total | number: '1.0-0' }}
+                    {{ totals.cpu.unit }}
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="getUsageColor(getUsagePercentage(totals.cpu.used, totals.cpu.total))"
+                    [style.width.%]="getUsagePercentage(totals.cpu.used, totals.cpu.total)"
+                  ></div>
+                </div>
+                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {{ getUsagePercentage(totals.cpu.used, totals.cpu.total) }}% used
+                </div>
               </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="getUsageColor(getUsagePercentage(totals.cpu.used, totals.cpu.total))"
-                  [style.width.%]="getUsagePercentage(totals.cpu.used, totals.cpu.total)"
-                ></div>
-              </div>
-              <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {{ getUsagePercentage(totals.cpu.used, totals.cpu.total) }}% used
-              </div>
-            </div>
 
-            <!-- Memory -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700 dark:text-white">Memory</span>
-                <span class="text-gray-500 dark:text-gray-400">
-                  {{ totals.memory.used | number: '1.1-1' }} /
-                  {{ totals.memory.total | number: '1.0-0' }}
-                  {{ totals.memory.unit }}
-                </span>
+              <!-- Memory -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700 dark:text-white">Memory</span>
+                  <span class="text-gray-500 dark:text-gray-400">
+                    {{ totals.memory.used | number: '1.1-1' }} /
+                    {{ totals.memory.total | number: '1.0-0' }}
+                    {{ totals.memory.unit }}
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="
+                      getUsageColor(getUsagePercentage(totals.memory.used, totals.memory.total))
+                    "
+                    [style.width.%]="getUsagePercentage(totals.memory.used, totals.memory.total)"
+                  ></div>
+                </div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                  {{ getUsagePercentage(totals.memory.used, totals.memory.total) }}% used
+                </div>
               </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(getUsagePercentage(totals.memory.used, totals.memory.total))
-                  "
-                  [style.width.%]="getUsagePercentage(totals.memory.used, totals.memory.total)"
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{ getUsagePercentage(totals.memory.used, totals.memory.total) }}% used
-              </div>
-            </div>
 
-            <!-- Pods -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700 dark:text-white">Pods</span>
-                <span class="text-gray-500 dark:text-gray-400">
-                  {{ totals.pods.used | number: '1.0-0' }} /
-                  {{ totals.pods.total | number: '1.0-0' }}
-                  {{ totals.pods.unit }}
-                </span>
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="getUsageColor(getUsagePercentage(totals.pods.used, totals.pods.total))"
-                  [style.width.%]="getUsagePercentage(totals.pods.used, totals.pods.total)"
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{ getUsagePercentage(totals.pods.used, totals.pods.total) }}% used
+              <!-- Pods -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700 dark:text-white">Pods</span>
+                  <span class="text-gray-500 dark:text-gray-400">
+                    {{ totals.pods.used | number: '1.0-0' }} /
+                    {{ totals.pods.total | number: '1.0-0' }}
+                    {{ totals.pods.unit }}
+                  </span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                    [class]="getUsageColor(getUsagePercentage(totals.pods.used, totals.pods.total))"
+                    [style.width.%]="getUsagePercentage(totals.pods.used, totals.pods.total)"
+                  ></div>
+                </div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                  {{ getUsagePercentage(totals.pods.used, totals.pods.total) }}% used
+                </div>
               </div>
             </div>
-          </div>
+          }
         </div>
       }
 

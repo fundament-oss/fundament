@@ -19,6 +19,7 @@ import { Chart, ChartConfiguration, ChartDataset, registerables } from 'chart.js
 import ZoomPlugin from 'chartjs-plugin-zoom';
 import { type Timestamp, timestampFromDate, timestampDate } from '@bufbuild/protobuf/wkt';
 import { TitleService } from '../title.service';
+import { getUsagePercentage, getUsageColor } from '../utils/usage';
 import DateRangePickerComponent from '../date-range-picker/date-range-picker.component';
 import { CLUSTER, METRICS } from '../../connect/tokens';
 import DropdownSyncDirective from '../dropdown-sync.directive';
@@ -98,17 +99,6 @@ const PRESET_WINDOW_SECONDS: Record<Exclude<TimeRangePreset, 'custom'>, number> 
 };
 
 const MAX_RECONNECT_DELAY_MS = 60_000;
-
-function getUsagePercentage(used: number, total: number): number {
-  if (total === 0) return 0;
-  return Math.round((used / total) * 100);
-}
-
-function getUsageColor(percentage: number): string {
-  if (percentage >= 90) return 'bg-danger-500';
-  if (percentage >= 75) return 'bg-yellow-500';
-  return 'bg-green-500';
-}
 
 function formatTimestamp(ts: Timestamp | undefined, includeTime: boolean): string {
   if (!ts) return '';
@@ -263,6 +253,10 @@ export default class MetricsComponent implements OnInit, OnDestroy {
   clusterSummaries = signal<ClusterSummaryData[]>([]);
 
   clusterTotals = signal<ClusterUsageData | null>(null);
+
+  // The backend could not reach the metrics backend for the current cluster
+  // or project view; its zero totals are placeholders, not measurements.
+  totalsUnavailable = signal(false);
 
   nodeUsage = signal<NodeUsageData[]>([]);
 
@@ -542,6 +536,8 @@ export default class MetricsComponent implements OnInit, OnDestroy {
           },
         }
       : null;
+
+    this.totalsUnavailable.set(r.metricsUnavailable);
 
     if (this.viewMode() === 'project') {
       this.projectTotals.set(totals);

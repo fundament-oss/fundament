@@ -168,6 +168,7 @@ func Test_Metrics_ClusterView_DegradesWhenPrometheusUnreachable(t *testing.T) {
 	metricsReq := organizationv1.GetClusterWorkloadMetricsRequest_builder{ClusterId: clusterID}.Build()
 	metricsRes, err := metricsClient.GetClusterWorkloadMetrics(ctx, metricsReq)
 	require.NoError(t, err, "an unreachable Prometheus must not fail the cluster view")
+	assert.True(t, metricsRes.GetMetricsUnavailable(), "degraded zeros must be marked unavailable")
 	assert.Zero(t, metricsRes.GetTotals().GetCpu().GetUsed())
 	assert.Equal(t, "cores", metricsRes.GetTotals().GetCpu().GetUnit())
 	assert.Empty(t, metricsRes.GetNodes())
@@ -177,4 +178,53 @@ func Test_Metrics_ClusterView_DegradesWhenPrometheusUnreachable(t *testing.T) {
 	tsRes, err := metricsClient.GetClusterWorkloadTimeSeries(ctx, tsReq)
 	require.NoError(t, err, "an unreachable Prometheus must not fail the time-series view")
 	assert.Empty(t, tsRes.GetCpuCores())
+}
+
+// Prometheus rejecting the query itself (HTTP 400: malformed PromQL) is a
+// programmer error, not an unreachable backend: it must surface as
+// CodeInternal instead of degrading, or a typo'd query ships to production
+// permanently disguised as "this cluster has no metrics".
+func Test_Metrics_ClusterView_SurfacesBadQuery(t *testing.T) {
+	t.Parallel()
+
+	orgID := uuid.New()
+	userID := uuid.New()
+	garden := &mapGardener{info: make(map[uuid.UUID]*gardener.MonitoringInfo)}
+
+	env := newTestAPI(t,
+		WithOrganization(orgID, "test-org"),
+		WithUser(&UserArgs{ID: userID, Name: "test-user", OrgIDs: []uuid.UUID{orgID}}),
+		WithPrometheusBackend("per-shoot", garden),
+	)
+	token := env.createAuthnToken(t, userID)
+
+	clusterClient := organizationv1connect.NewClusterServiceClient(env.server.Client(), env.server.URL)
+	createReq := organizationv1.CreateClusterRequest_builder{
+		Name:              "bad-query",
+		Region:            "eu-west-1",
+		KubernetesVersion: "1.28",
+	}.Build()
+	ctx, callInfo := connect.NewClientContext(context.Background())
+	callInfo.RequestHeader().Set("Authorization", "Bearer "+token)
+	callInfo.RequestHeader().Set("Fun-Organization", orgID.String())
+	createRes, err := clusterClient.CreateCluster(ctx, createReq)
+	require.NoError(t, err)
+	clusterID := createRes.GetClusterId()
+
+	// Prometheus is reachable and answers every query with 400.
+	rejecting := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, `{"status":"error","errorType":"bad_data","error":"parse error"}`, http.StatusBadRequest)
+	}))
+	t.Cleanup(rejecting.Close)
+	garden.set(uuid.MustParse(clusterID), &gardener.MonitoringInfo{URL: "https://plutono", PrometheusURL: rejecting.URL, Username: "u", Password: "p"})
+
+	metricsClient := organizationv1connect.NewMetricsServiceClient(env.server.Client(), env.server.URL)
+
+	_, err = metricsClient.GetClusterWorkloadMetrics(ctx, organizationv1.GetClusterWorkloadMetricsRequest_builder{ClusterId: clusterID}.Build())
+	require.Error(t, err, "a rejected query must not degrade into empty metrics")
+	assert.Equal(t, connect.CodeInternal, connect.CodeOf(err))
+
+	_, err = metricsClient.GetClusterWorkloadTimeSeries(ctx, organizationv1.GetClusterWorkloadTimeSeriesRequest_builder{ClusterId: clusterID}.Build())
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeInternal, connect.CodeOf(err))
 }

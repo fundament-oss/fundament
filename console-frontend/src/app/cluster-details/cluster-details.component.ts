@@ -37,6 +37,7 @@ import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../util
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
+import { getUsagePercentage, getUsageColor } from '../utils/usage';
 
 interface ClusterResourceUsage {
   cpu: { used: number; total: number; unit: string };
@@ -45,15 +46,6 @@ interface ClusterResourceUsage {
 }
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
-
-const getUsagePercentage = (used: number, limit: number): number =>
-  Math.round((used / limit) * 100);
-
-const getUsageColor = (percentage: number): string => {
-  if (percentage >= 90) return 'bg-danger-500';
-  if (percentage >= 75) return 'bg-yellow-500';
-  return 'bg-green-500';
-};
 
 const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   const labels: Record<NodePoolStatus, string> = {
@@ -159,6 +151,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
 
+  private usageRetryTimer: ReturnType<typeof setInterval> | null = null;
+
   // Expose enums for use in template
   NodePoolStatus = NodePoolStatus;
 
@@ -250,6 +244,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopPolling();
+    this.stopUsageRetry();
   }
 
   async ngOnInit() {
@@ -323,7 +318,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       // provisioning while the page is open, fetch it now instead of
       // requiring a page refresh.
       if (!this.resourceUsage() && !isTransitionalStatus(response.cluster.status)) {
-        void this.loadResourceUsage(clusterId);
+        this.loadResourceUsage(clusterId);
       }
       this.cdr.markForCheck();
       this.updatePolling();
@@ -499,9 +494,10 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       const request = create(GetClusterWorkloadMetricsRequestSchema, { clusterId });
       const response = await firstValueFrom(this.metricsClient.getClusterWorkloadMetrics(request));
       const t = response.totals;
-      // All-zero totals mean the metrics backend has nothing yet (cluster
-      // provisioning); keep the fallback instead of rendering 0 / 0 bars.
-      if (!t || (!t.cpu?.total && !t.pods?.total)) {
+      // An unavailable backend (cluster provisioning, monitoring stack
+      // unreachable) or all-zero totals mean there is no measurement yet;
+      // keep the fallback instead of rendering 0 / 0 bars.
+      if (!t || response.metricsUnavailable || (!t.cpu?.total && !t.pods?.total)) {
         return;
       }
       this.resourceUsage.set({
@@ -515,6 +511,33 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       });
     } catch {
       // Non-fatal: the card falls back to its "not available" text.
+    } finally {
+      this.updateUsageRetry(clusterId);
+    }
+  }
+
+  /**
+   * A RUNNING cluster whose metrics backend is transiently unreachable would
+   * otherwise show the fallback text until a full page reload: retry slowly
+   * until a measurement arrives. Transitional clusters are covered by the 5s
+   * status poll, which fetches usage once they finish provisioning.
+   */
+  private updateUsageRetry(clusterId: string): void {
+    if (this.resourceUsage()) {
+      this.stopUsageRetry();
+      return;
+    }
+    if (!this.usageRetryTimer && !isTransitionalStatus(this.clusterData.status)) {
+      this.usageRetryTimer = setInterval(() => {
+        this.loadResourceUsage(clusterId);
+      }, 30_000);
+    }
+  }
+
+  private stopUsageRetry(): void {
+    if (this.usageRetryTimer) {
+      clearInterval(this.usageRetryTimer);
+      this.usageRetryTimer = null;
     }
   }
 

@@ -236,3 +236,30 @@ func TestPerShootClients_MissingPrometheusURLIsNotFound(t *testing.T) {
 	_, err := cache.clientFor(context.Background(), uuid.New())
 	require.ErrorIs(t, err, gardener.ErrNotFound)
 }
+
+// ctxGardener fails like a real client when its context is already dead.
+type ctxGardener struct {
+	fakeGardener
+}
+
+func (c *ctxGardener) Monitoring(ctx context.Context, id uuid.UUID) (*gardener.MonitoringInfo, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return c.fakeGardener.Monitoring(ctx, id)
+}
+
+func TestPerShootClients_ResolutionDetachedFromCallerCancel(t *testing.T) {
+	// Concurrent callers join the winning caller's singleflight; that caller
+	// aborting (page refresh) must not fail resolution for the ones that join.
+	g := &ctxGardener{fakeGardener{info: &gardener.MonitoringInfo{URL: "https://plutono", PrometheusURL: "https://prom", Username: "u", Password: "p"}}}
+	cache := testCache(g)
+	cache.newClient = func(string, string, string) prom.Client { return &fakeProm{} }
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := cache.resolved(ctx, uuid.New())
+	require.NoError(t, err)
+	assert.Equal(t, int32(1), g.calls.Load())
+}

@@ -22,6 +22,11 @@ const (
 	// refreshes happen before staleness bites (same convention as
 	// kube-api-proxy's admin-kubeconfig cache).
 	perShootTTL = 10 * time.Minute
+
+	// resolveTimeout bounds one monitoring-secret read. Resolution runs
+	// detached from the winning caller's context (all concurrent callers join
+	// its flight), so it needs its own deadline.
+	resolveTimeout = 15 * time.Second
 )
 
 // perShootClients resolves and caches one Prometheus client per cluster,
@@ -85,7 +90,12 @@ func (c *perShootClients) resolved(ctx context.Context, clusterID uuid.UUID) (pr
 	}
 
 	v, err, _ := c.sf.Do(clusterID.String(), func() (any, error) {
-		info, err := c.gardener.Monitoring(ctx, clusterID)
+		// Detach from the winning caller's cancellation: every concurrent
+		// caller for this cluster joins this flight, and one caller aborting
+		// (page refresh) must not fail the others' resolution.
+		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), resolveTimeout)
+		defer cancel()
+		info, err := c.gardener.Monitoring(rctx, clusterID)
 		if err != nil {
 			return nil, err
 		}

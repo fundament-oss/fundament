@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -56,6 +57,21 @@ func (s *Server) promClientFor(ctx context.Context, clusterID uuid.UUID) (prom.C
 	}
 }
 
+// isPromBadQuery reports whether err is Prometheus rejecting the query itself
+// (HTTP 400 malformed parameters, 422 unexecutable expression) — a programmer
+// error in our PromQL that must surface instead of degrading: the mock and
+// stub clients never execute real PromQL, so a degraded response would
+// disguise a broken query as "this cluster has no metrics" forever. Anything
+// else (5xx, network errors, 401/403/404 from the ingress) is environmental
+// and keeps degrading.
+func isPromBadQuery(err error) bool {
+	var statusErr *prom.StatusError
+	if !errors.As(err, &statusErr) {
+		return false
+	}
+	return statusErr.StatusCode == http.StatusBadRequest || statusErr.StatusCode == http.StatusUnprocessableEntity
+}
+
 // logPromUnavailable records why a cluster has no metrics backend. A missing
 // shoot/monitoring stack is expected while a cluster is provisioning and logs
 // at debug; anything else is a real resolution failure.
@@ -91,7 +107,10 @@ func (s *Server) GetClusterWorkloadMetrics(
 		// Spec: a cluster whose monitoring stack is not (yet) reachable gets
 		// empty metrics, not an error.
 		s.logPromUnavailable(ctx, clusterID, err)
-		client = prom.StubClient{}
+		return organizationv1.GetClusterWorkloadMetricsResponse_builder{
+			Totals:             emptyResourceTotals(),
+			MetricsUnavailable: true,
+		}.Build(), nil
 	}
 	now := time.Now()
 
@@ -159,12 +178,16 @@ func (s *Server) GetClusterWorkloadMetrics(
 
 	err = g.Wait()
 	if err != nil {
+		if isPromBadQuery(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("cluster metrics: %w", err))
+		}
 		// A resolvable but unreachable backend (hibernated shoot, ingress
 		// 5xx) degrades the same as an unresolvable one: empty metrics, not
 		// an error that breaks the page or kills a stream tick.
 		s.logger.WarnContext(ctx, "cluster metrics queries failed", "cluster_id", clusterID, "error", err)
 		return organizationv1.GetClusterWorkloadMetricsResponse_builder{
-			Totals: emptyResourceTotals(),
+			Totals:             emptyResourceTotals(),
+			MetricsUnavailable: true,
 		}.Build(), nil
 	}
 
@@ -231,6 +254,9 @@ func (s *Server) GetClusterWorkloadTimeSeries(
 
 	err = g.Wait()
 	if err != nil {
+		if isPromBadQuery(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("cluster time-series: %w", err))
+		}
 		// Same degradation as GetClusterWorkloadMetrics: empty series, not
 		// an error.
 		s.logger.WarnContext(ctx, "cluster time-series queries failed", "cluster_id", clusterID, "error", err)
@@ -337,6 +363,9 @@ func (s *Server) GetOrgWorkloadMetrics(
 			qs(&r.nsNetTx, "query per-namespace net tx", `sum(rate(container_network_transmit_bytes_total[5m])) by (namespace)`)
 
 			if err := sub.Wait(); err != nil {
+				if isPromBadQuery(err) {
+					return err
+				}
 				s.logger.WarnContext(gctx, "cluster metrics queries failed", "cluster_id", cl.ID, "cluster", cl.Name, "error", err)
 				*r = clusterResult{id: r.id, name: r.name, unavailable: true}
 			}
@@ -464,6 +493,9 @@ func (s *Server) GetOrgWorkloadTimeSeries(
 			qr(&r.netTx, "query net tx time-series", `sum(rate(container_network_transmit_bytes_total[5m]))`)
 
 			if err := sub.Wait(); err != nil {
+				if isPromBadQuery(err) {
+					return err
+				}
 				s.logger.WarnContext(gctx, "cluster time-series queries failed", "cluster_id", cl.ID, "cluster", cl.Name, "error", err)
 				*r = clusterTSResult{}
 			}
@@ -538,7 +570,10 @@ func (s *Server) GetProjectWorkloadMetrics(
 	client, err := s.promClientFor(ctx, clusterID)
 	if err != nil {
 		s.logPromUnavailable(ctx, clusterID, err)
-		client = prom.StubClient{}
+		return organizationv1.GetProjectWorkloadMetricsResponse_builder{
+			Totals:             emptyResourceTotals(),
+			MetricsUnavailable: true,
+		}.Build(), nil
 	}
 	nsFilter := buildNamespaceFilter(namespaceNames(namespaces))
 	now := time.Now()
@@ -596,11 +631,15 @@ func (s *Server) GetProjectWorkloadMetrics(
 
 	err = g.Wait()
 	if err != nil {
+		if isPromBadQuery(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project metrics: %w", err))
+		}
 		// Same degradation as GetClusterWorkloadMetrics: empty metrics, not
 		// an error.
 		s.logger.WarnContext(ctx, "project metrics queries failed", "project_id", projectID, "cluster_id", clusterID, "error", err)
 		return organizationv1.GetProjectWorkloadMetricsResponse_builder{
-			Totals: emptyResourceTotals(),
+			Totals:             emptyResourceTotals(),
+			MetricsUnavailable: true,
 		}.Build(), nil
 	}
 
@@ -681,6 +720,9 @@ func (s *Server) GetProjectWorkloadTimeSeries(
 
 	err = g.Wait()
 	if err != nil {
+		if isPromBadQuery(err) {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("project time-series: %w", err))
+		}
 		// Same degradation as GetClusterWorkloadMetrics: empty series, not
 		// an error.
 		s.logger.WarnContext(ctx, "project time-series queries failed", "project_id", projectID, "cluster_id", clusterID, "error", err)
@@ -1115,11 +1157,12 @@ func (s *Server) sendClusterSnapshot(
 	}
 
 	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
-		Totals:      workload.GetTotals(),
-		Nodes:       workload.GetNodes(),
-		Namespaces:  workload.GetNamespaces(),
-		TimeSeries:  ts,
-		RefreshedAt: timestamppb.Now(),
+		Totals:             workload.GetTotals(),
+		Nodes:              workload.GetNodes(),
+		Namespaces:         workload.GetNamespaces(),
+		TimeSeries:         ts,
+		RefreshedAt:        timestamppb.Now(),
+		MetricsUnavailable: workload.GetMetricsUnavailable(),
 	}.Build())
 }
 
@@ -1157,10 +1200,11 @@ func (s *Server) sendProjectSnapshot(
 	}
 
 	return stream.Send(organizationv1.StreamWorkloadMetricsResponse_builder{
-		Totals:      workload.GetTotals(),
-		Namespaces:  workload.GetNamespaces(),
-		TimeSeries:  ts,
-		RefreshedAt: timestamppb.Now(),
+		Totals:             workload.GetTotals(),
+		Namespaces:         workload.GetNamespaces(),
+		TimeSeries:         ts,
+		RefreshedAt:        timestamppb.Now(),
+		MetricsUnavailable: workload.GetMetricsUnavailable(),
 	}.Build())
 }
 
