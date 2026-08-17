@@ -23,7 +23,8 @@
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
       <!-- Everything you can do here, in one bar: the two places this data
-           center leads to, and the two things you can do to it. -->
+           center leads to, and editing it. Deleting is not among them, it waits
+           at the bottom of the page. -->
       <nldd-toolbar label="Data center actions">
         <nldd-toolbar-item slot="start">
           <nldd-button
@@ -67,21 +68,6 @@
             (select)="openEditDc(dc)"
           ></nldd-menu-item>
         </nldd-toolbar-item>
-        <nldd-toolbar-item slot="end">
-          <nldd-button
-            variant="destructive"
-            text="Delete"
-            start-icon="trash"
-            (click)="openDeleteDc(dc)"
-          ></nldd-button>
-          <nldd-menu-item
-            slot="overflow"
-            icon="trash"
-            text="Delete"
-            destructive
-            (select)="openDeleteDc(dc)"
-          ></nldd-menu-item>
-        </nldd-toolbar-item>
       </nldd-toolbar>
       <nldd-spacer size="16"></nldd-spacer>
       <!-- Three numbers that say how full this hall is. Cards rather than a row
@@ -91,7 +77,7 @@
         layout="horizontal-scroll"
         item-width="160px"
         gap="16px"
-        accessible-label="Datacenter figures"
+        accessible-label="Data center figures"
       >
         <nldd-card background="tinted">
           <nldd-container padding="16">
@@ -324,6 +310,29 @@
           <nldd-text-cell horizontal-alignment="right" [attr.text]="dc.established"></nldd-text-cell>
         </nldd-list-item>
       </nldd-list>
+      <nldd-spacer size="32"></nldd-spacer>
+      <!-- Deleting a data center takes its rooms, rows and racks with it, so it
+           does not belong next to Edit in the toolbar. It waits at the end of
+           the page, where you only end up on purpose. -->
+      <nldd-box background="critical">
+        <nldd-container padding="16">
+          <nldd-title size="4">
+            <h2>Delete this data center</h2>
+          </nldd-title>
+          <nldd-spacer size="4"></nldd-spacer>
+          <nldd-text size="sm">
+            Deleting {{ dc.name }} removes its rooms, rack rows and racks as well. This cannot be
+            undone.
+          </nldd-text>
+          <nldd-spacer size="16"></nldd-spacer>
+          <nldd-button
+            variant="destructive"
+            text="Delete data center"
+            start-icon="trash"
+            (click)="openDeleteDc(dc)"
+          ></nldd-button>
+        </nldd-container>
+      </nldd-box>
     </nldd-simple-section>
   } @else {
     <!-- The section is open and nothing is picked, the same sentence in the same
@@ -338,7 +347,7 @@
 <!-- ══════════════════════════════════════════════════════════════
      DATACENTER EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #editSheet accessible-label="Datacenter details" placement="right">
+<nldd-sheet #editSheet accessible-label="Data center details" placement="right">
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
@@ -489,20 +498,20 @@
   variant="alert"
   #deleteModal
   (close)="cancelDelete()"
-  [attr.text]="'Delete datacenter ' + (deleteTarget()?.name ?? '') + '?'"
-  supporting-text="All rooms, rack rows, and floor positions in this datacenter are removed. This cannot be undone."
-  accessible-label="Confirm datacenter deletion"
+  [attr.text]="'Delete data center ' + (deleteTarget()?.name ?? '') + '?'"
+  supporting-text="All rooms, rack rows, and floor positions in this data center are removed. This cannot be undone."
+  accessible-label="Confirm data center deletion"
 >
   <nldd-button
     slot="actions"
     variant="primary"
-    text="Keep datacenter"
+    text="Keep data center"
     (click)="cancelDelete()"
   ></nldd-button>
   <nldd-button
     slot="actions"
     variant="destructive"
-    text="Delete datacenter"
+    text="Delete data center"
     (click)="confirmDeleteDc()"
   ></nldd-button>
 </nldd-modal-dialog>
@@ -678,54 +687,12 @@
 }
 <!-- The data centers are the menu of this section, so the shell shows them in the
      second sidebar instead of as a strip of tabs above the page. -->
+<!-- The menu of this section, in a component of its own: the page with the
+     rooms of one data center shows the same one beside it. -->
 <ng-template #secondaryNav>
-  <nldd-page sticky-header>
-    <nldd-top-title-bar slot="header" back-text="Data center"></nldd-top-title-bar>
-    <nldd-simple-section>
-      <nldd-title size="3">
-        <h1>Data centers</h1>
-      </nldd-title>
-      <nldd-spacer size="12"></nldd-spacer>
-      <!-- Making one is an action on this list, not on the data center you have
-           open, so it stands where the list does. -->
-      <nldd-toolbar label="Data center actions">
-        <nldd-toolbar-item slot="start">
-          <nldd-button
-            variant="secondary"
-            text="Add data center"
-            start-icon="plus-small"
-            (click)="openCreateDc()"
-          ></nldd-button>
-        </nldd-toolbar-item>
-      </nldd-toolbar>
-      <nldd-spacer size="12"></nldd-spacer>
-      <nldd-list type="navigation" dividers="on-touch" accessible-label="Data centers">
-        @for (dc of mutableDcs(); track dc.id) {
-          <nldd-list-item
-            button
-            [attr.selected]="selectedDcId() === dc.id ? '' : null"
-            (click)="selectDc(dc.id)"
-          >
-            <!-- One building per row, where the section in the sidebar carries
-                 the plural. -->
-            <nldd-icon-cell icon="building" size="20"></nldd-icon-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-text-cell
-              width="full"
-              [attr.text]="dc.name"
-              [attr.supporting-text]="dc.city"
-            ></nldd-text-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-cell width="fit-content">
-              <nldd-badge decorative [attr.color]="statusTagColor(dc.status)"></nldd-badge>
-            </nldd-cell>
-            <!-- Same 4 as in the section menu: a dot is 12 wide where a badge
-                 with a number is 20, so right-aligned its middle sits further
-                 right than the one above it. -->
-            <nldd-spacer-cell size="4"></nldd-spacer-cell>
-          </nldd-list-item>
-        }
-      </nldd-list>
-    </nldd-simple-section>
-  </nldd-page>
+  <app-datacenter-nav
+    [selectedId]="selectedDcId()"
+    (dcSelected)="selectDc($event)"
+    (add)="openCreateDc()"
+  ></app-datacenter-nav>
 </ng-template>

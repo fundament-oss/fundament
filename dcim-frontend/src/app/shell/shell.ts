@@ -33,7 +33,7 @@ import TaskAttentionService from '../tasks/task-attention.service';
 const SECTIONS = [
   { text: 'Catalog', icon: 'books', path: '/catalog' },
   { text: 'Inventory', icon: 'inventory-alt', path: '/inventory' },
-  { text: 'Data centers', icon: 'buildings', path: '/datacenters' },
+  { text: 'Data centers', icon: 'buildings', path: '/data-centers' },
   { text: 'Racks', icon: 'rack-servers', path: '/racks' },
   { text: 'Patch mapping', icon: 'network-patch-mapping', path: '/patch-mapping' },
   { text: 'Tasks', icon: 'tasks', path: '/tasks' },

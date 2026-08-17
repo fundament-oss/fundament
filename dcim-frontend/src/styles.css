@@ -157,8 +157,12 @@ nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > * {
    notch softer than pure white, and text-content already carries it in both
    schemes; the override only made light-DOM text brighter than every component
    that colors itself, which showed up as icons glowing beside their neighbours. */
+/* The ground behind the app is the design system's base surface, not a pinned
+   Tailwind step: it is the same colour nldd-app-view paints, so the first paint
+   before Angular boots already shows the right one, in both schemes. */
 body {
-  @apply text-content font-body bg-neutral-25 dark:bg-gray-900;
+  @apply text-content font-body;
+  background-color: var(--semantics-surfaces-base-background-color);
 }
 
 button {

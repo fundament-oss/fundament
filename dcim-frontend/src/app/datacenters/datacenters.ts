@@ -6,15 +6,19 @@ import {
   inject,
   OnInit,
   signal,
+  untracked,
   viewChild,
   CUSTOM_ELEMENTS_SCHEMA,
   TemplateRef,
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
+import { firstValueFrom, map } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 import DatacenterApiService from './datacenter-api.service';
+import DatacenterListService from './datacenter-list.service';
+import DatacenterNavComponent from './datacenter-nav';
 import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import { ASSET_CLIENT } from '../../connect/tokens';
@@ -24,6 +28,7 @@ import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
 import { DatacenterInfo, DatacenterStatus, RackCell, statusTagColor } from './datacenter.model';
 import SecondaryNavService from '../shell/secondary-nav.service';
+import { viewSlug } from '../shared/section-views';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -42,7 +47,7 @@ interface DcStats {
   selector: 'app-datacenters',
   templateUrl: './datacenters.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, IsometricCanvasComponent],
+  imports: [RouterLink, IsometricCanvasComponent, DatacenterNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
@@ -62,6 +67,8 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
 
   private readonly router = inject(Router);
 
+  private readonly route = inject(ActivatedRoute);
+
   private readonly dcApi = inject(DatacenterApiService);
 
   private readonly placementApi = inject(PlacementApiService);
@@ -70,10 +77,24 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
 
   private readonly assetClient = inject(ASSET_CLIENT);
 
-  // ── DC list (loaded from the API) ──────────────────────────────────────────
-  readonly mutableDcs = signal<DatacenterInfo[]>([]);
+  private readonly list = inject(DatacenterListService);
 
-  selectedDcId = signal('');
+  /** The list this section shares, so a step to another page does not lose it.
+   *  Writable: creating, renaming and deleting one all write straight into it. */
+  readonly mutableDcs = this.list.datacenters;
+
+  /** Which data center the address names, by its short name: /datacenters/ams1.
+   *  A data center is a place, so it deserves a link of its own. */
+  private readonly slug = toSignal(
+    this.route.paramMap.pipe(map((params: ParamMap) => params.get('slug') ?? '')),
+    { initialValue: '' },
+  );
+
+  /** Nothing is picked without a slug: /datacenters is the list, not the first
+   *  data center in it. Opening the section should not open a place as well. */
+  readonly selectedDcId = computed(
+    () => this.mutableDcs().find((dc) => viewSlug(dc.name) === this.slug())?.id ?? '',
+  );
 
   viewMode = signal<'map' | 'isometric'>('map');
 
@@ -138,19 +159,20 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
       if (this.deleteTarget() !== null) el?.show?.();
       else el?.hide?.();
     });
+    // The address says which data center is on screen, so the floor is read
+    // again whenever it moves — including the first time, once the list of data
+    // centers has landed.
+    effect(() => {
+      const id = this.selectedDcId();
+      untracked(() => {
+        this.hoveredRackId.set(null);
+        if (id) this.loadFloor(id).catch(() => undefined);
+      });
+    });
   }
 
   ngOnInit(): void {
-    firstValueFrom(this.dcApi.listSites())
-      .then((res) => {
-        this.mutableDcs.set(res.sites.map((s) => DatacenterApiService.mapSite(s)));
-        if (!this.selectedDcId()) {
-          const first = this.mutableDcs()[0]?.id ?? '';
-          if (first) this.selectDc(first);
-        }
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    this.list.load();
   }
 
   readonly currentDc = computed(() =>
@@ -422,7 +444,7 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
         this.mutableDcs.update((list) => list.filter((dc) => dc.id !== target.id));
         if (this.selectedDcId() === target.id) {
           const remaining = this.mutableDcs();
-          this.selectDc(remaining[0]?.id ?? '');
+          if (remaining[0]) this.selectDc(remaining[0].id);
         }
         this.deleteTarget.set(null);
       })
@@ -432,10 +454,10 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
+  /** Picking one puts it in the address; the floor follows from there. */
   selectDc(id: string): void {
-    this.selectedDcId.set(id);
-    this.hoveredRackId.set(null);
-    this.loadFloor(id).catch(() => undefined);
+    const dc = this.mutableDcs().find((d) => d.id === id);
+    this.router.navigate(['/data-centers', dc ? viewSlug(dc.name) : '']);
   }
 
   onMapMouseMove(event: MouseEvent): void {
@@ -450,7 +472,7 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
   /** The floor one level down: the rooms and the rack rows inside them, where
    *  they are made and renamed. */
   openRoomsAndRows(dc: DatacenterInfo): void {
-    this.router.navigate(['/datacenters', dc.id]);
+    this.router.navigate(['/data-centers', viewSlug(dc.name), 'layout']);
   }
 
   /** Opens the rack section on the first rack of this data center. */

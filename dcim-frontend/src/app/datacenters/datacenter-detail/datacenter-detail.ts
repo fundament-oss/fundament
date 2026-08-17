@@ -1,19 +1,28 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
   inject,
+  OnDestroy,
   OnInit,
   signal,
+  TemplateRef,
+  untracked,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
+import { firstValueFrom, map } from 'rxjs';
 import parseValidationError from '../../../connect/validation';
 import { DatacenterInfo, DatacenterRack, RackRow, Room } from '../datacenter.model';
 import DatacenterApiService from '../datacenter-api.service';
+import DatacenterListService from '../datacenter-list.service';
+import DatacenterNavComponent from '../datacenter-nav';
+import SecondaryNavService from '../../shell/secondary-nav.service';
+import { viewSlug } from '../../shared/section-views';
 import connectErrorMessage from '../../../connect/error';
 
 type InvalidFields = Record<string, string>;
@@ -28,14 +37,67 @@ interface NativeElementRef {
   selector: 'app-datacenter-detail',
   templateUrl: './datacenter-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [DatacenterNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
-export default class DatacenterDetailComponent implements OnInit {
+export default class DatacenterDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
 
+  private readonly router = inject(Router);
+
   private readonly dcApi = inject(DatacenterApiService);
+
+  private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** This section's menu, handed to the shell for as long as the page is open. */
+  private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
+
+  ngAfterViewInit(): void {
+    this.secondaryNav.set(this.secondaryNavTemplate());
+  }
+
+  ngOnDestroy(): void {
+    this.secondaryNav.clear(this.secondaryNavTemplate());
+  }
+
+  /**
+   * Which data center this page is about: its short name is in the address.
+   * Reactive rather than read once, because picking another data center in the
+   * menu keeps you on this page and only swaps the slug.
+   */
+  readonly slug = toSignal(
+    this.route.paramMap.pipe(map((params: ParamMap) => params.get('slug') ?? '')),
+    { initialValue: this.route.snapshot.paramMap.get('slug') ?? '' },
+  );
+
+  readonly siteId = computed(
+    () => this.allDatacenters().find((dc) => viewSlug(dc.name) === this.slug())?.id ?? '',
+  );
+
+  private readonly list = inject(DatacenterListService);
+
+  /** Every data center: the same list the menu beside this page draws, so the
+   *  slug resolves without fetching it again. */
+  readonly allDatacenters = this.list.datacenters;
+
+  /** True once that list has landed, so a slug can be resolved. */
+  readonly sitesLoaded = this.list.loaded;
+
+  /** A different data center in the address means different rooms and racks. */
+  private readonly loadForSlug = effect(() => {
+    const siteId = this.siteId();
+    const listed = this.sitesLoaded();
+    untracked(() => {
+      if (!listed) return;
+      if (!siteId) {
+        this.dcLoaded.set(true);
+        return;
+      }
+      this.loadSite(siteId);
+      this.loadRoomsAndRacks(siteId);
+    });
+  });
 
   readonly dc = signal<DatacenterInfo | undefined>(undefined);
 
@@ -46,10 +108,9 @@ export default class DatacenterDetailComponent implements OnInit {
 
   readonly mutableRooms = signal<Room[]>([]);
 
-  readonly dcRooms = computed(() => {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
-    return this.mutableRooms().filter((r) => r.siteId === id);
-  });
+  readonly dcRooms = computed(() =>
+    this.mutableRooms().filter((r) => r.siteId === this.siteId()),
+  );
 
   // ── Rack rows ──────────────────────────────────────────────────────────────
 
@@ -161,9 +222,26 @@ export default class DatacenterDetailComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const siteId = this.route.snapshot.paramMap.get('id') ?? '';
-    this.loadSite(siteId);
-    this.loadRoomsAndRacks(siteId);
+    // The address carries the short name, so the list of data centers has to
+    // land before this page knows whose rooms it is showing.
+    this.list.load();
+  }
+
+  /** Back to the floor map of this data center. */
+  backToFloorMap(): void {
+    this.router.navigate(['/data-centers', this.slug()]);
+  }
+
+  /** The menu beside this page shows every data center; picking one shows its
+   *  rooms, because that is the view you are in. */
+  openDatacenter(id: string): void {
+    const dc = this.allDatacenters().find((d) => d.id === id);
+    this.router.navigate(['/data-centers', dc ? viewSlug(dc.name) : '', 'layout']);
+  }
+
+  /** The rack as it stands: what is mounted in it, unit by unit. */
+  openRack(rack: DatacenterRack): void {
+    this.router.navigate(['/racks', rack.id]);
   }
 
   private loadSite(siteId: string): void {
@@ -323,7 +401,9 @@ export default class DatacenterDetailComponent implements OnInit {
 
   openCreateRackRow(roomId: string): void {
     this.clearRowErrors();
-    this.activeRoomId.set(roomId);
+    // Straight from a room the room is known; from the Add menu it is not, so
+    // the form starts on the first one and you pick another if you meant that.
+    this.activeRoomId.set(roomId || (this.dcRooms()[0]?.id ?? ''));
     this.editRackRow.set({ id: '', roomId, name: '', positionX: 1, positionY: 1 });
   }
 
@@ -341,6 +421,11 @@ export default class DatacenterDetailComponent implements OnInit {
   saveRackRow(): void {
     const form = this.editRackRow();
     if (!form) return;
+    const roomId = form.id ? (form.roomId ?? '') : this.activeRoomId();
+    if (!roomId) {
+      this.rowInvalidFields.set({ room_id: 'Pick the room this row stands in.' });
+      return;
+    }
     this.clearRowErrors();
     const name = this.fRowName()?.nativeElement.value ?? '';
     const posX = parseInt(this.fRowX()?.nativeElement.value ?? '1', 10) || 1;
@@ -362,11 +447,11 @@ export default class DatacenterDetailComponent implements OnInit {
         })
         .catch((err) => this.handleRowError(err));
     } else {
-      firstValueFrom(this.dcApi.createRackRow(form.roomId!, name, posX, posY))
+      firstValueFrom(this.dcApi.createRackRow(roomId, name, posX, posY))
         .then((res) => {
           const created: RackRow = {
             id: res.rackRowId,
-            roomId: form.roomId!,
+            roomId,
             name,
             positionX: posX,
             positionY: posY,
@@ -400,15 +485,31 @@ export default class DatacenterDetailComponent implements OnInit {
 
   // ── Rack actions ───────────────────────────────────────────────────────────
 
+  /** The room the rack form is pointing at: picked in the form when the rack is
+   *  new, and read from the row it stands in when it already exists. */
+  readonly rackRoomId = signal<string>('');
+
+  /** A room holds its own rows, so picking another one lets go of the row. */
+  onRackRoomChange(roomId: string): void {
+    this.rackRoomId.set(roomId);
+    this.activeRowId.set('');
+  }
+
+  private roomIdForRow(rowId: string): string {
+    return this.mutableRackRows().find((row) => row.id === rowId)?.roomId ?? '';
+  }
+
   openCreateRack(rowId: string): void {
     this.clearRackErrors();
     this.activeRowId.set(rowId);
+    this.rackRoomId.set(rowId ? this.roomIdForRow(rowId) : (this.dcRooms()[0]?.id ?? ''));
     this.editRack.set({ id: '', rowId, name: '', totalU: 42 });
   }
 
   openEditRack(rack: DatacenterRack): void {
     this.clearRackErrors();
     this.activeRowId.set(rack.rowId);
+    this.rackRoomId.set(this.roomIdForRow(rack.rowId));
     this.editRack.set({ ...rack });
   }
 
@@ -420,6 +521,13 @@ export default class DatacenterDetailComponent implements OnInit {
   saveRack(): void {
     const form = this.editRack();
     if (!form) return;
+    // A new rack lands in the row picked in the form; an existing one cannot
+    // move, so it keeps the row it was opened from (see the form).
+    const rowId = form.id ? (form.rowId ?? '') : this.activeRowId();
+    if (!rowId) {
+      this.rackInvalidFields.set({ row_id: 'Pick the row this rack stands in.' });
+      return;
+    }
     this.clearRackErrors();
     const name = this.fRackName()?.nativeElement.value ?? '';
     const totalU = parseInt(this.fRackTotalU()?.nativeElement.value ?? '42', 10) || 42;
@@ -438,11 +546,11 @@ export default class DatacenterDetailComponent implements OnInit {
         })
         .catch((err) => this.handleRackError(err));
     } else {
-      firstValueFrom(this.dcApi.createRack(form.rowId!, name, totalU))
+      firstValueFrom(this.dcApi.createRack(rowId, name, totalU))
         .then((res) => {
           const created: DatacenterRack = {
             id: res.rackId,
-            rowId: form.rowId!,
+            rowId,
             name,
             totalU,
             positionInRow: 0,

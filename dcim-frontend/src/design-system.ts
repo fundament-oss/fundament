@@ -8,6 +8,7 @@
 // main.demo.ts, and two lists of the same components would drift apart.
 import '@nldd/design-system/app-view';
 import '@nldd/design-system/avatar';
+import '@nldd/design-system/activity-indicator';
 import '@nldd/design-system/badge';
 import '@nldd/design-system/bar-split-view';
 import '@nldd/design-system/box';
@@ -59,6 +60,7 @@ import '@nldd/design-system/text-cell';
 import '@nldd/design-system/text-field';
 import '@nldd/design-system/timeline-track-cell';
 import '@nldd/design-system/title';
+import '@nldd/design-system/title-cell';
 import '@nldd/design-system/toggle-button';
 import '@nldd/design-system/toggle-button-group';
 import '@nldd/design-system/tooltip';

@@ -4,6 +4,8 @@ import { tasksMatcher } from './tasks/task-views';
 import { catalogMatcher } from './catalog/catalog-views';
 import { inventoryMatcher } from './inventory/inventory-views';
 import { patchMappingMatcher } from './patch-mapping/patch-mapping-views';
+import { dataCentersMatcher } from './datacenters/datacenter-views';
+import { racksMatcher } from './racks/rack-views';
 
 const routes: Routes = [
   {
@@ -18,7 +20,7 @@ const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'datacenters',
+        redirectTo: 'data-centers',
       },
       {
         // Before the detail route, not after: /catalog/all is one segment and
@@ -42,12 +44,18 @@ const routes: Routes = [
         loadComponent: () => import('./inventory/asset-detail/asset-detail').then((m) => m.default),
       },
       {
-        path: 'datacenters/:id',
+        // A data center is a place with an address of its own: /data-centers/ams1
+        // is its floor map and /data-centers/ams1/layout the rooms and rows it is
+        // built from. The short name is the slug, because that is what everybody
+        // calls it.
+        path: 'data-centers/:slug/layout',
         loadComponent: () =>
           import('./datacenters/datacenter-detail/datacenter-detail').then((m) => m.default),
       },
       {
-        path: 'datacenters',
+        // The list and one data center on it are the same page, so they share
+        // one route config: see the matcher.
+        matcher: dataCentersMatcher,
         loadComponent: () => import('./datacenters/datacenters').then((m) => m.default),
       },
       {
@@ -55,11 +63,9 @@ const routes: Routes = [
         loadComponent: () => import('./racks/device-detail/device-detail').then((m) => m.default),
       },
       {
-        path: 'racks/:rackId',
-        loadComponent: () => import('./racks/racks').then((m) => m.default),
-      },
-      {
-        path: 'racks',
+        // The list and one rack on it are the same page, so they share one
+        // route config: see the matcher.
+        matcher: racksMatcher,
         loadComponent: () => import('./racks/racks').then((m) => m.default),
       },
       {
