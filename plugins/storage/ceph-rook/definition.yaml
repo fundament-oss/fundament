@@ -1,0 +1,156 @@
+apiVersion: fundament.io/v1
+kind: PluginDefinition
+metadata:
+  name: ceph-rook
+  displayName: Ceph Storage (Rook)
+  version: v0.1.0
+  description: Block storage for in-cluster workloads, backed by Ceph and Rook.
+  author: Fundament
+  license: Apache-2.0
+  icon: server-stack
+  urls:
+    homepage: https://rook.io
+    repository: https://github.com/rook/rook
+    documentation: https://rook.io/docs
+  tags:
+    - storage
+    - block
+    - ceph
+spec:
+  permissions:
+    capabilities:
+      - internet_access
+    rbac:
+      # --- Fundament storage resources this plugin reconciles ---
+      # storagepools/finalizers: the API server requires update on the owner's
+      # finalizers before accepting an owner ref with blockOwnerDeletion=true.
+      - apiGroups:
+          - storage.fundament.io
+        resources:
+          - disks
+          - disks/status
+          - storagepools
+          - storagepools/status
+          - storagepools/finalizers
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      # --- Rook/Ceph CRDs this plugin manages ---
+      - apiGroups:
+          - ceph.rook.io
+        resources:
+          - cephclusters
+          - cephblockpools
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+      # --- StorageClasses: created/updated by the StoragePool controller and
+      # watched via Owns(). No delete; cascade is the k8s garbage collector. ---
+      - apiGroups:
+          - storage.k8s.io
+        resources:
+          - storageclasses
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+      # --- ConfigMap inspection for disk discovery ---
+      # Rook's discover daemon writes one local-device-<node> ConfigMap per node.
+      # No nodes rule: the node name comes off that ConfigMap, so the plugin never
+      # reads the Node API.
+      - apiGroups:
+          - ""
+        resources:
+          - configmaps
+        verbs:
+          - get
+          - list
+          - watch
+      # --- CRD management: apply own storage.fundament.io CRDs at install time ---
+      - apiGroups:
+          - apiextensions.k8s.io
+        resources:
+          - customresourcedefinitions
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+      # --- Rook operator install (cluster-admin-equivalent) ---
+      # This SA helm-installs the Rook operator, which creates privileged
+      # host-networked DaemonSets, the Ceph CSI driver, and its own cluster-wide
+      # RBAC with escalate+bind. No narrower stable rule set exists, and there is
+      # no cluster-admin escalation field. plugin-controller intersects this with
+      # the installing admin's own permissions (FUN-17). The specific rules above
+      # document the plugin binary's own direct API usage.
+      - apiGroups: ["*"]
+        resources: ["*"]
+        verbs: ["*"]
+  menu:
+    project:
+      - crd: storagepools.storage.fundament.io
+        list: true
+        detail: true
+        icon: circle-stack
+      - crd: disks.storage.fundament.io
+        list: true
+        detail: true
+        icon: server-stack
+  crds:
+    - disks.storage.fundament.io
+    - storagepools.storage.fundament.io
+  customComponents:
+    StoragePool:
+      list: storagepools-list.html
+      detail: storagepools-detail.html
+      create: storagepools-create.html
+    Disk:
+      list: disks-list.html
+      detail: disks-detail.html
+  uiHints:
+    storagepools.storage.fundament.io:
+      statusMapping:
+        jsonPath: ".status.phase"
+        values:
+          Ready:
+            badge: success
+            label: Ready
+          Provisioning:
+            badge: warning
+            label: Provisioning
+          Degraded:
+            badge: danger
+            label: Degraded
+  allowedResources:
+    - group: storage.fundament.io
+      version: v1alpha1
+      resource: disks
+      verbs: [list, get]
+    - group: storage.fundament.io
+      version: v1alpha1
+      resource: storagepools
+      verbs: [list, get, create, update, delete]
+    - group: ceph.rook.io
+      version: v1
+      resource: cephclusters
+      verbs: [get]
+    # Deleting a pool cascades to its StorageClass, so the console checks for
+    # bound volumes before offering the button.
+    - group: ""
+      version: v1
+      resource: persistentvolumes
+      verbs: [list]
