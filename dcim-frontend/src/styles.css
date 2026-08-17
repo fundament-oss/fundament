@@ -208,30 +208,3 @@ input[type='radio']:checked {
 .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
   transition: transform 150ms ease;
 }
-
-/* Rack diagram: free slot diagonal stripe */
-.rack-slot-free {
-  background-color: #f8fafc;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 4px,
-    #e2e8f0 4px,
-    #e2e8f0 5px
-  );
-  border: 1px dashed #94a3b8;
-  color: #94a3b8;
-}
-
-.dark .rack-slot-free {
-  background-color: #111827;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 4px,
-    #374151 4px,
-    #374151 5px
-  );
-  border-color: #475569;
-  color: #64748b;
-}
