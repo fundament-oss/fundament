@@ -1,14 +1,11 @@
 import { escapeHtml, humanizeBytes } from './_shared.js';
 
-// Which disks a pool may choose from.
+// Which disks a pool may choose from. A disk this pool already uses reports
+// available=false, since Ceph consumed it, so filtering on availability alone
+// would empty the edit form the moment the pool went live. Disks claimed by
+// another pool are never offered, mirroring ClaimOwner.
 //
-// The subtlety: a disk this pool already uses reports available=false, because
-// Ceph consumed it and it stopped looking empty. Filtering on availability
-// alone would make every disk vanish from the edit form the moment the pool
-// went live. Disks claimed by a *different* pool are never offered -- that
-// mirrors ClaimOwner on the reconciler side.
-//
-// Pass poolName=null from the create form, where no pool owns anything yet.
+// poolName is null from the create form, where no pool owns anything yet.
 export function selectableDisks(items, poolName) {
   return (items ?? []).filter((item) => {
     const s = item.status ?? {};

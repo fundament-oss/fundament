@@ -26,8 +26,12 @@ const (
 	rookChart       = "rook-ceph"
 	rookRepoURL     = "https://charts.rook.io/release"
 
-	// fieldOwner identifies this plugin in server-side-apply managedFields for
-	// everything it applies, not just the CephCluster.
+	// Not a config field: the reconcilers are written against this chart's CRDs,
+	// so it belongs to the build. Pinning it here means the digest-pinned image —
+	// and the manifest hash an admin consents to — binds the operator too.
+	rookChartVersion = "v1.16.0"
+
+	// fieldOwner identifies this plugin in server-side-apply managedFields.
 	fieldOwner = "fundament-storage-plugin"
 )
 
@@ -36,31 +40,23 @@ var fundamentCRDNames = []string{
 	"storagepools.storage.fundament.io",
 }
 
-// install performs the full install lifecycle:
-//  1. Installs the rook-ceph operator Helm chart.
-//  2. Server-side applies the plugin's own CRDs (Disk, StoragePool).
-//  3. Waits for those CRDs to be established.
-//  4. Server-side applies the singleton CephCluster bootstrap object
-//     (creates on first run; does not overwrite spec.storage on subsequent runs).
+// install runs the full install lifecycle: the rook-ceph chart, this plugin's
+// CRDs, a wait for them to be established, then the CephCluster singleton.
 func (p *Plugin) install(ctx context.Context, kube client.Client) error {
-	// Step 1: Install the rook-ceph operator via Helm.
 	if err := helm.NewClient(p.cfg.RookNamespace).InstallFromRepo(
-		ctx, rookReleaseName, rookChart, rookRepoURL, p.cfg.RookChartVersion, RookValues(p.cfg),
+		ctx, rookReleaseName, rookChart, rookRepoURL, rookChartVersion, RookValues(p.cfg),
 	); err != nil {
 		return fmt.Errorf("install rook-ceph helm chart: %w", err)
 	}
 
-	// Step 2: Apply the plugin's own CRDs.
 	if err := applyCRDs(ctx, kube); err != nil {
 		return fmt.Errorf("apply fundament CRDs: %w", err)
 	}
 
-	// Step 3: Wait for the CRDs to be established.
 	if err := crd.WaitEstablished(ctx, kube, fundamentCRDNames); err != nil {
 		return fmt.Errorf("wait for CRDs to be established: %w", err)
 	}
 
-	// Step 4: Bootstrap the CephCluster singleton.
 	if err := bootstrapCephCluster(ctx, kube, p.cfg.ClusterNamespace, p.cfg); err != nil {
 		return fmt.Errorf("bootstrap CephCluster: %w", err)
 	}
@@ -68,8 +64,7 @@ func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 	return nil
 }
 
-// applyCRDs reads all YAML files from the embedded crds/ directory and
-// server-side applies each document as an unstructured object.
+// applyCRDs server-side applies every document in the embedded crds/ dir.
 func applyCRDs(ctx context.Context, kube client.Client) error {
 	entries, err := crdFS.ReadDir("crds")
 	if err != nil {
@@ -90,8 +85,7 @@ func applyCRDs(ctx context.Context, kube client.Client) error {
 	return nil
 }
 
-// applyYAMLDocs splits a multi-document YAML byte slice into individual
-// documents and server-side applies each one.
+// applyYAMLDocs server-side applies each document in a multi-document YAML.
 func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 	reader := utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(data)))
 	for {
@@ -122,10 +116,9 @@ func applyYAMLDocs(ctx context.Context, kube client.Client, data []byte) error {
 	return nil
 }
 
-// bootstrapCephCluster creates the singleton CephCluster if it does not exist.
-// If it already exists, it is left untouched so that spec.storage (the disk
-// assignments StoragePoolReconciler maintains) is not overwritten — install
-// runs on every plugin start, not just the first.
+// bootstrapCephCluster creates the singleton CephCluster if absent. An existing
+// one is left alone: install runs on every plugin start, and overwriting would
+// clobber the spec.storage that StoragePoolReconciler maintains.
 func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace string, cfg Config) error {
 	desired := BootstrapCephCluster(namespace, cfg)
 
@@ -133,16 +126,14 @@ func bootstrapCephCluster(ctx context.Context, kube client.Client, namespace str
 	existing.SetGroupVersionKind(desired.GroupVersionKind())
 	err := kube.Get(ctx, types.NamespacedName{Name: desired.GetName(), Namespace: desired.GetNamespace()}, existing)
 	if err == nil {
-		// Already exists — do not overwrite spec.storage.
 		return nil
 	}
 	if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("get CephCluster: %w", err)
 	}
 
-	// Plain create closes the TOCTOU race: if the object appeared between the
-	// Get above and this Create, an AlreadyExists result means someone else
-	// created it — we must not touch its spec.storage.
+	// Plain create closes the TOCTOU race: AlreadyExists means someone else got
+	// there, so leave its spec.storage alone.
 	if err := kube.Create(ctx, desired); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			return nil // created concurrently — do not touch its spec.storage

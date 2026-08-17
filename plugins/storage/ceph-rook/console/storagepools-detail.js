@@ -33,17 +33,10 @@ function renderReadOnly(item) {
     ['Storage Class', status.storageClassName ?? '—'],
     ['Replicas', String(status.replicas ?? '—')],
     ['Failure Domain', status.failureDomain ?? '—'],
-    // Both counts describe the pool's selection, not what Ceph currently has
-    // running — the labels say so rather than implying live cluster state.
-    ['Selected disks', String(status.selectedDiskCount ?? '—')],
-    ['Raw capacity (before replication)', humanizeBytes(status.rawCapacityBytes ?? 0)],
+    // Labelled as contributions, not capacity: the obvious reading is wrong.
+    ['Disks contributed', String(status.selectedDiskCount ?? '—')],
+    ['Raw size of contributed disks', humanizeBytes(status.rawCapacityBytes ?? 0)],
   ];
-  if (status.replicas > 0 && status.rawCapacityBytes > 0) {
-    pairs.push([
-      'Usable capacity (approx.)',
-      humanizeBytes(Math.floor(status.rawCapacityBytes / status.replicas)),
-    ]);
-  }
   if (status.message) pairs.push(['Message', status.message]);
 
   const disks =
@@ -54,7 +47,13 @@ function renderReadOnly(item) {
   return `
     <h2 class="plugin-heading">Status</h2>
     ${renderDefList(pairs)}
-    <h2 class="plugin-heading">Selected Disks</h2>
+    <p class="plugin-hint">
+      Every storage pool feeds one shared Ceph cluster. Volumes provisioned through this
+      pool are placed across all of the cluster's disks, not only the ones listed below,
+      so the raw size above is this pool's contribution rather than its capacity. Use
+      <code>ceph df</code> for actual free space.
+    </p>
+    <h2 class="plugin-heading">Contributed Disks</h2>
     ${disks}
   `;
 }
@@ -65,10 +64,9 @@ async function showDetail() {
     heading.textContent = `Storage Pool · ${item.metadata?.name ?? name}`;
     content.innerHTML = renderReadOnly(item);
     actions.hidden = false;
-    // Property assignment, not addEventListener: the action buttons live
-    // outside #content and survive every re-render, so adding a listener each
-    // time would stack them. Assigning .onclick replaces. (CSP restricts inline
-    // handler *attributes* in HTML, not this.)
+    // .onclick, not addEventListener: these buttons live outside #content and
+    // survive every re-render, so listeners would stack. (CSP restricts inline
+    // handler *attributes*, not this.)
     document.getElementById('edit-btn').onclick = () => showEdit(item);
     document.getElementById('delete-btn').onclick = () => showDelete(item);
   } catch (err) {
@@ -112,7 +110,7 @@ async function showEdit(item) {
       <div class="plugin-field">
         <label class="plugin-label" for="replication">Replication</label>
         <select id="replication" name="replication" class="plugin-select">${options}</select>
-        <span class="plugin-hint">auto derives the replica count from the number of contributing nodes.</span>
+        <span class="plugin-hint">auto derives the replica count from the number of nodes contributing disks to the cluster.</span>
       </div>
 
       <div class="plugin-field">
@@ -151,8 +149,8 @@ async function showEdit(item) {
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
     try {
-      // Merge-patch of spec only: status is never clobbered, and the disk array
-      // is replaced wholesale rather than merged element-wise.
+      // Merge-patch of spec only: status is untouched and disks is replaced
+      // wholesale, not merged element-wise.
       await fundament.k8s.patch(
         { ...RESOURCE, name },
         {
@@ -172,9 +170,8 @@ async function showEdit(item) {
   });
 }
 
-// Volumes still bound to this pool's StorageClass. Deleting the pool cascades
-// to that StorageClass through owner references, so this has to be answered
-// before the button is offered.
+// Volumes still bound to this pool's StorageClass. Deleting the pool cascades to
+// it via owner refs, so this has to be answered before offering the button.
 async function boundVolumes(storageClassName) {
   if (!storageClassName) return [];
   const { items } = await fundament.k8s.list(RESOURCE_PVS);

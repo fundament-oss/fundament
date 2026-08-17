@@ -47,9 +47,8 @@ spec:
             properties:
               disks:
                 description: |-
-                  Disks are the names of Disk objects to consume as OSDs. A repeat would be
-                  counted twice in status.selectedDiskCount and status.rawCapacityBytes, so
-                  the API server rejects one.
+                  Disks are the names of Disk objects to consume as OSDs. listType=set so the
+                  API server rejects a repeat, which would be double-counted in status.
                 items:
                   type: string
                 type: array
@@ -66,7 +65,12 @@ spec:
                 type: string
             type: object
           status:
-            description: StoragePoolStatus is the observed state.
+            description: |-
+              StoragePoolStatus is the observed state.
+
+              Every field describes this pool's contribution to one shared Ceph cluster, not
+              storage that belongs to it: all pools feed a single OSD set, and the derived
+              CephBlockPool has no CRUSH rule confining it to spec.disks.
             properties:
               failureDomain:
                 type: string
@@ -76,18 +80,21 @@ spec:
                 type: string
               rawCapacityBytes:
                 description: |-
-                  RawCapacityBytes is the summed size of the selected disks, before
-                  replication. Usable capacity is roughly this divided by replicas.
+                  RawCapacityBytes is the summed size of the disks this pool contributes,
+                  before replication. Not the pool's capacity: volumes draw on the whole
+                  cluster's OSDs, so dividing by Replicas means nothing. Use `ceph df`.
                 format: int64
                 type: integer
               replicas:
+                description: |-
+                  Sized against the nodes contributing disks to the whole cluster, since that
+                  is what bounds where Ceph can place a replica.
                 type: integer
               selectedDiskCount:
                 description: |-
-                  SelectedDiskCount is how many of spec.disks resolved to a usable Disk.
-                  It is not the number of OSDs Ceph currently has running: Rook creates
-                  those asynchronously, and removing a disk from spec never removes its
-                  OSD (that needs a Ceph purge).
+                  SelectedDiskCount is how many of spec.disks resolved to a usable Disk, not
+                  how many OSDs are running: Rook creates those asynchronously, and removing a
+                  disk from spec never removes its OSD (that needs a Ceph purge).
                 type: integer
               storageClassName:
                 type: string

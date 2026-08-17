@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,19 +10,16 @@ import (
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
-// Shaped like rook's sys.LocalDisk, which is what rook-discover serialises into
-// the ConfigMap. Note "devLinks": there is no "by-id" key on that struct, so a
-// tag naming one decodes to "" and every device silently falls back to its
-// kernel name.
+// Shaped like sys.LocalDisk, what rook-discover serialises into the ConfigMap.
+// Note devLinks: there is no "by-id" key, so a tag naming one decodes to "".
 const sampleDevices = `[
  {"name":"sdb","size":1073741824,"rotational":true,"type":"disk","empty":true,"filesystem":"","vendor":"ATA","model":"DISK1","serial":"S1","wwn":"0x5000c500a1b2c3d4","devLinks":"/dev/disk/by-id/wwn-0x5000c500a1b2c3d4 /dev/disk/by-id/ata-DISK1_S1 /dev/disk/by-path/pci-0000:00:17.0-ata-1"},
  {"name":"sdc","size":2147483648,"rotational":false,"type":"disk","empty":false,"filesystem":"ext4","devLinks":"/dev/disk/by-id/ata-DISK2_S2"},
  {"name":"sda1","size":500,"rotational":true,"type":"part","empty":false}
 ]`
 
-// What rook-discover reports on a k3d node prepared by
-// deploy/k3d/storage-disks.sh: the host's own partitions alongside the
-// loop-backed ones, and no stable links at all.
+// What a k3d node prepared by storage-disks.sh reports: the host's partitions
+// alongside the loop-backed ones, and no stable links.
 const sampleLoopDevices = `[
  {"name":"vda1","parent":"vda","size":20400029184,"rotational":true,"type":"part","empty":false,"filesystem":"ext4","real-path":"/dev/vda1","kernel-name":"vda1"},
  {"name":"vdc","size":19943424,"rotational":true,"type":"disk","empty":false,"filesystem":"iso9660","real-path":"/dev/vdc","kernel-name":"vdc"},
@@ -47,8 +45,8 @@ func TestParseDiscoveredDevices(t *testing.T) {
 	assert.False(t, got[1].Available)                  // has filesystem
 }
 
-// The whole reason StablePath exists: a kernel rename must not change what the
-// CephCluster is pointed at, nor what the Disk CR is called.
+// Why StablePath exists: a kernel rename must move neither the CephCluster's
+// device entry nor the Disk CR's name.
 func TestParseDiscoveredDevicesSurvivesKernelRename(t *testing.T) {
 	t.Parallel()
 	const before = `[{"name":"sdb","type":"disk","empty":true,"size":100,"wwn":"0xABC","devLinks":"/dev/disk/by-id/wwn-0xABC"}]`
@@ -93,8 +91,7 @@ func TestByIDPath(t *testing.T) {
 		},
 		{
 			name: "logical-volume links are ignored, not used as a fallback",
-			// lvm-pv-uuid names a PV that can be rebuilt onto another disk, so
-			// following it would point the pool at the wrong device.
+			// lvm-pv-uuid names a PV that can be rebuilt elsewhere.
 			devLinks: "/dev/disk/by-id/lvm-pv-uuid-abc123 /dev/disk/by-id/dm-name-vg0-lv0",
 			want:     "",
 		},
@@ -165,7 +162,6 @@ func TestDeviceKeyPrefersStableIdentity(t *testing.T) {
 		})
 	}
 
-	// The prefixes exist so these two can never collide.
 	assert.NotEqual(t,
 		DeviceKey(v1alpha1.DiskStatus{WWN: "X"}),
 		DeviceKey(v1alpha1.DiskStatus{Serial: "X"}))
@@ -175,7 +171,6 @@ func TestDeviceRef(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, "/dev/disk/by-id/wwn-0xABC",
 		DeviceRef(v1alpha1.DiskStatus{Path: "/dev/sdb", StablePath: "/dev/disk/by-id/wwn-0xABC"}))
-	// Loop devices expose nothing stable; the kernel path is all there is.
 	assert.Equal(t, "/dev/loop0p1", DeviceRef(v1alpha1.DiskStatus{Path: "/dev/loop0p1"}))
 }
 
@@ -219,4 +214,42 @@ func TestDiskNameIsDeterministicAndDNSSafe(t *testing.T) {
 	n2 := DiskName("Node-1", "/dev/disk/by-id/wwn-0xAAA")
 	assert.Equal(t, n1, n2)
 	assert.Regexp(t, `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`, n1)
+}
+
+// The sanitiser folds "worker.1" and "worker-1" to the same prefix, and a device
+// with no stable identity keys identically on every node.
+func TestDiskNameSeparatesNodesThatSanitiseAlike(t *testing.T) {
+	dotted := DiskName("worker.1", "path:/dev/sdb")
+	dashed := DiskName("worker-1", "path:/dev/sdb")
+
+	assert.NotEqual(t, dotted, dashed)
+	// The readable prefix genuinely does collide; only the digest separates them.
+	assert.True(t, strings.HasPrefix(dotted, "worker-1-"))
+	assert.True(t, strings.HasPrefix(dashed, "worker-1-"))
+}
+
+// A renamed Disk silently drops out of every StoragePool listing it.
+func TestDiskNameStableForSameNodeAndKey(t *testing.T) {
+	assert.Equal(t,
+		DiskName("worker-1", "path:/dev/sdb"),
+		DiskName("worker-1", "path:/dev/sdb"))
+}
+
+// A 253-char node name plus a digest would exceed the API server's name limit.
+func TestDiskNameFitsObjectNameLimit(t *testing.T) {
+	long := strings.Repeat("a", 253)
+	name := DiskName(long, "path:/dev/sdb")
+
+	assert.LessOrEqual(t, len(name), 253)
+	assert.Regexp(t, `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`, name)
+}
+
+// Truncation can strand a trailing dash, which DNS-1123 rejects.
+func TestDiskNameTrimsDashLeftByTruncation(t *testing.T) {
+	// Dashes land exactly on the truncation boundary.
+	node := strings.Repeat("a", maxDiskNameBase-1) + "---tail"
+	name := DiskName(node, "path:/dev/sdb")
+
+	assert.Regexp(t, `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`, name)
+	assert.NotContains(t, name, "--")
 }

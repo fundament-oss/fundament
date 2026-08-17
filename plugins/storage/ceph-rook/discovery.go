@@ -11,14 +11,12 @@ import (
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
 )
 
-// rawDevice mirrors the fields of rook's sys.LocalDisk that this plugin reads.
-// The JSON tags have to match that struct exactly -- rook serialises it straight
-// into the discovery ConfigMap, and a tag that does not exist there decodes to
-// the zero value in silence.
+// rawDevice mirrors the sys.LocalDisk fields this plugin reads. Tags must match
+// that struct exactly: rook serialises it straight into the ConfigMap, and a tag
+// that does not exist there decodes to the zero value in silence.
 type rawDevice struct {
-	Name string `json:"name"`
-	Size int64  `json:"size"`
-	// Rook's discover ConfigMap emits this as a JSON bool (sys.LocalDisk).
+	Name       string `json:"name"`
+	Size       int64  `json:"size"`
 	Rotational bool   `json:"rotational"`
 	Type       string `json:"type"`
 	Empty      bool   `json:"empty"`
@@ -27,9 +25,8 @@ type rawDevice struct {
 	Model      string `json:"model"`
 	Serial     string `json:"serial"`
 	WWN        string `json:"wwn"`
-	// DevLinks is a space-separated list of udev symlinks (/dev/disk/by-id/...,
-	// /dev/disk/by-path/...). It is the only place rook reports the stable names
-	// for a device; there is no "by-id" field on sys.LocalDisk.
+	// DevLinks is a space-separated list of udev symlinks. It is the only place
+	// rook reports stable names; sys.LocalDisk has no "by-id" field.
 	DevLinks string `json:"devLinks"`
 }
 
@@ -38,14 +35,12 @@ var loopPartition = regexp.MustCompile(`^/dev/loop\d+p\d+$`)
 
 const byIDDir = "/dev/disk/by-id/"
 
-// byIDPreference ranks /dev/disk/by-id link forms from most to least preferred.
-// Every one of them is derived from something burned into the device, so it
-// survives a reboot renaming /dev/sdb to /dev/sdc.
+// byIDPreference ranks /dev/disk/by-id link forms, most preferred first. Each is
+// derived from something burned into the device, so it survives a rename.
 //
-// Link forms outside this list are deliberately ignored rather than used as a
-// last resort: lvm-pv-uuid-*, md-uuid-* and dm-* name a logical volume, which
-// can be rebuilt on top of a different physical device and would then point the
-// pool at the wrong disk.
+// Forms outside this list are ignored rather than used as a last resort:
+// lvm-pv-uuid-*, md-uuid-* and dm-* name a logical volume, which can be rebuilt
+// on another physical device and would point the pool at the wrong disk.
 var byIDPreference = []string{
 	"wwn-",
 	"nvme-eui.",
@@ -56,9 +51,8 @@ var byIDPreference = []string{
 	"usb-",
 }
 
-// byIDPath picks the most stable /dev/disk/by-id symlink out of rook's
-// space-separated devLinks, or "" when the device has none (loop devices, and
-// virtual disks whose backend exposes no identity).
+// byIDPath picks the most stable /dev/disk/by-id symlink from devLinks, or ""
+// when the device has none (loop devices, some virtual disks).
 func byIDPath(devLinks string) string {
 	best, bestRank := "", len(byIDPreference)
 	for _, link := range strings.Fields(devLinks) {
@@ -70,9 +64,8 @@ func byIDPath(devLinks string) string {
 			if !strings.HasPrefix(suffix, prefix) {
 				continue
 			}
-			// Lower rank wins. Equal rank falls back to the lexicographically
-			// first link so the choice never depends on udev's ordering, which
-			// is not guaranteed stable between probes.
+			// Lower rank wins; ties break lexicographically, since udev's
+			// ordering is not stable between probes.
 			if rank < bestRank || (rank == bestRank && link < best) {
 				best, bestRank = link, rank
 			}
@@ -83,8 +76,7 @@ func byIDPath(devLinks string) string {
 }
 
 // isNVMe reports whether a device is NVMe-attached. sys.LocalDisk has no
-// transport field, so this goes on the kernel name and the by-id link form,
-// which are the two places the transport shows up.
+// transport field, so this goes on the kernel name and the by-id link form.
 func isNVMe(d rawDevice) bool {
 	if strings.HasPrefix(d.Name, "nvme") {
 		return true
@@ -97,19 +89,13 @@ func isNVMe(d rawDevice) bool {
 	return false
 }
 
-// ParseDiscoveredDevices converts a rook discover ConfigMap's device JSON into
+// ParseDiscoveredDevices converts a discover ConfigMap's device JSON into
 // candidate Disk statuses.
 //
-// Normally only whole disks (type=="disk") are returned. In loop-device mode
-// that is replaced -- not extended -- by loop-backed partitions. A k3d node
-// exposes the host's real disks to every privileged container and they do reach
-// the discover ConfigMap, so this filter is the only thing keeping them out of
-// an OSD.
-//
-// Path is the kernel name (/dev/sdb), which is what an operator recognises but
-// is not stable across reboots. StablePath is the by-id link when the device
-// has one, and is what actually gets written into the CephCluster and hashed
-// into the Disk's name -- see DeviceKey and DeviceRef.
+// Only whole disks (type=="disk"), or in loop-device mode only loop-backed
+// partitions -- replaced, not extended. A k3d node's privileged containers see
+// the host's real disks and they do reach the ConfigMap, so this filter is the
+// only thing keeping them out of an OSD.
 func ParseDiscoveredDevices(node string, raw string, loopDevices bool) ([]v1alpha1.DiskStatus, error) {
 	if strings.TrimSpace(raw) == "" {
 		return nil, nil
@@ -122,8 +108,8 @@ func ParseDiscoveredDevices(node string, raw string, loopDevices bool) ([]v1alph
 	for _, d := range devs {
 		path := "/dev/" + d.Name
 		if loopDevices {
-			// rook-discover reports loop-backed partitions as type "part"; a
-			// bare loop device is rejected by the discover daemon itself.
+			// Loop-backed partitions report as "part"; a bare loop device is
+			// rejected by the discover daemon itself.
 			if d.Type != "part" || !loopPartition.MatchString(path) {
 				continue
 			}
@@ -153,13 +139,11 @@ func ParseDiscoveredDevices(node string, raw string, loopDevices bool) ([]v1alph
 	return out, nil
 }
 
-// DeviceKey is the identity a Disk CR is named after. It prefers whatever the
-// node reports that survives a reboot, because a Disk whose name changes is a
-// Disk that drops out of every StoragePool listing it: the old name resolves to
-// nothing and the device silently leaves the CephCluster.
+// DeviceKey is the identity a Disk CR is named after, preferring whatever
+// survives a reboot: a Disk whose name changes drops out of every StoragePool
+// listing it, and the device silently leaves the CephCluster.
 //
-// The prefixes keep the namespaces apart, so a serial can never collide with a
-// WWN that happens to have the same text.
+// The prefixes stop a serial colliding with a WWN of the same text.
 func DeviceKey(st v1alpha1.DiskStatus) string {
 	switch {
 	case st.StablePath != "":
@@ -169,18 +153,29 @@ func DeviceKey(st v1alpha1.DiskStatus) string {
 	case st.Serial != "":
 		return "serial:" + st.Serial
 	default:
-		// Nothing stable was reported. Loop devices land here, and so do some
-		// virtio disks; the name then moves if the kernel reorders them.
+		// Nothing stable reported -- loop and some virtio disks. The name then
+		// moves if the kernel reorders them.
 		return "path:" + st.Path
 	}
 }
 
+// A node name may be a full 253-character DNS subdomain; leaving room for the
+// digest keeps the result inside the API server's name limit.
+const maxDiskNameBase = 200
+
 // DiskName is a deterministic, DNS-1123-safe name for a (node, key) pair, where
 // key comes from DeviceKey.
-// The digest is a naming device, not a security control; sha256 is used anyway
-// so the file needs no linter exemption for sha1.
+//
+// The digest covers the node, not just the key. The readable prefix cannot carry
+// the node on its own: the sanitiser below folds dots to dashes, so "worker.1"
+// and "worker-1" collide. Devices with no stable identity all key on
+// "path:/dev/sdb", so hashing the key alone would collapse two nodes' disks onto
+// one CR.
+//
+// sha256 rather than sha1 only to avoid a linter exemption; this is a naming
+// device, not a security control.
 func DiskName(node, key string) string {
-	sum := sha256.Sum256([]byte(key))
+	sum := sha256.Sum256([]byte(node + "\x00" + key))
 	short := hex.EncodeToString(sum[:])[:10]
 	base := strings.ToLower(node)
 	base = strings.Map(func(r rune) rune {
@@ -189,6 +184,10 @@ func DiskName(node, key string) string {
 		}
 		return '-'
 	}, base)
+	if len(base) > maxDiskNameBase {
+		base = base[:maxDiskNameBase]
+	}
+	// After truncating too: a cut can strand a trailing dash.
 	base = strings.Trim(base, "-")
 	if base == "" {
 		base = "node"

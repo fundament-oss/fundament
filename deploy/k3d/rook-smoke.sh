@@ -10,9 +10,9 @@ CLUSTER="${CLUSTER:-fundament-plugin}"
 KUBE_CONTEXT="${KUBE_CONTEXT:-k3d-${CLUSTER}}"
 NS="${NS:-rook-ceph}"
 ROOK_VERSION="${ROOK_VERSION:-v1.16.0}"
-# reef (v18.x) arm64 images segfault immediately -- `ceph-osd --version` exits
-# 139 in a plain docker run. Squid (v19) is the oldest line that runs on Apple
-# Silicon, and Rook v1.16 supports it.
+# reef (v18.x) arm64 images segfault immediately (`ceph-osd --version` exits 139).
+# Squid (v19) is the oldest line that runs on Apple Silicon, and Rook v1.16
+# supports it, so allowUnsupported is not needed for this pairing.
 CEPH_IMAGE="${CEPH_IMAGE:-quay.io/ceph/ceph:v19.2.3}"
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -22,9 +22,8 @@ log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m /!\\\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31mERR\033[0m %s\n' "$*" >&2; exit 1; }
 
-# The server node specifically: /dev is bound there (nodeFilters [server:0]), so
-# that is the only node whose OSDs can see the loop devices. Picking items[0]
-# would follow node ordering and can land on a stale or unrelated node.
+# The server node specifically: /dev is bound only there (nodeFilters
+# [server:0]). items[0] would follow node ordering and can land elsewhere.
 node_name() {
     local n="k3d-${CLUSTER}-server-0"
     "${KUBECTL[@]}" get node "$n" >/dev/null 2>&1 || die "node $n not found in $KUBE_CONTEXT"
@@ -79,8 +78,8 @@ spec:
   monitoring:
     enabled: false
   storage:
-    # A k3d node is privileged and enumerates the Docker host's real disks.
-    # Never enable useAllDevices here.
+    # A k3d node is privileged and sees the host's real disks. Never enable
+    # useAllDevices here.
     useAllNodes: false
     useAllDevices: false
     nodes:
@@ -155,11 +154,10 @@ parameters:
   csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
   csi.storage.k8s.io/node-stage-secret-namespace: $NS
   csi.storage.k8s.io/fstype: ext4
-  # krbd retries OSD requests forever by default, so if the cluster goes away
-  # while a volume is mounted the filesystem's journal thread blocks
-  # uninterruptibly and the device can never be unmapped -- on bare metal that
-  # costs a reboot. A timeout turns that into an I/O error the filesystem can
-  # fail on. Dev only: it aborts all requests, not just at unmap time.
+  # krbd retries OSD requests forever, so a cluster that goes away while a volume
+  # is mounted blocks the journal thread uninterruptibly and the device can never
+  # be unmapped -- a reboot on bare metal. A timeout makes that an I/O error
+  # instead. Dev only: it aborts all requests, not just at unmap time.
   mapOptions: "krbd:osd_request_timeout=90"
   unmapOptions: "krbd:force"
 allowVolumeExpansion: true
@@ -215,11 +213,10 @@ status() {
         || { warn "toolbox not ready; pod status instead"; "${KUBECTL[@]}" -n "$NS" get pod; }
 }
 
-# Mounting CephFS needs the 'ceph' kernel module; mapping RBD needs 'rbd'. A
-# kernel can ship one without the other -- OrbStack has rbd but not ceph -- and
-# bundling both into one pod then fails the whole run over a limitation that
-# does not touch block storage at all. Since block is what the ceph-rook plugin
-# provides, CephFS is dropped rather than allowed to mask an RBD result.
+# CephFS needs the 'ceph' module, RBD needs 'rbd', and a kernel can ship one
+# without the other (OrbStack has no ceph). Bundling both in one pod would fail
+# the whole run over a limitation that does not touch block storage, so CephFS is
+# dropped rather than allowed to mask an RBD result.
 cephfs_supported() {
     CLUSTER="$CLUSTER" "$HERE"/storage-disks.sh has-module ceph
 }
@@ -258,8 +255,8 @@ spec:
   resources: { requests: { storage: 1Gi } }
 YAML
 
-    # The volume set is built here rather than in the container so a missing
-    # CephFS never reaches the pod spec at all.
+    # Built here, not in the container, so a missing CephFS never reaches the
+    # pod spec at all.
     local targets='/rbd' mounts volumes
     mounts='        - { name: rbd, mountPath: /rbd }'
     volumes='    - { name: rbd, persistentVolumeClaim: { claimName: rook-smoke-rbd } }'
@@ -310,8 +307,8 @@ YAML
 }
 
 # Long-running counterpart to `test`: keeps volumes bound and re-verifies a
-# checksum, so restarts of the cluster, the Docker VM or the machine can be
-# checked for data loss. Survives restarts by being a Deployment.
+# checksum, so restarts can be checked for data loss. A Deployment, so it
+# survives them.
 soak() {
     log "starting the soak workload on an RBD and a CephFS volume"
     "${KUBECTL[@]}" apply -f - <<'YAML'
@@ -386,18 +383,16 @@ soak_log() {
     "${KUBECTL[@]}" logs deploy/rook-soak 2>/dev/null | grep -cE 'MISMATCH|READFAIL' | sed 's/^/  failures: /'
 }
 
-# Takes one resource/name argument, so it accepts `kubectl get -o name` output
-# directly. Passing kind and name separately alongside that form makes kubectl
-# reject the call client-side.
+# One resource/name argument, so `kubectl get -o name` output works directly;
+# kind and name separately alongside that form is rejected client-side.
 unfinalize() {
     "${KUBECTL[@]}" -n "$NS" patch "$1" --type merge \
         -p '{"metadata":{"finalizers":[]}}' >/dev/null 2>&1 || true
 }
 
-# Deletes every instance of a namespaced Rook kind, clearing the finalizer when
-# the delete does not complete. `get` fails when the CRD is absent -- a second
-# run, or a run after `up` failed before helm installed it -- and pipefail would
-# abort the teardown, hence the guards.
+# Deletes every instance of a namespaced Rook kind, clearing the finalizer if the
+# delete stalls. The guards are for an absent CRD, where `get` fails and pipefail
+# would abort the teardown.
 delete_rook_kind() {
     local kind="$1" r
     "${KUBECTL[@]}" -n "$NS" get "$kind" -o name 2>/dev/null | while read -r r; do
@@ -407,13 +402,11 @@ delete_rook_kind() {
 }
 
 # The CephCluster must go before the operator, or Rook's cleanup job never runs.
-# Rook's finalizers are cleared by the operator, so anything still holding one
-# once the operator is gone strands the namespace in Terminating -- with no way
-# back, because the thing that clears finalizers is the thing that just left.
+# The operator is what clears Rook's finalizers, so anything still holding one
+# after it leaves strands the namespace in Terminating with no way back.
 #
-# Every kind `up` creates has to be listed here. A CephFilesystem was missed once
-# and the namespace hung forever, which then blocks installing the ceph-rook
-# plugin: helm cannot create its release secret in a terminating namespace.
+# Every kind `up` creates must be listed here. Missing one hangs the namespace,
+# which then blocks the plugin: helm cannot create its release secret there.
 down() {
     "${KUBECTL[@]}" delete deploy/rook-soak --ignore-not-found >/dev/null 2>&1 || true
     "${KUBECTL[@]}" delete pod/rook-smoke --ignore-not-found >/dev/null 2>&1 || true
@@ -421,8 +414,8 @@ down() {
         --ignore-not-found >/dev/null 2>&1 || true
     "${KUBECTL[@]}" delete storageclass rook-ceph-block rook-cephfs --ignore-not-found
 
-    # Both go before the CephCluster: they are its tenants, and Rook expects to
-    # tear them down while the cluster is still serving.
+    # Before the CephCluster: they are its tenants, and Rook tears them down
+    # while the cluster is still serving.
     log "deleting the Rook CRs while the operator can still finalize them"
     delete_rook_kind cephfilesystem
     delete_rook_kind cephblockpool

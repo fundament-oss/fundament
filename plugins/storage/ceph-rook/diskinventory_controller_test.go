@@ -10,8 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1alpha1 "github.com/fundament-oss/fundament/plugins/storage/ceph-rook/api/v1alpha1"
@@ -64,7 +66,7 @@ func TestNodeFromConfigMap(t *testing.T) {
 	}
 }
 
-// discoveryConfigMap builds the ConfigMap rook-discover writes per node.
+// discoveryConfigMap builds what rook-discover writes per node.
 func discoveryConfigMap(t *testing.T, node string, devices ...rawDevice) *corev1.ConfigMap {
 	t.Helper()
 	raw, err := json.Marshal(devices)
@@ -94,9 +96,8 @@ func getDisk(t *testing.T, c client.Client, name string) *v1alpha1.Disk {
 	return &disk
 }
 
-// claimedBy is what the console's disk picker filters on. It has to reflect a
-// pool created a moment ago, not wait for rook-discover's next sweep (60m by
-// default) — otherwise an operator can hand the same disk to a second pool.
+// The picker filters on claimedBy, so it must reflect a pool created a moment
+// ago rather than wait out rook-discover's 60m sweep.
 func TestDiskInventorySetsClaimedByFromPools(t *testing.T) {
 	t.Parallel()
 	node := "node-a"
@@ -117,7 +118,7 @@ func TestDiskInventorySetsClaimedByFromPools(t *testing.T) {
 	assert.Equal(t, "pool", getDisk(t, c, diskName).Status.ClaimedBy)
 }
 
-// The StoragePool watch exists so a pool event reaches every node's ConfigMap.
+// A pool event has to reach every node's ConfigMap.
 func TestPoolToDiscoveryConfigMapsCoversEveryNode(t *testing.T) {
 	t.Parallel()
 	c := newFakeClient(t,
@@ -137,8 +138,7 @@ func TestPoolToDiscoveryConfigMapsCoversEveryNode(t *testing.T) {
 	assert.ElementsMatch(t, []string{"local-device-node-a", "local-device-node-b"}, names)
 }
 
-// A disk that disappears from discovery is marked unavailable, never deleted:
-// repo policy is soft deletes only.
+// Marked unavailable, never deleted: repo policy is soft deletes only.
 func TestDiskInventorySoftDeletesVanishedDisks(t *testing.T) {
 	t.Parallel()
 	node := "node-a"
@@ -151,7 +151,6 @@ func TestDiskInventorySoftDeletesVanishedDisks(t *testing.T) {
 	require.NoError(t, reconcileDiscovery(t, r, node))
 	require.True(t, getDisk(t, c, diskName).Status.Available)
 
-	// The device stops being reported.
 	var cm corev1.ConfigMap
 	require.NoError(t, c.Get(context.Background(),
 		types.NamespacedName{Namespace: testNamespace, Name: "local-device-" + node}, &cm))
@@ -163,10 +162,8 @@ func TestDiskInventorySoftDeletesVanishedDisks(t *testing.T) {
 	assert.False(t, disk.Status.Available, "vanished disks are marked unavailable")
 }
 
-// A node leaving takes its whole discovery ConfigMap with it, so there is no
-// device list left to diff against. Returning early on NotFound left those Disks
-// available=true forever and the picker kept offering disks on a node that no
-// longer existed.
+// A departed node takes its ConfigMap with it, leaving no device list to diff.
+// Returning early on NotFound left those Disks available=true forever.
 func TestDiskInventorySoftDeletesDisksOfDepartedNode(t *testing.T) {
 	t.Parallel()
 	node := "node-a"
@@ -179,7 +176,6 @@ func TestDiskInventorySoftDeletesDisksOfDepartedNode(t *testing.T) {
 	require.NoError(t, reconcileDiscovery(t, r, node))
 	require.True(t, getDisk(t, c, diskName).Status.Available)
 
-	// The node leaves; rook deletes the ConfigMap.
 	var cm corev1.ConfigMap
 	require.NoError(t, c.Get(context.Background(),
 		types.NamespacedName{Namespace: testNamespace, Name: "local-device-" + node}, &cm))
@@ -190,8 +186,8 @@ func TestDiskInventorySoftDeletesDisksOfDepartedNode(t *testing.T) {
 		"disks on a departed node must stop being offered")
 }
 
-// The departed-node path derives the node from the request name, since the
-// labels went with the object. Disks on other nodes must be left alone.
+// The node comes from the request name once the labels are gone; other nodes'
+// disks must be left alone.
 func TestDiskInventoryDepartedNodeLeavesOtherNodesAlone(t *testing.T) {
 	t.Parallel()
 	gone, staying := "node-a", "node-b"
@@ -251,4 +247,48 @@ func TestDiskInventoryKeepsDiskNameAcrossKernelRename(t *testing.T) {
 	assert.Equal(t, before.Items[0].Name, after.Items[0].Name)
 	assert.True(t, after.Items[0].Status.Available, "and must not soft-delete the survivor")
 	assert.Equal(t, "/dev/sdc", after.Items[0].Status.Path, "the kernel path still tracks reality")
+}
+
+// The watch predicate filters events, not the cache. The scope must match what
+// DiskInventoryReconciler queries, or the cached client returns nothing.
+// configMapCacheScope finds the ConfigMap entry in a ByObject map. It cannot
+// index the map: the keys are interface values holding pointers, so a fresh
+// &corev1.ConfigMap{} misses. controller-runtime resolves them by GVK, so
+// matching the concrete type mirrors that.
+func configMapCacheScope(t *testing.T, opts cache.Options) (cache.ByObject, bool) {
+	t.Helper()
+	for obj, byObject := range opts.ByObject {
+		if _, ok := obj.(*corev1.ConfigMap); ok {
+			return byObject, true
+		}
+	}
+	return cache.ByObject{}, false
+}
+
+func TestCacheOptionsScopeConfigMapsToDiscovery(t *testing.T) {
+	t.Parallel()
+	cfg := Config{RookNamespace: "rook-ceph"}
+
+	byObject, ok := configMapCacheScope(t, cacheOptions(cfg))
+	require.True(t, ok, "ConfigMaps must be scoped; the default caches the whole cluster")
+
+	nsCfg, ok := byObject.Namespaces[cfg.RookNamespace]
+	require.True(t, ok, "scoped to the namespace the discovery daemon writes to")
+	require.NotNil(t, nsCfg.LabelSelector)
+
+	assert.True(t, nsCfg.LabelSelector.Matches(labels.Set{"app": discoverAppLabel}),
+		"the selector must admit the ConfigMaps the reconciler reads")
+	assert.False(t, nsCfg.LabelSelector.Matches(labels.Set{"app": "something-else"}))
+}
+
+// A non-default namespace must follow, or the plugin caches nothing.
+func TestCacheOptionsFollowsRookNamespace(t *testing.T) {
+	t.Parallel()
+	byObject, found := configMapCacheScope(t, cacheOptions(Config{RookNamespace: "ceph-operator"}))
+	require.True(t, found)
+
+	_, ok := byObject.Namespaces["ceph-operator"]
+	assert.True(t, ok)
+	_, ok = byObject.Namespaces["rook-ceph"]
+	assert.False(t, ok, "the default namespace must not be cached when it is not configured")
 }

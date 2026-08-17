@@ -20,9 +20,8 @@ if (!ctx.resource?.name) {
     heading.textContent = `Disk · ${item.metadata?.name ?? ctx.resource.name}`;
     const s = item.status ?? {};
 
-    // Two paths, because they answer different questions: the kernel path is
-    // what an operator matches against lsblk, the stable path is what the pool
-    // actually binds to and what survives a reboot renaming the first one.
+    // Both paths: the kernel one matches lsblk, the stable one is what the pool
+    // binds to and what survives a reboot.
     const device = [
       ['Path (kernel)', s.path ?? '—'],
       ['Path (stable)', s.stablePath || 'none reported — this device is tracked by its kernel path'],
@@ -35,9 +34,8 @@ if (!ctx.resource?.name) {
       ['WWN', s.wwn || '—'],
     ];
 
-    // claimedBy is text, not a link: plugin:navigate resolves relative to the
-    // current resource kind, so a hop to a StoragePool would route to
-    // disks/<poolname>. Cross-kind navigation is not expressible today.
+    // Text, not a link: plugin:navigate resolves within the current kind, so a
+    // hop to a StoragePool would route to disks/<poolname>.
     const allocation = [
       ['Available', s.available ? 'yes' : 'no'],
       ['Claimed by', s.claimedBy || '—'],

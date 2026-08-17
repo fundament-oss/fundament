@@ -1,18 +1,13 @@
-// Shared helpers for ceph-rook plugin templates.
-// Keep this file plain ES module so templates can `import` from it.
+// Shared helpers for ceph-rook plugin templates. Plain ES module so templates
+// can `import` from it.
 //
-// The plugin CSP is `script-src 'self'; style-src 'self'` with no
-// 'unsafe-inline' (see plugin-proxy/pkg/assets/handler.go buildCSP). That rules
-// out inline event handlers (onclick=) and inline style attributes alike, so
-// everything here wires events with addEventListener and styles with the
-// .plugin-* classes from plugin-sdk.css.
+// The plugin CSP has no 'unsafe-inline', which rules out onclick= and inline
+// style alike: events go through addEventListener, styling through the
+// .plugin-* classes in plugin-sdk.css.
 
-// Loads the Fundament plugin SDK v1. Under FUN-17 the iframe runs on the
-// dedicated plugin-proxy origin — the same origin that serves the SDK — so the
-// bare-path URL below resolves on plugin-proxy, matching the plugin CSP
-// (script-src 'self'). The /v1/ segment tracks fundament:init's protocolVersion:
-// a future breaking protocol change ships as /plugins/sdk/v2/ and old plugins
-// keep loading v1 unchanged.
+// Loads the plugin SDK v1. The iframe runs on the plugin-proxy origin, which
+// also serves the SDK, so these bare paths satisfy script-src 'self'. The /v1/
+// segment tracks protocolVersion: a breaking change ships as /v2/.
 export function loadSdk() {
   const link = document.createElement('link');
   link.rel = 'stylesheet';
@@ -38,7 +33,6 @@ export function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-// Renders a "no rows" placeholder spanning the given number of columns.
 export function emptyRow(colspan, message = 'No items.') {
   return `<tr><td colspan="${colspan}" class="plugin-text">${escapeHtml(message)}</td></tr>`;
 }
@@ -48,12 +42,9 @@ export function errorRow(colspan, err) {
   return `<tr><td colspan="${colspan}" class="plugin-text">${escapeHtml(`Failed to load: ${message}`)}</td></tr>`;
 }
 
-// Posts a navigate message to the parent. The host resolves the destination
-// relative to the iframe's current route, so the plugin only sends the resource
-// identity. From a create view the host hops to the new resource's sibling
-// detail route, which is what makes this work after a successful create too.
-// The SDK's pinned parentOrigin scopes the message under FUN-17; falls back to
-// '*' before init (or in a preview server that runs unframed).
+// Posts a navigate message to the parent, which resolves it relative to the
+// iframe's current route — so this sends only the resource identity, and works
+// from a create view too. parentOrigin falls back to '*' before init.
 export function navigateToDetail(name, namespace) {
   window.parent.postMessage(
     { type: 'plugin:navigate', name, namespace },
@@ -61,12 +52,9 @@ export function navigateToDetail(name, namespace) {
   );
 }
 
-// Asks the host to hop to this resource kind's create route. A custom list UI
-// has to provide its own "Add" affordance: the console only renders its built-in
-// Create button when the kind has no custom list component (see
-// resource-list.component.html), so without this the create view is unreachable.
-// Only meaningful from a list view, and only for a kind whose definition
-// declares a create component.
+// Asks the host for this kind's create route. A custom list UI needs its own
+// "Add": the console only renders its built-in Create button for kinds without a
+// custom list component, so without this the create view is unreachable.
 export function navigateToCreate() {
   window.parent.postMessage(
     { type: 'plugin:create' },
@@ -83,8 +71,7 @@ export function navigateBack() {
   );
 }
 
-// Turns each row carrying data-name into a keyboard-reachable link to its
-// detail page. The anchors must already be in the DOM.
+// Makes each data-name row a keyboard-reachable link. Anchors must be in the DOM.
 export function wireRowLinks(root) {
   root.querySelectorAll('a.row-link').forEach((link) => {
     link.addEventListener('click', (e) => {
@@ -95,7 +82,8 @@ export function wireRowLinks(root) {
   });
 }
 
-// Renders a key/value definition list. Values are already-escaped strings.
+// Renders a key/value definition list from [key, value] pairs. Both halves are
+// escaped here, so pass raw values — pre-escaped ones render as "&amp;".
 export function renderDefList(pairs) {
   const rows = pairs
     .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`)
@@ -103,7 +91,6 @@ export function renderDefList(pairs) {
   return `<dl class="plugin-deflist">${rows}</dl>`;
 }
 
-// Humanizes a byte count to a human-readable size string (GiB or TiB).
 export function humanizeBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
   const tib = bytes / 1024 ** 4;

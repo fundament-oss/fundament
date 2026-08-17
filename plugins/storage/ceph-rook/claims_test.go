@@ -24,8 +24,7 @@ func poolAt(name string, created time.Time, disks ...string) v1alpha1.StoragePoo
 
 func TestDerivedNameIsPrefixed(t *testing.T) {
 	t.Parallel()
-	// An unprefixed name would collide with — and through CreateOrUpdate adopt
-	// — a pre-existing StorageClass like k3d's "local-path".
+	// An unprefixed name could adopt something like k3d's "local-path".
 	assert.Equal(t, "ceph-local-path", DerivedName("local-path"))
 	assert.Equal(t, "ceph-default", DerivedName("default"))
 }
@@ -74,8 +73,7 @@ func TestClaimOwner(t *testing.T) {
 	}
 }
 
-// A pool being deleted must release its disks immediately, or the disk stays
-// unusable until the object finally disappears.
+// Release on delete, or the disk stays unusable until the object goes.
 func TestClaimOwnerIgnoresDeletingPools(t *testing.T) {
 	t.Parallel()
 	early := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -106,8 +104,8 @@ func TestBuildClaimIndexAgreesWithClaimOwner(t *testing.T) {
 		"disk-3": "zeta",
 	}, index)
 
-	// The inventory and the StoragePool reconciler must never disagree on who
-	// owns a disk, so the index has to match ClaimOwner disk for disk.
+	// The index must match ClaimOwner disk for disk, or the inventory and the
+	// reconciler disagree on ownership.
 	for disk, owner := range index {
 		assert.Equal(t, ClaimOwner(pools, disk), owner, "disk %s", disk)
 	}
@@ -123,8 +121,7 @@ func TestOwnedByPool(t *testing.T) {
 		Kind: "StoragePool", Name: "mine", UID: pool.UID, Controller: &yes,
 	}}, &pool))
 
-	// A same-named pool that was deleted and recreated has a new UID; the old
-	// object's refs must not count as ours.
+	// A recreated pool has a new UID; the old refs are not ours.
 	assert.False(t, ownedByPool([]metav1.OwnerReference{{
 		Kind: "StoragePool", Name: "mine", UID: "stale-uid", Controller: &yes,
 	}}, &pool))

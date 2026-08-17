@@ -4,9 +4,8 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // StoragePoolSpec is the operator's desired block storage.
 type StoragePoolSpec struct {
-	// Disks are the names of Disk objects to consume as OSDs. A repeat would be
-	// counted twice in status.selectedDiskCount and status.rawCapacityBytes, so
-	// the API server rejects one.
+	// Disks are the names of Disk objects to consume as OSDs. listType=set so the
+	// API server rejects a repeat, which would be double-counted in status.
 	// +optional
 	// +listType=set
 	Disks []string `json:"disks,omitempty"`
@@ -17,8 +16,7 @@ type StoragePoolSpec struct {
 }
 
 // Pool phases. Provisioning and Ready track the backing CephBlockPool; Degraded
-// means this pool cannot be reconciled without operator action (a disk claimed
-// by another pool, or a derived object owned by someone else).
+// means the pool needs operator action.
 const (
 	PhaseProvisioning = "Provisioning"
 	PhaseReady        = "Ready"
@@ -26,18 +24,24 @@ const (
 )
 
 // StoragePoolStatus is the observed state.
+//
+// Every field describes this pool's contribution to one shared Ceph cluster, not
+// storage that belongs to it: all pools feed a single OSD set, and the derived
+// CephBlockPool has no CRUSH rule confining it to spec.disks.
 type StoragePoolStatus struct {
 	Phase            string `json:"phase,omitempty"`
 	StorageClassName string `json:"storageClassName,omitempty"`
-	Replicas         int    `json:"replicas,omitempty"`
-	FailureDomain    string `json:"failureDomain,omitempty"`
-	// SelectedDiskCount is how many of spec.disks resolved to a usable Disk.
-	// It is not the number of OSDs Ceph currently has running: Rook creates
-	// those asynchronously, and removing a disk from spec never removes its
-	// OSD (that needs a Ceph purge).
+	// Sized against the nodes contributing disks to the whole cluster, since that
+	// is what bounds where Ceph can place a replica.
+	Replicas      int    `json:"replicas,omitempty"`
+	FailureDomain string `json:"failureDomain,omitempty"`
+	// SelectedDiskCount is how many of spec.disks resolved to a usable Disk, not
+	// how many OSDs are running: Rook creates those asynchronously, and removing a
+	// disk from spec never removes its OSD (that needs a Ceph purge).
 	SelectedDiskCount int `json:"selectedDiskCount,omitempty"`
-	// RawCapacityBytes is the summed size of the selected disks, before
-	// replication. Usable capacity is roughly this divided by replicas.
+	// RawCapacityBytes is the summed size of the disks this pool contributes,
+	// before replication. Not the pool's capacity: volumes draw on the whole
+	// cluster's OSDs, so dividing by Replicas means nothing. Use `ceph df`.
 	RawCapacityBytes int64  `json:"rawCapacityBytes,omitempty"`
 	Message          string `json:"message,omitempty"`
 }

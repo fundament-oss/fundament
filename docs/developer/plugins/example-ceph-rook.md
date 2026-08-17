@@ -176,7 +176,9 @@ The `StoragePool` spec includes a `replication` field that controls how many cop
 
 - `"1"`, `"2"`, `"3"`: explicit replica count, e.g. to sacrifice redundancy for capacity on a test cluster.
 
-An explicit count is **clamped down** to the number of contributing nodes rather than leaving the pool unsatisfiable: asking for 3 replicas across 2 nodes yields 2, and the reason is recorded in `status.message`. The pool provisions either way; it does not sit degraded waiting for disks that may never arrive.
+An explicit count is **clamped down** to the number of nodes contributing disks to the cluster rather than leaving the pool unsatisfiable: asking for 3 replicas on a 2-node cluster yields 2, and the reason is recorded in `status.message`. The pool provisions either way; it does not sit degraded waiting for disks that may never arrive.
+
+The node count is the cluster's, not the pool's — see [Pools share one OSD set](#pools-share-one-osd-set).
 
 The failure domain follows from the result: `host` when the pool ends up with 2 or more replicas across 2 or more nodes, otherwise `osd`. A single-node cluster therefore still provisions — with `osd` domain and, at 1 replica, `requireSafeReplicaSize: false`, which Ceph needs to accept a size-1 pool at all.
 
@@ -184,11 +186,21 @@ The resulting replica count, failure domain and any clamping message are recorde
 
 ### Status fields
 
-`status` describes the pool's *selection*, not live Ceph state:
+`status` describes the pool's *contribution* to one shared Ceph cluster, not live Ceph state and not a slice of storage the pool owns:
 
 - `selectedDiskCount` — how many of `spec.disks` resolved to a usable `Disk`. Not the number of OSDs Ceph is running; Rook creates those asynchronously.
-- `rawCapacityBytes` — the summed size of those disks, **before** replication. Usable capacity is roughly this divided by `replicas`; the console shows both.
-- `phase` — `Provisioning` until the backing `CephBlockPool` reports `Ready`, or `Degraded` when the pool cannot be reconciled without operator action (see below).
+- `rawCapacityBytes` — the summed size of those disks, **before** replication. This is **not the pool's capacity**: see [Pools share one OSD set](#pools-share-one-osd-set). Use `ceph df` for real free space.
+- `phase` — `Provisioning` until the backing `CephBlockPool` reports `Ready`; `Degraded` when the pool cannot be reconciled without operator action (see below), including when it resolves no disks at all.
+
+### Pools share one OSD set
+
+Every `StoragePool` feeds the same `CephCluster`, and the `CephBlockPool` a pool derives carries **no CRUSH rule confining it to that pool's disks**. Ceph places a volume's data across every OSD in the cluster.
+
+Three consequences, all of them load-bearing:
+
+- **Multiple pools do not isolate or tier storage.** A second pool gives you a second `StorageClass` over the same disks. Real separation needs a device class plus a per-pool CRUSH rule, which this version does not implement.
+- **`rawCapacityBytes / replicas` is not usable capacity.** With more than one pool it is not even an upper bound.
+- **Replication is sized against the cluster, not the pool.** `auto` uses the number of nodes contributing disks cluster-wide. This is deliberate: sizing off a pool's own disks would cap a single-disk pool at `replicas: 1` — waiving Ceph's size-1 safety check to advertise no redundancy — while Ceph replicated that data across all hosts regardless.
 
 ### Removing disks
 

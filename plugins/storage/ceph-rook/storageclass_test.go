@@ -26,17 +26,15 @@ func TestRenderStorageClass(t *testing.T) {
 	}
 }
 
-// Rook names its CSI drivers after the namespace the *operator* runs in, which
-// FUNP_ROOK_NAMESPACE controls independently of the CephCluster's namespace.
-// Hardcoding "rook-ceph" here produced a StorageClass no driver answers, and the
-// symptom is a PVC that stays Pending with nothing to attribute it to.
+// The driver name follows the *operator's* namespace (FUNP_ROOK_NAMESPACE), set
+// independently of the CephCluster's. Hardcoding it yields a StorageClass no
+// driver answers, whose only symptom is a PVC stuck Pending.
 func TestRenderStorageClassFollowsRookNamespace(t *testing.T) {
 	t.Parallel()
 	sc := RenderStorageClass("pool-a", "ceph-cluster", "pool-a", "rook-system")
 
 	assert.Equal(t, "rook-system.rbd.csi.ceph.com", sc.Provisioner)
-	// clusterID and every CSI secret namespace track the CephCluster's namespace,
-	// not the operator's -- the two are separate knobs.
+	// clusterID and the CSI secrets track the CephCluster's namespace instead.
 	assert.Equal(t, "ceph-cluster", sc.Parameters["clusterID"])
 	assert.Equal(t, "ceph-cluster", sc.Parameters["csi.storage.k8s.io/provisioner-secret-namespace"])
 	assert.Equal(t, "ceph-cluster", sc.Parameters["csi.storage.k8s.io/node-stage-secret-namespace"])

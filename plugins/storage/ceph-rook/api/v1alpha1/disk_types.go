@@ -15,29 +15,26 @@ const (
 	DiskTypeNVMe DiskType = "nvme"
 )
 
-// DiskSpec is intentionally empty: Disk objects are published by the plugin
-// from Rook device discovery and are not operator-editable.
+// DiskSpec is intentionally empty: Disks are published from Rook discovery and
+// are not operator-editable.
 type DiskSpec struct{}
 
 // DiskStatus is the discovered state of a node block device.
 type DiskStatus struct {
 	Node string `json:"node,omitempty"`
-	// Path is the kernel device name, e.g. /dev/sdb. It is what an operator
-	// recognises, but the kernel is free to reassign it across reboots, so it
-	// is not what this plugin identifies the device by.
+	// Path is the kernel name, e.g. /dev/sdb: what an operator recognises, but
+	// reassignable across reboots, so not what identifies the device.
 	Path string `json:"path,omitempty"`
-	// StablePath is the /dev/disk/by-id link for this device, empty when the
-	// node reports none (loop devices, some virtual disks). When set it is what
-	// goes into CephCluster.spec.storage.nodes, because it survives a reboot
-	// that renames Path.
+	// StablePath is the /dev/disk/by-id link, empty when the node reports none
+	// (loop devices, some virtual disks). When set it is what goes into the
+	// CephCluster, because it survives a reboot that renames Path.
 	StablePath string   `json:"stablePath,omitempty"`
 	SizeBytes  int64    `json:"sizeBytes,omitempty"`
 	Type       DiskType `json:"type,omitempty"`
 	Rotational bool     `json:"rotational,omitempty"`
 	Model      string   `json:"model,omitempty"`
 	Serial     string   `json:"serial,omitempty"`
-	// WWN is the device's World Wide Name, a fallback stable identity when the
-	// node exposes no by-id link.
+	// WWN is a fallback stable identity when there is no by-id link.
 	WWN       string `json:"wwn,omitempty"`
 	Available bool   `json:"available,omitempty"`
 	ClaimedBy string `json:"claimedBy,omitempty"`

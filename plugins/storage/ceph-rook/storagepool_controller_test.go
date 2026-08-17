@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,8 +27,8 @@ import (
 
 const testNamespace = "rook-ceph"
 
-// testScheme mirrors buildScheme and additionally registers the Rook kinds as
-// unstructured list types, which the fake client needs in order to track them.
+// testScheme mirrors buildScheme, plus the Rook kinds as unstructured list types
+// so the fake client can track them.
 func testScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	s := runtime.NewScheme()
@@ -121,9 +122,8 @@ func cephClusterDevices(t *testing.T, c client.Client) map[string][]string {
 	return out
 }
 
-// The happy path: a pool over two nodes produces a prefixed StorageClass and
-// CephBlockPool, folds its disks into the CephCluster, and reports its own
-// selection back in status.
+// Happy path: prefixed derived objects, disks folded into the CephCluster, and
+// the pool's own selection reported in status.
 func TestReconcileCreatesDerivedObjects(t *testing.T) {
 	t.Parallel()
 	s := testScheme(t)
@@ -167,8 +167,7 @@ func TestReconcileCreatesDerivedObjects(t *testing.T) {
 	assert.Equal(t, "host", pool.Status.FailureDomain)
 }
 
-// A pre-existing StorageClass the pool does not own must never be adopted:
-// adopting it would also mean deleting it when the pool goes away.
+// Adopting a StorageClass we do not own would delete it with the pool.
 func TestReconcileRefusesToAdoptForeignStorageClass(t *testing.T) {
 	t.Parallel()
 	s := testScheme(t)
@@ -188,7 +187,6 @@ func TestReconcileRefusesToAdoptForeignStorageClass(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not owned by this StoragePool")
 
-	// The foreign object is untouched, and the operator is told why.
 	var sc storagev1.StorageClass
 	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: "ceph-pool"}, &sc))
 	assert.Equal(t, "rancher.io/local-path", sc.Provisioner)
@@ -199,7 +197,7 @@ func TestReconcileRefusesToAdoptForeignStorageClass(t *testing.T) {
 	assert.Contains(t, pool.Status.Message, "not owned by this StoragePool")
 }
 
-// Same rule for Rook's own CephBlockPools, which live in the same namespace.
+// Same rule for Rook's own CephBlockPools in that namespace.
 func TestReconcileRefusesToAdoptForeignBlockPool(t *testing.T) {
 	t.Parallel()
 	s := testScheme(t)
@@ -593,9 +591,8 @@ func TestUnresolvableConflictsAreTerminal(t *testing.T) {
 	})
 }
 
-// Every Disk event in the cluster fans out to a reconcile of every pool, and the
-// status is identical almost every time. Rewriting it would bump the
-// resourceVersion and wake every watcher for nothing.
+// Every Disk event fans out to every pool, with identical status almost every
+// time. Rewriting would bump resourceVersion and wake every watcher.
 func TestReconcileDoesNotRewriteUnchangedStatus(t *testing.T) {
 	t.Parallel()
 	s := testScheme(t)
@@ -617,3 +614,125 @@ func TestReconcileDoesNotRewriteUnchangedStatus(t *testing.T) {
 	assert.Equal(t, settled, getPool(t, c, "pool").ResourceVersion,
 		"a reconcile that changes nothing must not write")
 }
+
+// Ceph places replicas across every OSD in the cluster, so sizing off the pool's
+// own disks would hand a single-disk pool replicas=1 on a three-node cluster.
+func TestReconcileSizesReplicationOnClusterNodesNotPoolDisks(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	now := time.Now()
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testDisk("b", "node-b", "/dev/sdb", 100, true),
+		testDisk("c", "node-c", "/dev/sdb", 100, true),
+		// "big" spans all three nodes; "small" names a single disk on one node.
+		testPool("big", now, "a", "b"),
+		testPool("small", now.Add(time.Minute), "c"),
+	)
+	r := newReconciler(c, s)
+
+	require.NoError(t, firstErr(reconcilePool(t, r, "big")))
+	require.NoError(t, firstErr(reconcilePool(t, r, "small")))
+
+	small := getPool(t, c, "small").Status
+	assert.Equal(t, 3, small.Replicas, "three nodes contribute disks to the cluster")
+	assert.Equal(t, "host", small.FailureDomain)
+	// The selection reporting still describes only this pool's own contribution.
+	assert.Equal(t, 1, small.SelectedDiskCount)
+	assert.Equal(t, int64(100), small.RawCapacityBytes)
+}
+
+// A pool over zero disks used to sit in Provisioning forever behind a
+// CephBlockPool with no OSDs and a StorageClass that left every PVC Pending.
+func TestReconcileEmptyPoolIsDegradedAndCreatesNothing(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t, cephCluster(), testPool("pool", time.Now()))
+
+	_, err := reconcilePool(t, newReconciler(c, s), "pool")
+	require.NoError(t, err, "an empty pool is an operator problem, not a reconcile failure")
+
+	status := getPool(t, c, "pool").Status
+	assert.Equal(t, v1alpha1.PhaseDegraded, status.Phase)
+	assert.Contains(t, status.Message, "add disks to spec.disks",
+		"an empty spec.disks produces no skip notes, so the message must be explicit")
+	assert.Zero(t, status.Replicas)
+	assert.Zero(t, status.SelectedDiskCount)
+
+	var sc storagev1.StorageClass
+	err = c.Get(context.Background(), types.NamespacedName{Name: DerivedName("pool")}, &sc)
+	assert.True(t, apierrors.IsNotFound(err), "no StorageClass for a pool with no disks")
+
+	cbp := &unstructured.Unstructured{}
+	cbp.SetAPIVersion(cephAPIVersion)
+	cbp.SetKind("CephBlockPool")
+	err = c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: DerivedName("pool")}, cbp)
+	assert.True(t, apierrors.IsNotFound(err), "no CephBlockPool for a pool with no disks")
+}
+
+// Same dead end as naming none, but the failed names have to be reported.
+func TestReconcileEmptyPoolNamesTheMissingDisks(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t, cephCluster(), testPool("pool", time.Now(), "ghost"))
+
+	_, err := reconcilePool(t, newReconciler(c, s), "pool")
+	require.NoError(t, err)
+
+	status := getPool(t, c, "pool").Status
+	assert.Equal(t, v1alpha1.PhaseDegraded, status.Phase)
+	assert.Contains(t, status.Message, "ghost")
+}
+
+// The previous Ready status must not be left standing.
+func TestReconcileEmptyingALivePoolDegradesIt(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "a"),
+	)
+	r := newReconciler(c, s)
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	require.NotEqual(t, v1alpha1.PhaseDegraded, getPool(t, c, "pool").Status.Phase)
+
+	pool := getPool(t, c, "pool")
+	pool.Spec.Disks = nil
+	require.NoError(t, c.Update(context.Background(), pool))
+
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	assert.Equal(t, v1alpha1.PhaseDegraded, getPool(t, c, "pool").Status.Phase)
+	assert.Empty(t, cephClusterDevices(t, c), "the pool's disks leave the CephCluster too")
+}
+
+// Every Disk event fans out to every pool, each of which rewrites the
+// CephCluster. An identical write still costs a round-trip.
+func TestReconcileDoesNotRewriteUnchangedCephCluster(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "a"),
+	)
+	r := newReconciler(c, s)
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+
+	cc := &unstructured.Unstructured{}
+	cc.SetAPIVersion(cephAPIVersion)
+	cc.SetKind("CephCluster")
+	key := types.NamespacedName{Namespace: testNamespace, Name: cephClusterName}
+	require.NoError(t, c.Get(context.Background(), key, cc))
+	settled := cc.GetResourceVersion()
+
+	for range 3 {
+		require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	}
+	require.NoError(t, c.Get(context.Background(), key, cc))
+	assert.Equal(t, settled, cc.GetResourceVersion())
+}
+
+func firstErr(_ ctrl.Result, err error) error { return err }

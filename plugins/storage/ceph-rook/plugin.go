@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -31,9 +34,7 @@ func NewPlugin() (*Plugin, error) {
 	return &Plugin{cfg: cfg}, nil
 }
 
-// buildScheme builds the runtime Scheme for this plugin. It includes the
-// core Kubernetes types, the API extensions group (CRDs), and the plugin's
-// own storage.fundament.io/v1alpha1 API types.
+// buildScheme registers core Kubernetes types, CRDs, and this plugin's API.
 func buildScheme() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
@@ -48,43 +49,59 @@ func buildScheme() (*runtime.Scheme, error) {
 	return scheme, nil
 }
 
+// cacheOptions confines the manager's ConfigMap informer to Rook's per-node
+// discovery ConfigMaps. The watch predicate only filters events; without this the
+// cache holds every ConfigMap in the cluster.
+//
+// Anything the reconcilers read through the cached client must match these
+// selectors. DiskInventoryReconciler only touches discovery ConfigMaps, and the
+// install path uses its own uncached client.
+func cacheOptions(cfg Config) cache.Options {
+	return cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.ConfigMap{}: {
+				Namespaces: map[string]cache.Config{
+					cfg.RookNamespace: {
+						LabelSelector: labels.SelectorFromSet(labels.Set{"app": discoverAppLabel}),
+					},
+				},
+			},
+		},
+	}
+}
+
 func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
-	// Build the runtime scheme.
 	scheme, err := buildScheme()
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("build scheme: %w", pluginerrors.NewPermanent(err))
 	}
 
-	// Obtain the in-cluster kubeconfig.
 	kubeCfg, err := ctrl.GetConfig()
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("get kubeconfig: %w", pluginerrors.NewPermanent(err))
 	}
 
-	// Create a plain client used during the install phase (before the manager
-	// is started and its cache is warm).
+	// Uncached client for the install phase, before the manager starts.
 	kube, err := client.New(kubeCfg, client.Options{Scheme: scheme})
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
 		return fmt.Errorf("create kubernetes client: %w", pluginerrors.NewPermanent(err))
 	}
 
-	// Install rook, apply CRDs, and bootstrap the CephCluster singleton.
 	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseInstalling, Message: "installing rook-ceph operator"})
 	if err := p.install(ctx, kube); err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseDegraded, Message: err.Error()})
 		return fmt.Errorf("install: %w", pluginerrors.NewTransient(err))
 	}
 
-	// Create the controller-runtime manager. Reconcilers register against it
-	// below, before the blocking mgr.Start call.
+	// Reconcilers register below, before the blocking mgr.Start.
 	mgr, err := crhelper.SetupManager(scheme, &ctrl.Options{
-		// Disable the default metrics and health-probe listeners; the plugin
-		// host manages the plugin lifecycle.
+		// The plugin host owns the lifecycle; no listeners of our own.
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",
+		Cache:                  cacheOptions(p.cfg),
 	})
 	if err != nil {
 		host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseFailed, Message: err.Error()})
@@ -111,7 +128,6 @@ func (p *Plugin) Start(ctx context.Context, host pluginruntime.Host) error {
 	host.ReportReady()
 	host.ReportStatus(pluginruntime.PluginStatus{Phase: pluginruntime.PhaseRunning, Message: "rook-ceph storage plugin running"})
 
-	// mgr.Start blocks until ctx is cancelled.
 	if err := mgr.Start(ctx); err != nil {
 		return fmt.Errorf("manager stopped: %w", pluginerrors.NewTransient(err))
 	}

@@ -54,14 +54,10 @@ func VerifyAll(ctx context.Context, c client.Client, names []string) error {
 	return nil
 }
 
-// WaitEstablished polls until every named CRD reports Established=True.
-//
-// A plugin that applies its own CRDs and then immediately creates custom
-// resources has to wait for this: until the condition flips, the API server has
-// no REST mapping for the new kinds and both a Get and a Create fail. A CRD
-// that is not visible yet — NotFound, or a no-match from a stale RESTMapper —
-// is treated as "keep polling" rather than an error, because that is the normal
-// state right after an apply.
+// WaitEstablished polls until every named CRD reports Established=True. Until it
+// does, the API server has no REST mapping for the new kinds and both Get and
+// Create fail. A CRD that is not visible yet — NotFound, or a no-match from a
+// stale RESTMapper — means keep polling; that is normal right after an apply.
 func WaitEstablished(ctx context.Context, c client.Client, names []string) error {
 	err := wait.PollUntilContextTimeout(ctx, establishedPollInterval, establishedPollTimeout, true,
 		func(ctx context.Context) (bool, error) {

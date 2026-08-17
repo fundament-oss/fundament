@@ -6,8 +6,6 @@ await fundament.init;
 
 const content = document.getElementById('content');
 
-// --- Load available disks ---
-
 let availableDisks = [];
 let loadError = null;
 
@@ -18,16 +16,13 @@ try {
     resource: 'disks',
   });
 
-  // Only unclaimed, available disks can be pooled. claimedBy is maintained by
-  // the DiskInventory reconciler, which re-runs when a StoragePool changes, so
-  // a disk another pool just took disappears from this list. No pool exists
-  // yet at create time, hence the null.
+  // Only unclaimed, available disks. The DiskInventory reconciler re-runs on
+  // StoragePool changes, so a disk another pool just took drops out. null
+  // because no pool exists yet at create time.
   availableDisks = selectableDisks(items, null);
 } catch (err) {
   loadError = err;
 }
-
-// --- Render ---
 
 if (loadError) {
   content.innerHTML = `<div class="plugin-error">${escapeHtml(
@@ -49,8 +44,9 @@ if (loadError) {
 
   content.innerHTML = `
     <p class="plugin-text">
-      <strong>Recommendation:</strong> create a single StoragePool per cluster for most setups.
-      Multiple StoragePools are only needed for advanced tiered-storage configurations.
+      <strong>Recommendation:</strong> create a single StoragePool per cluster. All pools feed
+      one shared Ceph cluster and their data is placed across every disk in it, so a second
+      pool gives you another StorageClass — not isolated or tiered storage.
     </p>
 
     <form id="create-form" class="plugin-form" novalidate>
@@ -67,7 +63,10 @@ if (loadError) {
       <div class="plugin-field">
         <span class="plugin-label">Disks</span>
         ${diskPicker}
-        <span class="plugin-hint">Disks spread over two or more nodes enable host-level failure domains.</span>
+        <span class="plugin-hint">
+          These disks become OSDs in the shared Ceph cluster. Disks spread over two or more
+          nodes enable host-level failure domains.
+        </span>
       </div>
 
       <div class="plugin-field">
@@ -78,7 +77,7 @@ if (loadError) {
           <option value="2">2 — two replicas</option>
           <option value="3">3 — three replicas</option>
         </select>
-        <span class="plugin-hint">auto derives the replica count from the number of contributing nodes.</span>
+        <span class="plugin-hint">auto derives the replica count from the number of nodes contributing disks to the cluster.</span>
       </div>
 
       <div class="plugin-actions">
@@ -137,7 +136,6 @@ if (loadError) {
           spec: { disks: checkedDisks, replication },
         },
       );
-      // From a create view the host hops to the new resource's sibling detail route.
       navigateToDetail(name);
     } catch (err) {
       showError(`Failed to create StoragePool: ${err?.message ?? err}`);

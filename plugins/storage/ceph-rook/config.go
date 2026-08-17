@@ -8,8 +8,8 @@ import (
 
 // Config is the plugin's runtime configuration, injected by the plugin
 // controller as FUNP_-prefixed environment variables.
+// The Rook chart version is deliberately not here; see rookChartVersion.
 type Config struct {
-	RookChartVersion string `env:"ROOK_CHART_VERSION" envDefault:"v1.16.0"`
 	// RookNamespace is where the operator runs. Rook names its CSI drivers
 	// "<this namespace>.rbd.csi.ceph.com", so it reaches the rendered
 	// StorageClass too -- see RBDProvisioner.
@@ -25,10 +25,11 @@ type Config struct {
 	// build than the one validated there tests nothing.
 	CephImage string `env:"CEPH_IMAGE" envDefault:"quay.io/ceph/ceph:v19.2.3"`
 
-	// AllowUnsupportedCeph sets CephCluster.spec.cephVersion.allowUnsupported.
-	// Rook v1.16 refuses a Ceph release outside its supported table, and v19 on
-	// arm64 is exactly that pairing; rook-smoke.sh sets the same flag.
-	AllowUnsupportedCeph bool `env:"ALLOW_UNSUPPORTED_CEPH" envDefault:"true"`
+	// AllowUnsupportedCeph waives Rook's check that it knows how to drive the
+	// given Ceph release. Off by default, and the default CephImage does not need
+	// it: Rook v1.16 lists Squid (v19) as supported. Set it only for a release
+	// outside that table (v20+).
+	AllowUnsupportedCeph bool `env:"ALLOW_UNSUPPORTED_CEPH" envDefault:"false"`
 
 	// Quorum sizing. A single-node cluster needs count 1 and
 	// AllowMultiplePerNode, or mons never reach quorum.

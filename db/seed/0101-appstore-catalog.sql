@@ -301,7 +301,7 @@ The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes n
 
 - **Automatic Disk Discovery**: Rook scans nodes for raw block devices and publishes them as Disk CRs
 - **Declarative Storage Pools**: A single StoragePool CR configures OSDs, replication, and produces a ready-to-use StorageClass
-- **Tunable Replication**: Set replication to auto, 1, 2, or 3 — auto derives the replica count from the number of available nodes
+- **Tunable Replication**: Set replication to auto, 1, 2, or 3 — auto derives the replica count from the number of nodes contributing disks to the cluster
 - **In-Cluster Block Storage**: No external storage backend required; data stays within the cluster
 
 ## Use Cases
@@ -314,7 +314,8 @@ The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes n
 
 - **Raw, unpartitioned disks** on the cluster nodes. Disks that already hold a filesystem are not offered.
 - **Cluster-admin-equivalent permissions.** The Rook operator runs privileged, host-networked device-discovery DaemonSets, installs the Ceph CSI driver, and manages its own cluster-wide RBAC, so this plugin requests wildcard permissions. They are intersected with the installing administrator''s own permissions. Install it only if that tradeoff is acceptable for your cluster.
-- Block storage (RBD, ReadWriteOnce) only. Shared filesystems (CephFS) and object storage (RGW) are not yet supported.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
+- Block storage (RBD, ReadWriteOnce) only. Shared filesystems (CephFS) and object storage (RGW) are not yet supported.
+- All storage pools share one Ceph cluster. Data is placed across every disk in it, so additional pools give you additional StorageClasses rather than isolated or tiered storage.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
 ON CONFLICT (id) DO UPDATE SET
     organization_id = EXCLUDED.organization_id,
     name = EXCLUDED.name,

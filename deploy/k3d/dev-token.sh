@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# Prints a user JWT from authn-api, for local dev tooling that needs a bearer
-# token -- plugin-publish above all.
-#
-# Defaults to platform-admin@fundament.io, the only member of the seeded system
-# organization that owns the first-party plugins. Publishing needs admin of the
-# owning org, so other dev logins are refused.
+# Prints a user JWT from authn-api for dev tooling that needs a bearer token,
+# plugin-publish above all. Defaults to platform-admin@fundament.io: publishing
+# needs admin of the system org that owns the first-party plugins, so other dev
+# logins are refused.
 #
 #   export FUNDAMENT_TOKEN=$(./deploy/k3d/dev-token.sh)          # bash/zsh
 #   set -gx FUNDAMENT_TOKEN (./deploy/k3d/dev-token.sh)          # fish

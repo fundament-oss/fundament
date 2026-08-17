@@ -12,9 +12,8 @@ await fundament.init;
 
 const tbody = document.getElementById('rows');
 
-// A disk Ceph already consumes stops reporting as empty, so `available` alone
-// cannot tell "in use by us" from "in use by something else". claimedBy is what
-// distinguishes them.
+// A consumed disk stops reporting as empty, so `available` alone cannot tell
+// "in use by us" from "in use by something else". claimedBy can.
 function availabilityText(status) {
   if (status?.claimedBy) return `Claimed by ${status.claimedBy}`;
   if (status?.available) return 'Available';

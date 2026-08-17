@@ -12,14 +12,11 @@ import (
 	"github.com/fundament-oss/fundament/plugin-sdk/pluginruntime"
 )
 
-// fakeDigest is a valid-looking digest reference used to satisfy
-// ParseDefinition's requirement for a pinned image. The source definition.yaml
-// is an image-free template; publish time injects the real digest.
+// ParseDefinition requires a pinned image. The source definition.yaml is an
+// image-free template; publish injects the real digest.
 const fakeDigest = "ghcr.io/fundament-oss/fundament/ceph-rook-plugin@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
 
-// injectFakeImage sets spec.image on the raw YAML bytes so that
-// ParseDefinition (which requires a digest reference) can validate the
-// source definition template.
+// injectFakeImage sets spec.image so ParseDefinition can validate the template.
 func injectFakeImage(src []byte) ([]byte, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(src, &doc); err != nil {
@@ -39,7 +36,6 @@ func injectFakeImage(src []byte) ([]byte, error) {
 	if spec == nil || spec.Kind != yaml.MappingNode {
 		return nil, nil
 	}
-	// Set spec.image.
 	for i := 0; i+1 < len(spec.Content); i += 2 {
 		if spec.Content[i].Value == "image" {
 			spec.Content[i+1].Value = fakeDigest
@@ -70,7 +66,6 @@ func TestDefinition(t *testing.T) {
 	src, err := os.ReadFile("definition.yaml")
 	require.NoError(t, err, "definition.yaml must exist")
 
-	// Inject a fake digest so ParseDefinition can validate the source template.
 	withImage, err := injectFakeImage(src)
 	require.NoError(t, err)
 
@@ -130,8 +125,7 @@ func TestDefinition(t *testing.T) {
 		assert.NotEmpty(t, mapping.Detail, "Disk must have a detail page")
 	})
 
-	// The console files are useless unless the definition points the host at
-	// them. A page that exists on disk but is unreferenced here is unreachable.
+	// A page on disk that nothing references is unreachable.
 	t.Run("customComponents/every-page-is-referenced", func(t *testing.T) {
 		t.Parallel()
 		referenced := make(map[string]struct{})
@@ -154,9 +148,8 @@ func TestDefinition(t *testing.T) {
 	})
 }
 
-// pluginruntime.Run only registers the /console/ route for plugins that
-// implement ConsoleProvider. Without this the console/ directory is embedded
-// but never served, and the iframe 404s.
+// Run only registers /console/ for a ConsoleProvider; without it the embedded
+// files are never served and the iframe 404s.
 func TestPluginServesConsoleAssets(t *testing.T) {
 	t.Parallel()
 	plugin, err := NewPlugin()

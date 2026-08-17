@@ -275,8 +275,11 @@ spec:
 YAML
 ```
 
-`CEPH_IMAGE` and `ALLOW_UNSUPPORTED_CEPH` already default to the pair `rook-smoke.sh`
-validates, so leave them unless you are testing a different Ceph build.
+`CEPH_IMAGE` already defaults to the build `rook-smoke.sh` validates, so leave it unless
+you are testing a different one. `ALLOW_UNSUPPORTED_CEPH` defaults to `false` and should
+stay there: it turns off Rook's check that it knows how to drive the Ceph release it is
+given, and Rook v1.16 supports the default image's Squid (v19) line. Set it only when
+pairing the plugin with a Ceph build outside that table.
 
 :::caution[`DEV_LOOP_DEVICES` is a safety control, not a convenience]
 A k3d node is privileged and enumerates the Docker host's real disks, and they *do* reach
@@ -377,11 +380,16 @@ Expected, on this single-node cluster:
 ```yaml
 phase: Ready
 storageClassName: ceph-test-pool     # note the ceph- prefix
-replicas: 1                          # auto = min(3, nodes); one node -> 1
+replicas: 1                          # auto = min(3, cluster nodes with disks); one node -> 1
 failureDomain: osd                   # host domain needs >=2 replicas across >=2 nodes
 selectedDiskCount: 3
-rawCapacityBytes: 64418217984        # before replication
+rawCapacityBytes: 64418217984        # this pool's contribution, before replication
 ```
+
+`rawCapacityBytes` is the raw size of the disks this pool contributes, **not** its
+capacity — all pools share one OSD set and Ceph places data across every OSD in it. Ask
+Ceph for real free space (`ceph df` in the toolbox). A pool that resolves *no* disks
+reports `Degraded` with the reason in `status.message` and creates no `StorageClass`.
 
 `selectedDiskCount` is how many of `spec.disks` resolved, **not** how many OSDs are
 running. Check the OSDs separately:
@@ -618,7 +626,7 @@ To keep the disks for a future run, use `just storage-disks reset` instead of `p
 | No `Disk` CRs, ConfigMap has devices | Filter rejected them | `DEV_LOOP_DEVICES: "true"` needs `type: part` on `/dev/loopNpN` |
 | OSD prepare job: `unsupported diskType loop` | `allowLoopDevices` did not take | Confirm `DEV_LOOP_DEVICES` is set on the PluginInstallation |
 | Mons never reach quorum | 3 mons on one node | Set `MON_COUNT: "1"` and `ALLOW_MULTIPLE_PER_NODE: "true"` |
-| CephCluster rejected on version | Ceph release outside Rook's table | Leave `ALLOW_UNSUPPORTED_CEPH` at its default (`true`) |
+| CephCluster rejected on version | Ceph release outside Rook's table | Only if you overrode `CEPH_IMAGE`: set `ALLOW_UNSUPPORTED_CEPH: "true"` (default `false`) |
 | `csi-rbdplugin` CrashLoopBackOff | `rbd` kernel module missing | `just storage-disks doctor`; use colima |
 | PVC Pending, provisioner logs quiet | No OSD is up | `kubectl -n rook-ceph get pods -l app=rook-ceph-osd` |
 | `rbd: mapping succeeded but /dev/rbd0 is not accessible` | No `/dev` bind | Recreate with `just cluster-create-storage` |

@@ -11,6 +11,9 @@ import (
 // for more host-domain replicas than there are nodes to place them on. The
 // failure domain is "host" only when the result spans >=2 nodes; otherwise
 // "osd", so single-node clusters still provision.
+//
+// nodeCount is cluster-wide, not per-pool: a CephBlockPool has no CRUSH rule
+// confining it to one pool's disks. See the call site in reconcilePool.
 func ComputeReplication(requested string, nodeCount int) (replicas int, failureDomain string, message string) {
 	nodes := nodeCount
 	if nodes < 1 {
@@ -29,7 +32,7 @@ func ComputeReplication(requested string, nodeCount int) (replicas int, failureD
 	default:
 		replicas = want
 		if replicas > nodes {
-			message = fmt.Sprintf("requested %d, clamped to %d: only %d node(s) contribute disks", want, nodes, nodes)
+			message = fmt.Sprintf("requested %d, clamped to %d: only %d node(s) in the cluster contribute disks", want, nodes, nodes)
 			replicas = nodes
 		}
 	}

@@ -8,8 +8,8 @@ registry := "plugin-registry.localhost"
 registry_port := "5112"
 export kube_context := "k3d-" + cluster
 
-# Both binds are required; see docs/developer/fundament/k3d-block-devices.md. Off by default because
-# they expose the host's devices and only storage work needs them.
+# Both binds are required; see docs/developer/fundament/k3d-block-devices.md.
+# Off by default: they expose the host's devices.
 storage_volumes := "--volume /dev:/dev@server:0 --volume /run/udev:/run/udev:ro@server:0"
 
 _default:
@@ -25,17 +25,15 @@ cluster-create:
 cluster-create-storage:
     k3d cluster create --config=sandbox/k3d-config.yaml {{ storage_volumes }}
 
-# Start the cluster (creates if it doesn't exist), clearing any leftover cordon
-# uncordon is a no-op (and skips its node wait) unless storage disks were ever
-# attached on this machine, so this costs nothing for non-storage work.
+# Start the cluster (creates if it doesn't exist), clearing any leftover cordon.
+# uncordon is a no-op unless storage disks were ever attached.
 cluster-start:
     @k3d cluster list {{ cluster }} > /dev/null 2>&1 && k3d cluster start {{ cluster }} || just cluster-create
     CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh uncordon
 
-# Stop the cluster without deleting it, evicting Ceph consumers first if any.
-# drain returns immediately unless storage disks were ever attached; when they
-# were and a volume is still mapped it fails on purpose, because stopping then
-# wedges the Docker host. Do not add a `-` prefix here.
+# Stop the cluster, evicting Ceph consumers first. drain fails on purpose while a
+# volume is still mapped, because stopping then wedges the Docker host — so do not
+# add a `-` prefix here.
 cluster-stop:
     CLUSTER={{ cluster }} ../deploy/k3d/storage-disks.sh drain
     k3d cluster stop {{ cluster }}

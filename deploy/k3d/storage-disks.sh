@@ -12,19 +12,11 @@
 # Run without arguments for the commands. See docs/developer/fundament/k3d-block-devices.md for the
 # workflow, persistence and cleanup.
 #
-# TODO: single-node only. The sandbox is servers:1/agents:0 and this assumes it:
-#   1. `reset` clears /var/lib/rook on $NODE only, so agents would keep the
-#      stale Rook state that reset exists to remove.
-#   2. doctor/status/attach inspect $NODE only, so a missing /run/udev or an
-#      invisible device on an agent goes unreported.
-#   3. plugins/sandbox/k3d-config.yaml binds /dev and /run/udev with
-#      nodeFilters [server:0], so a cluster created with agents:2 leaves them
-#      unbound there (`k3d node create` does bind them, so the routes disagree).
-# Fix: enumerate nodes with `docker ps --filter label=k3d.cluster=$CLUSTER`
-# restricted to roles server/agent, loop over them, and widen the nodeFilters to
-# `all`. Loop devices are global kernel objects, so every node sees every disk
-# either way; a device-to-node convention would have to live in the plugin's
-# disk inventory or the docs, not here.
+# TODO: single-node only, and the sandbox (servers:1/agents:0) is why it works.
+# reset, doctor, status and attach all inspect $NODE alone, and k3d-config.yaml
+# binds /dev with nodeFilters [server:0]. To widen: enumerate nodes via
+# `docker ps --filter label=k3d.cluster=$CLUSTER` and set nodeFilters to `all`.
+# Loop devices are global kernel objects, so every node sees every disk anyway.
 set -euo pipefail
 
 CLUSTER="${CLUSTER:-fundament-plugin}"
@@ -42,10 +34,9 @@ log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m /!\\\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31mERR\033[0m %s\n' "$*" >&2; exit 1; }
 
-# Loop devices and kernel modules live in the kernel the Docker daemon runs on:
-# the VM on macOS, the machine itself on Linux. --pid=host enters that kernel's
-# PID 1 regardless of backend. --native is for rootless Docker, where the
-# container's PID 1 is not the host's.
+# Loop devices live in the kernel the Docker daemon runs on: the VM on macOS, the
+# machine itself on Linux. --pid=host enters that kernel's PID 1. --native is for
+# rootless Docker, where the container's PID 1 is not the host's.
 host_exec() {
     if [ "$NATIVE" = 1 ]; then
         sudo sh -s
@@ -55,9 +46,8 @@ host_exec() {
     fi
 }
 
-# Backing files go in a Docker volume so they land on the Docker data disk,
-# which is where a backend puts its bulk storage. A path under /var/lib would
-# instead land on the root filesystem, which is typically far smaller.
+# A Docker volume puts the backing files on the Docker data disk, where a backend
+# keeps its bulk storage; /var/lib would land on the much smaller root fs.
 disk_dir() {
     docker volume create "$DISK_VOLUME" >/dev/null
     docker volume inspect "$DISK_VOLUME" --format '{{.Mountpoint}}'
@@ -68,14 +58,12 @@ require_docker() {
     docker info >/dev/null 2>&1 || die "Docker daemon not reachable"
 }
 
-# True when this machine has ever had loop-backed disks attached. The backing
-# volume is created by `attach` and survives everything short of `purge`, so its
-# absence means no cluster here has ever run Ceph.
+# True when this machine has ever had loop-backed disks attached: the volume is
+# created by `attach` and survives everything short of `purge`.
 #
-# The lifecycle hooks (drain, uncordon) run on every `just cluster-start` and
-# `just cluster-stop`, including for people who never touch storage. This is a
-# cheap local query; without it those hooks would spin up a privileged helper
-# container to inspect the host kernel on every start and stop.
+# The drain/uncordon hooks run on every cluster-start and cluster-stop, including
+# for people who never touch storage. This cheap local query is what stops them
+# spinning up a privileged helper container every time.
 disks_present() {
     docker volume inspect "$DISK_VOLUME" >/dev/null 2>&1
 }
@@ -91,12 +79,9 @@ docker_daemon_is_local() {
     esac
 }
 
-# The virtualisation technology the Docker host runs on, "none" for bare metal,
-# or "unknown" when nothing answers.
-#
-# Probed inside the Docker host rather than on this machine, because DOCKER_HOST
-# can point somewhere else entirely -- a Mac driving a remote bare-metal Linux
-# box must still refuse.
+# The Docker host's virtualisation technology, "none" for bare metal, "unknown"
+# when nothing answers. Probed inside the host, not here: DOCKER_HOST can point
+# elsewhere, and a Mac driving a remote bare-metal box must still refuse.
 host_virt() {
     local virt
     virt="$(printf '%s\n' '
@@ -107,12 +92,10 @@ host_virt() {
                 *Virtual*|*VMware*|*KVM*|*QEMU*|*Hyper-V*) echo vm ;;
                 *) echo none ;;
             esac
-        # Neither probe fires on an aarch64 guest: there is no SMBIOS/DMI to read,
-        # and the minimal guests these backends ship (OrbStack, colima) have no
-        # systemd. That is every Docker backend on Apple Silicon, so without the
-        # two below the normal macOS setup reports "unknown" and gets refused.
-        # The device tree names the hypervisor; a virtio bus only exists under
-        # paravirtualisation.
+        # Neither probe fires on an aarch64 guest: no SMBIOS/DMI to read, and
+        # the minimal guests these backends ship have no systemd -- i.e. every
+        # Docker backend on Apple Silicon. The device tree names the hypervisor,
+        # and a virtio bus only exists under paravirtualisation.
         elif grep -qaiE "qemu|kvm|virt|apple|orbstack" /proc/device-tree/compatible 2>/dev/null; then
             echo device-tree
         elif [ -n "$(ls -A /sys/bus/virtio/devices 2>/dev/null)" ]; then
@@ -122,21 +105,18 @@ host_virt() {
         fi
     ' | host_exec | tr -d '[:space:]')"
 
-    # Last resort: macOS cannot run Linux containers without a VM, whatever the
-    # backend. Only trusted for a local daemon, and only once the in-guest
-    # probes have come back inconclusive.
+    # Last resort: macOS cannot run Linux containers without a VM. Trusted only
+    # for a local daemon, and only after the in-guest probes are inconclusive.
     if [ "$virt" = unknown ] && [ "$(uname -s)" = Darwin ] && docker_daemon_is_local; then
         virt=macos
     fi
     printf '%s\n' "$virt"
 }
 
-# Ceph in k3d puts block devices, filesystems and their kernel threads in the
-# Docker host's kernel. On a VM a mistake costs a VM restart; on a workstation an
-# RBD mapping can wedge unkillably (only a reboot clears it) and the privileged
-# node enumerates the real drives. Rook says the same: "Always use a virtual
-# machine when testing Rook. Never use your host system where local devices may
-# mistakenly be consumed."
+# Ceph in k3d puts block devices and their kernel threads in the Docker host's
+# kernel. On a VM a mistake costs a restart; on a workstation an RBD mapping can
+# wedge unkillably and the privileged node enumerates the real drives. Rook:
+# "Never use your host system where local devices may mistakenly be consumed."
 require_vm() {
     local virt; virt="$(host_virt)"
     case "$virt" in
@@ -174,10 +154,9 @@ EOF
     exit 1
 }
 
-# Whether the Docker host's kernel has a module, loading it if it is not already
-# in. Exposed as a command so rook-smoke.sh can decide what it is able to test:
-# 'rbd' maps block devices and 'ceph' mounts CephFS, and a kernel can ship one
-# without the other (OrbStack has rbd but not ceph).
+# Whether the host kernel has a module, loading it if not. A command so
+# rook-smoke.sh can decide what it can test: rbd maps block devices, ceph mounts
+# CephFS, and a kernel can ship one without the other (OrbStack has no ceph).
 has_module() {
     [ -n "${1:-}" ] || die "usage: has-module <name>"
     printf '%s\n' "[ -d /sys/module/$1 ] || modprobe $1 2>/dev/null" | host_exec >/dev/null 2>&1
@@ -258,8 +237,7 @@ partition() {
 
 # The OSD device is /dev/loopNp1 (type=part), never the bare /dev/loopN:
 # rook-discover does not report loop devices, so one never reaches the ConfigMap
-# the plugin's disk inventory reads. See docs/developer/fundament/k3d-block-devices.md for why the
-# upstream allowance does not fix this.
+# the disk inventory reads. See docs/developer/fundament/k3d-block-devices.md.
 attach() {
     require_docker
     require_vm
@@ -274,16 +252,12 @@ attach() {
         modprobe rbd 2>/dev/null || true
         modprobe ceph 2>/dev/null || true
         mkdir -p '$dir'
-        # The Docker host may ship BusyBox losetup rather than util-linux --
-        # OrbStack and colima both do -- and BusyBox has neither -j nor --show.
-        # What both implementations agree on: -a prints one \"/dev/loopN: ...\"
-        # line per association ending in the backing file (util-linux wraps it
-        # in parens), -f prints the next free device, and -P takes -f. So the
-        # file is looked up by parsing -a, and the device the kernel picked is
-        # read back the same way after associating.
-        # 'if', not '[ ] && ...': a failing test as the loop body's last command
-        # makes the loop exit non-zero, which under set -e kills the script the
-        # moment a backing file is not in the list -- i.e. every new disk.
+        # The host may ship BusyBox losetup (OrbStack, colima do), which has
+        # neither -j nor --show. Both implementations agree that -a prints one
+        # \"/dev/loopN: ...\" line per association ending in the backing file
+        # (util-linux parenthesises it), so associations are found by parsing -a.
+        # 'if', not '[ ] && ...': a failing test as the last command makes the
+        # loop exit non-zero, which under set -e kills the script.
         loop_for() {
             losetup -a 2>/dev/null | while IFS= read -r line; do
                 d=\${line%%:*}
@@ -318,10 +292,9 @@ attach() {
     " | host_exec)"
     [ -n "$loops" ] || die "no loop devices were attached"
 
-    # Herestring, not a pipe: this loop must run in the main shell so die works.
-    # 'if', not '[ ] && ...': the latter leaves the loop's exit status at 1 when
-    # the last device is already partitioned, and set -e then aborts a second
-    # (idempotent, no-op) attach with no message at all.
+    # Herestring, not a pipe: must run in the main shell so die works. 'if', not
+    # '[ ] && ...': that leaves exit status 1 when the last device is already
+    # partitioned, and set -e then aborts an idempotent re-attach silently.
     local dev state
     while read -r dev state; do
         if [ "$state" = raw ]; then partition "$dev"; fi
@@ -334,20 +307,15 @@ attach() {
     require_node_bind
 }
 
-# Without the bind a node's /dev is a snapshot taken at container start. Testing
-# for a device inside the node is not enough: the snapshot may already hold one
-# from before, and Ceph CSI would still fail later because it creates /dev/rbdN
-# only when a volume is mounted.
-#
-# Nor is the mount type a usable signal. It looks like it should be -- devtmpfs
-# for the real thing, tmpfs for a snapshot -- but a backend whose own /dev is a
-# tmpfs (OrbStack) reports tmpfs inside the node either way. The bind list on
-# the container definition is what actually distinguishes them.
+# Without the bind a node's /dev is a snapshot from container start. Probing for
+# a device inside the node cannot detect that: the snapshot may already hold one,
+# and CSI would still fail later, since it creates /dev/rbdN only on mount. Mount
+# type is no signal either -- a backend whose own /dev is a tmpfs (OrbStack)
+# reports tmpfs either way. Only the container's bind list distinguishes them.
 require_node_bind() {
     docker inspect "$NODE" >/dev/null 2>&1 || return 0
-    # Read the bind from the container definition rather than from inside it:
-    # a stopped node cannot be exec'd into, and that is not the same as a node
-    # without the bind.
+    # From the container definition, not from inside: a stopped node cannot be
+    # exec'd into, which is not the same as a node without the bind.
     docker inspect "$NODE" --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' 2>/dev/null \
         | grep -qx '/dev' && return 0
     die "$NODE has no /dev bind, so the cluster cannot use these disks.
@@ -381,11 +349,10 @@ status() {
     fi
 }
 
-# Our devices that something still holds, by open fd or by mount. This has to be
-# answered before detaching anything: BlueStore keeps its OSD device open, and
-# losetup -d on a held device reports success while only flagging autoclear, so
-# the kernel keeps both device and backing file alive. Trusting that exit status
-# would detach the idle devices and leave the cluster on a half-dismantled set.
+# Our devices that something still holds, by open fd or mount. Must be answered
+# before detaching: losetup -d on a held device reports success while only
+# flagging autoclear, so trusting its exit status would detach the idle devices
+# and leave the cluster on a half-dismantled set.
 busy_devices() {
     local dir="$1"
     printf '%s\n' "
@@ -416,8 +383,7 @@ detach() {
         return 1
     fi
     log "detaching loop devices for $dir"
-    # The post-check is authoritative: it catches both a refused detach and a
-    # deferred one.
+    # The post-check is authoritative: catches refused and deferred detaches.
     local out rc=0
     out="$(printf '%s\n' "
         losetup -a 2>/dev/null | grep -F '$dir' | cut -d: -f1 | while read -r dev; do
@@ -434,16 +400,11 @@ detach() {
     fi
 }
 
-# Ceph consumers must let go of their volumes while Ceph is still running to
-# service the unmounts -- Rook's documented order. kubectl drain waits for the
-# pods to actually be gone, which is what forces the teardown, and cordons so
-# nothing reschedules onto a cluster that is about to stop. The selector keeps
-# the Ceph daemons; the CSI pods carry no rook_cluster label, so what keeps
-# csi-rbdplugin -- which has to be there to do NodeUnstageVolume -- is
-# --ignore-daemonsets.
-# Safe to call on any cluster: a mapped device is the only thing that makes
-# stopping dangerous, so with none the drain is skipped entirely rather than
-# evicting the workloads of a cluster that never used storage.
+# Consumers must release their volumes while Ceph still runs to service the
+# unmounts -- Rook's documented order. drain waits for the pods to be gone, which
+# forces the teardown, and cordons so nothing reschedules. The selector keeps the
+# Ceph daemons; --ignore-daemonsets is what keeps csi-rbdplugin, which has to be
+# there for NodeUnstageVolume. Skipped entirely when nothing is mapped.
 drain() {
     command -v docker >/dev/null && docker info >/dev/null 2>&1 || return 0
     disks_present || return 0
@@ -471,17 +432,14 @@ drain() {
 }
 
 # After a stop that bypassed the drain, the mapping is what keeps the node
-# container from exiting: rbd retries re-registering its watch, a wait with no
-# timeout of its own. Removing the device ends it, and the container then stops
-# at once. The write blocks until teardown finishes, so it runs detached and the
-# device list is what we poll.
-# Requires the workload's I/O to have already been aborted -- see the StorageClass
-# mapOptions in rook-smoke.sh; without that the freeze never completes.
+# container alive: rbd retries its watch registration with no timeout. Removing
+# the device ends it. The write blocks until teardown finishes, so it runs
+# detached and we poll the device list. Needs the workload's I/O already aborted
+# (see the StorageClass mapOptions in rook-smoke.sh) or the freeze never ends.
 unmap_stale() {
     require_docker
-    # A wedged node stays Status=running and refuses to stop, so that flag cannot
-    # tell "live" from "stuck". Entering it can: the stuck mapping pins the dead
-    # container's namespaces, so exec fails where a healthy node answers.
+    # A wedged node stays Status=running, so that cannot tell live from stuck.
+    # exec can: the stuck mapping pins the namespaces, so entering it fails.
     if docker inspect -f '{{.State.Running}}' "$NODE" 2>/dev/null | grep -qx true &&
        docker exec "$NODE" true >/dev/null 2>&1; then
         die "$NODE is live -- unmapping now would pull the device out from
@@ -507,24 +465,20 @@ unmap_stale() {
       Restart the Docker host to clear it (on macOS: colima restart)."
 }
 
-# A k3d restart clears the cordon on its own, so this covers a drain that was
-# not followed by one: an aborted stop, a failed delete, or a manual drain.
+# k3d restart clears the cordon itself; this covers a drain without one.
 uncordon() {
     command -v docker >/dev/null && docker info >/dev/null 2>&1 || return 0
     disks_present || return 0
     local ctx="k3d-$CLUSTER"
-    # Only this path waits for the node: nothing can be uncordoned before the
-    # API server answers, and a cluster that never had disks should not pay for
-    # the wait at all.
+    # Only this path waits for the API server, and only when disks exist.
     kubectl --context "$ctx" wait --for=condition=Ready node --all --timeout=300s >/dev/null 2>&1 || return 0
     kubectl --context "$ctx" get node "$NODE" >/dev/null 2>&1 || return 0
     kubectl --context "$ctx" uncordon "$NODE"
 }
 
-# Removes the disks for good, which nothing else does: reset recreates them and
-# detach keeps the files. Detaching first is not optional -- deleting an image
-# while its loop device is still attached frees no space, because the kernel
-# keeps the deleted inode alive until the device goes away.
+# Removes the disks for good; reset recreates them and detach keeps the files.
+# Detaching first is not optional: deleting an image while its loop device is
+# attached frees no space, since the kernel keeps the inode alive.
 purge() {
     require_docker
     detach || die "refusing to delete the images while they are still in use"
@@ -533,8 +487,8 @@ purge() {
     echo "  removed"
 }
 
-# Stale OSD metadata on the images, or Rook state under dataDirHostPath, is the
-# usual reason a second install attempt fails.
+# Stale OSD metadata or Rook state under dataDirHostPath is the usual reason a
+# second install attempt fails.
 reset() {
     require_docker
     detach || die "refusing to wipe the images while they are still in use"

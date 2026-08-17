@@ -31,15 +31,13 @@ type DiskInventoryReconciler struct {
 	LoopDevices bool
 }
 
-// SetupWithManager registers the reconciler with the controller-runtime manager.
+// SetupWithManager registers the reconciler with the manager.
 //
-// The ConfigMap watch is filtered to the Rook namespace's discovery ConfigMaps.
-// StoragePools are watched too, mapped back to every discovery ConfigMap: a pool
-// being created or deleted changes which disks are claimed, and claimedBy is
-// what the console's disk picker filters on. Without this watch a disk stays
-// "unclaimed" in the UI until the discovery daemon happens to rewrite its
-// ConfigMap (default interval: 60m), long enough for an operator to hand the
-// same disk to a second pool.
+// StoragePools are watched too, mapped back to every discovery ConfigMap, because
+// a pool changes which disks are claimed and claimedBy is what the console's
+// picker filters on. Without it a disk stays "unclaimed" in the UI until the
+// discovery daemon rewrites its ConfigMap (default 60m) -- long enough to hand
+// the same disk to a second pool.
 func (r *DiskInventoryReconciler) SetupWithManager(mgr manager.Manager) error {
 	discoverPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if obj.GetNamespace() != r.RookNamespace {
@@ -57,12 +55,11 @@ func (r *DiskInventoryReconciler) SetupWithManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
-// discoverAppLabel is the label rook-discover puts on the per-node ConfigMaps
-// it writes its probe results to.
+// discoverAppLabel is what rook-discover labels its per-node ConfigMaps with.
 const discoverAppLabel = "rook-discover"
 
 // poolToDiscoveryConfigMaps maps a StoragePool event onto every discovery
-// ConfigMap, so each node's Disk CRs get their claimedBy recomputed.
+// ConfigMap, so every node's claimedBy is recomputed.
 func (r *DiskInventoryReconciler) poolToDiscoveryConfigMaps(ctx context.Context, _ client.Object) []reconcile.Request {
 	var cms corev1.ConfigMapList
 	err := r.Client.List(ctx, &cms,
@@ -87,11 +84,9 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	var cm corev1.ConfigMap
 	if err := r.Client.Get(ctx, req.NamespacedName, &cm); err != nil {
 		if apierrors.IsNotFound(err) {
-			// The node left the cluster, so rook deleted its discovery
-			// ConfigMap. Nothing will ever report those devices again; without
-			// this they would stay available=true forever and the console would
-			// keep offering disks on a node that no longer exists. The labels
-			// are gone with the object, but the name still carries the node.
+			// The node left, so rook deleted its ConfigMap. Without this the
+			// disks stay available=true forever and the console keeps offering
+			// them. The labels went with the object; the name still has the node.
 			node := nodeFromConfigMap(req.Name, nil)
 			if err := r.softDeleteStale(ctx, node, nil); err != nil {
 				return ctrl.Result{}, fmt.Errorf("soft-delete disks for departed node %q: %w", node, err)
@@ -109,13 +104,11 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("parse discovered devices for node %q: %w", node, err)
 	}
 
-	// Build a lookup of all StoragePools so we can resolve ClaimedBy.
 	claimedBy, err := r.buildClaimedByIndex(ctx)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("build claimed-by index: %w", err)
 	}
 
-	// Upsert a Disk CR for every discovered device.
 	seenNames := make(map[string]struct{}, len(statuses))
 	for _, st := range statuses {
 		name := DiskName(node, DeviceKey(st))
@@ -136,7 +129,6 @@ func (r *DiskInventoryReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 // nodeFromConfigMap derives the node name from the ConfigMap's labels or name.
-// It is exported as a package-level helper so it can be unit-tested cheaply.
 func nodeFromConfigMap(name string, labels map[string]string) string {
 	if node, ok := labels["rook.io/node"]; ok && node != "" {
 		return node
@@ -144,10 +136,8 @@ func nodeFromConfigMap(name string, labels map[string]string) string {
 	return strings.TrimPrefix(name, "local-device-")
 }
 
-// buildClaimedByIndex lists all StoragePools and returns a map from disk name
-// to the StoragePool entitled to it. Precedence when several pools list the
-// same disk is decided by BuildClaimIndex, so the inventory and the StoragePool
-// reconciler always agree on who owns what.
+// buildClaimedByIndex maps disk name to the StoragePool entitled to it. Uses
+// BuildClaimIndex, so the inventory and the StoragePool reconciler always agree.
 func (r *DiskInventoryReconciler) buildClaimedByIndex(ctx context.Context) (map[string]string, error) {
 	var pools v1alpha1.StoragePoolList
 	if err := r.Client.List(ctx, &pools); err != nil {
@@ -156,8 +146,7 @@ func (r *DiskInventoryReconciler) buildClaimedByIndex(ctx context.Context) (map[
 	return BuildClaimIndex(pools.Items), nil
 }
 
-// upsertDisk creates or updates the Disk object and then writes the status via
-// the status subresource.
+// upsertDisk creates or updates the Disk, then writes status.
 func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, st v1alpha1.DiskStatus) error {
 	disk := &v1alpha1.Disk{
 		ObjectMeta: metav1.ObjectMeta{
@@ -166,14 +155,12 @@ func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, s
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, disk, func() error {
-		// DiskSpec is intentionally empty; nothing to mutate on the spec.
 		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("create-or-update Disk %q: %w", name, err)
 	}
 
-	// Re-fetch to get the current resource version before patching status.
 	var current v1alpha1.Disk
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, &current); err != nil {
 		return fmt.Errorf("get Disk %q for status update: %w", name, err)
@@ -188,10 +175,9 @@ func (r *DiskInventoryReconciler) upsertDisk(ctx context.Context, name string, s
 	return nil
 }
 
-// softDeleteStale marks any Disk belonging to node that is no longer seen as
-// Available=false. It never calls Delete — repo policy is soft deletes only.
-// A nil seen set means nothing on the node is reported any more, which is what
-// a departed node looks like.
+// softDeleteStale marks Disks on node that are no longer reported as
+// Available=false. Never Delete -- repo policy is soft deletes only. A nil seen
+// set means nothing is reported, which is what a departed node looks like.
 func (r *DiskInventoryReconciler) softDeleteStale(ctx context.Context, node string, seen map[string]struct{}) error {
 	var allDisks v1alpha1.DiskList
 	if err := r.Client.List(ctx, &allDisks); err != nil {
@@ -206,7 +192,6 @@ func (r *DiskInventoryReconciler) softDeleteStale(ctx context.Context, node stri
 		if _, ok := seen[disk.Name]; ok {
 			continue
 		}
-		// This disk was on the node but is no longer reported — mark unavailable.
 		if disk.Status.Available {
 			disk.Status.Available = false
 			if err := r.Client.Status().Update(ctx, disk); err != nil {

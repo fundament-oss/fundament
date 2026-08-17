@@ -8,6 +8,7 @@ import (
 	"time"
 
 	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -90,7 +91,7 @@ func (r *StoragePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			// next resync. controller-runtime delivers the delete event after
 			// the cache has dropped the object, so the List below no longer
 			// returns it.
-			if err := r.reconcileCephClusterNodes(ctx); err != nil {
+			if _, err := r.reconcileCephClusterNodes(ctx); err != nil {
 				return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes after deleting StoragePool %s: %w", req.Name, err)
 			}
 			return ctrl.Result{}, nil
@@ -101,7 +102,7 @@ func (r *StoragePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// A pool being deleted has already released its claims; recompute the union
 	// without it and rely on owner-reference GC for the rest.
 	if !pool.DeletionTimestamp.IsZero() {
-		if err := r.reconcileCephClusterNodes(ctx); err != nil {
+		if _, err := r.reconcileCephClusterNodes(ctx); err != nil {
 			return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes while deleting StoragePool %s: %w", pool.Name, err)
 		}
 		return ctrl.Result{}, nil
@@ -119,23 +120,42 @@ func (r *StoragePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 // reconcilePool does the work for a live StoragePool.
 func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha1.StoragePool) (ctrl.Result, error) {
-	// Step 2: Resolve this pool's spec.disks into DiskStatus values.
+	// Step 2: Resolve this pool's spec.disks. This is its contribution to the
+	// shared OSD set, and what selectedDiskCount/rawCapacityBytes report.
 	selected, notes, err := r.resolveDisks(ctx, pool)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("resolve disks for StoragePool %s: %w", pool.Name, err)
 	}
 
-	// Step 3: Compute replication from this pool's selected disks.
-	nodeCount := DistinctNodeCount(selected)
-	replicas, domain, msg := ComputeReplication(pool.Spec.Replication, nodeCount)
-	if msg != "" {
-		notes = append([]string{msg}, notes...)
+	// Step 3: Set the singleton CephCluster's spec.storage.nodes to the union of
+	// all pools' disks, so pools don't clobber each other.
+	union, err := r.reconcileCephClusterNodes(ctx)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes: %w", err)
 	}
 
-	// Step 4: Update the singleton CephCluster's spec.storage.nodes with the
-	// union of all pools' disks so that pools don't clobber each other.
-	if err := r.reconcileCephClusterNodes(ctx); err != nil {
-		return ctrl.Result{}, fmt.Errorf("reconcile CephCluster nodes: %w", err)
+	// A CephBlockPool over zero OSDs never leaves Provisioning, and its
+	// StorageClass leaves every PVC Pending. Report it instead of creating them;
+	// the Disk and StoragePool watches will wake us when it can be fixed.
+	if len(selected) == 0 {
+		status := pool.Status
+		status.Phase = v1alpha1.PhaseDegraded
+		status.Replicas, status.FailureDomain = 0, ""
+		status.SelectedDiskCount, status.RawCapacityBytes = 0, 0
+		status.Message = emptyPoolMessage(pool, notes)
+		return ctrl.Result{}, r.writeStatus(ctx, pool, status)
+	}
+
+	// Step 4: Size replication on the cluster's nodes, not this pool's. The
+	// derived CephBlockPool carries no CRUSH rule confining it to the pool's
+	// disks, so every OSD is a placement candidate and the cluster's host count
+	// is what bounds a replica count. Sizing off the pool's own disks would cap a
+	// single-disk pool at replicas=1 — waiving the size-1 safety check to
+	// advertise no redundancy — while Ceph replicated it across all hosts anyway.
+	clusterNodeCount := DistinctNodeCount(union)
+	replicas, domain, msg := ComputeReplication(pool.Spec.Replication, clusterNodeCount)
+	if msg != "" {
+		notes = append([]string{msg}, notes...)
 	}
 
 	derived := DerivedName(pool.Name)
@@ -180,6 +200,18 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 		return ctrl.Result{RequeueAfter: provisioningRequeue}, nil
 	}
 	return ctrl.Result{}, nil
+}
+
+// emptyPoolMessage explains why a pool resolved no disks. An empty spec.disks
+// produces no notes, which would otherwise leave the message blank.
+func emptyPoolMessage(pool *v1alpha1.StoragePool, notes []string) string {
+	if len(notes) > 0 {
+		return "no usable disks: " + strings.Join(notes, "; ")
+	}
+	if len(pool.Spec.Disks) == 0 {
+		return "no disks selected: add disks to spec.disks"
+	}
+	return "no usable disks"
 }
 
 // writeStatus persists status via the status subresource, refetching first so a
@@ -277,11 +309,13 @@ func (r *StoragePoolReconciler) resolveDisks(ctx context.Context, pool *v1alpha1
 }
 
 // reconcileCephClusterNodes loads the singleton CephCluster and sets
-// spec.storage.nodes to the union of all live StoragePools' disks.
-func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) error {
+// spec.storage.nodes to the union of all live StoragePools' disks. It returns
+// that union: the disks behind every OSD in the cluster, which is what callers
+// size replication against.
+func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) ([]v1alpha1.DiskStatus, error) {
 	var pools v1alpha1.StoragePoolList
 	if err := r.Client.List(ctx, &pools); err != nil {
-		return fmt.Errorf("list StoragePools: %w", err)
+		return nil, fmt.Errorf("list StoragePools: %w", err)
 	}
 
 	// Deduplicate by (node, path) so a disk listed in multiple pools isn't doubled.
@@ -300,7 +334,7 @@ func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) e
 				continue
 			}
 			if err != nil {
-				return fmt.Errorf("get Disk %q: %w", name, err)
+				return nil, fmt.Errorf("get Disk %q: %w", name, err)
 			}
 			// Keyed on the same reference that goes into the CephCluster, so two
 			// Disk CRs that resolve to one device collapse to one entry.
@@ -322,21 +356,27 @@ func (r *StoragePoolReconciler) reconcileCephClusterNodes(ctx context.Context) e
 	err := r.Client.Get(ctx, types.NamespacedName{Namespace: r.ClusterNamespace, Name: cephClusterName}, cc)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// CephCluster not yet created; skip for now.
-			return nil
+			// Not created yet. The union still stands; it describes the pools.
+			return union, nil
 		}
-		return fmt.Errorf("get CephCluster: %w", err)
+		return nil, fmt.Errorf("get CephCluster: %w", err)
+	}
+
+	// Skip the identical write, for the same reason writeStatus does.
+	if current, found, err := unstructured.NestedSlice(cc.Object, "spec", "storage", "nodes"); err == nil &&
+		found && equality.Semantic.DeepEqual(current, nodesIface) {
+		return union, nil
 	}
 
 	// Set only spec.storage.nodes; do not touch other fields.
 	if err := unstructured.SetNestedSlice(cc.Object, nodesIface, "spec", "storage", "nodes"); err != nil {
-		return fmt.Errorf("set CephCluster spec.storage.nodes: %w", err)
+		return nil, fmt.Errorf("set CephCluster spec.storage.nodes: %w", err)
 	}
 
 	if err := r.Client.Update(ctx, cc); err != nil {
-		return fmt.Errorf("update CephCluster: %w", err)
+		return nil, fmt.Errorf("update CephCluster: %w", err)
 	}
-	return nil
+	return union, nil
 }
 
 // storageNodesToInterface converts []map[string]any to []interface{} as

@@ -8,12 +8,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// unstructuredNestedInt64 wraps unstructured.NestedInt64 for easier testing.
 func unstructuredNestedInt64(obj map[string]any, fields ...string) (int64, bool, error) {
 	return unstructured.NestedInt64(obj, fields...)
 }
 
-// unstructuredNestedString wraps unstructured.NestedString for easier testing.
 func unstructuredNestedString(obj map[string]any, fields ...string) (string, bool, error) {
 	return unstructured.NestedString(obj, fields...)
 }
@@ -39,7 +37,7 @@ func TestRenderCephBlockPool(t *testing.T) {
 }
 
 // Ceph rejects a size-1 pool unless the safe-replica check is waived, which is
-// what a single-node cluster gets from `replication: auto`.
+// what `replication: auto` yields on one node.
 func TestRenderCephBlockPoolSingleReplica(t *testing.T) {
 	u := RenderCephBlockPool("rook-ceph", "pool-a", 1, "osd")
 

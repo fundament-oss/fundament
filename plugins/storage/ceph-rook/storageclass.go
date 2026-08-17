@@ -6,25 +6,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RBDProvisioner is the CSI driver name for a Rook operator installed in
-// rookNamespace.
+// RBDProvisioner is the CSI driver name for a Rook operator in rookNamespace.
 //
-// Rook registers its CSI drivers as "<operator namespace>.rbd.csi.ceph.com", so
-// this must follow FUNP_ROOK_NAMESPACE and not the CephCluster's namespace --
-// the two are configured separately and only happen to share a default. A
-// StorageClass naming a driver nobody registered does not fail: PVCs simply sit
-// in Pending forever with nothing to attribute it to.
+// Rook registers drivers as "<operator namespace>.rbd.csi.ceph.com", so this
+// follows FUNP_ROOK_NAMESPACE, not the CephCluster's -- the two only share a
+// default. Naming an unregistered driver does not fail; PVCs just sit Pending.
 func RBDProvisioner(rookNamespace string) string {
 	return rookNamespace + ".rbd.csi.ceph.com"
 }
 
-// RenderStorageClass constructs a Kubernetes StorageClass for Rook Ceph RBD provisioning.
-// It configures the standard Rook RBD CSI parameters with the given cluster namespace
-// and block pool name.
-//
-// clusterNamespace is where the CephCluster and its CSI secrets live (it is also
-// the CSI clusterID); rookNamespace is where the operator runs, which is what
-// names the driver.
+// RenderStorageClass builds the RBD StorageClass. clusterNamespace holds the
+// CephCluster and its CSI secrets and is the clusterID; rookNamespace runs the
+// operator and names the driver.
 func RenderStorageClass(name, clusterNamespace, blockPoolName, rookNamespace string) *storagev1.StorageClass {
 	reclaim := corev1.PersistentVolumeReclaimDelete
 	allowExpansion := true
