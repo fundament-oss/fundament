@@ -64,6 +64,7 @@ interface PlacementInfo {
   slotType: RackSlotType;
   uSize: number;
   deviceType: ReturnType<typeof categoryToDeviceType>;
+  category: string;
 }
 
 type InvalidFields = Record<string, string>;
@@ -465,6 +466,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
             slotType: loc.rackSlotType,
             uSize: parseRackHeight(catalog?.specs),
             deviceType: categoryToDeviceType(catalog?.category),
+            category: catalog?.category ?? '',
           },
         ];
       });
@@ -486,6 +488,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
       id: p.placementId,
       name: p.assetTag,
       type: p.deviceType,
+      category: p.category,
       uSize: p.uSize,
       uStart: p.rackUnitStart,
       state: 'allocated',
@@ -599,15 +602,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
    * came out as "Switch" and said nothing about being down. The type is a tag
    * behind the name, the state a dot on the right.
    */
-  readonly deviceTypeText = (device: RackDevice): string => {
-    const types: Record<DeviceType, string> = {
-      machine: 'Machine',
-      switch: 'Switch',
-      patch: 'Patch panel',
-      pdu: 'PDU',
-    };
-    return types[device.type];
-  };
+  readonly deviceTypeText = (device: RackDevice): string => device.category ?? '';
 
   /** The colours the legend gave the types, by their design system name. */
   readonly deviceTypeColor = (device: RackDevice): string => {

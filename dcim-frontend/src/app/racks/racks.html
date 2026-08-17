@@ -53,12 +53,13 @@
                    product wears its category. What state it is in is a
                    different question and rides on the right. -->
               <nldd-text-cell width="full" min-width="140px"
-                >{{ device.name }}&ngsp;<nldd-tag
-                  size="sm"
-                  [attr.color]="deviceTypeColor(device)"
-                  [attr.text]="deviceTypeText(device)"
-                ></nldd-tag
-              ></nldd-text-cell>
+                >{{ device.name }}@if (deviceTypeText(device); as category) {&ngsp;<nldd-tag
+                    size="sm"
+                    [attr.color]="deviceTypeColor(device)"
+                    [attr.text]="category"
+                  ></nldd-tag>
+                }</nldd-text-cell
+              >
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-cell width="fit-content">
                 <nldd-text>

@@ -28,7 +28,7 @@ import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
-import categoryIcon, { AssetCategory } from '../../shared/asset-category';
+import categoryIcon from '../../shared/asset-category';
 import CatalogNavComponent from '../catalog-nav';
 import { CATALOG_PATH, catalogViewTitle, isCatalogView } from '../catalog-views';
 import SecondaryNavService from '../../shell/secondary-nav.service';
@@ -536,12 +536,12 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
   }
 
   /** The numbers behind a port, as one line: 25 Gbps · 15 W. */
-  portRating(pd: PortDefinition): string {
+  readonly portRating = (pd: PortDefinition): string => {
     const parts: string[] = [];
     if (pd.speedGbps !== null && pd.speedGbps !== undefined) parts.push(`${pd.speedGbps} Gbps`);
     if (pd.powerWatts !== null && pd.powerWatts !== undefined) parts.push(`${pd.powerWatts} W`);
     return parts.join(' · ');
-  }
+  };
 
   readonly compatibleEntryName = (entryId: string): string =>
     this.allCatalogEntries().find((e) => e.id === entryId)?.model ?? entryId;
