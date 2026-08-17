@@ -54,7 +54,7 @@ const ICONS: Record<AssetCategory, string> = {
   Switch: 'network-switch',
   Storage: 'storage',
   Power: 'power',
-  Firewall: 'shield-check-mark',
+  Firewall: 'firewall',
   Cooling: 'cooling',
   KVM: 'kvm-switch',
   Memory: 'memory',

@@ -27,12 +27,12 @@ import TaskAttentionService from '../tasks/task-attention.service';
  * are racks. They used to be a stack of folders, a stack of layers and the
  * database cylinder, which all said "files" about a hall full of hardware.
  *
- * Inventory borrows the box until it has an icon of its own, and patch mapping
- * keeps the list it never fitted.
+ * Inventory is a clipboard with a list on it: what you own, counted. Patch
+ * mapping draws the cable runs themselves.
  */
 const SECTIONS = [
   { text: 'Catalog', icon: 'books', path: '/catalog' },
-  { text: 'Inventory', icon: 'file-box', path: '/inventory' },
+  { text: 'Inventory', icon: 'inventory-alt', path: '/inventory' },
   { text: 'Data centers', icon: 'buildings', path: '/datacenters' },
   { text: 'Racks', icon: 'rack-servers', path: '/racks' },
   { text: 'Patch mapping', icon: 'network-patch-mapping', path: '/patch-mapping' },

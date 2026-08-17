@@ -7,9 +7,12 @@
       <nldd-container padding-left="16" padding-right="8" padding-block="8">
         <nldd-toolbar label="Application">
           <nldd-toolbar-title slot="start" text="Fundament DCIM" href="/">
-            <!-- The same mark as the favicon, so the tab and the toolbar say the
-                 same thing. Empty alt because the name stands beside it. -->
-            <img slot="media" src="/img/favicon.svg" alt="" height="32" />
+            <!-- The same mark as the favicon and the same file as the console
+                 toolbar, so the tab, this bar and the other app all say the same
+                 thing at the same size. The favicon itself is a fixed 24 square
+                 without a viewBox, so it painted at 24 inside a 32 box here.
+                 Empty alt because the name stands beside it. -->
+            <img slot="media" src="/img/fundament-logo.svg" alt="" height="32" />
           </nldd-toolbar-title>
           <!-- Everything about your own account in one place: who you are, how
                the app looks and the way out. The theme was a control of its own
@@ -129,6 +132,11 @@
                       ></nldd-badge>
                     </nldd-cell>
                   }
+                  <!-- The dot is a badge without a number, so it is 12 wide
+                       where a one-digit badge is 20. Right-aligned that puts its
+                       middle 4 pixels further right than the middle of the badge
+                       above it, which is what the eye follows down a column of
+                       rows. The spacer gives those 4 back. -->
                   @if (item.path === '/datacenters' && health.worstColor(); as color) {
                     <nldd-cell width="fit-content">
                       <nldd-badge
@@ -136,6 +144,7 @@
                         [attr.accessible-label]="'Data centers: ' + health.worst()"
                       ></nldd-badge>
                     </nldd-cell>
+                    <nldd-spacer-cell size="4"></nldd-spacer-cell>
                   }
                 </nldd-list-item>
               }
