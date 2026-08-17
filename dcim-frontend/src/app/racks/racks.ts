@@ -20,6 +20,8 @@ import SecondaryNavService from '../shell/secondary-nav.service';
 import RackApiService from './rack-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
 import DatacenterListService from '../datacenters/datacenter-list.service';
+import RackListService, { RackListItem } from './rack-list.service';
+import RackNavComponent from './rack-nav';
 import InventoryApiService from '../inventory/inventory-api.service';
 import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
@@ -29,14 +31,6 @@ import { RackRow, Room } from '../datacenters/datacenter.model';
 import { RackSlotType } from '../../generated/v1/common_pb';
 import parseValidationError from '../../connect/validation';
 import { categoryToDeviceType, parseRackHeight } from './catalog-helpers';
-
-interface RackListItem extends Rack {
-  usedU: number;
-  freeU: number;
-  totalPowerW: number;
-  deviceCount: number;
-  rowId: string;
-}
 
 interface RowOption {
   id: string;
@@ -233,6 +227,7 @@ interface RackRowItem {
   templateUrl: './racks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RackNavComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
@@ -266,12 +261,15 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     initialValue: this.route.snapshot.paramMap.get('rackId'),
   });
 
-  searchQuery = signal('');
-
   activeModal = signal<'notes' | 'history' | null>(null);
 
   // ── Mutable rack list (per selected DC) ────────────────────────────────────
-  readonly mutableRacks = signal<RackListItem[]>([]);
+  private readonly rackList = inject(RackListService);
+
+  /** The list this section shares with the menu and the device page. */
+  readonly mutableRacks = this.rackList.racks;
+
+  readonly racksLoaded = this.rackList.loaded;
 
   // Placements keyed by rack id. Loaded on demand via ListPlacementsByRack.
   readonly placementsByRack = signal<Map<string, PlacementInfo[]>>(new Map());
@@ -283,7 +281,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
    *  above the racks is filled the moment this page opens. */
   readonly mutableDcs = this.dcList.datacenters;
 
-  readonly selectedDcId = signal('');
+  readonly selectedDcId = this.rackList.selectedDcId;
 
   // ── Row options for the create-rack form (rooms + rows in the selected DC) ─
   readonly rowOptions = signal<RowOption[]>([]);
@@ -335,7 +333,23 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     () => this.mutableDcs().find((dc) => dc.id === this.currentDC())?.name ?? '',
   );
 
+  /** ?new=1 means "the create form is open". The menu sets it when you press
+   *  Add rack on a page that does not have this form, and it is read here
+   *  rather than in ngOnInit because both addresses share one route: coming
+   *  from a rack, this component is reused and never starts again. */
+  private readonly createRequested = toSignal(
+    this.route.queryParamMap.pipe(map((params) => params.has('new'))),
+    { initialValue: this.route.snapshot.queryParamMap.has('new') },
+  );
+
   constructor() {
+    effect(() => {
+      if (!this.createRequested()) return;
+      untracked(() => {
+        this.openCreateRack();
+        this.router.navigate([], { queryParams: {}, replaceUrl: true });
+      });
+    });
     // A rack always stands in a data center, so the list opens in one: the
     // first, until you pick another.
     effect(() => {
@@ -358,15 +372,15 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
       if (rackId) this.reloadDevicesForRack(rackId);
     });
 
-    // The page always shows a rack of the data center you are in: the first,
-    // unless the address names one. Switching data center leaves the address
-    // pointing at a rack that is no longer in the list, which counts as none.
+    // Nothing opens on its own: /racks is the list, and which rack is open is
+    // what the address says. Switching data center leaves the address pointing
+    // at a rack that is not in the list any more, and that clears it.
     effect(() => {
       const racks = this.mutableRacks();
       const id = this.currentRackId();
-      if (racks.length === 0) return;
-      if (!id || !racks.some((rack) => rack.id === id)) {
-        this.router.navigate(['/racks', racks[0].id], { replaceUrl: true });
+      if (!id || racks.length === 0) return;
+      if (!racks.some((rack) => rack.id === id)) {
+        untracked(() => this.router.navigate(['/racks'], { replaceUrl: true }));
       }
     });
     effect(() => {
@@ -404,30 +418,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   private reloadRacks(dcId: string): void {
-    firstValueFrom(this.rackApi.listRacksBySite(dcId))
-      .then((res) => {
-        const racks: RackListItem[] = res.racks.flatMap((summary): RackListItem[] => {
-          const rack = summary.rack;
-          if (!rack) return [];
-          return [
-            {
-              id: rack.id,
-              name: rack.name,
-              dcId,
-              rowId: rack.rowId,
-              totalU: rack.totalUnits,
-              devices: [] as RackDevice[],
-              usedU: summary.usedUnits,
-              freeU: summary.freeUnits,
-              totalPowerW: summary.powerDrawW,
-              deviceCount: summary.deviceCount,
-            },
-          ];
-        });
-        untracked(() => this.mutableRacks.set(racks));
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    this.rackList.load(dcId);
   }
 
   private async reloadDevicesForRack(rackId: string): Promise<void> {
@@ -511,10 +502,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     }
   }
 
-  readonly filteredRacks = computed(() => {
-    const q = this.searchQuery().toLowerCase();
-    return this.mutableRacks().filter((r) => !q || r.name.toLowerCase().includes(q));
-  });
 
   readonly currentRack = computed(() => {
     const id = this.currentRackId();
@@ -661,8 +648,22 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
+  /** The data center the form is making a rack in. It opens on the one you are
+   *  looking at, and picking another one reloads the rows to choose from. */
+  readonly formDcId = signal('');
+
+  onFormDcToggle(id: string, selected: boolean): void {
+    if (!selected || id === this.formDcId()) return;
+    this.formDcId.set(id);
+    this.reloadRowOptions(id);
+    const el = this.fRackRowId()?.nativeElement;
+    if (el) el.value = '';
+  }
+
   openCreateRack(): void {
     this.clearRackErrors();
+    this.formDcId.set(this.currentDC());
+    this.reloadRowOptions(this.currentDC());
     this.editRack.set({
       id: '',
       name: '',
@@ -898,7 +899,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   selectDC(dc: string): void {
-    this.searchQuery.set('');
     this.activeModal.set(null);
     this.selectedDcId.set(dc);
     // No navigation here: the rack in the address is not in this data center,

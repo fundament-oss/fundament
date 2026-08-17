@@ -1,7 +1,7 @@
 <!-- One machine, in one column: the same shape as the pages it hangs under.
      The drawing of the rack that used to stand beside it is gone: the page you
      came from is that drawing, and it said the same thing twice. -->
-<nldd-page sticky-header>
+<nldd-page sticky-header style="--context-back-button-display: flex">
   <nldd-top-title-bar
     slot="header"
     [attr.text]="device()?.name ?? 'Device'"
@@ -56,9 +56,10 @@
           <nldd-text-cell width="180px" text="State"></nldd-text-cell>
           <nldd-cell width="full" horizontal-alignment="right">
             <nldd-text>
-              <nldd-badge decorative [attr.color]="stateTagColor(dev.state)"></nldd-badge>&ngsp;{{
-                dev.state
-              }}
+              <nldd-badge
+                decorative
+                [attr.color]="stateTagColor(dev.state)"
+              ></nldd-badge>&ngsp;{{ stateLabel(dev.state) }}
             </nldd-text>
           </nldd-cell>
         </nldd-list-item>
@@ -162,7 +163,7 @@
                 <nldd-badge
                   decorative
                   [attr.color]="powerTagColor(ipmi.powerstate)"
-                ></nldd-badge>&ngsp;{{ ipmi.powerstate }}
+                ></nldd-badge>&ngsp;{{ ipmi.powerstate === 'ON' ? 'On' : 'Off' }}
               </nldd-text>
             </nldd-cell>
           </nldd-list-item>
@@ -214,7 +215,6 @@
         <nldd-spacer size="24"></nldd-spacer>
         <nldd-title size="4">
           <h2>Connections</h2>
-          <nldd-badge slot="end" color="neutral" [attr.text]="deviceConnections().length"></nldd-badge>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
         <nldd-list variant="box-tinted" accessible-label="Device connections">
@@ -245,7 +245,6 @@
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-title size="4">
         <h2>Ports</h2>
-        <nldd-badge slot="end" color="neutral" [attr.text]="devicePorts().length"></nldd-badge>
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
       <nldd-toolbar label="Port actions">
@@ -254,63 +253,43 @@
             variant="secondary"
             text="Add port"
             start-icon="plus-small"
-            (click)="showAddPortForm.set(!showAddPortForm())"
-            [attr.aria-expanded]="showAddPortForm()"
+            (click)="showAddPortForm.set(true)"
           ></nldd-button>
         </nldd-toolbar-item>
       </nldd-toolbar>
-      @if (showAddPortForm()) {
-        <nldd-spacer size="12"></nldd-spacer>
-        <nldd-form>
-          <nldd-form-field label="Port name">
-            <nldd-text-field
-              #portNameInput
-              [value]="newPortName()"
-              (input)="newPortName.set($any($event.target).value)"
-              (keydown.enter)="addPort()"
-              accessible-label="New port name"
-            ></nldd-text-field>
-          </nldd-form-field>
-          <nldd-form-actions>
-            <nldd-button variant="primary" text="Add" (click)="addPort()"></nldd-button>
-            <nldd-button
-              variant="secondary"
-              text="Cancel"
-              (click)="showAddPortForm.set(false)"
-            ></nldd-button>
-          </nldd-form-actions>
-        </nldd-form>
-      }
       <nldd-spacer size="12"></nldd-spacer>
       <nldd-list
         variant="box-tinted"
-        [attr.accessible-label]="PORT_TYPE_LABEL[activePortTab()]"
-        [attr.empty-text]="'No ' + (PORT_TYPE_LABEL[activePortTab()] | lowercase) + ' on this device'"
+        accessible-label="Ports"
+        empty-text="No ports on this device"
       >
-        <nldd-segmented-control
-          slot="toolbar"
-          [value]="activePortTab()"
-          type="radio"
-          variant="text"
-          accessible-label="Port type"
-          (change)="activePortTab.set($any($event).detail.value)"
-        >
-          @for (tab of PORT_TABS; track tab) {
-            <nldd-segmented-control-item
-              [attr.value]="tab"
-              [attr.text]="PORT_TYPE_LABEL[tab]"
-            ></nldd-segmented-control-item>
-          }
-        </nldd-segmented-control>
         @for (port of devicePorts(); track port.id) {
           @let cable = portCableMap().get(port.id);
           @let peer = cable ? (cable.aSide.deviceId === deviceId() ? cable.bSide : cable.aSide) : null;
           <nldd-list-item>
+            <!-- The kind behind the name, in the same neutral tag a product's
+                 ports wear. -->
             <nldd-text-cell
               width="full"
-              [attr.text]="port.name"
-              [attr.supporting-text]="peer ? peer.deviceName + ' › ' + peer.portName : 'Not connected'"
+              min-width="140px"
+              [attr.supporting-text]="peer ? peer.deviceName + ' › ' + peer.portName : null"
+              >{{ port.name }}&ngsp;<nldd-tag
+                size="sm"
+                color="neutral"
+                [attr.text]="portTypeLabel(port.type)"
+              ></nldd-tag
             ></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <!-- Whether it is in use, as a state anywhere else in this app: a
+                 dot with the word beside it, and the action to its right. -->
+            <nldd-cell width="fit-content">
+              <nldd-text>
+                <nldd-badge
+                  decorative
+                  [attr.color]="cable ? 'success' : 'neutral'"
+                ></nldd-badge>&ngsp;{{ cable ? 'Connected' : 'Not connected' }}
+              </nldd-text>
+            </nldd-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-cell width="fit-content">
               @if (cable) {
@@ -336,112 +315,186 @@
       </nldd-list>
 
       <!-- Notes stay inline: writing one is the point of the section, not a
-           trip to a sheet. -->
+           trip to a sheet. The field is the last row of the same box, so a new
+           note appears right above where you typed it. -->
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-title size="4">
         <h2>Notes</h2>
-        @if (notes().length > 0) {
-          <nldd-badge slot="end" color="neutral" [attr.text]="notes().length"></nldd-badge>
-        }
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
       @if (notesDescription()) {
         <nldd-text color="secondary">{{ notesDescription() }}</nldd-text>
         <nldd-spacer size="12"></nldd-spacer>
       }
-      <div class="space-y-3">
-        @if (notes().length === 0) {
-          <nldd-text color="secondary">No notes yet</nldd-text>
-        }
+      <nldd-list variant="box-tinted" accessible-label="Notes">
         @for (comment of notes(); track comment.id) {
-          <div class="flex gap-3">
-            <div class="shrink-0 pt-0.5">
-              <span
-                class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 dark:bg-accent-950 text-xs font-semibold text-accent-700 dark:text-accent-300 shrink-0 select-none"
-                aria-hidden="true"
-              >
-                {{ comment.initials }}
-              </span>
-            </div>
-            <div class="flex-1 rounded-xl bg-gray-50 dark:bg-gray-900 px-3.5 py-3">
-              <div class="flex items-center justify-between gap-2 mb-1">
-                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{
-                  comment.author
-                }}</span>
-                <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">{{
-                  formatDaysAgo(comment.daysAgo)
-                }}</span>
-              </div>
-              <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                {{ comment.content }}
-              </p>
-            </div>
-          </div>
+          <nldd-list-item>
+            <nldd-cell width="fit-content" vertical-alignment="top">
+              <nldd-avatar size="28" [attr.name]="comment.author"></nldd-avatar>
+            </nldd-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="full"
+              [attr.text]="comment.content"
+              [attr.supporting-text]="comment.author + ' · ' + formatDaysAgo(comment.daysAgo)"
+            ></nldd-text-cell>
+          </nldd-list-item>
         }
-      </div>
-      <nldd-spacer size="12"></nldd-spacer>
-      <nldd-form>
-        <nldd-form-field label="Add a note">
-          <nldd-text-field
-            #noteInput
-            (keydown.enter)="addNote()"
-            accessible-label="Add a note"
-          ></nldd-text-field>
-        </nldd-form-field>
-        <nldd-form-actions>
-          <nldd-button variant="secondary" text="Add note" (click)="addNote()"></nldd-button>
-        </nldd-form-actions>
-      </nldd-form>
+        <nldd-list-item>
+          <nldd-cell width="full">
+            <nldd-multi-line-text-field
+              #noteInput
+              rows="1"
+              placeholder="Write a note about this device"
+              accessible-label="Add a note"
+            ></nldd-multi-line-text-field>
+          </nldd-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-cell width="fit-content" vertical-alignment="bottom">
+            <nldd-button variant="secondary" text="Send" (click)="addNote()"></nldd-button>
+          </nldd-cell>
+        </nldd-list-item>
+      </nldd-list>
 
-      <!-- History as everywhere else: what happened, who did it and when. -->
+      <!-- History like an asset's: the track carries the line between the
+           events, so the rows need no dividers of their own. -->
       @if (deviceHistory().length > 0) {
         <nldd-spacer size="24"></nldd-spacer>
         <nldd-title size="4">
           <h2>History</h2>
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
-        <ol class="flex flex-col gap-0" aria-label="Device history">
+        <nldd-list variant="box-tinted" dividers="never" accessible-label="Device history">
           @for (
             entry of deviceHistory();
             track entry.daysAgo + entry.description;
-            let last = $last
+            let i = $index
           ) {
-            <li class="flex items-start gap-2.5">
-              <div class="flex flex-col items-center shrink-0">
-                <div
-                  class="flex h-7 w-7 items-center justify-center rounded-full"
-                  [class]="historyIconBg(entry.action)"
-                  aria-hidden="true"
-                >
-                  <nldd-icon
-                    [attr.name]="historyIcon(entry.action)"
-                    style="width: 14px; height: 14px"
-                  ></nldd-icon>
-                </div>
-                @if (!last) {
-                  <div
-                    class="w-px flex-1 bg-gray-100 dark:bg-gray-800 my-1 min-h-3"
-                    aria-hidden="true"
-                  ></div>
-                }
-              </div>
-              <div class="pb-3 min-w-0 flex-1">
-                <p class="text-sm text-gray-800 dark:text-gray-100 leading-snug">
-                  {{ entry.description }}
-                </p>
-                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {{ entry.user }} · {{ formatDaysAgo(entry.daysAgo) }}
-                </p>
-              </div>
-            </li>
+            <nldd-list-item>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-timeline-track-cell
+                [attr.position]="historyPosition(i)"
+              ></nldd-timeline-track-cell>
+              <nldd-spacer-cell size="16"></nldd-spacer-cell>
+              <nldd-text-cell
+                [attr.text]="entry.description"
+                [attr.supporting-text]="entry.user + ' · ' + formatDaysAgo(entry.daysAgo)"
+              ></nldd-text-cell>
+            </nldd-list-item>
           }
-        </ol>
+        </nldd-list>
       }
+      <nldd-spacer size="32"></nldd-spacer>
+      <!-- Out of the rack is not out of the system: the asset stays in the
+           inventory, only its place in this rack goes. Deleting the asset
+           itself is done where the asset lives. -->
+      <nldd-box background="critical">
+        <nldd-container padding="16">
+          <nldd-title size="4">
+            <h2>Remove from rack</h2>
+          </nldd-title>
+          <nldd-spacer size="4"></nldd-spacer>
+          <nldd-text size="sm">
+            Taking {{ dev.name }} out frees the units it fills. The asset itself stays in the
+            inventory.
+          </nldd-text>
+          <nldd-spacer size="16"></nldd-spacer>
+          <nldd-button
+            variant="destructive"
+            text="Remove from rack"
+            start-icon="trash"
+            (click)="removeFromRack()"
+          ></nldd-button>
+        </nldd-container>
+      </nldd-box>
     </nldd-simple-section>
-  } @else {
+  } @else if (deviceLoaded()) {
     <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
       <nldd-inline-dialog text="Device not found"></nldd-inline-dialog>
+    </nldd-simple-section>
+  } @else {
+    <!-- Not "nothing found" until the answer is in: the indicator holds itself
+         back for a second, so a quick answer shows no state at all. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-activity-indicator></nldd-activity-indicator>
     </nldd-simple-section>
   }
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ADD PORT SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-sheet #portSheet accessible-label="Port details" placement="right">
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Add port"
+      dismiss-text="Cancel"
+      (dismiss)="showAddPortForm.set(false)"
+    ></nldd-top-title-bar>
+    <nldd-simple-section>
+      <nldd-form>
+        <nldd-form-field label="Port name">
+          <nldd-text-field
+            #portNameInput
+            autofocus
+            [value]="newPortName()"
+            (input)="newPortName.set($any($event.target).value)"
+            (keydown.enter)="addPort()"
+          ></nldd-text-field>
+        </nldd-form-field>
+        <!-- The kind used to come from the tab you were on; the form asks it
+             now. Five buttons wrap to two rows in a sheet, which beats hiding
+             the choice behind a dropdown. -->
+        <nldd-form-field label="Port type">
+          <nldd-toggle-button-group type="radio" accessible-label="Port type">
+            @for (type of PORT_TABS; track type) {
+              <nldd-toggle-button
+                [attr.value]="type"
+                [attr.text]="portTypeLabel(type)"
+                [attr.selected]="newPortType() === type ? '' : null"
+                (change)="onPortTypeToggle(type, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
+        </nldd-form-field>
+        <nldd-form-actions>
+          <nldd-button variant="primary" width="full" text="Add" (click)="addPort()"></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
+
+<!-- The same menu as the rack page: this is a view of one device in that rack,
+     not a page of its own. -->
+<ng-template #secondaryNav>
+  <app-rack-nav></app-rack-nav>
+</ng-template>
+
+<!-- ══════════════════════════════════════════════════════════════
+     REMOVE FROM RACK CONFIRMATION
+     ══════════════════════════════════════════════════════════════ -->
+<nldd-modal-dialog
+  #removeModal
+  variant="alert"
+  icon="trash"
+  [attr.text]="'Remove ' + (device()?.name ?? '') + ' from this rack?'"
+  supporting-text="The units it fills become free again. The asset stays in the inventory."
+  accessible-label="Confirm removal from the rack"
+  (close)="cancelRemove()"
+>
+  <nldd-button
+    slot="actions"
+    variant="primary"
+    text="Keep in rack"
+    (click)="cancelRemove()"
+  ></nldd-button>
+  <nldd-button
+    slot="actions"
+    variant="destructive"
+    text="Remove from rack"
+    (click)="confirmRemoveFromRack()"
+  ></nldd-button>
+</nldd-modal-dialog>

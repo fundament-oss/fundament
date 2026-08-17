@@ -54,7 +54,7 @@
                    A colour there would read as a state, which is a different
                    question and rides on the right. -->
               <nldd-icon-cell [attr.icon]="deviceTypeIcon(device)" size="20"></nldd-icon-cell>
-              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-spacer-cell size="6"></nldd-spacer-cell>
               <nldd-text-cell width="full" min-width="140px"
                 >{{ device.name }}@if (deviceTypeText(device); as category) {&ngsp;<nldd-tag
                     size="sm"
@@ -141,58 +141,33 @@
       <!-- Notes -->
       @if (currentRackNotes(); as notes) {
         <nldd-spacer size="24"></nldd-spacer>
-        <section aria-labelledby="rack-notes-heading">
-          <nldd-title size="4">
-            <h2 id="rack-notes-heading">Notes</h2>
-            @if (notes.comments.length > 0) {
-              <nldd-badge
-                slot="end"
-                color="neutral"
-                [attr.text]="notes.comments.length"
-              ></nldd-badge>
-            }
-          </nldd-title>
-          <nldd-spacer size="8"></nldd-spacer>
-          @if (notes.description) {
-            <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
-              <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                {{ notes.description }}
-              </p>
-            </div>
+        <nldd-title size="4">
+          <h2 id="rack-notes-heading">Notes</h2>
+        </nldd-title>
+        <nldd-spacer size="8"></nldd-spacer>
+        @if (notes.description) {
+          <nldd-text color="secondary">{{ notes.description }}</nldd-text>
+          <nldd-spacer size="12"></nldd-spacer>
+        }
+        <nldd-list
+          variant="box-tinted"
+          accessible-label="Notes"
+          empty-text="No notes yet"
+        >
+          @for (comment of notes.comments; track $index) {
+            <nldd-list-item>
+              <nldd-cell width="fit-content" vertical-alignment="top">
+                <nldd-avatar size="28" [attr.name]="comment.author"></nldd-avatar>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-text-cell
+                width="full"
+                [attr.text]="comment.content"
+                [attr.supporting-text]="comment.author + ' · ' + formatDaysAgo(comment.daysAgo)"
+              ></nldd-text-cell>
+            </nldd-list-item>
           }
-          <div class="px-5 py-3 space-y-3">
-            @if (notes.comments.length === 0) {
-              <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-2">
-                No notes yet
-              </p>
-            }
-            @for (comment of notes.comments; track $index) {
-              <div class="flex gap-2.5">
-                <div class="shrink-0 pt-0.5">
-                  <span
-                    class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 dark:bg-accent-950 text-xs font-semibold text-accent-700 dark:text-accent-300 shrink-0 select-none"
-                    aria-hidden="true"
-                  >
-                    {{ comment.initials }}
-                  </span>
-                </div>
-                <div class="flex-1 rounded-xl bg-gray-50 dark:bg-gray-900 px-3 py-2">
-                  <div class="flex items-center justify-between gap-2 mb-0.5">
-                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{
-                      comment.author
-                    }}</span>
-                    <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">{{
-                      formatDaysAgo(comment.daysAgo)
-                    }}</span>
-                  </div>
-                  <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                    {{ comment.content }}
-                  </p>
-                </div>
-              </div>
-            }
-          </div>
-        </section>
+        </nldd-list>
       }
 
       <!-- History -->
@@ -268,11 +243,17 @@
         </nldd-container>
       </nldd-box>
     </nldd-simple-section>
-  } @else {
+  } @else if (racksLoaded()) {
     <!-- The section is open and nothing is picked, the same sentence in the
          same place as the other sections. -->
     <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
       <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
+    </nldd-simple-section>
+  } @else {
+    <!-- Not "nothing picked" until the racks are in: the indicator holds itself
+         back for a second, so a quick answer shows no state at all. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-activity-indicator></nldd-activity-indicator>
     </nldd-simple-section>
   }
   <nldd-page-footer slot="footer"></nldd-page-footer>
@@ -302,6 +283,21 @@
           <!-- Where it stands, before what it is called. The API cannot move a
                rack to another row, so an existing one does not ask. -->
           @if (!rack.id) {
+            <!-- Where it stands, widest first: the data center you are looking
+                 at is the one it lands in, and picking another swaps the rows
+                 you can choose from. -->
+            <nldd-form-field label="Location">
+              <nldd-toggle-button-group type="radio" accessible-label="Location">
+                @for (dc of mutableDcs(); track dc.id) {
+                  <nldd-toggle-button
+                    [attr.value]="dc.id"
+                    [attr.text]="dc.name"
+                    [attr.selected]="formDcId() === dc.id ? '' : null"
+                    (change)="onFormDcToggle(dc.id, $any($event).detail.selected)"
+                  ></nldd-toggle-button>
+                }
+              </nldd-toggle-button-group>
+            </nldd-form-field>
             <nldd-form-field label="Rack row">
               <nldd-combo-box
                 #fRackRowId
@@ -326,10 +322,11 @@
               }
             </nldd-form-field>
           }
+          <!-- No autofocus: the name is the third field, and jumping there
+               skips the two above it. -->
           <nldd-form-field label="Rack name">
             <nldd-text-field
               #fRackName
-              autofocus
               [attr.value]="rack.name ?? ''"
               [attr.invalid]="isFieldInvalid('name') ? '' : null"
               error-message="error-rack-name"
@@ -339,6 +336,9 @@
               {{ fieldError('name') }}
             </nldd-form-field-error-text>
           </nldd-form-field>
+          <!-- Spin buttons here, and none on the rack unit of a device: this is
+               a value you nudge from a default (42U, 45U, 47U) between bounds
+               the buttons also mark, where a rack unit is one you name. -->
           <nldd-form-field label="Height (U)">
             <nldd-number-field
               #fRackTotalU
@@ -346,7 +346,6 @@
               min="1"
               max="52"
               full-width
-              hide-spin-buttons
               [attr.invalid]="isFieldInvalid('total_units') ? '' : null"
               error-message="error-rack-total-u"
               (keydown.enter)="saveRack()"
@@ -505,73 +504,8 @@
 <!-- The rack list is the menu of this section, so the shell shows it in the
      second sidebar, beside the sections themselves. It is declared here because
      the racks and their filling are this page's data. -->
+<!-- The menu of this section, in a component of its own: the page of one
+     device in a rack shows the same one beside it. -->
 <ng-template #secondaryNav>
-  <nldd-page sticky-header>
-    <nldd-top-title-bar slot="header" back-text="Data center"></nldd-top-title-bar>
-    <nldd-simple-section>
-      <nldd-title size="3">
-        <h1>Racks</h1>
-      </nldd-title>
-      <nldd-spacer size="12"></nldd-spacer>
-      <!-- Making a rack is an action on this list, not on the rack you have
-           open, so it stands where the list does. -->
-      <nldd-toolbar label="Rack actions">
-        <nldd-toolbar-item slot="start">
-          <nldd-button
-            variant="secondary"
-            text="Add rack"
-            start-icon="plus-small"
-            (click)="openCreateRack()"
-          ></nldd-button>
-        </nldd-toolbar-item>
-      </nldd-toolbar>
-      <nldd-spacer size="12"></nldd-spacer>
-      <!-- The one placeholder that earns its place: the field has no visible
-           label, and without it the design system falls back to Dutch. -->
-      <nldd-search-field
-        accessible-label="Search racks"
-        placeholder="Search"
-        [value]="searchQuery()"
-        (input)="searchQuery.set($any($event.target).value)"
-      ></nldd-search-field>
-      <nldd-spacer size="12"></nldd-spacer>
-      <!-- The data center rides in the list's own toolbar rather than above it:
-           it is what this list shows, and the slot keeps it in place when the
-           list runs empty, so you can always pick another one. -->
-      <nldd-list
-        type="navigation"
-        dividers="on-touch"
-        [attr.accessible-label]="'Racks in ' + currentDcName()"
-        empty-text="No racks found"
-      >
-        <nldd-toggle-button-group slot="toolbar" type="radio" accessible-label="Data center">
-          @for (dc of mutableDcs(); track dc.id) {
-            <nldd-toggle-button
-              [attr.value]="dc.id"
-              [attr.text]="dc.name"
-              [attr.selected]="currentDC() === dc.id ? '' : null"
-              (change)="onDcToggle(dc.id, $any($event).detail.selected)"
-            ></nldd-toggle-button>
-          }
-        </nldd-toggle-button-group>
-        @for (rack of filteredRacks(); track rack.id) {
-          <nldd-list-item
-            button
-            [attr.selected]="currentRackId() === rack.id ? '' : null"
-            (click)="selectRack(rack.id)"
-          >
-            <nldd-icon-cell icon="rack-servers" size="20"></nldd-icon-cell>
-            <nldd-spacer-cell size="12"></nldd-spacer-cell>
-            <nldd-text-cell width="full" [attr.text]="rack.name"></nldd-text-cell>
-            <nldd-spacer-cell size="12"></nldd-spacer-cell>
-            <nldd-text-cell
-              width="fit-content"
-              horizontal-alignment="right"
-              [attr.text]="rackUsedU(rack) + '/' + rack.totalU + 'U'"
-            ></nldd-text-cell>
-          </nldd-list-item>
-        }
-      </nldd-list>
-    </nldd-simple-section>
-  </nldd-page>
+  <app-rack-nav></app-rack-nav>
 </ng-template>

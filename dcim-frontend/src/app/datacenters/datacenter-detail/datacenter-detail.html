@@ -197,6 +197,12 @@
     <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
       <nldd-inline-dialog text="Data center not found"></nldd-inline-dialog>
     </nldd-simple-section>
+  } @else {
+    <!-- Not "nothing found" until the answer is in: the indicator holds itself
+         back for a second, so a quick answer shows no state at all. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-activity-indicator></nldd-activity-indicator>
+    </nldd-simple-section>
   }
   <nldd-page-footer slot="footer"></nldd-page-footer>
 </nldd-page>
