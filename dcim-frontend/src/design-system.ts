@@ -10,6 +10,7 @@ import '@nldd/design-system/app-view';
 import '@nldd/design-system/avatar';
 import '@nldd/design-system/badge';
 import '@nldd/design-system/bar-split-view';
+import '@nldd/design-system/box';
 import '@nldd/design-system/button';
 import '@nldd/design-system/button-group';
 import '@nldd/design-system/card';

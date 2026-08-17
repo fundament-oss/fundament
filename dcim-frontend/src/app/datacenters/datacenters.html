@@ -1,433 +1,349 @@
-<!-- ══════════════════════════════════════════════════════════════
-     PAGE HEADER (subbar)
-     ══════════════════════════════════════════════════════════════ -->
-<div
-  class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
->
-  <div class="flex-1 min-w-0">
-    @if (currentDc(); as dc) {
-      <div class="flex items-center gap-3 min-w-0">
-        <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0">
-          {{ dc.name }}
-        </h1>
-        <span class="text-slate-300 dark:text-gray-600 hidden sm:inline" aria-hidden="true">·</span>
-        <span class="text-sm text-slate-400 dark:text-gray-500 hidden sm:inline truncate">{{
-          dc.fullName
-        }}</span>
-        <nldd-tag
-          size="sm"
-          [attr.color]="statusTagColor(dc.status)"
-          [attr.text]="statusLabel(dc.status)"
-          [attr.accessible-label]="'Status: ' + statusLabel(dc.status)"
-        ></nldd-tag>
-      </div>
-      <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5 hidden sm:block">
-        {{ dc.city }}, {{ dc.country }}
-        <span class="mx-1.5 text-slate-300 dark:text-gray-600" aria-hidden="true">·</span>
-        Tier {{ dc.tier }}
-        <span class="mx-1.5 text-slate-300 dark:text-gray-600" aria-hidden="true">·</span>
-        Est. {{ dc.established }}
-      </p>
-    } @else {
-      <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight m-0">
-        Data centers
-      </h1>
-    }
-  </div>
-  <div class="flex items-center gap-2 shrink-0">
-    @if (currentDc(); as dc) {
-      <a
-        [routerLink]="['/datacenters', dc.id]"
-        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800 hover:text-slate-700 dark:hover:text-gray-300 transition-colors"
-        aria-label="View rooms and rack rows"
-      >
-        <nldd-icon name="apartment-building" class="w-3.5 h-3.5" aria-hidden="true"></nldd-icon>
-        Rooms &amp; Rows
-      </a>
-      <nldd-icon-button
-        icon="pencil-on-square"
-        variant="neutral-transparent"
-        size="sm"
-        text="Edit datacenter"
-        (click)="openEditDc(dc)"
-      ></nldd-icon-button>
-      <nldd-icon-button
-        icon="trash"
-        variant="neutral-transparent"
-        size="sm"
-        text="Delete datacenter"
-        (click)="openDeleteDc(dc)"
-      ></nldd-icon-button>
-    }
-    <nldd-button
-      variant="primary"
-      text="Add datacenter"
-      start-icon="plus-small"
-      size="sm"
-      (click)="openCreateDc()"
-    >
-    </nldd-button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════════════
-     DC SELECTOR TOOLBAR
-     ══════════════════════════════════════════════════════════════ -->
-<!-- ══════════════════════════════════════════════════════════════
-     MAIN CONTENT
-     ══════════════════════════════════════════════════════════════ -->
-<main class="flex-1 overflow-y-auto">
+<nldd-page sticky-header>
+  <!-- The bar carries the way back to the list of data centers once the panes
+       collapse to one column. -->
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="currentDc()?.name ?? 'Data centers'"
+    back-text="Data centers"
+    collapse-anchor="dc-title"
+  ></nldd-top-title-bar>
   @if (currentDc(); as dc) {
-    <div class="px-6 pb-6">
-      <!-- Stats row -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-5 pb-4">
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-accent-700 px-4 py-3.5 grid gap-1"
+    <nldd-simple-section>
+      <!-- The status rides in the heading as a badge, the same way an asset
+           wears its state: the system decides it, so it is not a tag somebody
+           assigned. -->
+      <nldd-title id="dc-title" size="2">
+        <h1>
+          {{ dc.name }}&ngsp;<nldd-badge
+            [attr.color]="statusTagColor(dc.status)"
+            [attr.text]="statusLabel(dc.status)"
+          ></nldd-badge>
+        </h1>
+        <span slot="subtitle">{{ dc.fullName }}</span>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <!-- Everything you can do here, in one bar: the two places this data
+           center leads to, and the two things you can do to it. -->
+      <nldd-toolbar label="Data center actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            text="Rooms & rows"
+            start-icon="square-grid-2x2"
+            (click)="openRoomsAndRows(dc)"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="square-grid-2x2"
+            text="Rooms & rows"
+            (select)="openRoomsAndRows(dc)"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            text="Racks"
+            start-icon="rack-servers"
+            (click)="openRackView()"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="rack-servers"
+            text="Racks"
+            (select)="openRackView()"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            text="Tasks"
+            start-icon="tasks"
+            (click)="openTaskManagement(dc)"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="tasks"
+            text="Tasks"
+            (select)="openTaskManagement(dc)"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            variant="secondary"
+            text="Edit"
+            start-icon="pencil-on-square"
+            (click)="openEditDc(dc)"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="pencil-on-square"
+            text="Edit"
+            (select)="openEditDc(dc)"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+        <nldd-toolbar-item slot="end">
+          <nldd-button
+            variant="destructive"
+            text="Delete"
+            start-icon="trash"
+            (click)="openDeleteDc(dc)"
+          ></nldd-button>
+          <nldd-menu-item
+            slot="overflow"
+            icon="trash"
+            text="Delete"
+            destructive
+            (select)="openDeleteDc(dc)"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- Three numbers that say how full this hall is. Cards rather than a row
+           of divs, and a horizontal scroll so they keep their size in a narrow
+           pane instead of squeezing to three columns of nothing. -->
+      <nldd-collection
+        layout="horizontal-scroll"
+        item-width="160px"
+        gap="16px"
+        accessible-label="Datacenter figures"
+      >
+        <nldd-card background="tinted">
+          <nldd-container padding="16">
+            <nldd-text size="sm" color="secondary">Racks</nldd-text>
+            <nldd-title size="3">
+              <h2>{{ dcStats().rackCount }}</h2>
+            </nldd-title>
+            <nldd-text size="sm" color="secondary">in this data center</nldd-text>
+          </nldd-container>
+        </nldd-card>
+        <nldd-card background="tinted">
+          <nldd-container padding="16">
+            <nldd-text size="sm" color="secondary">Devices</nldd-text>
+            <nldd-title size="3">
+              <h2>{{ dcStats().deviceCount }}</h2>
+            </nldd-title>
+            <nldd-text size="sm" color="secondary">{{ dcStats().capacityPct }}% capacity used</nldd-text>
+          </nldd-container>
+        </nldd-card>
+        <nldd-card background="tinted">
+          <nldd-container padding="16">
+            <nldd-text size="sm" color="secondary">Power draw</nldd-text>
+            <nldd-title size="3">
+              <h2>{{ formatPowerKw(dcStats().totalPowerKw) }}</h2>
+            </nldd-title>
+            <nldd-text size="sm" color="secondary">across all racks</nldd-text>
+          </nldd-container>
+        </nldd-card>
+      </nldd-collection>
+      <nldd-spacer size="24"></nldd-spacer>
+      <!-- The legend at the end of the heading it belongs to, not in the bar
+           below it: it explains the drawing, it does not do anything. -->
+      <nldd-title size="4">
+        <h2>Floor layout</h2>
+        <nldd-text slot="end"
+          ><nldd-badge decorative color="success"></nldd-badge>&ngsp;Rack (fill %)</nldd-text
         >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Racks
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ dcStats().rackCount }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">in this datacenter</p>
-        </div>
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-[#154273] px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Devices
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ dcStats().deviceCount }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">
-            {{ dcStats().capacityPct }}% capacity used
-          </p>
-        </div>
-        <div
-          class="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 border-l-[3px] border-l-amber-500 px-4 py-3.5 grid gap-1"
-        >
-          <p
-            class="text-xs text-slate-400 dark:text-gray-500 uppercase tracking-widest font-medium"
-          >
-            Power Draw
-          </p>
-          <p class="text-3xl font-medium text-slate-900 dark:text-white tabular-nums">
-            {{ formatPowerKw(dcStats().totalPowerKw) }}
-          </p>
-          <p class="text-xs text-slate-400 dark:text-gray-500">across all racks</p>
-        </div>
-      </div>
-
-      <!-- Two-column layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- ── LEFT COLUMN — floor layout ──────────────────────────── -->
-        <div class="lg:col-span-2">
-          <section
-            aria-labelledby="floor-heading"
-            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-          >
-            <!-- Card header with view toggle -->
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <!-- Which of the two drawings you get, and what the colour on them means.
+           The drawing itself is the one thing here the design system has no
+           component for, so it stays as it is. -->
+      <!-- Toolbar and drawing in one box: the drawing is the one thing here
+           the design system has no component for, and a loose control above a
+           loose drawing read as two things that happened to be near each
+           other. -->
+      <nldd-box>
+        <nldd-container padding="16">
+          <nldd-toolbar label="Floor layout view">
+            <nldd-toolbar-item slot="end">
+              <nldd-segmented-control
+                [value]="viewMode()"
+                type="radio"
+                variant="text"
+                (change)="viewMode.set($any($event).detail.value)"
+              >
+                <nldd-segmented-control-item
+                  value="map"
+                  text="Map"
+                  icon="rectangle-stack"
+                ></nldd-segmented-control-item>
+                <nldd-segmented-control-item
+                  value="isometric"
+                  text="Isometric"
+                  icon="folder-on-folder"
+                ></nldd-segmented-control-item>
+              </nldd-segmented-control>
+            </nldd-toolbar-item>
+          </nldd-toolbar>
+          <nldd-spacer size="12"></nldd-spacer>
+          <!-- ─── MAP VIEW ─────────────────────────────────────── -->
+          @if (viewMode() === 'map') {
             <div
-              class="px-5 py-4 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between gap-4"
+              class="overflow-x-auto"
+              (mousemove)="onMapMouseMove($event)"
+              (mouseleave)="hoveredRackId.set(null)"
             >
-              <h2
-                id="floor-heading"
-                class="text-sm font-semibold text-slate-900 dark:text-white shrink-0"
-              >
-                Floor layout
-              </h2>
-
-              <div class="flex items-center gap-3 min-w-0">
-                <!-- Legend -->
+              <!-- Floor plan. The wall around the hall belongs to the drawing,
+                   not to the page: it is what you walk into. -->
+              <div class="inline-block min-w-full">
                 <div
-                  class="hidden sm:flex items-center gap-3 text-xs text-slate-500 dark:text-gray-400 min-w-0"
+                  class="rounded-md border-2 border-slate-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-900 overflow-hidden shadow-inner"
                 >
-                  <span class="flex items-center gap-1.5 shrink-0">
-                    <span class="h-2.5 w-2.5 rounded-sm bg-emerald-300" aria-hidden="true"></span
-                    >Rack (fill %)
-                  </span>
-                </div>
-
-                <!-- View toggle -->
-                <nldd-segmented-control
-                  [value]="viewMode()"
-                  size="sm"
-                  type="radio"
-                  variant="text"
-                  (change)="viewMode.set($any($event).detail.value)"
-                >
-                  <nldd-segmented-control-item
-                    value="map"
-                    text="Map"
-                    icon="rectangle-stack"
-                  ></nldd-segmented-control-item>
-                  <nldd-segmented-control-item
-                    value="isometric"
-                    text="Isometric"
-                    icon="folder-on-folder"
-                  ></nldd-segmented-control-item>
-                </nldd-segmented-control>
-              </div>
-            </div>
-
-            <!-- ─── MAP VIEW ─────────────────────────────────────── -->
-            @if (viewMode() === 'map') {
-              <div
-                class="px-5 py-5 overflow-x-auto"
-                (mousemove)="onMapMouseMove($event)"
-                (mouseleave)="hoveredRackId.set(null)"
-              >
-                <!-- Floor plan -->
-                <div class="inline-block min-w-full">
+                  <!-- Top wall / entrance -->
                   <div
-                    class="rounded-md border-2 border-slate-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-900 overflow-hidden shadow-inner"
+                    class="flex items-stretch border-b-2 border-slate-300 dark:border-gray-700 bg-slate-200/80 dark:bg-gray-800/80"
+                    style="height: 38px"
                   >
-                    <!-- Top wall / entrance -->
+                    <!-- Left solid wall -->
                     <div
-                      class="flex items-stretch border-b-2 border-slate-300 dark:border-gray-700 bg-slate-200/80 dark:bg-gray-800/80"
-                      style="height: 38px"
+                      class="w-16 shrink-0 bg-slate-300 dark:bg-gray-700 border-r-2 border-slate-400 flex items-center justify-center"
                     >
-                      <!-- Left solid wall -->
-                      <div
-                        class="w-16 shrink-0 bg-slate-300 dark:bg-gray-700 border-r-2 border-slate-400 flex items-center justify-center"
-                      >
-                        <nldd-icon
-                          name="apartment-building"
-                          style="width: 14px; height: 14px; color: #94a3b8"
-                          aria-hidden="true"
-                        ></nldd-icon>
-                      </div>
-                      <!-- Door opening -->
-                      <div
-                        class="w-14 shrink-0 bg-white/60 dark:bg-gray-950/60 border-x-2 border-dashed border-slate-400 flex items-center justify-center gap-1"
-                      >
-                        <nldd-icon
-                          name="arrow-right"
-                          class="w-4 h-4 text-[#94a3b8]"
-                          aria-hidden="true"
-                        ></nldd-icon>
-                      </div>
-                      <!-- Remainder of top wall -->
-                      <div class="flex-1 flex items-center px-3 gap-2">
-                        <span
-                          class="text-xs font-medium text-slate-500 dark:text-gray-400 uppercase tracking-widest"
-                          >Entrance</span
-                        >
-                      </div>
+                      <nldd-icon
+                        name="apartment-building"
+                        style="width: 14px; height: 14px; color: #94a3b8"
+                        aria-hidden="true"
+                      ></nldd-icon>
                     </div>
+                    <!-- Door opening -->
+                    <div
+                      class="w-14 shrink-0 bg-white/60 dark:bg-gray-950/60 border-x-2 border-dashed border-slate-400 flex items-center justify-center gap-1"
+                    >
+                      <nldd-icon
+                        name="arrow-right"
+                        class="w-4 h-4 text-[#94a3b8]"
+                        aria-hidden="true"
+                      ></nldd-icon>
+                    </div>
+                    <!-- Remainder of top wall -->
+                    <div class="flex-1 flex items-center px-3 gap-2">
+                      <span
+                        class="text-xs font-medium text-slate-500 dark:text-gray-400 uppercase tracking-widest"
+                        >Entrance</span
+                      >
+                    </div>
+                  </div>
 
-                    <!-- Floor area -->
-                    <div class="p-4 space-y-0">
-                      @for (row of rowKeys(); track row; let isLast = $last) {
-                        <!-- Rack row -->
-                        <div class="flex items-center gap-2.5 py-1.5">
-                          <!-- Row letter -->
-                          <div class="w-5 shrink-0 text-center">
-                            <span
-                              class="text-xs font-bold text-slate-400 dark:text-gray-500 uppercase select-none"
-                              >{{ row }}</span
-                            >
-                          </div>
-
-                          <!-- Rack cells -->
-                          <div class="flex gap-1.5">
-                            @for (cell of floorRows().get(row)!; track cell.col) {
-                              <a
-                                [routerLink]="['/racks', cell.rackId]"
-                                (mouseenter)="hoveredRackId.set(cell.rackId)"
-                                (mouseleave)="hoveredRackId.set(null)"
-                                class="relative flex flex-col items-center justify-end rounded border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 overflow-hidden"
-                                [class]="rackCellClass()"
-                                style="width: 52px; height: 68px"
-                                [attr.aria-label]="cell.rackName"
-                              >
-                                <!-- Fill bar -->
-                                <div
-                                  class="absolute bottom-0 left-0 right-0 transition-all duration-300"
-                                  [class]="rackFillBarClass()"
-                                  [style.height.%]="cell.fillPct"
-                                  aria-hidden="true"
-                                ></div>
-
-                                <!-- Icon + short name -->
-                                <div class="relative z-10 flex flex-col items-center gap-0.5 pb-2">
-                                  <nldd-icon
-                                    name="cylinder-split"
-                                    class="w-3.5 h-3.5"
-                                    aria-hidden="true"
-                                  ></nldd-icon>
-                                  <span class="text-[10px] font-bold font-mono leading-none">
-                                    {{ cell.rackName.split('-').slice(-1)[0] }}
-                                  </span>
-                                </div>
-                              </a>
-                            }
-                          </div>
+                  <!-- Floor area -->
+                  <div class="p-4 space-y-0">
+                    @for (row of rowKeys(); track row; let isLast = $last) {
+                      <!-- Rack row -->
+                      <div class="flex items-center gap-2.5 py-1.5">
+                        <!-- Row letter -->
+                        <div class="w-5 shrink-0 text-center">
+                          <span
+                            class="text-xs font-bold text-slate-400 dark:text-gray-500 uppercase select-none"
+                            >{{ row }}</span
+                          >
                         </div>
 
-                        <!-- Spacing between rows -->
-                        @if (!isLast) {
-                          <div class="h-6"></div>
-                        }
+                        <!-- Rack cells -->
+                        <div class="flex gap-1.5">
+                          @for (cell of floorRows().get(row)!; track cell.col) {
+                            <a
+                              [routerLink]="['/racks', cell.rackId]"
+                              (mouseenter)="hoveredRackId.set(cell.rackId)"
+                              (mouseleave)="hoveredRackId.set(null)"
+                              class="relative flex flex-col items-center justify-end rounded border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 overflow-hidden"
+                              [class]="rackCellClass()"
+                              style="width: 52px; height: 68px"
+                              [attr.aria-label]="cell.rackName"
+                            >
+                              <!-- Fill bar -->
+                              <div
+                                class="absolute bottom-0 left-0 right-0 transition-all duration-300"
+                                [class]="rackFillBarClass()"
+                                [style.height.%]="cell.fillPct"
+                                aria-hidden="true"
+                              ></div>
+
+                              <!-- Icon + short name -->
+                              <div class="relative z-10 flex flex-col items-center gap-0.5 pb-2">
+                                <nldd-icon
+                                  name="cylinder-split"
+                                  class="w-3.5 h-3.5"
+                                  aria-hidden="true"
+                                ></nldd-icon>
+                                <span class="text-[10px] font-bold font-mono leading-none">
+                                  {{ cell.rackName.split('-').slice(-1)[0] }}
+                                </span>
+                              </div>
+                            </a>
+                          }
+                        </div>
+                      </div>
+
+                      <!-- Spacing between rows -->
+                      @if (!isLast) {
+                        <div class="h-6"></div>
                       }
-                    </div>
+                    }
                   </div>
                 </div>
               </div>
-            }
-
-            <!-- ─── ISOMETRIC VIEW ────────────────────────────────── -->
-            @if (viewMode() === 'isometric') {
-              <div class="px-5 py-5" (mousemove)="onMapMouseMove($event)">
-                <app-isometric-canvas
-                  [cells]="rackCells()"
-                  [ariaLabel]="'Isometric view of ' + dc.name"
-                  (rackHover)="hoveredRackId.set($any($event))"
-                  (rackClick)="navigateToRack($event)"
-                />
-              </div>
-            }
-          </section>
-        </div>
-
-        <!-- ── RIGHT COLUMN — properties + quick links ─────────────── -->
-        <div class="flex flex-col gap-6">
-          <!-- Datacenter Properties card -->
-          <section
-            aria-labelledby="props-heading"
-            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-          >
-            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
-              <h2 id="props-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
-                Properties
-              </h2>
             </div>
-            <dl class="divide-y divide-slate-100 dark:divide-gray-800">
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt
-                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-36"
-                >
-                  <nldd-icon
-                    name="info-circle"
-                    class="w-4 h-4 text-[#94a3b8]"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Address
-                </dt>
-                <dd class="text-xs text-right text-slate-700 dark:text-gray-300 font-medium">
-                  {{ dc.address }}
-                </dd>
-              </div>
+          }
 
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt
-                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-36"
-                >
-                  <nldd-icon
-                    name="shield-check-mark"
-                    class="w-4 h-4 text-[#94a3b8]"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Tier
-                </dt>
-                <dd class="text-sm font-medium text-slate-800 dark:text-gray-100">
-                  Tier {{ dc.tier }}
-                </dd>
-              </div>
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt
-                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-36"
-                >
-                  <nldd-icon
-                    name="pencil-on-square"
-                    class="w-4 h-4 text-[#94a3b8]"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Floor Space
-                </dt>
-                <dd class="text-sm font-medium text-slate-800 dark:text-gray-100">
-                  {{ dc.floorSqm }} m²
-                </dd>
-              </div>
-
-              <div class="flex items-center justify-between px-5 py-3">
-                <dt
-                  class="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400 shrink-0 w-36"
-                >
-                  <nldd-icon
-                    name="calendar-event"
-                    class="w-4 h-4 text-[#94a3b8]"
-                    aria-hidden="true"
-                  ></nldd-icon>
-                  Established
-                </dt>
-                <dd class="text-sm font-medium text-slate-800 dark:text-gray-100">
-                  {{ dc.established }}
-                </dd>
-              </div>
-            </dl>
-          </section>
-
-          <!-- Quick Links card -->
-          <section
-            aria-labelledby="links-heading"
-            class="rounded-xl border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950"
-          >
-            <div class="px-5 py-4 border-b border-slate-100 dark:border-gray-800">
-              <h2 id="links-heading" class="text-sm font-semibold text-slate-900 dark:text-white">
-                Quick Links
-              </h2>
+          <!-- ─── ISOMETRIC VIEW ────────────────────────────────── -->
+          @if (viewMode() === 'isometric') {
+            <div (mousemove)="onMapMouseMove($event)">
+              <app-isometric-canvas
+                [cells]="rackCells()"
+                [ariaLabel]="'Isometric view of ' + dc.name"
+                (rackHover)="hoveredRackId.set($any($event))"
+                (rackClick)="navigateToRack($event)"
+              />
             </div>
-            <div class="px-5 py-4 flex flex-col gap-2">
-              <a
-                [routerLink]="firstRackRoute()"
-                class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors w-full text-left"
-              >
-                <nldd-icon
-                  name="cylinder-split"
-                  class="w-4 h-4 text-[#94a3b8]"
-                  aria-hidden="true"
-                ></nldd-icon>
-                Open in Rack View
-              </a>
-              <a
-                routerLink="/tasks"
-                class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors w-full text-left"
-              >
-                <nldd-icon
-                  name="check-mark-circle"
-                  class="w-4 h-4 text-[#94a3b8]"
-                  aria-hidden="true"
-                ></nldd-icon>
-                Open Task Management
-              </a>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
+          }
+        </nldd-container>
+      </nldd-box>
+      <nldd-spacer size="24"></nldd-spacer>
+      <nldd-title size="4">
+        <h2>Properties</h2>
+      </nldd-title>
+      <nldd-spacer size="8"></nldd-spacer>
+      <!-- The same list a product page uses for its properties: label left,
+           value right, no icons. An icon per row named the row twice. -->
+      <nldd-list variant="box-tinted" accessible-label="Data center properties">
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="Address"></nldd-text-cell>
+          <nldd-text-cell horizontal-alignment="right" [attr.text]="fullAddress(dc)"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="Tier"></nldd-text-cell>
+          <nldd-text-cell horizontal-alignment="right" [attr.text]="'Tier ' + dc.tier"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="Floor space"></nldd-text-cell>
+          <nldd-text-cell horizontal-alignment="right" [attr.text]="dc.floorSqm + ' m²'"></nldd-text-cell>
+        </nldd-list-item>
+        <nldd-list-item>
+          <nldd-text-cell width="180px" text="Established"></nldd-text-cell>
+          <nldd-text-cell horizontal-alignment="right" [attr.text]="dc.established"></nldd-text-cell>
+        </nldd-list-item>
+      </nldd-list>
+    </nldd-simple-section>
+  } @else {
+    <!-- The section is open and nothing is picked, the same sentence in the same
+         place as the other sections. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
+    </nldd-simple-section>
   }
-</main>
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
 
 <!-- ══════════════════════════════════════════════════════════════
      DATACENTER EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #editSheet accessible-label="Datacenter details" placement="right">
-  <nldd-page sticky-header sticky-footer>
+  <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
-      [attr.text]="editForm()?.id ? 'Edit datacenter' : 'Add datacenter'"
+      [attr.text]="editForm()?.id ? 'Edit data center' : 'Add data center'"
       dismiss-text="Cancel"
       (dismiss)="closeEditForm()"
     ></nldd-top-title-bar>
-    <nldd-simple-section class="space-y-4">
+    <nldd-simple-section>
       @if (formErrorMessage()) {
         <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
           <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
@@ -435,39 +351,48 @@
           </p>
         </div>
       }
-      <nldd-form-field label="Short name (e.g. AMS-01)">
-        <nldd-text-field
-          #fName
-          autofocus
-          [attr.value]="editForm()?.name ?? ''"
-          placeholder="AMS-01"
-          (keydown.enter)="saveDc()"
-          [attr.invalid]="isFieldInvalid('name') ? '' : null"
-          error-message="error-dc-name"
-        ></nldd-text-field>
-        <nldd-form-field-error-text id="error-dc-name">{{
-          fieldError('name')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      <nldd-form-field label="Full name">
-        <nldd-text-field
-          #fFullName
-          [attr.value]="editForm()?.fullName ?? ''"
-          placeholder="Amsterdam West"
-          (keydown.enter)="saveDc()"
-          [attr.invalid]="isFieldInvalid('full_name') ? '' : null"
-          error-message="error-dc-fullname"
-        ></nldd-text-field>
-        <nldd-form-field-error-text id="error-dc-fullname">{{
-          fieldError('full_name')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      <div class="grid grid-cols-2 gap-3">
+      <nldd-form>
+        <nldd-form-field label="Short name" supporting-label="e.g. AMS-01">
+          <nldd-text-field
+            #fName
+            autofocus
+            [attr.value]="editForm()?.name ?? ''"
+            (keydown.enter)="saveDc()"
+            [attr.invalid]="isFieldInvalid('name') ? '' : null"
+            error-message="error-dc-name"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="error-dc-name">{{
+            fieldError('name')
+          }}</nldd-form-field-error-text>
+        </nldd-form-field>
+        <nldd-form-field label="Full name">
+          <nldd-text-field
+            #fFullName
+            [attr.value]="editForm()?.fullName ?? ''"
+            (keydown.enter)="saveDc()"
+            [attr.invalid]="isFieldInvalid('full_name') ? '' : null"
+            error-message="error-dc-fullname"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="error-dc-fullname">{{
+            fieldError('full_name')
+          }}</nldd-form-field-error-text>
+        </nldd-form-field>
+        <nldd-form-field label="Street address">
+          <nldd-text-field
+            #fAddress
+            [attr.value]="editForm()?.address ?? ''"
+            (keydown.enter)="saveDc()"
+            [attr.invalid]="isFieldInvalid('address') ? '' : null"
+            error-message="error-dc-address"
+          ></nldd-text-field>
+          <nldd-form-field-error-text id="error-dc-address">{{
+            fieldError('address')
+          }}</nldd-form-field-error-text>
+        </nldd-form-field>
         <nldd-form-field label="City">
           <nldd-text-field
             #fCity
             [attr.value]="editForm()?.city ?? ''"
-            placeholder="Amsterdam"
             (keydown.enter)="saveDc()"
             [attr.invalid]="isFieldInvalid('city') ? '' : null"
             error-message="error-dc-city"
@@ -480,7 +405,6 @@
           <nldd-text-field
             #fCountry
             [attr.value]="editForm()?.country ?? ''"
-            placeholder="Netherlands"
             (keydown.enter)="saveDc()"
             [attr.invalid]="isFieldInvalid('country') ? '' : null"
             error-message="error-dc-country"
@@ -489,74 +413,69 @@
             fieldError('country')
           }}</nldd-form-field-error-text>
         </nldd-form-field>
-      </div>
-      <nldd-form-field label="Address">
-        <nldd-text-field
-          #fAddress
-          [attr.value]="editForm()?.address ?? ''"
-          placeholder="Street, City"
-          (keydown.enter)="saveDc()"
-          [attr.invalid]="isFieldInvalid('address') ? '' : null"
-          error-message="error-dc-address"
-        ></nldd-text-field>
-        <nldd-form-field-error-text id="error-dc-address">{{
-          fieldError('address')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      <div class="grid grid-cols-2 gap-3">
+        <!-- Four tiers and three states, all short: buttons show the whole choice
+             where a dropdown hides it behind a click, and one field per row keeps
+             each label above the thing it names. -->
         <nldd-form-field label="Tier">
-          <nldd-dropdown>
-            <select [ngModel]="dcTier()" (ngModelChange)="dcTier.set($event)">
-              <option value="1">Tier 1</option>
-              <option value="2">Tier 2</option>
-              <option value="3">Tier 3</option>
-              <option value="4">Tier 4</option>
-            </select>
-          </nldd-dropdown>
+          <nldd-toggle-button-group type="radio" accessible-label="Tier">
+            @for (t of TIERS; track t.value) {
+              <nldd-toggle-button
+                [attr.value]="t.value"
+                [attr.text]="t.label"
+                [attr.selected]="dcTier() === t.value ? '' : null"
+                (change)="onTierToggle(t.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
         </nldd-form-field>
         <nldd-form-field label="Status">
-          <nldd-dropdown>
-            <select [ngModel]="dcStatus()" (ngModelChange)="dcStatus.set($event)">
-              <option value="operational">Operational</option>
-              <option value="degraded">Degraded</option>
-              <option value="maintenance">Maintenance</option>
-            </select>
-          </nldd-dropdown>
+          <nldd-toggle-button-group type="radio" accessible-label="Status">
+            @for (st of DC_STATUSES; track st.value) {
+              <nldd-toggle-button
+                [attr.value]="st.value"
+                [attr.text]="st.label"
+                [attr.selected]="dcStatus() === st.value ? '' : null"
+                (change)="onDcStatusToggle(st.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
         </nldd-form-field>
-      </div>
-      <nldd-form-field label="Established (year)">
-        <nldd-number-field
-          #fEstablished
-          [attr.value]="editForm()?.established ?? 2024"
-          min="1990"
-          max="2100"
-          full-width
-          (keydown.enter)="saveDc()"
-          [attr.invalid]="isFieldInvalid('established') ? '' : null"
-          error-message="error-dc-established"
-        ></nldd-number-field>
-        <nldd-form-field-error-text id="error-dc-established">{{
-          fieldError('established')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      <nldd-form-field label="Floor space (m²)">
-        <nldd-number-field
-          #fFloorSqm
-          [attr.value]="editForm()?.floorSqm ?? 0"
-          min="0"
-          full-width
-          (keydown.enter)="saveDc()"
-          [attr.invalid]="isFieldInvalid('floor_sqm') ? '' : null"
-          error-message="error-dc-floorsqm"
-        ></nldd-number-field>
-        <nldd-form-field-error-text id="error-dc-floorsqm">{{
-          fieldError('floor_sqm')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
+        <nldd-form-field label="Established (year)">
+          <nldd-number-field
+            #fEstablished
+            [attr.value]="editForm()?.established ?? 2024"
+            min="1990"
+            max="2100"
+            full-width
+            (keydown.enter)="saveDc()"
+            [attr.invalid]="isFieldInvalid('established') ? '' : null"
+            error-message="error-dc-established"
+          ></nldd-number-field>
+          <nldd-form-field-error-text id="error-dc-established">{{
+            fieldError('established')
+          }}</nldd-form-field-error-text>
+        </nldd-form-field>
+        <nldd-form-field label="Floor space (m²)">
+          <nldd-number-field
+            #fFloorSqm
+            [attr.value]="editForm()?.floorSqm ?? 0"
+            min="0"
+            full-width
+            (keydown.enter)="saveDc()"
+            [attr.invalid]="isFieldInvalid('floor_sqm') ? '' : null"
+            error-message="error-dc-floorsqm"
+          ></nldd-number-field>
+          <nldd-form-field-error-text id="error-dc-floorsqm">{{
+            fieldError('floor_sqm')
+          }}</nldd-form-field-error-text>
+        </nldd-form-field>
+        <!-- Under the form rather than docked at the bottom of the sheet: the
+             button belongs to the fields above it. -->
+        <nldd-form-actions>
+          <nldd-button variant="primary" width="full" text="Save" (click)="saveDc()"></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
     </nldd-simple-section>
-    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
-      <nldd-button variant="primary" text="Save" width="full" (click)="saveDc()"></nldd-button>
-    </div>
   </nldd-page>
 </nldd-sheet>
 
@@ -764,6 +683,19 @@
         <h1>Data centers</h1>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
+      <!-- Making one is an action on this list, not on the data center you have
+           open, so it stands where the list does. -->
+      <nldd-toolbar label="Data center actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            text="Add data center"
+            start-icon="plus-small"
+            (click)="openCreateDc()"
+          ></nldd-button>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="12"></nldd-spacer>
       <nldd-list type="navigation" dividers="on-touch" accessible-label="Data centers">
         @for (dc of mutableDcs(); track dc.id) {
           <nldd-list-item
@@ -784,6 +716,10 @@
             <nldd-cell width="fit-content">
               <nldd-badge decorative [attr.color]="statusTagColor(dc.status)"></nldd-badge>
             </nldd-cell>
+            <!-- Same 4 as in the section menu: a dot is 12 wide where a badge
+                 with a number is 20, so right-aligned its middle sits further
+                 right than the one above it. -->
+            <nldd-spacer-cell size="4"></nldd-spacer-cell>
           </nldd-list-item>
         }
       </nldd-list>

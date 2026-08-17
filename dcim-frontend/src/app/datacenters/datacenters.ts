@@ -12,10 +12,8 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import DcSelectorComponent from '../shared/dc-selector';
 import DatacenterApiService from './datacenter-api.service';
 import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
@@ -25,7 +23,6 @@ import parseValidationError from '../../connect/validation';
 import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
 import { DatacenterInfo, DatacenterStatus, RackCell, statusTagColor } from './datacenter.model';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import SecondaryNavService from '../shell/secondary-nav.service';
 
 interface NativeElementRef {
@@ -45,13 +42,7 @@ interface DcStats {
   selector: 'app-datacenters',
   templateUrl: './datacenters.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    RouterLink,
-    FormsModule,
-    DcSelectorComponent,
-    IsometricCanvasComponent,
-    DropdownSyncDirective,
-  ],
+  imports: [RouterLink, IsometricCanvasComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
@@ -106,6 +97,20 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
   editForm = signal<Partial<DatacenterInfo> | null>(null);
+
+  /** The four tiers, as buttons rather than a dropdown. */
+  readonly TIERS: { value: string; label: string }[] = [
+    { value: '1', label: 'Tier 1' },
+    { value: '2', label: 'Tier 2' },
+    { value: '3', label: 'Tier 3' },
+    { value: '4', label: 'Tier 4' },
+  ];
+
+  readonly DC_STATUSES: { value: DatacenterStatus; label: string }[] = [
+    { value: 'operational', label: 'Operational' },
+    { value: 'degraded', label: 'Degraded' },
+    { value: 'maintenance', label: 'Maintenance' },
+  ];
 
   dcTier = signal<string>('3');
 
@@ -353,6 +358,15 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
     this.editForm.set(null);
   }
 
+  /** One tier at a time: unpicking the current one leaves it as it was. */
+  onTierToggle(tier: string, selected: boolean): void {
+    if (selected) this.dcTier.set(tier);
+  }
+
+  onDcStatusToggle(status: DatacenterStatus, selected: boolean): void {
+    if (selected) this.dcStatus.set(status);
+  }
+
   saveDc(): void {
     const form = this.editForm();
     if (!form) return;
@@ -432,6 +446,28 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
   navigateToRack(rackId: string): void {
     this.router.navigate(['/racks', rackId]);
   }
+
+  /** The floor one level down: the rooms and the rack rows inside them, where
+   *  they are made and renamed. */
+  openRoomsAndRows(dc: DatacenterInfo): void {
+    this.router.navigate(['/datacenters', dc.id]);
+  }
+
+  /** Opens the rack section on the first rack of this data center. */
+  openRackView(): void {
+    this.router.navigate(this.firstRackRoute());
+  }
+
+  /** The tasks of this data center: its name is a tag on every task that
+   *  happens here, so the tag view is the list. */
+  openTaskManagement(dc: DatacenterInfo): void {
+    this.router.navigate(['/tasks', 'tag', dc.name]);
+  }
+
+  /** Street, city and country on one line: an address is the whole thing, and
+   *  the city already stands in the menu row beside it. */
+  readonly fullAddress = (dc: DatacenterInfo): string =>
+    [dc.address, dc.city, dc.country].filter((part) => !!part).join(', ');
 
   readonly formatPowerKw = (kw: number): string => `${kw.toFixed(1)} kW`;
 }
