@@ -8,7 +8,7 @@ RUN bun install --frozen-lockfile
 COPY plugins/gateway-api/envoy-gateway/console-ui/ ./
 RUN bun run build
 
-FROM golang:1.26.5 AS build
+FROM golang:1.26.6 AS build
 
 WORKDIR /src
 COPY go.mod go.sum ./
