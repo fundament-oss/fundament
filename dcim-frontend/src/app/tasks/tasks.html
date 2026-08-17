@@ -651,13 +651,6 @@
         <nldd-spacer size="24"></nldd-spacer>
         <nldd-title size="5">
           <h2>Notes</h2>
-          <!-- A badge, not a tag: the number is the system's own count and
-               changes without anyone editing anything. Neutral, because a count
-               of notes is not a warning, and only once there is something to
-               count: saying "0" is the empty state's job. -->
-          @if (task.notes.length) {
-            <nldd-badge slot="end" color="neutral" [attr.text]="task.notes.length"></nldd-badge>
-          }
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
         @if (notesError()) {
@@ -674,7 +667,10 @@
             ></nldd-button>
           </nldd-inline-dialog>
         } @else {
-          <nldd-list accessible-label="Notes" empty-text="No notes yet">
+          <!-- The field is the last row of the same box, so a new note appears
+               right above where you typed it. Whose note it is stands beside
+               it; whose the new one will be is not a question you have. -->
+          <nldd-list variant="box-tinted" accessible-label="Notes">
             @for (note of task.notes; track $index) {
               @let author = noteAuthor(note);
               <nldd-list-item>
@@ -684,47 +680,34 @@
                   <!-- Without a roster entry the avatar falls back to its person
                        icon: either the note predates the directory or its author
                        has left it. -->
-                  <nldd-avatar decorative size="32" [attr.name]="author.tech?.name"></nldd-avatar>
+                  <nldd-avatar decorative size="28" [attr.name]="author.tech?.name"></nldd-avatar>
                 </nldd-cell>
                 <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
                   width="full"
                   vertical-alignment="top"
-                  [attr.overline]="author.name"
                   [attr.text]="note.text"
-                ></nldd-text-cell>
-                <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                <nldd-text-cell
-                  width="fit-content"
-                  vertical-alignment="top"
-                  horizontal-alignment="right"
-                  color="secondary"
-                  [attr.text]="note.time"
+                  [attr.supporting-text]="author.name + ' · ' + note.time"
                 ></nldd-text-cell>
               </nldd-list-item>
             }
+            <nldd-list-item>
+              <nldd-cell width="full">
+                <nldd-multi-line-text-field
+                  rows="1"
+                  placeholder="Write a note about this task"
+                  accessible-label="Add a note"
+                  [value]="newNoteText()"
+                  (input)="newNoteText.set($any($event.target).value ?? '')"
+                ></nldd-multi-line-text-field>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="fit-content" vertical-alignment="bottom">
+                <nldd-button variant="secondary" text="Send" (click)="addNote()"></nldd-button>
+              </nldd-cell>
+            </nldd-list-item>
           </nldd-list>
         }
-        <nldd-spacer size="16"></nldd-spacer>
-        <!-- The signed-in user, since that is who the backend attributes the
-             note to. A caller outside the directory gets the neutral avatar,
-             matching the unattributed note their write will produce. -->
-        <nldd-container layout="row" gap="8" vertical-alignment="center">
-          <nldd-avatar decorative size="32" [attr.name]="currentUser()?.name"></nldd-avatar>
-          <nldd-text-field
-            placeholder="Add a note…"
-            accessible-label="Add a note"
-            [value]="newNoteText()"
-            (input)="newNoteText.set($any($event.target).value ?? '')"
-            (keydown.enter)="addNote()"
-          ></nldd-text-field>
-          <nldd-icon-button
-            icon="arrow-right"
-            variant="secondary"
-            accessible-label="Send note"
-            (click)="addNote()"
-          ></nldd-icon-button>
-        </nldd-container>
       }
     </nldd-simple-section>
   </nldd-page>

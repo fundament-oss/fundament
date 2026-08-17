@@ -431,7 +431,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       this.loadError.set(
         err instanceof ConnectError && err.code === Code.NotFound ? NO_DIRECTORY_ENTRY : message,
       );
-      this.toast.show('Could not load your tasks');
+      this.toast.error('Could not load your tasks');
     }
   }
 
@@ -601,11 +601,11 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       if (this.tasks().length === 0) {
         // Covers both "nothing assigned" and "everything assigned has no steps
         // to walk through", which read the same from here.
-        this.toast.show('No tasks to walk through right now');
+        this.toast.info('No tasks to walk through right now');
         return;
       }
       if (this.checkedItems().size < this.gatherItems().length) {
-        this.toast.show(
+        this.toast.info(
           `${this.checkedItems().size}/${this.gatherItems().length} items checked — proceeding`,
         );
       }
@@ -665,7 +665,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
         next.delete(step.id);
         return next;
       });
-      this.toast.show('Could not save this step — try again');
+      this.toast.error('Could not save this step — try again');
       return false;
     }
   }
@@ -685,7 +685,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
-      this.toast.show('Step saved, but the task could not be closed');
+      this.toast.warning('Step saved, but the task could not be closed');
     }
   }
 
@@ -730,12 +730,11 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       .then(() => {
         this.noteText.set('');
         this.showNoteModal.set(false);
-        this.toast.show('Note saved');
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
-        this.toast.show('Could not save note');
+        this.toast.error('Could not save note');
       });
   }
 

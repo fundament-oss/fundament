@@ -91,9 +91,6 @@ interface NlddSheet extends HTMLElement {
  */
 type MenuKind = 'all' | 'inbox' | 'today' | 'waiting' | 'status' | 'priority' | 'tag';
 
-// Half the width of the filters <aside> (w-60 = 240px), so the toast centers
-// over the main content area next to it instead of the full viewport.
-const TOAST_SIDEBAR_OFFSET_PX = 120;
 
 // Ceiling on in-flight requests for the bulk actions. Select-all over a large
 // board would otherwise put one request per task on the wire at once.
@@ -193,14 +190,12 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   }
 
   ngOnInit(): void {
-    this.toast.offsetPx.set(TOAST_SIDEBAR_OFFSET_PX);
     this.loadCurrentUser();
     this.loadUsers();
     this.loadTasks();
   }
 
   ngOnDestroy(): void {
-    this.toast.offsetPx.set(0);
     this.secondaryNav.clear(this.secondaryNavTemplate());
   }
 
@@ -227,7 +222,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
         // departed assignee from one it merely failed to look up, so it says
         // neither rather than picking the alarming reading.
         this.rosterLoaded.set(false);
-        this.toast.show('Could not load the technician roster');
+        this.toast.error('Could not load the technician roster');
       });
   }
 
@@ -263,7 +258,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
         // eslint-disable-next-line no-console
         console.error(message);
         this.loadError.set(message);
-        this.toast.show('Could not load tasks');
+        this.toast.error('Could not load tasks');
       });
   }
 
@@ -950,7 +945,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
-        this.toast.show('Could not move task');
+        this.toast.error('Could not move task');
         this.tasks.update((list) =>
           list.map((t) => (t.id === task.id ? { ...t, status: previousStatus } : t)),
         );
@@ -1061,12 +1056,11 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
       .then(() => {
         this.closeDetail();
         this.loadTasks();
-        this.toast.show('Task deleted');
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
-        this.toast.show('Could not delete task');
+        this.toast.error('Could not delete task');
       });
   }
 
@@ -1091,11 +1085,9 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
         // The pool settles rather than rejects, so surface partial failures
         // explicitly rather than reporting blanket success.
         const failed = TasksComponent.countRejections(results);
-        this.toast.show(
-          failed === 0
-            ? `${ids.length} task(s) deleted`
-            : `${ids.length - failed} of ${ids.length} deleted, ${failed} failed`,
-        );
+        if (failed > 0) {
+          this.toast.warning(`${ids.length - failed} of ${ids.length} deleted, ${failed} failed`);
+        }
       })
       .catch((err) => {
         // settledPool itself never rejects, so this only fires if the handler
@@ -1115,18 +1107,18 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   bulkSetStatus(status: TaskStatusLabel): void {
     this.bulkStatusPopoverEl()?.nativeElement.hide();
-    this.bulkUpdate({ status }, 'Status updated');
+    this.bulkUpdate({ status });
   }
 
   // assignee of null unassigns the selected tasks (the "Unassigned" option).
   bulkAssign(assigneeId: string | null): void {
     this.bulkAssignPopoverEl()?.nativeElement.hide();
-    this.bulkUpdate({ assignee: assigneeId }, assigneeId ? 'Tasks reassigned' : 'Tasks unassigned');
+    this.bulkUpdate({ assignee: assigneeId });
   }
 
   // Applies `patch` to every selected task. Like the kanban drop, this sends
   // only the changed fields — never the board's snapshot of the other ones.
-  private bulkUpdate(patch: TaskPatch, successMessage: string): void {
+  private bulkUpdate(patch: TaskPatch): void {
     const ids = this.selectedExistingTaskIds();
     if (ids.length === 0) return;
     settledPool(ids, BULK_CONCURRENCY, (id) => firstValueFrom(this.taskApi.updateTask(id, patch)))
@@ -1135,11 +1127,9 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
         // The pool settles rather than rejects, so surface partial failures
         // explicitly rather than reporting blanket success.
         const failed = TasksComponent.countRejections(results);
-        this.toast.show(
-          failed === 0
-            ? successMessage
-            : `${ids.length - failed} of ${ids.length} updated, ${failed} failed`,
-        );
+        if (failed > 0) {
+          this.toast.warning(`${ids.length - failed} of ${ids.length} updated, ${failed} failed`);
+        }
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
@@ -1218,13 +1208,12 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     firstValueFrom(request)
       .then(() => {
         this.loadTasks();
-        this.toast.show(editingId !== null ? 'Task updated' : 'Task created');
         this.closeEditModal();
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
-        this.toast.show('Could not save task');
+        this.toast.error('Could not save task');
       });
   }
 
@@ -1236,13 +1225,13 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     firstValueFrom(this.noteApi.createNoteForTask(id, text))
       .then(() => {
         this.newNoteText.set('');
+        // No toast: the note appearing in the list is the confirmation.
         this.loadNotes(id);
-        this.toast.show('Note added');
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
-        this.toast.show('Could not add note');
+        this.toast.error('Could not add note');
       });
   }
 
