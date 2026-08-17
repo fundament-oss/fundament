@@ -106,10 +106,12 @@
                    by its color as often as by its name. -->
               <nldd-cell width="fit-content" min-width="16px">
                 @if (cable.color) {
+                  <!-- The jacket colour of a real cable, so it is the cable's own
+                       and not one of the system's: custom-color takes it as a
+                       CSS value. -->
                   <nldd-badge
                     decorative
-                    [style.color]="CABLE_COLOR_HEX[cable.color]"
-                    color="inherit"
+                    [attr.custom-color]="CABLE_COLOR_HEX[cable.color]"
                   ></nldd-badge>
                 }
               </nldd-cell>
@@ -212,7 +214,7 @@
      Declared here because the counts are this page's data. -->
 <ng-template #secondaryNav>
   <nldd-page sticky-header>
-    <nldd-top-title-bar slot="header" back-text="Data center"></nldd-top-title-bar>
+    <nldd-top-title-bar slot="header" back-text="DCIM"></nldd-top-title-bar>
     <nldd-simple-section>
       <nldd-title size="3">
         <h1>Patch mapping</h1>
@@ -382,7 +384,10 @@
               [attr.selected]="filterDeviceId() === dev.id ? '' : null"
               (click)="selectView($event, viewPath('device', dev.id))"
             >
-              <nldd-icon-cell icon="cylinder-split" size="20"></nldd-icon-cell>
+              <!-- Not specific: a cable side knows the kind of port, not the kind
+                   of device. Until it does, this says what is true of every row
+                   here: a machine in a rack. -->
+              <nldd-icon-cell icon="rack-server" size="20"></nldd-icon-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <nldd-text-cell [attr.text]="dev.name"></nldd-text-cell>
             </nldd-list-item>

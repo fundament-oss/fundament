@@ -65,24 +65,18 @@
           <!-- Device + manage ports -->
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
-              <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
-                   can't see it. Autofocus is the recommended pattern for a sheet's first field. -->
-              <!-- eslint-disable @angular-eslint/template/no-autofocus -->
-              <nldd-dropdown class="flex-1">
-                <select
-                  autofocus
-                  id="a-device"
-                  (change)="onADeviceChange($any($event.target).value)"
-                >
-                  <option value="" [selected]="!aDeviceId()">Select device…</option>
+              <nldd-combo-box
+                class="flex-1"
+                id="a-device"
+                [attr.value]="aDeviceId()"
+                (change)="onADeviceChange($any($event).detail.value)"
+              >
+                <nldd-menu>
                   @for (dev of dcDevices(); track dev.id) {
-                    <option [value]="dev.id" [selected]="dev.id === aDeviceId()">
-                      {{ dev.name }}
-                    </option>
+                    <nldd-menu-item [attr.value]="dev.id" [attr.text]="dev.name"></nldd-menu-item>
                   }
-                </select>
-              </nldd-dropdown>
-              <!-- eslint-enable @angular-eslint/template/no-autofocus -->
+                </nldd-menu>
+              </nldd-combo-box>
               <nldd-icon-button
                 icon="gear"
                 variant="neutral-transparent"
@@ -96,49 +90,51 @@
 
           <!-- Port type -->
           <nldd-form-field label="Port type">
-            <nldd-dropdown [attr.disabled]="!aDeviceId() ? true : null">
-              <select
-                id="a-port-type"
-                (change)="onAPortTypeChange($any($event.target).value)"
-                [disabled]="!aDeviceId()"
-              >
-                <option value="" [selected]="!aPortType()">Any type</option>
+            <!-- A kind the device has no ports of stays in the list but cannot
+                 be picked: hiding it would suggest the device cannot have any. -->
+            <nldd-combo-box
+              id="a-port-type"
+              [attr.value]="aPortType()"
+              [attr.disabled]="aDeviceId() ? null : ''"
+              (change)="onAPortTypeChange($any($event).detail.value)"
+            >
+              <nldd-menu>
+                <nldd-menu-item value="" text="Any type"></nldd-menu-item>
                 @for (pt of PORT_TYPES; track pt.value) {
-                  <option
-                    [value]="pt.value"
-                    [selected]="pt.value === aPortType()"
-                    [disabled]="!aAvailablePortTypes().has(pt.value)"
-                  >
-                    {{ pt.label }}
-                  </option>
+                  <nldd-menu-item
+                    [attr.value]="pt.value"
+                    [attr.text]="pt.label"
+                    [attr.disabled]="aAvailablePortTypes().has(pt.value) ? null : ''"
+                  ></nldd-menu-item>
                 }
-              </select>
-            </nldd-dropdown>
+              </nldd-menu>
+            </nldd-combo-box>
           </nldd-form-field>
 
           <!-- Port -->
           <nldd-form-field label="Port">
             <div class="flex items-center gap-1.5">
-              <nldd-dropdown class="flex-1" [attr.disabled]="!aDeviceId() ? true : null">
-                <select
-                  id="a-port"
-                  (change)="aPortId.set($any($event.target).value)"
-                  [disabled]="!aDeviceId()"
-                >
-                  <option value="" [selected]="!aPortId()">Select port…</option>
+              <!-- A port that already carries a cable stays visible and says so
+                   on the right, rather than disappearing: a port you cannot find
+                   reads as a port that does not exist. -->
+              <nldd-combo-box
+                class="flex-1"
+                id="a-port"
+                [attr.value]="aPortId()"
+                [attr.disabled]="aDeviceId() ? null : ''"
+                (change)="aPortId.set($any($event).detail.value)"
+              >
+                <nldd-menu>
                   @for (port of aFilteredPorts(); track port.id) {
-                    <option
-                      [value]="port.id"
-                      [selected]="port.id === aPortId()"
-                      [disabled]="usedPortIds().has(port.id)"
-                    >
-                      {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
-                        usedPortIds().has(port.id) ? ' [in use]' : ''
-                      }}
-                    </option>
+                    <nldd-menu-item
+                      [attr.value]="port.id"
+                      [attr.text]="port.name + ' (' + PORT_TYPE_LABEL[port.type] + ')'"
+                      [attr.details]="usedPortIds().has(port.id) ? 'In use' : null"
+                      [attr.disabled]="usedPortIds().has(port.id) ? '' : null"
+                    ></nldd-menu-item>
                   }
-                </select>
-              </nldd-dropdown>
+                </nldd-menu>
+              </nldd-combo-box>
               <nldd-icon-button
                 icon="plus-small"
                 variant="neutral-transparent"
@@ -218,16 +214,18 @@
           <!-- Device + manage ports -->
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
-              <nldd-dropdown class="flex-1">
-                <select id="b-device" (change)="onBDeviceChange($any($event.target).value)">
-                  <option value="" [selected]="!bDeviceId()">Select device…</option>
+              <nldd-combo-box
+                class="flex-1"
+                id="b-device"
+                [attr.value]="bDeviceId()"
+                (change)="onBDeviceChange($any($event).detail.value)"
+              >
+                <nldd-menu>
                   @for (dev of dcDevices(); track dev.id) {
-                    <option [value]="dev.id" [selected]="dev.id === bDeviceId()">
-                      {{ dev.name }}
-                    </option>
+                    <nldd-menu-item [attr.value]="dev.id" [attr.text]="dev.name"></nldd-menu-item>
                   }
-                </select>
-              </nldd-dropdown>
+                </nldd-menu>
+              </nldd-combo-box>
               <nldd-icon-button
                 icon="gear"
                 variant="neutral-transparent"
@@ -241,51 +239,55 @@
 
           <!-- Port type -->
           <nldd-form-field label="Port type">
-            <nldd-dropdown [attr.disabled]="!bDeviceId() ? true : null">
-              <select
-                id="b-port-type"
-                (change)="onBPortTypeChange($any($event.target).value)"
-                [disabled]="!bDeviceId()"
-              >
-                <option value="" [selected]="!bPortType()">Any type</option>
+            <!-- A kind the device has no ports of, or one that cannot meet the
+                 A side, stays in the list but cannot be picked. -->
+            <nldd-combo-box
+              id="b-port-type"
+              [attr.value]="bPortType()"
+              [attr.disabled]="bDeviceId() ? null : ''"
+              (change)="onBPortTypeChange($any($event).detail.value)"
+            >
+              <nldd-menu>
+                <nldd-menu-item value="" text="Any type"></nldd-menu-item>
                 @for (pt of PORT_TYPES; track pt.value) {
-                  <option
-                    [value]="pt.value"
-                    [selected]="pt.value === bPortType()"
-                    [disabled]="
-                      !bAvailablePortTypes().has(pt.value) || !bCompatiblePortTypes().has(pt.value)
+                  <nldd-menu-item
+                    [attr.value]="pt.value"
+                    [attr.text]="pt.label"
+                    [attr.disabled]="
+                      bAvailablePortTypes().has(pt.value) && bCompatiblePortTypes().has(pt.value)
+                        ? null
+                        : ''
                     "
-                  >
-                    {{ pt.label }}
-                  </option>
+                  ></nldd-menu-item>
                 }
-              </select>
-            </nldd-dropdown>
+              </nldd-menu>
+            </nldd-combo-box>
           </nldd-form-field>
 
           <!-- Port -->
           <nldd-form-field label="Port">
             <div class="flex items-center gap-1.5">
-              <nldd-dropdown class="flex-1" [attr.disabled]="!bDeviceId() ? true : null">
-                <select
-                  id="b-port"
-                  (change)="bPortId.set($any($event.target).value)"
-                  [disabled]="!bDeviceId()"
-                >
-                  <option value="" [selected]="!bPortId()">Select port…</option>
+              <!-- A port that already carries a cable stays visible and says so
+                   on the right, rather than disappearing: a port you cannot find
+                   reads as a port that does not exist. -->
+              <nldd-combo-box
+                class="flex-1"
+                id="b-port"
+                [attr.value]="bPortId()"
+                [attr.disabled]="bDeviceId() ? null : ''"
+                (change)="bPortId.set($any($event).detail.value)"
+              >
+                <nldd-menu>
                   @for (port of bFilteredPorts(); track port.id) {
-                    <option
-                      [value]="port.id"
-                      [selected]="port.id === bPortId()"
-                      [disabled]="usedPortIds().has(port.id)"
-                    >
-                      {{ port.name }} ({{ PORT_TYPE_LABEL[port.type] }}){{
-                        usedPortIds().has(port.id) ? ' [in use]' : ''
-                      }}
-                    </option>
+                    <nldd-menu-item
+                      [attr.value]="port.id"
+                      [attr.text]="port.name + ' (' + PORT_TYPE_LABEL[port.type] + ')'"
+                      [attr.details]="usedPortIds().has(port.id) ? 'In use' : null"
+                      [attr.disabled]="usedPortIds().has(port.id) ? '' : null"
+                    ></nldd-menu-item>
                   }
-                </select>
-              </nldd-dropdown>
+                </nldd-menu>
+              </nldd-combo-box>
               <nldd-icon-button
                 icon="plus-small"
                 variant="neutral-transparent"
