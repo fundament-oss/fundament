@@ -1129,6 +1129,26 @@
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
       <nldd-list type="navigation" dividers="on-touch" accessible-label="Tags">
+        <!-- The halls first: where the work is, is the thing people narrow by
+             before what kind of work it is. Same tag icon as the rest, because
+             here it is a tag like any other. -->
+        @for (site of taskSites(); track site) {
+          <nldd-list-item
+            [attr.href]="viewPath('tag', site)"
+            [attr.selected]="isMenuSelection('tag', site) ? '' : null"
+            (click)="goToView($event, 'tag', site)"
+          >
+            <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-text-cell [attr.text]="site"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              color="secondary"
+              [attr.text]="tagCounts()[site]"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
         @for (tag of taskTags(); track tag) {
           <nldd-list-item
             [attr.href]="viewPath('tag', tag)"

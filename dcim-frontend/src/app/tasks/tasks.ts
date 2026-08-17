@@ -537,6 +537,19 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return [...place, ...task.tags];
   };
 
+  /** The data center a task happens in: the first half of its location, which
+   *  reads as "AMS1 · R02-2". Empty for work that is not tied to a hall. */
+  readonly taskSite = (task: TaskData): string =>
+    task.location.split('·')[0]?.trim() ?? '';
+
+  /** The data centers with work in them, listed above the free tags. A hall is
+   *  a tag like any other on a task, and the one people filter by first. */
+  readonly taskSites = computed(() =>
+    [...new Set(this.tasks().map((t) => this.taskSite(t)).filter(Boolean))].sort((a, b) =>
+      a.localeCompare(b),
+    ),
+  );
+
   /** The tags in use, in the order the menu shows them. Derived rather than
    *  fixed, so a tag somebody adds turns up here on its own. */
   readonly taskTags = computed(() =>
@@ -736,7 +749,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return this.tasks().filter((t) => {
       if (st !== 'all' && !this.inStatusView(t, st as TaskStatusLabel)) return false;
       if (pr !== 'all' && t.priority !== pr) return false;
-      if (cat !== 'all' && !t.tags.includes(cat)) return false;
+      if (cat !== 'all' && !t.tags.includes(cat) && this.taskSite(t) !== cat) return false;
       if (view === 'inbox' && !this.isInbox(t)) return false;
       if (view === 'today' && !this.isToday(t)) return false;
       if (view === 'waiting' && !this.isWaiting(t)) return false;
@@ -800,6 +813,8 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   tagCounts = computed(() =>
     this.tasks().reduce<Record<string, number>>((acc, t) => {
+      const site = this.taskSite(t);
+      if (site) acc[site] = (acc[site] ?? 0) + 1;
       t.tags.forEach((tag) => {
         acc[tag] = (acc[tag] ?? 0) + 1;
       });
