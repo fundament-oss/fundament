@@ -1,331 +1,278 @@
-<div class="flex flex-col h-full overflow-hidden bg-white dark:bg-gray-950">
-  <!-- ══════════════════════════════════════════════════════════════
-       SUBBAR
-       ══════════════════════════════════════════════════════════════ -->
-  <div
-    class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex items-center gap-4"
-  >
-    <!-- Breadcrumb -->
-    <nav aria-label="Breadcrumb" class="flex-1 min-w-0">
-      <ol class="flex items-center gap-1.5 text-sm">
-        <li>
-          <span class="font-semibold text-slate-900 dark:text-white">Racks</span>
-        </li>
-        @if (breadcrumbRack(); as rackName) {
-          <li
-            class="flex items-center gap-1.5 text-slate-400 dark:text-gray-500"
-            aria-hidden="true"
-          >
-            <nldd-icon name="chevron-right-small" class="w-3.5 h-3.5"></nldd-icon>
-          </li>
-          <li class="text-slate-500 dark:text-gray-400 truncate">{{ rackName }}</li>
-        }
-      </ol>
-    </nav>
-    <!-- Actions -->
-    <div class="flex items-center gap-2 shrink-0">
-      @if (currentRack(); as rack) {
-        <nldd-icon-button
-          icon="pencil-on-square"
-          variant="neutral-transparent"
-          size="sm"
-          text="Edit rack"
-          (click)="openEditRack(rack)"
-        ></nldd-icon-button>
-        <nldd-icon-button
-          icon="trash"
-          variant="neutral-transparent"
-          size="sm"
-          text="Delete rack"
-          (click)="openDeleteRack(rack)"
-        ></nldd-icon-button>
-      }
-      <nldd-button
-        variant="primary"
-        text="Add rack"
-        start-icon="plus-small"
-        size="sm"
-        (click)="openCreateRack()"
-      ></nldd-button>
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════════════════════════
-       DC TABS
-       ══════════════════════════════════════════════════════════════ -->
-  <div class="shrink-0 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950">
-    <div class="px-6">
-      <app-dc-selector
-        [datacenters]="mutableDcs()"
-        [selectedId]="currentDC()"
-        (dcSelected)="selectDC($event)"
-      />
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════════════════════════
-       BODY ROW (rack diagram + info panel)
-       ══════════════════════════════════════════════════════════════ -->
-  <div class="flex flex-1 min-h-0 overflow-hidden">
-    <!-- ── MAIN: Rack diagram ──────────────────────────────────── -->
-    <main
-      class="flex-1 min-w-0 overflow-y-auto bg-slate-50 dark:bg-gray-900"
-      aria-label="Rack diagram"
-    >
-      @if (currentRack(); as rack) {
-        <!-- Diagram toolbar -->
-        <div
-          class="sticky top-0 z-10 border-b border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-2"
-        >
-          <span class="font-semibold text-slate-900 dark:text-white text-sm font-mono">{{
-            rack.name
-          }}</span>
-
-          <!-- Front / Back toggle -->
-          <nldd-segmented-control
-            [value]="viewMode()"
-            size="sm"
-            type="radio"
-            variant="text"
-            (change)="viewMode.set($any($event).detail.value)"
-          >
-            <nldd-segmented-control-item value="front" text="Front"></nldd-segmented-control-item>
-            <nldd-segmented-control-item value="back" text="Back"></nldd-segmented-control-item>
-          </nldd-segmented-control>
-
-          <!-- Stats -->
-          <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-400">
-            <span>
-              <span class="font-semibold text-slate-900 dark:text-white">{{
-                rackStats().usedU
-              }}</span
-              >/{{ rackStats().totalU }}U
-            </span>
-            <span class="text-slate-300 dark:text-gray-600" aria-hidden="true">·</span>
-            <span>{{ formatPowerKw(rackStats().totalPowerW) }}kW</span>
-            <span class="text-slate-300 dark:text-gray-600" aria-hidden="true">·</span>
-            <span
-              >{{ rackStats().deviceCount }} device{{
-                rackStats().deviceCount === 1 ? '' : 's'
-              }}</span
-            >
-          </div>
-
-          <!-- Spacer -->
-          <div class="flex-1"></div>
-
-          <!-- Edit-layout controls -->
-          @if (editMode()) {
-            <nldd-button
-              variant="accent-tinted"
-              text="Add device"
-              start-icon="plus-small"
-              size="sm"
-              (click)="openAddDevice()"
-            ></nldd-button>
-          }
+<nldd-page sticky-header>
+  <!-- The bar carries the way back to the list of racks once the panes collapse
+       to one column. -->
+  <nldd-top-title-bar
+    slot="header"
+    [attr.text]="currentRack()?.name ?? 'Racks'"
+    back-text="Racks"
+    collapse-anchor="rack-title"
+  ></nldd-top-title-bar>
+  @if (currentRack(); as rack) {
+    <nldd-simple-section>
+      <nldd-title id="rack-title" size="2">
+        <h1>{{ rack.name }}</h1>
+        <span slot="subtitle">
+          {{ rackStats().usedU }}/{{ rackStats().totalU }}U ·
+          {{ formatPowerKw(rackStats().totalPowerW) }}kW ·
+          {{ rackStats().deviceCount }} device{{ rackStats().deviceCount === 1 ? '' : 's' }}
+        </span>
+      </nldd-title>
+      <nldd-spacer size="12"></nldd-spacer>
+      <nldd-toolbar label="Rack actions">
+        <nldd-toolbar-item slot="start">
           <nldd-button
-            [variant]="editMode() ? 'accent-filled' : 'neutral-tinted'"
-            [text]="editMode() ? 'Done' : 'Edit layout'"
-            size="sm"
-            (click)="toggleEditMode()"
+            variant="secondary"
+            text="Edit rack"
+            start-icon="pencil-on-square"
+            (click)="openEditRack(rack)"
           ></nldd-button>
-        </div>
-
-        <!-- Rack frame -->
-        <div class="mx-6 my-6 flex items-start justify-center">
-          <div class="w-full max-w-xs min-w-0 shrink-0">
-            @if (editMode()) {
-              <app-rack-diagram-editor
-                [rack]="rack"
-                (devicesChange)="applyDeviceChanges(rack.id, $event)"
-                (deleteDeviceRequest)="openDeleteDevice($event)"
-              />
-            } @else {
-              <app-rack-diagram
-                [rack]="rack"
-                [viewMode]="viewMode()"
-                (deviceSelect)="selectDevice($event)"
-              />
+          <nldd-menu-item
+            slot="overflow"
+            icon="pencil-on-square"
+            text="Edit rack"
+            (select)="openEditRack(rack)"
+          ></nldd-menu-item>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="16"></nldd-spacer>
+      <!-- The rack as a list rather than a drawing: unit left, what stands
+           in it beside that, and the one thing you can do to that unit on
+           the right. A device fills several units and is one row, written
+           down at the top unit of its span. -->
+      <nldd-list variant="box-tinted" [attr.accessible-label]="'Units in ' + rack.name">
+        @for (row of rackRows(); track row.key) {
+          @if (row.device; as device) {
+            <nldd-list-item>
+              <nldd-text-cell
+                width="64px"
+                horizontal-alignment="right"
+                [attr.text]="row.label"
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- What the thing is, in a tag behind its name, the way a
+                   product wears its category. What state it is in is a
+                   different question and rides on the right. -->
+              <nldd-text-cell width="full" min-width="140px"
+                >{{ device.name }}&ngsp;<nldd-tag
+                  size="sm"
+                  [attr.color]="deviceTypeColor(device)"
+                  [attr.text]="deviceTypeText(device)"
+                ></nldd-tag
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="fit-content">
+                <nldd-text>
+                  <nldd-badge
+                    decorative
+                    [attr.color]="deviceStateColor(device)"
+                  ></nldd-badge>&ngsp;{{ deviceStateText(device) }}
+                </nldd-text>
+              </nldd-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="fit-content">
+                <nldd-icon-button
+                  icon="ellipsis"
+                  size="sm"
+                  popup-type="menu"
+                  [attr.accessible-label]="'Actions for ' + device.name"
+                >
+                  <nldd-menu slot="popup">
+                    <nldd-menu-item
+                      text="View details"
+                      icon="server"
+                      (select)="selectDevice(device.id)"
+                    ></nldd-menu-item>
+                    <!-- Only the units where this device fits: a 4U machine
+                         needs four in a row, so a free unit is not a place by
+                         itself. -->
+                    <nldd-menu-item text="Move to" icon="arrow-up-arrow-down">
+                      <nldd-menu>
+                        @for (unit of moveTargets(device); track unit) {
+                          <nldd-menu-item
+                            [attr.text]="'U ' + unit"
+                            (select)="moveDevice(device, unit)"
+                          ></nldd-menu-item>
+                        }
+                      </nldd-menu>
+                    </nldd-menu-item>
+                    <nldd-menu-divider></nldd-menu-divider>
+                    <nldd-menu-item
+                      text="Remove from rack"
+                      icon="trash"
+                      destructive
+                      (select)="openDeleteDevice(device)"
+                    ></nldd-menu-item>
+                  </nldd-menu>
+                </nldd-icon-button>
+              </nldd-cell>
+            </nldd-list-item>
+          } @else {
+            <nldd-list-item>
+              <nldd-text-cell
+                width="64px"
+                horizontal-alignment="right"
+                [attr.text]="row.label"
+              ></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <!-- The word, not a dash: a screen reader makes nothing of a
+                   dash, and "Free" is what the legend used to call it. -->
+              <nldd-text-cell width="full" color="secondary" text="Free"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="fit-content">
+                <nldd-button
+                  variant="secondary"
+                  size="sm"
+                  text="Add"
+                  start-icon="plus-small"
+                  [attr.accessible-label]="'Place a device in U ' + row.unit"
+                  (click)="openAddDevice(row.unit)"
+                ></nldd-button>
+              </nldd-cell>
+            </nldd-list-item>
+          }
+        }
+      </nldd-list>
+      <!-- The spacer sits inside the block it separates: a section that does
+           not render leaves its own space behind otherwise. -->
+      <!-- Notes -->
+      @if (currentRackNotes(); as notes) {
+        <nldd-spacer size="24"></nldd-spacer>
+        <section aria-labelledby="rack-notes-heading">
+          <nldd-title size="4">
+            <h2 id="rack-notes-heading">Notes</h2>
+            @if (notes.comments.length > 0) {
+              <nldd-badge
+                slot="end"
+                color="neutral"
+                [attr.text]="notes.comments.length"
+              ></nldd-badge>
             }
-          </div>
-        </div>
-      } @else {
-        <div class="flex flex-col items-center justify-center h-full py-24 text-center">
-          <div
-            class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200 dark:bg-gray-800 text-slate-400 dark:text-gray-500 mb-4"
-          >
-            <nldd-icon name="cylinder-split" class="w-8 h-8" aria-hidden="true"></nldd-icon>
-          </div>
-          <p class="text-sm font-medium text-slate-600 dark:text-gray-300">
-            Select a rack from the sidebar
-          </p>
-          <p class="mt-1 text-xs text-slate-400 dark:text-gray-500">
-            Click any rack to view its diagram
-          </p>
-        </div>
-      }
-    </main>
-
-    <!-- ── RIGHT SIDEBAR: Legend + Notes + History ───────────── -->
-    <aside
-      class="w-72 shrink-0 border-l border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col overflow-y-auto"
-      aria-label="Rack info"
-    >
-      @if (currentRack(); as rack) {
-        <!-- Legend -->
-        <div class="shrink-0 px-5 pt-5 pb-4 border-b border-slate-100 dark:border-gray-800">
-          <h2 class="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-3">Legend</h2>
-          <ul class="space-y-2">
-            <li class="flex items-center gap-2">
-              <span class="h-3 w-3 rounded-sm bg-accent-700 shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600 dark:text-gray-300">Allocated</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="h-3 w-3 rounded-sm bg-[#ffb612] shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600 dark:text-gray-300">Switch</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="h-3 w-3 rounded-sm bg-[#8fcae7] shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600 dark:text-gray-300">Reserved</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="h-3 w-3 rounded-sm bg-[#42145f] shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600 dark:text-gray-300">Locked / PDU</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="h-3 w-3 rounded-sm bg-[#a90061] shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600 dark:text-gray-300">Patch panel</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="h-3 w-3 rounded-sm bg-red-700 shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600 dark:text-gray-300">Offline</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="rack-slot-free h-3 w-3 rounded-sm shrink-0" aria-hidden="true"></span>
-              <span class="text-sm text-slate-600 dark:text-gray-300">Free</span>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Notes -->
-        @if (currentRackNotes(); as notes) {
-          <section
-            class="border-b border-slate-100 dark:border-gray-800"
-            aria-labelledby="rack-notes-heading"
-          >
-            <div class="px-5 py-3 border-b border-slate-100 dark:border-gray-800">
-              <h2
-                id="rack-notes-heading"
-                class="font-semibold text-gray-700 dark:text-gray-300 text-sm"
-              >
-                Notes
-                @if (notes.comments.length > 0) {
-                  <nldd-tag
-                    class="ml-1.5"
-                    color="neutral"
-                    size="sm"
-                    [attr.text]="notes.comments.length"
-                  ></nldd-tag>
-                }
-              </h2>
+          </nldd-title>
+          <nldd-spacer size="8"></nldd-spacer>
+          @if (notes.description) {
+            <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+              <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                {{ notes.description }}
+              </p>
             </div>
-            @if (notes.description) {
-              <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
-                <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                  {{ notes.description }}
-                </p>
+          }
+          <div class="px-5 py-3 space-y-3">
+            @if (notes.comments.length === 0) {
+              <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-2">
+                No notes yet
+              </p>
+            }
+            @for (comment of notes.comments; track $index) {
+              <div class="flex gap-2.5">
+                <div class="shrink-0 pt-0.5">
+                  <span
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 dark:bg-accent-950 text-xs font-semibold text-accent-700 dark:text-accent-300 shrink-0 select-none"
+                    aria-hidden="true"
+                  >
+                    {{ comment.initials }}
+                  </span>
+                </div>
+                <div class="flex-1 rounded-xl bg-gray-50 dark:bg-gray-900 px-3 py-2">
+                  <div class="flex items-center justify-between gap-2 mb-0.5">
+                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{
+                      comment.author
+                    }}</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">{{
+                      formatDaysAgo(comment.daysAgo)
+                    }}</span>
+                  </div>
+                  <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                    {{ comment.content }}
+                  </p>
+                </div>
               </div>
             }
-            <div class="px-5 py-3 space-y-3">
-              @if (notes.comments.length === 0) {
-                <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-2">
-                  No notes yet
-                </p>
-              }
-              @for (comment of notes.comments; track $index) {
-                <div class="flex gap-2.5">
-                  <div class="shrink-0 pt-0.5">
-                    <span
-                      class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 dark:bg-accent-950 text-xs font-semibold text-accent-700 dark:text-accent-300 shrink-0 select-none"
-                      aria-hidden="true"
-                    >
-                      {{ comment.initials }}
-                    </span>
-                  </div>
-                  <div class="flex-1 rounded-xl bg-gray-50 dark:bg-gray-900 px-3 py-2">
-                    <div class="flex items-center justify-between gap-2 mb-0.5">
-                      <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{
-                        comment.author
-                      }}</span>
-                      <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">{{
-                        formatDaysAgo(comment.daysAgo)
-                      }}</span>
-                    </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                      {{ comment.content }}
-                    </p>
-                  </div>
-                </div>
-              }
-            </div>
-          </section>
-        }
-
-        <!-- History -->
-        @if (currentRackHistory().length > 0) {
-          <section class="px-5 py-4" aria-labelledby="rack-history-heading">
-            <h2
-              id="rack-history-heading"
-              class="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-3"
-            >
-              History
-            </h2>
-            <ol class="flex flex-col gap-0" aria-label="Rack history">
-              @for (
-                event of currentRackHistory();
-                track event.daysAgo + event.description;
-                let last = $last
-              ) {
-                <li class="flex items-start gap-2.5">
-                  <!-- Icon + vertical line -->
-                  <div class="flex flex-col items-center shrink-0">
-                    <div
-                      class="flex h-7 w-7 items-center justify-center rounded-full"
-                      [class]="historyEventIconBg(event.type)"
-                      aria-hidden="true"
-                    >
-                      <nldd-icon
-                        [name]="historyEventIcon(event.type)"
-                        [style]="'width:14px;height:14px;' + historyEventIconColor(event.type)"
-                      >
-                      </nldd-icon>
-                    </div>
-                    @if (!last) {
-                      <div
-                        class="w-px flex-1 bg-gray-100 dark:bg-gray-800 my-1 min-h-3"
-                        aria-hidden="true"
-                      ></div>
-                    }
-                  </div>
-                  <!-- Content -->
-                  <div class="pb-3 min-w-0 flex-1">
-                    <p class="text-sm text-gray-800 dark:text-gray-100 leading-snug">
-                      {{ event.description }}
-                    </p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {{ event.user }} · {{ formatDaysAgo(event.daysAgo) }}
-                    </p>
-                  </div>
-                </li>
-              }
-            </ol>
-          </section>
-        }
+          </div>
+        </section>
       }
-    </aside>
-  </div>
-</div>
+
+      <!-- History -->
+      @if (currentRackHistory().length > 0) {
+        <nldd-spacer size="24"></nldd-spacer>
+        <section aria-labelledby="rack-history-heading">
+          <nldd-title size="4">
+            <h2 id="rack-history-heading">History</h2>
+          </nldd-title>
+          <nldd-spacer size="8"></nldd-spacer>
+          <ol class="flex flex-col gap-0" aria-label="Rack history">
+            @for (
+              event of currentRackHistory();
+              track event.daysAgo + event.description;
+              let last = $last
+            ) {
+              <li class="flex items-start gap-2.5">
+                <!-- Icon + vertical line -->
+                <div class="flex flex-col items-center shrink-0">
+                  <div
+                    class="flex h-7 w-7 items-center justify-center rounded-full"
+                    [class]="historyEventIconBg(event.type)"
+                    aria-hidden="true"
+                  >
+                    <nldd-icon
+                      [name]="historyEventIcon(event.type)"
+                      [style]="'width:14px;height:14px;' + historyEventIconColor(event.type)"
+                    >
+                    </nldd-icon>
+                  </div>
+                  @if (!last) {
+                    <div
+                      class="w-px flex-1 bg-gray-100 dark:bg-gray-800 my-1 min-h-3"
+                      aria-hidden="true"
+                    ></div>
+                  }
+                </div>
+                <!-- Content -->
+                <div class="pb-3 min-w-0 flex-1">
+                  <p class="text-sm text-gray-800 dark:text-gray-100 leading-snug">
+                    {{ event.description }}
+                  </p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {{ event.user }} · {{ formatDaysAgo(event.daysAgo) }}
+                  </p>
+                </div>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+      <nldd-spacer size="32"></nldd-spacer>
+      <!-- Deleting a rack takes the devices in it with it, so it does not
+           belong in the bar beside Edit. It waits at the end of the page, where
+           you only end up on purpose. -->
+      <nldd-box background="critical">
+        <nldd-container padding="16">
+          <nldd-title size="4">
+            <h2>Delete this rack</h2>
+          </nldd-title>
+          <nldd-spacer size="4"></nldd-spacer>
+          <nldd-text size="sm">
+            Deleting {{ rack.name }} removes the devices placed in it as well. This cannot be
+            undone.
+          </nldd-text>
+          <nldd-spacer size="16"></nldd-spacer>
+          <nldd-button
+            variant="destructive"
+            text="Delete rack"
+            start-icon="trash"
+            (click)="openDeleteRack(rack)"
+          ></nldd-button>
+        </nldd-container>
+      </nldd-box>
+    </nldd-simple-section>
+  } @else {
+    <!-- The section is open and nothing is picked, the same sentence in the
+         same place as the other sections. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
+    </nldd-simple-section>
+  }
+  <nldd-page-footer slot="footer"></nldd-page-footer>
+</nldd-page>
 
 <!-- ══════════════════════════════════════════════════════════════
      RACK EDIT SHEET
@@ -381,7 +328,7 @@
           }
           @if (rowOptions().length === 0) {
             <nldd-form-field-error-text id="error-no-rows"
-              >No rack rows in this datacenter. Create one on the Datacenters page
+              >No rack rows in this data center. Create one on the Data centers page
               first.</nldd-form-field-error-text
             >
           }
@@ -556,6 +503,21 @@
         <h1>Racks</h1>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
+      <!-- Making a rack is an action on this list, not on the rack you have
+           open, so it stands where the list does. -->
+      <nldd-toolbar label="Rack actions">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            text="Add rack"
+            start-icon="plus-small"
+            (click)="openCreateRack()"
+          ></nldd-button>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
+      <nldd-spacer size="12"></nldd-spacer>
+      <!-- The one placeholder that earns its place: the field has no visible
+           label, and without it the design system falls back to Dutch. -->
       <nldd-search-field
         accessible-label="Search racks"
         placeholder="Search"
@@ -563,41 +525,43 @@
         (input)="searchQuery.set($any($event.target).value)"
       ></nldd-search-field>
       <nldd-spacer size="12"></nldd-spacer>
-      @if (filteredRacks().length === 0) {
-        <nldd-inline-dialog
-          icon="cylinder-split-slash"
-          icon-color="secondary"
-          text="No racks found"
-        ></nldd-inline-dialog>
-      } @else {
-        <nldd-list
-          type="navigation"
-          dividers="on-touch"
-          [attr.accessible-label]="'Racks in ' + currentDC()"
-        >
-          @for (rack of filteredRacks(); track rack.id) {
-            <nldd-list-item
-              button
-              [attr.selected]="currentRackId() === rack.id ? '' : null"
-              (click)="selectRack(rack.id)"
-            >
-              <nldd-text-cell
-                width="full"
-                [attr.text]="rack.name"
-                [attr.supporting-text]="rackUsedU(rack) + '/' + rack.totalU + 'U'"
-              ></nldd-text-cell>
-              <nldd-spacer-cell size="12"></nldd-spacer-cell>
-              <nldd-cell width="fit-content">
-                <nldd-progress-bar
-                  [attr.value]="rackUsedU(rack)"
-                  [attr.max]="rack.totalU"
-                  [attr.accessible-label]="rackUsedU(rack) + ' of ' + rack.totalU + ' U used'"
-                ></nldd-progress-bar>
-              </nldd-cell>
-            </nldd-list-item>
+      <!-- The data center rides in the list's own toolbar rather than above it:
+           it is what this list shows, and the slot keeps it in place when the
+           list runs empty, so you can always pick another one. -->
+      <nldd-list
+        type="navigation"
+        dividers="on-touch"
+        [attr.accessible-label]="'Racks in ' + currentDcName()"
+        empty-text="No racks found"
+      >
+        <nldd-toggle-button-group slot="toolbar" type="radio" accessible-label="Data center">
+          @for (dc of mutableDcs(); track dc.id) {
+            <nldd-toggle-button
+              [attr.value]="dc.id"
+              [attr.text]="dc.name"
+              [attr.selected]="currentDC() === dc.id ? '' : null"
+              (change)="onDcToggle(dc.id, $any($event).detail.selected)"
+            ></nldd-toggle-button>
           }
-        </nldd-list>
-      }
+        </nldd-toggle-button-group>
+        @for (rack of filteredRacks(); track rack.id) {
+          <nldd-list-item
+            button
+            [attr.selected]="currentRackId() === rack.id ? '' : null"
+            (click)="selectRack(rack.id)"
+          >
+            <nldd-icon-cell icon="rack-servers" size="20"></nldd-icon-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell width="full" [attr.text]="rack.name"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="rackUsedU(rack) + '/' + rack.totalU + 'U'"
+            ></nldd-text-cell>
+          </nldd-list-item>
+        }
+      </nldd-list>
     </nldd-simple-section>
   </nldd-page>
 </ng-template>

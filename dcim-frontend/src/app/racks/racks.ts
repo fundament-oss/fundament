@@ -20,15 +20,13 @@ import { firstValueFrom, map } from 'rxjs';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import RackApiService from './rack-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
+import DatacenterListService from '../datacenters/datacenter-list.service';
 import InventoryApiService from '../inventory/inventory-api.service';
 import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import connectErrorMessage from '../../connect/error';
-import DcSelectorComponent from '../shared/dc-selector';
-import RackDiagramComponent from './rack-diagram/rack-diagram';
-import RackDiagramEditorComponent from './rack-diagram-editor/rack-diagram-editor';
-import { Rack, RackDevice } from './rack.model';
-import { DatacenterInfo, RackRow, Room } from '../datacenters/datacenter.model';
+import { DeviceState, DeviceType, Rack, RackDevice } from './rack.model';
+import { RackRow, Room } from '../datacenters/datacenter.model';
 import { RackSlotType } from '../../generated/v1/common_pb';
 import parseValidationError from '../../connect/validation';
 import { categoryToDeviceType, parseRackHeight } from './catalog-helpers';
@@ -221,6 +219,14 @@ interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
 }
 
+/** One row of the rack list: a device with the units it fills, or a free unit. */
+interface RackRowItem {
+  key: string;
+  unit: number;
+  label: string;
+  device: RackDevice | null;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 @Component({
@@ -229,9 +235,6 @@ interface NativeElementRef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
-    DcSelectorComponent,
-    RackDiagramComponent,
-    RackDiagramEditorComponent,
     DropdownSyncDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -266,8 +269,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     initialValue: this.route.snapshot.paramMap.get('rackId'),
   });
 
-  viewMode = signal<'front' | 'back'>('front');
-
   searchQuery = signal('');
 
   activeModal = signal<'notes' | 'history' | null>(null);
@@ -279,7 +280,11 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   readonly placementsByRack = signal<Map<string, PlacementInfo[]>>(new Map());
 
   // ── DC list (loaded from the API) ──────────────────────────────────────────
-  readonly mutableDcs = signal<DatacenterInfo[]>([]);
+  private readonly dcList = inject(DatacenterListService);
+
+  /** The list this section shares with the data center pages, so the toggle
+   *  above the racks is filled the moment this page opens. */
+  readonly mutableDcs = this.dcList.datacenters;
 
   readonly selectedDcId = signal('');
 
@@ -296,8 +301,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   readonly deleteRack = signal<Rack | null>(null);
 
   // ── Edit-layout mode ───────────────────────────────────────────────────────
-  readonly editMode = signal(false);
-
   readonly deleteDeviceTarget = signal<RackDevice | null>(null);
 
   readonly addDeviceForm = signal<AddDeviceForm | null>(null);
@@ -330,7 +333,20 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
 
   readonly currentDC = computed(() => this.selectedDcId());
 
+  /** What the current data center is called, for the label of the rack list. */
+  readonly currentDcName = computed(
+    () => this.mutableDcs().find((dc) => dc.id === this.currentDC())?.name ?? '',
+  );
+
   constructor() {
+    // A rack always stands in a data center, so the list opens in one: the
+    // first, until you pick another.
+    effect(() => {
+      const dcs = this.mutableDcs();
+      untracked(() => {
+        if (!this.selectedDcId() && dcs.length > 0) this.selectedDcId.set(dcs[0].id);
+      });
+    });
     // When the selected DC changes, fetch its racks and row options.
     effect(() => {
       const dcId = this.selectedDcId();
@@ -345,12 +361,15 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
       if (rackId) this.reloadDevicesForRack(rackId);
     });
 
+    // The page always shows a rack of the data center you are in: the first,
+    // unless the address names one. Switching data center leaves the address
+    // pointing at a rack that is no longer in the list, which counts as none.
     effect(() => {
-      if (!this.currentRackId()) {
-        const first = this.mutableRacks()[0];
-        if (first) {
-          this.router.navigate(['/racks', first.id], { replaceUrl: true });
-        }
+      const racks = this.mutableRacks();
+      const id = this.currentRackId();
+      if (racks.length === 0) return;
+      if (!id || !racks.some((rack) => rack.id === id)) {
+        this.router.navigate(['/racks', racks[0].id], { replaceUrl: true });
       }
     });
     effect(() => {
@@ -373,10 +392,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
       if (this.deleteDeviceTarget() !== null) el?.show?.();
       else el?.hide?.();
     });
-    effect(() => {
-      this.currentRackId();
-      this.editMode.set(false);
-    });
   }
 
   ngAfterViewInit(): void {
@@ -388,16 +403,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   ngOnInit(): void {
-    firstValueFrom(this.dcApi.listSites())
-      .then((res) => {
-        const dcs = res.sites.map((s) => DatacenterApiService.mapSite(s));
-        this.mutableDcs.set(dcs);
-        if (!this.selectedDcId() && dcs.length > 0) {
-          this.selectedDcId.set(dcs[0].id);
-        }
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    this.dcList.load();
   }
 
   private reloadRacks(dcId: string): void {
@@ -521,6 +527,123 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     return { ...rack, devices };
   });
 
+  /**
+   * The rack as a list: one row per device, however many units it takes, and
+   * one row per free unit. Counted down from the top, the way you stand in
+   * front of it.
+   */
+  readonly rackRows = computed((): RackRowItem[] => {
+    const rack = this.currentRack();
+    if (!rack) return [];
+    const byUnit = new Map<number, RackDevice>();
+    rack.devices.forEach((device) => {
+      RacksComponent.span(device).forEach((u) => byUnit.set(u, device));
+    });
+    const rows: RackRowItem[] = [];
+    for (let u = rack.totalU; u >= 1; u -= 1) {
+      const device = byUnit.get(u) ?? null;
+      if (!device) {
+        rows.push({ key: `u${u}`, unit: u, label: String(u), device: null });
+      } else if (u === device.uStart + device.uSize - 1) {
+        // A device fills several units but is one row, written down at the top
+        // unit of its span and skipped for the rest.
+        const label = device.uSize === 1 ? String(u) : `${device.uStart}-${u}`;
+        rows.push({ key: device.id, unit: device.uStart, label, device });
+      }
+    }
+    return rows;
+  });
+
+  /** The units a device fills, from its start upwards. */
+  private static span(device: RackDevice): number[] {
+    return Array.from({ length: device.uSize }, (unused, i) => device.uStart + i);
+  }
+
+  /**
+   * Where a device can go: every start unit whose whole span is free. A 4U
+   * machine needs four units in a row, so a free unit is not a place by
+   * itself. Counted down, in the order the list shows them.
+   */
+  moveTargets(device: RackDevice): number[] {
+    const rack = this.currentRack();
+    if (!rack) return [];
+    const taken = new Set<number>();
+    rack.devices
+      .filter((other) => other.id !== device.id)
+      .forEach((other) => RacksComponent.span(other).forEach((u) => taken.add(u)));
+    const starts = Array.from(
+      { length: rack.totalU - device.uSize + 1 },
+      (unused, i) => rack.totalU - device.uSize + 1 - i,
+    );
+    return starts.filter(
+      (start) =>
+        start !== device.uStart
+        && Array.from({ length: device.uSize }, (unused, i) => start + i).every(
+          (u) => !taken.has(u),
+        ),
+    );
+  }
+
+  moveDevice(device: RackDevice, unit: number): void {
+    const rack = this.currentRack();
+    if (!rack) return;
+    this.applyDeviceChanges(
+      rack.id,
+      rack.devices.map((d) => (d.id === device.id ? { ...d, uStart: unit } : d)),
+    );
+  }
+
+  /**
+   * What a device is. A type and a state are two different questions, and the
+   * old legend answered them in one list of colours: a switch that was offline
+   * came out as "Switch" and said nothing about being down. The type is a tag
+   * behind the name, the state a dot on the right.
+   */
+  readonly deviceTypeText = (device: RackDevice): string => {
+    const types: Record<DeviceType, string> = {
+      machine: 'Machine',
+      switch: 'Switch',
+      patch: 'Patch panel',
+      pdu: 'PDU',
+    };
+    return types[device.type];
+  };
+
+  /** The colours the legend gave the types, by their design system name. */
+  readonly deviceTypeColor = (device: RackDevice): string => {
+    const colors: Record<DeviceType, string> = {
+      machine: 'neutral',
+      switch: 'donkergeel',
+      patch: 'robijnrood',
+      pdu: 'paars',
+    };
+    return colors[device.type];
+  };
+
+  /** How a device is doing. */
+  readonly deviceStateText = (device: RackDevice): string => {
+    const states: Record<DeviceState, string> = {
+      allocated: 'Allocated',
+      free: 'Free',
+      offline: 'Offline',
+      locked: 'Locked',
+      reserved: 'Reserved',
+    };
+    return states[device.state];
+  };
+
+  /** The colours the legend used, by the name the design system gives them. */
+  readonly deviceStateColor = (device: RackDevice): string => {
+    const colors: Record<DeviceState, string> = {
+      allocated: 'lintblauw',
+      free: 'neutral',
+      offline: 'rood',
+      locked: 'paars',
+      reserved: 'lichtblauw',
+    };
+    return colors[device.state];
+  };
+
   readonly rackStats = computed(() => {
     const rack = this.currentRack();
     if (!rack) return { usedU: 0, freeU: 0, totalU: 42, totalPowerW: 0, deviceCount: 0 };
@@ -639,10 +762,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
 
   // ── Edit-layout mode actions ───────────────────────────────────────────────
 
-  toggleEditMode(): void {
-    this.editMode.update((v) => !v);
-  }
-
   applyDeviceChanges(rackId: string, devices: RackDevice[]): void {
     const placements = this.placementsByRack().get(rackId) ?? [];
     const byPid = new Map(placements.map((p) => [p.placementId, p]));
@@ -704,14 +823,15 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
       .catch((err) => console.error(connectErrorMessage(err)));
   }
 
-  openAddDevice(): void {
+  /** @param unit the free unit you clicked; without one, the first free unit. */
+  openAddDevice(unit?: number): void {
     const rack = this.currentRack();
     if (!rack) return;
     this.clearDeviceErrors();
     const firstFree = findFirstFreeSlot(rack, 1);
     this.addDeviceForm.set({
       assetId: '',
-      rackUnitStart: firstFree ?? rack.totalU,
+      rackUnitStart: unit ?? firstFree ?? rack.totalU,
       slotType: RackSlotType.UNIT,
     });
     this.deviceSlotType.set(String(RackSlotType.UNIT));
@@ -774,11 +894,18 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
 
   readonly currentRackFreeU = computed(() => this.rackStats().freeU);
 
+  /** The toggle above the list: a radio group, so only the button that becomes
+   *  selected has anything to say. */
+  onDcToggle(id: string, selected: boolean): void {
+    if (selected && id !== this.currentDC()) this.selectDC(id);
+  }
+
   selectDC(dc: string): void {
     this.searchQuery.set('');
     this.activeModal.set(null);
     this.selectedDcId.set(dc);
-    this.router.navigate(['/racks']);
+    // No navigation here: the rack in the address is not in this data center,
+    // so the effect above steps to the first one that is.
   }
 
   selectRack(id: string): void {

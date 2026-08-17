@@ -711,8 +711,13 @@ export default function createDemoTransport(): Transport {
           placement: store.placements.find((placement) => placement.assetId === request.assetId),
         });
       },
-      updatePlacement: async () => {
+      updatePlacement: async (request) => {
         await delay();
+        store.placements = store.placements.map((placement) =>
+          placement.id === request.id && request.location.case
+            ? create(PlacementSchema, { ...placement, location: request.location })
+            : placement,
+        );
         return create(EmptySchema, {});
       },
       deletePlacement: async (request) => {
