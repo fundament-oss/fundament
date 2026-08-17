@@ -1,4 +1,4 @@
-FROM golang:1.26.5-alpine
+FROM golang:1.26.6-alpine
 
 RUN go install github.com/air-verse/air@v1.65.0
 

@@ -8,7 +8,7 @@ RUN bun install --frozen-lockfile
 COPY console-frontend/src/plugin-sdk/ ./src/plugin-sdk/
 RUN mkdir -p public/plugin-ui && bun run build:plugin-ui
 
-FROM golang:1.26.5-alpine
+FROM golang:1.26.6-alpine
 RUN go install github.com/air-verse/air@v1.65.0
 WORKDIR /src
 COPY go.mod go.sum ./
