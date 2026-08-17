@@ -304,8 +304,15 @@ export default function createDemoTransport(): Transport {
         store.rooms = [...store.rooms, room];
         return create(CreateRoomResponseSchema, { roomId: room.id });
       },
-      updateRoom: async () => {
+      // Writes it back like the real service: the pages read their floor again
+      // when you come back to it, so a no-op here is a rename that never was.
+      updateRoom: async (request) => {
         await delay();
+        store.rooms = store.rooms.map((room) =>
+          room.id === request.id
+            ? create(RoomSchema, { ...room, name: request.name, floor: request.floor })
+            : room,
+        );
         return create(EmptySchema, {});
       },
       deleteRoom: async (request) => {
@@ -345,8 +352,18 @@ export default function createDemoTransport(): Transport {
         store.rackRows = [...store.rackRows, rackRow];
         return create(CreateRackRowResponseSchema, { rackRowId: rackRow.id });
       },
-      updateRackRow: async () => {
+      updateRackRow: async (request) => {
         await delay();
+        store.rackRows = store.rackRows.map((row) =>
+          row.id === request.id
+            ? create(RackRowSchema, {
+                ...row,
+                name: request.name,
+                positionX: request.positionX,
+                positionY: request.positionY,
+              })
+            : row,
+        );
         return create(EmptySchema, {});
       },
       deleteRackRow: async (request) => {
@@ -386,8 +403,17 @@ export default function createDemoTransport(): Transport {
         store.racks = [...store.racks, rack];
         return create(CreateRackResponseSchema, { rackId: rack.id });
       },
-      updateRack: async () => {
+      updateRack: async (request) => {
         await delay();
+        store.racks = store.racks.map((rack) =>
+          rack.id === request.id
+            ? create(RackSchema, {
+                ...rack,
+                name: request.name,
+                totalUnits: request.totalUnits,
+              })
+            : rack,
+        );
         return create(EmptySchema, {});
       },
       deleteRack: async (request) => {
