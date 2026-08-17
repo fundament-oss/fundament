@@ -93,13 +93,22 @@
       <!-- How many rows the view and the search left, right above them. Absent
          when there are none: the empty state below says that already, and "0 of
          70" reads as if this view were a filter over everything. -->
-      @if (orderedAssets().length > 0) {
+      @if (orderedAssets().length > 0 && !switchingView()) {
         <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
         <nldd-spacer size="8"></nldd-spacer>
       }
       <!-- A list, not a table: the category is a tag and the status is a tag, so
          the headers above them said nothing the cells did not. -->
-      @if (orderedAssets().length > 0) {
+      <!-- While another view's assets are on their way, this one shows nothing
+           rather than the list of the view you just left: that list is an
+           answer to another question and flashes past on its way out. The
+           indicator holds itself back a second, so a quick answer shows no
+           state at all. -->
+      @if (switchingView()) {
+        <nldd-simple-section width="full" height="40dvh" vertical-alignment="center" padding-block="0">
+          <nldd-activity-indicator></nldd-activity-indicator>
+        </nldd-simple-section>
+      } @else if (orderedAssets().length > 0) {
         <nldd-list accessible-label="Asset inventory">
           <!-- The whole row opens the asset. Editing and deleting live on the page
            the row opens: they act on one asset, and that is where you can see
@@ -146,7 +155,7 @@
     <!-- Nothing to show is not a row in a list: the empty state replaces the list
        and takes the room it leaves, so the message sits in the middle of the
        screen rather than clinging to the toolbar. -->
-    @if (orderedAssets().length === 0) {
+    @if (orderedAssets().length === 0 && !switchingView()) {
       <nldd-simple-section height="40dvh" vertical-alignment="center" padding-block="0">
         <nldd-inline-dialog [attr.text]="emptyText()"></nldd-inline-dialog>
       </nldd-simple-section>

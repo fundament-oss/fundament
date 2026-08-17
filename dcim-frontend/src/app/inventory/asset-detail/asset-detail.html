@@ -73,21 +73,6 @@
             ></nldd-menu-item>
           </nldd-toolbar-item>
         }
-        <nldd-toolbar-item slot="end">
-          <nldd-button
-            variant="destructive"
-            text="Delete"
-            start-icon="trash"
-            (click)="openDeleteAsset()"
-          ></nldd-button>
-          <nldd-menu-item
-            slot="overflow"
-            icon="trash"
-            text="Delete"
-            destructive
-            (select)="openDeleteAsset()"
-          ></nldd-menu-item>
-        </nldd-toolbar-item>
       </nldd-toolbar>
       <nldd-spacer size="20"></nldd-spacer>
       <!-- No heading over this one: it is what the page is about. The location
@@ -214,6 +199,29 @@
           }
         </nldd-list>
       }
+      <nldd-spacer size="32"></nldd-spacer>
+      <!-- Deleting takes the asset and its history out of the system. Taking it
+           out of service is the other button, up with Edit: that one is a state
+           you can set back. -->
+      <nldd-box background="critical">
+        <nldd-container padding="16">
+          <nldd-title size="4">
+            <h2>Delete this asset</h2>
+          </nldd-title>
+          <nldd-spacer size="4"></nldd-spacer>
+          <nldd-text size="sm">
+            Deleting {{ a.assetTag }} removes it and everything recorded about it.
+            This cannot be undone.
+          </nldd-text>
+          <nldd-spacer size="16"></nldd-spacer>
+          <nldd-button
+            variant="destructive"
+            text="Delete asset"
+            start-icon="trash"
+            (click)="openDeleteAsset()"
+          ></nldd-button>
+        </nldd-container>
+      </nldd-box>
     </nldd-simple-section>
   } @else if (assetLoaded()) {
     <!-- Nothing to show is not an empty page with a heading: the message takes
@@ -232,6 +240,12 @@
           href="/inventory"
         ></nldd-button>
       </nldd-inline-dialog>
+    </nldd-simple-section>
+  } @else {
+    <!-- Not "nothing found" until the answer is in: the indicator holds itself
+         back for a second, so a quick answer shows no state at all. -->
+    <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+      <nldd-activity-indicator></nldd-activity-indicator>
     </nldd-simple-section>
   }
   <nldd-page-footer slot="footer"></nldd-page-footer>

@@ -159,6 +159,15 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
 
   readonly assets = signal<Asset[]>([]);
 
+  /**
+   * True while a new view's assets are on their way. Only a view change sets
+   * it: the list you are looking at answers another question then, and showing
+   * it until the new one lands means a long list flashing past on the way to a
+   * short one. Typing in the search box does not, because there the list is
+   * the same question narrowing.
+   */
+  readonly switchingView = signal(false);
+
   readonly catalog = signal<CatalogEntry[]>([]);
 
   private catalogById = new Map<string, CatalogEntry>();
@@ -450,7 +459,7 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     effect(() => {
       this.menuSelection();
       this.statusParam();
-      this.reload();
+      this.loadAssets(true);
     });
 
     toObservable(this.searchQuery)
@@ -509,7 +518,8 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     { value: 'decommissioned', label: 'Decommissioned' },
   ];
 
-  private loadAssets(): void {
+  private loadAssets(viewChange = false): void {
+    if (viewChange) this.switchingView.set(true);
     firstValueFrom(
       this.inventoryApi.listAssets({
         search: this.searchQuery().trim(),
@@ -524,7 +534,8 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
         this.assets.set(res.assets.map((a) => InventoryApiService.mapAsset(a, this.catalogById))),
       )
       // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+      .catch((err) => console.error(connectErrorMessage(err)))
+      .finally(() => this.switchingView.set(false));
   }
 
   private loadStats(): void {

@@ -83,6 +83,8 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
    *  Writable: creating, renaming and deleting one all write straight into it. */
   readonly mutableDcs = this.list.datacenters;
 
+  readonly dcsLoaded = this.list.loaded;
+
   /** Which data center the address names, by its short name: /datacenters/ams1.
    *  A data center is a place, so it deserves a link of its own. */
   private readonly slug = toSignal(
