@@ -49,13 +49,16 @@
                 [attr.text]="row.label"
               ></nldd-text-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
-              <!-- What the thing is, in a tag behind its name, the way a
-                   product wears its category. What state it is in is a
-                   different question and rides on the right. -->
+              <!-- What the thing is: an icon in front of the name and the
+                   category behind it, in the same neutral tag a product wears.
+                   A colour there would read as a state, which is a different
+                   question and rides on the right. -->
+              <nldd-icon-cell [attr.icon]="deviceTypeIcon(device)" size="20"></nldd-icon-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-text-cell width="full" min-width="140px"
                 >{{ device.name }}@if (deviceTypeText(device); as category) {&ngsp;<nldd-tag
                     size="sm"
-                    [attr.color]="deviceTypeColor(device)"
+                    color="neutral"
                     [attr.text]="category"
                   ></nldd-tag>
                 }</nldd-text-cell
@@ -279,14 +282,14 @@
      RACK EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #rackSheet accessible-label="Rack details" placement="right">
-  <nldd-page sticky-header sticky-footer>
+  <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
       [attr.text]="editRack()?.id ? 'Edit rack' : 'Add rack'"
       dismiss-text="Cancel"
       (dismiss)="closeRackForm()"
     ></nldd-top-title-bar>
-    <nldd-simple-section class="space-y-4">
+    <nldd-simple-section>
       @if (rackErrorMessage()) {
         <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
           <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
@@ -294,66 +297,75 @@
           </p>
         </div>
       }
-      <nldd-form-field label="Rack name">
-        <nldd-text-field
-          #fRackName
-          autofocus
-          [attr.value]="editRack()?.name ?? ''"
-          placeholder="AMS-01-R01"
-          [attr.invalid]="isFieldInvalid('name') ? '' : null"
-          error-message="error-rack-name"
-          (keydown.enter)="saveRack()"
-        ></nldd-text-field>
-        <nldd-form-field-error-text id="error-rack-name">{{
-          fieldError('name')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
-      @if (!editRack()?.id) {
-        <nldd-form-field label="Row">
-          <nldd-dropdown>
-            <select
-              #fRackRowId
-              aria-label="Row"
-              [attr.aria-invalid]="isFieldInvalid('row_id') ? 'true' : null"
-            >
-              <option value="" disabled selected>Select a row</option>
-              @for (row of rowOptions(); track row.id) {
-                <option [value]="row.id">{{ row.label }}</option>
+      @if (editRack(); as rack) {
+        <nldd-form>
+          <!-- Where it stands, before what it is called. The API cannot move a
+               rack to another row, so an existing one does not ask. -->
+          @if (!rack.id) {
+            <nldd-form-field label="Rack row">
+              <nldd-combo-box
+                #fRackRowId
+                [attr.invalid]="isFieldInvalid('row_id') ? '' : null"
+                error-message="error-rack-row-id"
+              >
+                <nldd-menu>
+                  @for (row of rowOptions(); track row.id) {
+                    <nldd-menu-item [attr.value]="row.id" [attr.text]="row.label"></nldd-menu-item>
+                  }
+                </nldd-menu>
+              </nldd-combo-box>
+              @if (isFieldInvalid('row_id')) {
+                <nldd-form-field-error-text id="error-rack-row-id">
+                  {{ fieldError('row_id') }}
+                </nldd-form-field-error-text>
               }
-            </select>
-          </nldd-dropdown>
-          @if (isFieldInvalid('row_id')) {
-            <nldd-form-field-error-text id="error-rack-row-id">{{
-              fieldError('row_id')
-            }}</nldd-form-field-error-text>
+              @if (rowOptions().length === 0) {
+                <nldd-form-field-error-text id="error-no-rows">
+                  No rack rows in this data center. Create one on the Data centers page first.
+                </nldd-form-field-error-text>
+              }
+            </nldd-form-field>
           }
-          @if (rowOptions().length === 0) {
-            <nldd-form-field-error-text id="error-no-rows"
-              >No rack rows in this data center. Create one on the Data centers page
-              first.</nldd-form-field-error-text
-            >
-          }
-        </nldd-form-field>
+          <nldd-form-field label="Rack name">
+            <nldd-text-field
+              #fRackName
+              autofocus
+              [attr.value]="rack.name ?? ''"
+              [attr.invalid]="isFieldInvalid('name') ? '' : null"
+              error-message="error-rack-name"
+              (keydown.enter)="saveRack()"
+            ></nldd-text-field>
+            <nldd-form-field-error-text id="error-rack-name">
+              {{ fieldError('name') }}
+            </nldd-form-field-error-text>
+          </nldd-form-field>
+          <nldd-form-field label="Height (U)">
+            <nldd-number-field
+              #fRackTotalU
+              [attr.value]="rack.totalU ?? 42"
+              min="1"
+              max="52"
+              full-width
+              hide-spin-buttons
+              [attr.invalid]="isFieldInvalid('total_units') ? '' : null"
+              error-message="error-rack-total-u"
+              (keydown.enter)="saveRack()"
+            ></nldd-number-field>
+            <nldd-form-field-error-text id="error-rack-total-u">
+              {{ fieldError('total_units') }}
+            </nldd-form-field-error-text>
+          </nldd-form-field>
+          <nldd-form-actions>
+            <nldd-button
+              variant="primary"
+              width="full"
+              text="Save"
+              (click)="saveRack()"
+            ></nldd-button>
+          </nldd-form-actions>
+        </nldd-form>
       }
-      <nldd-form-field label="Unit count (U)">
-        <nldd-number-field
-          #fRackTotalU
-          [attr.value]="editRack()?.totalU ?? 42"
-          min="1"
-          max="52"
-          full-width
-          [attr.invalid]="isFieldInvalid('total_units') ? '' : null"
-          error-message="error-rack-total-u"
-          (keydown.enter)="saveRack()"
-        ></nldd-number-field>
-        <nldd-form-field-error-text id="error-rack-total-u">{{
-          fieldError('total_units')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
     </nldd-simple-section>
-    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
-      <nldd-button variant="primary" text="Save" width="full" (click)="saveRack()"></nldd-button>
-    </div>
   </nldd-page>
 </nldd-sheet>
 
@@ -361,14 +373,14 @@
      DEVICE ADD SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #deviceSheet accessible-label="Add device" placement="right">
-  <nldd-page sticky-header sticky-footer>
+  <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
       text="Add device"
       dismiss-text="Cancel"
       (dismiss)="closeAddDevice()"
     ></nldd-top-title-bar>
-    <nldd-simple-section class="flex flex-col gap-4">
+    <nldd-simple-section>
       @if (deviceErrorMessage()) {
         <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
           <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
@@ -376,72 +388,69 @@
           </p>
         </div>
       }
-      <nldd-form-field label="Asset">
-        <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
-             can't see it. Autofocus is the recommended pattern for a sheet's first field. -->
-        <!-- eslint-disable @angular-eslint/template/no-autofocus -->
-        <nldd-dropdown [attr.invalid]="isDeviceFieldInvalid('asset_id') ? true : null">
-          <select
+      <nldd-form>
+        <!-- Every asset in the inventory is in this list, so it is a combo box:
+             you type the tag you are looking for rather than scroll to it. -->
+        <nldd-form-field label="Asset">
+          <nldd-combo-box
             #fDeviceAsset
-            autofocus
-            aria-label="Asset"
-            [attr.aria-invalid]="isDeviceFieldInvalid('asset_id') ? 'true' : null"
+            [attr.invalid]="isDeviceFieldInvalid('asset_id') ? '' : null"
+            error-message="error-device-asset"
           >
-            <option value="" disabled selected>Select an asset</option>
-            @for (asset of assetOptions(); track asset.id) {
-              <option [value]="asset.id">{{ asset.label }}</option>
-            }
-          </select>
-        </nldd-dropdown>
-        <!-- eslint-enable @angular-eslint/template/no-autofocus -->
-        @if (isDeviceFieldInvalid('asset_id')) {
-          <nldd-form-field-error-text id="error-device-asset">{{
-            deviceFieldError('asset_id')
-          }}</nldd-form-field-error-text>
-        }
-        @if (assetOptions().length === 0) {
-          <nldd-form-field-error-text id="error-no-assets"
-            >No assets found. Create one on the Inventory page first.</nldd-form-field-error-text
-          >
-        }
-      </nldd-form-field>
-      <nldd-form-field label="Slot type">
-        <nldd-dropdown>
-          <select
-            aria-label="Slot type"
-            [ngModel]="deviceSlotType()"
-            (ngModelChange)="deviceSlotType.set($event)"
-          >
+            <nldd-menu>
+              @for (asset of assetOptions(); track asset.id) {
+                <nldd-menu-item [attr.value]="asset.id" [attr.text]="asset.label"></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-combo-box>
+          @if (isDeviceFieldInvalid('asset_id')) {
+            <nldd-form-field-error-text id="error-device-asset">
+              {{ deviceFieldError('asset_id') }}
+            </nldd-form-field-error-text>
+          }
+          @if (assetOptions().length === 0) {
+            <nldd-form-field-error-text id="error-no-assets">
+              No assets found. Create one on the Inventory page first.
+            </nldd-form-field-error-text>
+          }
+        </nldd-form-field>
+        <!-- Three kinds, all of them worth showing: a choice this small is
+             quicker as buttons than behind a dropdown. -->
+        <nldd-form-field label="Slot type">
+          <nldd-toggle-button-group type="radio" accessible-label="Slot type">
             @for (st of slotTypes; track st.value) {
-              <option [value]="st.value">{{ st.label }}</option>
+              <nldd-toggle-button
+                [attr.value]="st.value"
+                [attr.text]="st.label"
+                [attr.selected]="deviceSlotType() === st.value ? '' : null"
+                (change)="onSlotTypeToggle(st.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
             }
-          </select>
-        </nldd-dropdown>
-      </nldd-form-field>
-      <nldd-form-field label="Rack unit">
-        <nldd-number-field
-          #fDeviceRackUnit
-          [attr.value]="addDeviceForm()?.rackUnitStart ?? 1"
-          min="1"
-          [attr.max]="currentRack()?.totalU ?? 1"
-          full-width
-          [attr.invalid]="isDeviceFieldInvalid('location.rack.rack_unit_start') ? '' : null"
-          error-message="error-device-rack-unit"
-          (keydown.enter)="saveDevice()"
-        ></nldd-number-field>
-        <nldd-form-field-error-text id="error-device-rack-unit">{{
-          deviceFieldError('location.rack.rack_unit_start')
-        }}</nldd-form-field-error-text>
-      </nldd-form-field>
+          </nldd-toggle-button-group>
+        </nldd-form-field>
+        <nldd-form-field label="Rack unit">
+          <nldd-number-field
+            #fDeviceRackUnit
+            [attr.value]="addDeviceForm()?.rackUnitStart ?? 1"
+            min="1"
+            [attr.max]="currentRack()?.totalU ?? 1"
+            full-width
+            hide-spin-buttons
+            [attr.invalid]="isDeviceFieldInvalid('location.rack.rack_unit_start') ? '' : null"
+            error-message="error-device-rack-unit"
+            (keydown.enter)="saveDevice()"
+          ></nldd-number-field>
+          <nldd-form-field-error-text id="error-device-rack-unit">
+            {{ deviceFieldError('location.rack.rack_unit_start') }}
+          </nldd-form-field-error-text>
+        </nldd-form-field>
+        <!-- Under the form rather than docked at the bottom of the sheet: the
+             button belongs to the fields above it. -->
+        <nldd-form-actions>
+          <nldd-button variant="primary" width="full" text="Add" (click)="saveDevice()"></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
     </nldd-simple-section>
-    <div slot="footer" class="px-6 py-4 border-t border-slate-200 dark:border-gray-800 flex">
-      <nldd-button
-        variant="accent-filled"
-        text="Add"
-        width="full"
-        (click)="saveDevice()"
-      ></nldd-button>
-    </div>
   </nldd-page>
 </nldd-sheet>
 

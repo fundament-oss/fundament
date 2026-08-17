@@ -11,10 +11,9 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT, LowerCasePipe } from '@angular/common';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom, map } from 'rxjs';
-import RackDiagramComponent from '../rack-diagram/rack-diagram';
 import {
   ConnectionStatus,
   ConnectionType,
@@ -58,7 +57,7 @@ interface DeviceConnectionView {
   selector: 'app-device-detail',
   templateUrl: './device-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RackDiagramComponent, LowerCasePipe],
+  imports: [LowerCasePipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class DeviceDetailComponent {
@@ -399,6 +398,15 @@ export default class DeviceDetailComponent {
     return colors[type];
   };
 
+  readonly connectionStatusColor = (status: ConnectionStatus): string => {
+    const colors: Record<ConnectionStatus, string> = {
+      up: 'success',
+      down: 'critical',
+      unknown: 'neutral',
+    };
+    return colors[status];
+  };
+
   readonly connectionStatusDot = (status: ConnectionStatus): string => {
     if (status === 'up') return 'bg-emerald-500';
     if (status === 'down') return 'bg-red-500';
@@ -410,6 +418,12 @@ export default class DeviceDetailComponent {
     if (status === 'down') return 'Down';
     return 'Unknown';
   };
+
+  /** Up one level: the rack this device stands in, or the list of racks. */
+  backToRack(): void {
+    const rack = this.rack();
+    this.router.navigate(rack ? ['/racks', rack.id] : ['/racks']);
+  }
 
   navigateToDevice(id: string): void {
     this.router.navigate(['//racks/device', id]);
@@ -494,16 +508,18 @@ export default class DeviceDetailComponent {
     return months === 1 ? '1 month ago' : `${months} months ago`;
   };
 
+  /** A design system icon per kind of event, not a Tabler class: the font that
+   *  drew these is not loaded, so every circle came out empty. */
   readonly historyIcon = (action: HistoryEntry['action']): string => {
     const icons: Record<HistoryEntry['action'], string> = {
-      received: 'ti-arrow-right text-sky-500 dark:text-sky-400',
-      deployed: 'ti-circle-check text-teal-500 dark:text-teal-400',
-      moved: 'ti-arrows-up-down text-sky-500 dark:text-sky-400',
-      'repair-sent': 'ti-tool text-amber-500 dark:text-amber-400',
-      'repair-received': 'ti-tool text-amber-500 dark:text-amber-400',
-      decommissioned: 'ti-circle-off text-slate-500 dark:text-gray-400',
-      requested: 'ti-clock text-purple-500 dark:text-purple-400',
-      note: 'ti-info-circle text-indigo-500 dark:text-indigo-400',
+      received: 'arrow-down-in-bucket',
+      deployed: 'check-mark-circle',
+      moved: 'arrow-up-arrow-down',
+      'repair-sent': 'pipeline-machine-gear',
+      'repair-received': 'pipeline-machine-gear',
+      decommissioned: 'slash-circle',
+      requested: 'clock',
+      note: 'info-circle',
     };
     return icons[action];
   };

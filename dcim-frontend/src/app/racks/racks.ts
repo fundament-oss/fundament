@@ -14,7 +14,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import SecondaryNavService from '../shell/secondary-nav.service';
@@ -30,7 +29,6 @@ import { RackRow, Room } from '../datacenters/datacenter.model';
 import { RackSlotType } from '../../generated/v1/common_pb';
 import parseValidationError from '../../connect/validation';
 import { categoryToDeviceType, parseRackHeight } from './catalog-helpers';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 
 interface RackListItem extends Rack {
   usedU: number;
@@ -235,8 +233,6 @@ interface RackRowItem {
   templateUrl: './racks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    FormsModule,
-    DropdownSyncDirective,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
@@ -306,7 +302,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
 
   readonly addDeviceForm = signal<AddDeviceForm | null>(null);
 
-  readonly deviceSlotType = signal<string>(String(RackSlotType.UNIT));
+  readonly deviceSlotType = signal<RackSlotType>(RackSlotType.UNIT);
 
   readonly assetOptions = signal<AssetOption[]>([]);
 
@@ -604,15 +600,15 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
    */
   readonly deviceTypeText = (device: RackDevice): string => device.category ?? '';
 
-  /** The colours the legend gave the types, by their design system name. */
-  readonly deviceTypeColor = (device: RackDevice): string => {
-    const colors: Record<DeviceType, string> = {
-      machine: 'neutral',
-      switch: 'donkergeel',
-      patch: 'robijnrood',
-      pdu: 'paars',
+  /** What the thing is, in front of its name. */
+  readonly deviceTypeIcon = (device: RackDevice): string => {
+    const icons: Record<DeviceType, string> = {
+      machine: 'server',
+      switch: 'network-switch',
+      patch: 'network-patch-mapping',
+      pdu: 'power-plug',
     };
-    return colors[device.type];
+    return icons[device.type];
   };
 
   /** How a device is doing. */
@@ -819,6 +815,12 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   /** @param unit the free unit you clicked; without one, the first free unit. */
+  /** The slot type as buttons: a radio group, so only the button that becomes
+   *  selected has anything to say. */
+  onSlotTypeToggle(value: RackSlotType, selected: boolean): void {
+    if (selected) this.deviceSlotType.set(value);
+  }
+
   openAddDevice(unit?: number): void {
     const rack = this.currentRack();
     if (!rack) return;
@@ -829,7 +831,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
       rackUnitStart: unit ?? firstFree ?? rack.totalU,
       slotType: RackSlotType.UNIT,
     });
-    this.deviceSlotType.set(String(RackSlotType.UNIT));
+    this.deviceSlotType.set(RackSlotType.UNIT);
     firstValueFrom(
       this.inventoryApi.listAssets({ status: 'all', category: 'all', sortDirection: 'asc' }),
     )
@@ -856,7 +858,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     if (!rack || !form) return;
     this.clearDeviceErrors();
     const assetId = (this.fDeviceAsset()?.nativeElement as HTMLSelectElement)?.value ?? '';
-    const slotType = (Number(this.deviceSlotType()) as RackSlotType) || RackSlotType.UNIT;
+    const slotType = this.deviceSlotType();
     const rackUnitStart =
       parseInt((this.fDeviceRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '0', 10) || 0;
     firstValueFrom(this.placementApi.createPlacement(assetId, rack.id, rackUnitStart, slotType))
