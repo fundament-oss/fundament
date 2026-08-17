@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 18
 :state: proposed
 
 = ADR-0018: Information security management

@@ -1,4 +1,6 @@
 :showtitle:
+// Set to the ADR number so the sidebar sorts numerically (and remove sidebar-hidden).
+:sidebar-order: 0
 :sidebar-hidden: true
 :state: proposed
 

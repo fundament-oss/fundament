@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 24
 :state: proposed
 
 = ADR-0024: Internal network addressing
