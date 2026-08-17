@@ -1,0 +1,101 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: disks.storage.fundament.io
+spec:
+  group: storage.fundament.io
+  names:
+    kind: Disk
+    listKind: DiskList
+    plural: disks
+    singular: disk
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.node
+      name: Node
+      type: string
+    - jsonPath: .status.path
+      name: Path
+      type: string
+    - jsonPath: .status.sizeBytes
+      name: Size
+      type: integer
+    - jsonPath: .status.available
+      name: Available
+      type: boolean
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              DiskSpec is intentionally empty: Disks are published from Rook discovery and
+              are not operator-editable.
+            type: object
+          status:
+            description: DiskStatus is the discovered state of a node block device.
+            properties:
+              available:
+                type: boolean
+              claimedBy:
+                type: string
+              model:
+                type: string
+              node:
+                type: string
+              path:
+                description: |-
+                  Path is the kernel name, e.g. /dev/sdb: what an operator recognises, but
+                  reassignable across reboots, so not what identifies the device.
+                type: string
+              rotational:
+                type: boolean
+              serial:
+                type: string
+              sizeBytes:
+                format: int64
+                type: integer
+              stablePath:
+                description: |-
+                  StablePath is the /dev/disk/by-id link, empty when the node reports none
+                  (loop devices, some virtual disks). When set it is what goes into the
+                  CephCluster, because it survives a reboot that renames Path.
+                type: string
+              type:
+                description: DiskType classifies a block device.
+                enum:
+                - hdd
+                - ssd
+                - nvme
+                type: string
+              wwn:
+                description: WWN is a fallback stable identity when there is no by-id
+                  link.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
