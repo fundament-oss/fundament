@@ -564,6 +564,15 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     const query = this.searchQuery().trim();
     if (query) return `No results for "${query}"`;
     const { kind, value } = this.menuSelection();
+    // A filter is not the view: "No Switch assets" would say the category is
+    // empty while it is the filter on top of it that found nothing.
+    const status = this.statusParam();
+    if (status !== 'all') {
+      const label = this.statusLabel(status).toLowerCase();
+      return kind === 'category'
+        ? `No ${label} ${value} assets`
+        : `No ${label} assets`;
+    }
     if (kind === 'category') return `No ${value} assets`;
     if (kind === 'status') return `No ${this.statusLabel(value as AssetStatus)} assets`;
     return 'No assets';

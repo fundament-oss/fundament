@@ -59,8 +59,10 @@
            with the rows and not in the menu.
            No sort control: the order is fixed and says something on its own (see
            orderedAssets), and the one thing you would sort an asset by — its
-           number on the sticker — is what the search box is for. -->
-      @if (orderedAssets().length > 0 || searchQuery().trim()) {
+           number on the sticker — is what the search box is for.
+           Stays when a search or a filter left nothing: hiding it there takes
+           away the only control that could undo what emptied the list. -->
+      @if (orderedAssets().length > 0 || searchQuery().trim() || statusParam() !== 'all') {
         <nldd-toolbar label="Asset list">
           <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
             <nldd-search-field
