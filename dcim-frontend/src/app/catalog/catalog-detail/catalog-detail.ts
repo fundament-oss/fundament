@@ -13,7 +13,6 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -29,7 +28,6 @@ import InventoryApiService from '../../inventory/inventory-api.service';
 import connectErrorMessage from '../../../connect/error';
 import parseValidationError from '../../../connect/validation';
 import type { Asset as ProtoAsset } from '../../../generated/v1/asset_pb';
-import DropdownSyncDirective from '../../shared/dropdown-sync.directive';
 import categoryIcon, { AssetCategory } from '../../shared/asset-category';
 import CatalogNavComponent from '../catalog-nav';
 import { CATALOG_PATH, catalogViewTitle, isCatalogView } from '../catalog-views';
@@ -44,7 +42,7 @@ interface NativeElementRef {
   selector: 'app-catalog-detail',
   templateUrl: './catalog-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DropdownSyncDirective, CatalogNavComponent],
+  imports: [CatalogNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
@@ -166,18 +164,6 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
 
   private readonly fPortPower = viewChild<NativeElementRef>('fPortPower');
 
-  // ── Port compatibility CRUD state ─────────────────────────────────────────
-  addCompatPortDefId = signal<string | null>(null);
-
-  /** Catalog entry selected in the "Add compatibility" sheet (empty = none). */
-  readonly compatEntryId = signal('');
-
-  deleteCompat = signal<PortCompatibility | null>(null);
-
-  private readonly compatSheetEl = viewChild<NativeElementRef>('compatSheet');
-
-  private readonly compatDeleteModalEl = viewChild<NativeElementRef>('compatDeleteModal');
-
   // ── Catalog list for compatibility dropdown ────────────────────────────────
   readonly allCatalogEntries = signal<CatalogEntry[]>([]);
 
@@ -186,7 +172,7 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
    * itself and the ones already marked compatible with the active port.
    */
   readonly availableCompatEntries = computed<CatalogEntry[]>(() => {
-    const pdId = this.addCompatPortDefId();
+    const pdId = this.editPortDef()?.id ?? '';
     const taken = new Set(
       this.mutableCompatibilities()
         .filter((c) => c.portDefinitionId === pdId)
@@ -215,16 +201,6 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
     effect(() => {
       const el = this.portModalEl()?.nativeElement;
       if (this.deletePortDef() !== null) el?.show?.();
-      else el?.hide?.();
-    });
-    effect(() => {
-      const el = this.compatSheetEl()?.nativeElement;
-      if (this.addCompatPortDefId() !== null) el?.show?.();
-      else el?.hide?.();
-    });
-    effect(() => {
-      const el = this.compatDeleteModalEl()?.nativeElement;
-      if (this.deleteCompat() !== null) el?.show?.();
       else el?.hide?.();
     });
   }
@@ -400,6 +376,7 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
     });
     this.portType.set('');
     this.portDirection.set('bidir');
+    this.portCompatIds.set([]);
   }
 
   openEditPortDef(pd: PortDefinition): void {
@@ -407,6 +384,12 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
     this.editPortDef.set({ ...pd });
     this.portType.set(pd.portType);
     this.portDirection.set(pd.direction ?? 'bidir');
+    this.portCompatIds.set(
+      this.mutableCompatibilities()
+        .filter((c) => c.portDefinitionId === pd.id)
+        .map((c) => c.compatibleCatalogEntryId)
+        .filter((id) => !!id),
+    );
   }
 
   closePortDefForm(): void {
@@ -439,6 +422,7 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
     };
     if (form.id) {
       firstValueFrom(this.catalogApi.updatePortDefinition(pd))
+        .then(() => this.saveCompatibilities(pd.id))
         .then(() => {
           this.mutablePortDefs.update((list) => list.map((p) => (p.id === form.id ? pd : p)));
           this.editPortDef.set(null);
@@ -446,10 +430,12 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
         .catch((err) => this.handleError(err));
     } else {
       firstValueFrom(this.catalogApi.createPortDefinition(pd))
-        .then((res) => {
-          this.mutablePortDefs.update((list) => [...list, { ...pd, id: res.portDefinitionId }]);
-          this.editPortDef.set(null);
-        })
+        .then((res) =>
+          this.saveCompatibilities(res.portDefinitionId).then(() => {
+            this.mutablePortDefs.update((list) => [...list, { ...pd, id: res.portDefinitionId }]);
+            this.editPortDef.set(null);
+          }),
+        )
         .catch((err) => this.handleError(err));
     }
   }
@@ -479,62 +465,82 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
 
   // ── Port compatibility actions ─────────────────────────────────────────────
 
-  openAddCompatibility(portDefId: string): void {
-    this.clearErrors();
-    this.compatEntryId.set('');
-    this.addCompatPortDefId.set(portDefId);
+  /** What the port being edited already accepts, as it stands on the server. */
+  readonly editPortCompatibilities = computed<PortCompatibility[]>(() => {
+    const pdId = this.editPortDef()?.id;
+    if (!pdId) return [];
+    return this.mutableCompatibilities().filter((c) => c.portDefinitionId === pdId);
+  });
+
+  /**
+   * The products picked in the open form. Seeded when the form opens and only
+   * written on save, like every other field: a form you can still cancel should
+   * not have changed anything yet. A new port has none, and the compatibilities
+   * are created right after the port itself exists.
+   */
+  readonly portCompatIds = signal<string[]>([]);
+
+  /** Everything the port could accept: the whole catalog except the product the
+   *  port belongs to. The token field takes the chosen ones out of the menu by
+   *  itself. */
+  readonly compatOptions = computed<CatalogEntry[]>(() =>
+    this.allCatalogEntries().filter((e) => e.id !== this.catalogId()),
+  );
+
+  /** The token field hands back the whole set; the form keeps it until save. */
+  onCompatibilitiesChange(values: string[]): void {
+    this.portCompatIds.set(values);
   }
 
-  cancelAddCompatibility(): void {
-    this.clearErrors();
-    this.compatEntryId.set('');
-    this.addCompatPortDefId.set(null);
-  }
+  /**
+   * Writes the difference between what the form shows and what the server has:
+   * a product added is a compatibility created, one taken away is one deleted.
+   * Runs after the port is saved, so a new port has an id to point at.
+   */
+  private saveCompatibilities(pdId: string): Promise<unknown> {
+    const before = this.mutableCompatibilities()
+      .filter((c) => c.portDefinitionId === pdId)
+      .map((c) => c.compatibleCatalogEntryId);
+    const after = this.portCompatIds();
+    const added = after.filter((id) => id && !before.includes(id));
+    const removed = before.filter((id) => id && !after.includes(id));
+    if (added.length === 0 && removed.length === 0) return Promise.resolve();
 
-  confirmAddCompatibility(): void {
-    const pdId = this.addCompatPortDefId();
-    const entryId = this.compatEntryId();
-    if (!pdId || !entryId) return;
-    this.clearErrors();
-    const entry = this.allCatalogEntries().find((e) => e.id === entryId);
-    firstValueFrom(this.catalogApi.createPortCompatibility(pdId, entryId))
-      .then(() => {
-        const created: PortCompatibility = {
+    const writes = [
+      ...added.map((entryId) =>
+        firstValueFrom(this.catalogApi.createPortCompatibility(pdId, entryId)),
+      ),
+      ...removed.map((entryId) =>
+        firstValueFrom(this.catalogApi.deletePortCompatibility(pdId, entryId)),
+      ),
+    ];
+    return Promise.all(writes).then(() => {
+      this.mutableCompatibilities.update((list) => [
+        ...list.filter((c) => c.portDefinitionId !== pdId),
+        ...after.map((entryId) => ({
           id: `${pdId}:${entryId}`,
           portDefinitionId: pdId,
-          compatibleCategory: entry?.category ?? 'Other',
+          compatibleCategory:
+            this.allCatalogEntries().find((e) => e.id === entryId)?.category ?? 'Other',
           compatibleCatalogEntryId: entryId,
-        };
-        this.mutableCompatibilities.update((list) => [...list, created]);
-        this.compatEntryId.set('');
-        this.addCompatPortDefId.set(null);
-      })
-      .catch((err) => this.handleError(err));
+        })),
+      ]);
+    });
   }
 
-  openDeleteCompat(compat: PortCompatibility): void {
-    this.deleteCompat.set(compat);
+  /** What a row says under the port name: nothing when the port accepts
+   *  anything, otherwise the models it was narrowed to. */
+  compatSummary(pdId: string): string {
+    const names = this.compatibilitiesForPortDef(pdId).map((c) => this.compatLabel(c));
+    return names.length > 0 ? `Compatible with ${names.join(', ')}` : '';
   }
 
-  cancelDeleteCompat(): void {
-    this.deleteCompat.set(null);
-  }
-
-  confirmDeleteCompat(): void {
-    const target = this.deleteCompat();
-    if (!target) return;
-    firstValueFrom(
-      this.catalogApi.deletePortCompatibility(
-        target.portDefinitionId,
-        target.compatibleCatalogEntryId,
-      ),
-    )
-      .then(() => {
-        this.mutableCompatibilities.update((list) => list.filter((c) => c.id !== target.id));
-        this.deleteCompat.set(null);
-      })
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+  /** The numbers behind a port, as one line: 25 Gbps · 15 W. */
+  portRating(pd: PortDefinition): string {
+    const parts: string[] = [];
+    if (pd.speedGbps !== null && pd.speedGbps !== undefined) parts.push(`${pd.speedGbps} Gbps`);
+    if (pd.powerWatts !== null && pd.powerWatts !== undefined) parts.push(`${pd.powerWatts} W`);
+    return parts.join(' · ');
   }
 
   readonly compatibleEntryName = (entryId: string): string =>
@@ -548,10 +554,6 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
     compat.compatibleCatalogEntryId
       ? this.compatibleEntryName(compat.compatibleCatalogEntryId)
       : `Any ${compat.compatibleCategory}`;
-
-  portDefName(pdId: string): string {
-    return this.mutablePortDefs().find((p) => p.id === pdId)?.name ?? pdId;
-  }
 
   compatibilitiesForPortDef(pdId: string): PortCompatibility[] {
     return this.mutableCompatibilities().filter((c) => c.portDefinitionId === pdId);

@@ -120,81 +120,49 @@
         </nldd-toolbar-item>
       </nldd-toolbar>
       <nldd-spacer size="8"></nldd-spacer>
-      <!-- A table rather than a list: a port has four properties that only mean
-           something under a heading, and every row has the same shape. -->
-      <nldd-table
+      <!-- A list, not a table: what a port is fits in its name plus two tags,
+           and the numbers behind it read as one line rather than as columns that
+           are empty more often than not. The row itself does nothing: editing
+           and deleting both sit behind the button on the right, and a row that
+           picks one of them takes that choice out of your hands. Empty, the list
+           stays and says so inside its own box. -->
+      <nldd-list
+        variant="box-tinted"
         accessible-label="Port definitions"
-        columns="minmax(140px, 1fr) minmax(160px, 1fr) 100px 90px minmax(180px, 1.5fr) 64px"
-        md-columns="minmax(140px, 1fr) minmax(160px, 1fr) minmax(180px, 1.5fr) 64px"
-        sm-columns="minmax(140px, 1fr) minmax(160px, 1fr) minmax(180px, 1.5fr) 64px"
         empty-text="No ports"
         empty-supporting-text='Use "Add port" to define one.'
       >
-        <nldd-table-row slot="header">
-          <nldd-text-cell text="**Name**"></nldd-text-cell>
-          <nldd-text-cell text="**Type**"></nldd-text-cell>
-          <nldd-text-cell text="**Speed**" hide-below="lg"></nldd-text-cell>
-          <nldd-text-cell text="**Power**" hide-below="lg"></nldd-text-cell>
-          <nldd-text-cell text="**Compatible with**"></nldd-text-cell>
-          <nldd-text-cell text="**Actions**" horizontal-alignment="right"></nldd-text-cell>
-        </nldd-table-row>
-
         @for (pd of portDefs(); track pd.id) {
-          <nldd-table-row>
-            <nldd-text-cell class="font-mono" [attr.text]="pd.name"></nldd-text-cell>
+          <nldd-list-item>
+            <!-- The type behind the name, in the same neutral tag a category
+                 wears in the catalog. &ngsp; is Angular's keep-this-space. -->
             <nldd-text-cell
-              color="secondary"
-              [attr.text]="portTypeLabel(pd.portType) + (pd.mediaType ? ' · ' + pd.mediaType : '')"
-            ></nldd-text-cell>
+              width="full"
+              min-width="140px"
+              [attr.supporting-text]="compatSummary(pd.id)"
+              >{{ pd.name }}&ngsp;<nldd-tag
+                size="sm"
+                color="neutral"
+                [attr.text]="portTypeLabel(pd.portType)"
+              ></nldd-tag
+              >@if (pd.mediaType) {&ngsp;<nldd-tag
+                  size="sm"
+                  color="neutral"
+                  [attr.text]="pd.mediaType"
+                ></nldd-tag>}</nldd-text-cell
+            >
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
-              class="tabular-nums"
-              color="secondary"
-              hide-below="lg"
-              [attr.text]="
-                pd.speedGbps !== null && pd.speedGbps !== undefined ? pd.speedGbps + ' Gbps' : ''
-              "
+              width="140px"
+              horizontal-alignment="right"
+              hide-below="560px"
+              [attr.text]="portRating(pd)"
             ></nldd-text-cell>
-            <nldd-text-cell
-              class="tabular-nums"
-              color="secondary"
-              hide-below="lg"
-              [attr.text]="
-                pd.powerWatts !== null && pd.powerWatts !== undefined ? pd.powerWatts + ' W' : ''
-              "
-            ></nldd-text-cell>
-            <nldd-cell width="full">
-              <div class="flex flex-wrap gap-1 items-center">
-                @for (compat of compatibilitiesForPortDef(pd.id); track compat.id) {
-                  <span
-                    class="inline-flex items-center gap-1 bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300 text-xs rounded-full px-2 py-0.5"
-                  >
-                    {{ compatLabel(compat) }}
-                    @if (compat.compatibleCatalogEntryId) {
-                      <button
-                        (click)="openDeleteCompat(compat)"
-                        class="text-slate-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                        [attr.aria-label]="'Remove compatibility with ' + compatLabel(compat)"
-                      >
-                        ×
-                      </button>
-                    }
-                  </span>
-                }
-                <nldd-icon-button
-                  icon="plus-small"
-                  variant="neutral-transparent"
-                  size="xs"
-                  text="Add compatibility"
-                  (click)="openAddCompatibility(pd.id)"
-                ></nldd-icon-button>
-              </div>
-            </nldd-cell>
-            <nldd-cell horizontal-alignment="right">
+            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-cell width="fit-content">
               <nldd-icon-button
                 icon="ellipsis"
-                variant="neutral-transparent"
                 size="sm"
-                expandable
                 popup-type="menu"
                 [attr.accessible-label]="'Actions for port ' + pd.name"
               >
@@ -214,9 +182,9 @@
                 </nldd-menu>
               </nldd-icon-button>
             </nldd-cell>
-          </nldd-table-row>
+          </nldd-list-item>
         }
-      </nldd-table>
+      </nldd-list>
       <nldd-spacer size="24"></nldd-spacer>
       <nldd-title size="4">
         <h2>Assets</h2>
@@ -377,6 +345,28 @@
             (keydown.enter)="savePortDef()"
           ></nldd-number-field>
         </nldd-form-field>
+        <!-- What may be plugged into this port. It belongs to the port, so it
+             belongs in the port's own form, on a new port as much as on an
+             existing one: the compatibilities are written right after the port
+             itself, on save. Last of the fields, because a field under it reads
+             as being about the product you just picked. -->
+        <nldd-form-field label="Compatible with" [optional]="true">
+          <nldd-token-field
+            [values]="portCompatIds()"
+            accessible-label="Compatible products"
+            placeholder="Add product"
+            (change)="onCompatibilitiesChange($any($event).detail.values)"
+          >
+            <nldd-menu>
+              @for (entry of compatOptions(); track entry.id) {
+                <nldd-menu-item
+                  [attr.value]="entry.id"
+                  [attr.text]="entry.model"
+                ></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-token-field>
+        </nldd-form-field>
         <nldd-form-actions>
           <nldd-button
             variant="primary"
@@ -415,91 +405,6 @@
   ></nldd-button>
 </nldd-modal-dialog>
 
-<!-- ══════════════════════════════════════════════════════════════
-     ADD COMPATIBILITY SHEET
-     ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #compatSheet accessible-label="Add port compatibility" placement="right">
-  <nldd-page sticky-header sticky-footer>
-    <nldd-top-title-bar
-      slot="header"
-      text="Add port compatibility"
-      dismiss-text="Cancel"
-      (dismiss)="cancelAddCompatibility()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ formErrorMessage() }}
-          </p>
-        </div>
-      }
-      <p class="text-sm text-slate-500 dark:text-gray-400 mb-3">
-        Select a catalog entry compatible with port
-        <span class="font-medium text-slate-700 dark:text-gray-300">{{
-          portDefName(addCompatPortDefId() ?? '')
-        }}</span
-        >.
-      </p>
-      <nldd-form-field label="Compatible product">
-        <!-- nldd-sheet keeps its <dialog> in shadow DOM, so the rule's dialog exception
-             can't see it. Autofocus is the recommended pattern for a sheet's first field. -->
-        <!-- eslint-disable @angular-eslint/template/no-autofocus -->
-        <nldd-dropdown>
-          <select
-            autofocus
-            [value]="compatEntryId()"
-            (change)="compatEntryId.set($any($event.target).value)"
-          >
-            <option value="">— Select a product —</option>
-            @for (entry of availableCompatEntries(); track entry.id) {
-              <option [value]="entry.id">{{ entry.model }}</option>
-            }
-          </select>
-        </nldd-dropdown>
-        <!-- eslint-enable @angular-eslint/template/no-autofocus -->
-      </nldd-form-field>
-    </nldd-simple-section>
-    <div slot="footer" class="flex px-6 py-4 border-t border-slate-200 dark:border-gray-800">
-      <nldd-button
-        variant="primary"
-        text="Add"
-        width="full"
-        [attr.disabled]="compatEntryId() ? null : ''"
-        (click)="confirmAddCompatibility()"
-      ></nldd-button>
-    </div>
-  </nldd-page>
-</nldd-sheet>
-
-<!-- ══════════════════════════════════════════════════════════════
-     DELETE COMPATIBILITY MODAL
-     ══════════════════════════════════════════════════════════════ -->
-<nldd-modal-dialog
-  variant="alert"
-  #compatDeleteModal
-  (close)="cancelDeleteCompat()"
-  [attr.text]="
-    'Remove compatibility with ' +
-    compatibleEntryName(deleteCompat()?.compatibleCatalogEntryId ?? '') +
-    '?'
-  "
-  supporting-text="These two products will no longer be marked as compatible. You can add the compatibility again later."
-  accessible-label="Confirm compatibility removal"
->
-  <nldd-button
-    slot="actions"
-    variant="primary"
-    text="Keep compatibility"
-    (click)="cancelDeleteCompat()"
-  ></nldd-button>
-  <nldd-button
-    slot="actions"
-    variant="destructive"
-    text="Remove compatibility"
-    (click)="confirmDeleteCompat()"
-  ></nldd-button>
-</nldd-modal-dialog>
 
 <!-- ══════════════════════════════════════════════════════════════
      CATALOG ENTRY EDIT SHEET

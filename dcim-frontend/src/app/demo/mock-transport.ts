@@ -29,6 +29,7 @@ import {
   GetPortDefinitionResponseSchema,
   CreatePortDefinitionResponseSchema,
   ListPortCompatibilitiesResponseSchema,
+  PortCompatibilitySchema,
   PortDefinitionSchema,
 } from '../../generated/v1/catalog_pb';
 import {
@@ -134,6 +135,7 @@ const store = {
   assets: [...fx.assets],
   catalog: [...fx.catalog],
   portDefinitions: [...fx.portDefinitions],
+  portCompatibilities: [] as ReturnType<typeof create<typeof PortCompatibilitySchema>>[],
   placements: [...fx.placements],
   connections: [...fx.connections],
   tasks: [...fx.tasks],
@@ -622,16 +624,38 @@ export default function createDemoTransport(): Transport {
         store.portDefinitions = store.portDefinitions.filter((port) => port.id !== request.id);
         return create(EmptySchema, {});
       },
-      listPortCompatibilities: async () => {
+      // Kept in the store like everything else: the pages read them back after a
+      // write, so a no-op here shows up as a compatibility that will not stick.
+      listPortCompatibilities: async (request) => {
         await delay();
-        return create(ListPortCompatibilitiesResponseSchema, { compatibilities: [] });
+        return create(ListPortCompatibilitiesResponseSchema, {
+          compatibilities: store.portCompatibilities.filter(
+            (c) => c.portDefinitionId === request.portDefinitionId,
+          ),
+        });
       },
-      createPortCompatibility: async () => {
+      createPortCompatibility: async (request) => {
         await delay();
+        const entry = store.catalog.find((c) => c.id === request.compatibleCatalogId);
+        store.portCompatibilities = [
+          ...store.portCompatibilities,
+          create(PortCompatibilitySchema, {
+            portDefinitionId: request.portDefinitionId,
+            compatibleCatalogId: request.compatibleCatalogId,
+            compatibleCategory: entry?.category,
+          }),
+        ];
         return create(EmptySchema, {});
       },
-      deletePortCompatibility: async () => {
+      deletePortCompatibility: async (request) => {
         await delay();
+        store.portCompatibilities = store.portCompatibilities.filter(
+          (c) =>
+            !(
+              c.portDefinitionId === request.portDefinitionId &&
+              c.compatibleCatalogId === request.compatibleCatalogId
+            ),
+        );
         return create(EmptySchema, {});
       },
     });
