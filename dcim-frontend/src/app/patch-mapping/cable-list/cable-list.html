@@ -120,10 +120,14 @@
                 }
               </nldd-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <!-- The label is the name of the row, so a nameless one says so:
+                   left empty it reads as a rendering fault, and a dash reads as
+                   a value. -->
               <nldd-text-cell
                 width="120px"
                 hide-below="560px"
-                [attr.text]="cable.label ?? '—'"
+                [attr.color]="cable.label ? null : 'secondary'"
+                [attr.text]="cable.label || 'Unlabelled'"
               ></nldd-text-cell>
               <nldd-text-cell
                 width="full"
@@ -161,11 +165,13 @@
                 ></nldd-badge
                 >&ngsp;{{ cableStatusLabel(cable.status) }}</nldd-text-cell
               >
+              <!-- The kind of cable, when it is known. "Unspecified" on every
+                   row is not information, and it read as the status twice. -->
               <nldd-text-cell
                 width="80px"
                 color="secondary"
                 hide-below="860px"
-                [attr.text]="cableTypeLabel(cable.type)"
+                [attr.text]="knownCableType(cable.type)"
               ></nldd-text-cell>
             </nldd-list-item-action>
             <nldd-spacer-cell size="8"></nldd-spacer-cell>
@@ -207,6 +213,20 @@
       <nldd-spacer size="12"></nldd-spacer>
       <!-- Everything, above the headings. It is not a status or a type with an
            "all" in it, so it does not belong at the head of either list. -->
+      <!-- Which building you are standing in, above the views that narrow the
+           cables inside it. The same control, in the same place, as the racks
+           menu. -->
+      <nldd-toggle-button-group type="radio" accessible-label="Data center">
+        @for (dc of sites(); track dc.id) {
+          <nldd-toggle-button
+            [attr.value]="dc.id"
+            [attr.text]="dc.name"
+            [attr.selected]="dcId() === dc.id ? '' : null"
+            (change)="onDcToggle(dc.id, $any($event).detail.selected)"
+          ></nldd-toggle-button>
+        }
+      </nldd-toggle-button-group>
+      <nldd-spacer size="12"></nldd-spacer>
       <nldd-list type="navigation" dividers="on-touch" accessible-label="All cables">
         <nldd-list-item
           [attr.href]="viewPath('all')"
@@ -223,26 +243,6 @@
             [attr.text]="statusCounts()['all']"
           ></nldd-text-cell>
         </nldd-list-item>
-      </nldd-list>
-      <nldd-spacer size="16"></nldd-spacer>
-      <!-- The data center is not one of the views: it is which building you are
-           standing in, and the views narrow the cables inside it. -->
-      <nldd-title size="5">
-        <h2>Data center</h2>
-      </nldd-title>
-      <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list type="navigation" dividers="on-touch" accessible-label="Data center">
-        @for (dc of sites(); track dc.id) {
-          <nldd-list-item
-            button
-            [attr.selected]="dcId() === dc.id ? '' : null"
-            (click)="dcSelected.emit(dc.id)"
-          >
-            <nldd-icon-cell icon="building" size="20"></nldd-icon-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-text-cell [attr.text]="dc.name"></nldd-text-cell>
-          </nldd-list-item>
-        }
       </nldd-list>
       <nldd-spacer size="16"></nldd-spacer>
       <nldd-title size="5">

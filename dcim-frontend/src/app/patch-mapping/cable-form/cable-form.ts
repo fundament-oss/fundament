@@ -320,6 +320,12 @@ export default class CableFormComponent {
     }
   }
 
+  /** The status as buttons: a radio group, so only the button that becomes
+   *  selected has anything to say. */
+  onStatusToggle(value: string, selected: boolean): void {
+    if (selected) this.cableStatus.set(value as CableStatus | '');
+  }
+
   onCableColorChange(color: CableColor | undefined): void {
     this.colorManuallySet.set(true);
     this.cableColor.set(color);

@@ -153,6 +153,13 @@ nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > * {
   display: contents;
 }
 
+/* Same story one level down: a component that wraps an nldd-page and is slotted
+   into a sheet stands between the two, and the page then has no height to
+   scroll within. */
+nldd-sheet > app-cable-form {
+  display: contents;
+}
+
 /* No dark:text-white here. The design system's content color is deliberately a
    notch softer than pure white, and text-content already carries it in both
    schemes; the override only made light-DOM text brighter than every component

@@ -314,6 +314,17 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
 
   readonly cableTypeLabel = cableTypeLabel;
 
+  /** The kind of cable, or nothing: an unknown kind is not worth a column of
+   *  "Unspecified" on every row. */
+  readonly knownCableType = (type: CableType | undefined): string =>
+    type ? cableTypeLabel(type) : '';
+
+  /** The data center above the list: a radio group, so only the button that
+   *  becomes selected has anything to say. */
+  onDcToggle(id: string, selected: boolean): void {
+    if (selected && id !== this.dcId()) this.dcSelected.emit(id);
+  }
+
   readonly CABLE_TYPE_LABEL = CABLE_TYPE_LABEL;
 
   readonly CABLE_COLOR_HEX = CABLE_COLOR_HEX;

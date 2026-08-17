@@ -38,7 +38,7 @@
     />
   </div>
 </div>
-<nldd-page sticky-header sticky-footer [hidden]="portManagementDevice() !== null">
+<nldd-page sticky-header [hidden]="portManagementDevice() !== null">
   <nldd-top-title-bar
     slot="header"
     [attr.text]="isEditMode() ? 'Edit cable' : 'New cable'"
@@ -47,29 +47,21 @@
   ></nldd-top-title-bar>
 
   <nldd-simple-section>
-    <div class="flex flex-col gap-6">
-      @if (serverError()) {
+    @if (serverError()) {
         <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
           <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
             {{ serverError() }}
           </p>
         </div>
       }
-      <!-- ── A Side ──────────────────────────────────────────────────────────── -->
-      <section aria-labelledby="aside-heading">
-        <h3
-          id="aside-heading"
-          class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"
-        >
-          <span
-            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-100 dark:bg-accent-950 text-accent-700 dark:text-accent-300 text-[10px] font-bold"
-            aria-hidden="true"
-            >A</span
-          >
-          A side
-        </h3>
-
-        <div class="flex flex-col gap-3">
+    <!-- Both ends of the cable as two sections of one form: which device, which
+         kind of port, which port. -->
+    <nldd-title size="5">
+      <h2 id="aside-heading">A side</h2>
+    </nldd-title>
+    <nldd-spacer size="8"></nldd-spacer>
+    <section aria-labelledby="aside-heading">
+      <nldd-form>
           <!-- Device + manage ports -->
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
@@ -201,38 +193,28 @@
               </p>
             }
           </nldd-form-field>
-        </div>
-      </section>
-
-      <!-- ── Swap button ──────────────────────────────────────────────────────── -->
-      <div class="flex items-center gap-3">
-        <div class="flex-1 border-t border-slate-100 dark:border-gray-800"></div>
-        <nldd-icon-button
-          icon="arrow-up-down"
-          variant="neutral-transparent"
-          size="sm"
-          text="Swap A and B sides"
+      </nldd-form>
+    </section>
+    <nldd-spacer size="16"></nldd-spacer>
+    <nldd-toolbar label="Cable ends">
+      <nldd-toolbar-item slot="start">
+        <nldd-button
+          variant="secondary"
+          text="Swap sides"
+          start-icon="arrow-up-arrow-down"
+          [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
           (click)="swapSides()"
-          [disabled]="!aDeviceId() && !bDeviceId()"
-        ></nldd-icon-button>
-        <div class="flex-1 border-t border-slate-100 dark:border-gray-800"></div>
-      </div>
+        ></nldd-button>
+      </nldd-toolbar-item>
+    </nldd-toolbar>
+    <nldd-spacer size="16"></nldd-spacer>
 
-      <!-- ── B Side ──────────────────────────────────────────────────────────── -->
-      <section aria-labelledby="bside-heading">
-        <h3
-          id="bside-heading"
-          class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"
-        >
-          <span
-            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-neutral-200 dark:bg-gray-800 text-slate-700 dark:text-gray-300 text-[10px] font-bold"
-            aria-hidden="true"
-            >B</span
-          >
-          B side
-        </h3>
-
-        <div class="flex flex-col gap-3">
+    <nldd-title size="5">
+      <h2 id="bside-heading">B side</h2>
+    </nldd-title>
+    <nldd-spacer size="8"></nldd-spacer>
+    <section aria-labelledby="bside-heading">
+      <nldd-form>
           <!-- Device + manage ports -->
           <nldd-form-field label="Device">
             <div class="flex items-center gap-1.5">
@@ -368,21 +350,15 @@
               </p>
             }
           </nldd-form-field>
-        </div>
-      </section>
-
-      <div class="border-t border-slate-100 dark:border-gray-800"></div>
-
-      <!-- ── Cable properties ────────────────────────────────────────────────── -->
-      <section aria-labelledby="cable-props-heading">
-        <h3
-          id="cable-props-heading"
-          class="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-3"
-        >
-          Cable
-        </h3>
-
-        <div class="flex flex-col gap-3">
+      </nldd-form>
+    </section>
+    <nldd-spacer size="24"></nldd-spacer>
+    <nldd-title size="5">
+      <h2 id="cable-props-heading">Cable</h2>
+    </nldd-title>
+    <nldd-spacer size="8"></nldd-spacer>
+    <section aria-labelledby="cable-props-heading">
+      <nldd-form>
           <!-- Label -->
           <nldd-form-field label="Label">
             <nldd-text-field
@@ -414,40 +390,29 @@
             </nldd-dropdown>
           </nldd-form-field>
 
-          <!-- Status -->
-          <div class="flex flex-col gap-1.5">
-            <span
-              class="text-xs font-medium text-slate-700 dark:text-gray-300"
-              id="cable-status-label"
-              >Status</span
-            >
-            <nldd-segmented-control
-              [value]="cableStatus()"
-              size="sm"
-              type="radio"
-              variant="text"
-              aria-labelledby="cable-status-label"
-              (change)="cableStatus.set($any($event).detail.value)"
-            >
-              <nldd-segmented-control-item
-                [attr.value]="''"
-                [attr.text]="'Unspecified'"
-              ></nldd-segmented-control-item>
-              @for (s of CABLE_STATUSES; track s.value) {
-                <nldd-segmented-control-item
-                  [attr.value]="s.value"
-                  [attr.text]="s.label"
-                ></nldd-segmented-control-item>
+          <nldd-form-field label="Status">
+            <nldd-toggle-button-group type="radio" accessible-label="Status">
+              <nldd-toggle-button
+                value=""
+                text="Unspecified"
+                [attr.selected]="cableStatus() === '' ? '' : null"
+                (change)="onStatusToggle('', $any($event).detail.selected)"
+              ></nldd-toggle-button>
+              @for (st of CABLE_STATUSES; track st.value) {
+                <nldd-toggle-button
+                  [attr.value]="st.value"
+                  [attr.text]="st.label"
+                  [attr.selected]="cableStatus() === st.value ? '' : null"
+                  (change)="onStatusToggle(st.value, $any($event).detail.selected)"
+                ></nldd-toggle-button>
               }
-            </nldd-segmented-control>
-          </div>
+            </nldd-toggle-button-group>
+          </nldd-form-field>
 
-          <!-- Color -->
-          <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium text-slate-700 dark:text-gray-300" id="color-label"
-              >Color</span
-            >
-            <div class="flex flex-wrap gap-1.5" role="group" aria-labelledby="color-label">
+          <!-- The swatches are the one control here the design system has no
+               component for, so they stay as they are, inside a real field. -->
+          <nldd-form-field label="Color">
+            <div class="flex flex-wrap gap-1.5" role="group" aria-label="Color">
               <!-- No color option -->
               <button
                 class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1"
@@ -489,7 +454,7 @@
                 ></button>
               }
             </div>
-          </div>
+          </nldd-form-field>
 
           <!-- Description -->
           <nldd-form-field label="Description">
@@ -527,29 +492,41 @@
               (keydown.enter)="onSave()"
             ></nldd-number-field>
           </nldd-form-field>
-        </div>
-      </section>
-    </div>
+        <!-- Under the fields rather than docked at the bottom, the same as
+             every other form in this app. -->
+        <nldd-form-actions>
+          <nldd-button
+            variant="primary"
+            width="full"
+            text="Save"
+            [attr.disabled]="canSave() ? null : true"
+            (click)="onSave()"
+          ></nldd-button>
+        </nldd-form-actions>
+      </nldd-form>
+    </section>
+    @if (isEditMode()) {
+      <nldd-spacer size="32"></nldd-spacer>
+      <!-- Taking a cable out is not the same kind of act as changing it, so it
+           waits at the end of the sheet. -->
+      <nldd-box background="critical">
+        <nldd-container padding="16">
+          <nldd-title size="4">
+            <h2>Delete this cable</h2>
+          </nldd-title>
+          <nldd-spacer size="4"></nldd-spacer>
+          <nldd-text size="sm">
+            The two ports become free again. This cannot be undone.
+          </nldd-text>
+          <nldd-spacer size="16"></nldd-spacer>
+          <nldd-button
+            variant="destructive"
+            text="Delete cable"
+            start-icon="trash"
+            (click)="onDelete()"
+          ></nldd-button>
+        </nldd-container>
+      </nldd-box>
+    }
   </nldd-simple-section>
-
-  <div slot="footer" class="border-t border-slate-100 dark:border-gray-800 px-6 py-4">
-    <nldd-button-group orientation="vertical">
-      <nldd-button
-        variant="primary"
-        text="Save"
-        width="full"
-        (click)="onSave()"
-        [attr.disabled]="canSave() ? null : true"
-      ></nldd-button>
-      @if (isEditMode()) {
-        <nldd-button
-          variant="destructive"
-          text="Delete this cable"
-          start-icon="trash"
-          width="full"
-          (click)="onDelete()"
-        ></nldd-button>
-      }
-    </nldd-button-group>
-  </div>
 </nldd-page>
