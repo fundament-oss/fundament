@@ -119,6 +119,14 @@ spec:
   crds:
     - disks.storage.fundament.io
     - storagepools.storage.fundament.io
+  customComponents:
+    StoragePool:
+      list: storagepools-list.html
+      detail: storagepools-detail.html
+      create: storagepools-create.html
+    Disk:
+      list: disks-list.html
+      detail: disks-detail.html
   uiHints:
     storagepools.storage.fundament.io:
       statusMapping:
@@ -146,3 +154,9 @@ spec:
       version: v1
       resource: cephclusters
       verbs: [get]
+    # Deleting a pool cascades to its StorageClass, so the console checks for
+    # bound volumes before offering the button.
+    - group: ""
+      version: v1
+      resource: persistentvolumes
+      verbs: [list]
