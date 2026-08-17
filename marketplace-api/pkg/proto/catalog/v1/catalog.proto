@@ -1,0 +1,145 @@
+edition = "2023";
+
+package catalog.v1;
+
+import "buf/validate/validate.proto";
+import "catalog/v1/common.proto";
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+import "marketplace/v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/catalog/v1;catalogv1";
+
+// CatalogService serves the public marketplace storefront. It is unauthenticated
+// and returns only PUBLIC listings that have at least one published version;
+// RESTRICTED listings are never returned, so no visibility field is exposed.
+// Reads the appstore schema through a SELECT-only role.
+service CatalogService {
+  // Browse the storefront. Filters are AND-ed; an empty request returns the
+  // whole public catalog, which is what the storefront's first paint uses.
+  rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse);
+  // Fetch a listing by id.
+  rpc GetPlugin(GetPluginRequest) returns (GetPluginResponse);
+  // Published version history, latest first.
+  rpc ListPluginVersions(ListPluginVersionsRequest) returns (ListPluginVersionsResponse);
+  // Categories for the storefront's browse sidebar.
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+  // Organizations with at least one public listing, so the storefront can
+  // resolve organization_id without a credential for organization-api.
+  rpc ListPublishers(ListPublishersRequest) returns (ListPublishersResponse);
+}
+
+// Listing as it appears on a card or in a results grid.
+message PluginSummary {
+  string id = 10;
+  // Stable identifier (appstore.plugins.name), unique per publisher and used as
+  // the URL segment. Show display_name to a user.
+  string name = 20;
+  string display_name = 30;
+  // One-line summary (appstore.plugins.description_short).
+  string description_short = 40;
+  // Publishing organization, resolved through ListPublishers.
+  string organization_id = 50;
+  // Listing artwork (appstore.plugins.image), not a container image.
+  string image = 60;
+  repeated string category_ids = 70;
+  // Free-form labels with no independent identity, unlike categories.
+  repeated string tags = 80;
+  repeated PluginLabel labels = 90;
+  // The newest published version, resolved through ListPluginVersions. Points
+  // at the version rather than repeating its version string.
+  string latest_version_id = 100;
+  bool featured = 110;
+  // When the listing was first published; drives "recently added".
+  google.protobuf.Timestamp published = 120;
+}
+
+// Full listing as it appears on a detail page.
+message PluginDetails {
+  string id = 10;
+  // See PluginSummary.name.
+  string name = 20;
+  string display_name = 30;
+  string description_short = 40;
+  // See PluginSummary.organization_id.
+  string organization_id = 50;
+  // Listing artwork (appstore.plugins.image), not a container image.
+  string image = 60;
+  repeated string category_ids = 70;
+  repeated string tags = 80;
+  repeated PluginLabel labels = 90;
+  // See PluginSummary.latest_version_id.
+  string latest_version_id = 100;
+  bool featured = 110;
+  // When the listing was first published; drives "recently added".
+  google.protobuf.Timestamp published = 120;
+  string description = 130;
+  // Original author, which may differ from the publishing organization.
+  string author_name = 140;
+  string author_url = 150;
+  string repository_url = 160;
+  string license = 170;
+  // Platform capabilities the plugin declares, e.g. "internet_access".
+  repeated string capabilities = 180;
+  repeated marketplace.v1.PluginPermission permissions = 190;
+  repeated marketplace.v1.FeatureBlock features = 200;
+  repeated marketplace.v1.DocumentationLink documentation_links = 210;
+}
+
+// A published version of a listing. Carries the id that
+// PluginSummary.latest_version_id points at.
+message PublishedVersion {
+  string id = 10;
+  string version = 20;
+  google.protobuf.Timestamp published = 30;
+  // sha256 of the definition manifest. The console pins an install to
+  // (version, definition_hash); the manifest bytes are served to authenticated
+  // installers by organization-api, never from here.
+  string definition_hash = 40;
+  string release_notes = 50;
+}
+
+message ListPluginsRequest {
+  // Free text over display name, short description, publisher, tags and description.
+  string query = 10 [(buf.validate.field).string = {max_len: 200}];
+  string category_id = 20 [
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
+    (buf.validate.field).string = {uuid: true}
+  ];
+  bool featured_only = 30;
+  PluginSort sort = 40 [(buf.validate.field).enum = {defined_only: true}];
+}
+
+message ListPluginsResponse {
+  repeated PluginSummary plugins = 10;
+}
+
+message GetPluginRequest {
+  string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message GetPluginResponse {
+  PluginDetails plugin = 10;
+}
+
+message ListPluginVersionsRequest {
+  string plugin_id = 10 [(buf.validate.field).string = {uuid: true}];
+}
+
+message ListPluginVersionsResponse {
+  repeated PublishedVersion versions = 10;
+}
+
+message ListCategoriesRequest {}
+
+message ListCategoriesResponse {
+  repeated marketplace.v1.Category categories = 10;
+}
+
+message ListPublishersRequest {}
+
+message ListPublishersResponse {
+  repeated marketplace.v1.Publisher publishers = 10;
+}

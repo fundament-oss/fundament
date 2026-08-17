@@ -1,0 +1,145 @@
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:sidebar-order: 20
+:state: prediscussion
+
+= FUN-20 Marketplace APIs
+
+== Introduction
+
+The marketplace is where organizations outside Fundament publish plugins, Fundament reviews them, and users discover them. link:/funs/fun-11[FUN-11] describes the plugin system and the in-console catalog; this FUN describes the APIs behind the public marketplace itself.
+
+This FUN specifies the API contracts only. Service implementations, the database schema, and the marketplace frontend are separate work.
+
+== Three APIs
+
+[cols="2,1,2,2"]
+|===
+|Deployable |Package |Service |Caller
+
+|`marketplace-catalog-api`
+|`catalog.v1`
+|`CatalogService`
+|Anonymous visitor
+
+|`marketplace-registry-api`
+|`registry.v1`
+|`PublicationService`
+|Plugin developer
+
+|`marketplace-admin-api`
+|`admin.v1`
+|`ReviewService`
+|Fundament reviewer
+|===
+
+These are three deployables, not three proto modules: the contracts are four packages in one buf module at `marketplace-api/pkg/proto`, and the services get their own directories when they are implemented.
+
+The split axis is who is allowed to call the API. Three audiences, three credentials, three deployables.
+
+`marketplace-catalog-api` is servable with no credential path at all — it has no authenticated RPCs to protect. `marketplace-admin-api` can be restricted to the admin host without the developer API inheriting that restriction, which is what makes the backoffice separable from the developer surface.
+
+The three APIs are four proto packages in one buf module. `marketplace.v1` holds the types more than one of them needs — `SubmissionStatus`, `Category`, `Publisher`, `PluginPermission`, `FeatureBlock` and `DocumentationLink` — each defined once and imported. `Plugin` and `PluginVersion` are deliberately not shared: they carry the same name in `registry.v1` and `admin.v1` but different fields, because an author and a reviewer need different things. With `breaking: use: FILE` the breaking-change surface stays per file, so only a change to the shared package reaches all three APIs — which is correct, since those types describe one set of `appstore` rows.
+
+== One store
+
+There is a single plugin store: the `appstore` schema, which already holds `plugins`, `plugin_definitions`, `tags`, `categories`, `presets` and `plugin_documentation_links` (see link:/funs/fun-11[FUN-11]). The three APIs are surfaces over it, not systems of their own. There is no marketplace-owned registry and no sync between stores.
+
+This follows from what `appstore` already is. `appstore.plugins.organization_id` records the owning organization, and RLS enforces the model these APIs need: `plugins_select_all` makes catalog reads global, while `plugins_insert_owner` and `plugins_update_owner` restrict writes to the owning organization. `appstore.plugin_definitions` already carries `(plugin_version, manifest, hash)` — the pin the console installs against. A second store would have duplicated all of it and introduced a window in which an approved version was live in one place and not the other. Since the definition hash is a consent record (link:/funs/fun-17[FUN-17]), two copies means two chances for that record to disagree.
+
+What `appstore` does not yet have, and this design adds:
+
+* Review state — submission status, reviewer, decision, rejection reason.
+* Listing fields — short description, feature blocks, trust labels, featured flag, visibility and the organization allow-list, licence.
+* A per-organization uniqueness constraint on plugin name (see <<Identity>>).
+
+Isolation comes from database roles rather than from separate stores, matching the existing pattern (`fun_authn_api`, `fun_dcim_api`, `fun_cluster_worker`, `fun_authz_worker`). `marketplace-catalog-api` gets a SELECT-only role on `appstore`, so the anonymous, internet-facing surface cannot write and cannot reach the tenant schema at all. The publication and admin APIs get write roles, with RLS deciding which rows each may touch.
+
+Because there is one store, the proto field names follow the schema rather than inventing parallel ones: `name` (not `slug`), `description_short` (not `tagline`), `image` for the listing artwork, `Category` as an entity referenced by id, and `DocumentationLink{title, url_name, url}`. Tags are the exception: `appstore.tags` carries ids, but the APIs pass tag names as plain strings, because a tag has no identity a client needs to hold.
+
+The marketplace has no install RPC. Its "Install" button deep-links to the console, which drives `organization-api` against the same schema.
+
+== Identity
+
+A plugin is identified by its `id`. Its `name` is `appstore.plugins.name`, unique only within the owning organization:
+
+[source,sql]
+----
+UNIQUE NULLS NOT DISTINCT (organization_id, name, deleted)
+----
+
+This changes the shipped constraint, which is currently global on `(name, deleted)`. Global uniqueness makes plugin names first-come-first-served across every publisher, which does not fit a marketplace open to external organizations.
+
+Two organizations may each publish a plugin called `cert-manager`, so a name alone does not identify a listing and every RPC addresses a plugin by `plugin_id`. The storefront's route is a separate decision that belongs to the frontend: the API no longer constrains it.
+
+Cluster-side, `PluginInstallation` resources are named `<org>-<plugin>` so two same-named plugins from different publishers do not collide in one cluster. That is decided and tracked separately from this FUN.
+
+All resource identifiers are UUIDv7, per link:/funs/fun-6[FUN-6].
+
+== Review lifecycle
+
+The reviewed unit is a *version*, not a listing. A plugin is the container; each pushed version is reviewed on its own. This means a bad second version cannot reach users on the strength of a trusted first one.
+
+There is one state vocabulary, `marketplace.v1.SubmissionStatus`, imported by both `registry.v1` and `admin.v1`. The developer and the reviewer are looking at the same state, so it does not get two sets of names depending on which surface you ask:
+
+* `DRAFT` — pushed via `functl plugins push`, not yet submitted. No submission exists in the review queue yet.
+* `PENDING` — submitted and awaiting a decision.
+* `CHANGES_REQUESTED` — the reviewer returned it with a note; the developer can fix and resubmit.
+* `APPROVED` — approved and live in the catalog.
+* `REJECTED` — refused; the submission is closed.
+* `WITHDRAWN` — the developer pulled the version back before a decision was made; it can be submitted again.
+
+`SubmissionStatus` lives in `marketplace.v1` and is imported by both, so the two surfaces cannot drift. It was previously copied into each with a rule that the copies stay identical; they had already drifted in their comments, which is what the shared definition prevents.
+
+A plugin listing carries no review state of its own. It goes live in the public catalog when its first version is approved.
+
+A submission carries identifiers, not a copy of the listing. The reviewer resolves them through `ReviewService`'s own read RPCs and sees the listing as it stands, so an edit a developer makes after submitting is visible to the reviewer.
+
+== Normalization
+
+The contract is normalized. A message carries its own fields, the natural key others address it by, and foreign keys as bare identifiers. It carries no projection of another resource — no copied display names, no embedded snapshots of data another service owns.
+
+Every identifier handed to a client must be resolvable by an RPC on the service that owns it. Where nothing serves one yet, it is listed under <<Deferred>> rather than papered over by copying the value into the response.
+
+Composition is not denormalization: `FeatureBlock`, `DocumentationLink` and `PluginPermission` have no independent identity and no lookup of their own, so they stay nested in the messages that use them.
+
+Categories are a curated vocabulary referenced as `category_ids`, resolved through `ListCategories`. Tags are free-form labels with no identity of their own, carried as plain strings.
+
+Field names carry no qualifier unless a second reference of the same kind shares the message. A plugin has exactly one organization, so the field is `organization_id` throughout, matching `appstore.plugins.organization_id`. `Submission.submitter_user_id` and `Submission.reviewer_user_id` keep theirs, because they are different people sitting in one message, and `allowed_organization_ids` keeps its own for the same reason.
+
+Requests address by identifier too. `GetPlugin` takes `plugin_id` on every surface that offers it, rather than the catalog addressing a listing by a `(publisher, name)` pair while the backoffice addressed the same row by id.
+
+`ReviewService` therefore serves its own `ListPlugins`, `GetPlugin`, `GetPluginVersion`, `ListCategories` and `ListPublishers`. Neither of the other two APIs can stand in: the catalog holds only approved public listings, so a pending submission's plugin is absent from it, and `PublicationService` authorizes "owns this plugin", which a Fundament reviewer does not. `organization-api` cannot resolve the publishing organization either — its `GetOrganization` is scoped to organization members and a reviewer is not one. `CatalogService` carries its own `ListPublishers` for a related reason: it is anonymous and holds no credential for `organization-api` at all, so it serves the organizations that already have a public listing, which leaks nothing a visitor could not learn by browsing.
+
+One deliberate exception. `registry.v1.PluginVersion.review_feedback` originates in a review record, but a developer has no credential for `admin.v1` and never will, so an identifier pointing into the backoffice would be unresolvable. The field is the hand-off of the reviewer's note onto the developer's surface.
+
+== Visibility
+
+`registry.v1.PluginVisibility` is `PUBLIC` or `RESTRICTED`. A developer sets it, together with `allowed_organization_ids`, through `UpdatePlugin`.
+
+`CatalogService` never returns a `RESTRICTED` listing and exposes no visibility field — returning the flag would leak the listing's existence. Installability for a permitted organization is resolved in the console.
+
+== Conventions
+
+All four proto packages follow link:/funs/fun-6[FUN-6]: edition 2023, `API_OPAQUE`, implicit field presence, field numbers starting at 10 and stepping by 10, `<Action><Object>` RPC names, `<Object>Summary` / `<Object>Details` messages, past-tense timestamp names, and `SCREAMING_SNAKE_CASE` enums with an `UNSPECIFIED` zero value. Numbers are not renumbered to close a gap left by a removed field.
+
+One deliberate deviation: these modules do **not** use `google.protobuf.Empty` for void responses. `buf lint` with the `STANDARD` category rejects it under `RPC_RESPONSE_STANDARD_NAME` and `RPC_REQUEST_RESPONSE_UNIQUE`, and these modules are required to lint clean. Every RPC has its own `<Rpc>Response` message, empty-bodied where there is nothing to return. This is also additive-friendly: an empty response can gain fields later without a breaking change.
+
+Request validation uses protovalidate. Slugs are constrained to DNS-1123 labels, versions to semantic versions, identifiers to UUIDs, and free text to explicit length bounds.
+
+== Deferred
+
+Not covered by this FUN, each its own piece of work:
+
+* Service implementations, and the `appstore` schema changes listed under <<One store>> — review state, listing fields, and the per-organization uniqueness constraint.
+* The database roles and grants that give `marketplace-catalog-api` SELECT-only access to `appstore`.
+* The `marketplace-frontend` Angular SSR application.
+* Sideloading a build onto a cluster. This creates a `PluginInstallation` resource, so it belongs to `organization-api`; routing it through the publication API would give the marketplace cluster-write authority it should not have.
+* Developer login via the Console, for the publishing surface.
+* Pagination on `ListPlugins`. The catalog is small and the storefront filters client-side; `page_size` and `page_token` are additive when needed.
+* Who sets the editorial fields. `PluginLabel` (`CORE`, `RIJKSOVERHEID`, `SUPPORT_9_TO_17`) and `featured` are Fundament curation decisions, not developer-authored — no API writes them yet, and the curation surface is undesigned.
+* A lookup over `tenant.users`, on whichever service owns it. Nothing resolves an arbitrary user identifier today — `authn-api`'s `GetUserInfo` introspects the caller's own token and `organization-api` has no user RPCs — so the backoffice renders identifiers where a submitter's name and email belong.
+* Which store marketplace reviewers authenticate against. `tenant.users` and `dcim.users` are separate tables with separate identity-provider subjects, so `Submission.reviewer_user_id` is namespaced apart from `submitter_user_id` until this is settled.
+* An organization picker for `allowed_organization_ids`. A developer restricting a plugin names organizations they are not a member of, and `organization-api`'s `GetOrganization` is scoped to members, so nothing lets them browse or resolve those identifiers. The allow-list is writable but not yet discoverable; this belongs to the publishing UI rather than to the contract.

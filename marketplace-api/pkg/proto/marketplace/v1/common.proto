@@ -1,0 +1,67 @@
+edition = "2023";
+
+package marketplace.v1;
+
+import "google/protobuf/go_features.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/marketplace/v1;marketplacev1";
+
+// Where a version sits in the push -> submit -> review -> publish pipeline.
+// One vocabulary for the developer and the reviewer alike: they are looking at
+// the same state, so it does not get two sets of names depending on which
+// surface you ask. DRAFT is pushed but not yet submitted, so no submission
+// exists for it in the review queue.
+enum SubmissionStatus {
+  SUBMISSION_STATUS_UNSPECIFIED = 0;
+  SUBMISSION_STATUS_DRAFT = 1;
+  SUBMISSION_STATUS_PENDING = 2;
+  SUBMISSION_STATUS_CHANGES_REQUESTED = 3;
+  SUBMISSION_STATUS_APPROVED = 4;
+  SUBMISSION_STATUS_REJECTED = 5;
+  // The developer withdrew the version before a decision was made.
+  SUBMISSION_STATUS_WITHDRAWN = 6;
+}
+
+// appstore.categories. A curated vocabulary: a developer picks from it rather
+// than creating entries, and a listing references it by id.
+message Category {
+  string id = 10;
+  string name = 20;
+}
+
+// A publishing organization, projected from tenant.organizations. Served by
+// each API's own ListPublishers, because organization-api's GetOrganization is
+// scoped to members and neither an anonymous visitor nor a Fundament reviewer
+// qualifies.
+message Publisher {
+  string id = 10;
+  // DNS-label organization name (tenant.organizations.name).
+  string name = 20;
+  // Human-readable organization name (tenant.organizations.alias).
+  string display_name = 30;
+}
+
+// Human-readable projection of a version's RBAC rules, e.g.
+// ("Certificates", "Read and write"). Derived from the pinned definition.
+message PluginPermission {
+  string resource = 10;
+  string access = 20;
+}
+
+// A selling point the developer writes; rendered as a card on the public
+// detail page.
+message FeatureBlock {
+  string title = 10;
+  string body = 20;
+}
+
+// appstore.plugin_documentation_links. url_name is the link text; title labels
+// the group it appears under.
+message DocumentationLink {
+  string id = 10;
+  string title = 20;
+  string url_name = 30;
+  string url = 40;
+}

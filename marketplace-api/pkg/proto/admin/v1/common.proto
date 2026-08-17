@@ -1,0 +1,91 @@
+edition = "2023";
+
+package admin.v1;
+
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+import "marketplace/v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/admin/v1;adminv1";
+
+// Fixed set offered in the reject dialog. Backoffice reporting only: the
+// developer never sees this value, they receive PluginVersion.review_feedback.
+enum RejectionReason {
+  REJECTION_REASON_UNSPECIFIED = 0;
+  REJECTION_REASON_INCOMPLETE_METADATA = 1;
+  REJECTION_REASON_DUPLICATE = 2;
+  REJECTION_REASON_SECURITY_CONCERNS = 3;
+  REJECTION_REASON_NAMING_GUIDELINES = 4;
+  REJECTION_REASON_OUT_OF_SCOPE = 5;
+  REJECTION_REASON_OTHER = 6;
+}
+
+// A plugin version awaiting or having gone through review. Identity plus
+// decision: everything else is resolved through this service's read RPCs.
+// There is no listing snapshot — a reviewer sees the listing as it stands, so
+// an edit made after submitting is visible to the reviewer.
+message Submission {
+  string id = 10;
+  string plugin_id = 20;
+  string plugin_version_id = 30;
+  // Publishing organization (tenant.organizations), resolved through this
+  // service's ListPublishers — organization-api's GetOrganization is scoped to
+  // members and a reviewer is not one.
+  string organization_id = 40;
+  // The developer who submitted (tenant.users). No lookup serves this yet —
+  // see FUN-20's deferred list.
+  string submitter_user_id = 50;
+  marketplace.v1.SubmissionStatus status = 60;
+  google.protobuf.Timestamp submitted = 70;
+
+  // Set once a decision is made.
+  google.protobuf.Timestamp reviewed = 80;
+  // The deciding Fundament staff member. Which store they come from is
+  // undecided — tenant.users or dcim.users — so do not assume this shares a
+  // namespace with submitter_user_id.
+  string reviewer_user_id = 90;
+  RejectionReason rejection_reason = 100;
+  string feedback = 110;
+}
+
+// The listing a submission points at, as it stands now. Deliberately narrower
+// than the developer's authoring shape: a reviewer judges the listing copy and
+// its classification, and does not need the authoring-only fields.
+message Plugin {
+  string id = 10;
+  // Stable identifier (appstore.plugins.name), unique per publisher.
+  string name = 20;
+  string display_name = 30;
+  string description_short = 40;
+  string description = 50;
+  // Publishing organization, resolved through ListPublishers.
+  string organization_id = 60;
+  // Listing artwork, not a container image.
+  string image = 70;
+  repeated string category_ids = 80;
+  repeated string tags = 90;
+  google.protobuf.Timestamp created = 100;
+  google.protobuf.Timestamp updated = 110;
+}
+
+// The version under review. Carries the review payload — what the plugin will
+// be allowed to do once installed — because those are properties of the
+// version, derived from its pinned definition manifest.
+message PluginVersion {
+  string id = 10;
+  string plugin_id = 20;
+  string version = 30;
+  // Container image the plugin runs, read out of the manifest.
+  string image = 40;
+  string definition_hash = 50;
+  string release_notes = 60;
+  marketplace.v1.SubmissionStatus status = 70;
+  // Platform capabilities the version declares, e.g. "internet_access".
+  repeated string capabilities = 80;
+  repeated marketplace.v1.PluginPermission permissions = 90;
+  google.protobuf.Timestamp created = 100;
+  google.protobuf.Timestamp submitted = 110;
+  google.protobuf.Timestamp published = 120;
+}
