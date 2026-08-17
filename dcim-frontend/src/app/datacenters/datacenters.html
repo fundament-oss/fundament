@@ -28,20 +28,6 @@
         <nldd-toolbar-item slot="start">
           <nldd-button
             variant="secondary"
-            text="Rooms & rows"
-            start-icon="square-grid-2x2"
-            (click)="openRoomsAndRows(dc)"
-          ></nldd-button>
-          <nldd-menu-item
-            slot="overflow"
-            icon="square-grid-2x2"
-            text="Rooms & rows"
-            (select)="openRoomsAndRows(dc)"
-          ></nldd-menu-item>
-        </nldd-toolbar-item>
-        <nldd-toolbar-item slot="start">
-          <nldd-button
-            variant="secondary"
             text="Racks"
             start-icon="rack-servers"
             (click)="openRackView()"
@@ -155,7 +141,7 @@
       <nldd-box>
         <nldd-container padding="16">
           <nldd-toolbar label="Floor layout view">
-            <nldd-toolbar-item slot="end">
+            <nldd-toolbar-item slot="start">
               <nldd-segmented-control
                 [value]="viewMode()"
                 type="radio"
@@ -173,6 +159,23 @@
                   icon="folder-on-folder"
                 ></nldd-segmented-control-item>
               </nldd-segmented-control>
+            </nldd-toolbar-item>
+            <!-- What this drawing is made of lives one page down: the rooms and
+                 the rack rows. That is editing the layout, so the button sits
+                 with the layout and not with the data center. -->
+            <nldd-toolbar-item slot="end">
+              <nldd-button
+                variant="secondary"
+                text="Edit layout"
+                start-icon="pencil-on-square"
+                (click)="openRoomsAndRows(dc)"
+              ></nldd-button>
+              <nldd-menu-item
+                slot="overflow"
+                icon="pencil-on-square"
+                text="Edit layout"
+                (select)="openRoomsAndRows(dc)"
+              ></nldd-menu-item>
             </nldd-toolbar-item>
           </nldd-toolbar>
           <nldd-spacer size="12"></nldd-spacer>
