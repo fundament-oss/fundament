@@ -505,28 +505,5 @@
         </nldd-form-actions>
       </nldd-form>
     </section>
-    @if (isEditMode()) {
-      <nldd-spacer size="32"></nldd-spacer>
-      <!-- Taking a cable out is not the same kind of act as changing it, so it
-           waits at the end of the sheet. -->
-      <nldd-box background="critical">
-        <nldd-container padding="16">
-          <nldd-title size="4">
-            <h2>Delete this cable</h2>
-          </nldd-title>
-          <nldd-spacer size="4"></nldd-spacer>
-          <nldd-text size="sm">
-            The two ports become free again. This cannot be undone.
-          </nldd-text>
-          <nldd-spacer size="16"></nldd-spacer>
-          <nldd-button
-            variant="destructive"
-            text="Delete cable"
-            start-icon="trash"
-            (click)="onDelete()"
-          ></nldd-button>
-        </nldd-container>
-      </nldd-box>
-    }
   </nldd-simple-section>
 </nldd-page>

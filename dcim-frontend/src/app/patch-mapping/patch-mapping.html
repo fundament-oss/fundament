@@ -40,21 +40,22 @@
     <nldd-simple-section width="full" padding-block="8">
       <nldd-toolbar label="Topology filters">
         <nldd-toolbar-item slot="start">
-          <nldd-segmented-control
-            [value]="topologyStatusFilter()"
-            type="radio"
-            variant="text"
-            (change)="topologyStatusFilter.set($any($event).detail.value)"
-            accessible-label="Filter by status"
-          >
-            <nldd-segmented-control-item value="" text="All"></nldd-segmented-control-item>
+          <nldd-toggle-button-group type="radio" accessible-label="Filter by status">
+            <nldd-toggle-button
+              value=""
+              text="All"
+              [attr.selected]="topologyStatusFilter() === '' ? '' : null"
+              (change)="onTopologyStatusToggle('', $any($event).detail.selected)"
+            ></nldd-toggle-button>
             @for (s of CABLE_STATUSES; track s.value) {
-              <nldd-segmented-control-item
+              <nldd-toggle-button
                 [attr.value]="s.value"
                 [attr.text]="s.label"
-              ></nldd-segmented-control-item>
+                [attr.selected]="topologyStatusFilter() === s.value ? '' : null"
+                (change)="onTopologyStatusToggle(s.value, $any($event).detail.selected)"
+              ></nldd-toggle-button>
             }
-          </nldd-segmented-control>
+          </nldd-toggle-button-group>
         </nldd-toolbar-item>
         <nldd-toolbar-item slot="end">
           <nldd-dropdown>
@@ -113,7 +114,6 @@
     [serverError]="cableFormError()"
     (save)="saveFromForm($event)"
     (cancelForm)="closeForm()"
-    (cableDelete)="openDeleteCable($event)"
     (portsUpdated)="onPortsUpdated($event)"
   />
 </nldd-sheet>

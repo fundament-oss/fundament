@@ -108,6 +108,12 @@ export default class PatchMappingComponent implements OnInit {
   // ── Topology filters ───────────────────────────────────────────────────────
   readonly topologyStatusFilter = signal<CableStatus | ''>('');
 
+  /** The status the drawing is filtered on: a radio group, so only the button
+   *  that becomes selected has anything to say. */
+  onTopologyStatusToggle(value: string, selected: boolean): void {
+    if (selected) this.topologyStatusFilter.set(value as CableStatus | '');
+  }
+
   readonly topologyTypeFilter = signal<CableType | ''>('');
 
   // Devices (placements) and their ports in the active datacenter.

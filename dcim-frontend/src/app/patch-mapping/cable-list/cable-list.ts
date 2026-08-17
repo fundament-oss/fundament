@@ -123,6 +123,10 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     () => this.CABLE_STATUSES.find((s) => s.value === this.statusView())?.value ?? '',
   );
 
+  /** A cable can have no status at all, so that is a view of its own: without
+   *  it those cables sit behind none of the three. */
+  readonly filterUnspecified = computed(() => this.statusView() === 'unspecified');
+
   readonly filterType = computed<CableType | ''>(
     () => this.CABLE_TYPES.find((t) => t === this.typeView()) ?? '',
   );
@@ -143,6 +147,7 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     const { kind, value } = this.menuSelection();
     switch (kind) {
       case 'status':
+        if (value === 'unspecified') return 'Unspecified';
         return this.CABLE_STATUSES.find((s) => s.value === value)?.label ?? 'All cables';
       case 'type':
         return this.CABLE_TYPE_LABEL[value as CableType] ?? 'All cables';
@@ -205,8 +210,11 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     const type = this.filterType();
     const color = this.filterColor();
 
+    const unspecified = this.filterUnspecified();
+
     return this.cables().filter((c) => {
       if (status && c.status !== status) return false;
+      if (unspecified && c.status) return false;
       if (type && c.type !== type) return false;
       if (color && c.color !== color) return false;
       if (devId && c.aSide.deviceId !== devId && c.bSide.deviceId !== devId) return false;

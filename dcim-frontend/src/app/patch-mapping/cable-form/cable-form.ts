@@ -64,8 +64,6 @@ export default class CableFormComponent {
 
   readonly cancelForm = output<void>();
 
-  readonly cableDelete = output<Cable>();
-
   /** Emitted when this form mutates a device's ports, so the parent can persist them. */
   readonly portsUpdated = output<{ deviceId: string; ports: Port[] }>();
 
@@ -452,11 +450,6 @@ export default class CableFormComponent {
 
   onCancel(): void {
     this.cancelForm.emit();
-  }
-
-  onDelete(): void {
-    const c = this.cable();
-    if (c?.id) this.cableDelete.emit(c as Cable);
   }
 
   // ── Focus helpers ──────────────────────────────────────────────────────────
