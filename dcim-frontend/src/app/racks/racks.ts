@@ -32,11 +32,6 @@ import { RackSlotType } from '../../generated/v1/common_pb';
 import parseValidationError from '../../connect/validation';
 import { categoryToDeviceType, parseRackHeight } from './catalog-helpers';
 
-interface RowOption {
-  id: string;
-  label: string;
-}
-
 interface AssetOption {
   id: string;
   label: string;
@@ -284,7 +279,20 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   readonly selectedDcId = this.rackList.selectedDcId;
 
   // ── Row options for the create-rack form (rooms + rows in the selected DC) ─
-  readonly rowOptions = signal<RowOption[]>([]);
+  /** The halls of the data center the form is set to. */
+  readonly formRooms = signal<Room[]>([]);
+
+  /** Every rack row in that data center, each knowing its hall. */
+  readonly formRows = signal<RackRow[]>([]);
+
+  readonly formRoomId = signal('');
+
+  readonly formRowId = signal('');
+
+  /** The rows of the chosen hall, which is what the second group offers. */
+  readonly rowsForFormRoom = computed(() =>
+    this.formRows().filter((row) => row.roomId === this.formRoomId()),
+  );
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
   readonly editRack = signal<(Partial<Rack> & { rowId?: string }) | null>(null);
@@ -313,8 +321,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   private readonly rackModalEl = viewChild<NativeElementRef>('rackModal');
 
   private readonly fRackName = viewChild<NativeElementRef>('fRackName');
-
-  private readonly fRackRowId = viewChild<NativeElementRef>('fRackRowId');
 
   private readonly fRackTotalU = viewChild<NativeElementRef>('fRackTotalU');
 
@@ -490,16 +496,30 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
       ]);
       const rooms = roomsRes.rooms.map((r) => DatacenterApiService.mapRoom(r));
       const rows = rowsRes.rackRows.map((r) => DatacenterApiService.mapRackRow(r));
-      const roomName = new Map<string, string>(rooms.map((r: Room) => [r.id, r.name]));
-      const options = rows.map((r: RackRow) => ({
-        id: r.id,
-        label: `${roomName.get(r.roomId) ?? '—'} · ${r.name}`,
-      }));
-      this.rowOptions.set(options);
+      this.formRooms.set(rooms);
+      this.formRows.set(rows);
+      // Both groups open on their first button, so a new rack always has a
+      // place: nothing in this form is ever disabled waiting for a choice
+      // above it.
+      const room = rooms.find((r) => r.id === this.formRoomId()) ?? rooms[0];
+      this.formRoomId.set(room?.id ?? '');
+      const firstRow = rows.find((r) => r.roomId === room?.id);
+      this.formRowId.set(firstRow?.id ?? '');
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(connectErrorMessage(err));
     }
+  }
+
+  /** Picking a hall offers the rows in it, and lands on the first. */
+  onFormRoomToggle(id: string, selected: boolean): void {
+    if (!selected || id === this.formRoomId()) return;
+    this.formRoomId.set(id);
+    this.formRowId.set(this.formRows().find((row) => row.roomId === id)?.id ?? '');
+  }
+
+  onFormRowToggle(id: string, selected: boolean): void {
+    if (selected) this.formRowId.set(id);
   }
 
 
@@ -656,8 +676,8 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     if (!selected || id === this.formDcId()) return;
     this.formDcId.set(id);
     this.reloadRowOptions(id);
-    const el = this.fRackRowId()?.nativeElement;
-    if (el) el.value = '';
+    this.formRoomId.set('');
+    this.formRowId.set('');
   }
 
   openCreateRack(): void {
@@ -689,7 +709,7 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     if (!form) return;
     this.clearRackErrors();
     const name = (this.fRackName()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const rowId = (this.fRackRowId()?.nativeElement as HTMLSelectElement)?.value ?? '';
+    const rowId = this.formRowId();
     const totalU =
       parseInt((this.fRackTotalU()?.nativeElement as HTMLInputElement)?.value ?? '42', 10) || 42;
     if (form.id) {

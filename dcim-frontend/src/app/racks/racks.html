@@ -298,26 +298,42 @@
                 }
               </nldd-toggle-button-group>
             </nldd-form-field>
+            <nldd-form-field label="Room">
+              <nldd-toggle-button-group type="radio" accessible-label="Room">
+                @for (room of formRooms(); track room.id) {
+                  <nldd-toggle-button
+                    [attr.value]="room.id"
+                    [attr.text]="room.name"
+                    [attr.selected]="formRoomId() === room.id ? '' : null"
+                    (change)="onFormRoomToggle(room.id, $any($event).detail.selected)"
+                  ></nldd-toggle-button>
+                }
+              </nldd-toggle-button-group>
+              @if (formRooms().length === 0) {
+                <nldd-form-field-error-text id="error-no-rooms">
+                  No rooms in this data center. Create one on the Data centers page first.
+                </nldd-form-field-error-text>
+              }
+            </nldd-form-field>
             <nldd-form-field label="Rack row">
-              <nldd-combo-box
-                #fRackRowId
-                [attr.invalid]="isFieldInvalid('row_id') ? '' : null"
-                error-message="error-rack-row-id"
-              >
-                <nldd-menu>
-                  @for (row of rowOptions(); track row.id) {
-                    <nldd-menu-item [attr.value]="row.id" [attr.text]="row.label"></nldd-menu-item>
-                  }
-                </nldd-menu>
-              </nldd-combo-box>
+              <nldd-toggle-button-group type="radio" accessible-label="Rack row">
+                @for (row of rowsForFormRoom(); track row.id) {
+                  <nldd-toggle-button
+                    [attr.value]="row.id"
+                    [attr.text]="row.name"
+                    [attr.selected]="formRowId() === row.id ? '' : null"
+                    (change)="onFormRowToggle(row.id, $any($event).detail.selected)"
+                  ></nldd-toggle-button>
+                }
+              </nldd-toggle-button-group>
               @if (isFieldInvalid('row_id')) {
                 <nldd-form-field-error-text id="error-rack-row-id">
                   {{ fieldError('row_id') }}
                 </nldd-form-field-error-text>
               }
-              @if (rowOptions().length === 0) {
+              @if (formRooms().length > 0 && rowsForFormRoom().length === 0) {
                 <nldd-form-field-error-text id="error-no-rows">
-                  No rack rows in this data center. Create one on the Data centers page first.
+                  No rack rows in this room. Create one on the Data centers page first.
                 </nldd-form-field-error-text>
               }
             </nldd-form-field>
