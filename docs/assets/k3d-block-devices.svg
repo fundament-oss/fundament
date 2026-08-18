@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="660" viewBox="0 0 900 660"
+     style="background: #ffffff; background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color-scheme: light dark;">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .fg    { fill: light-dark(#111827, #e5e7eb); }
+    .muted { fill: light-dark(#6b7280, #9ca3af); }
+    .mono  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .panel { fill: light-dark(#f9fafb, #1b2130); stroke: light-dark(#d1d5db, #3b4457); }
+    .host  { fill: light-dark(#eef2ff, #312e81); stroke: #6366f1; }
+    .box   { fill: light-dark(#ffffff, #1f2937); stroke: light-dark(#d1d5db, #3b4457); }
+    .keep  { fill: light-dark(#ecfdf5, #064e3b); stroke: #10b981; }
+    .lose  { fill: light-dark(#fffbeb, #78350f); stroke: #f59e0b; }
+    .keept { fill: light-dark(#047857, #6ee7b7); }
+    .loset { fill: light-dark(#b45309, #fcd34d); }
+    .arrow { stroke: light-dark(#6b7280, #9ca3af); stroke-width: 2; fill: none; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="light-dark(#6b7280, #9ca3af)"/>
+    </marker>
+  </defs>
+
+  <!-- platform comparison -->
+  <rect class="panel" x="30" y="16" width="400" height="132" rx="8"/>
+  <text class="fg" x="46" y="40" font-size="15" font-weight="600">macOS</text>
+  <text class="muted" x="46" y="60" font-size="12">Docker runs in a VM. Everything below</text>
+  <text class="muted" x="46" y="76" font-size="12">is inside it, never on the Mac filesystem.</text>
+  <rect class="host" x="46" y="88" width="368" height="46" rx="6"/>
+  <text class="fg mono" x="60" y="107" font-size="12.5">colima / Docker Desktop VM</text>
+  <text class="fg" x="60" y="125" font-size="12" font-weight="600">= the Docker host</text>
+
+  <rect class="panel" x="470" y="16" width="400" height="132" rx="8"/>
+  <text class="fg" x="486" y="40" font-size="15" font-weight="600">Linux</text>
+  <text class="muted" x="486" y="60" font-size="12">No VM layer. Same commands, but the</text>
+  <text class="muted" x="486" y="76" font-size="12">disks live on your actual machine.</text>
+  <rect class="host" x="486" y="88" width="368" height="46" rx="6"/>
+  <text class="fg mono" x="500" y="107" font-size="12.5">the machine itself</text>
+  <text class="fg" x="500" y="125" font-size="12" font-weight="600">= the Docker host</text>
+
+  <text class="muted" x="450" y="176" font-size="13" text-anchor="middle">every layer below runs on the Docker host</text>
+
+  <!-- layer stack -->
+  <rect class="box" x="150" y="192" width="470" height="58" rx="6"/>
+  <text class="fg mono" x="168" y="216" font-size="12.5">osd0.img  osd1.img  osd2.img</text>
+  <text class="muted" x="168" y="236" font-size="11.5">docker volume fundament-k3d-disks — sparse files, 20G each</text>
+  <rect class="keep" x="640" y="204" width="230" height="34" rx="17"/>
+  <text class="keept" x="755" y="226" font-size="12" font-weight="600" text-anchor="middle">survives every reboot</text>
+
+  <path class="arrow" marker-end="url(#a)" d="M385,250 L385,286"/>
+  <text class="muted mono" x="397" y="272" font-size="11.5">losetup -P</text>
+
+  <rect class="box" x="150" y="288" width="470" height="58" rx="6"/>
+  <text class="fg mono" x="168" y="312" font-size="12.5">/dev/loopN  ──GPT──▶  /dev/loopNp1</text>
+  <text class="muted" x="168" y="332" font-size="11.5">partitioned: rook-discover rejects a bare loop device</text>
+  <rect class="lose" x="640" y="300" width="230" height="34" rx="17"/>
+  <text class="loset" x="755" y="322" font-size="12" font-weight="600" text-anchor="middle">gone on reboot — re-attach</text>
+
+  <path class="arrow" marker-end="url(#a)" d="M385,346 L385,382"/>
+  <text class="muted mono" x="397" y="368" font-size="11.5">/dev bind-mounted (live devtmpfs)</text>
+
+  <rect class="box" x="150" y="384" width="470" height="52" rx="6"/>
+  <text class="fg" x="168" y="406" font-size="13" font-weight="600">k3d node container</text>
+  <text class="muted" x="168" y="424" font-size="11.5">privileged, so it sees every device on the Docker host</text>
+
+  <path class="arrow" marker-end="url(#a)" d="M385,436 L385,472"/>
+  <text class="muted mono" x="397" y="458" font-size="11.5">hostPath /dev</text>
+
+  <rect class="box" x="150" y="474" width="470" height="52" rx="6"/>
+  <text class="fg" x="168" y="496" font-size="13" font-weight="600">Rook OSD pod</text>
+  <text class="muted" x="168" y="514" font-size="11.5">one OSD per partition</text>
+
+  <path class="arrow" marker-end="url(#a)" d="M385,526 L385,562"/>
+
+  <rect class="host" x="150" y="564" width="470" height="52" rx="6"/>
+  <text class="fg" x="168" y="586" font-size="13" font-weight="600">BlueStore</text>
+  <text class="muted" x="168" y="604" font-size="11.5">writes to the raw device — this is why a plain file will not do</text>
+</svg>
