@@ -86,7 +86,10 @@ host_virt() {
     local virt
     virt="$(printf '%s\n' '
         if command -v systemd-detect-virt >/dev/null 2>&1; then
-            systemd-detect-virt 2>/dev/null || echo none
+            # On bare metal it prints "none" *and* exits 1, so an "|| echo none"
+            # fallback would emit it twice; only an empty result needs one.
+            v=$(systemd-detect-virt 2>/dev/null) || true
+            echo "${v:-none}"
         elif [ -r /sys/class/dmi/id/product_name ]; then
             case "$(cat /sys/class/dmi/id/product_name)" in
                 *Virtual*|*VMware*|*KVM*|*QEMU*|*Hyper-V*) echo vm ;;
@@ -119,10 +122,12 @@ host_virt() {
 # "Never use your host system where local devices may mistakenly be consumed."
 require_vm() {
     local virt; virt="$(host_virt)"
-    case "$virt" in
-        none|unknown) ;;
-        *) log "Docker host is a VM ($virt) -- mistakes are contained to it"; return 0 ;;
-    esac
+    # "none" is bare metal and "unknown" is a probe that found nothing; every
+    # other value names a hypervisor or a paravirt signal, so it is a VM.
+    if [ "$virt" != none ] && [ "$virt" != unknown ]; then
+        log "Docker host is a VM ($virt) -- mistakes are contained to it"
+        return 0
+    fi
     [ "$ALLOW_BARE_METAL" = 1 ] && {
         warn "bare-metal Docker host, continuing because ALLOW_BARE_METAL is set"
         return 0
