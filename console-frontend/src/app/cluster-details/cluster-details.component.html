@@ -219,166 +219,63 @@
 
       <!-- Resource Usage Stats -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- Resource Usage Charts -->
+        <!-- Resource usage (live totals from the cluster's metrics backend) -->
         <div class="card card-body">
-          <h3 class="mb-4 text-xl font-medium">Resource usage</h3>
-          <div class="space-y-4">
-            <!-- CPU Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">CPU</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.cpu.used }} /
-                  {{ clusterData.resourceUsage.cpu.limit }}
-                  {{ clusterData.resourceUsage.cpu.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
-                      getUsagePercentage(
-                        clusterData.resourceUsage.cpu.used,
-                        clusterData.resourceUsage.cpu.limit
-                      )
-                    )
-                  "
-                  [style.width.%]="
-                    getUsagePercentage(
-                      clusterData.resourceUsage.cpu.used,
-                      clusterData.resourceUsage.cpu.limit
-                    )
-                  "
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.cpu.used,
-                    clusterData.resourceUsage.cpu.limit
-                  )
-                }}% used
-              </div>
-            </div>
-
-            <!-- Memory Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">Memory</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.memory.used }} /
-                  {{ clusterData.resourceUsage.memory.limit }}
-                  {{ clusterData.resourceUsage.memory.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
-                      getUsagePercentage(
-                        clusterData.resourceUsage.memory.used,
-                        clusterData.resourceUsage.memory.limit
-                      )
-                    )
-                  "
-                  [style.width.%]="
-                    getUsagePercentage(
-                      clusterData.resourceUsage.memory.used,
-                      clusterData.resourceUsage.memory.limit
-                    )
-                  "
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.memory.used,
-                    clusterData.resourceUsage.memory.limit
-                  )
-                }}% used
-              </div>
-            </div>
-
-            <!-- Disk Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">Disk</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.disk.used }} /
-                  {{ clusterData.resourceUsage.disk.limit }}
-                  {{ clusterData.resourceUsage.disk.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
-                      getUsagePercentage(
-                        clusterData.resourceUsage.disk.used,
-                        clusterData.resourceUsage.disk.limit
-                      )
-                    )
-                  "
-                  [style.width.%]="
-                    getUsagePercentage(
-                      clusterData.resourceUsage.disk.used,
-                      clusterData.resourceUsage.disk.limit
-                    )
-                  "
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.disk.used,
-                    clusterData.resourceUsage.disk.limit
-                  )
-                }}% used
-              </div>
-            </div>
-
-            <!-- Pods Usage -->
-            <div>
-              <div class="mb-1 flex justify-between">
-                <span class="font-medium text-gray-700">Pods</span>
-                <span class="text-gray-500 dark:text-gray-400"
-                  >{{ clusterData.resourceUsage.pods.used }} /
-                  {{ clusterData.resourceUsage.pods.limit }}
-                  {{ clusterData.resourceUsage.pods.unit }}</span
-                >
-              </div>
-              <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  [class]="
-                    getUsageColor(
-                      getUsagePercentage(
-                        clusterData.resourceUsage.pods.used,
-                        clusterData.resourceUsage.pods.limit
-                      )
-                    )
-                  "
-                  [style.width.%]="
-                    getUsagePercentage(
-                      clusterData.resourceUsage.pods.used,
-                      clusterData.resourceUsage.pods.limit
-                    )
-                  "
-                ></div>
-              </div>
-              <div class="mt-1 text-gray-500 dark:text-gray-400">
-                {{
-                  getUsagePercentage(
-                    clusterData.resourceUsage.pods.used,
-                    clusterData.resourceUsage.pods.limit
-                  )
-                }}% used
-              </div>
-            </div>
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-xl font-medium">Resource usage</h3>
+            <a
+              routerLink="/metrics"
+              class="text-accent-600 hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 text-sm hover:underline"
+            >
+              View metrics
+            </a>
           </div>
+          @if (resourceUsage(); as usage) {
+            <div class="space-y-4">
+              @for (
+                row of [
+                  { label: 'CPU', data: usage.cpu },
+                  { label: 'Memory', data: usage.memory },
+                  { label: 'Pods', data: usage.pods },
+                ];
+                track row.label
+              ) {
+                <div>
+                  <div class="mb-1 flex justify-between">
+                    <span class="font-medium text-gray-700">{{ row.label }}</span>
+                    <span class="text-gray-500 dark:text-gray-400"
+                      >{{ round1(row.data.used) }} / {{ round1(row.data.total) }}
+                      {{ row.data.unit }}</span
+                    >
+                  </div>
+                  <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                    <div
+                      class="h-2 rounded-full transition-all duration-300 ease-in-out"
+                      [class]="getUsageColor(getUsagePercentage(row.data.used, row.data.total))"
+                      [style.width.%]="getUsagePercentage(row.data.used, row.data.total)"
+                    ></div>
+                  </div>
+                  <div class="mt-1 text-gray-500 dark:text-gray-400">
+                    {{ getUsagePercentage(row.data.used, row.data.total) }}% used
+                  </div>
+                </div>
+              }
+              <!-- Disk: not served by the metrics backend yet; placeholder until
+                   we decide whether to add an ephemeral-storage query. -->
+              <div>
+                <div class="mb-1 flex justify-between">
+                  <span class="font-medium text-gray-700">Disk</span>
+                  <span class="text-gray-500 dark:text-gray-400">&mdash;</span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                <div class="mt-1 text-gray-500 dark:text-gray-400">? % used</div>
+              </div>
+            </div>
+          } @else {
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              Usage data becomes available once the cluster is ready.
+            </p>
+          }
         </div>
 
         <!-- Event History -->
@@ -418,7 +315,7 @@
         </div>
       </div>
 
-      <!-- Node Pools, Plugins and Monitoring -->
+      <!-- Node Pools and Plugins -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <!-- Node Pools -->
         <div class="card card-body">
@@ -510,37 +407,6 @@
             <p class="text-gray-500 dark:text-gray-400">No plugins installed</p>
           }
         </div>
-
-        <!-- Monitoring Block -->
-        <div class="card card-body">
-          <h3 class="mb-4 text-lg font-medium dark:text-white">Monitoring</h3>
-          @if (clusterData.observabilityUrl && clusterData.status === ClusterStatus.RUNNING) {
-            <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-              Per-shoot Plutono dashboard with Prometheus metrics. Authenticate using the
-              Gardener-issued basic-auth credentials.
-            </p>
-            <div class="flex flex-wrap gap-2">
-              <nldd-button
-                type="button"
-                (click)="openObservabilityDashboard()"
-                text="Open dashboard"
-                start-icon="chart-x-y-axis-line"
-                variant="primary"
-              ></nldd-button>
-              <nldd-button
-                type="button"
-                (click)="openCredentialsModal()"
-                text="Show credentials"
-                start-icon="lock-closed"
-                variant="secondary"
-              ></nldd-button>
-            </div>
-          } @else {
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Metrics dashboard becomes available once the cluster is ready.
-            </p>
-          }
-        </div>
       </div>
 
       <!-- Danger Zone -->
@@ -577,69 +443,6 @@
     </div>
   </div>
 }
-
-<!-- Metrics credentials modal -->
-<nldd-modal-dialog
-  appDialogSync
-  [show]="showCredentialsModal()"
-  text="Metrics dashboard credentials"
-  (close)="closeCredentialsModal()"
->
-  @if (credentialsLoading()) {
-    <p class="text-sm text-gray-500 dark:text-gray-400">Loading credentials...</p>
-  } @else if (credentialsError()) {
-    <p class="text-danger-600 dark:text-danger-400 text-sm">{{ credentialsError() }}</p>
-  } @else if (credentials(); as creds) {
-    <p class="text-sm text-gray-600 dark:text-gray-400">
-      Paste these into the basic-auth dialog presented by Plutono. The credentials are generated by
-      Gardener and rotate when the shoot is reconciled.
-    </p>
-    <nldd-spacer size="16"></nldd-spacer>
-    <nldd-form-field label="Username">
-      <div class="flex gap-2">
-        <nldd-text-field
-          id="metricsUsername"
-          [value]="creds.username"
-          readonly
-          class="flex-1"
-        ></nldd-text-field>
-        <nldd-button
-          type="button"
-          (click)="copyCredential('username')"
-          [text]="copiedField() === 'username' ? 'Copied' : 'Copy'"
-          [attr.start-icon]="copiedField() === 'username' ? 'check-mark' : 'rectangle-stack'"
-          variant="secondary"
-        ></nldd-button>
-      </div>
-    </nldd-form-field>
-    <nldd-spacer size="12"></nldd-spacer>
-    <nldd-form-field label="Password">
-      <div class="flex gap-2">
-        <nldd-text-field
-          id="metricsPassword"
-          [value]="creds.password"
-          readonly
-          class="flex-1"
-        ></nldd-text-field>
-        <nldd-button
-          type="button"
-          (click)="copyCredential('password')"
-          [text]="copiedField() === 'password' ? 'Copied' : 'Copy'"
-          [attr.start-icon]="copiedField() === 'password' ? 'check-mark' : 'rectangle-stack'"
-          variant="secondary"
-        ></nldd-button>
-      </div>
-    </nldd-form-field>
-  }
-
-  <nldd-button
-    slot="actions"
-    type="button"
-    (click)="closeCredentialsModal()"
-    text="Close"
-    variant="secondary"
-  ></nldd-button>
-</nldd-modal-dialog>
 
 <!-- Delete Cluster Modal -->
 <nldd-modal-dialog

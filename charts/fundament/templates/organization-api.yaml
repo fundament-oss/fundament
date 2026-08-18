@@ -39,7 +39,7 @@ spec:
               value: {{ $.Values.deploymentVersion | quote }}
             {{- end }}
             - name: PROMETHEUS_URL
-              value: {{ $.Values.organizationApi.prometheusURL }}
+              value: {{ $.Values.organizationApi.prometheusURL | quote }}
             {{- if $.Values.externalUrls.corsAllowedOrigins }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ $.Values.externalUrls.corsAllowedOrigins }}
@@ -64,23 +64,44 @@ spec:
                 configMapKeyRef:
                   name: openfga-config
                   key: authorization-model-id
+            {{- if $.Values.organizationApi.prometheusCASecret }}
+            - name: PROMETHEUS_CA_FILE
+              value: /etc/prometheus-ca/ca.crt
+            {{- end }}
             {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
             - name: GARDENER_KUBECONFIG
               value: /etc/gardener/kubeconfig
             {{- end }}
-          {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+          {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.organizationApi.prometheusCASecret }}
           volumeMounts:
+            {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
             - name: gardener-kubeconfig
               mountPath: /etc/gardener
               readOnly: true
+            {{- end }}
+            {{- if $.Values.organizationApi.prometheusCASecret }}
+            - name: prometheus-ca
+              mountPath: /etc/prometheus-ca
+              readOnly: true
+            {{- end }}
           {{- end }}
           {{- include "fundament.livenessProbe" (dict "root" $ "port" "http") | nindent 10 }}
           {{- include "fundament.readinessProbe" (dict "root" $ "port" "http") | nindent 10 }}
-      {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
+      {{- if or $.Values.clusterWorker.gardenerKubeconfigSecret $.Values.organizationApi.prometheusCASecret }}
       volumes:
+        {{- if $.Values.clusterWorker.gardenerKubeconfigSecret }}
         - name: gardener-kubeconfig
           secret:
             secretName: {{ $.Values.clusterWorker.gardenerKubeconfigSecret }}
+        {{- end }}
+        {{- if $.Values.organizationApi.prometheusCASecret }}
+        - name: prometheus-ca
+          secret:
+            secretName: {{ $.Values.organizationApi.prometheusCASecret }}
+            items:
+              - key: ca.crt
+                path: ca.crt
+        {{- end }}
       {{- end }}
 
 ---

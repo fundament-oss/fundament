@@ -478,12 +478,13 @@ func (b0 GetClusterWorkloadMetricsRequest_builder) Build() *GetClusterWorkloadMe
 
 // GetClusterWorkloadMetricsResponse contains current workload metrics for a cluster.
 type GetClusterWorkloadMetricsResponse struct {
-	state                 protoimpl.MessageState       `protogen:"opaque.v1"`
-	xxx_hidden_Totals     *ResourceUsageInfo           `protobuf:"bytes,10,opt,name=totals"`
-	xxx_hidden_Nodes      *[]*NodeWorkloadMetrics      `protobuf:"bytes,20,rep,name=nodes"`
-	xxx_hidden_Namespaces *[]*NamespaceWorkloadMetrics `protobuf:"bytes,30,rep,name=namespaces"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state                         protoimpl.MessageState       `protogen:"opaque.v1"`
+	xxx_hidden_Totals             *ResourceUsageInfo           `protobuf:"bytes,10,opt,name=totals"`
+	xxx_hidden_Nodes              *[]*NodeWorkloadMetrics      `protobuf:"bytes,20,rep,name=nodes"`
+	xxx_hidden_Namespaces         *[]*NamespaceWorkloadMetrics `protobuf:"bytes,30,rep,name=namespaces"`
+	xxx_hidden_MetricsUnavailable bool                         `protobuf:"varint,40,opt,name=metrics_unavailable,json=metricsUnavailable"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *GetClusterWorkloadMetricsResponse) Reset() {
@@ -536,6 +537,13 @@ func (x *GetClusterWorkloadMetricsResponse) GetNamespaces() []*NamespaceWorkload
 	return nil
 }
 
+func (x *GetClusterWorkloadMetricsResponse) GetMetricsUnavailable() bool {
+	if x != nil {
+		return x.xxx_hidden_MetricsUnavailable
+	}
+	return false
+}
+
 func (x *GetClusterWorkloadMetricsResponse) SetTotals(v *ResourceUsageInfo) {
 	x.xxx_hidden_Totals = v
 }
@@ -546,6 +554,10 @@ func (x *GetClusterWorkloadMetricsResponse) SetNodes(v []*NodeWorkloadMetrics) {
 
 func (x *GetClusterWorkloadMetricsResponse) SetNamespaces(v []*NamespaceWorkloadMetrics) {
 	x.xxx_hidden_Namespaces = &v
+}
+
+func (x *GetClusterWorkloadMetricsResponse) SetMetricsUnavailable(v bool) {
+	x.xxx_hidden_MetricsUnavailable = v
 }
 
 func (x *GetClusterWorkloadMetricsResponse) HasTotals() bool {
@@ -568,6 +580,10 @@ type GetClusterWorkloadMetricsResponse_builder struct {
 	Nodes []*NodeWorkloadMetrics
 	// Per-namespace breakdown
 	Namespaces []*NamespaceWorkloadMetrics
+	// True when the cluster's metrics backend could not be reached; the
+	// usage fields are then zero and should be rendered as unavailable
+	// rather than as real zeros.
+	MetricsUnavailable bool
 }
 
 func (b0 GetClusterWorkloadMetricsResponse_builder) Build() *GetClusterWorkloadMetricsResponse {
@@ -577,6 +593,7 @@ func (b0 GetClusterWorkloadMetricsResponse_builder) Build() *GetClusterWorkloadM
 	x.xxx_hidden_Totals = b.Totals
 	x.xxx_hidden_Nodes = &b.Nodes
 	x.xxx_hidden_Namespaces = &b.Namespaces
+	x.xxx_hidden_MetricsUnavailable = b.MetricsUnavailable
 	return m0
 }
 
@@ -988,14 +1005,15 @@ func (b0 GetOrgWorkloadMetricsResponse_builder) Build() *GetOrgWorkloadMetricsRe
 // ClusterWorkloadSummary summarises workload usage for a single cluster within
 // an org-level view.
 type ClusterWorkloadSummary struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_ClusterId   string                 `protobuf:"bytes,5,opt,name=cluster_id,json=clusterId"`
-	xxx_hidden_ClusterName string                 `protobuf:"bytes,10,opt,name=cluster_name,json=clusterName"`
-	xxx_hidden_Cpu         *ResourceUsage         `protobuf:"bytes,20,opt,name=cpu"`
-	xxx_hidden_Memory      *ResourceUsage         `protobuf:"bytes,30,opt,name=memory"`
-	xxx_hidden_Pods        *ResourceUsage         `protobuf:"bytes,40,opt,name=pods"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_ClusterId          string                 `protobuf:"bytes,5,opt,name=cluster_id,json=clusterId"`
+	xxx_hidden_ClusterName        string                 `protobuf:"bytes,10,opt,name=cluster_name,json=clusterName"`
+	xxx_hidden_Cpu                *ResourceUsage         `protobuf:"bytes,20,opt,name=cpu"`
+	xxx_hidden_Memory             *ResourceUsage         `protobuf:"bytes,30,opt,name=memory"`
+	xxx_hidden_Pods               *ResourceUsage         `protobuf:"bytes,40,opt,name=pods"`
+	xxx_hidden_MetricsUnavailable bool                   `protobuf:"varint,50,opt,name=metrics_unavailable,json=metricsUnavailable"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *ClusterWorkloadSummary) Reset() {
@@ -1058,6 +1076,13 @@ func (x *ClusterWorkloadSummary) GetPods() *ResourceUsage {
 	return nil
 }
 
+func (x *ClusterWorkloadSummary) GetMetricsUnavailable() bool {
+	if x != nil {
+		return x.xxx_hidden_MetricsUnavailable
+	}
+	return false
+}
+
 func (x *ClusterWorkloadSummary) SetClusterId(v string) {
 	x.xxx_hidden_ClusterId = v
 }
@@ -1076,6 +1101,10 @@ func (x *ClusterWorkloadSummary) SetMemory(v *ResourceUsage) {
 
 func (x *ClusterWorkloadSummary) SetPods(v *ResourceUsage) {
 	x.xxx_hidden_Pods = v
+}
+
+func (x *ClusterWorkloadSummary) SetMetricsUnavailable(v bool) {
+	x.xxx_hidden_MetricsUnavailable = v
 }
 
 func (x *ClusterWorkloadSummary) HasCpu() bool {
@@ -1119,6 +1148,10 @@ type ClusterWorkloadSummary_builder struct {
 	Cpu         *ResourceUsage
 	Memory      *ResourceUsage
 	Pods        *ResourceUsage
+	// True when this cluster's metrics backend could not be reached; the
+	// usage fields are then zero and should be rendered as unavailable
+	// rather than as real zeros.
+	MetricsUnavailable bool
 }
 
 func (b0 ClusterWorkloadSummary_builder) Build() *ClusterWorkloadSummary {
@@ -1130,6 +1163,7 @@ func (b0 ClusterWorkloadSummary_builder) Build() *ClusterWorkloadSummary {
 	x.xxx_hidden_Cpu = b.Cpu
 	x.xxx_hidden_Memory = b.Memory
 	x.xxx_hidden_Pods = b.Pods
+	x.xxx_hidden_MetricsUnavailable = b.MetricsUnavailable
 	return m0
 }
 
@@ -1303,11 +1337,12 @@ func (b0 GetProjectWorkloadMetricsRequest_builder) Build() *GetProjectWorkloadMe
 
 // GetProjectWorkloadMetricsResponse contains workload metrics for a project.
 type GetProjectWorkloadMetricsResponse struct {
-	state                 protoimpl.MessageState       `protogen:"opaque.v1"`
-	xxx_hidden_Totals     *ResourceUsageInfo           `protobuf:"bytes,10,opt,name=totals"`
-	xxx_hidden_Namespaces *[]*NamespaceWorkloadMetrics `protobuf:"bytes,20,rep,name=namespaces"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state                         protoimpl.MessageState       `protogen:"opaque.v1"`
+	xxx_hidden_Totals             *ResourceUsageInfo           `protobuf:"bytes,10,opt,name=totals"`
+	xxx_hidden_Namespaces         *[]*NamespaceWorkloadMetrics `protobuf:"bytes,20,rep,name=namespaces"`
+	xxx_hidden_MetricsUnavailable bool                         `protobuf:"varint,30,opt,name=metrics_unavailable,json=metricsUnavailable"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *GetProjectWorkloadMetricsResponse) Reset() {
@@ -1351,12 +1386,23 @@ func (x *GetProjectWorkloadMetricsResponse) GetNamespaces() []*NamespaceWorkload
 	return nil
 }
 
+func (x *GetProjectWorkloadMetricsResponse) GetMetricsUnavailable() bool {
+	if x != nil {
+		return x.xxx_hidden_MetricsUnavailable
+	}
+	return false
+}
+
 func (x *GetProjectWorkloadMetricsResponse) SetTotals(v *ResourceUsageInfo) {
 	x.xxx_hidden_Totals = v
 }
 
 func (x *GetProjectWorkloadMetricsResponse) SetNamespaces(v []*NamespaceWorkloadMetrics) {
 	x.xxx_hidden_Namespaces = &v
+}
+
+func (x *GetProjectWorkloadMetricsResponse) SetMetricsUnavailable(v bool) {
+	x.xxx_hidden_MetricsUnavailable = v
 }
 
 func (x *GetProjectWorkloadMetricsResponse) HasTotals() bool {
@@ -1377,6 +1423,10 @@ type GetProjectWorkloadMetricsResponse_builder struct {
 	Totals *ResourceUsageInfo
 	// Per-namespace breakdown limited to this project's namespaces
 	Namespaces []*NamespaceWorkloadMetrics
+	// True when the cluster's metrics backend could not be reached; the
+	// usage fields are then zero and should be rendered as unavailable
+	// rather than as real zeros.
+	MetricsUnavailable bool
 }
 
 func (b0 GetProjectWorkloadMetricsResponse_builder) Build() *GetProjectWorkloadMetricsResponse {
@@ -1385,6 +1435,7 @@ func (b0 GetProjectWorkloadMetricsResponse_builder) Build() *GetProjectWorkloadM
 	_, _ = b, x
 	x.xxx_hidden_Totals = b.Totals
 	x.xxx_hidden_Namespaces = &b.Namespaces
+	x.xxx_hidden_MetricsUnavailable = b.MetricsUnavailable
 	return m0
 }
 
@@ -1919,15 +1970,16 @@ func (b0 StreamProjectWorkloadMetricsRequest_builder) Build() *StreamProjectWork
 // StreamWorkloadMetricsResponse is the unified response pushed on each live tick.
 // Fields are populated based on the view level (org / cluster / project).
 type StreamWorkloadMetricsResponse struct {
-	state                  protoimpl.MessageState         `protogen:"opaque.v1"`
-	xxx_hidden_Totals      *ResourceUsageInfo             `protobuf:"bytes,10,opt,name=totals"`
-	xxx_hidden_Clusters    *[]*ClusterWorkloadSummary     `protobuf:"bytes,20,rep,name=clusters"`
-	xxx_hidden_Nodes       *[]*NodeWorkloadMetrics        `protobuf:"bytes,30,rep,name=nodes"`
-	xxx_hidden_Namespaces  *[]*NamespaceWorkloadMetrics   `protobuf:"bytes,40,rep,name=namespaces"`
-	xxx_hidden_TimeSeries  *GetWorkloadTimeSeriesResponse `protobuf:"bytes,50,opt,name=time_series,json=timeSeries"`
-	xxx_hidden_RefreshedAt *timestamppb.Timestamp         `protobuf:"bytes,60,opt,name=refreshed_at,json=refreshedAt"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                         protoimpl.MessageState         `protogen:"opaque.v1"`
+	xxx_hidden_Totals             *ResourceUsageInfo             `protobuf:"bytes,10,opt,name=totals"`
+	xxx_hidden_Clusters           *[]*ClusterWorkloadSummary     `protobuf:"bytes,20,rep,name=clusters"`
+	xxx_hidden_Nodes              *[]*NodeWorkloadMetrics        `protobuf:"bytes,30,rep,name=nodes"`
+	xxx_hidden_Namespaces         *[]*NamespaceWorkloadMetrics   `protobuf:"bytes,40,rep,name=namespaces"`
+	xxx_hidden_TimeSeries         *GetWorkloadTimeSeriesResponse `protobuf:"bytes,50,opt,name=time_series,json=timeSeries"`
+	xxx_hidden_RefreshedAt        *timestamppb.Timestamp         `protobuf:"bytes,60,opt,name=refreshed_at,json=refreshedAt"`
+	xxx_hidden_MetricsUnavailable bool                           `protobuf:"varint,70,opt,name=metrics_unavailable,json=metricsUnavailable"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *StreamWorkloadMetricsResponse) Reset() {
@@ -2003,6 +2055,13 @@ func (x *StreamWorkloadMetricsResponse) GetRefreshedAt() *timestamppb.Timestamp 
 	return nil
 }
 
+func (x *StreamWorkloadMetricsResponse) GetMetricsUnavailable() bool {
+	if x != nil {
+		return x.xxx_hidden_MetricsUnavailable
+	}
+	return false
+}
+
 func (x *StreamWorkloadMetricsResponse) SetTotals(v *ResourceUsageInfo) {
 	x.xxx_hidden_Totals = v
 }
@@ -2025,6 +2084,10 @@ func (x *StreamWorkloadMetricsResponse) SetTimeSeries(v *GetWorkloadTimeSeriesRe
 
 func (x *StreamWorkloadMetricsResponse) SetRefreshedAt(v *timestamppb.Timestamp) {
 	x.xxx_hidden_RefreshedAt = v
+}
+
+func (x *StreamWorkloadMetricsResponse) SetMetricsUnavailable(v bool) {
+	x.xxx_hidden_MetricsUnavailable = v
 }
 
 func (x *StreamWorkloadMetricsResponse) HasTotals() bool {
@@ -2075,6 +2138,11 @@ type StreamWorkloadMetricsResponse_builder struct {
 	TimeSeries *GetWorkloadTimeSeriesResponse
 	// Wall-clock time when this snapshot was computed.
 	RefreshedAt *timestamppb.Timestamp
+	// True when the metrics backend could not be reached — populated in
+	// cluster and project views (the org view marks individual clusters via
+	// ClusterWorkloadSummary.metrics_unavailable instead). The totals are
+	// then zero and should be rendered as unavailable, not as real zeros.
+	MetricsUnavailable bool
 }
 
 func (b0 StreamWorkloadMetricsResponse_builder) Build() *StreamWorkloadMetricsResponse {
@@ -2087,6 +2155,7 @@ func (b0 StreamWorkloadMetricsResponse_builder) Build() *StreamWorkloadMetricsRe
 	x.xxx_hidden_Namespaces = &b.Namespaces
 	x.xxx_hidden_TimeSeries = b.TimeSeries
 	x.xxx_hidden_RefreshedAt = b.RefreshedAt
+	x.xxx_hidden_MetricsUnavailable = b.MetricsUnavailable
 	return m0
 }
 
@@ -2124,14 +2193,15 @@ const file_v1_metrics_proto_rawDesc = "" +
 	" GetClusterWorkloadMetricsRequest\x12'\n" +
 	"\n" +
 	"cluster_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"\xe6\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tclusterId\"\x97\x02\n" +
 	"!GetClusterWorkloadMetricsResponse\x12:\n" +
 	"\x06totals\x18\n" +
 	" \x01(\v2\".organization.v1.ResourceUsageInfoR\x06totals\x12:\n" +
 	"\x05nodes\x18\x14 \x03(\v2$.organization.v1.NodeWorkloadMetricsR\x05nodes\x12I\n" +
 	"\n" +
 	"namespaces\x18\x1e \x03(\v2).organization.v1.NamespaceWorkloadMetricsR\n" +
-	"namespaces\"\xc7\x01\n" +
+	"namespaces\x12/\n" +
+	"\x13metrics_unavailable\x18( \x01(\bR\x12metricsUnavailable\"\xc7\x01\n" +
 	"\x13NodeWorkloadMetrics\x12\x12\n" +
 	"\x04node\x18\n" +
 	" \x01(\tR\x04node\x120\n" +
@@ -2152,7 +2222,7 @@ const file_v1_metrics_proto_rawDesc = "" +
 	"\bclusters\x18\x14 \x03(\v2'.organization.v1.ClusterWorkloadSummaryR\bclusters\x12I\n" +
 	"\n" +
 	"namespaces\x18\x1e \x03(\v2).organization.v1.NamespaceWorkloadMetricsR\n" +
-	"namespaces\"\xf8\x01\n" +
+	"namespaces\"\xa9\x02\n" +
 	"\x16ClusterWorkloadSummary\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\x05 \x01(\tR\tclusterId\x12!\n" +
@@ -2160,7 +2230,8 @@ const file_v1_metrics_proto_rawDesc = "" +
 	" \x01(\tR\vclusterName\x120\n" +
 	"\x03cpu\x18\x14 \x01(\v2\x1e.organization.v1.ResourceUsageR\x03cpu\x126\n" +
 	"\x06memory\x18\x1e \x01(\v2\x1e.organization.v1.ResourceUsageR\x06memory\x122\n" +
-	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\"\xb2\x01\n" +
+	"\x04pods\x18( \x01(\v2\x1e.organization.v1.ResourceUsageR\x04pods\x12/\n" +
+	"\x13metrics_unavailable\x182 \x01(\bR\x12metricsUnavailable\"\xb2\x01\n" +
 	"\x1fGetOrgWorkloadTimeSeriesRequest\x127\n" +
 	"\x05start\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
@@ -2169,13 +2240,14 @@ const file_v1_metrics_proto_rawDesc = "" +
 	" GetProjectWorkloadMetricsRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"\xaa\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tprojectId\"\xdb\x01\n" +
 	"!GetProjectWorkloadMetricsResponse\x12:\n" +
 	"\x06totals\x18\n" +
 	" \x01(\v2\".organization.v1.ResourceUsageInfoR\x06totals\x12I\n" +
 	"\n" +
 	"namespaces\x18\x14 \x03(\v2).organization.v1.NamespaceWorkloadMetricsR\n" +
-	"namespaces\"\xdf\x01\n" +
+	"namespaces\x12/\n" +
+	"\x13metrics_unavailable\x18\x1e \x01(\bR\x12metricsUnavailable\"\xdf\x01\n" +
 	"#GetProjectWorkloadTimeSeriesRequest\x12'\n" +
 	"\n" +
 	"project_id\x18\n" +
@@ -2204,7 +2276,7 @@ const file_v1_metrics_proto_rawDesc = "" +
 	"\x0ewindow_seconds\x18\x14 \x01(\x05R\rwindowSeconds\x127\n" +
 	"\x05start\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x05start\x123\n" +
 	"\x03end\x18( \x01(\v2\x1a.google.protobuf.TimestampB\x05\xaa\x01\x02\b\x01R\x03end\x12!\n" +
-	"\fstep_seconds\x182 \x01(\x05R\vstepSeconds\"\xb7\x03\n" +
+	"\fstep_seconds\x182 \x01(\x05R\vstepSeconds\"\xe8\x03\n" +
 	"\x1dStreamWorkloadMetricsResponse\x12:\n" +
 	"\x06totals\x18\n" +
 	" \x01(\v2\".organization.v1.ResourceUsageInfoR\x06totals\x12C\n" +
@@ -2215,7 +2287,8 @@ const file_v1_metrics_proto_rawDesc = "" +
 	"namespaces\x12O\n" +
 	"\vtime_series\x182 \x01(\v2..organization.v1.GetWorkloadTimeSeriesResponseR\n" +
 	"timeSeries\x12=\n" +
-	"\frefreshed_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\vrefreshedAt2\xb0\t\n" +
+	"\frefreshed_at\x18< \x01(\v2\x1a.google.protobuf.TimestampR\vrefreshedAt\x12/\n" +
+	"\x13metrics_unavailable\x18F \x01(\bR\x12metricsUnavailable2\xb0\t\n" +
 	"\x0eMetricsService\x12\x82\x01\n" +
 	"\x19GetClusterWorkloadMetrics\x121.organization.v1.GetClusterWorkloadMetricsRequest\x1a2.organization.v1.GetClusterWorkloadMetricsResponse\x12\x84\x01\n" +
 	"\x1cGetClusterWorkloadTimeSeries\x124.organization.v1.GetClusterWorkloadTimeSeriesRequest\x1a..organization.v1.GetWorkloadTimeSeriesResponse\x12v\n" +

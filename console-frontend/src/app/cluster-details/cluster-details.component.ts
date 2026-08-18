@@ -15,19 +15,19 @@ import { create } from '@bufbuild/protobuf';
 import { firstValueFrom } from 'rxjs';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
-import { CLUSTER, NAMESPACE, PLUGIN } from '../../connect/tokens';
+import { CLUSTER, METRICS, NAMESPACE, PLUGIN } from '../../connect/tokens';
 import {
   GetClusterRequestSchema,
   ListNodePoolsRequestSchema,
   DeleteClusterRequestSchema,
   GetClusterActivityRequestSchema,
   GetKubeconfigRequestSchema,
-  GetClusterMetricsCredentialsRequestSchema,
   NodePool,
   type ClusterEvent,
   type SyncState,
 } from '../../generated/v1/cluster_pb';
 import { ListClusterNamespacesRequestSchema, Namespace } from '../../generated/v1/namespace_pb';
+import { GetClusterWorkloadMetricsRequestSchema } from '../../generated/v1/metrics_pb';
 import { OrganizationDataService } from '../organization-data.service';
 import { ListPluginsRequestSchema, type PluginSummary } from '../../generated/v1/plugin_pb';
 import PluginInstallationService from '../plugin-installation/plugin-installation.service';
@@ -37,15 +37,15 @@ import { getStatusTagColor, getStatusLabel, isTransitionalStatus } from '../util
 import DialogSyncDirective from '../dialog-sync.directive';
 import focusFirstModalInput from '../modal-focus';
 import { formatDateTime as formatDateTimeUtil } from '../utils/date-format';
+import { getUsagePercentage, getUsageColor } from '../utils/usage';
 
-const getUsagePercentage = (used: number, limit: number): number =>
-  Math.round((used / limit) * 100);
+interface ClusterResourceUsage {
+  cpu: { used: number; total: number; unit: string };
+  memory: { used: number; total: number; unit: string };
+  pods: { used: number; total: number; unit: string };
+}
 
-const getUsageColor = (percentage: number): string => {
-  if (percentage >= 90) return 'bg-danger-500';
-  if (percentage >= 75) return 'bg-yellow-500';
-  return 'bg-green-500';
-};
+const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 const getNodePoolStatusLabel = (status: NodePoolStatus): string => {
   const labels: Record<NodePoolStatus, string> = {
@@ -135,6 +135,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   private client = inject(CLUSTER);
 
+  private metricsClient = inject(METRICS);
+
   private namespaceClient = inject(NAMESPACE);
 
   private organizationDataService = inject(OrganizationDataService);
@@ -148,6 +150,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
 
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
+
+  private usageRetryTimer: ReturnType<typeof setInterval> | null = null;
 
   // Expose enums for use in template
   NodePoolStatus = NodePoolStatus;
@@ -165,17 +169,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   showDeleteModal = signal<boolean>(false);
 
-  showCredentialsModal = signal<boolean>(false);
-
-  credentialsLoading = signal<boolean>(false);
-
-  credentialsError = signal<string | null>(null);
-
-  credentials = signal<{ username: string; password: string } | null>(null);
-
-  // Tracks which field was just copied so we can flip the icon to a checkmark.
-  copiedField = signal<'username' | 'password' | null>(null);
-
   // Namespace management
   namespaces = signal<Namespace[]>([]);
 
@@ -189,6 +182,11 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   isLoadingPlugins = signal<boolean>(true);
 
   // Activity/Events data
+  // Live usage totals from the cluster's per-shoot Prometheus (MetricsService);
+  // null until real data is available (cluster not ready, or metrics backend
+  // unreachable), which renders the card's fallback text.
+  resourceUsage = signal<ClusterResourceUsage | null>(null);
+
   clusterEvents = signal<ClusterEvent[]>([]);
 
   isLoadingEvents = signal<boolean>(true);
@@ -203,7 +201,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     },
     status: ClusterStatus.UNSPECIFIED,
     syncState: null as SyncState | null,
-    observabilityUrl: '',
     creationDate: '2024-11-15T10:30:00Z', // Mock data - not available from API
     activity: [
       {
@@ -238,12 +235,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       },
     ],
     nodePools: [] as NodePool[],
-    resourceUsage: {
-      cpu: { used: 2.4, limit: 8.0, unit: 'cores' },
-      memory: { used: 12.8, limit: 32.0, unit: 'GB' },
-      disk: { used: 45.2, limit: 100.0, unit: 'GB' },
-      pods: { used: 28, limit: 110, unit: 'pods' },
-    },
     workerNodes: {
       nodeType: 'n1-standard-2 (2 vCPU, 7.5 GB RAM)',
       minAutoscaling: 1,
@@ -253,6 +244,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopPolling();
+    this.stopUsageRetry();
   }
 
   async ngOnInit() {
@@ -282,7 +274,6 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
       };
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
-      this.clusterData.observabilityUrl = response.cluster.observabilityUrl;
       this.clusterData.nodePools = nodePoolsResponse.nodePools;
 
       this.titleService.setTitle(response.cluster.name);
@@ -292,6 +283,7 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
         this.loadNamespaces(clusterId),
         this.loadInstalledPlugins(clusterId),
         this.loadClusterEvents(clusterId),
+        this.loadResourceUsage(clusterId),
       ]);
 
       this.updatePolling();
@@ -322,7 +314,12 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
 
       this.clusterData.status = response.cluster.status;
       this.clusterData.syncState = response.cluster.syncState ?? null;
-      this.clusterData.observabilityUrl = response.cluster.observabilityUrl;
+      // The usage card loads once on init; when the cluster finishes
+      // provisioning while the page is open, fetch it now instead of
+      // requiring a page refresh.
+      if (!this.resourceUsage() && !isTransitionalStatus(response.cluster.status)) {
+        this.loadResourceUsage(clusterId);
+      }
       this.cdr.markForCheck();
       this.updatePolling();
     } catch {
@@ -352,6 +349,8 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   readonly formatDate = formatDateTimeUtil;
 
   getUsagePercentage = getUsagePercentage;
+
+  round1 = round1;
 
   getUsageColor = getUsageColor;
 
@@ -490,6 +489,58 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
   getSyncStatusLabel = getSyncStatusLabel;
 
   // Load cluster activity/events
+  async loadResourceUsage(clusterId: string): Promise<void> {
+    try {
+      const request = create(GetClusterWorkloadMetricsRequestSchema, { clusterId });
+      const response = await firstValueFrom(this.metricsClient.getClusterWorkloadMetrics(request));
+      const t = response.totals;
+      // An unavailable backend (cluster provisioning, monitoring stack
+      // unreachable) or all-zero totals mean there is no measurement yet;
+      // keep the fallback instead of rendering 0 / 0 bars.
+      if (!t || response.metricsUnavailable || (!t.cpu?.total && !t.pods?.total)) {
+        return;
+      }
+      this.resourceUsage.set({
+        cpu: { used: t.cpu?.used ?? 0, total: t.cpu?.total ?? 0, unit: t.cpu?.unit ?? 'cores' },
+        memory: {
+          used: t.memory?.used ?? 0,
+          total: t.memory?.total ?? 0,
+          unit: t.memory?.unit ?? 'GiB',
+        },
+        pods: { used: t.pods?.used ?? 0, total: t.pods?.total ?? 0, unit: t.pods?.unit ?? 'pods' },
+      });
+    } catch {
+      // Non-fatal: the card falls back to its "not available" text.
+    } finally {
+      this.updateUsageRetry(clusterId);
+    }
+  }
+
+  /**
+   * A RUNNING cluster whose metrics backend is transiently unreachable would
+   * otherwise show the fallback text until a full page reload: retry slowly
+   * until a measurement arrives. Transitional clusters are covered by the 5s
+   * status poll, which fetches usage once they finish provisioning.
+   */
+  private updateUsageRetry(clusterId: string): void {
+    if (this.resourceUsage()) {
+      this.stopUsageRetry();
+      return;
+    }
+    if (!this.usageRetryTimer && !isTransitionalStatus(this.clusterData.status)) {
+      this.usageRetryTimer = setInterval(() => {
+        this.loadResourceUsage(clusterId);
+      }, 30_000);
+    }
+  }
+
+  private stopUsageRetry(): void {
+    if (this.usageRetryTimer) {
+      clearInterval(this.usageRetryTimer);
+      this.usageRetryTimer = null;
+    }
+  }
+
   async loadClusterEvents(clusterId: string): Promise<void> {
     try {
       this.isLoadingEvents.set(true);
@@ -518,59 +569,5 @@ export default class ClusterDetailsComponent implements OnInit, OnDestroy {
     this.deleteConfirmationInput.set('');
     const el = this.deleteDialogRef()?.nativeElement;
     if (el) focusFirstModalInput(el);
-  }
-
-  openObservabilityDashboard(): void {
-    const url = this.clusterData.observabilityUrl;
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
-  }
-
-  async openCredentialsModal(): Promise<void> {
-    this.showCredentialsModal.set(true);
-    this.credentialsError.set(null);
-    this.copiedField.set(null);
-
-    // Credentials are cached for the component lifetime; if Gardener rotates
-    // them between reconciles, the user must refresh the page to see the new ones.
-    if (this.credentials()) {
-      return;
-    }
-
-    this.credentialsLoading.set(true);
-    try {
-      const request = create(GetClusterMetricsCredentialsRequestSchema, {
-        clusterId: this.clusterData.basics.id,
-      });
-      const response = await firstValueFrom(this.client.getClusterMetricsCredentials(request));
-      this.credentials.set({ username: response.username, password: response.password });
-    } catch (error) {
-      this.credentialsError.set(
-        error instanceof Error
-          ? `Failed to load credentials: ${error.message}`
-          : 'Failed to load credentials',
-      );
-    } finally {
-      this.credentialsLoading.set(false);
-    }
-  }
-
-  closeCredentialsModal(): void {
-    this.showCredentialsModal.set(false);
-  }
-
-  async copyCredential(field: 'username' | 'password'): Promise<void> {
-    const creds = this.credentials();
-    if (!creds) return;
-    try {
-      await navigator.clipboard.writeText(creds[field]);
-      this.copiedField.set(field);
-      setTimeout(() => {
-        if (this.copiedField() === field) {
-          this.copiedField.set(null);
-        }
-      }, 1500);
-    } catch {
-      this.toastService.error('Failed to copy to clipboard');
-    }
   }
 }

@@ -1,0 +1,62 @@
+:showtitle:
+:sidebar-order: 26
+:state: accepted
+
+= ADR-0026: Native metrics panels via per-shoot Prometheus
+
+Status:: accepted
+Date:: 2026-08-02
+Group:: cross-cutting
+Depends-on:: ADR-0025
+
+== Context
+
+ADR-0025 adopted Gardener's default metrics backend (Prometheus behind Plutono, per shoot) and deliberately deferred the tenant frontend question: it allowed a deep link from cluster details to the per-shoot Plutono as a UX bridge, and named "native metrics panels in fundament's `console-frontend`, queried through fundament's backend" as a possible follow-up requiring its own decision.
+
+Since then the console has shipped a complete native metrics dashboard (org/cluster/project panels, ConnectRPC `MetricsService`, a PromQL client) that only ever ran against generated mock data: it had one process-global `PROMETHEUS_URL`, no auth support, and no way to route a query to a specific cluster's backend. Meanwhile the deep-link bridge hands tenants the raw monitoring basic-auth credentials in a modal for manual paste into Plutono — functional, but a split UX and a credential-handling smell.
+
+Gardener publishes the per-shoot Prometheus on its own ingress and annotates the `<shoot-name>.monitoring` secret with it (`prometheus-url`, next to the `plutono-url` organization-api already reads for the deep link). Verified against a live local Gardener (v1.138, 2026-08-02): the endpoint serves the standard Prometheus HTTP API and accepts the same basic-auth credentials, rejecting wrong credentials with 401.
+
+An earlier draft of this decision planned to reach Prometheus through Plutono's datasource proxy (`{plutono-url}/api/datasources/proxy/uid/{uid}/...`). Live verification killed that route: behind the ingress basic auth the caller is an anonymous Plutono Viewer, the datasource lookup/listing APIs (`/api/datasources`, `/api/datasources/name/{name}`) are admin-only, and Gardener provisions the datasources without uids — so the proxy path is not discoverable. (This equally affects any Vali-via-Plutono design for logs.)
+
+== Options
+
+=== Option 1: Server-side per-cluster querying in organization-api
+
+`MetricsService` resolves a Prometheus client per cluster: global URL override, mock, or — when unset — the cluster's per-shoot Prometheus at the monitoring secret's `prometheus-url` annotation with the secret's credentials. Resolved clients are cached (TTL, singleflight, re-resolve on 401 for credential rotation).
+
+* Reuses the entire existing proto surface, frontend, and OpenFGA authorization unchanged.
+* Monitoring credentials never leave organization-api; the plaintext credentials modal can be retired.
+* The per-shoot Prometheus only contains its own shoot's data, so the existing unfiltered PromQL queries become correct per cluster without modification.
+* The seam is the Prometheus HTTP query API, which GEP-34 (Gardener's OpenTelemetry transition) keeps stable — the storage behind it can change without fundament noticing. Keeping query routing in the backend means the backend can be swapped again (e.g. a central aggregation store) without touching the console.
+
+=== Option 2: Browser-facing metrics proxy (plugin-proxy style)
+
+A new authenticated HTTP pass-through from the browser to Plutono/Prometheus, following the plugin-proxy pattern (cookie auth, OpenFGA per request, CSP).
+
+* Required only if fundament embeds Plutono itself (iframe) or wants the browser to speak PromQL directly.
+* New public attack surface; still needs the same seed-side resolution plumbing as Option 1.
+* Duplicates what `MetricsService` already models as typed RPCs.
+
+=== Option 3: Central aggregation store (Mimir/Thanos/VictoriaMetrics)
+
+Deploy a fleet-wide store and remote-write every shoot's metrics into it.
+
+* Solves cross-shoot aggregation and retention — but those are explicitly deferred by ADR-0025 and not needed for per-cluster console panels.
+* Heavy operational footprint; premature while the per-shoot data answers all current questions.
+
+== Decision
+
+Option 1. Organization-api queries each cluster's per-shoot Prometheus server-side at the monitoring secret's `prometheus-url` annotation, selected by the existing `PROMETHEUS_URL` setting: `per-shoot` enables per-shoot resolution (explicit sentinel — set-but-empty env vars collapse into the `mock` default at the env-parsing layer), `mock` keeps generated data (local dev, CI), and any other URL keeps a single global backend.
+
+The endpoint comes straight from the `prometheus-url` annotation; a monitoring secret without it degrades like a missing monitoring stack. Per-cluster failures degrade (empty metrics at cluster level, a `metrics_unavailable` marker in org summaries) instead of failing whole RPCs. The streaming RPCs use the same per-cluster resolution; the gating load check passed against a live shoot (21 concurrent queries in 442ms), and one 15-second dashboard tick equals the query burst of an interactive page load.
+
+Once verified against a live cluster, the cluster page's Monitoring card was removed entirely: the `GetClusterMetricsCredentials` RPC, the plaintext credentials modal, and the Plutono deep link (`observability_url`, field reserved). ADR-0025's deep-link UX bridge is retired now the native panels serve real data; Plutono remains reachable for operators via the monitoring secret directly.
+
+== Consequences
+
+* Tenants get real per-cluster metrics in the console with no frontend changes; the split UX ADR-0025 tolerated starts to close.
+* Every metrics query now transits the seed ingress; organization-api holds a resolver cache with the monitoring credentials in memory only.
+* Cross-shoot aggregation, retention beyond per-shoot defaults, and streaming against real backends remain open, tracked as follow-ups (see openspec change `metrics-per-shoot-prometheus` and ADR-0025's deferred items).
+* If Gardener's observability migration ever changes the ingress or annotation, the per-shoot client factory is the single place to re-point (e.g. at a central store).
+* Locally the seed ingress uses a self-signed CA, so the org-api → ingress TLS needs a CA knob in local dev (`prometheus.WithTransport`); real landscapes with publicly-trusted ingress certs need nothing.

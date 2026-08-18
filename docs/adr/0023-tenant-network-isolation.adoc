@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 23
 :state: proposed
 
 = ADR-0023: Tenant network isolation

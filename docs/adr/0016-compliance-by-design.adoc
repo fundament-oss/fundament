@@ -1,4 +1,5 @@
 :showtitle:
+:sidebar-order: 16
 :state: proposed
 
 = ADR-0016: Compliance by design
