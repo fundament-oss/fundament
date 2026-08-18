@@ -317,18 +317,18 @@ export default class LogAnalyticsComponent implements OnInit, AfterViewInit, OnD
   onClusterChange(value: string): void {
     this.selectedCluster.set(value);
     this.selectedNamespace.set('');
-    void this.onClusterSelected();
+    this.onClusterSelected();
   }
 
   onNamespaceChange(value: string): void {
     this.selectedNamespace.set(value);
-    void this.loadLogs();
+    this.loadLogs();
   }
 
   onTimePresetChange(value: string): void {
     this.timePreset.set(value);
-    void this.refreshLabels();
-    void this.loadLogs();
+    this.refreshLabels();
+    this.loadLogs();
   }
 
   private createVolumeChart(): void {

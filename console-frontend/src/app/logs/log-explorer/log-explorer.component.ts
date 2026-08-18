@@ -448,7 +448,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.pods.set([]);
     this.containers.set([]);
     this.livePods.set([]);
-    void this.onClusterSelected();
+    this.onClusterSelected();
   }
 
   // Plugin namespaces are derived, not listed: every PluginInstallation named
@@ -706,7 +706,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.selectedContainer.set('');
     this.currentPage.set(0);
     this.stopLiveTail();
-    void this.onClusterSelected();
+    this.onClusterSelected();
   }
 
   onNamespaceChange(value: string): void {
@@ -715,11 +715,11 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     this.selectedContainer.set('');
     this.currentPage.set(0);
     if (this.isLiveMode()) {
-      void this.loadLivePods();
+      this.loadLivePods();
     } else {
-      void this.refineLabels();
+      this.refineLabels();
     }
-    void this.loadLogs();
+    this.loadLogs();
   }
 
   onPodChange(value: string): void {
@@ -730,13 +730,13 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       const pod = this.livePods().find((p) => p.name === value);
       this.containers.set(pod?.containers ?? []);
     }
-    void this.loadLogs();
+    this.loadLogs();
   }
 
   onContainerChange(value: string): void {
     this.selectedContainer.set(value);
     this.currentPage.set(0);
-    void this.loadLogs();
+    this.loadLogs();
   }
 
   onTimePresetChange(value: string): void {
@@ -746,16 +746,18 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
     // must follow the active window. Live-mode pods come from the cluster
     // itself and are not time-scoped.
     if (!this.isLiveMode()) {
-      void this.refineLabels();
+      this.refineLabels();
     }
-    void this.loadLogs();
+    this.loadLogs();
   }
 
   onSearchChange(value: string): void {
     this.searchText.set(value);
     this.currentPage.set(0);
     if (this.searchDebounce !== null) clearTimeout(this.searchDebounce);
-    this.searchDebounce = setTimeout(() => void this.loadLogs(), 400);
+    this.searchDebounce = setTimeout(() => {
+      this.loadLogs();
+    }, 400);
   }
 
   clearAllFilters(): void {
@@ -769,9 +771,9 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       this.pods.set([]);
       this.containers.set([]);
     } else {
-      void this.refineLabels();
+      this.refineLabels();
     }
-    void this.loadLogs();
+    this.loadLogs();
   }
 
   removeChip(key: string): void {
@@ -783,7 +785,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
         this.pods.set([]);
         this.containers.set([]);
       } else {
-        void this.refineLabels();
+        this.refineLabels();
       }
     } else if (key === 'pod') {
       this.selectedPod.set('');
@@ -792,7 +794,7 @@ export default class LogExplorerComponent implements OnInit, AfterViewInit, OnDe
       this.selectedContainer.set('');
     }
     this.currentPage.set(0);
-    void this.loadLogs();
+    this.loadLogs();
   }
 
   toggleAllLevels(): void {
