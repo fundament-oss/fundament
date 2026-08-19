@@ -56,6 +56,27 @@ spec:
               # the two always happen together as one triggered event. OpenFGA no
               # longer resets itself on pod start, so an unrelated openfga rollout
               # can't wipe the store out from under an already-synced outbox.
+              # CNPG creates the openfga database asynchronously, so on a cold start
+              # it can still be absent here — the init container's port check says
+              # nothing about which databases exist. Failing here is unrecoverable:
+              # the Job exhausts backoffLimit, ttlSecondsAfterFinished then removes
+              # it, and openfga's wait-for-reset blocks forever on a Job name that
+              # no longer exists. Wait for the database itself.
+              echo "Waiting for the openfga database..."
+              i=0
+              until psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'openfga'" | grep -q 1; do
+                i=$((i + 1))
+                if [ "$i" -ge 150 ]; then
+                  echo "openfga database did not appear after 5 minutes" >&2
+                  exit 1
+                fi
+                sleep 2
+              done
+              # TODO: this reset does not always converge. openfga-setup can create a new store
+              # while the tuples authz-worker writes go to the previous one, leaving every
+              # authorization decision false with every pod healthy — and it stays that way
+              # until another reset happens to line them up. Observed 1 run in 3. Couple the
+              # store id to the outbox, or re-emit the outbox when the store is recreated.
               echo "Resetting OpenFGA datastore (coupled with the DB reset)..."
               psql "$OPENFGA_DATASTORE_URI" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
               echo "OpenFGA datastore reset complete."

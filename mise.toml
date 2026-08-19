@@ -11,6 +11,8 @@ FUNCTL_DEBUG = "true"
 # Scripting & Meta
 just = "1.42.4"
 act = "0.2.84"
+jq = "1.7.1"
+yq = "4.44.3"
 
 # Database
 "go:github.com/printeers/trek" = "0.12.1"
