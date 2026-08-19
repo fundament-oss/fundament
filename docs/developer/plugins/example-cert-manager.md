@@ -1,10 +1,18 @@
 ---
 title: "Example: cert-manager"
 sidebar:
-  order: 5
+  label: cert-manager plugin
+  order: 4
 ---
 
-The cert-manager plugin is a reference implementation that installs and manages cert-manager.
+The cert-manager plugin is a reference implementation that installs and manages cert-manager. It
+The version a `PluginInstallation` pins is the plugin's own `metadata.version`, from
+`plugins/cert-manager/definition.yaml`.
+
+:::tip[Install and test it]
+This page describes the design. To run it locally, follow
+[Install a plugin](./install-a-plugin.md) — cert-manager is the plugin that walkthrough uses.
+:::
 
 ## What it does
 
@@ -43,7 +51,7 @@ helpers — copy it as a starting point for new plugins. See
 [Custom UI](custom-ui) for the pattern and
 [Console integration](console-integration) for the architecture.
 
-## Why it needs `cluster-admin`
+## Why it needs cluster-wide RBAC
 
 cert-manager installs cluster-scoped resources that require broad permissions:
 - CRDs (`certificates.cert-manager.io`, etc.)
@@ -51,19 +59,24 @@ cert-manager installs cluster-scoped resources that require broad permissions:
 - ValidatingWebhookConfigurations / MutatingWebhookConfigurations
 - Resources across multiple namespaces
 
-The default namespace-admin RoleBinding only covers the plugin's own namespace. The `clusterRoles: [cluster-admin]` field in the PluginInstallation grants the additional access.
+The default namespace-admin RoleBinding only covers the plugin's own namespace. The extra access
+is declared by the plugin itself, under `spec.permissions.rbac` in
+`plugins/cert-manager/definition.yaml`, as a set of narrowly scoped rules — not `cluster-admin`.
+The controller materialises those rules into a `plugin-cert-manager-scope` ClusterRole at install
+time, which is what lets an admin see the exact permissions before approving them.
+
+The installation itself therefore carries no permissions at all:
 
 ```yaml
-# plugins/cert-manager/install.yaml
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: cert-manager-test
+  name: cert-manager
 spec:
-  image: localhost:5111/cert-manager-plugin:latest
-  pluginName: cert-manager-test
-  clusterRoles:
-    - cluster-admin
+  definitionRef:
+    pluginName: cert-manager
+    pluginVersion: …          # metadata.version from definition.yaml
+    definitionHash: sha256:…  # required — printed by plugin-publish
 ```
 
 ## Plugin lifecycle

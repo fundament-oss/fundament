@@ -1,6 +1,7 @@
 ---
 title: Block devices for k3d
 sidebar:
+  label: Block devices for k3d
   order: 2
 ---
 
@@ -48,7 +49,9 @@ Do not try to tell the two apart by filesystem type. It is tempting — devtmpfs
 docker inspect k3d-fundament-plugin-server-0 \
   --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' | grep -qx /dev && echo bound
 just storage-disks attach && docker exec k3d-fundament-plugin-server-0 ls /dev/loop0p1
-``` Ceph checks for exactly this and says so — `rbd: mapping succeeded but /dev/rbd0 is not accessible, is host /dev mounted?` (`ceph/src/krbd.cc`, `do_map`). There is no way around it: rbd-nbd has the same dependency, and Rook's own RBD node plugin hardcodes a hostPath mount of `/dev`.
+```
+
+Ceph checks for exactly this and says so — `rbd: mapping succeeded but /dev/rbd0 is not accessible, is host /dev mounted?` (`ceph/src/krbd.cc`, `do_map`). There is no way around it: rbd-nbd has the same dependency, and Rook's own RBD node plugin hardcodes a hostPath mount of `/dev`.
 
 `/run/udev` is mounted because Rook mounts it into every OSD pod, the prepare job and the discover daemon, and it is a documented prerequisite from Rook v1.20 on. Running without it here wedged the prepare job with a process in uninterruptible I/O wait; the cause was not established, and the plausible explanations point at device probing rather than at udev itself.
 

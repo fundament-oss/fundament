@@ -12,12 +12,20 @@ The focus of the project is currently on research and ideation. Some initial PoC
 
 ## Documentation
 
+Published at **<https://docs.fundament.projects.digilab.network/docs>**. The pages below are the
+same content, rendered on GitHub.
+
 - [Overview](docs/user/overview.md)
 - [Infrastructure](docs/user/infrastructure.md)
 - [Organizations and projects](docs/user/organizations.md)
 - [Plugins](docs/user/plugins.md)
-- [Fundament development](docs/developer/fundament/getting-started.md)
-- [Plugin development](docs/developer/plugins/index.md)
+- [Run Fundament locally](docs/developer/fundament/getting-started.md)
+- [The two development clusters](docs/developer/plugins/dev-environment.md)
+- [Install and test a plugin](docs/developer/plugins/install-a-plugin.md)
+- [Plugin development reference](docs/developer/plugins/index.md)
+
+Once the platform is running locally, the same documentation is served from the cluster at
+<https://docs.fundament.localhost:8443>.
 
 ## Contributing
 
