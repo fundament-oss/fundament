@@ -37,8 +37,11 @@ spec:
         - name: console-frontend
           image: {{ $.Values.images.consoleFrontend }}
           env:
+            # Feeds both connect-src and frame-src in nginx.conf. plugin-proxy is its own
+            # origin and serves the plugin console pages the iframe loads (FUN-17), so
+            # leaving it out blocks every plugin UI with a CSP frame-src violation.
             - name: CONNECT_SRC
-              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }}"
+              value: "{{ $.Values.externalUrls.authn }} {{ $.Values.externalUrls.organization }} {{ $.Values.externalUrls.kubeApiProxy }} {{ $.Values.externalUrls.pluginProxy }}"
           ports:
             - name: http
               containerPort: 80
