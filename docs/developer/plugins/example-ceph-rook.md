@@ -1,10 +1,15 @@
 ---
 title: "Example: Ceph Storage (Rook)"
 sidebar:
-  order: 5
+  label: Ceph/Rook plugin
+  order: 8
 ---
 
 The ceph-rook plugin provides block storage for in-cluster workloads by installing and managing the Rook-Ceph operator and a singleton CephCluster.
+
+**Advanced.** Storage is the most demanding plugin to run locally — it needs raw block devices
+and a virtualised Docker host. It is not part of the standard
+[plugin walkthrough](./install-a-plugin.md).
 
 :::tip[Verifying it works]
 This page describes the design. To actually exercise the plugin against a local
@@ -226,12 +231,13 @@ in-cluster config, which never traverses it. There is no separate `clusterRoles`
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: ceph-rook
+  name: system--ceph-rook
 spec:
   definitionRef:
+    organizationName: system
     pluginName: ceph-rook
     pluginVersion: v0.1.0
-    definitionHash: sha256:<hash printed by `just plugin-publish storage/ceph-rook`>
+    definitionHash: sha256:<hash printed by `just plugins publish storage/ceph-rook`>
 ```
 
 ## Host prerequisites

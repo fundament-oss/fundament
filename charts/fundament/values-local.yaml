@@ -19,6 +19,12 @@ db:
   enabled: true
   instances: 1
   storageSize: 1Gi
+  # Resetting on every deploy is what makes testdata re-appliable: db/testdata/*.sql use
+  # plain INSERTs, unlike db/seed/*.sql which upsert. The side effect is that published
+  # PluginDefinitions go too, while the PluginInstallations referencing them live in the
+  # sandbox cluster and are not reset — so they dangle, and keep reporting Running.
+  # TODO: make testdata idempotent (ON CONFLICT) so this can be opt-in, and surface an
+  # unresolvable definitionRef in PluginInstallation.status.
   reset: true
   insertTestData: true
   exposePort: 54328

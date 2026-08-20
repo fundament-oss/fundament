@@ -1,10 +1,18 @@
 ---
 title: "Example: cert-manager"
 sidebar:
-  order: 5
+  label: cert-manager plugin
+  order: 4
 ---
 
-The cert-manager plugin is a reference implementation that installs and manages cert-manager.
+The cert-manager plugin is a reference implementation that installs and manages cert-manager. It
+The version a `PluginInstallation` pins is the plugin's own `metadata.version`, from
+`plugins/cert-manager/definition.yaml`.
+
+:::tip[Install and test it]
+This page describes the design. To run it locally, follow
+[Install a plugin](./install-a-plugin.md) — cert-manager is the plugin that walkthrough uses.
+:::
 
 ## What it does
 
@@ -43,7 +51,7 @@ helpers — copy it as a starting point for new plugins. See
 [Custom UI](custom-ui) for the pattern and
 [Console integration](console-integration) for the architecture.
 
-## Why it needs `cluster-admin`
+## Why it needs cluster-wide RBAC
 
 cert-manager installs cluster-scoped resources that require broad permissions:
 - CRDs (`certificates.cert-manager.io`, etc.)
@@ -53,8 +61,9 @@ cert-manager installs cluster-scoped resources that require broad permissions:
 
 The default namespace-admin RoleBinding only covers the plugin's own namespace. The additional cluster-wide access comes from `definition.yaml`'s `spec.permissions.rbac`, which `plugin-controller` materialises into a ClusterRole bound to the plugin's ServiceAccount — see [Plugin Controller](/docs/developer/plugins/#plugin-controller).
 
+The installation itself therefore carries no permissions at all:
+
 ```yaml
-# plugins/cert-manager/install.yaml
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
@@ -63,8 +72,8 @@ spec:
   definitionRef:
     organizationName: system
     pluginName: cert-manager
-    pluginVersion: v1.17.2
-    definitionHash: sha256:...
+    pluginVersion: v1.17.2      # metadata.version from definition.yaml
+    definitionHash: sha256:…    # required — from `just plugins publish`
 ```
 
 ## Plugin lifecycle

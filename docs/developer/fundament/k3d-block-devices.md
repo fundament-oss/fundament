@@ -1,6 +1,7 @@
 ---
 title: Block devices for k3d
 sidebar:
+  label: Block devices for k3d
   order: 2
 ---
 
@@ -18,27 +19,29 @@ A k3d node has no raw block devices, so a storage plugin that needs one cannot r
 
 ## Quick start
 
+Run these from the repository root — the sandbox recipes are the root `Justfile`'s `plugins`
+module:
+
 ```bash
-cd plugins
-just cluster-create-storage        # binds the host block devices in
-just storage-disks doctor          # check the kernel Docker runs on
-just storage-disks attach          # creates /dev/loop0p1 .. /dev/loop2p1
+just plugins cluster-create-storage        # binds the host block devices in
+just plugins storage-disks doctor          # check the kernel Docker runs on
+just plugins storage-disks attach          # creates /dev/loop0p1 .. /dev/loop2p1
 ```
 
 Then verify the disks really work, independently of any plugin:
 
 ```bash
-../deploy/k3d/rook-smoke.sh up     # upstream Rook chart + a minimal CephCluster
-../deploy/k3d/rook-smoke.sh status # expect HEALTH_OK
-../deploy/k3d/rook-smoke.sh test   # 1Gi PVC + a pod that writes to it -> SMOKE-OK
-../deploy/k3d/rook-smoke.sh down   # frees the rook-ceph namespace
+./deploy/k3d/rook-smoke.sh up     # upstream Rook chart + a minimal CephCluster
+./deploy/k3d/rook-smoke.sh status # expect HEALTH_OK
+./deploy/k3d/rook-smoke.sh test   # 1Gi PVC + a pod that writes to it -> SMOKE-OK
+./deploy/k3d/rook-smoke.sh down   # frees the rook-ceph namespace
 ```
 
 `rook-smoke.sh` uses no fundament code, so it separates a broken environment from a broken plugin.
 
 ## Requirements
 
-The cluster must bind `/dev` and `/run/udev` into its node, which is off by default so a cluster only exposes the host's devices when someone is working on storage: use `just cluster-create-storage` instead of `just cluster-create`. Docker fixes a container's mounts at creation, so an existing cluster has to be recreated — `just cluster-delete && just cluster-create-storage`.
+The cluster must bind `/dev` and `/run/udev` into its node, which is off by default so a cluster only exposes the host's devices when someone is working on storage: use `just plugins cluster-create-storage` instead of `just plugins cluster-create`. Docker fixes a container's mounts at creation, so an existing cluster has to be recreated — `just plugins cluster-delete && just plugins cluster-create-storage`.
 
 Neither bind is optional. Without `/dev` the OSDs come up and Ceph reports `HEALTH_OK`, but no PVC can mount: a node container's `/dev` is then a private snapshot taken at container start rather than the host's live one, so the `/dev/rbdN` that Ceph CSI creates when it maps a volume never appears there.
 
@@ -47,8 +50,10 @@ Do not try to tell the two apart by filesystem type. It is tempting — devtmpfs
 ```bash
 docker inspect k3d-fundament-plugin-server-0 \
   --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' | grep -qx /dev && echo bound
-just storage-disks attach && docker exec k3d-fundament-plugin-server-0 ls /dev/loop0p1
-``` Ceph checks for exactly this and says so — `rbd: mapping succeeded but /dev/rbd0 is not accessible, is host /dev mounted?` (`ceph/src/krbd.cc`, `do_map`). There is no way around it: rbd-nbd has the same dependency, and Rook's own RBD node plugin hardcodes a hostPath mount of `/dev`.
+just plugins storage-disks attach && docker exec k3d-fundament-plugin-server-0 ls /dev/loop0p1
+```
+
+Ceph checks for exactly this and says so — `rbd: mapping succeeded but /dev/rbd0 is not accessible, is host /dev mounted?` (`ceph/src/krbd.cc`, `do_map`). There is no way around it: rbd-nbd has the same dependency, and Rook's own RBD node plugin hardcodes a hostPath mount of `/dev`.
 
 `/run/udev` is mounted because Rook mounts it into every OSD pod, the prepare job and the discover daemon, and it is a documented prerequisite from Rook v1.20 on. Running without it here wedged the prepare job with a process in uninterruptible I/O wait; the cause was not established, and the plausible explanations point at device probing rather than at udev itself.
 
@@ -58,18 +63,18 @@ Ceph needs roughly 2 GiB per OSD plus its own daemons, so give the VM at least 8
 
 ## After a reboot
 
-The backing files are ordinary files on the Docker data disk, so they survive a Docker daemon restart, a VM restart and a laptop reboot. The loop devices do not — those are kernel state. Recovery is `just storage-disks attach`, and nothing else: `/dev` is bound into the node as a live devtmpfs, so the devices reappear there immediately.
+The backing files are ordinary files on the Docker data disk, so they survive a Docker daemon restart, a VM restart and a laptop reboot. The loop devices do not — those are kernel state. Recovery is `just plugins storage-disks attach`, and nothing else: `/dev` is bound into the node as a live devtmpfs, so the devices reappear there immediately.
 
 ## Stopping a cluster that has Ceph volumes mounted
 
 Stopping the cluster kills the OSDs while the kernel still has the volume mapped, so the filesystem's journal thread blocks forever on a device that will never answer. The node container then cannot be stopped and cannot be entered.
 
-`just cluster-stop` handles this by itself: a mapped device is the signal that storage is in play, so it evicts the Ceph consumers first — while Ceph is still up to service the unmounts — and skips straight to stopping when nothing is mapped. `just cluster-delete` does the same. Nothing extra to remember, and a cluster that never used storage pays nothing. Nothing can intercept `k3d cluster stop` run directly, a `docker stop`, a `kill -9` or closing the laptop lid. For those the StorageClass sets `mapOptions: "krbd:osd_request_timeout=90"`, which turns krbd's endless retry into an I/O error and so keeps the filesystem's journal thread out of uninterruptible sleep. It is deliberately dev-only: it aborts *all* requests once they exceed the timeout, which is the wrong trade for a real cluster.
+`just plugins cluster-stop` handles this by itself: a mapped device is the signal that storage is in play, so it evicts the Ceph consumers first — while Ceph is still up to service the unmounts — and skips straight to stopping when nothing is mapped. `just plugins cluster-delete` does the same. Nothing extra to remember, and a cluster that never used storage pays nothing. Nothing can intercept `k3d cluster stop` run directly, a `docker stop`, a `kill -9` or closing the laptop lid. For those the StorageClass sets `mapOptions: "krbd:osd_request_timeout=90"`, which turns krbd's endless retry into an I/O error and so keeps the filesystem's journal thread out of uninterruptible sleep. It is deliberately dev-only: it aborts *all* requests once they exceed the timeout, which is the wrong trade for a real cluster.
 
 That bounds the damage without removing it. Measured on the bypass path: the filesystem unmounts, but the mapping stays and the node container will not exit — `k3d cluster stop` fails at its own 30s timeout, repeated `docker stop` calls fail too, and the node can no longer be entered. What holds it is a kernel worker retrying the rbd watch, a wait with no timeout of its own. Removing the device ends it:
 
 ```bash
-just storage-disks unmap-stale
+just plugins storage-disks unmap-stale
 ```
 
 The container then stops immediately, and a normal start brings the cluster back with its data intact. This works only because the timeout already aborted the in-flight I/O; without it the removal blocks for the same reason `rbd unmap -o force` does, and only restarting the host clears it.
@@ -78,11 +83,11 @@ After any restart, an OSD can come back with a PG stuck in `laggy`, which blocks
 
 ## Cleaning up
 
-Nothing removes the images on its own — `k3d cluster delete` knows nothing about the volume, and `reset` deletes them only to recreate them empty. `just storage-disks purge` detaches and deletes the volume, which is the only way to get the space back. This matters more on Linux than on macOS, where deleting the VM takes the disks with it.
+Nothing removes the images on its own — `k3d cluster delete` knows nothing about the volume, and `reset` deletes them only to recreate them empty. `just plugins storage-disks purge` detaches and deletes the volume, which is the only way to get the space back. This matters more on Linux than on macOS, where deleting the VM takes the disks with it.
 
 Deleting an image while its loop device is still attached frees nothing, because the kernel keeps the deleted inode alive until the device goes away. `purge` and `reset` therefore refuse while anything still holds a device; stop the consumer first.
 
-Use `just storage-disks reset` to start over from clean disks, which is needed after deleting the cluster: the images keep their on-disk state while the node that referenced them is gone.
+Use `just plugins storage-disks reset` to start over from clean disks, which is needed after deleting the cluster: the images keep their on-disk state while the node that referenced them is gone.
 
 The volume is never attached to a container, so Docker counts it as unused: `docker volume prune -a` and `docker system prune --volumes` will delete the images. Plain `docker volume prune` will not, as it only removes anonymous volumes.
 

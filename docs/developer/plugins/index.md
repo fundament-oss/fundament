@@ -2,16 +2,27 @@
 title: Plugins
 sidebar:
   label: Overview
-  order: 2
+  order: 1
 ---
 
 The plugin system allows extending Fundament with installable plugins that integrate into the platform's console UI, RBAC, and lifecycle management.
+
+## Start here
+
+This page is reference material. To actually do something:
+
+| I want to… | Go to |
+|---|---|
+| Run Fundament on my machine | [Getting started](/docs/developer/fundament/getting-started) |
+| Understand the local setup | [The two development clusters](/docs/developer/plugins/dev-environment) |
+| **Install and test a plugin** | [Install a plugin](/docs/developer/plugins/install-a-plugin) |
+| Write a plugin of my own | [Writing a plugin](/docs/developer/plugins/writing-a-plugin) |
 
 ## System overview
 
 ```
   ┌──────────────────────────────────────────────────────────────────────────┐
-  │                         Fundament Cluster                                │
+  │              Managed cluster (locally: k3d-fundament-plugin)             │
   │                                                                          │
   │  PluginInstallation CRs (cluster-scoped)                                 │
   │  ┌──────────────────────┐                                                │
@@ -197,18 +208,28 @@ kind: PluginInstallation
 metadata:
   name: system--cert-manager
 spec:
-  definitionRef:
+  definitionRef:                # Which published definition to install
     organizationName: system
     pluginName: cert-manager
-    pluginVersion: v1.17.2
-    definitionHash: sha256:...
-  config:                # Optional: extra env vars (injected with FUNP_ prefix)
-    LOG_LEVEL: debug     # → becomes FUNP_LOG_LEVEL in the container
+    pluginVersion: v1.17.2      # the plugin's own version, not the platform's
+    definitionHash: sha256:…    # the admin's consent record; see below
+  config:                       # Optional: extra env vars (injected with FUNP_ prefix)
+    LOG_LEVEL: debug            # → becomes FUNP_LOG_LEVEL in the container
 ```
 
 A plugin's identity is the pair `(organizationName, pluginName)`, and
 `metadata.name` must equal `<organizationName>--<pluginName>` — see
 [FUN-17](/funs/fun-17#plugin-identity-and-naming) for why.
+
+`definitionRef` and `config` are the only fields you set. The container image and the plugin's
+RBAC are **not** in the CR — they come from the published definition the reference resolves to
+(FUN-19). `definitionRef` is immutable once set: to move a plugin to a new version, delete and
+recreate the installation.
+
+`definitionHash` records exactly which definition an admin approved. Always set it: although
+`pluginController.allowUnpinnedHash` suggests otherwise, the CRD's immutability rule rejects the
+controller's first update when the hash is absent, and the installation never reconciles — see
+[Install a plugin](/docs/developer/plugins/install-a-plugin).
 
 ### What the controller creates
 
@@ -229,6 +250,10 @@ For each `PluginInstallation`, the controller creates:
 Every namespace-scoped child is named `plugin` — not `plugin-<installationName>`
 — because the namespace already disambiguates installations; see
 [FUN-17](/funs/fun-17#plugin-identity-and-naming).
+
+The cluster-scoped permissions are always derived from the published definition, never requested
+by the CR. That is what lets an admin see, at install time, exactly what a plugin will be able to
+do.
 
 ### RBAC model
 
