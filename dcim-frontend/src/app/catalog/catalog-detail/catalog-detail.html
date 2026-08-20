@@ -129,13 +129,11 @@
                 size="sm"
                 color="neutral"
                 [attr.text]="portTypeLabel(pd.portType)"
-              ></nldd-tag
-              >@if (pd.mediaType) {&ngsp;<nldd-tag
-                  size="sm"
-                  color="neutral"
-                  [attr.text]="pd.mediaType"
-                ></nldd-tag>}</nldd-text-cell
-            >
+              ></nldd-tag>
+              @if (pd.mediaType) {
+                &ngsp;<nldd-tag size="sm" color="neutral" [attr.text]="pd.mediaType"></nldd-tag>
+              }
+            </nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               width="140px"
@@ -372,10 +370,7 @@
           >
             <nldd-menu>
               @for (entry of compatOptions(); track entry.id) {
-                <nldd-menu-item
-                  [attr.value]="entry.id"
-                  [attr.text]="entry.model"
-                ></nldd-menu-item>
+                <nldd-menu-item [attr.value]="entry.id" [attr.text]="entry.model"></nldd-menu-item>
               }
             </nldd-menu>
           </nldd-token-field>
@@ -417,7 +412,6 @@
     (click)="confirmDeletePortDef()"
   ></nldd-button>
 </nldd-modal-dialog>
-
 
 <!-- ══════════════════════════════════════════════════════════════
      CATALOG ENTRY EDIT SHEET

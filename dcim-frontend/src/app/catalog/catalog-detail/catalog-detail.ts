@@ -13,8 +13,10 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { pageTitle } from '../../shell/page-title';
 import {
   Asset,
   AssetStatus,
@@ -63,6 +65,8 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
+
+  private readonly title = inject(Title);
 
   private readonly catalogApi = inject(CatalogApiService);
 
@@ -182,6 +186,11 @@ export default class CatalogDetailComponent implements OnInit, AfterViewInit, On
   });
 
   constructor() {
+    // The tab says which one you have open, not just which section.
+    effect(() => {
+      const name = this.entry()?.model;
+      if (name) this.title.setTitle(pageTitle(name));
+    });
     // The product form is the shell's now, so this page watches for a write
     // and reads its product again rather than patching it in place.
     effect(() => {
