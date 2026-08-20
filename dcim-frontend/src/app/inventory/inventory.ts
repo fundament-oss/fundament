@@ -8,6 +8,7 @@ import {
   inject,
   OnInit,
   signal,
+  untracked,
   viewChild,
   TemplateRef,
   AfterViewInit,
@@ -29,6 +30,9 @@ import categoryIcon, { AssetCategory, CATEGORIES } from '../shared/asset-categor
 import { viewSlug } from '../shared/section-views';
 import { INVENTORY_PATH } from './inventory-views';
 import InventoryNavComponent from './inventory-nav';
+import openOnCreateRequest from '../shell/create-request';
+import OverlayService from '../shell/overlay.service';
+import InventoryStatsService from './inventory-stats.service';
 
 export type { AssetCategory };
 
@@ -154,6 +158,12 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   private readonly inventoryApi = inject(InventoryApiService);
 
   private readonly catalogApi = inject(CatalogApiService);
+
+  /** The asset form lives in the shell, so it can be opened from anywhere. */
+  private readonly overlays = inject(OverlayService);
+
+  /** Says when an asset changed somewhere else than this page. */
+  private readonly assetChanges = inject(InventoryStatsService);
 
   private readonly placementApi = inject(PlacementApiService);
 
@@ -453,6 +463,17 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
   private readonly fAssetNotes = viewChild<ElementRef>('fAssetNotes');
 
   constructor() {
+    // An asset made from the add button in the bar is saved somewhere else, so
+    // this list reads itself again when the shell says something changed.
+    effect(() => {
+      this.assetChanges.changed();
+      untracked(() => {
+        this.loadAssets();
+        this.loadStats();
+      });
+    });
+    // The add menu in the bar asks for this form through the address.
+    openOnCreateRequest(() => this.openCreateAsset());
     // The view and the status filter both live in the address now, so the
     // address is what asks for a new query. This runs on arrival too, which is
     // where the first load comes from.
@@ -580,9 +601,7 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     const status = this.statusParam();
     if (status !== 'all') {
       const label = this.statusLabel(status).toLowerCase();
-      return kind === 'category'
-        ? `No ${label} ${value} assets`
-        : `No ${label} assets`;
+      return kind === 'category' ? `No ${label} ${value} assets` : `No ${label} assets`;
     }
     if (kind === 'category') return `No ${value} assets`;
     if (kind === 'status') return `No ${this.statusLabel(value as AssetStatus)} assets`;
@@ -641,110 +660,14 @@ export default class InventoryComponent implements OnInit, AfterViewInit, OnDest
     this.formErrorMessage.set(message);
   }
 
+  /** Both routes into the form open the one the shell holds: it outlives this
+   *  page, and the add button in the bar opens the same one. */
   openCreateAsset(): void {
-    this.clearErrors();
-    this.editPlacement.set(null);
-    this.pickedLocation.set('');
-    // No device to start with. The old dropdown always had one selected, which
-    // made the first product in the catalog the silent default answer to the
-    // one question this form cannot guess.
-    this.assetDeviceId.set('');
-    this.assetStatus.set('available');
-    this.assetRackId.set('');
-    this.assetSlotType.set('');
-    this.editAsset.set({
-      id: '',
-      deviceCatalogId: '',
-      assetTag: '',
-      status: 'available',
-      notes: '',
-    });
+    this.overlays.newAsset();
   }
 
-  /** One status at a time: unpicking the current one leaves it as it was. */
-  onStatusToggle(status: AssetStatus, selected: boolean): void {
-    if (selected) this.assetStatus.set(status);
-  }
-
-  onSlotTypeToggle(slotType: RackSlotType, selected: boolean): void {
-    if (selected) this.assetSlotType.set(slotType);
-  }
-
-  /** One place at a time: unpicking the current one leaves it as it was. */
-  onLocationToggle(location: string, selected: boolean): void {
-    if (selected) this.onLocationChange(location);
-  }
-
-  /** Picking a place empties the rack: the rack you had stands somewhere else. */
-  private onLocationChange(location: string): void {
-    this.pickedLocation.set(location);
-    this.assetRackId.set('');
-  }
-
-  closeAssetForm(): void {
-    this.clearErrors();
-    this.editAsset.set(null);
-  }
-
-  saveAsset(): void {
-    const form = this.editAsset();
-    if (!form) return;
-    this.clearErrors();
-    const deviceCatalogId = this.assetDeviceId() || (form.deviceCatalogId ?? '');
-    // An asset is an instance of a product, so without one there is nothing to
-    // create. Said here rather than left to the API, because the answer is in
-    // the field right above the button.
-    if (!deviceCatalogId) {
-      this.invalidFields.set({ device_catalog_id: 'Pick the device this asset is.' });
-      return;
-    }
-    const entry = this.catalogById.get(deviceCatalogId);
-    const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const updated: Asset = {
-      id: form.id ?? '',
-      deviceCatalogId,
-      model: entry?.model ?? form.model ?? 'Unknown device',
-      category: entry?.category ?? form.category ?? 'Other',
-      assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? '',
-      status: this.assetStatus(),
-      serialNumber: (this.fAssetSerial()?.nativeElement as HTMLInputElement)?.value ?? '',
-      warrantyExpiry: warranty || undefined,
-      notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? '',
-    };
-    if (form.id) {
-      firstValueFrom(this.inventoryApi.updateAsset(updated))
-        .then(() => this.reconcilePlacement(updated.id))
-        .then(() => {
-          this.assets.update((list) => list.map((a) => (a.id === form.id ? updated : a)));
-          this.loadStats();
-          this.editAsset.set(null);
-        })
-        .catch((err) => this.handleError(err));
-    } else {
-      firstValueFrom(this.inventoryApi.createAsset(updated))
-        .then((res) =>
-          this.reconcilePlacement(res.assetId).then(() => {
-            this.assets.update((list) => [{ ...updated, id: res.assetId }, ...list]);
-            this.loadStats();
-            this.editAsset.set(null);
-          }),
-        )
-        .catch((err) => this.handleError(err));
-    }
-  }
-
-  private reconcilePlacement(assetId: string): Promise<unknown> {
-    const rackId = this.assetRackId();
-    const unit =
-      parseInt((this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '', 10) || 0;
-    const slotType = this.assetSlotType() || RackSlotType.UNIT;
-    return this.placementApi.reconcilePlacement({
-      assetId,
-      rackId,
-      unit,
-      slotType,
-      existingPlacementId: this.editPlacement()?.id ?? null,
-    });
+  openEditAsset(asset: Asset): void {
+    this.overlays.editAsset(asset);
   }
 
   statusLabel(status: AssetStatus): string {

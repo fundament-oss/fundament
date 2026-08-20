@@ -26,6 +26,16 @@ export default class InventoryStatsService {
   private pending = false;
 
   /** Loads once and keeps the last answer visible while a new one is on its way. */
+  /** Bumped when an asset is made or changed somewhere else than the page
+   *  showing the list, so that page can read it again. */
+  readonly changed = signal(0);
+
+  /** Say that an asset changed: the counts follow and so does the list. */
+  markChanged(): void {
+    this.changed.update((n) => n + 1);
+    this.refresh();
+  }
+
   refresh(): void {
     if (this.pending) return;
     this.pending = true;

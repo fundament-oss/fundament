@@ -210,8 +210,8 @@
           </nldd-title>
           <nldd-spacer size="4"></nldd-spacer>
           <nldd-text size="sm">
-            Deleting {{ a.assetTag }} removes it and everything recorded about it.
-            This cannot be undone.
+            Deleting {{ a.assetTag }} removes it and everything recorded about it. This cannot be
+            undone.
           </nldd-text>
           <nldd-spacer size="16"></nldd-spacer>
           <nldd-button
@@ -254,144 +254,6 @@
 <!-- ══════════════════════════════════════════════════════════════
      ASSET EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #assetSheet accessible-label="Edit asset" placement="right">
-  <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      text="Edit asset"
-      dismiss-text="Cancel"
-      (dismiss)="closeAssetForm()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ formErrorMessage() }}
-          </p>
-        </div>
-      }
-      <!-- The same form as adding an asset, one field per row. -->
-      <nldd-form>
-        <nldd-form-field label="Device">
-          <!-- What the asset is, so it cannot change: replacing the device makes
-               it a different thing, not the same one edited. -->
-          <nldd-combo-box readonly [attr.text]="editAsset()?.model ?? ''"></nldd-combo-box>
-        </nldd-form-field>
-        <nldd-form-field label="Asset tag">
-          <nldd-text-field
-            #fAssetTag
-            autofocus
-            [attr.value]="editAsset()?.assetTag ?? ''"
-            (keydown.enter)="saveAsset()"
-            [attr.invalid]="isFieldInvalid('asset_tag') ? '' : null"
-            error-message="error-ad-asset-tag"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="error-ad-asset-tag">{{
-            fieldError('asset_tag')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <nldd-form-field label="Serial number">
-          <nldd-text-field
-            #fAssetSerial
-            [attr.value]="editAsset()?.serialNumber ?? ''"
-            (keydown.enter)="saveAsset()"
-            [attr.invalid]="isFieldInvalid('serial_number') ? '' : null"
-            error-message="error-ad-asset-serial"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="error-ad-asset-serial">{{
-            fieldError('serial_number')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <nldd-form-field label="Warranty expiry">
-          <nldd-date-field
-            #fAssetWarranty
-            [attr.value]="editAsset()?.warrantyExpiry ?? ''"
-          ></nldd-date-field>
-        </nldd-form-field>
-        <nldd-form-field label="Status">
-          <nldd-toggle-button-group type="radio" accessible-label="Status">
-            @for (s of statuses; track s.value) {
-              <nldd-toggle-button
-                [attr.value]="s.value"
-                [attr.text]="s.label"
-                [attr.selected]="assetStatus() === s.value ? '' : null"
-                (change)="onStatusToggle(s.value, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
-        </nldd-form-field>
-        <!-- Where before which rack: the place cuts the rack list down to the
-             racks that stand there, and opens them. -->
-        <nldd-form-field label="Location">
-          @if (locations().length === 0) {
-            <nldd-form-field-help-text>
-              No racks available yet. Add a room, rack row, and rack to a data center first.
-            </nldd-form-field-help-text>
-          }
-          <nldd-toggle-button-group type="radio" accessible-label="Location">
-            @for (loc of locations(); track loc) {
-              <nldd-toggle-button
-                [attr.value]="loc"
-                [attr.text]="loc"
-                [attr.selected]="rackLocation() === loc ? '' : null"
-                (change)="onLocationToggle(loc, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
-        </nldd-form-field>
-        <nldd-form-field label="Rack">
-          <nldd-combo-box
-            [attr.value]="assetRackId()"
-            (change)="assetRackId.set($any($event).detail.value)"
-          >
-            <nldd-menu>
-              @for (rack of racksAtLocation(); track rack.id) {
-                <nldd-menu-item [attr.value]="rack.id" [attr.text]="rack.name"></nldd-menu-item>
-              }
-            </nldd-menu>
-          </nldd-combo-box>
-        </nldd-form-field>
-        <nldd-form-field label="Rack unit">
-          <!-- A position in a rack, not a quantity you step: 1 to totalU, and
-               empty when the asset stands nowhere. -->
-          <nldd-text-field
-            #fAssetRackUnit
-            keyboard="numeric"
-            [attr.value]="editPlacement()?.unit ?? ''"
-            (keydown.enter)="saveAsset()"
-            [attr.invalid]="isFieldInvalid('rack_unit_start') ? '' : null"
-            error-message="error-ad-rack-unit"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="error-ad-rack-unit">{{
-            fieldError('rack_unit_start')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <nldd-form-field label="Slot type">
-          <nldd-toggle-button-group type="radio" accessible-label="Slot type">
-            @for (st of slotTypes; track st.value) {
-              <nldd-toggle-button
-                [attr.value]="st.value"
-                [attr.text]="st.label"
-                [attr.selected]="assetSlotType() === st.value ? '' : null"
-                (change)="onSlotTypeToggle(st.value, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
-        </nldd-form-field>
-        <nldd-form-field label="Notes">
-          <nldd-multi-line-text-field
-            #fAssetNotes
-            [attr.value]="editAsset()?.notes ?? ''"
-          ></nldd-multi-line-text-field>
-        </nldd-form-field>
-        <nldd-form-actions>
-          <nldd-button variant="primary" width="full" text="Save" (click)="saveAsset()"></nldd-button>
-        </nldd-form-actions>
-      </nldd-form>
-    </nldd-simple-section>
-  </nldd-page>
-</nldd-sheet>
-
 <!-- ══════════════════════════════════════════════════════════════
      ASSET DELETE MODAL
      ══════════════════════════════════════════════════════════════ -->

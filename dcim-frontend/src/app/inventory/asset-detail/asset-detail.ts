@@ -13,8 +13,10 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { pageTitle } from '../../shell/page-title';
 import { RackSlotType } from '../../../generated/v1/common_pb';
 import { Asset, AssetStatus, CatalogEntry, HistoryEntry, NoteComment } from '../inventory';
 import { ASSET_STATUS_TAG_COLOR, ASSET_STATUS_LABEL } from '../asset-status';
@@ -28,6 +30,7 @@ import categoryIcon from '../../shared/asset-category';
 import { INVENTORY_PATH, inventoryViewTitle, isInventoryView } from '../inventory-views';
 import InventoryNavComponent from '../inventory-nav';
 import SecondaryNavService from '../../shell/secondary-nav.service';
+import OverlayService from '../../shell/overlay.service';
 
 @Component({
   selector: 'app-asset-detail',
@@ -41,6 +44,9 @@ import SecondaryNavService from '../../shell/secondary-nav.service';
 })
 export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly secondaryNav = inject(SecondaryNavService);
+
+  /** The asset form lives in the shell: one form, opened from three places. */
+  private readonly overlays = inject(OverlayService);
 
   /** This section's menu, handed to the shell for as long as the page is open. */
   private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
@@ -56,6 +62,8 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
+
+  private readonly title = inject(Title);
 
   private readonly inventoryApi = inject(InventoryApiService);
 
@@ -195,6 +203,11 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
   readonly backText = inventoryViewTitle(this.cameFrom);
 
   constructor() {
+    // The tab says which one you have open, not just which section.
+    effect(() => {
+      const name = this.asset()?.assetTag;
+      if (name) this.title.setTitle(pageTitle(name));
+    });
     effect(() => {
       const el = this.assetSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
       if (this.editAsset() !== null) el?.show?.();
@@ -383,131 +396,11 @@ export default class AssetDetailComponent implements OnInit, AfterViewInit, OnDe
     this.formErrorMessage.set(message);
   }
 
+  /** The form is the one the shell holds, so it is the same one the inventory
+   *  list and the add button in the bar open. */
   openEditAsset(): void {
     const current = this.asset();
-    if (!current) return;
-    this.clearErrors();
-    // Resolve the existing placement before opening, so the location picker
-    // renders with the right rack pre-selected.
-    firstValueFrom(this.placementApi.getPlacementByAsset(current.id))
-      .then((res) => {
-        const p = res.placement;
-        const placement =
-          p && p.location.case === 'rack'
-            ? {
-                id: p.id,
-                rackId: p.location.value.rackId,
-                unit: p.location.value.rackUnitStart,
-                slotType: p.location.value.rackSlotType,
-              }
-            : null;
-        this.editPlacement.set(placement);
-        this.assetRackId.set(placement?.rackId ?? '');
-        this.assetSlotType.set(placement?.slotType ?? '');
-        // The place comes from the rack it is in: the picker below it lists the
-        // racks that stand there, so it has to know where "there" is.
-        this.pickedLocation.set(
-          this.racks().find((rack) => rack.id === placement?.rackId)?.datacenter ?? '',
-        );
-      })
-      .catch((err) => {
-        this.editPlacement.set(null);
-        this.assetRackId.set('');
-        this.assetSlotType.set('');
-        this.pickedLocation.set('');
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-      })
-      .finally(() => {
-        this.assetStatus.set(current.status);
-        this.editAsset.set({ ...current });
-      });
-  }
-
-  /** One status at a time: unpicking the current one leaves it as it was. */
-  onStatusToggle(status: AssetStatus, selected: boolean): void {
-    if (selected) this.assetStatus.set(status);
-  }
-
-  onSlotTypeToggle(slotType: RackSlotType, selected: boolean): void {
-    if (selected) this.assetSlotType.set(slotType);
-  }
-
-  /** One place at a time: unpicking the current one leaves it as it was. */
-  onLocationToggle(location: string, selected: boolean): void {
-    if (selected) this.onLocationChange(location);
-  }
-
-  /** Picking a place empties the rack: the rack you had stands somewhere else. */
-  private onLocationChange(location: string): void {
-    this.pickedLocation.set(location);
-    this.assetRackId.set('');
-  }
-
-  closeAssetForm(): void {
-    this.clearErrors();
-    this.editAsset.set(null);
-  }
-
-  saveAsset(): void {
-    const current = this.asset();
-    if (!current) return;
-    this.clearErrors();
-    const warranty = (this.fAssetWarranty()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const updated: Asset = {
-      ...current,
-      assetTag: (this.fAssetTag()?.nativeElement as HTMLInputElement)?.value ?? current.assetTag,
-      status: this.assetStatus(),
-      serialNumber:
-        (this.fAssetSerial()?.nativeElement as HTMLInputElement)?.value ??
-        current.serialNumber ??
-        '',
-      warrantyExpiry: warranty || undefined,
-      notes: (this.fAssetNotes()?.nativeElement as HTMLInputElement)?.value ?? current.notes,
-    };
-    // Validate the placement input before any write so a missing/zero unit
-    // can't be saved as an off-grid (U0) placement.
-    const placement = this.readPlacementInput();
-    if (placement === 'invalid') return;
-
-    firstValueFrom(this.inventoryApi.updateAsset(updated))
-      .then(() => this.placementApi.reconcilePlacement({ ...placement, assetId: updated.id }))
-      .then(() => {
-        this.asset.set(updated);
-        this.editAsset.set(null);
-        this.loadLocation();
-      })
-      .catch((err) => this.handleError(err));
-  }
-
-  /**
-   * Reads the rack/unit/slot inputs and validates them. Returns `'invalid'`
-   * (after surfacing an inline error) when a rack is selected but the unit is
-   * missing or below 1; the rack diagram only draws units 1…totalU, so a U0
-   * placement would be invisible.
-   */
-  private readPlacementInput():
-    | { rackId: string; unit: number; slotType: RackSlotType; existingPlacementId: string | null }
-    | 'invalid' {
-    const rackId = this.assetRackId();
-    const slotType = this.assetSlotType() || RackSlotType.UNIT;
-    const existingPlacementId = this.editPlacement()?.id ?? null;
-
-    if (!rackId) {
-      // No rack selected: clears any existing placement, unit is irrelevant.
-      return { rackId: '', unit: 0, slotType, existingPlacementId };
-    }
-
-    const unit = parseInt(
-      (this.fAssetRackUnit()?.nativeElement as HTMLInputElement)?.value ?? '',
-      10,
-    );
-    if (!Number.isInteger(unit) || unit < 1) {
-      this.invalidFields.set({ rack_unit_start: 'Enter a rack unit of 1 or higher.' });
-      return 'invalid';
-    }
-
-    return { rackId, unit, slotType, existingPlacementId };
+    if (current) this.overlays.editAsset(current);
   }
 
   readonly notes = signal<NoteComment[]>([]);
