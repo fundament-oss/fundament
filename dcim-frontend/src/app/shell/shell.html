@@ -14,6 +14,27 @@
                  Empty alt because the name stands beside it. -->
             <img slot="media" src="/img/fundament-logo.svg" alt="" height="32" />
           </nldd-toolbar-title>
+          <!-- Making something is not a property of the page you happen to be
+               on, so it stands in the bar that is on every screen. No icons:
+               six plus signs beside six names say the same thing six times. -->
+          <nldd-toolbar-item slot="end">
+            <nldd-icon-button
+              icon="plus"
+              variant="secondary"
+              accessible-label="New"
+              expandable
+              popup-type="menu"
+            >
+              <nldd-menu slot="popup" placement="bottom-end">
+                @for (action of createActions; track action.text) {
+                  <nldd-menu-item
+                    [attr.text]="action.text"
+                    (select)="create(action)"
+                  ></nldd-menu-item>
+                }
+              </nldd-menu>
+            </nldd-icon-button>
+          </nldd-toolbar-item>
           <!-- Everything about your own account in one place: who you are, how
                the app looks and the way out. The theme was a control of its own
                in the bar, which put a setting you touch twice a year next to the
@@ -91,65 +112,69 @@
              stands beside what it opens can hold a count, a status dot and a
              second level; a row of tabs runs out of room at six. -->
         <nldd-split-view-pane slot="sidebar" background="base" has-content>
-          <nldd-simple-section>
-            <nldd-title size="3">
-              <h1>DCIM</h1>
-            </nldd-title>
-            <nldd-spacer size="8"></nldd-spacer>
-            <nldd-list type="navigation" dividers="on-touch" aria-label="Sections">
-              @for (item of sections; track item.path) {
-                <nldd-list-item
-                  [attr.href]="item.path"
-                  [attr.selected]="isCurrent(item.path) ? '' : null"
-                  (click)="navigate($event, item.path)"
-                >
-                  <nldd-icon-cell [attr.icon]="item.icon" size="20"></nldd-icon-cell>
-                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
-                  <nldd-text-cell [attr.text]="item.text"></nldd-text-cell>
-                  <!-- What the section wants from you, before you open it: how
-                       many assets are waiting on somebody, and how the data
-                       centers are doing. Both read from a service rather than
-                       from the page, because the shell outlives every page. -->
-                  @if (item.path === '/inventory' && attentionCount() > 0) {
-                    <nldd-cell width="fit-content">
-                      <nldd-badge
-                        color="critical"
-                        [attr.text]="attentionCount()"
-                        [attr.accessible-label]="attentionCount() + ' assets need attention'"
-                      ></nldd-badge>
-                    </nldd-cell>
-                  }
-                  <!-- What the day holds, the same rule as the Today view in
-                       the section's own menu. Critical like the assets badge
-                       above it: both count things that are waiting for someone,
-                       and one color for "this needs you" beats two. -->
-                  @if (item.path === '/tasks' && taskAttention.todayCount() > 0) {
-                    <nldd-cell width="fit-content">
-                      <nldd-badge
-                        color="critical"
-                        [attr.text]="taskAttention.todayCount()"
-                        [attr.accessible-label]="taskAttention.todayCount() + ' tasks for today'"
-                      ></nldd-badge>
-                    </nldd-cell>
-                  }
-                  <!-- The dot is a badge without a number, so it is 12 wide
-                       where a one-digit badge is 20. Right-aligned that puts its
-                       middle 4 pixels further right than the middle of the badge
-                       above it, which is what the eye follows down a column of
-                       rows. The spacer gives those 4 back. -->
-                  @if (item.path === '/data-centers' && health.worstColor(); as color) {
-                    <nldd-cell width="fit-content">
-                      <nldd-badge
-                        [attr.color]="color"
-                        [attr.accessible-label]="'Data centers: ' + health.worst()"
-                      ></nldd-badge>
-                    </nldd-cell>
-                    <nldd-spacer-cell size="4"></nldd-spacer-cell>
-                  }
-                </nldd-list-item>
-              }
-            </nldd-list>
-          </nldd-simple-section>
+          <!-- The page owns the scroll region: a pane clips what does not fit, so a
+               menu longer than the pane would be cut off without one. -->
+          <nldd-page>
+            <nldd-simple-section>
+              <nldd-title size="3">
+                <h1>DCIM</h1>
+              </nldd-title>
+              <nldd-spacer size="8"></nldd-spacer>
+              <nldd-list type="navigation" dividers="on-touch" aria-label="Sections">
+                @for (item of sections; track item.path) {
+                  <nldd-list-item
+                    [attr.href]="item.path"
+                    [attr.current]="isCurrent(item.path) ? '' : null"
+                    (click)="navigate($event, item.path)"
+                  >
+                    <nldd-icon-cell [attr.icon]="item.icon" size="20"></nldd-icon-cell>
+                    <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                    <nldd-text-cell [attr.text]="item.text"></nldd-text-cell>
+                    <!-- What the section wants from you, before you open it: how
+                         many assets are waiting on somebody, and how the data
+                         centers are doing. Both read from a service rather than
+                         from the page, because the shell outlives every page. -->
+                    @if (item.path === '/inventory' && attentionCount() > 0) {
+                      <nldd-cell width="fit-content">
+                        <nldd-badge
+                          color="critical"
+                          [attr.text]="attentionCount()"
+                          [attr.accessible-label]="attentionCount() + ' assets need attention'"
+                        ></nldd-badge>
+                      </nldd-cell>
+                    }
+                    <!-- What the day holds, the same rule as the Today view in
+                         the section's own menu. Critical like the assets badge
+                         above it: both count things that are waiting for someone,
+                         and one color for "this needs you" beats two. -->
+                    @if (item.path === '/tasks' && taskAttention.todayCount() > 0) {
+                      <nldd-cell width="fit-content">
+                        <nldd-badge
+                          color="critical"
+                          [attr.text]="taskAttention.todayCount()"
+                          [attr.accessible-label]="taskAttention.todayCount() + ' tasks for today'"
+                        ></nldd-badge>
+                      </nldd-cell>
+                    }
+                    <!-- The dot is a badge without a number, so it is 12 wide
+                         where a one-digit badge is 20. Right-aligned that puts its
+                         middle 4 pixels further right than the middle of the badge
+                         above it, which is what the eye follows down a column of
+                         rows. The spacer gives those 4 back. -->
+                    @if (item.path === '/data-centers' && health.worstColor(); as color) {
+                      <nldd-cell width="fit-content">
+                        <nldd-badge
+                          [attr.color]="color"
+                          [attr.accessible-label]="'Data centers: ' + health.worst()"
+                        ></nldd-badge>
+                      </nldd-cell>
+                      <nldd-spacer-cell size="4"></nldd-spacer-cell>
+                    }
+                  </nldd-list-item>
+                }
+              </nldd-list>
+            </nldd-simple-section>
+          </nldd-page>
         </nldd-split-view-pane>
         <!-- Filled by the page: the rack list, the categories, the filters. The
              page knows that content and the data behind it.
@@ -183,4 +208,19 @@
      anywhere. Deferred, so it costs nothing until the first time you open it. -->
 @defer (when overlays.productSheet()) {
   <app-product-sheet></app-product-sheet>
+}
+@defer (when overlays.datacenterSheet()) {
+  <app-datacenter-sheet></app-datacenter-sheet>
+}
+@defer (when overlays.rackSheet()) {
+  <app-rack-sheet></app-rack-sheet>
+}
+@defer (when overlays.taskSheet()) {
+  <app-task-sheet></app-task-sheet>
+}
+@defer (when overlays.assetSheet()) {
+  <app-asset-sheet></app-asset-sheet>
+}
+@defer (when overlays.cableSheet()) {
+  <app-cable-sheet></app-cable-sheet>
 }

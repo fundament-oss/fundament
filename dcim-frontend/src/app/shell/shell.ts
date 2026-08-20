@@ -15,6 +15,11 @@ import ThemeService from '../theme.service';
 import SecondaryNavService from './secondary-nav.service';
 import OverlayService from './overlay.service';
 import ProductSheetComponent from '../catalog/product-sheet/product-sheet';
+import DatacenterSheetComponent from '../datacenters/datacenter-sheet/datacenter-sheet';
+import RackSheetComponent from '../racks/rack-sheet/rack-sheet';
+import TaskSheetComponent from '../tasks/task-sheet/task-sheet';
+import AssetSheetComponent from '../inventory/asset-sheet/asset-sheet';
+import CableSheetComponent from '../patch-mapping/cable-sheet/cable-sheet';
 import InventoryStatsService from '../inventory/inventory-stats.service';
 import DatacenterHealthService from '../datacenters/datacenter-health.service';
 import TaskAttentionService from '../tasks/task-attention.service';
@@ -40,6 +45,23 @@ const SECTIONS = [
 ];
 
 /**
+ * What the add button in the bar can make, in the order the sections stand.
+ *
+ * A form for a new record belongs to nobody: you want it from wherever you are,
+ * not only from the page that happens to hold it. So the shell holds them all,
+ * and each one asks for the context a page would otherwise have supplied: which
+ * data center a rack goes in, which one a cable runs through.
+ */
+const CREATE_ACTIONS: { text: string }[] = [
+  { text: 'New product' },
+  { text: 'New asset' },
+  { text: 'New data center' },
+  { text: 'New rack' },
+  { text: 'New cable' },
+  { text: 'New task' },
+];
+
+/**
  * How deep the stacked (narrow) view is: the sections are the whole screen when
  * nothing is chosen, a section's own menu sits one step in, and what you opened
  * from it one step further.
@@ -55,7 +77,16 @@ function depthForPath(url: string): number {
   selector: 'app-shell',
   templateUrl: './shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, NgTemplateOutlet, ProductSheetComponent],
+  imports: [
+    RouterOutlet,
+    NgTemplateOutlet,
+    ProductSheetComponent,
+    DatacenterSheetComponent,
+    RackSheetComponent,
+    TaskSheetComponent,
+    AssetSheetComponent,
+    CableSheetComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class ShellComponent implements OnInit {
@@ -94,6 +125,36 @@ export default class ShellComponent implements OnInit {
   }
 
   protected readonly sections = SECTIONS;
+
+  protected readonly createActions = CREATE_ACTIONS;
+
+  /** Opens a create form wherever you are: either here, or in the section it
+   *  belongs to, which reads the request off the address when it arrives. */
+  create(action: { text: string }): void {
+    if (action.text === 'New product') {
+      this.overlays.newProduct();
+      return;
+    }
+    if (action.text === 'New data center') {
+      this.overlays.newDatacenter();
+      return;
+    }
+    if (action.text === 'New rack') {
+      this.overlays.newRack();
+      return;
+    }
+    if (action.text === 'New task') {
+      this.overlays.newTask();
+      return;
+    }
+    if (action.text === 'New asset') {
+      this.overlays.newAsset();
+      return;
+    }
+    if (action.text === 'New cable') {
+      this.overlays.newCable();
+    }
+  }
 
   /** Read from the address rather than from routerLinkActive: the links live in
    *  the list item's shadow DOM, where that directive cannot reach them. */
