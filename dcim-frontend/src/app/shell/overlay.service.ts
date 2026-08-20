@@ -1,5 +1,9 @@
 import { Injectable, signal } from '@angular/core';
-import type { AssetCategory, CatalogEntry } from '../inventory/inventory';
+import type { Asset, AssetCategory, CatalogEntry } from '../inventory/inventory';
+import type { DatacenterInfo } from '../datacenters/datacenter.model';
+import type { Rack } from '../racks/rack.model';
+import type { TaskData } from '../task-management/task-api.service';
+import type { Cable } from '../patch-mapping/cable.model';
 
 /**
  * The sheets the shell owns rather than a page.
@@ -43,7 +47,120 @@ export default class OverlayService {
     this.productSheet.set(entry);
   }
 
+  /**
+   * The data center form. Null when closed. A record without an id is a new
+   * one, which is what the add button in the bar opens.
+   */
+  readonly datacenterSheet = signal<Partial<DatacenterInfo> | null>(null);
+
+  /** Open the data center form on a blank one. */
+  newDatacenter(): void {
+    this.datacenterSheet.set({
+      id: '',
+      name: '',
+      fullName: '',
+      city: '',
+      country: '',
+      address: '',
+      tier: 3,
+      established: new Date().getFullYear(),
+      status: 'operational',
+      floorSqm: 0,
+    });
+  }
+
+  /** Open the data center form on one that exists. */
+  editDatacenter(dc: DatacenterInfo): void {
+    this.datacenterSheet.set({ ...dc });
+  }
+
+  closeDatacenter(): void {
+    this.datacenterSheet.set(null);
+  }
+
+  /** The rack form. Null when closed. */
+  readonly rackSheet = signal<(Partial<Rack> & { rowId?: string }) | null>(null);
+
+  /** Open the rack form on a blank one. The data center you were looking at
+   *  comes along when there is one; the form asks for it either way. */
+  newRack(dcId = ''): void {
+    this.rackSheet.set({ id: '', name: '', dcId, rowId: '', totalU: 42, devices: [] });
+  }
+
+  /** Open the rack form on one that exists. */
+  editRack(rack: Partial<Rack> & { rowId?: string }): void {
+    this.rackSheet.set({ ...rack });
+  }
+
+  closeRack(): void {
+    this.rackSheet.set(null);
+  }
+
+  /** The task form. Null when closed. */
+  readonly taskSheet = signal<Partial<TaskData> | null>(null);
+
+  /** Open the task form on a blank task. */
+  newTask(): void {
+    this.taskSheet.set({ id: '', title: '', status: 'To do', priority: 'None', tags: [] });
+  }
+
+  /** Open the task form on one that exists. */
+  editTask(task: TaskData): void {
+    this.taskSheet.set({ ...task });
+  }
+
+  closeTask(): void {
+    this.taskSheet.set(null);
+  }
+
+  /** The asset form. Null when closed. */
+  readonly assetSheet = signal<Partial<Asset> | null>(null);
+
+  /** Open the asset form on a blank asset. */
+  newAsset(): void {
+    this.assetSheet.set({
+      id: '',
+      deviceCatalogId: '',
+      assetTag: '',
+      status: 'available',
+      notes: '',
+    });
+  }
+
+  /** Open the asset form on one that exists. */
+  editAsset(asset: Asset): void {
+    this.assetSheet.set({ ...asset });
+  }
+
+  closeAsset(): void {
+    this.assetSheet.set(null);
+    this.cableSheet.set(null);
+  }
+
+  /** The cable form. Null when closed. */
+  readonly cableSheet = signal<Partial<Cable> | null>(null);
+
+  /** Open the cable form on a blank cable. The data center you were looking at
+   *  comes along when there is one; the form asks for it either way. */
+  newCable(dcId = ''): void {
+    this.cableSheet.set({ dcId, status: 'connected' });
+  }
+
+  /** Open the cable form on one that exists. */
+  editCable(cable: Cable): void {
+    this.cableSheet.set({ ...cable });
+  }
+
+  closeCable(): void {
+    this.cableSheet.set(null);
+  }
+
   closeAll(): void {
     this.productSheet.set(null);
+    this.datacenterSheet.set(null);
+    this.rackSheet.set(null);
+    this.taskSheet.set(null);
+    this.assetSheet.set(null);
+    this.cableSheet.set(null);
   }
 }
