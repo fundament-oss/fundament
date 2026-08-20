@@ -17,9 +17,25 @@ export default class TaskAttentionService {
 
   private readonly count = signal(0);
 
+  /** Every tag in use, so a form can offer the words already in the wild
+   *  instead of asking everyone to type them again the same way. */
+  private readonly allTags = signal<string[]>([]);
+
   private pending = false;
 
   readonly todayCount = computed(() => this.count());
+
+  readonly tags = computed(() => this.allTags());
+
+  /** Bumped whenever a task is made or changed somewhere else than the page
+   *  showing the list, so that page can read the list again. */
+  readonly changed = signal(0);
+
+  /** Say that a task changed: the badge counts again and the list follows. */
+  markChanged(): void {
+    this.changed.update((n) => n + 1);
+    this.refresh();
+  }
 
   refresh(): void {
     if (this.pending) return;
@@ -28,6 +44,7 @@ export default class TaskAttentionService {
     firstValueFrom(this.taskApi.listTasks())
       .then((res) => {
         const tasks = res.tasks.map((t) => TaskApiService.mapTask(t));
+        this.allTags.set([...new Set(tasks.flatMap((task) => task.tags))].sort());
         this.count.set(
           tasks.filter(
             (task) =>

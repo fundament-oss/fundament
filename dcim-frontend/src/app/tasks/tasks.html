@@ -253,7 +253,7 @@
                      a cycle cannot, so the label and the tooltip say it instead.
                      Blocked is not in the round: it needs a reason, which is a text
                      field and so a trip to the sheet. -->
-                <nldd-list-item-action
+                <nldd-list-item-segment
                   button
                   [attr.accessible-label]="task.status + '. Mark as ' + nextStatus(task.status)"
                   (click)="setStatus(task, nextStatus(task.status))"
@@ -268,10 +268,10 @@
                       [attr.icon]="taskStateIcon(task)"
                     ></nldd-icon-cell>
                   </nldd-tooltip>
-                </nldd-list-item-action>
+                </nldd-list-item-segment>
                 <!-- No spacer between the two: a segmented action carries its own
                      inline padding, so one here would set the gap twice. -->
-                <nldd-list-item-action
+                <nldd-list-item-segment
                   button
                   width="full"
                   [attr.accessible-label]="'Open ' + task.title"
@@ -281,7 +281,7 @@
                     [ngTemplateOutlet]="taskCells"
                     [ngTemplateOutletContext]="{ $implicit: task }"
                   ></ng-container>
-                </nldd-list-item-action>
+                </nldd-list-item-segment>
               </nldd-list-item>
             }
           }
@@ -430,7 +430,7 @@
                         [attr.text]="task.priority"
                       ></nldd-tag>
                     }
-                    @for (tag of task.tags; track tag) {
+                    @for (tag of taskTagList(task); track tag) {
                       <nldd-tag size="sm" color="neutral" [attr.text]="tag"></nldd-tag>
                     }
                   </div>
@@ -507,16 +507,23 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #detailSheetEl accessible-label="Task details" placement="right">
   <nldd-page sticky-header>
+    <!-- The bar carries the title only once the heading below has scrolled
+         under it, so the name of the task is never off screen. -->
     <nldd-top-title-bar
       slot="header"
       [attr.text]="detailTask()?.title ?? ''"
       dismiss-text="Close"
+      collapse-anchor="task-detail-title"
       (dismiss)="closeDetail()"
     ></nldd-top-title-bar>
 
     <!-- Sheet body -->
     <nldd-simple-section>
       @if (detailTask(); as task) {
+        <nldd-title id="task-detail-title" size="2">
+          <h1>{{ task.title }}</h1>
+        </nldd-title>
+        <nldd-spacer size="12"></nldd-spacer>
         <!-- What you can do with this task, directly under its title: the same
              order as the page itself, where the actions sit under the heading
              and the content follows. -->
@@ -574,14 +581,6 @@
                one task. -->
         <nldd-list accessible-label="Task properties">
           <nldd-list-item>
-            <nldd-text-cell text="ID"></nldd-text-cell>
-            <nldd-text-cell
-              width="fit-content"
-              horizontal-alignment="right"
-              [attr.text]="taskDisplayId(task)"
-            ></nldd-text-cell>
-          </nldd-list-item>
-          <nldd-list-item>
             <nldd-text-cell text="Assignee"></nldd-text-cell>
             @if (getTech(task.assignee); as tech) {
               <nldd-cell width="fit-content">
@@ -625,13 +624,29 @@
               [attr.text]="task.due ? formatDate(task.due) : 'None'"
             ></nldd-text-cell>
           </nldd-list-item>
+          <!-- Where it is and what it is about, in one row: a data center, a
+               rack and a word are all tags on the task, and the location is
+               shown as the tags it is made of. -->
           <nldd-list-item>
-            <nldd-text-cell text="Location"></nldd-text-cell>
-            <nldd-text-cell
-              width="fit-content"
-              horizontal-alignment="right"
-              [attr.text]="task.location"
-            ></nldd-text-cell>
+            <nldd-text-cell text="Tags"></nldd-text-cell>
+            @if (taskTagList(task).length) {
+              <nldd-cell width="full" horizontal-alignment="right">
+                <!-- A wrapping row: a task can carry more tags than fit on one
+                     line, and they keep their spacing when they fall over. -->
+                <div class="flex flex-wrap justify-end gap-1.5">
+                  @for (tag of taskTagList(task); track tag) {
+                    <nldd-tag color="neutral" [attr.text]="tag"></nldd-tag>
+                  }
+                </div>
+              </nldd-cell>
+            } @else {
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                text="None"
+              ></nldd-text-cell>
+            }
           </nldd-list-item>
           <nldd-list-item>
             <nldd-text-cell text="Created"></nldd-text-cell>
@@ -639,6 +654,14 @@
               width="fit-content"
               horizontal-alignment="right"
               [attr.text]="formatDate(task.created)"
+            ></nldd-text-cell>
+          </nldd-list-item>
+          <nldd-list-item>
+            <nldd-text-cell text="ID"></nldd-text-cell>
+            <nldd-text-cell
+              width="fit-content"
+              horizontal-alignment="right"
+              [attr.text]="taskDisplayId(task)"
             ></nldd-text-cell>
           </nldd-list-item>
         </nldd-list>
@@ -772,206 +795,6 @@
 <!-- ══════════════════════════════════════════════════════════════
      ADD / EDIT TASK SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #editModalEl accessible-label="Add / edit task" placement="right">
-  <nldd-page sticky-header sticky-footer>
-    <nldd-top-title-bar
-      slot="header"
-      [attr.text]="editModalTitle()"
-      dismiss-text="Cancel"
-      (dismiss)="closeEditModal()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      <div class="space-y-4">
-        <nldd-form-field label="Title">
-          <nldd-text-field
-            #editTitleInput
-            id="editTitle"
-            placeholder="E.g. Replace broken harddisk"
-            accessible-label="Title"
-            class="w-full"
-            error-message="editTitle-error"
-            [attr.invalid]="editTitleInvalid() ? '' : null"
-            [value]="editFormTitle()"
-            (change)="editFormTitle.set($any($event).detail?.value ?? '')"
-            (input)="editFormTitle.set($any($event.target).value)"
-            (keydown.enter)="saveTask()"
-            (focusout)="editTitleTouched.set(true)"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="editTitle-error"
-            >Title is required.</nldd-form-field-error-text
-          >
-        </nldd-form-field>
-        <div>
-          <label
-            class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
-            for="editDescription"
-            >Description</label
-          >
-          <nldd-multi-line-text-field
-            id="editDescription"
-            rows="3"
-            placeholder="Describe the task…"
-            [value]="editFormDescription()"
-            (input)="editFormDescription.set($any($event).target.value)"
-          ></nldd-multi-line-text-field>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label
-              class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
-              for="editStatus"
-              >Status</label
-            >
-            <nldd-dropdown>
-              <select id="editStatus" (change)="editFormStatus.set($any($event).target.value)">
-                <option [selected]="editFormStatus() === 'To do'">To do</option>
-                <option [selected]="editFormStatus() === 'Doing'">Doing</option>
-                <option [selected]="editFormStatus() === 'Done'">Done</option>
-              </select>
-            </nldd-dropdown>
-          </div>
-          <div>
-            <label
-              class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
-              for="editPriority"
-              >Priority</label
-            >
-            <nldd-dropdown>
-              <select id="editPriority" (change)="editFormPriority.set($any($event).target.value)">
-                <option [selected]="editFormPriority() === 'Urgent'">Urgent</option>
-                <option [selected]="editFormPriority() === 'High'">High</option>
-                <option [selected]="editFormPriority() === 'Medium'">Medium</option>
-                <option [selected]="editFormPriority() === 'Low'">Low</option>
-                <option [selected]="editFormPriority() === 'None'">None</option>
-              </select>
-            </nldd-dropdown>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label
-              class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
-              for="editTags"
-              >Tags</label
-            >
-            <!-- A token field rather than a dropdown: a task carries more than
-                 one tag, and the ones in use are offered as you type. -->
-            <nldd-token-field
-              id="editTags"
-              accessible-label="Tags"
-              [attr.value]="editFormTags().join(',')"
-              (change)="editFormTags.set($any($event).detail.tokens ?? [])"
-            ></nldd-token-field>
-          </div>
-          <div>
-            <label
-              class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
-              for="editDue"
-              >Due date</label
-            >
-            <nldd-text-field
-              type="date"
-              input-id="editDue"
-              class="w-full"
-              [value]="editFormDue()"
-              (change)="editFormDue.set($any($event).detail?.value ?? '')"
-              (keydown.enter)="saveTask()"
-            ></nldd-text-field>
-          </div>
-        </div>
-        <div>
-          <label
-            class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
-            for="editLocation"
-            >Location</label
-          >
-          <nldd-text-field
-            id="editLocation"
-            placeholder="E.g. DC Amsterdam-West · Rack 123"
-            accessible-label="Location"
-            class="w-full"
-            [value]="editFormLocation()"
-            (change)="editFormLocation.set($any($event).detail?.value ?? '')"
-            (input)="editFormLocation.set($any($event.target).value)"
-            (keydown.enter)="saveTask()"
-          ></nldd-text-field>
-        </div>
-        <div>
-          <p
-            class="block text-xs font-medium text-slate-500 dark:text-gray-400 mb-1.5"
-            id="assigneeSelectorLabel"
-          >
-            Assignee
-          </p>
-          <div
-            role="group"
-            aria-labelledby="assigneeSelectorLabel"
-            class="max-h-48 overflow-y-auto"
-          >
-            <nldd-radio-button-group
-              name="assignee"
-              class="space-y-1.5"
-              (change)="
-                editFormAssignee.set($any($event).detail.value ? $any($event).detail.value : null)
-              "
-            >
-              <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- click delegates to the inner radio button, which remains keyboard-focusable via the radio group -->
-              <div
-                class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-800 p-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors"
-                (click)="editFormAssignee.set(null)"
-              >
-                <span [class]="unassignedAvatarClass('h-8 w-8 text-sm')" aria-hidden="true">
-                  <nldd-icon name="person" class="w-3 h-3"></nldd-icon>
-                </span>
-                <nldd-radio-button-field
-                  value=""
-                  label="Unassigned"
-                  class="grow"
-                  [attr.checked]="editFormAssignee() === null ? '' : null"
-                ></nldd-radio-button-field>
-              </div>
-              @for (tech of technicians(); track tech.id) {
-                <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- click delegates to the inner radio button, which remains keyboard-focusable via the radio group -->
-                <div
-                  class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-gray-800 p-2.5 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors"
-                  (click)="editFormAssignee.set(tech.id)"
-                >
-                  <span [class]="techInitialsClass(tech, 'h-8 w-8 text-sm')" aria-hidden="true">{{
-                    tech.initials
-                  }}</span>
-                  <nldd-radio-button-field
-                    [attr.value]="tech.id"
-                    [attr.label]="tech.name"
-                    class="grow"
-                    [attr.checked]="editFormAssignee() === tech.id ? '' : null"
-                  ></nldd-radio-button-field>
-                  <nldd-tag
-                    class="ml-auto"
-                    size="sm"
-                    [attr.color]="tech.available ? 'success' : 'neutral'"
-                    [attr.text]="tech.available ? 'Available' : 'Busy'"
-                  ></nldd-tag>
-                </div>
-              }
-            </nldd-radio-button-group>
-          </div>
-        </div>
-      </div>
-    </nldd-simple-section>
-    <div
-      slot="footer"
-      class="flex items-center border-t border-slate-100 dark:border-gray-800 px-6 py-4"
-    >
-      <nldd-button
-        variant="primary"
-        text="Save task"
-        size="sm"
-        width="full"
-        (click)="saveTask()"
-      ></nldd-button>
-    </div>
-  </nldd-page>
-</nldd-sheet>
 <!-- The filters are the menu of this section: what state a task is in, how urgent
      it is and what kind of work it is. Declared here because the counts are this
      page's data. -->
@@ -994,7 +817,7 @@
              says how far the work is and the view says whose move it is. -->
         <nldd-list-item
           [attr.href]="viewPath('inbox')"
-          [attr.selected]="isMenuSelection('inbox') ? '' : null"
+          [attr.current]="isMenuSelection('inbox') ? '' : null"
           (click)="goToView($event, 'inbox')"
         >
           <nldd-icon-cell icon="inbox" size="20"></nldd-icon-cell>
@@ -1009,7 +832,7 @@
         </nldd-list-item>
         <nldd-list-item
           [attr.href]="viewPath('today')"
-          [attr.selected]="isMenuSelection('today') ? '' : null"
+          [attr.current]="isMenuSelection('today') ? '' : null"
           (click)="goToView($event, 'today')"
         >
           <nldd-icon-cell icon="calendar-event" size="20"></nldd-icon-cell>
@@ -1025,7 +848,7 @@
         @for (status of kanbanColumns; track status) {
           <nldd-list-item
             [attr.href]="viewPath('status', status)"
-            [attr.selected]="isMenuSelection('status', status) ? '' : null"
+            [attr.current]="isMenuSelection('status', status) ? '' : null"
             (click)="goToView($event, 'status', status)"
           >
             <nldd-icon-cell [attr.icon]="statusIcon(status)" size="20"></nldd-icon-cell>
@@ -1046,7 +869,7 @@
           @if (status === 'To do') {
             <nldd-list-item
               [attr.href]="viewPath('waiting')"
-              [attr.selected]="isMenuSelection('waiting') ? '' : null"
+              [attr.current]="isMenuSelection('waiting') ? '' : null"
               (click)="goToView($event, 'waiting')"
             >
               <nldd-icon-cell icon="clock" size="20"></nldd-icon-cell>
@@ -1063,7 +886,7 @@
         }
         <nldd-list-item
           [attr.href]="viewPath('all')"
-          [attr.selected]="isMenuSelection('all') ? '' : null"
+          [attr.current]="isMenuSelection('all') ? '' : null"
           (click)="goToView($event, 'all')"
         >
           <nldd-icon-cell icon="all-tasks" size="20"></nldd-icon-cell>
@@ -1089,7 +912,7 @@
         @for (priority of menuPriorities; track priority) {
           <nldd-list-item
             [attr.href]="viewPath('priority', priority)"
-            [attr.selected]="isMenuSelection('priority', priority) ? '' : null"
+            [attr.current]="isMenuSelection('priority', priority) ? '' : null"
             (click)="goToView($event, 'priority', priority)"
           >
             <nldd-icon-cell [attr.icon]="priorityIcon(priority)" size="20"></nldd-icon-cell>
@@ -1111,46 +934,81 @@
         <h2>Tags</h2>
       </nldd-title>
       <nldd-spacer size="8"></nldd-spacer>
-      <nldd-list type="navigation" dividers="on-touch" accessible-label="Tags">
-        <!-- The halls first: where the work is, is the thing people narrow by
-             before what kind of work it is. Same tag icon as the rest, because
-             here it is a tag like any other. -->
-        @for (site of taskSites(); track site) {
-          <nldd-list-item
-            [attr.href]="viewPath('tag', site)"
-            [attr.selected]="isMenuSelection('tag', site) ? '' : null"
-            (click)="goToView($event, 'tag', site)"
-          >
-            <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-text-cell [attr.text]="site"></nldd-text-cell>
-            <nldd-text-cell
-              width="fit-content"
-              horizontal-alignment="right"
-              color="secondary"
-              [attr.text]="tagCounts()[site]"
-            ></nldd-text-cell>
-          </nldd-list-item>
-        }
-        @for (tag of taskTags(); track tag) {
-          <nldd-list-item
-            [attr.href]="viewPath('tag', tag)"
-            [attr.selected]="isMenuSelection('tag', tag) ? '' : null"
-            (click)="goToView($event, 'tag', tag)"
-          >
-            <!-- One icon for every tag: which tag it is, is what the word says.
-                 A picture per tag would only be a second name for the same
-                 thing, and a wrong one as soon as somebody adds a tag. -->
-            <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
-            <nldd-text-cell [attr.text]="tag"></nldd-text-cell>
-            <nldd-text-cell
-              width="fit-content"
-              horizontal-alignment="right"
-              color="secondary"
-              [attr.text]="tagCounts()[tag]"
-            ></nldd-text-cell>
-          </nldd-list-item>
+      <!-- A tree, because a tag can be a path: a rack hangs under the data
+           center it stands in. A branch is cut in two, a chevron that folds and
+           a label that filters, because it has two things to do. A row with
+           nothing to fold is the control itself, so arrowing to it and pressing
+           Enter opens it without a detour through a segment. -->
+      <nldd-list type="tree" dividers="on-touch" accessible-label="Tags">
+        @for (node of tagTree(); track node.path) {
+          @if (node.children.length) {
+            <!-- No `current` on the row: the label segment below carries it, and
+                 the row paints itself from that. -->
+            <nldd-list-item [attr.expanded]="isTagExpanded(node.path) ? '' : null">
+              <nldd-list-item-segment
+                button
+                disclosure
+                [attr.accessible-label]="'Fold ' + node.name + ' open or shut'"
+                (click)="toggleTag($event, node.path)"
+              >
+                <nldd-icon-cell icon="chevron-right" size="20"></nldd-icon-cell>
+              </nldd-list-item-segment>
+              <nldd-list-item-segment
+                width="full"
+                [attr.href]="viewPath('tag', node.path)"
+                [attr.current]="isMenuSelection('tag', node.path) ? '' : null"
+                (click)="goToView($event, 'tag', node.path)"
+              >
+                <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
+                <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                <nldd-text-cell width="full" [attr.text]="node.name"></nldd-text-cell>
+                <nldd-text-cell
+                  width="fit-content"
+                  horizontal-alignment="right"
+                  color="secondary"
+                  [attr.text]="node.count"
+                ></nldd-text-cell>
+              </nldd-list-item-segment>
+              @for (child of node.children; track child.path) {
+                <!-- The indent marks the level: one spacer for the chevron this
+                     row does not have, one for the step in. -->
+                <nldd-list-item
+                  slot="children"
+                  [attr.href]="viewPath('tag', child.path)"
+                  [attr.current]="isMenuSelection('tag', child.path) ? '' : null"
+                  (click)="goToView($event, 'tag', child.path)"
+                >
+                  <nldd-spacer-cell size="16"></nldd-spacer-cell>
+                  <nldd-spacer-cell size="44"></nldd-spacer-cell>
+                  <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
+                  <nldd-spacer-cell size="8"></nldd-spacer-cell>
+                  <nldd-text-cell width="full" [attr.text]="child.name"></nldd-text-cell>
+                  <nldd-text-cell
+                    width="fit-content"
+                    horizontal-alignment="right"
+                    color="secondary"
+                    [attr.text]="child.count"
+                  ></nldd-text-cell>
+                </nldd-list-item>
+              }
+            </nldd-list-item>
+          } @else {
+            <nldd-list-item
+              [attr.href]="viewPath('tag', node.path)"
+              [attr.current]="isMenuSelection('tag', node.path) ? '' : null"
+              (click)="goToView($event, 'tag', node.path)"
+            >
+              <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
+              <nldd-spacer-cell size="8"></nldd-spacer-cell>
+              <nldd-text-cell width="full" [attr.text]="node.name"></nldd-text-cell>
+              <nldd-text-cell
+                width="fit-content"
+                horizontal-alignment="right"
+                color="secondary"
+                [attr.text]="node.count"
+              ></nldd-text-cell>
+            </nldd-list-item>
+          }
         }
       </nldd-list>
     </nldd-simple-section>

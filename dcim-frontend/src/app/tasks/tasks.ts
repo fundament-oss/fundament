@@ -17,7 +17,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
-import { firstValueFrom, Observable } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import {
   CdkDropList,
@@ -27,10 +27,8 @@ import {
   CdkDragDrop,
 } from '@angular/cdk/drag-drop';
 import type { Note as ProtoNote } from '../../generated/v1/note_pb';
-import DropdownSyncDirective from '../shared/dropdown-sync.directive';
 import TaskApiService, {
   TaskData,
-  TaskInput,
   TaskPatch,
   TaskPriorityLabel,
   TaskStatusLabel,
@@ -42,6 +40,11 @@ import ToastService from '../shared/toast.service';
 import connectErrorMessage from '../../connect/error';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import { TASKS_PATH, viewSlug } from './task-views';
+import openOnCreateRequest from '../shell/create-request';
+import OverlayService from '../shell/overlay.service';
+import TaskAttentionService from './task-attention.service';
+import DatacenterListService from '../datacenters/datacenter-list.service';
+import { buildTagTree, tagMatches, taskTags } from './task-tags';
 
 type Technician = RosterUser;
 
@@ -91,7 +94,6 @@ interface NlddSheet extends HTMLElement {
  */
 type MenuKind = 'all' | 'inbox' | 'today' | 'waiting' | 'status' | 'priority' | 'tag';
 
-
 // Ceiling on in-flight requests for the bulk actions. Select-all over a large
 // board would otherwise put one request per task on the wire at once.
 const BULK_CONCURRENCY = 6;
@@ -100,14 +102,7 @@ const BULK_CONCURRENCY = 6;
   selector: 'app-tasks',
   templateUrl: './tasks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    NgTemplateOutlet,
-    DropdownSyncDirective,
-    CdkDropListGroup,
-    CdkDropList,
-    CdkDrag,
-    CdkDragPlaceholder,
-  ],
+  imports: [NgTemplateOutlet, CdkDropListGroup, CdkDropList, CdkDrag, CdkDragPlaceholder],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {
     // No styling of its own. The page inside paints the surface and owns the
@@ -127,6 +122,17 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   }
 
   private readonly taskApi = inject(TaskApiService);
+
+  /** The task form lives in the shell, so it can be opened from anywhere. */
+  private readonly overlays = inject(OverlayService);
+
+  /** Says when a task changed somewhere else than this page. */
+  private readonly attention = inject(TaskAttentionService);
+
+  /** The data centers, so the menu can list them as the fixed tags they are. */
+  private readonly datacenterList = inject(DatacenterListService);
+
+  private readonly datacenters = this.datacenterList.datacenters;
 
   private readonly userApi = inject(UserApiService);
 
@@ -158,6 +164,17 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   readonly currentUser = signal<Technician | null>(null);
 
   constructor() {
+    // The halls are fixed entries in the tag menu, so this page needs them
+    // whether or not a task mentions one.
+    this.datacenterList.load();
+    // A task made from the add button in the bar is saved somewhere else, so
+    // the list reads itself again when the shell says something changed.
+    effect(() => {
+      this.attention.changed();
+      untracked(() => this.loadTasks());
+    });
+    // The add menu in the bar asks for this form through the address.
+    openOnCreateRequest(() => this.openEditModal(null));
     // A selection survives no further than the view it was made in. Half of it
     // would be off screen after a move to another view, and the bulk actions
     // act on the whole set: deleting six tasks of which you can see two is the
@@ -485,24 +502,17 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return map[status];
   };
 
-  /** Stuck on something that is not a person, and not finished. */
-  private readonly isBlocked = (task: TaskData): boolean =>
-    task.status !== 'Done' && task.blockedReason !== null;
-
   /**
    * The icon in front of a row says how far the work has got, and nothing else.
-   * A task waiting on somebody is a to-do that happens to be theirs, and one
-   * they have started is under way whoever is doing it, so both keep the icon of
-   * the state they are in. Who is waited on is what the line under the title is
-   * for; saying it twice, in two channels, is how the two started to disagree.
-   *
-   * The exception is a task stuck on something that is not a person. There the
-   * state it is in says nothing useful — it is not moving at all — so it gets
-   * the barred circle instead. In the light weight, because a row draws these
-   * at 32.
+   * A task has three states — to do, doing, done — and being stuck is not a
+   * fourth: a blocked task is still to do or still under way, it just is not
+   * moving. So it keeps the icon of the state it is in, and the reason it is
+   * stuck is the line under the title, where the words are. A fourth icon read
+   * as a fourth state and made the round of the tooltip ("Mark as …") say
+   * something the icon contradicted. In the light weight, because a row draws
+   * these at 32.
    */
-  readonly taskStateIcon = (task: TaskData): string =>
-    this.isBlocked(task) ? 'blocked-light' : `${this.statusIcon(task.status)}-light`;
+  readonly taskStateIcon = (task: TaskData): string => `${this.statusIcon(task.status)}-light`;
 
   /**
    * The state line as a row shows it: nothing at all when the line would say no
@@ -524,31 +534,50 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * overline before, which said the same thing in a second shape: a rack is a
    * property of the task like every other tag.
    */
-  readonly tagCloud = (task: TaskData): string[] => {
-    const place = task.location
-      .split('·')
-      .map((part) => part.trim())
-      .filter(Boolean);
-    return [...place, ...task.tags];
-  };
+  readonly tagCloud = (task: TaskData): string[] => taskTags(task);
 
-  /** The data center a task happens in: the first half of its location, which
-   *  reads as "AMS1 · R02-2". Empty for work that is not tied to a hall. */
-  readonly taskSite = (task: TaskData): string =>
-    task.location.split('·')[0]?.trim() ?? '';
+  /** Everything a task is filed under, as one list of paths. See task-tags.ts. */
+  readonly taskTagList = (task: TaskData): string[] => taskTags(task);
 
-  /** The data centers with work in them, listed above the free tags. A hall is
-   *  a tag like any other on a task, and the one people filter by first. */
-  readonly taskSites = computed(() =>
-    [...new Set(this.tasks().map((t) => this.taskSite(t)).filter(Boolean))].sort((a, b) =>
-      a.localeCompare(b),
+  /**
+   * The tag menu, as the tree the paths describe: a data center with its racks
+   * under it, then the free tags. The data centers are always there, whether
+   * or not there is work in them.
+   */
+  /** Which branches of the tag menu you folded open. Shut is the default: the
+   *  menu is a list of places and words, and every rack at once buries the
+   *  words underneath them. */
+  private readonly expandedTags = signal<ReadonlySet<string>>(new Set());
+
+  /** Open when you opened it, and open when what you are filtering on lives
+   *  inside it: a view you cannot see in the menu reads as no view at all. */
+  isTagExpanded(path: string): boolean {
+    if (this.expandedTags().has(path)) return true;
+    const selection = this.menuSelection();
+    return (
+      this.hasSelection() &&
+      selection.kind === 'tag' &&
+      String(selection.value).startsWith(`${path}/`)
+    );
+  }
+
+  /** Folds a branch open or shut. Separate from picking it: the chevron is its
+   *  own control, so opening a hall does not also filter on it. */
+  toggleTag(event: Event, path: string): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.expandedTags.update((paths) => {
+      const next = new Set(paths);
+      if (!next.delete(path)) next.add(path);
+      return next;
+    });
+  }
+
+  readonly tagTree = computed(() =>
+    buildTagTree(
+      this.tasks().map((task) => taskTags(task)),
+      this.datacenters().map((dc) => dc.name),
     ),
-  );
-
-  /** The tags in use, in the order the menu shows them. Derived rather than
-   *  fixed, so a tag somebody adds turns up here on its own. */
-  readonly taskTags = computed(() =>
-    [...new Set(this.tasks().flatMap((t) => t.tags))].sort((a, b) => a.localeCompare(b)),
   );
 
   private readonly dateLocale = 'en-US';
@@ -710,28 +739,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   detailTaskId = signal<string | null>(null);
 
   // null means "creating a new task"; a string is the id being edited.
-  editingTaskId = signal<string | null>(null);
-
-  editFormTitle = signal('');
-
-  editFormDescription = signal('');
-
-  editFormStatus = signal<TaskStatusLabel>('To do');
-
-  editFormPriority = signal<TaskPriorityLabel>('Medium');
-
-  editFormTags = signal<string[]>([]);
-
-  editFormDue = signal('');
-
-  editFormLocation = signal('');
-
-  editFormAssignee = signal<string | null>(null);
-
-  editTitleTouched = signal(false);
-
-  editTitleInvalid = computed(() => this.editTitleTouched() && !this.editFormTitle().trim());
-
   newNoteText = signal('');
 
   /** The tasks that belong in this view right now. */
@@ -744,7 +751,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return this.tasks().filter((t) => {
       if (st !== 'all' && !this.inStatusView(t, st as TaskStatusLabel)) return false;
       if (pr !== 'all' && t.priority !== pr) return false;
-      if (cat !== 'all' && !t.tags.includes(cat) && this.taskSite(t) !== cat) return false;
+      if (cat !== 'all' && !taskTags(t).some((tag) => tagMatches(tag, cat))) return false;
       if (view === 'inbox' && !this.isInbox(t)) return false;
       if (view === 'today' && !this.isToday(t)) return false;
       if (view === 'waiting' && !this.isWaiting(t)) return false;
@@ -806,17 +813,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     ),
   );
 
-  tagCounts = computed(() =>
-    this.tasks().reduce<Record<string, number>>((acc, t) => {
-      const site = this.taskSite(t);
-      if (site) acc[site] = (acc[site] ?? 0) + 1;
-      t.tags.forEach((tag) => {
-        acc[tag] = (acc[tag] ?? 0) + 1;
-      });
-      return acc;
-    }, {}),
-  );
-
   // Drives the header checkbox. Mirrors toggleSelectAll's scope (the filtered
   // rows) so the control reflects what it actually selects.
   allFilteredSelected = computed(() => {
@@ -854,15 +850,9 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return this.tasks().find((t) => t.id === id) ?? null;
   });
 
-  editModalTitle = computed(() => (this.editingTaskId() ? 'Edit task' : 'New task'));
-
   readonly kanbanSheetEl = viewChild<ElementRef<NlddSheet>>('kanbanSheetEl');
 
   readonly detailSheetEl = viewChild<ElementRef<NlddSheet>>('detailSheetEl');
-
-  readonly editModalEl = viewChild<ElementRef<NlddSheet>>('editModalEl');
-
-  readonly editTitleInput = viewChild<ElementRef<HTMLElement>>('editTitleInput');
 
   readonly deleteDialogEl = viewChild<ElementRef<NlddSheet>>('deleteDialogEl');
 
@@ -1146,75 +1136,12 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return rejected.length;
   }
 
+  /** Both routes into the form open the one the shell holds: it outlives this
+   *  page, and the add button in the bar opens the same one. */
   openEditModal(taskId: string | null): void {
-    this.editingTaskId.set(taskId);
     const task = taskId !== null ? this.tasks().find((t) => t.id === taskId) : null;
-    this.editFormTitle.set(task?.title ?? '');
-    this.editFormDescription.set(task?.description ?? '');
-    this.editFormStatus.set(task?.status ?? 'To do');
-    this.editFormPriority.set(task?.priority ?? 'Medium');
-    this.editFormTags.set(task ? [...task.tags] : []);
-    this.editFormDue.set(task?.due ?? '');
-    this.editFormLocation.set(task?.location ?? '');
-    this.editFormAssignee.set(task?.assignee ?? null);
-    this.editTitleTouched.set(false);
-    this.editModalEl()?.nativeElement.show();
-    // setTimeout ensures the sheet and Lit's async shadow DOM render have
-    // completed before calling focus(), since Lit renders on microtasks.
-    setTimeout(() => this.editTitleInput()?.nativeElement.focus());
-  }
-
-  closeEditModal(): void {
-    this.editModalEl()?.nativeElement.hide();
-    this.editingTaskId.set(null);
-  }
-
-  saveTask(): void {
-    this.editTitleTouched.set(true);
-    const title = this.editFormTitle().trim();
-    if (!title) return;
-
-    const input: TaskInput = {
-      title,
-      description: this.editFormDescription().trim(),
-      status: this.editFormStatus(),
-      priority: this.editFormPriority(),
-      tags: this.editFormTags(),
-      due: this.editFormDue(),
-      location: this.editFormLocation().trim(),
-      assignee: this.editFormAssignee(),
-    };
-
-    const editingId = this.editingTaskId();
-
-    let request: Observable<unknown>;
-    if (editingId === null) {
-      request = this.taskApi.createTask(input);
-    } else {
-      // Only the fields this form actually changed are sent, for the same
-      // reason the kanban drop and the bulk actions send a single key: posting
-      // the whole form writes back every column as this board last saw it, so
-      // an edit here would silently revert a status another admin changed
-      // since the sheet was opened.
-      const current = this.tasks().find((t) => t.id === editingId);
-      const patch = current ? TaskApiService.changedFields(current, input) : input;
-      if (Object.keys(patch).length === 0) {
-        this.closeEditModal();
-        return;
-      }
-      request = this.taskApi.updateTask(editingId, patch);
-    }
-
-    firstValueFrom(request)
-      .then(() => {
-        this.loadTasks();
-        this.closeEditModal();
-      })
-      .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-        this.toast.error('Could not save task');
-      });
+    if (task) this.overlays.editTask(task);
+    else this.overlays.newTask();
   }
 
   addNote(): void {
@@ -1267,12 +1194,12 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return !this.rosterLoaded() && task.assignee !== null;
   }
 
-  // Goes through the same closers as the buttons: hiding the sheets without
-  // clearing detailTaskId/editingTaskId would leave a "closed" task still
-  // addressable by addNote() and detailTask().
+  // Goes through the same closer as the button: hiding the sheet without
+  // clearing detailTaskId would leave a "closed" task still addressable by
+  // addNote() and detailTask(). The task form closes itself, in the shell.
   onEscape(): void {
     this.closeDetail();
-    this.closeEditModal();
+    this.overlays.closeTask();
   }
 
   statusTagColor(status: string): string {
