@@ -13,8 +13,9 @@
         <h1>{{ rack.name }}</h1>
         <span slot="subtitle">
           {{ rackStats().usedU }}/{{ rackStats().totalU }}U ·
-          {{ formatPowerKw(rackStats().totalPowerW) }}kW ·
-          {{ rackStats().deviceCount }} device{{ rackStats().deviceCount === 1 ? '' : 's' }}
+          {{ formatPowerKw(rackStats().totalPowerW) }}kW · {{ rackStats().deviceCount }} device{{
+            rackStats().deviceCount === 1 ? '' : 's'
+          }}
         </span>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
@@ -56,20 +57,16 @@
               <nldd-icon-cell [attr.icon]="deviceTypeIcon(device)" size="20"></nldd-icon-cell>
               <nldd-spacer-cell size="6"></nldd-spacer-cell>
               <nldd-text-cell width="full" min-width="140px"
-                >{{ device.name }}@if (deviceTypeText(device); as category) {&ngsp;<nldd-tag
-                    size="sm"
-                    color="neutral"
-                    [attr.text]="category"
-                  ></nldd-tag>
-                }</nldd-text-cell
-              >
+                >{{ device.name }}
+                @if (deviceTypeText(device); as category) {
+                  &ngsp;<nldd-tag size="sm" color="neutral" [attr.text]="category"></nldd-tag>
+                }
+              </nldd-text-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-cell width="fit-content">
                 <nldd-text>
-                  <nldd-badge
-                    decorative
-                    [attr.color]="deviceStateColor(device)"
-                  ></nldd-badge>&ngsp;{{ deviceStateText(device) }}
+                  <nldd-badge decorative [attr.color]="deviceStateColor(device)"></nldd-badge
+                  >&ngsp;{{ deviceStateText(device) }}
                 </nldd-text>
               </nldd-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -149,11 +146,7 @@
           <nldd-text color="secondary">{{ notes.description }}</nldd-text>
           <nldd-spacer size="12"></nldd-spacer>
         }
-        <nldd-list
-          variant="box-tinted"
-          accessible-label="Notes"
-          empty-text="No notes yet"
-        >
+        <nldd-list variant="box-tinted" accessible-label="Notes" empty-text="No notes yet">
           @for (comment of notes.comments; track $index) {
             <nldd-list-item>
               <nldd-cell width="fit-content" vertical-alignment="top">
@@ -262,128 +255,6 @@
 <!-- ══════════════════════════════════════════════════════════════
      RACK EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #rackSheet accessible-label="Rack details" placement="right">
-  <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      [attr.text]="editRack()?.id ? 'Edit rack' : 'Add rack'"
-      dismiss-text="Cancel"
-      (dismiss)="closeRackForm()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      @if (rackErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ rackErrorMessage() }}
-          </p>
-        </div>
-      }
-      @if (editRack(); as rack) {
-        <nldd-form>
-          <!-- Where it stands, before what it is called. The API cannot move a
-               rack to another row, so an existing one does not ask. -->
-          @if (!rack.id) {
-            <!-- Where it stands, widest first: the data center you are looking
-                 at is the one it lands in, and picking another swaps the rows
-                 you can choose from. -->
-            <nldd-form-field label="Location">
-              <nldd-toggle-button-group type="radio" accessible-label="Location">
-                @for (dc of mutableDcs(); track dc.id) {
-                  <nldd-toggle-button
-                    [attr.value]="dc.id"
-                    [attr.text]="dc.name"
-                    [attr.selected]="formDcId() === dc.id ? '' : null"
-                    (change)="onFormDcToggle(dc.id, $any($event).detail.selected)"
-                  ></nldd-toggle-button>
-                }
-              </nldd-toggle-button-group>
-            </nldd-form-field>
-            <nldd-form-field label="Room">
-              <nldd-toggle-button-group type="radio" accessible-label="Room">
-                @for (room of formRooms(); track room.id) {
-                  <nldd-toggle-button
-                    [attr.value]="room.id"
-                    [attr.text]="room.name"
-                    [attr.selected]="formRoomId() === room.id ? '' : null"
-                    (change)="onFormRoomToggle(room.id, $any($event).detail.selected)"
-                  ></nldd-toggle-button>
-                }
-              </nldd-toggle-button-group>
-              @if (formRooms().length === 0) {
-                <nldd-form-field-error-text id="error-no-rooms">
-                  No rooms in this data center. Create one on the Data centers page first.
-                </nldd-form-field-error-text>
-              }
-            </nldd-form-field>
-            <nldd-form-field label="Rack row">
-              <nldd-toggle-button-group type="radio" accessible-label="Rack row">
-                @for (row of rowsForFormRoom(); track row.id) {
-                  <nldd-toggle-button
-                    [attr.value]="row.id"
-                    [attr.text]="row.name"
-                    [attr.selected]="formRowId() === row.id ? '' : null"
-                    (change)="onFormRowToggle(row.id, $any($event).detail.selected)"
-                  ></nldd-toggle-button>
-                }
-              </nldd-toggle-button-group>
-              @if (isFieldInvalid('row_id')) {
-                <nldd-form-field-error-text id="error-rack-row-id">
-                  {{ fieldError('row_id') }}
-                </nldd-form-field-error-text>
-              }
-              @if (formRooms().length > 0 && rowsForFormRoom().length === 0) {
-                <nldd-form-field-error-text id="error-no-rows">
-                  No rack rows in this room. Create one on the Data centers page first.
-                </nldd-form-field-error-text>
-              }
-            </nldd-form-field>
-          }
-          <!-- No autofocus: the name is the third field, and jumping there
-               skips the two above it. -->
-          <nldd-form-field label="Rack name">
-            <nldd-text-field
-              #fRackName
-              [attr.value]="rack.name ?? ''"
-              [attr.invalid]="isFieldInvalid('name') ? '' : null"
-              error-message="error-rack-name"
-              (keydown.enter)="saveRack()"
-            ></nldd-text-field>
-            <nldd-form-field-error-text id="error-rack-name">
-              {{ fieldError('name') }}
-            </nldd-form-field-error-text>
-          </nldd-form-field>
-          <!-- Spin buttons here, and none on the rack unit of a device: this is
-               a value you nudge from a default (42U, 45U, 47U) between bounds
-               the buttons also mark, where a rack unit is one you name. -->
-          <nldd-form-field label="Height (U)">
-            <nldd-number-field
-              #fRackTotalU
-              [attr.value]="rack.totalU ?? 42"
-              min="1"
-              max="52"
-              full-width
-              [attr.invalid]="isFieldInvalid('total_units') ? '' : null"
-              error-message="error-rack-total-u"
-              (keydown.enter)="saveRack()"
-            ></nldd-number-field>
-            <nldd-form-field-error-text id="error-rack-total-u">
-              {{ fieldError('total_units') }}
-            </nldd-form-field-error-text>
-          </nldd-form-field>
-          <nldd-form-actions>
-            <nldd-button
-              variant="primary"
-              width="full"
-              text="Save"
-              (click)="saveRack()"
-            ></nldd-button>
-          </nldd-form-actions>
-        </nldd-form>
-      }
-    </nldd-simple-section>
-  </nldd-page>
-</nldd-sheet>
-
 <!-- ══════════════════════════════════════════════════════════════
      DEVICE ADD SHEET
      ══════════════════════════════════════════════════════════════ -->
@@ -462,7 +333,12 @@
         <!-- Under the form rather than docked at the bottom of the sheet: the
              button belongs to the fields above it. -->
         <nldd-form-actions>
-          <nldd-button variant="primary" width="full" text="Add" (click)="saveDevice()"></nldd-button>
+          <nldd-button
+            variant="primary"
+            width="full"
+            text="Add"
+            (click)="saveDevice()"
+          ></nldd-button>
         </nldd-form-actions>
       </nldd-form>
     </nldd-simple-section>

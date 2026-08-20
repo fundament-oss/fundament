@@ -12,11 +12,13 @@ import {
   TemplateRef,
   viewChild,
 } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom, map } from 'rxjs';
+import { pageTitle } from '../../shell/page-title';
 import RackListService from '../rack-list.service';
 import RackNavComponent from '../rack-nav';
 import SecondaryNavService from '../../shell/secondary-nav.service';
@@ -88,6 +90,8 @@ export default class DeviceDetailComponent implements AfterViewInit, OnDestroy {
 
   private readonly router = inject(Router);
 
+  private readonly title = inject(Title);
+
   private readonly placementApi = inject(PlacementApiService);
 
   private readonly catalogApi = inject(CatalogApiService);
@@ -117,6 +121,11 @@ export default class DeviceDetailComponent implements AfterViewInit, OnDestroy {
   readonly dcLabel = signal<string>('');
 
   constructor() {
+    // The tab says which one you have open, not just which section.
+    effect(() => {
+      const name = this.device()?.name;
+      if (name) this.title.setTitle(pageTitle(name));
+    });
     effect(() => {
       const id = this.deviceId();
       if (!id) return;

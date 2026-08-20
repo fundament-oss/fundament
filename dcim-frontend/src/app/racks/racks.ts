@@ -13,9 +13,11 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
+import { pageTitle } from '../shell/page-title';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import RackApiService from './rack-api.service';
 import DatacenterApiService from '../datacenters/datacenter-api.service';
@@ -31,6 +33,8 @@ import { RackRow, Room } from '../datacenters/datacenter.model';
 import { RackSlotType } from '../../generated/v1/common_pb';
 import parseValidationError from '../../connect/validation';
 import { categoryToDeviceType, parseRackHeight } from './catalog-helpers';
+import openOnCreateRequest from '../shell/create-request';
+import OverlayService from '../shell/overlay.service';
 
 interface AssetOption {
   id: string;
@@ -221,9 +225,7 @@ interface RackRowItem {
   selector: 'app-racks',
   templateUrl: './racks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    RackNavComponent,
-  ],
+  imports: [RackNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -233,6 +235,9 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
 
   private readonly rackApi = inject(RackApiService);
+
+  /** The forms that make or change a rack live in the shell. */
+  private readonly overlays = inject(OverlayService);
 
   private readonly dcApi = inject(DatacenterApiService);
 
@@ -245,6 +250,8 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
+
+  private readonly title = inject(Title);
 
   readonly slotTypes: { value: RackSlotType; label: string }[] = [
     { value: RackSlotType.UNIT, label: 'Unit' },
@@ -295,8 +302,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   );
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
-  readonly editRack = signal<(Partial<Rack> & { rowId?: string }) | null>(null);
-
   readonly rackErrorMessage = signal<string | null>(null);
 
   readonly invalidFields = signal<InvalidFields>({});
@@ -315,8 +320,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
   readonly deviceErrorMessage = signal<string | null>(null);
 
   readonly invalidDeviceFields = signal<InvalidFields>({});
-
-  private readonly rackSheetEl = viewChild<NativeElementRef>('rackSheet');
 
   private readonly rackModalEl = viewChild<NativeElementRef>('rackModal');
 
@@ -339,23 +342,15 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     () => this.mutableDcs().find((dc) => dc.id === this.currentDC())?.name ?? '',
   );
 
-  /** ?new=1 means "the create form is open". The menu sets it when you press
-   *  Add rack on a page that does not have this form, and it is read here
-   *  rather than in ngOnInit because both addresses share one route: coming
-   *  from a rack, this component is reused and never starts again. */
-  private readonly createRequested = toSignal(
-    this.route.queryParamMap.pipe(map((params) => params.has('new'))),
-    { initialValue: this.route.snapshot.queryParamMap.has('new') },
-  );
-
   constructor() {
+    // The tab says which one you have open, not just which section.
     effect(() => {
-      if (!this.createRequested()) return;
-      untracked(() => {
-        this.openCreateRack();
-        this.router.navigate([], { queryParams: {}, replaceUrl: true });
-      });
+      const name = this.currentRack()?.name;
+      if (name) this.title.setTitle(pageTitle(name));
     });
+    // Add rack from the menu, or from the add button in the bar: both ask for
+    // this form through the address.
+    openOnCreateRequest(() => this.openCreateRack());
     // A rack always stands in a data center, so the list opens in one: the
     // first, until you pick another.
     effect(() => {
@@ -388,11 +383,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
       if (!racks.some((rack) => rack.id === id)) {
         untracked(() => this.router.navigate(['/racks'], { replaceUrl: true }));
       }
-    });
-    effect(() => {
-      const el = this.rackSheetEl()?.nativeElement as { show?: () => void; hide?: () => void };
-      if (this.editRack() !== null) el?.show?.();
-      else el?.hide?.();
     });
     effect(() => {
       const el = this.rackModalEl()?.nativeElement as { show?: () => void; hide?: () => void };
@@ -522,7 +512,6 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     if (selected) this.formRowId.set(id);
   }
 
-
   readonly currentRack = computed(() => {
     const id = this.currentRackId();
     if (!id) return null;
@@ -583,10 +572,8 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     );
     return starts.filter(
       (start) =>
-        start !== device.uStart
-        && Array.from({ length: device.uSize }, (unused, i) => start + i).every(
-          (u) => !taken.has(u),
-        ),
+        start !== device.uStart &&
+        Array.from({ length: device.uSize }, (unused, i) => start + i).every((u) => !taken.has(u)),
     );
   }
 
@@ -680,75 +667,15 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     this.formRowId.set('');
   }
 
+  /** Both routes into the form open the one the shell holds, so it survives
+   *  this page and the add button in the bar opens the same one. The data
+   *  center you are looking at comes along as the form's first answer. */
   openCreateRack(): void {
-    this.clearRackErrors();
-    this.formDcId.set(this.currentDC());
-    this.reloadRowOptions(this.currentDC());
-    this.editRack.set({
-      id: '',
-      name: '',
-      dcId: this.currentDC(),
-      rowId: '',
-      totalU: 42,
-      devices: [],
-    });
+    this.overlays.newRack(this.currentDC());
   }
 
   openEditRack(rack: RackListItem): void {
-    this.clearRackErrors();
-    this.editRack.set({ ...rack });
-  }
-
-  closeRackForm(): void {
-    this.clearRackErrors();
-    this.editRack.set(null);
-  }
-
-  saveRack(): void {
-    const form = this.editRack();
-    if (!form) return;
-    this.clearRackErrors();
-    const name = (this.fRackName()?.nativeElement as HTMLInputElement)?.value ?? '';
-    const rowId = this.formRowId();
-    const totalU =
-      parseInt((this.fRackTotalU()?.nativeElement as HTMLInputElement)?.value ?? '42', 10) || 42;
-    if (form.id) {
-      firstValueFrom(this.rackApi.updateRack(form.id, name, totalU))
-        .then(() => {
-          this.reloadRacks(this.selectedDcId());
-          this.editRack.set(null);
-        })
-        .catch((err) => this.handleRackError(err));
-    } else {
-      firstValueFrom(this.rackApi.createRack(name, totalU, rowId))
-        .then((res) => {
-          this.reloadRacks(this.selectedDcId());
-          if (res.rackId) {
-            this.router.navigate(['/racks', res.rackId]);
-          }
-          this.editRack.set(null);
-        })
-        .catch((err) => this.handleRackError(err));
-    }
-  }
-
-  isFieldInvalid(field: string): boolean {
-    return field in this.invalidFields();
-  }
-
-  fieldError(field: string): string {
-    return this.invalidFields()[field] ?? '';
-  }
-
-  private clearRackErrors(): void {
-    this.invalidFields.set({});
-    this.rackErrorMessage.set(null);
-  }
-
-  private handleRackError(err: unknown): void {
-    const { fields, message } = parseValidationError(err);
-    this.invalidFields.set(fields);
-    this.rackErrorMessage.set(message);
+    this.overlays.editRack(rack);
   }
 
   openDeleteRack(rack: Rack): void {

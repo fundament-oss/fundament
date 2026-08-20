@@ -20,8 +20,13 @@
           ></nldd-tag>
         </h1>
         <span slot="subtitle">
-          {{ uRange(dev) }}@if (rack(); as r) { in {{ r.name }}}@if (dcLabel()) { ·
-          {{ dcLabel() }}}
+          {{ uRange(dev) }}
+          @if (rack(); as r) {
+            in {{ r.name }}
+          }
+          @if (dcLabel()) {
+            · {{ dcLabel() }}
+          }
         </span>
       </nldd-title>
       <nldd-spacer size="16"></nldd-spacer>
@@ -56,10 +61,9 @@
           <nldd-text-cell width="180px" text="State"></nldd-text-cell>
           <nldd-cell width="full" horizontal-alignment="right">
             <nldd-text>
-              <nldd-badge
-                decorative
-                [attr.color]="stateTagColor(dev.state)"
-              ></nldd-badge>&ngsp;{{ stateLabel(dev.state) }}
+              <nldd-badge decorative [attr.color]="stateTagColor(dev.state)"></nldd-badge>&ngsp;{{
+                stateLabel(dev.state)
+              }}
             </nldd-text>
           </nldd-cell>
         </nldd-list-item>
@@ -160,10 +164,8 @@
             <nldd-text-cell width="180px" text="Power state"></nldd-text-cell>
             <nldd-cell width="full" horizontal-alignment="right">
               <nldd-text>
-                <nldd-badge
-                  decorative
-                  [attr.color]="powerTagColor(ipmi.powerstate)"
-                ></nldd-badge>&ngsp;{{ ipmi.powerstate === 'ON' ? 'On' : 'Off' }}
+                <nldd-badge decorative [attr.color]="powerTagColor(ipmi.powerstate)"></nldd-badge
+                >&ngsp;{{ ipmi.powerstate === 'ON' ? 'On' : 'Off' }}
               </nldd-text>
             </nldd-cell>
           </nldd-list-item>
@@ -231,7 +233,8 @@
                   <nldd-badge
                     decorative
                     [attr.color]="connectionStatusColor(conn.status)"
-                  ></nldd-badge>&ngsp;{{ connectionStatusLabel(conn.status) }}
+                  ></nldd-badge
+                  >&ngsp;{{ connectionStatusLabel(conn.status) }}
                 </nldd-text>
               </nldd-cell>
             </nldd-list-item>
@@ -258,14 +261,11 @@
         </nldd-toolbar-item>
       </nldd-toolbar>
       <nldd-spacer size="12"></nldd-spacer>
-      <nldd-list
-        variant="box-tinted"
-        accessible-label="Ports"
-        empty-text="No ports on this device"
-      >
+      <nldd-list variant="box-tinted" accessible-label="Ports" empty-text="No ports on this device">
         @for (port of devicePorts(); track port.id) {
           @let cable = portCableMap().get(port.id);
-          @let peer = cable ? (cable.aSide.deviceId === deviceId() ? cable.bSide : cable.aSide) : null;
+          @let peer =
+            cable ? (cable.aSide.deviceId === deviceId() ? cable.bSide : cable.aSide) : null;
           <nldd-list-item>
             <!-- The kind behind the name, in the same neutral tag a product's
                  ports wear. -->
@@ -284,10 +284,8 @@
                  dot with the word beside it, and the action to its right. -->
             <nldd-cell width="fit-content">
               <nldd-text>
-                <nldd-badge
-                  decorative
-                  [attr.color]="cable ? 'success' : 'neutral'"
-                ></nldd-badge>&ngsp;{{ cable ? 'Connected' : 'Not connected' }}
+                <nldd-badge decorative [attr.color]="cable ? 'success' : 'neutral'"></nldd-badge
+                >&ngsp;{{ cable ? 'Connected' : 'Not connected' }}
               </nldd-text>
             </nldd-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
@@ -365,11 +363,7 @@
         </nldd-title>
         <nldd-spacer size="8"></nldd-spacer>
         <nldd-list variant="box-tinted" dividers="never" accessible-label="Device history">
-          @for (
-            entry of deviceHistory();
-            track entry.daysAgo + entry.description;
-            let i = $index
-          ) {
+          @for (entry of deviceHistory(); track entry.daysAgo + entry.description; let i = $index) {
             <nldd-list-item>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <nldd-timeline-track-cell
