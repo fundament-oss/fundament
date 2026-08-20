@@ -31,7 +31,7 @@
           @for (dc of datacenters(); track dc.id) {
             <nldd-list-item
               button
-              [attr.selected]="selectedId() === dc.id ? '' : null"
+              [attr.current]="selectedId() === dc.id ? '' : null"
               (click)="dcSelected.emit(dc.id)"
             >
               <!-- One building per row, where the section in the sidebar carries

@@ -40,7 +40,7 @@
       @for (rack of racks(); track rack.id) {
         <nldd-list-item
           button
-          [attr.selected]="currentRackId() === rack.id ? '' : null"
+          [attr.current]="currentRackId() === rack.id ? '' : null"
           (click)="selectRack(rack.id)"
         >
           <nldd-icon-cell icon="rack-servers" size="20"></nldd-icon-cell>

@@ -11,7 +11,7 @@
     <nldd-list type="navigation" dividers="on-touch" accessible-label="All assets">
       <nldd-list-item
         [attr.href]="viewPath('all')"
-        [attr.selected]="isCurrent('all') ? '' : null"
+        [attr.current]="isCurrent('all') ? '' : null"
         (click)="goToView($event, 'all')"
       >
         <nldd-icon-cell icon="square-grid-2x2" size="20"></nldd-icon-cell>
@@ -36,7 +36,7 @@
       @for (s of statuses; track s.value) {
         <nldd-list-item
           [attr.href]="viewPath('status', s.value)"
-          [attr.selected]="isCurrent('status', s.value) ? '' : null"
+          [attr.current]="isCurrent('status', s.value) ? '' : null"
           (click)="goToView($event, 'status', s.value)"
         >
           <!-- The dot sits where an icon sits in the category rows: a spacer
@@ -69,7 +69,7 @@
       @for (cat of categories; track cat) {
         <nldd-list-item
           [attr.href]="viewPath('category', cat)"
-          [attr.selected]="isCurrent('category', cat) ? '' : null"
+          [attr.current]="isCurrent('category', cat) ? '' : null"
           (click)="goToView($event, 'category', cat)"
         >
           <nldd-icon-cell [attr.icon]="categoryIcon(cat)" size="20"></nldd-icon-cell>

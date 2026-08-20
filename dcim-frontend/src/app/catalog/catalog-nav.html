@@ -10,7 +10,7 @@
     <nldd-list type="navigation" dividers="on-touch" accessible-label="All products">
       <nldd-list-item
         [attr.href]="viewPath('all')"
-        [attr.selected]="isCurrent('all') ? '' : null"
+        [attr.current]="isCurrent('all') ? '' : null"
         (click)="goToView($event, 'all')"
       >
         <nldd-icon-cell icon="square-grid-2x2" size="20"></nldd-icon-cell>
@@ -33,7 +33,7 @@
       @for (cat of categories; track cat) {
         <nldd-list-item
           [attr.href]="viewPath(cat)"
-          [attr.selected]="isCurrent(cat) ? '' : null"
+          [attr.current]="isCurrent(cat) ? '' : null"
           (click)="goToView($event, cat)"
         >
           <nldd-icon-cell [attr.icon]="categoryIcon(cat)" size="20"></nldd-icon-cell>
