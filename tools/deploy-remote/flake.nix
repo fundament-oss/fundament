@@ -25,6 +25,9 @@
         # runs nixos-anywhere inside a throwaway nix container — so NO local nix is
         # needed even though this is a normal flake target.
         hetzner = mkHost ./hosts/hetzner;
+        # Daily-cattle devbox: same VM layout, persistent state semantics
+        # (per-dev home volume, no reboot wipe). Installed by `just devbox up`.
+        hetzner-devbox = mkHost ./hosts/hetzner-devbox;
       };
     };
 }
