@@ -51,8 +51,11 @@ setup-certs:
     TRUST_STORES=system,nss mkcert -install
     echo "Waiting for cert-manager to become available..."
     deadline=$(( $(date +%s) + 120 ))
-    until kubectl get ns cert-manager > /dev/null 2>&1; do
-        [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for cert-manager namespace"; exit 1; }
+    # Wait for the Deployments themselves, not just the namespace: k3s creates the
+    # namespace before the helm-install Job creates their contents, and `kubectl wait`
+    # errors immediately on a resource that does not exist yet instead of polling.
+    until kubectl get deployment cert-manager cert-manager-webhook -n cert-manager > /dev/null 2>&1; do
+        [ "$(date +%s)" -ge "$deadline" ] && { echo "Timed out waiting for the cert-manager deployments"; exit 1; }
         sleep 5
     done
     kubectl wait --for=condition=Available deployment/cert-manager deployment/cert-manager-webhook -n cert-manager --timeout=300s
