@@ -99,7 +99,7 @@
                     accessible-label="Create"
                   >
                     <nldd-menu-item
-                      icon="add-kubernetes"
+                      icon="new-kubernetes"
                       text="New cluster…"
                       [attr.href]="path('/clusters/new')"
                       (click)="pageNav.openHere($event, overlays.newCluster, true)"
@@ -126,7 +126,7 @@
                         >
                           <nldd-menu [attr.accessible-label]="project.name">
                             <nldd-menu-item
-                              icon="add-namespace"
+                              icon="new-namespace"
                               text="New namespace…"
                               [attr.href]="path('/projects/' + project.id + '/namespaces/new')"
                               (click)="pageNav.openHere($event, overlays.newNamespace, project.id)"
