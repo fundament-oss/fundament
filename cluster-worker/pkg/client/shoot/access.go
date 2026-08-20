@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
@@ -85,8 +86,19 @@ type ShootAccess interface {
 	// EnsureServiceAccount creates or updates a ServiceAccount.
 	EnsureServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string, labels, annotations map[string]string) error
 
-	// EnsureClusterRoleBinding creates or updates a ClusterRoleBinding binding to cluster-admin.
-	EnsureClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name, saNamespace, saName string, labels, annotations map[string]string) error
+	// EnsureClusterRoleBinding creates or updates a ClusterRoleBinding binding
+	// the ServiceAccount to the named ClusterRole.
+	EnsureClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name, roleName, saNamespace, saName string, labels, annotations map[string]string) error
+
+	// EnsureCRD creates or updates a CustomResourceDefinition from its YAML manifest.
+	EnsureCRD(ctx context.Context, clusterID uuid.UUID, manifest []byte) error
+
+	// EnsureClusterRole creates or updates a ClusterRole with the given rules.
+	EnsureClusterRole(ctx context.Context, clusterID uuid.UUID, name string, rules []rbacv1.PolicyRule, labels map[string]string) error
+
+	// EnsureDeployment creates or updates a Deployment; the namespace is taken
+	// from the object's metadata.
+	EnsureDeployment(ctx context.Context, clusterID uuid.UUID, deployment *appsv1.Deployment) error
 
 	// DeleteServiceAccount deletes a ServiceAccount (no-op if absent).
 	DeleteServiceAccount(ctx context.Context, clusterID uuid.UUID, namespace, name string) error

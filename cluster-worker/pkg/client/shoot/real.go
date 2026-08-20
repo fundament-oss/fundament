@@ -8,14 +8,20 @@ import (
 	"maps"
 
 	"github.com/google/uuid"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/yaml"
 
 	"github.com/fundament-oss/fundament/cluster-worker/pkg/client/gardener"
 )
@@ -28,6 +34,10 @@ type RealShootAccess struct {
 	// tests can inject a fake clientset; in production it is nil and
 	// clientForCluster falls back to the real AdminKubeconfigRequest path.
 	newClient func(ctx context.Context, clusterID uuid.UUID) (kubernetes.Interface, error)
+	// newAPIExtClient is the apiextensions counterpart of newClient, used by
+	// EnsureCRD; tests inject a fake, production falls back to the admin
+	// kubeconfig path.
+	newAPIExtClient func(ctx context.Context, clusterID uuid.UUID) (apiextensionsclientset.Interface, error)
 }
 
 // NewRealShootAccess creates a ShootAccess backed by real Gardener AdminKubeconfigRequest calls.
@@ -38,11 +48,7 @@ func NewRealShootAccess(gardenerClient gardener.Client, logger *slog.Logger) *Re
 	}
 }
 
-func (r *RealShootAccess) clientForCluster(ctx context.Context, clusterID uuid.UUID) (kubernetes.Interface, error) {
-	if r.newClient != nil {
-		return r.newClient(ctx, clusterID)
-	}
-
+func (r *RealShootAccess) restConfigForCluster(ctx context.Context, clusterID uuid.UUID) (*rest.Config, error) {
 	adminKC, err := r.gardener.RequestAdminKubeconfig(ctx, clusterID, 600)
 	if err != nil {
 		return nil, fmt.Errorf("request admin kubeconfig: %w", err)
@@ -53,9 +59,40 @@ func (r *RealShootAccess) clientForCluster(ctx context.Context, clusterID uuid.U
 		return nil, fmt.Errorf("parse kubeconfig: %w", err)
 	}
 
+	return cfg, nil
+}
+
+func (r *RealShootAccess) clientForCluster(ctx context.Context, clusterID uuid.UUID) (kubernetes.Interface, error) {
+	if r.newClient != nil {
+		return r.newClient(ctx, clusterID)
+	}
+
+	cfg, err := r.restConfigForCluster(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+
 	cs, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("create clientset: %w", err)
+	}
+
+	return cs, nil
+}
+
+func (r *RealShootAccess) apiExtClientForCluster(ctx context.Context, clusterID uuid.UUID) (apiextensionsclientset.Interface, error) {
+	if r.newAPIExtClient != nil {
+		return r.newAPIExtClient(ctx, clusterID)
+	}
+
+	cfg, err := r.restConfigForCluster(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	cs, err := apiextensionsclientset.NewForConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("create apiextensions clientset: %w", err)
 	}
 
 	return cs, nil
@@ -259,7 +296,7 @@ func (r *RealShootAccess) EnsureServiceAccount(ctx context.Context, clusterID uu
 		})
 }
 
-func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name, saNamespace, saName string, labels, annotations map[string]string) error {
+func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterID uuid.UUID, name, roleName, saNamespace, saName string, labels, annotations map[string]string) error {
 	cs, err := r.clientForCluster(ctx, clusterID)
 	if err != nil {
 		return err
@@ -281,7 +318,7 @@ func (r *RealShootAccess) EnsureClusterRoleBinding(ctx context.Context, clusterI
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "cluster-admin",
+			Name:     roleName,
 		},
 	}
 
@@ -425,6 +462,67 @@ func limitRangeSpec(defaults LimitDefaults) corev1.LimitRangeSpec {
 // ClusterRoleBindingNeedsRecreate returns true if the RoleRef has changed (immutable field).
 func ClusterRoleBindingNeedsRecreate(existing, desired *rbacv1.ClusterRoleBinding) bool {
 	return existing.RoleRef != desired.RoleRef
+}
+
+func (r *RealShootAccess) EnsureCRD(ctx context.Context, clusterID uuid.UUID, manifest []byte) error {
+	cs, err := r.apiExtClientForCluster(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	crd := &apiextensionsv1.CustomResourceDefinition{}
+	err = yaml.Unmarshal(manifest, crd)
+	if err != nil {
+		return fmt.Errorf("unmarshal CRD manifest: %w", err)
+	}
+
+	return ensureResource(ctx, cs.ApiextensionsV1().CustomResourceDefinitions(), crd.Name, "CRD "+crd.Name, crd,
+		func(existing *apiextensionsv1.CustomResourceDefinition) bool {
+			mergeMeta(&existing.ObjectMeta, crd.Labels, crd.Annotations)
+			existing.Spec = crd.Spec
+			return false
+		})
+}
+
+func (r *RealShootAccess) EnsureClusterRole(ctx context.Context, clusterID uuid.UUID, name string, rules []rbacv1.PolicyRule, labels map[string]string) error {
+	cs, err := r.clientForCluster(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	role := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+		Rules: rules,
+	}
+
+	return ensureResource(ctx, cs.RbacV1().ClusterRoles(), name, "ClusterRole "+name, role,
+		func(existing *rbacv1.ClusterRole) bool {
+			mergeMeta(&existing.ObjectMeta, labels, nil)
+			existing.Rules = rules
+			return false
+		})
+}
+
+func (r *RealShootAccess) EnsureDeployment(ctx context.Context, clusterID uuid.UUID, deployment *appsv1.Deployment) error {
+	cs, err := r.clientForCluster(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+
+	desc := fmt.Sprintf("Deployment %s/%s", deployment.Namespace, deployment.Name)
+	return ensureResource(ctx, cs.AppsV1().Deployments(deployment.Namespace), deployment.Name, desc, deployment,
+		func(existing *appsv1.Deployment) bool {
+			// The label selector is immutable; a changed selector needs delete+recreate.
+			if !equality.Semantic.DeepEqual(existing.Spec.Selector, deployment.Spec.Selector) {
+				return true
+			}
+			mergeMeta(&existing.ObjectMeta, deployment.Labels, deployment.Annotations)
+			existing.Spec = deployment.Spec
+			return false
+		})
 }
 
 var _ ShootAccess = (*RealShootAccess)(nil)
