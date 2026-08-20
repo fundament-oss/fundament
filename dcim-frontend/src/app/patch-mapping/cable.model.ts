@@ -89,6 +89,21 @@ export interface Cable {
 
 // ── Color palette ─────────────────────────────────────────────────────────────
 
+/** The colour as a word, because a colour on its own is not something everyone
+ *  can read. */
+export const CABLE_COLOR_LABEL: Record<CableColor, string> = {
+  'dark-grey': 'Dark grey',
+  'light-grey': 'Light grey',
+  red: 'Red',
+  green: 'Green',
+  blue: 'Blue',
+  yellow: 'Yellow',
+  purple: 'Purple',
+  orange: 'Orange',
+  teal: 'Teal',
+  white: 'White',
+};
+
 export const CABLE_COLOR_HEX: Record<CableColor, string> = {
   'dark-grey': '#374151',
   'light-grey': '#9ca3af',

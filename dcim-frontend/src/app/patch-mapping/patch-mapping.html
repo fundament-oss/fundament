@@ -102,23 +102,6 @@
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════
-     ADD / EDIT CABLE SHEET
-     ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #cableSheet accessible-label="Cable details" placement="right">
-  <app-cable-form
-    [cable]="editCable()"
-    [dcId]="selectedDcId()"
-    [allCables]="dcCables()"
-    [externalDevicePorts]="localDevicePorts()"
-    [devices]="dcDevices()"
-    [serverError]="cableFormError()"
-    (save)="saveFromForm($event)"
-    (cancelForm)="closeForm()"
-    (portsUpdated)="onPortsUpdated($event)"
-  />
-</nldd-sheet>
-
-<!-- ══════════════════════════════════════════════════════════════
      SHOPPING LIST SHEET
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet

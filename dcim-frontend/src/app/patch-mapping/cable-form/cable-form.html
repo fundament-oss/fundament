@@ -1,43 +1,14 @@
-<div class="flex flex-col h-full" [hidden]="portManagementDevice() === null">
-  <!-- Back header — plain button to avoid bubbling a dismiss event to the sheet -->
-  <div class="flex items-center gap-3 border-b border-slate-200 bg-white px-6 py-3 shrink-0">
-    <button
-      class="inline-flex items-center gap-1.5 rounded text-sm font-medium text-accent-700 transition-colors hover:text-accent-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400"
-      type="button"
-      (click)="closePortManagement()"
-      aria-label="Back to cable form"
-    >
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M19 12H5M12 5l-7 7 7 7" />
-      </svg>
-      Back to cable
-    </button>
-    <span class="text-slate-300">·</span>
-    <span class="truncate text-sm font-semibold text-slate-900">{{
-      portManagementDevice()?.name
-    }}</span>
-  </div>
-  <div class="flex-1 overflow-y-auto p-4">
-    <app-device-ports
-      [deviceId]="portManagementDevice()?.id ?? ''"
-      [deviceName]="portManagementDevice()?.name ?? ''"
-      [ports]="portManagementPorts()"
-      [embedded]="true"
-      (portsChange)="onPortsSaved($event)"
-      (cancelEdit)="closePortManagement()"
-    />
-  </div>
-</div>
+<!-- The ports of one device, as a page of its own inside this sheet: it brings
+     its own bar and its own way back. -->
+@if (portManagementDevice(); as device) {
+  <app-device-ports
+    [deviceId]="device.id"
+    [deviceName]="device.name"
+    [ports]="portManagementPorts()"
+    (portsChange)="onPortsChanged($event)"
+    (back)="closePortManagement()"
+  />
+}
 <nldd-page sticky-header [hidden]="portManagementDevice() !== null">
   <nldd-top-title-bar
     slot="header"
@@ -48,464 +19,315 @@
 
   <nldd-simple-section>
     @if (serverError()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ serverError() }}
-          </p>
-        </div>
-      }
+      <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
+        <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
+          {{ serverError() }}
+        </p>
+      </div>
+    }
     <!-- Both ends of the cable as two sections of one form: which device, which
          kind of port, which port. -->
-    <nldd-title size="5">
-      <h2 id="aside-heading">A side</h2>
-    </nldd-title>
-    <nldd-spacer size="8"></nldd-spacer>
-    <section aria-labelledby="aside-heading">
-      <nldd-form>
-          <!-- Device + manage ports -->
-          <nldd-form-field label="Device">
-            <div class="flex items-center gap-1.5">
-              <nldd-combo-box
-                class="flex-1"
-                id="a-device"
-                [attr.value]="aDeviceId()"
-                (change)="onADeviceChange($any($event).detail.value)"
-              >
-                <nldd-menu>
-                  @for (dev of dcDevices(); track dev.id) {
-                    <nldd-menu-item [attr.value]="dev.id" [attr.text]="dev.name"></nldd-menu-item>
-                  }
-                </nldd-menu>
-              </nldd-combo-box>
-              <nldd-icon-button
-                icon="gear"
-                variant="neutral-transparent"
-                size="sm"
-                text="Manage ports for this device"
-                [attr.disabled]="aDeviceId() ? null : true"
-                (click)="openPortManagement(aDeviceId())"
-              ></nldd-icon-button>
-            </div>
-          </nldd-form-field>
+    <nldd-form>
+      <!-- Where the cable runs, before which two ends it joins: the devices you
+           can pick come from this one, so changing it empties both sides. -->
+      @if (datacenters().length > 1) {
+        <nldd-form-field label="Data center">
+          <nldd-toggle-button-group type="radio" accessible-label="Data center">
+            @for (dc of datacenters(); track dc.id) {
+              <nldd-toggle-button
+                [attr.value]="dc.id"
+                [attr.text]="dc.name"
+                [attr.selected]="dcId() === dc.id ? '' : null"
+                (change)="onDcToggle(dc.id, $any($event).detail.selected)"
+              ></nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
+        </nldd-form-field>
+      }
 
-          <!-- Port type -->
-          <nldd-form-field label="Port type">
-            <!-- A kind the device has no ports of stays in the list but cannot
-                 be picked: hiding it would suggest the device cannot have any. -->
-            <nldd-combo-box
-              id="a-port-type"
-              [attr.value]="aPortType()"
-              [attr.disabled]="aDeviceId() ? null : ''"
-              (change)="onAPortTypeChange($any($event).detail.value)"
-            >
-              <nldd-menu>
-                <nldd-menu-item value="" text="Any type"></nldd-menu-item>
-                @for (pt of PORT_TYPES; track pt.value) {
-                  <nldd-menu-item
-                    [attr.value]="pt.value"
-                    [attr.text]="pt.label"
-                    [attr.disabled]="aAvailablePortTypes().has(pt.value) ? null : ''"
-                  ></nldd-menu-item>
-                }
-              </nldd-menu>
-            </nldd-combo-box>
-          </nldd-form-field>
+      <nldd-form-section text="A side">
+        <nldd-form-field label="Device">
+          <nldd-combo-box
+            id="a-device"
+            [attr.value]="aDeviceId()"
+            [attr.invalid]="aDeviceError() ? '' : null"
+            [attr.error-message]="aDeviceError() ? 'a-device-error' : null"
+            (change)="onADeviceChange($any($event).detail.value)"
+          >
+            <nldd-menu>
+              @for (dev of dcDevices(); track dev.id) {
+                <nldd-menu-item [attr.value]="dev.id" [attr.text]="dev.name"></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-combo-box>
+          @if (aDeviceError()) {
+            <nldd-form-field-error-text id="a-device-error">{{
+              aDeviceError()
+            }}</nldd-form-field-error-text>
+          }
+        </nldd-form-field>
 
+        <!-- Both only make sense once there is a device to look in.
+             A greyed-out field says "not now" without saying what to do
+             about it; one that is not there yet reads as the next step. -->
+        @if (aDeviceId()) {
           <!-- Port -->
           <nldd-form-field label="Port">
             <div class="flex items-center gap-1.5">
               <!-- A port that already carries a cable stays visible and says so
-                   on the right, rather than disappearing: a port you cannot find
-                   reads as a port that does not exist. -->
+                     on the right, rather than disappearing: a port you cannot find
+                     reads as a port that does not exist. -->
               <nldd-combo-box
                 class="flex-1"
                 id="a-port"
                 [attr.value]="aPortId()"
-                [attr.disabled]="aDeviceId() ? null : ''"
+                [attr.invalid]="aPortError() ? '' : null"
+                [attr.error-message]="aPortError() ? 'a-port-error' : null"
                 (change)="aPortId.set($any($event).detail.value)"
               >
                 <nldd-menu>
-                  @for (port of aFilteredPorts(); track port.id) {
+                  @for (port of aPorts(); track port.id) {
                     <nldd-menu-item
                       [attr.value]="port.id"
                       [attr.text]="port.name + ' (' + PORT_TYPE_LABEL[port.type] + ')'"
-                      [attr.details]="usedPortIds().has(port.id) ? 'In use' : null"
-                      [attr.disabled]="usedPortIds().has(port.id) ? '' : null"
+                      [attr.details]="portInUse(aDeviceId(), port) ? 'In use' : null"
+                      [attr.disabled]="portInUse(aDeviceId(), port) ? '' : null"
                     ></nldd-menu-item>
                   }
                 </nldd-menu>
               </nldd-combo-box>
               <nldd-icon-button
-                icon="plus-small"
-                variant="neutral-transparent"
-                size="sm"
-                text="Add a new port to this device"
-                [attr.disabled]="aDeviceId() ? null : true"
-                (click)="startAddPort('a')"
+                icon="edit"
+                variant="secondary"
+                text="Edit ports"
+                (click)="openPortManagement(aDeviceId())"
               ></nldd-icon-button>
             </div>
-            @if (aAddingPort()) {
-              <div
-                class="flex items-center gap-1.5 mt-1 p-2 bg-slate-50 rounded border border-slate-200"
-              >
-                <nldd-text-field
-                  id="a-new-port-name"
-                  [attr.value]="aNewPortName()"
-                  (input)="aNewPortName.set($any($event.target).value)"
-                  placeholder="Port name…"
-                  class="flex-1 font-mono"
-                  (keydown.enter)="confirmAddPort('a')"
-                  (keydown.escape)="cancelAddPort('a')"
-                ></nldd-text-field>
-                <nldd-dropdown size="sm">
-                  <select (change)="aNewPortType.set($any($event.target).value)">
-                    @for (pt of PORT_TYPES; track pt.value) {
-                      <option [value]="pt.value" [selected]="pt.value === aNewPortType()">
-                        {{ pt.label }}
-                      </option>
-                    }
-                  </select>
-                </nldd-dropdown>
-                <nldd-icon-button
-                  icon="check-mark-small"
-                  variant="primary"
-                  size="sm"
-                  text="Confirm new port"
-                  [attr.disabled]="aNewPortName().trim() ? null : true"
-                  (click)="confirmAddPort('a')"
-                ></nldd-icon-button>
-                <nldd-icon-button
-                  icon="dismiss-small"
-                  variant="secondary"
-                  size="sm"
-                  text="Cancel"
-                  (click)="cancelAddPort('a')"
-                ></nldd-icon-button>
-              </div>
+            @if (aPorts().length === 0) {
+              <nldd-form-field-help-text>This device has no ports yet.</nldd-form-field-help-text>
             }
-            @if (aDeviceId() && aFilteredPorts().length === 0) {
-              <p class="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5">
-                No ports of this type on this device.
-              </p>
+            @if (aPortError()) {
+              <nldd-form-field-error-text id="a-port-error">{{
+                aPortError()
+              }}</nldd-form-field-error-text>
             }
           </nldd-form-field>
-      </nldd-form>
-    </section>
-    <nldd-spacer size="16"></nldd-spacer>
-    <nldd-toolbar label="Cable ends">
-      <nldd-toolbar-item slot="start">
-        <nldd-button
-          variant="secondary"
-          text="Swap sides"
-          start-icon="arrow-up-arrow-down"
-          [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
-          (click)="swapSides()"
-        ></nldd-button>
-      </nldd-toolbar-item>
-    </nldd-toolbar>
-    <nldd-spacer size="16"></nldd-spacer>
+        }
+      </nldd-form-section>
 
-    <nldd-title size="5">
-      <h2 id="bside-heading">B side</h2>
-    </nldd-title>
-    <nldd-spacer size="8"></nldd-spacer>
-    <section aria-labelledby="bside-heading">
-      <nldd-form>
-          <!-- Device + manage ports -->
-          <nldd-form-field label="Device">
-            <div class="flex items-center gap-1.5">
-              <nldd-combo-box
-                class="flex-1"
-                id="b-device"
-                [attr.value]="bDeviceId()"
-                (change)="onBDeviceChange($any($event).detail.value)"
-              >
-                <nldd-menu>
-                  @for (dev of dcDevices(); track dev.id) {
-                    <nldd-menu-item [attr.value]="dev.id" [attr.text]="dev.name"></nldd-menu-item>
-                  }
-                </nldd-menu>
-              </nldd-combo-box>
-              <nldd-icon-button
-                icon="gear"
-                variant="neutral-transparent"
-                size="sm"
-                text="Manage ports for this device"
-                [attr.disabled]="bDeviceId() ? null : true"
-                (click)="openPortManagement(bDeviceId())"
-              ></nldd-icon-button>
-            </div>
-          </nldd-form-field>
+      <nldd-toolbar label="Cable ends">
+        <nldd-toolbar-item slot="start">
+          <nldd-button
+            variant="secondary"
+            text="Swap sides"
+            start-icon="arrow-up-arrow-down"
+            [attr.disabled]="!aDeviceId() && !bDeviceId() ? true : null"
+            (click)="swapSides()"
+          ></nldd-button>
+        </nldd-toolbar-item>
+      </nldd-toolbar>
 
-          <!-- Port type -->
-          <nldd-form-field label="Port type">
-            <!-- A kind the device has no ports of, or one that cannot meet the
-                 A side, stays in the list but cannot be picked. -->
-            <nldd-combo-box
-              id="b-port-type"
-              [attr.value]="bPortType()"
-              [attr.disabled]="bDeviceId() ? null : ''"
-              (change)="onBPortTypeChange($any($event).detail.value)"
-            >
-              <nldd-menu>
-                <nldd-menu-item value="" text="Any type"></nldd-menu-item>
-                @for (pt of PORT_TYPES; track pt.value) {
-                  <nldd-menu-item
-                    [attr.value]="pt.value"
-                    [attr.text]="pt.label"
-                    [attr.disabled]="
-                      bAvailablePortTypes().has(pt.value) && bCompatiblePortTypes().has(pt.value)
-                        ? null
-                        : ''
-                    "
-                  ></nldd-menu-item>
-                }
-              </nldd-menu>
-            </nldd-combo-box>
-          </nldd-form-field>
+      <nldd-form-section text="B side">
+        <nldd-form-field label="Device">
+          <nldd-combo-box
+            id="b-device"
+            [attr.value]="bDeviceId()"
+            [attr.invalid]="bDeviceError() ? '' : null"
+            [attr.error-message]="bDeviceError() ? 'b-device-error' : null"
+            (change)="onBDeviceChange($any($event).detail.value)"
+          >
+            <nldd-menu>
+              @for (dev of dcDevices(); track dev.id) {
+                <nldd-menu-item [attr.value]="dev.id" [attr.text]="dev.name"></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-combo-box>
+          @if (bDeviceError()) {
+            <nldd-form-field-error-text id="b-device-error">{{
+              bDeviceError()
+            }}</nldd-form-field-error-text>
+          }
+        </nldd-form-field>
 
+        <!-- Both only make sense once there is a device to look in.
+             A greyed-out field says "not now" without saying what to do
+             about it; one that is not there yet reads as the next step. -->
+        @if (bDeviceId()) {
           <!-- Port -->
           <nldd-form-field label="Port">
             <div class="flex items-center gap-1.5">
               <!-- A port that already carries a cable stays visible and says so
-                   on the right, rather than disappearing: a port you cannot find
-                   reads as a port that does not exist. -->
+                     on the right, rather than disappearing: a port you cannot find
+                     reads as a port that does not exist. -->
               <nldd-combo-box
                 class="flex-1"
                 id="b-port"
                 [attr.value]="bPortId()"
-                [attr.disabled]="bDeviceId() ? null : ''"
+                [attr.invalid]="bPortError() ? '' : null"
+                [attr.error-message]="bPortError() ? 'b-port-error' : null"
                 (change)="bPortId.set($any($event).detail.value)"
               >
                 <nldd-menu>
-                  @for (port of bFilteredPorts(); track port.id) {
+                  @for (port of bPorts(); track port.id) {
                     <nldd-menu-item
                       [attr.value]="port.id"
                       [attr.text]="port.name + ' (' + PORT_TYPE_LABEL[port.type] + ')'"
-                      [attr.details]="usedPortIds().has(port.id) ? 'In use' : null"
-                      [attr.disabled]="usedPortIds().has(port.id) ? '' : null"
+                      [attr.details]="
+                        portInUse(bDeviceId(), port)
+                          ? 'In use'
+                          : fitsOtherSide(port)
+                            ? null
+                            : 'Does not fit the A side'
+                      "
+                      [attr.disabled]="
+                        portInUse(bDeviceId(), port) || !fitsOtherSide(port) ? '' : null
+                      "
                     ></nldd-menu-item>
                   }
                 </nldd-menu>
               </nldd-combo-box>
               <nldd-icon-button
-                icon="plus-small"
-                variant="neutral-transparent"
-                size="sm"
-                text="Add a new port to this device"
-                [attr.disabled]="bDeviceId() ? null : true"
-                (click)="startAddPort('b')"
+                icon="edit"
+                variant="secondary"
+                text="Edit ports"
+                (click)="openPortManagement(bDeviceId())"
               ></nldd-icon-button>
             </div>
-            @if (bAddingPort()) {
-              <div
-                class="flex items-center gap-1.5 mt-1 p-2 bg-slate-50 rounded border border-slate-200"
-              >
-                <nldd-text-field
-                  id="b-new-port-name"
-                  [attr.value]="bNewPortName()"
-                  (input)="bNewPortName.set($any($event.target).value)"
-                  placeholder="Port name…"
-                  class="flex-1 font-mono"
-                  (keydown.enter)="confirmAddPort('b')"
-                  (keydown.escape)="cancelAddPort('b')"
-                ></nldd-text-field>
-                <nldd-dropdown size="sm">
-                  <select (change)="bNewPortType.set($any($event.target).value)">
-                    @for (pt of PORT_TYPES; track pt.value) {
-                      <option [value]="pt.value" [selected]="pt.value === bNewPortType()">
-                        {{ pt.label }}
-                      </option>
-                    }
-                  </select>
-                </nldd-dropdown>
-                <nldd-icon-button
-                  icon="check-mark-small"
-                  variant="primary"
-                  size="sm"
-                  text="Confirm new port"
-                  [attr.disabled]="bNewPortName().trim() ? null : true"
-                  (click)="confirmAddPort('b')"
-                ></nldd-icon-button>
-                <nldd-icon-button
-                  icon="dismiss-small"
-                  variant="secondary"
-                  size="sm"
-                  text="Cancel"
-                  (click)="cancelAddPort('b')"
-                ></nldd-icon-button>
-              </div>
+            @if (bPorts().length === 0) {
+              <nldd-form-field-help-text>This device has no ports yet.</nldd-form-field-help-text>
             }
-            @if (bDeviceId() && bFilteredPorts().length === 0) {
-              <p class="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5">
-                No ports of this type on this device.
-              </p>
-            }
-            @if (isSamePort()) {
-              <p class="text-[10px] text-red-600 dark:text-red-300 mt-0.5" role="alert">
-                A and B sides cannot use the same port.
-              </p>
-            }
-            @if (incompatibleSides()) {
-              <p class="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5" role="alert">
-                Power and data ports cannot be combined.
-              </p>
+            @if (bPortError()) {
+              <nldd-form-field-error-text id="b-port-error">{{
+                bPortError()
+              }}</nldd-form-field-error-text>
             }
           </nldd-form-field>
-      </nldd-form>
-    </section>
-    <nldd-spacer size="24"></nldd-spacer>
-    <nldd-title size="5">
-      <h2 id="cable-props-heading">Cable</h2>
-    </nldd-title>
-    <nldd-spacer size="8"></nldd-spacer>
-    <section aria-labelledby="cable-props-heading">
-      <nldd-form>
-          <!-- Label -->
-          <nldd-form-field label="Label">
-            <nldd-text-field
-              id="cable-label"
-              [attr.value]="cableLabel()"
-              placeholder="E.g. srv01-eth0"
-              class="w-full font-mono"
-              (change)="cableLabel.set($any($event).detail?.value ?? '')"
-              (input)="cableLabel.set($any($event.target).value)"
-              (keydown.enter)="onSave()"
-            ></nldd-text-field>
-          </nldd-form-field>
+        }
+      </nldd-form-section>
 
-          <!-- Type -->
-          <nldd-form-field label="Type">
-            <nldd-dropdown>
-              <select
-                id="cable-type"
-                [value]="cableType()"
-                (change)="onCableTypeChange($any($event.target).value)"
-              >
-                <option value="" [selected]="cableType() === ''">Unspecified</option>
-                @for (t of CABLE_TYPES; track t) {
-                  <option [value]="t" [selected]="t === cableType()">
-                    {{ CABLE_TYPE_LABEL[t] }}
-                  </option>
-                }
-              </select>
-            </nldd-dropdown>
-          </nldd-form-field>
+      <nldd-form-section text="Cable">
+        <!-- Label -->
+        <nldd-form-field label="Label" optional optional-label="Optional">
+          <nldd-text-field
+            id="cable-label"
+            [attr.value]="cableLabel()"
+            class="w-full font-mono"
+            (change)="cableLabel.set($any($event).detail?.value ?? '')"
+            (input)="cableLabel.set($any($event.target).value)"
+            (keydown.enter)="onSave()"
+          ></nldd-text-field>
+        </nldd-form-field>
 
-          <nldd-form-field label="Status">
-            <nldd-toggle-button-group type="radio" accessible-label="Status">
+        <!-- Type -->
+        <nldd-form-field label="Type">
+          <!-- Thirteen kinds of cable: typing "cat6" beats reading past twelve
+               others, and it puts this field in the same shape as the pickers
+               above it. -->
+          <nldd-combo-box
+            id="cable-type"
+            [attr.value]="cableType()"
+            (change)="onCableTypeChange($any($event).detail.value)"
+          >
+            <nldd-menu>
+              <nldd-menu-item value="" text="Unspecified"></nldd-menu-item>
+              @for (t of CABLE_TYPES; track t) {
+                <nldd-menu-item [attr.value]="t" [attr.text]="CABLE_TYPE_LABEL[t]"></nldd-menu-item>
+              }
+            </nldd-menu>
+          </nldd-combo-box>
+        </nldd-form-field>
+
+        <nldd-form-field label="Status">
+          <nldd-toggle-button-group type="radio" accessible-label="Status">
+            <nldd-toggle-button
+              value=""
+              text="Unspecified"
+              [attr.selected]="cableStatus() === '' ? '' : null"
+              (change)="onStatusToggle('', $any($event).detail.selected)"
+            ></nldd-toggle-button>
+            @for (st of CABLE_STATUSES; track st.value) {
               <nldd-toggle-button
-                value=""
-                text="Unspecified"
-                [attr.selected]="cableStatus() === '' ? '' : null"
-                (change)="onStatusToggle('', $any($event).detail.selected)"
+                [attr.value]="st.value"
+                [attr.text]="st.label"
+                [attr.selected]="cableStatus() === st.value ? '' : null"
+                (change)="onStatusToggle(st.value, $any($event).detail.selected)"
               ></nldd-toggle-button>
-              @for (st of CABLE_STATUSES; track st.value) {
-                <nldd-toggle-button
-                  [attr.value]="st.value"
-                  [attr.text]="st.label"
-                  [attr.selected]="cableStatus() === st.value ? '' : null"
-                  (change)="onStatusToggle(st.value, $any($event).detail.selected)"
-                ></nldd-toggle-button>
-              }
-            </nldd-toggle-button-group>
-          </nldd-form-field>
+            }
+          </nldd-toggle-button-group>
+        </nldd-form-field>
 
-          <!-- The swatches are the one control here the design system has no
-               component for, so they stay as they are, inside a real field. -->
-          <nldd-form-field label="Color">
-            <div class="flex flex-wrap gap-1.5" role="group" aria-label="Color">
-              <!-- No color option -->
-              <button
-                class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1"
-                [class]="
-                  cableColor() === undefined
-                    ? 'border-accent-500 bg-white dark:bg-gray-950'
-                    : 'border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 hover:border-slate-400'
-                "
-                (click)="onCableColorChange(undefined)"
-                aria-label="No color"
-                [attr.aria-pressed]="cableColor() === undefined"
-                title="No color"
+        <!-- The colour with its name beside it: a colour on its own is not
+               something everyone can read, and a swatch of 24 pixels with only
+               a title says nothing on touch or to a screen reader. -->
+        <nldd-form-field label="Color">
+          <nldd-toggle-button-group type="radio" accessible-label="Color">
+            <nldd-toggle-button
+              value=""
+              text="No color"
+              [attr.selected]="cableColor() === undefined ? '' : null"
+              (change)="onColorToggle('', $any($event).detail.selected)"
+            >
+              <!-- An open ring where the others carry a filled one, so the row
+                   reads as one scale with nothing at the start. -->
+              <nldd-icon slot="icon" name="circle-dashed"></nldd-icon>
+            </nldd-toggle-button>
+            @for (color of CABLE_COLORS; track color) {
+              <nldd-toggle-button
+                [attr.value]="color"
+                [attr.text]="CABLE_COLOR_LABEL[color]"
+                [attr.selected]="cableColor() === color ? '' : null"
+                (change)="onColorToggle(color, $any($event).detail.selected)"
               >
-                <svg
-                  class="w-3 h-3 text-slate-300 dark:text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                <nldd-icon
+                  slot="icon"
+                  name="circle-filled"
+                  [attr.custom-color]="CABLE_COLOR_HEX[color]"
+                ></nldd-icon>
+              </nldd-toggle-button>
+            }
+          </nldd-toggle-button-group>
+        </nldd-form-field>
 
-              @for (color of CABLE_COLORS; track color) {
-                <button
-                  class="w-6 h-6 rounded-full border-2 transition-all focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-1"
-                  [class]="
-                    cableColor() === color
-                      ? 'border-accent-500 scale-110'
-                      : 'border-transparent hover:border-slate-300 dark:hover:border-gray-700 hover:scale-105'
-                  "
-                  [style.background]="CABLE_COLOR_HEX[color]"
-                  (click)="onCableColorChange(color)"
-                  [attr.aria-label]="'Color: ' + color"
-                  [attr.aria-pressed]="cableColor() === color"
-                  [title]="color"
-                ></button>
-              }
-            </div>
-          </nldd-form-field>
+        <!-- Length -->
+        <nldd-form-field label="Length (m)" optional optional-label="Optional">
+          <nldd-number-field
+            id="cable-length"
+            [attr.value]="cableLength() ?? ''"
+            class="w-full"
+            min="0"
+            step="0.5"
+            (change)="
+              cableLength.set(
+                $any($event).detail?.value !== null && $any($event).detail?.value !== ''
+                  ? +$any($event).detail.value
+                  : undefined
+              )
+            "
+            (input)="
+              cableLength.set(
+                $any($event.target).value !== '' ? +$any($event.target).value : undefined
+              )
+            "
+            (keydown.enter)="onSave()"
+          ></nldd-number-field>
+        </nldd-form-field>
 
-          <!-- Description -->
-          <nldd-form-field label="Description">
-            <nldd-multi-line-text-field
-              id="cable-description"
-              [value]="cableDescription()"
-              (input)="cableDescription.set($any($event.target).value)"
-              rows="3"
-              placeholder="Optional description or notes…"
-              resize="vertical"
-            ></nldd-multi-line-text-field>
-          </nldd-form-field>
-
-          <!-- Length -->
-          <nldd-form-field label="Length (m)">
-            <nldd-number-field
-              id="cable-length"
-              [attr.value]="cableLength() ?? ''"
-              placeholder="E.g. 2"
-              class="w-full"
-              min="0"
-              step="0.5"
-              (change)="
-                cableLength.set(
-                  $any($event).detail?.value !== null && $any($event).detail?.value !== ''
-                    ? +$any($event).detail.value
-                    : undefined
-                )
-              "
-              (input)="
-                cableLength.set(
-                  $any($event.target).value !== '' ? +$any($event.target).value : undefined
-                )
-              "
-              (keydown.enter)="onSave()"
-            ></nldd-number-field>
-          </nldd-form-field>
-        <!-- Under the fields rather than docked at the bottom, the same as
+        <!-- Description -->
+        <nldd-form-field label="Description" optional optional-label="Optional">
+          <nldd-multi-line-text-field
+            id="cable-description"
+            [value]="cableDescription()"
+            (input)="cableDescription.set($any($event.target).value)"
+            rows="3"
+            resize="vertical"
+          ></nldd-multi-line-text-field>
+        </nldd-form-field>
+      </nldd-form-section>
+      <!-- Under the fields rather than docked at the bottom, the same as
              every other form in this app. -->
-        <nldd-form-actions>
-          <nldd-button
-            variant="primary"
-            width="full"
-            text="Save"
-            [attr.disabled]="canSave() ? null : true"
-            (click)="onSave()"
-          ></nldd-button>
-        </nldd-form-actions>
-      </nldd-form>
-    </section>
+      <nldd-form-actions>
+        <nldd-button variant="primary" width="full" text="Save" (click)="onSave()"></nldd-button>
+      </nldd-form-actions>
+    </nldd-form>
   </nldd-simple-section>
 </nldd-page>
