@@ -1,7 +1,7 @@
 ---
 title: Writing a plugin
 sidebar:
-  order: 3
+  order: 5
 ---
 
 Writing a plugin consists of several steps, each described below.
@@ -170,18 +170,28 @@ ENTRYPOINT ["/my-plugin"]
 
 ### 5. Create a PluginInstallation
 
+A plugin is not installed by pointing at an image. You publish its **definition** to
+organization-api, then reference that:
+
+```bash
+just plugin-publish my-plugin      # from plugins/ — prints the version and hash
+```
+
 ```yaml
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
   name: my-plugin
 spec:
-  image: registry.example.com/my-plugin:v1.0.0
-  pluginName: my-plugin
-  # Only if your plugin needs cluster-wide access:
-  # clusterRoles:
-  #   - cluster-admin
+  definitionRef:
+    pluginName: my-plugin          # metadata.name from your definition.yaml
+    pluginVersion: v1.0.0          # metadata.version from your definition.yaml
+    definitionHash: sha256:…       # printed by plugin-publish
 ```
+
+The image and the cluster-wide RBAC come from the published definition, not from this CR. The
+full walkthrough, with the cluster setup it needs, is
+[Install a plugin](./install-a-plugin.md).
 
 ## Metadata API
 
@@ -199,6 +209,9 @@ service PluginMetadataService {
 | Plugin Controller | `GetStatus` | Poll phase, message, version → write to CR `.status` |
 | Console Frontend | `GetDefinition` | Fetch menu entries, UI hints, CRDs → render plugin UI |
 
-## Plugin sandbox
+## Next steps
 
-A self-contained development environment for plugin development. See [`plugins/README.md`](https://github.com/fundament-oss/fundament/blob/master/plugins/README.md) for setup instructions and available commands.
+- [Install a plugin](./install-a-plugin.md) — publish and install what you just built, on the
+  local two-cluster setup.
+- [`plugins/README.md`](https://github.com/fundament-oss/fundament/blob/master/plugins/README.md)
+  — the command reference for the sandbox.

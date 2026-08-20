@@ -1,7 +1,7 @@
 ---
 title: Console integration
 sidebar:
-  order: 6
+  order: 7
 ---
 
 How a Fundament plugin renders inside the Console: the iframe boundary, the
@@ -12,7 +12,7 @@ This document is the architecture reference for anyone working on the
 Console-plugin boundary. For a plugin author's how-to, start with
 [Writing a plugin](writing-a-plugin) and [Custom UI](custom-ui). For the
 container lifecycle (controller, RBAC, install/uninstall), see the
-[Plugins overview](.).
+[Plugins overview](/docs/developer/plugins).
 
 ## Overview
 

@@ -2,16 +2,27 @@
 title: Plugins
 sidebar:
   label: Overview
-  order: 2
+  order: 1
 ---
 
 The plugin system allows extending Fundament with installable plugins that integrate into the platform's console UI, RBAC, and lifecycle management.
+
+## Start here
+
+This page is reference material. To actually do something:
+
+| I want to… | Go to |
+|---|---|
+| Run Fundament on my machine | [Getting started](/docs/developer/fundament/getting-started) |
+| Understand the local setup | [The two development clusters](/docs/developer/plugins/dev-environment) |
+| **Install and test a plugin** | [Install a plugin](/docs/developer/plugins/install-a-plugin) |
+| Write a plugin of my own | [Writing a plugin](/docs/developer/plugins/writing-a-plugin) |
 
 ## System overview
 
 ```
   ┌──────────────────────────────────────────────────────────────────────────┐
-  │                         Fundament Cluster                                │
+  │              Managed cluster (locally: k3d-fundament-plugin)             │
   │                                                                          │
   │  PluginInstallation CRs (cluster-scoped)                                 │
   │  ┌──────────────────────┐                                                │
@@ -37,8 +48,8 @@ The plugin system allows extending Fundament with installable plugins that integ
   │  ┌───────────────────────┐  ┌───────────────────────┐                    │
   │  │ SA + RoleBinding      │  │ SA + RoleBinding      │                    │
   │  │ Deployment + Service  │  │ Deployment + Service  │                    │
-  │  │ (+ ClusterRoleBinding │  │                       │                    │
-  │  │  if requested)        │  │                       │                    │
+  │  │ + plugin-scope        │  │                       │                    │
+  │  │   ClusterRole         │  │                       │                    │
   │  └───────────────────────┘  └───────────────────────┘                    │
   └──────────────────────────────────────────────────────────────────────────┘
 ```
@@ -195,30 +206,44 @@ The controller watches `PluginInstallation` CRs.
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: cert-manager-test
+  name: cert-manager
 spec:
-  image: ghcr.io/fundament-oss/fundament/cert-manager-plugin:v1.0.0
-  pluginName: cert-manager-test
-  clusterRoles:          # Optional: bind SA to these ClusterRoles
-    - cluster-admin
-  config:                # Optional: extra env vars (injected with FUNP_ prefix)
-    LOG_LEVEL: debug     # → becomes FUNP_LOG_LEVEL in the container
+  definitionRef:              # Which published definition to install
+    pluginName: cert-manager
+    pluginVersion: v1.2.3     # the plugin's own version, not the platform's
+    definitionHash: sha256:…  # the admin's consent record; see below
+  config:                     # Optional: extra env vars (injected with FUNP_ prefix)
+    LOG_LEVEL: debug          # → becomes FUNP_LOG_LEVEL in the container
 ```
+
+`definitionRef` and `config` are the only fields you set. The container image and the plugin's
+RBAC are **not** in the CR — they come from the published definition the reference resolves to
+(FUN-19). `definitionRef` is immutable once set: to move a plugin to a new version, delete and
+recreate the installation.
+
+`definitionHash` records exactly which definition an admin approved. Always set it: although
+`pluginController.allowUnpinnedHash` suggests otherwise, the CRD's immutability rule rejects the
+controller's first update when the hash is absent, and the installation never reconciles — see
+[Install a plugin](/docs/developer/plugins/install-a-plugin).
 
 ### What the controller creates
 
 For each `PluginInstallation`, the controller creates:
 
 ```
-  plugin-{pluginName} namespace
-  ├─ ServiceAccount/plugin-{pluginName}
+  plugin-{name} namespace                    ← {name} is metadata.name, max 56 chars
+  ├─ ServiceAccount/plugin-{name}
   ├─ RoleBinding ──► ClusterRole/admin (always, namespace-scoped)
-  ├─ Deployment (runs the plugin image)
+  ├─ Deployment (image taken from the published definition)
   └─ Service (:8080)
 
-  ClusterRoleBinding (only if spec.clusterRoles is set)
-  └─ Binds SA to requested ClusterRoles at cluster scope
+  ClusterRole/plugin-{name}-scope + binding
+  └─ Materialised from the definition's spec.permissions.rbac
 ```
+
+The cluster-scoped permissions are always derived from the published definition, never requested
+by the CR. That is what lets an admin see, at install time, exactly what a plugin will be able to
+do.
 
 ### RBAC model
 
@@ -234,10 +259,11 @@ For each `PluginInstallation`, the controller creates:
   └─────────────────────────────────────┘
                   +
   ┌─────────────────────────────────────┐
-  │  OPTIONAL (spec.clusterRoles)       │
+  │  FROM THE PUBLISHED DEFINITION      │
   │                                     │
-  │  ClusterRoleBinding                 │
-  │  → ClusterRole/{requested}          │
+  │  ClusterRole/plugin-{name}-scope    │
+  │  → rules from                       │
+  │    spec.permissions.rbac            │
   │                                     │
   │  For plugins that need cluster-wide │
   │  access (CRDs, webhooks, resources  │
@@ -254,7 +280,7 @@ For each `PluginInstallation`, the controller creates:
   Add finalizer ──► Create Namespace ──► Create SA
            │
            ├──► Create RoleBinding (→ admin)
-           ├──► Create ClusterRoleBindings (if spec.clusterRoles)
+           ├──► Materialise plugin-scope ClusterRole + binding
            ├──► Create Deployment
            ├──► Create Service
            │
@@ -275,7 +301,7 @@ For each `PluginInstallation`, the controller creates:
 
 ```
   CR deleted ──► Finalizer triggers:
-                 ├─ Delete ClusterRoleBindings (if any)
+                 ├─ Delete the plugin-scope ClusterRole + binding
                  ├─ Delete Namespace (cascades to all resources)
                  └─ Remove finalizer → CR garbage collected
 ```

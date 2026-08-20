@@ -1,7 +1,7 @@
 ---
 title: Custom UI
 sidebar:
-  order: 4
+  order: 6
 ---
 
 Custom UI is optional. When a plugin omits `customComponents` for a CRD it
