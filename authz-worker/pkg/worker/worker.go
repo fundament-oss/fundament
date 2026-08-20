@@ -22,6 +22,8 @@ import (
 const (
 	listenChannel = "authz_outbox"
 
+	storeCheckTimeout = 5 * time.Second
+
 	// finalizeTimeout bounds the post-dispatch DB work (mark processed/retry
 	// + commit) when running on a context that may already have been cancelled
 	// by SIGTERM. The OpenFGA write has already happened at that point; if we
@@ -29,6 +31,9 @@ const (
 	// OpenFGA rejects it as a duplicate.
 	finalizeTimeout = 10 * time.Second
 )
+
+// errStoreUnavailable lets Run distinguish a failed store check from a lost DB connection.
+var errStoreUnavailable = errors.New("openfga store unavailable")
 
 // Config holds configuration for the outbox worker.
 type Config struct {
@@ -45,6 +50,7 @@ type Worker struct {
 	pool    *pgxpool.Pool
 	queries *db.Queries
 	handler *handler.Handler
+	fga     *client.OpenFgaClient
 	logger  *slog.Logger
 	cfg     Config
 	ready   atomic.Bool
@@ -53,6 +59,10 @@ type Worker struct {
 	// dispatchItem and exists as a field so tests can substitute failure
 	// scenarios, including ones that abort tx (SQLSTATE 25P02).
 	dispatch func(ctx context.Context, tx pgx.Tx, qtx *db.Queries, item *db.GetAndLockNextOutboxRowRow) error
+
+	// verify gates each drain on the OpenFGA store. Defaults to verifyStore and
+	// exists as a field so tests can stub it.
+	verify func(ctx context.Context) error
 }
 
 // New creates a new authz worker with sensible defaults.
@@ -66,12 +76,14 @@ func New(pool *pgxpool.Pool, fgaClient *client.OpenFgaClient, logger *slog.Logge
 		pool:    pool,
 		queries: db.New(pool),
 		handler: handler.New(fgaClient, logger),
+		fga:     fgaClient,
 		logger:  logger.With("worker_id", workerID),
 		cfg:     cfg,
 	}
 	w.dispatch = func(ctx context.Context, _ pgx.Tx, qtx *db.Queries, item *db.GetAndLockNextOutboxRowRow) error {
 		return w.dispatchItem(ctx, qtx, item)
 	}
+	w.verify = w.verifyStore
 
 	return w
 }
@@ -115,7 +127,11 @@ func (w *Worker) Run(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return fmt.Errorf("worker stopped: %w", ctx.Err())
 		}
-		w.logger.Error("connection lost, reconnecting", "error", err, "delay", w.cfg.BackoffDelay)
+		if errors.Is(err, errStoreUnavailable) {
+			w.logger.Error("openfga store unavailable, holding outbox", "error", err, "delay", w.cfg.BackoffDelay)
+		} else {
+			w.logger.Error("connection lost, reconnecting", "error", err, "delay", w.cfg.BackoffDelay)
+		}
 		w.ready.Store(false)
 		select {
 		case <-ctx.Done():
@@ -131,6 +147,11 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 		return err
 	}
 	defer conn.Release()
+
+	// Ready only once the store checks out — a worker without its store makes no progress.
+	if err := w.verify(ctx); err != nil {
+		return err
+	}
 
 	w.ready.Store(true)
 
@@ -151,8 +172,25 @@ func (w *Worker) runWithConnection(ctx context.Context) error {
 		if _, err := w.waitForNotification(ctx, conn); err != nil {
 			return err
 		}
+		if err := w.verify(ctx); err != nil {
+			return err
+		}
 		w.processBatch(ctx)
 	}
+}
+
+// verifyStore gates a drain on the store existing: OpenFGA's Write does not
+// check store existence, so writes to a wiped store falsely succeed. GetStore
+// bypasses the typesystem cache and sees the wipe.
+func (w *Worker) verifyStore(ctx context.Context) error {
+	checkCtx, cancel := context.WithTimeout(ctx, storeCheckTimeout)
+	defer cancel()
+
+	if _, err := w.fga.GetStore(checkCtx).Execute(); err != nil {
+		return fmt.Errorf("%w: %w", errStoreUnavailable, err)
+	}
+
+	return nil
 }
 
 func (w *Worker) setupListener(ctx context.Context) (*pgxpool.Conn, error) {

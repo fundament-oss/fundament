@@ -40,6 +40,7 @@ func TestProcessesRetryingRowOnPollTimeoutWithoutNotify(t *testing.T) {
 	w.dispatch = func(context.Context, pgx.Tx, *db.Queries, *db.GetAndLockNextOutboxRowRow) error {
 		return nil
 	}
+	w.verify = func(context.Context) error { return nil }
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -114,6 +115,7 @@ func TestProcessOneItem_DispatchAbortsTx(t *testing.T) {
 		queries: db.New(pool),
 		logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
 		cfg:     applyDefaults(Config{}),
+		verify:  func(context.Context) error { return nil },
 	}
 
 	// Simulate a handler whose SQL statement fails mid-transaction: the failing
@@ -149,4 +151,49 @@ func TestProcessOneItem_DispatchAbortsTx(t *testing.T) {
 	require.NotNil(t, statusInfo)
 	assert.Contains(t, *statusInfo, "boom")
 	assert.NotNil(t, retryAfter, "retry backoff must be scheduled")
+}
+
+// TestHoldsOutboxWhenStoreUnavailable verifies the worker refuses to drain when
+// the OpenFGA store check fails. OpenFGA accepts writes to a store that no
+// longer exists, so a drain in that state marks rows processed against nothing
+// and they are never replayed.
+func TestHoldsOutboxWhenStoreUnavailable(t *testing.T) {
+	pool := createTestDB(t)
+
+	_, err := pool.Exec(t.Context(), `DELETE FROM authz.outbox`)
+	require.NoError(t, err)
+
+	var itemID uuid.UUID
+	err = pool.QueryRow(t.Context(),
+		`INSERT INTO authz.outbox (cluster_id) VALUES ($1) RETURNING id`,
+		seededClusterID,
+	).Scan(&itemID)
+	require.NoError(t, err)
+
+	w := &Worker{
+		pool:    pool,
+		queries: db.New(pool),
+		logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+		cfg:     applyDefaults(Config{PollInterval: 50 * time.Millisecond}),
+		verify:  func(context.Context) error { return errStoreUnavailable },
+	}
+	// Fails the test if reached: a failed store check must stop the drain.
+	w.dispatch = func(context.Context, pgx.Tx, *db.Queries, *db.GetAndLockNextOutboxRowRow) error {
+		t.Error("dispatched an outbox row while the store was unavailable")
+
+		return nil
+	}
+
+	err = w.runWithConnection(t.Context())
+	require.ErrorIs(t, err, errStoreUnavailable)
+	assert.False(t, w.IsReady(), "must not report ready without its store")
+
+	var status string
+	var processed *time.Time
+	err = pool.QueryRow(t.Context(),
+		`SELECT status, processed FROM authz.outbox WHERE id = $1`, itemID,
+	).Scan(&status, &processed)
+	require.NoError(t, err)
+	assert.Equal(t, "pending", status, "row must be held, not consumed")
+	assert.Nil(t, processed, "row must not be marked processed")
 }
