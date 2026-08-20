@@ -13,9 +13,11 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
+import { pageTitle } from '../../shell/page-title';
 import parseValidationError from '../../../connect/validation';
 import { DatacenterInfo, DatacenterRack, RackRow, Room } from '../datacenter.model';
 import DatacenterApiService from '../datacenter-api.service';
@@ -45,6 +47,8 @@ export default class DatacenterDetailComponent implements OnInit, AfterViewInit,
   private readonly route = inject(ActivatedRoute);
 
   private readonly router = inject(Router);
+
+  private readonly title = inject(Title);
 
   private readonly dcApi = inject(DatacenterApiService);
 
@@ -189,6 +193,11 @@ export default class DatacenterDetailComponent implements OnInit, AfterViewInit,
   private readonly fRackTotalU = viewChild<NativeElementRef>('fRackTotalU');
 
   constructor() {
+    // The tab says which one you have open, not just which section.
+    effect(() => {
+      const name = this.dc()?.name;
+      if (name) this.title.setTitle(pageTitle(name));
+    });
     effect(() => {
       const el = this.roomSheetEl()?.nativeElement;
       if (this.editRoom() !== null) el?.show?.();

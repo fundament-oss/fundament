@@ -13,9 +13,11 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { pageTitle } from '../shell/page-title';
 import DatacenterApiService from './datacenter-api.service';
 import DatacenterListService from './datacenter-list.service';
 import DatacenterNavComponent from './datacenter-nav';
@@ -23,12 +25,13 @@ import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import { ASSET_CLIENT } from '../../connect/tokens';
 import connectErrorMessage from '../../connect/error';
-import parseValidationError from '../../connect/validation';
 import { parseRackHeight } from '../racks/catalog-helpers';
 import IsometricCanvasComponent from './isometric-canvas';
 import { DatacenterInfo, DatacenterStatus, RackCell, statusTagColor } from './datacenter.model';
 import SecondaryNavService from '../shell/secondary-nav.service';
 import { viewSlug } from '../shared/section-views';
+import openOnCreateRequest from '../shell/create-request';
+import OverlayService from '../shell/overlay.service';
 
 interface NativeElementRef {
   nativeElement: { value: string; show?: () => void; hide?: () => void };
@@ -67,6 +70,8 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
 
   private readonly router = inject(Router);
 
+  private readonly title = inject(Title);
+
   private readonly route = inject(ActivatedRoute);
 
   private readonly dcApi = inject(DatacenterApiService);
@@ -78,6 +83,9 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
   private readonly assetClient = inject(ASSET_CLIENT);
 
   private readonly list = inject(DatacenterListService);
+
+  /** The forms that make or change a data center live in the shell. */
+  private readonly overlays = inject(OverlayService);
 
   /** The list this section shares, so a step to another page does not lose it.
    *  Writable: creating, renaming and deleting one all write straight into it. */
@@ -119,42 +127,18 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
   });
 
   // ── CRUD state ─────────────────────────────────────────────────────────────
-  editForm = signal<Partial<DatacenterInfo> | null>(null);
-
-  /** The four tiers, as buttons rather than a dropdown. */
-  readonly TIERS: { value: string; label: string }[] = [
-    { value: '1', label: 'Tier 1' },
-    { value: '2', label: 'Tier 2' },
-    { value: '3', label: 'Tier 3' },
-    { value: '4', label: 'Tier 4' },
-  ];
-
-  readonly DC_STATUSES: { value: DatacenterStatus; label: string }[] = [
-    { value: 'operational', label: 'Operational' },
-    { value: 'degraded', label: 'Degraded' },
-    { value: 'maintenance', label: 'Maintenance' },
-  ];
-
-  dcTier = signal<string>('3');
-
-  dcStatus = signal<DatacenterStatus>('operational');
-
   deleteTarget = signal<DatacenterInfo | null>(null);
-
-  // ── Validation feedback ──────────────────────────────────────────────────────
-  readonly invalidFields = signal<Record<string, string>>({});
-
-  readonly formErrorMessage = signal<string | null>(null);
-
-  private readonly editSheetEl = viewChild<NativeElementRef>('editSheet');
 
   private readonly deleteModalEl = viewChild<NativeElementRef>('deleteModal');
 
   constructor() {
+    // The add button in the bar opens this form itself, so the page only has
+    // to honour a link that asks for it.
+    openOnCreateRequest(() => this.openCreateDc());
+    // The tab says which one you have open, not just which section.
     effect(() => {
-      const el = this.editSheetEl()?.nativeElement;
-      if (this.editForm() !== null) el?.show?.();
-      else el?.hide?.();
+      const name = this.currentDc()?.name;
+      if (name) this.title.setTitle(pageTitle(name));
     });
     effect(() => {
       const el = this.deleteModalEl()?.nativeElement;
@@ -316,118 +300,16 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
     }
   };
 
-  // ── CRUD form field refs ───────────────────────────────────────────────────
-  private readonly fName = viewChild<NativeElementRef>('fName');
-
-  private readonly fFullName = viewChild<NativeElementRef>('fFullName');
-
-  private readonly fCity = viewChild<NativeElementRef>('fCity');
-
-  private readonly fCountry = viewChild<NativeElementRef>('fCountry');
-
-  private readonly fAddress = viewChild<NativeElementRef>('fAddress');
-
-  private readonly fEstablished = viewChild<NativeElementRef>('fEstablished');
-
-  private readonly fFloorSqm = viewChild<NativeElementRef>('fFloorSqm');
-
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
-  isFieldInvalid(field: string): boolean {
-    return field in this.invalidFields();
-  }
-
-  fieldError(field: string): string {
-    return this.invalidFields()[field] ?? '';
-  }
-
-  private clearErrors(): void {
-    this.invalidFields.set({});
-    this.formErrorMessage.set(null);
-  }
-
-  private handleError(err: unknown): void {
-    const { fields, message } = parseValidationError(err);
-    this.invalidFields.set(fields);
-    this.formErrorMessage.set(message);
-  }
-
+  /** Both routes into the form open the one the shell holds: it has to survive
+   *  the page, and the add button in the bar opens the same one. */
   openCreateDc(): void {
-    this.clearErrors();
-    this.editForm.set({
-      id: '',
-      name: '',
-      fullName: '',
-      city: '',
-      country: '',
-      address: '',
-      tier: 3,
-      established: new Date().getFullYear(),
-      status: 'operational',
-      floorSqm: 0,
-    });
-    this.dcTier.set('3');
-    this.dcStatus.set('operational');
+    this.overlays.newDatacenter();
   }
 
   openEditDc(dc: DatacenterInfo): void {
-    this.clearErrors();
-    this.editForm.set({ ...dc });
-    this.dcTier.set(String(dc.tier));
-    this.dcStatus.set(dc.status);
-  }
-
-  closeEditForm(): void {
-    this.clearErrors();
-    this.editForm.set(null);
-  }
-
-  /** One tier at a time: unpicking the current one leaves it as it was. */
-  onTierToggle(tier: string, selected: boolean): void {
-    if (selected) this.dcTier.set(tier);
-  }
-
-  onDcStatusToggle(status: DatacenterStatus, selected: boolean): void {
-    if (selected) this.dcStatus.set(status);
-  }
-
-  saveDc(): void {
-    const form = this.editForm();
-    if (!form) return;
-    this.clearErrors();
-    const updated: DatacenterInfo = {
-      id: form.id || `dc-${Date.now()}`,
-      name: this.fName()?.nativeElement.value ?? '',
-      fullName: this.fFullName()?.nativeElement.value ?? '',
-      city: this.fCity()?.nativeElement.value ?? '',
-      country: this.fCountry()?.nativeElement.value ?? '',
-      address: this.fAddress()?.nativeElement.value ?? '',
-      tier: (parseInt(this.dcTier(), 10) || 3) as 1 | 2 | 3 | 4,
-      status: this.dcStatus(),
-      established: parseFloat(this.fEstablished()?.nativeElement.value ?? '0') || 0,
-      floorSqm: parseFloat(this.fFloorSqm()?.nativeElement.value ?? '0') || 0,
-      // Not modelled by the API.
-      powerCapacityKw: 0,
-      coolingCapacityKw: 0,
-      pue: 0,
-    };
-    if (form.id) {
-      firstValueFrom(this.dcApi.updateSite(updated))
-        .then(() => {
-          this.mutableDcs.update((list) => list.map((dc) => (dc.id === form.id ? updated : dc)));
-          this.editForm.set(null);
-        })
-        .catch((err) => this.handleError(err));
-    } else {
-      firstValueFrom(this.dcApi.createSite(updated))
-        .then((res) => {
-          const created = { ...updated, id: res.siteId || updated.id };
-          this.mutableDcs.update((list) => [...list, created]);
-          this.selectDc(created.id);
-          this.editForm.set(null);
-        })
-        .catch((err) => this.handleError(err));
-    }
+    this.overlays.editDatacenter(dc);
   }
 
   openDeleteDc(dc: DatacenterInfo): void {

@@ -94,7 +94,9 @@
             <nldd-title size="3">
               <h2>{{ dcStats().deviceCount }}</h2>
             </nldd-title>
-            <nldd-text size="sm" color="secondary">{{ dcStats().capacityPct }}% capacity used</nldd-text>
+            <nldd-text size="sm" color="secondary"
+              >{{ dcStats().capacityPct }}% capacity used</nldd-text
+            >
           </nldd-container>
         </nldd-card>
         <nldd-card background="tinted">
@@ -295,19 +297,31 @@
       <nldd-list variant="box-tinted" accessible-label="Data center properties">
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Address"></nldd-text-cell>
-          <nldd-text-cell horizontal-alignment="right" [attr.text]="fullAddress(dc)"></nldd-text-cell>
+          <nldd-text-cell
+            horizontal-alignment="right"
+            [attr.text]="fullAddress(dc)"
+          ></nldd-text-cell>
         </nldd-list-item>
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Tier"></nldd-text-cell>
-          <nldd-text-cell horizontal-alignment="right" [attr.text]="'Tier ' + dc.tier"></nldd-text-cell>
+          <nldd-text-cell
+            horizontal-alignment="right"
+            [attr.text]="'Tier ' + dc.tier"
+          ></nldd-text-cell>
         </nldd-list-item>
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Floor space"></nldd-text-cell>
-          <nldd-text-cell horizontal-alignment="right" [attr.text]="dc.floorSqm + ' m²'"></nldd-text-cell>
+          <nldd-text-cell
+            horizontal-alignment="right"
+            [attr.text]="dc.floorSqm + ' m²'"
+          ></nldd-text-cell>
         </nldd-list-item>
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Established"></nldd-text-cell>
-          <nldd-text-cell horizontal-alignment="right" [attr.text]="dc.established"></nldd-text-cell>
+          <nldd-text-cell
+            horizontal-alignment="right"
+            [attr.text]="dc.established"
+          ></nldd-text-cell>
         </nldd-list-item>
       </nldd-list>
       <nldd-spacer size="32"></nldd-spacer>
@@ -353,150 +367,6 @@
 <!-- ══════════════════════════════════════════════════════════════
      DATACENTER EDIT SHEET
      ══════════════════════════════════════════════════════════════ -->
-<nldd-sheet #editSheet accessible-label="Data center details" placement="right">
-  <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      [attr.text]="editForm()?.id ? 'Edit data center' : 'Add data center'"
-      dismiss-text="Cancel"
-      (dismiss)="closeEditForm()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ formErrorMessage() }}
-          </p>
-        </div>
-      }
-      <nldd-form>
-        <nldd-form-field label="Short name" supporting-label="e.g. AMS-01">
-          <nldd-text-field
-            #fName
-            autofocus
-            [attr.value]="editForm()?.name ?? ''"
-            (keydown.enter)="saveDc()"
-            [attr.invalid]="isFieldInvalid('name') ? '' : null"
-            error-message="error-dc-name"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-name">{{
-            fieldError('name')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <nldd-form-field label="Full name">
-          <nldd-text-field
-            #fFullName
-            [attr.value]="editForm()?.fullName ?? ''"
-            (keydown.enter)="saveDc()"
-            [attr.invalid]="isFieldInvalid('full_name') ? '' : null"
-            error-message="error-dc-fullname"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-fullname">{{
-            fieldError('full_name')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <nldd-form-field label="Street address">
-          <nldd-text-field
-            #fAddress
-            [attr.value]="editForm()?.address ?? ''"
-            (keydown.enter)="saveDc()"
-            [attr.invalid]="isFieldInvalid('address') ? '' : null"
-            error-message="error-dc-address"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-address">{{
-            fieldError('address')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <nldd-form-field label="City">
-          <nldd-text-field
-            #fCity
-            [attr.value]="editForm()?.city ?? ''"
-            (keydown.enter)="saveDc()"
-            [attr.invalid]="isFieldInvalid('city') ? '' : null"
-            error-message="error-dc-city"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-city">{{
-            fieldError('city')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <nldd-form-field label="Country">
-          <nldd-text-field
-            #fCountry
-            [attr.value]="editForm()?.country ?? ''"
-            (keydown.enter)="saveDc()"
-            [attr.invalid]="isFieldInvalid('country') ? '' : null"
-            error-message="error-dc-country"
-          ></nldd-text-field>
-          <nldd-form-field-error-text id="error-dc-country">{{
-            fieldError('country')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <!-- Four tiers and three states, all short: buttons show the whole choice
-             where a dropdown hides it behind a click, and one field per row keeps
-             each label above the thing it names. -->
-        <nldd-form-field label="Tier">
-          <nldd-toggle-button-group type="radio" accessible-label="Tier">
-            @for (t of TIERS; track t.value) {
-              <nldd-toggle-button
-                [attr.value]="t.value"
-                [attr.text]="t.label"
-                [attr.selected]="dcTier() === t.value ? '' : null"
-                (change)="onTierToggle(t.value, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
-        </nldd-form-field>
-        <nldd-form-field label="Status">
-          <nldd-toggle-button-group type="radio" accessible-label="Status">
-            @for (st of DC_STATUSES; track st.value) {
-              <nldd-toggle-button
-                [attr.value]="st.value"
-                [attr.text]="st.label"
-                [attr.selected]="dcStatus() === st.value ? '' : null"
-                (change)="onDcStatusToggle(st.value, $any($event).detail.selected)"
-              ></nldd-toggle-button>
-            }
-          </nldd-toggle-button-group>
-        </nldd-form-field>
-        <nldd-form-field label="Established (year)">
-          <nldd-number-field
-            #fEstablished
-            [attr.value]="editForm()?.established ?? 2024"
-            min="1990"
-            max="2100"
-            full-width
-            (keydown.enter)="saveDc()"
-            [attr.invalid]="isFieldInvalid('established') ? '' : null"
-            error-message="error-dc-established"
-          ></nldd-number-field>
-          <nldd-form-field-error-text id="error-dc-established">{{
-            fieldError('established')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <nldd-form-field label="Floor space (m²)">
-          <nldd-number-field
-            #fFloorSqm
-            [attr.value]="editForm()?.floorSqm ?? 0"
-            min="0"
-            full-width
-            (keydown.enter)="saveDc()"
-            [attr.invalid]="isFieldInvalid('floor_sqm') ? '' : null"
-            error-message="error-dc-floorsqm"
-          ></nldd-number-field>
-          <nldd-form-field-error-text id="error-dc-floorsqm">{{
-            fieldError('floor_sqm')
-          }}</nldd-form-field-error-text>
-        </nldd-form-field>
-        <!-- Under the form rather than docked at the bottom of the sheet: the
-             button belongs to the fields above it. -->
-        <nldd-form-actions>
-          <nldd-button variant="primary" width="full" text="Save" (click)="saveDc()"></nldd-button>
-        </nldd-form-actions>
-      </nldd-form>
-    </nldd-simple-section>
-  </nldd-page>
-</nldd-sheet>
-
 <!-- ══════════════════════════════════════════════════════════════
      DELETE CONFIRMATION MODAL
      ══════════════════════════════════════════════════════════════ -->
