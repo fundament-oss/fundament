@@ -177,8 +177,39 @@ plugin-sandbox-kubeconfig:
         --dry-run=client -o yaml | \
         kubectl --context k3d-fundament-plugin apply -f -
 
-    echo "plugin-sandbox-kubeconfig Secret updated. Restart plugin-proxy:"
-    echo "  kubectl --context k3d-fundament -n fundament rollout restart deployment/plugin-proxy"
+    # The console refuses a plugin install unless the cluster reports RUNNING, which
+    # organization-api derives from tenant.clusters.shoot_status = 'ready'. Locally there is
+    # no Gardener to set it, so the seeded row stays NULL and the cluster shows as
+    # provisioning forever. Every cluster id routes to the sandbox here (see
+    # kube-api-proxy/pkg/kube/sandbox_proxy.go), so the sandbox just wired up is what those
+    # rows stand for — which makes this the point where "ready" becomes true. A db.reset
+    # clears it again, and re-running this recipe is already the documented step after one.
+    echo "- marking the local cluster(s) ready so the console allows plugin installs"
+    kubectl --context k3d-fundament -n fundament exec db-1 -c postgres -- \
+        psql -U postgres -d fundament -qc \
+        "UPDATE tenant.clusters SET shoot_status = 'ready', shoot_status_updated = now() \
+         WHERE deleted IS NULL AND shoot_status IS DISTINCT FROM 'ready';" \
+        || echo "  (could not reach the database — the console will still show provisioning)" >&2
+
+    # Both consumers read the Secret only at startup, and Reloader does not reliably pick
+    # this one up, so restart them here rather than leave a Secret that has no effect.
+    echo "- restarting plugin-proxy and kube-api-proxy to pick the Secret up"
+    kubectl --context k3d-fundament -n fundament rollout restart \
+        deployment/plugin-proxy deployment/kube-api-proxy > /dev/null
+    kubectl --context k3d-fundament -n fundament rollout status deployment/kube-api-proxy --timeout=180s > /dev/null
+
+    # Confirm the new pod actually switched off the in-memory mock. `rollout status`
+    # returns slightly before the logs are attached, so poll rather than read once.
+    for i in $(seq 1 30); do
+        if kubectl --context k3d-fundament -n fundament logs deployment/kube-api-proxy 2>/dev/null \
+            | grep -q "plugin sandbox cluster"; then
+            echo "- kube-api-proxy is proxying to the sandbox (mock disabled)"
+            exit 0
+        fi
+        sleep 2
+    done
+    echo "kube-api-proxy did not report the sandbox proxy; check: kubectl -n fundament logs deployment/kube-api-proxy" >&2
+    exit 1
 
 # Delete deployment, can also be used to remove the deployment created by `just dev`.
 undeploy env:
