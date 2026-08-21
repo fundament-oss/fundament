@@ -2,6 +2,10 @@
 ---
 apiVersion: batch/v1
 kind: Job
+# Brings the database up to the current schema on every deploy: migrations, then
+# the appstore catalog seed. Where db.reset is set it first drops both the app
+# and OpenFGA databases and reloads db/testdata, which only trek's reset path
+# applies.
 metadata:
   # Per-release name: a Job's pod template is immutable, and openfga's
   # wait-for-reset needs to identify this upgrade's run.
@@ -10,7 +14,9 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 4 }}
 spec:
   backoffLimit: 3
-  ttlSecondsAfterFinished: 300
+  # This Job must outlive the deploy: openfga's wait-for-reset blocks on it by
+  # name, and an openfga pod recreated after it is gone waits forever. Helm
+  # prunes the previous revision's Job on each upgrade.
   template:
     metadata:
       labels:
@@ -46,25 +52,22 @@ spec:
             - -c
             - |
               set -e
-              trek apply
-              echo "Seeding system organization..."
-              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0100-system-org.sql
-              echo "Seeding appstore plugin catalog..."
-              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
               {{- if and $.Values.db.reset $.Values.openfga.enabled }}
               # Reset the OpenFGA datastore here, coupled with the DB reset, so
               # the two always happen together as one triggered event. OpenFGA no
               # longer resets itself on pod start, so an unrelated openfga rollout
               # can't wipe the store out from under an already-synced outbox.
+              #
+              # Must run before trek apply: reseeding fires authz.outbox notifies,
+              # and OpenFGA accepts writes to a dropped store, so rows drained into
+              # it would be marked processed and lost.
               # CNPG creates the openfga database asynchronously, so on a cold start
               # it can still be absent here — the init container's port check says
-              # nothing about which databases exist. Failing here is unrecoverable:
-              # the Job exhausts backoffLimit, ttlSecondsAfterFinished then removes
-              # it, and openfga's wait-for-reset blocks forever on a Job name that
-              # no longer exists. Wait for the database itself.
+              # nothing about which databases exist. Wait for the database itself,
+              # via -d postgres — fundament may not exist yet.
               echo "Waiting for the openfga database..."
               i=0
-              until psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'openfga'" | grep -q 1; do
+              until psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'openfga'" | grep -q 1; do
                 i=$((i + 1))
                 if [ "$i" -ge 150 ]; then
                   echo "openfga database did not appear after 5 minutes" >&2
@@ -72,15 +75,15 @@ spec:
                 fi
                 sleep 2
               done
-              # TODO: this reset does not always converge. openfga-setup can create a new store
-              # while the tuples authz-worker writes go to the previous one, leaving every
-              # authorization decision false with every pod healthy — and it stays that way
-              # until another reset happens to line them up. Observed 1 run in 3. Couple the
-              # store id to the outbox, or re-emit the outbox when the store is recreated.
               echo "Resetting OpenFGA datastore (coupled with the DB reset)..."
               psql "$OPENFGA_DATASTORE_URI" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
               echo "OpenFGA datastore reset complete."
               {{- end }}
+              trek apply
+              echo "Seeding system organization..."
+              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0100-system-org.sql
+              echo "Seeding appstore plugin catalog..."
+              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
           env:
             - name: TREK_POSTGRES_HOST
               value: {{ include "fundament.db.host" . }}
