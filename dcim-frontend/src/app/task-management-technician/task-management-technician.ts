@@ -148,7 +148,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   private static readonly STEP_ILLUSTRATIONS: { icon: string; svg: string }[] = [
     {
       icon: 'info-circle',
-      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-40 w-full" aria-hidden="true">
+      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="10" y="20" width="100" height="60" rx="6" stroke="#e2e8f0" stroke-width="1.5" fill="#f8fafc"/>
         <rect x="18" y="28" width="30" height="44" rx="3" stroke="#cbd5e1" stroke-width="1" fill="white"/>
         <text x="33" y="42" text-anchor="middle" fill="#94a3b8" font-size="7" font-weight="600">Hall A</text>
@@ -163,7 +163,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     },
     {
       icon: 'arrow-right',
-      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-40 w-full" aria-hidden="true">
+      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="25" y="15" width="35" height="65" rx="4" stroke="#6366f1" stroke-width="2" fill="#eef2ff"/>
         <rect x="30" y="20" width="25" height="55" rx="2" fill="white" stroke="#a5b4fc" stroke-width="1"/>
         <circle cx="50" cy="48" r="2.5" fill="#6366f1"/>
@@ -175,7 +175,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     },
     {
       icon: 'database',
-      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-40 w-full" aria-hidden="true">
+      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="10" y="15" width="18" height="70" rx="2" stroke="#cbd5e1" stroke-width="1" fill="#f8fafc"/>
         <rect x="30" y="15" width="18" height="70" rx="2" stroke="#cbd5e1" stroke-width="1" fill="#f8fafc"/>
         <rect x="50" y="15" width="18" height="70" rx="2" stroke="#cbd5e1" stroke-width="1" fill="#f8fafc"/>
@@ -187,7 +187,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     },
     {
       icon: 'lock-open',
-      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-40 w-full" aria-hidden="true">
+      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="35" y="20" width="50" height="55" rx="6" stroke="#6366f1" stroke-width="2" fill="#eef2ff"/>
         <rect x="43" y="35" width="12" height="10" rx="2" fill="white" stroke="#a5b4fc" stroke-width="1"/>
         <rect x="59" y="35" width="12" height="10" rx="2" fill="white" stroke="#a5b4fc" stroke-width="1"/>
@@ -199,7 +199,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     },
     {
       icon: 'search',
-      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-40 w-full" aria-hidden="true">
+      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="30" y="8" width="60" height="84" rx="4" stroke="#cbd5e1" stroke-width="1.5" fill="white"/>
         <rect x="35" y="14" width="50" height="7" rx="1.5" fill="#f1f5f9"/>
         <rect x="35" y="24" width="50" height="7" rx="1.5" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
@@ -210,7 +210,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     },
     {
       icon: 'cylinder-split-slash',
-      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-40 w-full" aria-hidden="true">
+      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="20" y="25" width="60" height="50" rx="4" stroke="#cbd5e1" stroke-width="1.5" fill="white"/>
         <rect x="26" y="31" width="22" height="16" rx="2" stroke="#ef4444" stroke-width="2" fill="#fef2f2" stroke-dasharray="4 2"/>
         <text x="37" y="42" text-anchor="middle" fill="#ef4444" font-size="6" font-weight="600">Bay 3</text>
@@ -221,7 +221,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     },
     {
       icon: 'cylinder-split',
-      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-40 w-full" aria-hidden="true">
+      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="20" y="25" width="60" height="50" rx="4" stroke="#cbd5e1" stroke-width="1.5" fill="white"/>
         <rect x="26" y="31" width="22" height="16" rx="2" stroke="#22c55e" stroke-width="2" fill="#f0fdf4"/>
         <text x="37" y="42" text-anchor="middle" fill="#22c55e" font-size="6" font-weight="600">Bay 3</text>
@@ -232,7 +232,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     },
     {
       icon: 'check-mark-circle',
-      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-40 w-full" aria-hidden="true">
+      svg: `<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="25" y="15" width="70" height="50" rx="6" stroke="#6366f1" stroke-width="2" fill="#eef2ff"/>
         <rect x="32" y="22" width="56" height="30" rx="3" fill="white" stroke="#a5b4fc" stroke-width="1"/>
         <text x="60" y="34" text-anchor="middle" fill="#6366f1" font-size="5.5" font-weight="500">Status OK</text>
@@ -536,6 +536,30 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   toggleMenu(event: Event): void {
     event.stopPropagation();
     this.menuOpen.update((v) => !v);
+  }
+
+  /** The track's own words for where you are. Being here wins over having been
+   *  here: you can step back into a finished step, and then it is the one you
+   *  are on. */
+  trackStatus(done: boolean, active: boolean): 'past' | 'current' | 'future' {
+    if (active) return 'current';
+    return done ? 'past' : 'future';
+  }
+
+  /**
+   * Where a row sits in the track: the first has no line above it, the last
+   * none below, and a track that ran past its end would promise a step that
+   * is not there.
+   */
+  trackPosition(row: 'task' | 'step', taskIdx: number, stepIdx = -1): 'first' | 'between' | 'last' {
+    const tasks = this.tasks();
+    const lastTask = tasks.length - 1;
+    if (row === 'task') {
+      const opensSteps = this.isTaskActive(taskIdx) && tasks[taskIdx].steps.length > 0;
+      return taskIdx === lastTask && !opensSteps ? 'last' : 'between';
+    }
+    const steps = tasks[taskIdx]?.steps.length ?? 0;
+    return taskIdx === lastTask && stepIdx === steps - 1 ? 'last' : 'between';
   }
 
   isTaskActive(taskIdx: number): boolean {

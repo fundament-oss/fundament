@@ -146,289 +146,150 @@
     </div>
   }
 
-  <!-- Step Wizard Timeline -->
-  <div class="relative ml-4" [class.hidden]="showCompleteScreen()">
-    <!-- ── Gather row ── -->
-    <div
-      class="relative flex gap-4 transition-opacity"
-      [class.opacity-100]="phase() === 'gather'"
-      [class.opacity-50]="phase() !== 'gather'"
-      [attr.aria-current]="phase() === 'gather' ? 'step' : null"
-    >
-      <div class="flex flex-col items-center">
-        <div
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-          [class]="
-            gatherCompleted()
-              ? 'bg-accent-600 text-white'
-              : phase() === 'gather'
-                ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-sm'
-                : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
-          "
-          aria-hidden="true"
-        >
-          @if (gatherCompleted()) {
-            <nldd-icon name="check-mark" class="w-3.5 h-3.5" aria-hidden="true"></nldd-icon>
-          } @else {
-            1
-          }
-        </div>
-        <div
-          class="my-1 w-0.5 flex-1"
-          [class]="gatherCompleted() ? 'bg-accent-300' : 'bg-slate-200 dark:bg-gray-800'"
-        ></div>
-      </div>
-
-      <div
-        class="flex-1 pb-8"
-        [class]="
-          phase() === 'gather'
-            ? 'rounded-xl bg-white dark:bg-gray-950 p-4 shadow-sm outline outline-2 outline-accent-500 outline-offset-0'
-            : 'py-2'
-        "
-      >
-        <div class="flex items-center gap-2">
-          <nldd-icon
-            name="inbox"
-            style="width: 20px; height: 20px"
-            [class]="
-              phase() === 'gather'
-                ? 'text-accent-600 dark:text-accent-300'
-                : gatherCompleted()
-                  ? 'text-accent-400 dark:text-accent-300'
-                  : 'text-slate-400 dark:text-gray-500'
-            "
-            aria-hidden="true"
-          ></nldd-icon>
-          <h3
-            class="text-sm font-semibold"
-            [class]="
-              phase() === 'gather'
-                ? 'text-slate-900 dark:text-white'
-                : 'text-slate-700 dark:text-gray-300'
-            "
-          >
-            Gather tools &amp; parts
-          </h3>
-        </div>
-
-        @if (phase() === 'gather') {
-          <p class="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-gray-400">
-            Collect all items from the supply room before heading to the floor.
-          </p>
-          <div class="mt-3 space-y-1" role="list" aria-label="Items to gather">
-            @for (item of gatherItems(); track item.key) {
-              <div
-                class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-slate-50 dark:hover:bg-gray-900"
-                role="listitem"
-                (click)="toggleGatherItem(item.key)"
-                (keydown.enter)="toggleGatherItem(item.key)"
-                (keydown.space)="toggleGatherItem(item.key)"
-              >
-                <nldd-checkbox
-                  [attr.accessible-label]="item.label"
-                  [attr.checked]="checkedItems().has(item.key) ? '' : null"
-                  (click)="$event.stopPropagation()"
-                  (change)="onGatherCheckbox(item.key, $any($event).detail.checked)"
-                ></nldd-checkbox>
-                <div class="select-none" aria-hidden="true">
-                  <span
-                    class="text-sm"
-                    [class]="
-                      checkedItems().has(item.key)
-                        ? 'text-slate-400 dark:text-gray-500 line-through'
-                        : 'text-slate-700 dark:text-gray-300'
-                    "
-                    >{{ item.label }}</span
-                  >
-                  @if (item.taskFor) {
-                    <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
-                      for: {{ item.taskFor }}
-                    </p>
+  <!-- Step Wizard Timeline
+       One list, one track: gathering, then every task, and under the task you
+       are on its own steps as minor rows in the same lane. The track carries
+       where you are, so the rows do not have to dim to say it. -->
+  <div [class.hidden]="showCompleteScreen()">
+    <nldd-list dividers="never" accessible-label="Work order">
+      <!-- ── Gather row ── -->
+      <nldd-list-item [attr.aria-current]="phase() === 'gather' ? 'step' : null">
+        <nldd-timeline-track-cell
+          variant="step"
+          position="first"
+          [attr.status]="trackStatus(gatherCompleted(), phase() === 'gather')"
+          [attr.icon]="gatherCompleted() ? 'check-mark' : null"
+          [attr.text]="gatherCompleted() ? null : '1'"
+        ></nldd-timeline-track-cell>
+        <nldd-spacer-cell size="12"></nldd-spacer-cell>
+        <nldd-cell width="full">
+          @if (phase() === 'gather') {
+            <!-- The container carries the width: a cell lines its content up on
+                 the left rather than stretching it, so a box in one shrinks to
+                 its text. Drop this wrapper once the design system ships a box
+                 that takes the width it is given. -->
+            <nldd-container>
+              <nldd-box background="base">
+              <nldd-container padding="16">
+                <nldd-title size="4">
+                  <h3>Gather tools &amp; parts</h3>
+                </nldd-title>
+                <nldd-spacer size="8"></nldd-spacer>
+                <nldd-text>Collect all items from the supply room before heading to the floor.</nldd-text>
+                <nldd-spacer size="16"></nldd-spacer>
+                <!-- Every row is the checkbox, so the whole row is the hit area
+                     and the tick beside the label is what it looks like. -->
+                <nldd-list dividers="never" accessible-label="Items to gather">
+                  @for (item of gatherItems(); track item.key) {
+                    <nldd-list-item
+                      checkbox
+                      [attr.checked]="checkedItems().has(item.key) ? '' : null"
+                      (change)="onGatherCheckbox(item.key, $any($event).detail.checked)"
+                    >
+                      <nldd-cell width="fit-content">
+                        <nldd-checkbox
+                          aria-hidden="true"
+                          tabindex="-1"
+                          [attr.checked]="checkedItems().has(item.key) ? '' : null"
+                        ></nldd-checkbox>
+                      </nldd-cell>
+                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
+                      <nldd-text-cell
+                        [attr.text]="item.label"
+                        [attr.supporting-text]="item.taskFor ? 'for: ' + item.taskFor : null"
+                      ></nldd-text-cell>
+                    </nldd-list-item>
                   }
-                </div>
-              </div>
-            }
-          </div>
-          @if (checkedItems().size > 0) {
-            <p class="mt-2 text-xs text-slate-400 dark:text-gray-500">
-              {{ checkedItems().size }} of {{ gatherItems().length }} collected
-            </p>
+                </nldd-list>
+              </nldd-container>
+              </nldd-box>
+            </nldd-container>
+          } @else {
+            <nldd-text>Gather tools &amp; parts</nldd-text>
+          }
+        </nldd-cell>
+      </nldd-list-item>
+
+      <!-- ── Task rows ── -->
+      @for (task of tasks(); track task.id; let taskIdx = $index) {
+        <nldd-list-item>
+          <!-- A task with its steps open is not the end of the going: the step
+               you are on sits below it, so the track carries on. -->
+          <nldd-timeline-track-cell
+            variant="step"
+            [attr.position]="trackPosition('task', taskIdx)"
+            [attr.status]="trackStatus(isTaskDone(taskIdx), isTaskActive(taskIdx))"
+            [attr.line]="isTaskActive(taskIdx) ? 'both' : null"
+            [attr.icon]="isTaskDone(taskIdx) ? 'check-mark' : null"
+            [attr.text]="isTaskDone(taskIdx) ? null : taskIdx + 2"
+          ></nldd-timeline-track-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
+          <nldd-cell width="full">
+            <nldd-title size="5">
+              <h2>{{ task.title }}</h2>
+              <nldd-tag
+                slot="end"
+                size="sm"
+                [attr.color]="task.priority === 'urgent' ? 'critical' : 'oranje'"
+                [attr.text]="task.priority === 'urgent' ? 'Urgent' : 'High'"
+                [attr.accessible-label]="
+                  'Priority: ' + (task.priority === 'urgent' ? 'Urgent' : 'High')
+                "
+                [hidden]="task.priority !== 'urgent' && task.priority !== 'high'"
+              ></nldd-tag>
+              <nldd-text slot="subtitle">{{ task.location }}</nldd-text>
+            </nldd-title>
+          </nldd-cell>
+        </nldd-list-item>
+
+        <!-- Sub-steps (visible when this task is active) -->
+        @if (isTaskActive(taskIdx)) {
+          @for (step of task.steps; track $index; let si = $index) {
+            <nldd-list-item
+              [attr.button]="isStepDone(taskIdx, si) ? '' : null"
+              [attr.aria-current]="isStepActive(taskIdx, si) ? 'step' : null"
+              (click)="isStepDone(taskIdx, si) ? jumpToStep(taskIdx, si) : null"
+            >
+              <nldd-timeline-track-cell
+                variant="step"
+                minor
+                [attr.position]="trackPosition('step', taskIdx, si)"
+                [attr.status]="trackStatus(isStepDone(taskIdx, si), isStepActive(taskIdx, si))"
+              ></nldd-timeline-track-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
+              <nldd-cell width="full">
+                @if (isStepActive(taskIdx, si)) {
+                  <!-- See the gather row: the container carries the width. -->
+                  <nldd-container>
+                    <nldd-box background="base">
+                    <nldd-container padding="16">
+                      <nldd-title size="4">
+                        <h3>{{ step.title }}</h3>
+                      </nldd-title>
+                      @if (step.description) {
+                        <nldd-spacer size="8"></nldd-spacer>
+                        <nldd-text>{{ step.description }}</nldd-text>
+                      }
+                      <nldd-spacer size="12"></nldd-spacer>
+                      <!-- The drawing is slotted straight in, so it keeps its
+                           own colors and the box around it reserves its space. -->
+                      <nldd-image
+                        decorative
+                        aspect-ratio="6/5"
+                        [innerHTML]="safeSvg(step.svg, theme.isDarkMode())"
+                      ></nldd-image>
+                    </nldd-container>
+                    </nldd-box>
+                  </nldd-container>
+                } @else {
+                  <nldd-text>{{ step.title }}</nldd-text>
+                }
+              </nldd-cell>
+            </nldd-list-item>
           }
         }
-      </div>
-    </div>
-
-    <!-- ── Task rows ── -->
-    @for (task of tasks(); track task.id; let taskIdx = $index) {
-      <div
-        class="relative flex gap-4 transition-opacity"
-        [class.opacity-100]="isTaskActive(taskIdx)"
-        [class.opacity-60]="!isTaskActive(taskIdx) && isTaskDone(taskIdx)"
-        [class.opacity-40]="!isTaskActive(taskIdx) && !isTaskDone(taskIdx)"
-      >
-        <div class="flex flex-col items-center">
-          <div
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-            [class]="
-              isTaskDone(taskIdx)
-                ? 'bg-accent-600 text-white'
-                : isTaskActive(taskIdx)
-                  ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-sm'
-                  : 'border-2 border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-sm font-medium text-slate-400 dark:text-gray-500'
-            "
-            aria-hidden="true"
-          >
-            @if (isTaskDone(taskIdx)) {
-              <nldd-icon name="check-mark" class="w-3.5 h-3.5" aria-hidden="true"></nldd-icon>
-            } @else {
-              {{ taskIdx + 2 }}
-            }
-          </div>
-          @if (taskIdx < tasks().length - 1) {
-            <div
-              class="my-1 w-0.5 flex-1"
-              [class]="isTaskDone(taskIdx) ? 'bg-accent-300' : 'bg-slate-200 dark:bg-gray-800'"
-            ></div>
-          }
-        </div>
-
-        <div class="flex-1 pb-2">
-          <div class="py-2">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span
-                class="text-sm font-semibold"
-                [class]="
-                  isTaskActive(taskIdx)
-                    ? 'text-slate-900 dark:text-white'
-                    : isTaskDone(taskIdx)
-                      ? 'text-slate-500 dark:text-gray-400'
-                      : 'text-slate-600 dark:text-gray-300'
-                "
-                >{{ task.title }}</span
-              >
-              @if (task.priority === 'urgent') {
-                <nldd-tag
-                  color="critical"
-                  size="sm"
-                  text="Urgent"
-                  accessible-label="Priority: Urgent"
-                ></nldd-tag>
-              }
-              @if (task.priority === 'high') {
-                <nldd-tag
-                  color="oranje"
-                  size="sm"
-                  text="High"
-                  accessible-label="Priority: High"
-                ></nldd-tag>
-              }
-            </div>
-            <p class="text-xs text-slate-400 dark:text-gray-500 mt-0.5">{{ task.location }}</p>
-          </div>
-
-          <!-- Sub-steps (visible when this task is active) -->
-          @if (isTaskActive(taskIdx)) {
-            <div class="mt-1">
-              @for (step of task.steps; track $index; let si = $index) {
-                <div
-                  class="relative flex gap-3 transition-opacity"
-                  [class.opacity-100]="isStepActive(taskIdx, si)"
-                  [class.opacity-50]="!isStepActive(taskIdx, si)"
-                  [class.cursor-pointer]="isStepDone(taskIdx, si)"
-                  [class.hover:opacity-70]="isStepDone(taskIdx, si)"
-                  [attr.role]="isStepDone(taskIdx, si) ? 'button' : null"
-                  [attr.tabindex]="isStepDone(taskIdx, si) ? '0' : null"
-                  [attr.aria-label]="
-                    isStepDone(taskIdx, si)
-                      ? 'Step ' + (si + 1) + ': ' + step.title + ' — Completed. Tap to revisit'
-                      : null
-                  "
-                  [attr.aria-current]="isStepActive(taskIdx, si) ? 'step' : null"
-                  (click)="isStepDone(taskIdx, si) ? jumpToStep(taskIdx, si) : null"
-                  (keydown.enter)="isStepDone(taskIdx, si) ? jumpToStep(taskIdx, si) : null"
-                  (keydown.space)="isStepDone(taskIdx, si) ? jumpToStep(taskIdx, si) : null"
-                >
-                  <div class="flex flex-col items-center">
-                    <div
-                      class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                      [class]="
-                        isStepDone(taskIdx, si)
-                          ? 'bg-accent-600 text-white'
-                          : isStepActive(taskIdx, si)
-                            ? 'border-2 border-accent-600 bg-white dark:bg-gray-950 font-semibold text-accent-600 dark:text-accent-300 text-xs'
-                            : 'border-2 border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs font-medium text-slate-400 dark:text-gray-500'
-                      "
-                      aria-hidden="true"
-                    >
-                      @if (isStepDone(taskIdx, si)) {
-                        <nldd-icon
-                          name="check-mark"
-                          style="width: 10px; height: 10px"
-                          aria-hidden="true"
-                        ></nldd-icon>
-                      } @else {
-                        {{ si + 1 }}
-                      }
-                    </div>
-                    @if (si < task.steps.length - 1) {
-                      <div
-                        class="my-1 w-0.5 flex-1"
-                        [class]="
-                          isStepDone(taskIdx, si)
-                            ? 'bg-accent-300'
-                            : 'bg-slate-200 dark:bg-gray-800'
-                        "
-                      ></div>
-                    }
-                  </div>
-
-                  <div
-                    class="flex-1 pb-4"
-                    [class]="
-                      isStepActive(taskIdx, si)
-                        ? 'rounded-xl bg-white dark:bg-gray-950 p-4 shadow-sm outline outline-2 outline-accent-500 outline-offset-0 mb-4'
-                        : 'py-1.5'
-                    "
-                  >
-                    <div class="flex items-center gap-2">
-                      <nldd-icon
-                        [attr.name]="step.icon"
-                        style="width: 18px; height: 18px"
-                        [class]="
-                          isStepActive(taskIdx, si)
-                            ? 'text-accent-600 dark:text-accent-300'
-                            : isStepDone(taskIdx, si)
-                              ? 'text-accent-400 dark:text-accent-300'
-                              : 'text-slate-400 dark:text-gray-500'
-                        "
-                        aria-hidden="true"
-                      ></nldd-icon>
-                      <h3
-                        class="text-sm font-medium"
-                        [class]="
-                          isStepActive(taskIdx, si)
-                            ? 'text-slate-900 dark:text-white'
-                            : 'text-slate-600 dark:text-gray-300'
-                        "
-                      >
-                        {{ step.title }}
-                      </h3>
-                    </div>
-                    @if (isStepActive(taskIdx, si)) {
-                      <p class="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-gray-400">
-                        {{ step.description }}
-                      </p>
-                      <div class="mt-3" [innerHTML]="safeSvg(step.svg, theme.isDarkMode())"></div>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </div>
-      </div>
-    }
+      }
+    </nldd-list>
   </div>
 
   <!-- Task Complete Screen -->

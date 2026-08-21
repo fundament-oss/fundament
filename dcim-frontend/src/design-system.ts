@@ -31,6 +31,7 @@ import '@nldd/design-system/icon';
 import '@nldd/design-system/icon-button';
 import '@nldd/design-system/icon-cell';
 import '@nldd/design-system/identity';
+import '@nldd/design-system/image';
 import '@nldd/design-system/inline-dialog';
 import '@nldd/design-system/list';
 import '@nldd/design-system/list-item';
