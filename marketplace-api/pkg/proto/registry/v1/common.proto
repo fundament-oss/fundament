@@ -1,0 +1,81 @@
+edition = "2023";
+
+package registry.v1;
+
+import "google/protobuf/go_features.proto";
+import "google/protobuf/timestamp.proto";
+import "marketplace/v1/common.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/fundament-oss/fundament/marketplace-api/pkg/proto/gen/registry/v1;registryv1";
+
+// RESTRICTED listings are hidden from the public catalog entirely and only
+// installable by the organizations on the plugin's allow-list.
+enum PluginVisibility {
+  PLUGIN_VISIBILITY_UNSPECIFIED = 0;
+  PLUGIN_VISIBILITY_PUBLIC = 1;
+  PLUGIN_VISIBILITY_RESTRICTED = 2;
+}
+
+// A plugin the caller's organization owns (appstore.plugins). Name is unique
+// per owning organization, so two organizations may both publish
+// "cert-manager".
+message Plugin {
+  string id = 10;
+  // Stable identifier and URL segment; also the PluginInstallation resource
+  // name on a cluster, prefixed with the owning organization.
+  string name = 20;
+  string display_name = 30;
+  string description_short = 40;
+  string description = 50;
+  // The publishing organization. A plugin has exactly one, so the field needs
+  // no qualifier. The developer frontend is authenticated and a member, so
+  // organization-api's GetOrganization resolves it.
+  string organization_id = 70;
+  // Listing artwork, not a container image.
+  string image = 80;
+  // Curated vocabulary, resolved through ListCategories. Matches what
+  // UpdatePlugin already accepts.
+  repeated string category_ids = 90;
+  // Free-form labels the server upserts by name; no independent identity.
+  repeated string tags = 100;
+  // Original author, which may differ from the publishing organization.
+  string author_name = 110;
+  string author_url = 120;
+  string repository_url = 130;
+  string license = 140;
+  repeated marketplace.v1.DocumentationLink documentation_links = 150;
+  repeated marketplace.v1.FeatureBlock features = 160;
+  PluginVisibility visibility = 170;
+  // Organizations permitted to install this plugin when visibility is
+  // RESTRICTED. Ignored when PUBLIC.
+  repeated string allowed_organization_ids = 180;
+  // Empty until the first version is approved; the listing goes live then.
+  // Points at the version rather than repeating its version string, which
+  // GetPluginVersion already serves.
+  string latest_published_version_id = 190;
+  google.protobuf.Timestamp created = 200;
+  google.protobuf.Timestamp updated = 210;
+}
+
+// A pushed build (appstore.plugin_definitions plus review state).
+// definition_hash is the sha256 the server computes from the manifest bytes,
+// and is the pin the console installs against.
+message PluginVersion {
+  string id = 10;
+  string plugin_id = 20;
+  string version = 30;
+  // Container image the plugin runs, read out of the manifest rather than
+  // stored alongside it — the pinned manifest is the source of truth.
+  string image = 40;
+  string definition_hash = 50;
+  string release_notes = 60;
+  marketplace.v1.SubmissionStatus status = 70;
+  google.protobuf.Timestamp created = 80;
+  google.protobuf.Timestamp submitted = 90;
+  google.protobuf.Timestamp published = 100;
+  // Reviewer note explaining a CHANGES_REQUESTED or REJECTED decision.
+  // Carries the reviewer's note from admin.v1.Submission.feedback.
+  string review_feedback = 110;
+}
