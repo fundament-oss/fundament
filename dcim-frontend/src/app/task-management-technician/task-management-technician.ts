@@ -7,6 +7,7 @@ import {
   computed,
   effect,
   inject,
+  input,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -97,6 +98,13 @@ interface ProgressSnapshot {
   },
 })
 export default class TaskManagementTechnicianComponent implements OnInit {
+  /**
+   * Shown inside something that already has a bar of its own, a sheet over the
+   * task you were looking at. The view drops its own top navigation there: two
+   * bars stacked say the same thing twice, and the way back is the sheet.
+   */
+  readonly embedded = input(false, { transform: (v: boolean | string) => v !== false && v !== 'false' });
+
   private sanitizer = inject(DomSanitizer);
 
   protected readonly theme = inject(ThemeService);

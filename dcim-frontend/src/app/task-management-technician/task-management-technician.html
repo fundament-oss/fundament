@@ -1,90 +1,92 @@
-<!-- Top Navigation -->
-<nav
-  class="sticky top-0 z-40 flex items-center justify-between border-b border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3"
->
-  <a
-    href="#"
-    class="flex items-center gap-1.5 text-sm font-medium text-neutral-500 dark:text-gray-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-    aria-label="Back to my tasks"
+@if (!embedded()) {
+  <!-- Top Navigation -->
+  <nav
+    class="sticky top-0 z-40 flex items-center justify-between border-b border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3"
   >
-    <nldd-icon name="arrow-left" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
-    <span class="hidden sm:inline">My Tasks</span>
-  </a>
-
-  <!-- Logo -->
-  <a routerLink="/" class="flex items-center leading-tight gap-2">
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="h-5.5 w-5.5 text-indigo-600 dark:text-indigo-400"
-      viewBox="0 0 24 24"
+    <a
+      href="#"
+      class="flex items-center gap-1.5 text-sm font-medium text-neutral-500 dark:text-gray-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+      aria-label="Back to my tasks"
     >
-      <path
-        fill="currentColor"
-        d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
-      />
-    </svg>
-    <span class="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white"
-      >Fundament</span
-    >
-  </a>
+      <nldd-icon name="arrow-left" class="w-4.5 h-4.5" aria-hidden="true"></nldd-icon>
+      <span class="hidden sm:inline">My Tasks</span>
+    </a>
 
-  <div class="flex items-center gap-2">
-    <app-theme-toggle />
+    <!-- Logo -->
+    <a routerLink="/" class="flex items-center leading-tight gap-2">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5.5 w-5.5 text-indigo-600 dark:text-indigo-400"
+        viewBox="0 0 24 24"
+      >
+        <path
+          fill="currentColor"
+          d="M6 5h12a1 1 0 0 1 1 1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1a1 1 0 0 1 1-1m15-3v2H3V2zm-6 6h2v14h-2zM7 8h2v14H7zm4 0h2v14h-2z"
+        />
+      </svg>
+      <span class="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white"
+        >Fundament</span
+      >
+    </a>
 
-    <div class="relative">
-      <button
-        class="rounded-lg p-1.5 text-neutral-500 dark:text-gray-400 hover:bg-neutral-25 dark:hover:bg-gray-900 hover:text-neutral-700 dark:hover:text-gray-300 transition-colors"
-        aria-label="Task menu"
-        (click)="toggleMenu($event)"
-      >
-        <nldd-icon name="list" class="w-5 h-5 block" aria-hidden="true"></nldd-icon>
-      </button>
-      <div
-        class="absolute right-0 top-full mt-1 w-64 rounded-xl border border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-1 shadow-lg shadow-neutral-900/10"
-        [class.hidden]="!menuOpen()"
-      >
+    <div class="flex items-center gap-2">
+      <app-theme-toggle />
+
+      <div class="relative">
+        <button
+          class="rounded-lg p-1.5 text-neutral-500 dark:text-gray-400 hover:bg-neutral-25 dark:hover:bg-gray-900 hover:text-neutral-700 dark:hover:text-gray-300 transition-colors"
+          aria-label="Task menu"
+          (click)="toggleMenu($event)"
+        >
+          <nldd-icon name="list" class="w-5 h-5 block" aria-hidden="true"></nldd-icon>
+        </button>
         <div
-          class="border-b border-neutral-100 dark:border-gray-800 px-3 py-2 text-xs font-semibold tracking-wide text-neutral-400 dark:text-gray-500 uppercase"
+          class="absolute right-0 top-full mt-1 w-64 rounded-xl border border-neutral-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-1 shadow-lg shadow-neutral-900/10"
+          [class.hidden]="!menuOpen()"
         >
-          Other Tasks
+          <div
+            class="border-b border-neutral-100 dark:border-gray-800 px-3 py-2 text-xs font-semibold tracking-wide text-neutral-400 dark:text-gray-500 uppercase"
+          >
+            Other Tasks
+          </div>
+          <a
+            href="#"
+            class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
+          >
+            <nldd-icon
+              name="rectangle-stack"
+              class="w-4 h-4 text-neutral-400 dark:text-gray-500"
+              aria-hidden="true"
+            ></nldd-icon>
+            Replace network switch — Rack 87
+          </a>
+          <a
+            href="#"
+            class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
+          >
+            <nldd-icon
+              name="slash-circle"
+              class="w-4 h-4 text-neutral-400 dark:text-gray-500"
+              aria-hidden="true"
+            ></nldd-icon>
+            Inspect PDU — Hall A
+          </a>
+          <a
+            href="#"
+            class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
+          >
+            <nldd-icon
+              name="exclamation-circle"
+              class="w-4 h-4 text-neutral-400 dark:text-gray-500"
+              aria-hidden="true"
+            ></nldd-icon>
+            Check cooling unit — Row 5
+          </a>
         </div>
-        <a
-          href="#"
-          class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
-        >
-          <nldd-icon
-            name="rectangle-stack"
-            class="w-4 h-4 text-neutral-400 dark:text-gray-500"
-            aria-hidden="true"
-          ></nldd-icon>
-          Replace network switch — Rack 87
-        </a>
-        <a
-          href="#"
-          class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
-        >
-          <nldd-icon
-            name="slash-circle"
-            class="w-4 h-4 text-neutral-400 dark:text-gray-500"
-            aria-hidden="true"
-          ></nldd-icon>
-          Inspect PDU — Hall A
-        </a>
-        <a
-          href="#"
-          class="flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-700 dark:text-gray-300 hover:bg-neutral-50 dark:hover:bg-gray-900 transition-colors"
-        >
-          <nldd-icon
-            name="exclamation-circle"
-            class="w-4 h-4 text-neutral-400 dark:text-gray-500"
-            aria-hidden="true"
-          ></nldd-icon>
-          Check cooling unit — Row 5
-        </a>
       </div>
     </div>
-  </div>
-</nav>
+  </nav>
+}
 
 <!-- Main Content -->
 <main class="mx-auto max-w-2xl px-4 pb-36 pt-6">

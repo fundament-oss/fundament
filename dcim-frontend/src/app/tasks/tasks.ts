@@ -45,6 +45,8 @@ import OverlayService from '../shell/overlay.service';
 import TaskAttentionService from './task-attention.service';
 import DatacenterListService from '../datacenters/datacenter-list.service';
 import { buildTagTree, tagMatches, taskTags } from './task-tags';
+import TaskManagementTechnicianComponent from '../task-management-technician/task-management-technician';
+import TaskFormComponent from './task-form/task-form';
 
 type Technician = RosterUser;
 
@@ -102,8 +104,25 @@ const BULK_CONCURRENCY = 6;
   selector: 'app-tasks',
   templateUrl: './tasks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, CdkDropListGroup, CdkDropList, CdkDrag, CdkDragPlaceholder],
+  imports: [
+    NgTemplateOutlet,
+    CdkDropListGroup,
+    CdkDropList,
+    CdkDrag,
+    CdkDragPlaceholder,
+    TaskManagementTechnicianComponent,
+    TaskFormComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  // The split view hides the back button of every bar in the main pane, because
+  // the menu beside you is the way back. A sheet has no menu beside it, so a bar
+  // in there keeps its own. Drop this once the design system ships the same
+  // reset on nldd-sheet.
+  styles: `
+    nldd-sheet {
+      --context-back-button-display: flex;
+    }
+  `,
   host: {
     // No styling of its own. The page inside paints the surface and owns the
     // layout, and styles.css takes this element out of the flow entirely
@@ -174,7 +193,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
       untracked(() => this.loadTasks());
     });
     // The add menu in the bar asks for this form through the address.
-    openOnCreateRequest(() => this.openEditModal(null));
+    openOnCreateRequest(() => this.openNewTask());
     // A selection survives no further than the view it was made in. Half of it
     // would be off screen after a move to another view, and the bulk actions
     // act on the whole set: deleting six tasks of which you can see two is the
@@ -539,6 +558,13 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   /** Everything a task is filed under, as one list of paths. See task-tags.ts. */
   readonly taskTagList = (task: TaskData): string[] => taskTags(task);
 
+  /** The place a task names, as a card shows it: the last step of the first tag
+   *  that is a path. A tag without a slash is a word, not a place. */
+  readonly placeLabel = (task: TaskData): string => {
+    const path = taskTags(task).find((tag) => tag.includes('/'));
+    return path ? path.slice(path.lastIndexOf('/') + 1) : '';
+  };
+
   /**
    * The tag menu, as the tree the paths describe: a data center with its racks
    * under it, then the free tags. The data centers are always there, whether
@@ -854,6 +880,8 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   readonly detailSheetEl = viewChild<ElementRef<NlddSheet>>('detailSheetEl');
 
+  readonly technicianSheetEl = viewChild<ElementRef<NlddSheet>>('technicianSheetEl');
+
   readonly deleteDialogEl = viewChild<ElementRef<NlddSheet>>('deleteDialogEl');
 
   readonly bulkDeleteDialogEl = viewChild<ElementRef<NlddSheet>>('bulkDeleteDialogEl');
@@ -972,6 +1000,8 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   openDetail(id: string): void {
     this.detailTaskId.set(id);
+    // A sheet that was left on the form opens on the task itself next time.
+    this.detailEditing.set(false);
     // Always refetched, since another admin may have added a note since this
     // task was last opened. Anything already cached stays on screen meanwhile,
     // so the list does not flash empty while the response is in flight.
@@ -1022,12 +1052,33 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   closeDetail(): void {
     this.detailSheetEl()?.nativeElement.hide();
     this.detailTaskId.set(null);
+    this.detailEditing.set(false);
   }
 
+  /** Which of the detail sheet's two views is on screen. */
+  readonly detailEditing = signal(false);
+
   openEditFromDetail(): void {
-    const id = this.detailTaskId();
-    this.detailSheetEl()?.nativeElement.hide();
-    this.openEditModal(id);
+    this.detailEditing.set(true);
+  }
+
+  /** Back from the form, by pressing Back or by saving: the task you were
+   *  reading is still there, now with what you just changed. */
+  closeEditFromDetail(): void {
+    this.detailEditing.set(false);
+  }
+
+  /** Drives the @defer around the technician view: it only loads once asked
+   *  for, and it stays loaded after that. */
+  readonly technicianOpen = signal(false);
+
+  openTechnicianView(): void {
+    this.technicianOpen.set(true);
+    this.technicianSheetEl()?.nativeElement.show();
+  }
+
+  closeTechnicianView(): void {
+    this.technicianSheetEl()?.nativeElement.hide();
   }
 
   openDeleteDialog(): void {
@@ -1136,12 +1187,11 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return rejected.length;
   }
 
-  /** Both routes into the form open the one the shell holds: it outlives this
-   *  page, and the add button in the bar opens the same one. */
-  openEditModal(taskId: string | null): void {
-    const task = taskId !== null ? this.tasks().find((t) => t.id === taskId) : null;
-    if (task) this.overlays.editTask(task);
-    else this.overlays.newTask();
+  /** A new task opens the sheet the shell holds: it outlives this page, and the
+   *  add button in the bar opens the same one. Editing a task you have open is
+   *  a view of the detail sheet instead, so the task stays on screen. */
+  openNewTask(): void {
+    this.overlays.newTask();
   }
 
   addNote(): void {

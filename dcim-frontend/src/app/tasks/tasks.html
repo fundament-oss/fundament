@@ -126,13 +126,13 @@
             variant="primary"
             text="New task"
             start-icon="plus-small"
-            (click)="openEditModal(null)"
+            (click)="openNewTask()"
           ></nldd-button>
           <nldd-menu-item
             slot="overflow"
             icon="plus-small"
             text="New task"
-            (select)="openEditModal(null)"
+            (select)="openNewTask()"
           ></nldd-menu-item>
         </nldd-toolbar-item>
         <!-- Picking tasks is a mode, not a column of checkboxes standing by. -->
@@ -435,16 +435,20 @@
                     }
                   </div>
                   <div class="mt-3 flex items-center justify-between">
-                    <span
-                      class="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500 truncate max-w-[60%]"
-                    >
-                      <nldd-icon
-                        name="apartment-building"
-                        style="width: 11px; height: 11px"
-                        aria-hidden="true"
-                      ></nldd-icon
-                      >{{ task.location.split('·')[1]?.trim() ?? task.location }}
-                    </span>
+                    @if (placeLabel(task); as place) {
+                      <span
+                        class="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-gray-500 truncate max-w-[60%]"
+                      >
+                        <nldd-icon
+                          name="apartment-building"
+                          style="width: 11px; height: 11px"
+                          aria-hidden="true"
+                        ></nldd-icon
+                        >{{ place }}
+                      </span>
+                    } @else {
+                      <span></span>
+                    }
                     <div class="flex items-center gap-2">
                       @if (task.due) {
                         <span class="text-xs text-slate-400 dark:text-gray-500">{{
@@ -507,19 +511,31 @@
      ══════════════════════════════════════════════════════════════ -->
 <nldd-sheet #detailSheetEl accessible-label="Task details" placement="right">
   <nldd-page sticky-header>
-    <!-- The bar carries the title only once the heading below has scrolled
-         under it, so the name of the task is never off screen. -->
+    <!-- Reading the task and changing it are two views of one sheet, so the
+         form does not take the task off the screen it came from. The bar says
+         which one you are on: reading, it carries the title once the heading
+         below has scrolled under it, and editing it says so and offers the way
+         back. -->
     <nldd-top-title-bar
       slot="header"
-      [attr.text]="detailTask()?.title ?? ''"
+      [attr.text]="detailEditing() ? 'Edit' : (detailTask()?.title ?? '')"
+      [attr.back-text]="detailEditing() ? 'Task' : null"
+      (back)="closeEditFromDetail()"
       dismiss-text="Close"
-      collapse-anchor="task-detail-title"
+      [attr.collapse-anchor]="detailEditing() ? 'task-edit-title' : 'task-detail-title'"
       (dismiss)="closeDetail()"
     ></nldd-top-title-bar>
 
     <!-- Sheet body -->
     <nldd-simple-section>
       @if (detailTask(); as task) {
+        @if (detailEditing()) {
+          <nldd-title id="task-edit-title" size="2">
+            <h1>Edit</h1>
+          </nldd-title>
+          <nldd-spacer size="12"></nldd-spacer>
+          <app-task-form [task]="task" (saved)="closeEditFromDetail()"></app-task-form>
+        } @else {
         <nldd-title id="task-detail-title" size="2">
           <h1>{{ task.title }}</h1>
         </nldd-title>
@@ -532,12 +548,12 @@
             <nldd-button
               variant="secondary"
               text="Edit"
-              start-icon="pencil"
+              start-icon="edit"
               (click)="openEditFromDetail()"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
-              icon="pencil"
+              icon="edit"
               text="Edit"
               (select)="openEditFromDetail()"
             ></nldd-menu-item>
@@ -546,28 +562,25 @@
             <nldd-button
               variant="secondary"
               text="Technician view"
-              start-icon="eye"
-              href="/task-management-technician"
-              target="_blank"
+              (click)="openTechnicianView()"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
-              icon="eye"
               text="Technician view"
-              href="/task-management-technician"
+              (select)="openTechnicianView()"
             ></nldd-menu-item>
           </nldd-toolbar-item>
           <nldd-toolbar-item slot="end">
             <nldd-button
               variant="destructive"
-              text="Delete task"
+              text="Delete"
               start-icon="trash"
               (click)="openDeleteDialog()"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
               icon="trash"
-              text="Delete task"
+              text="Delete"
               destructive
               (select)="openDeleteDialog()"
             ></nldd-menu-item>
@@ -738,8 +751,30 @@
             </nldd-list-item>
           </nldd-list>
         }
+        }
       }
     </nldd-simple-section>
+  </nldd-page>
+</nldd-sheet>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TECHNICIAN VIEW SHEET
+     ══════════════════════════════════════════════════════════════ -->
+<!-- What the technician sees, over the page you were on rather than in a tab of
+     its own: it is the same task, read from the floor instead of from a desk.
+     Deferred, because it is a page in its own right and nobody pays for it
+     until they ask for it. -->
+<nldd-sheet #technicianSheetEl accessible-label="Technician view" placement="bottom">
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="Technician view"
+      dismiss-text="Close"
+      (dismiss)="closeTechnicianView()"
+    ></nldd-top-title-bar>
+    @defer (when technicianOpen()) {
+      <app-task-management-technician embedded></app-task-management-technician>
+    }
   </nldd-page>
 </nldd-sheet>
 
