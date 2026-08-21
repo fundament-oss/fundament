@@ -581,9 +581,12 @@
                one task. -->
         <nldd-list accessible-label="Task properties">
           <nldd-list-item>
-            <nldd-text-cell text="Assignee"></nldd-text-cell>
+            <nldd-text-cell width="fit-content" text="Assignee"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             @if (getTech(task.assignee); as tech) {
-              <nldd-cell width="fit-content">
+              <!-- The avatar cell takes the slack, so the avatar and the name
+                   travel together against the right edge. -->
+              <nldd-cell width="full" horizontal-alignment="right">
                 <nldd-avatar decorative size="24" [attr.name]="tech.name"></nldd-avatar>
               </nldd-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
@@ -594,21 +597,21 @@
               ></nldd-text-cell>
             } @else if (assigneeUnresolved(task)) {
               <nldd-text-cell
-                width="fit-content"
+                width="full"
                 horizontal-alignment="right"
                 color="secondary"
                 text="Assigned, directory unavailable"
               ></nldd-text-cell>
             } @else if (assigneeMissing(task)) {
               <nldd-text-cell
-                width="fit-content"
+                width="full"
                 horizontal-alignment="right"
                 color="warning"
                 text="No longer in the directory"
               ></nldd-text-cell>
             } @else {
               <nldd-text-cell
-                width="fit-content"
+                width="full"
                 horizontal-alignment="right"
                 color="secondary"
                 text="Unassigned"
@@ -616,9 +619,10 @@
             }
           </nldd-list-item>
           <nldd-list-item>
-            <nldd-text-cell text="Due date"></nldd-text-cell>
+            <nldd-text-cell width="fit-content" text="Due date"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
-              width="fit-content"
+              width="full"
               horizontal-alignment="right"
               [attr.color]="task.due ? null : 'secondary'"
               [attr.text]="task.due ? formatDate(task.due) : 'None'"
@@ -628,7 +632,8 @@
                rack and a word are all tags on the task, and the location is
                shown as the tags it is made of. -->
           <nldd-list-item>
-            <nldd-text-cell text="Tags"></nldd-text-cell>
+            <nldd-text-cell width="fit-content" text="Tags"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             @if (taskTagList(task).length) {
               <nldd-cell width="full" horizontal-alignment="right">
                 <!-- A wrapping row: a task can carry more tags than fit on one
@@ -641,7 +646,7 @@
               </nldd-cell>
             } @else {
               <nldd-text-cell
-                width="fit-content"
+                width="full"
                 horizontal-alignment="right"
                 color="secondary"
                 text="None"
@@ -649,17 +654,19 @@
             }
           </nldd-list-item>
           <nldd-list-item>
-            <nldd-text-cell text="Created"></nldd-text-cell>
+            <nldd-text-cell width="fit-content" text="Created"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
-              width="fit-content"
+              width="full"
               horizontal-alignment="right"
               [attr.text]="formatDate(task.created)"
             ></nldd-text-cell>
           </nldd-list-item>
           <nldd-list-item>
-            <nldd-text-cell text="ID"></nldd-text-cell>
+            <nldd-text-cell width="fit-content" text="ID"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
-              width="fit-content"
+              width="full"
               horizontal-alignment="right"
               [attr.text]="taskDisplayId(task)"
             ></nldd-text-cell>
@@ -823,6 +830,7 @@
           <nldd-icon-cell icon="inbox" size="20"></nldd-icon-cell>
           <nldd-spacer-cell size="8"></nldd-spacer-cell>
           <nldd-text-cell text="Inbox"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             width="fit-content"
             horizontal-alignment="right"
@@ -838,6 +846,7 @@
           <nldd-icon-cell icon="calendar-event" size="20"></nldd-icon-cell>
           <nldd-spacer-cell size="8"></nldd-spacer-cell>
           <nldd-text-cell text="Today"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             width="fit-content"
             horizontal-alignment="right"
@@ -875,6 +884,7 @@
               <nldd-icon-cell icon="clock" size="20"></nldd-icon-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <nldd-text-cell text="Waiting"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-text-cell
                 width="fit-content"
                 horizontal-alignment="right"
@@ -892,6 +902,7 @@
           <nldd-icon-cell icon="all-tasks" size="20"></nldd-icon-cell>
           <nldd-spacer-cell size="8"></nldd-spacer-cell>
           <nldd-text-cell text="All"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             width="fit-content"
             horizontal-alignment="right"
@@ -962,6 +973,7 @@
                 <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
                 <nldd-spacer-cell size="8"></nldd-spacer-cell>
                 <nldd-text-cell width="full" [attr.text]="node.name"></nldd-text-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"
@@ -983,6 +995,7 @@
                   <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
                   <nldd-spacer-cell size="8"></nldd-spacer-cell>
                   <nldd-text-cell width="full" [attr.text]="child.name"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     width="fit-content"
                     horizontal-alignment="right"
@@ -1001,6 +1014,7 @@
               <nldd-icon-cell icon="tag" size="20"></nldd-icon-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <nldd-text-cell width="full" [attr.text]="node.name"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-text-cell
                 width="fit-content"
                 horizontal-alignment="right"

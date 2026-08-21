@@ -92,6 +92,7 @@
                    not get this cluster. -->
               <nldd-list-item>
                 <nldd-text-cell text="Region"></nldd-text-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"
@@ -102,6 +103,7 @@
               </nldd-list-item>
               <nldd-list-item>
                 <nldd-text-cell text="Kubernetes version"></nldd-text-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"
@@ -123,6 +125,7 @@
               </nldd-list-item>
               <nldd-list-item>
                 <nldd-text-cell text="Created"></nldd-text-cell>
+                <nldd-spacer-cell size="12"></nldd-spacer-cell>
                 <nldd-text-cell
                   width="fit-content"
                   horizontal-alignment="right"
@@ -158,6 +161,7 @@
               @if (clusterData.syncState?.statusUpdatedAt) {
                 <nldd-list-item>
                   <nldd-text-cell text="Status updated"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     width="fit-content"
                     horizontal-alignment="right"
@@ -168,6 +172,7 @@
               @if (clusterData.syncState?.shootMessage) {
                 <nldd-list-item>
                   <nldd-text-cell text="Message"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     width="fit-content"
                     horizontal-alignment="right"
@@ -178,6 +183,7 @@
               @if (clusterData.syncState?.outboxError) {
                 <nldd-list-item>
                   <nldd-text-cell text="Sync error"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     color="critical"
                     width="fit-content"
@@ -189,6 +195,7 @@
               @if (clusterData.syncState?.outboxStatus) {
                 <nldd-list-item>
                   <nldd-text-cell text="Outbox status"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     width="fit-content"
                     horizontal-alignment="right"
@@ -199,6 +206,7 @@
               @if (clusterData.syncState && clusterData.syncState.outboxRetries > 0) {
                 <nldd-list-item>
                   <nldd-text-cell text="Outbox retries"></nldd-text-cell>
+                  <nldd-spacer-cell size="12"></nldd-spacer-cell>
                   <nldd-text-cell
                     width="fit-content"
                     horizontal-alignment="right"
@@ -324,6 +332,7 @@
                       >
                         <nldd-list-item size="sm">
                           <nldd-text-cell text="Type"></nldd-text-cell>
+                          <nldd-spacer-cell size="12"></nldd-spacer-cell>
                           <nldd-text-cell
                             width="fit-content"
                             horizontal-alignment="right"
@@ -332,6 +341,7 @@
                         </nldd-list-item>
                         <nldd-list-item size="sm">
                           <nldd-text-cell text="Nodes"></nldd-text-cell>
+                          <nldd-spacer-cell size="12"></nldd-spacer-cell>
                           <nldd-text-cell
                             width="fit-content"
                             horizontal-alignment="right"
@@ -348,6 +358,7 @@
                         @if (pool.version) {
                           <nldd-list-item size="sm">
                             <nldd-text-cell text="Version"></nldd-text-cell>
+                            <nldd-spacer-cell size="12"></nldd-spacer-cell>
                             <nldd-text-cell
                               width="fit-content"
                               horizontal-alignment="right"
@@ -777,6 +788,7 @@
             [attr.overline]="event.createdAt ? formatTimestamp(event.createdAt) : null"
             [attr.text]="getEventLine(event)"
           ></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             hide-below="md"
             [attr.color]="getEventTypeColor(event.eventType)"

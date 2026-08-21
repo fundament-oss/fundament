@@ -106,6 +106,7 @@
                   @if (resource.metadata.namespace) {
                     <nldd-list-item size="sm">
                       <nldd-text-cell text="Namespace"></nldd-text-cell>
+                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
                       <nldd-text-cell
                         width="fit-content"
                         horizontal-alignment="right"
@@ -116,6 +117,7 @@
                   @for (col of detailColumns(); track col.name) {
                     <nldd-list-item size="sm">
                       <nldd-text-cell [attr.text]="col.name"></nldd-text-cell>
+                      <nldd-spacer-cell size="12"></nldd-spacer-cell>
                       <nldd-text-cell
                         width="fit-content"
                         horizontal-alignment="right"

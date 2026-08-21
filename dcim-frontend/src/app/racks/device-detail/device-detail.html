@@ -41,16 +41,19 @@
         @if (dev.model) {
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Model"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell horizontal-alignment="right" [attr.text]="dev.model"></nldd-text-cell>
           </nldd-list-item>
         }
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Name"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell horizontal-alignment="right" [attr.text]="dev.name"></nldd-text-cell>
         </nldd-list-item>
         @if (dev.assetTag) {
           <nldd-list-item [attr.href]="'/inventory/' + dev.assetTag">
             <nldd-text-cell width="180px" text="Asset tag"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               horizontal-alignment="right"
               [attr.text]="dev.assetTag"
@@ -69,17 +72,20 @@
         </nldd-list-item>
         <nldd-list-item>
           <nldd-text-cell width="180px" text="U position"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell horizontal-alignment="right" [attr.text]="uRange(dev)"></nldd-text-cell>
         </nldd-list-item>
         @if (rack(); as r) {
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Rack"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell horizontal-alignment="right" [attr.text]="r.name"></nldd-text-cell>
           </nldd-list-item>
         }
         @if (dev.warrantyExpiry) {
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Warranty expiry"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               horizontal-alignment="right"
               [attr.text]="dev.warrantyExpiry"
@@ -89,6 +95,7 @@
         @if (dev.lastMaintenance) {
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Last maintenance"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               horizontal-alignment="right"
               [attr.text]="dev.lastMaintenance"
@@ -155,6 +162,7 @@
         <nldd-list variant="box-tinted" accessible-label="IPMI and power">
           <nldd-list-item>
             <nldd-text-cell width="180px" text="IPMI address"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               horizontal-alignment="right"
               [attr.text]="ipmi.address"
@@ -171,6 +179,7 @@
           </nldd-list-item>
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Average draw"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               horizontal-alignment="right"
               [attr.text]="ipmi.averageW + ' W'"
@@ -188,6 +197,7 @@
         <nldd-list variant="box-tinted" accessible-label="Allocation">
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Project"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               horizontal-alignment="right"
               [attr.text]="alloc.project"
@@ -195,10 +205,12 @@
           </nldd-list-item>
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Role"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell horizontal-alignment="right" [attr.text]="alloc.role"></nldd-text-cell>
           </nldd-list-item>
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Hostname"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               horizontal-alignment="right"
               [attr.text]="alloc.hostname"
@@ -206,6 +218,7 @@
           </nldd-list-item>
           <nldd-list-item>
             <nldd-text-cell width="180px" text="OS image"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell horizontal-alignment="right" [attr.text]="alloc.image"></nldd-text-cell>
           </nldd-list-item>
         </nldd-list>

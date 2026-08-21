@@ -133,6 +133,7 @@
               [attr.color]="cable.label ? null : 'secondary'"
               [attr.text]="cable.label || 'Unlabelled'"
             ></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               width="full"
               min-width="120px"
@@ -250,6 +251,7 @@
           <nldd-icon-cell icon="square-grid-2x2" size="20"></nldd-icon-cell>
           <nldd-spacer-cell size="8"></nldd-spacer-cell>
           <nldd-text-cell text="All cables"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             width="fit-content"
             horizontal-alignment="right"
@@ -329,6 +331,7 @@
               (click)="selectView($event, viewPath('type', t))"
             >
               <nldd-text-cell [attr.text]="CABLE_TYPE_LABEL[t]"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-text-cell
                 width="fit-content"
                 horizontal-alignment="right"
@@ -366,6 +369,7 @@
               <nldd-spacer-cell size="4"></nldd-spacer-cell>
               <nldd-spacer-cell size="8"></nldd-spacer-cell>
               <nldd-text-cell [attr.text]="colorLabel(color)"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-text-cell
                 width="fit-content"
                 horizontal-alignment="right"

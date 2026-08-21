@@ -297,6 +297,7 @@
       <nldd-list variant="box-tinted" accessible-label="Data center properties">
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Address"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             horizontal-alignment="right"
             [attr.text]="fullAddress(dc)"
@@ -304,6 +305,7 @@
         </nldd-list-item>
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Tier"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             horizontal-alignment="right"
             [attr.text]="'Tier ' + dc.tier"
@@ -311,6 +313,7 @@
         </nldd-list-item>
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Floor space"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             horizontal-alignment="right"
             [attr.text]="dc.floorSqm + ' m²'"
@@ -318,6 +321,7 @@
         </nldd-list-item>
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Established"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             horizontal-alignment="right"
             [attr.text]="dc.established"

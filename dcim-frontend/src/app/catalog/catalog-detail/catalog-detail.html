@@ -46,6 +46,7 @@
       <nldd-list variant="box-tinted" accessible-label="Product details">
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Manufacturer"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             horizontal-alignment="right"
             [attr.text]="e.manufacturer"
@@ -53,11 +54,13 @@
         </nldd-list-item>
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Category"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell horizontal-alignment="right" [attr.text]="e.category"></nldd-text-cell>
         </nldd-list-item>
         @if (e.partNumber) {
           <nldd-list-item>
             <nldd-text-cell width="180px" text="Part number"></nldd-text-cell>
+            <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-text-cell
               horizontal-alignment="right"
               [attr.text]="e.partNumber"
@@ -66,6 +69,7 @@
         }
         <nldd-list-item>
           <nldd-text-cell width="180px" text="Catalog ID"></nldd-text-cell>
+          <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell horizontal-alignment="right" [attr.text]="e.id"></nldd-text-cell>
         </nldd-list-item>
       </nldd-list>
@@ -79,6 +83,7 @@
           @for (spec of specEntries(e.specs); track spec.key) {
             <nldd-list-item>
               <nldd-text-cell width="180px" [attr.text]="spec.key"></nldd-text-cell>
+              <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-text-cell
                 horizontal-alignment="right"
                 [attr.text]="spec.value"
