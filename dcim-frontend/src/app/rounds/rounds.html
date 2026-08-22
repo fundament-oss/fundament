@@ -26,11 +26,10 @@
          bottom of the window. Fixed, it spanned the menu beside it too. -->
   } @else if (rounds.rounds().length) {
     <nldd-simple-section>
-      <nldd-inline-dialog
-        icon="tools"
-        text="Select a round"
-        supporting-text="Pick a technician on the left to see the round they walk today."
-      ></nldd-inline-dialog>
+      <!-- The same words as every other section, and no more of them: telling
+           you to pick something from the list beside it is telling you what the
+           layout already says. -->
+      <nldd-inline-dialog text="No selection"></nldd-inline-dialog>
     </nldd-simple-section>
   } @else {
     <!-- Nothing to pick, so no menu beside this: the list is the page. -->
@@ -62,15 +61,17 @@
          A sentence with a link rather than a row in the menu: the rows here are
          rounds, and this one leaves the section. -->
     @if (rounds.unplaced().length) {
-      <nldd-text size="sm" color="secondary">
-        {{ unplacedLabel() }}.
-        <nldd-link
-          size="inherit"
-          [attr.href]="tasksPath + '/inbox'"
-          text="Sort that out in Inbox"
-          (click)="goToInbox($event)"
-        ></nldd-link>
-      </nldd-text>
+      <!-- Rich text rather than a text with a link component in it: this is a
+           sentence with a link in it, so it is written as one, and it reads at
+           the size everything else does. -->
+      <nldd-rich-text>
+        <p>
+          {{ unplacedLabel() }}.
+          <a [attr.href]="tasksPath + '/inbox'" (click)="goToInbox($event)"
+            >Sort that out in Inbox</a
+          >
+        </p>
+      </nldd-rich-text>
       <nldd-spacer size="16"></nldd-spacer>
     }
 

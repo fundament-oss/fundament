@@ -50,6 +50,7 @@ import '@nldd/design-system/popover';
 import '@nldd/design-system/progress-bar';
 import '@nldd/design-system/radio-button-field';
 import '@nldd/design-system/radio-button-group';
+import '@nldd/design-system/rich-text';
 import '@nldd/design-system/search-field';
 import '@nldd/design-system/segmented-control';
 import '@nldd/design-system/sheet';
