@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import authGuard from './auth.guard';
 import { tasksMatcher } from './tasks/task-views';
+import { roundsMatcher } from './rounds/round-views';
 import { catalogMatcher } from './catalog/catalog-views';
 import { inventoryMatcher } from './inventory/inventory-views';
 import { patchMappingMatcher } from './patch-mapping/patch-mapping-views';
@@ -91,11 +92,18 @@ const routes: Routes = [
         title: 'Tasks',
         loadComponent: () => import('./tasks/tasks').then((m) => m.default),
       },
+      {
+        // The list of rounds and one round on it are the same page, so they
+        // share one route config: see round-views.ts.
+        matcher: roundsMatcher,
+        title: 'Rounds',
+        loadComponent: () => import('./rounds/rounds').then((m) => m.default),
+      },
     ],
   },
   {
     path: 'task-management-technician',
-    title: 'My tasks',
+    title: 'My rounds',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./task-management-technician/task-management-technician').then((m) => m.default),

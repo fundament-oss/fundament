@@ -42,6 +42,7 @@ const SECTIONS = [
   { text: 'Racks', icon: 'rack-servers', path: '/racks' },
   { text: 'Patch mapping', icon: 'network-patch-mapping', path: '/patch-mapping' },
   { text: 'Tasks', icon: 'tasks', path: '/tasks' },
+  { text: 'Rounds', icon: 'tools', path: '/rounds' },
 ];
 
 /**

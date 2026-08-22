@@ -6,26 +6,29 @@ import {
   signal,
   computed,
   effect,
+  ChangeDetectorRef,
+  ElementRef,
   inject,
   input,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
+import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { timestampDate } from '@bufbuild/protobuf/wkt';
 import { firstValueFrom } from 'rxjs';
+import { taskTags } from '../tasks/task-tags';
+import { dayLabel, Round } from '../rounds/round';
+import RoundsService from '../rounds/rounds.service';
 
 import type { Task as ProtoTask } from '../../generated/v1/task_pb';
-import ThemeToggleComponent from '../shared/theme-toggle';
 import ThemeService from '../theme.service';
 import AuthService from '../auth.service';
-import TaskApiService, {
-  TaskPriorityLabel,
-  TaskStatusLabel,
-} from '../task-management/task-api.service';
+import TaskApiService, { TaskPriorityLabel } from '../task-management/task-api.service';
 import TaskStepApiService from '../task-management/task-step-api.service';
 import UserApiService from '../task-management/user-api.service';
 import NoteApiService from '../inventory/note-api.service';
+import { NoteComment } from '../inventory/inventory';
 import settledPool from '../shared/settled-pool';
 import ToastService from '../shared/toast.service';
 import connectErrorMessage from '../../connect/error';
@@ -45,6 +48,13 @@ interface Step {
   description: string;
   icon: string;
   svg: string;
+  /**
+   * A task nobody wrote steps for stands in its own walkthrough as one step.
+   * Without that, a one-action job like replacing a filter drops out of the
+   * round for lack of a checklist, which is exactly the work you walk for.
+   * There is no step to write away for it, so finishing it closes the task.
+   */
+  whole?: boolean;
 }
 
 interface Task {
@@ -57,9 +67,6 @@ interface Task {
 }
 
 type Phase = 'gather' | 'task';
-
-/** What the technician walks through: the statuses that still need work done. */
-const WALKTHROUGH_STATUSES: TaskStatusLabel[] = ['To do', 'Doing'];
 
 // Ceiling on in-flight ListTaskSteps calls while the walkthrough loads, matching
 // the admin board's BULK_CONCURRENCY.
@@ -89,12 +96,22 @@ interface ProgressSnapshot {
 @Component({
   selector: 'app-task-management-technician',
   templateUrl: './task-management-technician.html',
-  imports: [RouterLink, ThemeToggleComponent],
+  imports: [NgTemplateOutlet],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class:
-      'block bg-neutral-50 dark:bg-gray-900 font-sans text-neutral-900 dark:text-white antialiased',
+    /*
+     * Inside a page the host is a box nobody asked for: it carried a font and a
+     * text color the page already sets, and it stood in the page's own layout.
+     * So there it steps aside and its children take its place.
+     *
+     * Standing on its own it must not: the `nldd-app-view` under it sizes itself
+     * against its ancestors, and `display: contents` takes the host's box out of
+     * that chain, so the app-view collapsed and its panes clipped what would not
+     * fit — nothing scrolled. Left alone the host is `inline`, which is what
+     * every other Angular component that holds an app-view is.
+     */
+    '[style.display]': "embedded() ? 'contents' : null",
   },
 })
 export default class TaskManagementTechnicianComponent implements OnInit {
@@ -105,11 +122,28 @@ export default class TaskManagementTechnicianComponent implements OnInit {
    */
   readonly embedded = input(false, { transform: (v: boolean | string) => v !== false && v !== 'false' });
 
+  /**
+   * The round to show: one person, one data center, one day. Without it the
+   * view falls back to the open work of whoever is logged in, which is what the
+   * technician's own address does until they have an environment of their own.
+   */
+  readonly round = input<Round | null>(null);
+
+  /**
+   * Looking rather than walking. A planner reading somebody else's round has no
+   * business ticking off work they did not do, so the bar goes and nothing is
+   * written, here or in the browser's own store. Stepping through to read is
+   * still allowed: that changes what you look at, not what is there.
+   */
+  readonly readOnly = input(false, { transform: (v: boolean | string) => v !== false && v !== 'false' });
+
   private sanitizer = inject(DomSanitizer);
 
   protected readonly theme = inject(ThemeService);
 
   private readonly auth = inject(AuthService);
+
+  private readonly router = inject(Router);
 
   private readonly taskApi = inject(TaskApiService);
 
@@ -244,8 +278,6 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     },
   ];
 
-  readonly dcName = 'DC Amsterdam-West';
-
   // Generic part label per tag, used to build the gather checklist.
   private static readonly TAG_PARTS: Record<string, string> = {
     hardware: 'Replacement hardware components',
@@ -286,6 +318,28 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   }
 
   constructor() {
+    // Land on a round rather than on a menu: the first of mine, which is the
+    // one with the most urgent work in it since that is how they are sorted.
+    effect(() => {
+      const mine = this.myRounds();
+      if (!this.round() && !this.chosenRound() && mine.length) this.chosenRound.set(mine[0]);
+    });
+
+    // The round can arrive as an input and can change under the same instance
+    // when you pick another one, so it is watched rather than read once.
+    effect(() => {
+      const round = this.activeRound();
+      if (round) this.loadRound(round);
+    });
+
+    // The notes follow whichever task is open. Read per task rather than all at
+    // once: a round holds five of them and you look at one.
+    effect(() => {
+      const task = this.tasks()[this.currentTaskIndex()];
+      this.taskNotes.set([]);
+      if (task) this.loadNotes(task.id);
+    });
+
     // Auto-save progress on every change, once restoreProgress() has run —
     // otherwise this would immediately overwrite a saved snapshot with the
     // signals' initial (empty) values before it's been read back.
@@ -310,12 +364,22 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadTasks();
+    if (!this.round()) this.loadMyRounds();
   }
 
+  /**
+   * Where progress is kept. One store per round: two rounds on one day are two
+   * trips with two sets of material, and a shared key would have them ticking
+   * off each other's gather list.
+   *
+   * Nothing at all while only looking. What a planner clicks through is their
+   * own browser, not the technician's progress, and writing it would leave the
+   * technician's own store overwritten by somebody reading over their shoulder.
+   */
   private storageKey(): string | null {
-    const id = this.auth.user()?.id;
-    return id ? `dcim_tech_progress_${id}` : null;
+    if (this.readOnly()) return null;
+    const round = this.activeRound();
+    return round ? `dcim_round_${round.personId}_${round.datacenter}_${round.day}` : null;
   }
 
   // Resolves the saved ids back onto positions in the freshly loaded list. A
@@ -337,6 +401,7 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       this.phase.set(saved.phase === 'task' && ti >= 0 ? 'task' : 'gather');
       this.currentTaskIndex.set(taskIdx);
       this.currentStepIndex.set(stepIdx);
+      if (saved.phase === 'task' && ti >= 0) this.markReached(taskIdx, stepIdx);
       this.checkedItems.set(new Set((saved.checkedItems ?? []).filter((k) => keys.has(k))));
       this.gatherCompleted.set(!!saved.gatherCompleted);
     } catch {
@@ -349,89 +414,30 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     if (key) localStorage.removeItem(key);
   }
 
-  private async loadTasks(): Promise<void> {
+  /**
+   * Who I am, and then my rounds. The walkthrough itself is loaded by the
+   * effect that watches which round is active.
+   */
+  private async loadMyRounds(): Promise<void> {
     try {
       // The auth session carries the identity-provider subject; the task's
       // assignee is a DCIM user id, so resolve one onto the other first.
       const me = await firstValueFrom(this.userApi.getCurrentUser());
       const meId = me.user?.id;
+      this.meName.set(me.user ? UserApiService.mapUser(me.user).name : '');
       if (!meId) {
         this.loadError.set(NO_DIRECTORY_ENTRY);
         return;
       }
-
-      const res = await firstValueFrom(this.taskApi.listTasks(meId));
-      // Only tasks that still need doing. Without this, tasks the technician
-      // already finished (or that are blocked/awaiting review) pad the gather
-      // checklist and the linear flow walks them back through completed work.
-      const open = res.tasks
-        .filter((t) => WALKTHROUGH_STATUSES.includes(TaskApiService.fromProtoStatus(t.status)))
-        // Re-sorted oldest-first. ListTasks answers newest-first because that is
-        // what the admin board wants at the top; a walkthrough is a queue, so it
-        // should start with the work that has been waiting longest.
-        .sort(
-          (a, b) =>
-            TaskManagementTechnicianComponent.createdMs(a) -
-            TaskManagementTechnicianComponent.createdMs(b),
-        );
-
-      // One ListTaskSteps call per task, through the same bounded pool the admin
-      // board's bulk actions use. WALKTHROUGH_STATUSES keeps this to a
-      // technician's open tasks rather than the whole board, but that is a
-      // property of today's data, not a ceiling — so put a real one on it.
-      const completed = new Set<string>();
-      const settled = await settledPool(open, STEP_FETCH_CONCURRENCY, async (t) => {
-        const stepsRes = await firstValueFrom(this.taskStepApi.listTaskSteps(t.id));
-        const steps: Step[] = stepsRes.steps.map((s, si) => {
-          const art = TaskManagementTechnicianComponent.illustrationFor(si);
-          if (s.completed) completed.add(s.id);
-          return {
-            id: s.id,
-            title: s.title,
-            description: s.description,
-            icon: art.icon,
-            svg: art.svg,
-          };
-        });
-        return {
-          id: t.id,
-          title: t.title,
-          priority: TaskManagementTechnicianComponent.mapPriority(
-            TaskApiService.fromProtoPriority(t.priority),
-          ),
-          tags: [...t.tags],
-          location: t.location,
-          steps,
-        };
-      });
-
-      // The pool settles rather than rejects, but a partially loaded
-      // walkthrough is worse than a failed one: the technician would be walked
-      // through a queue with silent gaps in it, and the missing tasks would
-      // never be flagged. Fail the whole load instead, as Promise.all did.
-      const failure = settled.find((r) => r.status === 'rejected');
-      if (failure) throw failure.reason;
-
-      const tasks = settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
-
-      // A task with no steps is dropped rather than walked into: the flow
-      // advances one step at a time, so there is nothing for "Done" to complete
-      // on such a task and the technician would be stranded on it with no way
-      // forward. Tasks are seeded without steps often enough for this to bite.
-      const walkable = tasks.filter((t) => t.steps.length > 0);
-
-      this.completedSteps.set(completed);
-      this.tasks.set(walkable);
-      this.restoreProgress(walkable);
+      this.meId.set(meId);
+      this.roundsService.load();
       this.loadError.set(null);
-      this.hydrated.set(true);
     } catch (err) {
       const message = connectErrorMessage(err);
       // eslint-disable-next-line no-console
       console.error(message);
-      // Surfaced rather than swallowed: with no tasks and no error the page is
-      // indistinguishable from "you have nothing to do". hydrated stays false so
-      // the auto-save effect cannot overwrite the saved snapshot with an empty one.
+      // Surfaced rather than swallowed: with nothing on screen and no error the
+      // page is indistinguishable from "you have nothing to do".
       //
       // GetCurrentUser answers NotFound for a caller who is authenticated but
       // absent from the DCIM roster, which is an ordinary provisioning state
@@ -439,13 +445,110 @@ export default class TaskManagementTechnicianComponent implements OnInit {
       this.loadError.set(
         err instanceof ConnectError && err.code === Code.NotFound ? NO_DIRECTORY_ENTRY : message,
       );
-      this.toast.error('Could not load your tasks');
+      this.toast.error('Could not load your rounds');
+    }
+  }
+
+  /**
+   * The steps of every task, through a bounded pool. One ListTaskSteps call per
+   * task is fine for a technician's open work, but that is a property of
+   * today's data rather than a ceiling, so put a real one on it.
+   *
+   * A partial answer fails the whole load. A walkthrough with silent gaps in it
+   * is worse than one that did not load: it would walk somebody straight past
+   * work nobody flagged.
+   */
+  private async withSteps(
+    sources: { id: string; title: string; priority: TaskPriorityLabel; tags: string[]; location: string }[],
+  ): Promise<Task[]> {
+    const completed = new Set<string>();
+    const settled = await settledPool(sources, STEP_FETCH_CONCURRENCY, async (t) => {
+      const stepsRes = await firstValueFrom(this.taskStepApi.listTaskSteps(t.id));
+      const steps: Step[] = stepsRes.steps.map((s, si) => {
+        const art = TaskManagementTechnicianComponent.illustrationFor(si);
+        if (s.completed) completed.add(s.id);
+        return {
+          id: s.id,
+          title: s.title,
+          description: s.description,
+          icon: art.icon,
+          svg: art.svg,
+        };
+      });
+      return {
+        id: t.id,
+        title: t.title,
+        priority: TaskManagementTechnicianComponent.mapPriority(t.priority),
+        tags: t.tags,
+        location: t.location,
+        steps: steps.length ? steps : [TaskManagementTechnicianComponent.wholeTaskStep(t)],
+      };
+    });
+
+    const failure = settled.find((r) => r.status === 'rejected');
+    if (failure) throw failure.reason;
+
+    this.completedSteps.set(completed);
+    return settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+  }
+
+  /** A task nobody wrote steps for, as the one step it is. */
+  private static wholeTaskStep(task: { id: string; title: string }): Step {
+    const art = TaskManagementTechnicianComponent.illustrationFor(0);
+    return {
+      id: `task:${task.id}`,
+      title: task.title,
+      description: '',
+      icon: art.icon,
+      svg: art.svg,
+      whole: true,
+    };
+  }
+
+  /**
+   * One round, walked or read. Its tasks come composed and in the order you
+   * walk them, so there is nothing to filter or sort here.
+   */
+  private async loadRound(round: Round): Promise<void> {
+    try {
+      const tasks = await this.withSteps(
+        round.tasks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          priority: t.priority,
+          tags: [...t.tags],
+          location: t.location,
+        })),
+      );
+      this.tasks.set(tasks);
+      // What was ticked off the gather list lives in the technician's own
+      // browser, so a round read from elsewhere cannot know it. What it can
+      // know is whether the round has started: a step done means somebody went
+      // to the floor, and you do not get there without your material.
+      this.gatherCompleted.set(this.completedSteps().size > 0);
+      this.restoreProgress(tasks);
+      // Opened where the work stands rather than at the top: a round is read to
+      // see how far it has come, and the gather list is not that. Reading one
+      // keeps no progress of its own, so there is no snapshot to open it on.
+      // A round nobody has started opens on the gather step, because that is
+      // where it starts.
+      if (this.gatherCompleted()) {
+        const next = tasks.findIndex((_, i) => !this.isTaskDone(i));
+        this.openTask(next === -1 ? Math.max(0, tasks.length - 1) : next);
+      }
+      this.loadError.set(null);
+      this.hydrated.set(true);
+    } catch (err) {
+      const message = connectErrorMessage(err);
+      // eslint-disable-next-line no-console
+      console.error(message);
+      this.loadError.set(message);
     }
   }
 
   retryLoad(): void {
     this.loadError.set(null);
-    this.loadTasks();
+    this.loadMyRounds();
   }
 
   /** Creation time in epoch ms; 0 for a task the API sent without one. */
@@ -479,13 +582,9 @@ export default class TaskManagementTechnicianComponent implements OnInit {
 
   readonly menuOpen = signal(false);
 
-  readonly showPhotoModal = signal(false);
-
-  readonly showNoteModal = signal(false);
 
   readonly noteText = signal('');
 
-  readonly photoPreviewUrl = signal<string | null>(null);
 
   readonly loadError = signal<string | null>(null);
 
@@ -506,13 +605,22 @@ export default class TaskManagementTechnicianComponent implements OnInit {
   // ── Computed ──
   readonly currentTask = computed(() => this.tasks()[this.currentTaskIndex()]);
 
-  readonly totalSteps = computed(() => 1 + this.tasks().reduce((s, t) => s + t.steps.length, 0));
+  /**
+   * The work, counted in steps, with the gather step left out of it.
+   *
+   * Collecting material is preparation for a round rather than part of it, and
+   * counting it puts you at 1 of 21 for having picked up a screwdriver. It also
+   * keeps this the same number the list of rounds shows, which cannot know
+   * whether somebody ticked their gather list: that lives in their browser.
+   */
+  readonly totalSteps = computed(() => this.tasks().reduce((s, t) => s + t.steps.length, 0));
 
-  readonly completedCount = computed(
-    () => (this.gatherCompleted() ? 1 : 0) + this.completedSteps().size,
-  );
+  readonly completedCount = computed(() => this.completedSteps().size);
 
-  readonly progressPct = computed(() => (this.completedCount() / this.totalSteps()) * 100);
+  readonly progressPct = computed(() => {
+    const total = this.totalSteps();
+    return total ? (this.completedCount() / total) * 100 : 0;
+  });
 
   readonly showCompleteBtn = computed(() => {
     const p = this.phase();
@@ -524,26 +632,314 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     return ti === tasks.length - 1 && si === tasks[ti].steps.length - 1;
   });
 
-  readonly currentStepLabel = computed(() => {
-    if (this.phase() === 'gather') return 'Gather tools & parts';
-    const task = this.tasks()[this.currentTaskIndex()];
-    if (!task) return '';
-    const si = this.currentStepIndex();
-    return `${task.title} — Step ${si + 1}: ${task.steps[si]?.title ?? ''}`;
-  });
-
   // ── Methods ──
   toggleMenu(event: Event): void {
     event.stopPropagation();
     this.menuOpen.update((v) => !v);
   }
 
+  /** Where a task is, written as the path the tags use: one rack reads the same
+   *  wherever you meet it. */
+  readonly taskPlace = (task: { tags: string[]; location: string }): string =>
+    taskTags(task).find((tag) => tag.includes('/')) ?? task.location;
+
+  /**
+   * How far along the row is that carries what a step holds. It has no dot, so
+   * its status colors the whole stretch: covered when the next step is already
+   * reached, still ahead when this is where the going stops.
+   */
+  contentStatus(taskIdx: number, stepIdx: number): 'past' | 'current' {
+    const front = this.front();
+    const behind = front.taskIdx > taskIdx || (front.taskIdx === taskIdx && front.stepIdx > stepIdx);
+    return behind ? 'past' : 'current';
+  }
+
+  /**
+   * Where the row carrying a step's card sits in the track. Under the last step
+   * of the last task there is nothing below it, so it draws no line at all: a
+   * line running past the end promises a step that is not coming.
+   */
+  contentPosition(taskIdx: number, stepIdx: number): 'only' | null {
+    const tasks = this.tasks();
+    const steps = tasks[taskIdx]?.steps.length ?? 0;
+    return taskIdx === tasks.length - 1 && stepIdx === steps - 1 ? 'only' : null;
+  }
+
+  /** The same for the gather list: covered once there is a task under way. */
+  gatherContentStatus(): 'past' | 'current' {
+    return this.front().gather ? 'current' : 'past';
+  }
+
+  /**
+   * How much of the track a step has covered.
+   *
+   * `both` when the going carries on below the step you are on, which happens
+   * when you step back into one you already finished. `top` on the last step
+   * that is done with nothing covered below it: the track stops at the dot
+   * rather than running half a row past the end of the going. Anything else is
+   * what the status says on its own.
+   */
+  /** Whether you can go to this step: anything up to and including where the
+   *  work stands. Skipping one without ticking it off still means you passed
+   *  it, so it stays a place you can walk back into. */
+  stepReachable(taskIdx: number, stepIdx: number): boolean {
+    // Reading it through, everything is open: there is no work to skip past,
+    // and Next walks into what is still ahead anyway.
+    if (this.readOnly()) return true;
+    const front = this.front();
+    if (front.taskIdx > taskIdx) return true;
+    return front.taskIdx === taskIdx && stepIdx <= front.stepIdx;
+  }
+
   /** The track's own words for where you are. Being here wins over having been
    *  here: you can step back into a finished step, and then it is the one you
    *  are on. */
-  trackStatus(done: boolean, active: boolean): 'past' | 'current' | 'future' {
-    if (active) return 'current';
-    return done ? 'past' : 'future';
+  /**
+   * Where the work stands, which is not the same as what you have open.
+   *
+   * The track carries the first: everything up to here is behind you, the rest
+   * is ahead. Clicking back into step 1 to read it again does not move that —
+   * the process is still at step 2, so 2 stays current and 1 reads as past.
+   * What you have open is a selection, and that shows itself by the card that
+   * hangs under it.
+   */
+  private readonly reached = signal<{ taskIdx: number; stepIdx: number } | null>(null);
+
+  /**
+   * How far the work has come. Pressing on moves it along; clicking back into a
+   * step you finished to read it again does not, and neither does a step you
+   * land on that happens to be ticked off already — you are still standing
+   * there. It only ever moves forward.
+   */
+  private readonly front = computed(() => {
+    const tasks = this.tasks();
+    const reached = this.reached();
+    if (reached && tasks[reached.taskIdx]) {
+      return { gather: false, taskIdx: reached.taskIdx, stepIdx: reached.stepIdx };
+    }
+    if (!this.gatherCompleted()) return { gather: true, taskIdx: -1, stepIdx: -1 };
+    const taskIdx = tasks.findIndex((_, i) => !this.isTaskDone(i));
+    if (taskIdx === -1) return { gather: false, taskIdx: -1, stepIdx: -1 };
+    const steps = tasks[taskIdx].steps;
+    const stepIdx = steps.findIndex((_, i) => !this.isStepDone(taskIdx, i));
+    return { gather: false, taskIdx, stepIdx: stepIdx === -1 ? steps.length - 1 : stepIdx };
+  });
+
+  /**
+   * The notes on the task you have open, read where they were written: one flat
+   * stream per task, each line naming the step it came from. Per step would ask
+   * for a note that knows its step, and a `Note` carries an entity type that
+   * stops at the task.
+   */
+  readonly taskNotes = signal<NoteComment[]>([]);
+
+  /** When a note was written, as you would say it out loud. */
+  readonly noteWhen = (note: NoteComment): string => {
+    if (note.daysAgo === 0) return 'today';
+    if (note.daysAgo === 1) return 'yesterday';
+    return `${note.daysAgo} days ago`;
+  };
+
+  private loadNotes(taskId: string): void {
+    firstValueFrom(this.noteApi.listNotesForTask(taskId))
+      .then((res) => this.taskNotes.set(res.notes.map((n) => NoteApiService.mapNote(n))))
+      // A note that will not load is not worth stopping the walkthrough for.
+      // eslint-disable-next-line no-console
+      .catch((err) => console.error(connectErrorMessage(err)));
+  }
+
+  private readonly roundsService = inject(RoundsService);
+
+  /** Whose work this is, when it is your own rather than a round you opened. */
+  private readonly meName = signal('');
+
+  /** Me, as the tasks know me: the session carries an identity-provider
+   *  subject, a task carries a DCIM user id. */
+  private readonly meId = signal('');
+
+  /** The round picked from the menu, when nobody handed one in. */
+  private readonly chosenRound = signal<Round | null>(null);
+
+  /**
+   * The round being walked or read: the one handed in, or the one picked from
+   * the menu. A round rather than "everything assigned to me", because a round
+   * is one trip to one place on one day, and that is what the gather step is
+   * for. Without it the list held two data centers at once and collecting
+   * material for it meant nothing.
+   */
+  readonly activeRound = computed(() => this.round() ?? this.chosenRound());
+
+  /** My rounds, for the menu beside the walkthrough. */
+  readonly myRounds = computed(() =>
+    this.roundsService.rounds().filter((r) => r.personId === this.meId()),
+  );
+
+  /** False until the rounds have been read once, so an empty menu is only
+   *  called empty when it is known to be. */
+  readonly roundsLoaded = this.roundsService.loaded;
+
+  isActiveRound(round: Round): boolean {
+    return this.activeRound()?.key === round.key;
+  }
+
+  /** A round in the menu, as its place and its day. */
+  readonly roundLabel = (round: Round): string =>
+    `${round.datacenter} \u00b7 ${dayLabel(round.day, new Date().toISOString().slice(0, 10))}`;
+
+  roundProgress(round: Round): string {
+    const p = this.roundsService.taskProgress(round);
+    return `${p.done}/${p.total}`;
+  }
+
+  chooseRound(round: Round): void {
+    this.chosenRound.set(round);
+  }
+
+  /**
+   * Who walks this, where, and when. It replaces a hardcoded data center name
+   * and an invented work order number, which between them said one location for
+   * a list that held two.
+   */
+  /**
+   * The round, as its place and its day. Not the person: reading somebody
+   * else's round the menu beside it already says whose, and in your own
+   * environment your name is the least informative line on the screen. It
+   * stands top right instead, where you also sign out.
+   */
+  protected readonly roundTitle = computed(() => {
+    const round = this.activeRound();
+    if (!round) return 'My round';
+    const count = this.tasks().length;
+    return `${this.roundLabel(round)} (${count})`;
+  });
+
+  /** Whose round you are reading, when it is not your own. */
+  protected readonly roundOwner = computed(() => {
+    const round = this.round();
+    return round && round.personId !== this.meId() ? round.personName : '';
+  });
+
+  protected readonly userName = computed(() => this.auth.user()?.name ?? this.meName());
+
+  async handleLogout(): Promise<void> {
+    await this.auth.logout().catch(() => {});
+    await this.router.navigate(['/login']);
+  }
+
+  /** How far the round has come, beside its name rather than under it: it is
+   *  the same kind of fact as the name, not a footnote to it. */
+  /** How far the round has come, counted in tasks: that is the unit the menu
+   *  beside it counts in, and what somebody asks about a round. */
+  protected readonly roundSubtitle = computed(() => {
+    const tasks = this.tasks();
+    const done = tasks.filter((_, i) => this.isTaskDone(i)).length;
+    const owner = this.roundOwner();
+    const progress = tasks.length ? `${done} of ${tasks.length} done` : '';
+    return [owner, progress].filter(Boolean).join(' \u00b7 ');
+  });
+
+  private readonly host = inject(ElementRef<HTMLElement>);
+
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  /**
+   * Room above the row you land on: enough to clear the sheet's own title bar,
+   * and to leave a glimpse of the step you just finished.
+   */
+  private static readonly LANDING_OFFSET = 72;
+
+  /**
+   * Moves on to a row and puts it at the top of the view, with the card that
+   * opens under it in the room below.
+   *
+   * Nothing scrolls when you press Done, and that is the trouble: the card
+   * closes under one row and opens under the next, so the row you are moving to
+   * comes up by the height of the card that stood above it, and the screen
+   * fills with what used to be far higher up. It reads as being thrown back to
+   * the top. The browser would hold the page for us, but Safari has no scroll
+   * anchoring, so the view is placed by hand.
+   *
+   * Rendered and placed in one go, before anything is painted: no animation and
+   * no intermediate frame, so the view does not travel there — it is simply
+   * there. Animating it made every step look like a fresh page loading.
+   */
+  private movingTo(row: string, change: () => void): void {
+    change();
+    // Render now rather than next frame, so the placing lands in the same paint
+    // as the change itself.
+    this.cdr.detectChanges();
+    const anchor = (this.host.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      `[data-row="${row}"]`,
+    );
+    if (!anchor) return;
+    // The scroller belongs to whatever holds this view, and inside a sheet it
+    // sits behind a shadow boundary, so scrollIntoView is the only handle on it.
+    // scroll-margin is what keeps the row clear of the bar over the scrollport.
+    anchor.style.scrollMarginTop = `${TaskManagementTechnicianComponent.LANDING_OFFSET}px`;
+    anchor.scrollIntoView({ block: 'start' });
+    anchor.style.removeProperty('scroll-margin-top');
+  }
+
+  /** Records where you have got to, never back: a step you already finished
+   *  does not pull the work backwards when you walk into it again. */
+  private markReached(taskIdx: number, stepIdx: number): void {
+    const reached = this.reached();
+    const ahead = !reached
+      || taskIdx > reached.taskIdx
+      || (taskIdx === reached.taskIdx && stepIdx > reached.stepIdx);
+    if (ahead) this.reached.set({ taskIdx, stepIdx });
+  }
+
+  /**
+   * Whether the gather step can be opened from where you are. Walking, once you
+   * have been past it; reading, always, like every other row: there is nothing
+   * to skip when you are not doing the work.
+   */
+  canOpenGather(): boolean {
+    if (this.phase() === 'gather') return false;
+    return this.readOnly() || this.gatherCompleted();
+  }
+
+  /** The gather step on the track: behind you once you have gone past it. */
+  gatherStatus(): 'past' | 'current' {
+    return this.front().gather ? 'current' : 'past';
+  }
+
+  /**
+   * How far the track is covered at a task, measured against the front and
+   * nothing else.
+   *
+   * Being ticked off does not make a row blue. A row you have not reached sits
+   * under a stretch of grey line, and a blue dot there would draw an arrival
+   * without the journey to it. What is done shows itself with a check mark;
+   * the track shows how far the work has come.
+   */
+  taskStatus(taskIdx: number): 'past' | 'current' | 'future' {
+    const front = this.front();
+    if (front.taskIdx === taskIdx) return 'current';
+    return front.taskIdx > taskIdx ? 'past' : 'future';
+  }
+
+  /** The same for a step: behind the front, on it, or still ahead. */
+  stepStatus(taskIdx: number, stepIdx: number): 'past' | 'current' | 'future' {
+    const front = this.front();
+    if (front.taskIdx === taskIdx && front.stepIdx === stepIdx) return 'current';
+    const behind = front.taskIdx > taskIdx
+      || (front.taskIdx === taskIdx && front.stepIdx > stepIdx);
+    return behind ? 'past' : 'future';
+  }
+
+  /**
+   * Whether the track runs on under a task's dot in its own color.
+   *
+   * The steps of the task you are in hang below its dot, so that stretch is
+   * inside the task and covered. Collapsed there is nothing of its own down
+   * there, and a covered line would promise a step that is not on screen.
+   */
+  taskLine(taskIdx: number): 'both' | null {
+    if (this.taskStatus(taskIdx) !== 'current') return null;
+    const opensSteps = this.isTaskActive(taskIdx) && this.tasks()[taskIdx].steps.length > 0;
+    return opensSteps ? 'both' : null;
   }
 
   /**
@@ -616,16 +1012,61 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     });
   }
 
-  pressPrev(): void {
-    if (this.phase() === 'gather') return;
-    if (this.currentStepIndex() > 0) {
-      this.currentStepIndex.update((v) => v - 1);
-    } else if (this.currentTaskIndex() > 0) {
-      this.currentTaskIndex.update((v) => v - 1);
-      this.currentStepIndex.set(this.tasks()[this.currentTaskIndex()].steps.length - 1);
-    } else {
-      this.phase.set('gather');
+  /** Whether you have been in this task at all: one step ticked off is enough
+   *  to make it a place you can go back to. */
+  /** The same for a task: everything up to and including where the work stands. */
+  taskStarted(taskIdx: number): boolean {
+    if (this.readOnly()) return true;
+    return this.front().taskIdx >= taskIdx;
+  }
+
+  /**
+   * Back into a task you left halfway, at the step you left it on: the first
+   * one that is not done yet, or the last step when the whole task is. Landing
+   * on the first step again would make you walk past everything you already
+   * did.
+   */
+  openTask(taskIdx: number): void {
+    const steps = this.tasks()[taskIdx]?.steps ?? [];
+    const next = steps.findIndex((step) => !this.completedSteps().has(step.id));
+    const stepIdx = next === -1 ? Math.max(0, steps.length - 1) : next;
+    this.jumpToStep(taskIdx, stepIdx);
+    // Reading a round does not move it along. Walking into a task is what puts
+    // the work there; opening one to look at it is not, and every row is open
+    // to a reader, including the ones still ahead.
+    if (!this.readOnly()) this.markReached(taskIdx, stepIdx);
+  }
+
+  /** Back to gathering, the way Previous gets there from the first step: the
+   *  list you ticked off is still worth a second look. */
+  goToGather(): void {
+    this.phase.set('gather');
+  }
+
+  /** Whether there is anything after the step you are looking at. */
+  readonly atEnd = computed(() => {
+    const tasks = this.tasks();
+    if (this.phase() === 'gather') return tasks.length === 0;
+    const ti = this.currentTaskIndex();
+    const si = this.currentStepIndex();
+    return ti >= tasks.length - 1 && si >= (tasks[ti]?.steps.length ?? 1) - 1;
+  });
+
+  /**
+   * The mirror of Previous, for reading a round through. It only moves what you
+   * are looking at: where the work stands is the technician's, and a planner
+   * paging through it does not push it along.
+   */
+  pressNext(): void {
+    if (this.atEnd()) return;
+    if (this.phase() === 'gather') {
+      this.jumpToStep(0, 0);
+      return;
     }
+    const ti = this.currentTaskIndex();
+    const si = this.currentStepIndex();
+    if (si < this.tasks()[ti].steps.length - 1) this.currentStepIndex.update((v) => v + 1);
+    else this.jumpToStep(ti + 1, 0);
   }
 
   async pressDone(): Promise<void> {
@@ -636,15 +1077,13 @@ export default class TaskManagementTechnicianComponent implements OnInit {
         this.toast.info('No tasks to walk through right now');
         return;
       }
-      if (this.checkedItems().size < this.gatherItems().length) {
-        this.toast.info(
-          `${this.checkedItems().size}/${this.gatherItems().length} items checked — proceeding`,
-        );
-      }
       this.gatherCompleted.set(true);
-      this.phase.set('task');
-      this.currentTaskIndex.set(0);
-      this.currentStepIndex.set(0);
+      // Where the work stands, not the very beginning: you can come back to the
+      // gather list halfway through and pressing on should carry on from there.
+      const tasks = this.tasks();
+      const next = tasks.findIndex((_, i) => !this.isTaskDone(i));
+      const target = next === -1 ? Math.max(0, tasks.length - 1) : next;
+      this.movingTo(`task-${target}`, () => this.openTask(target));
       return;
     }
 
@@ -669,10 +1108,15 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     }
 
     if (!lastStep) {
-      this.currentStepIndex.update((v) => v + 1);
+      this.movingTo(`step-${ti}-${si + 1}`, () => {
+        this.currentStepIndex.update((v) => v + 1);
+        this.markReached(ti, si + 1);
+      });
     } else if (ti < this.tasks().length - 1) {
-      this.currentTaskIndex.update((v) => v + 1);
-      this.currentStepIndex.set(0);
+      // The same landing as clicking the task: its first step that still needs
+      // doing. Step 0 regardless would walk you into work already recorded as
+      // done, and leave that step blue below the one you stand on.
+      this.movingTo(`task-${ti + 1}`, () => this.openTask(ti + 1));
     } else {
       this.showCompleteScreen.set(true);
       this.clearProgress();
@@ -686,6 +1130,9 @@ export default class TaskManagementTechnicianComponent implements OnInit {
    */
   private async persistStepDone(step: Step): Promise<boolean> {
     this.completedSteps.update((set) => new Set(set).add(step.id));
+    // A task that stands for itself has no step record behind it; closing the
+    // task is what records it, and that happens a line later in pressDone.
+    if (step.whole) return true;
     try {
       await firstValueFrom(this.taskStepApi.updateTaskStep(step.id, true));
       return true;
@@ -721,62 +1168,23 @@ export default class TaskManagementTechnicianComponent implements OnInit {
     }
   }
 
-  openPhotoModal(): void {
-    this.photoPreviewUrl.set(null);
-    this.showPhotoModal.set(true);
-  }
-
-  closePhotoModal(): void {
-    this.showPhotoModal.set(false);
-  }
-
-  // There is no photo upload endpoint yet, so the capture below is preview-only
-  // and the modal says so. Deliberately no "Save": confirming a write that never
-  // happens would cost the technician the evidence they think they filed.
-  onPhotoSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        this.photoPreviewUrl.set(ev.target!.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  openNoteModal(): void {
-    this.showNoteModal.set(true);
-  }
-
-  closeNoteModal(): void {
-    this.showNoteModal.set(false);
-    this.noteText.set('');
-  }
-
   saveNote(): void {
     const text = this.noteText().trim();
     if (!text) return;
     const task = this.currentTask();
     if (!task) return;
+    // One flat stream per task: a note hangs off the task, is written from the
+    // task, and is read there. Nothing names a step, so nothing has to be
+    // parsed back out of the text later.
     firstValueFrom(this.noteApi.createNoteForTask(task.id, text))
       .then(() => {
         this.noteText.set('');
-        this.showNoteModal.set(false);
+        this.loadNotes(task.id);
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
         this.toast.error('Could not save note');
       });
-  }
-
-  onModalBackdropClick(event: Event, modal: 'photo' | 'note'): void {
-    if (event.target === event.currentTarget) {
-      if (modal === 'photo') this.showPhotoModal.set(false);
-      else {
-        this.showNoteModal.set(false);
-        this.noteText.set('');
-      }
-    }
   }
 }

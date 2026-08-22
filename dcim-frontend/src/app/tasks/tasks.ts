@@ -45,6 +45,8 @@ import OverlayService from '../shell/overlay.service';
 import TaskAttentionService from './task-attention.service';
 import DatacenterListService from '../datacenters/datacenter-list.service';
 import { buildTagTree, tagMatches, taskTags } from './task-tags';
+import { dayLabel, Round, taskDatacenter } from '../rounds/round';
+import RoundsService from '../rounds/rounds.service';
 import TaskManagementTechnicianComponent from '../task-management-technician/task-management-technician';
 import TaskFormComponent from './task-form/task-form';
 
@@ -150,6 +152,9 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   /** The data centers, so the menu can list them as the fixed tags they are. */
   private readonly datacenterList = inject(DatacenterListService);
+
+  /** Which round a task sits in, for the box at the bottom of its detail. */
+  private readonly roundsService = inject(RoundsService);
 
   private readonly datacenters = this.datacenterList.datacenters;
 
@@ -390,7 +395,14 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    */
   readonly isInbox = (task: TaskData): boolean => {
     if (task.status === 'Done') return false;
-    return !task.assignee || task.due === '';
+    // Three questions, and a task missing any of them cannot enter a round:
+    // who walks it, when, and where. A place is a tag like any other, so a task
+    // with no tag naming a data center has nowhere to be walked.
+    if (!task.assignee || task.due === '') return true;
+    return !taskDatacenter(
+      task,
+      this.datacenterList.datacenters().map((dc) => dc.name),
+    );
   };
 
   readonly inboxCount = computed(() => this.tasks().filter((t) => this.isInbox(t)).length);
@@ -1000,6 +1012,9 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   openDetail(id: string): void {
     this.detailTaskId.set(id);
+    // Read when the detail opens rather than with the page: the rounds are only
+    // needed for the box at the bottom of this sheet.
+    this.roundsService.load();
     // A sheet that was left on the form opens on the task itself next time.
     this.detailEditing.set(false);
     // Always refetched, since another admin may have added a note since this
@@ -1071,6 +1086,28 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   /** Drives the @defer around the technician view: it only loads once asked
    *  for, and it stays loaded after that. */
   readonly technicianOpen = signal(false);
+
+  /** The round this task is walked in, if it is in one at all. */
+  roundOf(task: TaskData): Round | null {
+    return this.roundsService.roundOf().get(task.id) ?? null;
+  }
+
+  /**
+   * Where the task stands in somebody's day, as a sentence. Most of the time
+   * this is the whole answer and the round itself does not have to be opened.
+   */
+  roundSentence(round: Round, task: TaskData): string {
+    const position = round.tasks.findIndex((t) => t.id === task.id) + 1;
+    const day = dayLabel(round.day, this.roundsService.todayISO()).toLowerCase();
+    return `Task ${position} of ${round.tasks.length} in the round ${round.personName} walks in ${round.datacenter}, ${day}.`;
+  }
+
+  /** Why a task is in nobody's round. Which of the three questions is open. */
+  readonly roundGap = (task: TaskData): string => {
+    if (!task.assignee) return 'Nobody is assigned to it yet.';
+    if (!task.due) return 'It has no due date.';
+    return 'None of its tags names a data center.';
+  };
 
   openTechnicianView(): void {
     this.technicianOpen.set(true);

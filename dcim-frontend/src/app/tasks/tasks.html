@@ -558,18 +558,6 @@
               (select)="openEditFromDetail()"
             ></nldd-menu-item>
           </nldd-toolbar-item>
-          <nldd-toolbar-item slot="start">
-            <nldd-button
-              variant="secondary"
-              text="Technician view"
-              (click)="openTechnicianView()"
-            ></nldd-button>
-            <nldd-menu-item
-              slot="overflow"
-              text="Technician view"
-              (select)="openTechnicianView()"
-            ></nldd-menu-item>
-          </nldd-toolbar-item>
           <nldd-toolbar-item slot="end">
             <nldd-button
               variant="destructive"
@@ -738,7 +726,7 @@
               <nldd-cell width="full">
                 <nldd-multi-line-text-field
                   rows="1"
-                  placeholder="Write a note about this task"
+                  placeholder="New note"
                   accessible-label="Add a note"
                   [value]="newNoteText()"
                   (input)="newNoteText.set($any($event.target).value ?? '')"
@@ -746,12 +734,31 @@
               </nldd-cell>
               <nldd-spacer-cell size="12"></nldd-spacer-cell>
               <nldd-cell width="fit-content" vertical-alignment="bottom">
-                <nldd-button variant="secondary" text="Send" (click)="addNote()"></nldd-button>
+                <nldd-button variant="secondary" text="Add" (click)="addNote()"></nldd-button>
               </nldd-cell>
             </nldd-list-item>
           </nldd-list>
         }
         }
+        <!-- Where this task stands in somebody's day. A button in the bar only
+             offered to show you; this says the answer, and the round only has
+             to be opened when you want the rest of it. -->
+        <nldd-spacer size="24"></nldd-spacer>
+        <nldd-box>
+          <nldd-container padding="16">
+            @if (roundOf(task); as round) {
+              <nldd-text>{{ roundSentence(round, task) }}</nldd-text>
+              <nldd-spacer size="12"></nldd-spacer>
+              <nldd-button
+                variant="secondary"
+                text="Open the round"
+                (click)="openTechnicianView()"
+              ></nldd-button>
+            } @else {
+              <nldd-text>This task is in nobody's round. {{ roundGap(task) }}</nldd-text>
+            }
+          </nldd-container>
+        </nldd-box>
       }
     </nldd-simple-section>
   </nldd-page>
@@ -760,20 +767,28 @@
 <!-- ══════════════════════════════════════════════════════════════
      TECHNICIAN VIEW SHEET
      ══════════════════════════════════════════════════════════════ -->
-<!-- What the technician sees, over the page you were on rather than in a tab of
-     its own: it is the same task, read from the floor instead of from a desk.
+<!-- The round this task is walked in, over the page you were on rather than in
+     a section of its own: a planner peeking from their list should keep their
+     place in it. Read-only, like every round outside the walkthrough itself.
      Deferred, because it is a page in its own right and nobody pays for it
      until they ask for it. -->
-<nldd-sheet #technicianSheetEl accessible-label="Technician view" placement="bottom">
+<nldd-sheet #technicianSheetEl accessible-label="Round" placement="bottom">
   <nldd-page sticky-header>
     <nldd-top-title-bar
       slot="header"
-      text="Technician view"
+      text="Round"
       dismiss-text="Close"
       (dismiss)="closeTechnicianView()"
     ></nldd-top-title-bar>
     @defer (when technicianOpen()) {
-      <app-task-management-technician embedded></app-task-management-technician>
+      @if (detailTask(); as task) {
+        <app-task-management-technician
+         
+          embedded
+          [readOnly]="true"
+          [round]="roundOf(task)"
+        ></app-task-management-technician>
+      }
     }
   </nldd-page>
 </nldd-sheet>

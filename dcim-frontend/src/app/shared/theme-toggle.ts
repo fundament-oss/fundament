@@ -6,21 +6,29 @@ import ThemeService from '../theme.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
+    <!-- Three, like the service and the menu in the shell: following the
+         operating system is a setting of its own, not the absence of a choice.
+         Bound to the preference rather than to what is on screen, or picking
+         System while the system is dark would light up Dark. -->
     <nldd-segmented-control
-      [value]="theme.isDarkMode() ? 'dark' : 'light'"
+      [value]="theme.themePreference()"
       variant="icon"
-      size="sm"
       (change)="theme.setTheme($any($event).detail.value)"
     >
       <nldd-segmented-control-item
+        value="system"
+        text="System"
+        icon="display"
+      ></nldd-segmented-control-item>
+      <nldd-segmented-control-item
         value="light"
         text="Light mode"
-        icon="sun"
+        icon="light-mode"
       ></nldd-segmented-control-item>
       <nldd-segmented-control-item
         value="dark"
         text="Dark mode"
-        icon="moon"
+        icon="dark-mode"
       ></nldd-segmented-control-item>
     </nldd-segmented-control>
   `,

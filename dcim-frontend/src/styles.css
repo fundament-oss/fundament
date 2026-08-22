@@ -148,8 +148,14 @@
    pane flex-grows every slotted child, so both claim a share of the height and
    a page shorter than the pane starts halfway down. `display: contents` takes
    them out of the layout and leaves the nldd-page as the pane's own child. No
-   visual styling involved, and nothing for a page to have to undo. */
-nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > * {
+   visual styling involved, and nothing for a page to have to undo.
+
+   Everything but the page itself: a view that slots its nldd-page straight into
+   the pane has nothing to flatten, and flattening the page takes away the box
+   its own `height: 100%` and `overflow-y: auto` need. It then grows past the
+   pane instead of scrolling inside it, and the app view clips what does not
+   fit. */
+nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > *:not(nldd-page) {
   display: contents;
 }
 
