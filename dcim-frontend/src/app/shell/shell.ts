@@ -53,14 +53,23 @@ const SECTIONS = [
  * and each one asks for the context a page would otherwise have supplied: which
  * data center a rack goes in, which one a cable runs through.
  */
-const CREATE_ACTIONS: { text: string }[] = [
-  { text: 'New product' },
-  { text: 'New asset' },
-  { text: 'New data center' },
-  { text: 'New rack' },
-  { text: 'New cable' },
-  { text: 'New task' },
-];
+// Each one opens a form before anything is made, so each one says so with an
+// ellipsis. A command that needs more from you before it can finish is not the
+// same as one that acts on the spot, and the menu is where that difference is
+// worth a character.
+//
+// The label is a label. What each entry opens is named beside it rather than
+// matched on the words, which broke the moment those words gained a character.
+const CREATE_ACTIONS = [
+  { text: 'New product…', opens: 'newProduct' },
+  { text: 'New asset…', opens: 'newAsset' },
+  { text: 'New data center…', opens: 'newDatacenter' },
+  { text: 'New rack…', opens: 'newRack' },
+  { text: 'New cable…', opens: 'newCable' },
+  { text: 'New task…', opens: 'newTask' },
+] as const satisfies readonly { text: string; opens: keyof OverlayService }[];
+
+type CreateAction = (typeof CREATE_ACTIONS)[number];
 
 /**
  * How deep the stacked (narrow) view is: the sections are the whole screen when
@@ -131,30 +140,8 @@ export default class ShellComponent implements OnInit {
 
   /** Opens a create form wherever you are: either here, or in the section it
    *  belongs to, which reads the request off the address when it arrives. */
-  create(action: { text: string }): void {
-    if (action.text === 'New product') {
-      this.overlays.newProduct();
-      return;
-    }
-    if (action.text === 'New data center') {
-      this.overlays.newDatacenter();
-      return;
-    }
-    if (action.text === 'New rack') {
-      this.overlays.newRack();
-      return;
-    }
-    if (action.text === 'New task') {
-      this.overlays.newTask();
-      return;
-    }
-    if (action.text === 'New asset') {
-      this.overlays.newAsset();
-      return;
-    }
-    if (action.text === 'New cable') {
-      this.overlays.newCable();
-    }
+  create(action: CreateAction): void {
+    this.overlays[action.opens]();
   }
 
   /** Read from the address rather than from routerLinkActive: the links live in
