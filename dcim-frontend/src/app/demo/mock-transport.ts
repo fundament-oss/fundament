@@ -849,6 +849,13 @@ export default function createDemoTransport(): Transport {
                 // carry, so an empty list clears the tags.
                 tags: request.tags.length > 0 ? request.tags : task.tags,
                 assigneeId: request.assigneeId || task.assigneeId,
+                // Clearing survives the same blind spot, because it travels as
+                // a flag of its own rather than as an empty string. What is
+                // still lost is waiting with no reason typed: that arrives as
+                // '' and so reads as untouched.
+                blockedReason: request.clearBlockedReason
+                  ? ''
+                  : request.blockedReason || task.blockedReason,
                 dueDate: request.dueDate ?? task.dueDate,
                 location: request.location || task.location,
               })

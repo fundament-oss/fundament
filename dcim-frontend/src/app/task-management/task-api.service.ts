@@ -40,6 +40,9 @@ export interface TaskInput {
   location: string;
   assignee: string | null;
   due: string;
+  /** What the work is stuck on, when it is not a person. `null` means it is
+   *  not stuck; an empty string means stuck without saying on what. */
+  blockedReason: string | null;
 }
 
 /**
@@ -206,6 +209,11 @@ export default class TaskApiService {
       ...('description' in patch ? { description: patch.description ?? '' } : {}),
       ...('assignee' in patch ? { assigneeId: patch.assignee ?? '' } : {}),
       ...('location' in patch ? { location: patch.location ?? '' } : {}),
+      // Blocked is the one field an empty value cannot clear: "" is a task that
+      // is stuck without saying on what, which is not the same as one that is
+      // not stuck. Hence the flag the API carries beside it.
+      ...(patch.blockedReason === null ? { clearBlockedReason: true } : {}),
+      ...(typeof patch.blockedReason === 'string' ? { blockedReason: patch.blockedReason } : {}),
       ...('due' in patch
         ? { dueDate: timestampFromDate(patch.due ? dueToDate(patch.due) : CLEAR_DUE_DATE) }
         : {}),

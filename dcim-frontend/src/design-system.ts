@@ -58,6 +58,7 @@ import '@nldd/design-system/simple-section';
 import '@nldd/design-system/spacer';
 import '@nldd/design-system/spacer-cell';
 import '@nldd/design-system/split-view-pane';
+import '@nldd/design-system/tab-bar';
 import '@nldd/design-system/table';
 import '@nldd/design-system/tag';
 import '@nldd/design-system/text';

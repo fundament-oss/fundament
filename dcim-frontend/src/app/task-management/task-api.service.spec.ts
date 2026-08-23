@@ -30,6 +30,7 @@ const inputFrom = (task: TaskData): TaskInput => ({
   location: task.location,
   assignee: task.assignee,
   due: task.due,
+  blockedReason: task.blockedReason,
 });
 
 describe('TaskApiService.changedFields', () => {

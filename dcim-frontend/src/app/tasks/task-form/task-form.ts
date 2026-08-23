@@ -171,6 +171,9 @@ export default class TaskFormComponent {
       // cleared.
       location: '',
       assignee: this.editFormAssignee(),
+      // Nothing here sets it, and a create leaves it alone: a task is not
+      // stuck the moment it is written down.
+      blockedReason: null,
     };
 
     let request: Observable<unknown>;

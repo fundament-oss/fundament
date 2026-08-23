@@ -429,7 +429,7 @@ const TASKS = [
     title: 'Koeling Hal B nakijken',
     tags: ['cooling'],
     status: TaskStatus.DOING,
-    blockedReason: 'Wacht op een onderdeel dat besteld is',
+    blockedReason: 'an ordered part to arrive',
     priority: TaskPriority.URGENT,
     due: 1,
     assignee: 0,
