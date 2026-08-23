@@ -618,29 +618,13 @@
             <nldd-text-cell width="full" text="Due date"></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-cell width="fit-content">
+              <!-- Nothing validates this field, so the room it holds for a
+                   validation icon is a gap between the date and the button. -->
               <nldd-date-field
+                width="fit-content"
                 [attr.value]="task.due"
                 (change)="commitDue(task, $event)"
               ></nldd-date-field>
-            </nldd-cell>
-          </nldd-list-item>
-          <nldd-list-item>
-            <nldd-text-cell width="full" text="Assigned to"></nldd-text-cell>
-            <nldd-spacer-cell size="12"></nldd-spacer-cell>
-            <nldd-cell width="180px">
-              <nldd-combo-box
-                placeholder="Unassigned"
-                [attr.value]="task.assignee ?? ''"
-                [attr.text]="assigneeName(task)"
-                (change)="setAssignee(task, $any($event).detail.value || null)"
-              >
-                <nldd-menu>
-                  <nldd-menu-item value="" text="Unassigned"></nldd-menu-item>
-                  @for (tech of technicians(); track tech.id) {
-                    <nldd-menu-item [attr.value]="tech.id" [attr.text]="tech.name"></nldd-menu-item>
-                  }
-                </nldd-menu>
-              </nldd-combo-box>
             </nldd-cell>
           </nldd-list-item>
           <nldd-list-item>
@@ -668,11 +652,33 @@
               </nldd-button>
             </nldd-cell>
           </nldd-list-item>
-          <!-- A row of its own rather than a section under the list: it is a
-               property like the ones above it, only one that needs the whole
-               width. The label comes from nldd-form-field, which ties it to the
-               field for a screen reader; a heading over the list could not.
-               A place is a tag like any other: a data center and a rack are
+          <!-- The two that need the whole width take their label from
+               nldd-form-field, which ties it to the field for a screen reader.
+               The rows above put the label in a cell beside the control, which
+               reads the same and names nothing. -->
+          <nldd-list-item>
+            <nldd-cell width="full">
+              <nldd-form-field label="Assigned to">
+                <nldd-combo-box
+                  placeholder="Unassigned"
+                  [attr.value]="task.assignee ?? ''"
+                  [attr.text]="assigneeName(task)"
+                  (change)="setAssignee(task, $any($event).detail.value || null)"
+                >
+                  <!-- No "Unassigned" among the names: it would read as a
+                       person, and take the first highlight when the menu opens.
+                       The clear button beside the field is the way back to
+                       nobody, and it is only there when there is somebody. -->
+                  <nldd-menu>
+                    @for (tech of technicians(); track tech.id) {
+                      <nldd-menu-item [attr.value]="tech.id" [attr.text]="tech.name"></nldd-menu-item>
+                    }
+                  </nldd-menu>
+                </nldd-combo-box>
+              </nldd-form-field>
+            </nldd-cell>
+          </nldd-list-item>
+          <!-- A place is a tag like any other: a data center and a rack are
                offered from their own lists, anything else you type. -->
           <nldd-list-item>
             <nldd-cell width="full">
@@ -715,12 +721,12 @@
              warning over the whole tab: the fields that fix it are the rows
              right above this. -->
         <nldd-spacer size="24"></nldd-spacer>
-        <nldd-title size="5">
-          <h2>Round</h2>
-        </nldd-title>
-        <nldd-spacer size="8"></nldd-spacer>
         <nldd-box>
           <nldd-container padding="16">
+            <nldd-title size="5">
+              <h2>Round</h2>
+            </nldd-title>
+            <nldd-spacer size="8"></nldd-spacer>
             @if (roundOf(task); as round) {
               <nldd-text>{{ roundSentence(round, task) }}</nldd-text>
               <nldd-spacer size="12"></nldd-spacer>
