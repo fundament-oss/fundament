@@ -102,6 +102,21 @@ type MenuKind = 'all' | 'inbox' | 'today' | 'waiting' | 'status' | 'priority' | 
 // board would otherwise put one request per task on the wire at once.
 const BULK_CONCURRENCY = 6;
 
+/**
+ * Opens something modal that was chosen from a menu.
+ *
+ * Safari does not reliably finish closing the menu before the dialog takes the
+ * top layer, and the row the menu hung off then stays lit: the menu never gets
+ * round to putting its anchor back. So the menu is closed here by hand, and the
+ * dialog goes a microtask later so the two do not land in the same tick. Chrome
+ * needs none of this and is unharmed by it.
+ */
+function openFromMenu(from: Event | undefined, show: () => void): void {
+  const menu = (from?.target as Element | null)?.closest?.('nldd-menu');
+  if (menu instanceof HTMLElement && menu.matches(':popover-open')) menu.hidePopover();
+  queueMicrotask(show);
+}
+
 @Component({
   selector: 'app-tasks',
   templateUrl: './tasks.html',
@@ -964,31 +979,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     this.setStatus(task, targetStatus);
   }
 
-  /**
-   * Moves one task to another status, from the menu on its icon or from a drop
-   * on a kanban lane. The row changes first and rolls back if the write fails,
-   * because a status you set by clicking should land under the pointer rather
-   * than a round trip later.
-   *
-   * Only the status is sent. Sending the row's whole snapshot would write back
-   * every field as this board last saw it, silently reverting any edit another
-   * admin made since it loaded.
-   */
-  /**
-   * Opens something modal that was chosen from a menu.
-   *
-   * Safari does not reliably finish closing the menu before the dialog takes the
-   * top layer, and the row the menu hung off then stays lit: the menu never gets
-   * round to putting its anchor back. So the menu is closed here by hand, and
-   * the dialog goes a microtask later so the two do not land in the same tick.
-   * Chrome needs none of this and is unharmed by it.
-   */
-  private openFromMenu(from: Event | undefined, show: () => void): void {
-    const menu = (from?.target as Element | null)?.closest?.('nldd-menu');
-    if (menu instanceof HTMLElement && menu.matches(':popover-open')) menu.hidePopover();
-    queueMicrotask(show);
-  }
-
   /** The task and the status waiting on an answer to "then it becomes yours". */
   readonly takeOver = signal<{ task: TaskData; status: TaskStatusLabel } | null>(null);
 
@@ -1012,7 +1002,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   private askToTakeOver(task: TaskData, status: TaskStatusLabel, from?: Event): void {
     this.takeOver.set({ task, status });
-    this.openFromMenu(from, () => this.takeOverDialogEl()?.nativeElement.show());
+    openFromMenu(from, () => this.takeOverDialogEl()?.nativeElement.show());
   }
 
   cancelTakeOver(): void {
@@ -1178,7 +1168,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     // has it stands with it.
     if (task.blockedReason !== null || !this.somebodyElses(task)) this.blockedChoice.set('other');
     else this.blockedChoice.set(task.status === 'Doing' ? 'finish' : 'start');
-    this.openFromMenu(from, () => this.blockedDialogEl()?.nativeElement.show());
+    openFromMenu(from, () => this.blockedDialogEl()?.nativeElement.show());
   }
 
   closeBlockedDialog(): void {

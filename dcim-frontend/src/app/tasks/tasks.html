@@ -619,7 +619,6 @@
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-cell width="fit-content">
               <nldd-date-field
-                size="sm"
                 [attr.value]="task.due"
                 (change)="commitDue(task, $event)"
               ></nldd-date-field>
@@ -630,7 +629,6 @@
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-cell width="180px">
               <nldd-combo-box
-                size="sm"
                 placeholder="Unassigned"
                 [attr.value]="task.assignee ?? ''"
                 [attr.text]="assigneeName(task)"
@@ -651,7 +649,6 @@
             <nldd-cell width="fit-content">
               <nldd-button
                 variant="secondary"
-                size="sm"
                 expandable
                 popup-type="menu"
                 [attr.text]="task.priority"
@@ -669,6 +666,29 @@
                   }
                 </nldd-menu>
               </nldd-button>
+            </nldd-cell>
+          </nldd-list-item>
+          <!-- A row of its own rather than a section under the list: it is a
+               property like the ones above it, only one that needs the whole
+               width. The label comes from nldd-form-field, which ties it to the
+               field for a screen reader; a heading over the list could not.
+               A place is a tag like any other: a data center and a rack are
+               offered from their own lists, anything else you type. -->
+          <nldd-list-item>
+            <nldd-cell width="full">
+              <nldd-form-field label="Tags">
+                <nldd-token-field
+                  allow-custom
+                  [attr.values]="taskTagList(task).join(',')"
+                  (change)="commitTags(task, $any($event).detail.values ?? [])"
+                >
+                  <nldd-menu>
+                    @for (tag of knownTags(); track tag) {
+                      <nldd-menu-item [attr.value]="tag" [attr.text]="tag"></nldd-menu-item>
+                    }
+                  </nldd-menu>
+                </nldd-token-field>
+              </nldd-form-field>
             </nldd-cell>
           </nldd-list-item>
           <nldd-list-item>
@@ -690,25 +710,6 @@
             ></nldd-text-cell>
           </nldd-list-item>
         </nldd-list>
-        <nldd-spacer size="24"></nldd-spacer>
-        <nldd-title size="5">
-          <h2>Tags</h2>
-        </nldd-title>
-        <nldd-spacer size="8"></nldd-spacer>
-        <!-- A place is a tag like any other: a data center and a rack are
-             offered from their own lists, anything else you type. -->
-        <nldd-token-field
-          allow-custom
-          accessible-label="Tags"
-          [attr.values]="taskTagList(task).join(',')"
-          (change)="commitTags(task, $any($event).detail.values ?? [])"
-        >
-          <nldd-menu>
-            @for (tag of knownTags(); track tag) {
-              <nldd-menu-item [attr.value]="tag" [attr.text]="tag"></nldd-menu-item>
-            }
-          </nldd-menu>
-        </nldd-token-field>
         <!-- The section is here either way. Being in nobody's round is a fact
              about the round and belongs where the round is read, not in a
              warning over the whole tab: the fields that fix it are the rows
