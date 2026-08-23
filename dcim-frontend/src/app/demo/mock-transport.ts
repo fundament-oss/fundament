@@ -4,7 +4,7 @@
 //
 // The fixtures are copied into a store here rather than read straight through,
 // so what you create or change during a session stays changed until you reload.
-import { create } from '@bufbuild/protobuf';
+import { create, isFieldSet } from '@bufbuild/protobuf';
 import { EmptySchema, timestampFromDate } from '@bufbuild/protobuf/wkt';
 import { Transport, createRouterTransport } from '@connectrpc/connect';
 import {
@@ -105,6 +105,7 @@ import {
   TaskStepService,
   TaskSchema,
   TaskStepSchema,
+  UpdateTaskRequestSchema,
   ListTasksResponseSchema,
   GetTaskResponseSchema,
   CreateTaskResponseSchema,
@@ -830,34 +831,39 @@ export default function createDemoTransport(): Transport {
       },
       updateTask: async (request) => {
         await delay();
+        // Every patchable field here carries explicit presence, so "not sent"
+        // and "sent empty" are two different things and the runtime knows which
+        // is which. The generated TypeScript types do not show it — they say
+        // plain `string` — but the descriptor does, and isFieldSet reads it.
+        //
+        // That is what lets a clear be a clear. Unassigning somebody sends an
+        // empty assignee on purpose, and truthiness cannot tell that from a
+        // status-only update that never mentioned the assignee at all.
+        const sent = (name: string) => {
+          const field = UpdateTaskRequestSchema.fields.find((f) => f.localName === name);
+          return !!field && isFieldSet(request, field);
+        };
+        // The one field presence cannot carry: an empty reason is a real value —
+        // waiting, with nothing typed — so clearing it needs a flag of its own.
+        const blockedReasonFor = (task: (typeof store.tasks)[number]) => {
+          if (request.clearBlockedReason) return '';
+          return sent('blockedReason') ? request.blockedReason : task.blockedReason;
+        };
         store.tasks = store.tasks.map((task) =>
           task.id === request.id
             ? create(TaskSchema, {
                 ...task,
-                // An untouched field arrives as '' (or 0), not as undefined: the
-                // generated types carry no field presence, so this end cannot
-                // tell "not sent" from "sent empty". Partial updates are the
-                // common case — a drag or a menu sends only the status — so an
-                // empty value leaves the field alone. The price is that the demo
-                // cannot clear a priority or an assignee; the real backend can,
-                // because it reads presence off the wire.
-                title: request.title || task.title,
-                description: request.description || task.description,
-                status: request.status || task.status,
-                priority: request.priority || task.priority,
+                title: sent('title') ? request.title : task.title,
+                description: sent('description') ? request.description : task.description,
+                status: sent('status') ? request.status : task.status,
+                priority: sent('priority') ? request.priority : task.priority,
                 // Replaced, not merged: the request says what the task should
                 // carry, so an empty list clears the tags.
                 tags: request.tags.length > 0 ? request.tags : task.tags,
-                assigneeId: request.assigneeId || task.assigneeId,
-                // Clearing survives the same blind spot, because it travels as
-                // a flag of its own rather than as an empty string. What is
-                // still lost is waiting with no reason typed: that arrives as
-                // '' and so reads as untouched.
-                blockedReason: request.clearBlockedReason
-                  ? ''
-                  : request.blockedReason || task.blockedReason,
-                dueDate: request.dueDate ?? task.dueDate,
-                location: request.location || task.location,
+                assigneeId: sent('assigneeId') ? request.assigneeId : task.assigneeId,
+                blockedReason: blockedReasonFor(task),
+                dueDate: sent('dueDate') ? request.dueDate : task.dueDate,
+                location: sent('location') ? request.location : task.location,
               })
             : task,
         );
