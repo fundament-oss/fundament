@@ -30,7 +30,6 @@ interface NativeElementRef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col min-h-screen bg-white dark:bg-gray-950' },
 })
 export default class DesignsComponent implements OnInit {
   private readonly designApi = inject(DesignApiService);

@@ -281,11 +281,7 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3 mb-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ formErrorMessage() }}
-          </p>
-        </div>
+        <nldd-banner variant="critical" [attr.text]="formErrorMessage()"></nldd-banner>
       }
       <!-- One field per line in a form: the two numbers stood side by side in a
            grid of their own, which is the one place the fields did not line up

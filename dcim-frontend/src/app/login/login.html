@@ -83,9 +83,7 @@
           </nldd-form-field>
 
           @if (error()) {
-            <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-              <p class="text-danger-800 dark:text-danger-200">{{ error() }}</p>
-            </div>
+            <nldd-banner variant="critical" [attr.text]="error()"></nldd-banner>
           }
 
           <nldd-button

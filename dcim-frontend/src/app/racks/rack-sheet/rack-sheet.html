@@ -8,11 +8,7 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (rackErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ rackErrorMessage() }}
-          </p>
-        </div>
+        <nldd-banner variant="critical" [attr.text]="rackErrorMessage()"></nldd-banner>
       }
       @if (form(); as rack) {
         <nldd-form>

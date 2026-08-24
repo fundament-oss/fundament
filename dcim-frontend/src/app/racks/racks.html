@@ -268,11 +268,7 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (deviceErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ deviceErrorMessage() }}
-          </p>
-        </div>
+        <nldd-banner variant="critical" [attr.text]="deviceErrorMessage()"></nldd-banner>
       }
       <nldd-form>
         <!-- Every asset in the inventory is in this list, so it is a combo box:

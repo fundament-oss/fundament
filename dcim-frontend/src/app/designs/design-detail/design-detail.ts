@@ -59,7 +59,6 @@ const ALL_ROLES: LogicalDeviceRole[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, FormsModule, DesignFlowWrapperComponent, DropdownSyncDirective],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col overflow-hidden', style: 'height: calc(100dvh - 4.25rem)' },
 })
 export default class DesignDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

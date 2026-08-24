@@ -46,7 +46,6 @@ interface NativeElementRef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CatalogNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'block bg-slate-50 dark:bg-gray-900 min-h-screen' },
 })
 export default class CatalogDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly secondaryNav = inject(SecondaryNavService);
