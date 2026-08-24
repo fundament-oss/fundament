@@ -1,11 +1,9 @@
 {{- if $.Values.db.enabled }}
 ---
+# With db.reset, trek apply drops the app database and reloads db/testdata; the
+# OpenFGA reset below is coupled to it.
 apiVersion: batch/v1
 kind: Job
-# Brings the database up to the current schema on every deploy: migrations, then
-# the appstore catalog seed. Where db.reset is set it first drops both the app
-# and OpenFGA databases and reloads db/testdata, which only trek's reset path
-# applies.
 metadata:
   # Per-release name: a Job's pod template is immutable, and openfga's
   # wait-for-reset needs to identify this upgrade's run.
@@ -14,11 +12,9 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 4 }}
 spec:
   backoffLimit: 3
-  # openfga's wait-for-reset blocks on this Job by name, so an openfga pod
-  # recreated after the Job is collected waits for something that will never
-  # appear. A day covers same-session restarts; outliving that needs the reset
-  # to be recorded somewhere durable rather than inferred from the Job.
-  # Required: the review cluster rejects an ownerless Job with no TTL.
+  # openfga's wait-for-reset blocks on this Job by name — a pod recreated after
+  # collection waits forever — and the review cluster's admission policy requires
+  # a TTL on an ownerless Job.
   ttlSecondsAfterFinished: 86400
   template:
     metadata:
@@ -42,35 +38,27 @@ spec:
       containers:
         - name: migrations
           image: {{ $.Values.images.dbMigrations }}
-          # Run the schema migrations, then seed the appstore plugin catalog
-          # (reference data) in EVERY environment, independently of
-          # TREK_INSERT_TEST_DATA. The seed is a set of idempotent upserts, so it
-          # runs unconditionally on every Job: a fresh DB gets the catalog and an
-          # existing one is reconciled to the file. It runs in one transaction
-          # with ON_ERROR_STOP, and any psql failure aborts the Job (set -e)
-          # instead of being swallowed. The trek image is Alpine-based and ships
-          # psql.
+          # The catalog seed runs in every environment, independent of
+          # TREK_INSERT_TEST_DATA; the upserts are idempotent.
           command:
             - sh
             - -c
             - |
               set -e
+              trek apply
+              echo "Seeding system organization..."
+              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0100-system-org.sql
+              echo "Seeding appstore plugin catalog..."
+              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
               {{- if and $.Values.db.reset $.Values.openfga.enabled }}
-              # Reset the OpenFGA datastore here, coupled with the DB reset, so
-              # the two always happen together as one triggered event. OpenFGA no
-              # longer resets itself on pod start, so an unrelated openfga rollout
-              # can't wipe the store out from under an already-synced outbox.
-              #
-              # Must run before trek apply: reseeding fires authz.outbox notifies,
-              # and OpenFGA accepts writes to a dropped store, so rows drained into
-              # it would be marked processed and lost.
-              # CNPG creates the openfga database asynchronously, so on a cold start
-              # it can still be absent here — the init container's port check says
-              # nothing about which databases exist. Wait for the database itself,
-              # via -d postgres — fundament may not exist yet.
+              # The OpenFGA reset lives here, coupled with the DB reset, so an
+              # unrelated openfga rollout can't wipe the store out from under an
+              # already-synced outbox. CNPG creates the openfga database
+              # asynchronously and the init container only checks the port, so wait
+              # for the database itself rather than assuming it exists.
               echo "Waiting for the openfga database..."
               i=0
-              until psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'openfga'" | grep -q 1; do
+              until psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'openfga'" | grep -q 1; do
                 i=$((i + 1))
                 if [ "$i" -ge 150 ]; then
                   echo "openfga database did not appear after 5 minutes" >&2
@@ -81,12 +69,13 @@ spec:
               echo "Resetting OpenFGA datastore (coupled with the DB reset)..."
               psql "$OPENFGA_DATASTORE_URI" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
               echo "OpenFGA datastore reset complete."
+              # The drop destroyed every tuple, so every row has to be replayed
+              # whatever it is marked: authz-worker may already have drained some into
+              # the store just dropped, and writes there report success because OpenFGA
+              # does not check that its store exists. Cost scales with the seed.
+              echo "Re-queueing the authz outbox for the new store..."
+              psql -c "UPDATE authz.outbox SET processed = NULL, status = 'pending', retries = 0, retry_after = NULL, failed = NULL, status_info = NULL;"
               {{- end }}
-              trek apply
-              echo "Seeding system organization..."
-              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0100-system-org.sql
-              echo "Seeding appstore plugin catalog..."
-              psql --single-transaction -v ON_ERROR_STOP=1 -f /data/seed/0101-appstore-catalog.sql
           env:
             - name: TREK_POSTGRES_HOST
               value: {{ include "fundament.db.host" . }}
@@ -110,7 +99,7 @@ spec:
               value: {{ $.Values.db.reset | quote }}
             - name: TREK_INSERT_TEST_DATA
               value: {{ $.Values.db.insertTestData | quote }}
-            # psql connection for the catalog seed step (same superuser as trek).
+            # psql env for the seed and reset steps.
             - name: PGHOST
               value: {{ include "fundament.db.host" . }}
             - name: PGPORT
@@ -130,8 +119,6 @@ spec:
             - name: PGSSLMODE
               value: disable
             {{- if and $.Values.db.reset $.Values.openfga.enabled }}
-            # OpenFGA datastore connection (separate DB on the same cluster), used
-            # only for the coupled reset step above.
             - name: OPENFGA_DATASTORE_URI
               valueFrom:
                 secretKeyRef:
