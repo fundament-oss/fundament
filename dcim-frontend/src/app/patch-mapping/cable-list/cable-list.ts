@@ -18,6 +18,7 @@ import {
   Cable,
   CableColor,
   CABLE_COLOR_HEX,
+  CABLE_STATUSES,
   CableStatus,
   CABLE_TYPE_LABEL,
   CableType,
@@ -66,11 +67,11 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
 
   readonly sites = input<SiteOption[]>([]);
 
-  readonly plannedCount = input(0);
-
   readonly editCable = output<Cable>();
 
   readonly deleteCable = output<Cable>();
+
+  readonly cableStatusChanged = output<{ cableId: string; status: CableStatus | undefined }>();
 
   readonly dcSelected = output<string>();
 
@@ -127,6 +128,7 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
    *  it those cables sit behind none of the three. */
   readonly filterUnspecified = computed(() => this.statusView() === 'unspecified');
 
+
   readonly filterType = computed<CableType | ''>(
     () => this.CABLE_TYPES.find((t) => t === this.typeView()) ?? '',
   );
@@ -162,6 +164,19 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     }
   });
 
+  /**
+   * Which building you are standing in, said under the title of the view.
+   *
+   * The data center is picked in the menu, and on a narrow screen that menu is
+   * a pane you have left behind: the rows would then be from somewhere, with
+   * nothing on screen saying where. Worth having on a wide screen too, so the
+   * answer is next to what it is about instead of two panes to the left.
+   */
+  readonly dcLabel = computed(() => {
+    if (!this.dcId()) return 'All locations';
+    return this.sites().find((site) => site.id === this.dcId())?.name ?? '';
+  });
+
   /** The address of a view, so every row in the menu is a real link. */
   readonly viewPath = (kind: string, value?: string): string =>
     kind === 'all' ? `${PATCH_MAPPING_PATH}/all` : `${PATCH_MAPPING_PATH}/${kind}/${value}`;
@@ -183,11 +198,64 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     this.router.navigateByUrl(PATCH_MAPPING_PATH);
   }
 
+  /**
+   * How many rows are left, and out of how many.
+   *
+   * "of" is only true of the search, because that is the only thing narrowing
+   * what the view already picked. Measured against this view and not against
+   * every cable in the data center: on Planned there are not eight to be three
+   * of, and saying so reads as a filter that failed.
+   */
   readonly listSummary = computed(() => {
     const shown = this.filteredCables().length;
-    const total = this.cables().length;
-    const noun = total === 1 ? 'cable' : 'cables';
-    return shown === total ? `${total} ${noun}` : `${shown} of ${total} ${noun}`;
+    const inView = this.viewCables().length;
+    // The noun agrees with the number it follows, which in "1 of 3 cables" is
+    // the three.
+    const noun = inView === 1 ? 'cable' : 'cables';
+    return shown === inView ? `${shown} ${noun}` : `${shown} of ${inView} ${noun}`;
+  });
+
+  /**
+   * What an empty list means, which is not the same thing every time.
+   *
+   * With something typed in the search box there is an adjustment to offer.
+   * With nothing typed there is not: the view is the filter, and no control on
+   * screen would make cables appear. Telling somebody to adjust their filters
+   * there sends them looking for a knob that is not on the page.
+   */
+  readonly emptyState = computed<{ text: string; supporting: string }>(() => {
+    if (this.searchText().trim()) {
+      return { text: 'No cables found', supporting: 'Nothing in this view matches your search.' };
+    }
+
+    const { kind, value } = this.menuSelection();
+    if (kind !== 'status') {
+      if (kind === 'all') {
+        return { text: 'No cables yet', supporting: 'Add the first one to this data center.' };
+      }
+      return { text: 'No cables here', supporting: 'This data center has none of these.' };
+    }
+
+    switch (value) {
+      case 'unspecified':
+        // An empty list here is the good outcome, so it does not read as a
+        // dead end: there is nothing left for anybody to classify.
+        return { text: 'Every cable has a status', supporting: 'Nothing is left to classify.' };
+      case 'to-order':
+        return { text: 'Nothing to order', supporting: 'Everything here has been bought.' };
+      case 'ordered':
+        return {
+          text: 'Nothing on order',
+          supporting: 'Tick a line in the shopping list once you have ordered it.',
+        };
+      case 'ready-to-install':
+        return {
+          text: 'Nothing waiting to be fitted',
+          supporting: 'Cables show up here once you mark them as arrived.',
+        };
+      default:
+        return { text: 'No cables here', supporting: 'This data center has none of these.' };
+    }
   });
 
   readonly dcDevices = computed<DeviceOption[]>(() => {
@@ -203,13 +271,12 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     return result.sort((a, b) => a.name.localeCompare(b.name));
   });
 
-  readonly filteredCables = computed(() => {
-    const q = this.searchText().toLowerCase();
+  /** What the view picked, before the search box says anything about it. */
+  readonly viewCables = computed(() => {
     const devId = this.filterDeviceId();
     const status = this.filterStatus();
     const type = this.filterType();
     const color = this.filterColor();
-
     const unspecified = this.filterUnspecified();
 
     return this.cables().filter((c) => {
@@ -218,21 +285,27 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
       if (type && c.type !== type) return false;
       if (color && c.color !== color) return false;
       if (devId && c.aSide.deviceId !== devId && c.bSide.deviceId !== devId) return false;
-      if (q) {
-        const haystack = [
-          c.label,
-          c.aSide.deviceName,
-          c.aSide.portName,
-          c.bSide.deviceName,
-          c.bSide.portName,
-          c.type,
-          c.status,
-        ]
-          .join(' ')
-          .toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
       return true;
+    });
+  });
+
+  readonly filteredCables = computed(() => {
+    const q = this.searchText().toLowerCase();
+    if (!q) return this.viewCables();
+
+    return this.viewCables().filter((c) => {
+      const haystack = [
+        c.label,
+        c.aSide.deviceName,
+        c.aSide.portName,
+        c.bSide.deviceName,
+        c.bSide.portName,
+        c.type,
+        c.status,
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
     });
   });
 
@@ -345,11 +418,7 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
 
   readonly PORT_TYPE_LABEL = PORT_TYPE_LABEL;
 
-  readonly CABLE_STATUSES: { value: CableStatus; label: string }[] = [
-    { value: 'planned', label: 'Planned' },
-    { value: 'connected', label: 'Connected' },
-    { value: 'decommissioned', label: 'Decommissioned' },
-  ];
+  readonly CABLE_STATUSES = CABLE_STATUSES;
 
   readonly CABLE_TYPES: CableType[] = [
     'cat5e',

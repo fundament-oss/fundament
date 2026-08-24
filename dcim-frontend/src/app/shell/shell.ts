@@ -21,6 +21,7 @@ import TaskSheetComponent from '../tasks/task-sheet/task-sheet';
 import AssetSheetComponent from '../inventory/asset-sheet/asset-sheet';
 import CableSheetComponent from '../patch-mapping/cable-sheet/cable-sheet';
 import InventoryStatsService from '../inventory/inventory-stats.service';
+import CableAttentionService from '../patch-mapping/cable-attention.service';
 import DatacenterHealthService from '../datacenters/datacenter-health.service';
 import TaskAttentionService from '../tasks/task-attention.service';
 
@@ -123,6 +124,9 @@ export default class ShellComponent implements OnInit {
    * been asked for and still has to be ordered. Both are waiting on a person,
    * which is what the badge on the section is for.
    */
+  /** How many cables are waiting on somebody, for the badge on Patch mapping. */
+  protected readonly cableAttention = inject(CableAttentionService);
+
   protected readonly attentionCount = computed(() => {
     const s = this.stats.stats();
     return s ? s.needsRepair + s.requested : 0;
@@ -130,6 +134,7 @@ export default class ShellComponent implements OnInit {
 
   ngOnInit(): void {
     this.stats.refresh();
+    this.cableAttention.refresh();
     this.health.refresh();
     this.taskAttention.refresh();
   }

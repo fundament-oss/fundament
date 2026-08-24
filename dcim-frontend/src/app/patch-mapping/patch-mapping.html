@@ -9,13 +9,13 @@
   [cables]="dcCables()"
   [dcId]="selectedDcId()"
   [sites]="sites()"
-  [plannedCount]="plannedCount()"
   (editCable)="openEditCable($event)"
   (deleteCable)="openDeleteCable($event)"
   (dcSelected)="selectDc($event)"
   (addCable)="openAddCable()"
-  (showShoppingList)="shoppingListOpen.set(true)"
-  (showTopology)="topologyOpen.set(true)"
+  (cableStatusChanged)="updateCableStatus($event)"
+  (showShoppingList)="openShoppingList()"
+  (showTopology)="openTopology()"
 />
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -38,6 +38,26 @@
       (dismiss)="topologyOpen.set(false)"
     ></nldd-top-title-bar>
     <nldd-simple-section width="full" padding-block="8">
+      <!-- Which hall is drawn. The list can show every location at once, a
+           drawing cannot: two data centers on one canvas are two islands, not a
+           floor. So the topology picks one, the way the shopping list does. -->
+      @if (sites().length > 1) {
+        <nldd-toolbar label="Topology location">
+          <nldd-toolbar-item slot="start">
+            <nldd-toggle-button-group type="radio" accessible-label="Data center">
+              @for (dc of sites(); track dc.id) {
+                <nldd-toggle-button
+                  [attr.value]="dc.id"
+                  [attr.text]="dc.name"
+                  [attr.selected]="topologyDcId() === dc.id ? '' : null"
+                  (change)="onTopologyDcToggle(dc.id, $any($event).detail.selected)"
+                ></nldd-toggle-button>
+              }
+            </nldd-toggle-button-group>
+          </nldd-toolbar-item>
+        </nldd-toolbar>
+        <nldd-spacer size="8"></nldd-spacer>
+      }
       <nldd-toolbar label="Topology filters">
         <nldd-toolbar-item slot="start">
           <nldd-toggle-button-group type="radio" accessible-label="Filter by status">
@@ -87,11 +107,11 @@
          whatever height is left under the filters. -->
     <app-patch-mapping-flow
       class="block w-full flex-1 min-h-0"
-      [cables]="dcCables()"
+      [cables]="topologyCables()"
       [devicePorts]="localDevicePorts()"
       [devices]="dcDevices()"
       [selectedCableId]="editCable()?.id ?? null"
-      [dcId]="selectedDcId()"
+      [dcId]="topologyDcId()"
       [filterStatus]="topologyStatusFilter()"
       [filterType]="topologyTypeFilter()"
       (cableSelected)="openEditCableById($event)"
@@ -110,7 +130,7 @@
   placement="right"
   (close)="shoppingListOpen.set(false)"
 >
-  <app-shopping-list [cables]="plannedCables()" [dcLabel]="selectedDcLabel()" />
+  <app-shopping-list [cables]="orderCables()" [sites]="sites()" />
 </nldd-sheet>
 
 <!-- ══════════════════════════════════════════════════════════════

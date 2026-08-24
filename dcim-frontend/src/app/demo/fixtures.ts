@@ -24,6 +24,7 @@ import {
   AssetCategory,
   AssetEventType,
   AssetStatus,
+  CableStatus,
   NoteEntityType,
   PortDirection,
   PortType,
@@ -371,34 +372,76 @@ function portsOfPlacement(placement: (typeof placements)[number]) {
   return portDefinitions.filter((port) => port.deviceCatalogId === asset?.deviceCatalogId);
 }
 
-/** A handful of runs between devices that have ports, enough for the patch
- *  mapping to draw something real. */
-export const connections = placements
-  .map((placement, index) => ({
-    source: placement,
-    target: placements[(index + 4) % placements.length],
-  }))
-  .filter(
-    ({ source, target }) =>
-      source !== target &&
-      portsOfPlacement(source).length > 0 &&
-      portsOfPlacement(target).length > 0,
-  )
-  .slice(0, 8)
-  .map(({ source, target }, index) => {
+/**
+ * Which building a device stands in, followed back through the rack it is in.
+ * The fixtures build sites, rooms, rows and racks in that order, so this is the
+ * way back down that chain.
+ */
+function siteOfPlacement(placement: (typeof placements)[number]): string {
+  const rackId = placement.location.case === 'rack' ? placement.location.value.rackId : '';
+  const rack = racks.find((candidate) => candidate.id === rackId);
+  const row = rackRows.find((candidate) => candidate.id === rack?.rowId);
+  const room = rooms.find((candidate) => candidate.id === row?.roomId);
+  return room?.siteId ?? '';
+}
+
+/**
+ * What the runs of each data center are up to.
+ *
+ * Every state is somewhere, so the ordering side of patch mapping has something
+ * to show: without one to order the shopping list is a screen the demo cannot
+ * reach, because its button only appears on that view. And the two locations
+ * hold different numbers on purpose, so that picking All rather than one
+ * building is a visible difference and not a setting that changes nothing.
+ */
+const DEMO_CABLE_STATUS: CableStatus[][] = [
+  [
+    CableStatus.TO_ORDER,
+    CableStatus.TO_ORDER,
+    CableStatus.ORDERED,
+    CableStatus.READY_TO_INSTALL,
+    CableStatus.CONNECTED,
+    CableStatus.CONNECTED,
+  ],
+  [
+    CableStatus.TO_ORDER,
+    CableStatus.CONNECTED,
+    CableStatus.CONNECTED,
+    CableStatus.DECOMMISSIONED,
+  ],
+];
+
+/**
+ * A handful of runs per data center, between devices that have ports, enough
+ * for the patch mapping to draw something real. Paired within a building: a
+ * cable between two cities is not a patch lead.
+ */
+export const connections = sites.flatMap((site, siteIndex) => {
+  const inSite = placements.filter(
+    (placement) =>
+      siteOfPlacement(placement) === site.id && portsOfPlacement(placement).length > 0,
+  );
+  const statuses = DEMO_CABLE_STATUS[siteIndex] ?? [];
+  const idBase = siteIndex * 20;
+
+  return statuses.map((status, index) => {
+    const source = inSite[index % inSite.length];
+    const target = inSite[(index + 2) % inSite.length];
     const sourcePorts = portsOfPlacement(source);
     const targetPorts = portsOfPlacement(target);
 
     return create(PhysicalConnectionSchema, {
-      id: id('conn', index + 1),
+      id: id('conn', idBase + index + 1),
       sourcePlacementId: source.id,
       sourcePortDefinitionId: sourcePorts[index % sourcePorts.length].id,
       targetPlacementId: target.id,
       targetPortDefinitionId: targetPorts[index % targetPorts.length].id,
       notes: '',
+      status,
       created: daysAgo(200 - index * 5),
     });
   });
+});
 
 // ── Work in progress ─────────────────────────────────────────────────────────
 

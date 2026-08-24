@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { Cable, Port } from './cable.model';
 import PatchMappingApiService from './patch-mapping-api.service';
@@ -77,6 +77,13 @@ export default class PatchGraphService {
   graphFor(siteId: string): SiteGraph {
     return this.bySite()[siteId] ?? EMPTY_GRAPH;
   }
+
+  /** Every cable that has been loaded, whichever site it is in. What is ordered
+   *  is ordered across the estate, so the shopping list needs all of them. */
+  readonly allCables = computed(() => Object.values(this.bySite()).flatMap((g) => g.cables));
+
+  /** Which sites are loaded, so a caller can tell "none there" from "not read". */
+  readonly loadedSites = computed(() => Object.keys(this.bySite()));
 
   /**
    * Loads every device (placement) in the site, its ports (from the catalog

@@ -5,6 +5,7 @@
   <nldd-top-title-bar
     slot="header"
     [attr.text]="viewTitle()"
+    [attr.supporting-text]="dcLabel()"
     back-text="Patch mapping"
     collapse-anchor="cables-title"
     (back)="goToMenu()"
@@ -13,6 +14,7 @@
     <nldd-simple-section>
       <nldd-title id="cables-title" size="2">
         <h1>{{ viewTitle() }}</h1>
+        <span slot="subtitle">{{ dcLabel() }}</span>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
       <!-- What this page can do, in one bar: add a cable, take the planned ones
@@ -32,18 +34,21 @@
             (select)="addCable.emit()"
           ></nldd-menu-item>
         </nldd-toolbar-item>
-        @if (plannedCount() > 0) {
-          <nldd-toolbar-item slot="start">
+        <!-- Only where its own set is on screen. On Planned the button would
+             lie about what it opens: some of those are already ordered. Here
+             the rows and the sheet hold the same cables, in two shapes. -->
+        @if (filterStatus() === 'to-order') {
+          <nldd-toolbar-item slot="end">
             <nldd-button
               variant="secondary"
-              start-icon="check-list"
-              [attr.text]="'Shopping list (' + plannedCount() + ')'"
+              text="Shopping list"
+              start-icon="cart"
               (click)="showShoppingList.emit()"
             ></nldd-button>
             <nldd-menu-item
               slot="overflow"
-              icon="check-list"
-              [attr.text]="'Shopping list (' + plannedCount() + ')'"
+              icon="cart"
+              text="Shopping list"
               (select)="showShoppingList.emit()"
             ></nldd-menu-item>
           </nldd-toolbar-item>
@@ -64,7 +69,13 @@
       <nldd-spacer size="16"></nldd-spacer>
       <!-- What narrows the list down and the way to take it with you. Searching is
            not navigating: it cuts across whichever view you are in, so it belongs
-           with the rows and not in the menu. -->
+           with the rows and not in the menu.
+           Gone when the view itself holds nothing: there is nothing to search
+           through and nothing to export, and a search field over an empty list
+           invites you to fix something that is not broken. Keyed on the view and
+           not on what is left after searching, because a search that matched
+           nothing still has to be clearable. -->
+      @if (viewCables().length > 0) {
       <nldd-toolbar label="Cable list">
         <nldd-toolbar-item slot="start" width="360px" max-width="360px" min-width="240px">
           <nldd-search-field
@@ -86,18 +97,20 @@
           </nldd-toolbar-item>
         }
       </nldd-toolbar>
-      <nldd-spacer size="8"></nldd-spacer>
-      <!-- How many rows the view and the search left, right above them. -->
-      <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
-      <nldd-spacer size="8"></nldd-spacer>
+      }
+      <!-- How many rows the view and the search left, right above them. With
+           nothing left there are no rows for it to stand above, and the empty
+           state below already says there is nothing. -->
+      @if (filteredCables().length) {
+        <nldd-spacer size="8"></nldd-spacer>
+        <nldd-text size="sm" color="secondary">{{ listSummary() }}</nldd-text>
+        <nldd-spacer size="8"></nldd-spacer>
+      }
       <!-- A list, not a table. A cable is two ends and what runs between them,
            so each end is one cell with the device above its port: that pair is
            read together, and a header row cannot say that. -->
-      <nldd-list
-        accessible-label="Cable list"
-        empty-text="No cables found"
-        empty-supporting-text="Try adjusting your search or filters."
-      >
+      @if (filteredCables().length) {
+      <nldd-list accessible-label="Cable list">
         @for (cable of filteredCables(); track cable.id) {
           <!-- The row is not a button: what you do with a cable you pick from
                the menu at the end of it. -->
@@ -133,7 +146,7 @@
               [attr.color]="cable.label ? null : 'secondary'"
               [attr.text]="cable.label || 'Unlabelled'"
             ></nldd-text-cell>
-            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-spacer-cell size="12" hide-below="560px"></nldd-spacer-cell>
             <nldd-text-cell
               width="full"
               min-width="120px"
@@ -142,14 +155,14 @@
                 cable.aSide.portName + ' · ' + PORT_TYPE_LABEL[cable.aSide.portType]
               "
             ></nldd-text-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-spacer-cell size="8" hide-below="480px"></nldd-spacer-cell>
             <nldd-icon-cell
               size="20"
               icon="arrow-right"
               color="secondary"
               hide-below="480px"
             ></nldd-icon-cell>
-            <nldd-spacer-cell size="8"></nldd-spacer-cell>
+            <nldd-spacer-cell size="8" hide-below="480px"></nldd-spacer-cell>
             <nldd-text-cell
               width="full"
               min-width="120px"
@@ -158,19 +171,25 @@
                 cable.bSide.portName + ' · ' + PORT_TYPE_LABEL[cable.bSide.portType]
               "
             ></nldd-text-cell>
-            <nldd-spacer-cell size="12"></nldd-spacer-cell>
+            <nldd-spacer-cell size="12" hide-below="700px"></nldd-spacer-cell>
             <!-- The status as a dot and a word rather than a tag: a tag is a
                    property somebody assigns, and this one the system decides. It
                    also puts the state in the same shape as the menu it was picked
-                   from. -->
-            <nldd-text-cell width="160px" hide-below="700px"
+                   from.
+                   Everything from here to the menu button takes the width of
+                   what it holds, so the whole tail sits against that button
+                   instead of leaving a column of air in front of it. -->
+            <nldd-text-cell width="fit-content" hide-below="700px"
               ><nldd-badge decorative [attr.color]="cableStatusTagColor(cable.status)"></nldd-badge
               >&ngsp;{{ cableStatusLabel(cable.status) }}</nldd-text-cell
             >
+            <nldd-spacer-cell size="12" hide-below="860px"></nldd-spacer-cell>
             <!-- The kind of cable, when it is known. "Unspecified" on every
-                   row is not information, and it read as the status twice. -->
+                   row is not information, and it read as the status twice.
+                   Which is also why this is not a fixed column: with no type on
+                   any row it would hold 80 pixels of nothing. -->
             <nldd-text-cell
-              width="80px"
+              width="fit-content"
               color="secondary"
               hide-below="860px"
               [attr.text]="knownCableType(cable.type)"
@@ -184,6 +203,32 @@
                 [attr.accessible-label]="'Actions for ' + (cable.label || 'this cable')"
               >
                 <nldd-menu slot="popup">
+                  <!-- The status right here, because moving a cable along is
+                       the ordinary thing you do to it and opening the whole
+                       form to change one field is a detour. Radios under a
+                       heading: a cable is in exactly one of them, and the group
+                       says which question the six answers belong to. -->
+                  <nldd-menu-group text="Status">
+                    <!-- Drawn, not decided on. Every other row says a cable is
+                         on its way to existing, and this is the answer for one
+                         that is not on its way yet. Without it the radios could
+                         only be moved forward, never set back. -->
+                    <nldd-menu-item
+                      type="radio"
+                      text="Unspecified"
+                      [attr.selected]="!cable.status ? '' : null"
+                      (select)="cableStatusChanged.emit({ cableId: cable.id, status: undefined })"
+                    ></nldd-menu-item>
+                    @for (s of CABLE_STATUSES; track s.value) {
+                      <nldd-menu-item
+                        type="radio"
+                        [attr.text]="s.label"
+                        [attr.selected]="cable.status === s.value ? '' : null"
+                        (select)="cableStatusChanged.emit({ cableId: cable.id, status: s.value })"
+                      ></nldd-menu-item>
+                    }
+                  </nldd-menu-group>
+                  <nldd-menu-divider></nldd-menu-divider>
                   <nldd-menu-item
                     text="Edit cable"
                     icon="pencil-on-square"
@@ -202,7 +247,21 @@
           </nldd-list-item>
         }
       </nldd-list>
+      }
     </nldd-simple-section>
+    <!-- The page's own empty state, and a section of its own: a list that draws
+         its message where the rows would have been puts it under the search
+         field and against the top of the page. Nothing to show is a fact about
+         the whole view, so it stands in the middle of it, the way "No selection"
+         does below. -->
+    @if (filteredCables().length === 0) {
+      <nldd-simple-section width="full" height="40dvh" vertical-alignment="center">
+        <nldd-inline-dialog
+          [attr.text]="emptyState().text"
+          [attr.supporting-text]="emptyState().supporting"
+        ></nldd-inline-dialog>
+      </nldd-simple-section>
+    }
   } @else {
     <!-- The section is open and nothing is picked. The console says the same
          thing in the same place: the menu beside this pane is the next move. -->
@@ -226,12 +285,20 @@
         <h1>Patch mapping</h1>
       </nldd-title>
       <nldd-spacer size="12"></nldd-spacer>
-      <!-- Everything, above the headings. It is not a status or a type with an
-           "all" in it, so it does not belong at the head of either list. -->
       <!-- Which building you are standing in, above the views that narrow the
            cables inside it. The same control, in the same place, as the racks
            menu. -->
       <nldd-toggle-button-group type="radio" accessible-label="Data center">
+        <!-- Every location, and the one the list opens on. What you ask a list
+             of cables is estate-wide: what still has to be bought, what is
+             waiting to be fitted. Narrowing to one building is the extra step,
+             not the starting point. -->
+        <nldd-toggle-button
+          value=""
+          text="All"
+          [attr.selected]="!dcId() ? '' : null"
+          (change)="onDcToggle('', $any($event).detail.selected)"
+        ></nldd-toggle-button>
         @for (dc of sites(); track dc.id) {
           <nldd-toggle-button
             [attr.value]="dc.id"

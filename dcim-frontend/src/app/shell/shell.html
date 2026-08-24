@@ -143,6 +143,21 @@
                         ></nldd-badge>
                       </nldd-cell>
                     }
+                    <!-- What the cables want from you, wherever they lie: one
+                         still to buy, one lying in a rack waiting for hands.
+                         Counted over every location, which is why the section
+                         itself opens on all of them: a badge that says three
+                         and a page that shows two is two answers to one
+                         question. -->
+                    @if (item.path === '/patch-mapping' && cableAttention.count() > 0) {
+                      <nldd-cell width="fit-content">
+                        <nldd-badge
+                          color="critical"
+                          [attr.text]="cableAttention.count()"
+                          [attr.accessible-label]="cableAttention.count() + ' cables need attention'"
+                        ></nldd-badge>
+                      </nldd-cell>
+                    }
                     <!-- What the day holds, the same rule as the Today view in
                          the section's own menu. Critical like the assets badge
                          above it: both count things that are waiting for someone,
