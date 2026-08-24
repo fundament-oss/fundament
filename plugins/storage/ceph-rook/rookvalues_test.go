@@ -66,6 +66,13 @@ func TestRookValuesEnablesDiscovery(t *testing.T) {
 	assert.NotContains(t, v, "discoverDaemonUdev")
 }
 
+// Left unset, Rook waits 60m before a newly racked disk shows up.
+func TestRookValuesShortensDiscoveryInterval(t *testing.T) {
+	v := RookValues(testConfig())
+	assert.Equal(t, discoveryInterval, v["discoveryDaemonInterval"])
+	assert.NotEqual(t, "60m", v["discoveryDaemonInterval"])
+}
+
 func TestRookValuesLoopDevices(t *testing.T) {
 	cfg := testConfig()
 	cfg.DevLoopDevices = true

@@ -23,6 +23,27 @@ const (
 	PhaseDegraded     = "Degraded"
 )
 
+// ConditionReady is the one condition every StoragePool carries. Paired with
+// status.observedGeneration it is what `kubectl wait --for=condition=Ready` and
+// a Flux/Argo health check read; phase alone cannot say whether the controller
+// has seen the current spec.
+const ConditionReady = "Ready"
+
+// Reasons for ConditionReady. Kubernetes requires a reason on every condition,
+// and it is the machine-readable half: message is prose, reason is matchable.
+const (
+	// ReasonReady: the derived CephBlockPool reports Ready.
+	ReasonReady = "Ready"
+	// ReasonProvisioning: the CephBlockPool exists (or is being created) but has
+	// not reported Ready yet.
+	ReasonProvisioning = "Provisioning"
+	// ReasonNoUsableDisks: spec.disks resolved to nothing, so there is no OSD to
+	// build a pool on.
+	ReasonNoUsableDisks = "NoUsableDisks"
+	// ReasonReconcileError: the reconcile itself failed; message carries the error.
+	ReasonReconcileError = "ReconcileError"
+)
+
 // StoragePoolStatus is the observed state.
 //
 // Every field describes this pool's contribution to one shared Ceph cluster, not
@@ -44,12 +65,24 @@ type StoragePoolStatus struct {
 	// cluster's OSDs, so dividing by Replicas means nothing. Use `ceph df`.
 	RawCapacityBytes int64  `json:"rawCapacityBytes,omitempty"`
 	Message          string `json:"message,omitempty"`
+	// ObservedGeneration is the metadata.generation this status was computed
+	// from. Below metadata.generation means the controller has not caught up with
+	// the current spec, and every field above describes an older one.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// Conditions carries ConditionReady. listType=map on type so the API server
+	// merges by condition type rather than by position.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="StorageClass",type=string,JSONPath=`.status.storageClassName`
 type StoragePool struct {
 	metav1.TypeMeta   `json:",inline"`

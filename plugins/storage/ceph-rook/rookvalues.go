@@ -6,6 +6,12 @@ const (
 	cephAPIVersion = "ceph.rook.io/v1"
 	// One Ceph cluster per Kubernetes cluster; pools share its OSD set.
 	cephClusterName = "rook-ceph"
+
+	// discoveryInterval is how often the discover DaemonSet re-probes a node for
+	// block devices. Rook's default is 60m, which is how long a newly racked disk
+	// stays invisible; there is no rescan action to shorten that wait. The probe
+	// is a lsblk/udev sweep per node, so 10m costs little.
+	discoveryInterval = "10m"
 )
 
 // RookValues returns the Helm --set values for the rook-ceph operator chart.
@@ -16,7 +22,8 @@ const (
 // ParseDiscoveredDevices is what keeps a node's real disks out of the inventory.
 func RookValues(cfg Config) map[string]string {
 	values := map[string]string{
-		"enableDiscoveryDaemon": "true",
+		"enableDiscoveryDaemon":   "true",
+		"discoveryDaemonInterval": discoveryInterval,
 	}
 	if cfg.DevLoopDevices {
 		values["allowLoopDevices"] = "true"

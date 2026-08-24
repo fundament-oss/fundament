@@ -11,6 +11,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,6 +20,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -736,3 +738,160 @@ func TestReconcileDoesNotRewriteUnchangedCephCluster(t *testing.T) {
 }
 
 func firstErr(_ ctrl.Result, err error) error { return err }
+
+// Owns() resolves the watched type's GVK through apiutil at builder time, which
+// is the one thing about an unstructured stub that can fail — and it would fail
+// at manager start, not here, so it is worth pinning.
+func TestCephBlockPoolStubResolvesGVK(t *testing.T) {
+	t.Parallel()
+	gvk, err := apiutil.GVKForObject(cephBlockPoolStub(), testScheme(t))
+	require.NoError(t, err)
+	assert.Equal(t, schema.GroupVersionKind{Group: "ceph.rook.io", Version: "v1", Kind: "CephBlockPool"}, gvk)
+}
+
+// readyCondition returns the pool's Ready condition, failing if it is absent.
+func readyCondition(t *testing.T, pool *v1alpha1.StoragePool) metav1.Condition {
+	t.Helper()
+	cond := meta.FindStatusCondition(pool.Status.Conditions, v1alpha1.ConditionReady)
+	require.NotNil(t, cond, "StoragePool %s has no %s condition", pool.Name, v1alpha1.ConditionReady)
+	return *cond
+}
+
+// markBlockPoolReady flips the derived CephBlockPool's status.phase to Ready,
+// which is the only thing blockPoolPhase reads.
+func markBlockPoolReady(t *testing.T, c client.Client, derived string) {
+	t.Helper()
+	cbp := &unstructured.Unstructured{}
+	cbp.SetAPIVersion(cephAPIVersion)
+	cbp.SetKind("CephBlockPool")
+	require.NoError(t, c.Get(context.Background(),
+		types.NamespacedName{Namespace: testNamespace, Name: derived}, cbp))
+	require.NoError(t, unstructured.SetNestedField(cbp.Object, "Ready", "status", "phase"))
+	require.NoError(t, c.Update(context.Background(), cbp))
+}
+
+// phase alone cannot say whether the controller has seen the current spec.
+// `kubectl wait --for=condition=Ready` and a Flux/Argo health check read this.
+func TestReconcileTracksReadyCondition(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "a"),
+	)
+	r := newReconciler(c, s)
+
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	cond := readyCondition(t, getPool(t, c, "pool"))
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, v1alpha1.ReasonProvisioning, cond.Reason)
+
+	markBlockPoolReady(t, c, "ceph-pool")
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+
+	cond = readyCondition(t, getPool(t, c, "pool"))
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, v1alpha1.ReasonReady, cond.Reason)
+}
+
+// A status reporting Ready from a spec two generations old is worse than no
+// status: observedGeneration is what separates current from stale.
+func TestReconcileRecordsObservedGeneration(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	// The fake client does not maintain metadata.generation, so the test sets it
+	// the way the API server would on a spec write.
+	pool := testPool("pool", time.Now(), "a")
+	pool.Generation = 3
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testDisk("b", "node-b", "/dev/sdb", 100, true),
+		pool,
+	)
+	r := newReconciler(c, s)
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+
+	assert.EqualValues(t, 3, getPool(t, c, "pool").Status.ObservedGeneration)
+	assert.EqualValues(t, 3, readyCondition(t, getPool(t, c, "pool")).ObservedGeneration)
+
+	live := getPool(t, c, "pool")
+	live.Spec.Disks = []string{"a", "b"}
+	live.Generation = 4
+	require.NoError(t, c.Update(context.Background(), live))
+	// Status still describes generation 3: this is the stale window the field exists to expose.
+	assert.EqualValues(t, 3, getPool(t, c, "pool").Status.ObservedGeneration)
+
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	assert.EqualValues(t, 4, getPool(t, c, "pool").Status.ObservedGeneration)
+	assert.EqualValues(t, 4, readyCondition(t, getPool(t, c, "pool")).ObservedGeneration)
+}
+
+// The one condition an operator acts on: there is nothing to build a pool from.
+func TestReconcileEmptyPoolConditionNamesTheCause(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t, cephCluster(), testPool("pool", time.Now()))
+	r := newReconciler(c, s)
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+
+	cond := readyCondition(t, getPool(t, c, "pool"))
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, v1alpha1.ReasonNoUsableDisks, cond.Reason)
+	assert.Contains(t, cond.Message, "add disks to spec.disks")
+}
+
+// setDegraded runs on the error path, where the reconcile returns before
+// building a status. The condition still has to carry the cause.
+func TestReconcileErrorConditionCarriesTheCause(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	foreign := &unstructured.Unstructured{}
+	foreign.SetAPIVersion(cephAPIVersion)
+	foreign.SetKind("CephBlockPool")
+	foreign.SetName("ceph-pool")
+	foreign.SetNamespace(testNamespace)
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "a"),
+		foreign,
+	)
+	r := newReconciler(c, s)
+
+	_, err := reconcilePool(t, r, "pool")
+	require.Error(t, err)
+
+	cond := readyCondition(t, getPool(t, c, "pool"))
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, v1alpha1.ReasonReconcileError, cond.Reason)
+	assert.Contains(t, cond.Message, "not owned by this StoragePool")
+}
+
+// SetStatusCondition only resets lastTransitionTime when the status flips. If it
+// reset on every pass, the DeepEqual guard in writeStatus would never hold and
+// every Disk event in the cluster would write every pool.
+func TestReconcileKeepsLastTransitionTimeWhileReady(t *testing.T) {
+	t.Parallel()
+	s := testScheme(t)
+	c := newFakeClient(t,
+		cephCluster(),
+		testDisk("a", "node-a", "/dev/sdb", 100, true),
+		testPool("pool", time.Now(), "a"),
+	)
+	r := newReconciler(c, s)
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	markBlockPoolReady(t, c, "ceph-pool")
+	require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+
+	first := readyCondition(t, getPool(t, c, "pool")).LastTransitionTime
+	settled := getPool(t, c, "pool").ResourceVersion
+
+	for range 3 {
+		require.NoError(t, firstErr(reconcilePool(t, r, "pool")))
+	}
+	assert.Equal(t, first, readyCondition(t, getPool(t, c, "pool")).LastTransitionTime)
+	assert.Equal(t, settled, getPool(t, c, "pool").ResourceVersion,
+		"a reconcile that changes nothing must not write")
+}

@@ -40,6 +40,15 @@ var fundamentCRDNames = []string{
 	"storagepools.storage.fundament.io",
 }
 
+// rookCRDNames are the Rook kinds the manager starts informers for. The
+// CephBlockPool watch in StoragePoolReconciler.SetupWithManager syncs its cache
+// at manager start, so a CRD the chart has applied but the API server has not
+// established yet fails the sync and takes the whole manager down.
+var rookCRDNames = []string{
+	"cephclusters.ceph.rook.io",
+	"cephblockpools.ceph.rook.io",
+}
+
 // install runs the full install lifecycle: the rook-ceph chart, this plugin's
 // CRDs, a wait for them to be established, then the CephCluster singleton.
 func (p *Plugin) install(ctx context.Context, kube client.Client) error {
@@ -47,6 +56,10 @@ func (p *Plugin) install(ctx context.Context, kube client.Client) error {
 		ctx, rookReleaseName, rookChart, rookRepoURL, rookChartVersion, RookValues(p.cfg),
 	); err != nil {
 		return fmt.Errorf("install rook-ceph helm chart: %w", err)
+	}
+
+	if err := crd.WaitEstablished(ctx, kube, rookCRDNames); err != nil {
+		return fmt.Errorf("wait for rook CRDs to be established: %w", err)
 	}
 
 	if err := applyCRDs(ctx, kube); err != nil {

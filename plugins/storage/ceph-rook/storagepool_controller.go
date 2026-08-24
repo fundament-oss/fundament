@@ -10,6 +10,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,9 +44,14 @@ type StoragePoolReconciler struct {
 }
 
 // SetupWithManager registers the controller with the manager. It watches
-// StoragePool (the primary resource), owns StorageClass objects so that
-// deletions cascade, and maps Disk changes to all StoragePools so that a disk
-// becoming available or unavailable triggers reconciliation of every pool.
+// StoragePool (the primary resource), owns the StorageClass and the
+// CephBlockPool so their changes come back to the pool that derived them, and
+// maps Disk changes to all StoragePools so that a disk becoming available or
+// unavailable triggers reconciliation of every pool.
+//
+// The CephBlockPool watch is what makes status keep tracking after the pool goes
+// Ready: the provisioningRequeue below stops at that point, so without it a pool
+// that later fails would report Ready until the manager's ~10h resync.
 func (r *StoragePoolReconciler) SetupWithManager(mgr manager.Manager) error {
 	if r.Scheme == nil {
 		r.Scheme = mgr.GetScheme()
@@ -53,11 +59,21 @@ func (r *StoragePoolReconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.StoragePool{}).
 		Owns(&storagev1.StorageClass{}).
+		Owns(cephBlockPoolStub()).
 		Watches(
 			&v1alpha1.Disk{},
 			handler.EnqueueRequestsFromMapFunc(r.diskToStoragePools),
 		).
 		Complete(r)
+}
+
+// cephBlockPoolStub is an empty CephBlockPool carrying only its GVK, which is
+// all Owns needs to start an informer for a type absent from the scheme.
+func cephBlockPoolStub() *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetAPIVersion(cephAPIVersion)
+	u.SetKind("CephBlockPool")
+	return u
 }
 
 // diskToStoragePools maps a Disk event to reconcile.Requests for every
@@ -143,7 +159,11 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 		status.Replicas, status.FailureDomain = 0, ""
 		status.SelectedDiskCount, status.RawCapacityBytes = 0, 0
 		status.Message = emptyPoolMessage(pool, notes)
-		return ctrl.Result{}, r.writeStatus(ctx, pool, status)
+		return ctrl.Result{}, r.writeStatus(ctx, pool, status, metav1.Condition{
+			Status:  metav1.ConditionFalse,
+			Reason:  v1alpha1.ReasonNoUsableDisks,
+			Message: status.Message,
+		})
 	}
 
 	// Step 4: Size replication on the cluster's nodes, not this pool's. The
@@ -182,6 +202,23 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 		rawCapacity += d.SizeBytes
 	}
 
+	message := strings.Join(notes, "; ")
+	ready := metav1.Condition{
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ReasonProvisioning,
+		Message: "waiting for CephBlockPool " + derived + " to report Ready",
+	}
+	if phase == v1alpha1.PhaseReady {
+		ready.Status = metav1.ConditionTrue
+		ready.Reason = v1alpha1.ReasonReady
+		// Notes here are advisory (a clamped replica count, a skipped disk); the
+		// pool still serves, so they belong in the message, not in the status.
+		ready.Message = message
+		if ready.Message == "" {
+			ready.Message = "CephBlockPool " + derived + " is Ready"
+		}
+	}
+
 	if err := r.writeStatus(ctx, pool, v1alpha1.StoragePoolStatus{
 		Phase:             phase,
 		StorageClassName:  derived,
@@ -189,8 +226,8 @@ func (r *StoragePoolReconciler) reconcilePool(ctx context.Context, pool *v1alpha
 		FailureDomain:     domain,
 		SelectedDiskCount: len(selected),
 		RawCapacityBytes:  rawCapacity,
-		Message:           strings.Join(notes, "; "),
-	}); err != nil {
+		Message:           message,
+	}, ready); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -216,7 +253,12 @@ func emptyPoolMessage(pool *v1alpha1.StoragePool, notes []string) string {
 
 // writeStatus persists status via the status subresource, refetching first so a
 // stale resourceVersion from earlier in the reconcile doesn't cause a conflict.
-func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.StoragePool, status v1alpha1.StoragePoolStatus) error {
+//
+// ready is upserted as the pool's Ready condition. Conditions and
+// observedGeneration are taken from the refetched object rather than from the
+// caller's status value: the caller builds the observable fields, this decides
+// what generation they describe.
+func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.StoragePool, status v1alpha1.StoragePoolStatus, ready metav1.Condition) error {
 	var current v1alpha1.StoragePool
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: pool.Name}, &current); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -224,10 +266,21 @@ func (r *StoragePoolReconciler) writeStatus(ctx context.Context, pool *v1alpha1.
 		}
 		return fmt.Errorf("get StoragePool %s for status update: %w", pool.Name, err)
 	}
-	if current.Status == status {
-		// Every Disk event in the cluster fans out to a reconcile of every pool,
-		// and the status is identical almost every time. The API server would
-		// no-op the write, but not before it has been serialised and sent.
+
+	status.ObservedGeneration = current.Generation
+	// Carry the existing conditions so SetStatusCondition can preserve
+	// lastTransitionTime for a condition whose status has not flipped.
+	status.Conditions = current.Status.Conditions
+	ready.Type = v1alpha1.ConditionReady
+	ready.ObservedGeneration = current.Generation
+	meta.SetStatusCondition(&status.Conditions, ready)
+
+	// Every Disk event in the cluster fans out to a reconcile of every pool, and
+	// the status is identical almost every time. The API server would no-op the
+	// write, but not before it has been serialised and sent. Compared semantically
+	// rather than with ==, which stopped compiling once Conditions was added and
+	// would silently compare slice headers if it ever did.
+	if equality.Semantic.DeepEqual(current.Status, status) {
 		return nil
 	}
 	current.Status = status
@@ -244,7 +297,12 @@ func (r *StoragePoolReconciler) setDegraded(ctx context.Context, pool *v1alpha1.
 	status := pool.Status
 	status.Phase = v1alpha1.PhaseDegraded
 	status.Message = cause.Error()
-	if err := r.writeStatus(ctx, pool, status); err != nil {
+	ready := metav1.Condition{
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ReasonReconcileError,
+		Message: cause.Error(),
+	}
+	if err := r.writeStatus(ctx, pool, status, ready); err != nil {
 		log.FromContext(ctx).Error(err, "could not record degraded status", "storagePool", pool.Name)
 	}
 }

@@ -94,9 +94,15 @@ spec:
       # This SA helm-installs the Rook operator, which creates privileged
       # host-networked DaemonSets, the Ceph CSI driver, and its own cluster-wide
       # RBAC with escalate+bind. No narrower stable rule set exists, and there is
-      # no cluster-admin escalation field. plugin-controller intersects this with
-      # the installing admin's own permissions (FUN-17). The specific rules above
-      # document the plugin binary's own direct API usage.
+      # no cluster-admin escalation field.
+      #
+      # Read this rule literally: it makes the plugin cluster-admin on the tenant
+      # cluster. Nothing narrows it. plugin-controller copies these rules verbatim
+      # into a ClusterRole bound to the plugin SA (mutatePluginScopeClusterRole),
+      # and FUN-17's SubjectAccessReview is a per-request check in kube-api-proxy
+      # on the console iframe path — the plugin pod uses its in-cluster config and
+      # never goes through it. The specific rules above document the plugin
+      # binary's own direct API usage; they grant nothing this rule does not.
       - apiGroups: ["*"]
         resources: ["*"]
         verbs: ["*"]
