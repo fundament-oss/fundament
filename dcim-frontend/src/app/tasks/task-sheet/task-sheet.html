@@ -1,15 +1,3 @@
-<nldd-sheet #taskSheet accessible-label="Task details" placement="right">
-  <nldd-page sticky-header>
-    <nldd-top-title-bar
-      slot="header"
-      [attr.text]="title()"
-      dismiss-text="Cancel"
-      (dismiss)="close()"
-    ></nldd-top-title-bar>
-    <nldd-simple-section>
-      @if (form(); as task) {
-        <app-task-form [task]="task" (saved)="close()"></app-task-form>
-      }
-    </nldd-simple-section>
-  </nldd-page>
+<nldd-sheet #taskSheet accessible-label="New task" placement="right">
+  <app-task-detail (closed)="close()"></app-task-detail>
 </nldd-sheet>

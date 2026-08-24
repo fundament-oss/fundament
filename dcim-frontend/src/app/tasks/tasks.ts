@@ -18,7 +18,6 @@ import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { timestampDate } from '@bufbuild/protobuf/wkt';
 import {
   CdkDropList,
   CdkDropListGroup,
@@ -26,14 +25,17 @@ import {
   CdkDragPlaceholder,
   CdkDragDrop,
 } from '@angular/cdk/drag-drop';
-import type { Note as ProtoNote } from '../../generated/v1/note_pb';
+import TaskStore, { Task, Technician } from '../task-management/task-store';
+import TaskStatusUi from '../task-management/task-status-ui.service';
+import TaskStatusDialogsComponent from '../task-management/task-status-dialogs/task-status-dialogs';
+import TaskDetailComponent from './task-detail/task-detail';
 import TaskApiService, {
   TaskData,
   TaskPatch,
   TaskPriorityLabel,
   TaskStatusLabel,
 } from '../task-management/task-api.service';
-import UserApiService, { RosterUser } from '../task-management/user-api.service';
+import UserApiService from '../task-management/user-api.service';
 import NoteApiService from '../inventory/note-api.service';
 import settledPool from '../shared/settled-pool';
 import ToastService from '../shared/toast.service';
@@ -44,27 +46,11 @@ import openOnCreateRequest from '../shell/create-request';
 import OverlayService from '../shell/overlay.service';
 import TaskAttentionService from './task-attention.service';
 import DatacenterListService from '../datacenters/datacenter-list.service';
-import PlacementApiService, { RackOption } from '../inventory/placement-api.service';
+import PlacementApiService from '../inventory/placement-api.service';
 import { buildTagTree, tagMatches, taskTags } from './task-tags';
-import { dayLabel, Round, taskDatacenter } from '../rounds/round';
+import { Round, taskDatacenter } from '../rounds/round';
 import RoundsService from '../rounds/rounds.service';
 import TaskManagementTechnicianComponent from '../task-management-technician/task-management-technician';
-
-type Technician = RosterUser;
-
-interface Note {
-  author: string;
-  // The author's roster id, or null for an unattributed note (written by someone
-  // outside the directory). Kept alongside the display name so the avatar can be
-  // resolved by id rather than by matching names.
-  authorId: string | null;
-  text: string;
-  time: string;
-}
-
-interface Task extends TaskData {
-  notes: Note[];
-}
 
 interface StatusStyle {
   bg: string;
@@ -102,21 +88,6 @@ type MenuKind = 'all' | 'inbox' | 'today' | 'waiting' | 'status' | 'priority' | 
 // board would otherwise put one request per task on the wire at once.
 const BULK_CONCURRENCY = 6;
 
-/**
- * Opens something modal that was chosen from a menu.
- *
- * Safari does not reliably finish closing the menu before the dialog takes the
- * top layer, and the row the menu hung off then stays lit: the menu never gets
- * round to putting its anchor back. So the menu is closed here by hand, and the
- * dialog goes a microtask later so the two do not land in the same tick. Chrome
- * needs none of this and is unharmed by it.
- */
-function openFromMenu(from: Event | undefined, show: () => void): void {
-  const menu = (from?.target as Element | null)?.closest?.('nldd-menu');
-  if (menu instanceof HTMLElement && menu.matches(':popover-open')) menu.hidePopover();
-  queueMicrotask(show);
-}
-
 @Component({
   selector: 'app-tasks',
   templateUrl: './tasks.html',
@@ -127,6 +98,8 @@ function openFromMenu(from: Event | undefined, show: () => void): void {
     CdkDropList,
     CdkDrag,
     CdkDragPlaceholder,
+    TaskStatusDialogsComponent,
+    TaskDetailComponent,
     TaskManagementTechnicianComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -156,6 +129,10 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     this.secondaryNav.set(this.secondaryNavTemplate());
   }
 
+  private readonly store = inject(TaskStore);
+
+  protected readonly ui = inject(TaskStatusUi);
+
   private readonly taskApi = inject(TaskApiService);
 
   /** The task form lives in the shell, so it can be opened from anywhere. */
@@ -178,7 +155,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   protected readonly toast = inject(ToastService);
 
-  readonly technicians = signal<Technician[]>([]);
+  readonly technicians = this.store.technicians;
 
   // False until ListUsers has actually answered. An empty roster because the
   // response has not landed (or failed) is not the same fact as an assignee
@@ -186,20 +163,19 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   // as the second — see assigneeUnresolved().
   readonly rosterLoaded = signal(false);
 
-  tasks = signal<Task[]>([]);
+  /** One list, shared with the sheet the shell opens: see TaskStore. */
+  readonly tasks = this.store.tasks;
 
   // Set when the board could not be loaded, so an API failure reads as an error
   // rather than as a legitimately empty board.
-  readonly loadError = signal<string | null>(null);
+  readonly loadError = this.store.loadError;
 
-  // The same, for the detail sheet's note list.
-  readonly notesError = signal<string | null>(null);
 
   // The signed-in user's roster entry, for the note composer's avatar. Null when
   // the caller has no directory entry — GetCurrentUser answers NotFound then,
   // which is an ordinary provisioning state and not worth a toast here: the
   // board still works, and any note they write comes out unattributed.
-  readonly currentUser = signal<Technician | null>(null);
+  readonly currentUser = this.store.currentUser;
 
   constructor() {
     // The halls are fixed entries in the tag menu, so this page needs them
@@ -256,18 +232,18 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   private loadCurrentUser(): void {
     firstValueFrom(this.userApi.getCurrentUser())
-      .then((res) => this.currentUser.set(res.user ? UserApiService.mapUser(res.user) : null))
+      .then((res) => this.store.currentUser.set(res.user ? UserApiService.mapUser(res.user) : null))
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error(connectErrorMessage(err));
-        this.currentUser.set(null);
+        this.store.currentUser.set(null);
       });
   }
 
   private loadUsers(): void {
     firstValueFrom(this.userApi.listUsers())
       .then((res) => {
-        this.technicians.set(res.users.map((u) => UserApiService.mapUser(u)));
+        this.store.technicians.set(res.users.map((u) => UserApiService.mapUser(u)));
         this.rosterLoaded.set(true);
       })
       .catch((err) => {
@@ -297,24 +273,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   // not carry notes, so a task the sheet has never been opened for keeps an
   // empty list until openDetail() fetches them.
   private loadTasks(): void {
-    firstValueFrom(this.taskApi.listTasks())
-      .then((res) => {
-        this.tasks.update((previous) => {
-          const notesById = new Map(previous.map((t) => [t.id, t.notes]));
-          return res.tasks.map((t) => ({
-            ...TaskApiService.mapTask(t),
-            notes: notesById.get(t.id) ?? [],
-          }));
-        });
-        this.loadError.set(null);
-      })
-      .catch((err) => {
-        const message = connectErrorMessage(err);
-        // eslint-disable-next-line no-console
-        console.error(message);
-        this.loadError.set(message);
-        this.toast.error('Could not load tasks');
-      });
+    this.store.loadTasks();
   }
 
   readonly statusStyles: Record<string, StatusStyle> = {
@@ -377,7 +336,6 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
   readonly kanbanColumns: TaskStatusLabel[] = ['To do', 'Doing', 'Done'];
 
-  readonly priorities: TaskPriorityLabel[] = ['Urgent', 'High', 'Medium', 'Low', 'None'];
 
   /** The picker offers all five; the menu leaves None out. */
   readonly menuPriorities: TaskPriorityLabel[] = ['Urgent', 'High', 'Medium', 'Low'];
@@ -427,7 +385,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * the line under the title, so the view and the row can never disagree.
    */
   isWaiting(task: TaskData): boolean {
-    return this.holdReason(task) !== null;
+    return this.store.isWaiting(task);
   }
 
   readonly waitingCount = computed(() => this.tasks().filter((t) => this.isWaiting(t)).length);
@@ -439,9 +397,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * one.
    */
   private isMine(task: TaskData): boolean {
-    const me = this.currentUser()?.id;
-    if (!me) return true;
-    return task.assignee === me;
+    return this.store.isMine(task);
   }
 
   /**
@@ -467,27 +423,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * the work is yours, or finished.
    */
   holdReason(task: TaskData): string | null {
-    if (task.status === 'Done') return null;
-
-    // What only a person can know: stuck on a thing rather than on somebody.
-    if (task.blockedReason !== null) {
-      return task.blockedReason ? `Waiting on ${task.blockedReason}` : 'Waiting';
-    }
-
-    if (!task.assignee) return null;
-
-    const me = this.currentUser()?.id;
-    if (me && task.assignee === me) return null;
-
-    const who = this.getTech(task.assignee);
-    if (!who) return null;
-
-    // Derived rather than written down: who has it is the assignee and how far
-    // they are is the status, so this sentence cannot go stale when either
-    // changes. Writing it by hand would repeat both and then drift from them.
-    return task.status === 'Doing'
-      ? `Waiting on ${who.name} to finish`
-      : `Waiting on ${who.name} to start`;
+    return this.store.holdReason(task);
   }
 
   /**
@@ -525,16 +461,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * the level, and coloring it too would say the same thing twice. Alias names,
    * because they say what the icon is for.
    */
-  readonly priorityIcon = (priority: TaskPriorityLabel): string => {
-    const map: Record<TaskPriorityLabel, string> = {
-      Urgent: 'high-priority-filled',
-      High: 'high-priority',
-      Medium: 'medium-priority',
-      Low: 'low-priority',
-      None: 'no-priority',
-    };
-    return map[priority];
-  };
+  readonly priorityIcon = this.store.priorityIcon;
 
   /**
    * Status as one ring three times over: empty, a second ring inside it, ticked.
@@ -545,14 +472,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * Every name has a `-light` twin drawn for 32 pixels, which is what a row uses
    * (see taskStateIcon). These are for the menu, at 20.
    */
-  readonly statusIcon = (status: TaskStatusLabel): string => {
-    const map: Record<TaskStatusLabel, string> = {
-      'To do': 'to-do',
-      Doing: 'doing',
-      Done: 'done',
-    };
-    return map[status];
-  };
+  readonly statusIcon = this.store.statusIcon;
 
   /**
    * The icon in front of a row says how far the work has got, and nothing else.
@@ -572,8 +492,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * up or carry on with — which is what To do and Doing would claim. Your own
    * work keeps its status icon, and Done stays Done for everyone.
    */
-  readonly taskStateIcon = (task: TaskData): string =>
-    this.holdReason(task) !== null ? 'clock-light' : `${this.statusIcon(task.status)}-light`;
+  readonly taskStateIcon = this.store.taskStateIcon;
 
   /**
    * The state line as a row shows it: nothing at all when the line would say no
@@ -598,7 +517,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   readonly tagCloud = (task: TaskData): string[] => taskTags(task);
 
   /** Everything a task is filed under, as one list of paths. See task-tags.ts. */
-  readonly taskTagList = (task: TaskData): string[] => taskTags(task);
+  readonly taskTagList = this.store.taskTagList;
 
   /** The place a task names, as a card shows it: the last step of the first tag
    *  that is a path. A tag without a slash is a word, not a place. */
@@ -799,10 +718,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     if (!on) this.selectedTasks.set(new Set());
   }
 
-  detailTaskId = signal<string | null>(null);
 
-  // null means "creating a new task"; a string is the id being edited.
-  newNoteText = signal('');
 
   /** The tasks that belong in this view right now. */
   private readonly matchingTasks = computed(() => {
@@ -907,19 +823,12 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     return selected === 0 ? 'Nothing selected' : `${selected} selected`;
   });
 
-  detailTask = computed(() => {
-    const id = this.detailTaskId();
-    if (id === null) return null;
-    return this.tasks().find((t) => t.id === id) ?? null;
-  });
 
   readonly kanbanSheetEl = viewChild<ElementRef<NlddSheet>>('kanbanSheetEl');
 
-  readonly detailSheetEl = viewChild<ElementRef<NlddSheet>>('detailSheetEl');
 
   readonly technicianSheetEl = viewChild<ElementRef<NlddSheet>>('technicianSheetEl');
 
-  readonly deleteDialogEl = viewChild<ElementRef<NlddSheet>>('deleteDialogEl');
 
   readonly bulkDeleteDialogEl = viewChild<ElementRef<NlddSheet>>('bulkDeleteDialogEl');
 
@@ -928,17 +837,11 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
   readonly bulkAssignPopoverEl = viewChild<ElementRef<NlddSheet>>('bulkAssignPopoverEl');
 
   getTech(id: string | null): Technician | null {
-    return this.technicians().find((t) => t.id === id) ?? null;
+    return this.store.getTech(id);
   }
 
   formatDate(str: string | null): string {
-    if (!str) return '—';
-    const d = new Date(`${str}T00:00:00`);
-    return d.toLocaleDateString(this.dateLocale, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    return this.store.formatDate(str);
   }
 
   // Uses the trailing (random) hex of the uuid rather than the leading bytes,
@@ -979,63 +882,13 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     this.setStatus(task, targetStatus);
   }
 
-  /** The task and the status waiting on an answer to "then it becomes yours". */
-  readonly takeOver = signal<{ task: TaskData; status: TaskStatusLabel } | null>(null);
-
-  private readonly takeOverDialogEl = viewChild<ElementRef<NlddSheet>>('takeOverDialogEl');
-
-  /**
-   * Setting the status of a task that is somebody else's.
-   *
-   * To do and Doing are states the person holding it is in, so choosing one for
-   * a task that is not yours only makes sense if you are taking it over. That
-   * is a second change, to the assignee, and a status menu is no place to make
-   * one quietly — hence the question. Done is not the same: closing somebody
-   * else's task does not make it yours.
-   */
-  /** What the handover costs, spelled out: who has it now and what happens. */
-  readonly takeOverExplanation = computed(() => {
-    const pending = this.takeOver();
-    if (!pending) return '';
-    return `It is assigned to ${this.assigneeName(pending.task)}. Setting it to ${pending.status} assigns it to you.`;
-  });
-
-  private askToTakeOver(task: TaskData, status: TaskStatusLabel, from?: Event): void {
-    this.takeOver.set({ task, status });
-    openFromMenu(from, () => this.takeOverDialogEl()?.nativeElement.show());
-  }
-
-  cancelTakeOver(): void {
-    this.takeOverDialogEl()?.nativeElement.hide();
-    this.takeOver.set(null);
-  }
-
-  confirmTakeOver(): void {
-    const pending = this.takeOver();
-    this.cancelTakeOver();
-    if (!pending) return;
-    const me = this.currentUser()?.id ?? null;
-    this.patchTask(
-      pending.task,
-      { status: pending.status, assignee: me, blockedReason: null },
-      'who it is for',
-    );
-  }
-
   /**
    * The status, and with it the end of any waiting. You cannot be waiting on
    * something and to-do at the same time, so choosing one of the three lets go
    * of the other; that is why there is no separate way to stop waiting.
    */
-  setStatus(task: TaskData, status: TaskStatusLabel, from?: Event): void {
-    if (status !== 'Done' && this.somebodyElses(task) && this.currentUser()) {
-      this.askToTakeOver(task, status, from);
-      return;
-    }
-    if (task.status === status && task.blockedReason === null) return;
-    const patch: TaskPatch = { status };
-    if (task.blockedReason !== null) patch.blockedReason = null;
-    this.patchTask(task, patch, 'the status');
+  setStatus(task: Task, status: TaskStatusLabel, from?: Event): void {
+    this.ui.setStatus(task, status, from);
   }
 
   /**
@@ -1052,28 +905,13 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * be closed, and one that fades takes the loss with it.
    */
   private patchTask(task: TaskData, patch: TaskPatch, what: string): void {
-    const before: Partial<TaskData> = {};
-    (Object.keys(patch) as (keyof TaskPatch)[]).forEach((key) => {
-      Object.assign(before, { [key]: task[key] });
-    });
-    this.tasks.update((list) => list.map((t) => (t.id === task.id ? { ...t, ...patch } : t)));
-
-    firstValueFrom(this.taskApi.updateTask(task.id, patch))
-      .then(() => this.loadTasks())
-      .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-        this.tasks.update((list) => list.map((t) => (t.id === task.id ? { ...t, ...before } : t)));
-        this.toast.error(`Could not save ${what} — it has been put back`);
-      });
+    this.store.patchTask(task, patch, what);
   }
-
-  private readonly blockedDialogEl = viewChild<ElementRef<NlddSheet>>('blockedDialogEl');
 
   private readonly placementApi = inject(PlacementApiService);
 
   /** Every rack, to offer as a tag under the data center it stands in. */
-  private readonly racks = signal<RackOption[]>([]);
+  private readonly racks = this.store.racks;
 
   /**
    * What the tag field offers: the places first, then the tags other tasks
@@ -1081,188 +919,25 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
    * or not, so they come from their own lists; anything else is free, which is
    * why the two are one list rather than two.
    */
-  readonly knownTags = computed(() => {
-    const sites = this.datacenterList.datacenters().map((dc) => dc.name);
-    const racks = this.racks().map((rack) => `${rack.datacenter}/${rack.name}`);
-    const fixed = [...sites, ...racks];
-    const used = this.attention.tags().filter((tag) => !fixed.includes(tag));
-    return [...fixed, ...used];
-  });
+  readonly knownTags = this.store.knownTags;
 
-  /** The due date, once it is a date. Empty clears it, which the API reads as
-   *  "remove". */
-  commitDue(task: TaskData, event: Event): void {
-    const due = (event as CustomEvent<{ value?: string }>).detail?.value ?? '';
-    if (due === task.due) return;
-    this.patchTask(task, { due }, 'the due date');
-  }
 
   /** The name the combo box shows for whoever it is for. */
   assigneeName(task: TaskData): string {
-    if (!task.assignee) return '';
-    return this.technicians().find((t) => t.id === task.assignee)?.name ?? '';
+    return this.store.assigneeName(task);
   }
 
-  setAssignee(task: TaskData, assignee: string | null): void {
-    if (assignee === task.assignee) return;
-    this.patchTask(task, { assignee }, 'who it is for');
-  }
-
-  /**
-   * Which task the waiting dialog is about. Kept as an id and looked up again,
-   * not held as the object: the list reloads under it and a captured task would
-   * answer with what was true when the dialog opened. It is its own state
-   * because the dialog is reachable from a row as well as from the sheet, where
-   * there is no open task to read it off.
-   */
-  readonly blockedTaskId = signal<string | null>(null);
-
-  readonly blockedTask = computed(
-    () => this.tasks().find((task) => task.id === this.blockedTaskId()) ?? null,
-  );
-
-  /** What the task is waiting on, while the dialog is open. */
-  readonly blockedDraft = signal('');
-
-  /** Which of the three kinds of waiting the dialog is on. */
-  readonly blockedChoice = signal<'start' | 'finish' | 'other'>('other');
 
   /** Whose task this is, if not yours. Nobody, or you, both read as yours. */
   somebodyElses(task: TaskData): boolean {
-    const me = this.currentUser()?.id;
-    return !!task.assignee && task.assignee !== me && !!this.getTech(task.assignee);
+    return this.store.somebodyElses(task);
   }
 
-  /**
-   * Who the waiting is on, while the dialog is open.
-   *
-   * On somebody else's task that is the person who has it and the radios say so
-   * by name. On your own there is nobody to name yet, so you point one out, and
-   * the task becomes theirs: waiting for a person to start is the same fact as
-   * the work being on their list.
-   */
-  readonly blockedWho = signal<string | null>(null);
 
-  /** The person the first two options are about, if the task already names one. */
-  blockedPerson(task: TaskData): string | null {
-    return this.somebodyElses(task) ? this.assigneeName(task) : null;
-  }
 
-  /** Everyone the waiting could be on. Waiting for yourself is what To do says. */
-  readonly otherTechnicians = computed(() => {
-    const me = this.currentUser()?.id;
-    return this.technicians().filter((tech) => tech.id !== me);
-  });
 
-  /** Nothing to save while an option about a person has no person. */
-  canSaveBlocked(task: TaskData): boolean {
-    if (this.blockedChoice() === 'other') return true;
-    return this.blockedPerson(task) !== null || this.blockedWho() !== null;
-  }
 
-  openBlockedDialog(task: TaskData, from?: Event): void {
-    this.blockedTaskId.set(task.id);
-    this.blockedDraft.set(task.blockedReason ?? '');
-    this.blockedWho.set(null);
-    // Opens on what it already is: a reason of its own, or where the person who
-    // has it stands with it.
-    if (task.blockedReason !== null || !this.somebodyElses(task)) this.blockedChoice.set('other');
-    else this.blockedChoice.set(task.status === 'Doing' ? 'finish' : 'start');
-    openFromMenu(from, () => this.blockedDialogEl()?.nativeElement.show());
-  }
 
-  closeBlockedDialog(): void {
-    this.blockedDialogEl()?.nativeElement.hide();
-    this.blockedTaskId.set(null);
-  }
-
-  /**
-   * What the task is waiting on.
-   *
-   * Two of the three are where the person who has it stands with it, which the
-   * app can read back off the status afterwards; only the third is something
-   * nobody could have known. Picking one of the first two clears any reason,
-   * because a task waits on one thing at a time.
-   */
-  commitBlocked(task: TaskData): void {
-    const choice = this.blockedChoice();
-    if (choice !== 'other' && !this.canSaveBlocked(task)) return;
-    this.closeBlockedDialog();
-    if (choice === 'other') {
-      const reason = this.blockedDraft().trim();
-      if (reason === (task.blockedReason ?? '')) return;
-      this.patchTask(task, { blockedReason: reason }, 'what it is waiting on');
-      return;
-    }
-    const status: TaskStatusLabel = choice === 'finish' ? 'Doing' : 'To do';
-    const patch: TaskPatch = { status, blockedReason: null };
-    // Handing it over is part of the same sentence: you cannot wait for
-    // somebody to start a task that is not theirs.
-    const who = this.blockedWho();
-    if (who !== null && who !== task.assignee) patch.assignee = who;
-    this.patchTask(task, patch, 'what it is waiting on');
-  }
-
-  setPriority(task: TaskData, priority: TaskPriorityLabel): void {
-    if (priority === task.priority) return;
-    this.patchTask(task, { priority }, 'the priority');
-  }
-
-  /**
-   * The tags, and with them the place. A location used to live in a field of
-   * its own, which produced three spellings of one rack; writing here is the
-   * migration, so whatever the location said stands among the tags and the old
-   * field is cleared.
-   */
-  commitTags(task: TaskData, tags: string[]): void {
-    const next = [...tags];
-    const current = taskTags(task);
-    if (next.length === current.length && next.every((tag, i) => tag === current[i])) return;
-    this.patchTask(task, { tags: next, location: '' }, 'the tags');
-  }
-
-  /**
-   * Which half of the task detail you are on. Info is where you change what the
-   * task is; Notes is where you read what has been said about it.
-   */
-  readonly detailTab = signal<'info' | 'notes'>('info');
-
-  /**
-   * The description, once you stop typing. An empty one is allowed and means
-   * what it says: the API reads an empty description as "remove".
-   */
-  commitDescription(task: TaskData, event: Event): void {
-    const field = event.target as HTMLElement & { value?: string };
-    const description = (field.value ?? '').trim();
-    if (description === task.description) return;
-    this.patchTask(task, { description }, 'the description');
-  }
-
-  /**
-   * What the title says while you are typing it, before it is written away.
-   * The bar above the sheet reads from this, so it keeps up with the keyboard
-   * rather than with the network.
-   */
-  readonly detailTitleDraft = signal<string | null>(null);
-
-  /**
-   * The title, once you stop typing.
-   *
-   * An empty one is not refused, it is ignored: without a submit there is no
-   * moment to refuse anything, and a task with no name cannot be found again.
-   * The field is put back to the name the task still has.
-   */
-  commitTitle(task: TaskData, event: Event): void {
-    this.detailTitleDraft.set(null);
-    const field = event.target as HTMLElement & { value?: string };
-    const title = (field.value ?? '').trim();
-    if (!title) {
-      field.value = task.title;
-      return;
-    }
-    if (title === task.title) return;
-    this.patchTask(task, { title }, 'the title');
-  }
 
   openKanban(): void {
     this.kanbanSheetEl()?.nativeElement.show();
@@ -1292,60 +967,39 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     }
   }
 
+  readonly detailSheetEl = viewChild<ElementRef<NlddSheet>>('detailSheetEl');
+
+  /** Which task the sheet is on. What is in it is app-task-detail. */
+  readonly detailTaskId = signal<string | null>(null);
+
+  readonly detailTask = computed(() => {
+    const id = this.detailTaskId();
+    if (id === null) return null;
+    return this.store.tasks().find((t) => t.id === id) ?? null;
+  });
+
+  /** Drives the @defer around the technician view: it only loads once asked
+   *  for, and it stays loaded after that. */
+  readonly technicianOpen = signal(false);
+
+  openTechnicianView(): void {
+    this.technicianOpen.set(true);
+    this.technicianSheetEl()?.nativeElement.show();
+  }
+
+  /** The round this task is walked in, for the technician view below. */
+  roundOf(task: TaskData): Round | null {
+    return this.roundsService.roundOf().get(task.id) ?? null;
+  }
+
   openDetail(id: string): void {
     this.detailTaskId.set(id);
-    this.detailTab.set('info');
     // Read when the detail opens rather than with the page: the rounds are only
-    // needed for the box at the bottom of this sheet, and the racks for the tag
+    // needed for the box at the bottom of that sheet, and the racks for the tag
     // field in it.
     this.roundsService.load();
-    if (this.racks().length === 0) this.loadRacks();
-    // A sheet that was left on the form opens on the task itself next time.
-    // Always refetched, since another admin may have added a note since this
-    // task was last opened. Anything already cached stays on screen meanwhile,
-    // so the list does not flash empty while the response is in flight.
-    this.loadNotes(id);
+    this.store.loadRacks();
     this.detailSheetEl()?.nativeElement.show();
-  }
-
-  private loadNotes(id: string): void {
-    this.notesError.set(null);
-    firstValueFrom(this.noteApi.listNotesForTask(id))
-      .then((res) => {
-        const notes = res.notes.map((n) => TasksComponent.mapNote(n));
-        this.tasks.update((tasks) => tasks.map((t) => (t.id === id ? { ...t, notes } : t)));
-      })
-      .catch((err) => {
-        const message = connectErrorMessage(err);
-        // eslint-disable-next-line no-console
-        console.error(message);
-        // Said out loud in the sheet: the note list falls back to whatever was
-        // cached from a previous open (or to nothing at all), which is
-        // indistinguishable from a task that genuinely has no notes.
-        this.notesError.set(message);
-      });
-  }
-
-  retryLoadNotes(): void {
-    const id = this.detailTaskId();
-    if (id !== null) this.loadNotes(id);
-  }
-
-  private static mapNote(n: ProtoNote): Note {
-    return {
-      author: n.createdBy,
-      authorId: n.createdById ? n.createdById : null,
-      text: n.body,
-      time: TasksComponent.relativeTime(n.created ? timestampDate(n.created) : new Date()),
-    };
-  }
-
-  private static relativeTime(date: Date): string {
-    const diffMs = Date.now() - date.getTime();
-    const days = Math.floor(diffMs / 86_400_000);
-    if (days <= 0) return 'Today';
-    if (days === 1) return '1 day ago';
-    return `${days} days ago`;
   }
 
   closeDetail(): void {
@@ -1355,72 +1009,21 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
 
 
 
-  /** Drives the @defer around the technician view: it only loads once asked
-   *  for, and it stays loaded after that. */
-  readonly technicianOpen = signal(false);
 
-  /** The round this task is walked in, if it is in one at all. */
-  roundOf(task: TaskData): Round | null {
-    return this.roundsService.roundOf().get(task.id) ?? null;
-  }
 
-  /**
-   * Where the task stands in somebody's day, as a sentence. Most of the time
-   * this is the whole answer and the round itself does not have to be opened.
-   */
-  roundSentence(round: Round, task: TaskData): string {
-    const position = round.tasks.findIndex((t) => t.id === task.id) + 1;
-    const day = dayLabel(round.day, this.roundsService.todayISO()).toLowerCase();
-    return `Task ${position} of ${round.tasks.length} in the round ${round.personName} walks in ${round.datacenter}, ${day}.`;
-  }
 
-  /** Why a task is in nobody's round. Which of the three questions is open. */
-  readonly roundGap = (task: TaskData): string => {
-    if (!task.assignee) return 'Nobody is assigned to it yet.';
-    if (!task.due) return 'It has no due date.';
-    return 'None of its tags names a data center.';
-  };
 
   private loadRacks(): void {
-    this.placementApi
-      .listRackOptions()
-      .then((racks) => this.racks.set(racks))
-      // eslint-disable-next-line no-console
-      .catch((err) => console.error(connectErrorMessage(err)));
+    this.store.loadRacks();
   }
 
-  openTechnicianView(): void {
-    this.technicianOpen.set(true);
-    this.technicianSheetEl()?.nativeElement.show();
-  }
 
   closeTechnicianView(): void {
     this.technicianSheetEl()?.nativeElement.hide();
   }
 
-  openDeleteDialog(): void {
-    this.deleteDialogEl()?.nativeElement.show();
-  }
 
-  closeDeleteDialog(): void {
-    this.deleteDialogEl()?.nativeElement.hide();
-  }
 
-  confirmDeleteTask(): void {
-    const id = this.detailTaskId();
-    this.closeDeleteDialog();
-    if (id === null) return;
-    firstValueFrom(this.taskApi.deleteTask(id))
-      .then(() => {
-        this.closeDetail();
-        this.loadTasks();
-      })
-      .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-        this.toast.error('Could not delete task');
-      });
-  }
 
   openBulkDeleteDialog(): void {
     this.bulkDeleteDialogEl()?.nativeElement.show();
@@ -1511,35 +1114,7 @@ export default class TasksComponent implements OnInit, OnDestroy, AfterViewInit,
     this.overlays.newTask();
   }
 
-  addNote(): void {
-    const text = this.newNoteText().trim();
-    if (!text) return;
-    const id = this.detailTaskId();
-    if (id === null) return;
-    firstValueFrom(this.noteApi.createNoteForTask(id, text))
-      .then(() => {
-        this.newNoteText.set('');
-        // No toast: the note appearing in the list is the confirmation.
-        this.loadNotes(id);
-      })
-      .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error(connectErrorMessage(err));
-        this.toast.error('Could not add note');
-      });
-  }
 
-  // Resolves a note's author onto the roster entry that supplies the avatar.
-  // Joined by id, not by display name: two people called "Jan de Vries" would
-  // otherwise share one avatar colour, and the first match would win.
-  //
-  // An author the backend could not attribute is "Unknown", not "Admin" — the
-  // note was written by someone outside the directory, which is not the same
-  // claim as it having come from an administrator.
-  noteAuthor(note: Note): { name: string; tech: Technician | null } {
-    const tech = note.authorId ? this.getTech(note.authorId) : null;
-    return { name: note.author || 'Unknown', tech };
-  }
 
   // True when a task carries an assignee that the roster has no entry for —
   // typically someone soft-deleted since the board loaded. Rendering that as

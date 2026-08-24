@@ -1,0 +1,127 @@
+<!-- Three kinds of waiting. Two of them are where the person who has it stands,
+     which the app reads back off the status; the third is the only one nobody
+     could have known, and the only one that needs typing.
+     A window rather than a modal dialog: a modal dialog is for a question you
+     answer with a button, and this one has fields under the answer. -->
+<nldd-window
+  #waitingDialogEl
+  centered
+  no-light-dismiss
+  accessible-label="What the task is waiting on"
+>
+  <nldd-page sticky-header>
+    <nldd-top-title-bar
+      slot="header"
+      text="What is it waiting on?"
+      dismiss-text="Cancel"
+      (dismiss)="ui.closeWaitingDialog()"
+    ></nldd-top-title-bar>
+    @if (ui.waitingTask(); as task) {
+      <nldd-simple-section>
+        <!-- The save button is never switched off. A button that cannot be
+             pressed does not say why; pressing it and being shown the field that
+             is missing does. -->
+        <nldd-form novalidate (submit)="save($event, task)">
+          <!-- Always the same three. Two of them are about a person: the task
+               already names one, or you point one out below and it becomes
+               theirs, because waiting for somebody to start is the same fact as
+               the work being on their list. An option that asks something
+               further says so with a trailing ellipsis, the way a menu item
+               that opens a window does. -->
+          <!-- In a form-field without a visible label: the group belongs in one,
+               which is where a radio group takes its group label from, but the
+               question is already the name of this window and asking it twice on
+               one screen reads as two questions. -->
+          <nldd-form-field>
+            <nldd-radio-button-group
+              name="waiting-on"
+              accessible-label="What it is waiting on"
+              (change)="onChoice($any($event).detail.value)"
+            >
+              <nldd-radio-button-field
+                value="start"
+                [attr.label]="
+                  'For ' + (ui.waitingPerson(task) ?? 'someone') + ' to start' + follow(task)
+                "
+                [attr.checked]="ui.waitingChoice() === 'start' ? '' : null"
+              ></nldd-radio-button-field>
+              <nldd-radio-button-field
+                value="finish"
+                [attr.label]="
+                  'For ' + (ui.waitingPerson(task) ?? 'someone') + ' to finish' + follow(task)
+                "
+                [attr.checked]="ui.waitingChoice() === 'finish' ? '' : null"
+              ></nldd-radio-button-field>
+              <nldd-radio-button-field
+                value="other"
+                label="Something else…"
+                [attr.checked]="ui.waitingChoice() === 'other' ? '' : null"
+              ></nldd-radio-button-field>
+            </nldd-radio-button-group>
+          </nldd-form-field>
+          @if (ui.waitingChoice() === 'other') {
+            <!-- No label over it: what you type here is the whole sentence, so a
+                 label would be the first half of it standing above the rest. The
+                 placeholder shows the shape instead. -->
+            <nldd-form-field>
+              <nldd-multi-line-text-field
+                rows="1"
+                placeholder="Waiting on a part, a delivery, a decision"
+                [value]="ui.waitingDraft()"
+                (input)="ui.waitingDraft.set($any($event.target).value ?? '')"
+              ></nldd-multi-line-text-field>
+            </nldd-form-field>
+          } @else if (ui.waitingPerson(task) === null) {
+            <nldd-form-field label="Who?">
+              <nldd-combo-box
+                [attr.value]="ui.waitingWho() ?? ''"
+                [attr.text]="store.getTech(ui.waitingWho())?.name ?? ''"
+                [attr.invalid]="missingWho() ? '' : null"
+                error-message="waiting-who-required"
+                (change)="pickWho($any($event).detail.value || null)"
+              >
+                <nldd-menu>
+                  @for (tech of ui.otherTechnicians(); track tech.id) {
+                    <nldd-menu-item [attr.value]="tech.id" [attr.text]="tech.name"></nldd-menu-item>
+                  }
+                </nldd-menu>
+              </nldd-combo-box>
+              <nldd-form-field-error-text id="waiting-who-required">
+                Name the person this is waiting on.
+              </nldd-form-field-error-text>
+            </nldd-form-field>
+          }
+          <nldd-form-actions>
+            <nldd-button type="submit" variant="primary" width="full" text="Save"></nldd-button>
+          </nldd-form-actions>
+        </nldd-form>
+      </nldd-simple-section>
+    }
+  </nldd-page>
+</nldd-window>
+
+<!-- To do and Doing are states the person holding the task is in, so picking one
+     on somebody else's task is really two changes. The second one is said out
+     loud here rather than made on the quiet. -->
+<nldd-modal-dialog
+  #takeOverDialogEl
+  icon="switch"
+  text="Take this task over?"
+  [attr.supporting-text]="ui.takeOverExplanation()"
+  accessible-label="Take this task over"
+>
+  @if (ui.takeOver()) {
+    <nldd-button
+      slot="actions"
+      variant="primary"
+      text="Take it over"
+      (click)="ui.confirmTakeOver()"
+    ></nldd-button>
+    <nldd-button
+      slot="actions"
+      variant="secondary"
+      text="Cancel"
+      (click)="ui.cancelTakeOver()"
+    ></nldd-button>
+  }
+</nldd-modal-dialog>

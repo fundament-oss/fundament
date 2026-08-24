@@ -1,14 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  computed,
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
   inject,
   viewChild,
 } from '@angular/core';
 import OverlayService from '../../shell/overlay.service';
-import TaskFormComponent from '../task-form/task-form';
+import TaskDetailComponent from '../task-detail/task-detail';
 
 interface NativeElementRef {
   nativeElement: { show?: () => void; hide?: () => void };
@@ -19,17 +18,19 @@ interface NativeElementRef {
  * page.
  *
  * Writing down what has to happen is the thing you do while looking at
- * something else: a rack that is full, an asset that is broken. So the form
- * opens from the add button in the bar over whatever page you are on, and the
- * page it belongs to does not have to be there. Editing a task you already
- * have open takes the same form, but as a second view inside that sheet: see
- * the tasks page.
+ * something else: a rack that is full, an asset that is broken. So it opens
+ * from the add button in the bar over whatever page you are on, and the page it
+ * belongs to does not have to be there.
+ *
+ * What is inside is the same app-task-detail the tasks page shows, on a task
+ * that does not exist yet. There is no submit: the first field you set is what
+ * makes the task real, and closing without setting one leaves nothing behind.
  */
 @Component({
   selector: 'app-task-sheet',
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  imports: [TaskFormComponent],
+  imports: [TaskDetailComponent],
   templateUrl: './task-sheet.html',
 })
 export default class TaskSheetComponent {
@@ -37,15 +38,21 @@ export default class TaskSheetComponent {
 
   protected readonly form = this.overlays.taskSheet;
 
-  protected readonly title = computed(() => (this.form()?.id ? 'Edit task' : 'New task'));
-
   private readonly sheetEl = viewChild<NativeElementRef>('taskSheet');
+
+  private readonly detail = viewChild(TaskDetailComponent);
 
   constructor() {
     effect(() => {
       const el = this.sheetEl()?.nativeElement;
-      if (this.form() !== null) el?.show?.();
-      else el?.hide?.();
+      if (this.form() === null) {
+        el?.hide?.();
+        return;
+      }
+      // A blank task every time it opens: what you typed and abandoned last time
+      // is not a draft you meant to keep.
+      this.detail()?.startDraft();
+      el?.show?.();
     });
   }
 

@@ -73,3 +73,4 @@ import '@nldd/design-system/tooltip';
 import '@nldd/design-system/token-field';
 import '@nldd/design-system/toolbar';
 import '@nldd/design-system/top-title-bar';
+import '@nldd/design-system/window';
