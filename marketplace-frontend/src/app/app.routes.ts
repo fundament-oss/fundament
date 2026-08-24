@@ -7,11 +7,11 @@ const routes: Routes = [
     loadComponent: () => import('./marketplace/index.component').then((m) => m.default),
   },
   {
-    path: 'plugins/:name',
+    path: 'plugins/:id',
     loadComponent: () => import('./marketplace/plugin-detail.component').then((m) => m.default),
   },
   // Developer area
-  // `create` is registered before `:name` so it is not parsed as a plugin name.
+  // `create` is registered before `:id` so it is not parsed as a plugin id.
   {
     path: 'manage/create',
     loadComponent: () => import('./plugin-create/plugin-create.component').then((m) => m.default),
@@ -22,7 +22,7 @@ const routes: Routes = [
       import('./plugin-development/plugin-development.component').then((m) => m.default),
   },
   {
-    path: 'manage/:name',
+    path: 'manage/:id',
     loadComponent: () =>
       import('./plugin-development-detail/plugin-development-detail.component').then(
         (m) => m.default,

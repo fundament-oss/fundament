@@ -14,20 +14,25 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PluginIconComponent } from '../icons';
-import AdminReviewService, {
-  type PluginSubmission,
+import AdminReviewService, { type PluginSubmission } from './admin-review.service';
+import {
   type RejectionReasonValue,
   REJECTION_REASONS,
-} from './admin-review.service';
-import {
-  submissionStatusLabel,
-  submissionStatusTagColor,
+  statusLabel,
+  statusTagColor,
   rejectionReasonLabel,
-} from './submission-status';
+} from '../status/submission-status';
+import connectErrorMessage from '../../connect/error';
+
+// Which decision the sheet is collecting. Rejecting ends the submission and
+// needs a reason for backoffice reporting; requesting changes leaves it open
+// and needs a note saying what to fix, which is the only thing the developer
+// ever sees of either decision.
+type DecisionMode = 'reject' | 'changes';
 
 // Admin-facing detail view for a single submission. Shows the submitted
-// metadata and, while the submission is pending, lets the reviewer approve it
-// or reject it with a reason (from a fixed dropdown) and optional feedback.
+// metadata and, while the submission is pending, lets the reviewer approve it,
+// send it back with a note, or reject it with a reason and optional feedback.
 @Component({
   selector: 'app-submission-detail',
   imports: [RouterLink, PluginIconComponent],
@@ -54,25 +59,35 @@ export default class SubmissionDetailComponent implements OnInit {
 
   errorMessage = signal<string | null>(null);
 
-  // Reject dialog state.
-  showRejectSheet = signal(false);
+  // Decision sheet state.
+  showDecisionSheet = signal(false);
+
+  decisionMode = signal<DecisionMode>('reject');
 
   selectedReason = signal<RejectionReasonValue | ''>('');
 
   feedback = signal('');
 
-  // The reject action requires a reason to be chosen.
-  canReject = computed(() => this.selectedReason() !== '');
+  isSubmitting = signal(false);
 
-  private readonly rejectSheetEl = viewChild<ElementRef>('rejectSheet');
+  // Rejecting requires a reason; requesting changes requires the note itself
+  // (admin.v1.RequestChangesRequest.feedback is min_len: 1), because asking for
+  // changes without saying which is a dead end.
+  canSubmitDecision = computed(() =>
+    this.decisionMode() === 'reject'
+      ? this.selectedReason() !== ''
+      : this.feedback().trim().length > 0,
+  );
+
+  private readonly decisionSheetEl = viewChild<ElementRef>('decisionSheet');
 
   constructor() {
     effect(() => {
-      const el = this.rejectSheetEl()?.nativeElement as {
+      const el = this.decisionSheetEl()?.nativeElement as {
         show?: () => void;
         hide?: () => void;
       };
-      if (this.showRejectSheet()) el?.show?.();
+      if (this.showDecisionSheet()) el?.show?.();
       else el?.hide?.();
     });
   }
@@ -85,32 +100,45 @@ export default class SubmissionDetailComponent implements OnInit {
       return;
     }
 
-    const submission = await this.service.getSubmission(id);
-    if (!submission) {
-      this.errorMessage.set('Submission not found');
+    try {
+      const submission = await this.service.getSubmission(id);
+      if (!submission) {
+        this.errorMessage.set('Submission not found');
+        return;
+      }
+      this.submission.set(submission);
+      this.titleService.setTitle(`${submission.title} — Review queue`);
+    } catch (error) {
+      this.errorMessage.set(connectErrorMessage(error));
+    } finally {
       this.isLoading.set(false);
-      return;
     }
-
-    this.submission.set(submission);
-    this.titleService.setTitle(`${submission.title} — Review queue`);
-    this.isLoading.set(false);
   }
 
   async approve() {
     const submission = this.submission();
     if (!submission) return;
-    await this.service.approve(submission.id);
-    this.toastService.success(`${submission.title} approved and published to the marketplace`);
-    this.router.navigate(['/admin']);
+    try {
+      await this.service.approve(submission.id);
+      this.toastService.success(`${submission.title} approved and published to the marketplace`);
+      this.router.navigate(['/admin']);
+    } catch (error) {
+      this.toastService.error(connectErrorMessage(error));
+    }
   }
 
   openReject() {
-    this.showRejectSheet.set(true);
+    this.decisionMode.set('reject');
+    this.showDecisionSheet.set(true);
   }
 
-  closeReject() {
-    this.showRejectSheet.set(false);
+  openRequestChanges() {
+    this.decisionMode.set('changes');
+    this.showDecisionSheet.set(true);
+  }
+
+  closeDecision() {
+    this.showDecisionSheet.set(false);
   }
 
   onReasonChange(event: Event) {
@@ -121,20 +149,33 @@ export default class SubmissionDetailComponent implements OnInit {
     this.feedback.set((event.target as HTMLTextAreaElement).value);
   }
 
-  async submitReject() {
+  async submitDecision() {
     const submission = this.submission();
-    const reason = this.selectedReason();
-    if (!submission || reason === '') return;
+    if (!submission || !this.canSubmitDecision()) return;
 
-    await this.service.reject(submission.id, { reason, feedback: this.feedback() });
-    this.toastService.info(`${submission.title} rejected`);
-    this.closeReject();
-    this.router.navigate(['/admin']);
+    this.isSubmitting.set(true);
+    try {
+      if (this.decisionMode() === 'changes') {
+        await this.service.requestChanges(submission.id, this.feedback().trim());
+        this.toastService.info(`Changes requested on ${submission.title}`);
+      } else {
+        const reason = this.selectedReason();
+        if (reason === '') return;
+        await this.service.reject(submission.id, { reason, feedback: this.feedback() });
+        this.toastService.info(`${submission.title} rejected`);
+      }
+      this.closeDecision();
+      this.router.navigate(['/admin']);
+    } catch (error) {
+      this.toastService.error(connectErrorMessage(error));
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 
-  statusLabel = submissionStatusLabel;
+  statusLabel = statusLabel;
 
-  statusTagColor = submissionStatusTagColor;
+  statusTagColor = statusTagColor;
 
   rejectionReasonLabel = rejectionReasonLabel;
 }

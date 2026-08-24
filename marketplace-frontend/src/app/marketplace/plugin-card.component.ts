@@ -1,7 +1,7 @@
 import { Component, input, ChangeDetectionStrategy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PluginIconComponent } from '../icons';
-import { type MarketplacePlugin } from './marketplace.service';
+import { type MarketplacePluginSummary } from './marketplace.service';
 import PluginLabelsComponent from './plugin-labels.component';
 
 // Compact plugin tile used across the marketplace home sections and results grid.
@@ -11,7 +11,7 @@ import PluginLabelsComponent from './plugin-labels.component';
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a [routerLink]="['/plugins', plugin().name]" class="group block h-full">
+    <a [routerLink]="['/plugins', plugin().id]" class="group block h-full">
       <nldd-card
         class="hover:ring-accent-200 dark:hover:ring-accent-800 block h-full transition duration-200 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-1"
       >
@@ -35,7 +35,9 @@ import PluginLabelsComponent from './plugin-labels.component';
             {{ plugin().tagline }}
           </p>
           <div class="flex flex-wrap items-center gap-1.5">
-            <nldd-tag size="sm" color="neutral" [text]="plugin().category"></nldd-tag>
+            @if (plugin().categoryName) {
+              <nldd-tag size="sm" color="neutral" [text]="plugin().categoryName"></nldd-tag>
+            }
             <app-plugin-labels [labels]="plugin().labels" />
           </div>
         </div>
@@ -44,5 +46,5 @@ import PluginLabelsComponent from './plugin-labels.component';
   `,
 })
 export default class PluginCardComponent {
-  plugin = input.required<MarketplacePlugin>();
+  plugin = input.required<MarketplacePluginSummary>();
 }

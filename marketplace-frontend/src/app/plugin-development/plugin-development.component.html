@@ -13,6 +13,10 @@
   <div class="py-8 text-center">
     <p class="text-gray-600 dark:text-gray-300">Loading plugins...</p>
   </div>
+} @else if (errorMessage(); as error) {
+  <div class="bg-danger-50 dark:bg-danger-950 mt-6 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+  </div>
 } @else {
   <!-- Status summary -->
   <div class="mt-6 mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -69,10 +73,10 @@
           </tr>
         </thead>
         <tbody>
-          @for (plugin of plugins(); track plugin.name) {
+          @for (plugin of plugins(); track plugin.id) {
             <tr
               class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
-              (click)="goToManage(plugin.name)"
+              (click)="goToManage(plugin.id)"
             >
               <td>
                 <div class="flex items-center gap-3">
@@ -100,7 +104,7 @@
               </td>
               <td class="text-right">
                 <nldd-button
-                  [routerLink]="['/manage', plugin.name]"
+                  [routerLink]="['/manage', plugin.id]"
                   text="Manage"
                   variant="secondary"
                   size="sm"

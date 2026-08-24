@@ -10,8 +10,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { ToastService } from '../toast.service';
 import { PluginIconComponent } from '../icons';
-import MarketplaceService, { type MarketplacePlugin } from './marketplace.service';
+import MarketplaceService, { type MarketplacePluginDetails } from './marketplace.service';
 import PluginLabelsComponent from './plugin-labels.component';
+import connectErrorMessage from '../../connect/error';
 
 @Component({
   selector: 'app-plugin-detail',
@@ -29,30 +30,33 @@ export default class PluginDetailComponent implements OnInit {
 
   private service = inject(MarketplaceService);
 
-  plugin = signal<MarketplacePlugin | null>(null);
+  plugin = signal<MarketplacePluginDetails | null>(null);
 
   isLoading = signal(true);
 
   errorMessage = signal<string | null>(null);
 
   async ngOnInit() {
-    const name = this.route.snapshot.paramMap.get('name');
-    if (!name) {
-      this.errorMessage.set('Plugin name is missing');
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.errorMessage.set('Plugin id is missing');
       this.isLoading.set(false);
       return;
     }
 
-    const plugin = await this.service.getPlugin(name);
-    if (!plugin) {
-      this.errorMessage.set('Plugin not found');
+    try {
+      const plugin = await this.service.getPlugin(id);
+      if (!plugin) {
+        this.errorMessage.set('Plugin not found');
+        return;
+      }
+      this.plugin.set(plugin);
+      this.titleService.setTitle(plugin.displayName);
+    } catch (error) {
+      this.errorMessage.set(connectErrorMessage(error));
+    } finally {
       this.isLoading.set(false);
-      return;
     }
-
-    this.plugin.set(plugin);
-    this.titleService.setTitle(plugin.displayName);
-    this.isLoading.set(false);
   }
 
   install() {

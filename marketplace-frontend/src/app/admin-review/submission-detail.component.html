@@ -23,7 +23,10 @@
       <div>
         <h1 class="text-3xl font-semibold">{{ submission.title }}</h1>
         <p class="mt-1 text-gray-600 dark:text-gray-300">
-          Submitted {{ submission.submittedAt }} · {{ submission.submitter.name }}
+          Submitted {{ submission.submittedAt }} · {{ submission.submitterName }}
+          @if (submission.version) {
+            · <span class="font-mono">{{ submission.version }}</span>
+          }
         </p>
       </div>
     </div>
@@ -39,8 +42,8 @@
       <div class="p-6">
         <h2 class="mb-1 text-lg font-semibold">Review this submission</h2>
         <p class="mb-5 text-gray-600 dark:text-gray-300">
-          Approving publishes the plugin to the marketplace. Rejecting sends the reason and any
-          feedback back to the author.
+          Approving publishes this version to the marketplace. Requesting changes sends it back with
+          a note so the author can fix it and resubmit. Rejecting ends the submission.
         </p>
         <div class="flex flex-wrap gap-2">
           <nldd-button
@@ -48,6 +51,12 @@
             text="Approve"
             start-icon="check-mark"
             variant="primary"
+          ></nldd-button>
+          <nldd-button
+            (click)="openRequestChanges()"
+            text="Request changes"
+            start-icon="arrow-left"
+            variant="secondary"
           ></nldd-button>
           <nldd-button
             (click)="openReject()"
@@ -86,7 +95,11 @@
               Reviewed
             </dt>
             <dd class="mt-2 text-gray-600 dark:text-gray-300">
-              {{ submission.reviewedAt }} · {{ submission.reviewedBy }}
+              {{ submission.reviewedAt }}
+              @if (submission.reviewedBy; as reviewer) {
+                ·
+                <span class="font-mono text-sm" title="Reviewer user id">{{ reviewer }}</span>
+              }
             </dd>
           </div>
           @if (submission.status === 'rejected' && submission.rejectionReason; as reason) {
@@ -147,53 +160,82 @@
             }
           </dd>
         </div>
+        @if (submission.version; as version) {
+          <div>
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              Version under review
+            </dt>
+            <dd class="mt-2 font-mono">{{ version }}</dd>
+          </div>
+        }
         <div>
           <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
             Submitted by
           </dt>
           <dd class="mt-2 text-gray-600 dark:text-gray-300">
-            {{ submission.submitter.name }} ·
-            <a [href]="'mailto:' + submission.submitter.email" class="link">
-              {{ submission.submitter.email }}
-            </a>
+            {{ submission.submitterName }}
+            @if (submission.submitterUserId; as userId) {
+              ·
+              <span class="font-mono text-sm" title="Submitter user id">{{ userId }}</span>
+            }
           </dd>
         </div>
       </dl>
     </div>
   </nldd-card>
 
-  <!-- Reject sheet -->
-  <nldd-sheet #rejectSheet accessible-label="Reject submission" placement="right" width="460px">
+  <!-- Decision sheet: rejecting, or sending the version back for changes -->
+  <nldd-sheet
+    #decisionSheet
+    [attr.accessible-label]="decisionMode() === 'changes' ? 'Request changes' : 'Reject submission'"
+    placement="right"
+    width="460px"
+  >
     <nldd-page sticky-header="" sticky-footer="">
       <div slot="header" class="flex items-center justify-between p-4">
-        <h2 class="text-lg font-semibold">Reject submission</h2>
+        <h2 class="text-lg font-semibold">
+          {{ decisionMode() === 'changes' ? 'Request changes' : 'Reject submission' }}
+        </h2>
         <nldd-icon-button
           icon="dismiss"
           text="Close"
           variant="neutral-transparent"
           size="sm"
-          (click)="closeReject()"
+          (click)="closeDecision()"
         ></nldd-icon-button>
       </div>
 
       <nldd-simple-section class="space-y-6" padding-top="0">
-        <p class="text-gray-600 dark:text-gray-300">
-          Rejecting <span class="font-medium">{{ submission.title }}</span> sends the reason and any
-          feedback below back to the author so they can address it and resubmit.
-        </p>
+        @if (decisionMode() === 'changes') {
+          <p class="text-gray-600 dark:text-gray-300">
+            Sending <span class="font-medium">{{ submission.title }}</span> back leaves the
+            submission open: the author fixes what you describe below and resubmits the version.
+          </p>
+        } @else {
+          <p class="text-gray-600 dark:text-gray-300">
+            Rejecting <span class="font-medium">{{ submission.title }}</span> ends the submission.
+            The reason is recorded for the backoffice; only the feedback reaches the author.
+          </p>
 
-        <nldd-form-field label="Reason for rejection">
-          <nldd-dropdown>
-            <select id="reject-reason" (change)="onReasonChange($event)">
-              <option value="" disabled selected>Select a reason…</option>
-              @for (reason of rejectionReasons; track reason.value) {
-                <option [value]="reason.value">{{ reason.label }}</option>
-              }
-            </select>
-          </nldd-dropdown>
-        </nldd-form-field>
+          <nldd-form-field label="Reason for rejection">
+            <nldd-dropdown>
+              <select id="reject-reason" (change)="onReasonChange($event)">
+                <option value="" disabled selected>Select a reason…</option>
+                @for (reason of rejectionReasons; track reason.value) {
+                  <option [value]="reason.value">{{ reason.label }}</option>
+                }
+              </select>
+            </nldd-dropdown>
+          </nldd-form-field>
+        }
 
-        <nldd-form-field label="Feedback to author (optional)">
+        <nldd-form-field
+          [attr.label]="
+            decisionMode() === 'changes' ? 'What needs to change' : 'Feedback to author (optional)'
+          "
+        >
           <nldd-multi-line-text-field
             [value]="feedback()"
             (input)="onFeedbackInput($event)"
@@ -201,7 +243,11 @@
             rows="5"
           ></nldd-multi-line-text-field>
           <nldd-form-field-help-text>
-            Shared with the author alongside the reason above.
+            {{
+              decisionMode() === 'changes'
+                ? 'Required. This note is the only thing the author sees about your decision.'
+                : 'Shared with the author alongside the reason above.'
+            }}
           </nldd-form-field-help-text>
         </nldd-form-field>
       </nldd-simple-section>
@@ -211,18 +257,18 @@
         class="flex items-center gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800"
       >
         <nldd-button
-          (click)="closeReject()"
+          (click)="closeDecision()"
           type="button"
           text="Cancel"
           variant="secondary"
         ></nldd-button>
         <nldd-button
-          (click)="submitReject()"
+          (click)="submitDecision()"
           type="button"
-          text="Reject submission"
-          start-icon="dismiss"
-          variant="destructive"
-          [disabled]="!canReject()"
+          [attr.text]="decisionMode() === 'changes' ? 'Request changes' : 'Reject submission'"
+          [attr.start-icon]="decisionMode() === 'changes' ? 'arrow-left' : 'dismiss'"
+          [attr.variant]="decisionMode() === 'changes' ? 'primary' : 'destructive'"
+          [disabled]="!canSubmitDecision() || isSubmitting()"
         ></nldd-button>
       </div>
     </nldd-page>

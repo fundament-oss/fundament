@@ -10,10 +10,14 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TitleService } from '../title.service';
-import MarketplaceService, { type MarketplacePlugin, type Category } from './marketplace.service';
+import MarketplaceService, {
+  type MarketplacePluginSummary,
+  type Category,
+} from './marketplace.service';
 import PluginCardComponent from './plugin-card.component';
 import PluginLabelsComponent from './plugin-labels.component';
 import { PluginIconComponent } from '../icons';
+import connectErrorMessage from '../../connect/error';
 
 @Component({
   selector: 'app-marketplace-index',
@@ -29,11 +33,13 @@ export default class MarketplaceIndexComponent implements OnInit {
 
   private route = inject(ActivatedRoute);
 
-  plugins = signal<MarketplacePlugin[]>([]);
+  plugins = signal<MarketplacePluginSummary[]>([]);
 
   categories = signal<Category[]>([]);
 
   isLoading = signal(true);
+
+  errorMessage = signal<string | null>(null);
 
   // 'all' or a category id.
   selectedCategory = signal<string>('all');
@@ -53,7 +59,7 @@ export default class MarketplaceIndexComponent implements OnInit {
     () => this.selectedCategory() !== 'all' || this.searchQuery().trim().length > 0,
   );
 
-  private matchesSearch = (plugin: MarketplacePlugin): boolean => {
+  private matchesSearch = (plugin: MarketplacePluginSummary): boolean => {
     const q = this.searchQuery().trim().toLowerCase();
     if (!q) return true;
     return (
@@ -66,8 +72,9 @@ export default class MarketplaceIndexComponent implements OnInit {
 
   // The search is scoped to the selected category: category and query narrow
   // the list together rather than one replacing the other.
-  private matchesFilters = (plugin: MarketplacePlugin): boolean => {
-    if (this.selectedCategory() !== 'all' && plugin.category !== this.selectedCategory()) {
+  private matchesFilters = (plugin: MarketplacePluginSummary): boolean => {
+    const selected = this.selectedCategory();
+    if (selected !== 'all' && !plugin.categoryIds.includes(selected)) {
       return false;
     }
     return this.matchesSearch(plugin);
@@ -101,7 +108,7 @@ export default class MarketplaceIndexComponent implements OnInit {
   // Counts track the active search, so the sidebar shows where the hits are
   // rather than a static catalogue total that contradicts the visible results.
   categoryCount(categoryId: string): number {
-    return this.searchMatches().filter((plugin) => plugin.category === categoryId).length;
+    return this.searchMatches().filter((plugin) => plugin.categoryIds.includes(categoryId)).length;
   }
 
   // Hits for the current query outside the selected category. Only meaningful
@@ -112,9 +119,17 @@ export default class MarketplaceIndexComponent implements OnInit {
       : this.searchMatches().length,
   );
 
+  // Categories are addressed by UUID, so every user-facing mention of the
+  // selection has to go through the resolved name.
+  selectedCategoryName = computed(() => {
+    const selected = this.selectedCategory();
+    if (selected === 'all') return 'All plugins';
+    return this.categories().find((category) => category.id === selected)?.name ?? selected;
+  });
+
   emptyStateMessage = computed(() => {
     const query = this.searchQuery().trim();
-    const category = this.selectedCategory();
+    const category = this.selectedCategoryName();
     if (!query) return `No plugins in ${category} yet.`;
     const outside = this.widenableMatchCount();
     if (outside > 0) {
@@ -131,19 +146,24 @@ export default class MarketplaceIndexComponent implements OnInit {
     Security: 'shield-check-mark',
   };
 
-  categoryIcon(categoryId: string): string {
-    return this.categoryIcons[categoryId] ?? 'puzzle-piece';
+  categoryIcon(category: Category): string {
+    return this.categoryIcons[category.name] ?? 'puzzle-piece';
   }
 
   async ngOnInit() {
     this.titleService.setTitle();
-    const [plugins, categories] = await Promise.all([
-      this.service.listPlugins(),
-      this.service.listCategories(),
-    ]);
-    this.plugins.set(plugins);
-    this.categories.set(categories);
-    this.isLoading.set(false);
+    try {
+      const [plugins, categories] = await Promise.all([
+        this.service.listPlugins(),
+        this.service.listCategories(),
+      ]);
+      this.plugins.set(plugins);
+      this.categories.set(categories);
+    } catch (error) {
+      this.errorMessage.set(connectErrorMessage(error));
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   selectCategory(categoryId: string) {

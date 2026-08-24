@@ -101,6 +101,10 @@
 
 @if (isLoading()) {
   <div class="py-12 text-center text-gray-600 dark:text-gray-300">Loading plugins...</div>
+} @else if (errorMessage(); as error) {
+  <div class="bg-danger-50 dark:bg-danger-950 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+  </div>
 } @else {
   <div class="flex flex-col gap-8 lg:flex-row">
     <!-- Category sidebar -->
@@ -142,7 +146,7 @@
           >
             <span class="flex items-center gap-2.5">
               <nldd-icon
-                [name]="categoryIcon(category.id)"
+                [name]="categoryIcon(category)"
                 class="block! h-4 w-4 shrink-0"
               ></nldd-icon>
               {{ category.name }}
@@ -165,11 +169,11 @@
               Results for “{{ searchQuery().trim() }}”
               @if (selectedCategory() !== 'all') {
                 <span class="font-normal text-gray-500 dark:text-gray-400">
-                  in {{ selectedCategory() }}
+                  in {{ selectedCategoryName() }}
                 </span>
               }
             } @else {
-              {{ selectedCategory() }}
+              {{ selectedCategoryName() }}
             }
           </h2>
           <span class="shrink-0 text-sm text-gray-500 dark:text-gray-400">
@@ -197,7 +201,7 @@
           </nldd-box>
         } @else {
           <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            @for (plugin of filteredPlugins(); track plugin.name) {
+            @for (plugin of filteredPlugins(); track plugin.id) {
               <app-plugin-card [plugin]="plugin" />
             }
           </div>
@@ -244,8 +248,6 @@
                       class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400"
                     >
                       <span>By {{ p.vendor }}</span>
-                      <span aria-hidden="true">·</span>
-                      <span class="font-mono">{{ p.version }}</span>
                     </div>
                   </div>
                   <span
@@ -264,7 +266,7 @@
 
           @if (gridFeatured().length > 0) {
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              @for (plugin of gridFeatured(); track plugin.name) {
+              @for (plugin of gridFeatured(); track plugin.id) {
                 <app-plugin-card [plugin]="plugin" />
               }
             </div>
@@ -282,7 +284,7 @@
             </p>
           </div>
           <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            @for (plugin of recentlyAdded(); track plugin.name) {
+            @for (plugin of recentlyAdded(); track plugin.id) {
               <app-plugin-card [plugin]="plugin" />
             }
           </div>

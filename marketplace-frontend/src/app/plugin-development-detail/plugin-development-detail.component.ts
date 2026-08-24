@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   effect,
   viewChild,
   ElementRef,
@@ -15,13 +16,12 @@ import { ToastService } from '../toast.service';
 import { PluginIconComponent } from '../icons';
 import PluginDevelopmentService, {
   type AuthoredPlugin,
-  type SideloadCluster,
 } from '../plugin-development/plugin-development.service';
-import {
-  statusLabel,
-  statusTagColor,
-  statusBadgeClass,
-} from '../plugin-development/status-display';
+import SideloadMockService, {
+  type SideloadCluster,
+} from '../plugin-development/sideload-mock.service';
+import { statusLabel, statusTagColor, statusBadgeClass } from '../status/submission-status';
+import connectErrorMessage from '../../connect/error';
 import PluginStatusTrackerComponent from '../plugin-status-tracker/plugin-status-tracker.component';
 
 @Component({
@@ -40,11 +40,22 @@ export default class PluginDevelopmentDetailComponent implements OnInit {
 
   private service = inject(PluginDevelopmentService);
 
+  // Sideloading belongs to organization-api, not to the marketplace APIs, so it
+  // stays mocked (see sideload-mock.service.ts).
+  private sideloadService = inject(SideloadMockService);
+
   plugin = signal<AuthoredPlugin | null>(null);
 
   isLoading = signal(true);
 
   errorMessage = signal<string | null>(null);
+
+  // Guards the review actions while an RPC is in flight.
+  isSubmitting = signal(false);
+
+  // The newest pushed build: the one every review action acts on, since the
+  // reviewed unit is a version.
+  latestVersion = computed(() => this.plugin()?.versions[0] ?? null);
 
   // Clusters the author can sideload onto, and the currently selected target.
   clusters = signal<SideloadCluster[]>([]);
@@ -71,26 +82,30 @@ export default class PluginDevelopmentDetailComponent implements OnInit {
   }
 
   async ngOnInit() {
-    const name = this.route.snapshot.paramMap.get('name');
-    if (!name) {
-      this.errorMessage.set('Plugin name is missing');
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.errorMessage.set('Plugin id is missing');
       this.isLoading.set(false);
       return;
     }
 
-    const plugin = await this.service.getPlugin(name);
-    if (!plugin) {
-      this.errorMessage.set('Plugin not found');
-      this.isLoading.set(false);
+    try {
+      const plugin = await this.service.getPlugin(id);
+      if (!plugin) {
+        this.errorMessage.set('Plugin not found');
+        return;
+      }
+      this.plugin.set(plugin);
+      this.titleService.setTitle(`${plugin.displayName} — My plugins`);
+      this.selectedVersion.set(plugin.version);
+    } catch (error) {
+      this.errorMessage.set(connectErrorMessage(error));
       return;
+    } finally {
+      this.isLoading.set(false);
     }
 
-    this.plugin.set(plugin);
-    this.titleService.setTitle(`${plugin.displayName} — My plugins`);
-    this.selectedVersion.set(plugin.version);
-    this.isLoading.set(false);
-
-    const clusters = await this.service.listClusters();
+    const clusters = await this.sideloadService.listClusters();
     this.clusters.set(clusters);
     // Default to the first cluster.
     if (clusters[0]) {
@@ -98,26 +113,45 @@ export default class PluginDevelopmentDetailComponent implements OnInit {
     }
   }
 
-  submitForReview() {
+  async submitForReview() {
     const plugin = this.plugin();
-    if (!plugin) return;
-    this.toastService.success(`${plugin.displayName} v${plugin.version} submitted for review`);
+    const version = this.latestVersion();
+    if (!plugin || !version) return;
+
+    this.isSubmitting.set(true);
+    try {
+      await this.service.submitVersion(version.id);
+      await this.reload(plugin.id);
+      this.toastService.success(`${plugin.displayName} ${version.version} submitted for review`);
+    } catch (error) {
+      this.toastService.error(connectErrorMessage(error));
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 
-  withdraw() {
+  async withdraw() {
     const plugin = this.plugin();
-    if (!plugin) return;
-    this.toastService.info(`Withdrew ${plugin.displayName} from review`);
+    const version = this.latestVersion();
+    if (!plugin || !version) return;
+
+    this.isSubmitting.set(true);
+    try {
+      await this.service.withdrawVersion(version.id);
+      await this.reload(plugin.id);
+      this.toastService.info(`Withdrew ${plugin.displayName} ${version.version} from review`);
+    } catch (error) {
+      this.toastService.error(connectErrorMessage(error));
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 
-  unpublish() {
-    const plugin = this.plugin();
-    if (!plugin) return;
-    this.toastService.info(`${plugin.displayName} unpublished from the catalog`);
-  }
-
-  viewInCatalog() {
-    this.toastService.info('This is a mockup — the catalog listing is not wired up yet');
+  // The decision lands on the version, so the whole listing is re-read rather
+  // than patched: its status is derived from the versions it holds.
+  private async reload(id: string) {
+    const plugin = await this.service.getPlugin(id);
+    if (plugin) this.plugin.set(plugin);
   }
 
   openSideload() {
@@ -142,11 +176,13 @@ export default class PluginDevelopmentDetailComponent implements OnInit {
     const version = this.selectedVersion();
     if (!plugin || !clusterId || !version) return;
 
-    // Point the image at the selected build by swapping its tag.
-    const image = `${plugin.image.replace(/:[^:]*$/, '')}:${version}`;
+    // The container image is a property of the build, read out of its pinned
+    // manifest, so the selected version carries the exact image to sideload.
+    const build = plugin.versions.find((candidate) => candidate.version === version);
+    if (!build) return;
 
-    await this.service.sideload({
-      image,
+    await this.sideloadService.sideload({
+      image: build.image,
       version,
       displayName: plugin.displayName,
       description: plugin.descriptionShort,

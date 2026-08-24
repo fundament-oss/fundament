@@ -26,7 +26,10 @@
         <h1 class="text-3xl font-semibold">{{ plugin.displayName }}</h1>
         <p class="mt-1 text-gray-600 dark:text-gray-300">{{ plugin.tagline }}</p>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          By {{ plugin.vendor }} · <span class="font-mono">{{ plugin.version }}</span>
+          By {{ plugin.vendor }}
+          @if (plugin.version) {
+            · <span class="font-mono">{{ plugin.version }}</span>
+          }
         </p>
         @if (plugin.labels.length > 0) {
           <div class="mt-3 flex flex-wrap items-center gap-1.5">
@@ -98,14 +101,16 @@
           </div>
           <div>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Category</dt>
-            <dd class="mt-1 text-gray-900 dark:text-white">{{ plugin.category }}</dd>
+            <dd class="mt-1 text-gray-900 dark:text-white">{{ plugin.categoryName }}</dd>
           </div>
-          <div>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
-            <dd class="mt-1 font-mono text-sm text-gray-900 dark:text-white">
-              {{ plugin.version }}
-            </dd>
-          </div>
+          @if (plugin.version) {
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Version</dt>
+              <dd class="mt-1 font-mono text-sm text-gray-900 dark:text-white">
+                {{ plugin.version }}
+              </dd>
+            </div>
+          }
           <div>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Requirements</dt>
             <dd class="mt-1 text-gray-900 dark:text-white">

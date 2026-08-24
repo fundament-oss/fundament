@@ -5,6 +5,7 @@ import { configs as airbnbConfigs, plugins as airbnbPlugins } from 'eslint-confi
 import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
+  { ignores: ['src/generated/**'] },
   tseslint.configs.recommended,
   airbnbPlugins.stylistic,
   airbnbPlugins.importX,

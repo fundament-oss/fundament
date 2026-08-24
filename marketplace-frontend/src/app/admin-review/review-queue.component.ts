@@ -10,11 +10,9 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { TitleService } from '../title.service';
 import { PluginIconComponent } from '../icons';
-import AdminReviewService, {
-  type PluginSubmission,
-  type SubmissionStatus,
-} from './admin-review.service';
-import { submissionStatusLabel, submissionStatusBadgeClass } from './submission-status';
+import AdminReviewService, { type PluginSubmission } from './admin-review.service';
+import { type SubmissionStatus, statusLabel, statusBadgeClass } from '../status/submission-status';
+import connectErrorMessage from '../../connect/error';
 
 interface StatusSummary {
   status: SubmissionStatus;
@@ -23,10 +21,14 @@ interface StatusSummary {
   dotColorVar: string;
 }
 
+// The four states a reviewer can act on or has acted on. `draft` never reaches
+// the queue (no submission exists for it) and `withdrawn` is the developer
+// taking a version back, so neither gets a counter.
 const SUMMARY_STATUSES: { status: SubmissionStatus; dotColorVar: string }[] = [
   { status: 'pending', dotColorVar: 'var(--primitives-color-accent-650)' },
+  { status: 'changes_requested', dotColorVar: 'var(--primitives-color-warning-600)' },
   { status: 'approved', dotColorVar: 'var(--primitives-color-success-600)' },
-  { status: 'rejected', dotColorVar: 'var(--primitives-color-warning-600)' },
+  { status: 'rejected', dotColorVar: 'var(--primitives-color-critical-600)' },
 ];
 
 // Admin-facing review queue: lists every plugin submission, pending ones first,
@@ -49,9 +51,20 @@ export default class ReviewQueueComponent implements OnInit {
 
   isLoading = signal(true);
 
-  // Pending submissions float to the top; within a status, newest first.
+  errorMessage = signal<string | null>(null);
+
+  // Submissions needing a decision float to the top; within a group, newest
+  // first. draft never appears in the queue, but the map covers it so the
+  // vocabulary stays exhaustive.
   sortedSubmissions = computed<PluginSubmission[]>(() => {
-    const order: Record<SubmissionStatus, number> = { pending: 0, approved: 1, rejected: 1 };
+    const order: Record<SubmissionStatus, number> = {
+      pending: 0,
+      changes_requested: 1,
+      withdrawn: 2,
+      approved: 3,
+      rejected: 3,
+      draft: 4,
+    };
     return [...this.submissions()].sort((a, b) => {
       if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
       return b.submittedAt.localeCompare(a.submittedAt);
@@ -62,7 +75,7 @@ export default class ReviewQueueComponent implements OnInit {
     const submissions = this.submissions();
     return SUMMARY_STATUSES.map(({ status, dotColorVar }) => ({
       status,
-      label: submissionStatusLabel(status),
+      label: statusLabel(status),
       count: submissions.filter((submission) => submission.status === status).length,
       dotColorVar,
     }));
@@ -73,13 +86,18 @@ export default class ReviewQueueComponent implements OnInit {
   }
 
   async ngOnInit() {
-    this.submissions.set(await this.service.listSubmissions());
-    this.isLoading.set(false);
+    try {
+      this.submissions.set(await this.service.listSubmissions());
+    } catch (error) {
+      this.errorMessage.set(connectErrorMessage(error));
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
-  statusLabel = submissionStatusLabel;
+  statusLabel = statusLabel;
 
-  statusBadgeClass = submissionStatusBadgeClass;
+  statusBadgeClass = statusBadgeClass;
 
   goToSubmission(id: string) {
     this.router.navigate(['/admin/submissions', id]);

@@ -43,15 +43,16 @@
       <!-- Stage-appropriate actions -->
       <div class="mt-5 flex flex-wrap gap-2">
         @switch (plugin.status) {
-          @case ('pushed') {
+          @case ('draft') {
             <nldd-button
               (click)="submitForReview()"
               text="Submit for review"
               start-icon="send"
               variant="primary"
+              [disabled]="isSubmitting()"
             ></nldd-button>
           }
-          @case ('in_review') {
+          @case ('pending') {
             <nldd-button text="Awaiting review" variant="primary" [disabled]="true"></nldd-button>
           }
           @case ('changes_requested') {
@@ -60,18 +61,28 @@
               text="Resubmit for review"
               start-icon="send"
               variant="primary"
+              [disabled]="isSubmitting()"
             ></nldd-button>
           }
-          @case ('published') {
+          @case ('withdrawn') {
             <nldd-button
-              (click)="viewInCatalog()"
+              (click)="submitForReview()"
+              text="Submit for review"
+              start-icon="send"
+              variant="primary"
+              [disabled]="isSubmitting()"
+            ></nldd-button>
+          }
+          @case ('approved') {
+            <nldd-button
+              [routerLink]="['/plugins', plugin.id]"
               text="View in catalog"
               start-icon="eye"
               variant="secondary"
             ></nldd-button>
           }
         }
-        @if (plugin.status !== 'published') {
+        @if (plugin.status !== 'approved') {
           <nldd-button
             (click)="openSideload()"
             text="Sideload plugin"
@@ -79,19 +90,13 @@
             variant="secondary"
           ></nldd-button>
         }
-        @if (plugin.status === 'published') {
-          <nldd-button
-            (click)="unpublish()"
-            text="Unpublish"
-            start-icon="trash"
-            variant="destructive"
-          ></nldd-button>
-        } @else if (plugin.status === 'in_review') {
+        @if (plugin.status === 'pending') {
           <nldd-button
             (click)="withdraw()"
             text="Withdraw"
             start-icon="trash"
             variant="destructive"
+            [disabled]="isSubmitting()"
           ></nldd-button>
         }
       </div>
@@ -131,7 +136,7 @@
           <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
             Category
           </dt>
-          <dd class="mt-2">{{ plugin.category }}</dd>
+          <dd class="mt-2">{{ plugin.categoryName }}</dd>
         </div>
         <div>
           <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
@@ -145,14 +150,20 @@
           </dt>
           <dd class="mt-2 font-mono text-sm">{{ plugin.versions[0]?.pushedAt }}</dd>
         </div>
-        <div>
-          <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-            Image
-          </dt>
-          <dd class="mt-2 font-mono text-xs break-all text-gray-600 dark:text-gray-300">
-            {{ plugin.image }}
-          </dd>
-        </div>
+        @if (latestVersion(); as latest) {
+          <div>
+            <dt
+              class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+            >
+              Image
+            </dt>
+            <!-- The image is read out of the version's pinned manifest, so it
+                 belongs to the build rather than to the listing. -->
+            <dd class="mt-2 font-mono text-xs break-all text-gray-600 dark:text-gray-300">
+              {{ latest.image }}
+            </dd>
+          </div>
+        }
         <div>
           <dt class="text-sm font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
             Tags
@@ -202,7 +213,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-            @for (version of plugin.versions; track version.version) {
+            @for (version of plugin.versions; track version.id) {
               <tr>
                 <td class="py-4 pr-8 font-mono text-sm whitespace-nowrap">{{ version.version }}</td>
                 <td
@@ -216,7 +227,7 @@
                   }}</span>
                 </td>
                 <td class="py-4 text-sm text-gray-600 dark:text-gray-400">
-                  {{ version.notes || '—' }}
+                  {{ version.reviewFeedback || '—' }}
                 </td>
               </tr>
             }
@@ -257,7 +268,7 @@
         <nldd-form-field label="Version">
           <nldd-dropdown>
             <select id="sideload-version" (change)="onVersionChange($event)">
-              @for (version of plugin.versions; track version.version) {
+              @for (version of plugin.versions; track version.id) {
                 <option
                   [value]="version.version"
                   [selected]="version.version === selectedVersion()"

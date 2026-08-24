@@ -233,6 +233,7 @@ generate:
     cd console-frontend && bunx openapi-ts
     cd e2e && buf generate
     cd dcim-frontend && buf generate
+    cd marketplace-frontend && buf generate
     just fmt
 
 # Lint all Go code

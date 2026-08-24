@@ -13,9 +13,13 @@
   <div class="py-8 text-center">
     <p class="text-gray-600 dark:text-gray-300">Loading submissions...</p>
   </div>
+} @else if (errorMessage(); as error) {
+  <div class="bg-danger-50 dark:bg-danger-950 mt-6 rounded-md p-4">
+    <p class="text-danger-800 dark:text-danger-200">{{ error }}</p>
+  </div>
 } @else {
   <!-- Status summary -->
-  <div class="mt-6 mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+  <div class="mt-6 mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
     @for (summary of statusCounts(); track summary.status) {
       <nldd-card class="block">
         <div class="flex items-center gap-2.5 p-4">
@@ -85,7 +89,7 @@
               <td class="text-gray-600 dark:text-gray-400">
                 <p class="whitespace-nowrap">{{ submission.submittedAt }}</p>
                 <p class="text-sm text-gray-500 dark:text-gray-500">
-                  {{ submission.submitter.name }}
+                  {{ submission.submitterName }}
                 </p>
               </td>
               <td>

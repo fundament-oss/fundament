@@ -1,13 +1,27 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { CATALOG_CLIENT } from '../../connect/tokens';
+import toIsoDate from '../../connect/timestamp';
+import { PluginLabel as ProtoPluginLabel } from '../../generated/catalog/v1/common_pb';
+import {
+  type PluginSummary,
+  type PluginDetails,
+  type PublishedVersion,
+} from '../../generated/catalog/v1/catalog_pb';
+import {
+  type Category as ProtoCategory,
+  type DocumentationLink as ProtoDocumentationLink,
+  type PluginPermission as ProtoPluginPermission,
+  type FeatureBlock as ProtoFeatureBlock,
+} from '../../generated/marketplace/v1/common_pb';
 
-// Public marketplace catalog. This dataset is independent from the author-side
-// "My plugins" mock (plugin-development.service.ts): it represents the plugins
-// as consumers browse them, so it only contains published listings from a range
-// of vendors.
+// Public marketplace catalog, backed by catalog.v1.CatalogService. The service
+// is anonymous and internet-facing: it returns only PUBLIC listings that have a
+// published version, so there is no visibility field to honour here.
 //
-// The shape is modelled loosely on the `appstore` schema described in FUN-11
-// (plugins, tags, categories, documentation links) so it can later be swapped
-// for the real PluginService API without reworking the components.
+// The catalog is small and pagination is deferred (FUN-20), so listPlugins()
+// fetches the whole catalog and the index filters it client-side. That is also
+// what the sidebar counts and the "search all categories" escape hatch need.
 
 export interface DocumentationLink {
   label: string;
@@ -31,19 +45,27 @@ export interface FeatureBlock {
 // plugin can hold several at once.
 export type PluginLabel = 'core' | 'rijksoverheid' | 'support-9-to-17';
 
-export interface MarketplacePlugin {
-  name: string; // stable slug, used in URLs
+// Mirrors catalog.v1.PluginSummary: what a card or a results grid needs.
+export interface MarketplacePluginSummary {
+  id: string; // UUID, used in URLs
+  name: string; // stable slug, unique per publisher
   displayName: string;
   tagline: string; // one-line summary shown on cards
-  description: string; // longer paragraph shown on the detail page
   vendor: string;
   icon: string; // base name under /img/plugins/<icon>.svg
-  category: string;
+  image: string; // listing artwork; not rendered yet, see plugin-icon fallback
+  categoryIds: string[];
+  categoryName: string; // first category, resolved for display
   tags: string[];
   labels: PluginLabel[];
-  version: string;
-  addedAt: string; // ISO date, used to sort "recently added"
   featured: boolean;
+  addedAt: string; // ISO date, used to sort "recently added"
+}
+
+// Mirrors catalog.v1.PluginDetails: everything the detail page adds on top.
+export interface MarketplacePluginDetails extends MarketplacePluginSummary {
+  description: string; // longer paragraph shown on the detail page
+  version: string; // latest published version, resolved from latestVersionId
   // Declared capabilities (e.g. internet access) the plugin needs.
   capabilities: string[];
   // RBAC-style permissions, shown on the detail page.
@@ -53,426 +75,169 @@ export interface MarketplacePlugin {
 }
 
 export interface Category {
-  id: string; // matches MarketplacePlugin.category
+  id: string; // UUID, matches MarketplacePluginSummary.categoryIds
   name: string;
 }
 
-const PLUGINS: MarketplacePlugin[] = [
-  {
-    name: 'cert-manager',
-    displayName: 'Cert Manager',
-    tagline: 'Automated TLS certificate management for your clusters.',
-    description:
-      'Cert Manager automatically provisions and renews TLS certificates from a range of issuers, including Let’s Encrypt and internal CAs. It watches Certificate resources and keeps secrets up to date so your workloads always serve valid certificates.',
-    vendor: 'Fundament',
-    icon: 'cert-manager',
-    category: 'Security',
-    tags: ['certificates', 'tls', 'security'],
-    labels: ['core', 'support-9-to-17'],
-    version: 'v1.17.2',
-    addedAt: '2026-02-10',
-    featured: true,
-    capabilities: ['internet_access'],
-    permissions: [
-      { resource: 'Certificates', access: 'Read and write' },
-      { resource: 'Issuers & ClusterIssuers', access: 'Read and write' },
-      { resource: 'Secrets', access: 'Read and write' },
-    ],
-    features: [
-      {
-        title: 'Issue certificates automatically',
-        body: 'Request a certificate with a single Kubernetes resource and Cert Manager handles the ACME challenge, issuance and storage for you.',
-      },
-      {
-        title: 'Renew before expiry',
-        body: 'Certificates are renewed well ahead of their expiry date, so there are no surprise outages from expired TLS.',
-      },
-    ],
-    documentationLinks: [
-      { label: 'Documentation', url: 'https://cert-manager.io/docs' },
-      { label: 'Homepage', url: 'https://cert-manager.io' },
-    ],
-  },
-  {
-    name: 'istio',
-    displayName: 'Istio Service Mesh',
-    tagline: 'Traffic management, security and observability for your services.',
-    description:
-      'Istio adds a service mesh to your cluster, giving you mTLS between workloads, fine-grained traffic routing, retries and circuit breaking, plus rich telemetry — all without changing application code.',
-    vendor: 'Fundament',
-    icon: 'istio',
-    category: 'Networking',
-    tags: ['service-mesh', 'networking', 'security'],
-    labels: ['core', 'support-9-to-17'],
-    version: 'v1.24.0',
-    addedAt: '2026-03-04',
-    featured: true,
-    capabilities: [],
-    permissions: [
-      { resource: 'VirtualServices & Gateways', access: 'Read and write' },
-      { resource: 'DestinationRules', access: 'Read and write' },
-      { resource: 'Pods', access: 'Read-only' },
-    ],
-    features: [
-      {
-        title: 'Zero-trust networking',
-        body: 'Mutual TLS is enabled between all meshed workloads by default, so traffic inside the cluster is encrypted and authenticated.',
-      },
-      {
-        title: 'Progressive delivery',
-        body: 'Shift traffic between versions with weighted routing to run canary and blue/green releases safely.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://istio.io/latest/docs' }],
-  },
-  {
-    name: 'istio-gateway',
-    displayName: 'Istio Gateway',
-    tagline: 'Managed ingress gateway built on the Istio mesh.',
-    description:
-      'A ready-to-use ingress gateway for clusters running the Istio service mesh. Terminates TLS at the edge and routes external traffic to meshed workloads using Gateway and VirtualService resources.',
-    vendor: 'Fundament',
-    icon: 'istio-gateway',
-    category: 'Networking',
-    tags: ['ingress', 'networking', 'gateway'],
-    labels: ['core'],
-    version: 'v1.24.0',
-    addedAt: '2026-03-04',
-    featured: false,
-    capabilities: [],
-    permissions: [
-      { resource: 'Gateways', access: 'Read and write' },
-      { resource: 'Services', access: 'Read and write' },
-    ],
-    features: [
-      {
-        title: 'Edge TLS termination',
-        body: 'Terminate HTTPS at the gateway and forward traffic over mTLS to your services.',
-      },
-    ],
-    documentationLinks: [
-      {
-        label: 'Documentation',
-        url: 'https://istio.io/latest/docs/tasks/traffic-management/ingress',
-      },
-    ],
-  },
-  {
-    name: 'grafana',
-    displayName: 'Grafana',
-    tagline: 'Dashboards and visualisation for all your metrics and logs.',
-    description:
-      'Grafana gives your teams a single place to explore metrics, logs and traces. Ships with sensible default dashboards for platform components and lets you build your own on top of the observability stack.',
-    vendor: 'Grafana Labs',
-    icon: 'grafana',
-    category: 'Observability',
-    tags: ['observability', 'dashboards', 'monitoring'],
-    labels: ['support-9-to-17'],
-    version: 'v11.3.0',
-    addedAt: '2026-04-18',
-    featured: true,
-    capabilities: ['internet_access'],
-    permissions: [
-      { resource: 'ConfigMaps', access: 'Read and write' },
-      { resource: 'Services', access: 'Read-only' },
-    ],
-    features: [
-      {
-        title: 'Batteries-included dashboards',
-        body: 'Preconfigured dashboards for ingress, workloads and platform components appear as soon as the plugin is installed.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://grafana.com/docs/grafana' }],
-  },
-  {
-    name: 'grafana-loki',
-    displayName: 'Grafana Loki',
-    tagline: 'Horizontally scalable log aggregation, like Prometheus for logs.',
-    description:
-      'Loki collects and indexes logs by label rather than full text, making it cost-efficient to run at scale. Query your logs from Grafana alongside your metrics.',
-    vendor: 'Grafana Labs',
-    icon: 'grafana-loki',
-    category: 'Observability',
-    tags: ['logs', 'observability'],
-    labels: [],
-    version: 'v3.2.0',
-    addedAt: '2026-05-22',
-    featured: false,
-    capabilities: [],
-    permissions: [{ resource: 'PersistentVolumeClaims', access: 'Read and write' }],
-    features: [
-      {
-        title: 'Label-based indexing',
-        body: 'Only metadata is indexed, keeping storage costs low while still enabling fast, targeted log queries.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://grafana.com/docs/loki' }],
-  },
-  {
-    name: 'grafana-tempo',
-    displayName: 'Grafana Tempo',
-    tagline: 'High-scale distributed tracing backend.',
-    description:
-      'Tempo is a cost-effective distributed tracing backend that only requires object storage. Correlate traces with your metrics and logs directly in Grafana.',
-    vendor: 'Grafana Labs',
-    icon: 'grafana-tempo',
-    category: 'Observability',
-    tags: ['tracing', 'observability'],
-    labels: [],
-    version: 'v2.6.0',
-    addedAt: '2026-06-11',
-    featured: false,
-    capabilities: [],
-    permissions: [{ resource: 'PersistentVolumeClaims', access: 'Read and write' }],
-    features: [
-      {
-        title: 'Traces to logs',
-        body: 'Jump from a trace span straight to the relevant logs in Loki to debug faster.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://grafana.com/docs/tempo' }],
-  },
-  {
-    name: 'grafana-mimir',
-    displayName: 'Grafana Mimir',
-    tagline: 'Long-term, highly available storage for Prometheus metrics.',
-    description:
-      'Mimir provides durable, long-term storage for Prometheus metrics with horizontal scalability and a highly available query path. Keep years of metrics without running out of local disk.',
-    vendor: 'Grafana Labs',
-    icon: 'grafana-mimir',
-    category: 'Observability',
-    tags: ['metrics', 'observability'],
-    labels: ['support-9-to-17'],
-    version: 'v2.14.0',
-    addedAt: '2026-06-25',
-    featured: false,
-    capabilities: [],
-    permissions: [{ resource: 'PersistentVolumeClaims', access: 'Read and write' }],
-    features: [
-      {
-        title: 'Unlimited retention',
-        body: 'Store metrics in object storage for as long as you need, decoupled from your Prometheus instances.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://grafana.com/docs/mimir' }],
-  },
-  {
-    name: 'grafana-alloy',
-    displayName: 'Grafana Alloy',
-    tagline: 'A flexible collector for metrics, logs, traces and profiles.',
-    description:
-      'Alloy is an OpenTelemetry collector distribution that gathers telemetry from your workloads and ships it to Loki, Mimir and Tempo. One agent for your whole observability pipeline.',
-    vendor: 'Grafana Labs',
-    icon: 'grafana-alloy',
-    category: 'Observability',
-    tags: ['agent', 'observability', 'opentelemetry'],
-    labels: [],
-    version: 'v1.5.0',
-    addedAt: '2026-07-02',
-    featured: false,
-    capabilities: [],
-    permissions: [
-      { resource: 'Pods', access: 'Read-only' },
-      { resource: 'Nodes', access: 'Read-only' },
-    ],
-    features: [
-      {
-        title: 'One collector, all signals',
-        body: 'Collect metrics, logs, traces and profiles with a single agent and a unified configuration.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://grafana.com/docs/alloy' }],
-  },
-  {
-    name: 'cloudnativepg',
-    displayName: 'CloudNativePG',
-    tagline: 'Production-grade PostgreSQL clusters, the Kubernetes-native way.',
-    description:
-      'CloudNativePG runs highly available PostgreSQL clusters with streaming replication, automated failover and continuous backup to object storage. Manage your databases declaratively with Cluster resources.',
-    vendor: 'Fundament',
-    icon: 'cloudnativepg',
-    category: 'Database',
-    tags: ['database', 'postgres', 'storage'],
-    labels: ['core', 'support-9-to-17'],
-    version: 'v1.24.1',
-    addedAt: '2026-01-28',
-    featured: true,
-    capabilities: [],
-    permissions: [
-      { resource: 'Clusters', access: 'Read and write' },
-      { resource: 'Secrets', access: 'Read and write' },
-      { resource: 'PersistentVolumeClaims', access: 'Read and write' },
-    ],
-    features: [
-      {
-        title: 'Automated failover',
-        body: 'A failed primary is detected and a replica is promoted automatically, minimising downtime.',
-      },
-      {
-        title: 'Continuous backup',
-        body: 'Base backups and WAL archiving to object storage enable point-in-time recovery.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://cloudnative-pg.io/docs' }],
-  },
-  {
-    name: 'eck-operator',
-    displayName: 'Elastic Cloud on Kubernetes',
-    tagline: 'Run Elasticsearch and Kibana with the official ECK operator.',
-    description:
-      'The ECK operator manages Elasticsearch, Kibana and related Elastic Stack components on Kubernetes, handling provisioning, scaling, upgrades and secure-by-default configuration.',
-    vendor: 'Elastic',
-    icon: 'eck-operator',
-    category: 'Database',
-    tags: ['search', 'database', 'elastic'],
-    labels: [],
-    version: 'v2.14.0',
-    addedAt: '2026-05-09',
-    featured: false,
-    capabilities: [],
-    permissions: [
-      { resource: 'Elasticsearch & Kibana', access: 'Read and write' },
-      { resource: 'Secrets', access: 'Read and write' },
-    ],
-    features: [
-      {
-        title: 'Secure by default',
-        body: 'TLS and authentication are configured out of the box for every managed Elastic Stack deployment.',
-      },
-    ],
-    documentationLinks: [
-      { label: 'Documentation', url: 'https://www.elastic.co/guide/en/cloud-on-k8s' },
-    ],
-  },
-  {
-    name: 'keycloak',
-    displayName: 'Keycloak',
-    tagline: 'Open-source identity and access management.',
-    description:
-      'Keycloak provides single sign-on, identity brokering and user federation for your applications. Supports OpenID Connect and SAML, with fine-grained authorization backed by a managed instance.',
-    vendor: 'Fundament',
-    icon: 'keycloak',
-    category: 'Security',
-    tags: ['identity', 'sso', 'security'],
-    labels: ['core', 'rijksoverheid', 'support-9-to-17'],
-    version: 'v26.0.0',
-    addedAt: '2026-02-19',
-    featured: false,
-    capabilities: ['internet_access'],
-    permissions: [
-      { resource: 'Secrets', access: 'Read and write' },
-      { resource: 'Services & Ingresses', access: 'Read and write' },
-    ],
-    features: [
-      {
-        title: 'Single sign-on',
-        body: 'Give your users one login across all your applications with OIDC and SAML support.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://www.keycloak.org/documentation' }],
-  },
-  {
-    name: 'pinniped',
-    displayName: 'Pinniped',
-    tagline: 'Consistent cluster authentication from your existing identity provider.',
-    description:
-      'Pinniped lets users log in to your clusters with credentials from an external OIDC or LDAP identity provider, giving platform teams a single, consistent authentication experience across clusters.',
-    vendor: 'Fundament',
-    icon: 'pinniped',
-    category: 'Security',
-    tags: ['authentication', 'security', 'identity'],
-    labels: ['core', 'rijksoverheid'],
-    version: 'v0.36.0',
-    addedAt: '2026-06-30',
-    featured: false,
-    capabilities: ['internet_access'],
-    permissions: [{ resource: 'TokenReviews', access: 'Read and write' }],
-    features: [
-      {
-        title: 'Bring your own IdP',
-        body: 'Authenticate cluster users against the identity provider you already run, with no shared static credentials.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://pinniped.dev/docs' }],
-  },
-  {
-    name: 'sealed-secrets',
-    displayName: 'Sealed Secrets',
-    tagline: 'Encrypt secrets so they can safely live in Git.',
-    description:
-      'Sealed Secrets encrypts Kubernetes Secrets into SealedSecret resources that are safe to store in version control. A controller decrypts them in-cluster at apply time, so plaintext never leaves your cluster.',
-    vendor: 'Fundament',
-    icon: 'sealed-secrets',
-    category: 'Security',
-    tags: ['secrets', 'gitops', 'security'],
-    labels: ['core'],
-    version: 'v0.27.1',
-    addedAt: '2026-04-01',
-    featured: false,
-    capabilities: [],
-    permissions: [{ resource: 'Secrets', access: 'Read and write' }],
-    features: [
-      {
-        title: 'GitOps-friendly secrets',
-        body: 'Commit encrypted secrets to your repository and let the controller decrypt them safely in-cluster.',
-      },
-    ],
-    documentationLinks: [
-      { label: 'Documentation', url: 'https://github.com/bitnami-labs/sealed-secrets' },
-    ],
-  },
-  {
-    name: 'openfsc',
-    displayName: 'OpenFSC Gateway',
-    tagline: 'Federated service connectivity for Dutch government systems.',
-    description:
-      'OpenFSC provides standardised, secure connectivity between government services over the Federated Service Connectivity protocol, handling authentication, authorization and audit logging at the edge.',
-    vendor: 'RINIS',
-    icon: 'openfsc',
-    category: 'Networking',
-    tags: ['government', 'connectivity', 'networking'],
-    labels: ['rijksoverheid', 'support-9-to-17'],
-    version: 'v0.9.0',
-    addedAt: '2026-07-08',
-    featured: false,
-    capabilities: ['internet_access'],
-    permissions: [
-      { resource: 'Services & Ingresses', access: 'Read and write' },
-      { resource: 'Secrets', access: 'Read-only' },
-    ],
-    features: [
-      {
-        title: 'Standards-based interconnect',
-        body: 'Connect to other government services using the FSC protocol with built-in audit logging.',
-      },
-    ],
-    documentationLinks: [{ label: 'Documentation', url: 'https://example.gov/openfsc/docs' }],
-  },
-];
+// The fields PluginSummary and PluginDetails share. Generated messages are
+// branded with their own type name, so a PluginDetails is not assignable to a
+// PluginSummary; the structural subset is what the shared mapper takes.
+type ListingFields = Pick<
+  PluginSummary,
+  | 'id'
+  | 'name'
+  | 'displayName'
+  | 'descriptionShort'
+  | 'organizationId'
+  | 'image'
+  | 'categoryIds'
+  | 'tags'
+  | 'labels'
+  | 'featured'
+  | 'published'
+>;
 
-const CATEGORIES: Category[] = [
-  { id: 'Database', name: 'Database' },
-  { id: 'Networking', name: 'Networking' },
-  { id: 'Observability', name: 'Observability' },
-  { id: 'Security', name: 'Security' },
-];
+// PLUGIN_LABEL_UNSPECIFIED has no badge, so it maps to nothing and is dropped.
+const PLUGIN_LABELS: Partial<Record<ProtoPluginLabel, PluginLabel>> = {
+  [ProtoPluginLabel.CORE]: 'core',
+  [ProtoPluginLabel.RIJKSOVERHEID]: 'rijksoverheid',
+  [ProtoPluginLabel.SUPPORT_9_TO_17]: 'support-9-to-17',
+};
 
 @Injectable({ providedIn: 'root' })
 export default class MarketplaceService {
-  private readonly plugins = PLUGINS;
+  private readonly client = inject(CATALOG_CLIENT);
 
-  private readonly categories = CATEGORIES;
+  // Publishers and categories are small, stable lookup tables that every
+  // mapping needs. Memoized on the root singleton so index -> detail costs two
+  // RPCs rather than four.
+  private publishers?: Promise<Map<string, string>>;
 
-  listPlugins(): Promise<MarketplacePlugin[]> {
-    return Promise.resolve(this.plugins.map((plugin) => ({ ...plugin })));
+  private categories?: Promise<Category[]>;
+
+  async listPlugins(): Promise<MarketplacePluginSummary[]> {
+    const [response, publishers, categories] = await Promise.all([
+      firstValueFrom(this.client.listPlugins({})),
+      this.loadPublishers(),
+      this.loadCategories(),
+    ]);
+    const categoryNames = MarketplaceService.byId(categories);
+    return response.plugins.map((plugin) =>
+      MarketplaceService.toSummary(plugin, publishers, categoryNames),
+    );
   }
 
-  getPlugin(name: string): Promise<MarketplacePlugin | null> {
-    const plugin = this.plugins.find((p) => p.name === name);
-    return Promise.resolve(plugin ? { ...plugin } : null);
+  async getPlugin(id: string): Promise<MarketplacePluginDetails | null> {
+    const [response, versions, publishers, categories] = await Promise.all([
+      firstValueFrom(this.client.getPlugin({ pluginId: id })),
+      firstValueFrom(this.client.listPluginVersions({ pluginId: id })),
+      this.loadPublishers(),
+      this.loadCategories(),
+    ]);
+    const plugin = response.plugin;
+    if (!plugin) return null;
+    return MarketplaceService.toDetails(
+      plugin,
+      versions.versions,
+      publishers,
+      MarketplaceService.byId(categories),
+    );
   }
 
   listCategories(): Promise<Category[]> {
-    return Promise.resolve(this.categories.map((category) => ({ ...category })));
+    return this.loadCategories();
+  }
+
+  private loadPublishers(): Promise<Map<string, string>> {
+    this.publishers ??= firstValueFrom(this.client.listPublishers({})).then(
+      (response) =>
+        new Map(response.publishers.map((publisher) => [publisher.id, publisher.displayName])),
+    );
+    return this.publishers;
+  }
+
+  private loadCategories(): Promise<Category[]> {
+    this.categories ??= firstValueFrom(this.client.listCategories({})).then((response) =>
+      response.categories.map((category: ProtoCategory) => ({
+        id: category.id,
+        name: category.name,
+      })),
+    );
+    return this.categories;
+  }
+
+  private static byId(categories: Category[]): Map<string, string> {
+    return new Map(categories.map((category) => [category.id, category.name]));
+  }
+
+  private static toSummary(
+    plugin: ListingFields,
+    publishers: Map<string, string>,
+    categories: Map<string, string>,
+  ): MarketplacePluginSummary {
+    return {
+      id: plugin.id,
+      name: plugin.name,
+      displayName: plugin.displayName,
+      tagline: plugin.descriptionShort,
+      // Falls back to the raw organization id: a listing whose publisher is not
+      // in ListPublishers should still render.
+      vendor: publishers.get(plugin.organizationId) ?? plugin.organizationId,
+      icon: plugin.name,
+      image: plugin.image,
+      categoryIds: plugin.categoryIds,
+      categoryName: MarketplaceService.categoryName(plugin.categoryIds, categories),
+      tags: plugin.tags,
+      labels: MarketplaceService.toLabels(plugin.labels),
+      featured: plugin.featured,
+      addedAt: toIsoDate(plugin.published),
+    };
+  }
+
+  private static toDetails(
+    plugin: PluginDetails,
+    versions: PublishedVersion[],
+    publishers: Map<string, string>,
+    categories: Map<string, string>,
+  ): MarketplacePluginDetails {
+    return {
+      ...MarketplaceService.toSummary(plugin, publishers, categories),
+      description: plugin.description,
+      version: MarketplaceService.latestVersion(plugin.latestVersionId, versions),
+      capabilities: plugin.capabilities,
+      permissions: plugin.permissions.map((permission: ProtoPluginPermission) => ({
+        resource: permission.resource,
+        access: permission.access,
+      })),
+      features: plugin.features.map((feature: ProtoFeatureBlock) => ({
+        title: feature.title,
+        body: feature.body,
+      })),
+      // `title` labels the group a link appears under, which this page does not
+      // render; url_name is the link text, so it wins where both are set.
+      documentationLinks: plugin.documentationLinks.map((link: ProtoDocumentationLink) => ({
+        label: link.urlName || link.title,
+        url: link.url,
+      })),
+    };
+  }
+
+  // Only the first category is shown; a listing can carry several, and all of
+  // them stay available through categoryIds for filtering.
+  private static categoryName(categoryIds: string[], categories: Map<string, string>): string {
+    const first = categoryIds[0];
+    return first ? (categories.get(first) ?? '') : '';
+  }
+
+  private static toLabels(labels: ProtoPluginLabel[]): PluginLabel[] {
+    return labels
+      .map((label) => PLUGIN_LABELS[label])
+      .filter((label): label is PluginLabel => label !== undefined);
+  }
+
+  private static latestVersion(latestVersionId: string, versions: PublishedVersion[]): string {
+    const latest =
+      versions.find((version) => version.id === latestVersionId) ?? versions[0] ?? null;
+    return latest?.version ?? '';
   }
 }
