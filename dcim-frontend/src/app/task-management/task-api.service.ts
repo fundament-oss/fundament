@@ -186,6 +186,7 @@ export default class TaskApiService {
       priority: TaskApiService.toProtoPriority(input.priority),
       tags: input.tags,
       ...(input.description ? { description: input.description } : {}),
+      ...(input.blockedReason !== null ? { blockedReason: input.blockedReason } : {}),
       ...(input.location ? { location: input.location } : {}),
       ...(input.assignee ? { assigneeId: input.assignee } : {}),
       ...(input.due ? { dueDate: timestampFromDate(dueToDate(input.due)) } : {}),

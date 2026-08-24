@@ -824,6 +824,7 @@ export default function createDemoTransport(): Transport {
           assigneeId: request.assigneeId,
           dueDate: request.dueDate,
           location: request.location,
+          blockedReason: request.blockedReason,
           created: now(),
         });
         store.tasks = [...store.tasks, task];
