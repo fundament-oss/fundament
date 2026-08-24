@@ -313,7 +313,7 @@ The Ceph Storage plugin deploys a Rook-managed Ceph cluster on your Kubernetes n
 ## Requirements
 
 - **Raw, unpartitioned disks** on the cluster nodes. Disks that already hold a filesystem are not offered.
-- **Cluster-admin-equivalent permissions.** The Rook operator runs privileged, host-networked device-discovery DaemonSets, installs the Ceph CSI driver, and manages its own cluster-wide RBAC, so this plugin requests wildcard permissions. They are intersected with the installing administrator''s own permissions. Install it only if that tradeoff is acceptable for your cluster.
+- **Cluster-admin-equivalent permissions.** The Rook operator runs privileged, host-networked device-discovery DaemonSets, installs the Ceph CSI driver, and manages its own cluster-wide RBAC, so this plugin requests wildcard permissions. Nothing narrows them: the plugin runs with full cluster-admin on the cluster you install it into. Install it only if that tradeoff is acceptable for your cluster.
 - Block storage (RBD, ReadWriteOnce) only. Shared filesystems (CephFS) and object storage (RGW) are not yet supported.
 - All storage pools share one Ceph cluster. Data is placed across every disk in it, so additional pools give you additional StorageClasses rather than isolated or tiered storage.', 'Fundament', 'https://rook.io', 'https://github.com/rook/rook', '')
 ON CONFLICT (id) DO UPDATE SET

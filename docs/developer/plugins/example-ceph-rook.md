@@ -214,10 +214,12 @@ The Rook-Ceph operator requires broad, cluster-admin-level permissions to:
 - Install its own cluster-wide RBAC (ClusterRoles/Bindings with escalate+bind) and the Ceph CSI driver
 
 The plugin declares this in its `definition.yaml` under `spec.permissions.rbac` (a
-cluster-admin-equivalent wildcard rule). The plugin-controller materialises those rules into a
-`ClusterRole` bound to the plugin's `ServiceAccount`, intersected with the installing admin's own
-permissions (FUN-17). There is no separate `clusterRoles` field on the `PluginInstallation` — it
-references a published definition:
+cluster-admin-equivalent wildcard rule). The plugin-controller copies those rules verbatim into a
+`ClusterRole` bound to the plugin's `ServiceAccount`. Nothing narrows them: the plugin pod runs with
+cluster-admin on the tenant cluster. FUN-17's `SubjectAccessReview` does not apply here — it is a
+per-request check in kube-api-proxy on the console iframe path, and the plugin pod uses its
+in-cluster config, which never traverses it. There is no separate `clusterRoles` field on the
+`PluginInstallation` — it references a published definition:
 
 ```yaml
 # Example PluginInstallation (references a published plugin version; see FUN-19)
