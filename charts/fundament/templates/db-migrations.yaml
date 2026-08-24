@@ -14,9 +14,12 @@ metadata:
     {{- include "fundament.labels" (dict "root" $ "name" "db-migrations" "component" "database") | nindent 4 }}
 spec:
   backoffLimit: 3
-  # This Job must outlive the deploy: openfga's wait-for-reset blocks on it by
-  # name, and an openfga pod recreated after it is gone waits forever. Helm
-  # prunes the previous revision's Job on each upgrade.
+  # openfga's wait-for-reset blocks on this Job by name, so an openfga pod
+  # recreated after the Job is collected waits for something that will never
+  # appear. A day covers same-session restarts; outliving that needs the reset
+  # to be recorded somewhere durable rather than inferred from the Job.
+  # Required: the review cluster rejects an ownerless Job with no TTL.
+  ttlSecondsAfterFinished: 86400
   template:
     metadata:
       labels:
