@@ -39,10 +39,10 @@ func fakeDynamic(objs ...runtime.Object) *dynamicfake.FakeDynamicClient {
 
 // TestResolvePluginSA_GetsByNameAndVerifiesUID verifies the CR is addressed by
 // name, its UID is checked against the token's installation_id, and the SA is
-// named plugin-{cr.Name}.
+// the constant "plugin" inside the namespace derived from the CR name.
 func TestResolvePluginSA_GetsByNameAndVerifiesUID(t *testing.T) {
 	const uid = "019b4000-2000-7000-8000-000000000009"
-	dyn := fakeDynamic(newPluginInstallationCR("cert-manager", uid, "sha256:abc"))
+	dyn := fakeDynamic(newPluginInstallationCR("system--cert-manager", uid, "sha256:abc"))
 
 	kube := k8sfake.NewSimpleClientset()
 	var gotSAName, gotSANamespace string
@@ -58,12 +58,12 @@ func TestResolvePluginSA_GetsByNameAndVerifiesUID(t *testing.T) {
 		}, nil
 	})
 
-	got, err := resolvePluginSA(context.Background(), dyn, kube, uid, "cert-manager")
+	got, err := resolvePluginSA(context.Background(), dyn, kube, uid, "system--cert-manager")
 	require.NoError(t, err)
 	assert.Equal(t, "sa-token-xyz", got.Token)
 	assert.Equal(t, "sha256:abc", got.PinnedDefinitionHash)
-	assert.Equal(t, "plugin-cert-manager", gotSAName, "SA name derives from CR name")
-	assert.Equal(t, "plugin-cert-manager", gotSANamespace)
+	assert.Equal(t, "plugin", gotSAName, "SA name is the shared constant")
+	assert.Equal(t, "plugin-system--cert-manager", gotSANamespace)
 }
 
 // TestResolvePluginSA_UIDMismatch confirms a token whose installation_id does

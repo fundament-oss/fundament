@@ -15,9 +15,11 @@ import (
 )
 
 const (
-	MockPluginName    = "test-plugin"
-	MockPluginVersion = "v1.17.2"
-	MockPluginHash    = "sha256@mock"
+	MockOrganizationName = "system"
+	MockPluginName       = "test-plugin"
+	MockInstallationName = MockOrganizationName + "--" + MockPluginName
+	MockPluginVersion    = "v1.17.2"
+	MockPluginHash       = "sha256@mock"
 )
 
 // MockClusterID matches the acme-corp cluster seeded in db/testdata so the
@@ -47,14 +49,15 @@ func NewMockClusterAccess() *MockClusterAccess {
 	}
 	cr := &pluginsv1.PluginInstallation{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: MockPluginName,
+			Name: MockInstallationName,
 			UID:  types.UID(MockInstallationID.String()),
 		},
 		Spec: pluginsv1.PluginInstallationSpec{
 			DefinitionRef: pluginsv1.DefinitionRef{
-				PluginName:     MockPluginName,
-				PluginVersion:  MockPluginVersion,
-				DefinitionHash: MockPluginHash,
+				OrganizationName: MockOrganizationName,
+				PluginName:       MockPluginName,
+				PluginVersion:    MockPluginVersion,
+				DefinitionHash:   MockPluginHash,
 			},
 		},
 		Status: pluginsv1.PluginInstallationStatus{Phase: pluginsv1.PluginPhaseRunning},

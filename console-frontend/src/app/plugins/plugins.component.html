@@ -54,14 +54,17 @@
 
             <!-- Plugin Card Actions -->
             <div class="px-6 pb-6">
-              @if (runningInstallCount(plugin.name) > 0) {
+              @if (runningInstallCount(plugin.organizationName, plugin.name) > 0) {
                 <p class="mb-3">
                   <nldd-tag
                     color="success"
                     size="sm"
                     icon="check-mark"
                     [attr.text]="
-                      'Installed on ' + runningInstallCount(plugin.name) + '/' + clusterCount
+                      'Installed on ' +
+                      runningInstallCount(plugin.organizationName, plugin.name) +
+                      '/' +
+                      clusterCount
                     "
                   ></nldd-tag>
                 </p>
@@ -79,7 +82,11 @@
                   data-tour="plugin-install"
                   (click)="onInstallPlugin(plugin)"
                   type="button"
-                  [text]="isPluginInstalledAnywhere(plugin.name) ? 'Manage' : 'Install'"
+                  [text]="
+                    isPluginInstalledAnywhere(plugin.organizationName, plugin.name)
+                      ? 'Manage'
+                      : 'Install'
+                  "
                   variant="primary"
                   size="sm"
                 ></nldd-button>

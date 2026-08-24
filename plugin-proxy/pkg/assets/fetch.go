@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/fundament-oss/fundament/common/kubename"
 	"github.com/fundament-oss/fundament/plugin-proxy/pkg/kube"
 )
 
@@ -62,16 +63,10 @@ func (f *PodFetcher) Fetch(ctx context.Context, clusterID uuid.UUID, pluginName,
 		return nil, "", fmt.Errorf("%w: url %q, installed %q", ErrVersionMismatch, pluginVersion, installed)
 	}
 
-	// plugin-controller names both the namespace and the Service `plugin-<name>`
-	// (see plugin-controller/pkg/controller/reconciler.go). The service exposes
-	// port 8080; kube-api-proxy's `http:name:port` selector picks the http
-	// scheme regardless of TLS on the API server.
-	escaped := url.PathEscape(pluginName)
-	ns := "plugin-" + escaped
-	svc := "http:plugin-" + escaped + ":8080"
+	ns, svc := upstreamTarget(pluginName)
 	asset := (&url.URL{Path: assetPath}).EscapedPath()
 	upstream := fmt.Sprintf("%s/api/v1/namespaces/%s/services/%s/proxy/console/%s", host, ns, svc, asset)
-	//nolint:gosec // host comes from the trusted admin kubeconfig cache; pluginName and assetPath are URL-escaped above.
+	//nolint:gosec // host comes from the trusted admin kubeconfig cache; assetPath is URL-escaped above.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, upstream, http.NoBody)
 	if err != nil {
 		return nil, "", fmt.Errorf("build request: %w", err)
@@ -104,6 +99,14 @@ func (f *PodFetcher) Fetch(ctx context.Context, clusterID uuid.UUID, pluginName,
 	}
 
 	return body, ct, nil
+}
+
+// upstreamTarget returns the namespace and the kube service-proxy selector for an
+// installation. plugin-controller names the Service "plugin" inside the plugin's
+// namespace; the `http:name:port` selector picks the http scheme regardless of TLS
+// on the API server.
+func upstreamTarget(installationName string) (namespace, service string) {
+	return kubename.PluginNamespace(installationName), "http:" + kubename.PluginChildName + ":8080"
 }
 
 // installedVersion reads the cluster-scoped PluginInstallation named pluginName

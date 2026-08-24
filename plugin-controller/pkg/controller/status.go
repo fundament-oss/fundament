@@ -14,9 +14,9 @@ import (
 	pluginsv1 "github.com/fundament-oss/fundament/plugin-controller/pkg/api/v1"
 )
 
-func pluginServiceURL(pluginName string) string {
-	ns := pluginNamespace(pluginName)
-	return fmt.Sprintf("http://plugin-%s.%s.svc.cluster.local:8080", pluginName, ns)
+func pluginServiceURL(installationName string) string {
+	// The Service is constant-named inside the plugin's own namespace.
+	return fmt.Sprintf("http://%s.%s.svc.cluster.local:8080", childResourceName, pluginNamespace(installationName))
 }
 
 type statusPoller struct {

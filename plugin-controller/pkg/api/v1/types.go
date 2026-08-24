@@ -35,10 +35,10 @@ type PluginInstallationSpec struct {
 	// It is the source of truth for the plugin's RBAC scope — no RBAC is
 	// copied onto this CR.
 	//
-	// The installation's addressable handle is metadata.name (Kubernetes
-	// convention — no spec.pluginName echo of it). The controller uses
-	// metadata.name to derive child resource names (namespace, SA, etc.);
-	// DefinitionRef.PluginName names the pinned definition and may differ.
+	// A plugin's identity is the pair (OrganizationName, PluginName), so
+	// metadata.name must equal "<organizationName>--<pluginName>". That makes the
+	// apiserver enforce pair-uniqueness, and keeps metadata.name the single
+	// handle every consumer addresses the installation by.
 	DefinitionRef DefinitionRef     `json:"definitionRef"`
 	Config        map[string]string `json:"config,omitempty"`
 }
@@ -50,8 +50,11 @@ type PluginInstallationSpec struct {
 //
 // +k8s:deepcopy-gen=true
 type DefinitionRef struct {
-	PluginName    string `json:"pluginName"`
-	PluginVersion string `json:"pluginVersion"`
+	// OrganizationName is the publishing organization (tenant.organizations.name).
+	// Two organizations may publish a plugin with the same PluginName.
+	OrganizationName string `json:"organizationName"`
+	PluginName       string `json:"pluginName"`
+	PluginVersion    string `json:"pluginVersion"`
 	// DefinitionHash is the admin's install-time consent record: plugin-controller
 	// enforces that the sha256 of the published manifest bytes stored in
 	// organization-api matches this value before materialising the plugin-scope
@@ -67,6 +70,10 @@ type PluginInstallationStatus struct {
 	Ready              bool               `json:"ready,omitempty"`
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 	Conditions         []metav1.Condition `json:"conditions,omitzero" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// Namespace is the resolved cluster-side namespace. Published for operators:
+	// a long installation name derives a hashed namespace that cannot be read off
+	// metadata.name. Nothing reads it back — derivation stays the authority.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // PluginInstallationList is a list of PluginInstallation resources.

@@ -352,6 +352,9 @@ const definitionHash = (name: string, version: string) => {
 
 /** The catalog fields that follow from a plugin's latest published version. */
 const published = (name: string) => ({
+  // First-party demo plugins are published by the seeded 'system' organization,
+  // mirroring db/migrations/033_org-owned-plugins.up.sql.
+  organizationName: 'system',
   image: `ghcr.io/fundament/plugins/${name}:${latestVersion(name)}`,
   pluginVersion: latestVersion(name),
   definitionHash: definitionHash(name, latestVersion(name)),
@@ -478,6 +481,7 @@ export const pluginDetail = (pluginId: string): PluginDetail | undefined => {
   return create(PluginDetailSchema, {
     id: summary.id,
     name: summary.name,
+    organizationName: summary.organizationName,
     displayName: summary.displayName,
     description: summary.description,
     descriptionShort: summary.descriptionShort,
@@ -600,8 +604,9 @@ export const pluginDefinitions: Record<string, PluginDefinition> = {
       { group: 'cert-manager.io', version: 'v1', resource: 'certificates', verbs: ['get', 'list'] },
     ],
     installationId: 'demo-cert-manager',
-    installationName: 'cert-manager',
+    installationName: 'system--cert-manager',
     installationVersion: 'v1.17.2',
+    organizationName: 'system',
   },
 };
 

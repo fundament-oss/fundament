@@ -62,7 +62,7 @@ CREATE TABLE tenant.organizations (
 	deleted timestamptz,
 	CONSTRAINT organizations_pk PRIMARY KEY (id),
 	CONSTRAINT organizations_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
-	CONSTRAINT organizations_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$'),
+	CONSTRAINT organizations_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND name !~ '--'),
 	CONSTRAINT organizations_ck_alias CHECK (char_length(alias) >= 1 AND char_length(alias) <= 255)
 );
 -- ddl-end --
@@ -1068,8 +1068,9 @@ CREATE TABLE appstore.plugins (
 	image text NOT NULL DEFAULT '',
 	created timestamptz NOT NULL DEFAULT now(),
 	deleted timestamptz,
-	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (name,deleted),
-	CONSTRAINT plugins_pk PRIMARY KEY (id)
+	CONSTRAINT plugins_uq_name UNIQUE NULLS NOT DISTINCT (organization_id,name,deleted),
+	CONSTRAINT plugins_pk PRIMARY KEY (id),
+	CONSTRAINT plugins_ck_name CHECK (name ~ '^[a-z][a-z0-9-]*[a-z0-9]$' AND name !~ '--')
 );
 -- ddl-end --
 COMMENT ON COLUMN appstore.plugins.organization_id IS E'Owning organization. Gates who may publish/edit this plugin (RLS). Catalog visibility is NOT org-scoped — reads stay global.';
@@ -1381,6 +1382,15 @@ CREATE POLICY organizations_user_select_policy ON tenant.organizations
 	FOR SELECT
 	TO fun_fundament_api
 	USING (authn.is_organization_member(id));
+-- ddl-end --
+
+-- object: organizations_select_plugin_publishers | type: POLICY --
+-- DROP POLICY IF EXISTS organizations_select_plugin_publishers ON tenant.organizations CASCADE;
+CREATE POLICY organizations_select_plugin_publishers ON tenant.organizations
+	AS PERMISSIVE
+	FOR SELECT
+	TO fun_fundament_api
+	USING (EXISTS (SELECT 1 FROM appstore.plugins WHERE appstore.plugins.organization_id = tenant.organizations.id AND appstore.plugins.deleted IS NULL));
 -- ddl-end --
 
 -- object: organizations_authn_api_policy | type: POLICY --

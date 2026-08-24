@@ -95,13 +95,22 @@ export default class FakePluginRegistryService implements Pick<
     this.plugins.set([]);
   }
 
-  getPlugin(name: string): PluginDefinition | undefined {
-    return this.plugins().find((p) => p.name === name);
+  // Keyed on the installation name, as in the real service: routes and nav
+  // address an installation, not a plugin name.
+  getPlugin(installationName: string): PluginDefinition | undefined {
+    return this.plugins().find((p) => p.installationName === installationName);
   }
 
   /** `key` is a plural, a kind or a full `plural.group`, as in the real service. */
   // eslint-disable-next-line class-methods-use-this
-  getCrd(pluginName: string, key: string, _clusterId: string): ParsedCrd | undefined {
+  getCrd(installationName: string, key: string, _clusterId: string): ParsedCrd | undefined {
+    // The fixtures index CRDs by plugin name, but callers address an
+    // installation. Resolve through the fixture definitions rather than the
+    // loaded set, so this stays usable before loadPlugins().
+    const pluginName = Object.values(fx.pluginDefinitions).find(
+      (def) => def.installationName === installationName,
+    )?.name;
+    if (!pluginName) return undefined;
     return (fx.pluginCrds[pluginName] ?? []).find(
       (crd) => key === crd.plural || key === crd.kind || key === `${crd.plural}.${crd.group}`,
     );

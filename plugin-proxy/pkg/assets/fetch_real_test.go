@@ -42,20 +42,23 @@ func fakeUpstream(t *testing.T, pluginName, installedVersion string, gotAssetPat
 	}))
 }
 
-// The upstream URL is a contract with plugin-controller: it names the
-// namespace AND the Service plugin-<name> (there is no Service "runtime"),
-// with the http: scheme selector so the API server proxies plain HTTP.
+// The upstream URL is a contract with plugin-controller: the derived
+// namespace holds the constant-named Service "plugin" (there is no Service
+// "runtime"), with the http: scheme selector so the API server proxies
+// plain HTTP.
 func TestPodFetcher_TargetsPluginService(t *testing.T) {
 	var gotPath string
-	upstream := fakeUpstream(t, "cert-manager", "1.2.3", &gotPath)
+	// The argument is the installation name (metadata.name), which is now
+	// "<organizationName>--<pluginName>" — not the bare catalog name.
+	upstream := fakeUpstream(t, "system--cert-manager", "1.2.3", &gotPath)
 	defer upstream.Close()
 
 	f := &PodFetcher{AdminKubeconfig: &fakeKubeconfigSource{host: upstream.URL}}
-	body, contentType, err := f.Fetch(context.Background(), uuid.New(), "cert-manager", "1.2.3", "index.html")
+	body, contentType, err := f.Fetch(context.Background(), uuid.New(), "system--cert-manager", "1.2.3", "index.html")
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		"/api/v1/namespaces/plugin-cert-manager/services/http:plugin-cert-manager:8080/proxy/console/index.html",
+		"/api/v1/namespaces/plugin-system--cert-manager/services/http:plugin:8080/proxy/console/index.html",
 		gotPath)
 	assert.Equal(t, "text/html", contentType)
 	assert.Equal(t, []byte("<html></html>"), body)

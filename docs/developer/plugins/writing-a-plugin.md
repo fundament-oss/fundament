@@ -174,14 +174,18 @@ ENTRYPOINT ["/my-plugin"]
 apiVersion: plugins.fundament.io/v1
 kind: PluginInstallation
 metadata:
-  name: my-plugin
+  name: acme--my-plugin
 spec:
-  image: registry.example.com/my-plugin:v1.0.0
-  pluginName: my-plugin
-  # Only if your plugin needs cluster-wide access:
-  # clusterRoles:
-  #   - cluster-admin
+  definitionRef:
+    organizationName: acme
+    pluginName: my-plugin
+    pluginVersion: v1.0.0
+    definitionHash: sha256:...
 ```
+
+`metadata.name` must equal `<organizationName>--<pluginName>` — a plugin's
+identity is that pair, not the plugin name alone (see
+[FUN-17](/funs/fun-17#plugin-identity-and-naming)).
 
 ## Metadata API
 

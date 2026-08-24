@@ -51,7 +51,12 @@ function parseCrd(raw: RawCrdYaml): ParsedCrd {
 
 function mapDefinition(
   def: ProtoPluginDefinition,
-  installation: { installationId: string; installationName: string; installationVersion: string },
+  installation: {
+    installationId: string;
+    installationName: string;
+    installationVersion: string;
+    organizationName: string;
+  },
 ): PluginDefinition {
   return {
     name: def.metadata?.name ?? '',
@@ -89,6 +94,7 @@ function mapDefinition(
     installationId: installation.installationId,
     installationName: installation.installationName,
     installationVersion: installation.installationVersion,
+    organizationName: installation.organizationName,
   };
 }
 
@@ -132,7 +138,10 @@ export default class PluginRegistryService {
       runningPlugins.map(async (item) => {
         const ref = item.spec.definitionRef;
         const res = await firstValueFrom(
+          // A definition is keyed on (organization, plugin, version): the
+          // publisher is required, not optional context.
           this.pluginClient.getPluginDefinition({
+            organizationName: ref.organizationName,
             pluginName: ref.pluginName,
             pluginVersion: ref.pluginVersion,
           }),
@@ -140,11 +149,12 @@ export default class PluginRegistryService {
         return {
           def: res.definition,
           installationId: item.metadata.uid,
-          // installationName is the CR metadata.name; plugin-proxy derives the
-          // plugin's namespace/Service as `plugin-<installationName>`, so this —
-          // not the definition's display name — drives the iframe asset URL.
+          // installationName is the CR metadata.name; the plugin's namespace is
+          // derived from installationName, so this — not the definition's
+          // display name — drives the iframe asset URL.
           installationName: item.metadata.name,
           installationVersion: ref.pluginVersion,
+          organizationName: ref.organizationName,
         };
       }),
     );
@@ -158,6 +168,7 @@ export default class PluginRegistryService {
           installationId: string;
           installationName: string;
           installationVersion: string;
+          organizationName: string;
         }> => r.status === 'fulfilled',
       )
       .filter((r) => r.value.def !== undefined)
@@ -166,6 +177,7 @@ export default class PluginRegistryService {
           installationId: r.value.installationId,
           installationName: r.value.installationName,
           installationVersion: r.value.installationVersion,
+          organizationName: r.value.organizationName,
         }),
       );
 
@@ -213,8 +225,11 @@ export default class PluginRegistryService {
     this.parsedCrdByPlural.clear();
   }
 
-  getPlugin(name: string): PluginDefinition | undefined {
-    return this.plugins().find((p) => p.name === name);
+  // Keyed on the installation name, not the definition's `name`: two
+  // organizations may publish the same plugin name, and only the installation
+  // name tells their installations apart.
+  getPlugin(installationName: string): PluginDefinition | undefined {
+    return this.plugins().find((p) => p.installationName === installationName);
   }
 
   getCrd(pluginName: string, plural: string, clusterId: string): ParsedCrd | undefined {
