@@ -351,15 +351,9 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     // Add rack from the menu, or from the add button in the bar: both ask for
     // this form through the address.
     openOnCreateRequest(() => this.openCreateRack());
-    // A rack always stands in a data center, so the list opens in one: the
-    // first, until you pick another.
-    effect(() => {
-      const dcs = this.mutableDcs();
-      untracked(() => {
-        if (!this.selectedDcId() && dcs.length > 0) this.selectedDcId.set(dcs[0].id);
-      });
-    });
-    // When the selected DC changes, fetch its racks and row options.
+    // The menu opens on every location, so nothing is picked here either: see
+    // the same effect in the rack menu.
+    // When a data center is picked, fetch its racks and row options.
     effect(() => {
       const dcId = this.selectedDcId();
       if (!dcId) return;

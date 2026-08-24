@@ -40,7 +40,13 @@ export default class RackNavComponent implements OnInit {
 
   readonly datacenters = this.dcList.datacenters;
 
-  readonly racks = this.rackList.racks;
+  readonly racks = this.rackList.visible;
+
+  /** Which building a rack stands in, said on the row. Rack names start again
+   *  at R01 in every hall, so over all locations the name alone is not enough
+   *  to tell two of them apart. */
+  readonly dcName = (dcId: string): string =>
+    this.datacenters().find((dc) => dc.id === dcId)?.name ?? '';
 
   readonly selectedDcId = this.rackList.selectedDcId;
 
@@ -61,20 +67,24 @@ export default class RackNavComponent implements OnInit {
     return rest.startsWith('device/') ? this.rackList.openRackId() : rest;
   });
 
-  readonly currentDcName = computed(
-    () => this.datacenters().find((dc) => dc.id === this.selectedDcId())?.name ?? '',
-  );
+  readonly currentDcName = computed(() => {
+    if (!this.selectedDcId()) return 'all locations';
+    return this.datacenters().find((dc) => dc.id === this.selectedDcId())?.name ?? '';
+  });
 
   constructor() {
-    // A rack always stands in a data center, so the menu opens in one: the
-    // first, until a page or a click says otherwise.
+    // Every location, until you pick one. Opening on the first data center was
+    // not a choice anybody made, only the order the list happened to come back
+    // in, and free space is a question about the whole estate rather than about
+    // one hall.
     effect(() => {
       const dcs = this.datacenters();
       untracked(() => {
-        if (!this.selectedDcId() && dcs.length > 0) this.selectedDcId.set(dcs[0].id);
+        if (this.selectedDcId()) this.rackList.load(this.selectedDcId());
+        else this.rackList.loadAll(dcs.map((dc) => dc.id));
       });
     });
-    // And it lists the racks of that one.
+    // And it follows a later pick, which reads that one building.
     effect(() => {
       const dcId = this.selectedDcId();
       untracked(() => this.rackList.load(dcId));

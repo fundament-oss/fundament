@@ -28,6 +28,15 @@
       empty-text="No racks found"
     >
       <nldd-toggle-button-group slot="toolbar" type="radio" accessible-label="Data center">
+        <!-- Every location, and where the menu starts. Which hall a rack is in
+             is a thing you pick, not something the order of the list decides
+             for you, and free space is a question about the whole estate. -->
+        <nldd-toggle-button
+          value=""
+          text="All"
+          [attr.selected]="!selectedDcId() ? '' : null"
+          (change)="onDcToggle('', $any($event).detail.selected)"
+        ></nldd-toggle-button>
         @for (dc of datacenters(); track dc.id) {
           <nldd-toggle-button
             [attr.value]="dc.id"
@@ -45,7 +54,15 @@
         >
           <nldd-icon-cell icon="rack-servers" size="20"></nldd-icon-cell>
           <nldd-spacer-cell size="12"></nldd-spacer-cell>
-          <nldd-text-cell width="full" [attr.text]="rack.name"></nldd-text-cell>
+          <!-- The building under the name, because rack names start again at
+               R01 in every hall: over all locations the name alone does not
+               tell two of them apart. Left off inside one building, where it
+               would be the same answer on every row. -->
+          <nldd-text-cell
+            width="full"
+            [attr.text]="rack.name"
+            [attr.supporting-text]="selectedDcId() ? null : dcName(rack.dcId)"
+          ></nldd-text-cell>
           <nldd-spacer-cell size="12"></nldd-spacer-cell>
           <nldd-text-cell
             width="fit-content"

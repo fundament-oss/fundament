@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import RackApiService from './rack-api.service';
 import { Rack, RackDevice } from './rack.model';
@@ -37,15 +37,23 @@ export default class RackListService {
   /** False until the first answer, so an empty list is only empty once known. */
   readonly loaded = signal(false);
 
-  private pending = false;
+  /** Per building, not one flag for the service: reading every location at
+   *  once would otherwise fetch the first and drop the rest. */
+  private readonly pending = new Set<string>();
 
-  /** Reads the racks of a data center, keeping the ones on screen meanwhile. */
+  /**
+   * Reads the racks of one data center, keeping the ones on screen meanwhile.
+   *
+   * Only that building's rows are replaced, because the menu can be showing
+   * every location at once and a read of one hall says nothing about another.
+   */
   load(dcId: string): void {
-    if (!dcId || this.pending) return;
-    this.pending = true;
+    if (!dcId || this.pending.has(dcId)) return;
+    this.pending.add(dcId);
     firstValueFrom(this.rackApi.listRacksBySite(dcId))
       .then((res) =>
-        this.racks.set(
+        this.mergeSite(
+          dcId,
           res.racks.flatMap((summary): RackListItem[] => {
             const rack = summary.rack;
             if (!rack) return [];
@@ -69,8 +77,25 @@ export default class RackListService {
       // eslint-disable-next-line no-console
       .catch((err) => console.error(connectErrorMessage(err)))
       .finally(() => {
-        this.pending = false;
+        this.pending.delete(dcId);
         this.loaded.set(true);
       });
   }
+
+  /** Every location at once, for the menu's All. */
+  loadAll(dcIds: string[]): void {
+    dcIds.forEach((dcId) => this.load(dcId));
+  }
+
+  private mergeSite(dcId: string, racks: RackListItem[]): void {
+    this.racks.update((current) => [...current.filter((rack) => rack.dcId !== dcId), ...racks]);
+  }
+
+  /** What the menu shows: one building, or all of them in the order the data
+   *  centers are listed. */
+  readonly visible = computed(() => {
+    const dcId = this.selectedDcId();
+    const racks = dcId ? this.racks().filter((rack) => rack.dcId === dcId) : this.racks();
+    return [...racks].sort((a, b) => a.name.localeCompare(b.name));
+  });
 }
