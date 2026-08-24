@@ -4,6 +4,7 @@
   <nldd-top-title-bar
     slot="header"
     [attr.text]="currentRack()?.name ?? 'Racks'"
+    [attr.supporting-text]="currentRackDcName()"
     back-text="Racks"
     collapse-anchor="rack-title"
   ></nldd-top-title-bar>
@@ -11,8 +12,11 @@
     <nldd-simple-section>
       <nldd-title id="rack-title" size="2">
         <h1>{{ rack.name }}</h1>
+        <!-- Where it stands, then how full it is: the address comes before the
+             measurements, and without it the name says nothing about which hall
+             you are in. -->
         <span slot="subtitle">
-          {{ rackStats().usedU }}/{{ rackStats().totalU }}U ·
+          {{ currentRackDcName() }} · {{ rackStats().usedU }}/{{ rackStats().totalU }}U ·
           {{ formatPowerKw(rackStats().totalPowerW) }}kW · {{ rackStats().deviceCount }} device{{
             rackStats().deviceCount === 1 ? '' : 's'
           }}

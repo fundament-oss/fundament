@@ -623,6 +623,19 @@ export default class RacksComponent implements OnInit, AfterViewInit, OnDestroy 
     return colors[device.state];
   };
 
+  /**
+   * Which building this rack stands in.
+   *
+   * Said on the page and not only in the menu beside it: on a narrow screen
+   * that menu is a pane you have left behind, and a rack page can be opened
+   * from a link. R01-1 exists in every hall, so the name alone does not say
+   * where you are.
+   */
+  readonly currentRackDcName = computed(() => {
+    const rack = this.currentRack();
+    return this.mutableDcs().find((dc) => dc.id === rack?.dcId)?.name ?? '';
+  });
+
   readonly rackStats = computed(() => {
     const rack = this.currentRack();
     if (!rack) return { usedU: 0, freeU: 0, totalU: 42, totalPowerW: 0, deviceCount: 0 };
