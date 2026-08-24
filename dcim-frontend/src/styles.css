@@ -162,7 +162,9 @@ nldd-navigation-split-view > nldd-split-view-pane[slot='main'] > *:not(nldd-page
 /* Same story one level down: a component that wraps an nldd-page and is slotted
    into a sheet stands between the two, and the page then has no height to
    scroll within. */
-nldd-sheet > app-cable-form {
+nldd-sheet > app-cable-form,
+nldd-sheet > app-datacenter-detail,
+nldd-sheet > app-shopping-list {
   display: contents;
 }
 

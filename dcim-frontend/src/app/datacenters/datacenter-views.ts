@@ -10,12 +10,18 @@ export const DATA_CENTERS_PATH = '/data-centers';
  * configs pointing at the same component would tear it down and build it again
  * on every click in the menu.
  *
- * /data-centers/ams1/layout is a page of its own and falls through to the route
- * that renders it.
+ * /data-centers/ams1/layout is the same page with the layout editor open over
+ * it. The editor is a sheet and not a page of its own, but it still has an
+ * address: opening it puts that address in the bar, so it can be linked to and
+ * so the back button closes it. Following such a link lands you on the data
+ * center with the editor already open, which is where the link was made.
  */
 export function dataCentersMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   if (segments.length === 0 || segments[0].path !== 'data-centers') return null;
   if (segments.length === 1) return { consumed: segments, posParams: {} };
   if (segments.length === 2) return { consumed: segments, posParams: { slug: segments[1] } };
+  if (segments.length === 3 && segments[2].path === 'layout') {
+    return { consumed: segments, posParams: { slug: segments[1], overlay: segments[2] } };
+  }
   return null;
 }

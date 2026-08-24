@@ -156,13 +156,13 @@
                 variant="secondary"
                 text="Edit layout"
                 start-icon="pencil-on-square"
-                (click)="openRoomsAndRows(dc)"
+                (click)="openLayout(dc)"
               ></nldd-button>
               <nldd-menu-item
                 slot="overflow"
                 icon="pencil-on-square"
                 text="Edit layout"
-                (select)="openRoomsAndRows(dc)"
+                (select)="openLayout(dc)"
               ></nldd-menu-item>
             </nldd-toolbar-item>
           </nldd-toolbar>
@@ -397,142 +397,6 @@
 </nldd-modal-dialog>
 
 <!-- ══════════════════════════════════════════════════════════════
-     RACK TEMPLATE MODAL
-     ══════════════════════════════════════════════════════════════ -->
-@if (showRackTemplateModal()) {
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="rack-template-heading"
-    tabindex="0"
-    (click)="showRackTemplateModal.set(false)"
-    (keydown.escape)="showRackTemplateModal.set(false)"
-  >
-    <div
-      class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-950 shadow-2xl shadow-slate-900/20 ring-1 ring-slate-200/80 dark:ring-gray-700/80"
-      tabindex="-1"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    >
-      <div
-        class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-gray-800"
-      >
-        <h2
-          id="rack-template-heading"
-          class="text-base font-semibold text-slate-900 dark:text-white"
-        >
-          Add rack from template
-        </h2>
-        <button
-          type="button"
-          (click)="showRackTemplateModal.set(false)"
-          class="rounded-lg p-1.5 text-slate-400 dark:text-gray-500 hover:bg-slate-100 dark:hover:bg-gray-800 hover:text-slate-600 dark:hover:text-gray-300 transition-colors"
-          aria-label="Close"
-        >
-          <nldd-icon name="dismiss" class="w-4.5 h-4.5 block" aria-hidden="true"></nldd-icon>
-        </button>
-      </div>
-      <ul class="px-3 py-3 flex flex-col gap-1" role="list">
-        <li>
-          <button
-            type="button"
-            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
-          >
-            <span
-              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-950 text-accent-600 dark:text-accent-300 group-hover:bg-accent-100 dark:group-hover:bg-accent-950 transition-colors"
-            >
-              <nldd-icon
-                name="arrow-up-arrow-down"
-                class="w-4 h-4 block"
-                aria-hidden="true"
-              ></nldd-icon>
-            </span>
-            <span class="flex flex-col">
-              <span class="text-sm font-medium text-slate-800 dark:text-gray-100"
-                >ToR switch + compute (full rack)</span
-              >
-              <span class="text-xs text-slate-400 dark:text-gray-500 mt-0.5"
-                >1× Top-of-Rack switch, 20× Gardener Shoot servers</span
-              >
-            </span>
-          </button>
-        </li>
-        <li>
-          <button
-            type="button"
-            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
-          >
-            <span
-              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-950 text-accent-600 dark:text-accent-300 group-hover:bg-accent-100 dark:group-hover:bg-accent-950 transition-colors"
-            >
-              <nldd-icon name="cylinder-split" class="w-4 h-4 block" aria-hidden="true"></nldd-icon>
-            </span>
-            <span class="flex flex-col">
-              <span class="text-sm font-medium text-slate-800 dark:text-gray-100"
-                >Gardener Shoots (full rack)</span
-              >
-              <span class="text-xs text-slate-400 dark:text-gray-500 mt-0.5"
-                >42U compute-only, no switching layer</span
-              >
-            </span>
-          </button>
-        </li>
-        <li>
-          <button
-            type="button"
-            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
-          >
-            <span
-              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-950 text-accent-600 dark:text-accent-300 group-hover:bg-accent-100 dark:group-hover:bg-accent-950 transition-colors"
-            >
-              <nldd-icon name="cylinder-split" class="w-4 h-4 block" aria-hidden="true"></nldd-icon>
-            </span>
-            <span class="flex flex-col">
-              <span class="text-sm font-medium text-slate-800 dark:text-gray-100"
-                >Gardener Shoots (half rack)</span
-              >
-              <span class="text-xs text-slate-400 dark:text-gray-500 mt-0.5"
-                >21U, shared rack — suitable for partial deployments</span
-              >
-            </span>
-          </button>
-        </li>
-        <li>
-          <button
-            type="button"
-            class="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors group"
-          >
-            <span
-              class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-50 dark:bg-accent-950 text-accent-600 dark:text-accent-300 group-hover:bg-accent-100 dark:group-hover:bg-accent-950 transition-colors"
-            >
-              <nldd-icon
-                name="apartment-building"
-                class="w-4 h-4 block"
-                aria-hidden="true"
-              ></nldd-icon>
-            </span>
-            <span class="flex flex-col">
-              <span class="text-sm font-medium text-slate-800 dark:text-gray-100"
-                >Empty rack (no devices)</span
-              >
-              <span class="text-xs text-slate-400 dark:text-gray-500 mt-0.5"
-                >Reserve a rack slot without pre-filling any hardware</span
-              >
-            </span>
-          </button>
-        </li>
-      </ul>
-      <div class="px-6 py-4 border-t border-slate-100 dark:border-gray-800">
-        <p class="text-xs text-slate-400 dark:text-gray-500">
-          Selecting a template is a preview only — no changes will be saved.
-        </p>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- ══════════════════════════════════════════════════════════════
      CURSOR TOOLTIP (fixed, follows mouse)
      ══════════════════════════════════════════════════════════════ -->
 @if (hoveredCell(); as cell) {
@@ -565,6 +429,23 @@
     </div>
   </div>
 }
+<!-- The layout editor over the data center it belongs to, instead of in place
+     of it: you are changing the floor that is drawn behind the sheet, and
+     closing it puts you back where you were rather than one level up. From the
+     bottom because it is a workbench, not a form beside the page. -->
+<nldd-sheet
+  #layoutSheet
+  accessible-label="Floor layout"
+  placement="bottom"
+  (close)="closeLayout()"
+>
+  @defer (when layoutOpen()) {
+    @if (layoutOpen()) {
+      <app-datacenter-detail [dcSlug]="slug()" (dismiss)="closeLayout()" />
+    }
+  }
+</nldd-sheet>
+
 <!-- The data centers are the menu of this section, so the shell shows them in the
      second sidebar instead of as a strip of tabs above the page. -->
 <!-- The menu of this section, in a component of its own: the page with the

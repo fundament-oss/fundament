@@ -3,12 +3,17 @@
      visible: the split view hides a pane's back button on a wide screen, but
      here it is the way up to the data center, not a pane affordance. -->
 <nldd-page sticky-header style="--context-back-button-display: flex">
+  <!-- Over a page it is a sheet you close, so the way out says Close and sits
+       where a dismiss sits. On its own it is a page you step up from, and then
+       it says which data center you are stepping up to. -->
   <nldd-top-title-bar
     slot="header"
     [attr.text]="(dc()?.name ?? '') + ' layout'"
-    [attr.back-text]="dc()?.name ?? 'Data center'"
+    [attr.back-text]="inSheet() ? null : (dc()?.name ?? 'Data center')"
+    [attr.dismiss-text]="inSheet() ? 'Close' : null"
     collapse-anchor="layout-title"
     (back)="backToFloorMap()"
+    (dismiss)="dismiss.emit()"
   ></nldd-top-title-bar>
   @if (dc(); as site) {
     <nldd-simple-section>
@@ -232,11 +237,7 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (roomErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ roomErrorMessage() }}
-          </p>
-        </div>
+        <nldd-banner variant="critical" [attr.text]="roomErrorMessage()"></nldd-banner>
       }
       @if (editRoom(); as room) {
         <nldd-form>
@@ -320,11 +321,7 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (rowErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ rowErrorMessage() }}
-          </p>
-        </div>
+        <nldd-banner variant="critical" [attr.text]="rowErrorMessage()"></nldd-banner>
       }
       @if (editRackRow(); as row) {
         <nldd-form>
@@ -354,7 +351,10 @@
               {{ rowFieldError('name') }}
             </nldd-form-field-error-text>
           </nldd-form-field>
-          <div class="grid grid-cols-2 gap-3">
+          <!-- Two short number fields side by side. A collection rather than a
+               grid of our own: the design system already knows what a row of
+               items is and how it should behave when the sheet gets narrow. -->
+          <nldd-collection item-width="120px">
             <nldd-form-field label="Position X">
               <nldd-number-field
                 #fRowX
@@ -383,7 +383,7 @@
                 {{ rowFieldError('position_y') }}
               </nldd-form-field-error-text>
             </nldd-form-field>
-          </div>
+          </nldd-collection>
           <nldd-form-actions>
             <nldd-button
               variant="primary"
@@ -436,11 +436,7 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (rackErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ rackErrorMessage() }}
-          </p>
-        </div>
+        <nldd-banner variant="critical" [attr.text]="rackErrorMessage()"></nldd-banner>
       }
       @if (editRack(); as rack) {
         <nldd-form>

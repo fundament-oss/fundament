@@ -50,18 +50,10 @@ const routes: Routes = [
         loadComponent: () => import('./inventory/asset-detail/asset-detail').then((m) => m.default),
       },
       {
-        // A data center is a place with an address of its own: /data-centers/ams1
-        // is its floor map and /data-centers/ams1/layout the rooms and rows it is
-        // built from. The short name is the slug, because that is what everybody
-        // calls it.
-        path: 'data-centers/:slug/layout',
-        title: 'Layout',
-        loadComponent: () =>
-          import('./datacenters/datacenter-detail/datacenter-detail').then((m) => m.default),
-      },
-      {
-        // The list and one data center on it are the same page, so they share
-        // one route config: see the matcher.
+        // The list, one data center on it, and the layout editor over that one,
+        // are all the same page: see the matcher. A data center is a place with
+        // an address of its own, and its short name is the slug, because that is
+        // what everybody calls it.
         matcher: dataCentersMatcher,
         title: 'Data centers',
         loadComponent: () => import('./datacenters/datacenters').then((m) => m.default),

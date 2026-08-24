@@ -21,6 +21,7 @@ import { pageTitle } from '../shell/page-title';
 import DatacenterApiService from './datacenter-api.service';
 import DatacenterListService from './datacenter-list.service';
 import DatacenterNavComponent from './datacenter-nav';
+import DatacenterDetailComponent from './datacenter-detail/datacenter-detail';
 import PlacementApiService from '../inventory/placement-api.service';
 import CatalogApiService from '../catalog/catalog-api.service';
 import { ASSET_CLIENT } from '../../connect/tokens';
@@ -50,9 +51,13 @@ interface DcStats {
   selector: 'app-datacenters',
   templateUrl: './datacenters.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, IsometricCanvasComponent, DatacenterNavComponent],
+  imports: [
+    RouterLink,
+    IsometricCanvasComponent,
+    DatacenterNavComponent,
+    DatacenterDetailComponent,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
 export default class DatacentersComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly secondaryNav = inject(SecondaryNavService);
@@ -95,10 +100,36 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
 
   /** Which data center the address names, by its short name: /datacenters/ams1.
    *  A data center is a place, so it deserves a link of its own. */
-  private readonly slug = toSignal(
+  readonly slug = toSignal(
     this.route.paramMap.pipe(map((params: ParamMap) => params.get('slug') ?? '')),
     { initialValue: '' },
   );
+
+  /**
+   * Whether the layout editor is open, which the address says: see the matcher.
+   * A sheet with an address rather than a page, so it can be linked to and the
+   * back button closes it, without the editor becoming somewhere you navigate
+   * to and have to find your way back from.
+   */
+  private readonly layoutSheetEl = viewChild<NativeElementRef>('layoutSheet');
+
+  readonly layoutOpen = toSignal(
+    this.route.paramMap.pipe(map((params: ParamMap) => params.get('overlay') === 'layout')),
+    { initialValue: false },
+  );
+
+  /** The floor one level down: the rooms and the rack rows inside them, where
+   *  they are made and renamed. */
+  openLayout(dc: DatacenterInfo): void {
+    this.router.navigate(['/data-centers', viewSlug(dc.name), 'layout']);
+  }
+
+  /** Back to the data center underneath, which is the address without the
+   *  editor on top. */
+  closeLayout(): void {
+    const dc = this.currentDc();
+    if (dc) this.router.navigate(['/data-centers', viewSlug(dc.name)]);
+  }
 
   /** Nothing is picked without a slug: /datacenters is the list, not the first
    *  data center in it. Opening the section should not open a place as well. */
@@ -113,8 +144,6 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
   tooltipX = signal(0);
 
   tooltipY = signal(0);
-
-  showRackTemplateModal = signal(false);
 
   // ── Floor layout (loaded per datacenter from the API) ────────────────────────
   readonly rackCells = signal<RackCell[]>([]);
@@ -132,6 +161,14 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
   private readonly deleteModalEl = viewChild<NativeElementRef>('deleteModal');
 
   constructor() {
+    // The address decides whether the editor is open, so the sheet follows it
+    // rather than the other way round: a link that carries it opens it, and the
+    // back button closes it without the page having to know it was pressed.
+    effect(() => {
+      const el = this.layoutSheetEl()?.nativeElement;
+      if (this.layoutOpen()) el?.show?.();
+      else el?.hide?.();
+    });
     // The add button in the bar opens this form itself, so the page only has
     // to honour a link that asks for it.
     openOnCreateRequest(() => this.openCreateDc());
@@ -353,11 +390,7 @@ export default class DatacentersComponent implements OnInit, AfterViewInit, OnDe
     this.router.navigate(['/racks', rackId]);
   }
 
-  /** The floor one level down: the rooms and the rack rows inside them, where
-   *  they are made and renamed. */
-  openRoomsAndRows(dc: DatacenterInfo): void {
-    this.router.navigate(['/data-centers', viewSlug(dc.name), 'layout']);
-  }
+
 
   /** Opens the rack section on the first rack of this data center. */
   openRackView(): void {

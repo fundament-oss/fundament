@@ -6,8 +6,10 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
   inject,
+  input,
   OnDestroy,
   OnInit,
+  output,
   signal,
   TemplateRef,
   untracked,
@@ -41,7 +43,6 @@ interface NativeElementRef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatacenterNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  host: { class: 'flex flex-col bg-white dark:bg-gray-950 text-slate-900 dark:text-white' },
 })
 export default class DatacenterDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -57,23 +58,42 @@ export default class DatacenterDetailComponent implements OnInit, AfterViewInit,
   /** This section's menu, handed to the shell for as long as the page is open. */
   private readonly secondaryNavTemplate = viewChild.required<TemplateRef<unknown>>('secondaryNav');
 
+  /**
+   * Set when this runs inside the layout sheet, which is how it is normally
+   * seen. The sheet sits over the data center it is about, so the address is
+   * about the page underneath and the caller says which one this is.
+   */
+  readonly dcSlug = input('');
+
+  /** Closing is the caller's business: over a page it means going back to the
+   *  address without the editor, which this component does not know. */
+  readonly dismiss = output<void>();
+
+  /** True when this is a sheet over a page rather than a page of its own. */
+  readonly inSheet = computed(() => this.dcSlug() !== '');
+
   ngAfterViewInit(): void {
-    this.secondaryNav.set(this.secondaryNavTemplate());
+    // The menu beside the page belongs to whatever is behind the sheet. Taking
+    // it over from in here would swap the menu of the page you are looking at.
+    if (!this.inSheet()) this.secondaryNav.set(this.secondaryNavTemplate());
   }
 
   ngOnDestroy(): void {
-    this.secondaryNav.clear(this.secondaryNavTemplate());
+    if (!this.inSheet()) this.secondaryNav.clear(this.secondaryNavTemplate());
   }
 
   /**
-   * Which data center this page is about: its short name is in the address.
-   * Reactive rather than read once, because picking another data center in the
-   * menu keeps you on this page and only swaps the slug.
+   * Which data center this is about: its short name is in the address, or is
+   * handed in when this runs inside a sheet. Reactive rather than read once,
+   * because picking another data center in the menu keeps you here and only
+   * swaps the slug.
    */
-  readonly slug = toSignal(
+  private readonly routeSlug = toSignal(
     this.route.paramMap.pipe(map((params: ParamMap) => params.get('slug') ?? '')),
     { initialValue: this.route.snapshot.paramMap.get('slug') ?? '' },
   );
+
+  readonly slug = computed(() => this.dcSlug() || this.routeSlug());
 
   readonly siteId = computed(
     () => this.allDatacenters().find((dc) => viewSlug(dc.name) === this.slug())?.id ?? '',
@@ -193,10 +213,12 @@ export default class DatacenterDetailComponent implements OnInit, AfterViewInit,
   private readonly fRackTotalU = viewChild<NativeElementRef>('fRackTotalU');
 
   constructor() {
-    // The tab says which one you have open, not just which section.
+    // The tab says which one you have open, not just which section. Left to the
+    // page behind it when this is a sheet: the tab is about where you are, and
+    // an overlay has not taken you anywhere.
     effect(() => {
       const name = this.dc()?.name;
-      if (name) this.title.setTitle(pageTitle(name));
+      if (name && !this.inSheet()) this.title.setTitle(pageTitle(name));
     });
     effect(() => {
       const el = this.roomSheetEl()?.nativeElement;
@@ -236,8 +258,13 @@ export default class DatacenterDetailComponent implements OnInit, AfterViewInit,
     this.list.load();
   }
 
-  /** Back to the floor map of this data center. */
+  /** Back to the floor map of this data center: a page steps up to it, a sheet
+   *  closes and reveals it. */
   backToFloorMap(): void {
+    if (this.inSheet()) {
+      this.dismiss.emit();
+      return;
+    }
     this.router.navigate(['/data-centers', this.slug()]);
   }
 

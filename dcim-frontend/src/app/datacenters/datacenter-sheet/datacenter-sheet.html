@@ -8,11 +8,7 @@
     ></nldd-top-title-bar>
     <nldd-simple-section>
       @if (formErrorMessage()) {
-        <div class="bg-danger-50 dark:bg-danger-900/20 rounded-md p-3" role="alert">
-          <p class="text-danger-800 dark:text-danger-200 whitespace-pre-line">
-            {{ formErrorMessage() }}
-          </p>
-        </div>
+        <nldd-banner variant="critical" [attr.text]="formErrorMessage()"></nldd-banner>
       }
       <nldd-form>
         <nldd-form-field label="Short name" supporting-label="e.g. AMS-01">
