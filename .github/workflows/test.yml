@@ -253,6 +253,41 @@ jobs:
         working-directory: plugins/openfsc/console-ui
         run: bun run build
 
+  gateway-api-console-ui:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-gateway-api-${{ hashFiles('plugins/gateway-api/envoy-gateway/console-ui/bun.lock') }}
+
+      - name: Install dependencies
+        working-directory: plugins/gateway-api/envoy-gateway/console-ui
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: plugins/gateway-api/envoy-gateway/console-ui
+        run: bun run typecheck
+
+      - name: Run tests
+        working-directory: plugins/gateway-api/envoy-gateway/console-ui
+        run: bun run test
+
+      # Catches a broken or missing HTML entry point here rather than at image build.
+      # Note this does not verify the emitted names against definition.yaml's
+      # customComponents — a renamed entry builds clean and only fails in the iframe.
+      - name: Build
+        working-directory: plugins/gateway-api/envoy-gateway/console-ui
+        run: bun run build
+
   # The docs image build in build.yml is gated behind `should_deploy`, so it is
   # skipped on draft PRs and on PRs labelled no-preview-env. This job runs
   # unconditionally so broken links are caught on every PR.
