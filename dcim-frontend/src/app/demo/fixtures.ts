@@ -25,6 +25,7 @@ import {
   AssetEventType,
   AssetStatus,
   CableStatus,
+  CableType,
   NoteEntityType,
   PortDirection,
   PortType,
@@ -411,6 +412,10 @@ const DEMO_CABLE_STATUS: CableStatus[][] = [
   ],
 ];
 
+/** Not every run is the same lead. The type shows as a tag behind the label,
+ *  so a copper patch and a fibre trunk are told apart in the list. */
+const DEMO_CABLE_TYPE = [CableType.CAT6A, CableType.CAT6A, CableType.MMF, CableType.CAT6];
+
 /**
  * A handful of runs per data center, between devices that have ports, enough
  * for the patch mapping to draw something real. Paired within a building: a
@@ -423,6 +428,11 @@ export const connections = sites.flatMap((site, siteIndex) => {
   );
   const statuses = DEMO_CABLE_STATUS[siteIndex] ?? [];
   const idBase = siteIndex * 20;
+  // What is printed on the cable, which is the point of labelling one, so the
+  // list has a name to show rather than "Unlabelled" on every row. One is left
+  // bare on purpose: a cable nobody labelled is a real thing to look at too.
+  const label = (index: number) =>
+    index === statuses.length - 1 ? '' : `${site.name}-C${String(index + 1).padStart(2, '0')}`;
 
   return statuses.map((status, index) => {
     const source = inSite[index % inSite.length];
@@ -438,6 +448,8 @@ export const connections = sites.flatMap((site, siteIndex) => {
       targetPortDefinitionId: targetPorts[index % targetPorts.length].id,
       notes: '',
       status,
+      label: label(index),
+      cableType: DEMO_CABLE_TYPE[index % DEMO_CABLE_TYPE.length],
       created: daysAgo(200 - index * 5),
     });
   });

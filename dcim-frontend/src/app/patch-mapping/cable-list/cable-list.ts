@@ -25,7 +25,6 @@ import {
   cableStatusTagColor,
   cableStatusLabel,
   cableTypeLabel,
-  PORT_TYPE_LABEL,
 } from '../cable.model';
 import { PATCH_MAPPING_PATH } from '../patch-mapping-views';
 import SecondaryNavService from '../../shell/secondary-nav.service';
@@ -416,7 +415,16 @@ export default class CableListComponent implements AfterViewInit, OnDestroy {
     return words.charAt(0).toUpperCase() + words.slice(1);
   };
 
-  readonly PORT_TYPE_LABEL = PORT_TYPE_LABEL;
+  /**
+   * The run a cable makes, as one sentence.
+   *
+   * The port is named and its type is not: in a rack every port is a network
+   * interface until one is not, and the type column says so on the run where it
+   * matters. "NIC 1" and "Port 4" are what is printed on the device anyway.
+   */
+  readonly runLabel = (cable: Cable): string =>
+    `${cable.aSide.deviceName} (${cable.aSide.portName}) → ${cable.bSide.deviceName} (${cable.bSide.portName})`;
+
 
   readonly CABLE_STATUSES = CABLE_STATUSES;
 

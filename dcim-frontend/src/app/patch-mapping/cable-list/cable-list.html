@@ -140,37 +140,25 @@
             <!-- The label is the name of the row, so a nameless one says so:
                    left empty it reads as a rendering fault, and a dash reads as
                    a value. -->
+            <!-- The cable's name, and under it the run it makes. One cell
+                 rather than three: a run is one sentence, and split over two
+                 growing columns the arrow between them landed somewhere else on
+                 every row. The port type is not said here. Every port in a rack
+                 is a network interface until one is not, and a word that is the
+                 same on every row is one you stop reading; the type column says
+                 "Power" on the run where it matters. -->
             <nldd-text-cell
-              width="120px"
-              hide-below="560px"
+              width="full"
+              min-width="160px"
               [attr.color]="cable.label ? null : 'secondary'"
-              [attr.text]="cable.label || 'Unlabelled'"
-            ></nldd-text-cell>
-            <nldd-spacer-cell size="12" hide-below="560px"></nldd-spacer-cell>
-            <nldd-text-cell
-              width="full"
-              min-width="120px"
-              [attr.text]="cable.aSide.deviceName"
-              [attr.supporting-text]="
-                cable.aSide.portName + ' · ' + PORT_TYPE_LABEL[cable.aSide.portType]
-              "
-            ></nldd-text-cell>
-            <nldd-spacer-cell size="8" hide-below="480px"></nldd-spacer-cell>
-            <nldd-icon-cell
-              size="20"
-              icon="arrow-right"
-              color="secondary"
-              hide-below="480px"
-            ></nldd-icon-cell>
-            <nldd-spacer-cell size="8" hide-below="480px"></nldd-spacer-cell>
-            <nldd-text-cell
-              width="full"
-              min-width="120px"
-              [attr.text]="cable.bSide.deviceName"
-              [attr.supporting-text]="
-                cable.bSide.portName + ' · ' + PORT_TYPE_LABEL[cable.bSide.portType]
-              "
-            ></nldd-text-cell>
+              [attr.supporting-text]="runLabel(cable)"
+              >{{ cable.label || 'Unlabelled'
+              }}@if (cable.type) {&ngsp;<nldd-tag
+                  size="sm"
+                  color="neutral"
+                  [attr.text]="CABLE_TYPE_LABEL[cable.type]"
+                ></nldd-tag>}</nldd-text-cell
+            >
             <nldd-spacer-cell size="12" hide-below="700px"></nldd-spacer-cell>
             <!-- The status as a dot and a word rather than a tag: a tag is a
                    property somebody assigns, and this one the system decides. It
@@ -183,17 +171,6 @@
               ><nldd-badge decorative [attr.color]="cableStatusTagColor(cable.status)"></nldd-badge
               >&ngsp;{{ cableStatusLabel(cable.status) }}</nldd-text-cell
             >
-            <nldd-spacer-cell size="12" hide-below="860px"></nldd-spacer-cell>
-            <!-- The kind of cable, when it is known. "Unspecified" on every
-                   row is not information, and it read as the status twice.
-                   Which is also why this is not a fixed column: with no type on
-                   any row it would hold 80 pixels of nothing. -->
-            <nldd-text-cell
-              width="fit-content"
-              color="secondary"
-              hide-below="860px"
-              [attr.text]="knownCableType(cable.type)"
-            ></nldd-text-cell>
             <nldd-spacer-cell size="12"></nldd-spacer-cell>
             <nldd-cell width="fit-content">
               <nldd-icon-button
