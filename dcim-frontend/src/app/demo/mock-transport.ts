@@ -35,6 +35,7 @@ import {
 import {
   PhysicalConnectionService,
   PhysicalConnectionSchema,
+  UpdatePhysicalConnectionRequestSchema,
   CreatePhysicalConnectionResponseSchema,
   GetPhysicalConnectionResponseSchema,
   ListConnectionsByPlacementResponseSchema,
@@ -162,8 +163,8 @@ const now = () => timestampFromDate(new Date());
 const STATUS_SORT_LABEL: Record<number, string> = {
   [AssetStatus.AVAILABLE]: 'Available',
   [AssetStatus.DEPLOYED]: 'Deployed',
-  [AssetStatus.NEEDS_REPAIR]: 'Needs Repair',
-  [AssetStatus.ON_ORDER]: 'On Order',
+  [AssetStatus.NEEDS_REPAIR]: 'Needs repair',
+  [AssetStatus.ON_ORDER]: 'On order',
   [AssetStatus.REQUESTED]: 'Requested',
   [AssetStatus.DECOMMISSIONED]: 'Decommissioned',
 };
@@ -763,8 +764,29 @@ export default function createDemoTransport(): Transport {
           connection: store.connections.find((connection) => connection.id === request.id),
         });
       },
-      updatePhysicalConnection: async () => {
+      updatePhysicalConnection: async (request) => {
         await delay();
+        // It used to answer "fine" and change nothing, so every edit to a cable
+        // came back the way it was on the next read: the status menu, the
+        // colour, the label. Same explicit-presence rule as updateTask, so a
+        // field nobody sent keeps what it had.
+        const sent = (name: string) => {
+          const field = UpdatePhysicalConnectionRequestSchema.fields.find(
+            (f) => f.localName === name,
+          );
+          return !!field && isFieldSet(request, field);
+        };
+        store.connections = store.connections.map((connection) => {
+          if (connection.id !== request.id) return connection;
+          return create(PhysicalConnectionSchema, {
+            ...connection,
+            cableType: sent('cableType') ? request.cableType : connection.cableType,
+            status: sent('status') ? request.status : connection.status,
+            color: sent('color') ? request.color : connection.color,
+            label: sent('label') ? request.label : connection.label,
+            notes: sent('notes') ? request.notes : connection.notes,
+          });
+        });
         return create(EmptySchema, {});
       },
       deletePhysicalConnection: async (request) => {
@@ -782,9 +804,28 @@ export default function createDemoTransport(): Transport {
           ),
         });
       },
-      listConnectionsBySite: async () => {
+      listConnectionsBySite: async (request) => {
         await delay();
-        return create(ListConnectionsBySiteResponseSchema, { connections: store.connections });
+        // Actually by site. It used to hand back every connection whatever was
+        // asked for, which nothing noticed while one site was ever loaded at a
+        // time: the caller stamped its own site onto them. Read two, and every
+        // cable came back twice.
+        const rackIds = new Set(racksOfSite(request.siteId).map((rack) => rack.id));
+        const inSite = new Set(
+          store.placements
+            .filter(
+              (placement) =>
+                placement.location.case === 'rack' &&
+                rackIds.has(placement.location.value.rackId),
+            )
+            .map((placement) => placement.id),
+        );
+        return create(ListConnectionsBySiteResponseSchema, {
+          connections: store.connections.filter(
+            (connection) =>
+              inSite.has(connection.sourcePlacementId) || inSite.has(connection.targetPlacementId),
+          ),
+        });
       },
     });
 

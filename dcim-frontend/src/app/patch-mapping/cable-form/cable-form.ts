@@ -18,6 +18,7 @@ import {
   CABLE_COLOR_HEX,
   CABLE_COLOR_LABEL,
   CableStatus,
+  CABLE_STATUSES,
   CableType,
   CABLE_TYPE_DEFAULT_COLOR,
   CABLE_TYPE_LABEL,
@@ -471,11 +472,7 @@ export default class CableFormComponent {
     'other',
   ];
 
-  readonly CABLE_STATUSES: { value: CableStatus; label: string }[] = [
-    { value: 'planned', label: 'Planned' },
-    { value: 'connected', label: 'Connected' },
-    { value: 'decommissioned', label: 'Decommissioned' },
-  ];
+  readonly CABLE_STATUSES = CABLE_STATUSES;
 
   readonly CABLE_COLORS: CableColor[] = [
     'dark-grey',

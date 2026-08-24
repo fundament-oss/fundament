@@ -440,7 +440,9 @@ export default class DeviceDetailComponent implements AfterViewInit, OnDestroy {
         return 'up';
       case 'decommissioned':
         return 'down';
-      case 'planned':
+      case 'to-order':
+      case 'ordered':
+      case 'ready-to-install':
         return 'unknown';
       default:
         // Runs inside a computed during change detection — degrade rather than

@@ -213,7 +213,9 @@ const (
 type PhysicalConnectionStatus string
 
 const (
-	PhysicalConnectionStatus_Planned        PhysicalConnectionStatus = "planned"
+	PhysicalConnectionStatus_ToOrder        PhysicalConnectionStatus = "to_order"
+	PhysicalConnectionStatus_Ordered        PhysicalConnectionStatus = "ordered"
+	PhysicalConnectionStatus_ReadyToInstall PhysicalConnectionStatus = "ready_to_install"
 	PhysicalConnectionStatus_Connected      PhysicalConnectionStatus = "connected"
 	PhysicalConnectionStatus_Decommissioned PhysicalConnectionStatus = "decommissioned"
 )

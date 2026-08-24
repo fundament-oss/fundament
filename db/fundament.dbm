@@ -3067,7 +3067,7 @@ END;]]> </definition>
 			<expression> <![CDATA[cable_type IS NULL OR cable_type IN ('cat5e','cat6','cat6a','cat7','cat8','dac','aoc','mmf','smf','power','console','usb','other')]]> </expression>
 	</constraint>
 	<constraint name="physical_connections_ck_status" type="ck-constr" table="dcim.physical_connections">
-			<expression> <![CDATA[status IS NULL OR status IN ('planned','connected','decommissioned')]]> </expression>
+			<expression> <![CDATA[status IS NULL OR status IN ('to_order','ordered','ready_to_install','connected','decommissioned')]]> </expression>
 	</constraint>
 	<constraint name="physical_connections_ck_color" type="ck-constr" table="dcim.physical_connections">
 			<expression> <![CDATA[color IS NULL OR color IN ('dark_grey','light_grey','red','green','blue','yellow','purple','orange','teal','white')]]> </expression>

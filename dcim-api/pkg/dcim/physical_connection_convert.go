@@ -86,8 +86,12 @@ func cableStatusToProto(s pgtype.Text) dcimv1.CableStatus {
 		return dcimv1.CableStatus_CABLE_STATUS_UNSPECIFIED
 	}
 	switch dbconst.PhysicalConnectionStatus(s.String) {
-	case dbconst.PhysicalConnectionStatus_Planned:
-		return dcimv1.CableStatus_CABLE_STATUS_PLANNED
+	case dbconst.PhysicalConnectionStatus_ToOrder:
+		return dcimv1.CableStatus_CABLE_STATUS_TO_ORDER
+	case dbconst.PhysicalConnectionStatus_Ordered:
+		return dcimv1.CableStatus_CABLE_STATUS_ORDERED
+	case dbconst.PhysicalConnectionStatus_ReadyToInstall:
+		return dcimv1.CableStatus_CABLE_STATUS_READY_TO_INSTALL
 	case dbconst.PhysicalConnectionStatus_Connected:
 		return dcimv1.CableStatus_CABLE_STATUS_CONNECTED
 	case dbconst.PhysicalConnectionStatus_Decommissioned:
@@ -101,8 +105,12 @@ func cableStatusToDB(s dcimv1.CableStatus) pgtype.Text {
 	switch s {
 	case dcimv1.CableStatus_CABLE_STATUS_UNSPECIFIED:
 		return pgtype.Text{}
-	case dcimv1.CableStatus_CABLE_STATUS_PLANNED:
-		return dbText(dbconst.PhysicalConnectionStatus_Planned)
+	case dcimv1.CableStatus_CABLE_STATUS_TO_ORDER:
+		return dbText(dbconst.PhysicalConnectionStatus_ToOrder)
+	case dcimv1.CableStatus_CABLE_STATUS_ORDERED:
+		return dbText(dbconst.PhysicalConnectionStatus_Ordered)
+	case dcimv1.CableStatus_CABLE_STATUS_READY_TO_INSTALL:
+		return dbText(dbconst.PhysicalConnectionStatus_ReadyToInstall)
 	case dcimv1.CableStatus_CABLE_STATUS_CONNECTED:
 		return dbText(dbconst.PhysicalConnectionStatus_Connected)
 	case dcimv1.CableStatus_CABLE_STATUS_DECOMMISSIONED:

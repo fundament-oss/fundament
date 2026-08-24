@@ -2503,7 +2503,7 @@ CREATE TABLE dcim.physical_connections (
 	deleted timestamptz,
 	CONSTRAINT physical_connections_pk PRIMARY KEY (id),
 	CONSTRAINT physical_connections_ck_cable_type CHECK (cable_type IS NULL OR cable_type IN ('cat5e','cat6','cat6a','cat7','cat8','dac','aoc','mmf','smf','power','console','usb','other')),
-	CONSTRAINT physical_connections_ck_status CHECK (status IS NULL OR status IN ('planned','connected','decommissioned')),
+	CONSTRAINT physical_connections_ck_status CHECK (status IS NULL OR status IN ('to_order','ordered','ready_to_install','connected','decommissioned')),
 	CONSTRAINT physical_connections_ck_color CHECK (color IS NULL OR color IN ('dark_grey','light_grey','red','green','blue','yellow','purple','orange','teal','white'))
 );
 -- ddl-end --
